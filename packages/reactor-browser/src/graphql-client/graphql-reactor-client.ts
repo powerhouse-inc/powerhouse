@@ -40,6 +40,7 @@ import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
 import {
+  isoStringFromDateTime,
   phDocumentFromGetDocument,
   phDocumentFromMutation,
 } from "./adapter.js";
@@ -275,16 +276,16 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   /**
    * Filters documents by criteria over the Switchboard's `findDocuments` query.
    *
-   * The query filters by `type` and `parentId` only. A search naming `ids` or
-   * `slugs` is refused rather than served, because the query ignores those
-   * fields -- running it would return every document instead of the named ones,
-   * a silently wrong answer. The router's remote backend turns this refusal into
-   * its typed not-supported signal so the collection-spanning read excludes this
-   * backend instead of merging the wrong page; drive enumeration itself filters
-   * by `type`, which is served.
-   *
-   * `view.revision` is rejected by {@link viewFilterInputFromViewFilter}: the
-   * Switchboard read API has no revision argument.
+   * The query filters by `type` and `parentId` only, at head. A search naming
+   * `ids` or `slugs` (present, whatever its length) and a point-in-time view are
+   * each by-contract limitations the query cannot express -- running it anyway
+   * would return every document instead of the named ones, or head instead of
+   * the asked-for revision, a silently wrong answer. {@link findIsServableOverGraphQL}
+   * is the single predicate that decides this; the router's remote backend
+   * consults the same predicate and turns an unservable `find` into its typed
+   * not-supported signal so the collection-spanning read excludes this backend
+   * instead of merging the wrong page. Drive enumeration itself filters by
+   * `type` at head, which is served.
    */
   async find<TDocument extends PHDocument = PHDocument>(
     search: SearchFilter,
@@ -299,11 +300,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     }
 
     const viewInput = viewFilterInputFromViewFilter(view);
+    const effectivePaging = paging ?? defaultPaging;
     const result = await this.sdk.FindDocuments(
       {
         search: { type: search.type, parentId: search.parentId },
         view: viewInput,
-        paging: pagingInputFromPaging(paging),
+        paging: pagingInputFromPaging(effectivePaging),
       },
       undefined,
       signal,
@@ -311,7 +313,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     return this.toDocumentResults<TDocument>(
       result.findDocuments,
-      paging ?? defaultPaging,
+      effectivePaging,
       view?.branch,
       (cursor, limit) =>
         this.find<TDocument>(search, view, { cursor, limit }, signal),
@@ -968,7 +970,7 @@ export function viewFilterInputFromViewFilter(
     return undefined;
   }
 
-  if (view.revision !== undefined) {
+  if (viewIsPointInTime(view)) {
     throw new Error(
       "point-in-time views are not supported by GraphQLReactorClient",
     );
@@ -991,14 +993,40 @@ function pagingInputFromPaging(
 }
 
 /**
- * Whether a search filters by `ids` or `slugs`, which the Switchboard
- * `findDocuments` query cannot honour (it filters by `type` and `parentId`).
+ * Whether a search names `ids` or `slugs`, which the Switchboard `findDocuments`
+ * query cannot honour (it filters by `type` and `parentId`).
+ *
+ * The test is PRESENCE, not length: the reactor `find` contract
+ * (`packages/reactor/src/core/reactor.ts`) dispatches on `search.ids` /
+ * `search.slugs` being present, so `find({ ids: [] })` is an identifier search
+ * that must yield the empty set -- not a plain type query over every document.
+ * The GraphQL surface cannot express an identifier search at all, so a present
+ * (even empty) `ids`/`slugs` is refused rather than served as the wrong query.
  */
 function searchNamesIdentifiers(search: SearchFilter): boolean {
-  return (
-    (search.ids !== undefined && search.ids.length > 0) ||
-    (search.slugs !== undefined && search.slugs.length > 0)
-  );
+  return search.ids !== undefined || search.slugs !== undefined;
+}
+
+/** Whether a view asks for a point-in-time read the GraphQL surface cannot express. */
+function viewIsPointInTime(view?: ViewFilter): boolean {
+  return view?.revision !== undefined;
+}
+
+/**
+ * The single source of truth for whether the Switchboard `findDocuments` query
+ * can serve a `find`. It is servable iff the search names neither `ids` nor
+ * `slugs` (present, regardless of length) AND the view is not point-in-time:
+ * each is a by-contract limitation of a surface that filters only by
+ * `type`/`parentId` at head. Both the client's own `find` and the connect
+ * router adapter consult this one predicate so the rule cannot drift between
+ * them; the adapter turns an unservable search into its typed not-supported
+ * signal so the router excludes the backend rather than failing the read.
+ */
+export function findIsServableOverGraphQL(
+  search: SearchFilter,
+  view?: ViewFilter,
+): boolean {
+  return !searchNamesIdentifiers(search) && !viewIsPointInTime(view);
 }
 
 /** Rebuilds a relationship edge from its GraphQL fields. */
@@ -1012,15 +1040,44 @@ function documentRelationshipFromEdge(
     createdAt: dateFromDateTime(edge.createdAt),
     updatedAt: dateFromDateTime(edge.updatedAt),
   };
-  if (edge.metadata !== undefined && edge.metadata !== null) {
-    relationship.metadata = edge.metadata as Record<string, unknown>;
+  const metadata = edge.metadata;
+  if (isPlainObject(metadata)) {
+    relationship.metadata = metadata;
   }
   return relationship;
 }
 
-/** The `DateTime` scalar deserializes as either an ISO string or a `Date`. */
-function dateFromDateTime(value: string | Date): Date {
-  return value instanceof Date ? value : new Date(value);
+/**
+ * Restores a `Date` from the `DateTime` scalar, which deserializes as either an
+ * ISO string or a `Date`, reusing the get-path's {@link isoStringFromDateTime}.
+ *
+ * A null, absent or unparseable value is a malformed timestamp from the server,
+ * not something to coerce to the epoch or an `Invalid Date`: it throws, so the
+ * malformed edge surfaces as a genuine failure rather than a silently-wrong
+ * `DocumentRelationship`.
+ */
+function dateFromDateTime(value: string | Date | null | undefined): Date {
+  if (value === null || value === undefined) {
+    throw new Error(
+      "relationship edge is missing a required DateTime timestamp",
+    );
+  }
+  const date = new Date(isoStringFromDateTime(value));
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(
+      `relationship edge carries an unparseable DateTime timestamp: ${String(value)}`,
+    );
+  }
+  return date;
+}
+
+/**
+ * Whether a JSON value is a plain object, so relationship `metadata` is assigned
+ * only when it is one. A non-object JSON scalar (string, number, array, null)
+ * is dropped exactly as a null is, rather than cast to `Record` and trusted.
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

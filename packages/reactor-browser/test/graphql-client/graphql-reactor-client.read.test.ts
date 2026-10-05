@@ -7,7 +7,10 @@ import type {
   GetDocumentQuery,
 } from "../../src/graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
-import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
+import {
+  findIsServableOverGraphQL,
+  GraphQLReactorClient,
+} from "../../src/graphql-client/graphql-reactor-client.js";
 
 type OperationsPage = GetDocumentOperationsQuery["documentOperations"];
 type FindPage = FindDocumentsQuery["findDocuments"];
@@ -498,6 +501,55 @@ describe("GraphQLReactorClient.find", () => {
     expect(sdk.FindDocuments).not.toHaveBeenCalled();
   });
 
+  it("refuses a present-but-empty ids array rather than serving it as an all-documents query", async () => {
+    const sdk = createMockSdk();
+
+    await expect(createClientWith(sdk).find({ ids: [] })).rejects.toThrow(
+      /cannot filter by ids or slugs/,
+    );
+    expect(sdk.FindDocuments).not.toHaveBeenCalled();
+  });
+
+  it("refuses a present-but-empty slugs array", async () => {
+    const sdk = createMockSdk();
+
+    await expect(createClientWith(sdk).find({ slugs: [] })).rejects.toThrow(
+      /cannot filter by ids or slugs/,
+    );
+    expect(sdk.FindDocuments).not.toHaveBeenCalled();
+  });
+
+  it("refuses a mixed type-and-empty-ids search", async () => {
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk).find({ type: "x", ids: [] }),
+    ).rejects.toThrow(/cannot filter by ids or slugs/);
+    expect(sdk.FindDocuments).not.toHaveBeenCalled();
+  });
+
+  it("sends the same effective limit on page 1 and the next() continuation", async () => {
+    const findDocuments = vi
+      .fn()
+      .mockResolvedValueOnce({ findDocuments: findPage })
+      .mockResolvedValueOnce({ findDocuments: emptyFindPage });
+    const sdk = createMockSdk({ FindDocuments: findDocuments });
+
+    const first = await createClientWith(sdk).find({ type: "x" });
+    await first.next?.();
+
+    const firstVariables = findDocuments.mock.calls[0]?.[0] as {
+      paging?: { cursor: string; limit: number };
+    };
+    const secondVariables = findDocuments.mock.calls[1]?.[0] as {
+      paging?: { cursor: string; limit: number };
+    };
+
+    expect(firstVariables.paging).toEqual({ cursor: "0", limit: 100 });
+    expect(first.options).toEqual({ cursor: "0", limit: 100 });
+    expect(secondVariables.paging).toEqual({ cursor: "cursor-2", limit: 100 });
+  });
+
   it("rejects point-in-time views", async () => {
     const sdk = createMockSdk();
 
@@ -598,6 +650,96 @@ describe("GraphQLReactorClient relationship reads", () => {
     expect(results.results[1].metadata).toBeUndefined();
   });
 
+  it("throws on a null DateTime rather than coercing it to the epoch", async () => {
+    const badPage: EdgesPage = {
+      items: [
+        {
+          sourceId: "doc-1",
+          targetId: "doc-2",
+          relationshipType: "cites",
+          metadata: null,
+          createdAt: null as unknown as string,
+          updatedAt: "2026-01-03T00:00:00.000Z",
+        },
+      ],
+      hasNextPage: false,
+      hasPreviousPage: false,
+      cursor: null,
+    };
+    const sdk = createMockSdk({
+      GetDocumentIncomingRelationshipEdges: vi
+        .fn()
+        .mockResolvedValue({ documentIncomingRelationshipEdges: badPage }),
+    });
+
+    await expect(
+      createClientWith(sdk).getIncomingRelationshipEdges("doc-2"),
+    ).rejects.toThrow(/missing a required DateTime/);
+  });
+
+  it("throws on an unparseable DateTime rather than yielding an Invalid Date", async () => {
+    const badPage: EdgesPage = {
+      items: [
+        {
+          sourceId: "doc-1",
+          targetId: "doc-2",
+          relationshipType: "cites",
+          metadata: null,
+          createdAt: "not-a-date",
+          updatedAt: "2026-01-03T00:00:00.000Z",
+        },
+      ],
+      hasNextPage: false,
+      hasPreviousPage: false,
+      cursor: null,
+    };
+    const sdk = createMockSdk({
+      GetDocumentIncomingRelationshipEdges: vi
+        .fn()
+        .mockResolvedValue({ documentIncomingRelationshipEdges: badPage }),
+    });
+
+    await expect(
+      createClientWith(sdk).getIncomingRelationshipEdges("doc-2"),
+    ).rejects.toThrow(/unparseable DateTime/);
+  });
+
+  it("drops a non-object metadata scalar rather than casting it to an object", async () => {
+    const scalarMetaPage: EdgesPage = {
+      items: [
+        {
+          sourceId: "doc-1",
+          targetId: "doc-2",
+          relationshipType: "cites",
+          metadata: "a plain string" as unknown as Record<string, unknown>,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-03T00:00:00.000Z",
+        },
+        {
+          sourceId: "doc-1",
+          targetId: "doc-3",
+          relationshipType: "cites",
+          metadata: [1, 2, 3] as unknown as Record<string, unknown>,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-03T00:00:00.000Z",
+        },
+      ],
+      hasNextPage: false,
+      hasPreviousPage: false,
+      cursor: null,
+    };
+    const sdk = createMockSdk({
+      GetDocumentIncomingRelationshipEdges: vi.fn().mockResolvedValue({
+        documentIncomingRelationshipEdges: scalarMetaPage,
+      }),
+    });
+    const results =
+      await createClientWith(sdk).getIncomingRelationshipEdges("doc-2");
+
+    expect(results.results[0].metadata).toBeUndefined();
+    expect(results.results[1].metadata).toBeUndefined();
+  });
+
   it("forwards an optional relationship type on the edges query", async () => {
     const sdk = createMockSdk();
     await createClientWith(sdk).getOutgoingRelationshipEdges("doc-1");
@@ -611,6 +753,29 @@ describe("GraphQLReactorClient relationship reads", () => {
       },
       undefined,
       undefined,
+    );
+  });
+});
+
+describe("findIsServableOverGraphQL (single-source servable predicate)", () => {
+  it("serves a type/parentId search at head", () => {
+    expect(findIsServableOverGraphQL({ type: "x", parentId: "p" })).toBe(true);
+    expect(findIsServableOverGraphQL({ type: "x" }, { branch: "draft" })).toBe(
+      true,
+    );
+  });
+
+  it("refuses any present ids or slugs, empty array included", () => {
+    expect(findIsServableOverGraphQL({ ids: ["a"] })).toBe(false);
+    expect(findIsServableOverGraphQL({ ids: [] })).toBe(false);
+    expect(findIsServableOverGraphQL({ slugs: ["s"] })).toBe(false);
+    expect(findIsServableOverGraphQL({ slugs: [] })).toBe(false);
+    expect(findIsServableOverGraphQL({ type: "x", ids: [] })).toBe(false);
+  });
+
+  it("refuses a point-in-time view", () => {
+    expect(findIsServableOverGraphQL({ type: "x" }, { revision: 3 })).toBe(
+      false,
     );
   });
 });
