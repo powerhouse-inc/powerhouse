@@ -710,8 +710,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * Each action is signed on its own for `(documentId, branch)`, the same
    * per-action signing the reactor's `signActions` does: no state prediction
    * across the job, so a job carrying a `CREATE_DOCUMENT` the push-prediction
-   * path rejects still signs. With no signer the actions pass through unsigned,
-   * matching {@link execute}.
+   * path rejects still signs. An action already signed under a key is left
+   * untouched -- the reference `DriveClient` signs its jobs with its own signer
+   * before handing them here, so re-signing would append a second signature.
+   * With no signer the actions pass through unsigned, matching {@link execute}.
    */
   private async signBatchJobActions(
     job: ExecutionJobPlan,
@@ -722,14 +724,17 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       return job.actions;
     }
     return Promise.all(
-      job.actions.map((action) =>
-        signStampedAction(
+      job.actions.map(async (action) => {
+        if (isActionSigned(action)) {
+          return action;
+        }
+        return signStampedAction(
           action,
           signer,
           actionSigningTarget(action, job.documentId, job.branch),
           signal,
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -1376,6 +1381,17 @@ function jobInfoFromGql(job: ExecuteBatchJobInfo, documentId: string): JobInfo {
     info.error = { name: "Error", message: job.error, stack: "" };
   }
   return info;
+}
+
+/**
+ * Whether an action already carries a signature under a key, mirroring the
+ * reactor's own `signAction`: a last tuple whose app-key element is set. The
+ * batch path re-signs only what is unsigned, so a job the reference
+ * `DriveClient` already signed is not signed a second time.
+ */
+function isActionSigned(action: Action): boolean {
+  const signer = action.context?.signer;
+  return Boolean(signer?.app?.key && signer.signatures.at(-1)?.[1]);
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */

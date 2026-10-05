@@ -1,3 +1,29 @@
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/analytics-engine-pg to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.40 (2026-10-02)
 
 ### 🩹 Fixes
