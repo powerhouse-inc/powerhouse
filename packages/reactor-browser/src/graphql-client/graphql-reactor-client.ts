@@ -227,6 +227,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  async isServed(identifier: string): Promise<boolean> {
+    const result = await this.sdk.GetDocument(
+      { identifier },
+      undefined,
+      undefined,
+    );
+    return result.document !== null && result.document !== undefined;
+  }
+
   async getOperations(
     documentIdentifier: string,
     view?: ViewFilter,

@@ -59,6 +59,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
  */
 const DELEGATED_METHODS: ReadonlySet<string> = new Set([
   "get",
+  "isServed",
   "subscribe",
   "execute",
   "getOperations",
