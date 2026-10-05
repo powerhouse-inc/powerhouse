@@ -99,6 +99,18 @@ export type WireQueueState = {
   readonly executingJobs: Job[];
 };
 
+/**
+ * The wire form of {@link import("./types.js").InspectorDocumentModelInfo}.
+ * Every field is JSON-safe already; versions are small bounded module numbers,
+ * not reactor ordinals, so they ride `Int`.
+ */
+export type WireInspectorDocumentModel = {
+  readonly documentType: string;
+  readonly name: string;
+  readonly version: number;
+  readonly supportedVersions: number[];
+};
+
 /** The wire form of {@link import("./types.js").InspectorProcessorInfo}. */
 export type WireInspectorProcessor = {
   readonly processorId: string;
@@ -177,6 +189,12 @@ export type WireDeadLetterPage = {
  * exactly where a wire contract actually drifts.
  */
 export const INSPECTION_WIRE_FIELDS = {
+  InspectionDocumentModel: [
+    "documentType",
+    "name",
+    "version",
+    "supportedVersions",
+  ],
   ReactorInspectionInfo: [
     "hosting",
     "inspection",

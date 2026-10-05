@@ -2,6 +2,7 @@ import type {
   CatchUpStatus,
   DeadLetterPage,
   IInspector,
+  InspectorDocumentModelInfo,
   InspectorProcessorInfo,
   IReactorDbQuery,
   ISyncInspector,
@@ -14,6 +15,7 @@ import type {
   SyncHold,
   ValidationResult,
   WireDeadLetterPage,
+  WireInspectorDocumentModel,
   WireInspectorProcessor,
   WireQueueState,
   WireReactorInspectionInfo,
@@ -110,6 +112,17 @@ function toCursor(wire: WireRemoteCursor): RemoteCursorInfo {
     ...(wire.lastSyncedAtUtcMs === null
       ? {}
       : { lastSyncedAtUtcMs: wire.lastSyncedAtUtcMs }),
+  };
+}
+
+function toDocumentModel(
+  wire: WireInspectorDocumentModel,
+): InspectorDocumentModelInfo {
+  return {
+    documentType: wire.documentType,
+    name: wire.name,
+    version: wire.version,
+    supportedVersions: [...wire.supportedVersions],
   };
 }
 
@@ -264,6 +277,13 @@ export class RemoteInspectorClient
   }
 
   // --- IInspector ---------------------------------------------------------
+
+  async listDocumentModels(): Promise<InspectorDocumentModelInfo[]> {
+    const data = await this.query<{
+      inspection: { documentModels: WireInspectorDocumentModel[] };
+    }>("documentModels");
+    return data.inspection.documentModels.map(toDocumentModel);
+  }
 
   async getQueueState(): Promise<QueueStateSnapshot> {
     const data = await this.query<{

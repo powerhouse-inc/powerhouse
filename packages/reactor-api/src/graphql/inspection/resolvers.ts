@@ -4,6 +4,7 @@ import type {
   RemoteCursorInfo,
   RemoteSyncInspection,
   WireDeadLetterPage,
+  WireInspectorDocumentModel,
   WireInspectorProcessor,
   WireQueueState,
   WireRemoteCursor,
@@ -182,6 +183,9 @@ export function createInspectionResolvers(
 
     ReactorInspection: {
       info: (): ReactorInspectionInfo => source.info(),
+
+      documentModels: async (): Promise<WireInspectorDocumentModel[]> =>
+        inspector().listDocumentModels(),
 
       queueState: async (): Promise<WireQueueState> =>
         inspector().getQueueState(),

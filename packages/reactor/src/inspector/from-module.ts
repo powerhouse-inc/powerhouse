@@ -42,6 +42,7 @@ export function reactorInspectorComponents(
       module.documentModelRegistry,
     ),
     storageHealth,
+    documentModelRegistry: module.documentModelRegistry,
   };
 }
 

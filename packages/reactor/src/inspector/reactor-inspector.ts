@@ -10,9 +10,11 @@ import type {
   SweepResult,
 } from "../catch-up/types.js";
 import type { Job } from "../queue/types.js";
+import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
   IInspectableQueue,
   IInspector,
+  InspectorDocumentModelInfo,
   InspectorProcessorInfo,
   IStorageHealthProvider,
   QueueStateSnapshot,
@@ -39,6 +41,7 @@ export type ReactorInspectorComponents = {
   catchUp?: ICatchUp;
   integrity?: IDocumentIntegrityService;
   storageHealth?: IStorageHealthProvider;
+  documentModelRegistry?: IDocumentModelRegistry;
 };
 
 const healthyStorageDefault: StorageHealth = {
@@ -82,6 +85,7 @@ export class ReactorInspector implements IInspector {
   private readonly catchUp: ICatchUp | undefined;
   private readonly integrity: IDocumentIntegrityService | undefined;
   private readonly storageHealth: IStorageHealthProvider | undefined;
+  private readonly documentModelRegistry: IDocumentModelRegistry | undefined;
 
   constructor(components: ReactorInspectorComponents) {
     this.queue = components.queue;
@@ -89,6 +93,25 @@ export class ReactorInspector implements IInspector {
     this.catchUp = components.catchUp;
     this.integrity = components.integrity;
     this.storageHealth = components.storageHealth;
+    this.documentModelRegistry = components.documentModelRegistry;
+  }
+
+  listDocumentModels(): Promise<InspectorDocumentModelInfo[]> {
+    const registry = this.documentModelRegistry;
+    if (!registry) {
+      return Promise.resolve([]);
+    }
+    return Promise.resolve(
+      registry.getAllModules().map((module) => {
+        const documentType = module.documentModel.global.id;
+        return {
+          documentType,
+          name: module.documentModel.global.name,
+          version: module.version ?? 1,
+          supportedVersions: registry.getSupportedVersions(documentType),
+        };
+      }),
+    );
   }
 
   getQueueState(): Promise<QueueStateSnapshot> {

@@ -86,6 +86,17 @@ export const inspectionTypeDefs = gql`
   }
 
   """
+  One document model this reactor has registered: its type and name, the
+  module version registered for it, and every version its type supports.
+  """
+  type InspectionDocumentModel {
+    documentType: String!
+    name: String!
+    version: Int!
+    supportedVersions: [Int!]!
+  }
+
+  """
   Point-in-time job-queue view; the job records ride the JSON scalar.
   """
   type InspectionQueueState {
@@ -191,6 +202,10 @@ export const inspectionTypeDefs = gql`
   """
   type ReactorInspection {
     info: ReactorInspectionInfo!
+    """
+    The document models registered on this reactor, with versions.
+    """
+    documentModels: [InspectionDocumentModel!]!
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
     catchUpStatus: JSONObject!

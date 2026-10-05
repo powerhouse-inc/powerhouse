@@ -37,6 +37,10 @@ const REMOTE_FIELDS = `
 export const INSPECTION_OPERATIONS = {
   info: `query ReactorInspectionInfo { inspection { info { ${INFO_FIELDS} } } }`,
 
+  documentModels: `query ReactorInspectionDocumentModels {
+    inspection { documentModels { ${fields("InspectionDocumentModel")} } }
+  }`,
+
   queueState: `query ReactorInspectionQueueState {
     inspection { queueState { ${fields("InspectionQueueState")} } }
   }`,

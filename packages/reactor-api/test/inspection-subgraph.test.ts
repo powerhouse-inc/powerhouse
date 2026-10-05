@@ -307,6 +307,40 @@ describe("inspection subgraph", () => {
   });
 
   describe("reads", () => {
+    it("serves the registered document models with versions", async () => {
+      const result = await run(
+        buildSchema({}),
+        `{ inspection { documentModels {
+            documentType name version supportedVersions
+          } } }`,
+      );
+
+      expect(errorMessages(result)).toEqual([]);
+      const models = (
+        result.data as {
+          inspection: {
+            documentModels: {
+              documentType: string;
+              name: string;
+              version: number;
+              supportedVersions: number[];
+            }[];
+          };
+        }
+      ).inspection.documentModels;
+      // The reactor under test registered the drive and document-model modules.
+      const byType = new Map(
+        models.map((model) => [model.documentType, model]),
+      );
+      expect(byType.has("powerhouse/document-drive")).toBe(true);
+      expect(byType.has("powerhouse/document-model")).toBe(true);
+      for (const model of models) {
+        expect(model.name.length).toBeGreaterThan(0);
+        expect(model.version).toBeGreaterThanOrEqual(1);
+        expect(model.supportedVersions).toContain(model.version);
+      }
+    });
+
     it("serves queue state as typed data", async () => {
       const result = await run(
         buildSchema({}),
@@ -816,6 +850,7 @@ describe("inspection subgraph", () => {
       ).toEqual([
         "catchUpStatus",
         "deadLetters",
+        "documentModels",
         "holds",
         "info",
         "processors",

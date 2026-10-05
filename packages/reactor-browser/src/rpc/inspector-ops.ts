@@ -7,6 +7,7 @@ import type { IInspector, IReactorDbQuery } from "@powerhousedao/reactor";
  * definition.
  */
 export const INSPECTOR_OPS = {
+  listDocumentModels: "registry.listDocumentModels",
   getQueueState: "queue.getState",
   pauseQueue: "queue.pause",
   resumeQueue: "queue.resume",
@@ -36,6 +37,8 @@ export async function dispatchInspectorOp(
   args: unknown[],
 ): Promise<unknown> {
   switch (method) {
+    case INSPECTOR_OPS.listDocumentModels:
+      return inspector.listDocumentModels();
     case INSPECTOR_OPS.getQueueState:
       return inspector.getQueueState();
     case INSPECTOR_OPS.pauseQueue:

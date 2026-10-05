@@ -17,6 +17,8 @@ import { ReactorInspector } from "../../src/inspector/reactor-inspector.js";
 import { StorageHealthTracker } from "../../src/inspector/storage-health.js";
 import type { IInspectableQueue } from "../../src/inspector/types.js";
 import type { Job } from "../../src/queue/types.js";
+import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 
 function job(id: string, documentId: string): Job {
   return {
@@ -95,7 +97,89 @@ const emptySnapshot = {
   totalExecuting: 0,
 };
 
+function documentModelModule(
+  id: string,
+  name: string,
+  version: number,
+): DocumentModelModule {
+  return {
+    version,
+    documentModel: { global: { id, name } },
+  } as unknown as DocumentModelModule;
+}
+
+function documentModelRegistry(
+  modules: DocumentModelModule[],
+  supported: Record<string, number[]> = {},
+): IDocumentModelRegistry {
+  return {
+    getAllModules: () => modules,
+    getSupportedVersions: (documentType: string) =>
+      supported[documentType] ?? [1],
+  } as unknown as IDocumentModelRegistry;
+}
+
 describe("ReactorInspector", () => {
+  describe("document models", () => {
+    it("returns an empty list with no registry", async () => {
+      const inspector = new ReactorInspector({});
+      await expect(inspector.listDocumentModels()).resolves.toEqual([]);
+    });
+
+    it("flattens each registered model with its supported versions", async () => {
+      const inspector = new ReactorInspector({
+        documentModelRegistry: documentModelRegistry(
+          [
+            documentModelModule(
+              "powerhouse/document-drive",
+              "DocumentDrive",
+              1,
+            ),
+            documentModelModule("sky/ledger", "Ledger", 2),
+          ],
+          {
+            "powerhouse/document-drive": [1],
+            "sky/ledger": [1, 2],
+          },
+        ),
+      });
+
+      await expect(inspector.listDocumentModels()).resolves.toEqual([
+        {
+          documentType: "powerhouse/document-drive",
+          name: "DocumentDrive",
+          version: 1,
+          supportedVersions: [1],
+        },
+        {
+          documentType: "sky/ledger",
+          name: "Ledger",
+          version: 2,
+          supportedVersions: [1, 2],
+        },
+      ]);
+    });
+
+    it("defaults a module with no version field to version 1", async () => {
+      const inspector = new ReactorInspector({
+        documentModelRegistry: documentModelRegistry([
+          {
+            documentModel: { global: { id: "x/y", name: "Y" } },
+          } as unknown as DocumentModelModule,
+        ]),
+      });
+
+      await expect(inspector.listDocumentModels()).resolves.toEqual([
+        {
+          documentType: "x/y",
+          name: "Y",
+          version: 1,
+          supportedVersions: [1],
+        },
+      ]);
+    });
+  });
+
   describe("queue", () => {
     it("reports an empty snapshot with no queue", async () => {
       const inspector = new ReactorInspector({});

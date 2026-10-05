@@ -128,6 +128,24 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
 
   const answers: Record<string, unknown> = {
     ReactorInspectionInfo: { inspection: { info } },
+    ReactorInspectionDocumentModels: {
+      inspection: {
+        documentModels: [
+          {
+            documentType: "powerhouse/document-drive",
+            name: "DocumentDrive",
+            version: 1,
+            supportedVersions: [1],
+          },
+          {
+            documentType: "sky/ledger",
+            name: "Ledger",
+            version: 2,
+            supportedVersions: [1, 2],
+          },
+        ],
+      },
+    },
     ReactorInspectionQueueState: {
       inspection: {
         queueState: {
@@ -283,6 +301,26 @@ describe("RemoteInspectorClient reads", () => {
       url: "http://host.example/graphql/inspection",
       fetch: server.fetchImpl,
     });
+  });
+
+  it("decodes the registered document models over the subgraph", async () => {
+    await expect(client.listDocumentModels()).resolves.toEqual([
+      {
+        documentType: "powerhouse/document-drive",
+        name: "DocumentDrive",
+        version: 1,
+        supportedVersions: [1],
+      },
+      {
+        documentType: "sky/ledger",
+        name: "Ledger",
+        version: 2,
+        supportedVersions: [1, 2],
+      },
+    ]);
+    expect(server.requests.at(-1)?.operation).toBe(
+      "ReactorInspectionDocumentModels",
+    );
   });
 
   it("decodes queue state into the reactor's own snapshot shape", async () => {

@@ -1,6 +1,7 @@
 import type {
   CatchUpStatus,
   IInspector,
+  InspectorDocumentModelInfo,
   InspectorProcessorInfo,
   IReactorDbQuery,
   QueueStateSnapshot,
@@ -26,6 +27,14 @@ const queueState: QueueStateSnapshot = {
   totalPending: 0,
   totalExecuting: 0,
 };
+const documentModels: InspectorDocumentModelInfo[] = [
+  {
+    documentType: "powerhouse/document-drive",
+    name: "DocumentDrive",
+    version: 1,
+    supportedVersions: [1],
+  },
+];
 const processors: InspectorProcessorInfo[] = [
   {
     processorId: "p1",
@@ -68,6 +77,7 @@ type FakeInspector = {
 
 function fakeInspector(): FakeInspector {
   return {
+    listDocumentModels: vi.fn(() => Promise.resolve(documentModels)),
     getQueueState: vi.fn(() => Promise.resolve(queueState)),
     pauseQueue: vi.fn(() => Promise.resolve()),
     resumeQueue: vi.fn(() => Promise.resolve()),
@@ -129,6 +139,9 @@ describe("dispatchInspectorOp", () => {
     const call = (method: string, args: unknown[] = []) =>
       dispatchInspectorOp(inspector as unknown as IInspector, db, method, args);
 
+    await expect(call(INSPECTOR_OPS.listDocumentModels)).resolves.toBe(
+      documentModels,
+    );
     await expect(call(INSPECTOR_OPS.getQueueState)).resolves.toBe(queueState);
     await expect(call(INSPECTOR_OPS.pauseQueue)).resolves.toBeUndefined();
     await expect(call(INSPECTOR_OPS.resumeQueue)).resolves.toBeUndefined();
@@ -156,6 +169,7 @@ describe("dispatchInspectorOp", () => {
       call(INSPECTOR_OPS.queryReactorDb, ["select 1", []]),
     ).resolves.toEqual([{ n: 1 }]);
 
+    expect(inspector.listDocumentModels).toHaveBeenCalledTimes(1);
     expect(inspector.getQueueState).toHaveBeenCalledTimes(1);
     expect(inspector.pauseQueue).toHaveBeenCalledTimes(1);
     expect(inspector.resumeQueue).toHaveBeenCalledTimes(1);
@@ -172,6 +186,7 @@ describe("dispatchInspectorOp", () => {
 
   it("keeps the op strings the wire protocol was shipped with", () => {
     expect(INSPECTOR_OPS).toEqual({
+      listDocumentModels: "registry.listDocumentModels",
       getQueueState: "queue.getState",
       pauseQueue: "queue.pause",
       resumeQueue: "queue.resume",

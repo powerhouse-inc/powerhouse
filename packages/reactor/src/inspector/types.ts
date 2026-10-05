@@ -43,6 +43,19 @@ export type QueueStateSnapshot = {
 };
 
 /**
+ * One registered document model, flattened for inspection: the model's type
+ * and name, the module version registered for it, and every version the
+ * registry supports for that type. Plain data, so it survives a structured
+ * clone or a JSON hop to an inspector UI.
+ */
+export type InspectorDocumentModelInfo = {
+  documentType: string;
+  name: string;
+  version: number;
+  supportedVersions: number[];
+};
+
+/**
  * A tracked processor flattened for inspection: the identity and progress
  * fields of `TrackedProcessor` without its `record` or its `retry()` closure,
  * so the shape survives a structured-clone hop to an inspector UI.
@@ -82,6 +95,12 @@ export interface IInspectableQueue {
  * Raw SQL access is deliberately NOT here — see `IReactorDbQuery`.
  */
 export interface IInspector {
+  /**
+   * The document models this reactor has registered, each with the module
+   * version registered for it and every version its type supports. A reactor
+   * with no registry wired reports an empty list.
+   */
+  listDocumentModels(): Promise<InspectorDocumentModelInfo[]>;
   getQueueState(): Promise<QueueStateSnapshot>;
   pauseQueue(): Promise<void>;
   resumeQueue(): Promise<void>;

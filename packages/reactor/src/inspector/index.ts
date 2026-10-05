@@ -10,6 +10,7 @@ export { StorageHealthTracker } from "./storage-health.js";
 export type {
   IInspectableQueue,
   IInspector,
+  InspectorDocumentModelInfo,
   InspectorProcessorInfo,
   IReactorDbQuery,
   IStorageHealthProvider,
@@ -21,6 +22,7 @@ export {
   INSPECTION_WIRE_FIELDS,
   type WireChannelConfig,
   type WireDeadLetterPage,
+  type WireInspectorDocumentModel,
   type WireInspectorProcessor,
   type WireMailboxDepths,
   type WireQueueState,

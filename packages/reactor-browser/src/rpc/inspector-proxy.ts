@@ -1,6 +1,7 @@
 import type {
   CatchUpStatus,
   IInspector,
+  InspectorDocumentModelInfo,
   InspectorProcessorInfo,
   QueueStateSnapshot,
   RebuildResult,
@@ -25,6 +26,10 @@ export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
   const ops = opChannel(router, "inspector-op");
 
   return {
+    listDocumentModels: () =>
+      ops.call(INSPECTOR_OPS.listDocumentModels) as Promise<
+        InspectorDocumentModelInfo[]
+      >,
     getQueueState: () =>
       ops.call(INSPECTOR_OPS.getQueueState) as Promise<QueueStateSnapshot>,
     pauseQueue: () => ops.callVoid(INSPECTOR_OPS.pauseQueue),
