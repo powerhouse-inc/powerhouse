@@ -1126,3 +1126,15 @@ This milestone = wire those over the Switchboard GraphQL so a remote drive is a 
 **Why it needs thought (not a mechanical fill-in):** drive choreography + jobs have ordering/idempotency/auth semantics that must map faithfully onto GraphQL mutations; relationship writes touch the graph model; batches need the Switchboard's batch/job intake. Each needs a faithful GraphQL mapping + the honest-degradation story preserved.
 
 **Explicitly NOT this milestone (stays deferred, harder):** CROSS-backend atomic operations — `CrossBackendBatchError` / `CrossBackendRelationshipError` (a batch or relationship spanning two independent reactors). That's the distributed-transaction (2PC/saga) problem, same family as the deferred W0.9 reshuffle strategy; the v1 invariant (refuse loudly, never half-apply across backends) holds until that's solved conceptually.
+
+### Inspector expansion + remote-drive fixes — DONE + LIVE-VERIFIED (2026-10-05)
+
+All 7 workstreams built, each through the /code-review gate (the inspection track's review caught real integrity-check correctness bugs — single-snapshot + branch-correctness fixes applied). Live-verified against the running distyra↔vetra stack (connect :2452 multi-reactor, vetra switchboard :7452, monitor :5173):
+- §5 drive-app meta: remote Workflows drive opens in Workflow Studio (preferredEditor flows through); whole-meta JSONObject passthrough.
+- §6 persistence: monitoring sets survive refresh (vetra-sb persisted across reload).
+- §4a staleness: Overview reads live serverInfo.workflows (shows "yes" without re-provision).
+- §2 Modules tab: 15 document models + versions (distyra/transaction-ledger, kbc/card-statement, …), deduped per type.
+- §1 Drives/Collections tab: drives + collection keys + state + honest main-branch note; on-demand integrity check ran clean (2/2, no false positives); single-snapshot branch-correct walk.
+- §4b Attachments: remote switchboard store reported (kysely, 567 MiB) instead of "unavailable".
+- §3 Workflows tab: 30 live runs from the workflow-runtime subgraph via the extracted/reused Workflow Studio runtime client (new @powerhousedao/workflow ./editors/runtime export), gated on serverInfo.workflows.
+Commits: 2702dc55a0/01cd5dac6c/1fe92a4216 (§6/§4a), 546450c491/ddd56fd332 (§5), a241da2742/df9201850b/17ae4d7d72 (§2/§1/§4b) + 0fc77e4f7b/66e9aa1196 (inspection review fixes), d32c2046a5/68198453b9/c01480d3a5 (§3). Screenshots delivered + folded into the core-dev briefing (workspace/multi-reactor-plan/multi-reactor-briefing.html).
