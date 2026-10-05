@@ -12,6 +12,7 @@ import {
   type ReactorCapabilities,
 } from "@powerhousedao/reactor-monitor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { ReactorOperationNotSupportedError } from "../src/errors.js";
 import { withOwnershipGuard } from "../src/guard.js";
 import type { ReactorBackend } from "../src/types.js";
 
@@ -39,6 +40,13 @@ export class FakeReactor {
   readonly subscribers: ((event: DocumentChangeEvent) => void)[] = [];
   /** Methods that should fail, for the strict/tolerant fan-in tests. */
   readonly failing = new Set<string>();
+  /**
+   * Methods this reactor cannot serve BY CONTRACT, for the fan-in exclusion
+   * tests. Mirrors the remote Switchboard backend: a capability-limited client
+   * raises a typed {@link ReactorOperationNotSupportedError} the fan-in excludes
+   * rather than counts as a failure.
+   */
+  readonly unsupported = new Set<string>();
 
   constructor(
     readonly name: string,
@@ -83,6 +91,12 @@ export class FakeReactor {
 
   private record(method: string, args: readonly unknown[]): void {
     this.calls.push({ method, args });
+    if (this.unsupported.has(method)) {
+      throw new ReactorOperationNotSupportedError({
+        backend: this.name,
+        operation: method,
+      });
+    }
     if (this.failing.has(method)) {
       throw new Error(`${this.name}: ${method} is configured to fail`);
     }

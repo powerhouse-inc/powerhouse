@@ -2,6 +2,7 @@ import type { PagedResults, PagingOptions } from "@powerhousedao/reactor";
 import {
   FanInPartialFailureError,
   InvalidFanInCursorError,
+  isOperationNotSupported,
   messageOf,
   rejectedWith,
   rethrow,
@@ -78,16 +79,26 @@ export function decodeFanInCursor(cursor: string): readonly BackendCursor[] {
 /**
  * How a fan-in treats a backend that fails.
  *
- * - `strict`: every backend must answer, and a failure is raised as a
- *   {@link FanInPartialFailureError} carrying what did answer. For `find`,
- *   because a backend dropping out means documents are missing from the result
- *   with nothing in the result to say so.
+ * - `strict`: every CAPABLE backend must answer, and a genuine failure is
+ *   raised as a {@link FanInPartialFailureError} carrying what did answer. For
+ *   `find`, because a backend dropping out means documents are missing from the
+ *   result with nothing in the result to say so.
  * - `tolerant`: a failure contributes nothing and is reported through
  *   `onDiagnostic`. For the reads whose subject legitimately does not exist on
  *   most backends -- a relationship read names a source document that only its
  *   owner holds, so every other backend SHOULD fail, and treating that as a
  *   partial result would make the operation impossible. If EVERY backend fails,
  *   the first failure is raised: an all-fail is not a tolerable silence.
+ *
+ * **In BOTH modes, a backend that is NOT APPLICABLE to the operation -- one
+ * that declares by contract it cannot serve this read, raising a
+ * {@link ReactorOperationNotSupportedError} -- is EXCLUDED from the fan-in and
+ * surfaced through `onDiagnostic`, never counted as a failure.** The result is
+ * the union of the CAPABLE backends' answers. This is the distinction that lets
+ * a capability-limited backend (a remote Switchboard whose GraphQL client
+ * serves only a document subset) sit behind the router without bricking every
+ * collection-spanning read, while a CAPABLE backend that errors at runtime
+ * still raises loud under `strict`.
  */
 export type FanInMode = "strict" | "tolerant";
 
@@ -124,6 +135,7 @@ export async function fanIn<T>(
   );
   const answers: Answer<T>[] = [];
   const failures: Failure[] = [];
+  const excluded: Failure[] = [];
   for (let i = 0; i < settled.length; i++) {
     const outcome = settled[i];
     const backend = participants[i];
@@ -131,7 +143,21 @@ export async function fanIn<T>(
       answers.push({ backend, value: outcome.value });
       continue;
     }
-    failures.push({ backend: backend.name, error: outcome.reason });
+    const failure: Failure = { backend: backend.name, error: outcome.reason };
+    if (isOperationNotSupported(outcome.reason)) {
+      excluded.push(failure);
+      continue;
+    }
+    failures.push(failure);
+  }
+  // A not-applicable backend is surfaced in BOTH modes and never silently
+  // dropped, but it is NOT a failure: the result is the union of the capable
+  // backends, minus the ones that cannot serve this read by contract.
+  for (const skip of excluded) {
+    options.onDiagnostic(
+      `${operation}: backend ${skip.backend} is not applicable to this read and was excluded from the fan-in (${messageOf(skip.error)})`,
+      skip.error,
+    );
   }
   if (failures.length === 0) {
     return answers;

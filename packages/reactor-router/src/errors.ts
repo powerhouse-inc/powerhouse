@@ -311,11 +311,95 @@ export class CrossBackendRelationshipError extends Error {
   }
 }
 
+/** The code {@link ReactorOperationNotSupportedError} carries on its message. */
+export const OPERATION_NOT_SUPPORTED_CODE = "operation-not-supported";
+
+/** What a backend states when it cannot serve an operation by contract. */
+export type ReactorOperationNotSupportedDetails = {
+  /** The backend that cannot serve the operation. */
+  readonly backend: string;
+  /** The `IReactorClient` member that is not served. */
+  readonly operation: string;
+  /** Why it is not served, for the diagnostic line. */
+  readonly reason?: string;
+};
+
+/**
+ * Raised by a BACKEND that, BY CONTRACT, cannot answer a given operation -- its
+ * client serves only a subset of `IReactorClient` and the member asked for is
+ * outside it.
+ *
+ * This is categorically NOT a failure. A fan-in read that reaches a backend
+ * which cannot serve the read treats that backend as NOT APPLICABLE to the read
+ * and EXCLUDES it from the union (surfacing the exclusion through the router's
+ * diagnostic), rather than raising {@link FanInPartialFailureError} -- because a
+ * backend that was never going to answer is not evidence the result is
+ * incomplete, where a CAPABLE backend that errors at runtime is. That
+ * distinction is the whole point: the capability contract drives routing, so a
+ * capability-limited backend cannot brick a fan-in the way a generic throw
+ * would (multi-reactor motivation 3: capability variance is modelled, not
+ * papered over).
+ *
+ * **The message carries the code** -- it opens with {@link OPERATION_NOT_SUPPORTED_CODE} --
+ * so the signal survives a structured-clone/RPC boundary that keeps only `name`
+ * and `message`, the same reasoning as {@link WrongBackendError}. The remote
+ * backend that raises this today throws it SYNCHRONOUSLY in the router's own
+ * realm, so {@link isOperationNotSupported} usually matches the instance; the
+ * message and name checks keep it recognised if it ever crosses a boundary.
+ */
+export class ReactorOperationNotSupportedError extends Error {
+  readonly code = OPERATION_NOT_SUPPORTED_CODE;
+  readonly backend: string;
+  readonly operation: string;
+
+  constructor(details: ReactorOperationNotSupportedDetails) {
+    const backend = details.backend;
+    const operation = details.operation;
+    const reason = details.reason ?? "";
+    super(
+      `${OPERATION_NOT_SUPPORTED_CODE}: backend ${JSON.stringify(backend)} does not support ${JSON.stringify(operation)}` +
+        (reason === "" ? "" : ` -- ${reason}`),
+    );
+    this.name = "ReactorOperationNotSupportedError";
+    this.backend = backend;
+    this.operation = operation;
+  }
+}
+
+/**
+ * Whether a thrown value is a {@link ReactorOperationNotSupportedError} in any
+ * of the forms that survive the trip: the live instance (same realm, the
+ * common case), an error whose name is `ReactorOperationNotSupportedError`, or
+ * any error whose message carries {@link OPERATION_NOT_SUPPORTED_CODE} (the
+ * structured-clone/RPC case). Anything else is `false` and is treated as a
+ * genuine failure.
+ */
+export function isOperationNotSupported(value: unknown): boolean {
+  if (value instanceof ReactorOperationNotSupportedError) {
+    return true;
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as { name?: unknown; message?: unknown };
+  if (candidate.name === "ReactorOperationNotSupportedError") {
+    return true;
+  }
+  return (
+    typeof candidate.message === "string" &&
+    candidate.message.startsWith(`${OPERATION_NOT_SUPPORTED_CODE}:`)
+  );
+}
+
 /**
  * A strict fan-in lost a backend. Carries what DID answer, because a caller
  * that can act on a partial page should be able to -- but it has to opt into
  * knowing the page is partial, rather than being handed a short list that looks
  * complete.
+ *
+ * A backend EXCLUDED for being not applicable to the operation
+ * ({@link ReactorOperationNotSupportedError}) is never one of these failures:
+ * it is excluded and surfaced, never counted as incompleteness.
  */
 export class FanInPartialFailureError extends Error {
   constructor(

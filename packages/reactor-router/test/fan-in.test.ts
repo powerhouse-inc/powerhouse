@@ -200,6 +200,79 @@ describe("fanIn", () => {
 
     await expect(run).rejects.toThrow(/one: isServed is configured to fail/);
   });
+
+  it("excludes a backend that cannot serve the operation by contract and surfaces the exclusion, even under strict mode", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    one.seed(fakeDocument({ id: "doc-1" }));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    // The remote-backend shape: a client that cannot serve this read by
+    // contract, not a reactor that failed at runtime.
+    two.unsupported.add("isServed");
+    const reported: string[] = [];
+
+    const answers = await fanIn(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      { mode: "strict", onDiagnostic: (message) => reported.push(message) },
+    );
+
+    // Strict did NOT raise: a by-contract limitation is not incompleteness.
+    expect(answers.map((answer) => answer.value)).toEqual([true]);
+    expect(reported.join()).toMatch(
+      /backend two is not applicable to this read and was excluded/,
+    );
+  });
+
+  it("still raises FanInPartialFailureError when a CAPABLE backend errors, naming only the genuine failure and not the excluded one", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    one.seed(fakeDocument({ id: "doc-1" }));
+    const capable = new FakeReactor(
+      "capable",
+      inProcessCapabilities("capable"),
+    );
+    capable.failing.add("isServed");
+    const limited = new FakeReactor(
+      "limited",
+      inProcessCapabilities("limited"),
+    );
+    limited.unsupported.add("isServed");
+
+    const run = fanIn(
+      "isServed",
+      [one.backend(), capable.backend(), limited.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      { mode: "strict", onDiagnostic: silent },
+    );
+
+    await expect(run).rejects.toThrow(FanInPartialFailureError);
+    await run.catch((error: unknown) => {
+      const partial = error as FanInPartialFailureError;
+      expect(partial.failures.map((failure) => failure.backend)).toEqual([
+        "capable",
+      ]);
+    });
+  });
+
+  it("returns the empty union, logged, when every backend is not applicable", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    one.unsupported.add("isServed");
+    two.unsupported.add("isServed");
+    const reported: string[] = [];
+
+    const answers = await fanIn(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      { mode: "strict", onDiagnostic: (message) => reported.push(message) },
+    );
+
+    expect(answers).toEqual([]);
+    expect(
+      reported.filter((message) => message.includes("not applicable")),
+    ).toHaveLength(2);
+  });
 });
 
 describe("mergePaged", () => {
@@ -233,6 +306,39 @@ describe("mergePaged", () => {
       "shared",
       "only-on-two",
     ]);
+  });
+
+  it("excludes a backend that cannot serve find by contract and merges only the capable backends", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    one.seed(fakeDocument({ id: "only-on-one", documentType: "test/doc" }));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    // The exact Connect boot scenario: the remote backend cannot serve find.
+    two.unsupported.add("find");
+    const reported: string[] = [];
+
+    const page = await mergePaged(
+      pagedParticipants("find", [one.backend(), two.backend()], undefined, {
+        mode: "strict",
+        onDiagnostic: (message) => reported.push(message),
+      }),
+      (backend, paging) =>
+        backend.client.find({ type: "test/doc" }, undefined, paging),
+      {
+        operation: "find",
+        mode: "strict",
+        onDiagnostic: (message) => reported.push(message),
+        identify: (document) => document.header.id,
+        paging: undefined,
+      },
+    );
+
+    // The capable backend's rows, not a thrown FanInPartialFailureError.
+    expect(page.results.map((document) => document.header.id)).toEqual([
+      "only-on-one",
+    ]);
+    expect(reported.join()).toMatch(
+      /find: backend two is not applicable to this read and was excluded/,
+    );
   });
 
   it("carries one cursor per backend and continues only those", async () => {

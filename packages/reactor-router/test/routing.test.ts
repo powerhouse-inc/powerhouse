@@ -210,6 +210,40 @@ describe("fan-in reads through the client", () => {
     );
   });
 
+  it("excludes a capability-limited backend from find instead of crashing the whole read (the Connect boot scenario)", async () => {
+    // Exactly the live defect: a local reactor that serves find alongside a
+    // remote Switchboard backend whose GraphQL client cannot. Connect's boot
+    // getDrives -> find used to turn the remote's by-contract throw into a
+    // FanInPartialFailureError that bricked the app at mount.
+    const local = new FakeReactor(
+      "connect-local",
+      inProcessCapabilities("connect-local"),
+    );
+    local.seed(fakeDocument({ id: "local-drive", documentType: "test/note" }));
+    const remote = new FakeReactor(
+      "switchboard-remote",
+      inProcessCapabilities("switchboard-remote"),
+    );
+    remote.unsupported.add("find");
+    const reported: string[] = [];
+    const client = new RoutingReactorClient(
+      [local.backend(), remote.backend()],
+      {
+        primaryBackend: "connect-local",
+        onDiagnostic: (message) => reported.push(message),
+      },
+    );
+
+    const page = await client.find({ type: "test/note" });
+
+    expect(page.results.map((document) => document.header.id)).toEqual([
+      "local-drive",
+    ]);
+    expect(reported.join()).toMatch(
+      /find: backend switchboard-remote is not applicable to this read and was excluded/,
+    );
+  });
+
   it("merges relationship edges and tolerates the backends without the source", async () => {
     const { one, two, backends } = topology();
     one.seed(fakeDocument({ id: "source-doc" }));
