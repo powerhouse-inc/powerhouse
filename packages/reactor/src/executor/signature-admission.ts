@@ -4,12 +4,15 @@ import type {
   CreateDocumentActionInput,
   ISigner,
   Operation,
+  ProtocolVersions,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSigningTarget,
   canonicalJson,
   deriveOperationId,
+  positionalOperations,
+  retractedActionIds,
   signaturePolicyOf,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -136,7 +139,7 @@ export class SignatureAdmission {
       candidates,
       live,
       isRetry(job),
-      operationStore,
+      stores,
       signal,
     );
 
@@ -355,7 +358,8 @@ export class SignatureAdmission {
   /**
    * The live candidates stored exactly as submitted and still standing: one
    * an undo or a reshuffle has since superseded is refused, not re-emitted with
-   * the state it once produced. A synthesized operation
+   * the state it once produced; on base-reducer 3 that includes one a live
+   * RETRACT names. A synthesized operation
    * holds another action, so it cannot be compared; only a retry, whose first
    * attempt this job was, takes it as committed.
    */
@@ -363,9 +367,10 @@ export class SignatureAdmission {
     candidates: Candidate[],
     live: Set<string>,
     retry: boolean,
-    operationStore: IOperationStore,
+    stores: AdmissionStores,
     signal?: AbortSignal,
   ): Promise<Map<Candidate, CommittedWrite>> {
+    const { operationStore } = stores;
     const committed = new Map<Candidate, CommittedWrite>();
     const toCompare: Candidate[] = [];
     for (const entry of candidates) {
@@ -404,13 +409,66 @@ export class SignatureAdmission {
         undefined,
         signal,
       );
+      const retracted = await this.retractedAmong(
+        stream,
+        matching,
+        stores,
+        signal,
+      );
       for (const entry of matching) {
-        if (!isSuperseded(byId.get(entry.opId)!, later.results)) {
+        if (
+          !isSuperseded(byId.get(entry.opId)!, later.results) &&
+          !retracted.has(entry.action.id)
+        ) {
           committed.set(entry, committedWrite(entry, entry.opId));
         }
       }
     }
     return committed;
+  }
+
+  /** The ids among `entries` the base-reducer 3 rule retracts; empty before 3. */
+  private async retractedAmong(
+    stream: Stream,
+    entries: Candidate[],
+    stores: AdmissionStores,
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    if (stream.scope === "auth" || stream.scope === "document") {
+      return new Set();
+    }
+    const stored = await storedVersions(
+      stores,
+      this.policySource,
+      stream.documentId,
+      stream.branch,
+      signal,
+    );
+    if (stored?.versions?.["base-reducer"] !== 3) {
+      return new Set();
+    }
+    const { operationStore } = stores;
+    const named = await operationStore.findRetractionsOf(
+      stream.documentId,
+      stream.scope,
+      stream.branch,
+      entries.map((entry) => entry.action.id),
+      signal,
+    );
+    if (named.size === 0) {
+      return named;
+    }
+    const all = await operationStore.getSince(
+      stream.documentId,
+      stream.scope,
+      stream.branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+    const retracted = retractedActionIds(positionalOperations(all.results));
+    return new Set([...named].filter((id) => retracted.has(id)));
   }
 
   /**
@@ -562,6 +620,24 @@ async function storedPolicy(
   branch: string,
   signal?: AbortSignal,
 ): Promise<SignaturePolicy | undefined> {
+  const stored = await storedVersions(
+    stores,
+    source,
+    documentId,
+    branch,
+    signal,
+  );
+  return stored && signaturePolicyOf(stored.versions);
+}
+
+/** The stored document's protocol versions; undefined when it is not stored. */
+async function storedVersions(
+  stores: AdmissionStores,
+  source: PolicySource,
+  documentId: string,
+  branch: string,
+  signal?: AbortSignal,
+): Promise<{ versions: ProtocolVersions | undefined } | undefined> {
   try {
     if (source === "write-cache") {
       const document = await stores.writeCache.getState(
@@ -571,14 +647,14 @@ async function storedPolicy(
         undefined,
         signal,
       );
-      return signaturePolicyOf(document.header);
+      return { versions: document.header.protocolVersions ?? undefined };
     }
     const meta = await stores.documentMetaCache.getDocumentMeta(
       documentId,
       branch,
       signal,
     );
-    return signaturePolicyOf(meta.protocolVersions);
+    return { versions: meta.protocolVersions };
   } catch (error) {
     if (DocumentNotFoundError.isError(error)) {
       return undefined;

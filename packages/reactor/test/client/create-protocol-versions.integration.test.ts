@@ -13,12 +13,12 @@ import { TestP256Signer } from "../utils/p256-signer.js";
 
 const DOCUMENT_MODEL = "powerhouse/document-model";
 
-/** Under the default registry every create path keeps its pre-feature versions. */
+/** Under the default registry every create path heads base-reducer 3. */
 describe.each<SignaturePolicy>(["v2-required", "legacy"])(
   "create paths under the default registry (%s)",
   (policy) => {
     const reactors: IReactor[] = [];
-    const before = protocolVersionsFor(policy);
+    const expected = protocolVersionsFor(policy, { "base-reducer": 3 });
 
     afterEach(() => {
       for (const reactor of reactors.splice(0)) {
@@ -41,18 +41,18 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
       return built.client;
     }
 
-    it("selects the pre-feature versions everywhere", async () => {
+    it("selects base-reducer 3 everywhere", async () => {
       const reactor = await client();
 
       expect(await reactor.getCreateProtocolVersions()).toEqual({
-        "base-reducer": 2,
+        "base-reducer": 3,
       });
 
       const drive = await reactor.drives.create({ global: { name: "Drive" } });
-      expect(drive.header.protocolVersions).toEqual(before);
+      expect(drive.header.protocolVersions).toEqual(expected);
 
       const empty = await reactor.createEmpty(DOCUMENT_MODEL);
-      expect(empty.header.protocolVersions).toEqual(before);
+      expect(empty.header.protocolVersions).toEqual(expected);
       expect(empty.header.protocolVersions).not.toHaveProperty(
         "document-purge",
       );
@@ -60,7 +60,7 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
       const child = await reactor.createEmpty(DOCUMENT_MODEL, {
         parentIdentifier: drive.header.id,
       });
-      expect(child.header.protocolVersions).toEqual(before);
+      expect(child.header.protocolVersions).toEqual(expected);
 
       const file = await reactor.drives.addFile(
         drive.header.id,
