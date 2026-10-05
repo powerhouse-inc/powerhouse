@@ -677,6 +677,9 @@ importers:
       '@powerhousedao/reactor-router':
         specifier: workspace:*
         version: link:../../packages/reactor-router
+      '@powerhousedao/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       react:
         specifier: 'catalog:'
         version: 19.2.6

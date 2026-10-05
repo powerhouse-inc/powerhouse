@@ -43,6 +43,7 @@ import { OverviewTab } from "./tabs/OverviewTab.js";
 import { ProcessorsTab } from "./tabs/ProcessorsTab.js";
 import { QueueTab } from "./tabs/QueueTab.js";
 import { SyncTab } from "./tabs/SyncTab.js";
+import { WorkflowsTab } from "./tabs/WorkflowsTab.js";
 
 export const INSPECTOR_TABS = [
   "Overview",
@@ -55,6 +56,7 @@ export const INSPECTOR_TABS = [
   "DB",
   "Sync",
   "Attachments",
+  "Workflows",
   "Events",
 ] as const;
 
@@ -126,6 +128,12 @@ function ReadyPanel({
       // reactor without a store says so instead of rendering empty counts
       // (multi-reactor W3.4).
       return <AttachmentsTab reactor={reactor} />;
+    case "Workflows":
+      // Reuses Workflow Studio's standalone runtime client against the
+      // reactor's workflow-runtime subgraph. The tab itself gates on kind and
+      // `serverInfo.workflows`, showing an "unavailable here" panel for a local
+      // reactor or a host with no workflow engine (multi-reactor §3).
+      return <WorkflowsTab reactor={reactor} />;
     case "Sync":
       return (
         <>

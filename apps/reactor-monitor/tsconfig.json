@@ -19,6 +19,9 @@
     },
     {
       "path": "../../packages/reactor-router"
+    },
+    {
+      "path": "../../packages/workflow"
     }
   ]
 }
