@@ -102,12 +102,9 @@ describe("base-reducer 2", () => {
 
       await execute([at("x", -20_000)]);
       await execute([at("w", -10_000)]);
-      // After the RETRACT's stamp, so the RETRACT sorts first, not y.
-      await execute([at("y", -50_000)]);
+      await execute([at("y", -120_000)]);
       await execute([undo()]);
       expect(ids(await module.reactor.get(docId))).toEqual(["x", "w"]);
-
-      // The rewind reaches the live RETRACT, which sorts first and takes skip 4.
 
       // The rewind reaches the live NOOP, which sorts first and takes skip 4.
       const z = at("z", -30_000);
