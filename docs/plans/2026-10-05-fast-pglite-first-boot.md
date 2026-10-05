@@ -192,3 +192,8 @@ that justified the budgets by initdb's sync count were rewritten.
   its own.
 - `durable-node-fs-pg16.test.ts` changes only its budget comment; the fresh
   PG16 initdb on 0.2.17 takes the same first-`syncToFs` path and passes.
+- `packages/reactor-api/src/pglite/sync-tree.ts:39` (`syncFile`) — files are
+  opened `r+`, not `r` — Windows refuses `FlushFileBuffers` on a read-only
+  handle with `EPERM`; `check-windows` failed every boot and conversion test
+  on the first head that carried the tree sync.
+

@@ -34,8 +34,9 @@ export function syncTree(
   return result;
 }
 
+// Windows refuses FlushFileBuffers on a read-only handle (EPERM).
 function syncFile(file: string, hostFs: SyncTreeHostFs): void {
-  const fd = nodeFs.openSync(file, "r");
+  const fd = nodeFs.openSync(file, "r+");
   try {
     hostFs.fsyncSync(fd);
   } finally {
