@@ -96,7 +96,8 @@ async function dbState(dataDir: string): Promise<number> {
   return ctl.readUInt32LE(DB_STATE_OFFSET);
 }
 
-describe("convertSnapshotDir", { timeout: 90_000 }, () => {
+// 180 s: the Windows runner scans first-seen files; a fresh initdb there took 68 s.
+describe("convertSnapshotDir", { timeout: 180_000 }, () => {
   let templateDir: string;
   let root: string;
   let dir: string;
