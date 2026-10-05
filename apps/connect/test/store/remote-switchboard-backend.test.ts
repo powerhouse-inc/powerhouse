@@ -1,38 +1,157 @@
+import type { BatchExecutionResult, JobInfo } from "@powerhousedao/reactor";
 import {
   isOperationNotSupported,
   ReactorOperationNotSupportedError,
 } from "@powerhousedao/reactor-router";
-import { describe, expect, it } from "vitest";
+import { GraphQLReactorClient } from "@powerhousedao/reactor-browser";
+import type {
+  ISigner,
+  PHDocument,
+  Signature,
+} from "@powerhousedao/shared/document-model";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRemoteSwitchboardBackend } from "../../src/store/remote-switchboard-backend.js";
 
-function backendClient() {
+const signature: Signature = ["1", "app-key", "v2:hash", "", "0xsig"];
+
+/** A signer whose signAction records a call and returns a fixed tuple. */
+function fakeSigner(): ISigner {
+  return {
+    user: { address: "0x1", networkId: "eip155", chainId: 1 },
+    app: { name: "test", key: "app-key" },
+    signAction: vi.fn().mockResolvedValue(signature),
+  } as unknown as ISigner;
+}
+
+function backendClient(signer: ISigner = fakeSigner()) {
   return createRemoteSwitchboardBackend({
     name: "switchboard-remote",
     graphqlUrl: "http://localhost:4001/graphql",
+    signer,
   }).client;
 }
 
-describe("remote Switchboard backend drives sub-proxy", () => {
-  it("await client.drives resolves to the drives proxy and does not reject", async () => {
+/** A completed job so DriveClient.runJobs' waitForJob sees no failure. */
+const completedJob = (id: string): JobInfo =>
+  ({
+    id,
+    documentId: "d",
+    status: "READ_READY",
+    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+      coordinates: [],
+    },
+    meta: { batchId: id, batchJobIds: [id] },
+  }) as unknown as JobInfo;
+
+const batchResult: BatchExecutionResult = {
+  jobs: { j: completedJob("job-1") },
+};
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("remote Switchboard backend drives", () => {
+  it("serves client.drives as the reference DriveClient, not a throwing stub", async () => {
     const client = backendClient();
 
-    // Before the `then` guard on the sub-proxy, resolving `client.drives` saw a
-    // throwing `then` stub, treated the object as a thenable, and rejected with
-    // a 'not supported' error. It must resolve to the proxy object instead.
-    // Promise.resolve routes through the same thenable detection `await` uses.
     const drives = await Promise.resolve(client.drives);
 
     expect(drives).toBeDefined();
-    expect(typeof drives).toBe("object");
+    // The reference DriveClient's choreography methods are real functions now,
+    // where the old stub threw a not-supported signal for every one of them.
+    expect(typeof drives.removeNode).toBe("function");
+    expect(typeof drives.addFolder).toBe("function");
+    expect(typeof drives.addFile).toBe("function");
   });
 
-  it("still refuses a real drives method by name", () => {
-    const client = backendClient();
-    const drives = client.drives as unknown as { addDrive: () => unknown };
+  it("removeNode of a file issues the batch mutation and signs with the threaded signer", async () => {
+    const signer = fakeSigner();
+    const client = backendClient(signer);
 
-    expect(() => drives.addDrive()).toThrow(
-      /does not support "drives\.addDrive"/,
-    );
+    const drive = {
+      header: { id: "drive-1" },
+      state: {
+        global: {
+          nodes: [
+            { id: "file-1", kind: "file", name: "f", parentFolder: null },
+          ],
+        },
+      },
+    } as unknown as PHDocument;
+
+    vi.spyOn(GraphQLReactorClient.prototype, "get").mockResolvedValue(drive);
+    const executeBatch = vi
+      .spyOn(GraphQLReactorClient.prototype, "executeBatch")
+      .mockResolvedValue(batchResult);
+
+    await client.drives.removeNode("drive-1", "file-1");
+
+    // removeFileNode runs two batches: the drive's DELETE_NODE, then the
+    // document delete plus the relationship removal.
+    expect(executeBatch).toHaveBeenCalled();
+    // The jobs carry signed actions: the threaded signer was used.
+    expect(
+      (signer.signAction as ReturnType<typeof vi.fn>).mock.calls.length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("addFolder uses execute, never the batch mutation", async () => {
+    const client = backendClient();
+
+    const execute = vi
+      .spyOn(GraphQLReactorClient.prototype, "execute")
+      .mockImplementation(((
+        _id: string,
+        _branch: string,
+        actions: unknown[],
+      ) => {
+        const input = (actions[0] as { input: { id: string; name: string } })
+          .input;
+        return Promise.resolve({
+          header: { id: "drive-1" },
+          state: {
+            global: {
+              nodes: [
+                {
+                  id: input.id,
+                  kind: "folder",
+                  name: input.name,
+                  parentFolder: null,
+                },
+              ],
+            },
+          },
+        } as unknown as PHDocument);
+      }) as never);
+    const executeBatch = vi
+      .spyOn(GraphQLReactorClient.prototype, "executeBatch")
+      .mockResolvedValue(batchResult);
+
+    const node = await client.drives.addFolder("drive-1", "My Folder");
+
+    expect(node.name).toBe("My Folder");
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(executeBatch).not.toHaveBeenCalled();
+  });
+
+  it("wires the IReactor shim's executeBatch to the GraphQL client", async () => {
+    const client = backendClient();
+    const executeBatch = vi
+      .spyOn(GraphQLReactorClient.prototype, "executeBatch")
+      .mockResolvedValue(batchResult);
+
+    const result = await (
+      client as unknown as {
+        executeBatch: (request: unknown) => Promise<BatchExecutionResult>;
+      }
+    ).executeBatch({ jobs: [] });
+
+    expect(executeBatch).toHaveBeenCalledTimes(1);
+    expect(result).toBe(batchResult);
   });
 });
 
@@ -187,7 +306,9 @@ describe("remote Switchboard backend unsupported-operation signal", () => {
     const typed = thrown as ReactorOperationNotSupportedError;
     expect(typed.backend).toBe("switchboard-remote");
     expect(typed.operation).toBe("addRelationship");
-    // The helpful served-methods message content is preserved.
-    expect(typed.message).toMatch(/get, subscribe, execute/);
+    // The helpful served-methods message content is preserved, and now names
+    // the batch surface the backend gained.
+    expect(typed.message).toMatch(/get, isServed, subscribe, execute/);
+    expect(typed.message).toMatch(/executeBatch/);
   });
 });

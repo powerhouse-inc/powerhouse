@@ -546,6 +546,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         localClient: reactorClientModule.client,
         localKind: reactorClientModule.kind === "worker" ? "worker" : "browser",
         remoteGraphqlUrl,
+        signer: renown.signer,
         documentModels: documentModelModules,
       });
     },

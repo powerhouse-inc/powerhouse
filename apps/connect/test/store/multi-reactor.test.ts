@@ -1,4 +1,5 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 import { RoutingReactorClient } from "@powerhousedao/reactor-router";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -17,6 +18,15 @@ import { remoteSwitchboardCapabilities } from "../../src/store/remote-switchboar
 // fake carries one; the default-path assertions only need object identity.
 function fakeLocalClient(): IReactorClient {
   return { marker: "local", drives: {} } as unknown as IReactorClient;
+}
+
+/** A stand-in signer; the builder only stores it, never calls it here. */
+function fakeSigner(): ISigner {
+  return {
+    user: { address: "0x1", networkId: "eip155", chainId: 1 },
+    app: { name: "test", key: "app-key" },
+    signAction: () => Promise.reject(new Error("not called")),
+  } as unknown as ISigner;
 }
 
 describe("selectAppReactorClient (default path is unchanged)", () => {
@@ -45,6 +55,7 @@ describe("selectAppReactorClient (default path is unchanged)", () => {
       localClient,
       localKind: "worker",
       remoteGraphqlUrl: "http://localhost:4001/graphql",
+      signer: fakeSigner(),
     });
 
     const client = selectAppReactorClient({
@@ -76,6 +87,7 @@ describe("buildMultiReactorClient", () => {
       localClient: fakeLocalClient(),
       localKind: "worker",
       remoteGraphqlUrl: "http://localhost:4001/graphql",
+      signer: fakeSigner(),
     });
 
     expect(router).toBeInstanceOf(RoutingReactorClient);

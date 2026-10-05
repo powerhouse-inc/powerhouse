@@ -23,7 +23,10 @@ import {
   type ReactorCapabilities,
 } from "@powerhousedao/reactor-router";
 import { getSwitchboardGatewayUrlFromDriveUrl } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
 import { createRemoteSwitchboardBackend } from "./remote-switchboard-backend.js";
 
 /** The in-browser reactor backend's router name. */
@@ -64,6 +67,8 @@ export type MultiReactorBuildParams = {
   localKind: LocalReactorKind;
   /** The remote Switchboard's reactor GraphQL endpoint (`<origin>/graphql`). */
   remoteGraphqlUrl: string;
+  /** Signs the remote backend's drive edits; the logged-in Renown user. */
+  signer: ISigner;
   /** Models the remote backend signs batches with. */
   documentModels?: readonly DocumentModelModule[];
 };
@@ -91,6 +96,7 @@ export function buildMultiReactorClient(
   const remote = createRemoteSwitchboardBackend({
     name: REMOTE_BACKEND_NAME,
     graphqlUrl: params.remoteGraphqlUrl,
+    signer: params.signer,
     documentModels: params.documentModels,
   });
   const remoteBackend: ReactorBackend = {

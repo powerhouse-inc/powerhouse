@@ -5,14 +5,19 @@
  * remote reactor's client, and adapts it to the full `IReactorClient` the
  * router's `ReactorBackend` requires. The client serves the read/write document
  * surface the Switchboard GraphQL schema exposes -- get, subscribe, execute,
- * getOperations, create, deleteDocument, `find`, and the four relationship
- * reads -- which this module delegates; every member the schema does NOT expose
- * (drive choreography, jobs, batches, relationship WRITES) throws a typed
- * {@link ReactorOperationNotSupportedError} naming the backend and the member,
- * rather than resolving to a silent wrong answer. That honest-degradation
- * posture is deliberate -- the same one reactor-monitor's remote `unwired.ts`
- * takes -- because a stub that read green while nothing worked is the exact
- * failure mode this initiative exists to stamp out.
+ * getOperations, create, deleteDocument, `find`, the four relationship reads,
+ * and now the batch surface (executeBatch, waitForJob, the create defaults and
+ * setPreferredEditor) -- which this module delegates. Drive choreography is
+ * served by handing those delegated primitives to the reference `DriveClient`
+ * over a thin GraphQL-backed `IReactor` shim, so a remote drive edit runs the
+ * same tested logic as a local one with no duplication. Every member still NOT
+ * expressible over the schema (relationship WRITES, loadBatch, the rest of
+ * `IReactor`) throws a typed {@link ReactorOperationNotSupportedError} naming
+ * the backend and the member, rather than resolving to a silent wrong answer.
+ * That honest-degradation posture is deliberate -- the same one
+ * reactor-monitor's remote `unwired.ts` takes -- because a stub that read green
+ * while nothing worked is the exact failure mode this initiative exists to
+ * stamp out.
  *
  * `find` over GraphQL enumerates remote drives, so a remote reactor is now a
  * contributing backend in the router's collection-spanning fan-in rather than
@@ -30,8 +35,10 @@
  * type.
  */
 import {
+  DriveClient,
   POLLING_CHANNEL_TYPE,
-  type IDriveClient,
+  type BatchExecutionRequest,
+  type IReactor,
   type IReactorClient,
   type SearchFilter,
   type ViewFilter,
@@ -46,7 +53,11 @@ import type {
   ReactorCapabilities,
 } from "@powerhousedao/reactor-router";
 import type { BearerTokenProvider } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
+import { logger } from "document-model";
 
 /**
  * The `IReactorClient` members the GraphQL client serves by straight delegation.
@@ -62,17 +73,30 @@ const DELEGATED_METHODS: ReadonlySet<string> = new Set([
   "isServed",
   "subscribe",
   "execute",
+  "executeBatch",
   "getOperations",
   "create",
   "deleteDocument",
+  "waitForJob",
+  "getCreateSignaturePolicy",
+  "getCreateProtocolVersions",
+  "setPreferredEditor",
   "getOutgoingRelationships",
   "getIncomingRelationships",
   "getOutgoingRelationshipEdges",
   "getIncomingRelationshipEdges",
 ]);
 
-/** The read members served, for the not-supported message's served-list. */
-const SERVED_METHODS: readonly string[] = [...DELEGATED_METHODS, "find"];
+/**
+ * The members served, for the not-supported message's served-list. `find` is
+ * served specially (see {@link asFullReactorClient}); `drives` is served by the
+ * reference {@link DriveClient}, built over the delegated batch primitives.
+ */
+const SERVED_METHODS: readonly string[] = [
+  ...DELEGATED_METHODS,
+  "find",
+  "drives",
+];
 
 /**
  * A remote reactor reached over HTTP/GraphQL is not this process's to open,
@@ -99,6 +123,12 @@ export type RemoteSwitchboardBackendOptions = {
   name: string;
   /** The Switchboard's reactor GraphQL endpoint, e.g. `<origin>/graphql`. */
   graphqlUrl: string;
+  /**
+   * Signs the actions the remote `DriveClient` and the GraphQL client push.
+   * Threaded from the logged-in Renown user at the build site; ambient signing
+   * would resolve the same signer, so this makes the dependency explicit.
+   */
+  signer: ISigner;
   /** Models the client signs multi-action batches with. */
   documentModels?: readonly DocumentModelModule[];
   /** Defaults to the ambient Renown token provider (the logged-in user). */
@@ -106,18 +136,53 @@ export type RemoteSwitchboardBackendOptions = {
 };
 
 /**
- * Wraps a 6-method `GraphQLReactorClient` as a complete `IReactorClient`.
+ * A thin `IReactor` shim backed by the GraphQL client, for the reference
+ * `DriveClient` to run batch choreography over.
+ *
+ * `executeBatch` is the single `IReactor` member `DriveClient` touches (see
+ * `packages/reactor/src/client/drive-client.ts` `runJobs`); every other member
+ * is refused by name so a reach this backend did not foresee fails loudly
+ * rather than returning a silent wrong answer.
+ */
+function asReactorShim(
+  gql: GraphQLReactorClient,
+  notSupported: (member: string, reason?: string) => never,
+): IReactor {
+  return new Proxy({} as IReactor, {
+    get(_target, prop) {
+      if (prop === "executeBatch") {
+        return (request: BatchExecutionRequest, signal?: AbortSignal) =>
+          gql.executeBatch(request, signal);
+      }
+      if (typeof prop !== "string" || prop === "then") {
+        return undefined;
+      }
+      return (..._args: unknown[]) => notSupported(`reactor.${prop}`);
+    },
+  });
+}
+
+/**
+ * Wraps the `GraphQLReactorClient` as a complete `IReactorClient`.
  *
  * A Proxy rather than a hand-written 25-method class: the codebase's own RPC
  * layer (`reactor-browser/src/rpc/client-proxy.ts`) is built the same way, and a
  * Proxy keeps the one honest rule in one place -- delegate what the GraphQL
- * client serves, refuse everything else by name -- instead of 20 near-identical
+ * client serves, refuse everything else by name -- instead of near-identical
  * throwing stubs. `then`/symbol reads resolve to undefined so the object is not
  * mistaken for a thenable by `await` or a promise check.
+ *
+ * `drives` is the reference {@link DriveClient}, handed this very proxy as its
+ * read/write client and the GraphQL-backed {@link asReactorShim} as its reactor,
+ * so a remote drive edit runs the same tested choreography as a local one with
+ * no duplication. Its `resolveReference` is the identity: the remote resolves an
+ * id or slug through `get`/`find` at the point of use, so a reference is handed
+ * back unchanged rather than resolved against a local view.
  */
 function asFullReactorClient(
   gql: GraphQLReactorClient,
   backendName: string,
+  signer: ISigner,
 ): IReactorClient {
   const notSupported = (member: string, reason?: string): never => {
     throw new ReactorOperationNotSupportedError({
@@ -127,7 +192,7 @@ function asFullReactorClient(
         reason ??
         `its GraphQL client serves only ${SERVED_METHODS.join(
           ", ",
-        )} in the router v1 document surface (multi-reactor stage 4, WP-E)`,
+        )} in the router document surface (multi-reactor stage 4, WP-E)`,
     });
   };
 
@@ -149,19 +214,7 @@ function asFullReactorClient(
     return (gql.find as (...callArgs: unknown[]) => unknown)(...args);
   };
 
-  const drives = new Proxy({} as IDriveClient, {
-    get(_target, prop) {
-      // `then`/symbol reads resolve to undefined so `await client.drives` does
-      // not treat this sub-proxy as a thenable (and reject spuriously); the
-      // outer client proxy guards `then` the same way.
-      if (typeof prop !== "string" || prop === "then") {
-        return undefined;
-      }
-      return () => notSupported(`drives.${prop}`);
-    },
-  });
-
-  return new Proxy({} as IReactorClient, {
+  const client: IReactorClient = new Proxy({} as IReactorClient, {
     get(_target, prop) {
       if (typeof prop !== "string" || prop === "then") {
         return undefined;
@@ -181,6 +234,16 @@ function asFullReactorClient(
       return (..._args: unknown[]) => notSupported(prop);
     },
   });
+
+  const drives = new DriveClient(
+    client,
+    logger,
+    asReactorShim(gql, notSupported),
+    signer,
+    (id: string) => Promise.resolve(id),
+  );
+
+  return client;
 }
 
 /** Builds the remote-Switchboard backend the router routes remote drives to. */
@@ -191,10 +254,11 @@ export function createRemoteSwitchboardBackend(
     url: options.graphqlUrl,
     documentModels: options.documentModels,
     tokenProvider: options.tokenProvider,
+    signer: options.signer,
   });
   return {
     name: options.name,
-    client: asFullReactorClient(gql, options.name),
+    client: asFullReactorClient(gql, options.name, options.signer),
     capabilities: remoteSwitchboardCapabilities(),
   };
 }
