@@ -132,7 +132,7 @@ describe("read-only over documents at an unsupported base-reducer version", () =
         ? b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7])
         : b
             .withKysely(db)
-            .withExecutorConfig({ featureFlags: { undoV3: true } as never }),
+            .withExecutorConfig({ featureFlags: { undoV3: true } }),
     );
     const { reactor } = wide;
     await succeeded(
@@ -248,7 +248,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     });
 
     const narrow = await build((b) =>
-      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+      b
+        .withKysely(db)
+        .withUnsupportedStoredDocuments("read-only")
+        .withExecutorConfig({ featureFlags: { undoV3: false } }),
     );
     const { reactor } = narrow;
     const sweeps = await narrow.catchUp.sweepNow();
