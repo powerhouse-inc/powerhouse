@@ -39,6 +39,7 @@ export default defineConfig({
       "connect/shared-deps.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-signature.test.ts",
+      "document-model/action-timestamp.test.ts",
       "document-model/action-transport.test.ts",
       "document-model/base-reducer-version.test.ts",
       "document-model/files.test.ts",
