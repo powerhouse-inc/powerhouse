@@ -329,16 +329,19 @@ export type ReactorOperationNotSupportedDetails = {
  * client serves only a subset of `IReactorClient` and the member asked for is
  * outside it.
  *
- * This is categorically NOT a failure. A fan-in read that reaches a backend
- * which cannot serve the read treats that backend as NOT APPLICABLE to the read
- * and EXCLUDES it from the union (surfacing the exclusion through the router's
- * diagnostic), rather than raising {@link FanInPartialFailureError} -- because a
- * backend that was never going to answer is not evidence the result is
- * incomplete, where a CAPABLE backend that errors at runtime is. That
- * distinction is the whole point: the capability contract drives routing, so a
- * capability-limited backend cannot brick a fan-in the way a generic throw
- * would (multi-reactor motivation 3: capability variance is modelled, not
- * papered over).
+ * Whether this is a tolerable exclusion or a hard failure is decided PER READ,
+ * not blanket. A read that legitimately unions whatever capable backends hold
+ * (`find`) opts to TOLERATE it: the backend is NOT APPLICABLE, excluded from the
+ * union and surfaced through the router's diagnostic, rather than raised as a
+ * {@link FanInPartialFailureError} -- a backend that was never going to answer
+ * is not evidence that read is incomplete, where a CAPABLE backend erroring at
+ * runtime is. A read whose answer would be CONFIDENTLY WRONG if a backend were
+ * silently dropped (a boolean existence read, an owner-only relationship read)
+ * does NOT tolerate it and fails loud instead. The capability contract drives
+ * routing either way (multi-reactor motivation 3: capability variance is
+ * modelled, not papered over); what varies is whether a given read can be
+ * answered from the capable backends alone. See `fanIn`'s `tolerateNotSupported`
+ * option and the call sites in `client.ts`.
  *
  * **The message carries the code** -- it opens with {@link OPERATION_NOT_SUPPORTED_CODE} --
  * so the signal survives a structured-clone/RPC boundary that keeps only `name`
@@ -367,12 +370,32 @@ export class ReactorOperationNotSupportedError extends Error {
 }
 
 /**
- * Whether a thrown value is a {@link ReactorOperationNotSupportedError} in any
- * of the forms that survive the trip: the live instance (same realm, the
- * common case), an error whose name is `ReactorOperationNotSupportedError`, or
- * any error whose message carries {@link OPERATION_NOT_SUPPORTED_CODE} (the
- * structured-clone/RPC case). Anything else is `false` and is treated as a
- * genuine failure.
+ * The FULL structured shape {@link ReactorOperationNotSupportedError}'s message
+ * opens with -- not merely the code prefix. Recognising the typed error across
+ * the RPC boundary by this pattern rather than by a bare
+ * `startsWith("operation-not-supported:")` is what stops a genuine runtime
+ * error whose message happens to begin with that text from being silently
+ * swallowed as a by-contract limitation (a false positive is silent data loss;
+ * a false negative merely fails loud). It mirrors {@link MESSAGE_FIELD_PATTERN}
+ * for {@link WrongBackendError} and is held no looser.
+ */
+const OPERATION_NOT_SUPPORTED_MESSAGE_PATTERN =
+  /^operation-not-supported: backend "[^"]*" does not support "[^"]*"/;
+
+/**
+ * Whether a thrown value is a {@link ReactorOperationNotSupportedError}.
+ *
+ * Recognised IN-REALM by its prototype (`instanceof`, the common case: the
+ * remote backend throws it synchronously in the router's own realm) or by an
+ * explicit structured `code` property. Only across the KNOWN
+ * RPC/structured-clone boundary -- where the class identity and own properties
+ * are lost and an error arrives as a plain `{ name, message }` -- does it fall
+ * back to the carried signal: the error's `name`, or the FULL structured
+ * message pattern. This mirrors exactly how {@link misrouteOf} recognises
+ * {@link WrongBackendError} across that same boundary, and no looser: a prefix
+ * match on the code would let a coincidental genuine error be swallowed, so the
+ * tightening prefers a false negative (fail loud) over a false positive (silent
+ * exclude). Anything else is `false` and is treated as a genuine failure.
  */
 export function isOperationNotSupported(value: unknown): boolean {
   if (value instanceof ReactorOperationNotSupportedError) {
@@ -381,37 +404,66 @@ export function isOperationNotSupported(value: unknown): boolean {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const candidate = value as { name?: unknown; message?: unknown };
+  const candidate = value as {
+    name?: unknown;
+    code?: unknown;
+    message?: unknown;
+  };
+  if (candidate.code === OPERATION_NOT_SUPPORTED_CODE) {
+    return true;
+  }
   if (candidate.name === "ReactorOperationNotSupportedError") {
     return true;
   }
   return (
     typeof candidate.message === "string" &&
-    candidate.message.startsWith(`${OPERATION_NOT_SUPPORTED_CODE}:`)
+    OPERATION_NOT_SUPPORTED_MESSAGE_PATTERN.test(candidate.message)
   );
 }
 
+/** One backend a fan-in deliberately excluded as not applicable, with why. */
+export type FanInExclusion = {
+  readonly backend: string;
+  readonly reason: string;
+};
+
 /**
- * A strict fan-in lost a backend. Carries what DID answer, because a caller
- * that can act on a partial page should be able to -- but it has to opt into
- * knowing the page is partial, rather than being handed a short list that looks
- * complete.
+ * A fan-in could not produce a trustworthy result. Carries what DID answer,
+ * because a caller that can act on a partial page should be able to -- but it
+ * has to opt into knowing the page is partial, rather than being handed a short
+ * list that looks complete.
  *
- * A backend EXCLUDED for being not applicable to the operation
- * ({@link ReactorOperationNotSupportedError}) is never one of these failures:
- * it is excluded and surfaced, never counted as incompleteness.
+ * Three causes reach here: a CAPABLE backend that errored at runtime under
+ * `strict` (named in {@link failures}); a backend that could not serve the read
+ * by contract that this particular read did NOT opt to tolerate (also in
+ * {@link failures}); and the all-excluded case, where every backend declined
+ * the read by contract so nothing answered ({@link failures} empty). In every
+ * case {@link excluded} names the backends that WERE tolerated and dropped, so
+ * a caller acting on a partial page can see that whole backends were left out,
+ * not only read it from the diagnostic log.
  */
 export class FanInPartialFailureError extends Error {
   constructor(
     readonly operation: string,
     readonly failures: readonly { backend: string; error: unknown }[],
     readonly partial: unknown,
+    readonly excluded: readonly FanInExclusion[],
   ) {
     const named = failures
       .map((failure) => `${failure.backend}: ${messageOf(failure.error)}`)
       .join("; ");
+    const excludedNote =
+      excluded.length === 0
+        ? ""
+        : ` (also excluded as not applicable: ${excluded
+            .map((entry) => `${entry.backend}: ${entry.reason}`)
+            .join("; ")})`;
+    const cause =
+      failures.length === 0
+        ? "every backend was excluded as not applicable, so none answered"
+        : `so its result would be silently incomplete (${named})`;
     super(
-      `${operation} could not be answered by every backend, so its result would be silently incomplete (${named})`,
+      `${operation} could not be answered by every backend, ${cause}${excludedNote}`,
     );
     this.name = "FanInPartialFailureError";
   }

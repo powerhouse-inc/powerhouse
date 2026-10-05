@@ -6,6 +6,7 @@ import {
   messageOf,
   rejectedWith,
   rethrow,
+  type FanInExclusion,
 } from "./errors.js";
 import type { ReactorBackend, RouterDiagnostic } from "./types.js";
 
@@ -77,7 +78,7 @@ export function decodeFanInCursor(cursor: string): readonly BackendCursor[] {
 }
 
 /**
- * How a fan-in treats a backend that fails.
+ * How a fan-in treats a CAPABLE backend that fails at runtime.
  *
  * - `strict`: every CAPABLE backend must answer, and a genuine failure is
  *   raised as a {@link FanInPartialFailureError} carrying what did answer. For
@@ -89,22 +90,28 @@ export function decodeFanInCursor(cursor: string): readonly BackendCursor[] {
  *   owner holds, so every other backend SHOULD fail, and treating that as a
  *   partial result would make the operation impossible. If EVERY backend fails,
  *   the first failure is raised: an all-fail is not a tolerable silence.
- *
- * **In BOTH modes, a backend that is NOT APPLICABLE to the operation -- one
- * that declares by contract it cannot serve this read, raising a
- * {@link ReactorOperationNotSupportedError} -- is EXCLUDED from the fan-in and
- * surfaced through `onDiagnostic`, never counted as a failure.** The result is
- * the union of the CAPABLE backends' answers. This is the distinction that lets
- * a capability-limited backend (a remote Switchboard whose GraphQL client
- * serves only a document subset) sit behind the router without bricking every
- * collection-spanning read, while a CAPABLE backend that errors at runtime
- * still raises loud under `strict`.
  */
 export type FanInMode = "strict" | "tolerant";
 
+/**
+ * Options for one fan-in, carrying the two decisions that are made PER READ.
+ *
+ * `tolerateNotSupported` is the one the shared fan-in must NOT decide on its
+ * own: a backend that cannot serve the read by contract
+ * ({@link ReactorOperationNotSupportedError}) is EXCLUDED from the union and
+ * surfaced through `onDiagnostic` only when the CALLER opted in -- the case for
+ * `find`, which legitimately unions whatever capable backends hold. For a read
+ * whose answer would be confidently wrong if a backend were silently dropped,
+ * the caller leaves this `false`, and a not-supported from any participating
+ * backend fails loud (a {@link FanInPartialFailureError}) regardless of `mode`
+ * and regardless of what the other backends answered. Lifting the decision to
+ * the call site is what stops a boot fix for one read from corrupting every
+ * other fan-in read (multi-reactor stage 4 review).
+ */
 export type FanInOptions = {
   readonly mode: FanInMode;
   readonly onDiagnostic: RouterDiagnostic;
+  readonly tolerateNotSupported: boolean;
 };
 
 type Answer<T> = {
@@ -136,6 +143,7 @@ export async function fanIn<T>(
   const answers: Answer<T>[] = [];
   const failures: Failure[] = [];
   const excluded: Failure[] = [];
+  const notSupported: Failure[] = [];
   for (let i = 0; i < settled.length; i++) {
     const outcome = settled[i];
     const backend = participants[i];
@@ -145,29 +153,56 @@ export async function fanIn<T>(
     }
     const failure: Failure = { backend: backend.name, error: outcome.reason };
     if (isOperationNotSupported(outcome.reason)) {
-      excluded.push(failure);
+      if (options.tolerateNotSupported) {
+        excluded.push(failure);
+      } else {
+        notSupported.push(failure);
+      }
       continue;
     }
     failures.push(failure);
   }
-  // A not-applicable backend is surfaced in BOTH modes and never silently
-  // dropped, but it is NOT a failure: the result is the union of the capable
-  // backends, minus the ones that cannot serve this read by contract.
+  // A TOLERATED not-applicable backend is surfaced in both modes and never
+  // silently dropped, but it is not a failure: the result is the union of the
+  // capable backends, minus the ones this read opted to exclude by contract.
   for (const skip of excluded) {
     options.onDiagnostic(
       `${operation}: backend ${skip.backend} is not applicable to this read and was excluded from the fan-in (${messageOf(skip.error)})`,
       skip.error,
     );
   }
-  if (failures.length === 0) {
-    return answers;
+  // A not-supported this read did NOT opt to tolerate is a hard failure no mode
+  // may mask: the backend that could not answer might have held the only
+  // trustworthy answer, so a union of the others would be confidently wrong.
+  if (notSupported.length > 0) {
+    throw new FanInPartialFailureError(
+      operation,
+      notSupported,
+      answers.map((answer) => answer.value),
+      exclusionsOf(excluded),
+    );
   }
-  if (options.mode === "strict") {
+  if (options.mode === "strict" && failures.length > 0) {
     throw new FanInPartialFailureError(
       operation,
       failures,
       answers.map((answer) => answer.value),
+      exclusionsOf(excluded),
     );
+  }
+  // Every backend was excluded as not applicable and none answered: there is no
+  // union to return, so an all-excluded read is a HARD error, never an empty
+  // page -- even a read that opted to tolerate exclusions.
+  if (answers.length === 0 && failures.length === 0 && excluded.length > 0) {
+    throw new FanInPartialFailureError(
+      operation,
+      [],
+      [],
+      exclusionsOf(excluded),
+    );
+  }
+  if (failures.length === 0) {
+    return answers;
   }
   if (answers.length === 0) {
     rethrow(failures[0].error);
@@ -179,6 +214,76 @@ export async function fanIn<T>(
     );
   }
   return answers;
+}
+
+/** Reduces excluded backends to the name+reason the partial-failure carries. */
+function exclusionsOf(excluded: readonly Failure[]): readonly FanInExclusion[] {
+  return excluded.map((entry) => ({
+    backend: entry.backend,
+    reason: messageOf(entry.error),
+  }));
+}
+
+/**
+ * A boolean existence fan-in -- "does ANY backend answer true?".
+ *
+ * True wins outright: a backend that answered true settles the question, and a
+ * backend that could not answer cannot turn that true into a false. A FALSE,
+ * though, is only trustworthy when EVERY backend actually answered false. If any
+ * backend failed at runtime or cannot serve the read by contract, the honest
+ * result is unknown -- returning false would be a confidently-wrong negative (an
+ * id reported free, a document reported not served) exactly when a non-answering
+ * backend might have held it. So an all-false with any gap is raised as a
+ * {@link FanInPartialFailureError}, never silently reported as false. There is
+ * no `tolerateNotSupported` here: a not-supported backend is a gap like any
+ * other, because the answer this read owes cannot be given without it.
+ */
+export async function fanInExistence(
+  operation: string,
+  participants: readonly ReactorBackend[],
+  call: (backend: ReactorBackend) => Promise<boolean>,
+  onDiagnostic: RouterDiagnostic,
+): Promise<boolean> {
+  const settled = await Promise.allSettled(
+    participants.map((backend) => invoke(call, backend)),
+  );
+  const failures: Failure[] = [];
+  const excluded: Failure[] = [];
+  let answeredTrue = false;
+  for (let i = 0; i < settled.length; i++) {
+    const outcome = settled[i];
+    const backend = participants[i];
+    if (outcome.status === "fulfilled") {
+      if (outcome.value) {
+        answeredTrue = true;
+      }
+      continue;
+    }
+    const failure: Failure = { backend: backend.name, error: outcome.reason };
+    if (isOperationNotSupported(outcome.reason)) {
+      excluded.push(failure);
+    } else {
+      failures.push(failure);
+    }
+  }
+  if (answeredTrue) {
+    for (const gap of [...excluded, ...failures]) {
+      onDiagnostic(
+        `${operation}: backend ${gap.backend} could not answer, but another backend answered true (${messageOf(gap.error)})`,
+        gap.error,
+      );
+    }
+    return true;
+  }
+  if (failures.length > 0 || excluded.length > 0) {
+    throw new FanInPartialFailureError(
+      operation,
+      failures,
+      false,
+      exclusionsOf(excluded),
+    );
+  }
+  return false;
 }
 
 /**
@@ -266,7 +371,7 @@ export function pagedParticipants(
     return participants;
   }
   if (options.mode === "strict") {
-    throw new FanInPartialFailureError(operation, missing, participants);
+    throw new FanInPartialFailureError(operation, missing, participants, []);
   }
   for (const failure of missing) {
     options.onDiagnostic(
@@ -281,6 +386,7 @@ export type MergePagedOptions<T> = {
   readonly operation: string;
   readonly mode: FanInMode;
   readonly onDiagnostic: RouterDiagnostic;
+  readonly tolerateNotSupported: boolean;
   /** The identity two backends' copies of one document share. */
   readonly identify: (item: T) => string;
   readonly paging: PagingOptions | undefined;
@@ -345,7 +451,11 @@ export async function mergePaged<T>(
           : { cursor, limit };
       return call(backend, paging);
     },
-    { mode: options.mode, onDiagnostic: options.onDiagnostic },
+    {
+      mode: options.mode,
+      onDiagnostic: options.onDiagnostic,
+      tolerateNotSupported: options.tolerateNotSupported,
+    },
   );
 
   const results: T[] = [];

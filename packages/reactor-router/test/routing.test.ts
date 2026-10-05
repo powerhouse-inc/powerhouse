@@ -244,7 +244,7 @@ describe("fan-in reads through the client", () => {
     );
   });
 
-  it("merges relationship edges and tolerates the backends without the source", async () => {
+  it("routes a relationship read to the backend that owns the source, not fanning the non-owner", async () => {
     const { one, two, backends } = topology();
     one.seed(fakeDocument({ id: "source-doc" }));
     one.relationships.push({
@@ -259,17 +259,78 @@ describe("fan-in reads through the client", () => {
     expect(edges.results.map((edge) => edge.targetId)).toEqual([
       "target-on-one",
     ]);
-    // "two" was asked and legitimately could not answer; the read still works.
-    expect(two.called("getOutgoingRelationshipEdges")).toBe(true);
+    // The edges live on the owner; the non-owner is never asked, so it cannot
+    // contribute an empty answer that masks the owner's edges.
+    expect(one.called("getOutgoingRelationshipEdges")).toBe(true);
+    expect(two.called("getOutgoingRelationshipEdges")).toBe(false);
   });
 
-  it("answers isServed and isDocumentIdTaken from any backend", async () => {
-    const { backends } = topology();
+  it("fails loud on a relationship read whose owner cannot answer, rather than returning a silently-empty page", async () => {
+    const { one, backends } = topology();
+    // The owner holds the source but cannot serve the relationship read by
+    // contract (the capability-limited remote shape). The previous tolerant
+    // fan-in excluded the owner and returned the non-owner's empty edge set.
+    one.seed(fakeDocument({ id: "source-doc" }));
+    one.unsupported.add("getOutgoingRelationshipEdges");
+    const client = router(backends);
+
+    await expect(
+      client.getOutgoingRelationshipEdges("source-doc"),
+    ).rejects.toThrow();
+  });
+
+  it("answers isServed from any backend and fails loud rather than reporting a wrong not-served", async () => {
+    const { one, backends } = topology();
     const client = router(backends);
 
     await expect(client.isServed("drive-b")).resolves.toBe(true);
-    await expect(client.isDocumentIdTaken("drive-a")).resolves.toBe(true);
+    await expect(client.isServed("drive-a")).resolves.toBe(true);
     await expect(client.isServed("nowhere")).resolves.toBe(false);
+
+    // A backend that cannot answer, and no backend that served it: reporting
+    // false would be a confidently-wrong negative, so isServed fails loud.
+    one.unsupported.add("isServed");
+    const limited = router(backends);
+    await expect(
+      limited.isServed("an-id-no-backend-can-answer-for"),
+    ).rejects.toThrow(FanInPartialFailureError);
+  });
+
+  it("routes isDocumentIdTaken to the backend that holds the id, true when taken there", async () => {
+    const { backends } = topology();
+    const client = router(backends);
+
+    await expect(client.isDocumentIdTaken("drive-a")).resolves.toBe(true);
+    await expect(client.isDocumentIdTaken("drive-b")).resolves.toBe(true);
+  });
+
+  it("isDocumentIdTaken does not break on a local id when a capability-limited backend cannot answer", async () => {
+    // The Connect boot shape: a local reactor (primary) that answers, and a
+    // remote backend that cannot answer isDocumentIdTaken at all. A new id is
+    // held by no backend, so the check routes to the primary (local), which
+    // answers free -- the create proceeds, and the remote's incapacity never
+    // breaks it.
+    const local = new FakeReactor(
+      "connect-local",
+      inProcessCapabilities("connect-local"),
+    );
+    const remote = new FakeReactor(
+      "switchboard-remote",
+      inProcessCapabilities("switchboard-remote"),
+    );
+    remote.unsupported.add("isServed");
+    remote.unsupported.add("isDocumentIdTaken");
+    const client = new RoutingReactorClient(
+      [local.backend(), remote.backend()],
+      {
+        primaryBackend: "connect-local",
+        onDiagnostic: silent,
+      },
+    );
+
+    await expect(
+      client.isDocumentIdTaken("brand-new-local-drive"),
+    ).resolves.toBe(false);
   });
 
   it("de-duplicates a replicated document's change events", () => {

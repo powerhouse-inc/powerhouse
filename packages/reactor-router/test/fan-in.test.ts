@@ -7,6 +7,7 @@ import {
   decodeFanInCursor,
   encodeFanInCursor,
   fanIn,
+  fanInExistence,
   isFanInCursor,
   mergePaged,
   pagedParticipants,
@@ -52,7 +53,7 @@ describe("fan-in cursors", () => {
         "find",
         pool("one", "two"),
         { cursor: "42", limit: 10 },
-        { mode: "strict", onDiagnostic: silent },
+        { mode: "strict", onDiagnostic: silent, tolerateNotSupported: true },
       ),
     ).toThrow(InvalidFanInCursorError);
   });
@@ -62,7 +63,7 @@ describe("fan-in cursors", () => {
       "find",
       pool("only"),
       { cursor: "42", limit: 10 },
-      { mode: "strict", onDiagnostic: silent },
+      { mode: "strict", onDiagnostic: silent, tolerateNotSupported: true },
     );
 
     expect(participants).toHaveLength(1);
@@ -78,7 +79,7 @@ describe("fan-in cursors", () => {
       "find",
       backends,
       { cursor, limit: 5 },
-      { mode: "strict", onDiagnostic: silent },
+      { mode: "strict", onDiagnostic: silent, tolerateNotSupported: true },
     );
 
     expect(participants.map((entry) => entry.backend.name)).toEqual(["three"]);
@@ -97,7 +98,7 @@ describe("fan-in cursors", () => {
         "find",
         backends,
         { cursor, limit: 5 },
-        { mode: "strict", onDiagnostic: silent },
+        { mode: "strict", onDiagnostic: silent, tolerateNotSupported: true },
       ),
     ).toThrow(FanInPartialFailureError);
   });
@@ -114,7 +115,11 @@ describe("fan-in cursors", () => {
       "find",
       backends,
       { cursor, limit: 5 },
-      { mode: "tolerant", onDiagnostic: (message) => reported.push(message) },
+      {
+        mode: "tolerant",
+        onDiagnostic: (message) => reported.push(message),
+        tolerateNotSupported: true,
+      },
     );
 
     expect(participants.map((entry) => entry.backend.name)).toEqual(["two"]);
@@ -133,7 +138,7 @@ describe("fanIn", () => {
       "isServed",
       backends,
       (backend) => backend.client.isServed("doc-1"),
-      { mode: "strict", onDiagnostic: silent },
+      { mode: "strict", onDiagnostic: silent, tolerateNotSupported: false },
     );
 
     await expect(run).rejects.toThrow(FanInPartialFailureError);
@@ -153,6 +158,7 @@ describe("fanIn", () => {
       {
         mode: "tolerant",
         onDiagnostic: (message) => reported.push(message),
+        tolerateNotSupported: false,
       },
     );
 
@@ -179,7 +185,7 @@ describe("fanIn", () => {
       "isServed",
       [one.backend(), throwing],
       (backend) => backend.client.isServed("doc-1"),
-      { mode: "tolerant", onDiagnostic: silent },
+      { mode: "tolerant", onDiagnostic: silent, tolerateNotSupported: false },
     );
 
     expect(answers.map((answer) => answer.value)).toEqual([true]);
@@ -195,13 +201,13 @@ describe("fanIn", () => {
       "isServed",
       [one.backend(), two.backend()],
       (backend) => backend.client.isServed("doc-1"),
-      { mode: "tolerant", onDiagnostic: silent },
+      { mode: "tolerant", onDiagnostic: silent, tolerateNotSupported: false },
     );
 
     await expect(run).rejects.toThrow(/one: isServed is configured to fail/);
   });
 
-  it("excludes a backend that cannot serve the operation by contract and surfaces the exclusion, even under strict mode", async () => {
+  it("excludes a not-applicable backend only when the read opts to tolerate it, even under strict mode", async () => {
     const one = new FakeReactor("one", inProcessCapabilities("one"));
     one.seed(fakeDocument({ id: "doc-1" }));
     const two = new FakeReactor("two", inProcessCapabilities("two"));
@@ -214,17 +220,46 @@ describe("fanIn", () => {
       "isServed",
       [one.backend(), two.backend()],
       (backend) => backend.client.isServed("doc-1"),
-      { mode: "strict", onDiagnostic: (message) => reported.push(message) },
+      {
+        mode: "strict",
+        onDiagnostic: (message) => reported.push(message),
+        tolerateNotSupported: true,
+      },
     );
 
-    // Strict did NOT raise: a by-contract limitation is not incompleteness.
+    // Strict did NOT raise: a by-contract limitation the read tolerates is not
+    // incompleteness.
     expect(answers.map((answer) => answer.value)).toEqual([true]);
     expect(reported.join()).toMatch(
       /backend two is not applicable to this read and was excluded/,
     );
   });
 
-  it("still raises FanInPartialFailureError when a CAPABLE backend errors, naming only the genuine failure and not the excluded one", async () => {
+  it("fails loud on a not-supported backend the read did NOT opt to tolerate, even when another backend answered", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    one.seed(fakeDocument({ id: "doc-1" }));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    two.unsupported.add("isServed");
+
+    const run = fanIn(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      { mode: "tolerant", onDiagnostic: silent, tolerateNotSupported: false },
+    );
+
+    // one answered, but tolerateNotSupported is false: the excluded backend
+    // might have held the only trustworthy answer, so no mode may mask it.
+    await expect(run).rejects.toThrow(FanInPartialFailureError);
+    await run.catch((error: unknown) => {
+      const partial = error as FanInPartialFailureError;
+      expect(partial.failures.map((failure) => failure.backend)).toEqual([
+        "two",
+      ]);
+    });
+  });
+
+  it("still raises FanInPartialFailureError when a CAPABLE backend errors, naming only the genuine failure and carrying the excluded one", async () => {
     const one = new FakeReactor("one", inProcessCapabilities("one"));
     one.seed(fakeDocument({ id: "doc-1" }));
     const capable = new FakeReactor(
@@ -242,7 +277,7 @@ describe("fanIn", () => {
       "isServed",
       [one.backend(), capable.backend(), limited.backend()],
       (backend) => backend.client.isServed("doc-1"),
-      { mode: "strict", onDiagnostic: silent },
+      { mode: "strict", onDiagnostic: silent, tolerateNotSupported: true },
     );
 
     await expect(run).rejects.toThrow(FanInPartialFailureError);
@@ -251,27 +286,114 @@ describe("fanIn", () => {
       expect(partial.failures.map((failure) => failure.backend)).toEqual([
         "capable",
       ]);
+      // The excluded backend is carried for observability, not counted as a
+      // failure (defect #6).
+      expect(partial.excluded.map((entry) => entry.backend)).toEqual([
+        "limited",
+      ]);
     });
   });
 
-  it("returns the empty union, logged, when every backend is not applicable", async () => {
+  it("raises a hard error when every backend is not applicable, even for a read that tolerates exclusions (all-excluded)", async () => {
     const one = new FakeReactor("one", inProcessCapabilities("one"));
     const two = new FakeReactor("two", inProcessCapabilities("two"));
     one.unsupported.add("isServed");
     two.unsupported.add("isServed");
     const reported: string[] = [];
 
-    const answers = await fanIn(
+    const run = fanIn(
       "isServed",
       [one.backend(), two.backend()],
       (backend) => backend.client.isServed("doc-1"),
-      { mode: "strict", onDiagnostic: (message) => reported.push(message) },
+      {
+        mode: "strict",
+        onDiagnostic: (message) => reported.push(message),
+        tolerateNotSupported: true,
+      },
     );
 
-    expect(answers).toEqual([]);
+    // Zero backends answered: there is no union to return, so an all-excluded
+    // read is a hard error (defect #2), never an empty page.
+    await expect(run).rejects.toThrow(FanInPartialFailureError);
+    await run.catch((error: unknown) => {
+      const partial = error as FanInPartialFailureError;
+      expect(partial.failures).toEqual([]);
+      expect(partial.excluded.map((entry) => entry.backend)).toEqual([
+        "one",
+        "two",
+      ]);
+    });
+    // The exclusions are still logged, both modes.
     expect(
       reported.filter((message) => message.includes("not applicable")),
     ).toHaveLength(2);
+  });
+});
+
+describe("fanInExistence", () => {
+  it("returns true when any backend answers true, logging one that could not", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    one.seed(fakeDocument({ id: "doc-1" }));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    two.unsupported.add("isServed");
+    const reported: string[] = [];
+
+    const answer = await fanInExistence(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      (message) => reported.push(message),
+    );
+
+    // A true settles it; the non-answering backend cannot change that.
+    expect(answer).toBe(true);
+    expect(reported.join()).toMatch(/backend two could not answer/);
+  });
+
+  it("returns false only when every backend actually answered false", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+
+    const answer = await fanInExistence(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("nowhere"),
+      silent,
+    );
+
+    expect(answer).toBe(false);
+  });
+
+  it("fails loud instead of returning false when a backend could not answer by contract", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    // one does not serve it, two cannot answer at all: reporting false here
+    // would be a confidently-wrong negative when two might serve it.
+    two.unsupported.add("isServed");
+
+    const run = fanInExistence(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      silent,
+    );
+
+    await expect(run).rejects.toThrow(FanInPartialFailureError);
+  });
+
+  it("fails loud instead of returning false when a backend errored at runtime", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    two.failing.add("isServed");
+
+    const run = fanInExistence(
+      "isServed",
+      [one.backend(), two.backend()],
+      (backend) => backend.client.isServed("doc-1"),
+      silent,
+    );
+
+    await expect(run).rejects.toThrow(FanInPartialFailureError);
   });
 });
 
@@ -289,12 +411,14 @@ describe("mergePaged", () => {
       pagedParticipants("find", [one.backend(), two.backend()], undefined, {
         mode: "strict",
         onDiagnostic: silent,
+        tolerateNotSupported: true,
       }),
       (backend, paging) =>
         backend.client.find({ type: "test/doc" }, undefined, paging),
       {
         operation: "find",
         mode: "strict",
+        tolerateNotSupported: true,
         onDiagnostic: silent,
         identify: (document) => document.header.id,
         paging: undefined,
@@ -320,12 +444,14 @@ describe("mergePaged", () => {
       pagedParticipants("find", [one.backend(), two.backend()], undefined, {
         mode: "strict",
         onDiagnostic: (message) => reported.push(message),
+        tolerateNotSupported: true,
       }),
       (backend, paging) =>
         backend.client.find({ type: "test/doc" }, undefined, paging),
       {
         operation: "find",
         mode: "strict",
+        tolerateNotSupported: true,
         onDiagnostic: (message) => reported.push(message),
         identify: (document) => document.header.id,
         paging: undefined,
@@ -339,6 +465,33 @@ describe("mergePaged", () => {
     expect(reported.join()).toMatch(
       /find: backend two is not applicable to this read and was excluded/,
     );
+  });
+
+  it("raises a hard error when every backend cannot serve find (all-excluded)", async () => {
+    const one = new FakeReactor("one", inProcessCapabilities("one"));
+    const two = new FakeReactor("two", inProcessCapabilities("two"));
+    one.unsupported.add("find");
+    two.unsupported.add("find");
+
+    const run = mergePaged(
+      pagedParticipants("find", [one.backend(), two.backend()], undefined, {
+        mode: "strict",
+        onDiagnostic: silent,
+        tolerateNotSupported: true,
+      }),
+      (backend, paging) =>
+        backend.client.find({ type: "test/doc" }, undefined, paging),
+      {
+        operation: "find",
+        mode: "strict",
+        tolerateNotSupported: true,
+        onDiagnostic: silent,
+        identify: (document) => document.header.id,
+        paging: undefined,
+      },
+    );
+
+    await expect(run).rejects.toThrow(FanInPartialFailureError);
   });
 
   it("carries one cursor per backend and continues only those", async () => {
@@ -356,6 +509,7 @@ describe("mergePaged", () => {
     const options = {
       operation: "find" as const,
       mode: "strict" as const,
+      tolerateNotSupported: true,
       onDiagnostic: silent,
       identify: (document: { header: { id: string } }) => document.header.id,
       paging: { cursor: "", limit: 2 },
@@ -365,6 +519,7 @@ describe("mergePaged", () => {
       pagedParticipants("find", backends, options.paging, {
         mode: options.mode,
         onDiagnostic: options.onDiagnostic,
+        tolerateNotSupported: true,
       }),
       call,
       options,
@@ -428,11 +583,13 @@ describe("mergePaged", () => {
       pagedParticipants("find", [backend], undefined, {
         mode: "strict",
         onDiagnostic: silent,
+        tolerateNotSupported: true,
       }),
       call,
       {
         operation: "find",
         mode: "strict",
+        tolerateNotSupported: true,
         onDiagnostic: silent,
         identify: (document: { header: { id: string } }) => document.header.id,
         paging: undefined,

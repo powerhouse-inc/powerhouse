@@ -42,7 +42,7 @@ import {
   rethrow,
 } from "./errors.js";
 import {
-  fanIn,
+  fanInExistence,
   mergePaged,
   pagedParticipants,
   type FanInMode,
@@ -58,11 +58,6 @@ import {
 /** The identity two backends' copies of one document share. */
 function documentIdentity(document: PHDocument): string {
   return document.header.id;
-}
-
-/** The identity two backends' copies of one relationship edge share. */
-function relationshipIdentity(edge: DocumentRelationship): string {
-  return `${edge.sourceId}|${edge.relationshipType}|${edge.targetId}`;
 }
 
 /**
@@ -516,15 +511,32 @@ export class RoutingReactorClient implements IReactorClient {
     );
   }
 
-  /** True when ANY backend has the id: an id taken anywhere is taken. */
+  /**
+   * Routed to the single backend the id's placement resolves to, NOT fanned.
+   *
+   * The id-collision check belongs to the one backend a create targets: a
+   * document is placed on exactly one reactor, so "is this id already taken" is
+   * a question about THAT backend. This read is on a create/placement path --
+   * Connect's boot `addLocalDefaultDrive` and the imported-document create in
+   * reactor-browser both call it before creating -- so it must honour two
+   * invariants a fan-in cannot hold together here: it must never report an id
+   * free because a non-answering backend was silently excluded (a false clear
+   * lets a colliding create through), and it must never break a legitimate
+   * local create because a capability-limited remote backend cannot answer. A
+   * fan-in that silently excluded would violate the first; one that failed loud
+   * would violate the second. Routing to the backend that SERVES the id if one
+   * does, and otherwise to the PRIMARY (the local reactor, where a create
+   * defaults and which can always answer), asks the one backend where a
+   * collision actually matters and never routes the question to the
+   * capability-limited backend for an id nothing holds yet.
+   */
   async isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    const answers = await this.fan("isDocumentIdTaken", "tolerant", (backend) =>
-      backend.client.isDocumentIdTaken(documentId, signal),
-    );
-    return answers.includes(true);
+    const serving = await this.dispatcher.servingBackends(documentId);
+    const backend = serving.length > 0 ? serving[0] : this.dispatcher.primary;
+    return backend.client.isDocumentIdTaken(documentId, signal);
   }
 
   getOperations(
@@ -550,14 +562,22 @@ export class RoutingReactorClient implements IReactorClient {
   }
 
   /**
-   * Fanned in and merged: a v1 constraint makes a relationship WRITE
-   * single-reactor, but a relationship that two reactors each recorded one side
-   * of is readable from both, and a read that only asked the source's owner
-   * would hide the other side (plan: "cross-reactor relationships are
-   * READ-level only; reads merge").
+   * Routed to the backend that owns the NAMED document, NOT fanned.
    *
-   * Tolerant, because a backend that does not hold the source document is
-   * SUPPOSED to fail here -- see {@link FanInMode}.
+   * A relationship's edges are written as operations on the source document, so
+   * they live on exactly one backend: the owner of the document the read names
+   * (the source for an outgoing read, the target for an incoming one). Fanning
+   * this read tolerantly -- the previous design -- let a capability-limited
+   * backend be excluded while another backend holding a REPLICATED copy of the
+   * document answered an empty edge set, yielding a confidently-empty result
+   * that hid the owner's real edges. Routing to the owner removes that failure:
+   * a read of a local document routes to the local backend and works regardless
+   * of what the remote can serve (so no legitimate local read breaks), and a
+   * read of a document owned by a capability-limited backend fails loud there
+   * rather than returning another backend's empty. The cross-reactor read-merge
+   * the fan-in once aimed at is not reachable in this topology anyway -- a
+   * backend that cannot serve the relationship read contributes no edges to
+   * merge -- so routing to the owner loses nothing that worked.
    */
   getOutgoingRelationships(
     sourceIdentifier: string,
@@ -566,19 +586,18 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    return this.fanPaged(
+    return this.dispatcher.onDocument(
       "getOutgoingRelationships",
-      "tolerant",
-      documentIdentity,
-      paging,
-      (backend, backendPaging) =>
+      sourceIdentifier,
+      (backend) =>
         backend.client.getOutgoingRelationships(
           sourceIdentifier,
           relationshipType,
           view,
-          backendPaging,
+          paging,
           signal,
         ),
+      ATTEMPT.read,
     );
   }
 
@@ -589,19 +608,18 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    return this.fanPaged(
+    return this.dispatcher.onDocument(
       "getIncomingRelationships",
-      "tolerant",
-      documentIdentity,
-      paging,
-      (backend, backendPaging) =>
+      targetIdentifier,
+      (backend) =>
         backend.client.getIncomingRelationships(
           targetIdentifier,
           relationshipType,
           view,
-          backendPaging,
+          paging,
           signal,
         ),
+      ATTEMPT.read,
     );
   }
 
@@ -612,19 +630,18 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentRelationship>> {
-    return this.fanPaged(
+    return this.dispatcher.onDocument(
       "getOutgoingRelationshipEdges",
-      "tolerant",
-      relationshipIdentity,
-      paging,
-      (backend, backendPaging) =>
+      sourceIdentifier,
+      (backend) =>
         backend.client.getOutgoingRelationshipEdges(
           sourceIdentifier,
           relationshipType,
           view,
-          backendPaging,
+          paging,
           signal,
         ),
+      ATTEMPT.read,
     );
   }
 
@@ -635,19 +652,18 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentRelationship>> {
-    return this.fanPaged(
+    return this.dispatcher.onDocument(
       "getIncomingRelationshipEdges",
-      "tolerant",
-      relationshipIdentity,
-      paging,
-      (backend, backendPaging) =>
+      targetIdentifier,
+      (backend) =>
         backend.client.getIncomingRelationshipEdges(
           targetIdentifier,
           relationshipType,
           view,
-          backendPaging,
+          paging,
           signal,
         ),
+      ATTEMPT.read,
     );
   }
 
@@ -675,6 +691,7 @@ export class RoutingReactorClient implements IReactorClient {
     return this.fanPaged(
       "find",
       "strict",
+      true,
       documentIdentity,
       paging,
       (backend, backendPaging) =>
@@ -682,16 +699,30 @@ export class RoutingReactorClient implements IReactorClient {
     );
   }
 
-  /** True when ANY backend would serve it. */
-  async isServed(
+  /**
+   * True when ANY backend would serve it.
+   *
+   * A boolean existence read: a backend that answers true settles it, so a
+   * capability-limited backend that cannot answer does not change a definitive
+   * true. But a FALSE is only trustworthy when every backend actually answered
+   * false -- so an all-false where any backend could not answer fails loud
+   * rather than reporting not-served, which would be a confidently-wrong
+   * negative exactly when the non-answering backend might serve it. It is NOT
+   * on a boot/create path (the dispatcher's ownership probe calls each backend
+   * directly and tolerates a non-answer per backend), so failing loud here
+   * cannot re-brick boot.
+   */
+  isServed(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    const answers = await this.fan("isServed", "tolerant", (backend) =>
-      backend.client.isServed(identifier, view, signal),
+    return fanInExistence(
+      "isServed",
+      this.dispatcher.backends,
+      (backend) => backend.client.isServed(identifier, view, signal),
+      this.dispatcher.onDiagnostic,
     );
-    return answers.includes(true);
   }
 
   evaluateActions(
@@ -1267,20 +1298,10 @@ export class RoutingReactorClient implements IReactorClient {
     return `${event.type}|${documents}|${context.parentId ?? ""}|${context.childId ?? ""}|${context.purged === true ? "purged" : ""}`;
   }
 
-  private fan<T>(
-    operation: string,
-    mode: FanInMode,
-    call: (backend: ReactorBackend) => Promise<T>,
-  ): Promise<readonly T[]> {
-    return fanIn(operation, this.dispatcher.backends, call, {
-      mode,
-      onDiagnostic: this.dispatcher.onDiagnostic,
-    }).then((answers) => answers.map((answer) => answer.value));
-  }
-
   private fanPaged<T>(
     operation: string,
     mode: FanInMode,
+    tolerateNotSupported: boolean,
     identify: (item: T) => string,
     paging: PagingOptions | undefined,
     call: (
@@ -1292,11 +1313,16 @@ export class RoutingReactorClient implements IReactorClient {
       operation,
       this.dispatcher.backends,
       paging,
-      { mode, onDiagnostic: this.dispatcher.onDiagnostic },
+      {
+        mode,
+        onDiagnostic: this.dispatcher.onDiagnostic,
+        tolerateNotSupported,
+      },
     );
     return mergePaged(participants, call, {
       operation,
       mode,
+      tolerateNotSupported,
       onDiagnostic: this.dispatcher.onDiagnostic,
       identify,
       paging,
