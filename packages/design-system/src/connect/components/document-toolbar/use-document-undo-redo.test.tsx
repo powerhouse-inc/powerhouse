@@ -193,6 +193,30 @@ describe("useDocumentUndoRedo", () => {
       await waitFor(() => expect(client.redo).toHaveBeenCalledOnce());
     });
 
+    it("reads again after a failed availability read", async () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      client.undoRedoAvailability
+        .mockImplementationOnce(() => Promise.reject(new Error("offline")))
+        .mockImplementation(() =>
+          Promise.resolve({ canUndo: true, canRedo: false }),
+        );
+      state.document = makeDocument({ baseReducer: 3, global: 2 });
+      const first = renderHook(() => useDocumentUndoRedo("doc-1"));
+      await waitFor(() =>
+        expect(error).toHaveBeenCalledWith(
+          "Failed to read undo and redo availability:",
+          expect.any(Error),
+        ),
+      );
+      expect(first.result.current.canUndo).toBe(false);
+      first.unmount();
+
+      const second = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      await waitFor(() => expect(second.result.current.canUndo).toBe(true));
+      expect(client.undoRedoAvailability).toHaveBeenCalledTimes(2);
+    });
+
     it("logs a failed undo instead of rejecting", async () => {
       const error = vi.spyOn(console, "error").mockImplementation(() => {});
       client.undo.mockImplementation(() =>

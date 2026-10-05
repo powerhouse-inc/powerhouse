@@ -63,14 +63,17 @@ function readAvailability(
   }
   const cached = reads.get(documentId);
   if (cached?.revision === revision) return cached.read;
-  const read = client
+  const entry = { revision, read: Promise.resolve(UNAVAILABLE) };
+  entry.read = client
     .undoRedoAvailability(documentId, UNDO_SCOPE)
     .catch((error: unknown) => {
       console.error("Failed to read undo and redo availability:", error);
+      // A failure is not cached, so the next ask reads again.
+      if (reads.get(documentId) === entry) reads.delete(documentId);
       return UNAVAILABLE;
     });
-  reads.set(documentId, { revision, read });
-  return read;
+  reads.set(documentId, entry);
+  return entry.read;
 }
 
 // The undo or redo in flight per document, so presses run one after another
