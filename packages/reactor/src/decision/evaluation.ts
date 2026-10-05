@@ -305,15 +305,17 @@ export async function evaluateByPosition<M>(
         throw error;
       }
 
-      // Base-reducer 3 derives the stream by the rule, which reads its
-      // RETRACTs; elsewhere they stay unread, as before.
+      // Base-reducer 3 derives the stream by the rule over every row: a
+      // reshuffle's skip can sit on a row no filter keeps, and without it the
+      // rewound original survives as a duplicate. Elsewhere the read stays
+      // narrowed, as before.
       const reducerFor = isBaseReducer3(before.header)
         ? projection.scopeReducer?.(before)
         : undefined;
-      const actionTypes =
+      const filter =
         reducerFor === undefined
-          ? projection.decidingActions
-          : [...projection.decidingActions, "RETRACT"];
+          ? { actionTypes: projection.decidingActions }
+          : undefined;
 
       const streamOperations = (
         await operationStore.getSince(
@@ -321,7 +323,7 @@ export async function evaluateByPosition<M>(
           query.scope,
           query.branch,
           -1,
-          { actionTypes },
+          filter,
           undefined,
           signal,
         )
