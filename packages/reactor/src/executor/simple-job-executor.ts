@@ -3178,7 +3178,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       existingOpsToReshuffle.length === 0 && skipCount === 0
         ? incomingOpsToApply
             .slice()
-            .sort((a, b) => a.index - b.index)
+            .sort(
+              (a, b) =>
+                // A sender's reshuffle puts its rows out of timestamp order,
+                // and base-reducer 3 does not read the skip that orders them.
+                (baseReducer3
+                  ? Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs)
+                  : 0) || a.index - b.index,
+            )
             .map((operation, i) => ({
               ...operation,
               index: latestRevision + i,

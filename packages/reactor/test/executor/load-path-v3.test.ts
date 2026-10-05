@@ -31,7 +31,7 @@ function shape(stream: Operation[]): string {
 }
 
 describe("base-reducer 3", () => {
-  describe("a peer's NOOP on the load path", () => {
+  describe("the load path", () => {
     let module: InProcessReactorModule | undefined;
     let document: PHDocument;
     let docId: string;
@@ -145,6 +145,20 @@ describe("base-reducer 3", () => {
         "0:x/0 1:y/0 2:NOOP/0",
       );
       expect(await modules()).toEqual(["x", "y"]);
+      await assertOneRuleAgreement({ module: module!, document });
+    });
+
+    // The sender holds 0:w 1:y 2/1:x 3:y; its skip is not read here.
+    it("appends a sender's reshuffled rows in timestamp order", async () => {
+      await build();
+      await execute([at(addModule({ id: "w", name: "w" }), 0)]);
+
+      const x = at(addModule({ id: "x", name: "x" }), 10);
+      const y = at(addModule({ id: "y", name: "y" }), 20);
+      await load([asOperation(y, 1), asOperation(x, 2, 1), asOperation(y, 3)]);
+
+      expect(shape(await storedRows(module!, docId))).toBe("0:w/0 1:x/0 2:y/0");
+      expect(await modules()).toEqual(["w", "x", "y"]);
       await assertOneRuleAgreement({ module: module!, document });
     });
   });
