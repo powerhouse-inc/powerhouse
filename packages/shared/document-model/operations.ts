@@ -2,7 +2,7 @@ import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
 import { noop, type Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
-import { nextSkipNumber, sortOperations } from "./documents.js";
+import { nextSkipNumber, sortOperations } from "./operation-order.js";
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(
