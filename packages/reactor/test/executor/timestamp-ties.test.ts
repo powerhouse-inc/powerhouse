@@ -201,4 +201,33 @@ describe("base-reducer 3 timestamp ties", () => {
       b: expected,
     });
   });
+
+  for (const senderIndex of [10, 0]) {
+    it(`writes nothing for a re-delivered row with a long tail after it, sender index ${senderIndex}`, async () => {
+      const module = await build(3);
+      const docId = await shared(module);
+
+      const first = at("s1", 100);
+      await ok(module, await module.reactor.execute(docId, "main", [first]));
+      for (const [i, ms] of [200, 300, 400, 500, 600].entries()) {
+        await ok(
+          module,
+          await module.reactor.execute(docId, "main", [at(`r${i}`, ms)]),
+        );
+      }
+      const before = (await storedRows(module, docId)).length;
+
+      const loaded = await settle(
+        module,
+        await module.reactor.load(docId, "main", [
+          row(docId, first, senderIndex),
+        ]),
+      );
+
+      expect({
+        outcome: loaded.error?.message ?? loaded.status,
+        rows: (await storedRows(module, docId)).length,
+      }).toEqual({ outcome: JobStatus.READ_READY, rows: before });
+    });
+  }
 });
