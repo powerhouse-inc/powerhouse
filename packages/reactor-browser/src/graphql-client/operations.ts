@@ -113,7 +113,7 @@ export type MutateDocumentWithOperationsResult = {
 };
 
 /**
- * The atomic batch mutation, the wire form of `IReactor.executeBatch`.
+ * The batch mutation, the wire form of `IReactor.executeBatch`.
  *
  * Hand-authored rather than generated for the same reason the mutation above
  * is: one request carries a list of jobs, each a signed `ExecutionJobInput`
@@ -121,6 +121,11 @@ export type MutateDocumentWithOperationsResult = {
  * with the completed `JobInfo` that applied it, so the client can rebuild the
  * `{ jobs }` record `IReactor.executeBatch` returns. The mutation is synchronous
  * server-side, so every returned job is already complete.
+ *
+ * The batch runs its jobs in dependency order and waits for all to settle.
+ * Ordering only -- NOT atomic: each job commits independently, there is no
+ * batch rollback, and re-submitting after a partial failure re-applies the
+ * jobs that already succeeded.
  */
 export const ExecuteBatchDocument = gql`
   mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {

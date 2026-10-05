@@ -23,7 +23,20 @@ import type {
 type MockSdk = {
   RunDocument: ReturnType<typeof vi.fn>;
   GetJobStatus: ReturnType<typeof vi.fn>;
+  GetDocument: ReturnType<typeof vi.fn>;
   SetPreferredEditor: ReturnType<typeof vi.fn>;
+};
+
+/** A parent drive the `get` adapter can rebuild, carrying no protocol versions. */
+const parentDriveDocument = {
+  id: "parent-1",
+  slug: "parent-drive",
+  name: "Parent Drive",
+  documentType: "powerhouse/document-drive",
+  state: { global: {}, local: {} },
+  createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+  lastModifiedAtUtcIso: "2026-01-02T00:00:00.000Z",
+  revisionsList: [{ scope: "global", revision: 1 }],
 };
 
 const batchPayload: ExecuteBatchResult = {
@@ -76,6 +89,9 @@ function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
         completedAt: "2026-01-01T00:00:01.000Z",
       },
     }),
+    GetDocument: vi
+      .fn()
+      .mockResolvedValue({ document: { document: parentDriveDocument } }),
     SetPreferredEditor: vi
       .fn()
       .mockResolvedValue({ setPreferredEditor: editorDocument }),
@@ -322,7 +338,7 @@ describe("GraphQLReactorClient.executeBatch", () => {
     });
   });
 
-  it("carries a failed job's error into the reconstructed JobInfo", async () => {
+  it("throws naming the failed plan key and the partial-state caveat when a job comes back FAILED", async () => {
     const sdk = createMockSdk({
       RunDocument: vi.fn().mockResolvedValue({
         executeBatch: {
@@ -342,12 +358,16 @@ describe("GraphQLReactorClient.executeBatch", () => {
       }),
     });
 
-    const result = await createClientWith(sdk).executeBatch({
+    const run = createClientWith(sdk).executeBatch({
       jobs: [removeFileBatch.jobs[0]],
     });
 
-    expect(result.jobs.drive.status).toBe("FAILED");
-    expect(result.jobs.drive.error?.message).toBe("drive refused the removal");
+    await expect(run).rejects.toThrow(/Batch job "drive" failed/);
+    await expect(run).rejects.toThrow("drive refused the removal");
+    await expect(run).rejects.toThrow(/ordering-only, not atomic/);
+    await expect(run).rejects.toThrow(
+      /re-applies every job that already succeeded/,
+    );
   });
 
   it("rejects when the mutation fails", async () => {
@@ -405,12 +425,42 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     expect(policy).toBe("v2-required");
   });
 
-  it("returns the baseline protocol versions", async () => {
+  it("reflects the parent drive's own protocol versions, not the hardcoded default", async () => {
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue({
+        document: {
+          document: {
+            ...parentDriveDocument,
+            protocolVersions: { "drive-reducer": 3 },
+          },
+        },
+      }),
+    });
+
+    const versions =
+      await createClientWith(sdk).getCreateProtocolVersions("parent-1");
+
+    expect(versions).toEqual({ "drive-reducer": 3 });
+    expect(sdk.GetDocument).toHaveBeenCalledWith(
+      { identifier: "parent-1", view: undefined },
+      undefined,
+      undefined,
+    );
+  });
+
+  it("falls back to the baseline when the parent reports no protocol versions", async () => {
     const versions =
       await createClientWith(createMockSdk()).getCreateProtocolVersions(
         "parent-1",
       );
     expect(versions).toEqual({ "base-reducer": 2 });
+  });
+
+  it("falls back to the baseline when there is no parent", async () => {
+    const sdk = createMockSdk();
+    const versions = await createClientWith(sdk).getCreateProtocolVersions();
+    expect(versions).toEqual({ "base-reducer": 2 });
+    expect(sdk.GetDocument).not.toHaveBeenCalled();
   });
 
   it("maps setPreferredEditor onto the mutation and returns the document", async () => {

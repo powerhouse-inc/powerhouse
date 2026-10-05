@@ -154,6 +154,14 @@ export type GraphQLReactorClientOptions = {
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
 
+/**
+ * The protocol-version baseline a remote create falls back to when the parent
+ * drive reports none, matching the reactor client's own default.
+ */
+const DEFAULT_CREATE_PROTOCOL_VERSIONS: ProtocolVersions = {
+  "base-reducer": 2,
+};
+
 /** A registered `subscribe` call. */
 type ChangeListener = {
   search: SearchFilter;
@@ -559,10 +567,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * Applies multiple mutation jobs atomically over the Switchboard's
-   * `executeBatch` mutation, returning the result shaped like
-   * `IReactor.executeBatch`'s so the reference `DriveClient` consumes it
-   * unchanged.
+   * Runs multiple mutation jobs in dependency order over the Switchboard's
+   * `executeBatch` mutation and waits for all to settle, returning the result
+   * shaped like `IReactor.executeBatch`'s so the reference `DriveClient`
+   * consumes it unchanged.
+   *
+   * Ordering only -- NOT atomic: each job commits independently, there is no
+   * batch rollback, and re-submitting after a partial failure re-applies the
+   * jobs that already succeeded.
    *
    * Each job's actions are signed independently for the job's own
    * `(documentId, branch)` target -- the per-action signing the reactor's own
@@ -574,8 +586,11 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * each action bare is exactly what the in-process `DriveClient` relies on.
    *
    * The mutation is synchronous server-side: a job it returns is already
-   * complete, so {@link waitForJob} resolves from it without polling. A failed
-   * job fails the whole mutation, surfacing here as a thrown error.
+   * complete, so {@link waitForJob} resolves from it without polling. The
+   * server resolver throws on a job failure, and as a second guard this method
+   * inspects each returned job and throws if any came back `FAILED` or carrying
+   * an error, so every caller is protected rather than only the ones that
+   * check per-job status themselves.
    */
   async executeBatch(
     request: BatchExecutionRequest,
@@ -610,6 +625,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
     const jobs: Record<string, JobInfo> = {};
     for (const entry of result.executeBatch.jobs) {
+      if (entry.job.status === "FAILED" || entry.job.error != null) {
+        const reason = entry.job.error ?? "unknown error";
+        throw new Error(
+          `Batch job "${entry.key}" failed: ${reason}. The batch is ordering-only, not atomic: jobs ordered before "${entry.key}" may already have committed, and re-submitting re-applies every job that already succeeded.`,
+        );
+      }
       jobs[entry.key] = jobInfoFromGql(
         entry.job,
         documentIdByKey.get(entry.key) ?? "",
@@ -649,9 +670,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   /**
    * The signature policy a new document takes when the caller chooses none.
    *
-   * The Switchboard exposes no query for this, so the documented default is
-   * returned -- the same `DEFAULT_SIGNATURE_POLICY` the in-process client
-   * resolves to when nothing overrides it.
+   * Known limitation: remote create uses the default signature policy. The
+   * Switchboard exposes no query for the create signature policy, so a
+   * switchboard configured with a non-default (stricter) policy is not
+   * observable over GraphQL today; such a switchboard would see remote creates
+   * under-signed relative to its own policy. This returns the same
+   * `DEFAULT_SIGNATURE_POLICY` the in-process client resolves to when nothing
+   * overrides it.
    */
   getCreateSignaturePolicy(): Promise<SignaturePolicy> {
     return Promise.resolve(DEFAULT_SIGNATURE_POLICY);
@@ -660,17 +685,30 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   /**
    * The protocol versions a new document takes, before the signature policy.
    *
-   * The Switchboard exposes no peer-agreement query over this surface, so the
-   * local baseline preference is returned rather than a negotiated set. The
-   * parent is accepted for interface compatibility and ignored.
+   * Reflects the parent drive's own versions rather than a hardcoded baseline:
+   * the drive document carries `header.protocolVersions` over GraphQL, so a
+   * create under a drive on a non-default switchboard matches that drive. Falls
+   * back to {@link DEFAULT_CREATE_PROTOCOL_VERSIONS} only when there is no
+   * parent, the parent cannot be fetched, or the parent reports no versions.
    */
-  getCreateProtocolVersions(
+  async getCreateProtocolVersions(
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    void parentIdentifier;
-    void signal;
-    return Promise.resolve({ "base-reducer": 2 });
+    if (parentIdentifier === undefined) {
+      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    }
+    let parent: PHDocument;
+    try {
+      parent = await this.get<PHDocument>(parentIdentifier, undefined, signal);
+    } catch {
+      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    }
+    const versions = parent.header.protocolVersions;
+    if (versions && Object.keys(versions).length > 0) {
+      return versions;
+    }
+    return DEFAULT_CREATE_PROTOCOL_VERSIONS;
   }
 
   /**
