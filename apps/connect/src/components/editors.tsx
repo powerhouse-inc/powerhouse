@@ -186,7 +186,8 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     !editorModule.documentTypes.includes(documentType) &&
     !editorModule.documentTypes.includes("*");
 
-  // Base-reducer 3 undoes through the client so the author signs the RETRACT.
+  // Base-reducer 3, and a light-client header without versions, undo through
+  // the client, so the author signs the RETRACT and presses run in order.
   const clientUndoRedo = useBaseReducer3UndoRedo(document);
   const canUndo =
     clientUndoRedo?.canUndo ??
