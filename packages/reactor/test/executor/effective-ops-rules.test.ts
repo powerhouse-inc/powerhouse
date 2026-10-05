@@ -467,8 +467,10 @@ describe("base-reducer 3", () => {
       module = undefined;
     });
 
-    async function build(): Promise<void> {
-      module = await createUndoV3ReactorBuilder()
+    async function build(
+      featureFlags: Partial<ReactorFeatureFlags> = {},
+    ): Promise<void> {
+      module = await createUndoV3ReactorBuilder({ featureFlags })
         .withWriteCacheConfig({ keyframeInterval: 2 })
         .buildModule();
       document = createBaseReducer3Document({ signaturePolicy: "legacy" });
@@ -568,6 +570,19 @@ describe("base-reducer 3", () => {
         await twoUndos();
 
         await load([asOperation(earlyModule("z"), 0)]);
+
+        expect(shapeV3(await stored())).toBe(
+          "0:a/0 1:b/0 2:RETRACT(b)/0 3:RETRACT(a)/0 4:z/4 5:a/0 6:b/0 7:RETRACT(b)/0 8:RETRACT(a)/0",
+        );
+        expect(await live()).toEqual(["z"]);
+        await agree();
+      });
+
+      it("keeps both undone across a backdated execute", async () => {
+        await build({ documentDecisions: true });
+        await twoUndos();
+
+        await execute([earlyModule("z")]);
 
         expect(shapeV3(await stored())).toBe(
           "0:a/0 1:b/0 2:RETRACT(b)/0 3:RETRACT(a)/0 4:z/4 5:a/0 6:b/0 7:RETRACT(b)/0 8:RETRACT(a)/0",
