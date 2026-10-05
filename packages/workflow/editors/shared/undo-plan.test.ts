@@ -390,4 +390,25 @@ describe("undoProtocolVersion", () => {
       "unknown base-reducer protocol version 7",
     );
   });
+
+  it("reads a header without a version from CREATE_DOCUMENT", () => {
+    const create = (input: unknown): Operation => {
+      const base = op(0, "CREATE_DOCUMENT");
+      return { ...base, action: { ...base.action, input } };
+    };
+    expect(
+      undoProtocolVersion(
+        header(),
+        create({ protocolVersions: { "base-reducer": 3 } }),
+      ),
+    ).toBe(3);
+    expect(undoProtocolVersion(header(), create({}))).toBe(1);
+    expect(
+      undoProtocolVersion(
+        header({ "base-reducer": 2 }),
+        create({ protocolVersions: { "base-reducer": 3 } }),
+      ),
+    ).toBe(2);
+    expect(undoProtocolVersion(header(), op(0, "ADD_STEP"))).toBe(1);
+  });
 });

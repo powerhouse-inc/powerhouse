@@ -63,6 +63,24 @@ async function globalHistory(documentId: string): Promise<Operation[]> {
   return all;
 }
 
+// The document's CREATE_DOCUMENT, from the cache or else read: a light-client
+// header carries no protocol versions.
+async function creation(document: PHDocument): Promise<Operation | undefined> {
+  const operations: Record<string, Operation[] | undefined> =
+    document.operations;
+  const cached = operations.document?.at(0);
+  if (cached) return cached;
+  const client = window.ph?.reactorClient;
+  if (!client) return undefined;
+  const page = await client.getOperations(
+    document.header.id,
+    { branch: "main", scopes: ["document"] },
+    undefined,
+    { cursor: "0", limit: 1 },
+  );
+  return page.results.at(0);
+}
+
 // Undefined when the header names no known version.
 function headerVersion(
   document: PHDocument | undefined,
@@ -85,7 +103,14 @@ function isEditable(target: EventTarget | null): boolean {
 export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   const [document, dispatch] = useDocumentById(props.documentId);
   const policy = props.policy ?? NO_SKIP;
-  const v3 = headerVersion(document) === 3;
+  const known = headerVersion(document);
+  const [read, setRead] = useState<{
+    documentId: string;
+    version: BaseReducerVersion;
+  }>();
+  const version =
+    known ?? (read?.documentId === props.documentId ? read.version : undefined);
+  const v3 = version === 3;
   // Base-reducer 3 reads it from the history, which the cache doesn't hold.
   const [canUndoV3, setCanUndoV3] = useState(false);
   const canUndo = v3
@@ -132,7 +157,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   };
 
   const versionNow = async (): Promise<BaseReducerVersion> =>
-    Promise.resolve(undoProtocolVersion(document!.header));
+    version ?? undoProtocolVersion(document!.header, await creation(document!));
   // The actions an undo sends, and what redo takes back; null if nothing.
   const undoOf = (
     history: Operation[],
@@ -203,9 +228,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     });
 
   // Read by the key handler and the effects, which don't rerun for them.
-  const latest = useRef({ doUndo, doRedo, stale, policy });
+  const latest = useRef({ doUndo, doRedo, stale, versionNow, policy });
   useEffect(() => {
-    latest.current = { doUndo, doRedo, stale, policy };
+    latest.current = { doUndo, doRedo, stale, versionNow, policy };
   });
 
   // An edit made elsewhere voids what is left to redo.
@@ -223,6 +248,23 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       active = false;
     };
   }, [revision, pending, props.documentId]);
+  const hasDocument = document !== undefined;
+  useEffect(() => {
+    if (!hasDocument || known !== undefined) return;
+    let active = true;
+    const documentId = props.documentId;
+    void latest.current
+      .versionNow()
+      .then((value) => {
+        if (active) setRead({ documentId, version: value });
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to read the base-reducer version:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasDocument, known, props.documentId]);
   useEffect(() => {
     if (!v3) return;
     let active = true;

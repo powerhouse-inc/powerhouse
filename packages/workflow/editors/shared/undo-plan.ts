@@ -13,6 +13,7 @@ import {
   sortOperations,
   type Action,
   type BaseReducerVersion,
+  type CreateDocumentActionInput,
   type Operation,
   type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
@@ -53,13 +54,26 @@ export function undoGroupOf(action: Action): string | undefined {
     : undefined;
 }
 
-// A header without a version, as the GraphQL light client builds it, reads as
-// 1; an unknown version throws.
+// The header's version; a header without one, as the GraphQL light client
+// builds it, takes the version from the document's CREATE_DOCUMENT, else 1.
+// An unknown version throws.
 export function undoProtocolVersion(
   header: PHDocumentHeader,
+  create?: Operation,
 ): BaseReducerVersion {
-  if (header.protocolVersions?.["base-reducer"] === undefined) return 1;
-  return baseReducerVersion(header);
+  if (header.protocolVersions?.["base-reducer"] !== undefined) {
+    return baseReducerVersion(header);
+  }
+  const input =
+    create?.action.type === "CREATE_DOCUMENT"
+      ? (create.action.input as Partial<CreateDocumentActionInput> | undefined)
+      : undefined;
+  const version = input?.protocolVersions?.["base-reducer"];
+  if (version === undefined) return 1;
+  return baseReducerVersion({
+    ...header,
+    protocolVersions: { "base-reducer": version },
+  });
 }
 
 // Base-reducer 1 and 2: the operations still in effect, undone ones and the
