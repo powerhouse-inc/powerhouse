@@ -258,7 +258,54 @@ describe("group membership under RETRACT, in the positional walk", () => {
     );
 
     expect(evaluations).toEqual([undefined, AUTH_NO_GRANT_REASON, undefined]);
-    expect(groupReads).toEqual([["ADD_MEMBER", "REMOVE_MEMBER", "RETRACT"]]);
+    expect(groupReads).toEqual([undefined]);
+  });
+
+  it("removes a retracted member when a reshuffle's skip sits on a non-membership row", async () => {
+    // A backdated SET_NAME rewinds the RETRACT and re-appends it.
+    const { stores: s } = stores(groupDocument(3), [
+      add,
+      undo,
+      { ...op("name", "SET_NAME", "global", 3, 2, { name: "n" }), skip: 1 },
+      { ...undo, index: 3 },
+    ]);
+
+    const evaluations = await evaluateByPosition(
+      authGroupsDecisionModel(registry()),
+      target,
+      {
+        scope: "global",
+        operations: [op("w", "SET_STATUS", "global", 5, 0, {}, MEMBER)],
+      },
+      s,
+    );
+
+    expect(evaluations).toEqual([AUTH_NO_GRANT_REASON]);
+  });
+
+  it("walks a group stream whose membership rows a reshuffle left out of timestamp order", async () => {
+    const remove = op("remove", "REMOVE_MEMBER", "global", 3, 1, {
+      address: MEMBER,
+    });
+    const { stores: s } = stores(groupDocument(3), [
+      add,
+      remove,
+      { ...op("name", "SET_NAME", "global", 1, 2, { name: "n" }), skip: 2 },
+      { ...add, index: 3 },
+      { ...remove, index: 4 },
+    ]);
+
+    const evaluations = await evaluateByPosition(
+      authGroupsDecisionModel(registry()),
+      target,
+      {
+        scope: "global",
+        operations: [op("w", "SET_STATUS", "global", 4, 0, {}, MEMBER)],
+      },
+      s,
+    );
+
+    expect(evaluations).toEqual([AUTH_NO_GRANT_REASON]);
   });
 
   it("keeps the add when the RETRACT naming it was refused", async () => {
