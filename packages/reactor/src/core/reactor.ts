@@ -5,8 +5,10 @@ import type {
   ISigner,
   Operation,
   PHDocument,
+  ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import {
+  FLAGLESS_BASE_REDUCER_VERSION,
   normalizeDocumentModelVersion,
   redoTarget,
   undoTarget,
@@ -118,6 +120,10 @@ export class Reactor implements IReactor {
     private readonly disposers: Unsubscribe[] = [],
     // Run last on kill(), once nothing routes to what they close.
     private readonly closers: Array<() => Promise<void>> = [],
+    // A header without versions takes these; the builder passes the flags' choice.
+    private readonly createProtocolVersions: ProtocolVersions = {
+      "base-reducer": FLAGLESS_BASE_REDUCER_VERSION,
+    },
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -595,9 +601,8 @@ export class Reactor implements IReactor {
       name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
+      protocolVersions:
+        document.header.protocolVersions ?? this.createProtocolVersions,
     };
 
     const createAction = createDocumentAction(createInput);

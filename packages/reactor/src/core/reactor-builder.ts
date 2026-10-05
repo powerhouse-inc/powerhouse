@@ -8,6 +8,7 @@ import {
   localSupports,
   mergePeerCapabilities,
   PEER_CAPABILITIES,
+  selectProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -1157,6 +1158,11 @@ export class ReactorBuilder {
       catchUp,
       [unsubscribeMarkerEviction],
       [() => processorManager.shutdown()],
+      selectProtocolVersions({
+        capabilities: this.getPeerCapabilities(),
+        flags: featureFlags,
+        members: [],
+      }),
     );
 
     const localPeer: LocalPeer = {

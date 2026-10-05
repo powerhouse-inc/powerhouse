@@ -797,7 +797,15 @@ export class ReactorClient implements IReactorClient {
         members = [...agreement().members(collectionIds).values()];
       }
     }
-    return selectProtocolVersions({ capabilities, flags, members });
+    // Members narrow every negotiated protocol except base-reducer.
+    return {
+      ...selectProtocolVersions({ capabilities, flags, members }),
+      "base-reducer": selectProtocolVersions({
+        capabilities,
+        flags,
+        members: [],
+      })["base-reducer"],
+    };
   }
 
   /**
@@ -878,9 +886,9 @@ export class ReactorClient implements IReactorClient {
       name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
+      protocolVersions:
+        document.header.protocolVersions ??
+        (await this.getCreateProtocolVersions(parentIdentifier, signal)),
     };
 
     const createActions: Action[] = await signActions(

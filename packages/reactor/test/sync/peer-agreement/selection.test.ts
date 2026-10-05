@@ -44,6 +44,18 @@ describe("selecting protocol versions for new documents", () => {
     expect(wideDoc.header.protocolVersions?.["test-protocol"]).toBe(2);
   });
 
+  it("gives base-reducer the local preference whatever the parent's members support", async () => {
+    const { a } = await setup();
+
+    const selected = await a.client.getCreateProtocolVersions("drive");
+    expect(selected["base-reducer"]).toBe(3);
+    expect(selected["test-protocol"]).toBe(1);
+    const document = await a.client.createEmpty(DOCUMENT_MODEL, {
+      parentIdentifier: "drive",
+    });
+    expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
+  });
+
   it("lets explicit protocolVersions win", async () => {
     const { a } = await setup();
 
