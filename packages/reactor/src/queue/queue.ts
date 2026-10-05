@@ -510,18 +510,28 @@ export class InMemoryQueue implements IQueue {
     await this.remove(jobId);
 
     // Emit JOB_FAILED so subscribers (sync manager, job tracker, etc.) can react.
-    // The name is preserved because consumers classify failures by it.
-    const emittedError = new Error(error?.message ?? "Job failed");
-    if (error?.name) {
-      emittedError.name = error.name;
+    // The typed instance the failer carried on errorInfo.source survives the
+    // trip; without one the error is reconstructed with the name preserved,
+    // because consumers classify failures by it.
+    // A job the index no longer holds was dropped by a deferral, and the
+    // deferred-expiry path emits its own JOB_FAILED carrying the job - emitting
+    // a job-less event here too delivered every expiry to subscribers twice.
+    if (job) {
+      let emittedError = error?.source;
+      if (!emittedError) {
+        emittedError = new Error(error?.message ?? "Job failed");
+        if (error?.name) {
+          emittedError.name = error.name;
+        }
+      }
+      this.eventBus
+        .emit(ReactorEventTypes.JOB_FAILED, {
+          jobId,
+          error: emittedError,
+          job,
+        })
+        .catch(() => {});
     }
-    this.eventBus
-      .emit(ReactorEventTypes.JOB_FAILED, {
-        jobId,
-        error: emittedError,
-        job,
-      })
-      .catch(() => {});
 
     // Check if queue is now drained
     this.checkDrained();
