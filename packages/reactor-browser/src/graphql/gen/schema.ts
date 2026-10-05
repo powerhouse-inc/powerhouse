@@ -447,9 +447,11 @@ export type PhDocument = {
   readonly documentType: Scalars["String"]["output"];
   readonly id: Scalars["String"]["output"];
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
+  readonly meta?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
   readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
+  readonly protocolVersions?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -806,6 +808,8 @@ export type PhDocumentFieldsFragment = {
   readonly slug?: string | null | undefined;
   readonly name: string;
   readonly documentType: string;
+  readonly meta?: NonNullable<unknown> | null | undefined;
+  readonly protocolVersions?: NonNullable<unknown> | null | undefined;
   readonly state: NonNullable<unknown>;
   readonly createdAtUtcIso: string | Date;
   readonly lastModifiedAtUtcIso: string | Date;
@@ -858,6 +862,8 @@ export type GetDocumentQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
+          readonly meta?: NonNullable<unknown> | null | undefined;
+          readonly protocolVersions?: NonNullable<unknown> | null | undefined;
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
@@ -887,6 +893,8 @@ export type GetDocumentWithOperationsQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
+          readonly meta?: NonNullable<unknown> | null | undefined;
+          readonly protocolVersions?: NonNullable<unknown> | null | undefined;
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
@@ -967,6 +975,8 @@ export type GetDocumentOutgoingRelationshipsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -995,6 +1005,8 @@ export type GetDocumentIncomingRelationshipsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1068,6 +1080,8 @@ export type FindDocumentsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1179,6 +1193,8 @@ export type CreateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1200,6 +1216,8 @@ export type CreateEmptyDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1222,6 +1240,8 @@ export type MutateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1261,6 +1281,8 @@ export type RenameDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1283,6 +1305,8 @@ export type SetPreferredEditorMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1307,6 +1331,8 @@ export type AddRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1331,6 +1357,8 @@ export type UpdateRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1354,6 +1382,8 @@ export type RemoveRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1379,6 +1409,8 @@ export type MoveRelationshipMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1392,6 +1424,8 @@ export type MoveRelationshipMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1430,6 +1464,8 @@ export type DocumentChangesSubscription = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1572,6 +1608,8 @@ export const PhDocumentFieldsFragmentDoc = gql`
     slug
     name
     documentType
+    meta
+    protocolVersions
     state
     revisionsList {
       scope
