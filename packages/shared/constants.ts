@@ -8,7 +8,6 @@ export const PACKAGES_DEPENDENCIES = [
   "document-drive",
   "document-model",
   "@powerhousedao/opentelemetry-instrumentation-reactor",
-  "@powerhousedao/pglite-fs",
   "@powerhousedao/pieces-framework",
   "@powerhousedao/reactor",
   "@powerhousedao/reactor-api",
