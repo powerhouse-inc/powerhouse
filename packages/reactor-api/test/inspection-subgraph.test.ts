@@ -341,6 +341,97 @@ describe("inspection subgraph", () => {
       }
     });
 
+    it("serves the drive list, empty on a reactor with no drives", async () => {
+      const result = await run(
+        buildSchema({}),
+        `{ inspection { drives {
+            results {
+              driveId name branch collectionId documentType
+              nodeCount fileCount folderCount icon
+            }
+            nextCursor
+          } } }`,
+      );
+
+      expect(errorMessages(result)).toEqual([]);
+      expect(result.data).toEqual({
+        inspection: { drives: { results: [], nextCursor: null } },
+      });
+    });
+
+    it("walks a drive for missing documents and unsupported types", async () => {
+      const drive = {
+        header: {
+          id: "drive-1",
+          branch: "main",
+          documentType: "powerhouse/document-drive",
+          name: "D",
+        },
+        state: {
+          global: {
+            name: "D",
+            icon: null,
+            nodes: [
+              {
+                id: "a",
+                kind: "file",
+                documentType: "powerhouse/document-drive",
+              },
+              { id: "b", kind: "file", documentType: "evil/unknown" },
+              { id: "f", kind: "folder" },
+            ],
+          },
+        },
+      };
+      const reactorStub = {
+        get: () => Promise.resolve(drive),
+        find: (search: { ids?: string[] }) =>
+          Promise.resolve({
+            results: (search.ids ?? []).includes("a")
+              ? [{ header: { id: "a" } }]
+              : [],
+            options: { cursor: "", limit: 0 },
+          }),
+      };
+      const registryStub = {
+        getAllModules: () => [
+          { documentModel: { global: { id: "powerhouse/document-drive" } } },
+        ],
+      };
+      const inspector = new ReactorInspector({
+        reactor: reactorStub as never,
+        documentModelRegistry: registryStub as never,
+      });
+      const schema = buildStubSchema({
+        inspector,
+        syncManager: { list: () => [] },
+      });
+
+      const result = await run(
+        schema,
+        `{ inspection { driveIntegrity(driveId: "drive-1") {
+            driveId checkedNodeCount totalFileNodeCount
+            missingDocuments { id documentType }
+            unsupportedTypes { id documentType }
+            nextCursor
+          } } }`,
+      );
+
+      expect(errorMessages(result)).toEqual([]);
+      expect(result.data).toEqual({
+        inspection: {
+          driveIntegrity: {
+            driveId: "drive-1",
+            checkedNodeCount: 2,
+            totalFileNodeCount: 2,
+            missingDocuments: [{ id: "b", documentType: "evil/unknown" }],
+            unsupportedTypes: [{ id: "b", documentType: "evil/unknown" }],
+            nextCursor: null,
+          },
+        },
+      });
+    });
+
     it("serves queue state as typed data", async () => {
       const result = await run(
         buildSchema({}),
@@ -851,6 +942,8 @@ describe("inspection subgraph", () => {
         "catchUpStatus",
         "deadLetters",
         "documentModels",
+        "driveIntegrity",
+        "drives",
         "holds",
         "info",
         "processors",

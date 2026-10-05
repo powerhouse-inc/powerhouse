@@ -41,6 +41,32 @@ export const INSPECTION_OPERATIONS = {
     inspection { documentModels { ${fields("InspectionDocumentModel")} } }
   }`,
 
+  drives: `query ReactorInspectionDrives($cursor: String, $limit: Int) {
+    inspection {
+      drives(cursor: $cursor, limit: $limit) {
+        results { ${fields("InspectionDrive")} }
+        nextCursor
+      }
+    }
+  }`,
+
+  driveIntegrity: `query ReactorInspectionDriveIntegrity(
+    $driveId: String!
+    $cursor: String
+    $limit: Int
+  ) {
+    inspection {
+      driveIntegrity(driveId: $driveId, cursor: $cursor, limit: $limit) {
+        driveId
+        checkedNodeCount
+        totalFileNodeCount
+        missingDocuments { ${fields("InspectionDriveIntegrityRef")} }
+        unsupportedTypes { ${fields("InspectionDriveIntegrityRef")} }
+        nextCursor
+      }
+    }
+  }`,
+
   queueState: `query ReactorInspectionQueueState {
     inspection { queueState { ${fields("InspectionQueueState")} } }
   }`,

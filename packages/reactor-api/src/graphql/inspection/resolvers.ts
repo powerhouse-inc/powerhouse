@@ -1,10 +1,14 @@
 import type {
+  InspectorDriveInfo,
   InspectorProcessorInfo,
   Remote,
   RemoteCursorInfo,
   RemoteSyncInspection,
   WireDeadLetterPage,
   WireInspectorDocumentModel,
+  WireInspectorDrive,
+  WireInspectorDriveIntegrity,
+  WireInspectorDrivePage,
   WireInspectorProcessor,
   WireQueueState,
   WireRemoteCursor,
@@ -52,6 +56,20 @@ function notEnabled(flag: string, what: string): GraphQLError {
  */
 function toOrdinal(value: number | bigint): number {
   return Number(value);
+}
+
+function toWireDrive(drive: InspectorDriveInfo): WireInspectorDrive {
+  return {
+    driveId: drive.driveId,
+    name: drive.name,
+    branch: drive.branch,
+    collectionId: drive.collectionId,
+    documentType: drive.documentType,
+    nodeCount: drive.nodeCount,
+    fileCount: drive.fileCount,
+    folderCount: drive.folderCount,
+    icon: drive.icon ?? null,
+  };
 }
 
 function toWireProcessor(info: InspectorProcessorInfo): WireInspectorProcessor {
@@ -186,6 +204,39 @@ export function createInspectionResolvers(
 
       documentModels: async (): Promise<WireInspectorDocumentModel[]> =>
         inspector().listDocumentModels(),
+
+      drives: async (
+        _parent: unknown,
+        args: { cursor?: string; limit?: number },
+      ): Promise<WireInspectorDrivePage> => {
+        const page = await inspector().listDrives(
+          args.cursor ?? undefined,
+          args.limit ?? undefined,
+        );
+        return {
+          results: page.results.map(toWireDrive),
+          nextCursor: page.nextCursor ?? null,
+        };
+      },
+
+      driveIntegrity: async (
+        _parent: unknown,
+        args: { driveId: string; cursor?: string; limit?: number },
+      ): Promise<WireInspectorDriveIntegrity> => {
+        const result = await inspector().checkDriveIntegrity(
+          args.driveId,
+          args.cursor ?? undefined,
+          args.limit ?? undefined,
+        );
+        return {
+          driveId: result.driveId,
+          checkedNodeCount: result.checkedNodeCount,
+          totalFileNodeCount: result.totalFileNodeCount,
+          missingDocuments: result.missingDocuments,
+          unsupportedTypes: result.unsupportedTypes,
+          nextCursor: result.nextCursor ?? null,
+        };
+      },
 
       queueState: async (): Promise<WireQueueState> =>
         inspector().getQueueState(),

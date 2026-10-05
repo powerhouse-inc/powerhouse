@@ -35,6 +35,7 @@ import {
 import { AttachmentsTab } from "./tabs/AttachmentsTab.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
 import { DbTab } from "./tabs/DbTab.js";
+import { DrivesTab } from "./tabs/DrivesTab.js";
 import { EventsTab } from "./tabs/EventsTab.js";
 import { IntegrityTab } from "./tabs/IntegrityTab.js";
 import { ModulesTab } from "./tabs/ModulesTab.js";
@@ -46,6 +47,7 @@ import { SyncTab } from "./tabs/SyncTab.js";
 export const INSPECTOR_TABS = [
   "Overview",
   "Modules",
+  "Drives",
   "Queue",
   "Processors",
   "Catch-up",
@@ -101,6 +103,13 @@ function ReadyPanel({
       );
     case "Modules":
       return <ModulesTab inspector={reactor.inspector} />;
+    case "Drives":
+      return (
+        <DrivesTab
+          inspector={reactor.inspector}
+          syncManager={reactor.syncManager}
+        />
+      );
     case "Queue":
       return <QueueTab admin={admin} inspector={reactor.inspector} />;
     case "Processors":

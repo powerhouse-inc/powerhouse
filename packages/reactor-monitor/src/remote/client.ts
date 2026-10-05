@@ -3,6 +3,9 @@ import type {
   DeadLetterPage,
   IInspector,
   InspectorDocumentModelInfo,
+  InspectorDriveInfo,
+  InspectorDriveIntegrity,
+  InspectorDrivePage,
   InspectorProcessorInfo,
   IReactorDbQuery,
   ISyncInspector,
@@ -16,6 +19,9 @@ import type {
   ValidationResult,
   WireDeadLetterPage,
   WireInspectorDocumentModel,
+  WireInspectorDrive,
+  WireInspectorDriveIntegrity,
+  WireInspectorDrivePage,
   WireInspectorProcessor,
   WireQueueState,
   WireReactorInspectionInfo,
@@ -123,6 +129,46 @@ function toDocumentModel(
     name: wire.name,
     version: wire.version,
     supportedVersions: [...wire.supportedVersions],
+  };
+}
+
+function toDrive(wire: WireInspectorDrive): InspectorDriveInfo {
+  return {
+    driveId: wire.driveId,
+    name: wire.name,
+    branch: wire.branch,
+    collectionId: wire.collectionId,
+    documentType: wire.documentType,
+    nodeCount: wire.nodeCount,
+    fileCount: wire.fileCount,
+    folderCount: wire.folderCount,
+    icon: wire.icon ?? undefined,
+  };
+}
+
+function toDrivePage(wire: WireInspectorDrivePage): InspectorDrivePage {
+  return {
+    results: wire.results.map(toDrive),
+    nextCursor: wire.nextCursor ?? undefined,
+  };
+}
+
+function toDriveIntegrity(
+  wire: WireInspectorDriveIntegrity,
+): InspectorDriveIntegrity {
+  return {
+    driveId: wire.driveId,
+    checkedNodeCount: wire.checkedNodeCount,
+    totalFileNodeCount: wire.totalFileNodeCount,
+    missingDocuments: wire.missingDocuments.map((ref) => ({
+      id: ref.id,
+      documentType: ref.documentType,
+    })),
+    unsupportedTypes: wire.unsupportedTypes.map((ref) => ({
+      id: ref.id,
+      documentType: ref.documentType,
+    })),
+    nextCursor: wire.nextCursor ?? undefined,
   };
 }
 
@@ -283,6 +329,31 @@ export class RemoteInspectorClient
       inspection: { documentModels: WireInspectorDocumentModel[] };
     }>("documentModels");
     return data.inspection.documentModels.map(toDocumentModel);
+  }
+
+  async listDrives(
+    cursor?: string,
+    limit?: number,
+  ): Promise<InspectorDrivePage> {
+    const data = await this.query<{
+      inspection: { drives: WireInspectorDrivePage };
+    }>("drives", { cursor: cursor ?? null, limit: limit ?? null });
+    return toDrivePage(data.inspection.drives);
+  }
+
+  async checkDriveIntegrity(
+    driveId: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<InspectorDriveIntegrity> {
+    const data = await this.query<{
+      inspection: { driveIntegrity: WireInspectorDriveIntegrity };
+    }>("driveIntegrity", {
+      driveId,
+      cursor: cursor ?? null,
+      limit: limit ?? null,
+    });
+    return toDriveIntegrity(data.inspection.driveIntegrity);
   }
 
   async getQueueState(): Promise<QueueStateSnapshot> {

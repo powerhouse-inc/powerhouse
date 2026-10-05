@@ -97,6 +97,52 @@ export const inspectionTypeDefs = gql`
   }
 
   """
+  One drive (collection) this reactor holds: its identity, the collection id a
+  remote synchronizes it under, and a summary of its node tree.
+  """
+  type InspectionDrive {
+    driveId: String!
+    name: String!
+    branch: String!
+    collectionId: String!
+    documentType: String!
+    nodeCount: Int!
+    fileCount: Int!
+    folderCount: Int!
+    icon: String
+  }
+
+  """
+  One cursor-paged page of drives, for a reactor holding many collections.
+  """
+  type InspectionDrivePage {
+    results: [InspectionDrive!]!
+    nextCursor: String
+  }
+
+  """
+  One drive node a drive-integrity check flagged, by id and declared type.
+  """
+  type InspectionDriveIntegrityRef {
+    id: String!
+    documentType: String!
+  }
+
+  """
+  The result of walking a drive's node tree: file nodes whose document is
+  absent from the reactor, and file nodes whose type no document model
+  supports. The walk is cursor-paged for large drives.
+  """
+  type InspectionDriveIntegrity {
+    driveId: String!
+    checkedNodeCount: Int!
+    totalFileNodeCount: Int!
+    missingDocuments: [InspectionDriveIntegrityRef!]!
+    unsupportedTypes: [InspectionDriveIntegrityRef!]!
+    nextCursor: String
+  }
+
+  """
   Point-in-time job-queue view; the job records ride the JSON scalar.
   """
   type InspectionQueueState {
@@ -206,6 +252,19 @@ export const inspectionTypeDefs = gql`
     The document models registered on this reactor, with versions.
     """
     documentModels: [InspectionDocumentModel!]!
+    """
+    The drives (collections) this reactor holds, cursor-paged.
+    """
+    drives(cursor: String, limit: Int): InspectionDrivePage!
+    """
+    Walks one drive's node tree for missing documents and unsupported types.
+    Potentially expensive on a large drive; cursor-paged.
+    """
+    driveIntegrity(
+      driveId: String!
+      cursor: String
+      limit: Int
+    ): InspectionDriveIntegrity!
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
     catchUpStatus: JSONObject!

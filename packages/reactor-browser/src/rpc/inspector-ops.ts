@@ -8,6 +8,8 @@ import type { IInspector, IReactorDbQuery } from "@powerhousedao/reactor";
  */
 export const INSPECTOR_OPS = {
   listDocumentModels: "registry.listDocumentModels",
+  listDrives: "drives.list",
+  checkDriveIntegrity: "drives.checkIntegrity",
   getQueueState: "queue.getState",
   pauseQueue: "queue.pause",
   resumeQueue: "queue.resume",
@@ -39,6 +41,14 @@ export async function dispatchInspectorOp(
   switch (method) {
     case INSPECTOR_OPS.listDocumentModels:
       return inspector.listDocumentModels();
+    case INSPECTOR_OPS.listDrives: {
+      const [cursor, limit] = args as [string?, number?];
+      return inspector.listDrives(cursor, limit);
+    }
+    case INSPECTOR_OPS.checkDriveIntegrity: {
+      const [driveId, cursor, limit] = args as [string, string?, number?];
+      return inspector.checkDriveIntegrity(driveId, cursor, limit);
+    }
     case INSPECTOR_OPS.getQueueState:
       return inspector.getQueueState();
     case INSPECTOR_OPS.pauseQueue:

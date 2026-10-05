@@ -111,6 +111,42 @@ export type WireInspectorDocumentModel = {
   readonly supportedVersions: number[];
 };
 
+/** The wire form of {@link import("./types.js").InspectorDriveInfo}. */
+export type WireInspectorDrive = {
+  readonly driveId: string;
+  readonly name: string;
+  readonly branch: string;
+  readonly collectionId: string;
+  readonly documentType: string;
+  readonly nodeCount: number;
+  readonly fileCount: number;
+  readonly folderCount: number;
+  /** An absent icon travels as an explicit null. */
+  readonly icon: string | null;
+};
+
+/** The wire form of {@link import("./types.js").InspectorDrivePage}. */
+export type WireInspectorDrivePage = {
+  readonly results: WireInspectorDrive[];
+  readonly nextCursor: string | null;
+};
+
+/** The wire form of {@link import("./types.js").InspectorDriveIntegrityRef}. */
+export type WireInspectorDriveIntegrityRef = {
+  readonly id: string;
+  readonly documentType: string;
+};
+
+/** The wire form of {@link import("./types.js").InspectorDriveIntegrity}. */
+export type WireInspectorDriveIntegrity = {
+  readonly driveId: string;
+  readonly checkedNodeCount: number;
+  readonly totalFileNodeCount: number;
+  readonly missingDocuments: WireInspectorDriveIntegrityRef[];
+  readonly unsupportedTypes: WireInspectorDriveIntegrityRef[];
+  readonly nextCursor: string | null;
+};
+
 /** The wire form of {@link import("./types.js").InspectorProcessorInfo}. */
 export type WireInspectorProcessor = {
   readonly processorId: string;
@@ -194,6 +230,27 @@ export const INSPECTION_WIRE_FIELDS = {
     "name",
     "version",
     "supportedVersions",
+  ],
+  InspectionDrive: [
+    "driveId",
+    "name",
+    "branch",
+    "collectionId",
+    "documentType",
+    "nodeCount",
+    "fileCount",
+    "folderCount",
+    "icon",
+  ],
+  InspectionDrivePage: ["results", "nextCursor"],
+  InspectionDriveIntegrityRef: ["id", "documentType"],
+  InspectionDriveIntegrity: [
+    "driveId",
+    "checkedNodeCount",
+    "totalFileNodeCount",
+    "missingDocuments",
+    "unsupportedTypes",
+    "nextCursor",
   ],
   ReactorInspectionInfo: [
     "hosting",

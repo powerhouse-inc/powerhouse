@@ -146,6 +146,38 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
         ],
       },
     },
+    ReactorInspectionDrives: {
+      inspection: {
+        drives: {
+          results: [
+            {
+              driveId: "drive-a",
+              name: "Accounts",
+              branch: "main",
+              collectionId: "drive.main.drive-a",
+              documentType: "powerhouse/document-drive",
+              nodeCount: 3,
+              fileCount: 2,
+              folderCount: 1,
+              icon: null,
+            },
+          ],
+          nextCursor: "25",
+        },
+      },
+    },
+    ReactorInspectionDriveIntegrity: {
+      inspection: {
+        driveIntegrity: {
+          driveId: "drive-a",
+          checkedNodeCount: 2,
+          totalFileNodeCount: 2,
+          missingDocuments: [{ id: "doc-x", documentType: "sky/ledger" }],
+          unsupportedTypes: [],
+          nextCursor: null,
+        },
+      },
+    },
     ReactorInspectionQueueState: {
       inspection: {
         queueState: {
@@ -321,6 +353,45 @@ describe("RemoteInspectorClient reads", () => {
     expect(server.requests.at(-1)?.operation).toBe(
       "ReactorInspectionDocumentModels",
     );
+  });
+
+  it("decodes the drive list, dropping a null icon and carrying the cursor", async () => {
+    await expect(client.listDrives(undefined, 25)).resolves.toEqual({
+      results: [
+        {
+          driveId: "drive-a",
+          name: "Accounts",
+          branch: "main",
+          collectionId: "drive.main.drive-a",
+          documentType: "powerhouse/document-drive",
+          nodeCount: 3,
+          fileCount: 2,
+          folderCount: 1,
+          icon: undefined,
+        },
+      ],
+      nextCursor: "25",
+    });
+    expect(server.requests.at(-1)).toEqual({
+      operation: "ReactorInspectionDrives",
+      variables: { cursor: null, limit: 25 },
+    });
+  });
+
+  it("decodes a drive-integrity walk, dropping an absent next cursor", async () => {
+    const result = await client.checkDriveIntegrity("drive-a");
+    expect(result).toEqual({
+      driveId: "drive-a",
+      checkedNodeCount: 2,
+      totalFileNodeCount: 2,
+      missingDocuments: [{ id: "doc-x", documentType: "sky/ledger" }],
+      unsupportedTypes: [],
+      nextCursor: undefined,
+    });
+    expect(server.requests.at(-1)).toEqual({
+      operation: "ReactorInspectionDriveIntegrity",
+      variables: { driveId: "drive-a", cursor: null, limit: null },
+    });
   });
 
   it("decodes queue state into the reactor's own snapshot shape", async () => {

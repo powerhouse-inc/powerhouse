@@ -2,6 +2,8 @@ import type {
   CatchUpStatus,
   IInspector,
   InspectorDocumentModelInfo,
+  InspectorDriveIntegrity,
+  InspectorDrivePage,
   InspectorProcessorInfo,
   QueueStateSnapshot,
   RebuildResult,
@@ -30,6 +32,17 @@ export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
       ops.call(INSPECTOR_OPS.listDocumentModels) as Promise<
         InspectorDocumentModelInfo[]
       >,
+    listDrives: (cursor, limit) =>
+      ops.call(INSPECTOR_OPS.listDrives, [
+        cursor,
+        limit,
+      ]) as Promise<InspectorDrivePage>,
+    checkDriveIntegrity: (driveId, cursor, limit) =>
+      ops.call(INSPECTOR_OPS.checkDriveIntegrity, [
+        driveId,
+        cursor,
+        limit,
+      ]) as Promise<InspectorDriveIntegrity>,
     getQueueState: () =>
       ops.call(INSPECTOR_OPS.getQueueState) as Promise<QueueStateSnapshot>,
     pauseQueue: () => ops.callVoid(INSPECTOR_OPS.pauseQueue),

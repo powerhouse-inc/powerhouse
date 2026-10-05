@@ -18,7 +18,12 @@ import { StorageHealthTracker } from "../../src/inspector/storage-health.js";
 import type { IInspectableQueue } from "../../src/inspector/types.js";
 import type { Job } from "../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import type { IReactor } from "../../src/core/types.js";
+import type { SearchFilter } from "../../src/shared/types.js";
 
 function job(id: string, documentId: string): Job {
   return {
@@ -119,7 +124,212 @@ function documentModelRegistry(
   } as unknown as IDocumentModelRegistry;
 }
 
+type DriveNodeInput = {
+  id: string;
+  kind: string;
+  documentType?: string;
+};
+
+function driveDoc(
+  id: string,
+  branch: string,
+  name: string,
+  nodes: DriveNodeInput[],
+  icon?: string,
+): PHDocument {
+  return {
+    header: {
+      id,
+      branch,
+      name,
+      documentType: "powerhouse/document-drive",
+    },
+    state: { global: { name, icon, nodes } },
+  } as unknown as PHDocument;
+}
+
+function fakeReactor(opts: {
+  drives?: PHDocument[];
+  driveById?: Record<string, PHDocument>;
+  presentIds?: Set<string>;
+}): IReactor {
+  return {
+    find: (search: SearchFilter) => {
+      if (search.type !== undefined) {
+        return Promise.resolve({
+          results: opts.drives ?? [],
+          options: { cursor: "", limit: 0 },
+        });
+      }
+      const ids = search.ids ?? [];
+      const present = ids.filter((id) => opts.presentIds?.has(id));
+      return Promise.resolve({
+        results: present.map((id) => ({ header: { id } })),
+        options: { cursor: "", limit: 0 },
+      });
+    },
+    get: (id: string) => {
+      const doc = opts.driveById?.[id];
+      if (!doc) {
+        return Promise.reject(new Error(`no document ${id}`));
+      }
+      return Promise.resolve(doc);
+    },
+  } as unknown as IReactor;
+}
+
 describe("ReactorInspector", () => {
+  describe("drives", () => {
+    it("reports an empty page with no reactor", async () => {
+      const inspector = new ReactorInspector({});
+      await expect(inspector.listDrives()).resolves.toEqual({
+        results: [],
+        nextCursor: undefined,
+      });
+    });
+
+    it("summarizes each drive's identity and node tree", async () => {
+      const drive = driveDoc(
+        "drive-1",
+        "main",
+        "Accounts",
+        [
+          { id: "a", kind: "file", documentType: "sky/ledger" },
+          { id: "b", kind: "file", documentType: "sky/ledger" },
+          { id: "f", kind: "folder" },
+        ],
+        "icon-url",
+      );
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({ drives: [drive] }),
+      });
+
+      await expect(inspector.listDrives()).resolves.toEqual({
+        results: [
+          {
+            driveId: "drive-1",
+            name: "Accounts",
+            branch: "main",
+            collectionId: "drive.main.drive-1",
+            documentType: "powerhouse/document-drive",
+            nodeCount: 3,
+            fileCount: 2,
+            folderCount: 1,
+            icon: "icon-url",
+          },
+        ],
+        nextCursor: undefined,
+      });
+    });
+  });
+
+  describe("drive integrity", () => {
+    const supported = documentModelRegistry(
+      [documentModelModule("sky/ledger", "Ledger", 1)],
+      { "sky/ledger": [1] },
+    );
+
+    it("flags missing documents and unsupported types, leaving a clean drive empty", async () => {
+      const drive = driveDoc("drive-1", "main", "D", [
+        { id: "present", kind: "file", documentType: "sky/ledger" },
+        { id: "absent", kind: "file", documentType: "sky/ledger" },
+        { id: "weird", kind: "file", documentType: "evil/unknown" },
+        { id: "folder", kind: "folder" },
+      ]);
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({
+          driveById: { "drive-1": drive },
+          presentIds: new Set(["present", "weird"]),
+        }),
+        documentModelRegistry: supported,
+      });
+
+      await expect(inspector.checkDriveIntegrity("drive-1")).resolves.toEqual({
+        driveId: "drive-1",
+        checkedNodeCount: 3,
+        totalFileNodeCount: 3,
+        missingDocuments: [{ id: "absent", documentType: "sky/ledger" }],
+        unsupportedTypes: [{ id: "weird", documentType: "evil/unknown" }],
+        nextCursor: undefined,
+      });
+    });
+
+    it("reports a clean drive with no missing or unsupported nodes", async () => {
+      const drive = driveDoc("drive-1", "main", "D", [
+        { id: "one", kind: "file", documentType: "sky/ledger" },
+        { id: "two", kind: "file", documentType: "sky/ledger" },
+      ]);
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({
+          driveById: { "drive-1": drive },
+          presentIds: new Set(["one", "two"]),
+        }),
+        documentModelRegistry: supported,
+      });
+
+      const result = await inspector.checkDriveIntegrity("drive-1");
+      expect(result.missingDocuments).toEqual([]);
+      expect(result.unsupportedTypes).toEqual([]);
+      expect(result.checkedNodeCount).toBe(2);
+    });
+
+    it("pages the node walk for a large drive", async () => {
+      const nodes: DriveNodeInput[] = Array.from({ length: 5 }, (_, i) => ({
+        id: `n${i}`,
+        kind: "file",
+        documentType: "sky/ledger",
+      }));
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({
+          driveById: { "drive-1": driveDoc("drive-1", "main", "D", nodes) },
+          presentIds: new Set(nodes.map((node) => node.id)),
+        }),
+        documentModelRegistry: supported,
+      });
+
+      const first = await inspector.checkDriveIntegrity(
+        "drive-1",
+        undefined,
+        2,
+      );
+      expect(first.checkedNodeCount).toBe(2);
+      expect(first.totalFileNodeCount).toBe(5);
+      expect(first.nextCursor).toBe("2");
+
+      const second = await inspector.checkDriveIntegrity(
+        "drive-1",
+        first.nextCursor,
+        2,
+      );
+      expect(second.checkedNodeCount).toBe(2);
+      expect(second.nextCursor).toBe("4");
+
+      const third = await inspector.checkDriveIntegrity(
+        "drive-1",
+        second.nextCursor,
+        2,
+      );
+      expect(third.checkedNodeCount).toBe(1);
+      expect(third.nextCursor).toBeUndefined();
+    });
+
+    it("skips the unsupported check when no registry is wired", async () => {
+      const drive = driveDoc("drive-1", "main", "D", [
+        { id: "x", kind: "file", documentType: "anything" },
+      ]);
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({
+          driveById: { "drive-1": drive },
+          presentIds: new Set(["x"]),
+        }),
+      });
+
+      const result = await inspector.checkDriveIntegrity("drive-1");
+      expect(result.unsupportedTypes).toEqual([]);
+      expect(result.missingDocuments).toEqual([]);
+    });
+  });
+
   describe("document models", () => {
     it("returns an empty list with no registry", async () => {
       const inspector = new ReactorInspector({});

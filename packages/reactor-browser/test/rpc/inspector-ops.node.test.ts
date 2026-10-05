@@ -2,6 +2,8 @@ import type {
   CatchUpStatus,
   IInspector,
   InspectorDocumentModelInfo,
+  InspectorDriveIntegrity,
+  InspectorDrivePage,
   InspectorProcessorInfo,
   IReactorDbQuery,
   QueueStateSnapshot,
@@ -35,6 +37,30 @@ const documentModels: InspectorDocumentModelInfo[] = [
     supportedVersions: [1],
   },
 ];
+const drivePage: InspectorDrivePage = {
+  results: [
+    {
+      driveId: "drive-a",
+      name: "Accounts",
+      branch: "main",
+      collectionId: "drive.main.drive-a",
+      documentType: "powerhouse/document-drive",
+      nodeCount: 1,
+      fileCount: 1,
+      folderCount: 0,
+      icon: undefined,
+    },
+  ],
+  nextCursor: undefined,
+};
+const driveIntegrity: InspectorDriveIntegrity = {
+  driveId: "drive-a",
+  checkedNodeCount: 1,
+  totalFileNodeCount: 1,
+  missingDocuments: [],
+  unsupportedTypes: [],
+  nextCursor: undefined,
+};
 const processors: InspectorProcessorInfo[] = [
   {
     processorId: "p1",
@@ -78,6 +104,8 @@ type FakeInspector = {
 function fakeInspector(): FakeInspector {
   return {
     listDocumentModels: vi.fn(() => Promise.resolve(documentModels)),
+    listDrives: vi.fn(() => Promise.resolve(drivePage)),
+    checkDriveIntegrity: vi.fn(() => Promise.resolve(driveIntegrity)),
     getQueueState: vi.fn(() => Promise.resolve(queueState)),
     pauseQueue: vi.fn(() => Promise.resolve()),
     resumeQueue: vi.fn(() => Promise.resolve()),
@@ -142,6 +170,12 @@ describe("dispatchInspectorOp", () => {
     await expect(call(INSPECTOR_OPS.listDocumentModels)).resolves.toBe(
       documentModels,
     );
+    await expect(call(INSPECTOR_OPS.listDrives, ["c", 10])).resolves.toBe(
+      drivePage,
+    );
+    await expect(
+      call(INSPECTOR_OPS.checkDriveIntegrity, ["drive-a", "0", 5]),
+    ).resolves.toBe(driveIntegrity);
     await expect(call(INSPECTOR_OPS.getQueueState)).resolves.toBe(queueState);
     await expect(call(INSPECTOR_OPS.pauseQueue)).resolves.toBeUndefined();
     await expect(call(INSPECTOR_OPS.resumeQueue)).resolves.toBeUndefined();
@@ -170,6 +204,12 @@ describe("dispatchInspectorOp", () => {
     ).resolves.toEqual([{ n: 1 }]);
 
     expect(inspector.listDocumentModels).toHaveBeenCalledTimes(1);
+    expect(inspector.listDrives).toHaveBeenCalledWith("c", 10);
+    expect(inspector.checkDriveIntegrity).toHaveBeenCalledWith(
+      "drive-a",
+      "0",
+      5,
+    );
     expect(inspector.getQueueState).toHaveBeenCalledTimes(1);
     expect(inspector.pauseQueue).toHaveBeenCalledTimes(1);
     expect(inspector.resumeQueue).toHaveBeenCalledTimes(1);
@@ -187,6 +227,8 @@ describe("dispatchInspectorOp", () => {
   it("keeps the op strings the wire protocol was shipped with", () => {
     expect(INSPECTOR_OPS).toEqual({
       listDocumentModels: "registry.listDocumentModels",
+      listDrives: "drives.list",
+      checkDriveIntegrity: "drives.checkIntegrity",
       getQueueState: "queue.getState",
       pauseQueue: "queue.pause",
       resumeQueue: "queue.resume",

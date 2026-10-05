@@ -56,6 +56,60 @@ export type InspectorDocumentModelInfo = {
 };
 
 /**
+ * One drive (collection), flattened for inspection: its identity, the
+ * collection id a remote synchronizes it under, and a summary of its node
+ * tree. Plain data, so it survives a structured clone or a JSON hop.
+ */
+export type InspectorDriveInfo = {
+  driveId: string;
+  name: string;
+  branch: string;
+  /** The `drive.<branch>.<driveId>` collection id a remote syncs it under. */
+  collectionId: string;
+  documentType: string;
+  /** Total nodes in the drive tree. */
+  nodeCount: number;
+  /** File nodes (documents) in the drive tree. */
+  fileCount: number;
+  /** Folder nodes in the drive tree. */
+  folderCount: number;
+  /** The drive's icon, when it declares one. */
+  icon: string | undefined;
+};
+
+/** One page of {@link InspectorDriveInfo}, cursor-paged for large reactors. */
+export type InspectorDrivePage = {
+  results: InspectorDriveInfo[];
+  /** Absent once the last page has been served. */
+  nextCursor: string | undefined;
+};
+
+/** One drive node a drive-integrity check flagged, by id and declared type. */
+export type InspectorDriveIntegrityRef = {
+  id: string;
+  documentType: string;
+};
+
+/**
+ * The result of walking a drive's node tree for integrity: file nodes whose
+ * referenced document is absent from the reactor, and file nodes whose
+ * declared document type no document model supports. Composed from the reactor
+ * and the registry -- distinct from `DocumentIntegrityService`, which replays a
+ * single document rather than walking a drive.
+ */
+export type InspectorDriveIntegrity = {
+  driveId: string;
+  /** File nodes examined in this page of the walk. */
+  checkedNodeCount: number;
+  /** File nodes in the whole drive tree. */
+  totalFileNodeCount: number;
+  missingDocuments: InspectorDriveIntegrityRef[];
+  unsupportedTypes: InspectorDriveIntegrityRef[];
+  /** Absent once the walk has covered the whole tree. */
+  nextCursor: string | undefined;
+};
+
+/**
  * A tracked processor flattened for inspection: the identity and progress
  * fields of `TrackedProcessor` without its `record` or its `retry()` closure,
  * so the shape survives a structured-clone hop to an inspector UI.
@@ -101,6 +155,22 @@ export interface IInspector {
    * with no registry wired reports an empty list.
    */
   listDocumentModels(): Promise<InspectorDocumentModelInfo[]>;
+  /**
+   * The drives (collections) this reactor holds, one page at a time. A reactor
+   * with no reactor facade wired reports an empty page.
+   */
+  listDrives(cursor?: string, limit?: number): Promise<InspectorDrivePage>;
+  /**
+   * Walks one drive's node tree, reporting file nodes whose document is absent
+   * from the reactor and file nodes whose type no document model supports. The
+   * walk is paged for large drives. A reactor with no facade wired reports an
+   * empty result.
+   */
+  checkDriveIntegrity(
+    driveId: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<InspectorDriveIntegrity>;
   getQueueState(): Promise<QueueStateSnapshot>;
   pauseQueue(): Promise<void>;
   resumeQueue(): Promise<void>;

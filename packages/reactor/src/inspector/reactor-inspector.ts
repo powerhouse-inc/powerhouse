@@ -9,17 +9,121 @@ import type {
   ICatchUp,
   SweepResult,
 } from "../catch-up/types.js";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { DriveCollectionId } from "../cache/operation-index-types.js";
+import type { IReactor } from "../core/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
   IInspectableQueue,
   IInspector,
   InspectorDocumentModelInfo,
+  InspectorDriveInfo,
+  InspectorDriveIntegrity,
+  InspectorDriveIntegrityRef,
+  InspectorDrivePage,
   InspectorProcessorInfo,
   IStorageHealthProvider,
   QueueStateSnapshot,
   StorageHealth,
 } from "./types.js";
+
+/**
+ * The document type every drive collection carries. Drives are enumerated by
+ * this type rather than by a dedicated "list drives" API, which the reactor
+ * has none of.
+ */
+const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+
+/** Default file-node page size for the drive-integrity walk. */
+const DEFAULT_INTEGRITY_PAGE_SIZE = 500;
+
+/** Default drive page size when the caller names no limit. */
+const DEFAULT_DRIVE_PAGE_SIZE = 100;
+
+/** One drive-tree node, read defensively from an untrusted drive state. */
+type DriveNode = {
+  id: string;
+  kind: string;
+  documentType: string | undefined;
+};
+
+/**
+ * Reads a drive document's node tree without trusting its runtime shape: the
+ * inspector may be pointed at a drive whose state is older, partial, or
+ * malformed, and a drive observability view must not throw on one bad node.
+ */
+function readDriveState(doc: PHDocument): {
+  name: string;
+  icon: string | undefined;
+  nodes: DriveNode[];
+} {
+  const global = (doc.state as { global?: unknown }).global as
+    | {
+        name?: unknown;
+        icon?: unknown;
+        nodes?: unknown;
+      }
+    | undefined;
+  const rawNodes = Array.isArray(global?.nodes) ? global.nodes : [];
+  const nodes: DriveNode[] = [];
+  for (const raw of rawNodes) {
+    if (typeof raw !== "object" || raw === null) {
+      continue;
+    }
+    const node = raw as {
+      id?: unknown;
+      kind?: unknown;
+      documentType?: unknown;
+    };
+    if (typeof node.id !== "string" || typeof node.kind !== "string") {
+      continue;
+    }
+    nodes.push({
+      id: node.id,
+      kind: node.kind,
+      documentType:
+        typeof node.documentType === "string" ? node.documentType : undefined,
+    });
+  }
+  return {
+    name: typeof global?.name === "string" ? global.name : doc.header.name,
+    icon: typeof global?.icon === "string" ? global.icon : undefined,
+    nodes,
+  };
+}
+
+/** The drive's file nodes (documents), in tree order. */
+function fileNodesOf(nodes: DriveNode[]): DriveNode[] {
+  return nodes.filter((node) => node.kind === "file");
+}
+
+function toDriveInfo(doc: PHDocument): InspectorDriveInfo {
+  const driveId = doc.header.id;
+  const branch = doc.header.branch;
+  const state = readDriveState(doc);
+  const fileCount = fileNodesOf(state.nodes).length;
+  return {
+    driveId,
+    name: state.name,
+    branch,
+    collectionId: DriveCollectionId.forDrive(driveId, branch).key,
+    documentType: doc.header.documentType,
+    nodeCount: state.nodes.length,
+    fileCount,
+    folderCount: state.nodes.length - fileCount,
+    icon: state.icon,
+  };
+}
+
+/** Parses a non-negative integer walk offset from a cursor, defaulting to 0. */
+function parseOffset(cursor: string | undefined): number {
+  if (cursor === undefined || cursor === "") {
+    return 0;
+  }
+  const parsed = Number.parseInt(cursor, 10);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
 
 /**
  * The components a `ReactorInspector` observes. Every one is optional: a
@@ -42,6 +146,7 @@ export type ReactorInspectorComponents = {
   integrity?: IDocumentIntegrityService;
   storageHealth?: IStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
+  reactor?: IReactor;
 };
 
 const healthyStorageDefault: StorageHealth = {
@@ -86,6 +191,7 @@ export class ReactorInspector implements IInspector {
   private readonly integrity: IDocumentIntegrityService | undefined;
   private readonly storageHealth: IStorageHealthProvider | undefined;
   private readonly documentModelRegistry: IDocumentModelRegistry | undefined;
+  private readonly reactor: IReactor | undefined;
 
   constructor(components: ReactorInspectorComponents) {
     this.queue = components.queue;
@@ -94,6 +200,7 @@ export class ReactorInspector implements IInspector {
     this.integrity = components.integrity;
     this.storageHealth = components.storageHealth;
     this.documentModelRegistry = components.documentModelRegistry;
+    this.reactor = components.reactor;
   }
 
   listDocumentModels(): Promise<InspectorDocumentModelInfo[]> {
@@ -112,6 +219,70 @@ export class ReactorInspector implements IInspector {
         };
       }),
     );
+  }
+
+  async listDrives(
+    cursor?: string,
+    limit?: number,
+  ): Promise<InspectorDrivePage> {
+    const reactor = this.reactor;
+    if (!reactor) {
+      return { results: [], nextCursor: undefined };
+    }
+    const page = await reactor.find({ type: DRIVE_DOCUMENT_TYPE }, undefined, {
+      cursor: cursor ?? "",
+      limit: limit ?? DEFAULT_DRIVE_PAGE_SIZE,
+    });
+    return {
+      results: page.results.map(toDriveInfo),
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  async checkDriveIntegrity(
+    driveId: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<InspectorDriveIntegrity> {
+    const reactor = this.reactor;
+    if (!reactor) {
+      return {
+        driveId,
+        checkedNodeCount: 0,
+        totalFileNodeCount: 0,
+        missingDocuments: [],
+        unsupportedTypes: [],
+        nextCursor: undefined,
+      };
+    }
+    const drive = await reactor.get(driveId);
+    const fileNodes = fileNodesOf(readDriveState(drive).nodes);
+    const offset = parseOffset(cursor);
+    const pageSize = limit ?? DEFAULT_INTEGRITY_PAGE_SIZE;
+    const slice = fileNodes.slice(offset, offset + pageSize);
+    const present = await this.presentDocumentIds(slice.map((node) => node.id));
+    const supported = this.supportedDocumentTypes();
+    const missingDocuments: InspectorDriveIntegrityRef[] = [];
+    const unsupportedTypes: InspectorDriveIntegrityRef[] = [];
+    for (const node of slice) {
+      const documentType = node.documentType ?? "";
+      if (!present.has(node.id)) {
+        missingDocuments.push({ id: node.id, documentType });
+      }
+      if (supported !== undefined && !supported.has(documentType)) {
+        unsupportedTypes.push({ id: node.id, documentType });
+      }
+    }
+    const nextOffset = offset + slice.length;
+    return {
+      driveId,
+      checkedNodeCount: slice.length,
+      totalFileNodeCount: fileNodes.length,
+      missingDocuments,
+      unsupportedTypes,
+      nextCursor:
+        nextOffset < fileNodes.length ? String(nextOffset) : undefined,
+    };
   }
 
   getQueueState(): Promise<QueueStateSnapshot> {
@@ -242,5 +413,47 @@ export class ReactorInspector implements IInspector {
       return Promise.resolve({ ...healthyStorageDefault });
     }
     return Promise.resolve(provider.getStorageHealth());
+  }
+
+  /**
+   * The ids among `ids` that are present in the reactor, paging `find` until
+   * every match has been seen so a large slice cannot hide a present document
+   * behind the store's default page limit.
+   */
+  private async presentDocumentIds(ids: string[]): Promise<Set<string>> {
+    const present = new Set<string>();
+    const reactor = this.reactor;
+    if (!reactor || ids.length === 0) {
+      return present;
+    }
+    let page = await reactor.find({ ids }, undefined, {
+      cursor: "",
+      limit: ids.length,
+    });
+    for (const doc of page.results) {
+      present.add(doc.header.id);
+    }
+    while (page.nextCursor !== undefined && page.next) {
+      page = await page.next();
+      for (const doc of page.results) {
+        present.add(doc.header.id);
+      }
+    }
+    return present;
+  }
+
+  /**
+   * The document types the registry supports, or undefined when no registry is
+   * wired -- in which case the unsupported-type check is skipped rather than
+   * reporting every type as unsupported.
+   */
+  private supportedDocumentTypes(): Set<string> | undefined {
+    const registry = this.documentModelRegistry;
+    if (!registry) {
+      return undefined;
+    }
+    return new Set(
+      registry.getAllModules().map((module) => module.documentModel.global.id),
+    );
   }
 }
