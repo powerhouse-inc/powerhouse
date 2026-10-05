@@ -2,12 +2,14 @@ import {
   type ActionCandidate,
   type ActionEvaluations,
   AuthEnforcementDisabledError,
+  type BatchExecutionResult,
   ChannelError,
   ChannelErrorSource,
   consolidateSyncOperations,
   type DocumentRelationship,
   DriveCollectionId,
   envelopesToSyncOperations,
+  type ExecutionJobPlan,
   type IDriveClient,
   type IReactorClient,
   type ISyncManager,
@@ -109,8 +111,10 @@ import {
 import type {
   ActionEvaluations as GqlActionEvaluations,
   ActionInput,
+  BatchExecutionResult as GqlBatchExecutionResult,
   DocumentModelResultPage,
   DocumentRelationshipResultPage,
+  ExecutionJobInput,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
   PhDocumentResultPage,
@@ -1021,6 +1025,69 @@ export async function executeAsync(
   }
 
   return toGqlJobInfo(job);
+}
+
+/**
+ * Applies multiple mutation jobs atomically and waits for all of them, the wire
+ * form of `IReactorClient.executeBatch`.
+ *
+ * Each job's actions go through `toSubmittableActions`, the same coercion
+ * `execute` uses, so a client-signed action keeps its signature end to end. The
+ * client's `executeBatch` waits for every job and throws on the first failure,
+ * so reaching the conversion below means every job applied; each job's final
+ * status is then read back so the returned `JobInfo` is a completed one rather
+ * than the pending receipt the reactor hands back from a submission. The plan
+ * key is carried on each entry so the client can rebuild the keyed record.
+ */
+export async function executeBatch(
+  reactorClient: IReactorClient,
+  args: {
+    jobs: readonly ExecutionJobInput[];
+  },
+): Promise<GqlBatchExecutionResult> {
+  const jobs: ExecutionJobPlan[] = args.jobs.map((job) => ({
+    key: job.key,
+    documentId: job.documentIdOrSlug,
+    scope: job.scope,
+    branch: fromInputMaybe(job.branch) ?? DEFAULT_BRANCH,
+    actions: toSubmittableActions(job.actions),
+    dependsOn: [...job.dependsOn],
+  }));
+
+  let result: BatchExecutionResult;
+  try {
+    result = await reactorClient.executeBatch({ jobs });
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to execute batch: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  let completed: ReadonlyArray<readonly [string, JobInfo]>;
+  try {
+    completed = await Promise.all(
+      jobs.map(async (job) => {
+        const status = await reactorClient.getJobStatus(
+          result.jobs[job.key].id,
+        );
+        return [job.key, status] as const;
+      }),
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to read batch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return {
+      jobs: completed.map(([key, job]) => ({ key, job: toGqlJobInfo(job) })),
+    };
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert batch result to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
 }
 
 export async function mutateDocument(
