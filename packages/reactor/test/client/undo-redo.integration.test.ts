@@ -179,6 +179,29 @@ describe("ReactorClient undo and redo on base-reducer 3", () => {
     expect(await stream(id)).toHaveLength(1);
   });
 
+  it("runs an undo and a redo issued together in call order", async () => {
+    await build();
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    await add(id, "b");
+    await client.undo(id);
+
+    await Promise.all([client.undo(id), client.redo(id)]);
+
+    expect(await moduleIds(id)).toEqual(["a"]);
+  });
+
+  it("applies both of two undos issued together", async () => {
+    await build();
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    await add(id, "b");
+
+    await Promise.all([client.undo(id), client.undo(id)]);
+
+    expect(await moduleIds(id)).toEqual([]);
+  });
+
   it("refuses a redo once new content follows the undo", async () => {
     await build();
     const id = await createDocument(createBaseReducer3Document());
