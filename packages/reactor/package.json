@@ -89,7 +89,9 @@
   "devDependencies": {
     "@informalsystems/quint": "0.32.0",
     "@powerhousedao/pglite-fs": "workspace:*",
+    "@types/cross-spawn": "catalog:",
     "@types/pg": "catalog:",
+    "cross-spawn": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tinybench": "^2.9.0",
     "tsx": "catalog:",
