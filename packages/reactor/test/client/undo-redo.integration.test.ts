@@ -335,6 +335,24 @@ describe.each([1, 2] as const)(
       );
       expect(undone?.action.type).toBe("NOOP");
     });
+
+    it("reports nothing in a scope the subject may not read", async () => {
+      const gate: IReadGate = {
+        scopePredicate: () => Promise.resolve((scope) => scope !== "global"),
+      };
+      await build([], [], gate);
+      const id = await createDocument(
+        createDocModelDocument({
+          protocolVersions: { "base-reducer": version },
+        }),
+      );
+      await add(id, "a");
+
+      expect(await client.undoRedoAvailability(id)).toEqual({
+        canUndo: false,
+        canRedo: false,
+      });
+    });
   },
 );
 

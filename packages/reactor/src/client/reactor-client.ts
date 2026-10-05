@@ -1388,11 +1388,18 @@ export class ReactorClient implements IReactorClient {
     );
     switch (baseReducerVersion(document.header)) {
       case 1:
-      case 2:
+      case 2: {
+        const readable = await this.readableScopes(
+          document,
+          { branch },
+          signal,
+        );
         return {
-          canUndo: (document.header.revision[scope] ?? 0) > 0,
+          canUndo:
+            readable(scope) && (document.header.revision[scope] ?? 0) > 0,
           canRedo: false,
         };
+      }
       case 3: {
         const targets = await this.undoRedoTargets(
           document,
