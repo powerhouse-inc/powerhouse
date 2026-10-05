@@ -314,7 +314,11 @@ function resolveRetraction<TState extends PHBaseState>(
   }
   return {
     document,
-    action: retract(target, action.scope),
+    // A fresh id, but the submitted action's place in the stream's time order.
+    action: {
+      ...retract(target, action.scope),
+      timestampUtcMs: action.timestampUtcMs,
+    },
     // A reshuffle's rewind, carried over; never an undo.
     skip,
     reuseLastOperationIndex: false,

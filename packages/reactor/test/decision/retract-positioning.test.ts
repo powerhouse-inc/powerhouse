@@ -13,6 +13,8 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
+import { firstOutOfOrderPair } from "../../src/decision/stream-order.js";
+import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus } from "../../src/shared/types.js";
 import {
   assertOneRuleAgreement,
@@ -169,9 +171,7 @@ describe("positionByTimestamp on base-reducer 3", () => {
   it("re-appends an UNDO's RETRACT when a backdated write moves it", async () => {
     await add("a", 1);
     await add("b", 3);
-    // Stamped by the reactor's clock, as it stamps the RETRACT it resolves to.
-    vi.setSystemTime(new Date("2026-01-01T00:00:04.000Z"));
-    await execute(undo());
+    await execute(at(undo(), 4));
 
     await add("z", 2);
 
@@ -185,7 +185,6 @@ describe("positionByTimestamp on base-reducer 3", () => {
   it("positions a backdated UNDO with the rewind on its RETRACT", async () => {
     await add("a", 1);
     await add("b", 3);
-    vi.setSystemTime(new Date("2026-01-01T00:00:05.000Z"));
 
     await execute(at(undo(), 2));
 
@@ -193,6 +192,34 @@ describe("positionByTimestamp on base-reducer 3", () => {
       stream: "0:a/0 1:b/0 2:RETRACT(b)/1 3:b/0",
       positional: ["a", "RETRACT(b)", "b"],
       served: ["a"],
+    });
+  });
+
+  it("keeps the stream in timestamp order across a backdated UNDO", async () => {
+    await add("a", 1);
+    await add("b", 4);
+    const backdated = at(undo(), 3);
+
+    await execute(backdated);
+
+    const rows = await storedRows(module, docId);
+    const retraction = rows.find(
+      (operation) => operation.action.type === "RETRACT",
+    )!;
+    expect(retraction.action.id).toBe(synthesizedActionId(backdated.id));
+    expect(retraction.action.timestampUtcMs).toBe(backdated.timestampUtcMs);
+    expect(retraction.timestampUtcMs).toBe(backdated.timestampUtcMs);
+    expect(firstOutOfOrderPair(rows)).toBeUndefined();
+
+    await add("z", 2);
+
+    expect(
+      firstOutOfOrderPair(await storedRows(module, docId)),
+    ).toBeUndefined();
+    await check({
+      stream: "0:a/0 1:b/0 2:RETRACT(b)/1 3:b/0 4:z/3 5:RETRACT(b)/0 6:b/0",
+      positional: ["a", "z", "RETRACT(b)", "b"],
+      served: ["a", "z"],
     });
   });
 });
