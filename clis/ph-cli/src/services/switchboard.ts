@@ -6,6 +6,7 @@ import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switc
 import type { ILogger } from "document-model";
 import path from "node:path";
 import type { SwitchboardArgs } from "../types.js";
+import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 
 const EGRESS_ALLOW_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 const LOCALHOST_ADDRESSES = ["127.0.0.1/32", "::1/128"];
@@ -54,7 +55,7 @@ function getDefaultVetraSwitchboardOptions(
       slug: vetraDriveId,
       global: {
         name: "Vetra",
-        icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreibf2xokjqqtomqjd2w2xxmmhvogq4262csevclxh6sbrjgmjfre5u",
+        icon: POWERHOUSE_DRIVE_ICON,
       },
       preferredEditor: "vetra-drive-app",
       local: {

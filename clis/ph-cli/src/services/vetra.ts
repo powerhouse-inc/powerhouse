@@ -15,6 +15,7 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
+import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 import { mergeDefaultDrives } from "../utils/merge-default-drives.js";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
@@ -87,7 +88,7 @@ async function startVetraPreviewDrive(
     slug: previewDriveId,
     global: {
       name: "Vetra Preview",
-      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreifddkbopiyvcirf7vaqar74th424r5phlxkdxniirdyg3qgu2ajha",
+      icon: POWERHOUSE_DRIVE_ICON,
       nodes: [],
     },
     local: {
