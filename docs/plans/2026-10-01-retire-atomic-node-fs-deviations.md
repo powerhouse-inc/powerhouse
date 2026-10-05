@@ -122,6 +122,15 @@ against 49267b7e78. Entries read `path:line (symbol) — what — why`.
   Commit cbd1e67997's message calls the PG16 preflight case "red on purpose";
   8084fa5b1e made it green.
 
+- `patches/@electric-sql__pglite-tools@0.2.4.patch` — the legacy pg_dump
+  tool resolves `pg_dump.wasm` with `fileURLToPath` instead of slicing
+  `file://` off the URL — on Windows the slice leaves `/D:/...`, which
+  becomes `D:\D:\...` and `ENOENT`; `check-windows` shard 1 failed on the
+  PG16 migration test. Pre-existing: PG16 migration never ran on Windows.
+- `docs/plans/2026-10-05-fast-pglite-first-boot.md` — one-time setup work
+  (initdb, extraction, PG16 restore) no longer syncs per file; one tree
+  sync after the work. Its own deviations are recorded in that plan.
+
 ## Reactor tests
 
 - `packages/reactor/test/factories.ts:131-139` (`nodeFsBackend`) — the

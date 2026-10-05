@@ -353,6 +353,7 @@ overrides:
   unrun: ^0.3.1
 
 patchedDependencies:
+  '@electric-sql/pglite-tools@0.2.4': 3e823caceeee208b050028a08277c48de7f43d77bf2dc6788e79538937da5b51
   '@verdaccio/local-storage@14.0.0-next-9.31': 3c2fcd0454766c55ee55a88c71bf522838949149daed5491ed4f016f9a5bc96a
   cmd-ts@0.15.0: cf9842246eadd42e5eed711768b5cf97d9a90dc6b22f74c3f0d0b16f9ad199ea
 
@@ -576,7 +577,7 @@ importers:
         version: '@electric-sql/pglite@0.2.17'
       pglite-tools-legacy-02:
         specifier: npm:@electric-sql/pglite-tools@0.2.4
-        version: '@electric-sql/pglite-tools@0.2.4'
+        version: '@electric-sql/pglite-tools@0.2.4(patch_hash=3e823caceeee208b050028a08277c48de7f43d77bf2dc6788e79538937da5b51)'
       react-error-boundary:
         specifier: ^4.0.11
         version: 4.1.2(react@19.2.6)
@@ -793,7 +794,7 @@ importers:
         version: '@electric-sql/pglite@0.2.17'
       pglite-tools-legacy-02:
         specifier: npm:@electric-sql/pglite-tools@0.2.4
-        version: '@electric-sql/pglite-tools@0.2.4'
+        version: '@electric-sql/pglite-tools@0.2.4(patch_hash=3e823caceeee208b050028a08277c48de7f43d77bf2dc6788e79538937da5b51)'
       vite:
         specifier: 'catalog:'
         version: 8.3.0(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
@@ -22242,7 +22243,7 @@ snapshots:
     dependencies:
       '@electric-sql/pglite': 0.3.15
 
-  '@electric-sql/pglite-tools@0.2.4': {}
+  '@electric-sql/pglite-tools@0.2.4(patch_hash=3e823caceeee208b050028a08277c48de7f43d77bf2dc6788e79538937da5b51)': {}
 
   '@electric-sql/pglite@0.2.17': {}
 
