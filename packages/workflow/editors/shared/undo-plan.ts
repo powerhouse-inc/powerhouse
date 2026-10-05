@@ -1,15 +1,19 @@
 // Undo that steps over operations that are not the author's edits, such as
 // the runtime's test and run facts, and redo of what it took back.
 import {
-  appliedOperations,
   baseReducerVersion,
   garbageCollect,
   garbageCollectV2,
   generateId,
+  isDenied,
+  isDocumentAction,
+  positionalOperations,
+  retract,
+  retractedActionIds,
   sortOperations,
-  undoTarget,
   type Action,
   type BaseReducerVersion,
+  type CreateDocumentActionInput,
   type Operation,
   type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
@@ -50,42 +54,49 @@ export function undoGroupOf(action: Action): string | undefined {
     : undefined;
 }
 
-// A header without a version, as the GraphQL light client builds it, reads as
-// 1; an unknown version throws.
+// The header's version; a header without one, as the GraphQL light client
+// builds it, takes the version from the document's CREATE_DOCUMENT, else 1.
+// An unknown version throws.
 export function undoProtocolVersion(
   header: PHDocumentHeader,
+  create?: Operation,
 ): BaseReducerVersion {
-  if (header.protocolVersions?.["base-reducer"] === undefined) return 1;
-  return baseReducerVersion(header);
+  if (header.protocolVersions?.["base-reducer"] !== undefined) {
+    return baseReducerVersion(header);
+  }
+  const input =
+    create?.action.type === "CREATE_DOCUMENT"
+      ? (create.action.input as Partial<CreateDocumentActionInput> | undefined)
+      : undefined;
+  const version = input?.protocolVersions?.["base-reducer"];
+  if (version === undefined) return 1;
+  return baseReducerVersion({
+    ...header,
+    protocolVersions: { "base-reducer": version },
+  });
 }
 
-// The operations still in effect: undone ones and the NOOPs removed. On
-// base-reducer 3 these are the rows an UNDO can retract, one per UNDO;
-// `applied` (from `deriveScope`) says which rows apply, and without it a row
-// with a stored error counts as not applied.
+// Base-reducer 1 and 2: the operations still in effect, undone ones and the
+// NOOPs removed.
 export function effectiveOperations(
   operations: readonly Operation[],
-  protocolVersion: BaseReducerVersion,
-  applied?: ReadonlySet<string>,
+  protocolVersion: 1 | 2,
 ): Operation[] {
   const sorted = sortOperations([...operations]);
-  return keptOperations(sorted, protocolVersion, applied).filter(
+  return keptOperations(sorted, protocolVersion).filter(
     (operation) => operation.action.type !== "NOOP",
   );
 }
 
 function keptOperations(
   sorted: Operation[],
-  protocolVersion: BaseReducerVersion,
-  applied: ReadonlySet<string> | undefined,
+  protocolVersion: 1 | 2,
 ): Operation[] {
   switch (protocolVersion) {
     case 1:
       return garbageCollect(sorted);
     case 2:
       return garbageCollectV2(sorted);
-    case 3:
-      return retractableOperations(sorted, applied);
     default: {
       const unknown: never = protocolVersion;
       throw new Error(`Unknown base-reducer version ${String(unknown)}`);
@@ -93,31 +104,54 @@ function keptOperations(
   }
 }
 
-// What UNDO retracts on base-reducer 3: applied content. A stored error is
-// diagnostic there, so `applied` overrides it.
-function retractableOperations(
-  sorted: Operation[],
-  applied: ReadonlySet<string> | undefined,
-): Operation[] {
-  const rows = appliedOperations(sorted).filter(
+// Base-reducer 3: the live rows an undo may retract. Base actions, NOOPs,
+// retractions and denied rows are not edits.
+export function liveOperations(operations: readonly Operation[]): Operation[] {
+  const rows = positionalOperations(operations);
+  const retracted = retractedActionIds(rows);
+  return rows.filter(
     (operation) =>
-      operation.action.type !== "UNDO" && operation.action.type !== "REDO",
+      !retracted.has(operation.action.id) &&
+      !NOT_EDITS.has(operation.action.type) &&
+      !isDocumentAction(operation.action) &&
+      !isDenied(operation),
   );
-  if (!applied) return rows.filter((operation) => !operation.error);
-  return rows
-    .filter((operation) => applied.has(operation.action.id))
-    .map((operation) =>
-      operation.error ? { ...operation, error: undefined } : operation,
-    );
 }
 
-// Base-reducer 3: whether an UNDO has a row to retract. The cached document's
-// initial state is its current state, so `applied` can't be derived here.
-export function canUndoOn3(operations: readonly Operation[]): boolean {
-  const applied = new Set(
-    effectiveOperations(operations, 3).map((operation) => operation.action.id),
+const NOT_EDITS = new Set(["NOOP", "RETRACT", "UNDO", "REDO"]);
+
+// Base-reducer 3: the ids undo retracts, the live rows of the last edit
+// outside `policy.skip`; null when there is none. A row that threw is
+// retracted too, which changes nothing.
+export function planRetraction(
+  operations: readonly Operation[],
+  policy: UndoPolicy,
+): string[] | null {
+  const live = liveOperations(operations);
+  const last = live.findLast(
+    (operation) => !policy.skip.has(operation.action.type),
   );
-  return undoTarget(operations, applied) !== undefined;
+  if (!last) return null;
+  const group = undoGroupOf(last.action);
+  if (group === undefined) return [last.action.id];
+  return live
+    .filter((operation) => undoGroupOf(operation.action) === group)
+    .map((operation) => operation.action.id);
+}
+
+export function canUndoOn3(
+  operations: readonly Operation[],
+  policy: UndoPolicy,
+): boolean {
+  return planRetraction(operations, policy) !== null;
+}
+
+// One RETRACT per id, sent together.
+export function retractions(
+  ids: readonly string[],
+  scope = "global",
+): Action[] {
+  return ids.map((id) => retract(id, scope));
 }
 
 // Where the edit ending at `last` starts: back through its group's actions,

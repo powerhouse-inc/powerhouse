@@ -60,10 +60,9 @@ describe("useDocumentUndoRedo", () => {
     vi.restoreAllMocks();
   });
 
-  describe.each([
-    ["base-reducer 2", 2],
-    ["a header without protocol versions", undefined],
-  ])("on %s", (_, baseReducer) => {
+  describe("on base-reducer 2", () => {
+    const baseReducer = 2;
+
     it("reads revisions and the clipboard and dispatches UNDO and REDO", () => {
       state.document = makeDocument({ baseReducer, global: 2, clipboard: 1 });
       const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
@@ -91,8 +90,39 @@ describe("useDocumentUndoRedo", () => {
     });
   });
 
+  // The light client's header: the client resolves the version itself.
+  describe("on a header without protocol versions", () => {
+    it("undoes and redoes through the client", async () => {
+      state.document = makeDocument({ global: 2, clipboard: 1 });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      result.current.undo();
+      result.current.redo();
+
+      expect(client.undo).toHaveBeenCalledWith("doc-1", "global");
+      await waitFor(() =>
+        expect(client.redo).toHaveBeenCalledWith("doc-1", "global"),
+      );
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it("takes availability from the client, not revisions or the clipboard", async () => {
+      client = makeClient({ canUndo: false, canRedo: true });
+      state.client = client;
+      state.document = makeDocument({ global: 2 });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      await waitFor(() => expect(result.current.canRedo).toBe(true));
+      expect(result.current.canUndo).toBe(false);
+      expect(client.undoRedoAvailability).toHaveBeenCalledWith(
+        "doc-1",
+        "global",
+      );
+    });
+  });
+
   describe("on base-reducer 3", () => {
-    it("undoes and redoes through the client", () => {
+    it("undoes and redoes through the client", async () => {
       state.document = makeDocument({ baseReducer: 3, global: 2 });
       const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
 
@@ -100,7 +130,9 @@ describe("useDocumentUndoRedo", () => {
       result.current.redo();
 
       expect(client.undo).toHaveBeenCalledWith("doc-1", "global");
-      expect(client.redo).toHaveBeenCalledWith("doc-1", "global");
+      await waitFor(() =>
+        expect(client.redo).toHaveBeenCalledWith("doc-1", "global"),
+      );
       expect(dispatch).not.toHaveBeenCalled();
     });
 
@@ -138,6 +170,51 @@ describe("useDocumentUndoRedo", () => {
       await waitFor(() =>
         expect(client.undoRedoAvailability).toHaveBeenCalledTimes(2),
       );
+    });
+
+    it("runs a press only after the one in flight settles", async () => {
+      let finishUndo = () => {};
+      client.undo.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishUndo = () => resolve({});
+          }),
+      );
+      state.document = makeDocument({ baseReducer: 3, global: 2 });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      result.current.undo();
+      result.current.redo();
+      await act(() => Promise.resolve());
+      expect(client.undo).toHaveBeenCalledOnce();
+      expect(client.redo).not.toHaveBeenCalled();
+
+      finishUndo();
+      await waitFor(() => expect(client.redo).toHaveBeenCalledOnce());
+    });
+
+    it("reads again after a failed availability read", async () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      client.undoRedoAvailability
+        .mockImplementationOnce(() => Promise.reject(new Error("offline")))
+        .mockImplementation(() =>
+          Promise.resolve({ canUndo: true, canRedo: false }),
+        );
+      state.document = makeDocument({ baseReducer: 3, global: 2 });
+      const first = renderHook(() => useDocumentUndoRedo("doc-1"));
+      await waitFor(() =>
+        expect(error).toHaveBeenCalledWith(
+          "Failed to read undo and redo availability:",
+          expect.any(Error),
+        ),
+      );
+      expect(first.result.current.canUndo).toBe(false);
+      first.unmount();
+
+      const second = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      await waitFor(() => expect(second.result.current.canUndo).toBe(true));
+      expect(client.undoRedoAvailability).toHaveBeenCalledTimes(2);
     });
 
     it("logs a failed undo instead of rejecting", async () => {

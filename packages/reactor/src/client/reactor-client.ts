@@ -206,6 +206,8 @@ export class ReactorClient implements IReactorClient {
   private actionEvaluation: ActionEvaluationConfig | undefined;
   private readonly createSignaturePolicy: SignaturePolicy;
   private readonly protocolSelection: ProtocolSelection;
+  // Tail of each (document, scope, branch) undo/redo chain.
+  private readonly undoRedoChains = new Map<string, Promise<unknown>>();
 
   readonly drives: IDriveClient;
 
@@ -1386,11 +1388,18 @@ export class ReactorClient implements IReactorClient {
     );
     switch (baseReducerVersion(document.header)) {
       case 1:
-      case 2:
+      case 2: {
+        const readable = await this.readableScopes(
+          document,
+          { branch },
+          signal,
+        );
         return {
-          canUndo: (document.header.revision[scope] ?? 0) > 0,
+          canUndo:
+            readable(scope) && (document.header.revision[scope] ?? 0) > 0,
           canRedo: false,
         };
+      }
       case 3: {
         const targets = await this.undoRedoTargets(
           document,
@@ -2347,10 +2356,41 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * The id a write on `identifier` is stored under, which its signatures bind.
-   * A create names its own id.
+   * Resolves and submits one at a time per (identifier, scope, branch), in call
+   * order, so each resolves against the write before it. Taken before any
+   * await; a slug and its id are not serialized against each other.
    */
-  private async undoOrRedo<TDocument extends PHDocument>(
+  private undoOrRedo<TDocument extends PHDocument>(
+    type: "UNDO" | "REDO",
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    const key = JSON.stringify([documentIdentifier, scope, branch]);
+    const run = (this.undoRedoChains.get(key) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() =>
+        this.resolveAndSubmitUndoOrRedo<TDocument>(
+          type,
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      );
+    this.undoRedoChains.set(key, run);
+    void run
+      .catch(() => undefined)
+      .finally(() => {
+        if (this.undoRedoChains.get(key) === run) {
+          this.undoRedoChains.delete(key);
+        }
+      });
+    return run;
+  }
+
+  private async resolveAndSubmitUndoOrRedo<TDocument extends PHDocument>(
     type: "UNDO" | "REDO",
     documentIdentifier: string,
     scope: string,
@@ -2440,6 +2480,10 @@ export class ReactorClient implements IReactorClient {
     return this.reactor.resolveUndoRedo(documentId, scope, branch, signal);
   }
 
+  /**
+   * The id a write on `identifier` is stored under, which its signatures bind.
+   * A create names its own id.
+   */
   private async resolveWriteTarget(
     identifier: string,
     branch: string,

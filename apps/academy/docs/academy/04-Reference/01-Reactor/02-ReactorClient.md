@@ -703,7 +703,7 @@ undo<TDocument extends PHDocument = PHDocument>(
 | `branch`             | `string`      | No       | Defaults to `"main"`   |
 | `signal`             | `AbortSignal` | No       | Cancel the request     |
 
-On a base-reducer 3 document the client resolves the target and submits a `RETRACT` signed by its own signer; with nothing to undo it throws before submitting. On base-reducer 1 and 2 it submits `UNDO`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+On a base-reducer 3 document the reactor resolves the target and the client submits a `RETRACT` of it signed by its own signer; with nothing to undo it throws before submitting. On base-reducer 1 and 2 it submits `UNDO`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
 
 ---
 
@@ -720,7 +720,7 @@ redo<TDocument extends PHDocument = PHDocument>(
 ): Promise<TDocument>
 ```
 
-On base-reducer 3 the client submits a signed `RETRACT` of the last live retraction. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
+On base-reducer 3 the reactor resolves the last live retraction and the client submits a `RETRACT` of it signed by its own signer. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
 
 ---
 
@@ -739,7 +739,7 @@ undoRedoAvailability(
 type UndoRedoAvailability = { canUndo: boolean; canRedo: boolean };
 ```
 
-Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`.
+Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`. A scope the caller may not read reports neither.
 
 ---
 

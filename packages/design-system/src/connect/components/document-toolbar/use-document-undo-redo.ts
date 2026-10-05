@@ -28,11 +28,20 @@ const UNAVAILABLE: UndoRedoAvailability = { canUndo: false, canRedo: false };
 const UNDO_SCOPE = "global";
 
 /**
- * Whether undo and redo go through the reactor client. Light-client headers
- * carry no protocol versions and take the dispatch path.
+ * Whether undo and redo go through the reactor client: on base-reducer 3, and
+ * on a light-client header, which carries no protocol versions and whose
+ * client resolves every version.
  */
-function isBaseReducer3(document: PHDocument | undefined): boolean {
-  return document?.header.protocolVersions?.["base-reducer"] === 3;
+function undoesThroughClient(
+  client: IReactorBrowserClient | undefined,
+  document: PHDocument | undefined,
+): boolean {
+  if (!client || !document) return false;
+  const version = document.header.protocolVersions?.["base-reducer"];
+  if (version === 3) return true;
+  return (
+    version === undefined && typeof client.undoRedoAvailability === "function"
+  );
 }
 
 // The latest availability read per document, shared by every hook asking at
@@ -54,24 +63,62 @@ function readAvailability(
   }
   const cached = reads.get(documentId);
   if (cached?.revision === revision) return cached.read;
-  const read = client
+  const entry = { revision, read: Promise.resolve(UNAVAILABLE) };
+  entry.read = client
     .undoRedoAvailability(documentId, UNDO_SCOPE)
     .catch((error: unknown) => {
       console.error("Failed to read undo and redo availability:", error);
+      // A failure is not cached, so the next ask reads again.
+      if (reads.get(documentId) === entry) reads.delete(documentId);
       return UNAVAILABLE;
     });
-  reads.set(documentId, { revision, read });
-  return read;
+  reads.set(documentId, entry);
+  return entry.read;
+}
+
+// The undo or redo in flight per document, so presses run one after another
+// in press order.
+const pendingPresses = new WeakMap<
+  IReactorBrowserClient,
+  Map<string, Promise<unknown>>
+>();
+
+function queuePress(
+  client: IReactorBrowserClient,
+  documentId: string,
+  press: () => Promise<unknown>,
+  failure: string,
+): void {
+  let presses = pendingPresses.get(client);
+  if (!presses) {
+    presses = new Map();
+    pendingPresses.set(client, presses);
+  }
+  const queue = presses;
+  const prior = queue.get(documentId);
+  const started = prior
+    ? prior.then(press)
+    : new Promise((resolve) => resolve(press()));
+  const run = started.catch((error: unknown) => {
+    console.error(failure, error);
+  });
+  queue.set(documentId, run);
+  void run.finally(() => {
+    if (queue.get(documentId) === run) queue.delete(documentId);
+  });
 }
 
 /**
  * Undo and redo through the reactor client, so the author signs the RETRACT
  * it submits. Availability is read when the global or document revision
- * changes. Returns undefined unless the document is on base-reducer 3.
+ * changes, and presses run one at a time. Returns undefined unless the
+ * document is on base-reducer 3 or its header carries no protocol versions.
  */
 export function useBaseReducer3UndoRedo(document: PHDocument | undefined) {
   const client = useReactorClient();
-  const documentId = isBaseReducer3(document) ? document?.header.id : undefined;
+  const documentId = undoesThroughClient(client, document)
+    ? document?.header.id
+    : undefined;
   const revision = `${document?.header.revision[UNDO_SCOPE] ?? 0}:${document?.header.revision.document ?? 0}`;
   const [availability, setAvailability] = useState<{
     documentId?: string;
@@ -95,16 +142,20 @@ export function useBaseReducer3UndoRedo(document: PHDocument | undefined) {
   return {
     canUndo,
     canRedo,
-    undo: () => {
-      client.undo(documentId, UNDO_SCOPE).catch((error: unknown) => {
-        console.error("Failed to undo:", error);
-      });
-    },
-    redo: () => {
-      client.redo(documentId, UNDO_SCOPE).catch((error: unknown) => {
-        console.error("Failed to redo:", error);
-      });
-    },
+    undo: () =>
+      queuePress(
+        client,
+        documentId,
+        () => client.undo(documentId, UNDO_SCOPE),
+        "Failed to undo:",
+      ),
+    redo: () =>
+      queuePress(
+        client,
+        documentId,
+        () => client.redo(documentId, UNDO_SCOPE),
+        "Failed to redo:",
+      ),
   };
 }
 
@@ -128,9 +179,10 @@ function hasRevisions(document: PHDocument | undefined) {
 /**
  * Returns undo state and an undo dispatcher for a document.
  *
- * On base-reducer 3 both come from the reactor client. Otherwise `canUndo` is
- * true when the document has at least one non-zero revision count across any
- * revision scope, and undo dispatches UNDO.
+ * On base-reducer 3, and on a header without protocol versions, both come from
+ * the reactor client. Otherwise `canUndo` is true when the document has at
+ * least one non-zero revision count across any revision scope, and undo
+ * dispatches UNDO.
  */
 export function useUndo(documentId: string | undefined) {
   const [document, dispatch] = useDocumentById(documentId);
@@ -148,9 +200,10 @@ export function useUndo(documentId: string | undefined) {
 /**
  * Returns redo state and a redo dispatcher for a document.
  *
- * On base-reducer 3 both come from the reactor client. Otherwise `canRedo` is
- * true when the document clipboard contains at least one operation that can be
- * reapplied, and redo dispatches REDO.
+ * On base-reducer 3, and on a header without protocol versions, both come from
+ * the reactor client. Otherwise `canRedo` is true when the document clipboard
+ * contains at least one operation that can be reapplied, and redo dispatches
+ * REDO.
  */
 export function useRedo(documentId: string | undefined) {
   const [document, dispatch] = useDocumentById(documentId);

@@ -13,6 +13,7 @@ import {
   createPresignedHeader,
   createReducer,
   generateId,
+  retract,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { upgradeDocumentAction } from "../../src/actions/index.js";
@@ -179,6 +180,60 @@ describe("ReactorClient undo and redo on base-reducer 3", () => {
     expect(await stream(id)).toHaveLength(1);
   });
 
+  it("runs an undo and a redo issued together in call order", async () => {
+    await build();
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    await add(id, "b");
+    await client.undo(id);
+
+    await Promise.all([client.undo(id), client.redo(id)]);
+
+    expect(await moduleIds(id)).toEqual(["a"]);
+  });
+
+  it("applies both of two undos issued together", async () => {
+    await build();
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    await add(id, "b");
+
+    await Promise.all([client.undo(id), client.undo(id)]);
+
+    expect(await moduleIds(id)).toEqual([]);
+  });
+
+  it("applies RETRACTs batched in one write, and RETRACTs of them", async () => {
+    await build();
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    await add(id, "b");
+    await add(id, "c");
+    const [, b, c] = await stream(id);
+    const undo = [retract(b.action.id), retract(c.action.id)];
+
+    await client.execute(id, "main", undo);
+
+    expect(await moduleIds(id)).toEqual(["a"]);
+    expect(
+      (await stream(id)).slice(3).map((operation) => operation.action.id),
+    ).toEqual(undo.map((action) => action.id));
+
+    await client.execute(id, "main", [
+      retract(undo[0].id),
+      retract(undo[1].id),
+    ]);
+
+    expect(await moduleIds(id)).toEqual(["a", "b", "c"]);
+
+    await client.undo(id);
+
+    expect((await stream(id)).at(-1)!.action.input).toEqual({
+      target: c.action.id,
+    });
+    expect(await moduleIds(id)).toEqual(["a", "b"]);
+  });
+
   it("refuses a redo once new content follows the undo", async () => {
     await build();
     const id = await createDocument(createBaseReducer3Document());
@@ -311,6 +366,24 @@ describe.each([1, 2] as const)(
           operation.action.id === synthesizedActionId(submitted[0].id),
       );
       expect(undone?.action.type).toBe("NOOP");
+    });
+
+    it("reports nothing in a scope the subject may not read", async () => {
+      const gate: IReadGate = {
+        scopePredicate: () => Promise.resolve((scope) => scope !== "global"),
+      };
+      await build([], [], gate);
+      const id = await createDocument(
+        createDocModelDocument({
+          protocolVersions: { "base-reducer": version },
+        }),
+      );
+      await add(id, "a");
+
+      expect(await client.undoRedoAvailability(id)).toEqual({
+        canUndo: false,
+        canRedo: false,
+      });
     });
   },
 );

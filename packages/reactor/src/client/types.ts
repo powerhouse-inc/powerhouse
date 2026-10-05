@@ -727,8 +727,8 @@ export interface IReactorClient {
   /**
    * Undoes the last applied operation of a scope and waits for completion.
    *
-   * On base-reducer 3 the client resolves the target and submits a RETRACT
-   * signed by its own signer; on 1 and 2 it submits UNDO.
+   * On base-reducer 3 the reactor resolves the target and the client submits
+   * a RETRACT of it signed by its own signer; on 1 and 2 it submits UNDO.
    *
    * @param documentIdentifier - Target document id or slug
    * @param scope - Optional scope, defaults to "global"
@@ -747,8 +747,9 @@ export interface IReactorClient {
   /**
    * Redoes the last undo of a scope and waits for completion.
    *
-   * On base-reducer 3 the client submits a signed RETRACT of the last live
-   * retraction; on 1 and 2 it submits REDO. Applied content after the undo
+   * On base-reducer 3 the reactor resolves the last live retraction and the
+   * client submits a RETRACT of it signed by its own signer; on 1 and 2 it
+   * submits REDO. Applied content after the undo
    * leaves nothing to redo.
    *
    * @param documentIdentifier - Target document id or slug
@@ -769,7 +770,8 @@ export interface IReactorClient {
    * Whether {@link undo} and {@link redo} would find a target in a scope now.
    *
    * Exact on base-reducer 3. On 1 and 2, `canUndo` is whether the scope holds
-   * any operation and `canRedo` is false, since reads serve no clipboard.
+   * any operation and `canRedo` is false, since reads serve no clipboard. A
+   * scope the subject may not read has neither.
    *
    * @param documentIdentifier - Target document id or slug
    * @param scope - Optional scope, defaults to "global"
