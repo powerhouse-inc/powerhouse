@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { NodeFS } from "@electric-sql/pglite/nodefs";
 import { childLogger } from "document-model";
-import { promises as fs } from "node:fs";
+import nodeFs, { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -21,6 +21,7 @@ import {
   type ConversionStep,
   type VerifyHandle,
 } from "../../src/pglite/convert-snapshot-dir.js";
+import { syncDirectory } from "../../src/pglite/sync-tree.js";
 import { writeSnapshotFromDir } from "./snapshot-writer.js";
 
 const CURRENT_MAJOR = 17;
@@ -70,6 +71,24 @@ async function countRows(dataDir: string): Promise<number> {
   } finally {
     await closeNodeFs(pg, dataDir);
   }
+}
+
+async function countInodes(
+  root: string,
+): Promise<{ files: number; dirs: number }> {
+  const counts = { files: 0, dirs: 1 };
+  const walk = async (dir: string) => {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        counts.dirs++;
+        await walk(path.join(dir, entry.name));
+      } else if (entry.isFile()) {
+        counts.files++;
+      }
+    }
+  };
+  await walk(root);
+  return counts;
 }
 
 async function dbState(dataDir: string): Promise<number> {
@@ -280,6 +299,54 @@ describe("convertSnapshotDir", { timeout: 90_000 }, () => {
       "renameNew",
       "removeOld",
     ]);
+  });
+
+  it("syncs the converted tree once, after the verify handle closes", async () => {
+    await makeSnapshotStore();
+    const events: string[] = [];
+    let fsyncs = 0;
+    const observing: ConversionDeps = {
+      ...deps,
+      hostFs: {
+        fsyncSync: (fd) => {
+          nodeFs.fsyncSync(fd);
+          if (fsyncs++ === 0) events.push("first fsync");
+        },
+      },
+      openForVerify: async (major, dataDir) => {
+        const handle = await openForVerify(major, dataDir);
+        return {
+          query: (sql) => handle.query(sql),
+          close: async () => {
+            await handle.close();
+            events.push("close");
+          },
+        };
+      },
+      afterStep: (step) => {
+        if (step === "verify") {
+          events.push(`verify fsyncs=${fsyncs}`);
+        } else {
+          events.push(step);
+        }
+      },
+    };
+    expect(await convertSnapshotDir(dir, observing)).toBe("converted");
+
+    // One fsync per inode after verify, then the parent after each rename.
+    const inodes = await countInodes(dir);
+    const dirSyncs = syncDirectory(dir) ? inodes.dirs : 0;
+    const treeSyncs = inodes.files + dirSyncs;
+    expect(events).toEqual([
+      "extract",
+      "close",
+      "first fsync",
+      `verify fsyncs=${treeSyncs}`,
+      "renameOld",
+      "renameNew",
+      "removeOld",
+    ]);
+    expect(fsyncs).toBe(treeSyncs + (dirSyncs > 0 ? 2 : 0));
   });
 
   describe("recovery", () => {

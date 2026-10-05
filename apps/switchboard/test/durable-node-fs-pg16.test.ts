@@ -5,8 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadNodeFsClass, loadPGliteModule } from "../src/pglite-version.js";
 
-// initdb with fsync on issues ~1800 host syncs (18 s on a Mac); the Windows
-// runner is several times slower.
+// A fresh initdb takes ~10 s under suite load; the Windows runner is slower.
 const BOOT = 180_000;
 const COMMITS = 10;
 const RM = { recursive: true, force: true, maxRetries: 10 } as const;

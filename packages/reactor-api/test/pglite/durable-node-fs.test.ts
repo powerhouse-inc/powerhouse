@@ -9,8 +9,9 @@ import {
   resolvePgliteFsync,
   type DurableNodeFsOptions,
 } from "../../src/pglite/durable-node-fs.js";
+import { syncDirectory } from "../../src/pglite/sync-tree.js";
 
-// initdb with fsync on issues ~2400 host syncs; CI runners are slow.
+// A fresh initdb takes ~9 s under full-suite load; the Windows runner is slower.
 const BOOT = 90_000;
 const COMMITS = 10;
 
@@ -28,11 +29,10 @@ function spyHostFs(): HostFsSpy {
     failFdatasync,
     hostFs: {
       fsyncSync: (fd) => {
-        counts.fsync++;
         nodeFs.fsyncSync(fd);
+        counts.fsync++;
       },
       fdatasyncSync: (fd) => {
-        counts.fdatasync++;
         if (failFdatasync.current) {
           const err = new Error("ENOSPC: no space left on device") as Error & {
             code: string;
@@ -41,9 +41,28 @@ function spyHostFs(): HostFsSpy {
           throw err;
         }
         nodeFs.fdatasyncSync(fd);
+        counts.fdatasync++;
       },
     },
   };
+}
+
+async function countInodes(
+  root: string,
+): Promise<{ files: number; dirs: number }> {
+  const counts = { files: 0, dirs: 1 };
+  const walk = async (dir: string) => {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        counts.dirs++;
+        await walk(path.join(dir, entry.name));
+      } else if (entry.isFile()) {
+        counts.files++;
+      }
+    }
+  };
+  await walk(root);
+  return counts;
 }
 
 describe("createDurableNodeFs", () => {
@@ -78,6 +97,55 @@ describe("createDurableNodeFs", () => {
       const spy = spyHostFs();
       const { pg } = await start({ hostFs: spy.hostFs });
       await pg.exec("CREATE TABLE t (v int)");
+      const before = spy.counts.fdatasync;
+      for (let i = 0; i < COMMITS; i++) {
+        await pg.exec(`INSERT INTO t VALUES (${i})`);
+      }
+      expect(spy.counts.fdatasync - before).toBe(COMMITS);
+    },
+    BOOT,
+  );
+
+  it(
+    "fresh initdb issues no host syncs until init completes, then one tree sync",
+    async () => {
+      const spy = spyHostFs();
+      const { dir, pg } = await start({ hostFs: spy.hostFs });
+      // initdb alone issues 746 fdatasyncs on 0.3.15.
+      expect(spy.counts.fdatasync).toBe(0);
+      const inodes = await countInodes(dir);
+      const dirSyncs = syncDirectory(dir) ? inodes.dirs : 0;
+      expect(spy.counts.fsync).toBe(inodes.files + dirSyncs);
+
+      await pg.exec("CREATE TABLE t (v int)");
+      const before = spy.counts.fdatasync;
+      for (let i = 0; i < COMMITS; i++) {
+        await pg.exec(`INSERT INTO t VALUES (${i})`);
+      }
+      expect(spy.counts.fdatasync - before).toBe(COMMITS);
+    },
+    BOOT,
+  );
+
+  it(
+    "reopening an existing store does not walk the tree",
+    async () => {
+      const first = await start({});
+      await first.pg.exec("CREATE TABLE t (v int)");
+      await first.pg.close();
+      const inodes = await countInodes(first.dir);
+
+      const spy = spyHostFs();
+      const pg = new PGlite({
+        fs: createDurableNodeFs(NodeFS, first.dir, {
+          maintenanceIntervalMs: 0,
+          hostFs: spy.hostFs,
+        }),
+      });
+      open.push(pg);
+      await pg.waitReady;
+      expect(spy.counts.fsync).toBeLessThan(inodes.files / 2);
+
       const before = spy.counts.fdatasync;
       for (let i = 0; i < COMMITS; i++) {
         await pg.exec(`INSERT INTO t VALUES (${i})`);
