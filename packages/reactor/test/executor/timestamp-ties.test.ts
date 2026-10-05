@@ -7,9 +7,11 @@ import {
   addModule,
   deriveOperationId,
   positionalOperations,
+  undo,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
+import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
   createBaseReducer3Document,
@@ -201,6 +203,74 @@ describe("base-reducer 3 timestamp ties", () => {
       b: expected,
     });
   });
+
+  // Submitted ids on either side of the stored rows, with synthesized ids on
+  // the other side.
+  for (const [undoId, side] of [
+    ["00000000-0000-4000-8000-000000000002", "after"],
+    ["f0000030-0000-4000-8000-000000000000", "before"],
+  ] as const) {
+    it(`positions a tied UNDO by the id it is stored under, which sorts ${side}`, async () => {
+      const b = "20000000-0000-4000-8000-000000000000";
+      const c = "30000000-0000-4000-8000-000000000000";
+      const synthesized = synthesizedActionId(undoId);
+      expect(synthesized > c).toBe(side === "after");
+      expect(synthesized < b).toBe(side === "before");
+
+      const origin = await build();
+      const replica = await build();
+      const docId = await shared(origin, replica);
+
+      await ok(
+        origin,
+        await origin.reactor.execute(docId, "main", [at("b", 10, b)]),
+      );
+      await ok(
+        origin,
+        await origin.reactor.execute(docId, "main", [at("c", 10, c)]),
+      );
+      await ok(
+        replica,
+        await replica.reactor.load(
+          docId,
+          "main",
+          await storedRows(origin, docId),
+        ),
+      );
+
+      const tiedUndo: Action = {
+        ...undo(),
+        id: undoId,
+        timestampUtcMs: at("u", 10).timestampUtcMs,
+      };
+      await ok(origin, await origin.reactor.execute(docId, "main", [tiedUndo]));
+      await ok(
+        replica,
+        await replica.reactor.load(
+          docId,
+          "main",
+          await storedRows(origin, docId),
+        ),
+      );
+
+      const labels = async (module: InProcessReactorModule) =>
+        positionalOperations(await storedRows(module, docId)).map(
+          (operation) =>
+            operation.action.type === "RETRACT"
+              ? operation.action.id
+              : (operation.action.input as { id: string }).id,
+        );
+      const expected =
+        side === "after" ? ["b", "c", synthesized] : [synthesized, "b", "c"];
+      expect({
+        origin: await labels(origin),
+        replica: await labels(replica),
+      }).toEqual({
+        origin: expected,
+        replica: expected,
+      });
+    });
+  }
 
   for (const senderIndex of [10, 0]) {
     it(`writes nothing for a re-delivered row with a long tail after it, sender index ${senderIndex}`, async () => {
