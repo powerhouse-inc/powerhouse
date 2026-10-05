@@ -1095,3 +1095,17 @@ The documented v1 limitation (remote drives excluded from `find`) is LIFTED. `Gr
 - Residual honest degradation (the Switchboard surface genuinely cannot express these): `find` by ids/slugs, and point-in-time `find`. Everything still unimplemented (drive choreography, jobs, batches, relationship writes) keeps the typed by-name refusal.
 - Tests: reactor-browser 260, reactor-router 105, connect 343; tsc/lint clean. Commits fc767150de, 3cc18cec9f (feature); 0dcf680a70, 43ec7e22ff (review fixes).
 - **Not yet live-verified** against a real Switchboard — needs the local vetra switchboard (7452, no external cloud load) with the connect dev server's remote backend pointed at it; do when actively monitoring resources (one vetra + one browser). Unit tests + review give high confidence pending that.
+
+---
+
+## Inspector expansion + remote-drive fixes (approved 2026-10-05)
+
+Emerged from live use of the Reactor Monitor against the running distyra↔vetra stack. Observability polish on top of Stage 4 (motivation 3). Full plan: ~/.claude/plans/whimsical-marinating-bachman.md. Seven workstreams:
+1. **Drives/Collections tab** — list drives/collections, remote URL, drive+collection state, large-collection paging, + integrity check (missing docs / unsupported types). New inspection reads.
+2. **Modules tab** — document models + versions (reuse IDocumentModelRegistry).
+3. **Workflows tab** — REUSE Workflow Studio's standalone runtime-client (extract behind a @powerhousedao/workflow subpath export); monitor renders its own plain-CSS runs view, gated on serverInfo.workflows. Not an inspection bridge.
+4. **Attachments + staleness** — (a) Overview badge live-reads serverInfo.workflows (capability grid froze stale at provision); (b) add attachment observability to the inspection plane (store/replicator/refs/bytes) so the Attachments tab works for remote.
+5. **Connect drive-app fix (widened)** — remote drives lost their drive app because header.meta is dropped on the remote GraphQL path; fix = whole-`meta` (+ protocolVersions) JSONObject passthrough server→fragment→adapter. Fixes workflow-studio etc. on remote drives.
+6. **Monitor persistence** — localStorage monitoring sets (named descriptor groups) + active set + create/delete; reactors survive refresh.
+Shared infra: the 12-step IInspector→wire→subgraph→remote-client→tab pattern (reuse QueueTab/SyncTab templates) for the inspection-backed tabs (1,2,4b).
+Sequencing: quick wins (§6,§4a,§5) → inspection track (§2,§1,§4b) → workflows (§3). Each through /code-review. §5 implementation dispatched first.
