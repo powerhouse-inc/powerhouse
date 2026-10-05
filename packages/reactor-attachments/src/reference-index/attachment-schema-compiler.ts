@@ -21,6 +21,7 @@ import {
   type GraphQLInputObjectType,
   type GraphQLInputType,
   type GraphQLSchema,
+  type ScalarTypeDefinitionNode,
 } from "graphql";
 import { parseRef } from "../ref.js";
 import type {
@@ -29,13 +30,9 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-/**
- * Every catalog scalar except `JSONObject`, matching the scalars codegen maps.
- * A model may declare `JSONObject` itself, and a second declaration here would
- * fail as a duplicate.
- */
+/** Catalog scalars used by generated and code-first schemas. */
 const CODEGEN_SCALAR_NAMES: ReadonlySet<string> = new Set(
-  orderedScalarNames(scalarCatalog.names, [], ["JSONObject"]),
+  orderedScalarNames(scalarCatalog.names, [], []),
 );
 
 type CompilerContext = {
@@ -175,10 +172,6 @@ function buildEffectiveSchema(
   packageScalars: readonly string[],
   context: CompilerContext,
 ): GraphQLSchema {
-  const scalarSchemas = Array.from(
-    [...CODEGEN_SCALAR_NAMES, ...packageScalars],
-    (name) => `scalar ${name}`,
-  );
   const stateSchemas = Object.values(specification.state).map(
     (state) => state.schema,
   );
@@ -191,11 +184,31 @@ function buildEffectiveSchema(
 
   try {
     const document = parse(
-      [...scalarSchemas, ...stateSchemas, ...operationSchemas]
-        .filter(Boolean)
-        .join("\n\n"),
+      [...stateSchemas, ...operationSchemas].filter(Boolean).join("\n\n"),
     );
-    return buildASTSchema(dedupeTypeDefinitions(document));
+    const declaredScalars = new Set(
+      document.definitions.flatMap((definition) =>
+        definition.kind === Kind.SCALAR_TYPE_DEFINITION
+          ? [definition.name.value]
+          : [],
+      ),
+    );
+    const scalarDefinitions = [...CODEGEN_SCALAR_NAMES, ...packageScalars]
+      .filter((name) => name !== "JSONObject" || !declaredScalars.has(name))
+      .map(
+        (name) =>
+          ({
+            kind: Kind.SCALAR_TYPE_DEFINITION,
+            name: { kind: Kind.NAME, value: name },
+            directives: [],
+          }) satisfies ScalarTypeDefinitionNode,
+      );
+    return buildASTSchema(
+      dedupeTypeDefinitions({
+        ...document,
+        definitions: [...scalarDefinitions, ...document.definitions],
+      }),
+    );
   } catch {
     throw compilationError(context, "the effective GraphQL schema is invalid");
   }

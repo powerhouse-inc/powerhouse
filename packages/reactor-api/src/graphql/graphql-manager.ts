@@ -101,9 +101,13 @@ function filterLatestDocumentModelVersions(
     }
 
     const currentVersion =
-      documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
+      documentModel.version ??
+      documentModel.documentModel.global.specifications.at(-1)?.version ??
+      0;
     const existingVersion =
-      existing.documentModel.global.specifications.at(-1)?.version ?? 0;
+      existing.version ??
+      existing.documentModel.global.specifications.at(-1)?.version ??
+      0;
 
     if (currentVersion > existingVersion) {
       latestByName.set(name, documentModel);

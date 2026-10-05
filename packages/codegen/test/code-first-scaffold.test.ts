@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,12 +16,11 @@ import {
   generateCodeFirstDocumentModel,
   generateCodeFirstSubgraph,
 } from "../src/codegen/generate.js";
-import {
-  codeFirstModelImportSpecifiers,
-  codeFirstModelDirectories,
-} from "../src/file-builders/document-model/code-first-aggregates.js";
+import { codeFirstAggregateSources } from "../src/file-builders/document-model/code-first-aggregates.js";
 import { planDefinitionSourceRegistration } from "../src/file-builders/index.mts";
 import { buildTsMorphProject, formatSafe } from "../src/utils/index.mts";
+import { refreshDocumentModelAggregates } from "../src/file-builders/document-model/document-model.js";
+import { ViteTypeScriptSourceImportAdapter } from "../src/utils/definition-source-importer.js";
 
 let projectDir: string;
 let enteredFrom: string;
@@ -76,6 +76,20 @@ beforeEach(() => {
   enteredFrom = process.cwd();
   projectDir = mkdtempSync(join(tmpdir(), "ph-code-first-"));
   mkdirSync(join(projectDir, "document-models"), { recursive: true });
+  mkdirSync(join(projectDir, "node_modules", "@powerhousedao"), {
+    recursive: true,
+  });
+  symlinkSync(
+    new URL("../../document-model", import.meta.url).pathname,
+    join(projectDir, "node_modules", "document-model"),
+    "dir",
+  );
+  for (const name of ["shared", "reactor-api"])
+    symlinkSync(
+      new URL(`../../${name}`, import.meta.url).pathname,
+      join(projectDir, "node_modules", "@powerhousedao", name),
+      "dir",
+    );
   writeFileSync(
     join(projectDir, "package.json"),
     JSON.stringify({ name: "@acme/things", type: "module" }),
@@ -248,10 +262,10 @@ describe("generateCodeFirstDocumentModel", () => {
       'export * from "./todo/index.js";',
     );
     expect(read("document-models/document-models.ts")).toContain(
-      "...documentModelsCodeFirst0",
+      "documentModelsCodeFirst0",
     );
     expect(read("document-models/upgrade-manifests.ts")).toContain(
-      "...upgradeManifestsCodeFirst0",
+      "upgradeManifestsCodeFirst0",
     );
   });
 
@@ -322,39 +336,181 @@ describe("generateCodeFirstDocumentModel", () => {
 });
 
 describe("code-first aggregate modules", () => {
-  it("maps configured sources under document-models/ to aggregate specifiers", () => {
+  it("does not import model collections from a scalar-only source", async () => {
+    writeFileSync(
+      join(projectDir, "document-models", "scalars.ts"),
+      `import { defineScalar, ph } from "document-model";
+       const { validator, zodSource } = ph.EmailAddress.binding;
+       export const ContactEmail = defineScalar({ name: "ContactEmail", description: "An email", representation: "string", validator, zodSource });`,
+    );
+    writeConfig({
+      definitionSources: {
+        formatVersion: 1,
+        mode: "code-first",
+        entries: [{ specifier: "./document-models/scalars.ts" }],
+      },
+    });
+    await generateModel();
+    expect(read("document-models/document-models.ts")).not.toContain(
+      "scalars.js",
+    );
+    expect(read("document-models/upgrade-manifests.ts")).not.toContain(
+      "scalars.js",
+    );
+    expect(read("document-models/document-models.ts")).toContain(
+      "./todo/index.js",
+    );
+  });
+
+  it("uses the selected named exports instead of assuming collection exports", async () => {
+    await generateModel();
+    writeFileSync(
+      join(projectDir, "document-models", "selected.ts"),
+      `
+      export { todoV1 as chosen } from "./todo/index.js";
+      export { todoUpgradeManifest as manifest } from "./todo/index.js";
+    `,
+    );
     writeConfig({
       definitionSources: {
         formatVersion: 1,
         mode: "code-first",
         entries: [
-          { specifier: "./document-models/todo/index.ts" },
-          { specifier: "./document-models/ledger/index.mts" },
-          { specifier: "./src/elsewhere/model.ts" },
+          {
+            specifier: "./document-models/selected.ts",
+            exportPath: ["chosen"],
+          },
+          {
+            specifier: "./document-models/selected.ts",
+            exportPath: ["manifest"],
+          },
         ],
       },
     });
-    expect(codeFirstModelImportSpecifiers(projectDir)).toStrictEqual([
-      "./ledger/index.mjs",
-      "./todo/index.js",
-    ]);
+    const project = buildTsMorphProject(projectDir);
+    project.addSourceFilesAtPaths(join(projectDir, "document-models/**/*.ts"));
+    await refreshDocumentModelAggregates(project);
+    await project.save();
+    expect(read("document-models/document-models.ts")).toContain('["chosen"]');
+    expect(read("document-models/document-models.ts")).not.toContain(
+      '["documentModels"]',
+    );
+    expect(read("document-models/upgrade-manifests.ts")).toContain(
+      '["manifest"]',
+    );
+    expect(read("document-models/index.ts")).toContain(
+      "codeFirstDocumentModel",
+    );
+    expect(read("document-models/index.ts")).not.toContain(
+      'export * from "./selected.js"',
+    );
   });
 
-  it("finds nothing in a schema-first package", () => {
+  it.each(["collection", "element", "family", "outside", "outside-family"])(
+    "publishes named worker modules from a selected %s",
+    async (selection) => {
+      await generateModel();
+      const dir = selection.startsWith("outside") ? "src" : "document-models";
+      mkdirSync(join(projectDir, dir), { recursive: true });
+      writeFileSync(
+        join(projectDir, dir, "selected.ts"),
+        `
+        import { todoV1, todoFamily } from "${dir === "src" ? "../document-models" : "."}/todo/index.js";
+        export const documentModels = [todoV1];
+        export const Family = todoFamily;
+      `,
+      );
+      const exportPath = selection.endsWith("family")
+        ? ["Family"]
+        : selection === "element"
+          ? ["documentModels", "0"]
+          : ["documentModels"];
+      writeConfig({
+        definitionSources: {
+          formatVersion: 1,
+          mode: "code-first",
+          entries: [
+            { specifier: `./${dir}/selected.ts`, exportPath },
+            ...(!selection.endsWith("family")
+              ? [
+                  {
+                    specifier: "./document-models/todo/index.ts",
+                    exportPath: ["todoUpgradeManifest"],
+                  },
+                ]
+              : []),
+          ],
+        },
+      });
+      const project = buildTsMorphProject(projectDir);
+      await refreshDocumentModelAggregates(project);
+      await project.save();
+      const importer = new ViteTypeScriptSourceImportAdapter();
+      try {
+        const namespace = await importer.importModule({
+          packageRoot: projectDir,
+          specifier: "./document-models/index.ts",
+          packageRevision: `sha256:${"1".repeat(64)}`,
+        });
+        const modules = Object.values(namespace).filter(
+          (value) =>
+            value !== null &&
+            typeof value === "object" &&
+            "documentModel" in value &&
+            "reducer" in value &&
+            typeof value.reducer === "function",
+        );
+        expect(modules).toHaveLength(1);
+        expect(namespace.upgradeManifests).toHaveLength(1);
+      } finally {
+        await importer.disposeRevision();
+      }
+    },
+  );
+
+  it.each(["index.ts", "document-models.ts", "upgrade-manifests.ts"])(
+    "preserves aggregates when a definition source selects generated %s",
+    async (name) => {
+      await generateModel();
+      const files = ["index.ts", "document-models.ts", "upgrade-manifests.ts"];
+      const before = files.map((file) => read(`document-models/${file}`));
+      for (const alias of [false, true]) {
+        const specifier = alias
+          ? "./aggregate-alias.ts"
+          : `./document-models/${name}`;
+        if (alias)
+          symlinkSync(
+            join(projectDir, "document-models", name),
+            join(projectDir, "aggregate-alias.ts"),
+          );
+        writeConfig({
+          definitionSources: {
+            formatVersion: 1,
+            mode: "code-first",
+            entries: [{ specifier }],
+          },
+        });
+        await expect(
+          refreshDocumentModelAggregates(buildTsMorphProject(projectDir)),
+        ).rejects.toThrow(/Select the original authored definition file/);
+        expect(files.map((file) => read(`document-models/${file}`))).toEqual(
+          before,
+        );
+      }
+    },
+  );
+
+  it("keeps legacy packages without a definitionSources declaration working", async () => {
+    expect(await codeFirstAggregateSources(projectDir)).toEqual([]);
+    rmSync(configPath());
+    expect(await codeFirstAggregateSources(projectDir)).toEqual([]);
+  });
+
+  it("finds nothing in a schema-first package", async () => {
     writeConfig({
       definitionSources: { formatVersion: 1, mode: "schema-first" },
     });
-    expect(codeFirstModelImportSpecifiers(projectDir)).toStrictEqual([]);
-  });
-
-  it("names the model directories the manifest scan skips", () => {
-    expect(
-      codeFirstModelDirectories([
-        "./todo/index.js",
-        "./ledger/index.js",
-        "./loose.js",
-      ]),
-    ).toStrictEqual(new Set(["todo", "ledger"]));
+    expect(await codeFirstAggregateSources(projectDir)).toStrictEqual([]);
   });
 });
 

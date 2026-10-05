@@ -141,10 +141,10 @@ export interface DocumentModelSubgraphResolvers<
 }
 
 /**
- * Resolves a union value to the first member that has a field no sibling has,
- * or to the first member when none matches.
+ * Resolves an abstract value by its typename or a field unique to a member,
+ * falling back to the first member when neither identifies it.
  */
-function unionResolver(
+function abstractTypeResolver(
   documentName: string,
   members: readonly string[],
   fieldsByObject: ReadonlyMap<string, readonly string[]>,
@@ -162,6 +162,12 @@ function unionResolver(
   );
   return {
     __resolveType: (obj: Record<string, unknown>) => {
+      const declared = members.find(
+        (member) =>
+          obj.__typename === member ||
+          obj.__typename === `${documentName}_${member}`,
+      );
+      if (declared) return `${documentName}_${declared}`;
       for (const member of members) {
         const fields = uniqueFields.get(member) ?? [];
         if (fields.length > 0 && fields.some((field) => field in obj)) {
@@ -229,12 +235,15 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   }
 
   /**
-   * Builds `__resolveType` for each union the model's state declares. A
+   * Builds `__resolveType` for each abstract type the model's state declares. A
    * code-first model reads its structured types. A schema-first model parses
    * its state schema. Both pick the member by the presence of a field unique
    * to it.
    */
-  private generateUnionResolvers(): Record<string, DocumentModelResolverMap> {
+  private generateAbstractTypeResolvers(): Record<
+    string,
+    DocumentModelResolverMap
+  > {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
@@ -253,10 +262,20 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       );
       const resolvers: Record<string, DocumentModelResolverMap> = {};
       for (const type of stateTypes) {
-        if (type.kind !== "union" || type.members.length === 0) continue;
-        resolvers[`${documentName}_${type.name}`] = unionResolver(
+        if (type.kind !== "union" && type.kind !== "interface") continue;
+        const members =
+          type.kind === "union"
+            ? type.members
+            : stateTypes.flatMap((candidate) =>
+                candidate.kind === "object" &&
+                candidate.implements?.includes(type.name)
+                  ? [candidate.name]
+                  : [],
+              );
+        if (members.length === 0) continue;
+        resolvers[`${documentName}_${type.name}`] = abstractTypeResolver(
           documentName,
-          type.members,
+          members,
           fieldsByObject,
         );
       }
@@ -293,14 +312,25 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     const resolvers: Record<string, DocumentModelResolverMap> = {};
 
     for (const def of ast.definitions) {
-      if (def.kind !== Kind.UNION_TYPE_DEFINITION) continue;
-
-      const unionName = def.name.value;
-      const memberTypes = def.types?.map((t) => t.name.value) ?? [];
+      if (
+        def.kind !== Kind.UNION_TYPE_DEFINITION &&
+        def.kind !== Kind.INTERFACE_TYPE_DEFINITION
+      )
+        continue;
+      const memberTypes =
+        def.kind === Kind.UNION_TYPE_DEFINITION
+          ? (def.types?.map((t) => t.name.value) ?? [])
+          : ast.definitions.flatMap((candidate) =>
+              candidate.kind === Kind.OBJECT_TYPE_DEFINITION &&
+              candidate.interfaces?.some(
+                (interface_) => interface_.name.value === def.name.value,
+              )
+                ? [candidate.name.value]
+                : [],
+            );
       if (memberTypes.length === 0) continue;
 
-      const prefixedUnionName = `${documentName}_${unionName}`;
-      resolvers[prefixedUnionName] = unionResolver(
+      resolvers[`${documentName}_${def.name.value}`] = abstractTypeResolver(
         documentName,
         memberTypes,
         objectFieldsMap,
@@ -330,7 +360,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             ) ?? []);
 
     return {
-      ...this.generateUnionResolvers(),
+      ...this.generateAbstractTypeResolvers(),
       Query: {
         // Namespace resolver: returns empty object so nested field resolvers can run
         [documentName]: () => ({}),

@@ -59,6 +59,7 @@
     "read-pkg": "catalog:",
     "remeda": "catalog:",
     "ts-morph": "catalog:",
+    "vite": "catalog:",
     "write-json-file": "^7.0.0",
     "write-package": "catalog:",
     "zod": "catalog:"

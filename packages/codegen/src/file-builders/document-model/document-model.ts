@@ -34,8 +34,8 @@ import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import {
   addCodeFirstCollections,
   addCodeFirstExports,
-  codeFirstModelImportSpecifiers,
-  codeFirstModelDirectories,
+  codeFirstAggregateSources,
+  type CodeFirstAggregateSource,
 } from "./code-first-aggregates.js";
 import {
   makeDocumentModelDocumentTypeFile,
@@ -273,7 +273,7 @@ export async function refreshDocumentModelAggregates(
     join(documentModelsDirPath, "**", "module.ts"),
     join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
   ]);
-  const codeFirst = codeFirstModelImportSpecifiers(projectDir);
+  const codeFirst = await codeFirstAggregateSources(projectDir);
   // /document-models/document-models.ts
   await makeDocumentModelsFile({ project, documentModelsDirPath, codeFirst });
   // /document-models/index.ts
@@ -289,7 +289,7 @@ export async function refreshDocumentModelAggregates(
 async function makeUpgradeManifestsFile(args: {
   project: Project;
   documentModelsDirPath: string;
-  codeFirst: string[];
+  codeFirst: CodeFirstAggregateSource[];
 }) {
   const { project, documentModelsDirPath, codeFirst } = args;
   const sourceFile = project.createSourceFile(
@@ -301,7 +301,9 @@ async function makeUpgradeManifestsFile(args: {
   const upgradeManifestsArray = sourceFile
     .getVariableDeclarationOrThrow("upgradeManifests")
     .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
-  const manifestsListedByCodeFirst = codeFirstModelDirectories(codeFirst);
+  const manifestsListedByCodeFirst = new Set(
+    codeFirst.flatMap((source) => source.manifestDocumentTypes),
+  );
 
   pipe(
     project.getSourceFiles(),
@@ -312,6 +314,18 @@ async function makeUpgradeManifestsFile(args: {
       getVariableDeclarationByTypeName(sourceFile, "UpgradeManifest"),
     ),
     filter(isTruthy),
+    filter((declaration) => {
+      const documentType = declaration
+        .getInitializerIfKind(SyntaxKind.ObjectLiteralExpression)
+        ?.getProperty("documentType")
+        ?.asKind(SyntaxKind.PropertyAssignment)
+        ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue();
+      return (
+        documentType === undefined ||
+        !manifestsListedByCodeFirst.has(documentType)
+      );
+    }),
     // get name and dir for adding to upgradeManifests array and making import specifier
     map((variableDeclaration) => ({
       name: variableDeclaration.getName(),
@@ -322,10 +336,6 @@ async function makeUpgradeManifestsFile(args: {
         .getParentOrThrow()
         .getBaseName(),
     })),
-    filter(
-      ({ documentModelDir }) =>
-        !manifestsListedByCodeFirst.has(documentModelDir),
-    ),
     uniqueBy(prop("name")),
     // make named imports and module specifier to add for each upgrade manifest
     map(({ name, documentModelDir }) => ({
@@ -352,7 +362,7 @@ async function makeUpgradeManifestsFile(args: {
 async function makeDocumentModelsFile(args: {
   project: Project;
   documentModelsDirPath: string;
-  codeFirst: string[];
+  codeFirst: CodeFirstAggregateSource[];
 }) {
   const { project, documentModelsDirPath, codeFirst } = args;
   const sourceFile = project.createSourceFile(
@@ -408,7 +418,7 @@ async function makeDocumentModelsFile(args: {
 async function makeDocumentModelsIndexFile(args: {
   project: Project;
   documentModelsDirPath: string;
-  codeFirst: string[];
+  codeFirst: CodeFirstAggregateSource[];
 }) {
   const { project, documentModelsDirPath, codeFirst } = args;
   const sourceFile = project.createSourceFile(

@@ -513,7 +513,30 @@ describe("AttachmentSchemaCompiler", () => {
     ).toEqual([REF_C]);
   });
 
-  it("declares the package scalars a code-first module's definition names", () => {
+  it("keeps an explicit JSONObject declaration in schema-first SDL", () => {
+    const module = documentModule([
+      specification(1, [
+        operation(
+          "ATTACH_FILE",
+          "scalar JSONObject\ninput AttachFileInput { ref: AttachmentRef metadata: JSONObject }",
+        ),
+      ]),
+    ]);
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      "ATTACH_FILE",
+    );
+    expect(
+      extractor.extract(
+        action("ATTACH_FILE", {
+          ref: REF_A,
+          metadata: { label: "attachment" },
+        }),
+      ),
+    ).toEqual([REF_A]);
+  });
+
+  it("declares package and catalog scalars referenced by code-first SDL", () => {
     const { validator, zodSource } = ph.EmailAddress.binding;
     const ContactEmail = defineScalar({
       name: "ContactEmail",
@@ -532,9 +555,13 @@ describe("AttachmentSchemaCompiler", () => {
       specifications: {
         global: {
           schema: ph.object("ContactsState", {
-            fields: { email: ContactEmail(), card: ph.AttachmentRef() },
+            fields: {
+              email: ContactEmail(),
+              card: ph.AttachmentRef(),
+              metadata: ph.JSONObject(),
+            },
           }),
-          initialValue: { email: null, card: null },
+          initialValue: { email: null, card: null, metadata: null },
         },
         local: { schema: null, initialValue: {} },
       },
@@ -546,11 +573,13 @@ describe("AttachmentSchemaCompiler", () => {
             fields: {
               email: ContactEmail({ required: true }),
               card: ph.AttachmentRef(),
+              metadata: ph.JSONObject(),
             },
           }),
           reduce(state, input) {
             state.email = input.email;
             state.card = input.card ?? null;
+            state.metadata = input.metadata ?? null;
           },
         }),
       }),
@@ -564,7 +593,11 @@ describe("AttachmentSchemaCompiler", () => {
     );
     expect(
       extractor.extract(
-        action("SET_CONTACT", { email: "ada@example.com", card: REF_A }),
+        action("SET_CONTACT", {
+          email: "ada@example.com",
+          card: REF_A,
+          metadata: { source: "consumer" },
+        }),
       ),
     ).toEqual([REF_A]);
   });

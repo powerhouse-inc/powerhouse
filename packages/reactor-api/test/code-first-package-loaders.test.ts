@@ -9,6 +9,8 @@ import {
 } from "../../document-model/test/fixtures/loaders/materialize.js";
 import type { DefinedSubgraph } from "../src/graphql/define-subgraph.js";
 import type { SubgraphClass } from "../src/graphql/types.js";
+import type { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { asSchemaFirst, reactorClientFor } from "./utils/graphql-host.js";
 import { HttpPackageLoader } from "../src/packages/http-loader.js";
 import { ImportPackageLoader } from "../src/packages/import-loader.js";
 import { VitePackageLoader } from "../src/packages/vite-loader.mjs";
@@ -253,6 +255,55 @@ async function mountedSubgraphs(
 }
 
 describe("GraphQL", () => {
+  it.each([
+    { stored: false, reverse: false },
+    { stored: true, reverse: false },
+    { stored: false, reverse: true },
+    { stored: true, reverse: true },
+  ])(
+    "runs latest-version actions with complete history (stored: $stored, reverse: $reverse)",
+    async ({ stored, reverse }) => {
+      const loader = new ImportPackageLoader();
+      const loaded = models(await loader.loadDocumentModels(fixture.root));
+      if (reverse) loaded.reverse();
+      const latest = loaded.find((module) => module.version === 2)!;
+      const live = reactorClientFor(latest);
+      const { manager } = makeHarness({
+        enableDocumentModelSubgraphs: true,
+        reactorClient: makeMockReactorClient({
+          ...live.client,
+          getDocumentModelModules: vi.fn().mockResolvedValue({
+            results: [
+              makeDriveModule(),
+              ...loaded.map((module) =>
+                stored ? asSchemaFirst(module) : module,
+              ),
+            ],
+          }),
+        }),
+      });
+      vi.useFakeTimers();
+      try {
+        await initAndFlush(manager);
+        const subgraph = manager.getSubgraphByName(
+          "ledger",
+        ) as DocumentModelSubgraph;
+        await expect(
+          subgraph.mutationResolvers.setCurrency(
+            null,
+            { documentIdOrSlug: "doc-1", input: { currency: "USD" } },
+            { user: { address: "owner" } } as never,
+          ),
+        ).resolves.toBeDefined();
+        expect(live.current().state).toMatchObject({
+          global: { currency: "USD" },
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("selects a code-first model the way it selects any other", async () => {
     const loader = new ImportPackageLoader();
     const codeFirst = models(await loader.loadDocumentModels(fixture.root));
