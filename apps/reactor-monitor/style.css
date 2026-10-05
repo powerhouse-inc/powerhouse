@@ -50,6 +50,44 @@ body {
   color: #666;
 }
 
+.reactor-monitor__sidebar-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rm-sets {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 1rem;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+}
+
+.rm-sets h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.rm-sets label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.rm-sets select,
+.rm-sets input {
+  width: 100%;
+}
+
+.rm-sets-create {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
 .reactor-monitor__main {
   flex: 1;
   display: flex;

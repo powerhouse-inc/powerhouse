@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import { ChannelScheme } from "@powerhousedao/reactor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { App, INSPECTOR_TABS } from "./App.js";
 import type { ProvisionRequest } from "./components/ProvisionPanel.js";
+import { MonitoringSetsStore } from "./monitoring-sets.js";
 
 // Provisioning a reactor stands up a whole PGlite (WASM cold boot plus the
 // reactor migrations), which outlasts waitFor's 1s default on a loaded
@@ -19,7 +20,30 @@ function testDescriptor({ name, kind }: ProvisionRequest): ReactorDescriptor {
   return { kind, name, storage: { kind: "memory" } };
 }
 
+/**
+ * A store over a non-persisting in-memory map, so each test starts from an
+ * empty default set rather than inheriting what a sibling test provisioned
+ * into the shared happy-dom localStorage (multi-reactor §6).
+ */
+function freshStore(): MonitoringSetsStore {
+  const cells = new Map<string, string>();
+  return new MonitoringSetsStore({
+    getItem: (key) => cells.get(key) ?? null,
+    setItem: (key, value) => {
+      cells.set(key, value);
+    },
+  });
+}
+
 describe("App", () => {
+  beforeEach(() => {
+    try {
+      window.localStorage.clear();
+    } catch {
+      // No storage to clear in this environment; nothing leaks between tests.
+    }
+  });
+
   it("renders the shell with the provision form, reactor list and inspector tabs", () => {
     const { getByRole, getByLabelText, getByText } = render(<App />);
 
@@ -94,6 +118,60 @@ describe("App", () => {
     expect(
       view.getByText(/Provision another ready local-capable reactor/),
     ).toBeTruthy();
+  }, 30_000);
+
+  it("creates, switches and deletes monitoring sets through the set controls", () => {
+    const store = freshStore();
+    const view = render(<App buildDescriptor={testDescriptor} store={store} />);
+
+    const select = view.getByTestId("monitor-set-select") as HTMLSelectElement;
+    expect(select.value).toBe("default");
+    expect(
+      view.getByTestId("monitor-set-delete").hasAttribute("disabled"),
+    ).toBe(true);
+
+    fireEvent.change(view.getByTestId("monitor-set-name"), {
+      target: { value: "staging" },
+    });
+    fireEvent.click(view.getByTestId("monitor-set-create"));
+
+    expect(select.value).toBe("staging");
+    expect(store.getActiveSetName()).toBe("staging");
+    expect(
+      view.getByTestId("monitor-set-delete").hasAttribute("disabled"),
+    ).toBe(false);
+
+    fireEvent.change(select, { target: { value: "default" } });
+    expect(store.getActiveSetName()).toBe("default");
+
+    fireEvent.change(select, { target: { value: "staging" } });
+    fireEvent.click(view.getByTestId("monitor-set-delete"));
+    expect(store.listSetNames()).toEqual(["default"]);
+    expect(select.value).toBe("default");
+  });
+
+  it("hydrates the active set's reactors on mount and writes through a provision", async () => {
+    const store = freshStore();
+    store.setActiveDescriptors([
+      { kind: "in-process", name: "seeded", storage: { kind: "memory" } },
+    ]);
+
+    const view = render(<App buildDescriptor={testDescriptor} store={store} />);
+
+    // The seeded reactor is re-provisioned from storage without re-adding it.
+    await waitFor(() => expect(view.getByText("seeded")).toBeTruthy(), WAIT);
+
+    fireEvent.change(view.getByPlaceholderText("alpha"), {
+      target: { value: "added" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Provision" }));
+
+    await waitFor(() => expect(view.getByText("added")).toBeTruthy(), WAIT);
+    // Write-through: both reactors are now persisted in the active set.
+    expect(store.getActiveDescriptors().map((d) => d.name)).toEqual([
+      "seeded",
+      "added",
+    ]);
   }, 30_000);
 
   it("kills a provisioned reactor and clears the selection", async () => {

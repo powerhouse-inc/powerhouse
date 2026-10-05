@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App.js";
 
 /**
@@ -133,6 +133,14 @@ async function provisionRemoteReactor(
 }
 
 describe("remote reactor in the monitor app", () => {
+  beforeEach(() => {
+    try {
+      window.localStorage.clear();
+    } catch {
+      // No storage to clear in this environment; nothing leaks between tests.
+    }
+  });
+
   it("requires a URL, because a remote reactor IS its URL", () => {
     const view = remoteApp({ admin: false, sql: false });
 

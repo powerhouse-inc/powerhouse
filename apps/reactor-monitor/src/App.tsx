@@ -21,12 +21,17 @@ import {
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useServerTierGates } from "./components/AdminGate.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
+import { MonitoringSetsPanel } from "./components/MonitoringSetsPanel.js";
 import {
   ProvisionPanel,
   type ProvisionRequest,
 } from "./components/ProvisionPanel.js";
 import { RoutingPanel } from "./components/RoutingPanel.js";
-import { buildDescriptor as buildDescriptorFromForm } from "./provisioning.js";
+import { MonitoringSetsStore } from "./monitoring-sets.js";
+import {
+  buildDescriptor as buildDescriptorFromForm,
+  createMonitorWorker,
+} from "./provisioning.js";
 import { AttachmentsTab } from "./tabs/AttachmentsTab.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
 import { DbTab } from "./tabs/DbTab.js";
@@ -210,9 +215,24 @@ type AppBodyProps = {
   readonly onSelect: (name: string) => void;
   readonly onProvision: (request: ProvisionRequest) => void;
   readonly onKill: (name: string) => void;
+  readonly setNames: readonly string[];
+  readonly activeSetName: string;
+  readonly onSwitchSet: (name: string) => void;
+  readonly onCreateSet: (name: string) => void;
+  readonly onDeleteSet: (name: string) => void;
 };
 
-function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
+function AppBody({
+  selected,
+  onSelect,
+  onProvision,
+  onKill,
+  setNames,
+  activeSetName,
+  onSwitchSet,
+  onCreateSet,
+  onDeleteSet,
+}: AppBodyProps) {
   const entries = useManagedReactors();
   const entry = useManagedReactorEntry(selected ?? "");
   const [activeTab, setActiveTab] = useState<InspectorTab>("Overview");
@@ -237,13 +257,22 @@ function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
 
   return (
     <div className="reactor-monitor__body">
-      <ProvisionPanel
-        entries={entries}
-        onKill={onKill}
-        onProvision={onProvision}
-        onSelect={onSelect}
-        selected={selected}
-      />
+      <div className="reactor-monitor__sidebar-column">
+        <MonitoringSetsPanel
+          activeSetName={activeSetName}
+          onCreate={onCreateSet}
+          onDelete={onDeleteSet}
+          onSwitch={onSwitchSet}
+          setNames={setNames}
+        />
+        <ProvisionPanel
+          entries={entries}
+          onKill={onKill}
+          onProvision={onProvision}
+          onSelect={onSelect}
+          selected={selected}
+        />
+      </div>
       <main className="reactor-monitor__main">
         <nav aria-label="Views" className="reactor-monitor__tabs">
           {APP_VIEWS.map((name) => (
@@ -296,6 +325,19 @@ function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
   );
 }
 
+/**
+ * Re-attaches the live handles a persisted descriptor cannot carry. A worker
+ * descriptor's `createWorker` is a function, so it is dropped on save and must
+ * be restored from the app's own SharedWorker seam before the descriptor can
+ * provision again after a reload. Every other kind round-trips as-is.
+ */
+function rehydrateDescriptor(descriptor: ReactorDescriptor): ReactorDescriptor {
+  if (descriptor.kind === "worker") {
+    return { ...descriptor, createWorker: createMonitorWorker };
+  }
+  return descriptor;
+}
+
 export type AppProps = {
   /**
    * Builds the descriptor the provision form submits. Defaults to the real
@@ -305,26 +347,83 @@ export type AppProps = {
    * worker/an `idb://` store needs a browser, not happy-dom.
    */
   readonly buildDescriptor?: (request: ProvisionRequest) => ReactorDescriptor;
+  /**
+   * The monitoring-sets store that persists provisioned reactors across a
+   * refresh (multi-reactor §6). Defaults to a localStorage-backed one;
+   * overridable so a test can inject a fresh, isolated store.
+   */
+  readonly store?: MonitoringSetsStore;
 };
 
 export function App({
   buildDescriptor = buildDescriptorFromForm,
+  store: injectedStore,
 }: AppProps = {}) {
-  const [descriptors, setDescriptors] = useState<ReactorDescriptor[]>([]);
+  const [store] = useState(() => injectedStore ?? new MonitoringSetsStore());
+  const [setNames, setSetNames] = useState<readonly string[]>(() =>
+    store.listSetNames(),
+  );
+  const [activeSetName, setActiveSetName] = useState(() =>
+    store.getActiveSetName(),
+  );
+  const [descriptors, setDescriptors] = useState<ReactorDescriptor[]>(() =>
+    store.getActiveDescriptors().map(rehydrateDescriptor),
+  );
   const [selected, setSelected] = useState<string | undefined>();
 
   const handleProvision = useCallback(
     (request: ProvisionRequest) => {
-      setDescriptors((previous) => [...previous, buildDescriptor(request)]);
+      const built = buildDescriptor(request);
+      setDescriptors((previous) => {
+        const next = [...previous, built];
+        store.setActiveDescriptors(next);
+        return next;
+      });
       setSelected(request.name);
     },
-    [buildDescriptor],
+    [buildDescriptor, store],
   );
 
-  const handleKill = useCallback((name: string) => {
-    setDescriptors((previous) => previous.filter((d) => d.name !== name));
-    setSelected((current) => (current === name ? undefined : current));
-  }, []);
+  const handleKill = useCallback(
+    (name: string) => {
+      setDescriptors((previous) => {
+        const next = previous.filter((d) => d.name !== name);
+        store.setActiveDescriptors(next);
+        return next;
+      });
+      setSelected((current) => (current === name ? undefined : current));
+    },
+    [store],
+  );
+
+  const handleSwitchSet = useCallback(
+    (name: string) => {
+      setDescriptors(store.switchActiveSet(name).map(rehydrateDescriptor));
+      setActiveSetName(store.getActiveSetName());
+      setSelected(undefined);
+    },
+    [store],
+  );
+
+  const handleCreateSet = useCallback(
+    (name: string) => {
+      setDescriptors(store.createSet(name).map(rehydrateDescriptor));
+      setSetNames(store.listSetNames());
+      setActiveSetName(store.getActiveSetName());
+      setSelected(undefined);
+    },
+    [store],
+  );
+
+  const handleDeleteSet = useCallback(
+    (name: string) => {
+      setDescriptors(store.deleteSet(name).map(rehydrateDescriptor));
+      setSetNames(store.listSetNames());
+      setActiveSetName(store.getActiveSetName());
+      setSelected(undefined);
+    },
+    [store],
+  );
 
   return (
     <div className="reactor-monitor">
@@ -341,10 +440,15 @@ export function App({
         }
       >
         <AppBody
+          activeSetName={activeSetName}
+          onCreateSet={handleCreateSet}
+          onDeleteSet={handleDeleteSet}
           onKill={handleKill}
           onProvision={handleProvision}
           onSelect={setSelected}
+          onSwitchSet={handleSwitchSet}
           selected={selected}
+          setNames={setNames}
         />
       </ReactorMonitorProvider>
     </div>
