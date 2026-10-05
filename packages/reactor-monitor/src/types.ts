@@ -347,6 +347,26 @@ export interface ManagedRemoteReactor extends ManagedReactorBase {
   /** The inspection endpoint this handle talks to. */
   readonly endpoint: string;
   /**
+   * The reactor's GraphQL base URL -- the descriptor's `remote.url`, e.g.
+   * `http://host/graphql`. The authoritative base a SIBLING subgraph endpoint
+   * derives from (the workflow-runtime subgraph the Workflows tab reads is
+   * `subgraphUrlFromGraphqlUrl(url, "workflow-runtime")`), rather than being
+   * reverse-engineered from {@link endpoint}, which is the inspection subgraph
+   * beneath this same base.
+   */
+  readonly url: string;
+  /**
+   * The inspection auth this handle carries -- the descriptor's
+   * `remote.headers` / `remote.fetch`. Surfaced so a view that must reach a
+   * sibling subgraph of the same reactor (the Workflows tab's workflow-runtime
+   * reads) authenticates exactly as inspection does, over the same fetch,
+   * rather than reaching for an ambient browser token. Both are absent for a
+   * reactor reached unauthenticated, which is what a dev Switchboard under the
+   * OPEN policy serves.
+   */
+  readonly headers?: RemoteInspectionHeaders;
+  readonly fetch?: typeof fetch;
+  /**
    * What the remote reactor reported about itself, including which admin tiers
    * that deployment serves. A view that needs to disable a repair lever or the
    * DB tab reads `adminEnabled` / `sqlEnabled` from here.

@@ -85,6 +85,9 @@ export async function provisionRemote(
       syncChannelTypes: serverInfo.syncChannels,
     }),
     endpoint,
+    url: remote.url,
+    ...(remote.headers ? { headers: remote.headers } : {}),
+    ...(remote.fetch ? { fetch: remote.fetch } : {}),
     // Read through to the client's own last answer rather than a copy taken
     // here: the client re-reads the reported facts on its refusal paths too, so
     // a copy would leave a holder looking at a tier flag the client has already

@@ -5,6 +5,7 @@ import {
   POLLING_CHANNEL_TYPE,
   type ConnectionStateSnapshot,
 } from "@powerhousedao/reactor";
+import { subgraphUrlFromGraphqlUrl } from "@powerhousedao/reactor-browser/graphql-client";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   inspectionEndpoint,
@@ -982,6 +983,23 @@ describe("provisioning a remote reactor", () => {
     });
     expect(reactor.capabilities.syncChannels).not.toContain(GQL_CHANNEL_TYPE);
     expect(reactor.capabilities.syncChannels).not.toContain(LOCAL_CHANNEL_TYPE);
+  });
+
+  it("surfaces the GraphQL base and inspection auth, so a sibling subgraph derives", async () => {
+    const headers = () => ({ authorization: "Bearer t" });
+    const server = fakeInspectionServer();
+    const reactor = await provisionRemote(
+      remoteDescriptor(server.fetchImpl, { headers }),
+    );
+
+    expect(reactor.url).toBe("http://host.example/graphql");
+    // The workflow-runtime subgraph the Workflows tab reads derives from the
+    // base authoritatively, rather than from the inspection endpoint.
+    expect(subgraphUrlFromGraphqlUrl(reactor.url, "workflow-runtime")).toBe(
+      "http://host.example/graphql/workflow-runtime",
+    );
+    expect(reactor.headers).toBe(headers);
+    expect(reactor.fetch).toBe(server.fetchImpl);
   });
 
   it("reports a host that serves reads only, so the UI can disable its levers", async () => {
