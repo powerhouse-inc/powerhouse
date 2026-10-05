@@ -9,9 +9,10 @@ import type {
 import {
   addModule,
   deriveOperationId,
-  garbageCollect,
   initializeAuth,
-  sortOperations,
+  positionalOperations,
+  retract,
+  retractedActionIds,
   undo,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -539,9 +540,11 @@ describe("signature admission", () => {
 
   describe("an action the stream already holds", () => {
     async function liveActionIds(): Promise<string[]> {
-      return garbageCollect(sortOperations(await stored())).map(
-        (operation) => operation.action.id,
-      );
+      const rows = positionalOperations(await stored());
+      const retracted = retractedActionIds(rows);
+      return rows
+        .map((operation) => operation.action.id)
+        .filter((id) => !retracted.has(id));
     }
 
     async function moduleIds(): Promise<string[]> {
@@ -631,6 +634,28 @@ describe("signature admission", () => {
         expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
         expect(await liveActionIds()).not.toContain(action.id);
         expect(await moduleIds()).toEqual([]);
+      });
+
+      it("takes it as committed when resubmitted once a retraction revives it", async () => {
+        await build("enforce");
+        const action = await undone();
+        const undoing = (await stored()).at(-1)!;
+        expect(
+          (
+            await execute([
+              { ...retract(undoing.action.id), timestampUtcMs: at(20) },
+            ])
+          ).status,
+        ).toBe(JobStatus.READ_READY);
+        expect(await moduleIds()).toEqual(["x"]);
+
+        const job = await execute([action]);
+
+        expect(job.error).toBeUndefined();
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(refusals).toEqual([]);
+        expect(await liveActionIds()).toContain(action.id);
+        expect(await moduleIds()).toEqual(["x"]);
       });
     });
   });
