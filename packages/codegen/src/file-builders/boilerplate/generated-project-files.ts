@@ -1,6 +1,6 @@
 import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import {
   buildBoilerplatePackageJson,
   createOrUpdateManifest,
@@ -87,33 +87,64 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
   );
 }
 
+/** True when a file carries nothing beyond comments and whitespace — i.e. it
+ * is still the bare "auto-generated" banner a module aggregate is seeded with,
+ * before codegen (or a hand) added any export to it. */
+function hasOnlyComments(filePath: string): boolean {
+  const contents = readFileSync(filePath, "utf-8");
+  return (
+    contents
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "")
+      .trim() === ""
+  );
+}
+
+/** Seeds a module aggregate file ("auto-generated and updated by codegen").
+ *
+ * These files accumulate content after scaffolding — the ts-morph generators
+ * append module exports to them, and users occasionally add entries by hand.
+ * Writing the pristine template over an existing one therefore destroys
+ * registrations: `ph migrate` used to reset `subgraphs/index.ts` to the bare
+ * banner, which silently unregistered every subgraph until (and unless) the
+ * `generateAll` later in the migration happened to rediscover them, and
+ * dropped hand-written entries outright. So the template is written only when
+ * the file is missing or still contains nothing but the banner.
+ */
+async function seedModuleAggregateFile(filePath: string, contents: string) {
+  if (existsSync(filePath) && !hasOnlyComments(filePath)) return;
+  await writeFileEnsuringDir(filePath, contents);
+}
+
 export async function writeGeneratedDocumentModelsFiles(projectDir: string) {
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "document-models/document-models.ts"),
     await formatSafe(documentModelsTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "document-models/index.ts"),
     await formatSafe(documentModelsIndexTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "document-models/upgrade-manifests.ts"),
     await formatSafe(upgradeManifestsTemplate),
   );
 }
 
 export async function writeGeneratedEditorsFiles(projectDir: string) {
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "editors/editors.ts"),
     await formatSafe(editorsTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "editors/index.ts"),
     await formatSafe(editorsIndexTemplate),
   );
 }
 
 export async function writeGeneratedProcessorsFiles(projectDir: string) {
+  // factory.ts and index.ts are static, fully codegen-owned templates: they
+  // accumulate nothing, so overwriting refreshes them to the current shape.
   await writeFileEnsuringDir(
     join(projectDir, "processors/factory.ts"),
     await formatSafe(processorsFactoryTemplate),
@@ -122,22 +153,19 @@ export async function writeGeneratedProcessorsFiles(projectDir: string) {
     join(projectDir, "processors/index.ts"),
     await formatSafe(processorsIndexTemplate),
   );
-  await writeFileEnsuringDir(
+  // connect.ts and switchboard.ts accumulate processor factory builders.
+  await seedModuleAggregateFile(
     join(projectDir, "processors/connect.ts"),
     await formatSafe(factoryBuildersTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "processors/switchboard.ts"),
     await formatSafe(factoryBuildersTemplate),
-  );
-  await writeFileEnsuringDir(
-    join(projectDir, "processors/index.ts"),
-    await formatSafe(processorsIndexTemplate),
   );
 }
 
 export async function writeGeneratedSubgraphsFiles(projectDir: string) {
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "subgraphs/index.ts"),
     await formatSafe(subgraphsIndexTemplate),
   );
@@ -150,28 +178,58 @@ export async function writeModuleFiles(projectDir = process.cwd()) {
   await writeGeneratedSubgraphsFiles(projectDir);
 }
 
+/** Seeds an AI-assistant / editor config file only when it does not exist.
+ *
+ * Deliberately stricter than {@link seedModuleAggregateFile}: a module
+ * aggregate's content is codegen-owned and a pristine one is detectably
+ * banner-only, but an AI config is the user's the moment it exists — there is
+ * no content that marks it "still ours". So no content sniffing: existence
+ * alone preserves the file. `ph init` writes into a directory it just created
+ * (createProject refuses an existing one), so on a fresh scaffold this seeds
+ * every file; on `ph migrate` it writes only the ones the project lacks.
+ */
+async function seedUserOwnedFile(filePath: string, contents: string) {
+  if (existsSync(filePath)) return;
+  await writeFileEnsuringDir(filePath, contents);
+}
+
 export async function writeAiConfigFiles(projectDir = process.cwd()) {
-  await writeFileEnsuringDir(
+  // All six files are preserve-on-migrate; none is refresh. Per-file rationale:
+  //
+  // CLAUDE.md / AGENTS.md: project instructions for coding agents — prose the
+  // user extends by hand; nothing in the toolchain regenerates them.
+  await seedUserOwnedFile(
     join(projectDir, "CLAUDE.md"),
     claudeTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
+  await seedUserOwnedFile(
     join(projectDir, "AGENTS.md"),
     agentsTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
+  // .mcp.json / .cursor/mcp.json: committed files carrying the project's
+  // name-derived switchboard port as a literal (applyProjectCustomizations
+  // bakes it in at init; the static templates here carry only the default
+  // port, so overwriting on migrate also reset that port). The one tool that
+  // does manage them afterwards — `ph vetra` via syncMcpPort — patches the
+  // port in place precisely so hand-added servers and keys survive.
+  await seedUserOwnedFile(
     join(projectDir, ".mcp.json"),
     mcpTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
-    join(projectDir, ".gemini/settings.json"),
-    geminiSettingsTemplate.trimStart(),
-  );
-  await writeFileEnsuringDir(
+  await seedUserOwnedFile(
     join(projectDir, ".cursor/mcp.json"),
     cursorMcpTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
+  // .gemini/settings.json: the user's Gemini CLI settings; nothing in the
+  // toolchain writes it after scaffolding.
+  await seedUserOwnedFile(
+    join(projectDir, ".gemini/settings.json"),
+    geminiSettingsTemplate.trimStart(),
+  );
+  // .claude/settings.local.json: per-machine state — Claude Code itself
+  // appends the permission grants the user approves during sessions, so an
+  // existing one holds accumulated approvals no template can reproduce.
+  await seedUserOwnedFile(
     join(projectDir, ".claude/settings.local.json"),
     claudeSettingsLocalTemplate.trimStart(),
   );

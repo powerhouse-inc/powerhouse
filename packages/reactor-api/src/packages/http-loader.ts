@@ -10,6 +10,7 @@ import type {
 import { childLogger } from "document-model";
 import { pathToFileURL } from "node:url";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
+import { extractDocumentModels } from "./document-model-detection.js";
 import { piecesFromCdnList } from "./pieces.js";
 import {
   EXACT_VERSION,
@@ -20,6 +21,7 @@ import {
   type CachedRegistryPackage,
   type PackageEntryKind,
 } from "./registry-cache.js";
+import { extractSubgraphs } from "./subgraph-extraction.js";
 import type { PackagePieceEntry } from "./types.js";
 import { extractUpgradeManifests } from "./util.js";
 
@@ -44,19 +46,6 @@ export function piecesBaseUrl(
   return `${root}-/cdn/${packageName}@${version}/node/pieces/`;
 }
 
-// Expected shape of the document-models bundle export
-type DocumentModelsExport = Record<string, DocumentModelModule>;
-
-function documentModelsOf(module: DocumentModelsExport): DocumentModelModule[] {
-  return Object.values(module).filter(
-    (m: unknown): m is DocumentModelModule =>
-      m !== null &&
-      typeof m === "object" &&
-      "documentModel" in m &&
-      m.documentModel !== null,
-  );
-}
-
 // Expected shape of the subgraphs bundle export
 type SubgraphsExport = Record<string, SubgraphClass>;
 
@@ -66,16 +55,16 @@ type SubgraphsExport = Record<string, SubgraphClass>;
  * The published bundle uses `export * as Foo from "./file"`, which Node turns
  * into `{ Foo: <namespace>, … }`. The inner namespace's keys come from the
  * source file's named exports — typically `Subgraph` / `default` / the class
- * name itself — so the shape varies. Flatten one level and keep callables.
+ * name itself — so the shape varies.
  *
- * Exported for direct unit testing against synthetic module shapes.
+ * Delegates to the unified acceptance rule every package loader shares
+ * (`extractSubgraphs`), kept as an export because it is part of the package's
+ * public API and is unit-tested directly against synthetic module shapes.
  */
 export function extractSubgraphsFromModule(
   module: Record<string, SubgraphsExport>,
 ): SubgraphClass[] {
-  return Object.values(module)
-    .flatMap((namespace) => Object.values(namespace))
-    .filter((s): s is SubgraphClass => typeof s === "function");
+  return extractSubgraphs(module);
 }
 
 // Expected shape of the processors bundle export
@@ -249,7 +238,7 @@ export class HttpPackageLoader implements IPackageLoader {
   ): Promise<DocumentModelModule[]> {
     const { name: packageName } = this.parsePackageSpec(packageSpec);
     const { module } = await this.importDocumentModels(packageSpec);
-    const models = documentModelsOf(module as DocumentModelsExport);
+    const models = extractDocumentModels(module);
 
     this.logger.verbose(
       `Loaded ${models.length} document models from ${packageName}`,
@@ -445,7 +434,7 @@ export class HttpDocumentModelLoader implements IDocumentModelLoader {
     if (!models) {
       const { module, filePath } =
         await this.loader.importDocumentModels(packageName);
-      models = documentModelsOf(module as DocumentModelsExport);
+      models = extractDocumentModels(module);
       this.packageModulesCache.set(packageName, models);
       if (filePath) this.packageFileCache.set(packageName, filePath);
     }
