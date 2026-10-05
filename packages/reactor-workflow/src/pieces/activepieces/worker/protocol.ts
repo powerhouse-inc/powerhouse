@@ -78,6 +78,10 @@ export interface RunActionRequest extends HostScopedRequest, PieceModuleRef {
   // it the member keeps throwing, so a piece that needs it fails loudly.
   liveOutput?: boolean;
   executionType?: `${ExecutionType}`;
+  // The delivery that woke a RESUME run, served as ctx.resumePayload. This
+  // engine never suspends a run, so nothing sets it yet; absent, the context
+  // member keeps throwing by name.
+  resumePayload?: unknown;
   // Call the action's test method instead of run, as a single-step test does.
   stepTest?: boolean;
   identity?: ActionContextIdentity;
@@ -141,6 +145,10 @@ export interface TriggerHookRequest extends HostScopedRequest, PieceModuleRef {
   server?: ServerContext;
   // As on a run request: secrets stripped from errors before they cross back.
   redactValues?: string[];
+  // Serve `ctx.reactor` over the call channel, exactly as RunActionRequest
+  // does: set only for a piece the host loaded from an installed reactor
+  // package, so a trigger can read documents on the same terms as a step.
+  reactorAccess?: boolean;
 }
 
 export interface TriggerHookMessage {

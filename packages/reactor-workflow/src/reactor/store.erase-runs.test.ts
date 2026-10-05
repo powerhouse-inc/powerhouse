@@ -131,6 +131,59 @@ describe("eraseRunsForDocuments", () => {
     expect(await store.getRun(fired)).toBeDefined();
   });
 
+  it("deletes a run whose truncated trigger payload named the document", async () => {
+    // Over STEP_PAYLOAD_MAX_BYTES, so the journal keeps the marker instead
+    // of the payload — with the payload's top-level ids carried over, so
+    // this route still matches. Word-broken filler, as in
+    // store.payload-cap.test.ts.
+    const { store, start } = await freshStore();
+    const doomed = randomUUID();
+    const pad = "pad ".repeat(80 * 1024);
+    const truncated = await start({
+      payload: { documentId: doomed, document: pad },
+    });
+    const kept = await start({
+      payload: { documentId: "doc-kept", document: pad },
+    });
+
+    expect((await store.eraseRunsForDocuments([doomed])).runs).toBe(1);
+    expect(await store.getRun(truncated)).toBeUndefined();
+    expect(await store.getRun(kept)).toBeDefined();
+  });
+
+  it("deletes a test run whose truncated sample named the document at top level", async () => {
+    const { store, start } = await freshStore();
+    const doomed = randomUUID();
+    const sample = async (output: unknown) => {
+      const runId = await start({
+        workflowId: "wf-other",
+        triggerKind: "test",
+      });
+      await store.recordStep(runId, 2, { ...step("trigger"), output });
+      return runId;
+    };
+    const object = await sample({
+      documentId: doomed,
+      document: "pad ".repeat(80 * 1024),
+    });
+    // The accepted gap: a list sample names its documents per item, and the
+    // marker keeps only the payload's top-level ids — collecting per-item
+    // ids would grow with the payload, which the cap exists to prevent. So
+    // an over-cap trigger-test sample survives erasure; runs actually fired
+    // from the document stay covered by the run_document and trigger_payload
+    // routes above.
+    const listed = await sample(
+      Array.from({ length: 40 }, () => ({
+        documentId: doomed,
+        document: "pad ".repeat(2 * 1024),
+      })),
+    );
+
+    expect((await store.eraseRunsForDocuments([doomed])).runs).toBe(1);
+    expect(await store.getRun(object)).toBeUndefined();
+    expect(await store.getRun(listed)).toBeDefined();
+  });
+
   it("deletes a purged workflow's own runs, its test runs included", async () => {
     const { store, start } = await freshStore();
     const workflowId = randomUUID();
