@@ -1,3 +1,4 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   Action,
   AuthSubject,
@@ -224,7 +225,7 @@ export class ReactorClient implements IReactorClient {
     createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
     protocolSelection: ProtocolSelection = {
       capabilities: PEER_CAPABILITIES,
-      flags: {},
+      flags: resolveFeatureFlags(),
       collectionsOf: () => Promise.resolve({}),
     },
   ) {

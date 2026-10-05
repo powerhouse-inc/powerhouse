@@ -1,3 +1,4 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   HoldReason,
   Operation,
@@ -342,7 +343,10 @@ export class SyncManager
     driveContainerTypes: ReadonlySet<string>,
     watermark: ISettledWatermark,
     config: Partial<SyncManagerConfig> = {},
-    localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
+    localPeer: LocalPeer = {
+      capabilities: PEER_CAPABILITIES,
+      flags: resolveFeatureFlags(),
+    },
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
     purges?: PurgeLookup,
     receivedMarkers: ISyncReceivedMarkerStorage = new InMemorySyncReceivedMarkerStorage(),

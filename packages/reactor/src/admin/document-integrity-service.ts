@@ -1,3 +1,4 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
   hashDocumentStateForScope,
@@ -49,7 +50,8 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
     this.documentView = documentView;
     this.documentModelRegistry = documentModelRegistry;
     this.protocolSupport =
-      protocolSupport ?? localSupports(PEER_CAPABILITIES, {}).protocols;
+      protocolSupport ??
+      localSupports(PEER_CAPABILITIES, resolveFeatureFlags()).protocols;
   }
 
   async validateDocument(
