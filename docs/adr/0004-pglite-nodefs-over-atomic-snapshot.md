@@ -153,6 +153,19 @@ the PG18 / PGlite 0.5.x upgrade, where one fdatasync costs 8.4 ms instead of
 1.2 ms (`startParams` without `-F` plus `wal_sync_method=fsync` is the
 alternative there), and when upstream closes #1107.
 
+## Amendment 2026-10-05
+
+Decision 2 named initdb's fsync pass as a reason for the `PH_PGLITE_FSYNC`
+knob. That clause is obsolete: the durable fs now keeps host syncs off from
+`initialSyncFs` of a data dir without `PG_VERSION` until PGlite's first
+`syncToFs` (after the backend starts, before `ready`), then fsyncs the tree
+once. A fresh store reaches `waitReady` in 0.7 s instead of 7.7 s with the
+same bytes on disk; initdb's 1613 interleaved `fsync`s and 746 `fdatasync`s
+become ~1000 back-to-back `fsync`s costing ~30 ms. Conversion and the PG16→17
+restore sync their trees the same way, once, after the last write. The knob
+stays for the per-commit `fdatasync` cost. Plan:
+`docs/plans/2026-10-05-fast-pglite-first-boot.md`.
+
 ## Alternatives considered
 
 - **Keep AtomicNodeFs.** Its reason to exist (multi-instance corruption) was

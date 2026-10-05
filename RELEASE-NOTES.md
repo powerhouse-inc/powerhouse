@@ -48,6 +48,7 @@ The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-a
 - PG16 snapshot stores migrate to PG17 under `PH_MIGRATE_PGLITE=true`; the snapshot layout used to hide `PG_VERSION` from the migration.
 - The "Removed stale PGLite lockfile" warning no longer fires on every boot; `postmaster.pid` and `pg_wal/xlogtemp.*` left by a clean close are removed before open.
 - A periodic VACUUM and CHECKPOINT still runs inside the store; the CHECKPOINT bounds how much WAL a reopen after a crash replays.
+- First boot of a new store and the one-time conversion sync the written tree once instead of after every file: a fresh store is ready in under a second instead of 8 s, and a 45 MB snapshot converts in 0.3 s instead of 5 s, with the same bytes on disk before the first write is acknowledged.
 
 ---
 

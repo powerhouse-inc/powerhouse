@@ -27,6 +27,12 @@ export {
   type VerifyHandle,
 } from "./convert-snapshot-dir.js";
 export {
+  syncDirectory,
+  syncTree,
+  type SyncTreeHostFs,
+  type SyncTreeResult,
+} from "./sync-tree.js";
+export {
   CURRENT_PGLITE_MAJOR,
   openCurrentPgliteForVerify,
   preparePgliteDataDir,

@@ -4,6 +4,7 @@ import type { NodeFS } from "@electric-sql/pglite/nodefs";
 import nodeFs from "node:fs";
 import path from "node:path";
 import { dirBytes, PgliteMaintenance } from "./maintenance.js";
+import { syncTree } from "./sync-tree.js";
 
 export type NodeFsClass = typeof NodeFS;
 
@@ -114,6 +115,9 @@ export function createDurableNodeFs(
   class Durable extends Base {
     readonly maintenance = maintenance;
     private mod?: EmscriptenMod;
+    // Off from initialSyncFs of a fresh dir until PGlite's first syncToFs.
+    private hostSyncs = fsync;
+    private freshInit = false;
 
     async init(
       pg: PGlite,
@@ -158,6 +162,10 @@ export function createDurableNodeFs(
 
     async initialSyncFs(): Promise<void> {
       await super.initialSyncFs();
+      // No PG_VERSION: initdb runs next; PGlite calls syncToFs once before ready.
+      this.freshInit =
+        fsync && !nodeFs.existsSync(path.join(resolvedDir, "PG_VERSION"));
+      if (this.freshInit) this.hostSyncs = false;
       const baseBytes = await dirBytes(path.join(resolvedDir, "base"));
       maintenance.start(this.pg!, resolvedDir, baseBytes);
     }
@@ -165,6 +173,10 @@ export function createDurableNodeFs(
     async syncToFs(relaxedDurability?: boolean): Promise<void> {
       maintenance.noteSync();
       await super.syncToFs(relaxedDurability);
+      if (!this.freshInit) return;
+      this.freshInit = false;
+      this.hostSyncs = true;
+      syncTree(resolvedDir, hostFs);
     }
 
     async closeFs(): Promise<void> {
@@ -177,6 +189,7 @@ export function createDurableNodeFs(
 
     // WASI fd_sync convention: 0 or a positive errno.
     private fsyncStream(stream: NodeFsStream): number {
+      if (!this.hostSyncs) return 0;
       // Directory streams carry no host fd; only regular files do.
       if (typeof stream.nfd !== "number") return 0;
       try {
@@ -190,6 +203,7 @@ export function createDurableNodeFs(
 
     // Linux syscall convention: 0 or a negative errno.
     private fdatasync(fd: number): number {
+      if (!this.hostSyncs) return 0;
       let stream: NodeFsStream;
       try {
         stream = this.mod!.FS.getStreamChecked(fd);

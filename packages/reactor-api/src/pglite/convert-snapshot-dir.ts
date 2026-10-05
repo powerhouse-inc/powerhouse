@@ -2,6 +2,7 @@ import type { ILogger } from "document-model";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { extractSnapshot, SNAPSHOT_FILE_NAME } from "./snapshot-reader.js";
+import { syncDirectory, syncTree, type SyncTreeHostFs } from "./sync-tree.js";
 
 export interface VerifyHandle {
   query<T>(sql: string): Promise<{ rows: T[] }>;
@@ -21,6 +22,7 @@ export interface ConversionDeps {
   logger: ILogger;
   /** Test hook: throw after a named step to simulate a crash there. */
   afterStep?: (step: ConversionStep) => void | Promise<void>;
+  hostFs?: SyncTreeHostFs;
 }
 
 const RM_OPTIONS = {
@@ -116,9 +118,13 @@ export async function convertSnapshotDir(
     throw err;
   }
 
+  // Parent synced after each rename: a power loss lands on one recovery row.
+  const parent = path.dirname(s.dir);
   await fs.rename(s.dir, s.old);
+  syncDirectory(parent, deps.hostFs);
   await deps.afterStep?.("renameOld");
   await fs.rename(s.converting, s.dir);
+  syncDirectory(parent, deps.hostFs);
   await deps.afterStep?.("renameNew");
   await fs.rm(s.old, RM_OPTIONS);
   await deps.afterStep?.("removeOld");
@@ -135,7 +141,9 @@ async function extractAndVerify(
   s: Siblings,
   deps: ConversionDeps,
 ): Promise<{ bytes: number; entries: number }> {
-  const extracted = await extractSnapshot(s.snapshot, s.converting);
+  const extracted = await extractSnapshot(s.snapshot, s.converting, {
+    sync: false,
+  });
   await deps.afterStep?.("extract");
 
   if (!extracted.pgControl) {
@@ -158,6 +166,8 @@ async function extractAndVerify(
       `Extracted PGlite data dir ${s.converting} contains ${SNAPSHOT_FILE_NAME}`,
     );
   }
+  // One pass covers the extraction and the verify open's own writes.
+  syncTree(s.converting, deps.hostFs);
   await deps.afterStep?.("verify");
   return { bytes: extracted.bytes, entries: extracted.entries };
 }

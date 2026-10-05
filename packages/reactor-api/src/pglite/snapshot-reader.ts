@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
+import { syncTree, type SyncTreeHostFs } from "./sync-tree.js";
 
 // v1: magic, u32 version, u32 count; then u8 type, u32 mode, path, u32 len, data.
 export const SNAPSHOT_FILE_NAME = "snapshot.bin";
@@ -14,6 +15,9 @@ const DEFAULT_IO_CHUNK_SIZE = 64 * 1024 * 1024;
 
 export interface ExtractSnapshotOptions {
   chunkSize?: number;
+  /** Default true: one fsync pass over the tree after the last write. */
+  sync?: boolean;
+  hostFs?: SyncTreeHostFs;
 }
 
 export interface ExtractedSnapshot {
@@ -26,7 +30,7 @@ export interface ExtractedSnapshot {
   bytes: number;
 }
 
-/** Unpacks a snapshot into the existing `outDir`, fsyncing what it writes. */
+/** Unpacks a snapshot into the existing `outDir`. */
 export async function extractSnapshot(
   snapshotPath: string,
   outDir: string,
@@ -67,7 +71,6 @@ async function extractFromHandle(
   const count = header.readUInt32LE(8);
 
   const decoder = new TextDecoder();
-  const dirsWritten = new Set<string>([root]);
   let pgVersionText: string | undefined;
   let pgControl: Buffer | undefined;
   let written = 0;
@@ -87,12 +90,10 @@ async function extractFromHandle(
     if (type === 0) {
       await fs.mkdir(full, { recursive: true });
       await fs.chmod(full, dirMode(mode));
-      dirsWritten.add(full);
     } else if (type === 1) {
       await fs.mkdir(path.dirname(full), { recursive: true });
-      await writeFileSynced(full, data);
+      await fs.writeFile(full, data);
       await fs.chmod(full, mode);
-      dirsWritten.add(path.dirname(full));
       if (relPath === "PG_VERSION") pgVersionText = data.toString("utf8");
       if (relPath === "global/pg_control") pgControl = data;
     } else {
@@ -111,7 +112,7 @@ async function extractFromHandle(
     );
   }
 
-  for (const dir of dirsWritten) await syncDirectory(dir);
+  if (options.sync ?? true) syncTree(root, options.hostFs);
 
   return { pgVersionMajor, pgControl, entries: written, bytes: fileSize };
 }
@@ -122,33 +123,6 @@ function resolveInside(root: string, relPath: string): string {
     throw new Error(`snapshot.bin: entry escapes the data dir: ${relPath}`);
   }
   return full;
-}
-
-async function writeFileSynced(full: string, data: Buffer): Promise<void> {
-  const fh = await fs.open(full, "w");
-  try {
-    await fh.writeFile(data);
-    await fh.sync();
-  } finally {
-    await fh.close();
-  }
-}
-
-async function syncDirectory(dir: string): Promise<void> {
-  let fh: FileHandle;
-  try {
-    fh = await fs.open(dir, "r");
-  } catch {
-    // Windows cannot open a directory for fsync; the file syncs still hold.
-    return;
-  }
-  try {
-    await fh.sync();
-  } catch {
-    // Some platforms reject fsync on a directory fd.
-  } finally {
-    await fh.close();
-  }
 }
 
 /** NTFS has no execute bit; a Windows snapshot can carry untraversable dirs. */

@@ -1,3 +1,4 @@
+import { syncTree } from "@powerhousedao/reactor-api/pglite-node";
 import type { ILogger } from "document-model";
 import { promises as fs } from "node:fs";
 import {
@@ -147,6 +148,7 @@ export async function migratePgliteDir(
     const currentMod = await loadPGliteModule(CURRENT_PG_MAJOR);
     const CurrentPGlite = (currentMod as unknown as { PGlite: PGliteCtor })
       .PGlite;
+    // Stock NodeFS never syncs to the host; one pass after close does.
     const pg = new CurrentPGlite(dataDir, { relaxedDurability: false });
     try {
       await pg.waitReady;
@@ -166,6 +168,7 @@ export async function migratePgliteDir(
     } finally {
       await pg.close();
     }
+    syncTree(dataDir);
   } catch (err) {
     await rollback(dataDir, backupDir, err, logger);
     throw err;
