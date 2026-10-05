@@ -2,6 +2,7 @@ import {
   channelFactoryTypes,
   createReactorInspector,
   queryThroughDialect,
+  type IInspectableAttachmentStore,
   type IInspector,
   type InProcessReactorModule,
   type InspectableSyncManager,
@@ -176,6 +177,7 @@ export function createReactorInspectionSource(
   module: InProcessReactorModule,
   syncManager: InspectableSyncManager,
   options: ReactorInspectionOptions = {},
+  attachmentStore?: IInspectableAttachmentStore,
 ): IReactorInspectionSource {
   const adminEnabled =
     options.admin ?? envEnabled(process.env.PH_INSPECTION_ADMIN);
@@ -190,7 +192,7 @@ export function createReactorInspectionSource(
       ? [...channelFactoryTypes(module.syncModule.channelFactory)]
       : [],
   );
-  const inspector = createReactorInspector(module);
+  const inspector = createReactorInspector(module, undefined, attachmentStore);
   const dbQuery: IReactorDbQuery = {
     queryDb: (sql, params) => queryThroughDialect(module.database, sql, params),
   };

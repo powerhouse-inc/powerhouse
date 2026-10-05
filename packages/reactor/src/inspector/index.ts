@@ -8,8 +8,10 @@ export {
 } from "./reactor-inspector.js";
 export { StorageHealthTracker } from "./storage-health.js";
 export type {
+  IInspectableAttachmentStore,
   IInspectableQueue,
   IInspector,
+  InspectorAttachmentInfo,
   InspectorDocumentModelInfo,
   InspectorDriveInfo,
   InspectorDriveIntegrity,
@@ -26,6 +28,7 @@ export {
   INSPECTION_WIRE_FIELDS,
   type WireChannelConfig,
   type WireDeadLetterPage,
+  type WireInspectorAttachmentInfo,
   type WireInspectorDocumentModel,
   type WireInspectorDrive,
   type WireInspectorDriveIntegrity,

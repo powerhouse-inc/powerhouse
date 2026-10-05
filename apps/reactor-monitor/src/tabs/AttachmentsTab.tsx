@@ -1,5 +1,5 @@
 /**
- * Attachment byte movement for the selected reactor (multi-reactor W3.4).
+ * Attachment byte movement for the selected reactor (multi-reactor W3.4, §4b).
  *
  * The counts are the whole point: a lazy fetch-on-reference model has two
  * failure modes that look identical at the moment they happen -- a peer that
@@ -8,10 +8,18 @@
  * `waiting` and `not found` are shown side by side rather than folded into one
  * "missing" number, and the retry lever is here because an operator who can
  * see that a peer caught up should not have to wait for a reboot.
+ *
+ * An in-process reactor is read through its own built attachment handle. A
+ * REMOTE reactor has no such handle, so its store is read over the inspection
+ * surface instead (§4b): a Switchboard serves bytes directly with no
+ * fetch-on-reference replicator, so it reports store presence and bytes held
+ * and says the replicator counters do not apply.
  */
+import type { InspectorAttachmentInfo } from "@powerhousedao/reactor";
 import type {
   AttachmentReplicationEntry,
   AttachmentReplicatorStatus,
+  ManagedAttachments,
   ManagedReactor,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
@@ -28,8 +36,11 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
 }
 
-export function AttachmentsTab({ reactor }: AttachmentsTabProps) {
-  const attachments = reactor.attachments;
+function LocalAttachmentsPanel({
+  attachments,
+}: {
+  attachments: ManagedAttachments;
+}) {
   const [status, setStatus] = useState<AttachmentReplicatorStatus | null>(null);
   const [entries, setEntries] = useState<AttachmentReplicationEntry[]>([]);
   const [served, setServed] = useState({
@@ -40,7 +51,6 @@ export function AttachmentsTab({ reactor }: AttachmentsTabProps) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!attachments) return;
     try {
       setStatus(await attachments.status());
       setEntries(attachments.report());
@@ -52,32 +62,11 @@ export function AttachmentsTab({ reactor }: AttachmentsTabProps) {
   }, [attachments]);
 
   useEffect(() => {
-    if (!attachments) return;
     // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     void load();
     const interval = setInterval(() => void load(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [attachments, load]);
-
-  if (!attachments) {
-    return (
-      <section className="rm-panel" data-testid="attachments-unavailable">
-        <h3>Attachments</h3>
-        <p className="rm-note">
-          This reactor holds no attachment byte store, so it neither keeps nor
-          serves attachment bytes. Provision a reactor with an attachment store
-          to move bytes.
-        </p>
-        <p className="rm-note">
-          {reactor.kind === "in-process"
-            ? "Set an attachment store on the provision form."
-            : reactor.kind === "worker"
-              ? "Worker-hosted reactors are not wired yet: the store would live in the worker and its counts would have to cross the RPC boundary."
-              : "A remote reactor's attachment service belongs to that deployment and is reached over its own HTTP routes, not through this handle."}
-        </p>
-      </section>
-    );
-  }
+  }, [load]);
 
   const retry = (): void => {
     attachments.retry();
@@ -179,6 +168,144 @@ export function AttachmentsTab({ reactor }: AttachmentsTabProps) {
           </table>
         </div>
       )}
+    </section>
+  );
+}
+
+function RemoteAttachmentsPanel({ reactor }: { reactor: ManagedReactor }) {
+  const inspector = reactor.inspector;
+  const [info, setInfo] = useState<InspectorAttachmentInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setInfo(await inspector.getAttachmentInfo());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [inspector]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
+    void load();
+    const interval = setInterval(() => void load(), POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  if (error) {
+    return (
+      <section className="rm-panel" data-testid="attachments-panel">
+        <h3>Attachments</h3>
+        <p className="rm-error">{error}</p>
+      </section>
+    );
+  }
+
+  if (!info) {
+    return (
+      <section className="rm-panel" data-testid="attachments-panel">
+        <h3>Attachments</h3>
+        <p className="rm-note">Loading...</p>
+      </section>
+    );
+  }
+
+  if (!info.present) {
+    return (
+      <section className="rm-panel" data-testid="attachments-unavailable">
+        <h3>Attachments</h3>
+        <p className="rm-note">
+          This remote reactor reports no attachment byte store, so it neither
+          keeps nor serves attachment bytes.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rm-panel" data-testid="attachments-panel">
+      <h3>Attachments</h3>
+
+      <p className="rm-note">
+        Store: <strong>{info.storeKind}</strong>
+        {" · "}
+        Replicator:{" "}
+        <strong>
+          {info.hasReplicator
+            ? info.replicatorRunning
+              ? "running"
+              : "stopped"
+            : "none (served directly by this host)"}
+        </strong>
+      </p>
+
+      <div className="rm-stat-bar" data-testid="attachments-counts">
+        <span>
+          Bytes held: <strong>{formatBytes(info.bytesHeld)}</strong>
+        </span>
+        {info.hasReplicator ? (
+          <>
+            <span>
+              Refs seen: <strong>{info.refsSeen}</strong>
+            </span>
+            <span>
+              Held: <strong>{info.held}</strong>
+            </span>
+            <span>
+              In flight: <strong>{info.pendingFetches}</strong>
+            </span>
+            <span title="A pending upload, or a peer whose reference index has not caught up">
+              Waiting: <strong>{info.waiting}</strong>
+            </span>
+            <span>
+              Not found: <strong>{info.notFound}</strong>
+            </span>
+            <span>
+              Failed: <strong>{info.failed}</strong>
+            </span>
+          </>
+        ) : null}
+      </div>
+
+      {info.hasReplicator ? null : (
+        <p className="rm-note" data-testid="attachments-no-replicator">
+          This host serves attachment bytes directly and runs no
+          fetch-on-reference replicator, so the per-hash fetch counters do not
+          apply here.
+        </p>
+      )}
+
+      {info.lastError ? (
+        <p className="rm-note" data-testid="attachments-last-error">
+          Last transport error: {info.lastError}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+export function AttachmentsTab({ reactor }: AttachmentsTabProps) {
+  const attachments = reactor.attachments;
+  if (attachments) {
+    return <LocalAttachmentsPanel attachments={attachments} />;
+  }
+  if (reactor.kind === "remote") {
+    return <RemoteAttachmentsPanel reactor={reactor} />;
+  }
+  return (
+    <section className="rm-panel" data-testid="attachments-unavailable">
+      <h3>Attachments</h3>
+      <p className="rm-note">
+        This reactor holds no attachment byte store, so it neither keeps nor
+        serves attachment bytes. Provision a reactor with an attachment store to
+        move bytes.
+      </p>
+      <p className="rm-note">
+        {reactor.kind === "in-process"
+          ? "Set an attachment store on the provision form."
+          : "Worker-hosted reactors are not wired yet: the store would live in the worker and its counts would have to cross the RPC boundary."}
+      </p>
     </section>
   );
 }

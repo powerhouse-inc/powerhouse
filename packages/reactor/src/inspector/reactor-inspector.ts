@@ -15,8 +15,10 @@ import type { IReactor } from "../core/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
+  IInspectableAttachmentStore,
   IInspectableQueue,
   IInspector,
+  InspectorAttachmentInfo,
   InspectorDocumentModelInfo,
   InspectorDriveInfo,
   InspectorDriveIntegrity,
@@ -147,6 +149,7 @@ export type ReactorInspectorComponents = {
   storageHealth?: IStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
   reactor?: IReactor;
+  attachmentStore?: IInspectableAttachmentStore;
 };
 
 const healthyStorageDefault: StorageHealth = {
@@ -161,6 +164,24 @@ const emptyQueueState: QueueStateSnapshot = {
   executingJobs: [],
   totalPending: 0,
   totalExecuting: 0,
+};
+
+const noAttachmentStore: InspectorAttachmentInfo = {
+  present: false,
+  storeKind: "none",
+  hasReplicator: false,
+  replicatorRunning: false,
+  backlogScanned: false,
+  refsSeen: 0,
+  held: 0,
+  bytesHeld: 0,
+  queued: 0,
+  fetching: 0,
+  pendingFetches: 0,
+  waiting: 0,
+  notFound: 0,
+  failed: 0,
+  lastError: undefined,
 };
 
 function catchUpUnavailable(): Error {
@@ -192,6 +213,7 @@ export class ReactorInspector implements IInspector {
   private readonly storageHealth: IStorageHealthProvider | undefined;
   private readonly documentModelRegistry: IDocumentModelRegistry | undefined;
   private readonly reactor: IReactor | undefined;
+  private readonly attachmentStore: IInspectableAttachmentStore | undefined;
 
   constructor(components: ReactorInspectorComponents) {
     this.queue = components.queue;
@@ -201,6 +223,7 @@ export class ReactorInspector implements IInspector {
     this.storageHealth = components.storageHealth;
     this.documentModelRegistry = components.documentModelRegistry;
     this.reactor = components.reactor;
+    this.attachmentStore = components.attachmentStore;
   }
 
   listDocumentModels(): Promise<InspectorDocumentModelInfo[]> {
@@ -283,6 +306,14 @@ export class ReactorInspector implements IInspector {
       nextCursor:
         nextOffset < fileNodes.length ? String(nextOffset) : undefined,
     };
+  }
+
+  getAttachmentInfo(): Promise<InspectorAttachmentInfo> {
+    const store = this.attachmentStore;
+    if (!store) {
+      return Promise.resolve({ ...noAttachmentStore });
+    }
+    return store.getAttachmentInfo();
   }
 
   getQueueState(): Promise<QueueStateSnapshot> {

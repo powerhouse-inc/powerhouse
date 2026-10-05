@@ -178,6 +178,27 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
         },
       },
     },
+    ReactorInspectionAttachmentInfo: {
+      inspection: {
+        attachmentInfo: {
+          present: true,
+          storeKind: "kysely",
+          hasReplicator: false,
+          replicatorRunning: false,
+          backlogScanned: false,
+          refsSeen: 0,
+          held: 0,
+          bytesHeld: 4096,
+          queued: 0,
+          fetching: 0,
+          pendingFetches: 0,
+          waiting: 0,
+          notFound: 0,
+          failed: 0,
+          lastError: null,
+        },
+      },
+    },
     ReactorInspectionQueueState: {
       inspection: {
         queueState: {
@@ -392,6 +413,29 @@ describe("RemoteInspectorClient reads", () => {
       operation: "ReactorInspectionDriveIntegrity",
       variables: { driveId: "drive-a", cursor: null, limit: null },
     });
+  });
+
+  it("decodes attachment info, dropping an absent last error", async () => {
+    await expect(client.getAttachmentInfo()).resolves.toEqual({
+      present: true,
+      storeKind: "kysely",
+      hasReplicator: false,
+      replicatorRunning: false,
+      backlogScanned: false,
+      refsSeen: 0,
+      held: 0,
+      bytesHeld: 4096,
+      queued: 0,
+      fetching: 0,
+      pendingFetches: 0,
+      waiting: 0,
+      notFound: 0,
+      failed: 0,
+      lastError: undefined,
+    });
+    expect(server.requests.at(-1)?.operation).toBe(
+      "ReactorInspectionAttachmentInfo",
+    );
   });
 
   it("decodes queue state into the reactor's own snapshot shape", async () => {

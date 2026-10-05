@@ -330,6 +330,43 @@ describe("ReactorInspector", () => {
     });
   });
 
+  describe("attachments", () => {
+    it("reports a no-store shape when no attachment store is wired", async () => {
+      const inspector = new ReactorInspector({});
+      await expect(inspector.getAttachmentInfo()).resolves.toMatchObject({
+        present: false,
+        storeKind: "none",
+        hasReplicator: false,
+        bytesHeld: 0,
+        lastError: undefined,
+      });
+    });
+
+    it("delegates to the attachment store when one is wired", async () => {
+      const info = {
+        present: true,
+        storeKind: "memory",
+        hasReplicator: true,
+        replicatorRunning: true,
+        backlogScanned: true,
+        refsSeen: 4,
+        held: 2,
+        bytesHeld: 512,
+        queued: 1,
+        fetching: 1,
+        pendingFetches: 2,
+        waiting: 0,
+        notFound: 0,
+        failed: 0,
+        lastError: undefined,
+      };
+      const inspector = new ReactorInspector({
+        attachmentStore: { getAttachmentInfo: () => Promise.resolve(info) },
+      });
+      await expect(inspector.getAttachmentInfo()).resolves.toBe(info);
+    });
+  });
+
   describe("document models", () => {
     it("returns an empty list with no registry", async () => {
       const inspector = new ReactorInspector({});

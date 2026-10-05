@@ -147,6 +147,26 @@ export type WireInspectorDriveIntegrity = {
   readonly nextCursor: string | null;
 };
 
+/** The wire form of {@link import("./types.js").InspectorAttachmentInfo}. */
+export type WireInspectorAttachmentInfo = {
+  readonly present: boolean;
+  readonly storeKind: string;
+  readonly hasReplicator: boolean;
+  readonly replicatorRunning: boolean;
+  readonly backlogScanned: boolean;
+  readonly refsSeen: number;
+  readonly held: number;
+  readonly bytesHeld: number;
+  readonly queued: number;
+  readonly fetching: number;
+  readonly pendingFetches: number;
+  readonly waiting: number;
+  readonly notFound: number;
+  readonly failed: number;
+  /** An absent error travels as an explicit null. */
+  readonly lastError: string | null;
+};
+
 /** The wire form of {@link import("./types.js").InspectorProcessorInfo}. */
 export type WireInspectorProcessor = {
   readonly processorId: string;
@@ -251,6 +271,23 @@ export const INSPECTION_WIRE_FIELDS = {
     "missingDocuments",
     "unsupportedTypes",
     "nextCursor",
+  ],
+  InspectionAttachmentInfo: [
+    "present",
+    "storeKind",
+    "hasReplicator",
+    "replicatorRunning",
+    "backlogScanned",
+    "refsSeen",
+    "held",
+    "bytesHeld",
+    "queued",
+    "fetching",
+    "pendingFetches",
+    "waiting",
+    "notFound",
+    "failed",
+    "lastError",
   ],
   ReactorInspectionInfo: [
     "hosting",

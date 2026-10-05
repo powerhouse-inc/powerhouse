@@ -143,6 +143,30 @@ export const inspectionTypeDefs = gql`
   }
 
   """
+  The attachment byte store and replicator. A reactor with no store answers
+  present: false; a host whose store has no fetch-on-reference replicator
+  (a Switchboard) answers hasReplicator: false, and the replicator counters
+  below are then not meaningful.
+  """
+  type InspectionAttachmentInfo {
+    present: Boolean!
+    storeKind: String!
+    hasReplicator: Boolean!
+    replicatorRunning: Boolean!
+    backlogScanned: Boolean!
+    refsSeen: Int!
+    held: Int!
+    bytesHeld: Float!
+    queued: Int!
+    fetching: Int!
+    pendingFetches: Int!
+    waiting: Int!
+    notFound: Int!
+    failed: Int!
+    lastError: String
+  }
+
+  """
   Point-in-time job-queue view; the job records ride the JSON scalar.
   """
   type InspectionQueueState {
@@ -265,6 +289,10 @@ export const inspectionTypeDefs = gql`
       cursor: String
       limit: Int
     ): InspectionDriveIntegrity!
+    """
+    The attachment byte store and replicator on this reactor's host.
+    """
+    attachmentInfo: InspectionAttachmentInfo!
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
     catchUpStatus: JSONObject!

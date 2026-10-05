@@ -110,6 +110,56 @@ export type InspectorDriveIntegrity = {
 };
 
 /**
+ * The attachment byte store and replicator as the inspector surfaces them.
+ *
+ * `present` is the fact a UI reads first: a reactor that holds no attachment
+ * store answers `present: false` with everything else at its empty default,
+ * rather than erroring -- honest degradation, because a reactor that moves no
+ * bytes is a legitimate thing to inspect. `hasReplicator` separates a host with
+ * a fetch-on-reference replicator (a browser monitor's own reactor) from one
+ * whose store is served directly with no replicator (a Switchboard): when it is
+ * false, the replicator counters below are not meaningful and a UI shows store
+ * presence and bytes held instead.
+ */
+export type InspectorAttachmentInfo = {
+  /** Whether this reactor holds an attachment byte store at all. */
+  present: boolean;
+  /** The store class, e.g. "kysely", "idb", "memory"; "none" when absent. */
+  storeKind: string;
+  /** Whether a fetch-on-reference replicator is wired over the store. */
+  hasReplicator: boolean;
+  /** Whether that replicator is subscribed and scheduling. */
+  replicatorRunning: boolean;
+  /** Whether the replicator's boot re-scan over the reference backlog finished. */
+  backlogScanned: boolean;
+  /** Distinct attachment hashes the replicator has been told about. */
+  refsSeen: number;
+  /** Hashes whose bytes are in the local store. */
+  held: number;
+  /** Bytes held locally (`storageUsed`). */
+  bytesHeld: number;
+  /** Hashes waiting on a concurrency slot. */
+  queued: number;
+  /** Hashes with a fetch in flight. */
+  fetching: number;
+  /** Hashes still being chased (queued or fetching). */
+  pendingFetches: number;
+  /** Hashes with a retry scheduled (pending upload, lagging index, or error). */
+  waiting: number;
+  /** Hashes a peer answered not-found for, past the lag budget. */
+  notFound: number;
+  /** Hashes whose transport kept erroring. */
+  failed: number;
+  /** The most recent transport error, when one has occurred. */
+  lastError: string | undefined;
+};
+
+/** The attachment-store source a `ReactorInspector` reads, when one is wired. */
+export interface IInspectableAttachmentStore {
+  getAttachmentInfo(): Promise<InspectorAttachmentInfo>;
+}
+
+/**
  * A tracked processor flattened for inspection: the identity and progress
  * fields of `TrackedProcessor` without its `record` or its `retry()` closure,
  * so the shape survives a structured-clone hop to an inspector UI.
@@ -171,6 +221,11 @@ export interface IInspector {
     cursor?: string,
     limit?: number,
   ): Promise<InspectorDriveIntegrity>;
+  /**
+   * This reactor's attachment store and replicator. A reactor with no store
+   * wired reports a `present: false` shape rather than erroring.
+   */
+  getAttachmentInfo(): Promise<InspectorAttachmentInfo>;
   getQueueState(): Promise<QueueStateSnapshot>;
   pauseQueue(): Promise<void>;
   resumeQueue(): Promise<void>;

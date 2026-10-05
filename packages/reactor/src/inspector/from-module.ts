@@ -5,7 +5,10 @@ import {
   ReactorInspector,
   type ReactorInspectorComponents,
 } from "./reactor-inspector.js";
-import type { IStorageHealthProvider } from "./types.js";
+import type {
+  IInspectableAttachmentStore,
+  IStorageHealthProvider,
+} from "./types.js";
 
 /**
  * The inspectable components of a reactor module built in this process.
@@ -29,6 +32,7 @@ import type { IStorageHealthProvider } from "./types.js";
 export function reactorInspectorComponents(
   module: InProcessReactorModule,
   storageHealth?: IStorageHealthProvider,
+  attachmentStore?: IInspectableAttachmentStore,
 ): ReactorInspectorComponents {
   return {
     queue: module.queue instanceof InMemoryQueue ? module.queue : undefined,
@@ -44,6 +48,7 @@ export function reactorInspectorComponents(
     storageHealth,
     documentModelRegistry: module.documentModelRegistry,
     reactor: module.reactor,
+    attachmentStore,
   };
 }
 
@@ -55,8 +60,9 @@ export function reactorInspectorComponents(
 export function createReactorInspector(
   module: InProcessReactorModule,
   storageHealth?: IStorageHealthProvider,
+  attachmentStore?: IInspectableAttachmentStore,
 ): ReactorInspector {
   return new ReactorInspector(
-    reactorInspectorComponents(module, storageHealth),
+    reactorInspectorComponents(module, storageHealth, attachmentStore),
   );
 }

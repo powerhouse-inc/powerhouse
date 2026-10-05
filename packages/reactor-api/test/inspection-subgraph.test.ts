@@ -432,6 +432,77 @@ describe("inspection subgraph", () => {
       });
     });
 
+    it("reports no attachment store when none is wired", async () => {
+      const result = await run(
+        buildSchema({}),
+        `{ inspection { attachmentInfo {
+            present storeKind hasReplicator bytesHeld lastError
+          } } }`,
+      );
+
+      expect(errorMessages(result)).toEqual([]);
+      expect(result.data).toEqual({
+        inspection: {
+          attachmentInfo: {
+            present: false,
+            storeKind: "none",
+            hasReplicator: false,
+            bytesHeld: 0,
+            lastError: null,
+          },
+        },
+      });
+    });
+
+    it("serves a wired attachment store's presence and bytes held", async () => {
+      const inspector = new ReactorInspector({
+        attachmentStore: {
+          getAttachmentInfo: () =>
+            Promise.resolve({
+              present: true,
+              storeKind: "kysely",
+              hasReplicator: false,
+              replicatorRunning: false,
+              backlogScanned: false,
+              refsSeen: 0,
+              held: 0,
+              bytesHeld: 2048,
+              queued: 0,
+              fetching: 0,
+              pendingFetches: 0,
+              waiting: 0,
+              notFound: 0,
+              failed: 0,
+              lastError: undefined,
+            }),
+        },
+      });
+      const schema = buildStubSchema({
+        inspector,
+        syncManager: { list: () => [] },
+      });
+
+      const result = await run(
+        schema,
+        `{ inspection { attachmentInfo {
+            present storeKind hasReplicator bytesHeld lastError
+          } } }`,
+      );
+
+      expect(errorMessages(result)).toEqual([]);
+      expect(result.data).toEqual({
+        inspection: {
+          attachmentInfo: {
+            present: true,
+            storeKind: "kysely",
+            hasReplicator: false,
+            bytesHeld: 2048,
+            lastError: null,
+          },
+        },
+      });
+    });
+
     it("serves queue state as typed data", async () => {
       const result = await run(
         buildSchema({}),
@@ -939,6 +1010,7 @@ describe("inspection subgraph", () => {
           ).getFields(),
         ).sort(),
       ).toEqual([
+        "attachmentInfo",
         "catchUpStatus",
         "deadLetters",
         "documentModels",

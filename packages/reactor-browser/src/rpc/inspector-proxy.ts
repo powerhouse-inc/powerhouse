@@ -1,6 +1,7 @@
 import type {
   CatchUpStatus,
   IInspector,
+  InspectorAttachmentInfo,
   InspectorDocumentModelInfo,
   InspectorDriveIntegrity,
   InspectorDrivePage,
@@ -43,6 +44,10 @@ export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
         cursor,
         limit,
       ]) as Promise<InspectorDriveIntegrity>,
+    getAttachmentInfo: () =>
+      ops.call(
+        INSPECTOR_OPS.getAttachmentInfo,
+      ) as Promise<InspectorAttachmentInfo>,
     getQueueState: () =>
       ops.call(INSPECTOR_OPS.getQueueState) as Promise<QueueStateSnapshot>,
     pauseQueue: () => ops.callVoid(INSPECTOR_OPS.pauseQueue),

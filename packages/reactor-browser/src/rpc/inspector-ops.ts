@@ -10,6 +10,7 @@ export const INSPECTOR_OPS = {
   listDocumentModels: "registry.listDocumentModels",
   listDrives: "drives.list",
   checkDriveIntegrity: "drives.checkIntegrity",
+  getAttachmentInfo: "attachments.info",
   getQueueState: "queue.getState",
   pauseQueue: "queue.pause",
   resumeQueue: "queue.resume",
@@ -49,6 +50,8 @@ export async function dispatchInspectorOp(
       const [driveId, cursor, limit] = args as [string, string?, number?];
       return inspector.checkDriveIntegrity(driveId, cursor, limit);
     }
+    case INSPECTOR_OPS.getAttachmentInfo:
+      return inspector.getAttachmentInfo();
     case INSPECTOR_OPS.getQueueState:
       return inspector.getQueueState();
     case INSPECTOR_OPS.pauseQueue:

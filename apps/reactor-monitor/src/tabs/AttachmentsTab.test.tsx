@@ -1,5 +1,9 @@
 // @vitest-environment happy-dom
 import type {
+  IInspector,
+  InspectorAttachmentInfo,
+} from "@powerhousedao/reactor";
+import type {
   AttachmentReplicationEntry,
   AttachmentReplicatorStatus,
   ManagedAttachments,
@@ -9,6 +13,40 @@ import type {
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AttachmentsTab } from "./AttachmentsTab.js";
+
+function attachmentInfo(
+  overrides: Partial<InspectorAttachmentInfo> = {},
+): InspectorAttachmentInfo {
+  return {
+    present: true,
+    storeKind: "kysely",
+    hasReplicator: false,
+    replicatorRunning: false,
+    backlogScanned: false,
+    refsSeen: 0,
+    held: 0,
+    bytesHeld: 4096,
+    queued: 0,
+    fetching: 0,
+    pendingFetches: 0,
+    waiting: 0,
+    notFound: 0,
+    failed: 0,
+    lastError: undefined,
+    ...overrides,
+  };
+}
+
+function remoteReactor(info: InspectorAttachmentInfo): ManagedReactor {
+  return {
+    name: "sb",
+    kind: "remote",
+    attachments: undefined,
+    inspector: {
+      getAttachmentInfo: () => Promise.resolve(info),
+    } as unknown as IInspector,
+  } as unknown as ManagedReactor;
+}
 
 /**
  * The tab's job is to keep the two honest failure modes apart -- bytes nobody
@@ -165,18 +203,68 @@ describe("AttachmentsTab", () => {
     expect(view.queryByTestId("attachments-counts")).toBeNull();
   });
 
-  it("explains the worker and remote cases by name", () => {
+  it("explains the worker case by name", () => {
     const worker = render(
       <AttachmentsTab reactor={stubReactor(undefined, "worker")} />,
     );
     expect(worker.container.textContent).toContain("cross the RPC boundary");
-    worker.unmount();
+  });
 
-    const remote = render(
-      <AttachmentsTab reactor={stubReactor(undefined, "remote")} />,
+  it("reads a remote reactor's store over the inspection surface", async () => {
+    const view = render(
+      <AttachmentsTab
+        reactor={remoteReactor(
+          attachmentInfo({ storeKind: "kysely", bytesHeld: 2048 }),
+        )}
+      />,
     );
-    expect(remote.container.textContent).toContain(
-      "belongs to that deployment",
+
+    const counts = await waitFor(() => view.getByTestId("attachments-counts"));
+    expect(counts.textContent).toContain("Bytes held: 2.0 KiB");
+    expect(view.container.textContent).toContain("kysely");
+    // A server store has no fetch-on-reference replicator, and says so rather
+    // than rendering zero counters that read as a healthy empty state.
+    expect(view.getByTestId("attachments-no-replicator")).toBeTruthy();
+  });
+
+  it("shows the full replicator counters for a remote reactor that has one", async () => {
+    const view = render(
+      <AttachmentsTab
+        reactor={remoteReactor(
+          attachmentInfo({
+            hasReplicator: true,
+            replicatorRunning: true,
+            refsSeen: 5,
+            held: 3,
+            waiting: 1,
+            notFound: 1,
+          }),
+        )}
+      />,
     );
+
+    const counts = await waitFor(() => view.getByTestId("attachments-counts"));
+    expect(counts.textContent).toContain("Refs seen: 5");
+    expect(counts.textContent).toContain("Waiting: 1");
+    expect(counts.textContent).toContain("Not found: 1");
+    expect(view.queryByTestId("attachments-no-replicator")).toBeNull();
+  });
+
+  it("states that a remote reactor with no store holds no bytes", async () => {
+    const view = render(
+      <AttachmentsTab
+        reactor={remoteReactor(
+          attachmentInfo({
+            present: false,
+            storeKind: "none",
+          }),
+        )}
+      />,
+    );
+
+    const panel = await waitFor(() =>
+      view.getByTestId("attachments-unavailable"),
+    );
+    expect(panel.textContent).toContain("no attachment byte store");
   });
 });

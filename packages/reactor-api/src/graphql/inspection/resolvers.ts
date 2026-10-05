@@ -5,6 +5,7 @@ import type {
   RemoteCursorInfo,
   RemoteSyncInspection,
   WireDeadLetterPage,
+  WireInspectorAttachmentInfo,
   WireInspectorDocumentModel,
   WireInspectorDrive,
   WireInspectorDriveIntegrity,
@@ -236,6 +237,11 @@ export function createInspectionResolvers(
           unsupportedTypes: result.unsupportedTypes,
           nextCursor: result.nextCursor ?? null,
         };
+      },
+
+      attachmentInfo: async (): Promise<WireInspectorAttachmentInfo> => {
+        const info = await inspector().getAttachmentInfo();
+        return { ...info, lastError: info.lastError ?? null };
       },
 
       queueState: async (): Promise<WireQueueState> =>

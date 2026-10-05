@@ -5,6 +5,8 @@ import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
+  IInspectableAttachmentStore,
+  InspectorAttachmentInfo,
   IReadModel,
   IReactorClient,
   InProcessReactorModule,
@@ -368,6 +370,40 @@ function createReadinessGate(): ReadinessGate {
  */
 export function getExplorerPrefix(basePath: string): string {
   return path.posix.join(basePath, "explorer");
+}
+
+/**
+ * Adapts the host's attachment byte store to the reactor inspection surface
+ * (multi-reactor §4b). A Switchboard serves attachment bytes directly and runs
+ * no fetch-on-reference replicator, so it reports `hasReplicator: false` with
+ * the bytes it holds; the replicator counters stay at their empty default,
+ * which the inspection shape documents as not-meaningful in that case.
+ */
+function buildAttachmentInspectionStore(
+  attachments: AttachmentBuildResult,
+): IInspectableAttachmentStore {
+  return {
+    getAttachmentInfo: async (): Promise<InspectorAttachmentInfo> => {
+      const bytesHeld = await attachments.store.storageUsed();
+      return {
+        present: true,
+        storeKind: "kysely",
+        hasReplicator: false,
+        replicatorRunning: false,
+        backlogScanned: false,
+        refsSeen: 0,
+        held: 0,
+        bytesHeld,
+        queued: 0,
+        fetching: 0,
+        pendingFetches: 0,
+        waiting: 0,
+        notFound: 0,
+        failed: 0,
+        lastError: undefined,
+      };
+    },
+  };
 }
 
 function resolveAttachmentStoragePath(options: Options): string {
@@ -1697,6 +1733,7 @@ export async function initializeAndStartAPI(
           inProcessModule,
           syncManager,
           options.inspection,
+          buildAttachmentInspectionStore(attachments),
         )
       : undefined,
   );

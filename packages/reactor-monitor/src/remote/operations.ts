@@ -67,6 +67,10 @@ export const INSPECTION_OPERATIONS = {
     }
   }`,
 
+  attachmentInfo: `query ReactorInspectionAttachmentInfo {
+    inspection { attachmentInfo { ${fields("InspectionAttachmentInfo")} } }
+  }`,
+
   queueState: `query ReactorInspectionQueueState {
     inspection { queueState { ${fields("InspectionQueueState")} } }
   }`,

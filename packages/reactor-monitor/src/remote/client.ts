@@ -2,6 +2,7 @@ import type {
   CatchUpStatus,
   DeadLetterPage,
   IInspector,
+  InspectorAttachmentInfo,
   InspectorDocumentModelInfo,
   InspectorDriveInfo,
   InspectorDriveIntegrity,
@@ -18,6 +19,7 @@ import type {
   SyncHold,
   ValidationResult,
   WireDeadLetterPage,
+  WireInspectorAttachmentInfo,
   WireInspectorDocumentModel,
   WireInspectorDrive,
   WireInspectorDriveIntegrity,
@@ -169,6 +171,28 @@ function toDriveIntegrity(
       documentType: ref.documentType,
     })),
     nextCursor: wire.nextCursor ?? undefined,
+  };
+}
+
+function toAttachmentInfo(
+  wire: WireInspectorAttachmentInfo,
+): InspectorAttachmentInfo {
+  return {
+    present: wire.present,
+    storeKind: wire.storeKind,
+    hasReplicator: wire.hasReplicator,
+    replicatorRunning: wire.replicatorRunning,
+    backlogScanned: wire.backlogScanned,
+    refsSeen: wire.refsSeen,
+    held: wire.held,
+    bytesHeld: wire.bytesHeld,
+    queued: wire.queued,
+    fetching: wire.fetching,
+    pendingFetches: wire.pendingFetches,
+    waiting: wire.waiting,
+    notFound: wire.notFound,
+    failed: wire.failed,
+    lastError: wire.lastError ?? undefined,
   };
 }
 
@@ -354,6 +378,13 @@ export class RemoteInspectorClient
       limit: limit ?? null,
     });
     return toDriveIntegrity(data.inspection.driveIntegrity);
+  }
+
+  async getAttachmentInfo(): Promise<InspectorAttachmentInfo> {
+    const data = await this.query<{
+      inspection: { attachmentInfo: WireInspectorAttachmentInfo };
+    }>("attachmentInfo");
+    return toAttachmentInfo(data.inspection.attachmentInfo);
   }
 
   async getQueueState(): Promise<QueueStateSnapshot> {

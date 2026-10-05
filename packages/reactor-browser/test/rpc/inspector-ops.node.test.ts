@@ -1,6 +1,7 @@
 import type {
   CatchUpStatus,
   IInspector,
+  InspectorAttachmentInfo,
   InspectorDocumentModelInfo,
   InspectorDriveIntegrity,
   InspectorDrivePage,
@@ -61,6 +62,23 @@ const driveIntegrity: InspectorDriveIntegrity = {
   unsupportedTypes: [],
   nextCursor: undefined,
 };
+const attachmentInfo: InspectorAttachmentInfo = {
+  present: true,
+  storeKind: "kysely",
+  hasReplicator: false,
+  replicatorRunning: false,
+  backlogScanned: false,
+  refsSeen: 0,
+  held: 0,
+  bytesHeld: 1024,
+  queued: 0,
+  fetching: 0,
+  pendingFetches: 0,
+  waiting: 0,
+  notFound: 0,
+  failed: 0,
+  lastError: undefined,
+};
 const processors: InspectorProcessorInfo[] = [
   {
     processorId: "p1",
@@ -106,6 +124,7 @@ function fakeInspector(): FakeInspector {
     listDocumentModels: vi.fn(() => Promise.resolve(documentModels)),
     listDrives: vi.fn(() => Promise.resolve(drivePage)),
     checkDriveIntegrity: vi.fn(() => Promise.resolve(driveIntegrity)),
+    getAttachmentInfo: vi.fn(() => Promise.resolve(attachmentInfo)),
     getQueueState: vi.fn(() => Promise.resolve(queueState)),
     pauseQueue: vi.fn(() => Promise.resolve()),
     resumeQueue: vi.fn(() => Promise.resolve()),
@@ -176,6 +195,9 @@ describe("dispatchInspectorOp", () => {
     await expect(
       call(INSPECTOR_OPS.checkDriveIntegrity, ["drive-a", "0", 5]),
     ).resolves.toBe(driveIntegrity);
+    await expect(call(INSPECTOR_OPS.getAttachmentInfo)).resolves.toBe(
+      attachmentInfo,
+    );
     await expect(call(INSPECTOR_OPS.getQueueState)).resolves.toBe(queueState);
     await expect(call(INSPECTOR_OPS.pauseQueue)).resolves.toBeUndefined();
     await expect(call(INSPECTOR_OPS.resumeQueue)).resolves.toBeUndefined();
@@ -210,6 +232,7 @@ describe("dispatchInspectorOp", () => {
       "0",
       5,
     );
+    expect(inspector.getAttachmentInfo).toHaveBeenCalledTimes(1);
     expect(inspector.getQueueState).toHaveBeenCalledTimes(1);
     expect(inspector.pauseQueue).toHaveBeenCalledTimes(1);
     expect(inspector.resumeQueue).toHaveBeenCalledTimes(1);
@@ -229,6 +252,7 @@ describe("dispatchInspectorOp", () => {
       listDocumentModels: "registry.listDocumentModels",
       listDrives: "drives.list",
       checkDriveIntegrity: "drives.checkIntegrity",
+      getAttachmentInfo: "attachments.info",
       getQueueState: "queue.getState",
       pauseQueue: "queue.pause",
       resumeQueue: "queue.resume",
