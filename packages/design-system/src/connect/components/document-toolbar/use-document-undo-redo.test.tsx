@@ -172,6 +172,27 @@ describe("useDocumentUndoRedo", () => {
       );
     });
 
+    it("runs a press only after the one in flight settles", async () => {
+      let finishUndo = () => {};
+      client.undo.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishUndo = () => resolve({});
+          }),
+      );
+      state.document = makeDocument({ baseReducer: 3, global: 2 });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      result.current.undo();
+      result.current.redo();
+      await act(() => Promise.resolve());
+      expect(client.undo).toHaveBeenCalledOnce();
+      expect(client.redo).not.toHaveBeenCalled();
+
+      finishUndo();
+      await waitFor(() => expect(client.redo).toHaveBeenCalledOnce());
+    });
+
     it("logs a failed undo instead of rejecting", async () => {
       const error = vi.spyOn(console, "error").mockImplementation(() => {});
       client.undo.mockImplementation(() =>

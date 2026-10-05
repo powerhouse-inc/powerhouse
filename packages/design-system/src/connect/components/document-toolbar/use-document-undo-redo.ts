@@ -73,11 +73,43 @@ function readAvailability(
   return read;
 }
 
+// The undo or redo in flight per document, so presses run one after another
+// in press order.
+const pendingPresses = new WeakMap<
+  IReactorBrowserClient,
+  Map<string, Promise<unknown>>
+>();
+
+function queuePress(
+  client: IReactorBrowserClient,
+  documentId: string,
+  press: () => Promise<unknown>,
+  failure: string,
+): void {
+  let presses = pendingPresses.get(client);
+  if (!presses) {
+    presses = new Map();
+    pendingPresses.set(client, presses);
+  }
+  const queue = presses;
+  const prior = queue.get(documentId);
+  const started = prior
+    ? prior.then(press)
+    : new Promise((resolve) => resolve(press()));
+  const run = started.catch((error: unknown) => {
+    console.error(failure, error);
+  });
+  queue.set(documentId, run);
+  void run.finally(() => {
+    if (queue.get(documentId) === run) queue.delete(documentId);
+  });
+}
+
 /**
  * Undo and redo through the reactor client, so the author signs the RETRACT
  * it submits. Availability is read when the global or document revision
- * changes. Returns undefined unless the document is on base-reducer 3 or its
- * header carries no protocol versions.
+ * changes, and presses run one at a time. Returns undefined unless the
+ * document is on base-reducer 3 or its header carries no protocol versions.
  */
 export function useBaseReducer3UndoRedo(document: PHDocument | undefined) {
   const client = useReactorClient();
@@ -107,16 +139,20 @@ export function useBaseReducer3UndoRedo(document: PHDocument | undefined) {
   return {
     canUndo,
     canRedo,
-    undo: () => {
-      client.undo(documentId, UNDO_SCOPE).catch((error: unknown) => {
-        console.error("Failed to undo:", error);
-      });
-    },
-    redo: () => {
-      client.redo(documentId, UNDO_SCOPE).catch((error: unknown) => {
-        console.error("Failed to redo:", error);
-      });
-    },
+    undo: () =>
+      queuePress(
+        client,
+        documentId,
+        () => client.undo(documentId, UNDO_SCOPE),
+        "Failed to undo:",
+      ),
+    redo: () =>
+      queuePress(
+        client,
+        documentId,
+        () => client.redo(documentId, UNDO_SCOPE),
+        "Failed to redo:",
+      ),
   };
 }
 
