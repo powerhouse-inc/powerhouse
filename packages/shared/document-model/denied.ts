@@ -1,6 +1,6 @@
 // Kept out of operations.ts so documents.ts can read the denial verdict without
 // a value import back into operations.ts, which closes a runtime cycle
-// (operations.ts already imports nextSkipNumber/sortOperations from documents.ts).
+// (operations.ts imports nextSkipNumber/sortOperations from operation-order.ts).
 // The only import here is type-only, so this module can never join a cycle.
 import type { Operation } from "./operations.js";
 

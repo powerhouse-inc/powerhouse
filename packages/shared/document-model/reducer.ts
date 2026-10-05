@@ -8,6 +8,7 @@ import {
 } from "./actions.js";
 import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
 import { baseActionReducer } from "./base-action-reducer.js";
+import { tagStateReducer } from "./state-reducer.js";
 import { isDenied } from "./denied.js";
 import {
   baseReducerVersion,
@@ -742,8 +743,6 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   return newDocument;
 }
 
-const STATE_REDUCER = Symbol.for("powerhouse.stateReducer");
-
 /**
  * Base-reducer 3: applies the appended row, or re-derives the scope when the
  * row rewinds, retracts, or is named by a retraction. A stored `error` is
@@ -859,12 +858,7 @@ export function createReducer<TState extends PHBaseState = PHBaseState>(
   ) => {
     return documentReducer(document, action, stateReducer, dispatch, options);
   };
-  return Object.assign(reducer, { [STATE_REDUCER]: stateReducer });
+  return tagStateReducer(reducer, stateReducer);
 }
 
-/** The state reducer a `createReducer` reducer wraps, for base-reducer 3 derivation. */
-export function stateReducerOf<TState extends PHBaseState = PHBaseState>(
-  reducer: Reducer<TState>,
-): StateReducer<TState> | undefined {
-  return (reducer as { [STATE_REDUCER]?: StateReducer<TState> })[STATE_REDUCER];
-}
+export { stateReducerOf } from "./state-reducer.js";
