@@ -223,7 +223,7 @@ let lastStampMs = 0;
  * millisecond and their order survives a reorder by timestamp. A clock that
  * steps back is followed rather than outrun.
  */
-function nextActionTimestamp(): string {
+export function nextActionTimestamp(): string {
   const now = Date.now();
   lastStampMs = now < lastClockMs || now > lastStampMs ? now : lastStampMs + 1;
   lastClockMs = now;

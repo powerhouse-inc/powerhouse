@@ -10,6 +10,7 @@ import type {
 import {
   actions as documentActions,
   generateId,
+  nextActionTimestamp,
 } from "@powerhousedao/shared/document-model";
 
 export { documentActions };
@@ -22,7 +23,7 @@ export function createDocumentAction(input: CreateDocumentActionInput): Action {
     id: generateId(),
     type: "CREATE_DOCUMENT",
     scope: "document",
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     input,
   };
 }
@@ -37,7 +38,7 @@ export function upgradeDocumentAction(
     id: generateId(),
     type: "UPGRADE_DOCUMENT",
     scope: "document",
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     input,
   };
 }
@@ -54,7 +55,7 @@ export function deleteDocumentAction(documentId: string): Action {
     id: generateId(),
     type: "DELETE_DOCUMENT",
     scope: "document",
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     input,
   };
 }
@@ -83,7 +84,7 @@ export function addRelationshipAction(
     id: generateId(),
     type: "ADD_RELATIONSHIP",
     scope: "document",
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     input,
   };
 }
@@ -109,7 +110,7 @@ export function updateRelationshipAction(
     id: generateId(),
     type: "UPDATE_RELATIONSHIP",
     scope: "document",
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     input,
   };
 }
@@ -132,7 +133,7 @@ export function removeRelationshipAction(
     id: generateId(),
     type: "REMOVE_RELATIONSHIP",
     scope: "document",
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     input,
   };
 }
