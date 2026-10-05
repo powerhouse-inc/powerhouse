@@ -84,6 +84,7 @@ const compilerConfigSchema = z.object({
   compilerOptions: z.object({
     declarationDir: z.string().optional(),
     outDir: z.string().optional(),
+    allowImportingTsExtensions: z.boolean().optional(),
   }),
   references: z.array(z.object({ path: z.string() })).optional(),
 });
@@ -181,6 +182,11 @@ export function createTypecheckStep(
           "false",
           "--tsBuildInfoFile",
           join(emittedRoot, "tsconfig.tsbuildinfo"),
+          // Emitting JS is only allowed with `.ts` imports when they are
+          // rewritten, and Node needs them rewritten to load the output.
+          ...(compilerConfig.compilerOptions.allowImportingTsExtensions
+            ? ["--rewriteRelativeImportExtensions", "true"]
+            : []),
         ]);
     if (!result.ok) {
       console.error(result.summary);
