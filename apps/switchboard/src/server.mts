@@ -602,6 +602,11 @@ async function initServer(
         `Reactor feature flags enabled: ${enabledFeatureFlags.join(", ")}`,
       );
     }
+    if (!reactorFeatureFlags.undoV3) {
+      logger.info(
+        "Reactor undoV3 is off (REACTOR_UNDO_V3=false): new documents take base-reducer 2",
+      );
+    }
 
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
@@ -643,15 +648,10 @@ async function initServer(
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       documentModels: [...documentModels, ...vetraDocumentModels],
       upgradeManifests,
-      executorConfig:
-        hasSkipThreshold || enabledFeatureFlags.length > 0
-          ? {
-              ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
-              ...(enabledFeatureFlags.length > 0
-                ? { featureFlags: reactorFeatureFlags }
-                : {}),
-            }
-          : undefined,
+      executorConfig: {
+        ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
+        featureFlags: reactorFeatureFlags,
+      },
       documentModelLoader:
         httpLoader && dynamicModelLoading
           ? httpLoader.documentModelLoader
