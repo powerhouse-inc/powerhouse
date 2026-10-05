@@ -388,6 +388,11 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         const document = withSignaturePolicy(
           module.utils.createDocument(),
           await client.getCreateSignaturePolicy(),
+          {
+            protocolVersions: await client.getCreateProtocolVersions(
+              params.driveId,
+            ),
+          },
         );
         if (params.name) {
           document.header.name = params.name;

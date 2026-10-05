@@ -91,7 +91,12 @@ export class ReactorDriveClient implements IDriveClient {
         input,
         await this.reactor.getCreateSignaturePolicy(),
       ),
-      { protocolVersions: input.protocolVersions },
+      {
+        protocolVersions: {
+          ...(await this.reactor.getCreateProtocolVersions(undefined, signal)),
+          ...input.protocolVersions,
+        },
+      },
     );
     if (input.local) {
       if (typeof input.local.sharingType === "string") {
@@ -134,9 +139,9 @@ export class ReactorDriveClient implements IDriveClient {
       name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
+      protocolVersions:
+        document.header.protocolVersions ??
+        (await this.reactor.getCreateProtocolVersions(driveIdentifier, signal)),
     };
 
     const metadata: DriveChildFileMetadata = {

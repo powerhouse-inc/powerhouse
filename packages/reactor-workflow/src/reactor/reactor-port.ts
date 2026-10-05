@@ -298,6 +298,11 @@ export class SubgraphReactorPort implements ReactorPort {
     const empty = withSignaturePolicy(
       module.utils.createDocument() as PHDocument,
       await this.client.getCreateSignaturePolicy(),
+      {
+        protocolVersions: await this.client.getCreateProtocolVersions(
+          target.driveId,
+        ),
+      },
     );
     // The node name comes from the header, so set it before the file lands.
     if (input.name) empty.header.name = input.name;

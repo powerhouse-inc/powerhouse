@@ -169,6 +169,7 @@ describe("ReactorMcpProvider", () => {
       const doc = await client.get(documentId);
       expect(doc).toBeDefined();
       expect(doc.header.documentType).toBe("powerhouse/document-model");
+      expect(doc.header.protocolVersions?.["base-reducer"]).toBe(3);
     });
 
     it("should create a document in a drive with parentFolder", async () => {

@@ -73,11 +73,17 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
       return Promise.resolve(batch("new-1", options.parentIdentifier));
     },
     createAsync(
-      document: { header: { id: string; name: string } },
+      document: {
+        header: {
+          id: string;
+          name: string;
+          protocolVersions?: Record<string, number>;
+        };
+      },
       parent?: string,
     ) {
       calls.push(
-        `createAsync parent=${parent ?? "-"} name=${document.header.name || "-"}`,
+        `createAsync parent=${parent ?? "-"} name=${document.header.name || "-"} base-reducer=${document.header.protocolVersions?.["base-reducer"] ?? "-"}`,
       );
       return Promise.resolve(batch(document.header.id, parent));
     },
@@ -92,6 +98,10 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
     // The fake documents carry legacy headers, which a legacy default keeps.
     getCreateSignaturePolicy() {
       return Promise.resolve("legacy" as const);
+    },
+    getCreateProtocolVersions(parent?: string) {
+      calls.push(`versions parent=${parent ?? "-"}`);
+      return Promise.resolve({ "base-reducer": 3 });
     },
     getDocumentModelModule(documentType: string) {
       calls.push(`model ${documentType}`);
@@ -192,7 +202,10 @@ describe("SubgraphReactorPort.submitCreate", () => {
       parentId: "drive-1",
     });
 
-    expect(calls).toContain("createAsync parent=drive-1 name=Invoice");
+    expect(calls).toContain("versions parent=drive-1");
+    expect(calls).toContain(
+      "createAsync parent=drive-1 name=Invoice base-reducer=3",
+    );
     expect(submission.jobIds).toEqual(["job-create", "job-parent"]);
     expect(submission.followUps).toEqual([
       {
@@ -201,7 +214,7 @@ describe("SubgraphReactorPort.submitCreate", () => {
           {
             type: "ADD_FILE",
             input: {
-              id: "empty-1",
+              id: submission.documentId,
               name: "Invoice",
               documentType: "acme/todo",
               parentFolder: undefined,
@@ -227,7 +240,9 @@ describe("SubgraphReactorPort.submitCreate", () => {
     // folder-1 is not a document, so the port sweeps drives for the node —
     // and a reactor-drive is a drive.
     expect(calls).toContain(`find type=${REACTOR_DRIVE} parent=-`);
-    expect(calls).toContain("createAsync parent=rdrive-1 name=Invoice");
+    expect(calls).toContain(
+      "createAsync parent=rdrive-1 name=Invoice base-reducer=3",
+    );
     expect(submission.followUps[0]).toMatchObject({
       documentId: "rdrive-1",
       actions: [{ type: "ADD_FILE", input: { parentFolder: "folder-1" } }],

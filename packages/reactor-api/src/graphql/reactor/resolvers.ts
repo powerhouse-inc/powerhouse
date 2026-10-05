@@ -798,6 +798,11 @@ export async function createEmptyDocument(
         const document = withSignaturePolicy(
           module.utils.createDocument(),
           await reactorClient.getCreateSignaturePolicy(),
+          {
+            protocolVersions: await reactorClient.getCreateProtocolVersions(
+              parent.header.id,
+            ),
+          },
         );
         if (name) {
           document.header.name = name;
@@ -863,6 +868,11 @@ export async function createDocumentWithInitialState(
   const document = withSignaturePolicy(
     module.utils.createDocument(),
     await reactorClient.getCreateSignaturePolicy(),
+    {
+      protocolVersions: await reactorClient.getCreateProtocolVersions(
+        parentIdOrSlug ?? undefined,
+      ),
+    },
   );
 
   // Only merge specification-defined scopes (e.g., global, local).

@@ -22,9 +22,12 @@ async function underCreatePolicy<TDocument extends PHDocument>(
   document: TDocument,
   id: string | undefined,
 ): Promise<TDocument> {
+  const protocolVersions = await client.getCreateProtocolVersions();
   return id
-    ? withSignaturePolicy(document, "legacy", { id })
-    : withSignaturePolicy(document, await client.getCreateSignaturePolicy());
+    ? withSignaturePolicy(document, "legacy", { id, protocolVersions })
+    : withSignaturePolicy(document, await client.getCreateSignaturePolicy(), {
+        protocolVersions,
+      });
 }
 
 export async function addDefaultDrive(

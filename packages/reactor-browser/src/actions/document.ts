@@ -488,6 +488,10 @@ export async function addDocument(
     withSignaturePolicy(
       documentModelModule.utils.createDocument(),
       await reactorClient.getCreateSignaturePolicy(),
+      {
+        protocolVersions:
+          await reactorClient.getCreateProtocolVersions(driveId),
+      },
     );
   if (!document) {
     newDocument.state.document.version = documentModelModule.version ?? 1;
