@@ -69,6 +69,8 @@ function toWireDrive(drive: InspectorDriveInfo): WireInspectorDrive {
     nodeCount: drive.nodeCount,
     fileCount: drive.fileCount,
     folderCount: drive.folderCount,
+    otherNodeCount: drive.otherNodeCount,
+    unreadableNodeCount: drive.unreadableNodeCount,
     icon: drive.icon ?? null,
   };
 }
@@ -222,12 +224,11 @@ export function createInspectionResolvers(
 
       driveIntegrity: async (
         _parent: unknown,
-        args: { driveId: string; cursor?: string; limit?: number },
+        args: { driveId: string; branch: string },
       ): Promise<WireInspectorDriveIntegrity> => {
         const result = await inspector().checkDriveIntegrity(
           args.driveId,
-          args.cursor ?? undefined,
-          args.limit ?? undefined,
+          args.branch,
         );
         return {
           driveId: result.driveId,
@@ -235,7 +236,6 @@ export function createInspectionResolvers(
           totalFileNodeCount: result.totalFileNodeCount,
           missingDocuments: result.missingDocuments,
           unsupportedTypes: result.unsupportedTypes,
-          nextCursor: result.nextCursor ?? null,
         };
       },
 

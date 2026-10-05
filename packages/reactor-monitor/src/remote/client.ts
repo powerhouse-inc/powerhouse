@@ -144,6 +144,8 @@ function toDrive(wire: WireInspectorDrive): InspectorDriveInfo {
     nodeCount: wire.nodeCount,
     fileCount: wire.fileCount,
     folderCount: wire.folderCount,
+    otherNodeCount: wire.otherNodeCount,
+    unreadableNodeCount: wire.unreadableNodeCount,
     icon: wire.icon ?? undefined,
   };
 }
@@ -170,7 +172,6 @@ function toDriveIntegrity(
       id: ref.id,
       documentType: ref.documentType,
     })),
-    nextCursor: wire.nextCursor ?? undefined,
   };
 }
 
@@ -367,16 +368,11 @@ export class RemoteInspectorClient
 
   async checkDriveIntegrity(
     driveId: string,
-    cursor?: string,
-    limit?: number,
+    branch: string,
   ): Promise<InspectorDriveIntegrity> {
     const data = await this.query<{
       inspection: { driveIntegrity: WireInspectorDriveIntegrity };
-    }>("driveIntegrity", {
-      driveId,
-      cursor: cursor ?? null,
-      limit: limit ?? null,
-    });
+    }>("driveIntegrity", { driveId, branch });
     return toDriveIntegrity(data.inspection.driveIntegrity);
   }
 

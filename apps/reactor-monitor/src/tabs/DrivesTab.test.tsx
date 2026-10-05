@@ -25,6 +25,8 @@ const DRIVE: InspectorDriveInfo = {
   nodeCount: 3,
   fileCount: 2,
   folderCount: 1,
+  otherNodeCount: 0,
+  unreadableNodeCount: 0,
   icon: undefined,
 };
 
@@ -41,24 +43,25 @@ function stubInspector(
         totalFileNodeCount: 2,
         missingDocuments: [],
         unsupportedTypes: [],
-        nextCursor: undefined,
       }),
     ...overrides,
   } as unknown as IInspector;
 }
 
-function stubSyncManager(url: string | undefined): InspectableSyncManager {
-  const remotes: Remote[] = url
-    ? ([
-        {
-          meta: {
-            name: "peer",
-            collectionId: { driveId: "drive-a", branch: "main" },
-            channelConfig: { type: "polling", parameters: { url } },
-          },
+function stubSyncManager(
+  urls: string | readonly string[] | undefined,
+): InspectableSyncManager {
+  const list = urls === undefined ? [] : [urls].flat();
+  const remotes: Remote[] = list.map(
+    (url, index) =>
+      ({
+        meta: {
+          name: `peer-${index}`,
+          collectionId: { driveId: "drive-a", branch: "main" },
+          channelConfig: { type: "polling", parameters: { url } },
         },
-      ] as unknown as Remote[])
-    : [];
+      }) as unknown as Remote,
+  );
   return { list: () => remotes } as unknown as InspectableSyncManager;
 }
 
@@ -77,6 +80,25 @@ describe("DrivesTab", () => {
     expect(row.textContent).toContain("2 files");
     const url = view.getByTestId("drive-remote-url");
     expect(url.textContent).toContain("http://peer.example/graphql");
+  });
+
+  it("shows every remote a drive is synced to, not one as authoritative", async () => {
+    const view = render(
+      <DrivesTab
+        inspector={stubInspector({})}
+        syncManager={stubSyncManager([
+          "http://peer-a.example/graphql",
+          "http://peer-b.example/graphql",
+        ])}
+      />,
+    );
+
+    const url = await waitFor(() => view.getByTestId("drive-remote-url"));
+    await waitFor(() => {
+      expect(url.textContent).toContain("http://peer-a.example/graphql");
+    });
+    expect(url.textContent).toContain("http://peer-b.example/graphql");
+    expect(url.textContent).toContain("2 remotes");
   });
 
   it("says a drive with no matching remote is local-only", async () => {
@@ -99,7 +121,6 @@ describe("DrivesTab", () => {
         totalFileNodeCount: 2,
         missingDocuments: [{ id: "doc-x", documentType: "sky/ledger" }],
         unsupportedTypes: [{ id: "doc-y", documentType: "evil/unknown" }],
-        nextCursor: undefined,
       }),
     );
     const view = render(
@@ -119,11 +140,7 @@ describe("DrivesTab", () => {
     );
     expect(result.textContent).toContain("doc-x");
     expect(result.textContent).toContain("evil/unknown");
-    expect(checkDriveIntegrity).toHaveBeenCalledWith(
-      "drive-a",
-      undefined,
-      undefined,
-    );
+    expect(checkDriveIntegrity).toHaveBeenCalledWith("drive-a", "main");
   });
 
   it("states plainly when a reactor holds no drives", async () => {

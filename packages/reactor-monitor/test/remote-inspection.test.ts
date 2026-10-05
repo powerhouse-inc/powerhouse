@@ -159,6 +159,8 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
               nodeCount: 3,
               fileCount: 2,
               folderCount: 1,
+              otherNodeCount: 0,
+              unreadableNodeCount: 0,
               icon: null,
             },
           ],
@@ -174,7 +176,6 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
           totalFileNodeCount: 2,
           missingDocuments: [{ id: "doc-x", documentType: "sky/ledger" }],
           unsupportedTypes: [],
-          nextCursor: null,
         },
       },
     },
@@ -388,6 +389,8 @@ describe("RemoteInspectorClient reads", () => {
           nodeCount: 3,
           fileCount: 2,
           folderCount: 1,
+          otherNodeCount: 0,
+          unreadableNodeCount: 0,
           icon: undefined,
         },
       ],
@@ -399,19 +402,18 @@ describe("RemoteInspectorClient reads", () => {
     });
   });
 
-  it("decodes a drive-integrity walk, dropping an absent next cursor", async () => {
-    const result = await client.checkDriveIntegrity("drive-a");
+  it("decodes a single-snapshot drive-integrity walk on the given branch", async () => {
+    const result = await client.checkDriveIntegrity("drive-a", "main");
     expect(result).toEqual({
       driveId: "drive-a",
       checkedNodeCount: 2,
       totalFileNodeCount: 2,
       missingDocuments: [{ id: "doc-x", documentType: "sky/ledger" }],
       unsupportedTypes: [],
-      nextCursor: undefined,
     });
     expect(server.requests.at(-1)).toEqual({
       operation: "ReactorInspectionDriveIntegrity",
-      variables: { driveId: "drive-a", cursor: null, limit: null },
+      variables: { driveId: "drive-a", branch: "main" },
     });
   });
 

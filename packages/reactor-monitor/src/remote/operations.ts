@@ -52,17 +52,15 @@ export const INSPECTION_OPERATIONS = {
 
   driveIntegrity: `query ReactorInspectionDriveIntegrity(
     $driveId: String!
-    $cursor: String
-    $limit: Int
+    $branch: String!
   ) {
     inspection {
-      driveIntegrity(driveId: $driveId, cursor: $cursor, limit: $limit) {
+      driveIntegrity(driveId: $driveId, branch: $branch) {
         driveId
         checkedNodeCount
         totalFileNodeCount
         missingDocuments { ${fields("InspectionDriveIntegrityRef")} }
         unsupportedTypes { ${fields("InspectionDriveIntegrityRef")} }
-        nextCursor
       }
     }
   }`,

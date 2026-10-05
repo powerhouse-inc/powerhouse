@@ -47,8 +47,8 @@ export async function dispatchInspectorOp(
       return inspector.listDrives(cursor, limit);
     }
     case INSPECTOR_OPS.checkDriveIntegrity: {
-      const [driveId, cursor, limit] = args as [string, string?, number?];
-      return inspector.checkDriveIntegrity(driveId, cursor, limit);
+      const [driveId, branch] = args as [string, string];
+      return inspector.checkDriveIntegrity(driveId, branch);
     }
     case INSPECTOR_OPS.getAttachmentInfo:
       return inspector.getAttachmentInfo();

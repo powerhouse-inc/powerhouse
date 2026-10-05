@@ -49,6 +49,8 @@ const drivePage: InspectorDrivePage = {
       nodeCount: 1,
       fileCount: 1,
       folderCount: 0,
+      otherNodeCount: 0,
+      unreadableNodeCount: 0,
       icon: undefined,
     },
   ],
@@ -60,7 +62,6 @@ const driveIntegrity: InspectorDriveIntegrity = {
   totalFileNodeCount: 1,
   missingDocuments: [],
   unsupportedTypes: [],
-  nextCursor: undefined,
 };
 const attachmentInfo: InspectorAttachmentInfo = {
   present: true,
@@ -193,7 +194,7 @@ describe("dispatchInspectorOp", () => {
       drivePage,
     );
     await expect(
-      call(INSPECTOR_OPS.checkDriveIntegrity, ["drive-a", "0", 5]),
+      call(INSPECTOR_OPS.checkDriveIntegrity, ["drive-a", "main"]),
     ).resolves.toBe(driveIntegrity);
     await expect(call(INSPECTOR_OPS.getAttachmentInfo)).resolves.toBe(
       attachmentInfo,
@@ -229,8 +230,7 @@ describe("dispatchInspectorOp", () => {
     expect(inspector.listDrives).toHaveBeenCalledWith("c", 10);
     expect(inspector.checkDriveIntegrity).toHaveBeenCalledWith(
       "drive-a",
-      "0",
-      5,
+      "main",
     );
     expect(inspector.getAttachmentInfo).toHaveBeenCalledTimes(1);
     expect(inspector.getQueueState).toHaveBeenCalledTimes(1);

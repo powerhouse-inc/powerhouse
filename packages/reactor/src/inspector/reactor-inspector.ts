@@ -37,8 +37,13 @@ import type {
  */
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
-/** Default file-node page size for the drive-integrity walk. */
-const DEFAULT_INTEGRITY_PAGE_SIZE = 500;
+/**
+ * How many file-node ids one `find` existence check carries. The walk itself
+ * is a single pass over one drive snapshot; only the existence checks are
+ * chunked, so a drive with thousands of files does not become one unbounded
+ * `find`.
+ */
+const INTEGRITY_FIND_BATCH_SIZE = 500;
 
 /** Default drive page size when the caller names no limit. */
 const DEFAULT_DRIVE_PAGE_SIZE = 100;
@@ -55,11 +60,22 @@ type DriveNode = {
  * inspector may be pointed at a drive whose state is older, partial, or
  * malformed, and a drive observability view must not throw on one bad node.
  */
-function readDriveState(doc: PHDocument): {
+type DriveState = {
   name: string;
   icon: string | undefined;
+  /** The readable nodes (file, folder and other kinds), in tree order. */
   nodes: DriveNode[];
-} {
+  /** Total entries in the raw node array, malformed ones included. */
+  totalNodeCount: number;
+  /** Readable nodes with `kind === "folder"`. */
+  folderCount: number;
+  /** Readable nodes whose kind is neither file nor folder. */
+  otherNodeCount: number;
+  /** Raw entries too malformed to read (not an object, or no string id/kind). */
+  unreadableNodeCount: number;
+};
+
+function readDriveState(doc: PHDocument): DriveState {
   const global = (doc.state as { global?: unknown }).global as
     | {
         name?: unknown;
@@ -69,8 +85,12 @@ function readDriveState(doc: PHDocument): {
     | undefined;
   const rawNodes = Array.isArray(global?.nodes) ? global.nodes : [];
   const nodes: DriveNode[] = [];
+  let folderCount = 0;
+  let otherNodeCount = 0;
+  let unreadableNodeCount = 0;
   for (const raw of rawNodes) {
     if (typeof raw !== "object" || raw === null) {
+      unreadableNodeCount += 1;
       continue;
     }
     const node = raw as {
@@ -79,6 +99,7 @@ function readDriveState(doc: PHDocument): {
       documentType?: unknown;
     };
     if (typeof node.id !== "string" || typeof node.kind !== "string") {
+      unreadableNodeCount += 1;
       continue;
     }
     nodes.push({
@@ -87,11 +108,20 @@ function readDriveState(doc: PHDocument): {
       documentType:
         typeof node.documentType === "string" ? node.documentType : undefined,
     });
+    if (node.kind === "folder") {
+      folderCount += 1;
+    } else if (node.kind !== "file") {
+      otherNodeCount += 1;
+    }
   }
   return {
     name: typeof global?.name === "string" ? global.name : doc.header.name,
     icon: typeof global?.icon === "string" ? global.icon : undefined,
     nodes,
+    totalNodeCount: rawNodes.length,
+    folderCount,
+    otherNodeCount,
+    unreadableNodeCount,
   };
 }
 
@@ -111,20 +141,13 @@ function toDriveInfo(doc: PHDocument): InspectorDriveInfo {
     branch,
     collectionId: DriveCollectionId.forDrive(driveId, branch).key,
     documentType: doc.header.documentType,
-    nodeCount: state.nodes.length,
+    nodeCount: state.totalNodeCount,
     fileCount,
-    folderCount: state.nodes.length - fileCount,
+    folderCount: state.folderCount,
+    otherNodeCount: state.otherNodeCount,
+    unreadableNodeCount: state.unreadableNodeCount,
     icon: state.icon,
   };
-}
-
-/** Parses a non-negative integer walk offset from a cursor, defaulting to 0. */
-function parseOffset(cursor: string | undefined): number {
-  if (cursor === undefined || cursor === "") {
-    return 0;
-  }
-  const parsed = Number.parseInt(cursor, 10);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 /**
@@ -231,17 +254,21 @@ export class ReactorInspector implements IInspector {
     if (!registry) {
       return Promise.resolve([]);
     }
-    return Promise.resolve(
-      registry.getAllModules().map((module) => {
-        const documentType = module.documentModel.global.id;
-        return {
-          documentType,
-          name: module.documentModel.global.name,
-          version: module.version ?? 1,
-          supportedVersions: registry.getSupportedVersions(documentType),
-        };
-      }),
-    );
+    const byType = new Map<string, InspectorDocumentModelInfo>();
+    for (const module of registry.getAllModules()) {
+      const documentType = module.documentModel.global.id;
+      if (byType.has(documentType)) {
+        continue;
+      }
+      const supportedVersions = registry.getSupportedVersions(documentType);
+      byType.set(documentType, {
+        documentType,
+        name: module.documentModel.global.name,
+        version: supportedVersions.at(-1) ?? module.version ?? 1,
+        supportedVersions,
+      });
+    }
+    return Promise.resolve([...byType.values()]);
   }
 
   async listDrives(
@@ -264,8 +291,7 @@ export class ReactorInspector implements IInspector {
 
   async checkDriveIntegrity(
     driveId: string,
-    cursor?: string,
-    limit?: number,
+    branch: string,
   ): Promise<InspectorDriveIntegrity> {
     const reactor = this.reactor;
     if (!reactor) {
@@ -275,36 +301,41 @@ export class ReactorInspector implements IInspector {
         totalFileNodeCount: 0,
         missingDocuments: [],
         unsupportedTypes: [],
-        nextCursor: undefined,
       };
     }
-    const drive = await reactor.get(driveId);
+    const drive = await reactor.get(driveId, { branch });
     const fileNodes = fileNodesOf(readDriveState(drive).nodes);
-    const offset = parseOffset(cursor);
-    const pageSize = limit ?? DEFAULT_INTEGRITY_PAGE_SIZE;
-    const slice = fileNodes.slice(offset, offset + pageSize);
-    const present = await this.presentDocumentIds(slice.map((node) => node.id));
+    const present = await this.presentDocumentIds(
+      fileNodes.map((node) => node.id),
+      branch,
+    );
     const supported = this.supportedDocumentTypes();
     const missingDocuments: InspectorDriveIntegrityRef[] = [];
     const unsupportedTypes: InspectorDriveIntegrityRef[] = [];
-    for (const node of slice) {
-      const documentType = node.documentType ?? "";
+    for (const node of fileNodes) {
       if (!present.has(node.id)) {
-        missingDocuments.push({ id: node.id, documentType });
+        missingDocuments.push({
+          id: node.id,
+          documentType: node.documentType ?? "",
+        });
       }
-      if (supported !== undefined && !supported.has(documentType)) {
-        unsupportedTypes.push({ id: node.id, documentType });
+      if (
+        supported !== undefined &&
+        node.documentType !== undefined &&
+        !supported.has(node.documentType)
+      ) {
+        unsupportedTypes.push({
+          id: node.id,
+          documentType: node.documentType,
+        });
       }
     }
-    const nextOffset = offset + slice.length;
     return {
       driveId,
-      checkedNodeCount: slice.length,
+      checkedNodeCount: fileNodes.length,
       totalFileNodeCount: fileNodes.length,
       missingDocuments,
       unsupportedTypes,
-      nextCursor:
-        nextOffset < fileNodes.length ? String(nextOffset) : undefined,
     };
   }
 
@@ -447,27 +478,43 @@ export class ReactorInspector implements IInspector {
   }
 
   /**
-   * The ids among `ids` that are present in the reactor, paging `find` until
-   * every match has been seen so a large slice cannot hide a present document
-   * behind the store's default page limit.
+   * The ids among `ids` present in the reactor on `branch`, resolved in bounded
+   * `find` batches and paging each batch until every match has been seen, so
+   * neither a large id list nor the store's default page limit can hide a
+   * present document. The branch is threaded so a non-main drive's nodes are
+   * checked on their own branch rather than against main.
    */
-  private async presentDocumentIds(ids: string[]): Promise<Set<string>> {
+  private async presentDocumentIds(
+    ids: string[],
+    branch: string,
+  ): Promise<Set<string>> {
     const present = new Set<string>();
     const reactor = this.reactor;
     if (!reactor || ids.length === 0) {
       return present;
     }
-    let page = await reactor.find({ ids }, undefined, {
-      cursor: "",
-      limit: ids.length,
-    });
-    for (const doc of page.results) {
-      present.add(doc.header.id);
-    }
-    while (page.nextCursor !== undefined && page.next) {
-      page = await page.next();
+    for (
+      let start = 0;
+      start < ids.length;
+      start += INTEGRITY_FIND_BATCH_SIZE
+    ) {
+      const batch = ids.slice(start, start + INTEGRITY_FIND_BATCH_SIZE);
+      let page = await reactor.find(
+        { ids: batch },
+        { branch },
+        {
+          cursor: "",
+          limit: batch.length,
+        },
+      );
       for (const doc of page.results) {
         present.add(doc.header.id);
+      }
+      while (page.nextCursor !== undefined && page.next) {
+        page = await page.next();
+        for (const doc of page.results) {
+          present.add(doc.header.id);
+        }
       }
     }
     return present;

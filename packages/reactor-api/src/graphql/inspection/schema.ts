@@ -109,6 +109,8 @@ export const inspectionTypeDefs = gql`
     nodeCount: Int!
     fileCount: Int!
     folderCount: Int!
+    otherNodeCount: Int!
+    unreadableNodeCount: Int!
     icon: String
   }
 
@@ -131,7 +133,9 @@ export const inspectionTypeDefs = gql`
   """
   The result of walking a drive's node tree: file nodes whose document is
   absent from the reactor, and file nodes whose type no document model
-  supports. The walk is cursor-paged for large drives.
+  supports. The walk runs over one drive snapshot in a single pass, so
+  checkedNodeCount equals totalFileNodeCount and the result is internally
+  consistent (there is no cursor to page a mutating drive across).
   """
   type InspectionDriveIntegrity {
     driveId: String!
@@ -139,7 +143,6 @@ export const inspectionTypeDefs = gql`
     totalFileNodeCount: Int!
     missingDocuments: [InspectionDriveIntegrityRef!]!
     unsupportedTypes: [InspectionDriveIntegrityRef!]!
-    nextCursor: String
   }
 
   """
@@ -281,14 +284,11 @@ export const inspectionTypeDefs = gql`
     """
     drives(cursor: String, limit: Int): InspectionDrivePage!
     """
-    Walks one drive's node tree for missing documents and unsupported types.
-    Potentially expensive on a large drive; cursor-paged.
+    Walks one drive's node tree on the given branch for missing documents and
+    unsupported types, in a single pass over one snapshot. Potentially
+    expensive on a large drive.
     """
-    driveIntegrity(
-      driveId: String!
-      cursor: String
-      limit: Int
-    ): InspectionDriveIntegrity!
+    driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
     """
     The attachment byte store and replicator on this reactor's host.
     """

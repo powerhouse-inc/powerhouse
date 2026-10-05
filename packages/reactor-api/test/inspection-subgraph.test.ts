@@ -409,11 +409,10 @@ describe("inspection subgraph", () => {
 
       const result = await run(
         schema,
-        `{ inspection { driveIntegrity(driveId: "drive-1") {
+        `{ inspection { driveIntegrity(driveId: "drive-1", branch: "main") {
             driveId checkedNodeCount totalFileNodeCount
             missingDocuments { id documentType }
             unsupportedTypes { id documentType }
-            nextCursor
           } } }`,
       );
 
@@ -426,7 +425,6 @@ describe("inspection subgraph", () => {
             totalFileNodeCount: 2,
             missingDocuments: [{ id: "b", documentType: "evil/unknown" }],
             unsupportedTypes: [{ id: "b", documentType: "evil/unknown" }],
-            nextCursor: null,
           },
         },
       });

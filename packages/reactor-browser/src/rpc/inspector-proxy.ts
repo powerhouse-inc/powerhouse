@@ -38,11 +38,10 @@ export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
         cursor,
         limit,
       ]) as Promise<InspectorDrivePage>,
-    checkDriveIntegrity: (driveId, cursor, limit) =>
+    checkDriveIntegrity: (driveId, branch) =>
       ops.call(INSPECTOR_OPS.checkDriveIntegrity, [
         driveId,
-        cursor,
-        limit,
+        branch,
       ]) as Promise<InspectorDriveIntegrity>,
     getAttachmentInfo: () =>
       ops.call(

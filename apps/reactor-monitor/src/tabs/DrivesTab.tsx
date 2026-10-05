@@ -4,9 +4,11 @@
  * §1). Reads the inspection surface's `listDrives` / `checkDriveIntegrity`, so
  * it works for local, worker and remote reactors alike.
  *
- * The remote URL is JOINED from the sync manager's already-served remote list
+ * The remote URLs are JOINED from the sync manager's already-served remote list
  * rather than re-fetched: a remote's `meta.collectionId` names the drive and
- * branch it synchronizes, and its `channelConfig.parameters.url` is the URL.
+ * branch it synchronizes, and its `channelConfig.parameters.url` is the URL. A
+ * drive synced to more than one remote shows ALL of them, never one picked as
+ * authoritative.
  *
  * Plain CSS and a poll loop, forked from QueueTab/SyncTab (see QueueTab's
  * header note); large drives are paged the way SyncTab pages dead letters.
@@ -18,7 +20,7 @@ import type {
   InspectorDriveIntegrity,
   Remote,
 } from "@powerhousedao/reactor";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type DrivesTabProps = {
   readonly inspector: IInspector;
@@ -70,7 +72,9 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
   const [paged, setPaged] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [remoteUrls, setRemoteUrls] = useState<Map<string, string>>(new Map());
+  const [remoteUrls, setRemoteUrls] = useState<Map<string, string[]>>(
+    new Map(),
+  );
   const [integrity, setIntegrity] = useState<
     Map<string, InspectorDriveIntegrity>
   >(new Map());
@@ -82,17 +86,23 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
     if (!syncManager) {
       return;
     }
-    const map = new Map<string, string>();
+    const map = new Map<string, string[]>();
     for (const remote of syncManager.list()) {
       const url = remoteUrl(remote);
-      if (url) {
-        map.set(
-          collectionKey(
-            remote.meta.collectionId.driveId,
-            remote.meta.collectionId.branch,
-          ),
-          url,
-        );
+      if (!url) {
+        continue;
+      }
+      const key = collectionKey(
+        remote.meta.collectionId.driveId,
+        remote.meta.collectionId.branch,
+      );
+      const urls = map.get(key);
+      if (urls) {
+        if (!urls.includes(url)) {
+          urls.push(url);
+        }
+      } else {
+        map.set(key, [url]);
       }
     }
     setRemoteUrls(map);
@@ -141,32 +151,12 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
   }, [loadFirst, paged]);
 
   const runIntegrity = useCallback(
-    async (driveId: string, cursor?: string) => {
+    async (driveId: string, branch: string) => {
       try {
-        const result = await inspector.checkDriveIntegrity(
-          driveId,
-          cursor,
-          undefined,
-        );
+        const result = await inspector.checkDriveIntegrity(driveId, branch);
         setIntegrity((previous) => {
           const next = new Map(previous);
-          const prior = cursor ? previous.get(driveId) : undefined;
-          next.set(
-            driveId,
-            prior
-              ? {
-                  ...result,
-                  missingDocuments: [
-                    ...prior.missingDocuments,
-                    ...result.missingDocuments,
-                  ],
-                  unsupportedTypes: [
-                    ...prior.unsupportedTypes,
-                    ...result.unsupportedTypes,
-                  ],
-                }
-              : result,
-          );
+          next.set(driveId, result);
           return next;
         });
         setIntegrityError((previous) => {
@@ -216,6 +206,11 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
         </span>
       </div>
 
+      <p className="rm-note" data-testid="drives-branch-note">
+        Lists main-branch drives; the reactor enumerates collections by type on
+        the main branch.
+      </p>
+
       {loading && drives.length === 0 ? (
         <p className="rm-placeholder">Loading...</p>
       ) : drives.length === 0 ? (
@@ -225,9 +220,8 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
       ) : (
         <ul className="rm-remote-list">
           {drives.map((drive) => {
-            const url = remoteUrls.get(
-              collectionKey(drive.driveId, drive.branch),
-            );
+            const urls =
+              remoteUrls.get(collectionKey(drive.driveId, drive.branch)) ?? [];
             const result = integrity.get(drive.driveId);
             const integrityMessage = integrityError.get(drive.driveId);
             return (
@@ -241,7 +235,9 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
                   <span className="rm-badge">{drive.branch}</span>
                   <button
                     className="rm-btn"
-                    onClick={() => void runIntegrity(drive.driveId)}
+                    onClick={() =>
+                      void runIntegrity(drive.driveId, drive.branch)
+                    }
                     type="button"
                   >
                     Check integrity
@@ -258,14 +254,25 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
                   </dd>
                   <dt>Document type</dt>
                   <dd>{drive.documentType}</dd>
-                  <dt>Remote URL</dt>
+                  <dt>Remote URL{urls.length > 1 ? "s" : ""}</dt>
                   <dd data-testid="drive-remote-url">
-                    {url ?? "none (local-only or not synced)"}
+                    {urls.length === 0
+                      ? "none (local-only or not synced)"
+                      : urls.length === 1
+                        ? urls[0]
+                        : `${urls.length} remotes: ${urls.join(", ")}`}
                   </dd>
                   <dt>Nodes</dt>
                   <dd>
                     {drive.nodeCount} ({drive.fileCount} files,{" "}
-                    {drive.folderCount} folders)
+                    {drive.folderCount} folders
+                    {drive.otherNodeCount > 0
+                      ? `, ${drive.otherNodeCount} other`
+                      : ""}
+                    {drive.unreadableNodeCount > 0
+                      ? `, ${drive.unreadableNodeCount} unreadable`
+                      : ""}
+                    )
                   </dd>
                 </dl>
                 {integrityMessage ? (
@@ -273,22 +280,7 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
                     Integrity check failed: {integrityMessage}
                   </p>
                 ) : null}
-                {result ? (
-                  <Fragment>
-                    <IntegrityResult result={result} />
-                    {result.nextCursor !== undefined ? (
-                      <button
-                        className="rm-btn rm-btn-small"
-                        onClick={() =>
-                          void runIntegrity(drive.driveId, result.nextCursor)
-                        }
-                        type="button"
-                      >
-                        Continue walk
-                      </button>
-                    ) : null}
-                  </Fragment>
-                ) : null}
+                {result ? <IntegrityResult result={result} /> : null}
               </li>
             );
           })}

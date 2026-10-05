@@ -148,13 +148,19 @@ function driveDoc(
   } as unknown as PHDocument;
 }
 
+type GetCall = { id: string; branch: string | undefined };
+type FindCall = { search: SearchFilter; branch: string | undefined };
+
 function fakeReactor(opts: {
   drives?: PHDocument[];
   driveById?: Record<string, PHDocument>;
   presentIds?: Set<string>;
+  getCalls?: GetCall[];
+  findCalls?: FindCall[];
 }): IReactor {
   return {
-    find: (search: SearchFilter) => {
+    find: (search: SearchFilter, view?: { branch?: string }) => {
+      opts.findCalls?.push({ search, branch: view?.branch });
       if (search.type !== undefined) {
         return Promise.resolve({
           results: opts.drives ?? [],
@@ -168,7 +174,8 @@ function fakeReactor(opts: {
         options: { cursor: "", limit: 0 },
       });
     },
-    get: (id: string) => {
+    get: (id: string, view?: { branch?: string }) => {
+      opts.getCalls?.push({ id, branch: view?.branch });
       const doc = opts.driveById?.[id];
       if (!doc) {
         return Promise.reject(new Error(`no document ${id}`));
@@ -215,10 +222,47 @@ describe("ReactorInspector", () => {
             nodeCount: 3,
             fileCount: 2,
             folderCount: 1,
+            otherNodeCount: 0,
+            unreadableNodeCount: 0,
             icon: "icon-url",
           },
         ],
         nextCursor: undefined,
+      });
+    });
+
+    it("counts folders explicitly and surfaces other and unreadable nodes", async () => {
+      const drive = {
+        header: {
+          id: "drive-1",
+          branch: "main",
+          name: "D",
+          documentType: "powerhouse/document-drive",
+        },
+        state: {
+          global: {
+            name: "D",
+            nodes: [
+              { id: "f1", kind: "file", documentType: "sky/ledger" },
+              { id: "d1", kind: "folder" },
+              { id: "u1", kind: "spreadsheet-cell" },
+              null,
+              { id: 5, kind: "file" },
+            ],
+          },
+        },
+      } as unknown as PHDocument;
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({ drives: [drive] }),
+      });
+
+      const page = await inspector.listDrives();
+      expect(page.results[0]).toMatchObject({
+        nodeCount: 5,
+        fileCount: 1,
+        folderCount: 1,
+        otherNodeCount: 1,
+        unreadableNodeCount: 2,
       });
     });
   });
@@ -244,13 +288,14 @@ describe("ReactorInspector", () => {
         documentModelRegistry: supported,
       });
 
-      await expect(inspector.checkDriveIntegrity("drive-1")).resolves.toEqual({
+      await expect(
+        inspector.checkDriveIntegrity("drive-1", "main"),
+      ).resolves.toEqual({
         driveId: "drive-1",
         checkedNodeCount: 3,
         totalFileNodeCount: 3,
         missingDocuments: [{ id: "absent", documentType: "sky/ledger" }],
         unsupportedTypes: [{ id: "weird", documentType: "evil/unknown" }],
-        nextCursor: undefined,
       });
     });
 
@@ -267,50 +312,60 @@ describe("ReactorInspector", () => {
         documentModelRegistry: supported,
       });
 
-      const result = await inspector.checkDriveIntegrity("drive-1");
+      const result = await inspector.checkDriveIntegrity("drive-1", "main");
       expect(result.missingDocuments).toEqual([]);
       expect(result.unsupportedTypes).toEqual([]);
       expect(result.checkedNodeCount).toBe(2);
     });
 
-    it("pages the node walk for a large drive", async () => {
+    it("walks one consistent snapshot in a single pass, reading the drive once so no mutation between pages can skip a node", async () => {
       const nodes: DriveNodeInput[] = Array.from({ length: 5 }, (_, i) => ({
         id: `n${i}`,
         kind: "file",
         documentType: "sky/ledger",
       }));
+      const getCalls: GetCall[] = [];
       const inspector = new ReactorInspector({
         reactor: fakeReactor({
           driveById: { "drive-1": driveDoc("drive-1", "main", "D", nodes) },
           presentIds: new Set(nodes.map((node) => node.id)),
+          getCalls,
         }),
         documentModelRegistry: supported,
       });
 
-      const first = await inspector.checkDriveIntegrity(
-        "drive-1",
-        undefined,
-        2,
-      );
-      expect(first.checkedNodeCount).toBe(2);
-      expect(first.totalFileNodeCount).toBe(5);
-      expect(first.nextCursor).toBe("2");
+      const result = await inspector.checkDriveIntegrity("drive-1", "main");
+      expect(getCalls).toHaveLength(1);
+      expect(result.checkedNodeCount).toBe(5);
+      expect(result.totalFileNodeCount).toBe(5);
+      expect(result.checkedNodeCount).toBe(result.totalFileNodeCount);
+    });
 
-      const second = await inspector.checkDriveIntegrity(
-        "drive-1",
-        first.nextCursor,
-        2,
-      );
-      expect(second.checkedNodeCount).toBe(2);
-      expect(second.nextCursor).toBe("4");
+    it("reads the drive and its nodes on the given branch, never main", async () => {
+      const drive = driveDoc("drive-1", "feature", "D", [
+        { id: "a", kind: "file", documentType: "sky/ledger" },
+      ]);
+      const getCalls: GetCall[] = [];
+      const findCalls: FindCall[] = [];
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({
+          driveById: { "drive-1": drive },
+          presentIds: new Set(["a"]),
+          getCalls,
+          findCalls,
+        }),
+        documentModelRegistry: supported,
+      });
 
-      const third = await inspector.checkDriveIntegrity(
-        "drive-1",
-        second.nextCursor,
-        2,
+      await inspector.checkDriveIntegrity("drive-1", "feature");
+      expect(getCalls).toEqual([{ id: "drive-1", branch: "feature" }]);
+      const presenceFinds = findCalls.filter(
+        (call) => call.search.ids !== undefined,
       );
-      expect(third.checkedNodeCount).toBe(1);
-      expect(third.nextCursor).toBeUndefined();
+      expect(presenceFinds.length).toBeGreaterThan(0);
+      expect(presenceFinds.every((call) => call.branch === "feature")).toBe(
+        true,
+      );
     });
 
     it("skips the unsupported check when no registry is wired", async () => {
@@ -324,7 +379,25 @@ describe("ReactorInspector", () => {
         }),
       });
 
-      const result = await inspector.checkDriveIntegrity("drive-1");
+      const result = await inspector.checkDriveIntegrity("drive-1", "main");
+      expect(result.unsupportedTypes).toEqual([]);
+      expect(result.missingDocuments).toEqual([]);
+    });
+
+    it("does not report a node that declares no document type as unsupported", async () => {
+      const drive = driveDoc("drive-1", "main", "D", [
+        { id: "typed", kind: "file", documentType: "sky/ledger" },
+        { id: "untyped", kind: "file" },
+      ]);
+      const inspector = new ReactorInspector({
+        reactor: fakeReactor({
+          driveById: { "drive-1": drive },
+          presentIds: new Set(["typed", "untyped"]),
+        }),
+        documentModelRegistry: supported,
+      });
+
+      const result = await inspector.checkDriveIntegrity("drive-1", "main");
       expect(result.unsupportedTypes).toEqual([]);
       expect(result.missingDocuments).toEqual([]);
     });
@@ -398,6 +471,27 @@ describe("ReactorInspector", () => {
           version: 1,
           supportedVersions: [1],
         },
+        {
+          documentType: "sky/ledger",
+          name: "Ledger",
+          version: 2,
+          supportedVersions: [1, 2],
+        },
+      ]);
+    });
+
+    it("dedupes a type registered at two versions into one row with both supported versions", async () => {
+      const inspector = new ReactorInspector({
+        documentModelRegistry: documentModelRegistry(
+          [
+            documentModelModule("sky/ledger", "Ledger", 1),
+            documentModelModule("sky/ledger", "Ledger", 2),
+          ],
+          { "sky/ledger": [1, 2] },
+        ),
+      });
+
+      await expect(inspector.listDocumentModels()).resolves.toEqual([
         {
           documentType: "sky/ledger",
           name: "Ledger",

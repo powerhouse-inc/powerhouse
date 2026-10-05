@@ -67,12 +67,16 @@ export type InspectorDriveInfo = {
   /** The `drive.<branch>.<driveId>` collection id a remote syncs it under. */
   collectionId: string;
   documentType: string;
-  /** Total nodes in the drive tree. */
+  /** Total entries in the drive's raw node array, malformed ones included. */
   nodeCount: number;
   /** File nodes (documents) in the drive tree. */
   fileCount: number;
-  /** Folder nodes in the drive tree. */
+  /** Folder nodes (`kind === "folder"`) in the drive tree. */
   folderCount: number;
+  /** Readable nodes whose kind is neither file nor folder. */
+  otherNodeCount: number;
+  /** Raw node entries too malformed to read (no string id/kind). */
+  unreadableNodeCount: number;
   /** The drive's icon, when it declares one. */
   icon: string | undefined;
 };
@@ -96,17 +100,21 @@ export type InspectorDriveIntegrityRef = {
  * declared document type no document model supports. Composed from the reactor
  * and the registry -- distinct from `DocumentIntegrityService`, which replays a
  * single document rather than walking a drive.
+ *
+ * The walk runs over ONE drive snapshot in a single pass, so the result is
+ * internally consistent: every file node in the snapshot is examined once, and
+ * `checkedNodeCount` therefore equals `totalFileNodeCount`. There is no cursor,
+ * because paging the walk by array offset across re-reads of a mutating drive
+ * is exactly what let a node be skipped or double-reported.
  */
 export type InspectorDriveIntegrity = {
   driveId: string;
-  /** File nodes examined in this page of the walk. */
+  /** File nodes examined (the whole snapshot; equals totalFileNodeCount). */
   checkedNodeCount: number;
   /** File nodes in the whole drive tree. */
   totalFileNodeCount: number;
   missingDocuments: InspectorDriveIntegrityRef[];
   unsupportedTypes: InspectorDriveIntegrityRef[];
-  /** Absent once the walk has covered the whole tree. */
-  nextCursor: string | undefined;
 };
 
 /**
@@ -211,15 +219,17 @@ export interface IInspector {
    */
   listDrives(cursor?: string, limit?: number): Promise<InspectorDrivePage>;
   /**
-   * Walks one drive's node tree, reporting file nodes whose document is absent
-   * from the reactor and file nodes whose type no document model supports. The
-   * walk is paged for large drives. A reactor with no facade wired reports an
-   * empty result.
+   * Walks one drive's node tree on the given branch, reporting file nodes whose
+   * document is absent from the reactor and file nodes whose type no document
+   * model supports. The walk runs over a single drive snapshot in one pass --
+   * both the drive read and the existence checks resolve on `branch` -- so a
+   * drive mutated mid-check cannot skip or double-report a node, and a non-main
+   * drive is read on its own branch rather than falsely reported all-missing. A
+   * reactor with no facade wired reports an empty result.
    */
   checkDriveIntegrity(
     driveId: string,
-    cursor?: string,
-    limit?: number,
+    branch: string,
   ): Promise<InspectorDriveIntegrity>;
   /**
    * This reactor's attachment store and replicator. A reactor with no store

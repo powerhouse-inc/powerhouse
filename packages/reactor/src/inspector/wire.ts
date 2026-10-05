@@ -121,6 +121,8 @@ export type WireInspectorDrive = {
   readonly nodeCount: number;
   readonly fileCount: number;
   readonly folderCount: number;
+  readonly otherNodeCount: number;
+  readonly unreadableNodeCount: number;
   /** An absent icon travels as an explicit null. */
   readonly icon: string | null;
 };
@@ -144,7 +146,6 @@ export type WireInspectorDriveIntegrity = {
   readonly totalFileNodeCount: number;
   readonly missingDocuments: WireInspectorDriveIntegrityRef[];
   readonly unsupportedTypes: WireInspectorDriveIntegrityRef[];
-  readonly nextCursor: string | null;
 };
 
 /** The wire form of {@link import("./types.js").InspectorAttachmentInfo}. */
@@ -260,6 +261,8 @@ export const INSPECTION_WIRE_FIELDS = {
     "nodeCount",
     "fileCount",
     "folderCount",
+    "otherNodeCount",
+    "unreadableNodeCount",
     "icon",
   ],
   InspectionDrivePage: ["results", "nextCursor"],
@@ -270,7 +273,6 @@ export const INSPECTION_WIRE_FIELDS = {
     "totalFileNodeCount",
     "missingDocuments",
     "unsupportedTypes",
-    "nextCursor",
   ],
   InspectionAttachmentInfo: [
     "present",
