@@ -1,5 +1,5 @@
 import { parse } from "cmd-ts";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { build } from "../src/commands/build.js";
 import {
@@ -65,10 +65,10 @@ describe("the selected package root", () => {
   it("is the directory of the selected config file", () => {
     expect(
       selectedPackageRoot({
-        configFile: "/packages/invoice/powerhouse.config.json",
+        configFile: resolve("/packages/invoice/powerhouse.config.json"),
         source: [],
       }),
-    ).toBe("/packages/invoice");
+    ).toBe(resolve("/packages/invoice"));
   });
 
   it("is the working directory when no config file is selected", () => {

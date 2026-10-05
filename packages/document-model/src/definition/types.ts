@@ -148,9 +148,9 @@ export type OutputMembers = Readonly<
 
 /** The members of an output object that a source really carries. */
 export type StoredFieldsOf<TMembers extends OutputMembers> = {
-  [K in keyof TMembers as TMembers[K] extends AnyFieldDescriptor
-    ? K
-    : never]: TMembers[K] extends AnyFieldDescriptor ? TMembers[K] : never;
+  [
+    K in keyof TMembers as TMembers[K] extends AnyFieldDescriptor ? K : never
+  ]: TMembers[K] extends AnyFieldDescriptor ? TMembers[K] : never;
 };
 
 type RequiredInputKeys<TFields extends ObjectFields> = {
@@ -181,11 +181,13 @@ export type OutputObjectOf<TFields extends OutputMembers> = {
  * by accident.
  */
 export type SourceObjectOf<TFields extends OutputMembers> = {
-  -readonly [K in keyof TFields as SourceOf<TFields[K]> extends {
-    readonly [COMPUTED_SOURCE_BRAND]: true;
-  }
-    ? never
-    : K]: SourceOf<TFields[K]>;
+  -readonly [
+    K in keyof TFields as SourceOf<TFields[K]> extends {
+      readonly [COMPUTED_SOURCE_BRAND]: true;
+    }
+      ? never
+      : K
+  ]: SourceOf<TFields[K]>;
 };
 
 declare const COMPUTED_SOURCE_BRAND: unique symbol;

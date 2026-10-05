@@ -34,8 +34,12 @@ function project(): string {
 
 function ph(cwd: string, ...args: string[]) {
   const run = spawnSync(
-    join(REPOSITORY_ROOT, "node_modules", ".bin", "tsx"),
-    [join(REPOSITORY_ROOT, "clis", "ph-cli", "src", "cli.ts"), ...args],
+    process.execPath,
+    [
+      join(REPOSITORY_ROOT, "node_modules", "tsx", "dist", "cli.mjs"),
+      join(REPOSITORY_ROOT, "clis", "ph-cli", "src", "cli.ts"),
+      ...args,
+    ],
     { cwd, encoding: "utf-8", env: { ...process.env, PH_NO_TELEMETRY: "1" } },
   );
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };

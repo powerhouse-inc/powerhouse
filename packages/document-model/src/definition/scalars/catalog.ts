@@ -199,7 +199,9 @@ export const scalarCatalogReport = built.report;
 export const scalarEntries = Object.freeze(builtInScalars);
 
 type FactoryByBuilder = {
-  readonly [S in (typeof builtInScalars)[number] as S["declaration"]["builderName"]]: PhScalarFactory<S>;
+  readonly [
+    S in (typeof builtInScalars)[number] as S["declaration"]["builderName"]
+  ]: PhScalarFactory<S>;
 };
 
 /** Every catalog scalar as `ph` exposes it: the same binding, a `ph.` role. */

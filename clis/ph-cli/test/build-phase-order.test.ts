@@ -774,6 +774,11 @@ function wireScaffoldedPrepack(root: string): void {
     `#!/bin/sh\nexec "${join(REPOSITORY_ROOT, "node_modules", ".bin", "tsx")}" "${join(REPOSITORY_ROOT, "clis", "ph-cli", "src", "cli.ts")}" "$@"\n`,
     { mode: 0o755 },
   );
+  // Windows runs lifecycle scripts through cmd.exe, which finds the .cmd shim.
+  writeFileSync(
+    join(root, "node_modules", ".bin", "ph-cli.cmd"),
+    `@"${process.execPath}" "${join(REPOSITORY_ROOT, "node_modules", "tsx", "dist", "cli.mjs")}" "${join(REPOSITORY_ROOT, "clis", "ph-cli", "src", "cli.ts")}" %*\r\n`,
+  );
 }
 
 function runPackageManager(
@@ -793,6 +798,8 @@ function runPackageManager(
       {
         cwd: root,
         encoding: "utf-8",
+        // npm and pnpm are .cmd files on Windows, which only a shell runs.
+        shell: process.platform === "win32",
         env: {
           ...process.env,
           PH_NO_TELEMETRY: "1",

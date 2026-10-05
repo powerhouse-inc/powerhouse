@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -12,6 +13,52 @@ async function importSpecifier<T>(target: string): Promise<T> {
     ? pathToFileURL(target).href
     : target;
   return (await import(/* @vite-ignore */ specifier)) as T;
+}
+
+const EXPORT_CONDITIONS = new Set(["node", "import", "default"]);
+
+function exportTarget(entry: unknown): string | null {
+  if (typeof entry === "string") return entry;
+  const candidates = Array.isArray(entry)
+    ? entry
+    : typeof entry === "object" && entry !== null
+      ? Object.entries(entry)
+          .filter(([condition]) => EXPORT_CONDITIONS.has(condition))
+          .map(([, value]: [string, unknown]) => value)
+      : [];
+  for (const candidate of candidates) {
+    const target = exportTarget(candidate);
+    if (target !== null) return target;
+  }
+  return null;
+}
+
+/**
+ * Resolves `./${subPath}` through the `exports` map of the package at
+ * `packageRoot`, the file its consumers import. Node imports no directory, so
+ * joining the subpath onto the root fails for a package that maps it.
+ */
+export function resolvePackageExport(
+  packageRoot: string,
+  subPath: string,
+): string | null {
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(
+      readFileSync(path.join(packageRoot, "package.json"), "utf8"),
+    );
+  } catch {
+    return null;
+  }
+  const exports =
+    typeof manifest === "object" && manifest !== null && "exports" in manifest
+      ? manifest.exports
+      : undefined;
+  if (typeof exports !== "object" || exports === null) return null;
+  const target = exportTarget(
+    Object.entries(exports).find(([key]) => key === `./${subPath}`)?.[1],
+  );
+  return target === null ? null : path.join(packageRoot, target);
 }
 
 /**

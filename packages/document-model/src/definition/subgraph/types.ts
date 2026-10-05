@@ -83,11 +83,11 @@ export type OutputObjectWithComputed<TMembers extends OutputMembers> = {
  * must not be asked for them either.
  */
 export type SourceObjectWithComputed<TMembers extends OutputMembers> = {
-  -readonly [K in keyof TMembers as SourceOf<
-    TMembers[K]
-  > extends ComputedFieldSource
-    ? never
-    : K]: SourceOf<TMembers[K]>;
+  -readonly [
+    K in keyof TMembers as SourceOf<TMembers[K]> extends ComputedFieldSource
+      ? never
+      : K
+  ]: SourceOf<TMembers[K]>;
 };
 
 /**

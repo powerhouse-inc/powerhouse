@@ -251,15 +251,13 @@ function descriptorFingerprint(
 ): TypeFingerprint {
   const fields =
     definition.kind === "enum"
-      ? definition.values.map(
-          (value): FieldFingerprint => ({
-            name: value.name,
-            type: "",
-            defaultValue: null,
-            description: value.description,
-            deprecated: value.deprecated,
-          }),
-        )
+      ? definition.values.map((value): FieldFingerprint => ({
+          name: value.name,
+          type: "",
+          defaultValue: null,
+          description: value.description,
+          deprecated: value.deprecated,
+        }))
       : definition.kind === "union"
         ? []
         : definition.fields.map((field): FieldFingerprint => {
@@ -293,15 +291,13 @@ function descriptorFingerprint(
 function astFingerprint(node: NamedAstDefinition): TypeFingerprint {
   const fields =
     node.kind === AST_KINDS.enum
-      ? (node.values ?? []).map(
-          (value): FieldFingerprint => ({
-            name: value.name.value,
-            type: "",
-            defaultValue: null,
-            description: value.description?.value ?? null,
-            deprecated: astDeprecation(value.directives),
-          }),
-        )
+      ? (node.values ?? []).map((value): FieldFingerprint => ({
+          name: value.name.value,
+          type: "",
+          defaultValue: null,
+          description: value.description?.value ?? null,
+          deprecated: astDeprecation(value.directives),
+        }))
       : (node.fields ?? []).map((field): FieldFingerprint => {
           const defaultValue = (field as GraphQLInputValueDefinitionNode)
             .defaultValue;

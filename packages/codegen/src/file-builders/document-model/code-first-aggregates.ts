@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   DefinitionSourceLoader,
+  formatDefinitionDiagnostic,
   resolveDefinitionSelection,
 } from "document-model/tooling";
 import { createHash, randomUUID } from "node:crypto";
@@ -39,7 +40,7 @@ export async function codeFirstAggregateSources(
     return [];
   if (selection.status === "failed")
     throw new Error(
-      selection.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+      selection.diagnostics.map(formatDefinitionDiagnostic).join("\n"),
     );
   const generatedFiles = new Set(
     ["index.ts", "document-models.ts", "upgrade-manifests.ts"].map((name) => {
@@ -67,7 +68,7 @@ export async function codeFirstAggregateSources(
     });
     if (loaded.status === "failed")
       throw new Error(
-        loaded.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+        loaded.diagnostics.map(formatDefinitionDiagnostic).join("\n"),
       );
     const sources = new Map<string, CodeFirstAggregateSource>();
     for (const name of ["documentModels", "upgradeManifests"] as const) {

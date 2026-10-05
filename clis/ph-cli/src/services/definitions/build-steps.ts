@@ -85,6 +85,7 @@ const compilerConfigSchema = z.object({
     declarationDir: z.string().optional(),
     outDir: z.string().optional(),
   }),
+  references: z.array(z.object({ path: z.string() })).optional(),
 });
 const sourceMapSchema = z.object({
   sources: z.array(z.string()),
@@ -138,28 +139,49 @@ export function createTypecheckStep(
       "--showConfig",
     ]);
     if (!config.ok) return { ok: false, summary: config.summary };
-    const result = await runLocal(packageRoot, agent, [
-      "tsc",
-      "-p",
-      "tsconfig.json",
-      "--outDir",
-      emittedRoot,
-      "--declaration",
-      "--declarationDir",
-      emittedRoot,
-      "--emitDeclarationOnly",
-      "false",
-      "--noEmit",
-      "false",
-      "--noEmitOnError",
-      "false",
-      "--sourceMap",
-      "true",
-      "--inlineSourceMap",
-      "false",
-      "--tsBuildInfoFile",
-      join(emittedRoot, "tsconfig.tsbuildinfo"),
-    ]);
+    let compilerConfig: z.infer<typeof compilerConfigSchema>;
+    try {
+      compilerConfig = compilerConfigSchema.parse(
+        JSON.parse(config.stdout ?? ""),
+      );
+    } catch (error) {
+      return { ok: false, summary: layoutFailure(error) };
+    }
+    // `tsc -p` reads a referenced project's declarations without building
+    // them, so the references build first, as `tsc --build` would.
+    const references = compilerConfig.references ?? [];
+    const referencesBuilt =
+      references.length === 0
+        ? { ok: true }
+        : await runLocal(packageRoot, agent, [
+            "tsc",
+            "--build",
+            ...references.map((reference) => reference.path),
+          ]);
+    const result = !referencesBuilt.ok
+      ? referencesBuilt
+      : await runLocal(packageRoot, agent, [
+          "tsc",
+          "-p",
+          "tsconfig.json",
+          "--outDir",
+          emittedRoot,
+          "--declaration",
+          "--declarationDir",
+          emittedRoot,
+          "--emitDeclarationOnly",
+          "false",
+          "--noEmit",
+          "false",
+          "--noEmitOnError",
+          "false",
+          "--sourceMap",
+          "true",
+          "--inlineSourceMap",
+          "false",
+          "--tsBuildInfoFile",
+          join(emittedRoot, "tsconfig.tsbuildinfo"),
+        ]);
     if (!result.ok) {
       console.error(result.summary);
       if (
@@ -173,9 +195,7 @@ export function createTypecheckStep(
       );
     }
     try {
-      const { compilerOptions } = compilerConfigSchema.parse(
-        JSON.parse(config.stdout ?? ""),
-      );
+      const { compilerOptions } = compilerConfig;
       const declared = compilerOptions.declarationDir ?? compilerOptions.outDir;
       const emittedModules = new Map<string, string>();
       for (const path of filesUnder(emittedRoot)) {
@@ -202,15 +222,15 @@ export function createTypecheckStep(
               ),
       };
     } catch (error) {
-      return {
-        ok: false,
-        summary:
-          error instanceof Error
-            ? error.message
-            : "The TypeScript output layout could not be resolved.",
-      };
+      return { ok: false, summary: layoutFailure(error) };
     }
   };
+}
+
+function layoutFailure(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : "The TypeScript output layout could not be resolved.";
 }
 
 function createCandidateStep(

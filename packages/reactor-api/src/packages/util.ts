@@ -10,7 +10,10 @@ import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { resolveLinkedPackage } from "./import-resolver.js";
+import {
+  resolveLinkedPackage,
+  resolvePackageExport,
+} from "./import-resolver.js";
 
 // Define the expected module export structures
 type DocumentModelsExport = Record<string, DocumentModelModule>;
@@ -73,7 +76,10 @@ async function loadDependency<T = unknown>(
   // file:// URL: the ESM loader reads the drive letter in a Windows path as a
   // URL scheme.
   const fullPath = path.isAbsolute(packageName)
-    ? pathToFileURL(path.join(packageName, subPath)).href
+    ? pathToFileURL(
+        resolvePackageExport(packageName, subPath) ??
+          path.join(packageName, subPath),
+      ).href
     : `${packageName}/${subPath}`;
 
   // Try the standard import first

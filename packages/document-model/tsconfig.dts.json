@@ -1,0 +1,11 @@
+// Declarations for dist. Through the inherited `references`, a clean build
+// resolves `@powerhousedao/shared` to `.tsbuild` outputs that do not exist yet
+// (TS6305, hidden by --noCheck), and tsgo drops imports its output still uses.
+// `references` does not inherit; without the "source" condition, shared
+// resolves to its built dist declarations.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "customConditions": []
+  }
+}

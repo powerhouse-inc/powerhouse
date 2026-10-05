@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Project } from "ts-morph";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -80,13 +81,13 @@ beforeEach(() => {
     recursive: true,
   });
   symlinkSync(
-    new URL("../../document-model", import.meta.url).pathname,
+    fileURLToPath(new URL("../../document-model", import.meta.url)),
     join(projectDir, "node_modules", "document-model"),
     "dir",
   );
   for (const name of ["shared", "reactor-api"])
     symlinkSync(
-      new URL(`../../${name}`, import.meta.url).pathname,
+      fileURLToPath(new URL(`../../${name}`, import.meta.url)),
       join(projectDir, "node_modules", "@powerhousedao", name),
       "dir",
     );

@@ -23,6 +23,7 @@ import {
   packageRevisionOf,
   runGeneration,
 } from "../src/services/definitions/generation.js";
+import { toPosixPath } from "../src/services/definitions/package-revision.js";
 import { runModelCheck } from "../src/services/model-check.js";
 import { emitFixture, writeFixtureTsconfig } from "./helpers/emit-fixture.js";
 import { recorder } from "./helpers/recorder.js";
@@ -133,7 +134,7 @@ describe("published source maps", () => {
             };
             const source = resolve(dirname(join(dist, file)), map.sources[0]);
             expect(existsSync(source), file).toBe(true);
-            return [file, relative(fixture.root, source)];
+            return [toPosixPath(file), relative(fixture.root, source)];
           }),
       );
       expect(sources).toEqual({

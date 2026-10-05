@@ -244,8 +244,8 @@ describe("a scaffolded code-first model", () => {
 
   it("typechecks under the project's own tsconfig", () => {
     const result = spawnSync(
-      "./node_modules/.bin/tsc",
-      ["-p", "tsconfig.json"],
+      process.execPath,
+      ["./node_modules/typescript/bin/tsc", "-p", "tsconfig.json"],
       {
         cwd: projectDir,
         encoding: "utf8",
@@ -332,8 +332,8 @@ describe("a scaffolded code-first subgraph", () => {
 
   it("typechecks under the project's own tsconfig", () => {
     const result = spawnSync(
-      "./node_modules/.bin/tsc",
-      ["-p", "tsconfig.json"],
+      process.execPath,
+      ["./node_modules/typescript/bin/tsc", "-p", "tsconfig.json"],
       { cwd: projectDir, encoding: "utf8" },
     );
     expect(`${result.stdout}${result.stderr}`.trim()).toBe("");
