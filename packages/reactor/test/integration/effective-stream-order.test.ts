@@ -12,6 +12,8 @@ import type { IReactor } from "../../src/core/types.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
+const V2 = { "base-reducer": 2 };
+
 /**
  * Positional auth evaluation reads each stream up to a timestamp, so it needs
  * the effective stream -- the one left after skips are applied -- to run in
@@ -76,6 +78,7 @@ describe("effective stream timestamp order", () => {
     const document = createDocModelDocument({
       id: "probe-doc",
       slug: "probe-doc",
+      protocolVersions: V2,
     });
 
     // Both reactors hold the document.
@@ -143,6 +146,7 @@ describe("effective stream timestamp order", () => {
     const document = createDocModelDocument({
       id: "probe-doc-2",
       slug: "probe-doc-2",
+      protocolVersions: V2,
     });
 
     let info = await reactorA.create(document);
@@ -227,8 +231,7 @@ describe("effective stream timestamp order", () => {
     ).length;
     expect(modules).toBe(5);
 
-    // The skip was applied on a document carrying base-reducer 2, which is the
-    // only version the reactor stamps.
-    expect(doc.header.protocolVersions).toEqual({ "base-reducer": 2 });
+    // The skip was applied on a document carrying base-reducer 2.
+    expect(doc.header.protocolVersions).toEqual(V2);
   });
 });
