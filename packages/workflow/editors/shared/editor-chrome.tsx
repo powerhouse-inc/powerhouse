@@ -272,7 +272,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       .then((history) => {
         if (active) setCanUndoV3(canUndoOn3(history, latest.current.policy));
       })
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        console.error("Failed to read undo availability:", error);
+      });
     return () => {
       active = false;
     };
