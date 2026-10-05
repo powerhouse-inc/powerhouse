@@ -36,15 +36,29 @@ describe("remote Switchboard backend drives sub-proxy", () => {
   });
 });
 
-describe("remote Switchboard backend unsupported-operation signal", () => {
-  it("refuses an unsupported member with a typed ReactorOperationNotSupportedError the router can recognise", () => {
+describe("remote Switchboard backend read surface", () => {
+  it("serves find by delegating to the GraphQL client rather than refusing", () => {
     const client = backendClient();
-    // `find` is the operation Connect's boot getDrives fans in; the remote
-    // GraphQL client cannot serve it, and the throw must be the TYPED error the
-    // router's fan-in excludes rather than a generic Error it would fail on.
+    // A `type`/`parentId` search is what the Switchboard findDocuments query
+    // honours and what drive enumeration issues, so find must delegate (a
+    // thenable), not throw the typed not-supported signal. No server is
+    // reachable in this unit test, so the returned promise rejects on the
+    // network; swallow it rather than letting it surface as unhandled.
+    const result = (
+      client as unknown as { find: (search: unknown) => Promise<unknown> }
+    ).find({ type: "powerhouse/document-drive" });
+
+    expect(typeof result.then).toBe("function");
+    result.catch(() => undefined);
+  });
+
+  it("refuses a find naming ids with the typed signal the router excludes on", () => {
+    const client = backendClient();
     let thrown: unknown;
     try {
-      (client as unknown as { find: () => unknown }).find();
+      (client as unknown as { find: (search: unknown) => unknown }).find({
+        ids: ["doc-1"],
+      });
     } catch (error) {
       thrown = error;
     }
@@ -54,6 +68,58 @@ describe("remote Switchboard backend unsupported-operation signal", () => {
     const typed = thrown as ReactorOperationNotSupportedError;
     expect(typed.backend).toBe("switchboard-remote");
     expect(typed.operation).toBe("find");
+    expect(typed.message).toMatch(/type and parentId/);
+  });
+
+  it("refuses a find naming slugs with the typed signal", () => {
+    const client = backendClient();
+
+    expect(() =>
+      (client as unknown as { find: (search: unknown) => unknown }).find({
+        slugs: ["my-doc"],
+      }),
+    ).toThrow(ReactorOperationNotSupportedError);
+  });
+
+  it("serves the relationship reads by delegating to the GraphQL client", () => {
+    const client = backendClient();
+    const relationshipClient = client as unknown as {
+      getOutgoingRelationships: (id: string, type: string) => Promise<unknown>;
+      getIncomingRelationshipEdges: (id: string) => Promise<unknown>;
+    };
+
+    const outgoing = relationshipClient.getOutgoingRelationships(
+      "doc-1",
+      "cites",
+    );
+    const edges = relationshipClient.getIncomingRelationshipEdges("doc-2");
+
+    expect(typeof outgoing.then).toBe("function");
+    expect(typeof edges.then).toBe("function");
+    outgoing.catch(() => undefined);
+    edges.catch(() => undefined);
+  });
+});
+
+describe("remote Switchboard backend unsupported-operation signal", () => {
+  it("refuses a still-unsupported member with a typed error the router recognises", () => {
+    const client = backendClient();
+    // A relationship WRITE is not part of the v1 read surface; it must throw the
+    // TYPED error the router recognises rather than a generic Error.
+    let thrown: unknown;
+    try {
+      (
+        client as unknown as { addRelationship: () => unknown }
+      ).addRelationship();
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ReactorOperationNotSupportedError);
+    expect(isOperationNotSupported(thrown)).toBe(true);
+    const typed = thrown as ReactorOperationNotSupportedError;
+    expect(typed.backend).toBe("switchboard-remote");
+    expect(typed.operation).toBe("addRelationship");
     // The helpful served-methods message content is preserved.
     expect(typed.message).toMatch(/get, subscribe, execute/);
   });

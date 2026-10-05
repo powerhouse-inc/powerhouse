@@ -2,29 +2,32 @@
  * The remote-Switchboard router backend (multi-reactor stage 4, WP-E).
  *
  * Reuses Connect's existing GraphQL seam -- `GraphQLReactorClient` -- as the
- * remote reactor's client. That client implements only the `IReactorBrowserClient`
- * subset of `IReactorClient` (get, subscribe, execute, getOperations, create,
- * deleteDocument), so this module adapts it to the full `IReactorClient` the
- * router's `ReactorBackend` requires: the subset delegates to the GraphQL
- * client, and every other member throws a typed
+ * remote reactor's client, and adapts it to the full `IReactorClient` the
+ * router's `ReactorBackend` requires. The client serves the read/write document
+ * surface the Switchboard GraphQL schema exposes -- get, subscribe, execute,
+ * getOperations, create, deleteDocument, `find`, and the four relationship
+ * reads -- which this module delegates; every member the schema does NOT expose
+ * (drive choreography, jobs, batches, relationship WRITES) throws a typed
  * {@link ReactorOperationNotSupportedError} naming the backend and the member,
  * rather than resolving to a silent wrong answer. That honest-degradation
  * posture is deliberate -- the same one reactor-monitor's remote `unwired.ts`
  * takes -- because a stub that read green while nothing worked is the exact
  * failure mode this initiative exists to stamp out.
  *
- * The error being TYPED (not a bare `Error`) is load-bearing for the router's
- * fan-in reads: a collection-spanning read (`find`, the relationship reads)
- * recognises this backend as NOT APPLICABLE to the read and excludes it from
- * the union, surfacing the exclusion, instead of treating a by-contract
- * limitation as a failure that would make the whole read incomplete. A CAPABLE
- * backend that errored at runtime still fails that read loud -- the router
- * draws the line on the error type.
+ * `find` over GraphQL enumerates remote drives, so a remote reactor is now a
+ * contributing backend in the router's collection-spanning fan-in rather than
+ * an excluded one. One narrow case still degrades: the Switchboard
+ * `findDocuments` query filters by `type`/`parentId` only, so a search naming
+ * `ids`/`slugs` is refused with the typed signal -- drive enumeration filters
+ * by `type`, which is served.
  *
- * Completing the remaining surface (drive choreography, find, relationships,
- * jobs, batches) over GraphQL is the follow-up that makes the remote backend a
- * first-class routing target; the router + ownership guard + capability wiring
- * is what this work package delivers.
+ * The error being TYPED (not a bare `Error`) is load-bearing for the router's
+ * fan-in reads: a collection-spanning read recognises a refusing backend as NOT
+ * APPLICABLE to the read and excludes it from the union, surfacing the
+ * exclusion, instead of treating a by-contract limitation as a failure that
+ * would make the whole read incomplete. A CAPABLE backend that errored at
+ * runtime still fails that read loud -- the router draws the line on the error
+ * type.
  */
 import {
   POLLING_CHANNEL_TYPE,
@@ -40,7 +43,14 @@ import type {
 import type { BearerTokenProvider } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 
-/** The `IReactorClient` members the GraphQL client can actually serve. */
+/**
+ * The `IReactorClient` members the GraphQL client serves by straight delegation.
+ *
+ * `find` is served too but is NOT listed here: it is handled specially so a
+ * search naming `ids`/`slugs` -- which the Switchboard `findDocuments` query
+ * cannot honour -- refuses with the typed signal rather than returning every
+ * document. See {@link asFullReactorClient}.
+ */
 const DELEGATED_METHODS: ReadonlySet<string> = new Set([
   "get",
   "subscribe",
@@ -48,7 +58,32 @@ const DELEGATED_METHODS: ReadonlySet<string> = new Set([
   "getOperations",
   "create",
   "deleteDocument",
+  "getOutgoingRelationships",
+  "getIncomingRelationships",
+  "getOutgoingRelationshipEdges",
+  "getIncomingRelationshipEdges",
 ]);
+
+/** The read members served, for the not-supported message's served-list. */
+const SERVED_METHODS: readonly string[] = [...DELEGATED_METHODS, "find"];
+
+/**
+ * Whether a search filters by `ids` or `slugs`. The Switchboard `findDocuments`
+ * query filters only by `type`/`parentId`, so an identifier-named search cannot
+ * be served over GraphQL and is refused with the typed signal.
+ */
+function findSearchIsServable(search: unknown): boolean {
+  if (typeof search !== "object" || search === null) {
+    return true;
+  }
+  const { ids, slugs } = search as {
+    ids?: readonly string[];
+    slugs?: readonly string[];
+  };
+  const namesIds = ids !== undefined && ids.length > 0;
+  const namesSlugs = slugs !== undefined && slugs.length > 0;
+  return !namesIds && !namesSlugs;
+}
 
 /**
  * A remote reactor reached over HTTP/GraphQL is not this process's to open,
@@ -95,14 +130,29 @@ function asFullReactorClient(
   gql: GraphQLReactorClient,
   backendName: string,
 ): IReactorClient {
-  const notSupported = (member: string): never => {
+  const notSupported = (member: string, reason?: string): never => {
     throw new ReactorOperationNotSupportedError({
       backend: backendName,
       operation: member,
-      reason: `its GraphQL client serves only ${[...DELEGATED_METHODS].join(
-        ", ",
-      )} in the router v1 document surface (multi-reactor stage 4, WP-E)`,
+      reason:
+        reason ??
+        `its GraphQL client serves only ${SERVED_METHODS.join(
+          ", ",
+        )} in the router v1 document surface (multi-reactor stage 4, WP-E)`,
     });
+  };
+
+  // `find` is served, except for an ids/slugs search the GraphQL query cannot
+  // honour: that refuses with the typed signal so the router's fan-in excludes
+  // this backend from the union rather than merging a wrongly-unfiltered page.
+  const find = (...args: unknown[]): unknown => {
+    if (!findSearchIsServable(args[0])) {
+      return notSupported(
+        "find",
+        "the Switchboard findDocuments query filters only by type and parentId, so a search naming ids or slugs cannot be served over GraphQL (multi-reactor stage 4, WP-E)",
+      );
+    }
+    return (gql.find as (...callArgs: unknown[]) => unknown)(...args);
   };
 
   const drives = new Proxy({} as IDriveClient, {
@@ -124,6 +174,9 @@ function asFullReactorClient(
       }
       if (prop === "drives") {
         return drives;
+      }
+      if (prop === "find") {
+        return find;
       }
       if (DELEGATED_METHODS.has(prop)) {
         const value = (gql as unknown as Record<string, unknown>)[prop];

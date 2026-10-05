@@ -244,6 +244,59 @@ describe("fan-in reads through the client", () => {
     );
   });
 
+  it("unions a remote backend's drives into find once it answers, and excludes it again per policy when it cannot serve the read (the completed-remote scenario)", async () => {
+    // The follow-up to the Connect boot fix: the remote Switchboard backend now
+    // ANSWERS find over GraphQL, so its drives join the enumeration union
+    // instead of being excluded. The per-read tolerate policy is unchanged -- a
+    // remote that cannot serve a read is still dropped and logged, never fatal.
+    const local = new FakeReactor(
+      "connect-local",
+      inProcessCapabilities("connect-local"),
+    );
+    local.seed(
+      fakeDocument({
+        id: "local-drive",
+        documentType: "powerhouse/document-drive",
+        name: "Local",
+      }),
+    );
+    const remote = new FakeReactor(
+      "switchboard-remote",
+      workflowCapabilities("switchboard-remote"),
+    );
+    remote.seed(
+      fakeDocument({
+        id: "remote-drive",
+        documentType: "powerhouse/document-drive",
+        name: "Remote",
+      }),
+    );
+    const reported: string[] = [];
+    const client = new RoutingReactorClient(
+      [local.backend(), remote.backend()],
+      {
+        primaryBackend: "connect-local",
+        onDiagnostic: (message) => reported.push(message),
+      },
+    );
+
+    const unioned = await client.find({ type: "powerhouse/document-drive" });
+    expect(unioned.results.map((document) => document.header.id)).toEqual([
+      "local-drive",
+      "remote-drive",
+    ]);
+    expect(remote.called("find")).toBe(true);
+
+    remote.unsupported.add("find");
+    const degraded = await client.find({ type: "powerhouse/document-drive" });
+    expect(degraded.results.map((document) => document.header.id)).toEqual([
+      "local-drive",
+    ]);
+    expect(reported.join()).toMatch(
+      /find: backend switchboard-remote is not applicable to this read and was excluded/,
+    );
+  });
+
   it("routes a relationship read to the backend that owns the source, not fanning the non-owner", async () => {
     const { one, two, backends } = topology();
     one.seed(fakeDocument({ id: "source-doc" }));
