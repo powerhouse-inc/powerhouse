@@ -307,7 +307,6 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_PASSWORD: password
-          POSTGRES_DB: analytics
         ports:
           - 5555:5432
         options: >-
@@ -358,6 +357,16 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration:analytics
+
+      # A service container can't mount the docker-compose init script, so apply it here.
+      - name: Create the analytics schema
+        env:
+          PGHOST: localhost
+          PGPORT: 5555
+          PGPASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        run: bash packages/analytics-engine/pg/test/scripts/initdb.sh
 
       - name: Run Postgres integration tests
         run: pnpm test:pg
