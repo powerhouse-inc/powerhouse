@@ -34,7 +34,7 @@ const user = {
 };
 
 describe("createMcpRequestAuthorizer", () => {
-  it("allows every request when auth is disabled and the policy is OPEN", async () => {
+  it("allows every request as anonymous when auth is disabled and the policy is OPEN", async () => {
     const authorize = createMcpRequestAuthorizer(
       undefined,
       makeAuthorizationService(AuthorizationPolicy.OPEN, true),
@@ -42,6 +42,7 @@ describe("createMcpRequestAuthorizer", () => {
 
     await expect(authorize(makeRequest())).resolves.toEqual({
       authorized: true,
+      subject: {},
     });
   });
 
@@ -112,7 +113,7 @@ describe("createMcpRequestAuthorizer", () => {
     );
   });
 
-  it("allows authenticated supreme admins", async () => {
+  it("allows authenticated supreme admins, reading as their address and app key", async () => {
     const authService = makeAuthService({
       user,
       admins: [user.address],
@@ -125,7 +126,10 @@ describe("createMcpRequestAuthorizer", () => {
 
     const result = await authorize(makeRequest("Bearer token"));
 
-    expect(result).toEqual({ authorized: true });
+    expect(result).toEqual({
+      authorized: true,
+      subject: { address: user.address, key: user.appKey },
+    });
     expect(authService.verifyBearer).toHaveBeenCalledWith("Bearer token");
   });
 });

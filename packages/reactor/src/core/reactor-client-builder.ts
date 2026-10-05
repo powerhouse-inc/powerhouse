@@ -1,8 +1,13 @@
-import type { ISigner } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
+import { DEFAULT_SIGNATURE_POLICY } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { ActionEvaluationConfig } from "../client/reactor-client.js";
 import { ReactorClient } from "../client/reactor-client.js";
+import type { ProtocolSelection } from "../client/types.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
   BareReadGate,
@@ -14,10 +19,7 @@ import type { IEventBus } from "../events/interfaces.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
-import type {
-  SignatureVerificationHandler,
-  SignerConfig,
-} from "../signer/types.js";
+import type { SignerConfig } from "../signer/types.js";
 import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -40,7 +42,10 @@ export class ReactorClientBuilder {
   private documentIndexer?: IDocumentIndexer;
   private documentView?: IDocumentView;
   private signer?: ISigner;
-  private signatureVerifier?: SignatureVerificationHandler;
+  private workerSigner?: SignerConfig["workerSigner"];
+  private trustPolicy?: SignerConfig["trustPolicy"];
+  private workerTrustPolicy?: SignerConfig["workerTrustPolicy"];
+  private createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
@@ -89,17 +94,29 @@ export class ReactorClientBuilder {
   }
 
   /**
-   * Sets the signer configuration for signing and verifying actions.
-   *
-   * @param config - Either an ISigner for signing only, or a SignerConfig for both signing and verification
+   * Signs submitted actions, and the operations a reactor built from
+   * `withReactorBuilder` synthesizes unless that builder has its own signer.
+   * A `trustPolicy` reaches that builder unless it has its own.
    */
   public withSigner(config: ISigner | SignerConfig): this {
     if ("signer" in config) {
       this.signer = config.signer;
-      this.signatureVerifier = config.verifier;
+      this.workerSigner = config.workerSigner;
+      this.trustPolicy = config.trustPolicy;
+      this.workerTrustPolicy = config.workerTrustPolicy;
     } else {
       this.signer = config;
     }
+    return this;
+  }
+
+  /**
+   * What the client creates new documents as when a call does not say:
+   * `v2-required` (the default) or `legacy`, for a fleet with peers that
+   * predate v2-required documents. Existing documents keep their policy.
+   */
+  public withCreateSignaturePolicy(policy: SignaturePolicy): this {
+    this.createSignaturePolicy = policy;
     return this;
   }
 
@@ -179,6 +196,23 @@ export class ReactorClientBuilder {
       : undefined;
   }
 
+  /** Selection reads the sync manager's agreement; without a module, none. */
+  private resolveProtocolSelection(
+    reactorModule: InProcessReactorModule | undefined,
+  ): ProtocolSelection | undefined {
+    if (!reactorModule || !this.reactorBuilder) {
+      return undefined;
+    }
+    const syncManager = reactorModule.syncModule?.syncManager;
+    return {
+      capabilities: this.reactorBuilder.getPeerCapabilities(),
+      flags: reactorModule.featureFlags,
+      agreement: syncManager ? () => syncManager.agreement() : undefined,
+      collectionsOf: (documentIds) =>
+        reactorModule.operationIndex.getCollectionsForDocuments(documentIds),
+    };
+  }
+
   public async build(): Promise<ReactorClient> {
     const module = await this.buildModule();
     return module.client;
@@ -196,11 +230,17 @@ export class ReactorClientBuilder {
     let reactorModule: InProcessReactorModule | undefined;
 
     if (this.reactorBuilder) {
-      if (this.signatureVerifier) {
-        this.reactorBuilder.withSignatureVerifier(this.signatureVerifier);
-      }
       if (this.documentModelLoader) {
         this.reactorBuilder.withDocumentModelLoader(this.documentModelLoader);
+      }
+      if (this.signer && !this.reactorBuilder.hasSigner()) {
+        this.reactorBuilder.withSigner(this.signer, this.workerSigner);
+      }
+      if (this.trustPolicy && !this.reactorBuilder.hasTrustPolicy()) {
+        this.reactorBuilder.withTrustPolicy(
+          this.trustPolicy,
+          this.workerTrustPolicy,
+        );
       }
       reactorModule = await this.reactorBuilder.buildModule();
       reactor = reactorModule.reactor;
@@ -255,6 +295,8 @@ export class ReactorClientBuilder {
       this.readGate ??
         this.resolveReadGate(reactorModule, documentView, decisionModel),
       this.resolveActionEvaluation(reactorModule, decisionModel),
+      this.createSignaturePolicy,
+      this.resolveProtocolSelection(reactorModule),
     );
 
     return {

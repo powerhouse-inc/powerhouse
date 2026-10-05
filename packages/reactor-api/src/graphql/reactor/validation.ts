@@ -17,7 +17,6 @@ export const DocumentModelStateDTO = z
 export const DocumentModelResultPageDTO = z
   .object({
     items: z.array(DocumentModelStateDTO),
-    totalCount: z.number().int(),
     hasNextPage: z.boolean(),
     hasPreviousPage: z.boolean(),
     cursor: z.string().nullable().optional(),
@@ -47,7 +46,26 @@ export const PHDocumentDTO = z
 export const PHDocumentResultPageDTO = z
   .object({
     items: z.array(PHDocumentDTO),
-    totalCount: z.number().int(),
+    hasNextPage: z.boolean(),
+    hasPreviousPage: z.boolean(),
+    cursor: z.string().nullable().optional(),
+  })
+  .strip();
+
+export const DocumentRelationshipDTO = z
+  .object({
+    sourceId: z.string(),
+    targetId: z.string(),
+    relationshipType: z.string(),
+    metadata: JSONObjectDTO.nullable().optional(),
+    createdAt: DateTimeDTO,
+    updatedAt: DateTimeDTO,
+  })
+  .strip();
+
+export const DocumentRelationshipResultPageDTO = z
+  .object({
+    items: z.array(DocumentRelationshipDTO),
     hasNextPage: z.boolean(),
     hasPreviousPage: z.boolean(),
     cursor: z.string().nullable().optional(),
@@ -135,7 +153,6 @@ export const OperationDTO = z
 export const OperationResultPageDTO = z
   .object({
     items: z.array(OperationDTO),
-    totalCount: z.number().int(),
     hasNextPage: z.boolean(),
     hasPreviousPage: z.boolean(),
     cursor: z.string().nullable().optional(),

@@ -1,3 +1,4 @@
+import { PURGE_DOCUMENT } from "@powerhousedao/shared/document-model";
 import type { DocumentPermissionLevel } from "../utils/db.js";
 import type {
   DocumentPermissionService,
@@ -280,6 +281,10 @@ class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
     userAddress?: string,
   ): Promise<boolean> {
     if (this.isSupremeAdmin(userAddress)) return true;
+    // A purge marker needs a document admin whatever the operation rows say.
+    if (operationType === PURGE_DOCUMENT) {
+      return this.#isDocumentAdmin(documentId, userAddress);
+    }
 
     const isRestricted = await this.#permissions.isOperationRestricted(
       documentId,

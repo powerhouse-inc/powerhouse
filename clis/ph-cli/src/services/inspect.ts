@@ -49,6 +49,14 @@ export function startInspect(args: InspectArgs) {
         console.log(`- ${subgraph.name} (${subgraph.id})`);
       });
     }
+
+    if (manifest.pieces) {
+      console.log("\nPieces:");
+      manifest.pieces.forEach((piece) => {
+        const version = piece.version ? ` v${piece.version}` : "";
+        console.log(`- ${piece.name} (${piece.id})${version}`);
+      });
+    }
   } catch (e) {
     if (args.debug) {
       console.error(e);

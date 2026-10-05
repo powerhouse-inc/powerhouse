@@ -9,6 +9,8 @@ import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type { DocumentDriveGlobalState } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { DocumentNode } from "graphql";
+import type { IHttpScope } from "../http/index.js";
+import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { IncomingHttpHeaders } from "http";
 import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
@@ -52,6 +54,12 @@ export type ISubgraph = {
 
 export type SubgraphArgs = {
   reactorClient: IReactorClient;
+  /**
+   * The subgraph's package's slice of the HTTP surface, for serving REST
+   * routes and webhooks alongside the GraphQL API. Already bound to the
+   * package's namespace: there is no way to mount outside it.
+   */
+  http: IHttpScope;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
@@ -64,6 +72,11 @@ export type SubgraphArgs = {
    * to the host's permission tables alone.
    */
   syncServingGate?: SyncScopeGate;
+  /**
+   * Attachments as the request's caller may use them. Bind per request with
+   * `BaseSubgraph.attachmentsFor(ctx)`.
+   */
+  attachments?: IAttachmentClientProvider;
   /**
    * The host's base path, injected by the GraphQL manager when it constructs
    * a subgraph. Subgraph code may read it, but routing ignores it: every

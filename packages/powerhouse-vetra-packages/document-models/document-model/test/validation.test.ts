@@ -453,8 +453,6 @@ describe("DocumentModel Validation Error", () => {
       it("should return true for reserved names (lowercase)", () => {
         expect(isReservedOperationName("undo")).toBe(true);
         expect(isReservedOperationName("redo")).toBe(true);
-        expect(isReservedOperationName("prune")).toBe(true);
-        expect(isReservedOperationName("load_state")).toBe(true);
         expect(isReservedOperationName("set_name")).toBe(true);
         expect(isReservedOperationName("noop")).toBe(true);
       });
@@ -462,7 +460,6 @@ describe("DocumentModel Validation Error", () => {
       it("should return true for reserved names (mixed case)", () => {
         expect(isReservedOperationName("Undo")).toBe(true);
         expect(isReservedOperationName("Set_Name")).toBe(true);
-        expect(isReservedOperationName("Load_State")).toBe(true);
       });
 
       it("should return false for non-reserved names", () => {
@@ -532,9 +529,9 @@ describe("DocumentModel Validation Error", () => {
         expect(() =>
           validateOperationName("SET_NAME", doc.state.global),
         ).toThrow(/reserved/);
-        expect(() =>
-          validateOperationName("LOAD_STATE", doc.state.global),
-        ).toThrow(/reserved/);
+        expect(() => validateOperationName("REDO", doc.state.global)).toThrow(
+          /reserved/,
+        );
       });
 
       it("should throw error for duplicate names (same case)", () => {

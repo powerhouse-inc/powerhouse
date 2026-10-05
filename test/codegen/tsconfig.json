@@ -42,6 +42,9 @@
       "path": "../../packages/reactor-browser"
     },
     {
+      "path": "../../packages/renown"
+    },
+    {
       "path": "../../packages/shared"
     }
   ]

@@ -17,6 +17,23 @@ export function withAuthScope(view?: ViewFilter): ViewFilter | undefined {
   return view;
 }
 
+// Unnarrowed, so withholding is decided on every scope the document holds.
+export function withAllScopes(view?: ViewFilter): ViewFilter | undefined {
+  if (!view?.scopes) {
+    return view;
+  }
+  const { scopes: _narrowed, ...whole } = view;
+  return whole;
+}
+
+// The scopes a narrowed fetch returns, or undefined when the view does not narrow.
+export function narrowedScopes(view?: ViewFilter): Set<string> | undefined {
+  if (!view?.scopes || view.scopes.length === 0) {
+    return undefined;
+  }
+  return new Set(["document", "auth", ...view.scopes]);
+}
+
 /**
  * Drops the scopes the predicate refuses. The predicate is resolved by the read
  * gate, which decides against the whole policy once per document; this only

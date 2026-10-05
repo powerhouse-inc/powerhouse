@@ -1,4 +1,6 @@
 export * from "./src/graphql/index.js";
+export * from "./src/graphql/errors.js";
+export * from "./src/http/index.js";
 export * from "./src/graphql/types.js";
 export {
   AuthorizationPolicy,
@@ -14,11 +16,13 @@ export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/server.js";
 export * from "./src/services/attachment-access.service.js";
+export * from "./src/services/authorized-attachment.service.js";
 export * from "./src/services/auth.service.js";
 export * from "./src/services/canonical-document-id.js";
 export * from "./src/services/renown-config.js";
 export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
+export * from "./src/services/privacy-permissions.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";
 export * from "./src/types.js";

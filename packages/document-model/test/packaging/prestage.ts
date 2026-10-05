@@ -73,8 +73,18 @@ function packageDirectory(name: string, from: string): string {
   } catch {
     // Not every package exports its own manifest; walk up from its entry.
     let directory = dirname(require.resolve(name));
-    while (directory !== "/" && !existsSync(join(directory, "package.json"))) {
-      directory = dirname(directory);
+    while (true) {
+      const manifestPath = join(directory, "package.json");
+      if (existsSync(manifestPath)) {
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+          name?: string;
+        };
+        if (manifest.name === name) break;
+      }
+      const parent = dirname(directory);
+      if (parent === directory)
+        throw new Error(`Cannot locate the package root for ${name}`);
+      directory = parent;
     }
     return directory;
   }
@@ -123,8 +133,14 @@ export function stageDependencyClosure(
     }
     const manifest = JSON.parse(
       readFileSync(join(directory, "package.json"), "utf8"),
-    ) as { dependencies?: Record<string, string> };
-    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+    ) as {
+      dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+    };
+    for (const dependency of Object.keys({
+      ...manifest.dependencies,
+      ...manifest.optionalDependencies,
+    })) {
       pending.push({ name: dependency, from: directory });
     }
   }

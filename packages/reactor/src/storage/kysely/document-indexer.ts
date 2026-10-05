@@ -2,11 +2,15 @@ import type {
   Operation,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { IWriteCache } from "../../cache/write/interfaces.js";
-import { BaseReadModel } from "../../read-models/base-read-model.js";
+import {
+  BaseReadModel,
+  defaultReadModelIndexingConfig,
+  type ReadModelIndexingConfig,
+} from "../../read-models/base-read-model.js";
 import { DOCUMENT_INDEXER_READ_MODEL } from "../../read-models/names.js";
 import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { collectAllPages } from "../../shared/collect-all-pages.js";
@@ -22,11 +26,38 @@ import type {
   IDocumentGraph,
   IDocumentIndexer,
 } from "../interfaces.js";
+import { findPurged } from "./document-purges.js";
 import type {
   DocumentIndexerDatabase,
   InsertableDocumentRelationship,
   Database as StorageDatabase,
 } from "./types.js";
+
+function isRelationshipAction(actionType: string): boolean {
+  return (
+    actionType === "ADD_RELATIONSHIP" ||
+    actionType === "REMOVE_RELATIONSHIP" ||
+    actionType === "UPDATE_RELATIONSHIP"
+  );
+}
+
+type RelationshipEnds = { sourceId: string; targetId: string };
+
+function addRelationshipIds(items: OperationWithContext[]): string[] {
+  const ids: string[] = [];
+  for (const { operation } of items) {
+    if (operation.action.type !== "ADD_RELATIONSHIP") continue;
+    const { sourceId, targetId } = operation.action.input as RelationshipEnds;
+    if (typeof sourceId === "string") ids.push(sourceId);
+    if (typeof targetId === "string") ids.push(targetId);
+  }
+  return ids;
+}
+
+function touchesPurged(operation: Operation, purged: Set<string>): boolean {
+  const input = operation.action.input as RelationshipEnds;
+  return purged.has(input.sourceId) || purged.has(input.targetId);
+}
 
 export type IndexerDatabase = StorageDatabase &
   DocumentIndexerDatabase &
@@ -36,6 +67,8 @@ export class KyselyDocumentIndexer
   extends BaseReadModel
   implements IDocumentIndexer
 {
+  static override readonly commitsInFenceTransaction = true;
+
   private _db: Kysely<IndexerDatabase>;
 
   constructor(
@@ -43,34 +76,73 @@ export class KyselyDocumentIndexer
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
+    indexing: ReadModelIndexingConfig = defaultReadModelIndexingConfig,
   ) {
     super(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: DOCUMENT_INDEXER_READ_MODEL, rebuildStateOnInit: false },
+      {
+        readModelId: DOCUMENT_INDEXER_READ_MODEL,
+        rebuildStateOnInit: false,
+        indexing,
+        purgeFence: "locked",
+      },
     );
     this._db = db;
   }
 
+  protected override writesRows(items: OperationWithContext[]): boolean {
+    return items.some((item) =>
+      isRelationshipAction(item.operation.action.type),
+    );
+  }
+
+  /** Opens no transaction for a batch carrying no relationship operation. */
   protected override async commitOperations(
     items: OperationWithContext[],
+    fenced?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {
-    await this._db.transaction().execute(async (trx) => {
-      for (const item of items) {
-        const { operation } = item;
-        const actionType = operation.action.type;
+    const relationshipOps = items.filter((item) =>
+      isRelationshipAction(item.operation.action.type),
+    );
 
-        if (actionType === "ADD_RELATIONSHIP") {
-          await this.handleAddRelationship(trx, operation);
-        } else if (actionType === "REMOVE_RELATIONSHIP") {
-          await this.handleRemoveRelationship(trx, operation);
-        } else if (actionType === "UPDATE_RELATIONSHIP") {
-          await this.handleUpdateRelationship(trx, operation);
-        }
+    if (relationshipOps.length === 0) {
+      return;
+    }
+
+    if (fenced) {
+      await this.writeRelationships(
+        relationshipOps,
+        fenced as unknown as Transaction<IndexerDatabase>,
+      );
+      return;
+    }
+    await this._db
+      .transaction()
+      .execute((trx) => this.writeRelationships(relationshipOps, trx));
+  }
+
+  private async writeRelationships(
+    relationshipOps: OperationWithContext[],
+    trx: Transaction<IndexerDatabase>,
+  ): Promise<void> {
+    const purged = await findPurged(trx, addRelationshipIds(relationshipOps));
+    for (const item of relationshipOps) {
+      const { operation } = item;
+      const actionType = operation.action.type;
+
+      if (actionType === "ADD_RELATIONSHIP") {
+        // Whole: a lone target Document row would outlive the purge.
+        if (touchesPurged(operation, purged)) continue;
+        await this.handleAddRelationship(trx, operation);
+      } else if (actionType === "REMOVE_RELATIONSHIP") {
+        await this.handleRemoveRelationship(trx, operation);
+      } else if (actionType === "UPDATE_RELATIONSHIP") {
+        await this.handleUpdateRelationship(trx, operation);
       }
-    });
+    }
   }
 
   async getOutgoing(

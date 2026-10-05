@@ -2,7 +2,10 @@ import {
   addFile,
   driveDocumentModelModule,
 } from "@powerhousedao/shared/document-drive";
-import { actions } from "@powerhousedao/shared/document-model";
+import {
+  actions,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -15,6 +18,7 @@ import type { IEventBus } from "../../src/events/interfaces.js";
 import type { JobWriteReadyEvent } from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import { RelationshipNotFoundError } from "../../src/shared/errors.js";
 import { JobStatus, PropagationMode } from "../../src/shared/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
 import type { Database } from "../../src/storage/kysely/types.js";
@@ -24,6 +28,7 @@ import {
   createTestDocumentIndexer,
   createTestOperationStore,
 } from "../factories.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 describe("ReactorClient Integration Tests", () => {
   let client: IReactorClient;
@@ -54,6 +59,7 @@ describe("ReactorClient Integration Tests", () => {
       .withEventBus(eventBus);
     client = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner((await TestP256Signer.create()).asISigner())
       .build();
 
     reactor = (client as any).reactor;
@@ -566,6 +572,35 @@ describe("ReactorClient Integration Tests", () => {
         expect(children.results[0].header.id).toBe(result.header.id);
       });
     });
+
+    describe("createEmptyAsync", () => {
+      it("submits a create whose jobs can be waited on", async () => {
+        const parent = createDocModelDocument({ id: "async-parent" });
+        await client.create(parent);
+
+        const { jobs } = await client.createEmptyAsync(
+          "powerhouse/document-model",
+          { parentIdentifier: "async-parent" },
+        );
+
+        expect(Object.keys(jobs).sort()).toEqual(["create", "parent"]);
+        for (const job of Object.values(jobs)) {
+          expect((await client.waitForJob(job)).status).toBe(
+            JobStatus.READ_READY,
+          );
+        }
+        const documentId = jobs.create.documentId;
+        const created = await client.get(documentId);
+        expect(created.header.documentType).toBe("powerhouse/document-model");
+        const children = await client.getOutgoingRelationships(
+          "async-parent",
+          "child",
+        );
+        expect(children.results.map((child) => child.header.id)).toEqual([
+          documentId,
+        ]);
+      });
+    });
   });
 
   describe("Document Mutation", () => {
@@ -796,6 +831,118 @@ describe("ReactorClient Integration Tests", () => {
           "child",
         );
         expect(parent2Children.results.length).toBe(2);
+      });
+
+      it("should carry the relationship metadata across the move", async () => {
+        await client.create(createDocModelDocument({ id: "move-meta-src" }));
+        await client.create(createDocModelDocument({ id: "move-meta-dst" }));
+        await client.create(createDocModelDocument({ id: "move-meta-child" }));
+
+        await client.addRelationship(
+          "move-meta-src",
+          "move-meta-child",
+          "child",
+          { order: 7, label: "keep me" },
+        );
+
+        await client.moveRelationship(
+          "move-meta-src",
+          "move-meta-dst",
+          "move-meta-child",
+          "child",
+        );
+
+        const moved = await client.getOutgoingRelationshipEdges(
+          "move-meta-dst",
+          "child",
+        );
+        expect(moved.results).toHaveLength(1);
+        expect(moved.results[0].metadata).toEqual({
+          order: 7,
+          label: "keep me",
+        });
+
+        const emptied = await client.getOutgoingRelationshipEdges(
+          "move-meta-src",
+          "child",
+        );
+        expect(emptied.results).toHaveLength(0);
+      });
+    });
+
+    describe("relationship metadata", () => {
+      it("addRelationship writes metadata readable as an edge", async () => {
+        await client.create(createDocModelDocument({ id: "edge-parent" }));
+        await client.create(createDocModelDocument({ id: "edge-child" }));
+
+        await client.addRelationship("edge-parent", "edge-child", "child", {
+          parentFolderId: "folder-1",
+        });
+
+        const outgoing = await client.getOutgoingRelationshipEdges(
+          "edge-parent",
+          "child",
+        );
+        expect(outgoing.results).toHaveLength(1);
+        expect(outgoing.results[0]).toMatchObject({
+          sourceId: "edge-parent",
+          targetId: "edge-child",
+          relationshipType: "child",
+          metadata: { parentFolderId: "folder-1" },
+        });
+
+        const incoming = await client.getIncomingRelationshipEdges(
+          "edge-child",
+          "child",
+        );
+        expect(incoming.results).toHaveLength(1);
+        expect(incoming.results[0].metadata).toEqual({
+          parentFolderId: "folder-1",
+        });
+      });
+
+      it("updateRelationship replaces metadata, and null clears it", async () => {
+        await client.create(createDocModelDocument({ id: "upd-parent" }));
+        await client.create(createDocModelDocument({ id: "upd-child" }));
+
+        await client.addRelationship("upd-parent", "upd-child", "child", {
+          order: 1,
+        });
+
+        await client.updateRelationship("upd-parent", "upd-child", "child", {
+          order: 2,
+        });
+        let edges = await client.getOutgoingRelationshipEdges(
+          "upd-parent",
+          "child",
+        );
+        expect(edges.results[0].metadata).toEqual({ order: 2 });
+
+        await client.updateRelationship(
+          "upd-parent",
+          "upd-child",
+          "child",
+          null,
+        );
+        edges = await client.getOutgoingRelationshipEdges(
+          "upd-parent",
+          "child",
+        );
+        expect(edges.results[0].metadata).toBeUndefined();
+      });
+
+      it("updateRelationship rejects when the edge does not exist", async () => {
+        await client.create(createDocModelDocument({ id: "upd-miss-parent" }));
+        await client.create(createDocModelDocument({ id: "upd-miss-child" }));
+
+        await expect(
+          client.updateRelationship(
+            "upd-miss-parent",
+            "upd-miss-child",
+            "child",
+            { order: 1 },
+          ),
+        ).rejects.toThrow(RelationshipNotFoundError);
       });
     });
   });
@@ -1067,11 +1214,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(doc);
 
         const jobInfo = await client.executeAsync("job-status-test", "main", [
-          {
-            type: "SET_NAME",
-            input: { name: "Test" },
-            scope: "global",
-          } as any,
+          actions.setName("Test"),
         ]);
 
         const status = await client.getJobStatus(jobInfo.id);
@@ -1085,11 +1228,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(doc);
 
         const jobInfo = await client.executeAsync("job-signal-test", "main", [
-          {
-            type: "SET_NAME",
-            input: { name: "Test" },
-            scope: "global",
-          } as any,
+          actions.setName("Test"),
         ]);
 
         const controller = new AbortController();
@@ -1212,8 +1351,15 @@ describe("ReactorClient Integration Tests", () => {
     });
 
     it("should emit JOB_WRITE_READY events with batch metadata that allows detecting batch completion", async () => {
-      const first = documentModelDocumentModelModule.utils.createDocument();
-      const second = documentModelDocumentModelModule.utils.createDocument();
+      // executeBatch takes no signer, so these writes go unsigned.
+      const first = withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+      );
+      const second = withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+      );
       await client.create(first);
       await client.create(second);
 

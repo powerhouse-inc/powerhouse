@@ -6,8 +6,11 @@ import {
   useReducer,
   useSyncExternalStore,
 } from "react";
-import { readPromiseState } from "../document-cache.js";
-import type { IDocumentCache } from "../types/documents.js";
+import { IDLE_REFETCH_STATE, readPromiseState } from "../document-cache.js";
+import type {
+  DocumentRefetchState,
+  IDocumentCache,
+} from "../types/documents.js";
 import type { SetPHGlobalValue, UsePHGlobalValue } from "../types/global.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -88,12 +91,18 @@ export function useDocument(id: string | null | undefined) {
  *   - isPending: Whether the document is currently loading
  *   - error: Any error that occurred during loading (e.g., document not found)
  *   - reload: Function to force a refetch, or undefined when no id is supplied
+ *   - isRefetching: A loaded document is being refetched; `data` is the loaded one
+ *   - refetchError: The last refetch failure that kept the loaded document
  */
 export function useDocumentSafe(id: string | null | undefined) {
   const documentCache = useDocumentCache();
-  const promise = useSyncExternalStore(
-    (cb) => (id && documentCache ? documentCache.subscribe(id, cb) : () => {}),
-    () => (id ? documentCache?.get(id) : undefined),
+  const subscribe = (cb: () => void) =>
+    id && documentCache ? documentCache.subscribe(id, cb) : () => {};
+  const promise = useSyncExternalStore(subscribe, () =>
+    id ? documentCache?.get(id) : undefined,
+  );
+  const refetch = useSyncExternalStore(subscribe, () =>
+    readRefetchState(documentCache, id),
   );
 
   // The cache notifies subscribers only when a document CHANGES (its stored
@@ -128,11 +137,25 @@ export function useDocumentSafe(id: string | null | undefined) {
       error: undefined,
       data: undefined,
       reload: undefined,
+      isRefetching: false,
+      refetchError: undefined,
     } as const;
   }
 
   const state = getDocumentQueryState(promise);
-  return { ...state, reload: () => documentCache.get(id, true) } as const;
+  return {
+    ...state,
+    reload: () => documentCache.get(id, true),
+    isRefetching: refetch.isRefetching,
+    refetchError: refetch.error,
+  } as const;
+}
+
+function readRefetchState(
+  documentCache: IDocumentCache | undefined,
+  id: string | null | undefined,
+): DocumentRefetchState {
+  return (id && documentCache?.getRefetchState?.(id)) || IDLE_REFETCH_STATE;
 }
 
 /**
@@ -208,6 +231,8 @@ export function useGetDocuments() {
  *   - isPending: Boolean indicating if the document is currently loading
  *   - error: Any error that occurred during loading
  *   - reload: Function to force reload the document from cache
+ *   - isRefetching: A loaded document is being refetched; `data` is the loaded one
+ *   - refetchError: The last refetch failure that kept the loaded document
  */
 export function useGetDocumentAsync(id: string | null | undefined) {
   const documentCache = useDocumentCache();
@@ -218,11 +243,19 @@ export function useGetDocumentAsync(id: string | null | undefined) {
       isPending: false,
       error: undefined,
       reload: undefined,
+      isRefetching: false,
+      refetchError: undefined,
     } as const;
   }
 
   const promise = documentCache.get(id);
   const state = getDocumentQueryState(promise);
+  const refetch = readRefetchState(documentCache, id);
 
-  return { ...state, reload: () => documentCache.get(id, true) } as const;
+  return {
+    ...state,
+    reload: () => documentCache.get(id, true),
+    isRefetching: refetch.isRefetching,
+    refetchError: refetch.error,
+  } as const;
 }

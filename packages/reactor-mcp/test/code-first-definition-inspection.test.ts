@@ -1,3 +1,4 @@
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type {
@@ -180,8 +181,9 @@ describe("getDocumentModelSchema", () => {
 
 describe("addActions is unaffected", () => {
   it("still edits a schema-first model document", async () => {
-    const document = documentModelCreateDocument();
-    await client.create(document);
+    const document = await client.create(
+      withSignaturePolicy(documentModelCreateDocument(), "legacy"),
+    );
     const provider = await createReactorMcpProvider({ client });
     const result = await provider.tools.addActions.callback({
       documentId: document.header.id,
@@ -198,8 +200,9 @@ describe("addActions is unaffected", () => {
   });
 
   it("still edits a model document that declares a registered code-first id", async () => {
-    const document = documentModelCreateDocument();
-    await client.create(document);
+    const document = await client.create(
+      withSignaturePolicy(documentModelCreateDocument(), "legacy"),
+    );
     const provider = await createReactorMcpProvider({ client });
 
     const result = await provider.tools.addActions.callback({
@@ -233,8 +236,9 @@ describe("addActions is unaffected", () => {
 
   it("still adds actions to a business document", async () => {
     const ledger = ledgerModules.find((module) => module.version === 2)!;
-    const document = ledger.utils.createDocument();
-    await client.create(document);
+    const document = await client.create(
+      withSignaturePolicy(ledger.utils.createDocument(), "legacy"),
+    );
     const provider = await createReactorMcpProvider({ client });
     const result = await provider.tools.addActions.callback({
       documentId: document.header.id,

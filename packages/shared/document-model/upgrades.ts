@@ -2,9 +2,14 @@ import type { Action } from "./actions.js";
 import { resolveSnapshotAuth } from "./auth.js";
 import type { PHDocument } from "./documents.js";
 import { DowngradeNotSupportedError } from "./errors.js";
+import { isPurgeMarker } from "./purge.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
-import type { DeleteDocumentAction, UpgradeDocumentAction } from "./types.js";
+import type {
+  DeleteDocumentAction,
+  PurgeDocumentAction,
+  UpgradeDocumentAction,
+} from "./types.js";
 
 /** Upgrade reducer transforms a document from one version to another */
 export type UpgradeReducer<
@@ -106,9 +111,11 @@ export function applyUpgradeDocumentAction(
   }
 
   if (upgradePath) {
+    const protocolVersions = document.header.protocolVersions;
     for (const transition of upgradePath) {
       document = transition.upgradeReducer(document, action);
     }
+    document = withProtocolVersions(document, protocolVersions);
   }
 
   applyInitialState(document, action);
@@ -120,15 +127,31 @@ export function applyUpgradeDocumentAction(
   return document;
 }
 
+/** CREATE_DOCUMENT fixes `protocolVersions`; this puts them back after a reducer. */
+export function withProtocolVersions<TDocument extends PHDocument>(
+  document: TDocument,
+  protocolVersions: PHDocument["header"]["protocolVersions"],
+): TDocument {
+  const header = { ...document.header };
+  if (protocolVersions === undefined) {
+    delete header.protocolVersions;
+  } else {
+    header.protocolVersions = { ...protocolVersions };
+  }
+  return { ...document, header };
+}
+
 /**
- * Applies a DELETE_DOCUMENT action to a document.
+ * Applies a DELETE_DOCUMENT action, or a PURGE_DOCUMENT marker, to a document.
  * Marks the document as deleted in the document scope state.
  */
 export function applyDeleteDocumentAction(
   document: PHDocument,
-  action: DeleteDocumentAction,
+  action: DeleteDocumentAction | PurgeDocumentAction,
 ): PHDocument {
-  const deletedAt = action.timestampUtcMs || new Date().toISOString();
+  const deletedAt = isPurgeMarker(action)
+    ? action.input.purgedAtUtcIso
+    : action.timestampUtcMs || new Date().toISOString();
 
   document.state = {
     ...document.state,

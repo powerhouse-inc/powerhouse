@@ -10,24 +10,18 @@ import {
   matchesSearchFilter,
 } from "../src/graphql/reactor/adapters.js";
 import {
-  ensureGlobalDocumentSubscription,
+  DocumentChangeFeed,
   ensureJobSubscription,
-  getPubSub,
-  SUBSCRIPTION_TRIGGERS,
 } from "../src/graphql/reactor/pubsub.js";
 
 describe("Subscription Filtering", () => {
   let mockReactorClient: IReactorClient;
-  let mockSubscribeCallback: (event: DocumentChangeEvent) => void;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockReactorClient = {
-      subscribe: vi.fn((search, callback) => {
-        mockSubscribeCallback = callback;
-        return vi.fn();
-      }),
+      subscribe: vi.fn(() => vi.fn()),
       getJobStatus: vi.fn(),
     } as unknown as IReactorClient;
   });
@@ -197,51 +191,94 @@ describe("Subscription Filtering", () => {
     });
   });
 
-  describe("Global Subscription Pattern", () => {
-    it("should create only one reactorClient subscription for multiple subscribers", () => {
-      const cleanup1 = ensureGlobalDocumentSubscription(mockReactorClient);
-      const cleanup2 = ensureGlobalDocumentSubscription(mockReactorClient);
-      const cleanup3 = ensureGlobalDocumentSubscription(mockReactorClient);
+  describe("Per-subject document feeds", () => {
+    const alice = { address: "0xalice", key: "did:key:zAlice" };
+    const bob = { address: "0xbob", key: undefined };
+
+    it("shares one reactor subscription per subject", () => {
+      const feed = new DocumentChangeFeed(mockReactorClient);
+      const first = feed.subscribe(alice);
+      const second = feed.subscribe(alice);
 
       expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(1);
+      expect(mockReactorClient.subscribe).toHaveBeenCalledWith(
+        {},
+        expect.any(Function),
+        { subject: alice },
+      );
 
-      cleanup1();
-      expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(1);
-
-      cleanup2();
-      expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(1);
-
-      cleanup3();
+      void first.return?.();
+      void second.return?.();
     });
 
-    it("should cleanup reactorClient subscription when last subscriber disconnects", () => {
+    it("reads a different subject through its own subscription", () => {
+      const feed = new DocumentChangeFeed(mockReactorClient);
+      const first = feed.subscribe(alice);
+      const second = feed.subscribe(bob);
+      const anonymous = feed.subscribe({});
+
+      expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(3);
+      expect(
+        vi.mocked(mockReactorClient.subscribe).mock.calls.map((c) => c[2]),
+      ).toEqual([{ subject: alice }, { subject: bob }, { subject: {} }]);
+
+      void first.return?.();
+      void second.return?.();
+      void anonymous.return?.();
+    });
+
+    it("unsubscribes when the subject's last subscriber returns", async () => {
       const mockUnsubscribe = vi.fn();
       vi.mocked(mockReactorClient.subscribe).mockReturnValue(mockUnsubscribe);
+      const feed = new DocumentChangeFeed(mockReactorClient);
 
-      const cleanup1 = ensureGlobalDocumentSubscription(mockReactorClient);
-      const cleanup2 = ensureGlobalDocumentSubscription(mockReactorClient);
+      const first = feed.subscribe(alice);
+      const second = feed.subscribe(alice);
 
-      cleanup1();
+      await first.return?.();
+      await first.return?.();
       expect(mockUnsubscribe).not.toHaveBeenCalled();
 
-      cleanup2();
+      await second.return?.();
       expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+
+      const third = feed.subscribe(alice);
+      expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(2);
+      await third.return?.();
     });
 
-    it("should create new subscription after all subscribers disconnect", () => {
-      const mockUnsubscribe = vi.fn();
-      vi.mocked(mockReactorClient.subscribe).mockReturnValue(mockUnsubscribe);
+    it("delivers an event only to its subject's subscribers", async () => {
+      const callbacks: Array<(event: DocumentChangeEvent) => void> = [];
+      vi.mocked(mockReactorClient.subscribe).mockImplementation(
+        (_search, callback) => {
+          callbacks.push(callback);
+          return vi.fn();
+        },
+      );
+      const feed = new DocumentChangeFeed(mockReactorClient);
+      const asAlice = feed.subscribe(alice);
+      const asBob = feed.subscribe(bob);
+      const aliceNext = asAlice.next();
+      const bobNext = asBob.next();
+      await Promise.resolve();
 
-      const cleanup1 = ensureGlobalDocumentSubscription(mockReactorClient);
-      cleanup1();
+      const event: DocumentChangeEvent = {
+        type: DocumentChangeType.Created,
+        documents: [],
+      };
+      callbacks[0](event);
 
-      expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(1);
-      expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+      expect((await aliceNext).value).toEqual(
+        expect.objectContaining({ documentChanges: event }),
+      );
+      const bobGot = await Promise.race([
+        bobNext.then(() => "event"),
+        new Promise((resolve) => setTimeout(() => resolve("nothing"), 20)),
+      ]);
+      expect(bobGot).toBe("nothing");
 
-      const cleanup2 = ensureGlobalDocumentSubscription(mockReactorClient);
-      expect(mockReactorClient.subscribe).toHaveBeenCalledTimes(2);
-
-      cleanup2();
+      await asAlice.return?.();
+      await asBob.return?.();
     });
   });
 
@@ -299,35 +336,6 @@ describe("Subscription Filtering", () => {
 
       cleanup1();
       cleanup2();
-    });
-  });
-
-  describe("PubSub Integration", () => {
-    it("should publish events to correct channel", () => {
-      const publishSpy = vi.spyOn(getPubSub(), "publish");
-
-      ensureGlobalDocumentSubscription(mockReactorClient);
-
-      const mockEvent: DocumentChangeEvent = {
-        type: DocumentChangeType.Created,
-        documents: [
-          {
-            header: {
-              id: "doc-1",
-              documentType: "powerhouse/document-model",
-            },
-          } as any,
-        ],
-      };
-
-      mockSubscribeCallback(mockEvent);
-
-      expect(publishSpy).toHaveBeenCalledWith(
-        SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-        expect.objectContaining({
-          documentChanges: mockEvent,
-        }),
-      );
     });
   });
 });

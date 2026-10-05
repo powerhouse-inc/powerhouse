@@ -29,6 +29,7 @@ export interface IPackageManager extends IDocumentModelLoader {
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
   getPackageSource: (packageName: string) => RegistryPackageSource | null;
   getPackageVersion: (packageName: string) => string | undefined;
+  getPackageSpec: (packageName: string) => string | undefined;
   /**
    * Registry-installed packages keyed by their storage name (the registry
    * spec, e.g. "@powerhousedao/clint-common"). Used by callers that need to

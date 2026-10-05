@@ -12,6 +12,7 @@ import {
   generateId,
   groupDocumentType,
   initializeAuth,
+  protocolVersionsFor,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -138,6 +139,7 @@ describe("the read path", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = group.header.id;
     await client.create(group);
@@ -219,6 +221,7 @@ describe("the read path", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = group.header.id;
     await client.create(group);
@@ -268,6 +271,7 @@ describe("the read path", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = group.header.id;
     await client.create(group);

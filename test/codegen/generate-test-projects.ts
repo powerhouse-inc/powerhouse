@@ -29,7 +29,9 @@ export async function generateTestProjects() {
   await createProject({
     name: "new-project",
     packageManager: "pnpm",
-    skipGitInit: true,
+    // Own repo, as `ph init` makes, so the monorepo's .gitignore (which lists
+    // test-projects) does not hide the project from oxfmt.
+    skipGitInit: false,
     skipInstall: true,
   });
   await runTsc(NEW_PROJECT);

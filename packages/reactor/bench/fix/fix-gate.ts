@@ -12,7 +12,7 @@ import type { GateOptions } from "./fix-options.js";
 import {
   git,
   nonEmptyLines,
-  POSTGRES_PORT,
+  postgresTarget,
   probePort,
   repoRoot,
 } from "./repo.js";
@@ -205,7 +205,7 @@ export function formatGate(report: GateReport): string[] {
   for (const entry of report.benchmarks) {
     lines.push(...formatBenchmark(entry));
   }
-  lines.push(`postgres ${String(POSTGRES_PORT)}: ${report.postgres}`);
+  lines.push(`postgres ${String(postgresTarget().port)}: ${report.postgres}`);
   const verdict = gateExit(report);
   lines.push(
     verdict.exit === FIX_EXIT.ok
@@ -238,7 +238,8 @@ export async function runGate(options: GateOptions): Promise<CommandResult> {
     { subcommand: "verify", target: "all", dir: options.dir, json: false },
     RECORDS_IO,
   );
-  const reachable = await probePort("localhost", POSTGRES_PORT, 1500);
+  const target = postgresTarget();
+  const reachable = await probePort(target.host, target.port, 1500);
 
   const report: GateReport = {
     taskId: options.taskId,

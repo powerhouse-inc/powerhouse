@@ -35,6 +35,11 @@ Usage:
   criterion --before <results.json> --case <name> --max-ratio <r>
                                write the pass/fail thresholds and the before numbers
                                to a file, so they demonstrably predate the after-run
+  criterion --case <name> (--max-ms <m> | --min-ms <m>)
+  criterion --case <name> --over <name> (--max-growth <g> | --min-growth <g>)
+                               a bound judged on the after-run alone, for a case no
+                               before-run has (a GAP's new arm): an absolute mean, or
+                               the case's mean over another case's in the same run
   compare --criterion <file> --after <results.json>
                                judge the after-run against the criterion file
   dist-check                   newest source against newest runtime JS in dist, per
@@ -50,7 +55,10 @@ Usage:
   --fail-ratio <r>             criterion: at or above this the fix missed; between
                                max and fail is partial (default: none, so above max
                                is a miss)
-  --control <name>             criterion: a case the fix must not move
+  --fail-at <v>                criterion: the miss line for a bound, beyond the
+                               threshold in the failing direction (default: none)
+  --control <name>             criterion: a case the fix must not move; needs
+                               --before
   --control-tolerance <f>      criterion: how far the control may move (default: 0.10)
   --out <path>                 criterion: where to write (default:
                                bench/results/criterion.json); ci: the log directory
@@ -107,8 +115,9 @@ export type CasesOptions = {
   path: string;
 };
 
-export type CriterionOptions = {
+export type RatioCriterionOptions = {
   subcommand: "criterion";
+  mode: "ratio";
   before: string;
   caseName: string;
   maxRatio: number;
@@ -119,6 +128,28 @@ export type CriterionOptions = {
   controlTolerance: number;
   out: string;
 };
+
+export const BOUND_DIRECTIONS = ["at-most", "at-least"] as const;
+export type BoundDirection = (typeof BOUND_DIRECTIONS)[number];
+
+export type BoundCriterionOptions = {
+  subcommand: "criterion";
+  mode: "bound";
+  /** Empty means no before-run; only a control needs one. */
+  before: string;
+  caseName: string;
+  /** Empty means the bound is on the case's absolute mean in ms. */
+  over: string;
+  direction: BoundDirection;
+  threshold: number;
+  /** Undefined means anything on the wrong side of threshold is a miss. */
+  failAt: number | undefined;
+  control: string;
+  controlTolerance: number;
+  out: string;
+};
+
+export type CriterionOptions = RatioCriterionOptions | BoundCriterionOptions;
 
 export type CompareOptions = {
   subcommand: "compare";
@@ -163,6 +194,12 @@ const VALUE_FLAGS = [
   "--fail-ratio",
   "--control",
   "--control-tolerance",
+  "--max-ms",
+  "--min-ms",
+  "--max-growth",
+  "--min-growth",
+  "--over",
+  "--fail-at",
   "--out",
   "--criterion",
   "--after",
@@ -283,6 +320,113 @@ function rejectUnused(parsed: ParsedArgv, allowed: readonly string[]): void {
   }
 }
 
+const BOUND_FLAGS = [
+  "--max-ms",
+  "--min-ms",
+  "--max-growth",
+  "--min-growth",
+] as const;
+
+function parseCriterion(parsed: ParsedArgv): CriterionOptions {
+  const tolerance = parsed.values.get("--control-tolerance");
+  const control = parsed.values.get("--control") ?? "";
+  const before = parsed.values.get("--before") ?? "";
+  const shared = {
+    subcommand: "criterion" as const,
+    caseName: required(parsed, "--case"),
+    control,
+    controlTolerance:
+      tolerance === undefined
+        ? 0.1
+        : positiveNumber("--control-tolerance", tolerance),
+    out: parsed.values.get("--out") ?? "bench/results/criterion.json",
+  };
+  const bounds = BOUND_FLAGS.filter((flag) => parsed.values.has(flag));
+  const ratio = parsed.values.get("--max-ratio");
+
+  if (bounds.length === 0) {
+    if (ratio === undefined) {
+      throw new Error(
+        `--max-ratio is required, or one of ${BOUND_FLAGS.join(", ")} for a bound on the after-run alone`,
+      );
+    }
+    for (const flag of ["--over", "--fail-at"]) {
+      if (parsed.values.has(flag)) {
+        throw new Error(`${flag} applies to a bound, not to --max-ratio`);
+      }
+    }
+    const failRatio = parsed.values.get("--fail-ratio");
+    const options: RatioCriterionOptions = {
+      ...shared,
+      mode: "ratio",
+      before: required(parsed, "--before"),
+      maxRatio: positiveNumber("--max-ratio", ratio),
+      failRatio:
+        failRatio === undefined
+          ? undefined
+          : positiveNumber("--fail-ratio", failRatio),
+    };
+    if (
+      options.failRatio !== undefined &&
+      options.failRatio <= options.maxRatio
+    ) {
+      throw new Error("--fail-ratio must be above --max-ratio");
+    }
+    return options;
+  }
+
+  if (bounds.length > 1 || ratio !== undefined) {
+    throw new Error(
+      `Give one threshold: --max-ratio or one of ${BOUND_FLAGS.join(", ")}`,
+    );
+  }
+  if (parsed.values.has("--fail-ratio")) {
+    throw new Error(
+      "--fail-ratio applies to --max-ratio; a bound uses --fail-at",
+    );
+  }
+  const flag = bounds[0];
+  const growth = flag === "--max-growth" || flag === "--min-growth";
+  const over = parsed.values.get("--over") ?? "";
+  if (growth && over === "") {
+    throw new Error(
+      `${flag} needs --over, the case the growth is measured from`,
+    );
+  }
+  if (!growth && over !== "") {
+    throw new Error(`--over needs --max-growth or --min-growth, not ${flag}`);
+  }
+  if (control !== "" && before === "") {
+    throw new Error(
+      "--control needs --before, which holds the control's before number",
+    );
+  }
+  const direction: BoundDirection = flag.startsWith("--max")
+    ? "at-most"
+    : "at-least";
+  const threshold = positiveNumber(flag, required(parsed, flag));
+  const rawFailAt = parsed.values.get("--fail-at");
+  const failAt =
+    rawFailAt === undefined
+      ? undefined
+      : positiveNumber("--fail-at", rawFailAt);
+  if (failAt !== undefined && direction === "at-most" && failAt <= threshold) {
+    throw new Error(`--fail-at must be above ${flag}`);
+  }
+  if (failAt !== undefined && direction === "at-least" && failAt >= threshold) {
+    throw new Error(`--fail-at must be below ${flag}`);
+  }
+  return {
+    ...shared,
+    mode: "bound",
+    before,
+    over,
+    direction,
+    threshold,
+    failAt,
+  };
+}
+
 export function parseFixOptions(argv: string[]): FixOptions {
   const parsed = splitArgv(argv);
   const named = parsed.positionals.at(0);
@@ -337,36 +481,17 @@ export function parseFixOptions(argv: string[]): FixOptions {
         "--case",
         "--max-ratio",
         "--fail-ratio",
+        "--max-ms",
+        "--min-ms",
+        "--max-growth",
+        "--min-growth",
+        "--over",
+        "--fail-at",
         "--control",
         "--control-tolerance",
         "--out",
       ]);
-      const failRatio = parsed.values.get("--fail-ratio");
-      const tolerance = parsed.values.get("--control-tolerance");
-      const maxRatio = positiveNumber(
-        "--max-ratio",
-        required(parsed, "--max-ratio"),
-      );
-      const options: CriterionOptions = {
-        subcommand,
-        before: required(parsed, "--before"),
-        caseName: required(parsed, "--case"),
-        maxRatio,
-        failRatio:
-          failRatio === undefined
-            ? undefined
-            : positiveNumber("--fail-ratio", failRatio),
-        control: parsed.values.get("--control") ?? "",
-        controlTolerance:
-          tolerance === undefined
-            ? 0.1
-            : positiveNumber("--control-tolerance", tolerance),
-        out: parsed.values.get("--out") ?? "bench/results/criterion.json",
-      };
-      if (options.failRatio !== undefined && options.failRatio <= maxRatio) {
-        throw new Error("--fail-ratio must be above --max-ratio");
-      }
-      return options;
+      return parseCriterion(parsed);
     }
     case "compare": {
       rejectUnused(parsed, ["--criterion", "--after"]);

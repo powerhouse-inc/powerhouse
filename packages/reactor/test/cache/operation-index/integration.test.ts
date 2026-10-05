@@ -2052,4 +2052,65 @@ describe("KyselyOperationIndex Integration", () => {
       expect(ascending).toBe(true);
     });
   });
+
+  describe("getOrdinalsByOpIds()", () => {
+    function entry(documentId: string, scope: string, index: number) {
+      const actionId = generateId();
+      return {
+        id: deriveOperationId(documentId, scope, "main", actionId),
+        documentId,
+        documentType: "powerhouse/document-model",
+        branch: "main",
+        scope,
+        sourceRemote: "",
+        index,
+        timestampUtcMs: "1704067200000",
+        hash: `hash-${index}`,
+        skip: 0,
+        action: {
+          id: actionId,
+          type: "SET_NAME",
+          scope,
+          timestampUtcMs: "1704067200000",
+          input: { name: "x" },
+        },
+      };
+    }
+
+    it("returns the latest ordinal of each opId in the stream only", async () => {
+      const a = entry("doc-a", "global", 0);
+      const b = entry("doc-a", "global", 1);
+      const elsewhere = entry("doc-b", "global", 0);
+      const txn = operationIndex.start();
+      txn.write([a, b, elsewhere]);
+      const [ordinalA, ordinalB] = await operationIndex.commit(txn);
+
+      const moved = operationIndex.start();
+      moved.write([{ ...a, index: 2 }]);
+      const [movedA] = await operationIndex.commit(moved);
+
+      const ordinals = await operationIndex.getOrdinalsByOpIds(
+        "doc-a",
+        "global",
+        "main",
+        [a.id, b.id, elsewhere.id, "missing"],
+      );
+
+      expect(movedA).toBeGreaterThan(ordinalA);
+      expect(ordinals).toEqual(
+        new Map([
+          [a.id, movedA],
+          [b.id, ordinalB],
+        ]),
+      );
+      expect(
+        await operationIndex.getOrdinalsByOpIds("doc-a", "local", "main", [
+          a.id,
+        ]),
+      ).toEqual(new Map());
+      expect(
+        await operationIndex.getOrdinalsByOpIds("doc-a", "global", "main", []),
+      ).toEqual(new Map());
+    });
+  });
 });

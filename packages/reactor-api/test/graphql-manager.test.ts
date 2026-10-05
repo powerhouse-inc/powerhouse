@@ -9,18 +9,66 @@
  * via the Fetch API without any network I/O.
  */
 
-import type { IReactorClient, IRelationalDb } from "@powerhousedao/reactor";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type {
+  IReactorClient,
+  IRelationalDb,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import { gql } from "graphql-tag";
+import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { WebSocketServer } from "ws";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 
-import { createAuthFetchMiddleware } from "../src/graphql/gateway/auth-middleware.js";
-import type { FetchHandler } from "../src/graphql/gateway/types.js";
-import { createRequireAuthFetchMiddleware } from "../src/graphql/gateway/require-auth-middleware.js";
+import {
+  createAuthFetchMiddleware,
+  type AuthFetchMiddleware,
+} from "../src/graphql/gateway/auth-middleware.js";
+import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import type { IAttachmentClientProvider } from "../src/services/authorized-attachment.service.js";
+import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
+import type {
+  AdapterRouteHandle,
+  FetchHandler,
+  IGatewayAdapter,
+  IHttpAdapter,
+  WsConnection,
+  WsDisposer,
+  WsHandlers,
+} from "../src/graphql/gateway/types.js";
+import {
+  createRequireAuthFetchMiddleware,
+  type RequireAuthFetchMiddleware,
+} from "../src/graphql/gateway/require-auth-middleware.js";
 import type { GraphQLManager } from "../src/graphql/graphql-manager.js";
-import type { ISubgraph } from "../src/graphql/types.js";
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "../src/services/authorization.service.js";
+import type {
+  Context,
+  ISubgraph,
+  SubgraphArgs,
+  SubgraphClass,
+} from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
+
+// ── shared fixtures ──────────────────────────────────────────────────────────
+
+const silentLogger: ILogger = {
+  level: "error" as const,
+  verbose: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  errorHandler: vi.fn(),
+  child: () => silentLogger,
+};
+
 import {
   type HarnessOptions,
   initAndFlush,
@@ -159,9 +207,12 @@ describe("GraphQLManager", () => {
   // ── drive info endpoint ────────────────────────────────────────────────────
 
   describe("drive info endpoint", () => {
-    async function getHandler(options: HarnessOptions = {}) {
+    async function getHandler(
+      options: HarnessOptions = {},
+      authMiddleware?: AuthFetchMiddleware,
+    ) {
       const harness = makeHarness(options);
-      await initAndFlush(harness.manager);
+      await initAndFlush(harness.manager, [], authMiddleware);
       const drivePath =
         (options.path === "/" || !options.path ? "" : options.path) +
         "/d/:drive";
@@ -198,12 +249,14 @@ describe("GraphQLManager", () => {
       expect(typeof body.graphqlEndpoint).toBe("string");
     });
 
-    it("passes the drive ID from the URL to the reactor client", async () => {
+    it("passes the drive ID from the URL to the reactor client, read as the anonymous caller", async () => {
       const { handler, reactorClient } = await getHandler();
 
       await handler(new Request("http://localhost/d/drive-abc-123"));
 
-      expect(reactorClient.get).toHaveBeenCalledWith("drive-abc-123");
+      expect(reactorClient.get).toHaveBeenCalledWith("drive-abc-123", {
+        subject: { address: undefined, key: undefined },
+      });
     });
 
     it("uses x-forwarded-proto when present", async () => {
@@ -255,6 +308,136 @@ describe("GraphQLManager", () => {
       );
       const body = (await res.json()) as { graphqlEndpoint: string };
       expect(body.graphqlEndpoint).toBe("http://example.com/graphql/r");
+    });
+
+    // ── authorization ──────────────────────────────────────────────────────
+    //
+    // Drive metadata is a document read. Before this gate the endpoint was
+    // mounted raw — outside every middleware — so it answered any anonymous
+    // caller with the drive's id, slug, name, icon and meta.
+
+    function denyingAuthorizationService(): IAuthorizationService {
+      return createAuthorizationService({
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      });
+    }
+
+    function authServiceFor(user: AuthContext["user"]): AuthService {
+      return {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user,
+          admins: [],
+          auth_enabled: true,
+        }),
+      } as unknown as AuthService;
+    }
+
+    it("refuses a drive the caller may not read", async () => {
+      const { handler } = await getHandler({
+        authorizationService: denyingAuthorizationService(),
+      });
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(res.status).toBe(404);
+    });
+
+    it("reports a refused drive as 'not found', never as forbidden", async () => {
+      // A 403 would confirm the drive exists, letting an anonymous caller
+      // enumerate protected drives by probing slugs. The refusal has to be
+      // byte-identical to the genuine miss.
+      const { handler: refused } = await getHandler({
+        authorizationService: denyingAuthorizationService(),
+      });
+      const { handler: missing } = await getHandler({
+        reactorClient: makeMockReactorClient({
+          get: vi.fn().mockRejectedValue(new Error("not found")),
+        }),
+      });
+
+      const refusedRes = await refused(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+      const missingRes = await missing(
+        new Request("http://localhost/d/no-such-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(refusedRes.status).toBe(missingRes.status);
+      await expect(refusedRes.json()).resolves.toEqual(await missingRes.json());
+    });
+
+    it("withholds drive metadata from a caller who may not read it", async () => {
+      const { handler } = await getHandler({
+        authorizationService: denyingAuthorizationService(),
+      });
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body).not.toHaveProperty("slug");
+      expect(body).not.toHaveProperty("name");
+      expect(body).not.toHaveProperty("icon");
+      expect(body).not.toHaveProperty("meta");
+      expect(body).not.toHaveProperty("graphqlEndpoint");
+    });
+
+    it("admits an authorized caller, resolving identity from the bearer", async () => {
+      const { handler } = await getHandler(
+        {
+          authorizationService: createAuthorizationService({
+            admins: ["0xadmin"],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.ADMIN_ONLY,
+          }),
+        },
+        createAuthFetchMiddleware(
+          authServiceFor({
+            address: "0xadmin",
+            chainId: 1,
+            networkId: "mainnet",
+            appKey: "did:key:zadmin",
+          }),
+        ),
+      );
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { graphqlEndpoint: string };
+      expect(typeof body.graphqlEndpoint).toBe("string");
+    });
+
+    it("stays open to anonymous callers under the OPEN policy", async () => {
+      // Drive discovery is the one read a client makes before it can
+      // authenticate: Connect reads graphqlEndpoint from here to register the
+      // sync remote. An unauthenticated switchboard must keep answering.
+      const { handler } = await getHandler();
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(res.status).toBe(200);
     });
   });
 
@@ -361,6 +544,28 @@ describe("GraphQLManager", () => {
       // The auth-derived user should win over the one set via setAdditionalContextFields
       expect(ctx.user).toEqual(expectedUser);
     });
+
+    it("an additional field named user never becomes the caller of an anonymous WebSocket", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      manager.setAdditionalContextFields({
+        user: { address: "0xinjected" },
+        customField: "custom-value",
+      });
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      const handlers = gatewayAdapter.attachWebSocket.mock
+        .calls[0][2] as WsHandlers<Context>;
+      const connection = {} as WsConnection;
+      await expect(handlers.onConnect({}, connection)).resolves.toBe(true);
+      const ctx = (await handlers.context({}, connection)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(ctx["customField"]).toBe("custom-value");
+      expect(ctx.user).toBeUndefined();
+    });
   });
 
   // ── SSE handler ────────────────────────────────────────────────────────────
@@ -449,6 +654,65 @@ describe("GraphQLManager", () => {
       await handler!(req);
 
       expect(intercepted).toContain(req);
+    });
+
+    it("keeps each subscription subgraph's SSE route beside the supergraph's", async () => {
+      const { manager, handles, disposed } = makeHarness();
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      const subgraphRoute = handles.get(
+        "/graphql/test-subscription-sub/stream",
+      );
+      const supergraphRoute = handles.get("/graphql/stream");
+      expect(subgraphRoute).toBeDefined();
+      expect(supergraphRoute).toBeDefined();
+      expect(disposed).not.toContain(subgraphRoute);
+      expect(disposed).not.toContain(supergraphRoute);
+    });
+
+    it("unmounts a removed subgraph's SSE route", async () => {
+      const { manager, handles, disposed } = makeHarness();
+      const { gql } = await import("graphql-tag");
+      class PackagedSubscriptions {
+        name = "packaged-subs";
+        hasSubscriptions = true;
+        typeDefs = gql`
+          type Query {
+            _placeholder: Boolean
+          }
+          type Subscription {
+            ping: String
+          }
+        `;
+        resolvers = {
+          Subscription: {
+            ping: {
+              subscribe: async function* () {
+                await Promise.resolve();
+                yield { ping: "pong" };
+              },
+            },
+          },
+        };
+        relationalDb = {} as IRelationalDb;
+        reactorClient = {} as IReactorClient;
+      }
+      await manager.registerSubgraph(
+        PackagedSubscriptions as unknown as SubgraphClass,
+        "graphql",
+        false,
+        "pkg",
+      );
+      await initAndFlush(manager);
+      const route = handles.get("/graphql/packaged-subs/stream");
+      expect(route).toBeDefined();
+
+      const unregistering = manager.unregisterPackage("pkg");
+      await vi.runAllTimersAsync();
+      await unregistering;
+
+      expect(disposed).toContain(route);
     });
 
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
@@ -1058,7 +1322,7 @@ describe("GraphQLManager", () => {
     }
 
     it("unregisterPackage unmounts routes and removes all subgraph state", async () => {
-      const { manager, httpAdapter, mounts, handles, gatewayAdapter } =
+      const { manager, mounts, handles, disposed, gatewayAdapter } =
         makeHarness();
       await initAndFlush(manager);
 
@@ -1077,7 +1341,7 @@ describe("GraphQLManager", () => {
       await vi.runAllTimersAsync();
       await teardown;
 
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(originalHandle);
+      expect(originalHandle?.dispose).toHaveBeenCalled();
       expect(manager.hasSubgraphHandler("alpha")).toBe(false);
       expect(manager.getSubgraphByName("alpha")).toBeUndefined();
       expect(disconnected).toContain("alpha");
@@ -1085,20 +1349,20 @@ describe("GraphQLManager", () => {
     });
 
     it("unregisterPackage is a no-op for a package with no subgraphs", async () => {
-      const { manager, httpAdapter, gatewayAdapter } = makeHarness();
+      const { manager, disposed, gatewayAdapter } = makeHarness();
       await initAndFlush(manager);
 
       const supergraphCalls = gatewayAdapter.updateSupergraph.mock.calls.length;
       await manager.unregisterPackage("ghost-pkg");
 
-      expect(httpAdapter.unmount).not.toHaveBeenCalled();
+      expect(disposed).toHaveLength(0);
       expect(gatewayAdapter.updateSupergraph.mock.calls.length).toBe(
         supergraphCalls,
       );
     });
 
     it("prunePackageSubgraphs removes only the dropped subgraphs", async () => {
-      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      const { manager, mounts, handles, disposed } = makeHarness();
       await initAndFlush(manager);
 
       const [Alpha] = makeSubgraphClass("alpha");
@@ -1114,9 +1378,7 @@ describe("GraphQLManager", () => {
       await vi.runAllTimersAsync();
       await keepPromise;
 
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(
-        handles.get("/graphql/beta"),
-      );
+      expect(disposed).toContain(handles.get("/graphql/beta"));
       expect(manager.hasSubgraphHandler("alpha")).toBe(true);
       expect(manager.hasSubgraphHandler("beta")).toBe(false);
       expect(manager.getSubgraphByName("beta")).toBeUndefined();
@@ -1143,12 +1405,12 @@ describe("GraphQLManager", () => {
       const secondHandle = handles.get("/graphql/alpha");
       expect(secondHandle).toBeDefined();
       expect(secondHandle).not.toBe(firstHandle);
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+      expect(firstHandle?.dispose).toHaveBeenCalled();
       expect(manager.hasSubgraphHandler("alpha")).toBe(true);
     });
 
     it("replaces the SSE route on each update and removes it when no subgraph subscribes", async () => {
-      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      const { manager, mounts, handles, disposed } = makeHarness();
       await initAndFlush(manager);
 
       // No subscription-capable subgraphs: no SSE route after init.
@@ -1167,14 +1429,14 @@ describe("GraphQLManager", () => {
       const secondHandle = handles.get("/graphql/stream");
       expect(secondHandle).toBeDefined();
       expect(secondHandle).not.toBe(firstHandle);
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+      expect(firstHandle?.dispose).toHaveBeenCalled();
 
       // Tearing the package down removes the last subscription-capable
       // subgraph: the SSE route must be unmounted as well.
       const teardown = manager.unregisterPackage("test-pkg");
       await vi.runAllTimersAsync();
       await teardown;
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(secondHandle);
+      expect(secondHandle?.dispose).toHaveBeenCalled();
     });
   });
 
@@ -1243,7 +1505,7 @@ describe("GraphQLManager", () => {
           .fn()
           .mockResolvedValue({ results: [drive, alpha, beta] }),
       });
-      const { manager, httpAdapter, mounts, handles } = makeHarness({
+      const { manager, mounts, handles, disposed } = makeHarness({
         reactorClient,
         enableDocumentModelSubgraphs: true,
       });
@@ -1264,11 +1526,65 @@ describe("GraphQLManager", () => {
       await vi.runAllTimersAsync();
       await regenerate;
 
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(
-        handles.get("/graphql/beta-model"),
-      );
+      expect(disposed).toContain(handles.get("/graphql/beta-model"));
       expect(manager.getSubgraphByName("beta-model")).toBeUndefined();
       expect(manager.hasSubgraphHandler("alpha-model")).toBe(true);
+    });
+  });
+
+  // ── attachment client provider ───────────────────────────────────────────
+
+  describe("attachment client provider", () => {
+    function makeProvider() {
+      const client = {} as IAttachmentClient;
+      const provider = {
+        forSubject: vi.fn(() => client),
+      } satisfies IAttachmentClientProvider;
+      return { provider, client };
+    }
+
+    it("passes the provider to a registered subgraph", async () => {
+      const { provider } = makeProvider();
+      const { manager } = makeHarness({ attachments: provider });
+      await initAndFlush(manager);
+
+      let received: SubgraphArgs | undefined;
+      class CapturingSubgraph extends BaseSubgraph {
+        name = "capturing";
+        constructor(args: SubgraphArgs) {
+          super(args);
+          received = args;
+        }
+      }
+      await manager.registerSubgraph(CapturingSubgraph, "graphql");
+
+      expect(received?.attachments).toBe(provider);
+    });
+
+    it("passes the provider to a document model subgraph", async () => {
+      const { provider, client } = makeProvider();
+      const { manager } = makeHarness({
+        attachments: provider,
+        enableDocumentModelSubgraphs: true,
+        reactorClient: makeMockReactorClient({
+          getDocumentModelModules: vi.fn().mockResolvedValue({
+            results: [
+              makeDriveModule(),
+              makeModelModule("Gadget", "powerhouse/test-gadget"),
+            ],
+          }),
+        }),
+      });
+      await initAndFlush(manager);
+
+      const subgraph = manager.getSubgraphByName("gadget");
+      expect(subgraph).toBeInstanceOf(BaseSubgraph);
+      const ctx = { user: { address: "0xabc" } } as Context;
+      expect((subgraph as BaseSubgraph).attachmentsFor(ctx)).toBe(client);
+      expect(provider.forSubject).toHaveBeenCalledWith({
+        address: "0xabc",
+        key: undefined,
+      });
     });
   });
 

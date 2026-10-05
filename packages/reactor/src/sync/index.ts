@@ -3,6 +3,7 @@ export type {
   IChannel,
   IChannelFactory,
   ISyncManager,
+  PeerManifestListener,
   Remote,
   RemoteMeta,
 } from "./interfaces.js";
@@ -18,12 +19,19 @@ export type {
   ConnectionStateSnapshot,
   DeadLetterAddedEvent,
   JwtHandler,
+  LocalPeer,
+  PurgeLookup,
   RemoteCursor,
   RemoteFilter,
   RemoteOptions,
+  RemotePeer,
   RemoteRecord,
   RemoteStatus,
   SyncEnvelope,
+  SyncHeldEvent,
+  SyncHold,
+  SyncPurgeRefusedEvent,
+  SyncReleasedEvent,
   SyncEnvelopeType,
   SyncFailedEvent,
   SyncOperationErrorType,
@@ -51,6 +59,7 @@ export {
 
 export {
   ChannelError,
+  DriveRequestError,
   PollingChannelError,
   isDriveAuthError,
   isRecoverableGraphQLError,
@@ -70,6 +79,28 @@ export {
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";
+export {
+  supportsDeliveryTracking,
+  type DeliveryLookup,
+  type DeliveryMembership,
+  type DeliveryRow,
+  type IDeliveryTracking,
+  type PendingDelivery,
+} from "./delivery-tracking.js";
+export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+export { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
+export {
+  MAX_POLLED_REFUSALS,
+  supportsPurgeRefusals,
+  type IPurgeRefusalRecorder,
+  type PolledMarkerRefusal,
+} from "./purge-refusals.js";
+export { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
+export {
+  createPeerAgreement,
+  type IPeerAgreement,
+  type PeerAgreementBasis,
+} from "./peer-agreement.js";
 export { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 export { SyncStatus, SyncStatusTracker } from "./sync-status-tracker.js";
 export type {

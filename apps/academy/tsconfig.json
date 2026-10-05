@@ -2,7 +2,10 @@
   // This file is not used in compilation. It is here just for a nice editor experience.
   "extends": "@docusaurus/tsconfig",
   "compilerOptions": {
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0"
+    // tsgo rejects baseUrl, so unset the inherited one and root @site/* here.
+    "baseUrl": null,
+    "paths": {
+      "@site/*": ["./*"]
+    }
   }
 }

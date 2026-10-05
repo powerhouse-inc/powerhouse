@@ -47,8 +47,8 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "lint": "eslint . --cache",
-    "lint:fix": "eslint . --fix --cache",
+    "lint": "cd ../.. && oxlint test/vetra-e2e",
+    "lint:fix": "cd ../.. && oxlint test/vetra-e2e --fix",
     "typecheck": "tsc --noEmit",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
@@ -87,6 +87,8 @@
     "monocart-coverage-reports": "^2.12.8",
     "@playwright/test": "^1.60.0",
     "@powerhousedao/registry": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:"
   },

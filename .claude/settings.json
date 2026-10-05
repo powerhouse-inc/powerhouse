@@ -1,7 +1,5 @@
 {
-  "enabledPlugins": {
-    "powerhouse-knowledge@powerhouse-knowledge": true
-  },
+  "enabledPlugins": {},
   "hooks": {
     "PreToolUse": [
       {

@@ -98,10 +98,13 @@ function makeSyncManager(operations: OperationWithContext[]): ISyncManager {
       outbox: { items: [syncOp] },
       inbox: { ackOrdinal: 0 },
       deadLetter: { items: [] },
+      notePoll: () => {},
     },
   };
 
   return {
+    localManifest: () => ({ revision: "server" }),
+
     getById: (id: string) => {
       if (id !== CHANNEL_ID) throw new Error(`Unknown channel: ${id}`);
       return remote;

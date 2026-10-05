@@ -481,7 +481,7 @@ return (
    <details>
    <summary>Update `editors/todo-list-drive-explorer/components/EditorContainer.tsx`</summary>
 
-This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history.
+This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history. The revision history panel gets its operations from `useDocumentOperations`, which fetches one scope lazily while the panel is open; the panel itself asks for further pages as the viewer scrolls.
 
 ```typescript
 import {
@@ -499,7 +499,7 @@ type EditorModule,
 type Operation,
 } from "document-model";
 import { useTimelineItems } from "@powerhousedao/reactor-browser/analytics";
-import { getRevisionFromDate } from "@powerhousedao/reactor-browser";
+import { getRevisionFromDate, useDocumentOperations } from "@powerhousedao/reactor-browser";
 import {
 DocumentToolbar,
 RevisionHistory,
@@ -538,6 +538,19 @@ const { dispatch, error, document } = useDocumentEditorProps({
    user,
 });
 
+// `scopes` mirrors the document's own header; a document always carries
+// "global", so it's the fallback while `document` is still loading.
+const scopes = document ? Object.keys(document.header.revision) : ["global"];
+const [scope, setScope] = useState(scopes.includes("global") ? "global" : scopes[0]);
+
+// The hook fetches one scope lazily, only while the panel is open; the
+// panel itself asks for further pages as the viewer scrolls.
+const { operations, isLoading, hasNextPage, fetchNextPage } = useDocumentOperations(
+   documentId,
+   scope,
+   { enabled: showRevisionHistory },
+);
+
 const loadingContent = (
    <div className="flex-1 flex justify-center items-center h-full">
       <DefaultEditorLoader />
@@ -553,10 +566,15 @@ return showRevisionHistory ? (
    <RevisionHistory
       documentId={documentId}
       documentTitle={title}
-      globalOperations={document.operations.global}
-      key={documentId}
-      localOperations={document.operations.local}
+      operations={operations}
+      isLoading={isLoading}
+      hasNextPage={hasNextPage}
+      onLoadNextPage={fetchNextPage}
+      scopes={scopes}
+      scope={scope}
+      onScopeChange={setScope}
       onClose={() => setShowRevisionHistory(false)}
+      key={documentId}
    />
 ) : (
    <Suspense fallback={loadingContent}>

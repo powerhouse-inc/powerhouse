@@ -1,38 +1,9 @@
-import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
-import {
-  buildSignedAction,
-  type ActionSigner,
+import type {
+  Action,
+  ActionSigner,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
-
-export async function signAction(action: Action, document: PHDocument) {
-  const renown = window.ph?.renown;
-  if (!renown?.user) return action;
-  if (!action.context?.signer) return action;
-
-  // The document model module only exists on the full in-process reactor client;
-  // without it there is no reducer to build a signed action with.
-  const reactorClient = window.ph?.reactorClientModule?.client;
-  if (!reactorClient) return action;
-
-  // Resolved by the document's stamped version: signing a not-yet-upgraded
-  // document with the latest reducer builds an operation replay can't verify.
-  const documentModelModule =
-    await reactorClient.getDocumentModelModuleForDocument(document);
-  const reducer = documentModelModule.reducer;
-
-  const actionSigner = action.context.signer;
-  const unsafeSignedAction = await buildSignedAction(
-    action,
-    reducer,
-    document,
-    actionSigner,
-    renown.crypto.sign,
-  );
-
-  // TODO: this is super dangerous and is caused by the `buildSignedAction` function returning an `Operation` instead of an `Action`
-  return unsafeSignedAction as unknown as Action;
-}
 
 export function addActionContext(action: Action) {
   const renown = window.ph?.renown;
@@ -57,7 +28,7 @@ export function addActionContext(action: Action) {
   };
 }
 
-async function makeSignedActionWithContext(
+function makeSignedActionWithContext(
   action: Action | undefined,
   document: PHDocument | undefined,
 ) {
@@ -69,12 +40,12 @@ async function makeSignedActionWithContext(
     logger.error("No document found");
     return;
   }
-  const signedAction = await signAction(action, document);
-  const signedActionWithContext = addActionContext(signedAction);
-  return signedActionWithContext;
+  // The reactor client signs it: an empty signer is filled in for the log the
+  // write lands in, which only the client knows.
+  return addActionContext(action);
 }
 
-export async function makeSignedActionsWithContext(
+export function makeSignedActionsWithContext(
   actionOrActions: Action[] | Action | undefined,
   document: PHDocument | undefined,
 ) {
@@ -86,8 +57,8 @@ export async function makeSignedActionsWithContext(
     ? actionOrActions
     : [actionOrActions];
 
-  const signedActionsWithContext = await Promise.all(
-    actions.map((action) => makeSignedActionWithContext(action, document)),
+  const signedActionsWithContext = actions.map((action) =>
+    makeSignedActionWithContext(action, document),
   );
   return signedActionsWithContext.filter((a) => a !== undefined);
 }

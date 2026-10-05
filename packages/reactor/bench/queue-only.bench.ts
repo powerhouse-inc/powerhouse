@@ -253,7 +253,9 @@ describe("Queue Only Operations", () => {
         }
       }
       if (await queue.hasJobs()) {
-        throw new Error("bench fixture is wrong: queue not empty after dry run");
+        throw new Error(
+          "bench fixture is wrong: queue not empty after dry run",
+        );
       }
 
       return { jobs };
@@ -270,7 +272,10 @@ describe("Queue Only Operations", () => {
       }
     },
   );
+});
 
+/** Own suite: one spread per suite, and this case mutates no queue. */
+describe("Queue Size Query", () => {
   benchCase(
     "queue total size (500 jobs across 10 sub-queues)",
     1000,
@@ -405,7 +410,9 @@ describe("Queue Profiling Extensions", () => {
         );
       }
       if (await queue.hasJobs()) {
-        throw new Error("bench fixture is wrong: queue not empty after dry run");
+        throw new Error(
+          "bench fixture is wrong: queue not empty after dry run",
+        );
       }
 
       return { jobs };
@@ -470,7 +477,9 @@ describe("Queue Profiling Extensions", () => {
         }
       }
       if (await queue.hasJobs()) {
-        throw new Error("bench fixture is wrong: queue not empty after dry run");
+        throw new Error(
+          "bench fixture is wrong: queue not empty after dry run",
+        );
       }
 
       return { jobs };
@@ -717,7 +726,9 @@ describe("Queue Hint DAG Resolution", () => {
       const seen = await drainCollect(dryQueue);
       assertTopologicalOrder(seen, chain.length);
       if (await dryQueue.hasJobs()) {
-        throw new Error("bench fixture is wrong: queue not empty after dry run");
+        throw new Error(
+          "bench fixture is wrong: queue not empty after dry run",
+        );
       }
 
       return { chain };
@@ -759,7 +770,9 @@ describe("Queue Hint DAG Resolution", () => {
       const seen = await drainCollect(queue);
       assertTopologicalOrder(seen, enqueueOrder.length);
       if (await queue.hasJobs()) {
-        throw new Error("bench fixture is wrong: queue not empty after dry run");
+        throw new Error(
+          "bench fixture is wrong: queue not empty after dry run",
+        );
       }
 
       return { enqueueOrder };
@@ -792,7 +805,9 @@ describe("Queue Hint DAG Resolution", () => {
       const seen = await drainCollect(queue);
       assertTopologicalOrder(seen, enqueueOrder.length);
       if (await queue.hasJobs()) {
-        throw new Error("bench fixture is wrong: queue not empty after dry run");
+        throw new Error(
+          "bench fixture is wrong: queue not empty after dry run",
+        );
       }
 
       return { enqueueOrder };

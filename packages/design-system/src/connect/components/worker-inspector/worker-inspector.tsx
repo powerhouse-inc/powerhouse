@@ -58,7 +58,7 @@ export function WorkerInspector({ getInfo, onRestart }: WorkerInspectorProps) {
   }, [getInfo]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     void loadInfo();
     const interval = setInterval(() => {
       void loadInfo();

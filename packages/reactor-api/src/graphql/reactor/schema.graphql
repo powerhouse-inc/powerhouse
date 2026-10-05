@@ -18,10 +18,12 @@ input SearchFilterInput {
   type: String
   parentId: String
   identifiers: [String!]
+    @deprecated(reason: "Ignored. Filter by type or parentId.")
 }
 
 input OperationsFilterInput {
-  documentId: String!
+  documentIdOrSlug: String
+  documentId: String @deprecated(reason: "Use documentIdOrSlug.")
   branch: String
   scopes: [String!]
   actionTypes: [String!]
@@ -66,7 +68,6 @@ type DocumentModelGlobalState {
 
 type DocumentModelResultPage {
   items: [DocumentModelGlobalState!]!
-  totalCount: Int!
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   cursor: String
@@ -95,7 +96,23 @@ type PHDocument {
 
 type PHDocumentResultPage {
   items: [PHDocument!]!
-  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+# A directed edge between two documents, with the metadata recorded against it.
+type DocumentRelationship {
+  sourceId: String!
+  targetId: String!
+  relationshipType: String!
+  metadata: JSONObject
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DocumentRelationshipResultPage {
+  items: [DocumentRelationship!]!
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   cursor: String
@@ -103,7 +120,6 @@ type PHDocumentResultPage {
 
 type ReactorOperationResultPage {
   items: [ReactorOperation!]!
-  totalCount: Int!
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   cursor: String
@@ -129,6 +145,46 @@ type PollSyncEnvelopesResult {
   ackOrdinal: Int!
   deadLetters: [DeadLetterInfo!]!
   hasMore: Boolean!
+  # The server's current manifest revision
+  manifestRevision: String
+  # The client's manifest revision as the server holds it
+  peerManifestRevision: String
+}
+
+type SyncHoldReason {
+  protocol: String!
+  version: Int!
+  peerSupports: [Int!]!
+}
+
+# A document held back from a remote whose peer cannot run its versions
+type SyncHold {
+  remoteName: String!
+  documentId: String!
+  branch: String!
+  reason: SyncHoldReason!
+  heldAtUtcMs: String!
+}
+
+type PeerAgreementMember {
+  remoteName: String!
+  # False for a peer that announced nothing: it gets the baselines
+  announced: Boolean!
+  protocols: JSONObject!
+  features: JSONObject!
+}
+
+type PeerAgreementLimit {
+  protocol: String!
+  # The remotes whose peers lack the version new documents would take
+  remoteNames: [String!]!
+}
+
+type PeerAgreement {
+  collectionId: String!
+  local: JSONObject!
+  members: [PeerAgreementMember!]!
+  limitedBy: [PeerAgreementLimit!]!
 }
 
 type DocumentWithChildren {
@@ -170,7 +226,14 @@ type DocumentChangeContext {
 type JobChangeEvent {
   jobId: String!
   status: String!
-  result: JSONObject!
+
+  """
+  What the job produced, once it has produced anything. Nullable for the same
+  reason as `JobInfo.result`: a job that has not written yet has produced
+  nothing, and an empty object would claim otherwise.
+  """
+  result: JSONObject
+
   error: String
 }
 
@@ -262,13 +325,19 @@ against. They are recorded rather than enforced; a signature is verified from
 the params carried in its own tuple, which do not include them.
 """
 input ActionContextInput {
-  """The index of the last operation in the scope the action applies to."""
+  """
+  The index of the last operation in the scope the action applies to.
+  """
   prevOpIndex: Int
 
-  """The hash of the state the action applies to."""
+  """
+  The hash of the state the action applies to.
+  """
   prevOpHash: String
 
-  """Covers replay of an operation that would otherwise be a no-op."""
+  """
+  Covers replay of an operation that would otherwise be a no-op.
+  """
   nonce: String
 
   signer: ReactorSignerInput
@@ -398,17 +467,28 @@ input RemoteFilterInput {
   branch: String!
 }
 
+input SyncRefusalInput {
+  documentId: String!
+  branch: String!
+  # "marker" for a refused purge marker; absent for UNSUPPORTED_PROTOCOL
+  kind: String
+}
+
 input TouchChannelInput {
   id: String!
   name: String!
   collectionId: String!
   filter: RemoteFilterInput!
   sinceTimestampUtcMs: String!
+  # The client's peer manifest; absent from a client without peer agreement
+  manifest: JSONObject
 }
 
 type TouchChannelResult {
   success: Boolean!
   ackOrdinal: Int!
+  # The server's peer manifest
+  manifest: JSONObject
 }
 
 type Query {
@@ -419,11 +499,16 @@ type Query {
   ): DocumentModelResultPage!
 
   # Get a specific document by ID or slug
-  document(identifier: String!, view: ViewFilterInput): DocumentWithChildren
+  document(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    view: ViewFilterInput
+  ): DocumentWithChildren
 
   # Get outgoing relationships of a given type from a source document
   documentOutgoingRelationships(
-    sourceIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
     relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
@@ -431,11 +516,36 @@ type Query {
 
   # Get incoming relationships of a given type to a target document
   documentIncomingRelationships(
-    targetIdentifier: String!
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
   ): PHDocumentResultPage!
+
+  # Get the outgoing relationship edges of a source document. Unlike
+  # documentOutgoingRelationships, which returns the documents at the far end,
+  # this returns the edges themselves, carrying their metadata and timestamps.
+  # Omit relationshipType to return edges of every type.
+  documentOutgoingRelationshipEdges(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    relationshipType: String
+    view: ViewFilterInput
+    paging: PagingInput
+  ): DocumentRelationshipResultPage!
+
+  # Get the incoming relationship edges of a target document. Unlike
+  # documentIncomingRelationships, which returns the documents at the far end,
+  # this returns the edges themselves, carrying their metadata and timestamps.
+  # Omit relationshipType to return edges of every type.
+  documentIncomingRelationshipEdges(
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String
+    view: ViewFilterInput
+    paging: PagingInput
+  ): DocumentRelationshipResultPage!
 
   # Find documents by search criteria
   findDocuments(
@@ -481,7 +591,8 @@ type Query {
   AUTH_EVALUATION_UNSUPPORTED rather than guessing.
   """
   evaluateActions(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     branch: String
     candidates: [ActionCandidateInput!]!
   ): ActionEvaluations!
@@ -501,17 +612,32 @@ type Query {
     channelId: String!
     outboxAck: Int!
     outboxLatest: Int!
+    # The client's manifest revision; absent from a client without peer agreement
+    manifestRevision: String
+    # Documents the client refused from earlier polls: held, or a refused marker
+    refusals: [SyncRefusalInput!]
   ): PollSyncEnvelopesResult!
+
+  # Supreme admin, or the address the named remote's channel is bound to
+  syncHolds(remoteName: String, documentId: String): [SyncHold!]!
+
+  # Supreme admin, or an address bound to a channel in the collection
+  peerAgreement(collectionId: String!): PeerAgreement!
 }
 
 type Mutation {
   # Create a new document
-  createDocument(document: JSONObject!, parentIdentifier: String): PHDocument!
+  createDocument(
+    document: JSONObject!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): PHDocument!
 
   # Create an empty document of specified type
   createEmptyDocument(
     documentType: String!
-    parentIdentifier: String
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
   ): PHDocument!
 
   """
@@ -527,7 +653,8 @@ type Mutation {
   defaults to `main`.
   """
   execute(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     actions: [ActionInput!]!
     branch: String
   ): PHDocument!
@@ -541,7 +668,8 @@ type Mutation {
   ask for; `result` is null until the job produces one.
   """
   executeAsync(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     actions: [ActionInput!]!
     branch: String
   ): JobInfo!
@@ -568,7 +696,8 @@ type Mutation {
 
   # Rename a document
   renameDocument(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     name: String!
     branch: String
   ): PHDocument!
@@ -576,47 +705,83 @@ type Mutation {
   # Update the preferred editor recorded in the document header meta.
   # Pass null/omit to clear it.
   setPreferredEditor(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     preferredEditor: String
     branch: String
   ): PHDocument!
 
-  # Add a relationship between two documents
+  # Add a relationship between two documents. Adding one that already exists is
+  # a no-op, metadata included -- use updateRelationship to change an edge.
   addRelationship(
-    sourceIdentifier: String!
-    targetIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
+    metadata: JSONObject
+    branch: String
+  ): PHDocument!
+
+  # Replace the metadata of an existing relationship, preserving its createdAt.
+  # Omitting metadata, or passing null, clears it.
+  updateRelationship(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    metadata: JSONObject
     branch: String
   ): PHDocument!
 
   # Remove a relationship between two documents
   removeRelationship(
-    sourceIdentifier: String!
-    targetIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     branch: String
   ): PHDocument!
 
   # Move a relationship from one source to another
   moveRelationship(
-    sourceParentIdentifier: String!
-    targetParentIdentifier: String!
-    targetIdentifier: String!
+    sourceParentIdOrSlug: String
+    sourceParentIdentifier: String
+      @deprecated(reason: "Use sourceParentIdOrSlug.")
+    targetParentIdOrSlug: String
+    targetParentIdentifier: String
+      @deprecated(reason: "Use targetParentIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     branch: String
   ): MoveRelationshipResult!
 
   # Delete a single document
-  deleteDocument(identifier: String!, propagate: PropagationMode): Boolean!
+  deleteDocument(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    propagate: PropagationMode
+  ): Boolean!
 
   # Delete multiple documents
-  deleteDocuments(identifiers: [String!]!, propagate: PropagationMode): Boolean!
+  deleteDocuments(
+    idsOrSlugs: [String!]
+    identifiers: [String!] @deprecated(reason: "Use idsOrSlugs.")
+    propagate: PropagationMode
+  ): Boolean!
 
   # Touch (create or update) a channel for sync
   touchChannel(input: TouchChannelInput!): TouchChannelResult!
 
   # Push sync envelopes to a channel
-  pushSyncEnvelopes(envelopes: [SyncEnvelopeInput!]!): Boolean!
+  pushSyncEnvelopes(
+    envelopes: [SyncEnvelopeInput!]!
+    # The server's manifest revision the client gated these envelopes under
+    peerManifestRevision: String
+  ): Boolean!
 }
 
 type Subscription {

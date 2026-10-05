@@ -3,6 +3,7 @@ import type {
   DeleteDocumentAction,
   Operation,
   PHDocument,
+  PurgeDocumentAction,
   UpgradeDocumentAction,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
@@ -12,11 +13,17 @@ import {
   applyUpgradeDocumentAction,
   baseReducerVersion,
   isDenied,
+  isPurgeMarker,
   normalizeDocumentModelVersion,
+  PURGE_DOCUMENT,
+  withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  DocumentNotFoundError,
+  DocumentPurgedError,
+} from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
@@ -52,13 +59,14 @@ type PendingUpgrade = {
   /** The upgrade operation's index in the document scope. */
   index: number;
   /**
-   * DELETE_DOCUMENT actions the document scope recorded after this upgrade.
+   * DELETE_DOCUMENT and PURGE_DOCUMENT actions the document scope recorded
+   * after this upgrade.
    * The document-scope pass applies deletes inline while the upgrade is held
    * back, inverting log order; re-applying them after the upgrade restores it
    * — without this, an upgrade seeded from an initialState snapshot replaces
    * the state wholesale and a rebuilt deleted document comes back live.
    */
-  subsequentDeletes: DeleteDocumentAction[];
+  subsequentDeletes: (DeleteDocumentAction | PurgeDocumentAction)[];
 };
 
 /**
@@ -151,6 +159,8 @@ function copyDocument(document: PHDocument): PHDocument {
  * await cache.shutdown();
  * ```
  */
+type PendingRead = { evicted: boolean };
+
 export class KyselyWriteCache implements IWriteCache {
   private streams: Map<string, DocumentStream>;
   private lruTracker: LRUTracker<string>;
@@ -158,6 +168,7 @@ export class KyselyWriteCache implements IWriteCache {
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
   private config: Required<WriteCacheConfig>;
+  private reads = new Map<string, Set<PendingRead>>();
 
   constructor(
     keyframeStore: IKeyframeStore,
@@ -189,6 +200,7 @@ export class KyselyWriteCache implements IWriteCache {
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
+    scoped.reads = this.reads;
     return scoped;
   }
 
@@ -225,6 +237,7 @@ export class KyselyWriteCache implements IWriteCache {
    * @returns The document at the target revision
    * @throws {Error} "Operation aborted" if signal is aborted
    * @throws {ModuleNotFoundError} If document type not registered in registry
+   * @throws {DocumentPurgedError} If the stream's only row is a purge marker
    * @throws {Error} "Failed to rebuild document" if operation store fails
    * @throws {Error} If reducer throws during operation application
    * @throws {Error} If document serialization fails
@@ -235,6 +248,39 @@ export class KyselyWriteCache implements IWriteCache {
     branch: string,
     targetRevision?: number,
     signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const read: PendingRead = { evicted: false };
+    let pending = this.reads.get(documentId);
+    if (!pending) {
+      pending = new Set();
+      this.reads.set(documentId, pending);
+    }
+    pending.add(read);
+    try {
+      return await this.readState(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+        read,
+      );
+    } finally {
+      pending.delete(read);
+      if (pending.size === 0) {
+        this.reads.delete(documentId);
+      }
+    }
+  }
+
+  // A read an invalidation overtook returns its state but must not cache it.
+  private async readState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision: number | undefined,
+    signal: AbortSignal | undefined,
+    read: PendingRead,
   ): Promise<PHDocument> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
@@ -267,7 +313,8 @@ export class KyselyWriteCache implements IWriteCache {
             signal,
           );
 
-          this.store(
+          this.storeUnlessEvicted(
+            read,
             documentId,
             scope,
             branch,
@@ -303,7 +350,8 @@ export class KyselyWriteCache implements IWriteCache {
             signal,
           );
 
-          this.store(
+          this.storeUnlessEvicted(
+            read,
             documentId,
             scope,
             branch,
@@ -330,7 +378,8 @@ export class KyselyWriteCache implements IWriteCache {
     const revision =
       targetRevision ?? (document.header.revision[scope] ?? 0) - 1;
 
-    this.store(
+    this.storeUnlessEvicted(
+      read,
       documentId,
       scope,
       branch,
@@ -411,6 +460,20 @@ export class KyselyWriteCache implements IWriteCache {
     );
   }
 
+  private storeUnlessEvicted(
+    read: PendingRead,
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    position: SnapshotPosition,
+  ): void {
+    if (!read.evicted) {
+      this.store(documentId, scope, branch, revision, document, position);
+    }
+  }
+
   private store(
     documentId: string,
     scope: string,
@@ -424,8 +487,8 @@ export class KyselyWriteCache implements IWriteCache {
 
     // Keep only the last operation per scope in the ring buffer. The reducer
     // only needs at(-1).index to determine the next index, so carrying the
-    // full history causes O(n²) array copies across n operations. UNDO, REDO,
-    // and PRUNE bypass this by forcing a cold-miss rebuild in the job executor.
+    // full history causes O(n²) array copies across n operations. UNDO and REDO
+    // bypass this by forcing a cold-miss rebuild in the job executor.
     // Copied so a caller still holding the document cannot change what we
     // stored.
     const slicedDocument: PHDocument = {
@@ -490,6 +553,9 @@ export class KyselyWriteCache implements IWriteCache {
    * @returns The number of streams evicted
    */
   invalidate(documentId: string, scope?: string, branch?: string): number {
+    for (const read of this.reads.get(documentId) ?? []) {
+      read.evicted = true;
+    }
     let evicted = 0;
 
     if (scope === undefined && branch === undefined) {
@@ -525,6 +591,11 @@ export class KyselyWriteCache implements IWriteCache {
    * Resets LRU tracking state. This operation always succeeds.
    */
   clear(): void {
+    for (const pending of this.reads.values()) {
+      for (const read of pending) {
+        read.evicted = true;
+      }
+    }
     this.streams.clear();
     this.lruTracker.clear();
   }
@@ -598,16 +669,19 @@ export class KyselyWriteCache implements IWriteCache {
     branch: string,
     targetRevision: number | undefined,
     signal?: AbortSignal,
+    fromKeyframe = true,
   ): Promise<PHDocument> {
     const effectiveTargetRevision = targetRevision || Number.MAX_SAFE_INTEGER;
 
-    const keyframe = await this.findNearestKeyframe(
-      documentId,
-      scope,
-      branch,
-      effectiveTargetRevision,
-      signal,
-    );
+    const keyframe = fromKeyframe
+      ? await this.findNearestKeyframe(
+          documentId,
+          scope,
+          branch,
+          effectiveTargetRevision,
+          signal,
+        )
+      : undefined;
 
     // all scope rebuilds need the document scope for type, upgrades and deletion,
     // but we need to special case for document scope rebuilds
@@ -698,11 +772,14 @@ export class KyselyWriteCache implements IWriteCache {
               subsequentDeletes: [],
             });
           }
-        } else if (operation.action.type === "DELETE_DOCUMENT") {
+        } else if (
+          operation.action.type === "DELETE_DOCUMENT" ||
+          operation.action.type === PURGE_DOCUMENT
+        ) {
           applyDeleteDocumentAction(document, operation.action as never);
           for (const pending of pendingUpgrades) {
             pending.subsequentDeletes.push(
-              operation.action as DeleteDocumentAction,
+              operation.action as DeleteDocumentAction | PurgeDocumentAction,
             );
           }
         }
@@ -725,6 +802,9 @@ export class KyselyWriteCache implements IWriteCache {
       }
 
       const createOp = createOpResult.results[0];
+      if (isPurgeMarker(createOp)) {
+        throw new DocumentPurgedError(documentId);
+      }
       if (createOp.action.type !== "CREATE_DOCUMENT") {
         throw new Error(
           `Failed to rebuild document ${documentId}: first operation in document scope must be CREATE_DOCUMENT, found ${createOp.action.type}`,
@@ -825,19 +905,25 @@ export class KyselyWriteCache implements IWriteCache {
             documentType,
             normalizeDocumentModelVersion(toVersion),
           );
-        } else if (operation.action.type === "DELETE_DOCUMENT") {
+        } else if (
+          operation.action.type === "DELETE_DOCUMENT" ||
+          operation.action.type === PURGE_DOCUMENT
+        ) {
           applyDeleteDocumentAction(document, operation.action as never);
           for (const pending of pendingUpgrades) {
             pending.subsequentDeletes.push(
-              operation.action as DeleteDocumentAction,
+              operation.action as DeleteDocumentAction | PurgeDocumentAction,
             );
           }
         } else {
           const protocolVersion = baseReducerVersion(document.header);
-          document = docModule.reducer(document, operation.action, undefined, {
-            skip: operation.skip,
-            protocolVersion,
-          });
+          document = withProtocolVersions(
+            docModule.reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              protocolVersion,
+            }),
+            document.header.protocolVersions,
+          );
         }
       }
     }
@@ -915,6 +1001,7 @@ export class KyselyWriteCache implements IWriteCache {
     let cursor: string | undefined = undefined;
     const pageSize = 100;
     let hasMorePages: boolean;
+    let needsFullReplay = false;
 
     do {
       if (signal?.aborted) {
@@ -942,6 +1029,12 @@ export class KyselyWriteCache implements IWriteCache {
             break;
           }
 
+          // A keyframe carries no operations; a skip replays them all.
+          if (keyframe && operation.skip > 0) {
+            needsFullReplay = true;
+            break;
+          }
+
           const moduleVersion = this.resolveModuleVersionForOp(
             operation.index,
             operation.timestampUtcMs,
@@ -963,16 +1056,19 @@ export class KyselyWriteCache implements IWriteCache {
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
             const protocolVersion = baseReducerVersion(document.header);
-            document = getModuleCached(moduleVersion).reducer(
-              document,
-              operation.action,
-              undefined,
-              {
-                skip: operation.skip,
-                protocolVersion,
-                replayOptions: { operation },
-                skipIndexValidation: true,
-              },
+            document = withProtocolVersions(
+              getModuleCached(moduleVersion).reducer(
+                document,
+                operation.action,
+                undefined,
+                {
+                  skip: operation.skip,
+                  protocolVersion,
+                  replayOptions: { operation },
+                  skipIndexValidation: true,
+                },
+              ),
+              document.header.protocolVersions,
             );
           }
         }
@@ -980,7 +1076,8 @@ export class KyselyWriteCache implements IWriteCache {
         const reachedTarget =
           targetRevision !== undefined &&
           result.results.some((op) => op.index >= targetRevision);
-        hasMorePages = Boolean(result.nextCursor) && !reachedTarget;
+        hasMorePages =
+          Boolean(result.nextCursor) && !reachedTarget && !needsFullReplay;
 
         if (hasMorePages) {
           cursor = result.nextCursor;
@@ -993,6 +1090,17 @@ export class KyselyWriteCache implements IWriteCache {
         );
       }
     } while (hasMorePages);
+
+    if (needsFullReplay) {
+      return this.coldMissRebuild(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+        false,
+      );
+    }
 
     document = this.applyTailPendingUpgrades(
       document,
@@ -1248,6 +1356,8 @@ export class KyselyWriteCache implements IWriteCache {
     // The base is a cached snapshot and the revisions below are written in
     // place, so copy it first or a rebuild that applies nothing rewrites it.
     let document = copyDocument(baseDocument);
+    // The base holds one operation per scope; a skip needs them all.
+    let needsFullReplay = false;
 
     try {
       const pagedResults = await this.operationStore.getSince(
@@ -1269,6 +1379,11 @@ export class KyselyWriteCache implements IWriteCache {
           break;
         }
 
+        if (operation.skip > 0) {
+          needsFullReplay = true;
+          break;
+        }
+
         // A denied operation still carries a potentially valid action, so
         // we must specifically skip without applying.
         if (isDenied(operation)) {
@@ -1276,12 +1391,15 @@ export class KyselyWriteCache implements IWriteCache {
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
           const protocolVersion = baseReducerVersion(document.header);
-          document = module.reducer(document, operation.action, undefined, {
-            skip: operation.skip,
-            protocolVersion,
-            replayOptions: { operation },
-            skipIndexValidation: true,
-          });
+          document = withProtocolVersions(
+            module.reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              protocolVersion,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            }),
+            document.header.protocolVersions,
+          );
         }
 
         if (
@@ -1296,6 +1414,17 @@ export class KyselyWriteCache implements IWriteCache {
       throw new Error(
         `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
         { cause: err },
+      );
+    }
+
+    if (needsFullReplay) {
+      return this.coldMissRebuild(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+        false,
       );
     }
 

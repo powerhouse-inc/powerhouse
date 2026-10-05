@@ -28,6 +28,7 @@ import {
   type GenerationSteps,
   readRetainedApproval,
 } from "../src/services/definitions/generation.js";
+import { createTypecheckStep } from "../src/services/definitions/build-steps.js";
 import { selectedSourceSetDigest } from "../src/services/definitions/selection.js";
 import { writeFixtureTsconfig } from "./helpers/emit-fixture.js";
 import { recorder } from "./helpers/recorder.js";
@@ -60,6 +61,8 @@ function buildArgsFor(root: string, configFile = "powerhouse.config.json") {
     configFile: join(root, configFile),
     source: [] as string[],
     warningsAsErrors: false,
+    noSharedDeps: false,
+    ignoreTypeErrors: false,
   };
 }
 
@@ -105,6 +108,59 @@ describe("phase order", () => {
       fixture.dispose();
     }
   }, 60_000);
+});
+
+describe("opting into builds with type errors", () => {
+  it.each(["control", "schema-first"])(
+    "permits the opt-in for %s and otherwise preserves prior output",
+    async (name) => {
+      const fixture = withPriorOutput(name);
+      try {
+        writeFileSync(
+          join(fixture.root, "src", "type-error.ts"),
+          'export const count: number = "invalid";\n',
+        );
+        const run = async (ignoreTypeErrors: boolean, configFile?: string) => {
+          const recording = recorder();
+          const result = await runBuild(
+            { ...buildArgsFor(fixture.root, configFile), ignoreTypeErrors },
+            {
+              steps: {
+                ...recording.steps,
+                typecheck: createTypecheckStep("npm", "dist", {
+                  ignoreTypeErrors,
+                }),
+              },
+              log: silent,
+            },
+          );
+          return { result, recording };
+        };
+        const strict = await run(false);
+        expect(strict.result.exitCode).toBe(2);
+        expect(strict.recording.candidateWrites).toBe(0);
+        expect(directoryDigest(join(fixture.root, "dist"))).toBe(
+          fixture.priorDigest,
+        );
+
+        const allowed = await run(true);
+        expect(allowed.result.exitCode).toBe(0);
+        expect(allowed.recording.promotions).toBe(1);
+        if (name === "control") {
+          expect(allowed.result.phases).toContain("definitions");
+          expect(allowed.result.phases).toContain("packed");
+          const prior = directoryDigest(join(fixture.root, "dist"));
+          const invalid = await run(true, "missing-export.config.json");
+          expect(invalid.result.exitCode).not.toBe(0);
+          expect(invalid.recording.promotions).toBe(0);
+          expect(directoryDigest(join(fixture.root, "dist"))).toBe(prior);
+        }
+      } finally {
+        fixture.dispose();
+      }
+    },
+    60_000,
+  );
 });
 
 describe("what the promoted tree contains", () => {
@@ -677,6 +733,8 @@ describe("publish", () => {
           configFile: undefined,
           source: [],
           warningsAsErrors: false,
+          noSharedDeps: false,
+          ignoreTypeErrors: false,
         },
         { steps: hook.steps, log: (text) => logged.push(text) },
       );

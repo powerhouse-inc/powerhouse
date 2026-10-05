@@ -1,0 +1,19 @@
+{
+  "name": "@fixture/piece-only-package",
+  "description": "A package that ships two pieces and nothing else.",
+  "category": "Fixtures",
+  "documentModels": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "pieces": [
+    {
+      "id": "@fixture/piece-hello",
+      "name": "Hand-written Hello"
+    },
+    {
+      "id": "@fixture/piece-ghost",
+      "name": "Ghost"
+    }
+  ]
+}

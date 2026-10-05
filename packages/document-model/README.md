@@ -118,12 +118,6 @@ undo(count: number);
 redo(count: number);
 ```
 
-- `PRUNE`: Joins multiple operations into a single `LOAD_STATE` operation. Useful to keep operations history smaller. Operations to prune are selected by index, similar to the [slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) method in Arrays.
-
-```javascript
-prune(start?: number, end?: number);
-```
-
 ## Budget Statement Model
 
 A Budget statement follows the following data structure:

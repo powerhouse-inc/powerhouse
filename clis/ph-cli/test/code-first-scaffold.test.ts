@@ -304,6 +304,7 @@ describe("a scaffolded code-first subgraph", () => {
           all: false,
           extract: false,
           codeFirst: true,
+          skipInstall: true,
           debug: undefined,
         },
         projectDir,
@@ -505,7 +506,7 @@ describe("code-first generation refuses", () => {
     await expect(
       printed(() =>
         startGenerateSubgraph(
-          { ...noMode, name: undefined, codeFirst: true },
+          { ...noMode, name: undefined, codeFirst: true, skipInstall: true },
           projectDir,
         ),
       ),

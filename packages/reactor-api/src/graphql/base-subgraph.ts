@@ -4,6 +4,7 @@ import type {
   ISyncManager,
   SyncScopeGate,
 } from "@powerhousedao/reactor";
+import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type {
   GraphQLManager,
@@ -23,8 +24,17 @@ import {
   createCanonicalDocumentIdResolver,
   type CanonicalDocumentIdResolver,
 } from "../services/canonical-document-id.js";
+import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
+
+/**
+ * The subject a request reads as: its address and the app key its token
+ * carries. Anonymous is an empty subject, never the host's signer.
+ */
+export function callerSubject(user: Context["user"]): AuthSubject {
+  return { address: user?.address, key: user?.appKey };
+}
 
 export class BaseSubgraph implements ISubgraph {
   name = "example";
@@ -42,6 +52,8 @@ export class BaseSubgraph implements ISubgraph {
     }
   `;
   reactorClient: IReactorClient;
+  /** This package's namespaced slice of the HTTP surface. */
+  readonly http: SubgraphArgs["http"];
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
   syncManager: ISyncManager;
@@ -61,10 +73,15 @@ export class BaseSubgraph implements ISubgraph {
 
   readonly #resolveCanonical: CanonicalDocumentIdResolver;
 
+  readonly #attachments?: IAttachmentClientProvider;
+
+  readonly #attachmentClientMemo = new WeakMap<object, IAttachmentClient>();
+
   constructor(args: SubgraphArgs) {
     this.#resolveCanonical = createCanonicalDocumentIdResolver(
       args.reactorClient,
     );
+    this.http = args.http;
     this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
@@ -73,6 +90,24 @@ export class BaseSubgraph implements ISubgraph {
     this.authorizationService = args.authorizationService;
     this.syncServingGate = args.syncServingGate;
     this.path = args.path ?? "";
+    this.#attachments = args.attachments;
+  }
+
+  /**
+   * An attachment client bound to this request's caller, memoized per request.
+   *
+   * @throws Error when the host provides no attachment client to subgraphs.
+   */
+  attachmentsFor(ctx: Context): IAttachmentClient {
+    if (!this.#attachments) {
+      throw new Error("This host provides no attachment client to subgraphs");
+    }
+    let client = this.#attachmentClientMemo.get(ctx);
+    if (!client) {
+      client = this.#attachments.forSubject(callerSubject(ctx.user));
+      this.#attachmentClientMemo.set(ctx, client);
+    }
+    return client;
   }
 
   async onSetup() {
@@ -178,7 +213,24 @@ export class BaseSubgraph implements ISubgraph {
    * carries the same key. Anonymous callers supply neither.
    */
   protected viewSubject(ctx: Context): AuthSubject {
-    return { address: ctx.user?.address, key: ctx.user?.appKey };
+    return callerSubject(ctx.user);
+  }
+
+  /** Whether a listing would serve the document to the caller; fails closed. */
+  protected async servesDocument(
+    documentId: string,
+    ctx: Context,
+  ): Promise<boolean> {
+    if (!documentId) {
+      return false;
+    }
+    try {
+      return await this.reactorClient.isServed(documentId, {
+        subject: this.viewSubject(ctx),
+      });
+    } catch {
+      return false;
+    }
   }
 
   /**

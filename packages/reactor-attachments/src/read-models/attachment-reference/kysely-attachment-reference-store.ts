@@ -24,6 +24,21 @@ export class KyselyAttachmentReferenceStore
     return row !== undefined;
   }
 
+  async referencingScopes(
+    documentId: string,
+    ref: AttachmentRef,
+  ): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom("attachment_reference")
+      .select("scope")
+      .distinct()
+      .where("document_id", "=", documentId)
+      .where("attachment_ref", "=", ref)
+      .execute();
+
+    return rows.map((row) => row.scope);
+  }
+
   async addReferences(
     references: readonly AttachmentReferenceInput[],
   ): Promise<void> {
@@ -48,6 +63,17 @@ export class KyselyAttachmentReferenceStore
       .onConflict((oc) =>
         oc.columns(["document_id", "attachment_ref"]).doNothing(),
       )
+      .execute();
+  }
+
+  async removeDocuments(documentIds: readonly string[]): Promise<void> {
+    if (documentIds.length === 0) {
+      return;
+    }
+
+    await this.db
+      .deleteFrom("attachment_reference")
+      .where("document_id", "in", [...documentIds])
       .execute();
   }
 }

@@ -1,6 +1,7 @@
 import { ConsoleLogger } from "document-model";
 import { DriveCollectionId } from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
+import { optionalOneOf, requireOneOf } from "../argument-aliases.js";
 import { ForbiddenError } from "../errors.js";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
@@ -20,7 +21,7 @@ import {
 import { isDriveContainerType } from "./constants.js";
 import type { Resolvers } from "./gen/graphql.js";
 import {
-  ensureGlobalDocumentSubscription,
+  DocumentChangeFeed,
   ensureJobSubscription,
   getPubSub,
   SUBSCRIPTION_TRIGGERS,
@@ -40,6 +41,13 @@ export class ReactorSubgraph extends BaseSubgraph {
 
   name = "r";
   hasSubscriptions = true;
+
+  #documentChanges: DocumentChangeFeed | undefined;
+
+  private get documentChanges(): DocumentChangeFeed {
+    this.#documentChanges ??= new DocumentChangeFeed(this.reactorClient);
+    return this.#documentChanges;
+  }
 
   /**
    * Check operation-level permissions for an array of actions.
@@ -85,6 +93,52 @@ export class ReactorSubgraph extends BaseSubgraph {
   }
 
   /**
+   * Drops the relationship edges whose far-end document the caller cannot read.
+   *
+   * An edge names two documents, so returning it discloses the far end's id. The
+   * document-shaped relationship queries already withhold far-end documents the
+   * caller cannot read; the edge-shaped queries have to withhold the same ones,
+   * or they become a way to enumerate around that check. Supreme admins read
+   * everything, so the per-edge check is skipped for them.
+   *
+   * The cursor describes where to resume in the underlying unfiltered stream,
+   * so it is left as it came. A filtered page is therefore often shorter than
+   * the requested limit, and that is the stream continuing rather than a sign
+   * it ended.
+   */
+  private async filterRelationshipEdges<
+    TEdge extends { readonly sourceId: string; readonly targetId: string },
+    TPage extends { readonly items: ReadonlyArray<TEdge> },
+  >(
+    page: TPage,
+    farEnd: "sourceId" | "targetId",
+    ctx: Context,
+  ): Promise<TPage> {
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return page;
+    }
+
+    const decisions = new Map<string, boolean>();
+    const items: TEdge[] = [];
+    for (const edge of page.items) {
+      const documentId = edge[farEnd];
+      let canRead = decisions.get(documentId);
+      if (canRead === undefined) {
+        canRead = await this.canReadDocument(
+          documentId as CanonicalDocumentId,
+          ctx,
+        );
+        decisions.set(documentId, canRead);
+      }
+      if (canRead) {
+        items.push(edge);
+      }
+    }
+
+    return { ...page, items };
+  }
+
+  /**
    * Adds to `forbidden` the canonical document ids in `syncOps` that the caller
    * cannot read, checking each distinct id once. Sync operation document ids are
    * canonical (never slugs), so no resolution is needed.
@@ -121,14 +175,27 @@ export class ReactorSubgraph extends BaseSubgraph {
    * queued for the adopter.
    *
    * The refusal is the shape a read denial takes, so a puller treats it as a
-   * signal to authenticate again rather than as a transport failure.
+   * signal to authenticate again rather than as a transport failure. Pushes are
+   * refused the same way -- a push interacts with the same private queue, and
+   * reports the liveness that keeps it from being reclaimed -- but they never
+   * adopt, since the push path has no drive check to clear the claimant.
    *
-   * Nothing is enforced or adopted without a serving gate. Below
-   * `authEnforcement` there is no policy being enforced for the channel to
-   * belong to, and refusing a poll there would break sync for no gain.
+   * Nothing is enforced or adopted without a serving gate: with no gate the
+   * channel serves every subject alike, so there is no subject for it to
+   * belong to.
    */
-  async #bindOrRefuseChannel(channelId: string, ctx: Context): Promise<void> {
+  async #bindOrRefuseChannel(
+    channelId: string,
+    ctx: Context,
+    options: { adopt?: boolean; action?: "poll" | "push to" } = {},
+  ): Promise<void> {
     if (!this.syncServingGate) return;
+
+    // Claiming a channel is a write, so only a caller the coarse drive check
+    // has already cleared may do it. The push path has no such check and asks
+    // for refusal alone, or any authenticated address could claim a channel it
+    // can never poll and lock its rightful owner out for good.
+    const { adopt = true, action = "poll" } = options;
 
     let remote;
     try {
@@ -143,14 +210,14 @@ export class ReactorSubgraph extends BaseSubgraph {
     const address = ctx.user?.address;
 
     if (bound === undefined) {
-      if (address !== undefined) {
+      if (adopt && address !== undefined) {
         await this.syncManager.bindRemote(channelId, address);
       }
       return;
     }
 
     if (bound !== address) {
-      throw new ForbiddenError("to poll this sync channel");
+      throw new ForbiddenError(`to ${action} this sync channel`);
     }
   }
 
@@ -179,7 +246,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           // Build the filter using the document's id
           const filter = {
-            documentId: parent.id,
+            documentIdOrSlug: parent.id,
             branch: args.filter?.branch,
             scopes: args.filter?.scopes,
             actionTypes: args.filter?.actionTypes,
@@ -214,10 +281,11 @@ export class ReactorSubgraph extends BaseSubgraph {
       document: async (_parent, args, ctx: Context) => {
         this.logger.debug("document(@args)", args);
         try {
-          const handle = await this.assertCanRead(args.identifier, ctx);
+          const idOrSlug = requireOneOf<string>(args, "idOrSlug", "identifier");
+          const handle = await this.assertCanRead(idOrSlug, ctx);
           return await resolvers.document(
             this.reactorClient,
-            { ...args, identifier: handle.fetchIdentifier },
+            { idOrSlug: handle.fetchIdentifier, view: args.view },
             this.viewSubject(ctx),
           );
         } catch (error) {
@@ -229,10 +297,20 @@ export class ReactorSubgraph extends BaseSubgraph {
       documentOutgoingRelationships: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentOutgoingRelationships(@args)", args);
         try {
-          const handle = await this.assertCanRead(args.sourceIdentifier, ctx);
+          const sourceIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceIdOrSlug",
+            "sourceIdentifier",
+          );
+          const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
           return await resolvers.documentOutgoingRelationships(
             this.reactorClient,
-            { ...args, sourceIdentifier: handle.fetchIdentifier },
+            {
+              sourceIdOrSlug: handle.fetchIdentifier,
+              relationshipType: args.relationshipType,
+              view: args.view,
+              paging: args.paging,
+            },
             this.viewSubject(ctx),
           );
         } catch (error) {
@@ -247,10 +325,20 @@ export class ReactorSubgraph extends BaseSubgraph {
       documentIncomingRelationships: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentIncomingRelationships(@args)", args);
         try {
-          const handle = await this.assertCanRead(args.targetIdentifier, ctx);
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
+          const handle = await this.assertCanRead(targetIdOrSlug, ctx);
           const result = await resolvers.documentIncomingRelationships(
             this.reactorClient,
-            { ...args, targetIdentifier: handle.fetchIdentifier },
+            {
+              targetIdOrSlug: handle.fetchIdentifier,
+              relationshipType: args.relationshipType,
+              view: args.view,
+              paging: args.paging,
+            },
             this.viewSubject(ctx),
           );
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
@@ -264,16 +352,79 @@ export class ReactorSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return {
-              ...result,
-              items: filteredItems,
-            };
+            return { ...result, items: filteredItems };
           }
 
           return result;
         } catch (error) {
           this.logger.error(
             "Error in documentIncomingRelationships: @Error",
+            error,
+          );
+          throw error;
+        }
+      },
+
+      documentOutgoingRelationshipEdges: async (
+        _parent,
+        args,
+        ctx: Context,
+      ) => {
+        this.logger.debug("documentOutgoingRelationshipEdges(@args)", args);
+        try {
+          const sourceIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceIdOrSlug",
+            "sourceIdentifier",
+          );
+          const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
+          const result = await resolvers.documentOutgoingRelationshipEdges(
+            this.reactorClient,
+            {
+              sourceIdOrSlug: handle.fetchIdentifier,
+              relationshipType: args.relationshipType,
+              view: args.view,
+              paging: args.paging,
+            },
+            this.viewSubject(ctx),
+          );
+          return await this.filterRelationshipEdges(result, "targetId", ctx);
+        } catch (error) {
+          this.logger.error(
+            "Error in documentOutgoingRelationshipEdges: @Error",
+            error,
+          );
+          throw error;
+        }
+      },
+
+      documentIncomingRelationshipEdges: async (
+        _parent,
+        args,
+        ctx: Context,
+      ) => {
+        this.logger.debug("documentIncomingRelationshipEdges(@args)", args);
+        try {
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
+          const handle = await this.assertCanRead(targetIdOrSlug, ctx);
+          const result = await resolvers.documentIncomingRelationshipEdges(
+            this.reactorClient,
+            {
+              targetIdOrSlug: handle.fetchIdentifier,
+              relationshipType: args.relationshipType,
+              view: args.view,
+              paging: args.paging,
+            },
+            this.viewSubject(ctx),
+          );
+          return await this.filterRelationshipEdges(result, "sourceId", ctx);
+        } catch (error) {
+          this.logger.error(
+            "Error in documentIncomingRelationshipEdges: @Error",
             error,
           );
           throw error;
@@ -301,10 +452,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return {
-              ...result,
-              items: filteredItems,
-            };
+            return { ...result, items: filteredItems };
           }
 
           return result;
@@ -314,10 +462,12 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      jobStatus: async (_parent, args) => {
+      jobStatus: async (_parent, args, ctx: Context) => {
         this.logger.debug("jobStatus(@args)", args);
         try {
-          return await resolvers.jobStatus(this.reactorClient, args);
+          return await resolvers.jobStatus(this.reactorClient, args, (id) =>
+            this.servesDocument(id, ctx),
+          );
         } catch (error) {
           this.logger.error("Error in jobStatus: @Error", error);
           throw error;
@@ -327,15 +477,20 @@ export class ReactorSubgraph extends BaseSubgraph {
       documentOperations: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentOperations(@args)", args);
         try {
-          const handle = await this.assertCanRead(args.filter.documentId, ctx);
+          const { documentIdOrSlug, documentId, ...filter } = args.filter;
+          const handle = await this.assertCanRead(
+            requireOneOf<string>(
+              { documentIdOrSlug, documentId },
+              "documentIdOrSlug",
+              "documentId",
+            ),
+            ctx,
+          );
           return await resolvers.documentOperations(
             this.reactorClient,
             {
-              ...args,
-              filter: {
-                ...args.filter,
-                documentId: handle.fetchIdentifier,
-              },
+              filter: { ...filter, documentIdOrSlug: handle.fetchIdentifier },
+              paging: args.paging,
             },
             this.viewSubject(ctx),
           );
@@ -355,10 +510,19 @@ export class ReactorSubgraph extends BaseSubgraph {
       evaluateActions: async (_parent, args, ctx: Context) => {
         this.logger.debug("evaluateActions(@args)", args);
         try {
-          const handle = await this.assertCanRead(args.documentIdentifier, ctx);
+          const documentIdOrSlug = requireOneOf<string>(
+            args,
+            "documentIdOrSlug",
+            "documentIdentifier",
+          );
+          const handle = await this.assertCanRead(documentIdOrSlug, ctx);
           return await resolvers.evaluateActions(
             this.reactorClient,
-            { ...args, documentIdentifier: handle.fetchIdentifier },
+            {
+              documentIdOrSlug: handle.fetchIdentifier,
+              branch: args.branch,
+              candidates: args.candidates,
+            },
             this.viewSubject(ctx),
           );
         } catch (error) {
@@ -367,9 +531,60 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      syncHolds: async (
+        _parent: unknown,
+        args: { remoteName?: string | null; documentId?: string | null },
+        ctx: Context,
+      ) => {
+        const address = ctx.user?.address;
+        if (!this.authorizationService.isSupremeAdmin(address)) {
+          let bound: string | undefined;
+          try {
+            bound = args.remoteName
+              ? this.syncManager.getByName(args.remoteName).meta.options
+                  .boundAddress
+              : undefined;
+          } catch {
+            bound = undefined;
+          }
+          if (address === undefined || bound !== address) {
+            throw new ForbiddenError("to list sync holds");
+          }
+        }
+        return resolvers.syncHolds(this.syncManager, args);
+      },
+
+      peerAgreement: (
+        _parent: unknown,
+        args: { collectionId: string },
+        ctx: Context,
+      ) => {
+        const address = ctx.user?.address;
+        if (
+          !this.authorizationService.isSupremeAdmin(address) &&
+          (address === undefined ||
+            !this.syncManager
+              .list()
+              .some(
+                (remote) =>
+                  remote.meta.collectionId.key === args.collectionId &&
+                  remote.meta.options.boundAddress === address,
+              ))
+        ) {
+          throw new ForbiddenError("to read peer agreement");
+        }
+        return resolvers.peerAgreement(this.syncManager, args);
+      },
+
       pollSyncEnvelopes: async (
         _parent: unknown,
-        args: { channelId: string; outboxAck: number; outboxLatest: number },
+        args: {
+          channelId: string;
+          outboxAck: number;
+          outboxLatest: number;
+          manifestRevision?: string | null;
+          refusals?: ReadonlyArray<resolvers.PollRefusal> | null;
+        },
         ctx: Context,
       ) => {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
@@ -403,6 +618,22 @@ export class ReactorSubgraph extends BaseSubgraph {
           // `bindRemote` will not rebind, so a stray claim would lock the
           // rightful owner out for good. touchChannel orders these the same way.
           await this.#bindOrRefuseChannel(args.channelId, ctx);
+
+          resolvers.holdPollRefusals(
+            this.syncManager,
+            args.channelId,
+            args.refusals,
+          );
+          await resolvers.recordPollMarkerRefusals(
+            this.syncManager,
+            args.channelId,
+            args.refusals,
+          );
+          await resolvers.silenceUnversionedPoll(
+            this.syncManager,
+            args.channelId,
+            args.manifestRevision,
+          );
 
           // Tier 2/3: drop operations and dead letters for documents the caller
           // cannot read individually.
@@ -438,30 +669,32 @@ export class ReactorSubgraph extends BaseSubgraph {
           // the policy alone would open whatever the host's tables still
           // protect. Held entries are withheld, not consumed, so a grant that
           // widens later serves them whole on the next poll.
-          const heldOpIds = this.syncServingGate
-            ? await resolvers.collectHeldSyncOperations(
-                [
-                  ...remote.channel.outbox.items,
-                  ...remote.channel.deadLetter.items,
-                ],
-                this.syncServingGate,
-                this.viewSubject(ctx),
-              )
-            : new Set<string>();
+          // One snapshot feeds both the gate and the poll. Re-reading the
+          // outbox after the gate's awaits would let an entry queued in the
+          // meantime through with no verdict attached to it.
+          const gate = this.syncServingGate;
+          const gated = gate
+            ? [
+                ...remote.channel.outbox.items,
+                ...remote.channel.deadLetter.items,
+              ]
+            : undefined;
+          const heldOpIds =
+            gate && gated
+              ? await resolvers.collectHeldSyncOperations(
+                  gated,
+                  gate,
+                  this.viewSubject(ctx),
+                )
+              : new Set<string>();
 
-          const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(
-              this.syncManager,
-              args,
-              forbiddenIds,
-              heldOpIds,
-            );
-          return {
-            envelopes,
-            ackOrdinal,
-            deadLetters,
-            hasMore,
-          };
+          return resolvers.pollSyncEnvelopes(
+            this.syncManager,
+            args,
+            forbiddenIds,
+            heldOpIds,
+            gated && new Set(gated.map((syncOp) => syncOp.id)),
+          );
         } catch (error) {
           this.logger.error(
             "Error in pollSyncEnvelopes(@args): @Error",
@@ -477,10 +710,15 @@ export class ReactorSubgraph extends BaseSubgraph {
       createDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("createDocument(@args)", args);
         try {
+          const parentIdOrSlug = optionalOneOf<string>(
+            args,
+            "parentIdOrSlug",
+            "parentIdentifier",
+          );
           // If creating under a parent, check write permission on parent
-          if (args.parentIdentifier) {
+          if (parentIdOrSlug) {
             const parent = await resolvers.document(this.reactorClient, {
-              identifier: args.parentIdentifier,
+              idOrSlug: parentIdOrSlug,
             });
 
             await this.assertCanWriteCanonical(
@@ -492,8 +730,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           const result = await resolvers.createDocument(
             this.reactorClient,
-            args,
+            { document: args.document, parentIdOrSlug },
             this.graphqlManager.reactorDriveClient,
+            this.viewSubject(ctx),
           );
 
           if (result?.id && isDriveContainerType(result.documentType)) {
@@ -523,10 +762,15 @@ export class ReactorSubgraph extends BaseSubgraph {
       createEmptyDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("createEmptyDocument(@args)", args);
         try {
+          const parentIdOrSlug = optionalOneOf<string>(
+            args,
+            "parentIdOrSlug",
+            "parentIdentifier",
+          );
           // If creating under a parent, check write permission on parent
-          if (args.parentIdentifier) {
+          if (parentIdOrSlug) {
             const parent = await resolvers.document(this.reactorClient, {
-              identifier: args.parentIdentifier,
+              idOrSlug: parentIdOrSlug,
             });
 
             await this.assertCanWriteCanonical(
@@ -538,8 +782,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           const result = await resolvers.createEmptyDocument(
             this.reactorClient,
-            args,
+            { documentType: args.documentType, parentIdOrSlug },
             this.graphqlManager.reactorDriveClient,
+            this.viewSubject(ctx),
           );
 
           if (result?.id && isDriveContainerType(result.documentType)) {
@@ -569,17 +814,27 @@ export class ReactorSubgraph extends BaseSubgraph {
       execute: async (_parent, args, ctx: Context) => {
         this.logger.debug("execute(@args)", args);
         try {
+          const documentIdOrSlug = requireOneOf<string>(
+            args,
+            "documentIdOrSlug",
+            "documentIdentifier",
+          );
           // canMutate combines the write + operation checks per action.
           const handle = await this.assertCanExecuteOperations(
-            args.documentIdentifier,
+            documentIdOrSlug,
             args.actions,
             ctx,
           );
 
-          return await resolvers.execute(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.execute(
+            this.reactorClient,
+            {
+              documentIdOrSlug: handle.fetchIdentifier,
+              actions: args.actions,
+              branch: args.branch,
+            },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error("Error in execute(@args): @Error", args, error);
           throw error;
@@ -589,15 +844,21 @@ export class ReactorSubgraph extends BaseSubgraph {
       executeAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("executeAsync(@args)", args);
         try {
+          const documentIdOrSlug = requireOneOf<string>(
+            args,
+            "documentIdOrSlug",
+            "documentIdentifier",
+          );
           const handle = await this.assertCanExecuteOperations(
-            args.documentIdentifier,
+            documentIdOrSlug,
             args.actions,
             ctx,
           );
 
           return await resolvers.executeAsync(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
+            documentIdOrSlug: handle.fetchIdentifier,
+            actions: args.actions,
+            branch: args.branch,
           });
         } catch (error) {
           this.logger.error(
@@ -619,10 +880,11 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx,
           );
 
-          return await resolvers.mutateDocument(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.mutateDocument(
+            this.reactorClient,
+            { ...args, documentIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in mutateDocument(@args): @Error",
@@ -659,15 +921,23 @@ export class ReactorSubgraph extends BaseSubgraph {
       renameDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("renameDocument(@args)", args);
         try {
-          const handle = await this.assertCanWrite(
-            args.documentIdentifier,
-            ctx,
+          const documentIdOrSlug = requireOneOf<string>(
+            args,
+            "documentIdOrSlug",
+            "documentIdentifier",
           );
+          const handle = await this.assertCanWrite(documentIdOrSlug, ctx);
 
-          return await resolvers.renameDocument(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.renameDocument(
+            this.reactorClient,
+            {
+              documentIdOrSlug: handle.fetchIdentifier,
+              name: args.name,
+              branch: args.branch,
+            },
+            undefined,
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in renameDocument(@args): @Error",
@@ -681,15 +951,23 @@ export class ReactorSubgraph extends BaseSubgraph {
       setPreferredEditor: async (_parent, args, ctx: Context) => {
         this.logger.debug("setPreferredEditor(@args)", args);
         try {
-          const handle = await this.assertCanWrite(
-            args.documentIdentifier,
-            ctx,
+          const documentIdOrSlug = requireOneOf<string>(
+            args,
+            "documentIdOrSlug",
+            "documentIdentifier",
           );
+          const handle = await this.assertCanWrite(documentIdOrSlug, ctx);
 
-          return await resolvers.setPreferredEditor(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.setPreferredEditor(
+            this.reactorClient,
+            {
+              documentIdOrSlug: handle.fetchIdentifier,
+              preferredEditor: args.preferredEditor,
+              branch: args.branch,
+            },
+            undefined,
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in setPreferredEditor(@args): @Error",
@@ -703,12 +981,29 @@ export class ReactorSubgraph extends BaseSubgraph {
       addRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("addRelationship(@args)", args);
         try {
-          const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
+          const sourceIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceIdOrSlug",
+            "sourceIdentifier",
+          );
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
+          const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
 
-          return await resolvers.addRelationship(this.reactorClient, {
-            ...args,
-            sourceIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.addRelationship(
+            this.reactorClient,
+            {
+              sourceIdOrSlug: handle.fetchIdentifier,
+              targetIdOrSlug,
+              relationshipType: args.relationshipType,
+              metadata: args.metadata,
+              branch: args.branch,
+            },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in addRelationship(@args): @Error",
@@ -719,15 +1014,67 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      updateRelationship: async (_parent, args, ctx: Context) => {
+        this.logger.debug("updateRelationship(@args)", args);
+        try {
+          const sourceIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceIdOrSlug",
+            "sourceIdentifier",
+          );
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
+          const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
+
+          return await resolvers.updateRelationship(
+            this.reactorClient,
+            {
+              sourceIdOrSlug: handle.fetchIdentifier,
+              targetIdOrSlug,
+              relationshipType: args.relationshipType,
+              metadata: args.metadata,
+              branch: args.branch,
+            },
+            this.viewSubject(ctx),
+          );
+        } catch (error) {
+          this.logger.error(
+            "Error in updateRelationship(@args): @Error",
+            args,
+            error,
+          );
+          throw error;
+        }
+      },
+
       removeRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("removeRelationship(@args)", args);
         try {
-          const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
+          const sourceIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceIdOrSlug",
+            "sourceIdentifier",
+          );
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
+          const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
 
-          return await resolvers.removeRelationship(this.reactorClient, {
-            ...args,
-            sourceIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.removeRelationship(
+            this.reactorClient,
+            {
+              sourceIdOrSlug: handle.fetchIdentifier,
+              targetIdOrSlug,
+              relationshipType: args.relationshipType,
+              branch: args.branch,
+            },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in removeRelationship(@args): @Error",
@@ -741,25 +1088,46 @@ export class ReactorSubgraph extends BaseSubgraph {
       moveRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("moveRelationship(@args)", args);
         try {
+          const sourceParentIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceParentIdOrSlug",
+            "sourceParentIdentifier",
+          );
+          const targetParentIdOrSlug = requireOneOf<string>(
+            args,
+            "targetParentIdOrSlug",
+            "targetParentIdentifier",
+          );
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
           const sourceHandle = await this.assertCanWrite(
-            args.sourceParentIdentifier,
+            sourceParentIdOrSlug,
             ctx,
           );
           const targetHandle = await this.assertCanWrite(
-            args.targetParentIdentifier,
+            targetParentIdOrSlug,
             ctx,
           );
 
-          return await resolvers.moveRelationship(this.reactorClient, {
-            ...args,
-            sourceParentIdentifier: sourceHandle.fetchIdentifier,
-            targetParentIdentifier: targetHandle.fetchIdentifier,
-          });
+          return await resolvers.moveRelationship(
+            this.reactorClient,
+            {
+              sourceParentIdOrSlug: sourceHandle.fetchIdentifier,
+              targetParentIdOrSlug: targetHandle.fetchIdentifier,
+              targetIdOrSlug,
+              relationshipType: args.relationshipType,
+              branch: args.branch,
+            },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
-            "Error in moveRelationship(@args): @Error @args",
-            error,
+            "Error in moveRelationship(@args): @Error",
             args,
+            error,
           );
           throw error;
         }
@@ -768,17 +1136,20 @@ export class ReactorSubgraph extends BaseSubgraph {
       deleteDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocument(@args)", args);
         try {
-          const handle = await this.assertCanWrite(args.identifier, ctx);
-          const identifier = handle.fetchIdentifier;
+          const handle = await this.assertCanWrite(
+            requireOneOf<string>(args, "idOrSlug", "identifier"),
+            ctx,
+          );
+          const idOrSlug = handle.fetchIdentifier;
 
           // Resolve identifier (id or slug) to detect drive deletes for cache
           // invalidation. Only one read; no-op for non-drive callers via the
           // catch.
-          const driveIdToInvalidate = await this.#resolveDriveId(identifier);
+          const driveIdToInvalidate = await this.#resolveDriveId(idOrSlug);
 
           const result = await resolvers.deleteDocument(
             this.reactorClient,
-            { ...args, identifier },
+            { idOrSlug, propagate: args.propagate },
             this.graphqlManager.reactorDriveClient,
           );
 
@@ -802,14 +1173,18 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           // Check write permission on each document, resolving slugs so the
           // delete targets the same canonical ids the checks authorized.
-          const identifiers: string[] = [];
-          for (const identifier of args.identifiers) {
-            const handle = await this.assertCanWrite(identifier, ctx);
-            identifiers.push(handle.fetchIdentifier);
+          const idsOrSlugs: string[] = [];
+          for (const idOrSlug of requireOneOf<readonly string[]>(
+            args,
+            "idsOrSlugs",
+            "identifiers",
+          )) {
+            const handle = await this.assertCanWrite(idOrSlug, ctx);
+            idsOrSlugs.push(handle.fetchIdentifier);
           }
           return await resolvers.deleteDocuments(this.reactorClient, {
-            ...args,
-            identifiers,
+            idsOrSlugs,
+            propagate: args.propagate,
           });
         } catch (error) {
           this.logger.error(
@@ -834,6 +1209,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               branch: string;
             };
             sinceTimestampUtcMs: string;
+            manifest?: unknown;
           };
         },
         ctx: Context,
@@ -872,6 +1248,23 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("pushSyncEnvelopes(@args)", args);
 
         try {
+          // A push claims or proves ownership exactly as a poll does. It has to
+          // be checked here rather than left to the per-operation canMutate
+          // loop below, because an envelope carrying no operations skips that
+          // loop entirely -- and a push stamps channel liveness, so without
+          // this anyone who learns a channel id could keep that channel, and
+          // the operations it is holding, alive for good.
+          const boundChannelIds = new Set<string>();
+          for (const envelope of args.envelopes) {
+            const channelId = envelope.channelMeta.id;
+            if (boundChannelIds.has(channelId)) continue;
+            boundChannelIds.add(channelId);
+            await this.#bindOrRefuseChannel(channelId, ctx, {
+              adopt: false,
+              action: "push to",
+            });
+          }
+
           // Check canMutate per distinct (documentId, action type). Nested map
           // rather than a joined key: a separator could be forged to collide
           // two distinct pairs and skip a check.
@@ -946,9 +1339,9 @@ export class ReactorSubgraph extends BaseSubgraph {
 
     Subscription: {
       documentChanges: {
-        // Drop events referencing any document the subscriber cannot read. The
-        // check lives in the withFilter predicate (fail-closed on throw) so it
-        // covers both transports, which share this resolver.
+        // Each subscriber reads the reactor's feed as its own subject, so the
+        // client withholds what the policy refuses it. The predicate adds the
+        // host's legacy check; both transports share this resolver.
         subscribe: (
           rootValue: unknown,
           args: {
@@ -968,12 +1361,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             },
             Context
           >(
-            () => {
-              ensureGlobalDocumentSubscription(this.reactorClient);
-              return getPubSub().asyncIterableIterator<DocumentChangesPayload>(
-                SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-              );
-            },
+            () => this.documentChanges.subscribe(this.viewSubject(ctx)),
             async (payload, filterArgs, filterCtx) => {
               if (!payload) return false;
 
@@ -1037,6 +1425,14 @@ export class ReactorSubgraph extends BaseSubgraph {
             async (payload, filterArgs, filterCtx) => {
               if (!payload || !filterArgs) return false;
               if (!matchesJobFilter(payload, filterArgs)) return false;
+              if (
+                !(await this.servesDocument(
+                  payload.documentId,
+                  filterCtx as Context,
+                ))
+              ) {
+                return false;
+              }
 
               if (
                 this.authorizationService.isSupremeAdmin(

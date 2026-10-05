@@ -75,7 +75,7 @@ const connectRuntimeOverrideArgs = {
     type: optional(string),
     long: "json",
     description:
-      'Inline JSON override for the runtime connect.* block, e.g. \'{"renown":{"url":"..."}}\'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision.',
+      'Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. \'{"app":{"workflowsEnabled":true},"renown":{"url":"..."}}\'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision.',
   }),
   renownUrl: option({
     type: optional(string),
@@ -104,6 +104,12 @@ const connectRuntimeOverrideArgs = {
     type: optional(cliBoolean),
     long: "external-packages",
     description: "Override connect.packages.externalEnabled.",
+  }),
+  workflows: option({
+    type: optional(cliBoolean),
+    long: "workflows",
+    description:
+      "Override connect.app.workflowsEnabled (load the @powerhousedao/workflow package: workflow + connection documents, their editors and Workflow Studio).",
   }),
   remoteDrivesEnabled: option({
     type: optional(cliBoolean),
@@ -248,11 +254,11 @@ export const connectPreviewArgs = {
 //   ph connect config --<field> <value>     → set + dual-write via per-field flag
 //   ph connect config --json '{"…":"…"}'   → bulk set + dual-write
 //
-// The 15 field flags below come from `connectRuntimeOverrideArgs`, so
+// The 16 field flags below come from `connectRuntimeOverrideArgs`, so
 // `config` and `build` share an identical surface for runtime fields. The 4
 // flags imported individually from `common.ts` (`connectBasePath` /
 // `logLevel` / `defaultDrivesUrl` / `drivesPreserveStrategy`) extend that to
-// 19-flag coverage. The positional `<key>`/`<value>` pair is also shared with
+// 20-flag coverage. The positional `<key>`/`<value>` pair is also shared with
 // `ph connect build` so both commands accept the same set-mode grammar.
 // `--dist-dir` lets Docker / non-default deployments point at a custom dist
 // location; falls back to PH_CONNECT_OUTDIR env, then to the standard

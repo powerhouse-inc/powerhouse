@@ -31,6 +31,12 @@ export type CachedDocumentMeta = {
   documentType: string;
 
   /**
+   * From the CREATE_DOCUMENT input, which fixes them for the document's life;
+   * derived, not stored, once the document is purged.
+   */
+  protocolVersions: { [protocol: string]: number } | undefined;
+
+  /**
    * The revision of the document scope when this metadata was captured.
    * Used for cache invalidation and consistency checks.
    */
@@ -63,7 +69,10 @@ export interface IDocumentMetaCache {
    * @param signal - Optional abort signal to cancel the operation
    * @returns The cached or rebuilt document metadata
    * @throws {Error} "Operation aborted" if signal is aborted
-   * @throws {Error} If document not found (no CREATE_DOCUMENT operation)
+   * @throws {DocumentNotFoundError} If the document has no operations
+   *
+   * A purged document, whose only operation is its marker, yields deleted
+   * metadata built from the marker's input.
    */
   getDocumentMeta(
     documentId: string,

@@ -24,7 +24,6 @@ This command:
       const { getPowerhouseProjectInfo } =
         await import("@powerhousedao/shared/clis");
       const projectInfo = await getPowerhouseProjectInfo();
-      console.log("\n>>> projectInfo", projectInfo);
 
       const { getConfig } = await import("@powerhousedao/config/node");
       const phConfig = getConfig(
@@ -38,7 +37,9 @@ This command:
 
       console.log("Installed Packages:\n");
       phConfig.packages.forEach((pkg) => {
-        console.log(pkg.packageName);
+        console.log(
+          pkg.version ? `${pkg.packageName}@${pkg.version}` : pkg.packageName,
+        );
       });
     } catch (_e) {
       console.log("No packages found in the project");

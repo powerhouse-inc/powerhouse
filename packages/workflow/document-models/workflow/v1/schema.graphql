@@ -1,0 +1,403 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+enum WorkflowStatus {
+  DRAFT
+  ENABLED
+  DISABLED
+  ARCHIVED
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  WAITING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  PARKED
+}
+
+enum ConcurrencyMode {
+  SINGLETON
+  QUEUE
+  PARALLEL
+}
+
+enum FailureMode {
+  PARK
+  NOTIFY
+  IGNORE
+}
+
+enum BackoffKind {
+  FIXED
+  EXPONENTIAL
+}
+
+type RetryPolicy {
+  maxAttempts: Int!
+  backoff: BackoffKind!
+  initialDelaySeconds: Int!
+  maxDelaySeconds: Int!
+  "Error classes that are retryable. Everything else fails terminally on attempt 1."
+  retryOn: [String!]!
+}
+
+enum PropertyMode {
+  "The field's own control."
+  MANUAL
+  "The author switched the field to a free {{…}} expression."
+  EXPRESSION
+}
+
+type PropertySetting {
+  prop: String!
+  mode: PropertyMode!
+  "Resolved DynamicProperties children, options stripped."
+  schema: Unknown
+}
+
+"Reference to the latest test run in the run store."
+type StepTestRecord {
+  runId: String!
+  testedAt: DateTime!
+}
+
+"Layout only. The runtime ignores it."
+type Point {
+  x: Float!
+  y: Float!
+}
+
+type TriggerBinding {
+  id: OID!
+  "Package name of the trigger's piece, e.g. '@powerhousedao/piece-core' or '@acme/piece-imap'."
+  pieceName: String!
+  "Exact semver of the piece, e.g. '1.2.0'."
+  pieceVersion: String!
+  "Trigger name within the piece, e.g. 'schedule' or 'new_message'."
+  triggerName: String!
+  "Connection document id, when the trigger's connector requires one."
+  connectionId: PHID
+  "Validated against the trigger's configSchema."
+  config: Unknown!
+  propertySettings: [PropertySetting!]
+  lastTest: StepTestRecord
+  "Timestamp of the last real edit; a lastTest before it is stale."
+  updatedAt: DateTime
+}
+
+type WorkflowStep {
+  id: OID!
+  "Author-visible label; unique within the workflow; used in expressions."
+  key: String!
+  name: String!
+  "Package name of the step's piece, e.g. '@powerhousedao/piece-core' or '@activepieces/piece-http'."
+  pieceName: String!
+  "Exact semver of the piece, e.g. '0.11.19'."
+  pieceVersion: String!
+  "Action name within the piece, e.g. 'branch' or 'send_request'."
+  actionName: String!
+  connectionId: PHID
+  config: Unknown!
+  "Per-step override of the workflow default retry policy."
+  retry: RetryPolicy
+  timeoutSeconds: Int
+  "Expression yielding a stable key; two executions with the same key are one side effect."
+  idempotencyKeyExpression: String
+  position: Point
+  propertySettings: [PropertySetting!]
+  lastTest: StepTestRecord
+  "Skipped steps are passed over at run time."
+  skip: Boolean
+  "Timestamp of the last real edit; a lastTest before it is stale."
+  updatedAt: DateTime
+}
+
+type WorkflowEdge {
+  id: OID!
+  "Source step id, or the trigger id for the entry edge."
+  from: OID!
+  to: OID!
+  "Output port of the source, one it declares: 'next' and 'error' for a piece action, 'next' for the trigger, 'true', 'false' and 'error' for a branch."
+  port: String!
+  "Optional guard expression; the edge is taken only when it evaluates truthy."
+  condition: String
+}
+
+enum VariableType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  JSON
+  "value is a secret-provider handle (the format of a connection SecretRef.ref), never the plaintext."
+  SECRET
+}
+
+type WorkflowVariable {
+  id: OID!
+  "Name used in expressions."
+  key: String!
+  "The value a run reads as variables.<key>."
+  value: Unknown
+  description: String
+  "Null means untyped; consumers infer the kind of value it holds."
+  type: VariableType
+}
+
+type WorkflowPolicy {
+  "SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently."
+  concurrency: ConcurrencyMode!
+  maxParallelRuns: Int
+  runTimeoutSeconds: Int!
+  "Bounds how long a run may stay suspended on a waitpoint."
+  maxSuspensionDays: Int!
+  defaultRetry: RetryPolicy!
+  "What happens to a run whose steps have all failed terminally."
+  onFailure: FailureMode!
+  retainRunsDays: Int!
+  journalAsDocument: Boolean!
+}
+
+"Snapshot of the draft taken by PUBLISH_WORKFLOW."
+type PublishedWorkflow {
+  "Draft version the snapshot was taken at."
+  version: Int!
+  publishedAt: DateTime!
+  trigger: TriggerBinding
+  steps: [WorkflowStep!]!
+  edges: [WorkflowEdge!]!
+  variables: [WorkflowVariable!]!
+  policy: WorkflowPolicy!
+}
+
+type WorkflowState {
+  name: String!
+  description: String
+  "Only ENABLED workflows get trigger instances."
+  status: WorkflowStatus!
+  "Bumped on every draft edit; REVERT_TO_PUBLISHED resets it to published.version. A run records the version it executed."
+  version: Int!
+  trigger: TriggerBinding
+  steps: [WorkflowStep!]!
+  edges: [WorkflowEdge!]!
+  variables: [WorkflowVariable!]!
+  policy: WorkflowPolicy!
+  "Last published snapshot; version !== published.version means unpublished changes."
+  published: PublishedWorkflow
+  "Denormalised for inspectors; written by the runtime."
+  lastRunAt: DateTime
+  lastRunStatus: RunStatus
+}
+
+# workflow
+
+input SetWorkflowNameInput {
+    name: String!
+}
+
+input SetWorkflowDescriptionInput {
+    description: String
+}
+
+input SetWorkflowStatusInput {
+    status: WorkflowStatus!
+}
+
+# trigger
+
+input SetTriggerPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
+input SetTriggerInput {
+    id: OID!
+    pieceName: String!
+    pieceVersion: String!
+    triggerName: String!
+    connectionId: PHID
+    config: Unknown!
+    propertySettings: [SetTriggerPropertySettingInput!]
+}
+
+input ClearTriggerInput {
+    _: Boolean
+}
+
+# steps
+
+input AddStepRetryPolicyInput {
+    maxAttempts: Int!
+    backoff: BackoffKind!
+    initialDelaySeconds: Int!
+    maxDelaySeconds: Int!
+    retryOn: [String!]!
+}
+
+input AddStepPositionInput {
+    x: Float!
+    y: Float!
+}
+
+input AddStepPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
+input AddStepInput {
+    id: OID!
+    key: String!
+    name: String!
+    pieceName: String!
+    pieceVersion: String!
+    actionName: String!
+    connectionId: PHID
+    config: Unknown!
+    retry: AddStepRetryPolicyInput
+    timeoutSeconds: Int
+    idempotencyKeyExpression: String
+    position: AddStepPositionInput
+    skip: Boolean
+    propertySettings: [AddStepPropertySettingInput!]
+}
+
+input UpdateStepRetryPolicyInput {
+    maxAttempts: Int!
+    backoff: BackoffKind!
+    initialDelaySeconds: Int!
+    maxDelaySeconds: Int!
+    retryOn: [String!]!
+}
+
+input UpdateStepPositionInput {
+    x: Float!
+    y: Float!
+}
+
+input UpdateStepInput {
+    id: OID!
+    key: String
+    name: String
+    pieceName: String
+    pieceVersion: String
+    actionName: String
+    connectionId: PHID
+    config: Unknown
+    retry: UpdateStepRetryPolicyInput
+    timeoutSeconds: Int
+    idempotencyKeyExpression: String
+    position: UpdateStepPositionInput
+    skip: Boolean
+}
+
+input RemoveStepInput {
+    id: OID!
+}
+
+input SetStepConfigPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
+input SetStepConfigInput {
+    id: OID!
+    config: Unknown!
+    propertySettings: [SetStepConfigPropertySettingInput!]
+}
+
+# edges
+
+input AddEdgeInput {
+    id: OID!
+    from: OID!
+    to: OID!
+    port: String!
+    condition: String
+}
+
+input RemoveEdgeInput {
+    id: OID!
+}
+
+# variables
+
+input SetVariableInput {
+    id: OID!
+    key: String!
+    value: Unknown
+    description: String
+    "Undefined leaves an existing variable's type unchanged; null clears it."
+    type: VariableType
+}
+
+input RemoveVariableInput {
+    id: OID!
+}
+
+# policy
+
+input SetPolicyRetryPolicyInput {
+    maxAttempts: Int!
+    backoff: BackoffKind!
+    initialDelaySeconds: Int!
+    maxDelaySeconds: Int!
+    retryOn: [String!]!
+}
+
+input SetPolicyInput {
+    concurrency: ConcurrencyMode
+    maxParallelRuns: Int
+    runTimeoutSeconds: Int
+    maxSuspensionDays: Int
+    defaultRetry: SetPolicyRetryPolicyInput
+    onFailure: FailureMode
+    retainRunsDays: Int
+    journalAsDocument: Boolean
+}
+
+# runtime
+
+input SetLastRunInput {
+    lastRunAt: DateTime!
+    lastRunStatus: RunStatus!
+}
+
+input SetLastTestInput {
+    "Step id or trigger id."
+    id: OID!
+    runId: String!
+    testedAt: DateTime!
+}
+
+# publishing
+
+input PublishWorkflowInput {
+    publishedAt: DateTime!
+}
+
+input RevertToPublishedInput {
+    _: Boolean
+}

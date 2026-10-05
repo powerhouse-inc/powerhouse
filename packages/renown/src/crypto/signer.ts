@@ -1,11 +1,16 @@
 import type {
   Action,
+  ActionSigningTarget,
   AppActionSigner,
   ISigner,
   Operation,
   Signature,
   SignatureVerificationHandler,
   UserActionSigner,
+} from "@powerhousedao/shared/document-model";
+import {
+  actionSignerIdentity,
+  signActionV2,
 } from "@powerhousedao/shared/document-model";
 import type { IRenownCrypto } from "./index.js";
 
@@ -46,42 +51,59 @@ export class RenownCryptoSigner implements ISigner {
 
   async signAction(
     action: Action,
+    target: ActionSigningTarget,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
     const hashField = action.context?.prevOpHash ?? "";
-    return this._signAction(action, hashField, abortSignal);
+    return this._signAction(action, target, hashField, abortSignal);
   }
 
   /**
-   * Signs an action including a predicted resulting state hash.
-   *
-   * The resulting hash is packed into the signature tuple's 4th element (index 3)
-   * using the format: `${prevStateHash}:${resultingStateHash}`
-   *
-   * This allows offline verification of documents without reducer logic:
-   * - Verifier can check that the signature is valid for the claimed resulting state
-   * - Verifier can compare claimed resulting state to actual operation.hash
-   *
-   * @param action - The action to sign
-   * @param resultingStateHash - The predicted hash of document state AFTER this action runs
-   * @param abortSignal - Optional abort signal
-   * @returns A Signature tuple with the resulting hash encoded in element [3]
+   * Signs an action including a predicted resulting state hash, packed into
+   * element [3] as `${prevStateHash}:${resultingStateHash}`.
    */
   async signActionWithResultingState(
     action: Action,
+    target: ActionSigningTarget,
     resultingStateHash: string,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
     const prevStateHash = action.context?.prevOpHash ?? "";
     const hashField = `${prevStateHash}:${resultingStateHash}`;
-    return this._signAction(action, hashField, abortSignal);
+    return this._signAction(action, target, hashField, abortSignal);
   }
 
   /**
-   * Internal signing implementation shared by signAction and signActionWithResultingState.
+   * The pre-v2 tuple, over scope, type and input only. For peers and tests
+   * that still need one; it binds neither the document nor the signer.
    */
+  async signActionLegacy(
+    action: Action,
+    abortSignal?: AbortSignal,
+  ): Promise<Signature> {
+    if (abortSignal?.aborted) {
+      throw new Error("Signing aborted");
+    }
+
+    const params: [string, string, string, string] = [
+      (new Date().getTime() / 1000).toFixed(0),
+      this.crypto.did,
+      await this.hashAction(action),
+      action.context?.prevOpHash ?? "",
+    ];
+    const signatureBytes = await this.crypto.sign(
+      this.buildSignatureMessage(params),
+    );
+
+    if (abortSignal?.aborted) {
+      throw new Error("Signing aborted");
+    }
+    return [...params, `0x${this.arrayBufferToHex(signatureBytes)}`];
+  }
+
   private async _signAction(
     action: Action,
+    target: ActionSigningTarget,
     hashField: string,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
@@ -89,28 +111,19 @@ export class RenownCryptoSigner implements ISigner {
       throw new Error("Signing aborted");
     }
 
-    const timestamp = (new Date().getTime() / 1000).toFixed(0);
-    const hash = await this.hashAction(action);
+    const signature = await signActionV2({
+      action,
+      target,
+      signer: actionSignerIdentity(this),
+      sign: (message) => this.crypto.sign(message),
+      previousStateHash: hashField,
+    });
 
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
     }
 
-    const params: [string, string, string, string] = [
-      timestamp,
-      this.crypto.did,
-      hash,
-      hashField,
-    ];
-    const message = this.buildSignatureMessage(params);
-    const signatureBytes = await this.crypto.sign(message);
-    const signatureHex = `0x${this.arrayBufferToHex(signatureBytes)}`;
-
-    if (abortSignal?.aborted) {
-      throw new Error("Signing aborted");
-    }
-
-    return [...params, signatureHex];
+    return signature;
   }
 
   private async hashAction(action: Action): Promise<string> {

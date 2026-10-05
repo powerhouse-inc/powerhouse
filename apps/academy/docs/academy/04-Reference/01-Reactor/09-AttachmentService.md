@@ -42,7 +42,7 @@ If the field is small, fixed-length, and not really binary (a short string, a nu
 
 ## Getting an `IAttachmentService` instance
 
-The recommended client today is the switchboard-backed remote service. It targets a running switchboard's REST endpoints for reservations, uploads, and downloads:
+Code that runs outside the switchboard (a browser app, a script, another service) uses the switchboard-backed remote service. It targets a running switchboard's REST endpoints for reservations, uploads, and downloads:
 
 ```typescript
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
@@ -60,12 +60,52 @@ const attachments = createRemoteAttachmentService({
 `JwtHandler` is `(url: string) => Promise<string | undefined>`, defined in `@powerhousedao/reactor`.
 
 :::tip
-The switchboard remote service is the supported client implementation right now. Other transports (S3, peer-to-peer) are designed but not yet stable — prefer `createRemoteAttachmentService` until these docs call out a replacement.
+The switchboard remote service is the supported client implementation for code outside the switchboard. Other transports (S3, peer-to-peer) are designed but not yet stable.
 :::
 
-On the server side (inside a subgraph, processor, or trigger), an `IAttachmentClient` is already wired into the host context by `@powerhousedao/reactor-api` and is available as `context.attachments`. There is no need to construct one yourself — the server builds the service and wraps it with `createAttachmentClient(...)`; see `packages/reactor-api/src/server.ts` for the wiring.
+The package root also exports the pieces for a local, embedded service: `AttachmentBuilder` (fluent), `KyselyAttachmentStore`, `KyselyReservationStore`, `runAttachmentMigrations`, `ATTACHMENT_SCHEMA`, `DEFAULT_RESERVATION_TTL_MS`, `DirectAttachmentUpload`/`DirectAttachmentUploadFactory`, and `NullAttachmentTransport`. These are on the root entrypoint only, not `/client`. Assemble one with `AttachmentBuilder` if you need an in-process store of your own.
 
-The package root also exports the pieces for a local, embedded service: `AttachmentBuilder` (fluent), `KyselyAttachmentStore`, `KyselyReservationStore`, `runAttachmentMigrations`, `ATTACHMENT_SCHEMA`, `DEFAULT_RESERVATION_TTL_MS`, `DirectAttachmentUpload`/`DirectAttachmentUploadFactory`, and `NullAttachmentTransport`. These are on the root entrypoint only, not `/client`. Assemble one with `AttachmentBuilder` if you need an in-process store; the switchboard remote service remains the supported client today.
+### Inside the switchboard
+
+Processors and subgraphs do not build a client. `@powerhousedao/reactor-api` builds one in-process attachment service per host and hands out [attachment clients](#the-attachment-client) over it.
+
+**Processors** get a client on the host module as `module.attachments`. It is trusted and makes no caller check, because a processor acts for no caller.
+
+**Subgraphs** call `attachmentsFor(ctx)` in a resolver: `subgraph.attachmentsFor(ctx)` in the generated `getResolvers(subgraph)`, `this.attachmentsFor(ctx)` in a class-field resolver. It returns an `IAttachmentClient` bound to the request's caller, `ctx.user`. Calls within one request get the same client.
+
+```typescript
+import type { AttachmentRef } from "@powerhousedao/reactor";
+import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
+
+export const getResolvers = (subgraph: BaseSubgraph) => ({
+  Query: {
+    attachmentText: async (
+      _parent: unknown,
+      args: { documentId: string; ref: AttachmentRef },
+      ctx: Context,
+    ) => {
+      const attachments = subgraph.attachmentsFor(ctx);
+      const { body } = await attachments.download({
+        documentId: args.documentId,
+        ref: args.ref,
+      });
+      return new Response(body).text();
+    },
+  },
+});
+```
+
+The client is the authorization check, so the resolver needs no `assertCanRead` before it:
+
+- **Reads** are decided as the caller, through the document named by `documentId` (an id or a slug). The caller must be able to read that document, and the document's operations must reference the ref. This is the decision the HTTP download route makes. A refusal, an unknown ref, and a missing `documentId` all throw `AttachmentNotFound`, so a refusal does not reveal that a hash exists. There is no supreme-admin bypass: an admin also needs a document that references the ref.
+- **Anonymous reads** are decided by the document, unless the host sets `REQUIRE_AUTHENTICATED_CALLER`. Then they throw `AuthenticationRequiredError`.
+- **Uploads** need an authenticated caller when `AUTH_ENABLED` or `REQUIRE_AUTHENTICATED_CALLER` is on. An anonymous upload then throws `AuthenticationRequiredError`. An upload touches no document. Writing the ref into a document is a separate action, authorized when it is dispatched.
+- Uploads are hash-first only, through `upload`, `uploadMany`, or `preprocess` plus `reserve`. `mimeType`, `fileName`, and `extension` are validated with the rules the HTTP reserve route applies; a value that fails throws `InvalidAttachmentMetadata` from `@powerhousedao/reactor-attachments`, whose `field` names it.
+- `getShareLink` fails on this client. Only the remote service can mint a download target. Use `download` or `downloadBlob`.
+
+Two more errors come from `@powerhousedao/reactor-api`. `AttachmentAccessUnavailable` means the host does not maintain the [reference index](#the-attachment-reference-index), so no read can be decided. `AttachmentAccessFailed` means the access decision itself threw. The cause is logged on the server and kept as the error's `cause`; its message does not reach the GraphQL client.
+
+`attachmentsFor` throws when the host gave the subgraph no attachments. The `GraphQLManager` passes them to every subgraph it registers. A host that constructs a subgraph itself passes `api.attachmentClientProvider`, an `IAttachmentClientProvider`, as `attachments` in its `SubgraphArgs`.
 
 ## The general flow
 
@@ -144,10 +184,10 @@ await reactor.client.execute(documentId, "main", [
 ]);
 ```
 
-Later, anywhere the bytes are needed, call `service.get(ref)` and stream the body. In the browser, drain the stream into a `Blob` and hand it to `URL.createObjectURL` for an `<img>` or `<a download>`:
+Later, anywhere the bytes are needed, call `service.get(ref, { documentId })` and stream the body. `documentId` names the document whose operations reference the attachment; a remote service is authorized through it and refuses a read without one. In the browser, drain the stream into a `Blob` and hand it to `URL.createObjectURL` for an `<img>` or `<a download>`:
 
 ```typescript
-const response = await attachments.get(ref);
+const response = await attachments.get(ref, { documentId });
 
 const chunks: Uint8Array[] = [];
 const reader = response.body.getReader();
@@ -166,7 +206,7 @@ const objectUrl = URL.createObjectURL(blob);
 
 ## The attachment client
 
-`IAttachmentClient` wraps an `IAttachmentService` with the hash-first flow. Build one with `createAttachmentClient(service)` (server code already receives one as `context.attachments`).
+`IAttachmentClient` wraps an `IAttachmentService` with the hash-first flow. Build one with `createAttachmentClient(service)`. Processors and subgraphs receive one from the host; see [Inside the switchboard](#inside-the-switchboard).
 
 `preprocess(file)` reads the whole file, computes its SHA-256, and returns everything you need to both reference and upload it:
 
@@ -284,8 +324,8 @@ setAgentImageOperation(state, action) {
 | Method              | Returns                       | Description                                                                                              |
 | ------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `reserve(options)`  | `Promise<IAttachmentUpload>`  | Reserve a new attachment slot and return an upload handle.                                               |
-| `stat(ref)`         | `Promise<AttachmentHeader>`   | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown.                 |
-| `get(ref, signal?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. Accepts an optional `AbortSignal`. |
+| `stat(ref, { documentId }?)` | `Promise<AttachmentHeader>` | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown or, on a remote service, when no `documentId` is given. |
+| `get(ref, { documentId, signal }?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. A remote service requires `documentId`. |
 
 ### `IAttachmentUpload`
 
@@ -321,14 +361,16 @@ setAgentImageOperation(state, action) {
 
 | Class                     | When it is thrown                                                                                                                                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know.                                                                                      |
+| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know, or one the caller may not read through the named document (the server answers both with the same 404). |
 | `InvalidAttachmentRef`    | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`.                                                                        |
 | `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                              |
 | `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                             |
-| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading. |
+| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading, with a header built from the caller's own reserve options. |
 | `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. Carries `readonly hash`, `readonly expiresAtUtc: string`, and `readonly metadata?: { mimeType; fileName; sizeBytes }` so the caller can show the declared size and retry timing. Intentionally not a subclass of `AttachmentNotFound` — pending is "retry later", not "unknown". |
 | `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
 | `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
+
+A subgraph's client can also throw `AttachmentAccessUnavailable`, `AttachmentAccessFailed`, and `AuthenticationRequiredError`, all from `@powerhousedao/reactor-api`. See [Inside the switchboard](#inside-the-switchboard).
 
 ### Helpers
 
@@ -361,18 +403,27 @@ The client hashes the file locally (the existing hash-first flow) and reserves t
 
 ### Document-authorized download
 
-Knowing a hash or ref is not download authority. Downloads are authorized per document through one new route:
+Knowing a hash or ref is not download authority. Every read names the document that authorizes it:
 
 ```
-GET /attachments/:hash/download-target?documentId=<id-or-slug>
+GET  /attachments/:hash/download-target?documentId=<id-or-slug>[&expiresIn=<seconds>]
+GET  /attachments/:hash?documentId=<id-or-slug>
+HEAD /attachments/:hash?documentId=<id-or-slug>
+GET  /attachments/:hash?documentId=<id>&expires=<unix-seconds>&signature=<hmac>
+HEAD /attachments/:hash?documentId=<id>&expires=<unix-seconds>&signature=<hmac>
 ```
 
-It returns a validated, non-cacheable (`Cache-Control: no-store`) download target — `switchboard` (the existing authenticated byte route) for filesystem, or a short-lived `presigned-get` for S3. The decision requires both of the following, in order, before any metadata or presigner access:
+A `documentId` read is allowed only when all of the following hold, in order, before any metadata or storage access:
 
 1. The verified caller can read the document (`IAuthorizationService.canRead` — the canonical service that already handles admins, owners, unprotected documents, READ/WRITE/ADMIN and inherited grants; attachment code does not reimplement these rules).
-2. The document has historically referenced the attachment, per the reference index below.
+2. The reactor's read gate serves the document to the caller.
+3. The document's operations reference the attachment, per the reference index below, in a scope the caller may read.
 
-The caller identity comes exclusively from verified bearer authentication; identity headers or query parameters are ignored. An unreadable document and an absent relationship both return the same `404 { "error": "Attachment not found" }`. The legacy `GET /attachments/:hash` byte route is unchanged in this phase; restricting it for ordinary clients in S3 mode is deferred hardening. There is no attachment policy package, plugin mechanism, ACL, or owner table — authorization is canonical document permission plus the indexed relationship, nothing else.
+The caller identity comes exclusively from verified bearer authentication; identity headers or query parameters are ignored, and a caller with no bearer is decided as the anonymous subject. An unreadable document, an absent relationship, a request that names no document, and an unknown hash all return the same `404 { "error": "Attachment not found" }`, so a refusal never reveals that a hash exists. That includes the uploader: a blob no operation references yet is served to no one. There is no attachment policy package, plugin mechanism, ACL, or owner table — authorization is the document's read decision plus the indexed relationship, nothing else.
+
+`download-target` returns a validated, non-cacheable (`Cache-Control: no-store`) download target: a short-lived `presigned-get` for S3, or for filesystem a `switchboard` target whose URL is the byte route with `documentId`, `expires`, and `signature` parameters. The signature is an HMAC-SHA256 over the hash, the canonical document id, and the expiry; the byte route verifies it instead of re-running the decision, so the URL works without a bearer until it expires, like a presigned URL. Both kinds last at most 300 seconds by default, whether or not `expiresIn` asks for a lifetime; `ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS` raises that ceiling, up to 7 days. A tampered, expired, or unverifiable signature answers the same 404.
+
+The filesystem signing secret comes from `PH_ATTACHMENT_URL_SIGNING_SECRET` (at least 32 characters). Set it to the same value on every Switchboard instance that serves the same attachment storage. When it is unset and `NODE_ENV` is `production`, filesystem `download-target` answers `503`; any other process signs with a random per-process secret, so its URLs stop verifying on restart and on other instances. `documentId` byte reads never need the secret. With `REQUIRE_AUTHENTICATED_CALLER` on, a signed URL still needs a bearer.
 
 ### The attachment reference index
 
@@ -382,7 +433,7 @@ The index persists in its own `attachment_reference_read_model` SQL schema with 
 
 ### Client and hook additions
 
-`IAttachmentService.get` accepts an options form carrying the authorization anchor: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets keep the authenticated byte semantics, `presigned-get` targets receive exactly the returned headers and never the JWT. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work.
+`IAttachmentService.get` takes the authorization anchor in its options: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets carry their signature and the JWT, `presigned-get` targets receive exactly the returned headers and never the JWT. `stat(ref, { documentId })` sends a `documentId` HEAD. A replica pulling bytes through `SwitchboardAttachmentTransport.fetch(hash, documentId)` names the document whose operation it applied and is authorized as its own JWT subject, which must be able to read a scope referencing the attachment. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work.
 
 Every single-item method takes an options bag as its second argument carrying `onProgress` and `throttleMs`, and reports `AttachmentProgress` — `{ stage, loaded, total, indeterminate }` — where `stage` is one of `hashing`, `reserving`, `uploading`, `requesting-download-target`, `downloading`, `done`, `error`. `loaded`/`total` are per-stage, not per-operation: a per-operation denominator would have to weight hashing against transfer, and a dedup would shrink it mid-flight. Exactly one terminal event is emitted per operation; `done` always carries `loaded === total`. Byte events are throttled to one per 100ms by default.
 
@@ -396,7 +447,7 @@ If a document model previously inlined binary content, the migration is small an
 
 - **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: AttachmentRef` field on the input and the state type.
 - **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
-- **Read path** — replace data-URI assembly with `attachments.get(ref)`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
+- **Read path** — replace data-URI assembly with `attachments.get(ref, { documentId })`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.
 
 ## Deep dive

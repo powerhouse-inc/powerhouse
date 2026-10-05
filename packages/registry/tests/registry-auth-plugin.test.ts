@@ -36,6 +36,18 @@ describe("registry auth plugin — accounts", () => {
     expect(status(again.err)).toBe(409);
   });
 
+  it("adduser with an existing user's own password logs them in", async () => {
+    const store = createMemoryAuthStore();
+    const p = createRegistryAuthPlugin(store);
+    await call((cb) => p.adduser("alice", "pw1", cb));
+    const before = await store.getUser("alice");
+
+    const login = await call((cb) => p.adduser("alice", "pw1", cb));
+    expect(login.err).toBeNull();
+    expect(login.res).toBe(true);
+    expect(await store.getUser("alice")).toEqual(before);
+  });
+
   it("authenticate with a wrong password errors (401)", async () => {
     const p = createRegistryAuthPlugin(createMemoryAuthStore());
     await call((cb) => p.adduser("alice", "pw1", cb));

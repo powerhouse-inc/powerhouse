@@ -1,5 +1,6 @@
 import {
   buildPHGlobalConfig,
+  connectConfig,
   phGlobalConfig,
 } from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
@@ -16,7 +17,6 @@ import {
   addPHEventHandlers,
   addRemoteDrive,
   DocumentCache,
-  DocumentChangeType,
   DRIVE_DOCUMENT_TYPES,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -59,8 +59,10 @@ import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
+import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
@@ -268,6 +270,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     localPackage,
     runtimeConfig.localPackage?.version,
     phGlobalConfig.studioMode,
+    connectConfig.workflowsEnabled,
   );
   // Register provider:"local" packages the vite plugin bundled in. The virtual
   // module only exists under phBundledPackagesPlugin (ph-cli), so a resolution
@@ -344,6 +347,15 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   if (enabledReactorFlags.length > 0) {
     logger.info(`Reactor feature flags: ${enabledReactorFlags.join(", ")}`);
   }
+  const createSignaturePolicy =
+    runtimeConfig.connect?.reactor?.createSignaturePolicy;
+  const unsupportedStoredDocuments =
+    runtimeConfig.connect?.reactor?.unsupportedStoredDocuments;
+  // Both hosts verify signers against the endpoints the tab's Renown uses.
+  const renownEndpoints = {
+    renownUrl: phGlobalConfig.renownUrl,
+    switchboardUrl: phGlobalConfig.switchboardUrl,
+  };
 
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
@@ -382,14 +394,23 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         return module;
       },
     };
+    // The production vendor's shared-deps table (null in dev / vendor-off
+    // builds): the worker rewrites shared imports in package sources to
+    // these absolute URLs and blob-imports the result.
+    const sharedImports = (await getSharedDeps())?.imports;
     const workerClient = createWorkerReactorClientModule({
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
+      sharedImports,
       studioMode: phGlobalConfig.studioMode,
+      workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      createSignaturePolicy,
+      unsupportedStoredDocuments,
+      renownEndpoints,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,
@@ -419,6 +440,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       renown,
       reactorFeatureFlags,
       discoveryService,
+      createSignaturePolicy,
+      renownEndpoints,
+      unsupportedStoredDocuments,
     );
   }
 
@@ -509,23 +533,13 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // Redirect when a currently-viewed document or drive is deleted remotely
   reactorClient.subscribe({}, (event) => {
-    if (event.type !== DocumentChangeType.Deleted) return;
-    const deletedId = event.context?.childId;
-    if (!deletedId) return;
-
-    const selectedDriveId = window.ph?.selectedDriveId;
-    const selectedNodeId = window.ph?.selectedNodeId;
-
-    if (selectedDriveId && deletedId === selectedDriveId) {
-      setSelectedDrive(undefined);
-      toast("The drive you were viewing has been deleted");
-      return;
-    }
-
-    if (selectedNodeId && deletedId === selectedNodeId) {
-      setSelectedNode(undefined);
-      toast("The document you were editing has been deleted");
-    }
+    closeDeletedSelection(event, {
+      selectedDriveId: window.ph?.selectedDriveId,
+      selectedNodeId: window.ph?.selectedNodeId,
+      closeDrive: () => setSelectedDrive(undefined),
+      closeNode: () => setSelectedNode(undefined),
+      notify: (message) => toast(message),
+    });
   });
 
   await refreshReactorDataClient(reactorClientModule.client);

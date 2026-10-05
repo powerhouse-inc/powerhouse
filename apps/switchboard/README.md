@@ -110,6 +110,7 @@ pnpm add -g @powerhousedao/switchboard
 | `REDIS_TLS_URL`             | Redis TLS connection URL           | -                     |
 | `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
 | `FEATURE_REACTORV2_ENABLED` | Enable Reactor v2 subgraph feature | `false`               |
+| `MCP_ENABLED`               | `false` keeps `/mcp` unmounted     | `true`                |
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 
@@ -185,6 +186,40 @@ unmigrated schema — boot fails immediately with the worker's own error and
 exits non-zero instead of waiting out the init timeout.
 
 Programmatically: `startSwitchboard({ projectionWorker: { enabled, dbPoolSize } })`.
+
+### Creation Signature Policy
+
+| Variable                  | Description                                                  | Default       |
+| ------------------------- | ------------------------------------------------------------ | ------------- |
+| `CREATE_SIGNATURE_POLICY` | What new documents are created as: `legacy` or `v2-required` | `v2-required` |
+
+A v2-required document accepts only v2 action signatures and takes a
+content-addressed id. Set `legacy` while any reactor that syncs with this one
+predates v2-required documents. It only decides what new documents are born
+as; existing documents keep their policy, and it does not change what the
+switchboard accepts. Without a Renown identity the switchboard has no signer,
+so it creates legacy documents and logs a warning. A default drive configured
+with a fixed `id` is always created legacy.
+
+### Stored Documents This Build Does Not Run
+
+| Variable                               | Description                                                                            | Default  |
+| -------------------------------------- | -------------------------------------------------------------------------------------- | -------- |
+| `REACTOR_UNSUPPORTED_STORED_DOCUMENTS` | Stored documents at protocol versions this build does not run: `refuse` or `read-only` | `refuse` |
+
+Before it starts, the reactor reads the protocol versions its stored documents
+were created with. If this build does not run one of them, for example after a
+rollback, switchboard logs this and exits with code 1:
+
+```
+Refusing to start: 12 stored document(s) require base-reducer 3, which this switchboard does not run. Either start a switchboard build that runs base-reducer 3, or set REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only to start with those documents read-only.
+```
+
+With `read-only` it starts and logs a warning. Every write into those documents
+and every operation received for them is refused; the rest of the store works
+as usual. The check runs once on the host, so it covers the executor worker
+pool too. Any other value fails the boot. Programmatically:
+`startSwitchboard({ unsupportedStoredDocuments: "read-only" })`.
 
 ### Reactor Enforcement Flags
 

@@ -13,11 +13,7 @@ import type {
   InProcessReactorClientModule,
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
-import {
-  ModelReadGate,
-  readDecisionModel,
-  SyncScopeGate,
-} from "@powerhousedao/reactor";
+import type { SyncScopeGate } from "@powerhousedao/reactor";
 import {
   AttachmentBuilder,
   AttachmentReferenceIndexBuilder,
@@ -56,6 +52,10 @@ import {
   type AttachmentReferenceProjectionCapability,
   type IAttachmentAccessService,
 } from "./services/attachment-access.service.js";
+import {
+  AttachmentClientProvider,
+  type IAttachmentClientProvider,
+} from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import {
@@ -65,6 +65,7 @@ import {
 import {
   createGatewayAdapter,
   createHttpAdapter,
+  type GatewayAdapterType,
 } from "./graphql/gateway/factory.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -72,6 +73,13 @@ import {
 } from "./graphql/gateway/require-auth-middleware.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
+import {
+  CORE_PACKAGE_NAME,
+  HttpRouteService,
+  RelationalWebhookStore,
+  WEBHOOK_SEGMENT,
+  WebhookService,
+} from "./http/index.js";
 import {
   decodeExplorerUrlState,
   renderGraphqlPlayground,
@@ -100,6 +108,7 @@ import {
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
+import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
   assertCredentialVerifierForSource,
   resolveRenownConfig,
@@ -146,6 +155,19 @@ type Options = {
      *  request. Off by default; `REQUIRE_AUTHENTICATED_CALLER` overrides.
      *  Requires identity resolution to be on — refused at boot without it. */
     requireAuthenticatedCaller?: boolean;
+    /** Mounted paths that stay reachable anonymously while
+     *  `requireAuthenticatedCaller` is on, for a flow that runs before
+     *  sign-in. Matched against the request's pathname in full, never as a
+     *  prefix. `REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS` overrides, as a
+     *  comma-separated list. Each entry is a hole in the floor: only ever name
+     *  a path serving operations that are safe without a caller. */
+    requireAuthenticatedCallerExemptPaths?: string[];
+    /** Decide an attachment read with the referencing document's own policy
+     *  instead of the host permission tables. Off by default;
+     *  `ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY` overrides. Requires auth
+     *  enforcement, which is what supplies the model — refused at boot
+     *  without it. */
+    attachmentReadsFollowDocumentPolicy?: boolean;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving `auth.renown` and the env again (which would warn twice). */
@@ -244,7 +266,40 @@ export function assertSkipCredentialVerificationAllowed(
 export function assertRequireAuthenticatedCallerAllowed(
   requireAuthenticatedCaller: boolean,
   resolvesCallerIdentity: boolean,
+  exemptPaths: readonly string[] = [],
 ): void {
+  /**
+   * An exemption is only ever a hole in this floor, so configuring one while
+   * the floor is off is not a harmless no-op: it reads, to anyone auditing the
+   * configuration, as a surface that was deliberately opened — and therefore
+   * as a floor that exists. Refuse rather than let the two drift.
+   */
+  if (!requireAuthenticatedCaller && exemptPaths.length > 0) {
+    throw new Error(
+      "REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS is set but refused: " +
+        "REQUIRE_AUTHENTICATED_CALLER is off, so nothing is being exempted " +
+        "from anything and the configuration claims a protection the server " +
+        "is not applying. Enable the floor, or drop the exemptions.",
+    );
+  }
+
+  /**
+   * A path that cannot match anything is worse than no path: the operator
+   * believes the flow is reachable, and finds out when the first user cannot
+   * claim an invitation. `URL.pathname` is always absolute, so an entry that
+   * does not start with `/` never matches, whatever the router does.
+   */
+  const relative = exemptPaths.filter((path) => !path.trim().startsWith("/"));
+  if (relative.length > 0) {
+    throw new Error(
+      `REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS contains ${relative
+        .map((path) => `"${path}"`)
+        .join(", ")}, which cannot match: an exempt path is compared against ` +
+        "the request's pathname and must start with '/' (for example " +
+        "'/graphql/public').",
+    );
+  }
+
   if (!requireAuthenticatedCaller || resolvesCallerIdentity) {
     return;
   }
@@ -254,6 +309,29 @@ export function assertRequireAuthenticatedCallerAllowed(
       "RESOLVE_CALLER_IDENTITY the server never reads a bearer, so it would " +
       "reject every caller, including authenticated ones. Enable identity " +
       "resolution first (RESOLVE_CALLER_IDENTITY=true or AUTH_ENABLED=true).",
+  );
+}
+
+/**
+ * Deciding an attachment read by the document's policy needs a policy model to
+ * decide with, and that is what auth enforcement supplies. Without one there is
+ * nothing to consult, so the setting would silently leave the permission tables
+ * in charge — configuration that describes a protection the server is not
+ * applying, which is worse than no configuration at all. Refuse instead.
+ */
+export function assertAttachmentPolicyReadsAllowed(
+  attachmentReadsFollowDocumentPolicy: boolean,
+  hasDecisionModel: boolean,
+): void {
+  if (!attachmentReadsFollowDocumentPolicy || hasDecisionModel) {
+    return;
+  }
+  throw new Error(
+    "ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY is set but refused: deciding an " +
+      "attachment read by the referencing document's policy requires a policy " +
+      "model to evaluate, and this composition has none, so the host " +
+      "permission tables would keep deciding while the configuration says " +
+      "otherwise. Enable auth enforcement first (REACTOR_AUTH_ENFORCEMENT=true).",
   );
 }
 
@@ -336,98 +414,106 @@ function makeDbClosers(
 }
 
 /**
- * The gate sync serving evaluates a document's own policy through, or undefined
- * when there is none to evaluate.
- *
- * It is built here rather than taken off the reactor client because it is not
- * the same gate reads use: it carries the host's closes-by-default setting,
- * which withholds the domain scopes of a document nobody has policied yet. That
- * answer belongs to serving alone -- replay must keep reading an uninitialized
- * document in full -- so the two gates are deliberately separate objects over
- * the same model.
- *
- * Undefined below `authEnforcement`, where the registered model ignores the auth
- * scope: gating through it would serve every domain scope of a policied document
- * to anyone, which is worse than not gating at all.
+ * Resolves the gateway adapter type from the `GATEWAY_ADAPTER` env var.
+ * Defaults to "apollo" (the federation gateway, production behavior).
+ * "stitching" selects the in-process graphql-tools merge gateway (#1565
+ * prototype); "mercurius" the Fastify federation gateway.
  */
-function buildSyncServingGate(
-  reactorModule: InProcessReactorModule | undefined,
-  authorizationConfig: AuthorizationConfig,
-  logger: ILogger,
-): SyncScopeGate | undefined {
-  if (!reactorModule) {
-    return undefined;
+function resolveGatewayAdapterType(logger: ILogger): GatewayAdapterType {
+  const configured = process.env.GATEWAY_ADAPTER;
+  if (configured === undefined) {
+    return "apollo";
   }
-
-  const model = readDecisionModel(
-    reactorModule.featureFlags,
-    reactorModule.documentModelRegistry,
-  );
-  if (!model) {
-    return undefined;
+  if (
+    configured === "apollo" ||
+    configured === "mercurius" ||
+    configured === "stitching"
+  ) {
+    return configured;
   }
-
-  return new SyncScopeGate(
-    new ModelReadGate(
-      model,
-      reactorModule.documentView,
-      reactorModule.featureFlags.authGroups,
-      reactorModule.operationIndex,
-      logger,
-      { withholdUninitialized: authorizationConfig.defaultProtection },
-    ),
-    reactorModule.documentView,
-    logger,
+  logger.warn(
+    `Unknown GATEWAY_ADAPTER="${configured}"; falling back to "apollo"`,
   );
+  return "apollo";
 }
+
+type SetupGraphQLManagerOptions = {
+  httpAdapter: IHttpAdapter;
+  authFetchMiddleware: AuthFetchMiddleware | undefined;
+  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
+  httpServer: http.Server;
+  wsServer: WebSocketServer;
+  client: IReactorClient;
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  syncManager: ISyncManager;
+  subgraphs: {
+    extended: Map<string, SubgraphClass[]>;
+    core: SubgraphClass[];
+  };
+  logger: ILogger;
+  authorizationService: IAuthorizationService;
+  authService?: AuthService;
+  documentPermissionService?: DocumentPermissionService;
+  enableDocumentModelSubgraphs?: boolean;
+  port?: number;
+  reactorDriveClient?: IDriveClient;
+  syncServingGate?: SyncScopeGate;
+  httpRoutes?: HttpRouteService;
+  attachments?: IAttachmentClientProvider;
+};
 
 /**
  * Sets up the subgraph manager and registers subgraphs
  */
-async function setupGraphQLManager(
-  httpAdapter: IHttpAdapter,
-  authFetchMiddleware: AuthFetchMiddleware | undefined,
-  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
-  httpServer: http.Server,
-  wsServer: WebSocketServer,
-  client: IReactorClient,
-  relationalDb: IRelationalDb,
-  analyticsStore: IAnalyticsStore,
-  syncManager: ISyncManager,
-  subgraphs: {
-    extended: Map<string, SubgraphClass[]>;
-    core: SubgraphClass[];
-  },
-  logger: ILogger,
-  authorizationService: IAuthorizationService,
-  authService?: AuthService,
-  documentPermissionService?: DocumentPermissionService,
-  enableDocumentModelSubgraphs?: boolean,
-  port?: number,
-  reactorDriveClient?: IDriveClient,
-  syncServingGate?: SyncScopeGate,
-): Promise<GraphQLManager> {
-  const graphqlManager = new GraphQLManager(
-    config.basePath,
+async function setupGraphQLManager({
+  httpAdapter,
+  authFetchMiddleware,
+  requireAuthFetchMiddleware,
+  httpServer,
+  wsServer,
+  client,
+  relationalDb,
+  analyticsStore,
+  syncManager,
+  subgraphs,
+  logger,
+  authorizationService,
+  authService,
+  documentPermissionService,
+  enableDocumentModelSubgraphs,
+  port,
+  reactorDriveClient,
+  syncServingGate,
+  httpRoutes,
+  attachments,
+}: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
+  const graphqlManager = new GraphQLManager({
+    path: config.basePath,
     httpServer,
     wsServer,
-    client,
+    reactorClient: client,
     relationalDb,
     analyticsStore,
     syncManager,
     logger,
     httpAdapter,
-    await createGatewayAdapter("apollo", logger),
+    gatewayAdapter: await createGatewayAdapter(
+      resolveGatewayAdapterType(logger),
+      logger,
+    ),
     authService,
     documentPermissionService,
-    {
+    featureFlags: {
       enableDocumentModelSubgraphs,
     },
     port,
     authorizationService,
     reactorDriveClient,
     syncServingGate,
-  );
+    httpRoutes,
+    attachments,
+  });
 
   await graphqlManager.init(
     subgraphs.core,
@@ -458,7 +544,7 @@ function setupEventListeners(
   pkgManager: PackageManager,
   graphqlManager: GraphQLManager,
   reactorProcessorManager: IReactorProcessorManager,
-  module: IProcessorHostModule,
+  moduleFor: (packageName: string) => IProcessorHostModule,
   documentModelRegistry?: IDocumentModelRegistry,
 ): void {
   pkgManager.onDocumentModelsChange((packagedModels) => {
@@ -564,7 +650,8 @@ function setupEventListeners(
       for (const [packageName, fns] of processors) {
         await reactorProcessorManager.unregisterFactory(packageName);
 
-        const factories = fns.map((fn) => fn(module));
+        const factories = fns.map((fn) => fn(moduleFor(packageName)));
+
         const validBuilders = factories.filter(
           (factory): factory is ProcessorFactory =>
             typeof factory === "function",
@@ -637,6 +724,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
+  authEnabled: boolean;
   authService: AuthService | undefined;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
@@ -647,6 +735,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
   readiness: ReadinessGate;
+  httpRoutes: HttpRouteService;
+  attachmentReadsFollowDocumentPolicy: boolean;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
@@ -657,6 +747,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let authEnabled = false;
   let configuredResolveIdentity: boolean | undefined;
   let configuredRequireAuth: boolean | undefined;
+  let configuredExemptPaths: string[] | undefined;
+  let configuredAttachmentPolicyReads: boolean | undefined;
   let configuredRenown: RenownConfig | undefined;
   if (options.configFile) {
     const config = getConfig(options.configFile);
@@ -668,11 +760,16 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled = options.auth.enabled;
     configuredResolveIdentity = options.auth.resolveIdentity;
     configuredRequireAuth = options.auth.requireAuthenticatedCaller;
+    configuredExemptPaths = options.auth.requireAuthenticatedCallerExemptPaths;
+    configuredAttachmentPolicyReads =
+      options.auth.attachmentReadsFollowDocumentPolicy;
   }
   const {
     AUTH_ENABLED,
     RESOLVE_CALLER_IDENTITY,
     REQUIRE_AUTHENTICATED_CALLER,
+    REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS,
+    ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY,
     ADMINS,
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
@@ -717,6 +814,42 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   if (REQUIRE_AUTHENTICATED_CALLER !== undefined) {
     requireAuthenticatedCaller = REQUIRE_AUTHENTICATED_CALLER === "true";
   }
+
+  /**
+   * The paths the floor above does not apply to. Comma-separated, like
+   * `ADMINS`, because a deployment configures this the same way it configures
+   * everything else: one variable, one line, however many values it has.
+   *
+   * Empty entries are dropped rather than refused, so a trailing comma or a
+   * value split across lines in a manifest is not a boot failure; a value that
+   * cannot ever match is refused, in
+   * {@link assertRequireAuthenticatedCallerAllowed}.
+   */
+  let requireAuthenticatedCallerExemptPaths = configuredExemptPaths ?? [];
+  if (REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS !== undefined) {
+    requireAuthenticatedCallerExemptPaths =
+      REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS.split(",")
+        .map((path) => path.trim())
+        .filter((path) => path.length > 0);
+  }
+
+  /**
+   * Whether an attachment read is decided by the referencing document's own
+   * policy rather than by the host's permission tables.
+   *
+   * Off by default, and a deployment's choice rather than something derived
+   * from the flags around it. Which model governs those bytes is configuration
+   * in the same sense the storage backend behind them is: a host that has said
+   * nothing keeps exactly the behaviour it has, and one that wants the change
+   * asks for it and can take it back without disturbing anything else.
+   */
+  let attachmentReadsFollowDocumentPolicy =
+    configuredAttachmentPolicyReads ?? false;
+  if (ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY !== undefined) {
+    attachmentReadsFollowDocumentPolicy =
+      ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY === "true";
+  }
+
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
   }
@@ -762,6 +895,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   assertRequireAuthenticatedCallerAllowed(
     requireAuthenticatedCaller,
     resolveCallerIdentity,
+    requireAuthenticatedCallerExemptPaths,
   );
   if (authEnabled && skipCredentialVerification) {
     logger.warn(
@@ -851,9 +985,32 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
     if (requireAuthenticatedCaller) {
-      requireAuthFetchMiddleware = createRequireAuthFetchMiddleware();
+      requireAuthFetchMiddleware = createRequireAuthFetchMiddleware(
+        requireAuthenticatedCallerExemptPaths,
+      );
+      // The exempt paths are named in the log, not merely counted: the one
+      // question an operator asks about this floor is what is still open, and
+      // the answer should be in the boot output rather than in a manifest they
+      // have to go and find.
       logger.info(
-        "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
+        requireAuthenticatedCallerExemptPaths.length > 0
+          ? `Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph, except on ${requireAuthenticatedCallerExemptPaths.join(", ")}`
+          : "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
+      );
+    } else {
+      // Auth is on in some form, so say plainly what it is not doing. The
+      // policy gates the reactor's own document reads; it does not gate a
+      // package-provided subgraph, which authorizes nothing on its own. This
+      // has always been true over HTTP, and WebSocket admission now matches it
+      // rather than refusing tokenless connections on AUTH_ENABLED alone --
+      // so a subscription reaches the same surface a query already did.
+      logger.warn(
+        "Anonymous callers are admitted on every transport, including WebSocket " +
+          "subscriptions: REQUIRE_AUTHENTICATED_CALLER is not set. The " +
+          "authorization policy gates the reactor's own documents, but a " +
+          "package-provided subgraph authorizes nothing on its own. Set " +
+          "REQUIRE_AUTHENTICATED_CALLER=true to refuse anonymous callers before " +
+          "any subgraph sees them.",
       );
     }
   }
@@ -942,11 +1099,45 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     packages: options.packages ?? [],
   });
 
+  // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
+  // Created here rather than in the GraphQL manager because processors are
+  // initialised before it exists.
+  //
+  // Webhook tokens live in the reactor's own database rather than per host, so
+  // a URL a provider has registered keeps working across a restart and any
+  // replica can serve it.
+  const publicUrl = resolvePublicOrigin(port);
+  const webhooks = new WebhookService({
+    store: new RelationalWebhookStore(relationalDb),
+    basePath: config.basePath,
+    publicUrl,
+  });
+  const httpRoutes = new HttpRouteService({
+    httpAdapter,
+    basePath: config.basePath,
+    authService,
+    webhooks,
+    publicUrl,
+    // The reactor sits behind switchboard-lb in every deployed topology, so the
+    // forwarded headers naming the public origin come from the balancer, not a caller.
+    trustProxy: true,
+  });
+  // The endpoint family serves from a host scope rather than the adapter, so
+  // one dispatch path covers package routes and webhooks alike.
+  webhooks.attach(
+    httpRoutes.hostScope(
+      CORE_PACKAGE_NAME,
+      path.posix.join("/", config.basePath ?? "/", WEBHOOK_SEGMENT),
+    ),
+  );
+
   return {
     port,
     httpAdapter,
+    httpRoutes,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    authEnabled,
     authService,
     relationalDb,
     analyticsStore,
@@ -957,6 +1148,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     packages,
     dbClosers,
     readiness,
+    attachmentReadsFollowDocumentPolicy,
   };
 }
 
@@ -970,6 +1162,7 @@ async function _setupAPI(
   httpAdapter: IHttpAdapter,
   authFetchMiddleware: AuthFetchMiddleware | undefined,
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
+  authEnabled: boolean,
   authService: AuthService | undefined,
   port: number,
   packages: PackageManager,
@@ -989,8 +1182,10 @@ async function _setupAPI(
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
+  httpRoutes?: HttpRouteService,
+  attachmentReadsFollowDocumentPolicy = false,
 ): Promise<API> {
-  const hostModule: IProcessorHostModule = {
+  const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
       client: reactorClient,
       readModels,
@@ -1001,6 +1196,13 @@ async function _setupAPI(
     }),
     attachments: createAttachmentClient(attachments.service),
   };
+
+  // Per package, so a processor's HTTP scope is bound to its own namespace and
+  // cannot be swapped for another package's. Everything else is shared.
+  const moduleFor = (packageName: string): IProcessorHostModule => ({
+    ...hostModuleBase,
+    http: httpRoutes?.scopeForOrNull(packageName),
+  });
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
@@ -1019,10 +1221,11 @@ async function _setupAPI(
     const factories = await Promise.allSettled(
       fns.map(async (fn) => {
         try {
-          return fn(hostModule);
+          return fn(moduleFor(packageName));
         } catch (e) {
           logger.error(
-            `Error initializing processor factory for package ${packageName}:`,
+            "Error initializing processor factory for package @package: @error",
+            packageName,
             e,
           );
 
@@ -1088,16 +1291,44 @@ async function _setupAPI(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
   );
 
-  // Attachment reads are authorized by document permission plus the projected
-  // document/ref relationship; the facade owns that composition so routes
-  // never consult the reference store or authorization service directly.
+  // Attachment reads are authorized by the document read, the reactor's read
+  // gate, and the projected document/ref relationship; the facade owns that
+  // composition so routes never consult any of them directly.
+  //
+  // The document-read gate is the one sync serving already decides with, rather
+  // than a second one built here: two gates over one document model would be
+  // two policies that can disagree, and the question both are asking is the
+  // same one — may this subject read this document's state.
+  //
+  // Handed over only when the host asks for it. Which model decides an
+  // attachment read is a deployment's choice, the same way the storage backend
+  // behind those bytes is, and a host that has not asked keeps the behaviour it
+  // has — whatever else it has turned on.
+  assertAttachmentPolicyReadsAllowed(
+    attachmentReadsFollowDocumentPolicy,
+    syncServingGate !== undefined,
+  );
+  // The floor the attachment routes' requireAuth applies, so an in-process
+  // caller is refused exactly where the HTTP route would refuse it.
+  const floor = requireAuthFetchMiddleware !== undefined;
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
       createCanonicalDocumentIdResolver(reactorClient),
       authorizationService,
       attachmentReferenceIndex.store,
       attachmentReferenceProjection,
+      reactorClient,
+      attachmentReadsFollowDocumentPolicy ? syncServingGate : undefined,
+      {
+        refuseAnonymousWrites: authEnabled || floor,
+        refuseAnonymousReads: floor,
+      },
     );
+  const attachmentClientProvider = new AttachmentClientProvider(
+    attachments.service,
+    attachmentAccess,
+    logger,
+  );
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
@@ -1109,36 +1340,38 @@ async function _setupAPI(
     logger.info("Auth subgraph registered (document permissions enabled)");
   }
 
-  const graphqlManager = await setupGraphQLManager(
+  const graphqlManager = await setupGraphQLManager({
     httpAdapter,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
     httpServer,
     wsServer,
-    reactorClient,
+    client: reactorClient,
     relationalDb,
     analyticsStore,
     syncManager,
-    {
+    subgraphs: {
       extended: subgraphs,
       core: coreSubgraphs,
     },
-    logger.child(["graphql-manager"]),
+    logger: logger.child(["graphql-manager"]),
     authorizationService,
     authService,
     documentPermissionService,
-    options.enableDocumentModelSubgraphs,
+    enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
     port,
     reactorDriveClient,
     syncServingGate,
-  );
+    httpRoutes,
+    attachments: attachmentClientProvider,
+  });
 
   // Set up event listeners
   setupEventListeners(
     packages,
     graphqlManager,
     reactorProcessorManager,
-    hostModule,
+    moduleFor,
     documentModelRegistry,
   );
 
@@ -1159,6 +1392,7 @@ async function _setupAPI(
 
   const dispose = buildApiDispose({
     graphqlManager,
+    httpRoutes,
     httpServer,
     wsServer,
     dbClosers,
@@ -1167,12 +1401,25 @@ async function _setupAPI(
 
   return {
     httpAdapter,
+    httpRoutes: httpRoutes ?? new HttpRouteService({ httpAdapter }),
     graphqlManager,
     packages,
     attachments,
     attachmentReferenceIndex,
     attachmentAccess,
+    attachmentClientProvider,
     authService,
+    // Read from the composed middleware rather than from a second pass over
+    // the environment, and the same way `#makeWsContextFactory` reads it: the
+    // middleware exists exactly when the floor is on, so one value cannot
+    // disagree with another about whether this deployment serves anonymous
+    // callers.
+    requireAuthenticatedCaller: floor,
+    // Handed back rather than kept private: a component the host composes
+    // after boot (the workflow runtime) authorizes with this service and
+    // stores in this database.
+    authorizationService,
+    relationalDb,
     dispose,
   };
 }
@@ -1186,16 +1433,34 @@ async function _setupAPI(
  */
 function buildApiDispose(args: {
   graphqlManager: GraphQLManager;
+  httpRoutes?: HttpRouteService;
   httpServer: http.Server;
   wsServer: WebSocketServer;
   dbClosers: Array<() => Promise<void>>;
   logger: ILogger;
 }): () => Promise<void> {
-  const { graphqlManager, httpServer, wsServer, dbClosers, logger } = args;
+  const {
+    graphqlManager,
+    httpRoutes,
+    httpServer,
+    wsServer,
+    dbClosers,
+    logger,
+  } = args;
   let disposed = false;
   return async () => {
     if (disposed) return;
     disposed = true;
+
+    // Before the server closes: every package scope, and the host scopes with
+    // them. Nothing downstream depends on the routes still being mounted, and
+    // a handler answering during teardown is a handler holding a disposed
+    // dependency.
+    try {
+      httpRoutes?.disposeAll();
+    } catch (error) {
+      logger.error("API dispose: releasing HTTP routes failed: @error", error);
+    }
 
     try {
       await graphqlManager.shutdown();
@@ -1280,13 +1545,17 @@ export async function initializeAndStartAPI(
     readiness: ReadinessGate;
     attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
     packageManager: PackageManager;
+    /** Set under DOCUMENT_PERMISSIONS; the privacy add-on erases through it. */
+    documentPermissionService: DocumentPermissionService | undefined;
   }
 > {
   const {
     port,
     httpAdapter,
+    httpRoutes,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    authEnabled,
     authService,
     relationalDb,
     analyticsStore,
@@ -1297,6 +1566,7 @@ export async function initializeAndStartAPI(
     packages,
     dbClosers,
     readiness,
+    attachmentReadsFollowDocumentPolicy,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, upgradeManifests, processors, subgraphs } =
@@ -1352,6 +1622,7 @@ export async function initializeAndStartAPI(
     httpAdapter,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    authEnabled,
     authService,
     port,
     packages,
@@ -1375,6 +1646,8 @@ export async function initializeAndStartAPI(
       authorizationConfig,
       options.logger ?? defaultLogger,
     ),
+    httpRoutes,
+    attachmentReadsFollowDocumentPolicy,
   );
 
   return {
@@ -1385,5 +1658,28 @@ export async function initializeAndStartAPI(
     readiness,
     attachmentReferenceProjection,
     packageManager: packages,
+    documentPermissionService,
   };
+}
+
+/**
+ * The origin to advertise in a webhook URL.
+ *
+ * A provider is a third party: it has to be given something it can resolve, so
+ * a relative path is not an option. The platform variables come first, then a
+ * bare deploy domain, and finally the local origin — which is right for `ph
+ * dev` behind a tunnel and, at worst, obviously wrong rather than silently
+ * unusable.
+ */
+function resolvePublicOrigin(port: number): string {
+  const explicit = process.env.PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
+  if (explicit) return withScheme(explicit);
+  const domain = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME;
+  if (domain) return withScheme(domain);
+  return `http://localhost:${port}`;
+}
+
+function withScheme(origin: string): string {
+  const trimmed = origin.replace(/\/+$/, "");
+  return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
 }

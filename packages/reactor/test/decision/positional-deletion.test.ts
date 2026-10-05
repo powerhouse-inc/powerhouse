@@ -2,6 +2,7 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import {
   addModule,
+  deriveOperationId,
   garbageCollect,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
@@ -497,6 +498,52 @@ describe("positional deletion", () => {
       { type: "UPGRADE_DOCUMENT", denied: false },
       { type: "DELETE_DOCUMENT", denied: false },
       { type: "DELETE_DOCUMENT", denied: true },
+    ]);
+  });
+
+  it("keeps retracted what the first re-evaluated operation retracted", async () => {
+    target = await build(true);
+    const document = createDocModelDocument({ id: "reach-retraction-doc" });
+    await settle(target, (await target.create(document)).id);
+    const docId = document.header.id;
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.500Z"));
+    const local = await target.execute(docId, "main", [
+      addModule({ id: "local", name: "local" }),
+    ]);
+    await settle(target, local.id);
+
+    // Sorts before "local", so it heads a reshuffle that retracts index 0.
+    const action = {
+      ...addModule({ id: "peer", name: "peer" }),
+      timestampUtcMs: "2026-01-01T00:00:00.300Z",
+    };
+    const peer = await target.load(docId, "main", [
+      {
+        id: deriveOperationId(docId, "global", "main", action.id),
+        index: 0,
+        skip: 0,
+        hash: "",
+        timestampUtcMs: action.timestampUtcMs,
+        action,
+      },
+    ]);
+    await settle(target, peer.id);
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.100Z"));
+    await settle(target, (await target.deleteDocument(docId)).id);
+
+    const stored = (
+      await target.getOperations(docId, { branch: "main", scopes: ["global"] })
+    ).global.results;
+    expect(
+      garbageCollect(sortOperations([...stored])).map((op) => ({
+        id: (op.action.input as { id?: string }).id,
+        denied: op.deniedReason !== undefined,
+      })),
+    ).toEqual([
+      { id: "peer", denied: true },
+      { id: "local", denied: true },
     ]);
   });
 

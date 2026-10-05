@@ -256,12 +256,9 @@ describe("auth-scope reducer", () => {
     expect(ops[ops.length - 1].error).toContain("Grant not found");
   });
 
-  it("rejects UNDO, REDO and PRUNE on the auth scope", () => {
+  it("rejects UNDO and REDO on the auth scope", () => {
     expect(() =>
       countReducer(initialDocument, rawAction("UNDO", "auth")),
-    ).toThrow(AuthActionNotAllowedError);
-    expect(() =>
-      countReducer(initialDocument, rawAction("PRUNE", "auth")),
     ).toThrow(AuthActionNotAllowedError);
     expect(() =>
       countReducer(initialDocument, rawAction("REDO", "auth")),

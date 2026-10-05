@@ -212,7 +212,10 @@ registerRoute(
   new StaleWhileRevalidate({
     cacheName: "ph-package-cdn-entry",
     plugins: [
-      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 60 * 60 * 24 * 30,
+      }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),
     ],
   }),
@@ -235,7 +238,10 @@ registerRoute(
 // boot until the browser's own fetch timeout.
 registerRoute(
   ({ url }) => url.pathname.endsWith("/powerhouse.config.json"),
-  new NetworkFirst({ cacheName: "ph-runtime-config", networkTimeoutSeconds: 5 }),
+  new NetworkFirst({
+    cacheName: "ph-runtime-config",
+    networkTimeoutSeconds: 5,
+  }),
 );
 
 // ── extra runtime caching ────────────────────────────────────────────────────

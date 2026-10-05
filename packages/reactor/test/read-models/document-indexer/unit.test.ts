@@ -67,6 +67,11 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
       getGroupReferencers: vi.fn().mockResolvedValue([]),
+      getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
+      getCollectionsInRange: vi.fn().mockResolvedValue([]),
+      getOrdinalsInRange: vi.fn().mockResolvedValue([]),
+      getByOrdinals: vi.fn().mockResolvedValue([]),
+      getStreamAfter: vi.fn().mockResolvedValue([]),
     };
 
     mockWriteCache = {
@@ -242,7 +247,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
-        ordinal: 1,
+        ordinal: 2,
       };
       const addOperations: OperationWithContext[] = [
         {
@@ -275,7 +280,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       const removeOperations: OperationWithContext[] = [
         {
           operation: removeOperation,
-          context,
+          context: { ...context, ordinal: 3 },
         },
       ];
 

@@ -10,9 +10,15 @@ import {
   Reporter,
 } from "@powerhousedao/load-test-client";
 import type { InProcessReactorModule } from "@powerhousedao/reactor";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import fs from "node:fs";
-import { createReactorWithSync, waitForDocument } from "./reactor-setup.js";
+import {
+  createClientSigner,
+  createReactorWithSync,
+  signActions,
+  waitForDocument,
+} from "./reactor-setup.js";
 import type { ConnectTestConfig } from "./types.js";
 
 export class ConnectTestScheduler {
@@ -21,6 +27,7 @@ export class ConnectTestScheduler {
   private reporter: Reporter;
 
   private module: InProcessReactorModule | undefined;
+  private signer: ISigner | undefined;
   private document: TestDocument | undefined;
   private isRunning = false;
   private startTime = 0;
@@ -43,7 +50,8 @@ export class ConnectTestScheduler {
     const logger = new ConsoleLogger(["reactor"]);
     logger.level = this.config.verbose ? "verbose" : "info";
 
-    this.module = await createReactorWithSync(this.config, logger);
+    this.signer = await createClientSigner();
+    this.module = await createReactorWithSync(this.config, this.signer, logger);
 
     this.reporter.printInfo(
       `Waiting for document ${this.config.documentId} to sync from remote...`,
@@ -194,7 +202,8 @@ export class ConnectTestScheduler {
   }
 
   private async executeActions(): Promise<void> {
-    if (!this.isRunning || !this.module || !this.document) return;
+    if (!this.isRunning || !this.module || !this.signer || !this.document)
+      return;
 
     const operations = generateOperations(this.document);
     const startTime = Date.now();
@@ -205,7 +214,12 @@ export class ConnectTestScheduler {
       await this.module.reactor.execute(
         this.config.documentId,
         "main",
-        operations,
+        await signActions(
+          this.signer,
+          operations,
+          this.config.documentId,
+          "main",
+        ),
       );
 
       this.document.operationCount += operations.length;

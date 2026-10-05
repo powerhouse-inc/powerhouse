@@ -1,41 +1,35 @@
-import { Pool } from "pg";
+import type { Database } from "../db/database.js";
+import { createPostgresDatabase } from "../db/database.js";
+import { prepareSchema } from "../db/migrations.js";
 import type { AuthStore, UserRecord } from "./auth-store.js";
 
-/** Build a real Postgres pool from a connection string. */
-export function createPgPool(databaseUrl: string): Pool {
-  return new Pool({ connectionString: databaseUrl });
+/** A database over a Postgres connection string. */
+export function createPgPool(databaseUrl: string): Database {
+  return createPostgresDatabase(databaseUrl);
 }
 
 /**
- * Postgres-backed AuthStore. Two small tables:
- *  - registry_users(username PK, password_hash, created_at)
- *  - registry_package_owners(package_name PK, owners text[], claimed_at)
+ * Database-backed AuthStore over `registry_users` and `registry_package_owners`.
  *
  * Ownership claim is race-free: `INSERT ... ON CONFLICT DO NOTHING` means the
  * first publisher wins atomically; the follow-up read returns the actual
  * owners so a losing racer is denied.
- *
- * Takes an already-built `pg.Pool` (tests inject a pg-mem pool cast to Pool).
  */
-export function createPgStore(pool: Pool): AuthStore {
+export function createPgStore(
+  pool: Database,
+  options: { migrate?: boolean } = {},
+): AuthStore {
   let initialized: Promise<void> | null = null;
 
   return {
+    // Retried on failure: a replica that lost the first attempt must not keep the error
     init(): Promise<void> {
-      initialized ??= (async () => {
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS registry_users (
-            username      text PRIMARY KEY,
-            password_hash text NOT NULL,
-            created_at    timestamptz NOT NULL DEFAULT now()
-          )`);
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS registry_package_owners (
-            package_name text PRIMARY KEY,
-            owners       text[] NOT NULL,
-            claimed_at   timestamptz NOT NULL DEFAULT now()
-          )`);
-      })();
+      initialized ??= prepareSchema(pool, options.migrate ?? true).catch(
+        (err: unknown) => {
+          initialized = null;
+          throw err;
+        },
+      );
       return initialized;
     },
 
@@ -73,8 +67,6 @@ export function createPgStore(pool: Pool): AuthStore {
 
     async getOwnersFor(pkgs: string[]): Promise<Record<string, string[]>> {
       if (pkgs.length === 0) return {};
-      // IN (...) with per-value placeholders — portable across pg and pg-mem,
-      // unlike `= ANY($1)` array binding.
       const placeholders = pkgs.map((_, i) => `$${i + 1}`).join(",");
       const res = await pool.query<{ package_name: string; owners: string[] }>(
         `SELECT package_name, owners FROM registry_package_owners WHERE package_name IN (${placeholders})`,
@@ -101,7 +93,7 @@ export function createPgStore(pool: Pool): AuthStore {
     },
 
     close(): Promise<void> {
-      return pool.end();
+      return pool.close();
     },
   };
 }

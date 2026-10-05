@@ -252,23 +252,16 @@ describe("RemoteAttachmentStore document-aware download", () => {
     expect(response.header.sizeBytes).toBe(9);
   });
 
-  it("keeps the legacy direct byte path when no documentId is supplied", async () => {
-    const { fetchFn, calls } = makeFetch([
-      new Response("pdf-bytes", {
-        status: 200,
-        headers: { "Content-Type": "application/pdf", "Content-Length": "9" },
-      }),
-    ]);
+  it("refuses a hash-only read instead of requesting bare bytes", async () => {
+    const { fetchFn, calls } = makeFetch([]);
     const store = new RemoteAttachmentStore({
       remoteUrl: REMOTE,
       jwtHandler,
       fetchFn,
     });
 
-    await store.get(HASH);
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0].url).toBe(`${REMOTE}/attachments/${HASH}`);
+    await expect(store.get(HASH)).rejects.toThrow(/documentId/);
+    expect(calls).toHaveLength(0);
   });
 
   it("maps a 404 target response to AttachmentNotFound", async () => {

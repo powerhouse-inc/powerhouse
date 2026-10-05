@@ -1,0 +1,156 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/connection",
+  name: "Connection",
+  author: {
+    name: "Powerhouse",
+    website: "https://www.powerhouse.inc",
+  },
+  extension: ".conn",
+  description:
+    "A configured connector instance: auth kind, non-secret config and secret handles, shared by many workflows.",
+  specifications: [
+    {
+      state: {
+        local: {
+          schema: "",
+          examples: [],
+          initialValue: "",
+        },
+        global: {
+          schema:
+            'enum ConnectionAuthType {\n  SECRET_TEXT\n  BASIC_AUTH\n  CUSTOM_AUTH\n  OAUTH2\n  OIDC\n  NONE\n}\n\nenum ConnectionStatus {\n  UNCONFIGURED\n  OK\n  ERROR\n  REVOKED\n}\n\ntype SecretRef {\n  id: OID!\n  "Matches an auth property name in the connector\'s config schema."\n  name: String!\n  "Opaque handle into the host secret provider. Not the secret."\n  ref: String!\n}\n\ntype ConnectionState {\n  name: String!\n  "Fully-qualified connector id: \'@acme/connector-imap#imap\'."\n  connectorId: String!\n  "Activepieces auth kind, so a piece\'s PieceAuth maps directly."\n  authType: ConnectionAuthType!\n  "Non-secret configuration, validated against the connector\'s auth schema."\n  config: Unknown!\n  "Secret handles; values never appear in state, operations, or the run journal."\n  secretRefs: [SecretRef!]!\n  status: ConnectionStatus!\n  lastCheckedAt: DateTime\n  lastError: String\n  "Populated by the connector\'s own metadata call. Display only."\n  accountLabel: String\n}',
+          examples: [],
+          initialValue:
+            '{\n    "name": "",\n    "connectorId": "",\n    "authType": "NONE",\n    "config": {},\n    "secretRefs": [],\n    "status": "UNCONFIGURED",\n    "lastCheckedAt": null,\n    "lastError": null,\n    "accountLabel": null\n}',
+        },
+      },
+      modules: [
+        {
+          id: "d723a91b-329c-46c3-acbf-85533c47b5a4",
+          name: "connection",
+          description: "Connection identity and connector binding.",
+          operations: [
+            {
+              id: "ece5a33d-0bc1-46ff-87f4-c763d298cb3a",
+              name: "SET_CONNECTION_NAME",
+              description: "Sets the connection's display name.",
+              schema: "input SetConnectionNameInput {\n    name: String!\n}",
+              template: "Sets the connection's display name.",
+              reducer: "state.name = action.input.name;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "e668be97-82c8-433e-8af7-1644cfa25723",
+              name: "SET_CONNECTOR",
+              description:
+                "Binds the connection to a connector and auth kind; resets status to UNCONFIGURED.",
+              schema:
+                "input SetConnectorInput {\n    connectorId: String!\n    authType: ConnectionAuthType!\n}",
+              template:
+                "Binds the connection to a connector and auth kind; resets status to UNCONFIGURED.",
+              reducer:
+                'state.connectorId = action.input.connectorId;\nstate.authType = action.input.authType;\nstate.status = "UNCONFIGURED";',
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "01a28e56-4406-4160-9547-f6239e728afd",
+              name: "SET_ACCOUNT_LABEL",
+              description: "Sets or clears the display-only account label.",
+              schema:
+                "input SetAccountLabelInput {\n    accountLabel: String\n}",
+              template: "Sets or clears the display-only account label.",
+              reducer:
+                "state.accountLabel = action.input.accountLabel || null;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "728ec59f-db15-4c52-aa9d-fbe1a6d6a6f9",
+          name: "config",
+          description: "Non-secret configuration and secret handles.",
+          operations: [
+            {
+              id: "c26f7cd8-c280-4e85-be65-83c3c1217358",
+              name: "SET_CONFIG",
+              description: "Replaces the non-secret configuration.",
+              schema: "input SetConfigInput {\n    config: Unknown!\n}",
+              template: "Replaces the non-secret configuration.",
+              reducer: "state.config = action.input.config;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "1a90e020-6dc5-49e0-9be1-732028dd10d3",
+              name: "SET_SECRET_REF",
+              description:
+                "Creates or updates a secret handle, keyed by its auth property name.",
+              schema:
+                "input SetSecretRefInput {\n    id: OID!\n    name: String!\n    ref: String!\n}",
+              template:
+                "Creates or updates a secret handle, keyed by its auth property name.",
+              reducer:
+                "const existing = state.secretRefs.find(\n    (secretRef) => secretRef.name === action.input.name,\n);\nif (existing) {\n    existing.ref = action.input.ref;\n} else {\n    state.secretRefs.push({\n        id: action.input.id,\n        name: action.input.name,\n        ref: action.input.ref,\n    });\n}",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "0c7214b1-0494-49d8-913f-39ad59ca2a3b",
+              name: "REMOVE_SECRET_REF",
+              description: "Removes a secret handle.",
+              schema: "input RemoveSecretRefInput {\n    id: OID!\n}",
+              template: "Removes a secret handle.",
+              reducer:
+                'const index = state.secretRefs.findIndex(\n    (secretRef) => secretRef.id === action.input.id,\n);\nif (index === -1) {\n    throw new SecretRefNotFoundError("Secret ref not found");\n}\nstate.secretRefs.splice(index, 1);',
+              errors: [
+                {
+                  id: "0c5d799d-d71d-4a75-ab0e-136ea72f1a3b",
+                  name: "SecretRefNotFoundError",
+                  code: "SECRET_REF_NOT_FOUND",
+                  description: "No secret ref exists with the given id.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "3b02be29-0e8b-400d-ba05-1305e28c86b5",
+          name: "health",
+          description: "Connection health, written by connector checks.",
+          operations: [
+            {
+              id: "2e8e9df7-3939-425c-9e28-7c8fa5de7d3f",
+              name: "RECORD_CHECK_RESULT",
+              description:
+                "Records the outcome of a connection check, including revocation.",
+              schema:
+                "input RecordCheckResultInput {\n    status: ConnectionStatus!\n    checkedAt: DateTime!\n    error: String\n}",
+              template:
+                "Records the outcome of a connection check, including revocation.",
+              reducer:
+                "state.status = action.input.status;\nstate.lastCheckedAt = action.input.checkedAt;\nstate.lastError = action.input.error || null;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+      version: 1,
+      changeLog: [],
+    },
+  ],
+};

@@ -1,6 +1,13 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
+import { readSnapshotFunctions } from "../catch-up/settled-watermark.js";
+import type { DocumentStreamKey } from "./write-cache-types.js";
+import { DocumentPurgedError } from "../shared/errors.js";
+import { findPurged } from "../storage/kysely/document-purges.js";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
@@ -14,6 +21,28 @@ import type {
 } from "./operation-index-types.js";
 
 export const DEFAULT_PAGE_LIMIT = 500;
+
+/** Bind slots per statement: 16-bit on the wire, read signed in-process. */
+const MAX_BIND_PARAMETERS = 32_767;
+
+/** Splits rows into runs that each bind at most MAX_BIND_PARAMETERS. */
+function chunkRows<TRow extends object>(rows: TRow[]): TRow[][] {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const columnsPerRow = Math.max(1, Object.keys(rows[0]).length);
+  const perChunk = Math.max(1, Math.floor(MAX_BIND_PARAMETERS / columnsPerRow));
+  if (rows.length <= perChunk) {
+    return [rows];
+  }
+
+  const chunks: TRow[][] = [];
+  for (let i = 0; i < rows.length; i += perChunk) {
+    chunks.push(rows.slice(i, i + perChunk));
+  }
+  return chunks;
+}
 
 type CollectionMembershipRecord = {
   collectionId: string;
@@ -31,6 +60,9 @@ type GroupReferenceRecord = {
   // the index of the referencing auth operation in the operations array
   operationIndex: number;
 };
+
+/** Per database: the function that assigns the transaction's xid. */
+const xidFunctions = new WeakMap<object, Promise<string>>();
 
 class KyselyOperationIndexTxn implements IOperationIndexTxn {
   private collections: string[] = [];
@@ -125,6 +157,7 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
 
 export class KyselyOperationIndex implements IOperationIndex {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -132,9 +165,14 @@ export class KyselyOperationIndex implements IOperationIndex {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationIndex {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationIndex {
     const instance = new KyselyOperationIndex(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -217,15 +255,20 @@ export class KyselyOperationIndex implements IOperationIndex {
         kyselyTxn.recordMembershipInvalidation(collectionId);
       }
 
-      await trx
-        .insertInto("document_collections")
-        .values(collectionRows)
-        .onConflict((oc) => oc.doNothing())
-        .execute();
+      for (const chunk of chunkRows(collectionRows)) {
+        await trx
+          .insertInto("document_collections")
+          .values(chunk)
+          .onConflict((oc) => oc.doNothing())
+          .execute();
+      }
     }
 
     let operationOrdinals: number[] = [];
     if (operations.length > 0) {
+      await this.refusePurgedOperations(trx, operations);
+      await this.assignXid(trx);
+
       const operationRows: InsertableOperationIndexOperation[] = operations.map(
         (op) => ({
           opId: op.id || "",
@@ -243,13 +286,18 @@ export class KyselyOperationIndex implements IOperationIndex {
         }),
       );
 
-      const insertedOps = await trx
-        .insertInto("operation_index_operations")
-        .values(operationRows)
-        .returning("ordinal")
-        .execute();
+      // Callers index the ordinals by row position, so chunk order is kept.
+      for (const chunk of chunkRows(operationRows)) {
+        const insertedOps = await trx
+          .insertInto("operation_index_operations")
+          .values(chunk)
+          .returning("ordinal")
+          .execute();
 
-      operationOrdinals = insertedOps.map((row) => row.ordinal);
+        operationOrdinals = operationOrdinals.concat(
+          insertedOps.map((row) => row.ordinal),
+        );
+      }
     }
 
     if (memberships.length > 0) {
@@ -351,6 +399,104 @@ export class KyselyOperationIndex implements IOperationIndex {
     return operationOrdinals;
   }
 
+  async getCollectionsInRange(
+    after: number,
+    through: number,
+    among?: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    signal?.throwIfAborted();
+    if (through <= after || among?.length === 0) {
+      return [];
+    }
+
+    let query = this.queryExecutor
+      .selectFrom("operation_index_operations as oi")
+      .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
+      .select("dc.collectionId")
+      .distinct()
+      .where("oi.ordinal", ">", after)
+      .where("oi.ordinal", "<=", through);
+    if (among !== undefined) {
+      query = query.where("dc.collectionId", "in", [...among]);
+    }
+    const rows = await query.execute();
+
+    return rows.map((row) => row.collectionId);
+  }
+
+  async getOrdinalsInRange(
+    after: number,
+    through: number,
+    limit: number,
+    signal?: AbortSignal,
+  ): Promise<number[]> {
+    signal?.throwIfAborted();
+    if (through <= after || limit <= 0) {
+      return [];
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations")
+      .select("ordinal")
+      .where("ordinal", ">", after)
+      .where("ordinal", "<=", through)
+      .orderBy("ordinal", "asc")
+      .limit(limit)
+      .execute();
+
+    return rows.map((row) => Number(row.ordinal));
+  }
+
+  async getByOrdinals(
+    ordinals: readonly number[],
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
+    signal?.throwIfAborted();
+    if (ordinals.length === 0) {
+      return [];
+    }
+
+    const results: OperationWithContext[] = [];
+    for (let i = 0; i < ordinals.length; i += MAX_BIND_PARAMETERS) {
+      const chunk = ordinals.slice(i, i + MAX_BIND_PARAMETERS);
+      const rows = await this.queryExecutor
+        .selectFrom("operation_index_operations")
+        .selectAll()
+        .where("ordinal", "in", chunk)
+        .orderBy("ordinal", "asc")
+        .execute();
+      for (const row of rows) {
+        results.push(this.rowToOperationWithContext(row));
+      }
+    }
+
+    results.sort((a, b) => a.context.ordinal - b.context.ordinal);
+    return results;
+  }
+
+  async getStreamAfter(
+    stream: DocumentStreamKey,
+    after: number,
+    signal?: AbortSignal,
+    limit?: number,
+  ): Promise<OperationWithContext[]> {
+    signal?.throwIfAborted();
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations")
+      .selectAll()
+      .where("documentId", "=", stream.documentId)
+      .where("branch", "=", stream.branch)
+      .where("scope", "=", stream.scope)
+      .where("ordinal", ">", after)
+      .orderBy("ordinal", "asc")
+      .$if(limit !== undefined, (qb) => qb.limit(limit!))
+      .execute();
+
+    return rows.map((row) => this.rowToOperationWithContext(row));
+  }
+
   async getGroupReferencers(
     groupId: string,
     signal?: AbortSignal,
@@ -367,6 +513,32 @@ export class KyselyOperationIndex implements IOperationIndex {
       .execute();
 
     return rows.map((row) => row.documentId);
+  }
+
+  async getOrdinalsByOpIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Map<string, number>> {
+    signal?.throwIfAborted();
+    if (opIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations")
+      .select("opId")
+      .select((eb) => eb.fn.max("ordinal").as("ordinal"))
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .where("scope", "=", scope)
+      .where("opId", "in", opIds)
+      .groupBy("opId")
+      .execute();
+
+    return new Map(rows.map((row) => [row.opId, Number(row.ordinal)]));
   }
 
   async find(
@@ -418,6 +590,11 @@ export class KyselyOperationIndex implements IOperationIndex {
       }
       if (view?.excludeSourceRemote) {
         qb = qb.where("oi.sourceRemote", "!=", view.excludeSourceRemote);
+      }
+      if (view?.throughOrdinal !== undefined) {
+        qb = qb
+          .where("oi.ordinal", "<=", view.throughOrdinal)
+          .where("dc.joinedOrdinal", "<=", BigInt(view.throughOrdinal));
       }
 
       return qb;
@@ -580,6 +757,37 @@ export class KyselyOperationIndex implements IOperationIndex {
             )
         : undefined,
     };
+  }
+
+  /** Backstop to the store's refusal: only a marker indexes a purged id. */
+  private async refusePurgedOperations(
+    trx: Transaction<Database>,
+    operations: OperationIndexEntry[],
+  ): Promise<void> {
+    const ids = new Set(
+      operations
+        .filter((operation) => !isPurgeMarker(operation))
+        .map((operation) => operation.documentId)
+        .filter((id) => !this.liveIds?.has(id)),
+    );
+    const purged = await findPurged(trx, ids);
+    for (const id of ids) {
+      if (purged.has(id)) {
+        throw new DocumentPurgedError(id);
+      }
+    }
+  }
+
+  /** Takes the xid before the first ordinal, as the settled watermark needs. */
+  private async assignXid(trx: Transaction<Database>): Promise<void> {
+    let fn = xidFunctions.get(this.db);
+    if (fn === undefined) {
+      fn = readSnapshotFunctions<Database>(trx).then((fns) => fns.currentXid);
+      xidFunctions.set(this.db, fn);
+      fn.catch(() => xidFunctions.delete(this.db));
+    }
+    const name = await fn;
+    await sql`select ${sql.raw(name)}()`.execute(trx);
   }
 
   private rowToOperationWithContext(

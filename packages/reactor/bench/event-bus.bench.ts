@@ -309,7 +309,7 @@ describe("EventBus Mixed Sync/Async Emission Throughput", () => {
   );
 
   bench(
-    "50 subscribers (50% sync, 50% yield to macrotask via setImmediate)",
+    "50 subscribers (50% sync, 50% yield to macrotask via setImmediate) [reference]",
     async () => {
       await yieldingEventBus50_50.emit(EVENT_TYPE_MIXED, TEST_DATA);
     },

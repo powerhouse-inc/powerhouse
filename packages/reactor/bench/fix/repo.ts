@@ -63,5 +63,17 @@ export function probePort(
   });
 }
 
-export const POSTGRES_PORT = 5433;
-export const POSTGRES_URL = `postgres://postgres:postgres@localhost:${String(POSTGRES_PORT)}/reactor`;
+const DEFAULT_POSTGRES_URL =
+  "postgres://postgres:postgres@localhost:5433/reactor";
+
+export function postgresUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return env.REACTOR_TEST_PG_URL || DEFAULT_POSTGRES_URL;
+}
+
+export function postgresTarget(url: string = postgresUrl()): {
+  host: string;
+  port: number;
+} {
+  const { hostname, port } = new URL(url);
+  return { host: hostname, port: port === "" ? 5432 : Number(port) };
+}

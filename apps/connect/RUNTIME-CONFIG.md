@@ -55,7 +55,8 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
-    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false } },
+    "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },
+    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required", "unsupportedStoredDocuments": "refuse" },
     "pwa":       { ... } // build-time only, see below
   }
 }
@@ -126,6 +127,54 @@ new build — without that, the worker would keep enforcing the flags it booted
 with while the tab believed the new set was live. Other tabs still on the old
 worker reload as they refresh.
 
+With `authEnforcement` on, both hosts install the Renown trust policy that
+switchboard installs under `REACTOR_AUTH_ENFORCEMENT`: a signed write is
+accepted when a Renown credential binds its key to the wallet it claims, and
+the logged-in user's own key is accepted without a lookup. Credentials are
+read from `connect.renown.switchboardUrl`, or the switchboard `connect.renown.url`
+advertises, else Renown's REST API at `connect.renown.url`, so that endpoint must
+be reachable from the browser. With neither set, the reactor fails to build
+rather than refuse every signed write. The worker gets both URLs in its construct
+message and keeps the ones the first tab booted it with.
+
+### Creation signature policy (`connect.reactor.createSignaturePolicy`)
+
+What the documents and drives Connect creates are born as: `"v2-required"`
+(the default) or `"legacy"`. A v2-required document accepts only v2 action
+signatures and takes a content-addressed id. Set `"legacy"` while any reactor
+Connect syncs with predates v2-required documents; existing documents keep
+their policy either way, and the setting does not change what Connect accepts.
+
+```jsonc
+"reactor": { "createSignaturePolicy": "legacy" }
+```
+
+The main-thread reactor reads it from this file; the SharedWorker gets it in its
+construct message and keeps the value the first tab booted it with. It is not
+part of the worker's version fingerprint.
+
+### Stored documents this build does not run (`connect.reactor.unsupportedStoredDocuments`)
+
+A reactor refuses to boot when the browser's store holds documents created at a
+protocol version the build does not run, for example after rolling Connect back
+to a release that predates one. Connect then shows "Connect cannot open this
+browser's documents" with the versions and document count, instead of the app.
+There are two ways forward: serve a Connect build that runs those versions, or
+accept them read-only:
+
+```jsonc
+"reactor": { "unsupportedStoredDocuments": "read-only" }
+```
+
+`"refuse"` is the default. With `"read-only"` the reactor boots, logs a warning,
+and refuses every write into those documents and every operation received for
+them; the rest of the store works as usual. Connect has no in-app button for it:
+the setting is the operator's choice, so it goes in this file (or
+`PH_CONNECT_CONFIG_JSON`), and the boot screen's Reload picks up the change.
+Both reactor hosts read it; the SharedWorker gets it in its construct message.
+A worker that refused retries the build on the next tab's connect, so the new
+value takes effect without closing other tabs.
+
 ## Setting values — the precedence ladder
 
 When `ph connect build` runs, the _dist_ `powerhouse.config.json` is produced by deep-merging in this order (lowest → highest):
@@ -174,11 +223,18 @@ Two special-case writers also exist:
 - `<key> <value>` (positional) or `--<field> <value>` → set mode: Ajv-validates the value against the schema at that path and dual-writes to source and dist (dist is skipped silently if no build has happened yet). Coercion is JSON-aware — `true`/`false`/numbers parse correctly; arrays and objects should go through `--json` instead.
 - `--json '{...}'` → bulk-set mode: validates the full patch and dual-writes.
 
+**`--json` payload shape.** Both `ph connect config --json` and `ph connect build --json` take the `connect.*` block **without** the `connect` wrapper, as nested objects (not dotted keys). A top-level `packageRegistryUrl` is also accepted. The payload is Ajv-validated against the runtime schema: an unknown key, a `{"connect":{...}}` wrapper, a dotted key such as `"app.workflowsEnabled"`, or a wrong type fails the command instead of being dropped.
+
+```bash
+# Enables workflows and adds a default drive.
+ph connect build --json '{"app":{"workflowsEnabled":true},"drives":{"defaultDrives":[{"url":"http://localhost:4001/d/my-workflows","name":"My workflows"}]}}'
+```
+
 **`ph connect build` overrides.** Three combinable forms (last wins on collision): `<key> <value>` positional, `--<field> <value>` per-field flag, or `--json '{...}'` bulk. The same shared spec drives both `build` and `config`, so the positional grammar matches. **`--base` IS available here** (build-time field). The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI overrides beat source. Build has no read mode; passing only `<key>` without `<value>` errors with a pointer to `ph connect config <key>`.
 
 **`--base` is build-time only.** `ph connect build --base /foo` writes `connect.app.basePath` AND bakes the value into the Vite bundle's asset URLs AND templates the nginx config. `ph connect config --base /foo` would only write the first one, leaving the SPA's router and the deployed assets disagreeing — so `ph connect config` rejects `--base` up front with an actionable error pointing at `ph connect build --base`.
 
-**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload (same shape as `ph connect config --json '{...}'`). It deep-merges that JSON into the dist file with **operator-wins semantics**: a concrete value in the env JSON (including `false`/`""`/`[]`/`0`) overwrites whatever the build baked; a `null` leaf (or an omitted key) keeps the file's value, so baked defaults only apply where the operator expressed no opinion. One exception: `connect.app.basePath` is stripped from the payload — the base path is baked into the bundled asset URLs and cannot be changed at runtime (rebuild with `--base`, or use `--dynamic-base`). This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
+**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload, with the `connect` wrapper (unlike `--json`, which takes the `connect.*` block alone). It deep-merges that JSON into the dist file with **operator-wins semantics**: a concrete value in the env JSON (including `false`/`""`/`[]`/`0`) overwrites whatever the build baked; a `null` leaf (or an omitted key) keeps the file's value, so baked defaults only apply where the operator expressed no opinion. One exception: `connect.app.basePath` is stripped from the payload — the base path is baked into the bundled asset URLs and cannot be changed at runtime (rebuild with `--base`, or use `--dynamic-base`). This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
 
 ```bash
 docker run \
@@ -228,15 +284,15 @@ const loader = new ConfigLoader(
 
 Downstream consumers inside the SPA:
 
-| File                                            | Reads                                                                                                                                   |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths |
-| `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                 |
-| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags` for both reactor hosts                     |
-| Renown auth flow                                | Reads `connect.renown.*`                                                                                                                |
-| Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                |
-| Router                                          | Reads `connect.app.basePath`                                                                                                            |
-| `apps/connect/src/components/app.tsx`           | Reads `connect.app.offline` to register or unregister the service worker                                                                |
+| File                                            | Reads                                                                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths         |
+| `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                         |
+| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags`, `createSignaturePolicy` and `unsupportedStoredDocuments` for both reactor hosts |
+| Renown auth flow                                | Reads `connect.renown.*`                                                                                                                        |
+| Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                        |
+| Router                                          | Reads `connect.app.basePath`                                                                                                                    |
+| `apps/connect/src/components/app.tsx`           | Reads `connect.app.offline` to register or unregister the service worker                                                                        |
 
 A hard refresh in the browser tears down the module graph; the next module evaluation runs `loadRuntimeConfig()` again and the SPA picks up whatever the dist file holds now. This is the path operators use after `ph connect config --renown-url X`: write the new value, refresh the tab.
 
@@ -280,6 +336,19 @@ docker run -e PH_CONNECT_CONFIG_JSON='{
 ```
 
 `dsn: null` (the default) disables Sentry — the SPA never loads the Sentry SDK chunk. The Sentry **release** tag, in contrast, stays build-time (stamped via Vite's `define` from `WORKSPACE_VERSION`) so it always matches the sourcemap upload tag CI used.
+
+**"I want OpenPanel analytics on this deployment."**
+Set `connect.openPanel.clientId` (and `apiUrl` for a self-hosted OpenPanel):
+
+```bash
+docker run -e PH_CONNECT_CONFIG_JSON='{
+  "connect": {
+    "openPanel": { "clientId": "<client-id>", "apiUrl": "https://openpanel.example/api" }
+  }
+}' connect:latest
+```
+
+An empty `clientId` (the default) keeps OpenPanel off, and events are only sent after the user accepts analytics cookies. The runtime values take precedence over the build-time `PH_CONNECT_OPENPANEL_*` env vars, which remain a fallback for builds that bake them.
 
 **"I'm turning auth enforcement on for this fleet."**
 Set the whole flag set on the container, matching the switchboard's `REACTOR_*` env vars exactly:

@@ -1,4 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { defaultCatchUpConfig } from "../../src/catch-up/types.js";
 import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -10,6 +11,7 @@ import {
 } from "../../src/events/types.js";
 import { HybridProjectionCoordinator } from "../../src/projection/hybrid-projection-coordinator.js";
 import { ProjectionShardManager } from "../../src/projection/projection-shard-manager.js";
+import { defaultReadModelIndexingConfig } from "../../src/read-models/base-read-model.js";
 import type { DbConfig } from "../../src/projection/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 import {
@@ -21,6 +23,7 @@ import {
   createFakeProjectionTransports,
   type FakeProjectionTransport,
 } from "./fake-projection-transport.js";
+import { deferred, type Deferred } from "../factories.js";
 
 const DB: DbConfig = {
   host: "localhost",
@@ -100,16 +103,6 @@ function operation(
       ...overrides,
     },
   };
-}
-
-type Deferred = { promise: Promise<void>; resolve: () => void };
-
-function deferred(): Deferred {
-  let resolve: () => void = () => {};
-  const promise = new Promise<void>((r) => {
-    resolve = r;
-  });
-  return { promise, resolve };
 }
 
 type RecordingReadModelOptions = {
@@ -271,6 +264,8 @@ describe("HybridProjectionCoordinator", () => {
       models: [],
       preReadyKinds: ["document-view", "document-indexer"],
       postReadyKinds: [],
+      indexing: defaultReadModelIndexingConfig,
+      catchUp: defaultCatchUpConfig,
       factory,
       logger,
       hostBus: bus,

@@ -1,0 +1,5 @@
+--- 3: self-update failure (npm shim exits 1)
+Updating ph-cmd via npm (npm install -g ph-cmd@latest)...
+npm shim: forced failure
+ph-cmd update failed via npm. Try manually: npm install -g ph-cmd@latest
+npm exited with code 1

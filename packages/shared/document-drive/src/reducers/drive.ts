@@ -6,6 +6,16 @@
 
 import type { Listener, Trigger } from "../../gen/schema/types.js";
 import type { DocumentDriveDriveOperations } from "../../gen/drive/actions.js";
+import { isDraft, original } from "mutative";
+
+/**
+ * The untouched base of a mutative draft, or the value itself when it is not a
+ * draft. Build replacement lists from it and freeze them before assigning, as
+ * the node reducer does, so finalize skips the walk over the assigned list.
+ */
+function readBase<T extends object>(value: T): T {
+  return isDraft(value) ? original(value) : value;
+}
 
 export const driveReducer: DocumentDriveDriveOperations = {
   setDriveNameOperation(state, action, dispatch) {
@@ -48,9 +58,10 @@ export const driveReducer: DocumentDriveDriveOperations = {
     state.listeners.push(listener);
   },
   removeListenerOperation(state, action, dispatch) {
-    state.listeners = state.listeners.filter(
+    const listeners = readBase(state).listeners.filter(
       (listener) => listener.listenerId !== action.input.listenerId,
     );
+    state.listeners = Object.freeze(listeners) as Listener[];
   },
   addTriggerOperation(state, action, dispatch) {
     const { trigger: input } = action.input;
@@ -66,8 +77,9 @@ export const driveReducer: DocumentDriveDriveOperations = {
     state.triggers.push(trigger);
   },
   removeTriggerOperation(state, action, dispatch) {
-    state.triggers = state.triggers.filter(
+    const triggers = readBase(state).triggers.filter(
       (trigger) => trigger.id !== action.input.triggerId,
     );
+    state.triggers = Object.freeze(triggers) as Trigger[];
   },
 };

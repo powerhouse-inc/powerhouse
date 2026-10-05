@@ -1,0 +1,145 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/example-todo",
+  name: "Todo",
+  extension: "todo",
+  description:
+    "A todo list whose schema evolves from v1 to v2, used to demonstrate document model versioning",
+  author: {
+    name: "Powerhouse",
+    website: "https://powerhouse.inc",
+  },
+  specifications: [
+    {
+      version: 1,
+      changeLog: [],
+      state: {
+        global: {
+          schema:
+            "type TodoState {\n  items: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: ID!\n  title: String!\n  checked: Boolean!\n}",
+          initialValue: '{"items":[]}',
+          examples: [],
+        },
+        local: {
+          schema: "",
+          initialValue: "",
+          examples: [],
+        },
+      },
+      modules: [
+        {
+          id: "a1b2c3d4-1111-4a1a-8a1a-000000000001",
+          name: "todo",
+          description: "Todo item operations.",
+          operations: [
+            {
+              id: "a1b2c3d4-1111-4a1a-8a1a-000000000010",
+              name: "ADD_ITEM",
+              description: "Append a new, unchecked item.",
+              schema: "input AddItemInput {\n  id: ID!\n  title: String!\n}",
+              template: "",
+              reducer:
+                "state.items.push({ id: action.input.id, title: action.input.title, checked: false });",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "a1b2c3d4-1111-4a1a-8a1a-000000000011",
+              name: "CHECK_ITEM",
+              description: "Set an item's checked flag.",
+              schema:
+                "input CheckItemInput {\n  id: ID!\n  checked: Boolean!\n}",
+              template: "",
+              reducer:
+                "const item = state.items.find((i) => i.id === action.input.id);\nif (item) item.checked = action.input.checked;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      version: 2,
+      changeLog: [],
+      state: {
+        global: {
+          schema:
+            "type TodoState {\n  items: [TodoItem!]!\n}\n\nenum TodoStatus {\n  TODO\n  IN_PROGRESS\n  DONE\n}\n\ntype TodoItem {\n  id: ID!\n  title: String!\n  status: TodoStatus!\n  priority: Int!\n}",
+          initialValue: '{"items":[]}',
+          examples: [],
+        },
+        local: {
+          schema: "",
+          initialValue: "",
+          examples: [],
+        },
+      },
+      modules: [
+        {
+          id: "a1b2c3d4-1111-4a1a-8a1a-000000000001",
+          name: "todo",
+          description: "Todo item operations.",
+          operations: [
+            {
+              id: "a1b2c3d4-2222-4a2a-8a2a-000000000020",
+              name: "ADD_ITEM",
+              description: "Append a new item with default status TODO.",
+              schema:
+                "input AddItemInput {\n  id: ID!\n  title: String!\n  priority: Int\n}",
+              template: "",
+              reducer:
+                "state.items.push({ id: action.input.id, title: action.input.title, status: 'TODO', priority: action.input.priority ?? 0 });",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "a1b2c3d4-2222-4a2a-8a2a-000000000021",
+              name: "CHECK_ITEM",
+              description:
+                "Legacy operation retained from v1 so historical logs still replay; maps checked onto status.",
+              schema:
+                "input CheckItemInput {\n  id: ID!\n  checked: Boolean!\n}",
+              template: "",
+              reducer:
+                "const item = state.items.find((i) => i.id === action.input.id);\nif (item) item.status = action.input.checked ? 'DONE' : 'TODO';",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "a1b2c3d4-2222-4a2a-8a2a-000000000022",
+              name: "SET_STATUS",
+              description: "Set an item's status.",
+              schema:
+                "input SetStatusInput {\n  id: ID!\n  status: TodoStatus!\n}",
+              template: "",
+              reducer:
+                "const item = state.items.find((i) => i.id === action.input.id);\nif (item) item.status = action.input.status;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "a1b2c3d4-2222-4a2a-8a2a-000000000023",
+              name: "SET_PRIORITY",
+              description: "Set an item's priority.",
+              schema:
+                "input SetPriorityInput {\n  id: ID!\n  priority: Int!\n}",
+              template: "",
+              reducer:
+                "const item = state.items.find((i) => i.id === action.input.id);\nif (item) item.priority = action.input.priority;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};

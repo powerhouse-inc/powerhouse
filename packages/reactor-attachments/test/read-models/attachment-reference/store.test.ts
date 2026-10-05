@@ -55,6 +55,24 @@ describe("KyselyAttachmentReferenceStore", () => {
     await expect(store.hasReference("document-a", REF_A)).resolves.toBe(false);
   });
 
+  it("answers the scopes that reference a document/ref relationship", async () => {
+    await expect(store.referencingScopes("document-a", REF_A)).resolves.toEqual(
+      [],
+    );
+
+    await store.addReferences([
+      reference("document-a", REF_A),
+      reference("document-b", REF_B),
+    ]);
+
+    await expect(store.referencingScopes("document-a", REF_A)).resolves.toEqual(
+      ["global"],
+    );
+    await expect(store.referencingScopes("document-a", REF_B)).resolves.toEqual(
+      [],
+    );
+  });
+
   it("inserts and looks up an exact document/ref relationship and parsed hash", async () => {
     await store.addReferences([reference("document-a", REF_A)]);
 

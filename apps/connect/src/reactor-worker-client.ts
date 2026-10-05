@@ -5,6 +5,7 @@ import {
   type IDocumentModelLoader,
   type ModelLoadedEvent,
   type ReactorFeatureFlags,
+  type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import {
   setPGliteDB,
@@ -25,12 +26,14 @@ import {
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown, User } from "@renown/sdk";
 import { setWorkerConnectionStatus } from "./connection-state.js";
 import { reactorWorkerName } from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
+import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 
 const PING_INTERVAL_MS = 2000;
 const PING_DEADLINE_MS = 3000;
@@ -41,11 +44,22 @@ export type WorkerReactorClientArgs = {
   relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
+  /** Absolute-URL shared-deps import map (from the production vendor); the
+   *  worker rewrites package sources to these URLs and blob-imports them. */
+  sharedImports?: Record<string, string>;
   studioMode?: boolean;
+  /** Loads the workflow package's document models. Independent of studioMode. */
+  workflowsEnabled?: boolean;
   /** Chain the worker's bearer tokens are scoped to; matches the main thread's Renown instance. */
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
   featureFlags: Partial<ReactorFeatureFlags>;
+  /** What the worker's client creates new documents as. */
+  createSignaturePolicy?: SignaturePolicy;
+  /** Whether the worker boots over stored documents this build does not run. */
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments;
+  /** Where the worker's trust policy verifies signers under authEnforcement. */
+  renownEndpoints?: RenownTrustEndpoints;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -130,9 +144,14 @@ export function createWorkerReactorClientModule(
         relationalNamespace: args.relationalNamespace,
         cdnUrl: args.cdnUrl,
         packageSpecs: args.packageSpecs,
+        sharedImports: args.sharedImports,
         studioMode: args.studioMode,
+        workflowsEnabled: args.workflowsEnabled,
         renownChainId: args.renownChainId,
         featureFlags: args.featureFlags,
+        createSignaturePolicy: args.createSignaturePolicy,
+        unsupportedStoredDocuments: args.unsupportedStoredDocuments,
+        renownEndpoints: args.renownEndpoints,
       },
       packages: args.packageSpecs,
     },

@@ -9,7 +9,7 @@ In this tutorial you'll build a **logging processor** that prints a structured s
 A processor implements two methods:
 
 - **`onOperations(operations)`** — called when document operations match the processor's filter
-- **`onDisconnect()`** — called when the processor is disconnected (for cleanup)
+- **`onDisconnect()`** — called when the processor is disconnected (for cleanup), including when its factory is unregistered
 
 The reactor calls your processor's `onOperations` method with a list of `OperationWithContext` items. Each item pairs an `Operation` (what happened) with an `OperationContext` (where it happened).
 
@@ -154,8 +154,12 @@ export const operationLoggerProcessorFactory =
 | -------------- | ------------------------------------------------------------------ |
 | `branch`       | Which branches to monitor — usually `["main"]` for production data |
 | `documentId`   | Specific document IDs, or `["*"]` for all documents                |
-| `scope`        | `["global"]` for shared state, `["local"]` for user-specific state |
+| `scope`        | `["global"]` for shared state, `["local"]` for user-specific state, `["document"]` for document lifecycle operations such as `DELETE_DOCUMENT` |
 | `documentType` | Document types to process — omit to match all types                |
+
+:::warning[Erase at deletion]
+The logging processor stores nothing. A processor that stores data must delete a document's data when it receives `DELETE_DOCUMENT` or `PURGE_DOCUMENT`, which needs `"document"` in its `scope`. See [Erasing deleted documents](/academy/Build/WorkWithData/ProcessorBestPractices#erasing-deleted-documents).
+:::
 
 ### Starting position
 

@@ -101,6 +101,24 @@ if (!result.success && result.error) {
 
 `runMigrations` returns `{ success, migrationsExecuted, error? }` and never throws on a migration error — it reports the error in the result. Use `getMigrationStatus(db, REACTOR_SCHEMA)` to inspect applied versus pending migrations without running them.
 
+### Stored protocol versions
+
+After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with. If the reactor does not run one of them, for example after a rollback to an older build, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version }` pairs, and `documents` is how many stored documents need them.
+
+```typescript
+withUnsupportedStoredDocuments(mode: "refuse" | "read-only"): this
+```
+
+`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct set of creation versions rather than reading every document.
+
+| Host        | Setting                                                                       |
+| ----------- | ----------------------------------------------------------------------------- |
+| Switchboard | `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=refuse` (default) or `read-only`        |
+| Connect     | `connect.reactor.unsupportedStoredDocuments` in `powerhouse.config.json`      |
+| Library     | `ReactorBuilder.withUnsupportedStoredDocuments()`                             |
+
+A refused switchboard logs the versions, the document count and both ways forward, then exits with code 1. A refused Connect shows the same on its boot screen in place of the app.
+
 ## Scaling with a worker pool
 
 The executor worker pool moves job execution out of the main thread into N `node:worker_threads` workers. Each worker opens its own Postgres pool and runs document models in isolation. Jobs route to a worker stickily by document id, so all work for one document lands on the same worker.
@@ -133,8 +151,8 @@ const reactor = await new ReactorBuilder()
 
 ```typescript
 type WorkerPoolOptions =
-  | { numWorkers: number; db: DbConfig; verifier?: SignatureVerifierSpec; factory?: WorkerFactory }
-  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig; verifier?: SignatureVerifierSpec };
+  | { numWorkers: number; db: DbConfig; factory?: WorkerFactory }
+  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig };
 ```
 
 `numWorkers` is the number of workers the manager spawns at `start()` and the modulus used for sticky routing. Either `db` (the default thread transport; each worker opens its own Postgres pool) or a custom `factory` is required **by construction** — an enabled pool without connection info is unrepresentable rather than a runtime error.
@@ -158,7 +176,7 @@ type DbConfig = {
 
 `DbConfig` is sent across worker IPC, so it must be JSON-clonable. `ssl: true` maps to `{ rejectUnauthorized: false }`; `poolSize` maps to pg's `max`; `applicationName` maps to `application_name`.
 
-The `verifier` field is optional: when omitted, workers perform no executor-side signature verification (parity with the in-process executor's default). To opt in, pass a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+Workers verify signatures the same way the in-process executor does, with the same `signatureVerification` mode from `withExecutorConfig`. A refusal inside a worker is re-emitted on the host event bus. See [Signature Verification](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification).
 
 ### How sources resolve
 
@@ -183,7 +201,7 @@ Passing `factory` in the pool options injects a custom `WorkerFactory`, skipping
 type WorkerFactory = (index: number) => IExecutorWorker;
 ```
 
-Use this for tests or an alternative transport (e.g. a child-process adapter); `db` and `verifier` are then optional, since the builder is not constructing the default transport.
+Use this for tests or an alternative transport (e.g. a child-process adapter); `db` is then optional, since the builder is not constructing the default transport.
 
 ## Projection shards
 

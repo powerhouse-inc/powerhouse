@@ -14,11 +14,13 @@ import {
 } from "../records/from-vitest.js";
 import { RecordsError } from "../records/jsonl-store.js";
 import type { CommandResult } from "../records/records-commands.js";
-import { FIX_EXIT } from "./fix-options.js";
+import { BOUND_DIRECTIONS, FIX_EXIT } from "./fix-options.js";
 import type {
+  BoundCriterionOptions,
   CasesOptions,
   CompareOptions,
   CriterionOptions,
+  RatioCriterionOptions,
 } from "./fix-options.js";
 
 export const FlatCase = z.strictObject({
@@ -35,17 +37,42 @@ export type FlatCase = z.infer<typeof FlatCase>;
  * The thresholds and the before numbers together, timestamped, so the
  * comparison can show the criterion predates the run it judges.
  */
+const Control = z.strictObject({
+  before: FlatCase,
+  tolerance: z.number().positive(),
+});
+type Control = z.infer<typeof Control>;
+
 export const Criterion = z.strictObject({
   writtenAt: z.iso.datetime(),
   beforePath: z.string().min(1),
   before: FlatCase,
   maxRatio: z.number().positive(),
   failRatio: z.number().positive().optional(),
-  control: z
-    .strictObject({ before: FlatCase, tolerance: z.number().positive() })
-    .optional(),
+  control: Control.optional(),
 });
 export type Criterion = z.infer<typeof Criterion>;
+
+/**
+ * A threshold on the after-run alone, for a case no before-run has. With
+ * `over`, the measure is the case's mean divided by that case's mean in the
+ * same run; without it, the case's mean in ms.
+ */
+export const BoundCriterion = z.strictObject({
+  kind: z.literal("bound"),
+  writtenAt: z.iso.datetime(),
+  caseName: z.string().min(1),
+  over: z.string().min(1).optional(),
+  direction: z.enum(BOUND_DIRECTIONS),
+  threshold: z.number().positive(),
+  failAt: z.number().positive().optional(),
+  beforePath: z.string().min(1).optional(),
+  control: Control.optional(),
+});
+export type BoundCriterion = z.infer<typeof BoundCriterion>;
+
+export const CriterionFile = z.union([BoundCriterion, Criterion]);
+export type CriterionFile = z.infer<typeof CriterionFile>;
 
 export type Verdict = "met" | "partial" | "missed" | "inconclusive";
 
@@ -56,6 +83,21 @@ export type Comparison = {
   controlRatio: number | undefined;
   controlAfter: FlatCase | undefined;
   reasons: string[];
+};
+
+export type BoundComparison = {
+  verdict: Verdict;
+  measure: number;
+  after: FlatCase;
+  overAfter: FlatCase | undefined;
+  controlRatio: number | undefined;
+  controlAfter: FlatCase | undefined;
+  reasons: string[];
+};
+
+type Guarded = {
+  verdict: Verdict;
+  controlRatio: number | undefined;
 };
 
 export function flattenReport(report: VitestBenchReport): FlatCase[] {
@@ -151,6 +193,46 @@ export function formatCases(cases: FlatCase[]): string[] {
   return lines;
 }
 
+/** The checks every verdict passes through: the timestamp, then the control. */
+function guard(
+  judged: Verdict,
+  writtenAt: string,
+  control: Control | undefined,
+  controlAfter: FlatCase | undefined,
+  afterModifiedAt: Date,
+  reasons: string[],
+): Guarded {
+  let verdict = judged;
+  const controlRatio =
+    control !== undefined && controlAfter !== undefined
+      ? controlAfter.meanMs / control.before.meanMs
+      : undefined;
+  if (afterModifiedAt.getTime() <= Date.parse(writtenAt)) {
+    verdict = "inconclusive";
+    reasons.push(
+      `the after-run (${afterModifiedAt.toISOString()}) predates the criterion (${writtenAt}); a criterion written after the number is not a criterion`,
+    );
+  }
+  if (control !== undefined) {
+    if (controlAfter === undefined || controlRatio === undefined) {
+      verdict = "inconclusive";
+      reasons.push(
+        `the control case ${control.before.name} is missing from the after-run`,
+      );
+    } else if (Math.abs(controlRatio - 1) > control.tolerance) {
+      verdict = "inconclusive";
+      reasons.push(
+        `the control ${control.before.name} moved ${controlRatio.toFixed(3)}x, outside +/-${(control.tolerance * 100).toFixed(0)}%; the machine was not the same between runs`,
+      );
+    } else {
+      reasons.push(
+        `the control ${control.before.name} held at ${controlRatio.toFixed(3)}x`,
+      );
+    }
+  }
+  return { verdict, controlRatio };
+}
+
 export function judge(
   criterion: Criterion,
   after: FlatCase,
@@ -159,10 +241,6 @@ export function judge(
 ): Comparison {
   const reasons: string[] = [];
   const ratio = after.meanMs / criterion.before.meanMs;
-  const controlRatio =
-    criterion.control !== undefined && controlAfter !== undefined
-      ? controlAfter.meanMs / criterion.control.before.meanMs
-      : undefined;
 
   let verdict: Verdict;
   if (ratio <= criterion.maxRatio) {
@@ -184,31 +262,22 @@ export function judge(
     );
   }
 
-  if (afterModifiedAt.getTime() <= Date.parse(criterion.writtenAt)) {
-    verdict = "inconclusive";
-    reasons.push(
-      `the after-run (${afterModifiedAt.toISOString()}) predates the criterion (${criterion.writtenAt}); a criterion written after the number is not a criterion`,
-    );
-  }
-  if (criterion.control !== undefined) {
-    if (controlAfter === undefined || controlRatio === undefined) {
-      verdict = "inconclusive";
-      reasons.push(
-        `the control case ${criterion.control.before.name} is missing from the after-run`,
-      );
-    } else if (Math.abs(controlRatio - 1) > criterion.control.tolerance) {
-      verdict = "inconclusive";
-      reasons.push(
-        `the control ${criterion.control.before.name} moved ${controlRatio.toFixed(3)}x, outside +/-${(criterion.control.tolerance * 100).toFixed(0)}%; the machine was not the same between runs`,
-      );
-    } else {
-      reasons.push(
-        `the control ${criterion.control.before.name} held at ${controlRatio.toFixed(3)}x`,
-      );
-    }
-  }
-
-  return { verdict, ratio, after, controlRatio, controlAfter, reasons };
+  const guarded = guard(
+    verdict,
+    criterion.writtenAt,
+    criterion.control,
+    controlAfter,
+    afterModifiedAt,
+    reasons,
+  );
+  return {
+    verdict: guarded.verdict,
+    ratio,
+    after,
+    controlRatio: guarded.controlRatio,
+    controlAfter,
+    reasons,
+  };
 }
 
 export function verdictExit(verdict: Verdict): number {
@@ -256,13 +325,25 @@ export function runCases(options: CasesOptions): CommandResult {
   };
 }
 
-export function runCriterion(options: CriterionOptions): CommandResult {
-  if (existsSync(options.out)) {
+function refuseExisting(out: string): void {
+  if (existsSync(out)) {
     throw new RecordsError(
-      `${options.out} already exists. A criterion is written once; pass --out to name another file`,
+      `${out} already exists. A criterion is written once; pass --out to name another file`,
       FIX_EXIT.usage,
     );
   }
+}
+
+function writeCriterion(out: string, criterion: CriterionFile): void {
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, `${JSON.stringify(criterion, null, 2)}\n`);
+}
+
+function controlLine(control: Control): string {
+  return `  control: ${control.before.name} at ${ms(control.before.meanMs)} must stay within +/-${(control.tolerance * 100).toFixed(0)}%`;
+}
+
+function runRatioCriterion(options: RatioCriterionOptions): CommandResult {
   const cases = readReport(options.before);
   const before = findCase(cases, options.caseName);
   const criterion: Criterion = {
@@ -280,8 +361,7 @@ export function runCriterion(options: CriterionOptions): CommandResult {
       tolerance: options.controlTolerance,
     };
   }
-  mkdirSync(dirname(options.out), { recursive: true });
-  writeFileSync(options.out, `${JSON.stringify(criterion, null, 2)}\n`);
+  writeCriterion(options.out, criterion);
   const lines = [
     `criterion written to ${options.out} at ${criterion.writtenAt}`,
     `  holds if: ${before.name} mean <= ${(options.maxRatio * before.meanMs).toFixed(4)} ms (${options.maxRatio.toFixed(3)}x of ${ms(before.meanMs)})`,
@@ -290,9 +370,7 @@ export function runCriterion(options: CriterionOptions): CommandResult {
       : `  fails if: >= ${(options.failRatio * before.meanMs).toFixed(4)} ms (${options.failRatio.toFixed(3)}x); between is partial`,
   ];
   if (criterion.control !== undefined) {
-    lines.push(
-      `  control: ${criterion.control.before.name} at ${ms(criterion.control.before.meanMs)} must stay within +/-${(criterion.control.tolerance * 100).toFixed(0)}%`,
-    );
+    lines.push(controlLine(criterion.control));
   }
   return {
     exit: FIX_EXIT.ok,
@@ -301,7 +379,171 @@ export function runCriterion(options: CriterionOptions): CommandResult {
   };
 }
 
-export function readCriterion(path: string): Criterion {
+function boundValue(criterion: BoundCriterion, value: number): string {
+  return criterion.over === undefined ? ms(value) : `${value.toFixed(3)}x`;
+}
+
+function boundMeasureLabel(criterion: BoundCriterion): string {
+  return criterion.over === undefined
+    ? `${criterion.caseName} mean`
+    : `${criterion.caseName} mean / ${criterion.over} mean`;
+}
+
+function boundOperator(criterion: BoundCriterion): string {
+  return criterion.direction === "at-most" ? "<=" : ">=";
+}
+
+function missOperator(criterion: BoundCriterion): string {
+  return criterion.direction === "at-most" ? ">=" : "<=";
+}
+
+function runBoundCriterion(options: BoundCriterionOptions): CommandResult {
+  const criterion: BoundCriterion = {
+    kind: "bound",
+    writtenAt: new Date().toISOString(),
+    caseName: options.caseName,
+    direction: options.direction,
+    threshold: options.threshold,
+  };
+  if (options.over !== "") {
+    criterion.over = options.over;
+  }
+  if (options.failAt !== undefined) {
+    criterion.failAt = options.failAt;
+  }
+  if (options.before !== "") {
+    criterion.beforePath = options.before;
+  }
+  if (options.control !== "") {
+    criterion.control = {
+      before: findCase(readReport(options.before), options.control),
+      tolerance: options.controlTolerance,
+    };
+  }
+  writeCriterion(options.out, criterion);
+  const lines = [
+    `criterion written to ${options.out} at ${criterion.writtenAt}`,
+    `  holds if: ${boundMeasureLabel(criterion)} ${boundOperator(criterion)} ${boundValue(criterion, criterion.threshold)} in the after-run`,
+    criterion.failAt === undefined
+      ? `  fails if: the other side of that`
+      : `  fails if: ${missOperator(criterion)} ${boundValue(criterion, criterion.failAt)}; between is partial`,
+    `  judged on the after-run alone; the case need not exist in any before-run`,
+  ];
+  if (criterion.control !== undefined) {
+    lines.push(controlLine(criterion.control));
+  }
+  return {
+    exit: FIX_EXIT.ok,
+    lines,
+    data: { out: options.out, criterion },
+  };
+}
+
+export function runCriterion(options: CriterionOptions): CommandResult {
+  refuseExisting(options.out);
+  return options.mode === "ratio"
+    ? runRatioCriterion(options)
+    : runBoundCriterion(options);
+}
+
+export function judgeBound(
+  criterion: BoundCriterion,
+  after: FlatCase,
+  overAfter: FlatCase | undefined,
+  controlAfter: FlatCase | undefined,
+  afterModifiedAt: Date,
+): BoundComparison {
+  const reasons: string[] = [];
+  if (criterion.over !== undefined && overAfter === undefined) {
+    throw new RecordsError(
+      `The criterion measures growth over ${criterion.over}, but no over case was given`,
+      FIX_EXIT.error,
+    );
+  }
+  const measure =
+    overAfter === undefined ? after.meanMs : after.meanMs / overAfter.meanMs;
+  const shown = boundValue(criterion, measure);
+  const threshold = boundValue(criterion, criterion.threshold);
+  const atMost = criterion.direction === "at-most";
+  const holds = atMost
+    ? measure <= criterion.threshold
+    : measure >= criterion.threshold;
+  const short =
+    criterion.failAt !== undefined &&
+    (atMost ? measure < criterion.failAt : measure > criterion.failAt);
+
+  let verdict: Verdict;
+  if (holds) {
+    verdict = "met";
+    reasons.push(
+      `${shown} is at or ${atMost ? "under" : "over"} the ${threshold} threshold`,
+    );
+  } else if (short && criterion.failAt !== undefined) {
+    verdict = "partial";
+    reasons.push(
+      `${shown} is between the ${threshold} threshold and the ${boundValue(criterion, criterion.failAt)} miss line`,
+    );
+  } else {
+    verdict = "missed";
+    reasons.push(
+      criterion.failAt === undefined
+        ? `${shown} is ${atMost ? "above" : "below"} the ${threshold} threshold`
+        : `${shown} is at or ${atMost ? "above" : "below"} the ${boundValue(criterion, criterion.failAt)} miss line`,
+    );
+  }
+
+  const guarded = guard(
+    verdict,
+    criterion.writtenAt,
+    criterion.control,
+    controlAfter,
+    afterModifiedAt,
+    reasons,
+  );
+  return {
+    verdict: guarded.verdict,
+    measure,
+    after,
+    overAfter,
+    controlRatio: guarded.controlRatio,
+    controlAfter,
+    reasons,
+  };
+}
+
+export function formatBoundComparison(
+  criterion: BoundCriterion,
+  comparison: BoundComparison,
+  afterPath: string,
+): string[] {
+  const miss =
+    criterion.failAt === undefined
+      ? ""
+      : `, missed at ${missOperator(criterion)} ${boundValue(criterion, criterion.failAt)}`;
+  const lines = [
+    `criterion written ${criterion.writtenAt}: ${boundMeasureLabel(criterion)} ${boundOperator(criterion)} ${boundValue(criterion, criterion.threshold)}${miss} (after-run only)`,
+    `after  (${afterPath}): ${comparison.after.name} ${ms(comparison.after.meanMs)} | rme ${comparison.after.rmePct.toFixed(2)}% | n ${String(comparison.after.sampleCount)}`,
+  ];
+  if (comparison.overAfter !== undefined) {
+    lines.push(
+      `over   (${afterPath}): ${comparison.overAfter.name} ${ms(comparison.overAfter.meanMs)} | rme ${comparison.overAfter.rmePct.toFixed(2)}% | n ${String(comparison.overAfter.sampleCount)}`,
+      `growth: ${comparison.measure.toFixed(3)}x`,
+    );
+  }
+  if (
+    criterion.control !== undefined &&
+    comparison.controlAfter !== undefined
+  ) {
+    lines.push(
+      `control ${criterion.control.before.name}: ${ms(criterion.control.before.meanMs)} -> ${ms(comparison.controlAfter.meanMs)} (${(comparison.controlRatio ?? 0).toFixed(3)}x)`,
+    );
+  }
+  lines.push(...comparison.reasons.map((reason) => `  - ${reason}`));
+  lines.push(`verdict: ${comparison.verdict.toUpperCase()}`);
+  return lines;
+}
+
+export function readCriterion(path: string): CriterionFile {
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
@@ -311,7 +553,7 @@ export function readCriterion(path: string): Criterion {
       FIX_EXIT.notFound,
     );
   }
-  const parsed = Criterion.safeParse(JSON.parse(raw));
+  const parsed = CriterionFile.safeParse(JSON.parse(raw));
   if (!parsed.success) {
     throw new RecordsError(
       `${path} is not a criterion file: ${parsed.error.issues[0]?.message ?? "unknown shape"}`,
@@ -321,14 +563,47 @@ export function readCriterion(path: string): Criterion {
   return parsed.data;
 }
 
+function compareBound(
+  criterion: BoundCriterion,
+  options: CompareOptions,
+  cases: FlatCase[],
+  controlAfter: FlatCase | undefined,
+): CommandResult {
+  const after = findCase(cases, criterion.caseName);
+  const overAfter =
+    criterion.over === undefined ? undefined : findCase(cases, criterion.over);
+  const comparison = judgeBound(
+    criterion,
+    after,
+    overAfter,
+    controlAfter,
+    statSync(options.after).mtime,
+  );
+  return {
+    exit: verdictExit(comparison.verdict),
+    lines: formatBoundComparison(criterion, comparison, options.after),
+    data: {
+      criterion: options.criterion,
+      after: options.after,
+      verdict: comparison.verdict,
+      measure: comparison.measure,
+      controlRatio: comparison.controlRatio ?? null,
+      reasons: comparison.reasons,
+    },
+  };
+}
+
 export function runCompare(options: CompareOptions): CommandResult {
   const criterion = readCriterion(options.criterion);
   const cases = readReport(options.after);
-  const after = findCase(cases, criterion.before.name);
   const controlAfter =
     criterion.control === undefined
       ? undefined
       : cases.find((item) => item.name === criterion.control?.before.name);
+  if ("kind" in criterion) {
+    return compareBound(criterion, options, cases, controlAfter);
+  }
+  const after = findCase(cases, criterion.before.name);
   const comparison = judge(
     criterion,
     after,

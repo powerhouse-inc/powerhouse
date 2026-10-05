@@ -34,6 +34,12 @@
       "path": "../../packages/reactor-group"
     },
     {
+      "path": "../../packages/reactor-privacy"
+    },
+    {
+      "path": "../../packages/reactor-workflow"
+    },
+    {
       "path": "../../packages/renown"
     },
     {
@@ -41,6 +47,9 @@
     },
     {
       "path": "../../packages/vetra"
+    },
+    {
+      "path": "../../packages/workflow"
     }
   ]
 }

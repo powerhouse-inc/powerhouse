@@ -102,7 +102,7 @@ type MoveGrantInput = {
 
 `MOVE_GRANT` moves an existing grant to `index`, clamping an out-of-range index to the valid range. Order is significant because the last applicable grant wins.
 
-`UNDO`, `REDO`, and `PRUNE` are rejected on the auth scope.
+`UNDO` and `REDO` are rejected on the auth scope.
 
 On a `PHGroup` document, `INITIALIZE_AUTH` and `SET_GRANT` reject any grant whose principal is `{ group }`. That is, **a group's auth scope cannot reference other groups**. The auth reducer checks the document's own type, so the check is deterministic on every replica. We need this restriction to prevent reference cycles and to keep the systems that follow group references simple rather than potentially recursive (see Groups and Synchronization).
 
@@ -741,7 +741,7 @@ The rule is about _reachability_, not about a grant being present. Evaluation is
 
 A duplicated document inherits its source's policy. Duplication fails when the copy cannot preserve the policy rather than producing a policy that cannot be administered.
 
-**A state snapshot is not a door onto the policy.** `applyAuthAction` is the validated way into `state.auth`, but `UPGRADE_DOCUMENT`'s `initialState` and `LOAD_STATE`'s `data` replace whole scopes at once, and both are authorized as `document`-scope writes. Without a rule there, a subject holding `execute` on `document` and no auth grant could install a policy of its choosing, name itself `creator` (which exempts the policy from retention permanently), or wipe an existing policy by carrying the default uninitialized one. A snapshot's auth scope is therefore resolved rather than assigned: a snapshot with no policy or an uninitialized one leaves the document's own policy standing, an uninitialized document accepts a policy only after the validation genesis applies, and a snapshot reaching an already-initialized document must carry that same policy exactly, grants included. Duplication and import satisfy the last rule because they run against a freshly created document; anything else is an attempt to swap one policy for another.
+**A state snapshot is not a door onto the policy.** `applyAuthAction` is the validated way into `state.auth`, but `UPGRADE_DOCUMENT`'s `initialState` replaces whole scopes at once and is authorized as a `document`-scope write. Without a rule there, a subject holding `execute` on `document` and no auth grant could install a policy of its choosing, name itself `creator` (which exempts the policy from retention permanently), or wipe an existing policy by carrying the default uninitialized one. A snapshot's auth scope is therefore resolved rather than assigned: a snapshot with no policy or an uninitialized one leaves the document's own policy standing, an uninitialized document accepts a policy only after the validation genesis applies, and a snapshot reaching an already-initialized document must carry that same policy exactly, grants included. Duplication and import satisfy the last rule because they run against a freshly created document; anything else is an attempt to swap one policy for another.
 
 Migrating a host's own permission tables into grants is stage 9. A table owner needs both a `read` grant and an `execute`-on-`auth` one: the second because a migrated document has no creator to carve out for, so a policy that does not name its own administrator is born locked out.
 

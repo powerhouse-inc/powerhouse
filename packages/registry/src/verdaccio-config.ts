@@ -4,6 +4,9 @@ import type { AuthStore } from "./auth/auth-store.js";
 import { stashAuthStore } from "./auth/store-handoff.js";
 import type { RegistryConfig } from "./types.js";
 
+// Bundled into dist/plugins, where Verdaccio loads it by this name
+export const S3_STORAGE_PLUGIN = "@powerhousedao/verdaccio-s3-storage";
+
 export function buildVerdaccioConfig(config: RegistryConfig) {
   const htpasswdPath = path.join(config.storagePath, "htpasswd");
 
@@ -41,13 +44,17 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
       }
     : { htpasswd: { file: htpasswdPath } };
 
+  // The S3 store keeps Verdaccio's package list, tokens and secret in Postgres
+  if (config.s3 && !config.databaseUrl) {
+    throw new Error("S3 storage requires a database URL (--database-url)");
+  }
+  const loadsPlugins = usePgAuth || Boolean(config.s3);
+
   const base: Record<string, unknown> = {
     storage: config.storagePath,
-    self_path: "./",
-    // Top-level secret used by verdaccio to sign / verify its API JWTs.
-    // The renown middleware mints a verdaccio-format JWT with the same
-    // secret so verdaccio's apiJWTmiddleware accepts the swapped token.
-    ...(config.verdaccioSecret ? { secret: config.verdaccioSecret } : {}),
+    // Verdaccio 7 reads configPath from self_path; every path here is absolute
+    self_path: path.join(config.storagePath, "config.yaml"),
+    configPath: path.join(config.storagePath, "config.yaml"),
     // Force JWT mode for the npm API. Without this verdaccio falls back to
     // its legacy aes-encrypted token format, which signPayload won't produce.
     security: {
@@ -59,7 +66,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
       },
     },
     auth,
-    ...(usePgAuth ? { plugins: pluginsDir } : {}),
+    ...(loadsPlugins ? { plugins: pluginsDir } : {}),
     uplinks: {
       npmjs: {
         url: uplinkUrl,
@@ -113,6 +120,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
     },
     server: {
       keepAliveTimeout: 60,
+      ...(config.trustProxy !== undefined && { trustProxy: config.trustProxy }),
     },
     log: {
       type: "stdout",
@@ -124,7 +132,14 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
 
   if (config.s3) {
     base.store = {
-      "aws-s3-storage": {
+      [S3_STORAGE_PLUGIN]: {
+        postgresUrl: config.databaseUrl,
+        ...(config.storagePoolMax && {
+          postgresPoolMax: config.storagePoolMax,
+        }),
+        ...(config.storageLockPoolMax && {
+          postgresLockPoolMax: config.storageLockPoolMax,
+        }),
         bucket: config.s3.bucket,
         endpoint: config.s3.endpoint,
         region: config.s3.region,

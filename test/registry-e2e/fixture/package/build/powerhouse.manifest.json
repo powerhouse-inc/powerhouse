@@ -1,0 +1,19 @@
+{
+  "name": "@fixture/piece-only-package",
+  "description": "A registry-e2e probe package that ships one piece.",
+  "category": "Fixtures",
+  "documentModels": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "pieces": [
+    {
+      "id": "@fixture/piece-hello",
+      "name": "Hello",
+      "version": "1.2.3",
+      "description": "Says hello.",
+      "bundle": "dist/node/pieces/probe",
+      "descriptor": "dist/node/pieces/probe/descriptor.json"
+    }
+  ]
+}

@@ -1,3 +1,702 @@
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- pass package names, step keys and error text to the logger as arguments ([fd81243791](https://github.com/powerhouse-inc/powerhouse/commit/fd81243791))
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.37 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.36 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.35 (2026-10-01)
+
+### 🚀 Features
+
+- ⚠️  **registry:** serve every replica from Postgres and S3, processing publishes in a worker ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+- **reactor:** submit a document create without waiting for it ([eadc4397fd](https://github.com/powerhouse-inc/powerhouse/commit/eadc4397fd))
+- **reactor:** mark a Deleted event that a purge marker applied ([50cde8c64d](https://github.com/powerhouse-inc/powerhouse/commit/50cde8c64d))
+- **reactor:** persist marker refusals and report polled ones ([26c9bfc91a](https://github.com/powerhouse-inc/powerhouse/commit/26c9bfc91a))
+- **switchboard:** run the privacy add-on behind PH_PRIVACY_ENABLED ([38c9a43856](https://github.com/powerhouse-inc/powerhouse/commit/38c9a43856))
+- **reactor-privacy:** erase requested documents on a serial schedule ([f4f31289a1](https://github.com/powerhouse-inc/powerhouse/commit/f4f31289a1))
+- **reactor:** fence every read model by default ([90000d1ede](https://github.com/powerhouse-inc/powerhouse/commit/90000d1ede))
+- **reactor:** track which remotes still owe acknowledgement of an ordinal ([53ca60ea3d](https://github.com/powerhouse-inc/powerhouse/commit/53ca60ea3d))
+- **reactor:** set the purge size cap from the stage 1 measurement ([8cc64f6b99](https://github.com/powerhouse-inc/powerhouse/commit/8cc64f6b99))
+- **reactor-privacy:** serve disclosure and erasure to supreme admins only ([7a6b5232cb](https://github.com/powerhouse-inc/powerhouse/commit/7a6b5232cb))
+- **reactor:** export PurgeMarkerContext ([fb20c6714e](https://github.com/powerhouse-inc/powerhouse/commit/fb20c6714e))
+- **reactor-privacy:** scaffold the package and its migration ledger ([152ecff77b](https://github.com/powerhouse-inc/powerhouse/commit/152ecff77b))
+- **reactor:** deliver a drive's deletion before closing its processors and skip purged operations ([718a31b985](https://github.com/powerhouse-inc/powerhouse/commit/718a31b985))
+- **reactor-drive:** erase a purged document's nodes in NodeProcessor ([5a608e73bf](https://github.com/powerhouse-inc/powerhouse/commit/5a608e73bf))
+- **reactor:** read a model's tombstones through an overridable handle ([3264a6643b](https://github.com/powerhouse-inc/powerhouse/commit/3264a6643b))
+- **reactor-attachments:** delete a purged document's attachment references ([4121c83347](https://github.com/powerhouse-inc/powerhouse/commit/4121c83347))
+- **reactor:** notify subscribers of a purge marker explicitly ([d10fc0b9db](https://github.com/powerhouse-inc/powerhouse/commit/d10fc0b9db))
+- **reactor:** flag a marker load that deleted a live document ([75adf39efb](https://github.com/powerhouse-inc/powerhouse/commit/75adf39efb))
+- **reactor:** export the sync purge types and document the dead-letter refusal ([877eb9e81d](https://github.com/powerhouse-inc/powerhouse/commit/877eb9e81d))
+- **reactor:** keep a purged target's reopened membership on relationship removal ([d12bf1a648](https://github.com/powerhouse-inc/powerhouse/commit/d12bf1a648))
+- **reactor:** put DocumentPurgeService on the reactor module ([27ca60d32b](https://github.com/powerhouse-inc/powerhouse/commit/27ca60d32b))
+- **reactor:** drop a purged id's dead letters from memory ([c08c36d05e](https://github.com/powerhouse-inc/powerhouse/commit/c08c36d05e))
+- **reactor:** refuse a peer marker whose input carries more than the purge ([f59890862a](https://github.com/powerhouse-inc/powerhouse/commit/f59890862a))
+- **reactor:** fence the document view and indexer, and skip the marker ([1a8ae3c1e4](https://github.com/powerhouse-inc/powerhouse/commit/1a8ae3c1e4))
+- **reactor:** fence read-model commits against document purges ([7c677b7d2c](https://github.com/powerhouse-inc/powerhouse/commit/7c677b7d2c))
+- **reactor:** add DocumentPurgeService and export the purger ([92ea8eab93](https://github.com/powerhouse-inc/powerhouse/commit/92ea8eab93))
+- **reactor:** run purge jobs and marker receipts in the executor ([6d121ed55b](https://github.com/powerhouse-inc/powerhouse/commit/6d121ed55b))
+- **reactor:** add the document purger and bind it to the execution scope ([2478c68d15](https://github.com/powerhouse-inc/powerhouse/commit/2478c68d15))
+- **reactor:** refuse appends to purged streams in the store and index ([717fa74153](https://github.com/powerhouse-inc/powerhouse/commit/717fa74153))
+- **reactor:** evict the host's caches when a marker is written ([25ef6b3a25](https://github.com/powerhouse-inc/powerhouse/commit/25ef6b3a25))
+- **reactor:** evict a purged id from the projection worker's caches ([1f1fed8e03](https://github.com/powerhouse-inc/powerhouse/commit/1f1fed8e03))
+- **reactor:** write keyframes behind the purge lock and skip tombstoned ids ([b510c0d62d](https://github.com/powerhouse-inc/powerhouse/commit/b510c0d62d))
+- **reactor:** replay a purge marker as a deletion in the write and meta caches ([1bf6265e16](https://github.com/powerhouse-inc/powerhouse/commit/1bf6265e16))
+- **reactor:** keep a purged-id set in the sync manager ([9432f956db](https://github.com/powerhouse-inc/powerhouse/commit/9432f956db))
+- **reactor:** refuse dead letters for purged documents ([c63bebe12a](https://github.com/powerhouse-inc/powerhouse/commit/c63bebe12a))
+- **reactor:** classify the purge errors for sync dead letters ([b258fe9f05](https://github.com/powerhouse-inc/powerhouse/commit/b258fe9f05))
+- **reactor:** let the sync manager evict a document from the host meta cache ([d8b7d0d446](https://github.com/powerhouse-inc/powerhouse/commit/d8b7d0d446))
+- **reactor:** export the document erasure foundation ([7caf201f70](https://github.com/powerhouse-inc/powerhouse/commit/7caf201f70))
+- **reactor:** treat PURGE_DOCUMENT as structure and as a deletion ([fbcc3b6859](https://github.com/powerhouse-inc/powerhouse/commit/fbcc3b6859))
+- **reactor:** expose document locks on ExecutionStores ([9d733ed966](https://github.com/powerhouse-inc/powerhouse/commit/9d733ed966))
+- **reactor:** add the document_purges tombstone and purge locks ([088030f06d](https://github.com/powerhouse-inc/powerhouse/commit/088030f06d))
+- **reactor:** add the purge errors and make them terminal ([41713db07c](https://github.com/powerhouse-inc/powerhouse/commit/41713db07c))
+- **reactor:** add the purge job kind ([dc1283f7cf](https://github.com/powerhouse-inc/powerhouse/commit/dc1283f7cf))
+
+### 🩹 Fixes
+
+- **reactor:** evaluate a self-creating load against an absent stream ([8c14712859](https://github.com/powerhouse-inc/powerhouse/commit/8c14712859))
+- **reactor:** resolve slugs on every client write target ([30c303d82c](https://github.com/powerhouse-inc/powerhouse/commit/30c303d82c))
+- **reactor:** fail a push whose received marker was not stored ([1d0b7371ee](https://github.com/powerhouse-inc/powerhouse/commit/1d0b7371ee))
+- **reactor:** keep a purged relationship source's own error ([3290fcb277](https://github.com/powerhouse-inc/powerhouse/commit/3290fcb277))
+- **reactor:** a drive's purge does not require a live former member ([e8266b1035](https://github.com/powerhouse-inc/powerhouse/commit/e8266b1035))
+- **reactor-privacy:** a denied delete leaves the document live ([62f1038ce6](https://github.com/powerhouse-inc/powerhouse/commit/62f1038ce6))
+- **reactor:** refuse a peer marker whose purge time is not a timestamp ([b0f41275d6](https://github.com/powerhouse-inc/powerhouse/commit/b0f41275d6))
+- **reactor:** load items pushed into a remote's inbox before it is wired ([ee61d5e791](https://github.com/powerhouse-inc/powerhouse/commit/ee61d5e791))
+- **reactor-privacy:** warn and record lastError while a leaked purge blocks dispatch ([cd6fe4f022](https://github.com/powerhouse-inc/powerhouse/commit/cd6fe4f022))
+- **reactor-privacy:** reopen every failed request with no failed item each tick ([d9c19c3837](https://github.com/powerhouse-inc/powerhouse/commit/d9c19c3837))
+- **reactor:** bound the drive header reads of a late registration ([ecc435b71f](https://github.com/powerhouse-inc/powerhouse/commit/ecc435b71f))
+- **reactor:** drop a drive header read that a purge overtook ([6dffd64a5e](https://github.com/powerhouse-inc/powerhouse/commit/6dffd64a5e))
+- **reactor-api:** ignore polled refusals of an unknown kind ([aac4a3e752](https://github.com/powerhouse-inc/powerhouse/commit/aac4a3e752))
+- **reactor-api:** fail a poll with a recoverable code when a refusal is not recorded ([3ab1c92f7b](https://github.com/powerhouse-inc/powerhouse/commit/3ab1c92f7b))
+- **reactor:** keep a polled marker refusal only when the marker was owed ([07cae595da](https://github.com/powerhouse-inc/powerhouse/commit/07cae595da))
+- **reactor:** park a processor through a tombstone lookup outage ([2e57eb5faf](https://github.com/powerhouse-inc/powerhouse/commit/2e57eb5faf))
+- **reactor:** let re-registration run past a hung owed deletion ([7d64621f1d](https://github.com/powerhouse-inc/powerhouse/commit/7d64621f1d))
+- **reactor:** persist a purge refusal only from a MARKER_REFUSED dead letter ([ef2c3f4729](https://github.com/powerhouse-inc/powerhouse/commit/ef2c3f4729))
+- **reactor:** send marker refusals only to a peer announcing the feature ([a24cf8463c](https://github.com/powerhouse-inc/powerhouse/commit/a24cf8463c))
+- **reactor-privacy:** recover failed purges that commit, one purge at a time ([6832617d50](https://github.com/powerhouse-inc/powerhouse/commit/6832617d50))
+- **reactor:** bind nothing from a factory run that settles after shutdown ([68f9fc884c](https://github.com/powerhouse-inc/powerhouse/commit/68f9fc884c))
+- **reactor:** list processors that threw on their drive's deletion ([fd411760a9](https://github.com/powerhouse-inc/powerhouse/commit/fd411760a9))
+- **reactor:** bound tombstone lookup retries and close processors on kill ([a0838dbee6](https://github.com/powerhouse-inc/powerhouse/commit/a0838dbee6))
+- **reactor:** stop registerFactory and init awaiting owed deletions ([88017fc40a](https://github.com/powerhouse-inc/powerhouse/commit/88017fc40a))
+- **reactor:** hand factories the drive's creation header, not a minimal one ([ecf43e54a1](https://github.com/powerhouse-inc/powerhouse/commit/ecf43e54a1))
+- **reactor:** keep owed cursor rows no produced processor was paid for ([84490e6da2](https://github.com/powerhouse-inc/powerhouse/commit/84490e6da2))
+- **reactor:** owe the marker to remotes whose filter excludes it ([335333671d](https://github.com/powerhouse-inc/powerhouse/commit/335333671d))
+- **reactor:** release a factory's cursor rows on unregister instead of deleting them ([34e14393cb](https://github.com/powerhouse-inc/powerhouse/commit/34e14393cb))
+- **reactor:** keep a deleted drive's cursor rows until each processor has its deletion ([731112ce06](https://github.com/powerhouse-inc/powerhouse/commit/731112ce06))
+- **reactor:** retry a processor's failed tombstone lookup instead of erroring it ([57a22d68cb](https://github.com/powerhouse-inc/powerhouse/commit/57a22d68cb))
+- **shared:** match a relational processor's own drive by id, not namespace ([78175ef110](https://github.com/powerhouse-inc/powerhouse/commit/78175ef110))
+- **reactor:** guard locked read models by a declared marker, not arity ([897f1b6935](https://github.com/powerhouse-inc/powerhouse/commit/897f1b6935))
+- **reactor:** keep a received marker across a restart until its outcome ([db5c57747a](https://github.com/powerhouse-inc/powerhouse/commit/db5c57747a))
+- **reactor:** stop re-pushing a marker the remote refused ([fdd351c7d7](https://github.com/powerhouse-inc/powerhouse/commit/fdd351c7d7))
+- **reactor:** treat only an identical marker as a resent copy ([28ecb88e86](https://github.com/powerhouse-inc/powerhouse/commit/28ecb88e86))
+- **reactor:** push a marker again to a remote that never acknowledged it ([d40af1270a](https://github.com/powerhouse-inc/powerhouse/commit/d40af1270a))
+- **reactor:** hold the inbox ack below a marker awaiting its load ([8017ea64c4](https://github.com/powerhouse-inc/powerhouse/commit/8017ea64c4))
+- **reactor:** tombstone on a failed load only when the error names that id ([2f0b995213](https://github.com/powerhouse-inc/powerhouse/commit/2f0b995213))
+- **reactor:** resolve enqueuePurge once the purge is queued ([38cd9d70fd](https://github.com/powerhouse-inc/powerhouse/commit/38cd9d70fd))
+- **reactor:** push only outbox entries still queued when the buffer flushes ([be186002ba](https://github.com/powerhouse-inc/powerhouse/commit/be186002ba))
+- **reactor:** broadcast a committed purge's eviction to every worker ([e0357600c7](https://github.com/powerhouse-inc/powerhouse/commit/e0357600c7))
+- **reactor:** never cache a write-cache rebuild an invalidation overtook ([b96f2b410c](https://github.com/powerhouse-inc/powerhouse/commit/b96f2b410c))
+- **reactor:** lock the groups a job names and fence its cross-document reads ([d5d5493fb7](https://github.com/powerhouse-inc/powerhouse/commit/d5d5493fb7))
+- **reactor:** refuse a pre-purge hold written after the purge ([45b31b6606](https://github.com/powerhouse-inc/powerhouse/commit/45b31b6606))
+- **reactor:** never serve a tombstoned id's rows again ([dfaa34569d](https://github.com/powerhouse-inc/powerhouse/commit/dfaa34569d))
+- **reactor:** exempt purge markers from remote filters ([eb301bd379](https://github.com/powerhouse-inc/powerhouse/commit/eb301bd379))
+- **reactor:** retry a received marker whose load failed transiently ([a9f03e8728](https://github.com/powerhouse-inc/powerhouse/commit/a9f03e8728))
+- **reactor:** refuse a load's foreign purged id as an id mismatch ([1434eb7313](https://github.com/powerhouse-inc/powerhouse/commit/1434eb7313))
+- **reactor:** accept a submitted relationship removal naming a purged target ([984747a4bc](https://github.com/powerhouse-inc/powerhouse/commit/984747a4bc))
+- **reactor:** enforce marker admission under signatureVerification "log" ([87140adcd9](https://github.com/powerhouse-inc/powerhouse/commit/87140adcd9))
+- **reactor:** store a loaded marker in the receiver's own envelope ([4ac288dd68](https://github.com/powerhouse-inc/powerhouse/commit/4ac288dd68))
+- **reactor:** bucket purge advisory keys so large jobs fit the lock table ([ec7b9d9bd2](https://github.com/powerhouse-inc/powerhouse/commit/ec7b9d9bd2))
+- **reactor:** derive the outbox for a settled write whose write-ready was lost ([cb6af8ae3a](https://github.com/powerhouse-inc/powerhouse/commit/cb6af8ae3a))
+- **reactor:** dead-letter only the marker of a refused marker load ([ed82ecc9c7](https://github.com/powerhouse-inc/powerhouse/commit/ed82ecc9c7))
+- **reactor:** stop the host's marker eviction when the reactor is killed ([a7ba0d6439](https://github.com/powerhouse-inc/powerhouse/commit/a7ba0d6439))
+- **reactor:** never count a purge marker as a stored creation ([e1c2fef5cc](https://github.com/powerhouse-inc/powerhouse/commit/e1c2fef5cc))
+- **reactor:** serve a removed file's delete to its drive's remotes ([8f42d798c8](https://github.com/powerhouse-inc/powerhouse/commit/8f42d798c8))
+- **reactor:** plan cascade deletes children first, cycle-free under retry ([8366b11ef1](https://github.com/powerhouse-inc/powerhouse/commit/8366b11ef1))
+- **reactor:** forward a batch's jobs that finish after one of them failed ([ea8a180755](https://github.com/powerhouse-inc/powerhouse/commit/ea8a180755))
+- **reactor:** order purge lock acquisition in the locking select itself ([582ac86420](https://github.com/powerhouse-inc/powerhouse/commit/582ac86420))
+- **reactor:** keep document-purge out of the versions new documents want ([f64a6b52fd](https://github.com/powerhouse-inc/powerhouse/commit/f64a6b52fd))
+- **reactor:** order cascade deletes before their membership removals ([32a4d93e29](https://github.com/powerhouse-inc/powerhouse/commit/32a4d93e29))
+- **reactor:** throw DocumentNotFoundError from the document view ([8d67ca405b](https://github.com/powerhouse-inc/powerhouse/commit/8d67ca405b))
+
+### 🔥 Performance
+
+- **reactor:** index a cascade delete's leading removals by source ([9270844dbb](https://github.com/powerhouse-inc/powerhouse/commit/9270844dbb))
+- **reactor:** skip the settled sweep when no remote trails it ([0177a15029](https://github.com/powerhouse-inc/powerhouse/commit/0177a15029))
+- **reactor-privacy:** dispatch the next purge without rescanning the backlog ([5de3703ebf](https://github.com/powerhouse-inc/powerhouse/commit/5de3703ebf))
+- **reactor:** fence a decision model's derived streams in one round trip ([28e74cae21](https://github.com/powerhouse-inc/powerhouse/commit/28e74cae21))
+- **reactor:** track unapplied marker items instead of scanning the inbox ([418dfce8e9](https://github.com/powerhouse-inc/powerhouse/commit/418dfce8e9))
+- **reactor:** skip tombstone re-checks for ids a job read live under its lock ([2eb259bc6b](https://github.com/powerhouse-inc/powerhouse/commit/2eb259bc6b))
+- **reactor:** sweep settled ranges only for the remotes' collections ([7108af61da](https://github.com/powerhouse-inc/powerhouse/commit/7108af61da))
+
+### ⚠️  Breaking Changes
+
+- **registry:** serve every replica from Postgres and S3, processing publishes in a worker  ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+  /packages and /pieces return pages ({items,total,limit,offset,hasMore}) instead of full arrays, and piece bundles move to /-/pieces/bundled/<name>/<version>.tgz.
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+
+## 6.2.3-dev.34 (2026-09-30)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **reactor:** export the UnsupportedStoredDocuments mode type ([f17c1b074](https://github.com/powerhouse-inc/powerhouse/commit/f17c1b074))
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **reactor:** derive the sync outbox only up to the settled watermark ([98dc2f299](https://github.com/powerhouse-inc/powerhouse/commit/98dc2f299))
+- **reactor:** give the group re-evaluation trigger a catch-up cursor ([e6fa0640c](https://github.com/powerhouse-inc/powerhouse/commit/e6fa0640c))
+- **reactor:** select protocol versions for new documents from peer agreement ([f2fbcdd39](https://github.com/powerhouse-inc/powerhouse/commit/f2fbcdd39))
+- **reactor:** hold documents from peers that cannot run them ([89f932805](https://github.com/powerhouse-inc/powerhouse/commit/89f932805))
+- **reactor:** cap processor cursors at the manager's catch-up cursor ([ea8505be6](https://github.com/powerhouse-inc/powerhouse/commit/ea8505be6))
+- **reactor:** move read-model cursors to contiguous catch-up ([ae8859131](https://github.com/powerhouse-inc/powerhouse/commit/ae8859131))
+- **reactor:** exchange peer manifests on the channel handshake ([514c245a2](https://github.com/powerhouse-inc/powerhouse/commit/514c245a2))
+- **reactor:** add the settled watermark and catch-up scheduler ([885676bb5](https://github.com/powerhouse-inc/powerhouse/commit/885676bb5))
+- **reactor:** refuse documents at protocol versions this reactor does not run ([69532da36](https://github.com/powerhouse-inc/powerhouse/commit/69532da36))
+
+### 🩹 Fixes
+
+- **reactor:** resolve a live pass with its last chunk again ([4caa6fc16](https://github.com/powerhouse-inc/powerhouse/commit/4caa6fc16))
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+- **reactor:** create signed, derived-id documents in the sync bench ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** refuse to start below a protocol version the store holds ([78d258ee4](https://github.com/powerhouse-inc/powerhouse/commit/78d258ee4))
+- **reactor:** keep IChannel implementations without manifest support compiling ([f332d6174](https://github.com/powerhouse-inc/powerhouse/commit/f332d6174))
+- **reactor:** rebuild from the whole log when a cached rebuild meets a skip ([4da993040](https://github.com/powerhouse-inc/powerhouse/commit/4da993040))
+- **reactor:** pass the database type to readSnapshotFunctions for TS 5.9 ([826be505b](https://github.com/powerhouse-inc/powerhouse/commit/826be505b))
+- **reactor:** sequence manifests by start time and re-probe a silent server ([50611d8c1](https://github.com/powerhouse-inc/powerhouse/commit/50611d8c1))
+- **reactor:** report refusals of polled rows so the server holds them ([a970307ee](https://github.com/powerhouse-inc/powerhouse/commit/a970307ee))
+- **reactor:** name the gated-under server revision on push and hold before resending ([e5d9bd7ed](https://github.com/powerhouse-inc/powerhouse/commit/e5d9bd7ed))
+- **reactor:** name the client's revision on each poll and refresh before admitting rows ([a966599ea](https://github.com/powerhouse-inc/powerhouse/commit/a966599ea))
+- **reactor:** refuse every write into a stored document this reactor does not run ([8a97ba643](https://github.com/powerhouse-inc/powerhouse/commit/8a97ba643))
+- **reactor:** keep a read model's applied set across a repeat init ([67ca4ff72](https://github.com/powerhouse-inc/powerhouse/commit/67ca4ff72))
+- **reactor:** rebuild resultingState in the executor's shape ([ed92072b6](https://github.com/powerhouse-inc/powerhouse/commit/ed92072b6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.28 (2026-09-28)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.27 (2026-09-28)
+
+### 🚀 Features
+
+- **reactor:** answer whether a listing serves one document ([563af9de3](https://github.com/powerhouse-inc/powerhouse/commit/563af9de3))
+- **reactor:** prepare a read-gate decision once for many subjects ([19d3ee8a2](https://github.com/powerhouse-inc/powerhouse/commit/19d3ee8a2))
+
+### 🩹 Fixes
+
+- **reactor:** keep retracted what a re-evaluated reshuffle head retracted ([718527443](https://github.com/powerhouse-inc/powerhouse/commit/718527443))
+- **reactor:** stop a re-appended local NOOP undoing another operation ([4a9d3d2ed](https://github.com/powerhouse-inc/powerhouse/commit/4a9d3d2ed))
+- **reactor:** re-append every live operation a load's skip rewinds ([9bd03846b](https://github.com/powerhouse-inc/powerhouse/commit/9bd03846b))
+- **reactor:** refuse resubmitting an action the stream has superseded ([0a0da9e7c](https://github.com/powerhouse-inc/powerhouse/commit/0a0da9e7c))
+- **reactor:** re-apply a re-delivered operation a reshuffle rewound ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** check an event read's absence through the event's reads ([c9317e5d5](https://github.com/powerhouse-inc/powerhouse/commit/c9317e5d5))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor:** judge a document with no domain-scope rows on its declared scopes ([a70d94c77](https://github.com/powerhouse-inc/powerhouse/commit/a70d94c77))
+- **reactor:** deliver every id of a multi-document delete to subscribers ([6bb4c95ef](https://github.com/powerhouse-inc/powerhouse/commit/6bb4c95ef))
+- **reactor:** serve a stateless document from listings ([a87664c90](https://github.com/powerhouse-inc/powerhouse/commit/a87664c90))
+- **reactor:** withhold documents serving no readable domain scope ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+
+### 🔥 Performance
+
+- **reactor:** fetch only the view's scopes for a listing ([59411e697](https://github.com/powerhouse-inc/powerhouse/commit/59411e697))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- **reactor:** answer whether a listing serves one document ([563af9de3](https://github.com/powerhouse-inc/powerhouse/commit/563af9de3))
+- **reactor:** prepare a read-gate decision once for many subjects ([19d3ee8a2](https://github.com/powerhouse-inc/powerhouse/commit/19d3ee8a2))
+
+### 🩹 Fixes
+
+- **reactor:** keep retracted what a re-evaluated reshuffle head retracted ([718527443](https://github.com/powerhouse-inc/powerhouse/commit/718527443))
+- **reactor:** stop a re-appended local NOOP undoing another operation ([4a9d3d2ed](https://github.com/powerhouse-inc/powerhouse/commit/4a9d3d2ed))
+- **reactor:** re-append every live operation a load's skip rewinds ([9bd03846b](https://github.com/powerhouse-inc/powerhouse/commit/9bd03846b))
+- **reactor:** refuse resubmitting an action the stream has superseded ([0a0da9e7c](https://github.com/powerhouse-inc/powerhouse/commit/0a0da9e7c))
+- **reactor:** re-apply a re-delivered operation a reshuffle rewound ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** check an event read's absence through the event's reads ([c9317e5d5](https://github.com/powerhouse-inc/powerhouse/commit/c9317e5d5))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor:** judge a document with no domain-scope rows on its declared scopes ([a70d94c77](https://github.com/powerhouse-inc/powerhouse/commit/a70d94c77))
+- **reactor:** deliver every id of a multi-document delete to subscribers ([6bb4c95ef](https://github.com/powerhouse-inc/powerhouse/commit/6bb4c95ef))
+- **reactor:** serve a stateless document from listings ([a87664c90](https://github.com/powerhouse-inc/powerhouse/commit/a87664c90))
+- **reactor:** withhold documents serving no readable domain scope ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+
+### 🔥 Performance
+
+- **reactor:** fetch only the view's scopes for a listing ([59411e697](https://github.com/powerhouse-inc/powerhouse/commit/59411e697))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.25 (2026-09-25)
+
+### 🚀 Features
+
+- **workflow:** show run data in a lazy-loaded tree with copyable references, and scope the connection picker to the drive ([1d286f4a6](https://github.com/powerhouse-inc/powerhouse/commit/1d286f4a6))
+
+### 🩹 Fixes
+
+- **ci:** let the release skip the transpiler TypeScript 7 broke ([#36306](https://github.com/powerhouse-inc/powerhouse/issues/36306))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+- **reactor:** the cache bench times the real drive and document-model delete reducers ([1a94baa73](https://github.com/powerhouse-inc/powerhouse/commit/1a94baa73))
+
+### 🩹 Fixes
+
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+- **reactor:** the processors bench target declares its size units ([9438ef7e6](https://github.com/powerhouse-inc/powerhouse/commit/9438ef7e6))
+- **reactor:** post-ready read models run on their own per-key chain ([f3432fdc2](https://github.com/powerhouse-inc/powerhouse/commit/f3432fdc2))
+- **reactor:** bench:fix criterion can bound a case that exists only in the after-run ([07496793c](https://github.com/powerhouse-inc/powerhouse/commit/07496793c))
+- **reactor:** the FIXED gate requires a record at the fix sha in the tier and storage a GAP's experiment names ([3a126e599](https://github.com/powerhouse-inc/powerhouse/commit/3a126e599))
+- **reactor:** the cache bench records flag split slopes that round to zero instead of printing them as a measured 0 ([3626cf81e](https://github.com/powerhouse-inc/powerhouse/commit/3626cf81e))
+- **reactor:** the records adapter files adjacent mechanism-isolating spreads for multi-case suites and refuses a fastest-over-slowest fold on any same-size group of three or more undeclared cases ([071390bc3](https://github.com/powerhouse-inc/powerhouse/commit/071390bc3))
+- **reactor:** the async emission bench spread only pairs cases at the same delay ([c6980913b](https://github.com/powerhouse-inc/powerhouse/commit/c6980913b))
+- **reactor:** the records adapter groups bench cases by the sizes they state in each target's units ([47ef2da2b](https://github.com/powerhouse-inc/powerhouse/commit/47ef2da2b))
+- **reactor:** bench:fix reads the Postgres URL from REACTOR_TEST_PG_URL ([d4be0ac90](https://github.com/powerhouse-inc/powerhouse/commit/d4be0ac90))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🚀 Features
+
+- **reactor:** route processors synchronously and deliver through per-processor queues ([a021b7ab9](https://github.com/powerhouse-inc/powerhouse/commit/a021b7ab9))
+- **reactor:** a serial delivery queue per processor ([61d74021a](https://github.com/powerhouse-inc/powerhouse/commit/61d74021a))
+- **reactor:** the write-cache bench prices whole-array draft assignment across the surveyed reducers ([1f2683e52](https://github.com/powerhouse-inc/powerhouse/commit/1f2683e52))
+- **reactor:** the sync bench attributes post-ready read-model cost ([36326cf3c](https://github.com/powerhouse-inc/powerhouse/commit/36326cf3c))
+- **reactor:** the auth gate walks real storage in a meso-tier bench ([62d35a1cd](https://github.com/powerhouse-inc/powerhouse/commit/62d35a1cd))
+- **reactor:** the write-cache read/write split is recorded, not printed ([642ac58d2](https://github.com/powerhouse-inc/powerhouse/commit/642ac58d2))
+- **reactor:** the cache bench measures node lookups over frozen and plain lists ([4482bc45c](https://github.com/powerhouse-inc/powerhouse/commit/4482bc45c))
+- **reactor:** the sync bench separates document count from history depth ([a80c873c0](https://github.com/powerhouse-inc/powerhouse/commit/a80c873c0))
+- **reactor:** the auth bench isolates the reverse pass's deny wall ([6645fda5e](https://github.com/powerhouse-inc/powerhouse/commit/6645fda5e))
+
+### 🩹 Fixes
+
+- **reactor:** wait for an in-flight factory call before re-registering its factory ([b8d881b8e](https://github.com/powerhouse-inc/powerhouse/commit/b8d881b8e))
+- **reactor:** address the processor delivery review ([c8eb8275b](https://github.com/powerhouse-inc/powerhouse/commit/c8eb8275b))
+- **reactor:** reject a manager call made synchronously inside a locked callback ([64666e114](https://github.com/powerhouse-inc/powerhouse/commit/64666e114))
+- **reactor:** key processor-manager passes per document and backfill outside the lock ([3a347b16b](https://github.com/powerhouse-inc/powerhouse/commit/3a347b16b))
+- **reactor:** start a 'current' processor at its drive's creation, never earlier ([aa6ce24f2](https://github.com/powerhouse-inc/powerhouse/commit/aa6ce24f2))
+- **reactor:** park a processor's cursor below a live batch it did not take ([090c9770f](https://github.com/powerhouse-inc/powerhouse/commit/090c9770f))
+- **reactor:** deliver operations that reach the processor manager out of ordinal order ([b615f33d9](https://github.com/powerhouse-inc/powerhouse/commit/b615f33d9))
+- **reactor:** run processor-manager passes and registry mutations one at a time ([27521db2e](https://github.com/powerhouse-inc/powerhouse/commit/27521db2e))
+- **reactor:** never move a read-model cursor backwards ([938c42517](https://github.com/powerhouse-inc/powerhouse/commit/938c42517))
+- **reactor:** signal shutdown keeps a failure exit code set before the signal ([8e4bcb76e](https://github.com/powerhouse-inc/powerhouse/commit/8e4bcb76e))
+- **reactor:** the deep-hierarchy sync case measures nesting depth, not contention ([bce418a58](https://github.com/powerhouse-inc/powerhouse/commit/bce418a58))
+- **reactor:** the LRU bench varies only maxDocuments over equal document counts ([ce65e814b](https://github.com/powerhouse-inc/powerhouse/commit/ce65e814b))
+- **reactor:** the write-cache spread pairs only cases on the same leg and op count ([2daf22233](https://github.com/powerhouse-inc/powerhouse/commit/2daf22233))
+- **reactor:** bench case names ending in [reference] stay out of the suite spread ([fb0975397](https://github.com/powerhouse-inc/powerhouse/commit/fb0975397))
+- **reactor:** the write-cache baseline replays with the stored operation's hash ([d022d8c15](https://github.com/powerhouse-inc/powerhouse/commit/d022d8c15))
+- **reactor:** the queue size query is measured in its own suite ([d891f70ac](https://github.com/powerhouse-inc/powerhouse/commit/d891f70ac))
+- **reactor:** the dependency-scan bench asserts order once instead of per job ([eb7e809df](https://github.com/powerhouse-inc/powerhouse/commit/eb7e809df))
+
+### 🔥 Performance
+
+- **reactor:** time the reload processors' backfill in the re-register bench ([da5e19bf8](https://github.com/powerhouse-inc/powerhouse/commit/da5e19bf8))
+- **reactor:** deliver queued live batches to a processor in one call ([002dc6821](https://github.com/powerhouse-inc/powerhouse/commit/002dc6821))
+- **reactor:** bench processor delivery with a timer-based processor, driven directly ([b7f08451b](https://github.com/powerhouse-inc/powerhouse/commit/b7f08451b))
+- **reactor:** bench processor delivery under concurrent read-model batches ([5637ad6ca](https://github.com/powerhouse-inc/powerhouse/commit/5637ad6ca))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Claude Opus 5.5
+
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🩹 Fixes
+
+- **reactor:** write-cache spreads compare only cases at the same operation count ([610fc6ea6](https://github.com/powerhouse-inc/powerhouse/commit/610fc6ea6))
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+
+### 🔥 Performance
+
+- **shared:** build drive reducer input schemas once instead of per action ([791311ada](https://github.com/powerhouse-inc/powerhouse/commit/791311ada))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.21 (2026-09-22)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.20 (2026-09-22)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.19 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.18 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.17 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.16 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.15 (2026-09-20)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.14 (2026-09-19)
+
+### 🚀 Features
+
+- **ph-cli:** build pieces on ph build ([3913b0796](https://github.com/powerhouse-inc/powerhouse/commit/3913b0796))
+- **doc-harness:** serve rendered reports and transcripts from mastra studio ([fd64a4661](https://github.com/powerhouse-inc/powerhouse/commit/fd64a4661))
+- **doc-harness:** workflows, steps, and the run/resume/inspect commands ([0e116d226](https://github.com/powerhouse-inc/powerhouse/commit/0e116d226))
+- **doc-harness:** pilot task catalog with pinned recipe inputs ([74bc26129](https://github.com/powerhouse-inc/powerhouse/commit/74bc26129))
+- **doc-harness:** workspace wiring and core schemas for the docs-validation harness ([5c591ac69](https://github.com/powerhouse-inc/powerhouse/commit/5c591ac69))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.13 (2026-09-18)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.12 (2026-09-17)
+
+### 🚀 Features
+
+- **switchboard:** own the workflow runtime, feed it through a read model, and take workflows out of reactor-api ([#3042](https://github.com/powerhouse-inc/powerhouse/issues/3042))
+- **reactor-workflow:** the workflow engine, composed in reactor-api behind the workflows flag ([cb807bf5d](https://github.com/powerhouse-inc/powerhouse/commit/cb807bf5d))
+- **workflow:** the Connect-loaded workflow package, and the workflows flag in reactor-api ([0953fc254](https://github.com/powerhouse-inc/powerhouse/commit/0953fc254))
+- **pieces-framework:** vendor the Activepieces piece framework as a Powerhouse package ([3da5dbea8](https://github.com/powerhouse-inc/powerhouse/commit/3da5dbea8))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **reactor:** a projection shard indexes on the host's cadence, not the default ([5d63110e8](https://github.com/powerhouse-inc/powerhouse/commit/5d63110e8))
+- **reactor:** the header row takes the newest ordinal, so a stale echo cannot revert it ([4ec732a8d](https://github.com/powerhouse-inc/powerhouse/commit/4ec732a8d))
+- **reactor:** the chunking opt-out is exported, so a subclass can reach it ([1aefdf7b3](https://github.com/powerhouse-inc/powerhouse/commit/1aefdf7b3))
+- **reactor:** a failed chunk parks the cursor, so replay still reaches the gap ([104c85869](https://github.com/powerhouse-inc/powerhouse/commit/104c85869))
+- **reactor:** an index commit spans as many statements as its rows need ([56fb6d5a0](https://github.com/powerhouse-inc/powerhouse/commit/56fb6d5a0))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- **reactor-hypercore:** encode the operations paging cursor as the index to resume from, matching the Kysely store ([07ed430ac](https://github.com/powerhouse-inc/powerhouse/commit/07ed430ac))
+- **reactor:** apply the resume-from cursor encoding to getConflicting as well ([04f36e694](https://github.com/powerhouse-inc/powerhouse/commit/04f36e694))
+- **reactor:** encode the operations paging cursor as the index to resume from so a page ending at index 0 does not restart the walk ([7aa58680f](https://github.com/powerhouse-inc/powerhouse/commit/7aa58680f))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **reactor:** a commit chunk is 50 operations, measured ([74f782800](https://github.com/powerhouse-inc/powerhouse/commit/74f782800))
+- **reactor:** an indexing pass commits in chunks, so it stays linear ([2b5b37694](https://github.com/powerhouse-inc/powerhouse/commit/2b5b37694))
+- **reactor:** the head of a scope is one aggregate, not a subquery per row ([996748fa2](https://github.com/powerhouse-inc/powerhouse/commit/996748fa2))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank Pfeift
+
+## 6.2.3-dev.10 (2026-09-16)
+
+### 🚀 Features
+
+- **reactor:** relationship metadata on the add, update and read paths ([37f03f589](https://github.com/powerhouse-inc/powerhouse/commit/37f03f589))
+
+### 🩹 Fixes
+
+- **reactor:** relationship reads gate their far end, and refuse an absent edge ([ed4ed9c92](https://github.com/powerhouse-inc/powerhouse/commit/ed4ed9c92))
+- **reactor:** a job reports what became of each action it was given ([6237d9946](https://github.com/powerhouse-inc/powerhouse/commit/6237d9946))
+- **reactor:** the split mirror assigns through assignNodes like the reducer does ([b5e4034eb](https://github.com/powerhouse-inc/powerhouse/commit/b5e4034eb))
+- **reactor:** the read/write split mirror runs the reducer's current statements ([0d02ded9c](https://github.com/powerhouse-inc/powerhouse/commit/0d02ded9c))
+
+### 🔥 Performance
+
+- **reactor:** the snapshot lookup reads the columns it uses, not the state ([3614d7312](https://github.com/powerhouse-inc/powerhouse/commit/3614d7312))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.9 (2026-09-15)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.8 (2026-09-15)
+
+### 🩹 Fixes
+
+- **reactor:** keep every operation when a second backdated write reshuffles the same stream ([#3022](https://github.com/powerhouse-inc/powerhouse/pull/3022))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.3-dev.7 (2026-09-14)
+
+### 🩹 Fixes
+
+- **reactor:** keep every operation when a second backdated write reshuffles the same stream ([#3022](https://github.com/powerhouse-inc/powerhouse/pull/3022))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.3-dev.6 (2026-09-14)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.5 (2026-09-13)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor:** say which component started degraded, and let a host see it ([ffb7c73dc](https://github.com/powerhouse-inc/powerhouse/commit/ffb7c73dc))
+- **connect:** authenticate drive discovery and surface its refusals ([7ed675ea2](https://github.com/powerhouse-inc/powerhouse/commit/7ed675ea2))
+- **reactor-attachments:** index across a hole in the ordinal sequence ([97a44ecdb](https://github.com/powerhouse-inc/powerhouse/commit/97a44ecdb))
+- **reactor:** hold the remote registry slot until its storage record is gone ([308bb30f9](https://github.com/powerhouse-inc/powerhouse/commit/308bb30f9))
+- **reactor:** take the prune-deferral decision per remote, and give the revoke test a window it cannot age out of ([96d9fc0e2](https://github.com/powerhouse-inc/powerhouse/commit/96d9fc0e2))
+- **reactor:** keep a batch from deriving into a remote that is being removed ([529f91a17](https://github.com/powerhouse-inc/powerhouse/commit/529f91a17))
+- **reactor:** keep a remote whose init() is refused for credentials ([9bfa0ea0f](https://github.com/powerhouse-inc/powerhouse/commit/9bfa0ea0f))
+- **reactor:** decide a stale removal from the channel itself, and decide it again before acting ([98c4034d0](https://github.com/powerhouse-inc/powerhouse/commit/98c4034d0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor:** say which component started degraded, and let a host see it ([ffb7c73dc](https://github.com/powerhouse-inc/powerhouse/commit/ffb7c73dc))
+- **connect:** authenticate drive discovery and surface its refusals ([7ed675ea2](https://github.com/powerhouse-inc/powerhouse/commit/7ed675ea2))
+- **reactor-attachments:** index across a hole in the ordinal sequence ([97a44ecdb](https://github.com/powerhouse-inc/powerhouse/commit/97a44ecdb))
+- **reactor:** hold the remote registry slot until its storage record is gone ([308bb30f9](https://github.com/powerhouse-inc/powerhouse/commit/308bb30f9))
+- **reactor:** take the prune-deferral decision per remote, and give the revoke test a window it cannot age out of ([96d9fc0e2](https://github.com/powerhouse-inc/powerhouse/commit/96d9fc0e2))
+- **reactor:** keep a batch from deriving into a remote that is being removed ([529f91a17](https://github.com/powerhouse-inc/powerhouse/commit/529f91a17))
+- **reactor:** keep a remote whose init() is refused for credentials ([9bfa0ea0f](https://github.com/powerhouse-inc/powerhouse/commit/9bfa0ea0f))
+- **reactor:** decide a stale removal from the channel itself, and decide it again before acting ([98c4034d0](https://github.com/powerhouse-inc/powerhouse/commit/98c4034d0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.3 (2026-09-11)
+
+### 🚀 Features
+
+- **reactor-api:** add in-process stitching gateway adapter ([#1565](https://github.com/powerhouse-inc/powerhouse/issues/1565))
+- **reactor:** the write-cache bench splits the draft-proxy tax into read scans and push+sort ([cb32becd1](https://github.com/powerhouse-inc/powerhouse/commit/cb32becd1))
+- **reactor:** the write-cache bench separates draft-proxy scan cost from reducer body per replayed op ([caafff10f](https://github.com/powerhouse-inc/powerhouse/commit/caafff10f))
+
+### 🩹 Fixes
+
+- **reactor:** persist the cold-miss decomposition and price zod separately ([8e1722a6d](https://github.com/powerhouse-inc/powerhouse/commit/8e1722a6d))
+- **claude:** bench-loop offers the after-record a fix produced instead of counting its FIXED citation as read ([c4b4690be](https://github.com/powerhouse-inc/powerhouse/commit/c4b4690be))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
+## 6.2.3-dev.2 (2026-09-10)
+
+### 🩹 Fixes
+
+- **ci:** roll out prod registry on production releases ([354085855](https://github.com/powerhouse-inc/powerhouse/commit/354085855))
+- **switchboard-lb:** keep a webhook token out of the logs and traces ([5cfdb6e93](https://github.com/powerhouse-inc/powerhouse/commit/5cfdb6e93))
+
+### ❤️ Thank You
+
+- acaldas
+- froid1911
+
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+- **reactor:** bench viewer draws a renamed case as one line ([a9f7607a1](https://github.com/powerhouse-inc/powerhouse/commit/a9f7607a1))
+- **reactor:** createHybridProjectionCoordinatorFactory ([61a2ed26f](https://github.com/powerhouse-inc/powerhouse/commit/61a2ed26f))
+- **reactor:** add HybridProjectionCoordinator to run host read models behind a projection worker ([b69928976](https://github.com/powerhouse-inc/powerhouse/commit/b69928976))
+- **reactor:** withReadModelCoordinatorFactory and a projection-manager creator on the builder ([4ce813dad](https://github.com/powerhouse-inc/powerhouse/commit/4ce813dad))
+- **reactor:** onReadReady hook and dead-shard-safe drain on ProjectionShardManager ([af41b2cc1](https://github.com/powerhouse-inc/powerhouse/commit/af41b2cc1))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+- **reactor:** bench viewer overview drops the timeline and calls the series table Benchmarks ([60c65ab79](https://github.com/powerhouse-inc/powerhouse/commit/60c65ab79))
+- **reactor:** report the hybrid host chain's batch metrics ([2715ea9a6](https://github.com/powerhouse-inc/powerhouse/commit/2715ea9a6))
+- **reactor:** fail startup on a projection worker whose init throws ([2d70a9c8d](https://github.com/powerhouse-inc/powerhouse/commit/2d70a9c8d))
+- **reactor:** reject a projection worker db that is not the parent's database ([23f037022](https://github.com/powerhouse-inc/powerhouse/commit/23f037022))
+- **reactor:** projection shard creation rejects live-module-only models ([5c9da1a45](https://github.com/powerhouse-inc/powerhouse/commit/5c9da1a45))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes

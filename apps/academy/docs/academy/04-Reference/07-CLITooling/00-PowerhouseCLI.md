@@ -35,6 +35,7 @@ pnpm install -g ph-cmd
 - [Init](#init)
 - [Use](#use)
 - [Update](#update)
+- [Self Update](#self-update)
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
 
@@ -122,13 +123,32 @@ Specify the release version of Powerhouse dependencies to use.
 
 
 ## Update
-Update your powerhouse dependencies to their latest tagged version
+Update your Powerhouse dependencies and installed packages to their latest versions
 
 
 
 ### Flags
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
+**Update Packages** - Auto-update installed packages (powerhouse.config.json) to their newest same-major version - Usage: `--update-packages`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Self Update
+Update the globally installed ph to the newest version of its release stream
+
+
+
+### Options
+**Tag** - dist-tag to install (defaults to the running build's stream; e.g. latest, dev) - Usage: `--tag, -t <str>`
+
+
+
+
+### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -222,8 +242,12 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [App](#app)
 - [Processor](#processor)
 - [Subgraph](#subgraph)
+- [Piece](#piece)
+- [Piece Action](#piece-action)
+- [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
+- [Build](#build)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
 - [Connect Build](#connect-build)
@@ -372,6 +396,8 @@ Generate a processor
 
 **Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -398,6 +424,114 @@ Generate a subgraph
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
 **Code First** - Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name. - Usage: `--code-first`
+
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Piece
+Generate a piece: a connector whose actions and triggers a workflow can call
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name** - The name of the piece to generate. Its directory is the kebab-case of this. - Usage: `[name]`
+
+
+
+
+### Options
+**Name** - The name of the piece to generate - Usage: `--name, -n <str>`
+
+**Id** - The piece id, the pieceName a workflow step holds, e.g. @acme/piece-crm. Defaults to one derived from the package name. - Usage: `--id <str>`
+
+**Auth** - The kind of connection the piece asks for - Usage: `--auth <value>`
+
+**Default:** `custom`
+**Description** - One line describing what the piece connects to - Usage: `--description <str>`
+
+**Dir** - Name of the directory of an existing piece to re-register - Usage: `--dir <dir>`
+
+
+
+
+### Flags
+**All** - Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone - Usage: `--all, -a`
+
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Piece Action
+Generate an action inside an existing piece
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name** - The name of the action, e.g. get-record - Usage: `[name]`
+
+
+
+
+### Options
+**Name** - The name of the action to generate - Usage: `--name, -n <str>`
+
+**Piece** - The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece. - Usage: `--piece, -p <str>`
+
+
+
+
+### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Piece Trigger
+Generate a trigger inside an existing piece
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name** - The name of the trigger, e.g. new-record - Usage: `[name]`
+
+
+
+
+### Options
+**Name** - The name of the trigger to generate - Usage: `--name, -n <str>`
+
+**Piece** - The piece directory under pieces/ to add the trigger to. Optional when the project ships exactly one piece. - Usage: `--piece, -p <str>`
+
+**Strategy** - How the trigger fires: polled on a schedule, or delivered to a webhook - Usage: `--strategy <value>`
+
+**Default:** `polling`
+
+
+
+
+### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -435,6 +569,15 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 - 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
 - 4. Enables real-time updates, collaboration, and code generation
 
+Default drives:
+Connect's default drives resolve to the Vetra drive (and the preview drive
+when using --watch), plus any drives configured under
+connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
+URL, so configuring project drives does not cost you the Vetra drive.
+An explicit --default-drives-url is appended to that list (de-duplicated);
+it never replaces the Vetra drive.
+
+
 
 
 ### Options
@@ -462,7 +605,7 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -519,6 +662,46 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Help** - show help - Usage: `--help, -h`
 
 
+## Build
+Compile, check, bundle, and verify this package, then replace its output.
+
+A failed build leaves the published tree unchanged. TypeScript runs first; type errors require confirmation or --ignore-type-errors. For a
+code-first package, the definition check runs against that compilation, and a
+project that installs the packed tarball imports the bundles before the build
+promotes anything. Pieces are bundled as self-contained modules under dist/node/pieces,
+and shared browser dependencies are externalized unless --no-shared-deps is set.
+
+Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
+
+
+
+### Options
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**No Shared Deps** - Bundle the shared dependency set instead of externalizing it (default: externalize) - Usage: `--no-shared-deps`
+
+**Default:** `false`
+**Ignore Type Errors** - Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime - Usage: `--ignore-type-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
 ## Connect
 Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 
@@ -554,7 +737,7 @@ your project.
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -598,7 +781,9 @@ Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
   ph connect build &lt;key&gt; &lt;value&gt;                      Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
   ph connect build --&lt;field&gt; &lt;value&gt;                  Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
-  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+  ph connect build --json '\{"app":\{"workflowsEnabled":true\}\}'
+                                                      Build with a bulk override. The payload is the connect.* block
+                                                      without the "connect" wrapper; unknown keys are rejected.
 
 Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
 
@@ -609,7 +794,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+**Json** - Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. '\{"app":\{"workflowsEnabled":true\},"renown":\{"url":"..."\}\}'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
 
@@ -624,6 +809,8 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
 
 **External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
+
+**Workflows** - Override connect.app.workflowsEnabled (load the @powerhousedao/workflow package: workflow + connection documents, their editors and Workflow Studio). - Usage: `--workflows <value>`
 
 **Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
 
@@ -663,7 +850,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -722,7 +909,7 @@ NOTE: You must run `ph connect build` first
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -761,10 +948,11 @@ NOTE: You must run `ph connect build` first
 ## Build
 Compile, check, bundle, and verify this package, then replace its output.
 
-A failed build leaves the published tree unchanged. TypeScript runs first. For a
+A failed build leaves the published tree unchanged. TypeScript runs first; type errors require confirmation or --ignore-type-errors. For a
 code-first package, the definition check runs against that compilation, and a
 project that installs the packed tarball imports the bundles before the build
-promotes anything.
+promotes anything. Pieces are bundled as self-contained modules under dist/node/pieces,
+and shared browser dependencies are externalized unless --no-shared-deps is set.
 
 Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
 
@@ -784,6 +972,12 @@ Definition source to select, written as './module.ts' or './module.ts#/exportNam
 
 ### Flags
 **Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**No Shared Deps** - Bundle the shared dependency set instead of externalizing it (default: externalize) - Usage: `--no-shared-deps`
+
+**Default:** `false`
+**Ignore Type Errors** - Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime - Usage: `--ignore-type-errors`
 
 **Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -1109,6 +1303,12 @@ Definition source to select, written as './module.ts' or './module.ts#/exportNam
 
 ### Flags
 **Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**No Shared Deps** - Bundle the shared dependency set instead of externalizing it (default: externalize) - Usage: `--no-shared-deps`
+
+**Default:** `false`
+**Ignore Type Errors** - Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime - Usage: `--ignore-type-errors`
 
 **Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`

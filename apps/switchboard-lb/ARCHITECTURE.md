@@ -88,10 +88,56 @@ The Lua block runs in the nginx **rewrite phase** — after headers are parsed, 
 
 | Class                         | Example                                                                                                             | Where `$doc_id` comes from                                                                                                             |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Drive-scoped (`/graphql`)** | `POST /graphql`, `POST /graphql/r`, `POST /graphql/<model>`, `POST /graphql/stream`, `POST /graphql/<model>/stream` | Lua reads the `Drive-Id` request header (exposed as `$http_drive_id`) and writes it to `$doc_id`. Empty / missing → round-robin. §4.3. |
-| **Drive metadata**            | `GET /d/:drive`                                                                                                     | REST; returns the same payload from any backend. Routed to any healthy backend.                                                        |
+| **Drive-scoped (`/graphql`)** | `POST /graphql`, `POST /graphql/r`, `POST /graphql/<model>`, `POST /graphql/stream`, `POST /graphql/<model>/stream` | Lua reads the `Drive-Id` request header (exposed as `$http_drive_id`) and writes it to `$doc_id`. Empty / missing → one shared peer, see the note below. §4.3. |
+| **Drive metadata**            | `GET /d/:drive`                                                                                                     | REST; returns the same payload from any backend. No Lua runs, so the key stays empty.                                                  |
+| **Webhook**                   | `POST /webhooks/<token>` (any method)                                                                               | Lua keys on the token (`route.from_webhook_token`). One endpoint's redeliveries pin to one backend; distinct endpoints spread. §4.1.1. |
+| **Package REST**              | `GET /api/@scope/pkg/runs/42`                                                                                       | Lua uses `Drive-Id` when present, else `$request_id` (`route.spread`), so unpinned package traffic spreads. §4.1.2.                    |
 | **Global**                    | `GET /health`, introspection queries                                                                                | handled by the LB directly or routed to any backend.                                                                                   |
 | **Subscription**              | `WS /graphql/subscriptions`                                                                                         | upgrade forwarded to the pool; sticky for the connection's lifetime.                                                                   |
+
+> **An empty `$doc_id` is not round-robin.** `hash $doc_id consistent` treats
+> the empty string as a key like any other, so every request that leaves it
+> empty lands on the *same* peer. That is tolerable for `GET /d/:drive`, where
+> the payload is identical from any backend and the volume is low. It is not
+> tolerable for a route family that carries real traffic, which is why the two
+> classes below set a key of their own rather than leaving it empty. Measured
+> against the dev stubs: 10 consecutive `GET /d/:drive` requests all landed on
+> `sb-1`.
+
+#### 4.1.1 Webhook
+
+Token-addressed endpoints for third-party providers. Any backend can serve any
+delivery — dedupe is a database claim, not instance state — so the LB is free
+to choose, and it chooses by token. Two things improve when one endpoint's
+redeliveries land on one backend: the dedupe row is already warm, and the
+per-endpoint rate limiter is per-process, so the configured limit means what it
+says instead of being N times looser than it reads.
+
+The location is a prefix match, not a regex on the token's shape. The origin
+answers an unknown token and a malformed one identically; a location that only
+matched well-formed tokens would let malformed ones fall through to nginx's own
+404 and tell a prober the difference.
+
+Sync-mode deliveries — where the origin holds the connection until the work
+finishes — are bounded by nginx's default `proxy_read_timeout` (60s). Past that
+the provider sees a 504 while the origin keeps going. That is the intended
+shape: providers time out far sooner than this anyway, and the origin's own
+response mode is what decides whether waiting was ever appropriate.
+
+#### 4.1.2 Package REST
+
+Routes a loaded package serves under its own namespace. The namespace is the
+package's npm name used verbatim, so a scoped package occupies two path
+segments (`/api/@scope/pkg/…`) — `@` is a legal `pchar` and passes through the
+proxy unchanged.
+
+A package route pins on `Drive-Id` when the caller sends one, the same contract
+`/graphql` offers. Without it the route has declared no affinity, so the key is
+`$request_id`: unique per request, which spreads across the pool.
+
+Both classes set `client_max_body_size 10m`. The origin enforces the real
+per-route cap and answers 413 with a JSON body; the LB's limit only has to be
+loose enough not to pre-empt it.
 
 The LB does not parse the body at all. It is method-agnostic on `/graphql`: any request with a `Drive-Id` header pins, any request without it round-robins. Whether the request is a POST, a GET, a request batch, or persisted-query-only is the upstream's problem.
 
@@ -258,7 +304,7 @@ This is the biggest operational sharp edge of the MVP. Called out here and in `C
   - standard nginx stubs via `stub_status`
 - **Logs**: custom `log_format` in `log_format.conf` emitting key=value. Include `request_id`, `remote_addr`, `doc_id` (when set from the `Drive-Id` header), `upstream_addr`, `status`, `request_time`, `upstream_response_time`.
 - **Traces**: out of scope for the MVP. Slot reserved for OpenTelemetry (`opentelemetry-nginx` module) later.
-- **`X-LB-Upstream` response header** on `/graphql` and `/d/:drive` responses, exposing `$upstream_addr`. Dev-only debug aid for the `lb-loadtest` harness (§8 M4) — lets a test process observe per-request which backend served the response without log scraping. Not a production feature; the LB is dev-only-published anyway and the header is harmless if it leaks.
+- **`X-LB-Upstream` response header** on `/graphql`, `/d/:drive`, `/webhooks` and `/api` responses, exposing `$upstream_addr`. Dev-only debug aid for the `lb-loadtest` harness (§8 M4) — lets a test process observe per-request which backend served the response without log scraping. Not a production feature; the LB is dev-only-published anyway and the header is harmless if it leaks.
 
 ## 7. Concurrency model
 
@@ -277,7 +323,7 @@ Thin vertical slices, each end-to-end runnable.
 
 - **M0 — Skeleton.** _Done._ `Dockerfile` (dev + runtime), `docker-compose.yml` with LB + 3 stub upstreams, `nginx.conf` serving `/health`, `busted` wired up, k6 baseline measuring nginx-alone overhead — see `test/integration/BASELINE.md` for the reference numbers we regression-check against.
 - **M1 — Proxy plumbing.** _Done._ `POST /graphql` / `POST /graphql/*` / `GET /d/:drive` / `WS /graphql/subscriptions` proxied to the pool, `/health` served locally, `proxy_next_upstream off` throughout. `m1.sh` asserts path preservation, `X-Request-Id` passthrough, and that the WS upgrade reaches the pool.
-- **M2 — Header-based routing.** _Done._ `lua/route.lua` copies the `Drive-Id` request header into `$doc_id` (§4.3); `upstreams.conf` is on `hash $doc_id consistent`. Missing/empty header → empty `$doc_id` → round-robin (documented nginx behavior). The receiving switchboard validates drive ownership via cached middleware and returns a structured wrong-shard error if misrouted (see `packages/reactor-api/src/graphql/gateway/drive-middleware.ts`). `m2.sh` covers pinning (5/5 same backend for one `Drive-Id`), spread across distinct values, missing-header round-robin, and the no-Lua-on-non-`/graphql` invariant. The earlier body-parsing implementation (M2 v1) was deleted in favor of this layering — the LB no longer touches request bodies on `/graphql`.
+- **M2 — Header-based routing.** _Done._ `lua/route.lua` copies the `Drive-Id` request header into `$doc_id` (§4.3); `upstreams.conf` is on `hash $doc_id consistent`. Missing/empty header → empty `$doc_id`, which is a constant key and therefore one shared peer, not round-robin (§4.1). The receiving switchboard validates drive ownership via cached middleware and returns a structured wrong-shard error if misrouted (see `packages/reactor-api/src/graphql/gateway/drive-middleware.ts`). `m2.sh` covers pinning (5/5 same backend for one `Drive-Id`), spread across distinct values, that a missing header still reaches *a* backend, and the no-Lua-on-non-`/graphql` invariant. Note it asserts reachability, not distribution — measured against the dev stubs, 10 consecutive empty-key requests all landed on the same peer. The earlier body-parsing implementation (M2 v1) was deleted in favor of this layering — the LB no longer touches request bodies on `/graphql`.
 - **M3 — Health checks + reload-survival.** _Done._ Active probing for observability + a pinning-preserving 503 on dead backends per §4.5, plus integration coverage of WS reload-survival per §9 Q3. Concretely:
   - `lua_shared_dict healthcheck 1m;` and `init_worker_by_lua_block { require("healthcheck").run() }` in `nginx.conf` — shared state across workers per §7.
   - `lua/healthcheck.lua` runs a per-worker cosocket probe loop against every peer in the `switchboards` upstream every 2s (timeout 1s, fall=3, rise=2) hitting `GET /health`. State (`up`/`down`) is written to `lua_shared_dict healthcheck`; the loop **does not** call `set_peer_down` — see §5.2 for the pinning rationale. Switchboard's `/health` is liveness-only (registered before auth middleware in `packages/reactor-api/src/server.ts:379`); a true `/readyz` that 503s during init/drain is a switchboard-side follow-up.

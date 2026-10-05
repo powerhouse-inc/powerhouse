@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -65,6 +66,7 @@ describe("binding a sync channel to an address", () => {
       } as unknown as IReactor,
       new EventBus(),
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
   }
 

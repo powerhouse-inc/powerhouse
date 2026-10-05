@@ -66,7 +66,7 @@ describe("execute", () => {
     const { client, executeSpy } = recordingClient();
 
     const result = await execute(client, {
-      documentIdentifier: "doc-1",
+      documentIdOrSlug: "doc-1",
       actions: [action],
       branch: "feature",
     });
@@ -82,7 +82,7 @@ describe("execute", () => {
   it("applies to main when no branch is named", async () => {
     const { client, executeSpy } = recordingClient();
 
-    await execute(client, { documentIdentifier: "doc-1", actions: [action] });
+    await execute(client, { documentIdOrSlug: "doc-1", actions: [action] });
 
     expect(argsOf(executeSpy)[1]).toBe("main");
   });
@@ -91,7 +91,7 @@ describe("execute", () => {
     const { client, executeSpy } = recordingClient();
 
     await execute(client, {
-      documentIdentifier: "doc-1",
+      documentIdOrSlug: "doc-1",
       actions: [action],
       branch: null,
     });
@@ -105,7 +105,7 @@ describe("execute", () => {
     const { client, executeSpy } = recordingClient();
 
     await execute(client, {
-      documentIdentifier: "doc-1",
+      documentIdOrSlug: "doc-1",
       actions: [
         {
           ...action,
@@ -133,7 +133,7 @@ describe("execute", () => {
   it("carries no context for an action that arrived without one", async () => {
     const { client, executeSpy } = recordingClient();
 
-    await execute(client, { documentIdentifier: "doc-1", actions: [action] });
+    await execute(client, { documentIdOrSlug: "doc-1", actions: [action] });
 
     expect(argsOf(executeSpy)[2][0]).not.toHaveProperty("context");
   });
@@ -144,7 +144,7 @@ describe("execute", () => {
     } as unknown as IReactorClient;
 
     await expect(
-      execute(client, { documentIdentifier: "doc-1", actions: [action] }),
+      execute(client, { documentIdOrSlug: "doc-1", actions: [action] }),
     ).rejects.toThrow("locked by permissions");
   });
 });
@@ -154,7 +154,7 @@ describe("executeAsync", () => {
     const { client, executeAsyncSpy } = recordingClient();
 
     const submitted = await executeAsync(client, {
-      documentIdentifier: "doc-1",
+      documentIdOrSlug: "doc-1",
       actions: [action],
     });
 
@@ -178,7 +178,12 @@ describe("the mutation surface", () => {
   it("says execute takes a branch, not a view", () => {
     // The view's scopes were accepted and ignored on the old field.
     const args = mutation.getFields().execute.args.map((arg) => arg.name);
-    expect(args).toEqual(["documentIdentifier", "actions", "branch"]);
+    expect(args).toEqual([
+      "documentIdOrSlug",
+      "documentIdentifier",
+      "actions",
+      "branch",
+    ]);
   });
 
   it("points the deprecated fields at their replacements", () => {

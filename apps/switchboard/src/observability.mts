@@ -37,6 +37,7 @@ import { SentryPropagator, SentrySpanProcessor } from "@sentry/opentelemetry";
 import { childLogger } from "document-model";
 import type { IncomingMessage } from "node:http";
 import { createMeterProviderFromEnv } from "./metrics.js";
+import { redactWebhookPath } from "./redact-webhook-path.js";
 
 const logger = childLogger(["switchboard", "observability"]);
 
@@ -178,7 +179,7 @@ if (TRACING_ENABLED) {
         requestHook: (span, request) => {
           span.setAttribute(
             "http.route",
-            (request as IncomingMessage).url || "",
+            redactWebhookPath((request as IncomingMessage).url),
           );
         },
         responseHook: (span, response) => {

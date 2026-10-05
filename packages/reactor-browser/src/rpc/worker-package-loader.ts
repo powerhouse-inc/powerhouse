@@ -1,5 +1,6 @@
 import type { IDocumentModelLoader } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { rewritePackageSource } from "@powerhousedao/shared/connect";
 import { RegistryClient } from "../registry/client.js";
 
 export type PackageImporter = (url: string) => Promise<Record<string, unknown>>;
@@ -8,6 +9,12 @@ export type WorkerPackageLoaderOptions = {
   cdnUrl: string;
   importPackage: PackageImporter;
   resolvePackages?: (documentType: string) => Promise<string[]>;
+  /** Absolute-URL import map for shared deps (worker import maps don't
+   *  exist, so the source is rewritten to these URLs and blob-imported). */
+  sharedImports?: Record<string, string>;
+  /** Import a rewritten source string (blob URL). Only called when a
+   *  rewrite happened; omit to disable shared-deps loading in a worker. */
+  importSource?: (source: string) => Promise<Record<string, unknown>>;
 };
 
 export type PackageLoadFailure = {
@@ -43,6 +50,10 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   private readonly cdnUrl: string;
   private readonly importPackage: PackageImporter;
   private readonly resolvePackages: (documentType: string) => Promise<string[]>;
+  private readonly sharedImports?: Record<string, string>;
+  private readonly importSource?: (
+    source: string,
+  ) => Promise<Record<string, unknown>>;
   // Keyed by `documentType@version`: a type can ship several module versions
   // side by side, and keying by type alone would evict all but the last.
   private readonly modulesByKey = new Map<string, DocumentModelModule>();
@@ -52,6 +63,8 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   constructor(options: WorkerPackageLoaderOptions) {
     this.cdnUrl = options.cdnUrl.replace(/\/$/, "");
     this.importPackage = options.importPackage;
+    this.sharedImports = options.sharedImports;
+    this.importSource = options.importSource;
     const registryClient = new RegistryClient(options.cdnUrl);
     this.resolvePackages =
       options.resolvePackages ??
@@ -140,7 +153,31 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     const name = packageName(spec);
     const url = `${this.cdnUrl}/${name}/browser/document-models/index.js`;
     try {
-      const namespace = await this.importPackage(url);
+      // Shared-deps hosts fetch the source so shared specifiers can be
+      // rewritten to absolute vendor URLs (import maps don't apply to blob
+      // imports). Packages without shared/relative imports still go through
+      // the plain importPackage path below.
+      const hasSharedImports =
+        this.sharedImports !== undefined &&
+        Object.keys(this.sharedImports).length > 0;
+      const source = hasSharedImports
+        ? await (await fetch(url)).text()
+        : undefined;
+      const rewritten =
+        source !== undefined
+          ? rewritePackageSource(source, url, this.sharedImports!)
+          : source;
+      let namespace: Record<string, unknown>;
+      if (rewritten !== undefined && rewritten !== source) {
+        if (!this.importSource) {
+          throw new Error(
+            "importSource is required to load a package that imports shared deps",
+          );
+        }
+        namespace = await this.importSource(rewritten);
+      } else {
+        namespace = await this.importPackage(url);
+      }
       for (const value of Object.values(namespace)) {
         if (isDocumentModelModule(value)) {
           this.modulesByKey.set(moduleKey(value), value);

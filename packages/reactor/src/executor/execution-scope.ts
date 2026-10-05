@@ -10,7 +10,27 @@ import type { ICollectionMembershipCache } from "../cache/collection-membership-
 import type { IOperationStore } from "../storage/interfaces.js";
 import type { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import {
+  acquirePurgeLocks,
+  findPurged,
+} from "../storage/kysely/document-purges.js";
+import { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import type { Database } from "../storage/kysely/types.js";
+
+/** Per-document purge locks, held until the job's transaction ends. */
+export interface DocumentLocks {
+  shared(ids: Iterable<string>): Promise<void>;
+  exclusive(id: string): Promise<void>;
+  /** The tombstoned ids among `ids`, read in the job's transaction. */
+  purged(ids: Iterable<string>): Promise<Set<string>>;
+}
+
+/** For scopes without a transaction to hold a lock in. */
+export const NOOP_DOCUMENT_LOCKS: DocumentLocks = {
+  shared: () => Promise.resolve(),
+  exclusive: () => Promise.resolve(),
+  purged: () => Promise.resolve(new Set<string>()),
+};
 
 export interface ExecutionStores {
   operationStore: IOperationStore;
@@ -18,6 +38,9 @@ export interface ExecutionStores {
   writeCache: IWriteCache;
   documentMetaCache: IDocumentMetaCache;
   collectionMembershipCache: ICollectionMembershipCache;
+  documentLocks: DocumentLocks;
+  /** Absent without a transaction, which a purge cannot run outside of. */
+  purger?: KyselyDocumentPurger;
 }
 
 export interface IExecutionScope {
@@ -47,6 +70,7 @@ export class DefaultExecutionScope implements IExecutionScope {
       writeCache: this.writeCache,
       documentMetaCache: this.documentMetaCache,
       collectionMembershipCache: this.collectionMembershipCache,
+      documentLocks: NOOP_DOCUMENT_LOCKS,
     });
   }
 }
@@ -68,8 +92,17 @@ export class KyselyExecutionScope implements IExecutionScope {
   ): Promise<T> {
     signal?.throwIfAborted();
     return this.db.transaction().execute(async (trx: Transaction<Database>) => {
-      const scopedOperationStore = this.operationStore.withTransaction(trx);
-      const scopedOperationIndex = this.operationIndex.withTransaction(trx);
+      // A shared lock keeps a live id live until commit; its re-checks are moot.
+      const sharedLocked = new Set<string>();
+      const liveIds = new Set<string>();
+      const scopedOperationStore = this.operationStore.withTransaction(
+        trx,
+        liveIds,
+      );
+      const scopedOperationIndex = this.operationIndex.withTransaction(
+        trx,
+        liveIds,
+      );
       const scopedKeyframeStore = this.keyframeStore.withTransaction(trx);
       return fn({
         operationStore: scopedOperationStore,
@@ -82,6 +115,23 @@ export class KyselyExecutionScope implements IExecutionScope {
           this.documentMetaCache.withScopedStore(scopedOperationStore),
         collectionMembershipCache:
           this.collectionMembershipCache.withScopedIndex(scopedOperationIndex),
+        documentLocks: {
+          shared: async (ids) => {
+            const list = [...ids];
+            await acquirePurgeLocks(trx, list, "shared");
+            for (const id of list) sharedLocked.add(id);
+          },
+          exclusive: (id) => acquirePurgeLocks(trx, [id], "exclusive"),
+          purged: async (ids) => {
+            const list = [...ids];
+            const found = await findPurged(trx, list);
+            for (const id of list) {
+              if (sharedLocked.has(id) && !found.has(id)) liveIds.add(id);
+            }
+            return found;
+          },
+        },
+        purger: new KyselyDocumentPurger(trx),
       });
     });
   }

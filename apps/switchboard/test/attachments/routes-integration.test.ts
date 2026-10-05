@@ -1,11 +1,12 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  AttachmentAlreadyExists,
   AttachmentBuilder,
   S3AttachmentBackend,
   type AttachmentBuildResult,
   createRemoteAttachmentService,
 } from "@powerhousedao/reactor-attachments";
-import type { API } from "@powerhousedao/reactor-api";
+import type { API, IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import { createHttpAdapter } from "@powerhousedao/reactor-api";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -21,6 +22,17 @@ import { registerAttachmentRoutes } from "../../src/attachments/index.js";
 // signature this test guards against.
 const EMPTY_STRING_SHA256 =
   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+const DOC_ID = "doc-1";
+const ALLOW_ALL: IAttachmentAccessService = {
+  canReadAttachment: (request) =>
+    Promise.resolve({
+      kind: "allowed",
+      documentId: request.documentId as never,
+      ref: request.attachmentRef as never,
+    }),
+  admitCaller: () => Promise.resolve({ kind: "admitted" }),
+};
 
 describe("attachment routes through the real Express middleware stack", () => {
   let attachments: AttachmentBuildResult;
@@ -42,10 +54,11 @@ describe("attachment routes through the real Express middleware stack", () => {
     registerAttachmentRoutes({
       httpAdapter: adapter,
       attachments,
+      attachmentAccess: ALLOW_ALL,
       authService: undefined,
     } as unknown as API);
 
-    server = await adapter.listen(0);
+    server = await adapter.listen(0, undefined, "127.0.0.1");
     const addr = server.address();
     if (!addr || typeof addr === "string") throw new Error("no addr");
     baseUrl = `http://127.0.0.1:${addr.port}`;
@@ -82,7 +95,7 @@ describe("attachment routes through the real Express middleware stack", () => {
     expect(result.hash).not.toBe(EMPTY_STRING_SHA256);
     expect(result.header.sizeBytes).toBe(bytes.byteLength);
 
-    const got = await service.get(result.ref);
+    const got = await service.get(result.ref, { documentId: DOC_ID });
     expect(got.header.sizeBytes).toBe(bytes.byteLength);
     expect(got.header.mimeType).toBe("application/json");
     const reader = got.body.getReader();
@@ -100,6 +113,48 @@ describe("attachment routes through the real Express middleware stack", () => {
       off += c.byteLength;
     }
     expect(new TextDecoder().decode(merged)).toBe(payload);
+  });
+
+  it("HEAD and GET /attachments/:hash serve a file name above U+00FF", async () => {
+    const fileName = "opłata – 報告 📎.pdf";
+    const service = createRemoteAttachmentService({ remoteUrl: baseUrl });
+    const upload = await service.reserve({
+      mimeType: "application/pdf",
+      fileName,
+    });
+    const bytes = new TextEncoder().encode("%PDF-unicode-name");
+    const { hash } = await upload.send(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      }),
+    );
+
+    for (const method of ["HEAD", "GET"]) {
+      const res = await fetch(
+        `${baseUrl}/attachments/${hash}?documentId=${DOC_ID}`,
+        { method },
+      );
+      expect(res.status).toBe(200);
+      const meta = JSON.parse(res.headers.get("attachment-metadata")!) as {
+        fileName: string;
+      };
+      expect(meta.fileName).toBe(fileName);
+      await res.arrayBuffer();
+    }
+
+    // A hash-first reserve of the same bytes is what the client sends on the
+    // next upload; it stats the hash first.
+    await expect(
+      service.reserve({
+        mimeType: "application/pdf",
+        fileName,
+        clientHash: hash,
+        sizeBytes: bytes.byteLength,
+      }),
+    ).rejects.toBeInstanceOf(AttachmentAlreadyExists);
   });
 });
 
@@ -138,9 +193,10 @@ describe("authenticated S3 reservation production path", () => {
     registerAttachmentRoutes({
       httpAdapter: adapter,
       attachments,
+      attachmentAccess: ALLOW_ALL,
       authService: { verifyBearer },
     } as unknown as API);
-    const server = await adapter.listen(0);
+    const server = await adapter.listen(0, undefined, "127.0.0.1");
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("no addr");
     const baseUrl = `http://127.0.0.1:${address.port}`;

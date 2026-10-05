@@ -16,7 +16,11 @@ import {
   updateFile,
   updateNode,
 } from "@powerhousedao/shared/document-drive";
-import { generateId } from "@powerhousedao/shared/document-model";
+import type { ISigner } from "@powerhousedao/shared/document-model";
+import {
+  generateId,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -31,19 +35,28 @@ import type {
   Database as StorageDatabase,
 } from "../../src/storage/kysely/types.js";
 import {
-  createMockSigner,
   createTestDocumentIndexer,
   createTestOperationStore,
 } from "../factories.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
 
+// IReactor.execute takes no signer, so its writes go unsigned.
+function createLegacyDrive(): DocumentDriveDocument {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "legacy",
+  );
+}
+
 describe("Tests the Reactor with the Document Drive Document Model", () => {
   let reactor: IReactor;
   let documentIndexer: IDocumentIndexer;
   let db: Kysely<Database>;
+  let signer: ISigner;
 
   async function createDocumentViaReactor(
     document: DocumentDriveDocument,
@@ -77,6 +90,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
   }
 
   beforeEach(async () => {
+    signer = (await TestP256Signer.create()).asISigner();
     // Create documentIndexer that we need a reference to
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
@@ -104,7 +118,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     it("should create a document via reactor.create", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
 
-      const createJobInfo = await reactor.create(document);
+      const createJobInfo = await reactor.create(document, signer);
       expect(createJobInfo.status).toBe(JobStatus.PENDING);
 
       await waitForJobAndDocumentUpdate(createJobInfo.id);
@@ -122,7 +136,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     it("should set default protocol versions when creating a document", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
 
-      const createJobInfo = await reactor.create(document);
+      const createJobInfo = await reactor.create(document, signer);
       await waitForJobAndDocumentUpdate(createJobInfo.id);
 
       const retrievedDocument = await reactor.get<DocumentDriveDocument>(
@@ -130,12 +144,16 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       );
       expect(retrievedDocument.header.protocolVersions).toEqual({
         "base-reducer": 2,
+        signature: 2,
       });
     });
 
     it("should preserve existing protocol versions when creating a document", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
-      document.header.protocolVersions = { "base-reducer": 1 };
+      const document = withSignaturePolicy(
+        driveDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { protocolVersions: { "base-reducer": 1 } },
+      );
 
       const createJobInfo = await reactor.create(document);
       await waitForJobAndDocumentUpdate(createJobInfo.id);
@@ -149,10 +167,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should sign actions when signer is provided to reactor.create", async () => {
-      const mockSigner = createMockSigner();
       const document = driveDocumentModelModule.utils.createDocument();
 
-      const createJobInfo = await reactor.create(document, mockSigner);
+      const createJobInfo = await reactor.create(document, signer);
       expect(createJobInfo.status).toBe(JobStatus.PENDING);
 
       await waitForJobAndDocumentUpdate(createJobInfo.id);
@@ -173,14 +190,20 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
       expect(createDocOp?.action.context?.signer).toBeDefined();
       expect(createDocOp?.action.context?.signer?.signatures).toHaveLength(1);
-      expect(createDocOp?.action.context?.signer?.signatures[0][0]).toBe(
-        "mock-signature",
+      expect(createDocOp?.action.context?.signer?.signatures[0][1]).toBe(
+        signer.app?.key,
+      );
+      expect(createDocOp?.action.context?.signer?.signatures[0][2]).toMatch(
+        /^v2:/,
       );
 
       expect(upgradeDocOp?.action.context?.signer).toBeDefined();
       expect(upgradeDocOp?.action.context?.signer?.signatures).toHaveLength(1);
-      expect(upgradeDocOp?.action.context?.signer?.signatures[0][0]).toBe(
-        "mock-signature",
+      expect(upgradeDocOp?.action.context?.signer?.signatures[0][1]).toBe(
+        signer.app?.key,
+      );
+      expect(upgradeDocOp?.action.context?.signer?.signatures[0][2]).toMatch(
+        /^v2:/,
       );
     });
   });
@@ -188,7 +211,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
   describe("ADD Operations", () => {
     it("should add a folder via reactor.mutate", async () => {
       // Create a document-drive document using reactor.create()
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create an ADD_FOLDER action
@@ -227,7 +250,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should add a file via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // First add a folder
@@ -285,7 +308,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should handle nested folder structure", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create a hierarchy: root -> folder1 -> folder2 -> folder3
@@ -343,10 +366,10 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should add a file with full orchestration (new architecture pattern)", async () => {
-      const parentDrive = driveDocumentModelModule.utils.createDocument();
+      const parentDrive = createLegacyDrive();
       await createDocumentViaReactor(parentDrive);
 
-      const childDocument = driveDocumentModelModule.utils.createDocument();
+      const childDocument = createLegacyDrive();
       await createDocumentViaReactor(childDocument);
 
       const fileId = childDocument.header.id;
@@ -475,7 +498,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("UPDATE Operations", () => {
     it("should update a file via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Add a file first
@@ -521,7 +544,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should update a node (folder) via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Add a folder first
@@ -566,7 +589,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("DELETE Operations", () => {
     it("should delete a node via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Add a folder first
@@ -606,7 +629,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should delete children when parent is deleted", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create parent folder with children
@@ -670,7 +693,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("MOVE Operations", () => {
     it("should move a node to a different parent", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create folder structure
@@ -728,7 +751,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should move a node to root when targetParentFolder is null", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create nested folder
@@ -780,7 +803,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should prevent moving folder to its descendant", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create nested folders
@@ -841,7 +864,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("COPY Operations", () => {
     it("should copy a node to a different parent", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create folder structure
@@ -908,7 +931,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should copy a node with a new name", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create source folder
@@ -952,7 +975,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should copy a single node", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create source structure
@@ -1043,7 +1066,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("Drive-level Operations", () => {
     it("should set drive name via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Set drive name
@@ -1066,7 +1089,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should set drive icon via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Set drive icon
@@ -1089,7 +1112,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should set sharing type via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Set sharing type (note: this is a local operation)
@@ -1112,7 +1135,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should set available offline via reactor.mutate", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Set available offline (note: this is a local operation)
@@ -1137,7 +1160,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("Batch Operations", () => {
     it("should process multiple operations in a single mutate call", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create multiple operations
@@ -1207,7 +1230,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should maintain operation order in batch processing", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Operations that depend on each other
@@ -1263,7 +1286,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("Error Handling", () => {
     it("should handle invalid node references gracefully", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Try to add a file to a non-existent folder
@@ -1301,7 +1324,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should handle duplicate node IDs", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       const duplicateId = generateId();
@@ -1339,7 +1362,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should handle name collisions", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       const folder1Id = generateId();
@@ -1382,7 +1405,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should continue processing after encountering an error", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       const folder1Id = generateId();
@@ -1432,7 +1455,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
   describe("Complex Scenarios", () => {
     it("should handle complex file reorganization", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create initial structure
@@ -1540,7 +1563,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     });
 
     it("should handle project template creation", async () => {
-      const document = driveDocumentModelModule.utils.createDocument();
+      const document = createLegacyDrive();
       await createDocumentViaReactor(document);
 
       // Create a project template structure
@@ -1642,9 +1665,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
   describe("Document Query Operations", () => {
     describe("find() - Search by Type", () => {
       it("should find documents by type", async () => {
-        const doc1 = driveDocumentModelModule.utils.createDocument();
-        const doc2 = driveDocumentModelModule.utils.createDocument();
-        const doc3 = driveDocumentModelModule.utils.createDocument();
+        const doc1 = createLegacyDrive();
+        const doc2 = createLegacyDrive();
+        const doc3 = createLegacyDrive();
 
         await createDocumentViaReactor(doc1);
         await createDocumentViaReactor(doc2);
@@ -1662,7 +1685,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should return empty results for non-existent type", async () => {
-        const document = driveDocumentModelModule.utils.createDocument();
+        const document = createLegacyDrive();
         await createDocumentViaReactor(document);
 
         const results = await reactor.find({
@@ -1673,7 +1696,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should find documents by type with consistency token", async () => {
-        const document = driveDocumentModelModule.utils.createDocument();
+        const document = createLegacyDrive();
         const createJobInfo = await reactor.create(document);
 
         await vi.waitUntil(
@@ -1701,7 +1724,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       it("should paginate results by type", async () => {
         const docs = [];
         for (let i = 0; i < 5; i++) {
-          const doc = driveDocumentModelModule.utils.createDocument();
+          const doc = createLegacyDrive();
           docs.push(doc);
           await createDocumentViaReactor(doc);
         }
@@ -1724,11 +1747,11 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
     describe("find() - Search by Parent ID", () => {
       it("should find children of a parent document", async () => {
-        const parentDrive = driveDocumentModelModule.utils.createDocument();
+        const parentDrive = createLegacyDrive();
         await createDocumentViaReactor(parentDrive);
 
-        const child1 = driveDocumentModelModule.utils.createDocument();
-        const child2 = driveDocumentModelModule.utils.createDocument();
+        const child1 = createLegacyDrive();
+        const child2 = createLegacyDrive();
         await createDocumentViaReactor(child1);
         await createDocumentViaReactor(child2);
 
@@ -1811,7 +1834,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should return empty results for parent with no children", async () => {
-        const parentDrive = driveDocumentModelModule.utils.createDocument();
+        const parentDrive = createLegacyDrive();
         await createDocumentViaReactor(parentDrive);
 
         const results = await reactor.find({
@@ -1822,10 +1845,10 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should combine parentId with type filter", async () => {
-        const parentDrive = driveDocumentModelModule.utils.createDocument();
+        const parentDrive = createLegacyDrive();
         await createDocumentViaReactor(parentDrive);
 
-        const child1 = driveDocumentModelModule.utils.createDocument();
+        const child1 = createLegacyDrive();
         await createDocumentViaReactor(child1);
 
         const fileId = child1.header.id;
@@ -1890,9 +1913,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
     describe("find() - Search by IDs and Slugs", () => {
       it("should find documents by ID array", async () => {
-        const doc1 = driveDocumentModelModule.utils.createDocument();
-        const doc2 = driveDocumentModelModule.utils.createDocument();
-        const doc3 = driveDocumentModelModule.utils.createDocument();
+        const doc1 = createLegacyDrive();
+        const doc2 = createLegacyDrive();
+        const doc3 = createLegacyDrive();
 
         await createDocumentViaReactor(doc1);
         await createDocumentViaReactor(doc2);
@@ -1910,7 +1933,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should skip non-existent documents in ID array", async () => {
-        const doc1 = driveDocumentModelModule.utils.createDocument();
+        const doc1 = createLegacyDrive();
         await createDocumentViaReactor(doc1);
 
         const results = await reactor.find({
@@ -1922,8 +1945,8 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should combine ids with type filter", async () => {
-        const doc1 = driveDocumentModelModule.utils.createDocument();
-        const doc2 = driveDocumentModelModule.utils.createDocument();
+        const doc1 = createLegacyDrive();
+        const doc2 = createLegacyDrive();
 
         await createDocumentViaReactor(doc1);
         await createDocumentViaReactor(doc2);
@@ -1944,12 +1967,12 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should combine ids with parentId filter", async () => {
-        const parentDrive = driveDocumentModelModule.utils.createDocument();
+        const parentDrive = createLegacyDrive();
         await createDocumentViaReactor(parentDrive);
 
-        const child1 = driveDocumentModelModule.utils.createDocument();
-        const child2 = driveDocumentModelModule.utils.createDocument();
-        const child3 = driveDocumentModelModule.utils.createDocument();
+        const child1 = createLegacyDrive();
+        const child2 = createLegacyDrive();
+        const child3 = createLegacyDrive();
 
         await createDocumentViaReactor(child1);
         await createDocumentViaReactor(child2);
@@ -2045,7 +2068,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       });
 
       it("should throw error when both ids and slugs provided", async () => {
-        const doc = driveDocumentModelModule.utils.createDocument();
+        const doc = createLegacyDrive();
         await createDocumentViaReactor(doc);
 
         await expect(

@@ -2,6 +2,10 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
+import type {
+  MachineEnvironment,
+  StorageEngine,
+} from "../../bench/records/benchmark-schema.js";
 import { RecordsError } from "../../bench/records/jsonl-store.js";
 import type { CommandResult } from "../../bench/records/records-commands.js";
 import { runRecordsCommand } from "../../bench/records/records-commands.js";
@@ -354,6 +358,132 @@ describe("set-status", () => {
 
     expect(result.lines[0]).toContain("VERIFIED -> FIXED");
     expect(run(["verify"]).exit).toBe(0);
+  });
+
+  describe("a GAP whose experiment calls for a tier its evidence never ran", () => {
+    const fixSha = "f00dcafe";
+
+    function machineAt(
+      reactorSha: string,
+      storage: StorageEngine,
+    ): MachineEnvironment {
+      return {
+        host: "mac-studio-m2",
+        os: "darwin 24.6.0",
+        cpu: "Apple M2 Max",
+        cores: 12,
+        node: "v22.14.0",
+        reactorSha,
+        storage,
+      };
+    }
+
+    beforeEach(() => {
+      run(
+        ["add-task", "-"],
+        withoutId(
+          gapTask({
+            details: {
+              question: "What does the admission gate cost against a store?",
+              experiment:
+                "Add a meso-tier auth-gate benchmark against a real KyselyWriteCache/KyselyOperationIndex-backed store instead of the stubs, and compare against the stubbed numbers B-001 records",
+              whyItMatters: "Every policied read pays the storage cost",
+              blockedBy: [],
+            },
+          }),
+        ),
+      );
+      run(["add-benchmark", "-"], withoutId(microEntry()));
+      run(
+        ["add-benchmark", "-"],
+        withoutId(
+          microEntry({
+            environment: machineAt(fixSha, "stubbed"),
+          }),
+        ),
+      );
+      run(["set-status", "T-002", "VERIFIED", "--evidence", "B-001"]);
+    });
+
+    it("refuses a same-command rerun of the stubbed micro benchmark", () => {
+      const error = failure([
+        "set-status",
+        "T-002",
+        "FIXED",
+        "--commit",
+        fixSha,
+        "--evidence",
+        "B-001",
+        "--evidence",
+        "B-002",
+      ]);
+
+      expect(error.exitCode).toBe(5);
+      expect(error.message).toContain(
+        "its experiment calls for a meso tier on real, not stubbed, storage",
+      );
+      expect(error.message).toContain(
+        "B-002 (micro tier, stubbed storage, pnpm --filter @powerhousedao/reactor bench:auth:record)",
+      );
+      expect(readTask(1)).toMatchObject({ status: "VERIFIED" });
+    });
+
+    it("refuses a record in the right tier that still ran on stubs", () => {
+      run(
+        ["add-benchmark", "-"],
+        withoutId(
+          microEntry({
+            tier: "meso",
+            command:
+              "pnpm --filter @powerhousedao/reactor bench:auth-storage:record",
+            environment: machineAt(fixSha, "stubbed"),
+          }),
+        ),
+      );
+
+      const error = failure([
+        "set-status",
+        "T-002",
+        "FIXED",
+        "--commit",
+        fixSha,
+        "--evidence",
+        "B-001",
+        "--evidence",
+        "B-003",
+      ]);
+
+      expect(error.exitCode).toBe(5);
+    });
+
+    it("accepts the meso record against real storage it asked for", () => {
+      run(
+        ["add-benchmark", "-"],
+        withoutId(
+          microEntry({
+            tier: "meso",
+            command:
+              "pnpm --filter @powerhousedao/reactor bench:auth-storage:record",
+            environment: machineAt(fixSha, "pglite"),
+          }),
+        ),
+      );
+
+      const result = run([
+        "set-status",
+        "T-002",
+        "FIXED",
+        "--commit",
+        fixSha,
+        "--evidence",
+        "B-001",
+        "--evidence",
+        "B-003",
+      ]);
+
+      expect(result.lines[0]).toContain("VERIFIED -> FIXED");
+      expect(run(["verify"]).exit).toBe(0);
+    });
   });
 
   it("matches the sha whichever side was abbreviated shorter", () => {

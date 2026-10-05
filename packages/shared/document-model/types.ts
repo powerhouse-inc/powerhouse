@@ -3,6 +3,7 @@ import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
 import type { z } from "zod";
 import type { ZodRawShape } from "zod";
+import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
@@ -10,6 +11,7 @@ import type {
   ConfigEntrySchema,
   ConfigEntryTypeSchema,
   ManifestSchema,
+  PieceModuleSchema,
   PowerhouseModuleSchema,
   PublisherSchema,
 } from "./schemas.js";
@@ -1068,34 +1070,6 @@ export type IOperation = {
   type: Scalars["String"]["output"];
 };
 
-export type Load_State = "LOAD_STATE";
-
-export type SchemaLoadStateAction = {
-  id: Scalars["String"]["output"];
-  timestampUtcMs: Scalars["DateTime"]["output"];
-  input: LoadStateActionInput;
-  type: Load_State;
-  scope: string;
-};
-
-export type LoadStateActionInput = {
-  operations: Scalars["Int"]["input"];
-  state: LoadStateActionStateInput;
-};
-
-export type LoadStateActionStateInput = {
-  data?: InputMaybe<Scalars["Unknown"]["input"]>;
-  name: Scalars["String"]["input"];
-};
-
-export type MutationLoadStateArgs = {
-  input: SchemaLoadStateAction;
-};
-
-export type MutationPruneArgs = {
-  input: SchemaPruneAction;
-};
-
 export type MutationRedoArgs = {
   input: SchemaRedoAction;
 };
@@ -1106,21 +1080,6 @@ export type MutationSetNameArgs = {
 
 export type MutationUndoArgs = {
   input: SchemaUndoAction;
-};
-
-export type Prune = "PRUNE";
-
-export type SchemaPruneAction = {
-  id: Scalars["String"]["output"];
-  timestampUtcMs: Scalars["DateTime"]["output"];
-  input: PruneActionInput;
-  type: Prune;
-  scope: string;
-};
-
-export type PruneActionInput = {
-  end?: InputMaybe<Scalars["Int"]["input"]>;
-  start?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
 export type Query = {
@@ -1204,11 +1163,6 @@ export type SchemaNOOPAction = {
   type: "NOOP";
 };
 
-export type LoadStateAction = Action & {
-  type: "LOAD_STATE";
-  input: LoadStateActionInput;
-};
-export type PruneAction = Action & { type: "PRUNE"; input: PruneActionInput };
 export type RedoAction = Action & {
   type: "REDO";
   input: SchemaRedoAction["input"];
@@ -1268,6 +1222,14 @@ export type DeleteDocumentActionInput = {
   propagate?: "none" | "cascade"; // Deletion propagation mode
 };
 
+export type PurgeDocumentActionInput = {
+  documentId: string;
+  documentType: string;
+  /** The same instant as the action's timestampUtcMs. */
+  purgedAtUtcIso: string;
+  requestId: string;
+};
+
 export type AddRelationshipActionInput = {
   sourceId: string;
   targetId: string;
@@ -1303,6 +1265,13 @@ export type DeleteDocumentAction = Action & {
   input: DeleteDocumentActionInput;
 };
 
+/** Reserved document-scope marker; a purged document's only operation. */
+export type PurgeDocumentAction = Action & {
+  type: "PURGE_DOCUMENT";
+  scope: "document";
+  input: PurgeDocumentActionInput;
+};
+
 export type AddRelationshipAction = Action & {
   type: "ADD_RELATIONSHIP";
   input: AddRelationshipActionInput;
@@ -1319,8 +1288,6 @@ export type UpdateRelationshipAction = Action & {
 };
 
 export type DocumentAction =
-  | LoadStateAction
-  | PruneAction
   | RedoAction
   | SetNameAction
   | SetPreferredEditorAction
@@ -1618,13 +1585,18 @@ export interface ISigner {
   verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 
   /**
-   * Signs an action (used for operation signing).
+   * Signs an action for the log it is written to.
    *
    * @param action - The action to sign.
+   * @param target - The document and branch whose log stores the action.
    * @param abortSignal - Optional abort signal to cancel the signing.
    * @returns The signature tuple.
    */
-  signAction: (action: Action, abortSignal?: AbortSignal) => Promise<Signature>;
+  signAction: (
+    action: Action,
+    target: ActionSigningTarget,
+    abortSignal?: AbortSignal,
+  ) => Promise<Signature>;
 }
 
 export type IsStateOfType<TState> = (state: unknown) => state is TState;
@@ -1676,6 +1648,7 @@ export type MinimalBackupData = {
   branch: string;
   state: PHBaseState;
   name: string;
+  protocolVersions?: { [key: string]: number };
 };
 
 export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
@@ -1749,6 +1722,7 @@ export type ConfigEntryType = z.infer<typeof ConfigEntryTypeSchema>;
 export type ConfigEntry = z.infer<typeof ConfigEntrySchema>;
 
 export type PowerhouseModule = z.infer<typeof PowerhouseModuleSchema>;
+export type PieceModule = z.infer<typeof PieceModuleSchema>;
 export type Publisher = z.infer<typeof PublisherSchema>;
 
 export type Manifest = z.infer<typeof ManifestSchema>;

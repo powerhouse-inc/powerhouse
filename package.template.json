@@ -19,7 +19,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint packages/YOUR_PACKAGE_DIR"
   },
   "dependencies": {},
   "devDependencies": {}

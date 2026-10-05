@@ -11,10 +11,13 @@ import {
   initializeAuth,
   type DocumentModelModule,
   type Grant,
-  type ISigner,
   type PHDocument,
-  type Signature,
 } from "@powerhousedao/shared/document-model";
+import {
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  RenownCryptoSigner,
+} from "@renown/sdk/node";
 import { documentModelDocumentModelModule } from "document-model";
 import { GraphQLError } from "graphql";
 import { afterEach, describe, expect, it } from "vitest";
@@ -22,6 +25,7 @@ import * as resolvers from "../src/graphql/reactor/resolvers.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import { createTestSigner } from "./utils/test-signer.js";
 
 const WRITER = "0xWriter";
 const OUTSIDER = "0xOutsider";
@@ -61,6 +65,7 @@ describe("the evaluateActions resolver", () => {
     flags: Partial<ReactorFeatureFlags>,
   ): Promise<InProcessReactorClientModule> {
     module = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModelSources([
@@ -85,7 +90,7 @@ describe("the evaluateActions resolver", () => {
 
     const error: unknown = await resolvers
       .evaluateActions(built.client, {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
       })
       .then(
@@ -103,7 +108,7 @@ describe("the evaluateActions resolver", () => {
 
     const error: unknown = await resolvers
       .evaluateActions(built.client, {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
       })
       .then(
@@ -122,7 +127,7 @@ describe("the evaluateActions resolver", () => {
     const answer = await resolvers.evaluateActions(
       built.client,
       {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         candidates: [
           { scope: "global", type: "SET_MODEL_NAME" },
           { scope: "local", type: "SET_MODEL_NAME" },
@@ -174,7 +179,7 @@ describe("the evaluateActions resolver", () => {
       const asWriter = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
         },
         { address: WRITER },
@@ -182,7 +187,7 @@ describe("the evaluateActions resolver", () => {
       const asOutsider = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
         },
         { address: OUTSIDER },
@@ -203,7 +208,7 @@ describe("the evaluateActions resolver", () => {
       const answer = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [
             { scope: "global", type: "SET_MODEL_NAME" },
             { scope: "local", type: "SET_MODEL_NAME" },
@@ -229,7 +234,7 @@ describe("the evaluateActions resolver", () => {
       const answer = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           branch: null,
           candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
         },
@@ -251,7 +256,7 @@ describe("the evaluateActions resolver", () => {
       const answer = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [
             { scope: "global", type: "SET_MODEL_NAME", input: { name: "x" } },
           ],
@@ -273,29 +278,26 @@ describe("the evaluateActions resolver", () => {
  * preflight, the carve-out -- because every hop of it has to carry the key for
  * the answer to come out right.
  *
- * Canonical did:key/JWK pair for one P-256 key, shared with the carve-out suite
- * in document-model.
+ * The creator's key is real: its CREATE has to carry a signature that verifies.
  */
-const CREATOR_DID = "did:key:zDnaexNjCKnPLh5Vhn1KqjmrLDFtXddrtTTE9gJmdWRSCG3wt";
-const CREATOR_JWK = {
-  kty: "EC",
-  crv: "P-256",
-  x: "2qGULg46dKXbnsPdvI4AxOHiw94xJRDVAWuyHIyyGd8",
-  y: "V_jbfJ-wVhoUspPM9epxaJHUs_6TyMfrOgwB2Kcx170",
-};
 const OTHER_DID = "did:key:zDnaefv2pj8YQM2T6E3pnrJoGnDGbXsrvJiXhqHzh7d5RzncU";
 const CREATOR_ADDRESS = "0xCreator";
 
-/** A signer presenting one app key; signatures are never verified here. */
-function signerWithAppKey(appKey: string): ISigner {
-  return {
-    publicKey: {} as unknown as CryptoKey,
-    user: { address: CREATOR_ADDRESS, networkId: "eip155", chainId: 1 },
-    app: { name: "test", key: appKey },
-    sign: () => Promise.resolve(new Uint8Array(0)),
-    verify: () => Promise.resolve(),
-    signAction: () => Promise.resolve(["", "", "", "", ""] as Signature),
-  };
+async function creatorKey(): Promise<{
+  signer: RenownCryptoSigner;
+  did: string;
+  jwk: JsonWebKey;
+}> {
+  const crypto = await new RenownCryptoBuilder()
+    .withKeyPairStorage(new MemoryKeyStorage())
+    .build();
+  const signer = new RenownCryptoSigner(crypto, "test", {
+    address: CREATOR_ADDRESS,
+    networkId: "eip155",
+    chainId: 1,
+  });
+  const jwk = await globalThis.crypto.subtle.exportKey("jwk", crypto.publicKey);
+  return { signer, did: crypto.did, jwk };
 }
 
 describe("the creator carve-out over GraphQL", () => {
@@ -324,6 +326,7 @@ describe("the creator carve-out over GraphQL", () => {
       authorizationService: permitEverything,
       relationalDb: {} as never,
       analyticsStore: {} as never,
+      http: {} as never,
       graphqlManager: {
         driveOwnershipCache: {
           has: () => false,
@@ -356,9 +359,11 @@ describe("the creator carve-out over GraphQL", () => {
   async function lockedDownDocument(): Promise<{
     subgraph: ReactorSubgraph;
     documentId: string;
+    creatorDid: string;
   }> {
+    const creator = await creatorKey();
     module = await new ReactorClientBuilder()
-      .withSigner(signerWithAppKey(CREATOR_DID))
+      .withSigner(creator.signer)
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModelSources([
@@ -370,7 +375,7 @@ describe("the creator carve-out over GraphQL", () => {
       .buildModule();
 
     const document = createTestDocument();
-    document.header.sig.publicKey = CREATOR_JWK;
+    document.header.sig.publicKey = creator.jwk;
     await module.client.create(document);
     await module.client.execute(document.header.id, "main", [
       initializeAuth({
@@ -387,7 +392,11 @@ describe("the creator carve-out over GraphQL", () => {
       }),
     ]);
 
-    return { subgraph: subgraphOver(module), documentId: document.header.id };
+    return {
+      subgraph: subgraphOver(module),
+      documentId: document.header.id,
+      creatorDid: creator.did,
+    };
   }
 
   function evaluate(
@@ -416,13 +425,9 @@ describe("the creator carve-out over GraphQL", () => {
   }
 
   it("permits the creator an auth-scope operation a deny-all policy refuses", async () => {
-    const { subgraph, documentId } = await lockedDownDocument();
+    const { subgraph, documentId, creatorDid } = await lockedDownDocument();
 
-    const answer = await evaluate(
-      subgraph,
-      documentId,
-      contextFor(CREATOR_DID),
-    );
+    const answer = await evaluate(subgraph, documentId, contextFor(creatorDid));
 
     expect(answer.allAllowed).toBe(true);
   });

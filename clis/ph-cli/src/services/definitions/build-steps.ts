@@ -1,7 +1,22 @@
 import {
-  browserBuildConfig,
-  nodeBuildConfig,
+  browserEntry,
+  buildBrowserBuildConfig,
+  buildNodeBuildConfig,
+  findBundledSharedDeps,
 } from "@powerhousedao/shared/build-config";
+import {
+  buildPieces,
+  expandEntryGlobs,
+  pieceListPath,
+  planPieces,
+  syncDistManifest,
+} from "@powerhousedao/shared/build-pieces";
+import {
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
+  findSharedImports,
+} from "@powerhousedao/shared/connect";
+import { readPackage } from "read-pkg";
+import { z } from "zod";
 import { spawnAsync } from "@powerhousedao/shared/clis";
 import type { PackedConsumerEvidence } from "document-model/tooling";
 import {
@@ -16,11 +31,9 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import type { Agent } from "package-manager-detector";
 import { detect, resolveCommand } from "package-manager-detector";
-import type * as TypeScript from "typescript";
 import {
   assertOutputDirectory,
   type CandidateRequest,
@@ -31,7 +44,11 @@ import {
 } from "./generation.js";
 import { NON_INPUT_DIRECTORIES } from "./package-revision.js";
 
-type CommandResult = { readonly ok: boolean; readonly summary?: string };
+type CommandResult = {
+  readonly ok: boolean;
+  readonly summary?: string;
+  readonly stdout?: string;
+};
 
 async function runLocal(
   packageRoot: string,
@@ -46,8 +63,10 @@ async function runLocal(
     };
   }
   try {
-    await spawnAsync(resolved.command, resolved.args, { cwd: packageRoot });
-    return { ok: true };
+    const stdout = await spawnAsync(resolved.command, resolved.args, {
+      cwd: packageRoot,
+    });
+    return { ok: true, stdout };
   } catch (error) {
     return {
       ok: false,
@@ -56,31 +75,69 @@ async function runLocal(
   }
 }
 
-const tsConfigHost = (ts: typeof TypeScript) => ({
-  ...ts.sys,
-  onUnRecoverableConfigFileDiagnostic: () => undefined,
+type BuildStepOptions = {
+  readonly ignoreTypeErrors?: boolean;
+  readonly noSharedDeps?: boolean;
+};
+
+const compilerConfigSchema = z.object({
+  compilerOptions: z.object({
+    declarationDir: z.string().optional(),
+    outDir: z.string().optional(),
+  }),
+});
+const sourceMapSchema = z.object({
+  sources: z.array(z.string()),
+  sourceRoot: z.string().optional(),
 });
 
-function publishedDeclarationSubdirectory(
-  ts: typeof TypeScript,
-  packageRoot: string,
-  outDir: string,
-): string | null {
-  const options = ts.getParsedCommandLineOfConfigFile(
-    join(packageRoot, "tsconfig.json"),
-    undefined,
-    tsConfigHost(ts),
-  )?.options;
-  const declared = options?.declarationDir ?? options?.outDir;
-  if (declared === undefined) return null;
-  return pathWithin(join(packageRoot, outDir), resolve(packageRoot, declared));
+function filesUnder(root: string): string[] {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    return entry.isDirectory()
+      ? filesUnder(path)
+      : entry.isFile()
+        ? [path]
+        : [];
+  });
+}
+
+async function confirmBuildDespiteTypeErrors(): Promise<boolean> {
+  if (!process.stdin.isTTY || process.env.CI) {
+    console.error(
+      "Fix the type errors and build again, or use --ignore-type-errors to build without asking.",
+    );
+    return false;
+  }
+  const enquirer = await import("enquirer");
+  try {
+    const answer = await enquirer.default.prompt<{ confirmed: boolean }>({
+      type: "confirm",
+      name: "confirmed",
+      message:
+        "tsc reported type errors. A package built with type errors can load and still fail at runtime. Build anyway?",
+      initial: false,
+    });
+    return answer.confirmed;
+  } catch {
+    return false;
+  }
 }
 
 export function createTypecheckStep(
   agent: Agent,
   outDir: string,
+  options: BuildStepOptions = {},
 ): GenerationSteps["typecheck"] {
   return async ({ packageRoot, emittedRoot }) => {
+    const config = await runLocal(packageRoot, agent, [
+      "tsc",
+      "-p",
+      "tsconfig.json",
+      "--showConfig",
+    ]);
+    if (!config.ok) return { ok: false, summary: config.summary };
     const result = await runLocal(packageRoot, agent, [
       "tsc",
       "-p",
@@ -94,68 +151,55 @@ export function createTypecheckStep(
       "false",
       "--noEmit",
       "false",
+      "--noEmitOnError",
+      "false",
+      "--sourceMap",
+      "true",
+      "--inlineSourceMap",
+      "false",
       "--tsBuildInfoFile",
       join(emittedRoot, "tsconfig.tsbuildinfo"),
     ]);
-    if (!result.ok) return { ok: false, summary: result.summary };
-    try {
-      const ts = createRequire(join(packageRoot, "package.json"))(
-        "typescript",
-      ) as typeof TypeScript;
-      const parsed = ts.getParsedCommandLineOfConfigFile(
-        join(packageRoot, "tsconfig.json"),
-        {
-          outDir: emittedRoot,
-          declaration: true,
-          declarationDir: emittedRoot,
-          emitDeclarationOnly: false,
-          noEmit: false,
-          tsBuildInfoFile: join(emittedRoot, "tsconfig.tsbuildinfo"),
-        },
-        tsConfigHost(ts),
-      );
-      if (parsed === undefined || parsed.errors.length > 0) {
-        return {
-          ok: false,
-          summary: "The TypeScript output layout could not be resolved.",
-        };
+    if (!result.ok) {
+      console.error(result.summary);
+      if (
+        !options.ignoreTypeErrors &&
+        !(await confirmBuildDespiteTypeErrors())
+      ) {
+        return { ok: false, summary: result.summary };
       }
-      const program = ts.createProgram({
-        rootNames: parsed.fileNames,
-        options: parsed.options,
-        projectReferences: parsed.projectReferences,
-      });
-      const emittedConfig = {
-        ...parsed,
-        fileNames: program
-          .getSourceFiles()
-          .filter(
-            (file) =>
-              !file.isDeclarationFile &&
-              !program.isSourceFileFromExternalLibrary(file),
-          )
-          .map((file) => file.fileName),
-      };
+      console.warn(
+        "⚠ Building despite type errors. The package can load and still fail at runtime. Fix them before you publish or deploy it.",
+      );
+    }
+    try {
+      const { compilerOptions } = compilerConfigSchema.parse(
+        JSON.parse(config.stdout ?? ""),
+      );
+      const declared = compilerOptions.declarationDir ?? compilerOptions.outDir;
       const emittedModules = new Map<string, string>();
-      for (const source of emittedConfig.fileNames) {
-        const emitted = ts
-          .getOutputFileNames(
-            emittedConfig,
-            source,
-            !ts.sys.useCaseSensitiveFileNames,
-          )
-          .find((file) => /\.[cm]?jsx?$/.test(file));
-        if (emitted !== undefined)
-          emittedModules.set(resolve(source), resolve(emitted));
+      for (const path of filesUnder(emittedRoot)) {
+        if (!/\.[cm]?jsx?\.map$/.test(path)) continue;
+        const map = sourceMapSchema.parse(
+          JSON.parse(readFileSync(path, "utf8")),
+        );
+        for (const source of map.sources) {
+          emittedModules.set(
+            resolve(dirname(path), map.sourceRoot ?? "", source),
+            path.slice(0, -4),
+          );
+        }
       }
       return {
         ok: true,
         emittedModules,
-        declarationSubdirectory: publishedDeclarationSubdirectory(
-          ts,
-          packageRoot,
-          outDir,
-        ),
+        declarationSubdirectory:
+          declared === undefined
+            ? null
+            : pathWithin(
+                join(packageRoot, outDir),
+                resolve(packageRoot, declared),
+              ),
       };
     } catch (error) {
       return {
@@ -169,7 +213,10 @@ export function createTypecheckStep(
   };
 }
 
-function createCandidateStep(agent: Agent): GenerationSteps["emitCandidate"] {
+function createCandidateStep(
+  agent: Agent,
+  options: BuildStepOptions,
+): GenerationSteps["emitCandidate"] {
   return async ({ packageRoot, candidateRoot }) => {
     const { build } = await import("tsdown");
     const copy = existsSync(join(packageRoot, "powerhouse.manifest.json"))
@@ -177,17 +224,75 @@ function createCandidateStep(agent: Agent): GenerationSteps["emitCandidate"] {
       : [];
     try {
       await build({
-        ...browserBuildConfig,
+        ...buildBrowserBuildConfig({ sharedDeps: !options.noSharedDeps }),
         cwd: packageRoot,
         copy,
         outDir: join(candidateRoot, "browser"),
       });
       await build({
-        ...nodeBuildConfig,
+        ...buildNodeBuildConfig({ sharedDeps: !options.noSharedDeps }),
         cwd: packageRoot,
         copy,
         outDir: join(candidateRoot, "node"),
       });
+      if (!options.noSharedDeps) {
+        const imported = [
+          ...new Set(
+            expandEntryGlobs(packageRoot, browserEntry).flatMap((file) =>
+              findSharedImports(
+                readFileSync(file, "utf8"),
+                EXTERNALIZABLE_SHARED_SPECIFIERS,
+              ),
+            ),
+          ),
+        ];
+        const bundled = findBundledSharedDeps(
+          imported,
+          filesUnder(join(candidateRoot, "browser"))
+            .filter((file) => file.endsWith(".js"))
+            .map((file) => ({
+              path: file,
+              content: readFileSync(file, "utf8"),
+            })),
+        );
+        if (bundled.length > 0)
+          console.warn(
+            `⚠ shared deps bundled instead of externalized: ${bundled.join(", ")} — check your neverBundle config`,
+          );
+      }
+      const target = {
+        projectRoot: packageRoot,
+        outDir: candidateRoot,
+        pieces: [],
+      };
+      let built: Awaited<ReturnType<typeof buildPieces>> = [];
+      if (existsSync(pieceListPath(target))) {
+        const stageRoot = join(dirname(candidateRoot), "piece-package");
+        mkdirSync(stageRoot, { recursive: true });
+        symlinkSync(
+          candidateRoot,
+          join(stageRoot, "dist"),
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        const pkg = await readPackage({ cwd: packageRoot });
+        built = await buildPieces(
+          {
+            projectRoot: stageRoot,
+            outDir: "dist",
+            pieces: planPieces(packageRoot, "dist").map((piece) => ({
+              ...piece,
+              entry: resolve(packageRoot, piece.entry),
+            })),
+          },
+          {
+            name: pkg.name,
+            version: pkg.version,
+            license: typeof pkg.license === "string" ? pkg.license : undefined,
+          },
+          { bundle: (config) => build({ ...config, cwd: packageRoot }) },
+        );
+      }
+      syncDistManifest(target, built);
     } catch (error) {
       return {
         ok: false,
@@ -349,12 +454,13 @@ export function promoteCandidate({
 
 export async function createGenerationSteps(
   outDir: string,
+  options: BuildStepOptions = {},
 ): Promise<GenerationSteps> {
   const detected = await detect();
   const agent = detected?.agent ?? "npm";
   return {
-    typecheck: createTypecheckStep(agent, outDir),
-    emitCandidate: createCandidateStep(agent),
+    typecheck: createTypecheckStep(agent, outDir, options),
+    emitCandidate: createCandidateStep(agent, options),
     verifyPackedConsumers,
     promote: promoteCandidate,
   };

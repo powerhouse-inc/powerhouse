@@ -31,7 +31,6 @@ const OPERATIONS_QUERY = `
           }
         }
       }
-      totalCount
     }
   }
 `;
@@ -137,7 +136,7 @@ test("signs dispatched actions and stamps them with the previous operation hash"
   const response = await request.post(SWITCHBOARD_URL, {
     data: {
       query: OPERATIONS_QUERY,
-      variables: { filter: { documentId: id, scopes: ["global"] } },
+      variables: { filter: { documentIdOrSlug: id, scopes: ["global"] } },
     },
   });
   expect(response.ok()).toBe(true);

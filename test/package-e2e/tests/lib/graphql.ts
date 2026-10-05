@@ -67,13 +67,14 @@ export async function getDocumentOperations(
   const data = await graphql<{
     documentOperations: {
       items: DocumentOperationRecord[];
-      totalCount: number;
     };
   }>(
     "/graphql",
     `
       query Ops($id: String!) {
-        documentOperations(filter: { documentId: $id, scopes: ["global"] }) {
+        documentOperations(
+          filter: { documentIdOrSlug: $id, scopes: ["global"] }
+        ) {
           items {
             index
             hash
@@ -84,7 +85,6 @@ export async function getDocumentOperations(
               scope
             }
           }
-          totalCount
         }
       }
     `,

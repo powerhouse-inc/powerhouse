@@ -1,10 +1,12 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 export default defineConfig({
   entry: [
     "src/index.ts",
     "src/node.ts",
     "src/crypto.ts",
+    "src/trust.ts",
     "src/wallet/index.ts",
     "src/wallet/rainbow/index.ts",
     "src/wallet/rainbow/factory.ts",
@@ -16,7 +18,8 @@ export default defineConfig({
   outDir: "dist",
   platform: "neutral",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
   deps: {
     // Keep the optional wallet-lib peer deps external so they only load when a

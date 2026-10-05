@@ -245,6 +245,19 @@ async function fetchDelegationCredentialRest(params: {
   return credential;
 }
 
+/** True when the credential's EIP-712 proof, on `chainId`, was signed by its
+ * issuer address. Binding and expiry are the caller's to check. */
+export async function verifyDelegationProof(
+  credential: PowerhouseVerifiableCredential,
+  chainId: number,
+): Promise<boolean> {
+  const withDomain = withEip712Domain(credential, chainId);
+  return (
+    withDomain.proof.eip712.domain.chainId === chainId &&
+    (await verifyCredentialSignature(withDomain))
+  );
+}
+
 // Optionally re-verify the EIP-712 proof; returns the credential or undefined.
 async function finalizeCredential(
   credential: PowerhouseVerifiableCredential,
@@ -252,14 +265,10 @@ async function finalizeCredential(
   verifySignature: boolean,
 ): Promise<PowerhouseVerifiableCredential | undefined> {
   if (!verifySignature) return credential;
-  const withDomain = withEip712Domain(credential, chainId);
-  if (
-    withDomain.proof.eip712.domain.chainId !== chainId ||
-    !(await verifyCredentialSignature(withDomain))
-  ) {
+  if (!(await verifyDelegationProof(credential, chainId))) {
     return undefined;
   }
-  return withDomain;
+  return withEip712Domain(credential, chainId);
 }
 
 // Fetch the Renown delegation credential for (address, chainId) and validate it

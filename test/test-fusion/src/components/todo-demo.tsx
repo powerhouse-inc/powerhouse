@@ -10,7 +10,7 @@ import {
 } from "@powerhousedao/reactor-browser/graphql-client";
 import { generateId, type PHDocument } from "document-model";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import {
   readTodos,
   TODO_DOCUMENT_TYPE,
@@ -116,14 +116,13 @@ function TodoList({ documentId }: { documentId: string }) {
   const todos = readTodos(document);
 
   // The operation log through the same client the document came from - the
-  // primitive a fusion app derives a history view from. Refetching keyed on
-  // the document's last-modified stamp keeps it in step with every update the
-  // cache sees, including ones pushed over the realtime subscription.
-  const { globalOperations, refetch } = useDocumentOperations(documentId);
-  const lastModified = document?.header.lastModifiedAtUtcIso;
-  useEffect(() => {
-    if (lastModified) refetch();
-  }, [lastModified, refetch]);
+  // primitive a fusion app derives a history view from. The document cache
+  // drops it on every document change event, including ones pushed over the
+  // realtime subscription, so no manual refetch is needed.
+  const { operations: globalOperations } = useDocumentOperations(
+    documentId,
+    "global",
+  );
 
   function add() {
     const trimmed = title.trim();

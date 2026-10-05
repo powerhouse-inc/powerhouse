@@ -8,20 +8,32 @@ export interface DriveAuthGateProps {
   readonly onLogin?: () => void;
   /** Logout action used in `"unauthorized"` mode. */
   readonly onLogout?: () => void;
+  /** When set, renders a close control in the top-right corner. Omit it for a card with no way out. */
+  readonly onClose?: () => void;
   readonly className?: string;
 }
 
 // Reusable "log in to access this drive" card (drive-add auth modal + full-page
 // gate). It only shows the message + a trigger; login methods live in the modal.
 export function DriveAuthGate(props: DriveAuthGateProps) {
-  const { mode = "login", onLogin, onLogout, className } = props;
+  const { mode = "login", onLogin, onLogout, onClose, className } = props;
   return (
     <div
       className={twMerge(
-        "flex w-[28rem] max-w-[calc(100%-2rem)] flex-col items-center gap-4 rounded-3xl bg-background p-8 text-center shadow-2xl ring-1 ring-black/5 dark:ring-white/10",
+        "relative flex w-[28rem] max-w-[calc(100%-2rem)] flex-col items-center gap-4 rounded-3xl bg-background p-8 text-center shadow-2xl ring-1 ring-black/5 dark:ring-white/10",
         className,
       )}
     >
+      {onClose ? (
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="absolute top-4 right-4 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <CloseGlyph />
+        </button>
+      ) : null}
       {mode === "login" ? (
         <>
           <h2 className="text-xl font-semibold text-foreground">
@@ -58,5 +70,25 @@ export function DriveAuthGate(props: DriveAuthGateProps) {
         </>
       )}
     </div>
+  );
+}
+
+// Inline so the card stays free of the design-system barrel, which re-exports
+// this file.
+function CloseGlyph() {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={14}
+      height={14}
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    >
+      <path d="M2 2 L12 12 M12 2 L2 12" />
+    </svg>
   );
 }

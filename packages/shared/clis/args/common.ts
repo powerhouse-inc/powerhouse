@@ -73,6 +73,22 @@ export const buildArgs = {
   outDir,
   ...definitionSelectionArgs,
   warningsAsErrors,
+  noSharedDeps: flag({
+    type: boolean,
+    long: "no-shared-deps",
+    description:
+      "Bundle the shared dependency set instead of externalizing it (default: externalize)",
+    defaultValue: () => false as const,
+    defaultValueIsSerializable: true,
+  }),
+  ignoreTypeErrors: flag({
+    type: boolean,
+    long: "ignore-type-errors",
+    description:
+      "Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime",
+    defaultValue: () => false as const,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };
 
@@ -191,7 +207,7 @@ export const vetraSwitchboardArgs = {
 export const defaultDrivesUrl = option({
   type: optional(string),
   long: "default-drives-url",
-  description: "The default drives url to use in connect",
+  description: "Comma-separated drive URLs to use as Connect's default drives.",
   defaultValue: () => "",
 });
 

@@ -12,8 +12,8 @@ import {
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
-  type SignerConfig,
 } from "@powerhousedao/reactor-browser";
+import type { UnsupportedStoredDocuments } from "@powerhousedao/reactor";
 import type {
   PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
@@ -22,13 +22,19 @@ import type {
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { createSignatureVerifier, type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { getReactorPGlite } from "../pglite.db.js";
+import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
+import {
+  createConnectSignerConfig,
+  type RenownTrustEndpoints,
+} from "./renown-trust.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -40,11 +46,15 @@ export async function createBrowserReactor(
   renown: IRenown,
   featureFlags: Partial<ReactorFeatureFlags>,
   documentModelLoader?: IDocumentModelLoader,
+  createSignaturePolicy?: SignaturePolicy,
+  renownEndpoints: RenownTrustEndpoints = {},
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments,
 ): Promise<BrowserReactorClientModule> {
-  const signerConfig: SignerConfig = {
-    signer: renown.signer,
-    verifier: createSignatureVerifier(),
-  };
+  const signerConfig = await createConnectSignerConfig(
+    renown.signer,
+    featureFlags,
+    renownEndpoints,
+  );
 
   const jwtHandler: JwtHandler = async (_url: string) => {
     if (!renown.user) {
@@ -57,28 +67,38 @@ export async function createBrowserReactor(
 
   const pg = await getReactorPGlite();
   const logger = new ConsoleLogger(["reactor-client"]);
+  const reactorBuilder = new ReactorBuilder()
+    .withDocumentModelSources(documentModelModules)
+    .withUpgradeManifests(upgradeManifests)
+    .withChannelScheme(ChannelScheme.CONNECT)
+    .withExecutorConfig({ featureFlags })
+    .withJwtHandler(jwtHandler)
+    .withKysely(
+      new Kysely<Database>({
+        dialect: new PGliteDialect(pg),
+      }),
+    );
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)
-    .withReactorBuilder(
-      new ReactorBuilder()
-        .withDocumentModelSources(documentModelModules)
-        .withUpgradeManifests(upgradeManifests)
-        .withChannelScheme(ChannelScheme.CONNECT)
-        .withExecutorConfig({ featureFlags })
-        .withJwtHandler(jwtHandler)
-        .withKysely(
-          new Kysely<Database>({
-            dialect: new PGliteDialect(pg),
-          }),
-        ),
-    );
+    .withReactorBuilder(reactorBuilder);
 
   if (documentModelLoader) {
     builder.withDocumentModelLoader(documentModelLoader);
   }
+  if (createSignaturePolicy) {
+    builder.withCreateSignaturePolicy(createSignaturePolicy);
+  }
+  if (unsupportedStoredDocuments) {
+    reactorBuilder.withUnsupportedStoredDocuments(unsupportedStoredDocuments);
+  }
 
-  const module = await builder.buildModule();
+  let module: Awaited<ReturnType<typeof builder.buildModule>>;
+  try {
+    module = await builder.buildModule();
+  } catch (error) {
+    throw toStoredDocumentsRefused(error);
+  }
   return {
     ...module,
     kind: "browser",

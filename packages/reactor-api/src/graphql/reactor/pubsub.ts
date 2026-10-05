@@ -1,9 +1,11 @@
 import type {
   DocumentChangeEvent,
   IReactorClient,
+  JobResultSummary,
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import { PubSub } from "graphql-subscriptions";
 
 const pubSub = new PubSub();
@@ -35,42 +37,99 @@ export interface JobChangesPayload {
     createdAt: string;
     completedAt: string | null;
     error: string | null;
-    result: NonNullable<unknown>;
+    result: JobResultSummary | null;
   };
   jobId: string;
   /** Document id used to authorize the subscription; not in the GraphQL event. */
   documentId: string;
 }
 
-let globalDocumentUnsubscribe: (() => void) | null = null;
-let documentSubscriberCount = 0;
+type Feed = { unsubscribe: () => void; subscribers: number };
 
-export function ensureGlobalDocumentSubscription(
-  reactorClient: IReactorClient,
-): () => void {
-  if (documentSubscriberCount === 0) {
-    globalDocumentUnsubscribe = reactorClient.subscribe(
+// Anonymous callers share one feed; `|` cannot occur in an address or a did:key.
+function subjectKey(subject: AuthSubject): string {
+  return `${subject.address ?? ""}|${subject.key ?? ""}`;
+}
+
+/**
+ * The reactor's change feed, read once per distinct subject and shared by that
+ * subject's GraphQL subscriptions. Each feed is read as its subject, so the
+ * client withholds what that subject may not read; one feed read with no view
+ * would gate every subscriber as the host.
+ */
+export class DocumentChangeFeed {
+  readonly #pubSub = new PubSub();
+  readonly #feeds = new Map<string, Feed>();
+
+  constructor(private readonly reactorClient: IReactorClient) {}
+
+  subscribe(
+    subject: AuthSubject,
+  ): AsyncIterableIterator<DocumentChangesPayload> {
+    const key = subjectKey(subject);
+    const topic = `${SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES}:${key}`;
+    const iterator =
+      this.#pubSub.asyncIterableIterator<DocumentChangesPayload>(topic);
+    this.#acquire(key, topic, subject);
+
+    let released = false;
+    const release = () => {
+      if (!released) {
+        released = true;
+        this.#release(key);
+      }
+    };
+
+    return {
+      next: () => iterator.next(),
+      return: () => {
+        release();
+        return iterator.return();
+      },
+      throw: (error: unknown) => {
+        release();
+        return iterator.throw(error);
+      },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+  }
+
+  #acquire(key: string, topic: string, subject: AuthSubject): void {
+    const feed = this.#feeds.get(key);
+    if (feed) {
+      feed.subscribers++;
+      return;
+    }
+
+    const view: ViewFilter = { subject };
+    const unsubscribe = this.reactorClient.subscribe(
       {},
       (event: DocumentChangeEvent) => {
         const payload: DocumentChangesPayload = {
           documentChanges: event,
           search: {},
-          view: undefined,
+          view,
         };
-        void pubSub.publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, payload);
+        void this.#pubSub.publish(topic, payload);
       },
+      view,
     );
+    this.#feeds.set(key, { unsubscribe, subscribers: 1 });
   }
 
-  documentSubscriberCount++;
-
-  return () => {
-    documentSubscriberCount--;
-    if (documentSubscriberCount === 0 && globalDocumentUnsubscribe) {
-      globalDocumentUnsubscribe();
-      globalDocumentUnsubscribe = null;
+  #release(key: string): void {
+    const feed = this.#feeds.get(key);
+    if (!feed) {
+      return;
     }
-  };
+    feed.subscribers--;
+    if (feed.subscribers === 0) {
+      this.#feeds.delete(key);
+      feed.unsubscribe();
+    }
+  }
 }
 
 const activeJobSubscriptions = new Map<
@@ -104,8 +163,7 @@ export function ensureJobSubscription(
           createdAt: jobInfo.createdAtUtcIso,
           completedAt: jobInfo.completedAtUtcIso ?? null,
           error: jobInfo.error?.message ?? null,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          result: jobInfo.result ?? {},
+          result: jobInfo.result ?? null,
         },
         jobId,
         documentId: jobInfo.documentId,

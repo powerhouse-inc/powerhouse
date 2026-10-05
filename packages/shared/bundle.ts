@@ -1,4 +1,5 @@
 import { build } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 await build({
   entry: [
@@ -17,15 +18,18 @@ await build({
     "document-drive/index.ts",
     "processors/index.ts",
     "registry/index.ts",
-    // Browser-safe deep entries: Connect imports these directly so they don't
-    // pull the registry barrel's node:fs helpers into the browser bundle.
+    // Browser-safe deep entries: Connect and the design system import these
+    // directly so they don't pull the registry barrel's node:fs helpers into
+    // the browser bundle.
     "registry/manifest-slim.ts",
     "registry/urls.ts",
+    "registry/updates.ts",
   ],
   outDir: "dist",
   platform: "neutral",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
   deps: {
     neverBundle: [/^node:.*/],
@@ -37,7 +41,8 @@ await build({
   outDir: "dist/clis",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });
 
@@ -48,7 +53,8 @@ await build({
   outDir: "dist/clis/args",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });
 
@@ -63,10 +69,12 @@ await build({
     "clis/command-names.ts",
     "clis/services/telemetry.ts",
     "clis/build-config.mts",
+    "clis/build-pieces.mts",
   ],
   outDir: "dist/clis",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });

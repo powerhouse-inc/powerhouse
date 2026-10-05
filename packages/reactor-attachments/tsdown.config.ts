@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 // Both entries build in ONE pass so shared modules (e.g. errors.ts) emit as one
 // chunk -- separate builds inline a private error class per bundle, breaking
@@ -12,6 +13,7 @@ export default defineConfig({
   outDir: "dist",
   outExtensions: () => ({ js: ".js" }),
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });

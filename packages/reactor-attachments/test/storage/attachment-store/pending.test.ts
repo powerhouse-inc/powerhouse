@@ -220,7 +220,9 @@ describe("KyselyAttachmentStore: get() with pending reservations", () => {
       retryAfterMs: 5000,
     });
 
-    const err = await store.get(TEST_HASH).catch((e: unknown) => e);
+    const err = await store
+      .get(TEST_HASH, undefined, "doc-1")
+      .catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(AttachmentPending);
     expect((err as AttachmentPending).expiresAtUtc).toBe(pendingExpiry);
@@ -239,7 +241,7 @@ describe("KyselyAttachmentStore: get() with pending reservations", () => {
       },
     });
 
-    const response = await store.get(TEST_HASH);
+    const response = await store.get(TEST_HASH, undefined, "doc-1");
 
     expect(response.header.hash).toBe(TEST_HASH);
     expect(response.header.status).toBe("available");
@@ -252,7 +254,9 @@ describe("KyselyAttachmentStore: get() with pending reservations", () => {
 
     transport.fetch.mockResolvedValueOnce({ kind: "not-found" });
 
-    await expect(store.get(TEST_HASH)).rejects.toThrow(AttachmentNotFound);
+    await expect(store.get(TEST_HASH, undefined, "doc-1")).rejects.toThrow(
+      AttachmentNotFound,
+    );
   });
 
   it("unknown hash + transport returns data -> lazy fetch stores and serves", async () => {
@@ -265,7 +269,7 @@ describe("KyselyAttachmentStore: get() with pending reservations", () => {
       },
     });
 
-    const response = await store.get(TEST_HASH);
+    const response = await store.get(TEST_HASH, undefined, "doc-1");
 
     expect(response.header.hash).toBe(TEST_HASH);
     expect(response.header.status).toBe("available");
@@ -278,7 +282,9 @@ describe("KyselyAttachmentStore: get() with pending reservations", () => {
   it("unknown hash + transport returns not-found -> throws AttachmentNotFound", async () => {
     transport.fetch.mockResolvedValueOnce({ kind: "not-found" });
 
-    await expect(store.get(TEST_HASH)).rejects.toThrow(AttachmentNotFound);
+    await expect(store.get(TEST_HASH, undefined, "doc-1")).rejects.toThrow(
+      AttachmentNotFound,
+    );
   });
 
   it("does not call transport for a locally pending hash", async () => {

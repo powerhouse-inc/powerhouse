@@ -55,7 +55,7 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     `
       mutation CreateTodo($name: String!, $parent: String!) {
         Todo {
-          createDocument(name: $name, parentIdentifier: $parent) {
+          createDocument(name: $name, parentIdOrSlug: $parent) {
             id
             name
           }
@@ -73,9 +73,9 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     await graphql(
       "/graphql/todo",
       `
-        mutation Add($docId: PHID!, $input: Todo_AddTodoInput!) {
+        mutation Add($docId: String!, $input: Todo_AddTodoInput!) {
           Todo {
-            addTodo(docId: $docId, input: $input) {
+            addTodo(documentIdOrSlug: $docId, input: $input) {
               id
             }
           }
@@ -91,9 +91,9 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   await graphql(
     "/graphql/todo",
     `
-      mutation Update($docId: PHID!, $input: Todo_UpdateTodoInput!) {
+      mutation Update($docId: String!, $input: Todo_UpdateTodoInput!) {
         Todo {
-          updateTodo(docId: $docId, input: $input) {
+          updateTodo(documentIdOrSlug: $docId, input: $input) {
             id
           }
         }
@@ -107,9 +107,9 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   await graphql(
     "/graphql/todo",
     `
-      mutation Remove($docId: PHID!, $input: Todo_RemoveTodoInput!) {
+      mutation Remove($docId: String!, $input: Todo_RemoveTodoInput!) {
         Todo {
-          removeTodo(docId: $docId, input: $input) {
+          removeTodo(documentIdOrSlug: $docId, input: $input) {
             id
           }
         }
@@ -155,9 +155,59 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   page.on("pageerror", (err) => {
     console.log(`[pageerror] ${err.message}`);
   });
+  // A module the server doesn't have is answered with the SPA's index.html at
+  // 200, so the browser only reports a MIME-type error and never names the
+  // file. Log any script answered with HTML, plus outright error statuses.
+  page.on("response", (res) => {
+    const type = res.headers()["content-type"] ?? "";
+    if (res.status() >= 400) {
+      console.log(`[browser:http] ${res.status()} ${res.url()}`);
+    } else if (
+      res.request().resourceType() === "script" &&
+      type.includes("text/html")
+    ) {
+      console.log(`[browser:html-for-script] ${res.url()}`);
+    }
+  });
+  page.on("requestfailed", (req) => {
+    console.log(
+      `[browser:requestfailed] ${req.url()} (${req.failure()?.errorText ?? "unknown"})`,
+    );
+  });
 
   await page.goto(CONNECT_URL);
   await page.waitForLoadState("networkidle");
+
+  // What the page claims it can resolve, and whether the server agrees. A
+  // shared-dependency entry the map advertises but the deploy does not carry
+  // shows up only as an opaque MIME-type error, so check the vendor URLs
+  // directly and report the ones that are not real JavaScript.
+  const vendorReport = await page.evaluate(async () => {
+    const el = document.querySelector('script[type="importmap"]');
+    if (!el?.textContent) return { entries: 0, broken: [] as string[] };
+    const map = JSON.parse(el.textContent) as {
+      imports?: Record<string, string>;
+    };
+    const entries = Object.entries(map.imports ?? {});
+    const broken: string[] = [];
+    for (const [spec, url] of entries) {
+      try {
+        const res = await fetch(url, { method: "GET" });
+        const type = res.headers.get("content-type") ?? "";
+        if (!res.ok || type.includes("text/html")) {
+          broken.push(`${spec} -> ${url} [${res.status} ${type}]`);
+        }
+      } catch (e) {
+        broken.push(`${spec} -> ${url} [threw ${String(e)}]`);
+      }
+    }
+    return { entries: entries.length, broken };
+  });
+  console.log(
+    `[test] import map: ${vendorReport.entries} entries, ${vendorReport.broken.length} not served as JS`,
+  );
+  for (const b of vendorReport.broken) console.log(`[test]   broken: ${b}`);
+
   // Skeleton loader from the consumer scaffold can hang for a few seconds
   // while ph-packages.json fetches and React bootstraps.
   await page

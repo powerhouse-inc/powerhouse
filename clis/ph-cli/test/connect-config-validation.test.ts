@@ -15,12 +15,12 @@ describe("normalizeKey", () => {
   });
 });
 
-describe("buildConnectFlagPatch — 19 field flags", () => {
+describe("buildConnectFlagPatch — 20 field flags", () => {
   it("returns an empty patch when no flag is set", () => {
     expect(buildConnectFlagPatch({})).toEqual({});
   });
 
-  // The 15 strict-optional flags from connectRuntimeOverrideArgs.
+  // The 16 strict-optional flags from connectRuntimeOverrideArgs.
 
   it("renownUrl → renown.url", () => {
     expect(buildConnectFlagPatch({ renownUrl: "https://x" })).toEqual({
@@ -49,6 +49,15 @@ describe("buildConnectFlagPatch — 19 field flags", () => {
   it("externalPackages → packages.externalEnabled", () => {
     expect(buildConnectFlagPatch({ externalPackages: false })).toEqual({
       packages: { externalEnabled: false },
+    });
+  });
+
+  it("workflows → app.workflowsEnabled", () => {
+    expect(buildConnectFlagPatch({ workflows: true })).toEqual({
+      app: { workflowsEnabled: true },
+    });
+    expect(buildConnectFlagPatch({ workflows: false })).toEqual({
+      app: { workflowsEnabled: false },
     });
   });
 
@@ -232,6 +241,25 @@ describe("validateConnectPatch (--json path)", () => {
     expect(
       validateConnectPatch('{"packageRegistryUrl":"https://reg.example"}'),
     ).toEqual({ packageRegistryUrl: "https://reg.example" });
+  });
+
+  it("accepts a connect.openPanel block (runtime OpenPanel analytics)", () => {
+    const raw =
+      '{"openPanel":{"clientId":"abc","apiUrl":"https://op.example/api","trackUiEvents":false,"trackOperations":true}}';
+    expect(validateConnectPatch(raw)).toEqual({
+      openPanel: {
+        clientId: "abc",
+        apiUrl: "https://op.example/api",
+        trackUiEvents: false,
+        trackOperations: true,
+      },
+    });
+  });
+
+  it("rejects an unknown field inside connect.openPanel", () => {
+    expect(() =>
+      validateConnectPatch('{"openPanel":{"clientId":"abc","bogus":1}}'),
+    ).toThrow(/\/openPanel must NOT have additional properties \("bogus"\)/);
   });
 
   it("still rejects unknown top-level keys other than packageRegistryUrl", () => {

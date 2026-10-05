@@ -1,6 +1,15 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type { CatchUpThread, SweepResult } from "../catch-up/types.js";
+import type {
+  OperationContext,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { JobMeta } from "../shared/types.js";
+import type {
+  AdmissionPath,
+  SignatureRefusalCode,
+  SignatureScheme,
+} from "../signer/types.js";
 
 /**
  * Describes a function to unsubscribe from an event.
@@ -54,6 +63,8 @@ export const ReactorEventTypes = {
   READMODEL_BATCH_COMPLETED: 10006,
   READMODEL_INDEXED: 10007,
   MODEL_LOADED: 10008,
+  SIGNATURE_REFUSED: 10009,
+  CATCHUP_SWEPT: 10010,
 } as const;
 
 /**
@@ -100,12 +111,22 @@ export type JobWriteReadyEvent = {
   operations: OperationWithContext[];
   jobMeta: JobMeta;
   /**
+   * The ids of the actions the caller submitted with this job. `operations`
+   * can also carry operations the job merely moved into a new position, so a
+   * consumer reporting back to the caller needs this to tell the two apart.
+   * Absent on jobs that carry no submitted actions.
+   */
+  submittedActionIds?: string[];
+  /**
    * Maps documentId to the collection IDs it belongs to.
    * Used by SyncManager to route operations only to remotes
    * whose collection contains the document.
    */
   collectionMemberships?: Record<string, string[]>;
 };
+
+/** Set on a marker's context when its purge deleted a live document. */
+export type PurgeMarkerContext = OperationContext & { appliedDeletion?: true };
 
 /**
  * Event emitted after all read models have finished processing operations.
@@ -163,3 +184,20 @@ export type ReadModelIndexedEvent = {
   operationCount: number;
   success: boolean;
 };
+
+/** A write failed admission; `enforced` is false in log mode, which admits it. */
+export type SignatureRefusedEvent = {
+  jobId: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  actionId: string;
+  code: SignatureRefusalCode;
+  scheme: SignatureScheme;
+  path: AdmissionPath;
+  enforced: boolean;
+  reason: string;
+};
+
+/** A catch-up sweep that moved a cursor, replayed operations, or failed. */
+export type CatchUpSweptEvent = SweepResult & { thread: CatchUpThread };

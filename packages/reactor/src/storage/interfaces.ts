@@ -185,6 +185,16 @@ export interface IOperationStore {
    * Returns operations for a document/scope/branch whose index is greater
    * than the given revision.
    *
+   * `paging.cursor` is opaque to callers: treat it only as the value
+   * returned in `nextCursor` from a previous page, never construct or
+   * interpret it directly. An implementation must never emit a `nextCursor`
+   * equal to the start-of-stream sentinel ("0"), since a caller that walks
+   * `nextCursor` to exhaustion would read that as "start over" and loop
+   * forever. The reference encoding (used by the Kysely and Hypercore
+   * stores) is the index to resume from, i.e. the last returned row's index
+   * plus one, so a page that happens to end at index 0 still produces a
+   * cursor distinguishable from the start sentinel.
+   *
    * @param documentId - The document id
    * @param scope - The operation scope
    * @param branch - The branch name
@@ -220,6 +230,16 @@ export interface IOperationStore {
 
   /**
    * Gets operations that may conflict with incoming operations during a load.
+   *
+   * `paging.cursor` is opaque to callers: treat it only as the value
+   * returned in `nextCursor` from a previous page, never construct or
+   * interpret it directly. An implementation must never emit a `nextCursor`
+   * equal to the start-of-stream sentinel ("0"), since a caller that walks
+   * `nextCursor` to exhaustion would read that as "start over" and loop
+   * forever. The reference encoding (used by the Kysely and Hypercore
+   * stores) is the index to resume from, i.e. the last returned row's index
+   * plus one, so a page that happens to end at index 0 still produces a
+   * cursor distinguishable from the start sentinel.
    *
    * @param documentId - The document id
    * @param scope - The scope to query
@@ -269,6 +289,27 @@ export interface IOperationStore {
     branch: string,
     signal?: AbortSignal,
   ): Promise<string | undefined>;
+
+  /**
+   * The subset of `opIds` stored anywhere in one stream, retracted rows
+   * included.
+   */
+  findOperationIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>>;
+
+  /** The latest row of each of `opIds` stored in one stream. */
+  getOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]>;
 }
 
 /**
@@ -363,6 +404,8 @@ export interface ViewFilter {
   scopes?: string[];
   /** Exclude operations originating from this remote name. */
   excludeSourceRemote?: string;
+  /** Bounds find: ordinals and collection joins at or below this only. */
+  throughOrdinal?: number;
 }
 
 /**
@@ -474,6 +517,7 @@ export interface IDocumentView extends IReadModel {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If the view does not hold the document
    */
   get<TDocument extends PHDocument>(
     documentId: string,
@@ -505,6 +549,7 @@ export interface IDocumentView extends IReadModel {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If neither an id nor a slug matches
    * @throws {Error} If identifier matches both an ID and slug referring to different documents
    */
   getByIdOrSlug<TDocument extends PHDocument>(
@@ -573,7 +618,8 @@ export interface IDocumentView extends IReadModel {
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The document ID
-   * @throws {Error} If document not found or identifier matches both an ID and slug referring to different documents
+   * @throws {DocumentNotFoundError} If neither an id nor a slug matches
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
    */
   resolveIdOrSlug(
     identifier: string,
@@ -791,6 +837,62 @@ export interface IDocumentIndexer extends IReadModel {
   ): Promise<string[]>;
 }
 
+/** A hold as stored; the peer's supported set is read from its manifest. */
+export type SyncHoldRecord = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  protocol: string;
+  version: number;
+  heldAtUtcMs: number;
+};
+
+/** Documents held back from a remote until its peer can run them. */
+export interface ISyncHoldStorage {
+  list(filter?: {
+    remoteName?: string;
+    documentId?: string;
+  }): Promise<SyncHoldRecord[]>;
+  /** Throws DocumentPurgedError for a purged id, except for its marker's hold. */
+  upsert(hold: SyncHoldRecord): Promise<void>;
+  remove(remoteName: string, documentId: string, branch: string): Promise<void>;
+  removeRemote(remoteName: string): Promise<void>;
+}
+
+/** A purge marker received from a remote, kept until its outcome. */
+export type ReceivedMarkerRecord = {
+  remoteName: string;
+  /** The marker operation's id. */
+  markerId: string;
+  documentId: string;
+  branch: string;
+  operation: OperationWithContext;
+  receivedAtUtcMs: number;
+};
+
+/** Received markers that survive a restart, so the inbox ack stays below them. */
+export interface ISyncReceivedMarkerStorage {
+  list(remoteName: string): Promise<ReceivedMarkerRecord[]>;
+  upsert(record: ReceivedMarkerRecord): Promise<void>;
+  remove(remoteName: string, markerId: string): Promise<void>;
+  removeRemote(remoteName: string): Promise<void>;
+}
+
+/** A remote's refusal of a purge marker; no message, which may name a signer. */
+export type PurgeRefusalRecord = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  refusedAtUtcMs: number;
+};
+
+/** Marker refusals, kept after the remote goes so the erasure can report them. */
+export interface ISyncPurgeRefusalStorage {
+  list(documentId: string): Promise<PurgeRefusalRecord[]>;
+  /** One statement; the first time per remote, document and branch is kept. */
+  record(refusals: readonly PurgeRefusalRecord[]): Promise<void>;
+}
+
 /**
  * Persistent storage for sync remote configurations. Each remote represents
  * a connection to an external system that operations can be synced with.
@@ -916,7 +1018,8 @@ export interface ISyncDeadLetterStorage {
   ): Promise<PagedResults<DeadLetterRecord>>;
 
   /**
-   * Adds a dead letter. Duplicate ids are silently ignored.
+   * Adds a dead letter. Duplicate ids are silently ignored. Throws
+   * DocumentPurgedError, persisting nothing, when the document is purged.
    *
    * @param deadLetter - The dead letter record to persist
    * @param signal - Optional abort signal to cancel the request

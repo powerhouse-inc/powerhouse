@@ -4,6 +4,7 @@ import {
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError, Kind, parse } from "graphql";
+import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
   generateDocumentModelSchema,
   getDocumentModelSchemaName,
@@ -53,7 +54,11 @@ export interface DocumentModelQueryResolvers<
 > {
   document: (
     parent: unknown,
-    args: { identifier: string; view?: ViewArg },
+    args: {
+      idOrSlug?: string | null;
+      identifier?: string | null;
+      view?: ViewArg;
+    },
     ctx: Context,
   ) => Promise<{ document: TDocument; childIds: string[] }>;
   documents: (
@@ -73,7 +78,8 @@ export interface DocumentModelQueryResolvers<
   documentOutgoingRelationships: (
     parent: unknown,
     args: {
-      sourceIdentifier: string;
+      sourceIdOrSlug?: string | null;
+      sourceIdentifier?: string | null;
       relationshipType: string;
       view?: ViewArg;
       paging?: PagingArg;
@@ -83,7 +89,8 @@ export interface DocumentModelQueryResolvers<
   documentIncomingRelationships: (
     parent: unknown,
     args: {
-      targetIdentifier: string;
+      targetIdOrSlug?: string | null;
+      targetIdentifier?: string | null;
       relationshipType: string;
       view?: ViewArg;
       paging?: PagingArg;
@@ -104,7 +111,8 @@ export interface DocumentModelMutationResolvers<
     parent: unknown,
     args: {
       name: string;
-      parentIdentifier?: string;
+      parentIdOrSlug?: string | null;
+      parentIdentifier?: string | null;
       slug?: string;
       preferredEditor?: string;
       initialState?: Record<string, Record<string, unknown>>;
@@ -113,7 +121,7 @@ export interface DocumentModelMutationResolvers<
   ) => Promise<TDocument>;
   createEmptyDocument: (
     parent: unknown,
-    args: { parentIdentifier?: string },
+    args: { parentIdOrSlug?: string | null; parentIdentifier?: string | null },
     ctx: Context,
   ) => Promise<TDocument>;
   /** Dynamic operation resolvers (sync and async variants). */
@@ -201,6 +209,23 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     return this.resolvers[
       `${documentName}Mutations`
     ] as DocumentModelMutationResolvers;
+  }
+
+  /** Drops the items the host's own ACL refuses the caller. */
+  async #readableItems(
+    page: PhDocumentResultPage,
+    ctx: Context,
+  ): Promise<PhDocumentResultPage> {
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return page;
+    }
+    const items: PhDocument[] = [];
+    for (const item of page.items) {
+      if (await this.canReadDocument(item.id as CanonicalDocumentId, ctx)) {
+        items.push(item);
+      }
+    }
+    return { ...page, items };
   }
 
   /**
@@ -315,25 +340,28 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         document: async (
           _: unknown,
           args: {
-            identifier: string;
+            idOrSlug?: string | null;
+            identifier?: string | null;
             view?: { branch?: string; scopes?: string[] };
           },
           ctx: Context,
         ) => {
-          const { identifier, view } = args;
+          const idOrSlug = requireOneOf<string>(args, "idOrSlug", "identifier");
+          const { view } = args;
 
-          if (!identifier) {
+          if (!idOrSlug) {
             throw new GraphQLError("Document identifier is required");
           }
 
-          const result = await documentResolver(this.reactorClient, {
-            identifier,
-            view,
-          });
+          const result = await documentResolver(
+            this.reactorClient,
+            { idOrSlug, view },
+            this.viewSubject(ctx),
+          );
 
           if (result.document.documentType !== documentType) {
             throw new GraphQLError(
-              `Document with id ${identifier} is not of type ${documentType}`,
+              `Document with id ${idOrSlug} is not of type ${documentType}`,
             );
           }
 
@@ -354,31 +382,13 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { paging } = args;
 
-          const result = await findDocumentsResolver(this.reactorClient, {
-            search: { type: documentType },
-            paging,
-          });
+          const result = await findDocumentsResolver(
+            this.reactorClient,
+            { search: { type: documentType }, paging },
+            this.viewSubject(ctx),
+          );
 
-          // Filter by permission if needed
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const filteredItems = [];
-            for (const item of result.items) {
-              const canRead = await this.canReadDocument(
-                item.id as CanonicalDocumentId,
-                ctx,
-              );
-              if (canRead) {
-                filteredItems.push(item);
-              }
-            }
-            return {
-              ...result,
-              items: filteredItems,
-              totalCount: filteredItems.length,
-            };
-          }
-
-          return result;
+          return this.#readableItems(result, ctx);
         },
         // Flat query: Find documents by search criteria (type is built-in)
         // Uses shared findDocumentsResolver from reactor/resolvers.ts
@@ -393,91 +403,90 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { search, view, paging } = args;
 
-          const result = await findDocumentsResolver(this.reactorClient, {
-            search: {
-              type: documentType,
-              parentId: search?.parentId,
+          const result = await findDocumentsResolver(
+            this.reactorClient,
+            {
+              search: { type: documentType, parentId: search?.parentId },
+              view,
+              paging,
             },
-            view,
-            paging,
-          });
+            this.viewSubject(ctx),
+          );
 
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const filteredItems = [];
-            for (const item of result.items) {
-              const canRead = await this.canReadDocument(
-                item.id as CanonicalDocumentId,
-                ctx,
-              );
-              if (canRead) {
-                filteredItems.push(item);
-              }
-            }
-            return {
-              ...result,
-              items: filteredItems,
-              totalCount: filteredItems.length,
-            };
-          }
-
-          return result;
+          return this.#readableItems(result, ctx);
         },
 
         documentOutgoingRelationships: async (
           _: unknown,
           args: {
-            sourceIdentifier: string;
+            sourceIdOrSlug?: string | null;
+            sourceIdentifier?: string | null;
             relationshipType: string;
             view?: { branch?: string; scopes?: string[] };
             paging?: { limit?: number; offset?: number; cursor?: string };
           },
           ctx: Context,
         ) => {
+          const sourceIdOrSlug = requireOneOf<string>(
+            args,
+            "sourceIdOrSlug",
+            "sourceIdentifier",
+          );
           const { relationshipType, view, paging } = args;
 
-          const handle = await this.assertCanRead(args.sourceIdentifier, ctx);
+          const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
 
           const result = await documentOutgoingRelationshipsResolver(
             this.reactorClient,
             {
-              sourceIdentifier: handle.fetchIdentifier,
+              sourceIdOrSlug: handle.fetchIdentifier,
               relationshipType,
               view,
               paging,
             },
+            this.viewSubject(ctx),
           );
 
-          const filteredItems = result.items.filter(
+          const readable = await this.#readableItems(result, ctx);
+          const filteredItems = readable.items.filter(
             (item: PhDocument) => item.documentType === documentType,
           );
 
-          return {
-            ...result,
-            items: filteredItems,
-            totalCount: filteredItems.length,
-          };
+          return { ...readable, items: filteredItems };
         },
 
         documentIncomingRelationships: async (
           _: unknown,
           args: {
-            targetIdentifier: string;
+            targetIdOrSlug?: string | null;
+            targetIdentifier?: string | null;
             relationshipType: string;
             view?: { branch?: string; scopes?: string[] };
             paging?: { limit?: number; offset?: number; cursor?: string };
           },
           ctx: Context,
         ) => {
+          const targetIdOrSlug = requireOneOf<string>(
+            args,
+            "targetIdOrSlug",
+            "targetIdentifier",
+          );
           const { relationshipType, view, paging } = args;
 
-          const handle = await this.assertCanRead(args.targetIdentifier, ctx);
+          const handle = await this.assertCanRead(targetIdOrSlug, ctx);
 
-          return documentIncomingRelationshipsResolver(this.reactorClient, {
-            targetIdentifier: handle.fetchIdentifier,
-            relationshipType,
-            view,
-            paging,
-          });
+          const result = await documentIncomingRelationshipsResolver(
+            this.reactorClient,
+            {
+              targetIdOrSlug: handle.fetchIdentifier,
+              relationshipType,
+              view,
+              paging,
+            },
+            this.viewSubject(ctx),
+          );
+
+          return this.#readableItems(result, ctx);
         },
       },
       Mutation: {
@@ -489,7 +498,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           _: unknown,
           args: {
             name: string;
-            parentIdentifier?: string;
+            parentIdOrSlug?: string | null;
+            parentIdentifier?: string | null;
             slug?: string;
             preferredEditor?: string;
             initialState?: Record<string, Record<string, unknown>>;
@@ -498,10 +508,14 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { name, slug, preferredEditor, initialState } = args;
 
-          let parentIdentifier = args.parentIdentifier;
-          if (parentIdentifier) {
-            const handle = await this.assertCanWrite(parentIdentifier, ctx);
-            parentIdentifier = handle.fetchIdentifier;
+          let parentIdOrSlug = optionalOneOf<string>(
+            args,
+            "parentIdOrSlug",
+            "parentIdentifier",
+          );
+          if (parentIdOrSlug) {
+            const handle = await this.assertCanWrite(parentIdOrSlug, ctx);
+            parentIdOrSlug = handle.fetchIdentifier;
           } else {
             this.assertCanCreate(ctx);
           }
@@ -512,23 +526,25 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               this.reactorClient,
               {
                 documentType,
-                parentIdentifier,
+                parentIdOrSlug,
                 name,
                 slug,
                 preferredEditor,
                 initialState: initialState ?? {},
               },
               this.graphqlManager.reactorDriveClient,
+              this.viewSubject(ctx),
             );
           } else {
             createdDoc = await createEmptyDocumentResolver(
               this.reactorClient,
               {
                 documentType,
-                parentIdentifier,
+                parentIdOrSlug,
                 name,
               },
               this.graphqlManager.reactorDriveClient,
+              this.viewSubject(ctx),
             );
           }
 
@@ -553,6 +569,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               createdDoc.id,
               "main",
               [setName(name)],
+              undefined,
+              this.viewSubject(ctx),
             );
             return toGqlPhDocument(updatedDoc);
           }
@@ -561,13 +579,20 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         },
         createEmptyDocument: async (
           _: unknown,
-          args: { parentIdentifier?: string },
+          args: {
+            parentIdOrSlug?: string | null;
+            parentIdentifier?: string | null;
+          },
           ctx: Context,
         ) => {
-          let parentIdentifier = args.parentIdentifier;
-          if (parentIdentifier) {
-            const handle = await this.assertCanWrite(parentIdentifier, ctx);
-            parentIdentifier = handle.fetchIdentifier;
+          let parentIdOrSlug = optionalOneOf<string>(
+            args,
+            "parentIdOrSlug",
+            "parentIdentifier",
+          );
+          if (parentIdOrSlug) {
+            const handle = await this.assertCanWrite(parentIdOrSlug, ctx);
+            parentIdOrSlug = handle.fetchIdentifier;
           } else {
             this.assertCanCreate(ctx);
           }
@@ -576,9 +601,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             this.reactorClient,
             {
               documentType,
-              parentIdentifier,
+              parentIdOrSlug,
             },
             this.graphqlManager.reactorDriveClient,
+            this.viewSubject(ctx),
           );
 
           // Auto-ownership: set creator as document owner
@@ -597,22 +623,33 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           // Sync mutation
           mutations[camelCase(op.name!)] = async (
             _: unknown,
-            args: { docId: string; input: unknown },
+            args: {
+              documentIdOrSlug?: string | null;
+              docId?: string | null;
+              input: unknown;
+            },
             ctx: Context,
           ) => {
-            const { docId, input } = args;
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "docId",
+            );
+            const { input } = args;
 
             const handle = await this.assertCanExecuteOperation(
-              docId,
+              documentIdOrSlug,
               op.name!,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
 
-            const doc = await this.reactorClient.get(effectiveDocId);
+            const doc = await this.reactorClient.get(effectiveDocId, {
+              subject: this.viewSubject(ctx),
+            });
             if (doc.header.documentType !== documentType) {
               throw new GraphQLError(
-                `Document with id ${docId} is not of type ${documentType}`,
+                `Document with id ${documentIdOrSlug} is not of type ${documentType}`,
               );
             }
 
@@ -626,6 +663,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 effectiveDocId,
                 "main",
                 [action(input)],
+                undefined,
+                this.viewSubject(ctx),
               );
               return toGqlPhDocument(updatedDoc);
             } catch (error) {
@@ -638,22 +677,33 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           // Async mutation - returns job ID
           mutations[`${camelCase(op.name!)}Async`] = async (
             _: unknown,
-            args: { docId: string; input: unknown },
+            args: {
+              documentIdOrSlug?: string | null;
+              docId?: string | null;
+              input: unknown;
+            },
             ctx: Context,
           ) => {
-            const { docId, input } = args;
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "docId",
+            );
+            const { input } = args;
 
             const handle = await this.assertCanExecuteOperation(
-              docId,
+              documentIdOrSlug,
               op.name!,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
 
-            const doc = await this.reactorClient.get(effectiveDocId);
+            const doc = await this.reactorClient.get(effectiveDocId, {
+              subject: this.viewSubject(ctx),
+            });
             if (doc.header.documentType !== documentType) {
               throw new GraphQLError(
-                `Document with id ${docId} is not of type ${documentType}`,
+                `Document with id ${documentIdOrSlug} is not of type ${documentType}`,
               );
             }
 

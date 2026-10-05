@@ -18,8 +18,6 @@
     }
   },
   "todo": {
-    "codes": [
-      "comment.llm-tell"
-    ]
+    "codes": ["comment.llm-tell"]
   }
 }

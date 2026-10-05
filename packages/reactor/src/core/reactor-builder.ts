@@ -1,26 +1,53 @@
-import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  PeerCapability,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  localSupports,
+  mergePeerCapabilities,
+  PEER_CAPABILITIES,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import type {
   DbConfig,
+  FactorySpec,
   ModelManifestEntry,
-  SignatureVerifierSpec,
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
+import { DocumentPurgeService } from "../admin/document-purge-service.js";
 import type { WorkerFactory } from "../executor/worker-pool-job-executor-manager.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
+import { CatchUpScheduler, isCatchUpConsumer } from "../catch-up/scheduler.js";
+import {
+  createKyselyWatermarkProbe,
+  describeWaitingSessions,
+  SettledWatermark,
+} from "../catch-up/settled-watermark.js";
+import {
+  defaultCatchUpConfig,
+  type CatchUpConfig,
+  type CatchUpStatus,
+  type ICatchUpConsumer,
+} from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
+import {
+  checkStoredProtocols,
+  type UnsupportedStoredDocuments,
+} from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes } from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -29,6 +56,7 @@ import type { IJobExecutorManager } from "../executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
 import type { JobExecutorConfig } from "../executor/types.js";
+import type { SignatureTrustPolicy } from "../signer/types.js";
 import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { IQueue } from "../queue/interfaces.js";
@@ -45,8 +73,17 @@ import type {
   ProjectionShardHooks,
   ProjectionShardManager,
 } from "../projection/projection-shard-manager.js";
+import {
+  DEFAULT_COMMIT_CHUNK_SIZE,
+  DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+  type ReadModelIndexingConfig,
+} from "../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
-import { KyselyDocumentView } from "../read-models/document-view.js";
+import type { DocumentViewDatabase } from "../read-models/types.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../read-models/document-view.js";
 import type {
   IReadModel,
   IReadModelCoordinator,
@@ -64,7 +101,6 @@ import {
   ConsistencyTracker,
   type IConsistencyTracker,
 } from "../shared/consistency-tracker.js";
-import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   KyselyDocumentIndexer,
   type IndexerDatabase,
@@ -90,7 +126,7 @@ import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
 import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
 import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
-import type { JwtHandler } from "../sync/types.js";
+import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
@@ -99,6 +135,7 @@ import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
+  DegradedComponent,
   InProcessReactorModule,
   InProcessSyncModule,
   IReactor,
@@ -178,12 +215,6 @@ export type {
 type WorkerPoolBase = {
   /** Number of worker threads to spawn; also the sticky-routing modulus. */
   numWorkers: number;
-  /**
-   * Factory spec the default transport's workers import to instantiate
-   * their signature verifier. Omitted = no executor-side verification,
-   * parity with the in-process executor's default.
-   */
-  verifier?: SignatureVerifierSpec;
 };
 
 /**
@@ -232,6 +263,27 @@ export type ProjectionShardBuilderConfig = {
   drainTimeoutMs?: number;
   chainDepthReportIntervalMs?: number;
 };
+
+/** One contiguous cursor per read model cannot serve shards that each see part of the stream. */
+function validateShardCount(shardCount: number): void {
+  if (shardCount !== 1) {
+    throw new Error(
+      `shardCount ${shardCount} is not supported: read-side catch-up keeps one cursor per read model, so projection runs in exactly one worker (shardCount: 1)`,
+    );
+  }
+}
+
+/** A coordinator whose models sweep in a worker reports that status. */
+function hasCatchUpStatuses(
+  coordinator: IReadModelCoordinator,
+): coordinator is IReadModelCoordinator & {
+  catchUpStatuses(): CatchUpStatus[];
+} {
+  return (
+    "catchUpStatuses" in coordinator &&
+    typeof coordinator.catchUpStatuses === "function"
+  );
+}
 
 function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
   return a.host === b.host && a.port === b.port && a.database === b.database;
@@ -284,12 +336,16 @@ export class ReactorBuilder {
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private migrationStrategy: MigrationStrategy = "auto";
+  private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
-  private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
+  private signer?: ISigner;
+  private workerSigner?: FactorySpec;
+  private trustPolicy?: SignatureTrustPolicy;
+  private workerTrustPolicy?: FactorySpec;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
@@ -304,6 +360,8 @@ export class ReactorBuilder {
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
+  private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
+  private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -320,6 +378,20 @@ export class ReactorBuilder {
   withDocumentModelSources(sources: DocumentModelSource[]): this {
     this.documentModelSources.push(...sources);
     return this;
+  }
+
+  /** Capabilities beyond the registry, for tests and hosts that ship their own. */
+  withPeerCapabilities(extra: readonly PeerCapability[]): this {
+    this.extraPeerCapabilities = mergePeerCapabilities(
+      this.extraPeerCapabilities,
+      extra,
+    );
+    return this;
+  }
+
+  /** The registry plus any capabilities added with withPeerCapabilities. */
+  getPeerCapabilities(): readonly PeerCapability[] {
+    return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
 
   withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
@@ -389,8 +461,24 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Stored documents at protocol versions this build does not run: "refuse"
+   * (the default) fails buildModule; "read-only" starts with a warning, and
+   * every job and received row into them is refused.
+   */
+  withUnsupportedStoredDocuments(mode: UnsupportedStoredDocuments): this {
+    this.unsupportedStoredDocuments = mode;
+    return this;
+  }
+
   withSync(syncBuilder: SyncBuilder): this {
     this.syncBuilder = syncBuilder;
+    return this;
+  }
+
+  /** Tunes the read-side catch-up sweep. */
+  withCatchUp(config: Partial<CatchUpConfig>): this {
+    this.catchUpConfig = { ...this.catchUpConfig, ...config };
     return this;
   }
 
@@ -399,9 +487,39 @@ export class ReactorBuilder {
     return this;
   }
 
-  withSignatureVerifier(verifier: SignatureVerificationHandler): this {
-    this.signatureVerifier = verifier;
+  /**
+   * Signs the operations the executor synthesizes: the NOOP an UNDO becomes and
+   * the action a REDO rebuilds. Without one they are stored unsigned. Pooled
+   * workers import `workerSigner` to build the same signer.
+   */
+  withSigner(signer: ISigner, workerSigner?: FactorySpec): this {
+    this.signer = signer;
+    this.workerSigner = workerSigner;
     return this;
+  }
+
+  /** Whether {@link withSigner} was called. */
+  hasSigner(): boolean {
+    return this.signer !== undefined;
+  }
+
+  /**
+   * Decides at admission whether a key may sign as the user it claims; see
+   * {@link SignatureTrustPolicy} for the contract and the default. Pooled
+   * workers import `workerTrustPolicy` to build the same policy.
+   */
+  withTrustPolicy(
+    trustPolicy: SignatureTrustPolicy,
+    workerTrustPolicy?: FactorySpec,
+  ): this {
+    this.trustPolicy = trustPolicy;
+    this.workerTrustPolicy = workerTrustPolicy;
+    return this;
+  }
+
+  /** Whether {@link withTrustPolicy} was called. */
+  hasTrustPolicy(): boolean {
+    return this.trustPolicy !== undefined;
   }
 
   withKysely(kysely: Kysely<Database>): this {
@@ -465,8 +583,7 @@ export class ReactorBuilder {
    * this enables the pool — there is no `enabled` flag. Provide `db`
    * (each worker opens its own Postgres pool; the parent database is built
    * from it too unless {@link withKysely} is set) or a custom `factory`
-   * transport. `verifier` is imported by the default transport's workers;
-   * omitted = no executor-side signature verification.
+   * transport.
    */
   withWorkerPool(options: WorkerPoolOptions): this {
     this.workerPool = options;
@@ -515,6 +632,13 @@ export class ReactorBuilder {
     }
 
     const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
+    if (this.executorConfig.protocolSupport === undefined) {
+      this.executorConfig = {
+        ...this.executorConfig,
+        protocolSupport: localSupports(this.getPeerCapabilities(), featureFlags)
+          .protocols,
+      };
+    }
 
     if (
       this.readModelCoordinator !== undefined &&
@@ -572,6 +696,7 @@ export class ReactorBuilder {
     // pool opens, and again in createProjectionShardManager for the
     // coordinator-factory path.
     if (this.projectionShardConfig !== undefined) {
+      validateShardCount(this.projectionShardConfig.shardCount);
       validateBuiltInKindCoverage(
         this.projectionShardConfig.preReadyKinds,
         this.projectionShardConfig.postReadyKinds,
@@ -644,6 +769,14 @@ export class ReactorBuilder {
       }
     }
 
+    await checkStoredProtocols(
+      baseDatabase,
+      REACTOR_SCHEMA,
+      this.executorConfig.protocolSupport ?? {},
+      this.unsupportedStoredDocuments,
+      this.logger,
+    );
+
     const database = baseDatabase.withSchema(REACTOR_SCHEMA);
 
     const operationStore = new KyselyOperationStore(
@@ -664,6 +797,7 @@ export class ReactorBuilder {
       resolver.setModelLoadedHook((documentType) =>
         eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
       );
+      resolver.rememberManifest(this.resolvedModelManifest ?? []);
     }
     const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
     const jobTracker = new InMemoryJobTracker(eventBus);
@@ -686,10 +820,42 @@ export class ReactorBuilder {
       database as unknown as Kysely<StorageDatabase>,
     );
 
+    const settledWatermark = new SettledWatermark(
+      createKyselyWatermarkProbe(
+        database as unknown as Kysely<StorageDatabase>,
+      ),
+      this.logger,
+    );
+    const catchUp = new CatchUpScheduler(
+      settledWatermark,
+      operationIndex,
+      this.catchUpConfig,
+      this.logger,
+      {
+        onSwept: (result, thread) =>
+          void eventBus
+            .emit(ReactorEventTypes.CATCHUP_SWEPT, { ...result, thread })
+            .catch(() => {}),
+        describeSessions: (xids) => describeWaitingSessions(database, xids),
+      },
+    );
+
     const documentMetaCache = new DocumentMetaCache(operationStore, {
       maxDocuments: 1000,
     });
     await documentMetaCache.startup();
+
+    // Worker executors evict only their own caches; these are the host's.
+    const unsubscribeMarkerEviction = eventBus.subscribe<JobWriteReadyEvent>(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event) => {
+        for (const item of event.operations) {
+          if (!isPurgeMarker(item)) continue;
+          writeCache.invalidate(item.context.documentId);
+          documentMetaCache.invalidate(item.context.documentId);
+        }
+      },
+    );
 
     const collectionMembershipCache = new CollectionMembershipCache(
       operationIndex,
@@ -717,10 +883,19 @@ export class ReactorBuilder {
               "unreachable: worker pool configured without db or factory",
             );
           }
+          if (this.signer && !this.workerSigner) {
+            this.logger!.warn(
+              "Worker pool has no signer spec; pooled workers store synthesized operations unsigned",
+            );
+          }
+          if (this.trustPolicy && !this.workerTrustPolicy) {
+            this.logger!.warn(
+              "Worker pool has no trust policy spec; pooled workers apply the default trust policy",
+            );
+          }
           factory = await this.createDefaultWorkerFactory(
             pool.numWorkers,
             pool.db,
-            pool.verifier,
           );
         }
         const poolManager = new WorkerPoolJobExecutorManager(
@@ -753,8 +928,9 @@ export class ReactorBuilder {
               collectionMembershipCache,
               this.driveContainerTypes,
               this.executorConfig,
-              this.signatureVerifier,
               executionScope,
+              this.signer,
+              this.trustPolicy,
             ),
           eventBus,
           queue,
@@ -776,6 +952,33 @@ export class ReactorBuilder {
       new Set([...this.readModels]),
     );
 
+    // Initializing degraded must not take the reactor down -- a read model that
+    // cannot reach its database should not stop the writes. But a bare
+    // `console.error` and an absent component is how an operator finds out from
+    // a user report instead of from the server: the process reports healthy
+    // while answering from an index that stopped at boot. Each failure is now
+    // logged against the component that failed and recorded on the module, so a
+    // host can refuse readiness on a non-empty list.
+    const degradedComponents: DegradedComponent[] = [];
+    const startDegraded = (component: string, error: unknown): void => {
+      degradedComponents.push({
+        component,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+      this.logger?.error(
+        "Reactor component started degraded: @component",
+        component,
+        error,
+      );
+    };
+
+    const readModelIndexing: ReadModelIndexingConfig = {
+      commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE,
+      yieldDeadlineMs:
+        this.executorConfig.yieldDeadlineMs ??
+        DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+    };
+
     const documentViewConsistencyTracker = new ConsistencyTracker();
     const documentView = new KyselyDocumentView(
       // @ts-expect-error - Database type is a superset that includes all required tables
@@ -784,13 +987,20 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentViewConsistencyTracker,
-      featureFlags.documentDecisions,
+      featureFlags.documentDecisions
+        ? DeletedDocumentRead.StateAtDeletion
+        : DeletedDocumentRead.NotFound,
+      readModelIndexing,
+    );
+    documentView.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
     );
 
     try {
       await documentView.init();
     } catch (error) {
-      console.error("Error initializing document view", error);
+      startDegraded("document view", error);
     }
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
@@ -799,12 +1009,17 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentIndexerConsistencyTracker,
+      readModelIndexing,
+    );
+    documentIndexer.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
     );
 
     try {
       await documentIndexer.init();
     } catch (error) {
-      console.error("Error initializing document indexer", error);
+      startDegraded("document indexer", error);
     }
 
     const subscriptionManager = new ReactorSubscriptionManager(
@@ -825,21 +1040,38 @@ export class ReactorBuilder {
       this.driveContainerTypes,
       { legacyProcessorIds: this.features.legacyProcessorIds !== false },
     );
+    processorManager.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
+    );
 
     try {
       await processorManager.init();
     } catch (error) {
-      console.error("Error initializing processor manager", error);
+      startDegraded("processor manager", error);
     }
 
-    for (const factory of this.readModelFactories) {
-      const readModel = await factory({
-        documentModelRegistry,
-        operationIndex,
-        writeCache,
-        processorManagerConsistencyTracker,
-      });
-      callerReadModels.push(readModel);
+    for (const [index, factory] of this.readModelFactories.entries()) {
+      // A read model that cannot build or catch up must not take the reactor
+      // down with it: log and start degraded, as the indexers above do.
+      //
+      // A factory carries no id, and a failure has no instance to ask for one,
+      // so it is named by registration order plus the function's own name when
+      // it has one -- otherwise the log cannot say which of them failed.
+      try {
+        const readModel = await factory({
+          documentModelRegistry,
+          operationIndex,
+          writeCache,
+          processorManagerConsistencyTracker,
+        });
+        callerReadModels.push(readModel);
+      } catch (error) {
+        startDegraded(
+          `read model ${index}${factory.name ? ` (${factory.name})` : ""}`,
+          error,
+        );
+      }
     }
 
     const readModelInstances: IReadModel[] = [
@@ -868,6 +1100,7 @@ export class ReactorBuilder {
                 config,
                 eventBus,
                 hostTrackers,
+                readModelIndexing,
                 false,
               ),
             registerShutdownHook: (hook) => this.shutdownHooks.push(hook),
@@ -877,12 +1110,37 @@ export class ReactorBuilder {
               this.projectionShardConfig,
               eventBus,
               hostTrackers,
+              readModelIndexing,
               true,
             )
           : new ReadModelCoordinator(eventBus, readModelInstances, [
               subscriptionNotificationReadModel,
               processorManager,
             ]);
+
+    if (hasCatchUpStatuses(readModelCoordinator)) {
+      catchUp.addStatusSource(() =>
+        readModelCoordinator
+          .catchUpStatuses()
+          .flatMap((status) => status.consumers),
+      );
+    }
+    const indexedReadModels =
+      readModelCoordinator.indexedReadModels?.bind(readModelCoordinator);
+    if (indexedReadModels) {
+      catchUp.addSource(
+        () =>
+          indexedReadModels().filter(
+            (model): model is IReadModel & ICatchUpConsumer =>
+              isCatchUpConsumer(model),
+          ),
+        "host",
+      );
+    } else {
+      this.logger.warn(
+        "The read model coordinator does not report indexedReadModels; the host runs no read-side catch-up sweep",
+      );
+    }
 
     const reactor = new Reactor(
       this.logger,
@@ -896,8 +1154,30 @@ export class ReactorBuilder {
       operationStore,
       eventBus,
       executorManager,
+      catchUp,
+      [unsubscribeMarkerEviction],
+      [() => processorManager.shutdown()],
     );
 
+    const localPeer: LocalPeer = {
+      capabilities: this.getPeerCapabilities(),
+      flags: featureFlags,
+      appKey: this.signer?.app?.key,
+      protocolVersionsOf: async (documentId, branch) => {
+        try {
+          const meta = await documentMetaCache.getDocumentMeta(
+            documentId,
+            branch,
+          );
+          return meta.protocolVersions;
+        } catch {
+          return undefined;
+        }
+      },
+      forgetDocument: (documentId) => {
+        documentMetaCache.invalidate(documentId);
+      },
+    };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
       const factory =
@@ -913,6 +1193,8 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        settledWatermark,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -923,6 +1205,8 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        settledWatermark,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     }
@@ -934,8 +1218,14 @@ export class ReactorBuilder {
         eventBus,
         queue,
         operationIndex,
+        database as unknown as Kysely<DocumentViewDatabase>,
       );
-      groupReevaluationTrigger.startup();
+      groupReevaluationTrigger.attachCatchUp(
+        settledWatermark,
+        this.catchUpConfig.maxTrackedAboveCursor,
+      );
+      await groupReevaluationTrigger.startup();
+      catchUp.addConsumer(groupReevaluationTrigger, "host");
     }
 
     const module: InProcessReactorModule = {
@@ -962,7 +1252,26 @@ export class ReactorBuilder {
       reactor,
       groupReevaluationTrigger,
       pools: this.instrumentedPools,
+      degradedComponents,
+      catchUp,
+      settledWatermark,
+      documentPurgeService: new DocumentPurgeService(
+        queue,
+        jobTracker,
+        eventBus,
+      ),
     };
+
+    catchUp.start();
+
+    if (degradedComponents.length > 0) {
+      // buildModule assigns a default logger before anything here runs.
+      this.logger.warn(
+        "Reactor started with @count degraded component(s): @components",
+        degradedComponents.length,
+        degradedComponents.map(({ component }) => component).join(", "),
+      );
+    }
 
     if (this.signalHandlersEnabled) {
       this.attachSignalHandlers(module);
@@ -1005,6 +1314,10 @@ export class ReactorBuilder {
    *   models never index an operation, so the manager advances these from the
    *   shards' relayed indexing reports; without them every read carrying a
    *   consistency token waits forever.
+   * @param indexing The chunking bounds the host's own read models index
+   *   under. The shards' read models are built inside the worker, so without
+   *   this they would fall back to the library default and a host that tuned
+   *   the cadence would silently get it on the in-process path only.
    * @param registerShutdownHook Whether the builder owns `manager.shutdown()`
    *   at signal time. False for the coordinator-factory path, whose factory
    *   registers its own hook so host chains drain before the worker stops.
@@ -1015,6 +1328,7 @@ export class ReactorBuilder {
     consistencyTrackers: Partial<
       Record<BuiltInReadModelKind, IConsistencyTracker>
     >,
+    indexing: ReadModelIndexingConfig,
     registerShutdownHook: boolean,
   ): Promise<ProjectionShardManager> {
     const parentDb = this.resolveReactorDbConfig();
@@ -1056,6 +1370,7 @@ export class ReactorBuilder {
         );
       }
     }
+    validateShardCount(config.shardCount);
     validateBuiltInKindCoverage(config.preReadyKinds, config.postReadyKinds);
     // The executor pool guard in buildModule only runs with a worker pool.
     if (this.moduleOnlyModelKeys.length > 0) {
@@ -1088,6 +1403,8 @@ export class ReactorBuilder {
       models,
       preReadyKinds: config.preReadyKinds,
       postReadyKinds: config.postReadyKinds,
+      indexing,
+      catchUp: this.catchUpConfig,
       factory,
       logger: this.logger!,
       hostBus: eventBus,
@@ -1138,7 +1455,6 @@ export class ReactorBuilder {
   private async createDefaultWorkerFactory(
     numWorkers: number,
     db: DbConfig,
-    signatureVerifier: SignatureVerifierSpec | undefined,
   ): Promise<WorkerFactory> {
     const [{ WorkerHandle }, { createThreadTransport }, { workerEntryPath }] =
       await Promise.all([
@@ -1165,9 +1481,10 @@ export class ReactorBuilder {
         initPayload: {
           poolConfig,
           db,
-          signatureVerifier,
           models,
           executorConfig: this.executorConfig,
+          signer: this.workerSigner,
+          trustPolicy: this.workerTrustPolicy,
         },
         logger,
         poolInstrumentation,
@@ -1276,7 +1593,9 @@ export class ReactorBuilder {
 
       this.logger!.info("Shutdown complete");
       nodeProcess.exit = realExit;
-      realExit(pendingExitCode ?? 0);
+      // A failure code set before the signal (a fatal-error handler) wins
+      // over a peer handler's exit(0).
+      realExit(pendingExitCode || Number(nodeProcess.exitCode ?? 0));
     };
 
     nodeProcess.prependListener("SIGINT", () => void handler("SIGINT"));

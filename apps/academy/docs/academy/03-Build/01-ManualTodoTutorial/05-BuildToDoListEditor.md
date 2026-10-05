@@ -424,7 +424,7 @@ Finally, create `editors/todo-list-editor/components/TodoListName.tsx` for displ
 ```tsx
 import { useState, type FormEventHandler } from "react";
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
-import { setName } from "document-model/document";
+import { setName } from "document-model";
 
 /** Allows editing the name of the selected todo list */
 export function TodoListName() {
@@ -474,7 +474,7 @@ export function TodoListName() {
 
 **What's happening here:**
 
-- We use the `setName` action from `document-model/document` (a built-in action)
+- We use the `setName` action from `document-model` (a built-in action)
 - We toggle between viewing and editing the name
 - Click the name to edit it
 

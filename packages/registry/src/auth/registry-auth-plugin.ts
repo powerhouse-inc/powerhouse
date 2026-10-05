@@ -1,6 +1,7 @@
 import { errorUtils } from "@verdaccio/core";
 import bcrypt from "bcryptjs";
 import { type AuthStore } from "./auth-store.js";
+import { migrateOnBoot } from "../db/migrations.js";
 import { createPgPool, createPgStore } from "./pg-store.js";
 import { markStoreLoaded, takeAuthStore } from "./store-handoff.js";
 import {
@@ -69,18 +70,22 @@ export function createRegistryAuthPlugin(
         .catch((err) => cb(internal(err)));
     },
 
+    // Also the login for an existing user: Verdaccio 7 takes no Basic auth, so
+    // `npm login` reaches here and the right password must still get a token
     adduser(user: string, password: string, cb: AuthUserCallback): void {
       ready
         .then(() =>
           store.createUser(user, bcrypt.hashSync(password, BCRYPT_ROUNDS)),
         )
-        .then((created) => {
-          // createUser is atomic: false means the name is taken — reject
-          // rather than silently overwrite (the htpasswd 201 hole).
-          if (!created) {
-            return cb(errorUtils.getConflict("username already registered"));
+        .then(async (created) => {
+          if (created) return cb(null, true);
+          // createUser is atomic: false means the name is taken, so only its
+          // password may proceed (never an overwrite, the htpasswd 201 hole)
+          const rec = await store.getUser(user);
+          if (rec && bcrypt.compareSync(password, rec.passwordHash)) {
+            return cb(null, true);
           }
-          return cb(null, true);
+          return cb(errorUtils.getConflict("username already registered"));
         })
         .catch((err) => cb(internal(err)));
     },
@@ -158,18 +163,18 @@ export function createRegistryAuthPlugin(
 /** Verdaccio plugin entry. The loader calls this factory (or `new`s the
  *  default export — both return the plugin object). */
 export default function registryAuthPlugin(config: RegistryAuthPluginConfig) {
+  const databaseUrl = () =>
+    config.databaseUrl ??
+    (() => {
+      throw new Error(
+        "registry-auth plugin requires a databaseUrl (or a store token)",
+      );
+    })();
   const store =
     (config.storeToken ? takeAuthStore(config.storeToken) : undefined) ??
-    createPgStore(
-      createPgPool(
-        config.databaseUrl ??
-          (() => {
-            throw new Error(
-              "registry-auth plugin requires a databaseUrl (or a store token)",
-            );
-          })(),
-      ),
-    );
+    createPgStore(createPgPool(databaseUrl()), {
+      migrate: migrateOnBoot(undefined, config.databaseUrl),
+    });
   const renownVerifier = config.publicUrl
     ? createRenownVerifier({
         publicUrl: config.publicUrl,

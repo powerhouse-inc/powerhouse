@@ -106,6 +106,8 @@ export class ReactorHost {
   private readonly disposers = new Set<() => void>();
   private readonly clients = new Set<IRpcTransport>();
   private clientPromise: Promise<IReactorClient> | null = null;
+  // Ops after a failed build get its error until a hello rebuilds.
+  private buildFailure: { error: unknown } | null = null;
   private baseline: VersionFingerprint | null = null;
   private readonly ownerId: string;
   private readonly bootedAtMs: number;
@@ -313,9 +315,11 @@ export class ReactorHost {
       }
       const pending = build(construct);
       this.clientPromise = pending;
-      pending.catch(() => {
+      this.buildFailure = null;
+      pending.catch((error: unknown) => {
         if (this.clientPromise === pending) {
           this.clientPromise = null;
+          this.buildFailure = { error };
         }
       });
     }
@@ -325,6 +329,10 @@ export class ReactorHost {
   private async awaitClientReady(): Promise<void> {
     if (this.clientPromise) {
       await this.clientPromise;
+      return;
+    }
+    if (this.buildFailure) {
+      throw this.buildFailure.error;
     }
   }
 

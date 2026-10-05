@@ -24,6 +24,13 @@ import {
   Kind,
   parse,
   print,
+  type ASTNode,
+  type DefinitionNode,
+  Lexer,
+  type NameNode,
+  Source,
+  TokenKind,
+  visit,
 } from "graphql";
 import { gql } from "graphql-tag";
 import {
@@ -182,6 +189,101 @@ const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
   return { kind: Kind.DOCUMENT, definitions };
 };
 
+const EMPTY_DOCUMENT: DocumentNode = { kind: Kind.DOCUMENT, definitions: [] };
+
+const OUTPUT_TYPE_KINDS = [
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.OBJECT_TYPE_EXTENSION,
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.ENUM_TYPE_EXTENSION,
+  Kind.UNION_TYPE_DEFINITION,
+  Kind.UNION_TYPE_EXTENSION,
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_EXTENSION,
+];
+
+// Kinds whose names get prefixed: state schemas (inputs stripped) and operation schemas.
+const STATE_PREFIX_KINDS = new Set<Kind>(OUTPUT_TYPE_KINDS);
+const ALL_PREFIX_KINDS = new Set<Kind>([
+  ...OUTPUT_TYPE_KINDS,
+  Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  Kind.INPUT_OBJECT_TYPE_EXTENSION,
+]);
+
+// Nodes whose `name` is a type name: definitions, extensions and references.
+const TYPE_NAME_KINDS = new Set<Kind>([
+  ...ALL_PREFIX_KINDS,
+  Kind.SCALAR_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_EXTENSION,
+  Kind.NAMED_TYPE,
+]);
+
+// Stub local state types dropped from legacy models.
+const LOCAL_STATE_STUBS = new Set([
+  "AccountSnapshotLocalState",
+  "BudgetStatementLocalState",
+  "ScopeFrameworkLocalState",
+]);
+
+/** Parse SDL; blank or comment-only input yields an empty document. */
+function parseSdl(sdl: string): DocumentNode {
+  const source = new Source(sdl);
+  if (new Lexer(source).advance().kind === TokenKind.EOF) return EMPTY_DOCUMENT;
+  try {
+    return parse(source, { noLocation: true });
+  } catch (error) {
+    // Retry without stray semicolons, which GraphQL rejects.
+    const withoutSemicolons = sdl.replaceAll(";", "");
+    if (withoutSemicolons === sdl) throw error;
+    return parse(withoutSemicolons, { noLocation: true });
+  }
+}
+
+function definedTypeNames(
+  doc: DocumentNode,
+  kinds: ReadonlySet<Kind>,
+): string[] {
+  return doc.definitions
+    .filter((def) => kinds.has(def.kind))
+    .map((def) => (def as DefinitionNode & { name: NameNode }).name.value);
+}
+
+/** Prefix type definition names and type references found in `names`. */
+function prefixTypeNames(
+  doc: DocumentNode,
+  prefix: string,
+  names: ReadonlySet<string>,
+): DocumentNode {
+  return visit(doc, {
+    enter(node: ASTNode) {
+      if (!TYPE_NAME_KINDS.has(node.kind)) return undefined;
+      const { name } = node as ASTNode & { name: NameNode };
+      if (!names.has(name.value)) return undefined;
+      return { ...node, name: { ...name, value: `${prefix}_${name.value}` } };
+    },
+  });
+}
+
+/** State schema definitions without inputs, `DateTime` or the given object types. */
+function stateTypeDefinitions(
+  sdl: string,
+  droppedObjectTypes: ReadonlySet<string> = new Set(),
+): DefinitionNode[] {
+  return parseSdl(sdl).definitions.filter(
+    (def) =>
+      def.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION &&
+      def.kind !== Kind.INPUT_OBJECT_TYPE_EXTENSION &&
+      !(
+        def.kind === Kind.SCALAR_TYPE_DEFINITION &&
+        def.name.value === "DateTime"
+      ) &&
+      !(
+        def.kind === Kind.OBJECT_TYPE_DEFINITION &&
+        droppedObjectTypes.has(def.name.value)
+      ),
+  );
+}
+
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
@@ -304,71 +406,23 @@ function storedModelStateTypes(
   documentModel: DocumentModelGlobalState,
   dmSchemaName: string,
 ): string {
-  // Use only the latest specification to avoid duplicate type definitions
-  // when a document model has multiple versions (e.g. v1, v2).
   const latestSpec = documentModel.specifications.at(-1);
-  const globalSchema = latestSpec?.state.global.schema ?? "";
-  const localSchema = latestSpec?.state.local.schema ?? "";
-  let tmpDmSchema = `
-          ${globalSchema
-            .replaceAll("scalar DateTime", "")
-            .replaceAll(/input (.*?) {[\s\S]*?}/g, "")};
-
-          ${localSchema
-            .replaceAll("scalar DateTime", "")
-            .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
-            .replaceAll("type AccountSnapshotLocalState", "")
-            .replaceAll("type BudgetStatementLocalState", "")
-            .replaceAll("type ScopeFrameworkLocalState", "")};
-
-    \n`;
-
-  const found = tmpDmSchema.match(/(type|enum|union|interface)\s+(\w+)[\s{]/g);
-  const trimmedFound = found?.map((f) =>
-    f
-      .replaceAll("type ", "")
-      .replaceAll("enum ", "")
-      .replaceAll("union ", "")
-      .replaceAll("interface ", "")
-      .replaceAll("{", "")
-      .trim(),
+  const definitions = [
+    ...stateTypeDefinitions(latestSpec?.state.global.schema ?? ""),
+    ...stateTypeDefinitions(
+      latestSpec?.state.local.schema ?? "",
+      LOCAL_STATE_STUBS,
+    ),
+  ];
+  const stateDoc: DocumentNode = { kind: Kind.DOCUMENT, definitions };
+  const prefixed = prefixTypeNames(
+    stateDoc,
+    dmSchemaName,
+    new Set(definedTypeNames(stateDoc, STATE_PREFIX_KINDS)),
   );
-  trimmedFound?.forEach((f) => {
-    // Create a regex that matches the type name with proper boundaries
-    const typeRegex = new RegExp(
-      // Match type references in various GraphQL contexts
-      `(?<![_A-Za-z0-9])(${f})(?![_A-Za-z0-9])|` + // Basic type references
-        `\\[(${f})\\]|` + // Array types without nullability
-        `\\[(${f})!\\]|` + // Array of non-null types
-        `\\[(${f})\\]!|` + // Non-null array of types
-        `\\[(${f})!\\]!`, // Non-null array of non-null types
-      "g",
-    );
-
-    tmpDmSchema = tmpDmSchema.replace(
-      typeRegex,
-      (
-        match: string,
-        p1: string,
-        p2: string,
-        p3: string,
-        p4: string,
-        p5: string,
-      ) => {
-        // If it's an array type, preserve the brackets and ! while replacing the type name
-        if (match.startsWith("[")) {
-          return match.replace(
-            p2 || p3 || p4 || p5,
-            `${dmSchemaName}_${p2 || p3 || p4 || p5}`,
-          );
-        }
-        // Basic type reference
-        return `${dmSchemaName}_${p1}`;
-      },
-    );
-  });
   return (
-    tmpDmSchema + documentWrapperType(dmSchemaName, `${dmSchemaName}State`)
+    (definitions.length > 0 ? `${print(prefixed)}\n` : "") +
+    documentWrapperType(dmSchemaName, `${dmSchemaName}State`)
   );
 }
 
@@ -484,7 +538,7 @@ export const getDocumentModelTypeDefs = (
       operations(first: Int, skip: Int): [Operation!]!
       stateJSON: JSONObject
     }
-    ${dmSchema.replaceAll(";", "")}
+    ${dmSchema}
 
     type GqlDocument implements IDocument {
       id: String!
@@ -515,48 +569,33 @@ export const getDocumentModelTypeDefs = (
 };
 
 /**
- * Extract type names from a GraphQL schema.
- * @param {string} schema - GraphQL schema string
- * @returns {string[]} Array of type names
+ * Extract the names of types defined in a GraphQL schema.
+ * Unparseable schemas yield no names.
  */
-function extractTypeNames(schema: string) {
-  const found = schema.match(/(type|enum|union|interface|input)\s+(\w+)[\s{]/g);
-  if (!found) return [];
-  return found.map((f) =>
-    f
-      .replaceAll("type ", "")
-      .replaceAll("enum ", "")
-      .replaceAll("union ", "")
-      .replaceAll("interface ", "")
-      .replaceAll("input ", "")
-      .replaceAll("{", "")
-      .trim(),
-  );
+function extractTypeNames(schema: string): string[] {
+  try {
+    return definedTypeNames(parseSdl(schema), ALL_PREFIX_KINDS);
+  } catch (error) {
+    logger.debug(`Skipping unparseable schema: ${String(error)}`);
+    return [];
+  }
 }
 
 /**
- * Extract input type definitions from a GraphQL schema.
- * @param {string} schema - GraphQL schema string
- * @param {Set<string>} excludeTypeNames - Type names to exclude from extraction
- * @returns {string} All input type definitions as a string
+ * Print the input type definitions of a GraphQL schema.
+ * @param excludeTypeNames - Input type names to leave out
  */
 function extractInputTypeDefinitions(
   schema: string,
   excludeTypeNames: Set<string> = new Set(),
 ): string {
-  // Match input type blocks: input TypeName { ... }
-  const inputTypeRegex = /input\s+(\w+)\s*\{[^}]*\}/g;
-  const matches: string[] = [];
-  let match;
-  while ((match = inputTypeRegex.exec(schema)) !== null) {
-    const typeName = match[1];
-    // Skip if this type name is in the exclusion set
-    if (!excludeTypeNames.has(typeName)) {
-      matches.push(match[0]);
-    }
-  }
-  if (matches.length === 0) return "";
-  return matches.join("\n\n");
+  const definitions = parseSdl(schema).definitions.filter(
+    (def) =>
+      def.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION &&
+      !excludeTypeNames.has(def.name.value),
+  );
+  if (definitions.length === 0) return "";
+  return print({ kind: Kind.DOCUMENT, definitions });
 }
 
 /**
@@ -739,45 +778,13 @@ function applyGraphQLTypePrefixes(
     return schema;
   }
 
-  let processedSchema = schema;
-
-  // Find types defined in this schema
-  const localTypeNames = extractTypeNames(schema);
-
-  // Combine with external type names (remove duplicates)
-  const allTypeNames = [...new Set([...localTypeNames, ...externalTypeNames])];
-
-  if (allTypeNames.length === 0) {
-    return schema;
-  }
-
-  allTypeNames.forEach((typeName) => {
-    const typeRegex = new RegExp(
-      // Match type references in various GraphQL contexts
-      `(?<![_A-Za-z0-9])(${typeName})(?![_A-Za-z0-9])|` +
-        `\\[(${typeName})\\]|` +
-        `\\[(${typeName})!\\]|` +
-        `\\[(${typeName})\\]!|` +
-        `\\[(${typeName})!\\]!`,
-      "g",
-    );
-
-    processedSchema = processedSchema.replace(
-      typeRegex,
-      (match, p1, p2, p3, p4, p5) => {
-        if (match.startsWith("[")) {
-          return match.replace(
-            (p2 || p3 || p4 || p5) as string,
-            `${prefix}_${p2 || p3 || p4 || p5}`,
-          );
-        }
-        // Basic type reference
-        return `${prefix}_${p1}`;
-      },
-    );
-  });
-
-  return processedSchema;
+  const doc = parseSdl(schema);
+  const names = new Set([
+    ...definedTypeNames(doc, ALL_PREFIX_KINDS),
+    ...externalTypeNames,
+  ]);
+  if (names.size === 0) return schema;
+  return print(prefixTypeNames(doc, prefix, names));
 }
 
 /** Whether a stored schema string declares anything at all. */

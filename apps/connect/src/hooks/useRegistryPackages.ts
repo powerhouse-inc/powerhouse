@@ -1,4 +1,5 @@
 import {
+  getPackageInfo,
   getPackagePage,
   getPackagesForDocumentType,
   trimTrailingSlash,
@@ -13,10 +14,14 @@ import type {
   RegistryPackageSource,
   RegistryPackageStatus,
 } from "@powerhousedao/shared/registry";
+import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
+import type { PackageDeps } from "@powerhousedao/shared/connect";
 import { slimManifest } from "@powerhousedao/shared/registry/manifest-slim";
 import type { DocumentModelLib } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { sharedDepMismatchWarnings } from "../package-manager.js";
+import { getSharedDeps } from "../shared-deps.js";
 
 /** Page size for the paginated Available-packages listing. */
 const AVAILABLE_PAGE_SIZE = 30;
@@ -111,14 +116,16 @@ export function useRegistryPackages() {
               next[item.name] = makeRegistryPackageFromListItem(item, status);
             } else {
               // Keep the existing (possibly fuller) entry; just refresh the
-              // installed version and re-promote status. Never downgrade an
-              // installed/dismissed row from a trimmed list item.
+              // installed version, the registry's newest version, and
+              // re-promote status. Never downgrade an installed/dismissed
+              // row from a trimmed list item.
               next[item.name] = {
                 ...existing,
                 version:
                   packageManager.getPackageVersion(item.name) ??
                   item.version ??
                   existing.version,
+                latestVersion: item.version ?? existing.latestVersion,
                 status: promoteStatus(
                   existing.status,
                   packageManager.getPackageSource(item.name),
@@ -200,9 +207,8 @@ export function useRegistryPackages() {
   }
 
   /**
-   * Fetch full package info for a document type (via the legacy
-   * `?documentType=` filter) and merge into the map. Lets MissingPackageModal
-   * offer installs without loading the whole paginated listing.
+   * Fetch full package info for a document type and merge into the map. Lets
+   * MissingPackageModal offer installs without loading the whole listing.
    */
   const fetchPackagesByDocumentType = useCallback(
     async (documentType: string): Promise<RegistryPackage[]> => {
@@ -222,6 +228,7 @@ export function useRegistryPackages() {
             next[info.name] = existing
               ? {
                   ...existing,
+                  latestVersion: info.version ?? existing.latestVersion,
                   status: promoteStatus(
                     existing.status,
                     packageManager.getPackageSource(info.name),
@@ -255,6 +262,77 @@ export function useRegistryPackages() {
     [],
   );
 
+  // The host's shared-deps version table, from the production vendor
+  // (null in dev / vendor-off builds — nothing to compare against, so the
+  // rows simply have no warnings).
+  const [hostVersions, setHostVersions] = useState<Record<
+    string,
+    string
+  > | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void getSharedDeps().then((deps) => {
+      if (!cancelled) setHostVersions(deps?.versions ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Shared-dependency compatibility per row: fetch each package's npm
+  // package.json once from the CDN (session-cached), compare its declared
+  // shared-dep ranges against the host table, and stamp any mismatch
+  // warnings onto the row. Sequential on purpose — a page first load is a
+  // burst of row fetches, and this keeps it to one in flight at a time.
+  // Best-effort: a fetch failure or absent CDN means no warning, same as a
+  // vendor-less host.
+  const sharedDepAttemptedRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!registryUrl || !hostVersions) return;
+    const cdnUrl = toCdnUrl(trimTrailingSlash(registryUrl));
+    const pending = registryPackageList.filter(
+      (p) =>
+        !sharedDepAttemptedRef.current.has(p.name) &&
+        p.sharedDepWarnings === undefined,
+    );
+    if (pending.length === 0) return;
+    let cancelled = false;
+    let index = 0;
+    const runNext = () => {
+      if (cancelled) return;
+      const row: RegistryPackage | undefined = pending[index++];
+      if (!row) return;
+      sharedDepAttemptedRef.current.add(row.name);
+      void (async () => {
+        try {
+          const res = await fetch(
+            `${cdnUrl}/${encodeURIComponent(row.name)}/package.json`,
+          );
+          if (!res.ok) return;
+          const pkgJson = (await res.json()) as PackageDeps;
+          const warnings = sharedDepMismatchWarnings(pkgJson, hostVersions);
+          if (warnings.length === 0) return;
+          setRegistryPackagesMap((old) => {
+            const current = old[row.name];
+            if (!current) return old;
+            return {
+              ...old,
+              [row.name]: { ...current, sharedDepWarnings: warnings },
+            };
+          });
+        } catch {
+          // no warning
+        } finally {
+          runNext();
+        }
+      })();
+    };
+    runNext();
+    return () => {
+      cancelled = true;
+    };
+  }, [registryUrl, hostVersions, registryPackageList, setRegistryPackagesMap]);
+
   useEffect(() => {
     if (!packageManager) return;
 
@@ -265,10 +343,12 @@ export function useRegistryPackages() {
           const existingPackage = existingRegistryPackages[packageName];
           const newRegistryPackages = { ...existingRegistryPackages };
           const version = packageManager.getPackageVersion(packageName);
+          const spec = packageManager.getPackageSpec(packageName);
           if (existingPackage) {
             newRegistryPackages[packageName] = {
               ...existingPackage,
               version: version ?? existingPackage.version,
+              spec: spec ?? existingPackage.spec,
               status: promoteStatus(
                 existingPackage.status,
                 packageManager.getPackageSource(packageName),
@@ -282,7 +362,10 @@ export function useRegistryPackages() {
               status,
               version,
             );
-            newRegistryPackages[packageName] = newRegistryPackage;
+            newRegistryPackages[packageName] = {
+              ...newRegistryPackage,
+              ...(spec !== undefined ? { spec } : null),
+            };
           }
           return newRegistryPackages;
         });
@@ -343,10 +426,103 @@ export function useRegistryPackages() {
     });
   }
 
+  /**
+   * In-flight dedupe: the same row can be requested by the Installed-tab
+   * trigger and by runtime registration in the same tick — at most one
+   * fetch per row at a time.
+   */
+  const metadataInFlightRef = useRef(new Set<string>());
+
+  /**
+   * Fetch single-package info for the given rows and merge it into the
+   * map. The endpoint's `version` is the registry's newest release — the
+   * latest-stream target — and is stored as `latestVersion`, never
+   * overwriting the installed `version`, `spec`, or status. `distTags`/
+   * `versions` (the picker's data) merge in when the registry provides
+   * them. Per-row failures are logged and swallowed — a dead registry or
+   * one bad package must not blank the others.
+   */
+  const fetchInstalledRowData = useCallback(
+    (names: string[]) => {
+      if (registryUrl === null || names.length === 0) return;
+      const pending = names.filter(
+        (name) => !metadataInFlightRef.current.has(name),
+      );
+      if (pending.length === 0) return;
+      for (const name of pending) metadataInFlightRef.current.add(name);
+      void Promise.all(
+        pending.map(async (name) => {
+          try {
+            const info = await getPackageInfo(registryUrl, name);
+            if (!info || (!info.version && !info.distTags && !info.versions))
+              return;
+            setRegistryPackagesMap((oldPackages) => {
+              const existing = oldPackages[name];
+              if (!existing) return oldPackages;
+              return {
+                ...oldPackages,
+                [name]: {
+                  ...existing,
+                  latestVersion: info.version ?? existing.latestVersion,
+                  distTags: info.distTags ?? existing.distTags,
+                  versions: info.versions ?? existing.versions,
+                },
+              };
+            });
+          } catch (error: unknown) {
+            console.error(error);
+          } finally {
+            metadataInFlightRef.current.delete(name);
+          }
+        }),
+      );
+    },
+    [registryUrl, setRegistryPackagesMap],
+  );
+
+  /**
+   * Lazy refresh of installed-row version data — the Installed-tab trigger.
+   * Fetches rows missing `latestVersion` or the full `versions`/`distTags`
+   * metadata (the picker).
+   */
+  const ensureInstalledMetadataLoaded = useCallback(() => {
+    if (registryUrl === null || !packageManager) return;
+    const missing = Object.values(registryPackagesMap)
+      .filter(
+        (p): p is RegistryPackage =>
+          p !== undefined &&
+          p.status === "registry-install" &&
+          (!p.latestVersion ||
+            !(
+              (p.distTags && Object.keys(p.distTags).length > 0) ||
+              (p.versions?.length ?? 0) > 0
+            )),
+      )
+      .map((p) => p.name);
+    void fetchInstalledRowData(missing);
+  }, [registryUrl, packageManager, registryPackagesMap, fetchInstalledRowData]);
+
+  // Runtime registration can postdate the last Installed-tab activation
+  // (boot-time registry packages resolve after the modal opened, or an
+  // install lands while it is closed) — refresh the rows that were just
+  // registered so their update data arrives without a manual re-open.
+  useEffect(() => {
+    if (!packageManagerPackages?.length || !packageManager) return;
+    const names = packageManagerPackages
+      .filter(
+        (p) =>
+          packageManager.getPackageSource(p.manifest.name) ===
+          "registry-install",
+      )
+      .map((p) => p.manifest.name);
+    void fetchInstalledRowData(names);
+  }, [packageManagerPackages, packageManager, fetchInstalledRowData]);
+
   return {
     registryPackagesMap,
     registryPackageList,
     installedPackages,
+    ensureInstalledMetadataLoaded,
     // Available tab (paginated + server search)
     availablePackages,
     availableTotal,
@@ -378,6 +554,7 @@ function makeRegistryPackageFromListItem(
     path: item.path,
     documentTypes: [],
     version: item.version,
+    latestVersion: item.version,
     status,
     manifest: {
       name: item.name,
@@ -413,6 +590,10 @@ function makeRegistryPackageFromPackageInfo(
 ): RegistryPackage {
   return {
     ...packageInfo,
+    // The full-info `version` is the registry's newest release — record it
+    // as the latest-stream target even for installed rows (whose `version`
+    // is then refreshed to the installed one by the map merge).
+    latestVersion: packageInfo.version,
     // Slim before caching: registry manifests are unvalidated JSON and have
     // carried multi-megabyte junk fields that blew the localStorage quota
     // (and the UI only reads the summary fields anyway).

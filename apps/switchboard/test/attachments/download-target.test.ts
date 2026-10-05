@@ -9,15 +9,24 @@ import type {
   IAttachmentAccessService,
 } from "@powerhousedao/reactor-api";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AttachmentActorContext } from "../../src/attachments/auth.js";
 import { registerAttachmentRoutes } from "../../src/attachments/index.js";
 import { makeDownloadTargetHandler } from "../../src/attachments/routes.js";
+import { AttachmentUrlSigner } from "../../src/attachments/url-signer.js";
 
 const HASH = "a".repeat(64) as AttachmentHash;
 const REF = `attachment://v1:${HASH}`;
 const DOC_ID = "doc-1";
 const EXPIRES = "2026-07-23T00:00:00.000Z";
+const NOW_MS = Date.parse("2026-07-22T00:00:00.000Z");
+const SIGNER = new AttachmentUrlSigner("s".repeat(32), () => NOW_MS);
+
+function signedUrlParts(body: string) {
+  const target = JSON.parse(body) as { url: string; expiresAtUtc: string };
+  const url = new URL(target.url);
+  return { target, url, params: url.searchParams };
+}
 
 const ACTOR: AttachmentActorContext = {
   user: {
@@ -82,7 +91,13 @@ function makeAccess(result: AttachmentAccessResult): {
   spy: ReturnType<typeof vi.fn>;
 } {
   const spy = vi.fn().mockResolvedValue(result);
-  return { access: { canReadAttachment: spy }, spy };
+  return {
+    access: {
+      canReadAttachment: spy,
+      admitCaller: () => Promise.resolve({ kind: "admitted" }),
+    },
+    spy,
+  };
 }
 
 function makeAttachments(opts: {
@@ -106,27 +121,118 @@ const ALLOWED: AttachmentAccessResult = {
 };
 
 describe("makeDownloadTargetHandler", () => {
-  it("returns a switchboard target for filesystem with no-store", async () => {
+  it("returns a signed switchboard target for filesystem with no-store", async () => {
     const { access, spy } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
 
     expect(res.statusCode).toBe(200);
     expect(res._headers["cache-control"]).toBe("no-store");
-    expect(JSON.parse(res._body)).toEqual({
+    const { target, url, params } = signedUrlParts(res._body);
+    expect(target).toMatchObject({
       kind: "switchboard",
       method: "GET",
-      url: `http://sb.example.com/attachments/${HASH}`,
       headers: {},
+      expiresAtUtc: new Date(NOW_MS + 300_000).toISOString(),
     });
+    expect(`${url.origin}${url.pathname}`).toBe(
+      `http://sb.example.com/attachments/${HASH}`,
+    );
+    expect(params.get("documentId")).toBe(DOC_ID);
+    expect(
+      SIGNER.verify(
+        HASH,
+        DOC_ID,
+        params.get("expires")!,
+        params.get("signature")!,
+      ),
+    ).toBe(true);
     expect(spy).toHaveBeenCalledWith({
       documentId: DOC_ID,
       attachmentRef: REF,
       userAddress: "0xverified",
+      appKey: "did:key:zAppTest",
     });
+  });
+
+  it("signs for the requested expiresIn, clamped to the download-target ceiling", async () => {
+    const { access } = makeAccess(ALLOWED);
+    const handler = makeDownloadTargetHandler(
+      makeAttachments({}),
+      access,
+      SIGNER,
+    );
+
+    for (const [requested, granted] of [
+      [60, 60],
+      [3600, 300],
+      [99999999, 300],
+    ]) {
+      const res = makeRes();
+      await handler(
+        makeReq({
+          url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=${requested}`,
+        }),
+        res,
+        undefined,
+        ACTOR,
+      );
+      expect(signedUrlParts(res._body).target.expiresAtUtc).toBe(
+        new Date(NOW_MS + granted * 1000).toISOString(),
+      );
+    }
+  });
+
+  it("signs the canonical document id the access decision resolved", async () => {
+    const { access } = makeAccess({ ...ALLOWED, documentId: "canon" as never });
+    const handler = makeDownloadTargetHandler(
+      makeAttachments({}),
+      access,
+      SIGNER,
+    );
+    const res = makeRes();
+
+    await handler(makeReq({}), res, undefined, ACTOR);
+
+    expect(signedUrlParts(res._body).params.get("documentId")).toBe("canon");
+  });
+
+  it("fails closed with 503 on filesystem when no signer is configured", async () => {
+    const { access } = makeAccess(ALLOWED);
+    const handler = makeDownloadTargetHandler(
+      makeAttachments({}),
+      access,
+      null,
+    );
+    const res = makeRes();
+
+    await handler(makeReq({}), res, undefined, ACTOR);
+
+    expect(res.statusCode).toBe(503);
+    expect(res._body).not.toContain("/attachments/");
+  });
+
+  it("needs no signer for S3 presigned targets", async () => {
+    const { access } = makeAccess(ALLOWED);
+    const prepareDownloadTarget = vi.fn().mockResolvedValue({
+      kind: "presigned-get",
+      method: "GET",
+      url: "https://bucket.example.com/attachments/aa?sig=1",
+      headers: {},
+      expiresAtUtc: EXPIRES,
+    });
+    const attachments = makeAttachments({
+      backend: { kind: "s3", prepareDownloadTarget } as never,
+    });
+    const handler = makeDownloadTargetHandler(attachments, access, null);
+    const res = makeRes();
+
+    await handler(makeReq({}), res, undefined, ACTOR);
+
+    expect(res.statusCode).toBe(200);
   });
 
   it("returns the backend presigned-get target in S3 mode", async () => {
@@ -141,14 +247,14 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       backend: { kind: "s3", prepareDownloadTarget } as never,
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
 
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res._body)).toMatchObject({ kind: "presigned-get" });
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, undefined);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
   });
 
   it("passes a requested expiresIn through to the backend presigner", async () => {
@@ -163,12 +269,12 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       backend: { kind: "s3", prepareDownloadTarget } as never,
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(
       makeReq({
-        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=3600`,
+        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=60`,
       }),
       res,
       undefined,
@@ -176,10 +282,10 @@ describe("makeDownloadTargetHandler", () => {
     );
 
     expect(res.statusCode).toBe(200);
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 3600);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 60);
   });
 
-  it("clamps expiresIn to the 7-day presigning ceiling", async () => {
+  it("clamps a requested expiresIn to the ceiling", async () => {
     const { access } = makeAccess(ALLOWED);
     const prepareDownloadTarget = vi.fn().mockResolvedValue({
       kind: "presigned-get",
@@ -191,7 +297,7 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       backend: { kind: "s3", prepareDownloadTarget } as never,
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(
@@ -203,10 +309,10 @@ describe("makeDownloadTargetHandler", () => {
       ACTOR,
     );
 
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 604800);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
   });
 
-  it("omits the TTL override when expiresIn is absent", async () => {
+  it("applies the ceiling when expiresIn is absent, rather than the backend default", async () => {
     const { access } = makeAccess(ALLOWED);
     const prepareDownloadTarget = vi.fn().mockResolvedValue({
       kind: "presigned-get",
@@ -218,11 +324,73 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       backend: { kind: "s3", prepareDownloadTarget } as never,
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
 
     await handler(makeReq({}), makeRes(), undefined, ACTOR);
 
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, undefined);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
+  });
+
+  describe("ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS", () => {
+    const ORIGINAL = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+
+    afterEach(() => {
+      if (ORIGINAL === undefined) {
+        delete process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+      } else {
+        process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS = ORIGINAL;
+      }
+    });
+
+    async function ttlFor(configured: string | undefined, query = "") {
+      if (configured === undefined) {
+        delete process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+      } else {
+        process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS = configured;
+      }
+      const { access } = makeAccess(ALLOWED);
+      const prepareDownloadTarget = vi.fn().mockResolvedValue({
+        kind: "presigned-get",
+        method: "GET",
+        url: "https://bucket.example.com/attachments/aa?sig=1",
+        headers: {},
+        expiresAtUtc: EXPIRES,
+      });
+      const attachments = makeAttachments({
+        backend: { kind: "s3", prepareDownloadTarget } as never,
+      });
+      const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
+      await handler(
+        makeReq({
+          url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}${query}`,
+        }),
+        makeRes(),
+        undefined,
+        ACTOR,
+      );
+      return (prepareDownloadTarget.mock.calls[0] as unknown[])[1];
+    }
+
+    it("raises the ceiling when a deployment configures one", async () => {
+      await expect(ttlFor("1800")).resolves.toBe(1800);
+    });
+
+    it("never lets a configured ceiling exceed the signing maximum", async () => {
+      await expect(ttlFor("99999999")).resolves.toBe(604800);
+    });
+
+    it.each(["not-a-number", "0", "-5", "12.5"])(
+      "falls back to the default, not the maximum, on %s",
+      async (configured) => {
+        // A typo must narrow nothing and widen nothing: falling back to the
+        // signing ceiling would turn a misconfiguration into a week-long URL.
+        await expect(ttlFor(configured)).resolves.toBe(300);
+      },
+    );
+
+    it("still clamps a caller's request to the configured ceiling", async () => {
+      await expect(ttlFor("1800", "&expiresIn=99999")).resolves.toBe(1800);
+    });
   });
 
   it.each([
@@ -234,7 +402,7 @@ describe("makeDownloadTargetHandler", () => {
   ])("rejects a %s expiresIn with 400 before authorization", async (_, qs) => {
     const { access, spy } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(
@@ -253,7 +421,7 @@ describe("makeDownloadTargetHandler", () => {
   it("normalizes an uppercase path hash before authorization and lookup", async () => {
     const { access, spy } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({ hash: HASH.toUpperCase() }), res, undefined, ACTOR);
@@ -268,7 +436,7 @@ describe("makeDownloadTargetHandler", () => {
   it("rejects an invalid hash before any access or storage call", async () => {
     const { access, spy } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({ hash: "nothex" }), res, undefined, ACTOR);
@@ -292,7 +460,7 @@ describe("makeDownloadTargetHandler", () => {
   ])("rejects a %s documentId before authorization", async (_, url) => {
     const { access, spy } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({ url }), res, undefined, ACTOR);
@@ -307,7 +475,7 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       backend: { kind: "s3", prepareDownloadTarget } as never,
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
@@ -321,7 +489,7 @@ describe("makeDownloadTargetHandler", () => {
   it("maps projection-unavailable to a generic non-cacheable 503 before storage", async () => {
     const { access } = makeAccess({ kind: "projection-unavailable" });
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
@@ -337,7 +505,7 @@ describe("makeDownloadTargetHandler", () => {
     const { AttachmentNotFound } =
       await import("@powerhousedao/reactor-attachments");
     attachments.statSpy.mockRejectedValue(new AttachmentNotFound(HASH));
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
@@ -351,7 +519,7 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       stat: () => Promise.resolve({ ...AVAILABLE_HEADER, status: "pending" }),
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
@@ -371,7 +539,7 @@ describe("makeDownloadTargetHandler", () => {
     const attachments = makeAttachments({
       backend: { kind: "s3", prepareDownloadTarget } as never,
     });
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, ACTOR);
@@ -384,7 +552,7 @@ describe("makeDownloadTargetHandler", () => {
   it("passes an anonymous actor as an undefined address (OPEN mode)", async () => {
     const { access, spy } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(makeReq({}), res, undefined, {
@@ -400,7 +568,7 @@ describe("makeDownloadTargetHandler", () => {
   it("honours x-forwarded proto/host when building the switchboard target", async () => {
     const { access } = makeAccess(ALLOWED);
     const attachments = makeAttachments({});
-    const handler = makeDownloadTargetHandler(attachments, access);
+    const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
     const res = makeRes();
 
     await handler(
@@ -415,9 +583,10 @@ describe("makeDownloadTargetHandler", () => {
       ACTOR,
     );
 
-    expect(JSON.parse(res._body)).toMatchObject({
-      url: `https://public.example.com/attachments/${HASH}`,
-    });
+    const { url } = signedUrlParts(res._body);
+    expect(`${url.origin}${url.pathname}`).toBe(
+      `https://public.example.com/attachments/${HASH}`,
+    );
   });
 });
 
@@ -435,7 +604,7 @@ describe("registerAttachmentRoutes inventory", () => {
       attachmentAccess: { canReadAttachment: vi.fn() },
     } as unknown as API;
 
-    registerAttachmentRoutes(api);
+    registerAttachmentRoutes(api, { urlSigner: null });
 
     expect(captured).toEqual([
       { method: "POST", path: "/attachments/reservations" },

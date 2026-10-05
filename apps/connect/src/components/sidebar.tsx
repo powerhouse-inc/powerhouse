@@ -12,17 +12,17 @@ import {
   setSelectedDrive,
   showPHModal,
   useIsAddDriveEnabled,
-  useDrives,
   useSelectedDriveSafe,
   useUser,
 } from "@powerhousedao/reactor-browser";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
+import { useVisibleDrives } from "./use-drive-auth-gate.js";
 import { ErrorBoundary } from "./error-boundary.js";
 
 export function Sidebar() {
   const user = useUser();
   const openLogin = useOpenRenownLogin();
-  const drives = useDrives();
+  const drives = useVisibleDrives();
   const isAddDriveEnabled = useIsAddDriveEnabled();
   const [selectedDrive] = useSelectedDriveSafe();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
@@ -72,9 +72,9 @@ export function Sidebar() {
           fallbackMessage="There was an error loading drives"
           loggerContext={["Connect", "Sidebar"]}
         >
-          {drives?.map((drive, index) => (
+          {drives?.map((drive) => (
             <SidebarItem
-              key={index}
+              key={drive.header.id}
               title={drive.header.name}
               onClick={() => setSelectedDrive(drive)}
               active={selectedDrive?.header.id === drive.header.id}

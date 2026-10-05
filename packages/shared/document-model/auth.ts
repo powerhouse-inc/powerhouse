@@ -402,12 +402,12 @@ export function assertAuthPreservedOnDuplicate(
  * The auth scope a state snapshot may install, given the policy already there.
  *
  * `applyAuthAction` is the validated door onto `state.auth`, but a whole-state
- * snapshot (UPGRADE_DOCUMENT's `initialState`, LOAD_STATE's `data`) replaces the
- * scope wholesale and is authorized as a `document`-scope write. Without this,
- * a subject holding `execute` on `document` and no auth grant at all can install
- * a policy of its choosing, name itself `creator` (which exempts the policy from
- * the retention rule for good), or wipe an existing policy by carrying the
- * default uninitialized one.
+ * snapshot (UPGRADE_DOCUMENT's `initialState`) replaces the scope wholesale and
+ * is authorized as a `document`-scope write. Without this, a subject holding
+ * `execute` on `document` and no auth grant at all can install a policy of its
+ * choosing, name itself `creator` (which exempts the policy from the retention
+ * rule for good), or wipe an existing policy by carrying the default
+ * uninitialized one.
  *
  * Three cases:
  *
@@ -450,12 +450,9 @@ export function resolveSnapshotAuth(
   return incoming;
 }
 
-/** UNDO, REDO and PRUNE are rejected on the auth scope. */
+/** UNDO and REDO are rejected on the auth scope. */
 export function assertAuthScopeActionAllowed(action: Action): void {
-  if (
-    action.scope === "auth" &&
-    ["UNDO", "REDO", "PRUNE"].includes(action.type)
-  ) {
+  if (action.scope === "auth" && ["UNDO", "REDO"].includes(action.type)) {
     throw new AuthActionNotAllowedError(action.type);
   }
 }

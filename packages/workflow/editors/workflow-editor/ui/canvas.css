@@ -1,0 +1,57 @@
+/* React Flow paints the node layer above the edge-label layer, and gives every
+   node an inline z-index, so a picker in either layer loses to the nodes. */
+.react-flow__node:has([data-selector-open="true"]) {
+  z-index: 1002 !important;
+}
+
+/* The edge "Insert step" picker lives in the edge-label layer, which sits
+   below every node. Lift the label wrapper while its picker is open. */
+.react-flow__edgelabel-renderer > div:has([data-selector-open="true"]) {
+  z-index: 1002;
+}
+
+/* The right-click menu is a sibling of the flow; keep it above the lifted
+   node layer. */
+.workflow-context-menu {
+  z-index: 1003;
+}
+
+/* The expression picker is portalled to <body> to escape the side panel's
+   scroll container, so it only has to clear the canvas layers: one above the
+   right-click menu. */
+.workflow-expression-popup {
+  z-index: 1004;
+}
+
+/* Select popovers are portalled to <body>; keep them above every canvas
+   layer and the expression picker. */
+.workflow-select-popover {
+  z-index: 1005;
+}
+
+/* React Flow chrome follows Connect's theme tokens. */
+.react-flow {
+  --xy-background-pattern-dots-color-default: color-mix(
+    in oklab,
+    var(--foreground) 18%,
+    transparent
+  );
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-color-hover-default: var(--foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-minimap-background-color-default: var(--card);
+  --xy-minimap-mask-background-color-default: color-mix(
+    in oklab,
+    var(--foreground) 8%,
+    transparent
+  );
+}
+
+.react-flow__controls {
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}

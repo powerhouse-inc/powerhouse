@@ -215,7 +215,6 @@ describe.each(scopeVariants)(
         collectionMembershipCache,
         DEFAULT_DRIVE_CONTAINER_TYPES,
         {},
-        undefined,
         executionScope,
       );
     });

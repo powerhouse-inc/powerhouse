@@ -185,7 +185,7 @@ describe("Vite / local source", () => {
     await vite.close();
   });
 
-  it("reads model subpath exports with a truthy documentModel", async () => {
+  it("reads model subpath exports with the documentModel key", async () => {
     const loader = VitePackageLoader.build(vite);
     const loaded = await loader.loadDocumentModels(fixture.root, true);
     expect(
@@ -194,7 +194,10 @@ describe("Vite / local source", () => {
       ["test/ledger", 1],
       ["test/ledger", 2],
     ]);
-    expect(loaded).toHaveLength(2);
+    expect(loaded).toHaveLength(3);
+    expect(
+      loaded.filter((module) => module.documentModel === null),
+    ).toHaveLength(1);
     const schemaFirst = await loader.loadDocumentModels(
       fixture.schemaFirstRoot,
       true,

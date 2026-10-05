@@ -15,8 +15,10 @@ import {
 import { FileSystemError } from "./errors.js";
 import type { DocumentOperations } from "./operations.js";
 import { documentModelReducer } from "./reducers.js";
+import { SIGNATURE_PROTOCOL } from "./signature-policy.js";
 import type { PHBaseState } from "./state.js";
 import type {
+  CreateDocumentActionInput,
   DocumentModelPHState,
   FileInput,
   LoadFromInput,
@@ -128,6 +130,7 @@ export async function createMinimalZip(
     branch: data.branch,
     revision: {},
     lastModifiedAtUtcIso: now,
+    ...(data.protocolVersions && { protocolVersions: data.protocolVersions }),
   };
 
   return zipAsync({
@@ -187,6 +190,8 @@ async function parseZipData<TState extends PHBaseState>(
   ) as DocumentOperations;
 
   const clearedOperations = garbageCollectDocumentOperations(operations);
+  pinProtocolVersionsToCreate(header, operations);
+  backfillBaseReducerVersion(header);
 
   const operationsError = validateOperations(clearedOperations);
   if (operationsError.length) {
@@ -195,6 +200,34 @@ async function parseZipData<TState extends PHBaseState>(
   }
 
   return { initialState, header, clearedOperations };
+}
+
+/** header.json is a snapshot; the stored CREATE_DOCUMENT input wins. */
+function pinProtocolVersionsToCreate(
+  header: PHDocumentHeader,
+  operations: DocumentOperations,
+): void {
+  const create = operations.document?.find(
+    (operation) => operation.action.type === "CREATE_DOCUMENT",
+  );
+  if (!create) {
+    return;
+  }
+  const input = create.action.input as CreateDocumentActionInput | undefined;
+  if (input?.protocolVersions) {
+    header.protocolVersions = { ...input.protocolVersions };
+  } else if (header.protocolVersions) {
+    const { [SIGNATURE_PROTOCOL]: _dropped, ...rest } = header.protocolVersions;
+    header.protocolVersions = rest;
+  }
+}
+
+/** A zip with no recorded base-reducer version predates it: replay as v1. */
+function backfillBaseReducerVersion(header: PHDocumentHeader): void {
+  if (typeof header.protocolVersions?.["base-reducer"] === "number") {
+    return;
+  }
+  header.protocolVersions = { ...header.protocolVersions, "base-reducer": 1 };
 }
 
 async function loadFromZipData<TState extends PHBaseState>(

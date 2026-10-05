@@ -1,29 +1,204 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
+import { childLogger, type ILogger } from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import { ContiguousCursor } from "../catch-up/contiguous-cursor.js";
+import {
+  createKyselyWatermarkProbe,
+  SettledWatermark,
+} from "../catch-up/settled-watermark.js";
+import {
+  defaultCatchUpConfig,
+  type ICatchUpConsumer,
+  type ISettledWatermark,
+  type SweepBlockedAt,
+  type SweepResult,
+} from "../catch-up/types.js";
+import type { Unsubscribe } from "../events/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
-import type { IReadModel } from "./interfaces.js";
+import { yieldToMain } from "../shared/utils.js";
+import {
+  acquirePurgeLocks,
+  findPurged,
+} from "../storage/kysely/document-purges.js";
+import type { Database as StorageDatabase } from "../storage/kysely/types.js";
+import type { IReadModel, IReadModelReservation } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
 
-export type BaseReadModelConfig = {
-  readModelId: string;
-  rebuildStateOnInit: boolean;
+/** Bounds on an indexing pass: one transaction, and the stall between yields. */
+export type ReadModelIndexingConfig = {
+  /** Maximum operations committed in a single transaction. */
+  commitChunkSize: number;
+  /** Maximum elapsed milliseconds before yielding between chunks. */
+  yieldDeadlineMs: number;
+};
+
+/** Small enough that a chunk's transaction rarely outlasts the yield deadline. */
+export const DEFAULT_COMMIT_CHUNK_SIZE = 50;
+
+/** Matches the executor's own default, so both paths yield on the same cadence. */
+export const DEFAULT_READ_MODEL_YIELD_DEADLINE_MS = 50;
+
+export const defaultReadModelIndexingConfig: ReadModelIndexingConfig = {
+  commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE,
+  yieldDeadlineMs: DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+};
+
+/** For read models whose callers can observe where a batch was split. */
+export const unchunkedReadModelIndexingConfig: ReadModelIndexingConfig = {
+  commitChunkSize: Number.MAX_SAFE_INTEGER,
+  yieldDeadlineMs: DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
 };
 
 /**
- * Base class for read models that provides catch-up/rewind functionality.
- * Handles initialization, state tracking via ViewState table, and consistency tracking.
- * Subclasses override commitOperations() with their specific domain logic.
+ * Keeps the chunk size at one operation or more: a chunk of zero or less never
+ * advances the indexing loop, so the pass would spin without ever resolving.
  */
-export class BaseReadModel implements IReadModel {
-  protected lastOrdinal: number = 0;
+function normalizeIndexingConfig(
+  config: ReadModelIndexingConfig,
+): ReadModelIndexingConfig {
+  if (Number.isNaN(config.commitChunkSize)) {
+    return { ...config, commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE };
+  }
 
+  return {
+    ...config,
+    commitChunkSize: Math.max(
+      1,
+      Math.min(Math.floor(config.commitChunkSize), Number.MAX_SAFE_INTEGER),
+    ),
+  };
+}
+
+export type PurgeFence =
+  /** Commits in a purge-locked trx; see commitsInFenceTransaction. */
+  | "locked"
+  /** Drops tombstoned ids only, for rows that live on another database handle. */
+  | "skip"
+  /** No fence: ProcessorManager, and commits that open their own trx on this.db. */
+  | "none";
+
+export type BaseReadModelConfig = {
+  readModelId: string;
+  /** Rebuilds resultingState for boot replay and sweeps. */
+  rebuildStateOnInit: boolean;
+  /** Defaults to {@link defaultReadModelIndexingConfig}. */
+  indexing?: ReadModelIndexingConfig;
+  /** Where a first registration starts; defaults to "beginning". */
+  startFrom?: "beginning" | "head";
+  /** Re-applies the rest of a late operation's stream; defaults to true. */
+  replayStreamSuffix?: boolean;
+  /** Defaults to "locked"; see {@link PurgeFence} for the opt-outs. */
+  purgeFence?: PurgeFence;
+};
+
+type StreamGroup = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  lowest: number;
+  late: OperationWithContext[];
+};
+
+function ordinalOf(item: OperationWithContext): number {
+  return item.context.ordinal;
+}
+
+function isTracked(ordinal: number): boolean {
+  return Number.isFinite(ordinal) && ordinal > 0;
+}
+
+function streamKeyOf(stream: {
+  documentId: string;
+  scope: string;
+  branch: string;
+}): string {
+  return `${stream.documentId}\u0000${stream.scope}\u0000${stream.branch}`;
+}
+
+function groupByStream(items: OperationWithContext[]): StreamGroup[] {
+  const groups = new Map<string, StreamGroup>();
+  for (const item of items) {
+    const { documentId, scope, branch } = item.context;
+    const key = streamKeyOf(item.context);
+    let group = groups.get(key);
+    if (group === undefined) {
+      group = { documentId, scope, branch, lowest: ordinalOf(item), late: [] };
+      groups.set(key, group);
+    }
+    group.lowest = Math.min(group.lowest, ordinalOf(item));
+    group.late.push(item);
+  }
+  return [...groups.values()].sort((a, b) => a.lowest - b.lowest);
+}
+
+function mergeByOrdinal(
+  ...lists: OperationWithContext[][]
+): OperationWithContext[] {
+  const byOrdinal = new Map<number, OperationWithContext>();
+  for (const list of lists) {
+    for (const item of list) byOrdinal.set(ordinalOf(item), item);
+  }
+  return [...byOrdinal.values()].sort((a, b) => ordinalOf(a) - ordinalOf(b));
+}
+
+/** The ids whose purge an operation's rows must not outlive. */
+function purgeFenceIds(items: OperationWithContext[]): string[] {
+  const ids = new Set<string>();
+  for (const { operation, context } of items) {
+    ids.add(context.documentId);
+    if (operation.action.type !== "ADD_RELATIONSHIP") continue;
+    const input = operation.action.input as {
+      sourceId?: unknown;
+      targetId?: unknown;
+    };
+    if (typeof input.sourceId === "string") ids.add(input.sourceId);
+    if (typeof input.targetId === "string") ids.add(input.targetId);
+  }
+  return [...ids].sort();
+}
+
+function dropPurged(
+  items: OperationWithContext[],
+  purged: Set<string>,
+): OperationWithContext[] {
+  if (purged.size === 0) return items;
+  return items.filter(
+    (item) =>
+      isPurgeMarker(item.operation) || !purged.has(item.context.documentId),
+  );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** A read model whose cursor only sweeps and boot replay advance. */
+export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   readonly name: string;
+
+  private readonly indexing: ReadModelIndexingConfig;
+  private readonly catchUpLogger: ILogger;
+  private cursor: ContiguousCursor;
+  private persisted = 0;
+  private watermark: ISettledWatermark | undefined;
+  private maxTrackedAboveCursor = defaultCatchUpConfig.maxTrackedAboveCursor;
+  private loggedFailure: number | undefined;
+  private failedItem: OperationWithContext | undefined;
+  private initialized = false;
+  private readonly liveInFlight = new Map<string, Set<number>>();
+  private readonly sweptListeners = new Set<
+    (coordinates: ConsistencyCoordinate[]) => void
+  >();
 
   constructor(
     protected db: Kysely<DocumentViewDatabase>,
@@ -33,46 +208,195 @@ export class BaseReadModel implements IReadModel {
     protected config: BaseReadModelConfig,
   ) {
     this.name = config.readModelId;
+    this.catchUpLogger = childLogger([
+      "reactor",
+      "read-model",
+      config.readModelId,
+    ]);
+    this.indexing = normalizeIndexingConfig(
+      config.indexing ?? defaultReadModelIndexingConfig,
+    );
+    this.cursor = new ContiguousCursor(0, this.maxTrackedAboveCursor);
+    // A locked commit through this.db deadlocks single-connection PGlite.
+    if (
+      (config.purgeFence ?? "locked") === "locked" &&
+      this.commitOperations !== BaseReadModel.prototype.commitOperations &&
+      !(this.constructor as typeof BaseReadModel).commitsInFenceTransaction
+    ) {
+      throw new Error(
+        `Read model ${config.readModelId}: purgeFence "locked" commits in a ` +
+          "transaction its commitOperations must write through. Write " +
+          "through the trx argument and set static commitsInFenceTransaction " +
+          'to true, or set purgeFence "skip" (rows on another handle) or ' +
+          '"none" (no rows here, or its own transaction).',
+      );
+    }
   }
 
-  /**
-   * Initializes the read model by loading state and catching up on missed operations.
-   */
+  /** Set by a subclass whose commitOperations writes through its trx argument. */
+  static readonly commitsInFenceTransaction: boolean = false;
+
+  get consumerId(): string {
+    return this.config.readModelId;
+  }
+
+  get appliedThrough(): number {
+    return this.cursor.appliedThrough;
+  }
+
+  get trackedAbove(): number {
+    return this.cursor.trackedAbove;
+  }
+
+  /** Shares a thread's watermark; otherwise boot probes through this db. */
+  attachCatchUp(
+    watermark: ISettledWatermark,
+    maxTrackedAboveCursor: number,
+  ): void {
+    this.watermark = watermark;
+    this.maxTrackedAboveCursor = maxTrackedAboveCursor;
+    this.cursor.setLimit(maxTrackedAboveCursor);
+  }
+
+  /** Notified with the coordinates each sweep applied. */
+  onSwept(
+    listener: (coordinates: ConsistencyCoordinate[]) => void,
+  ): Unsubscribe {
+    this.sweptListeners.add(listener);
+    return () => {
+      this.sweptListeners.delete(listener);
+    };
+  }
+
+  /** A chunk that throws ends the replay; sweeps continue from below it. */
   async init(): Promise<void> {
-    const viewState = await this.loadState();
+    // A repeat init replays from where this process is, keeping what it applied.
+    if (this.initialized) {
+      await this.replayFromCursor();
+      return;
+    }
+    let stored = await this.loadState();
 
-    if (viewState !== undefined) {
-      this.lastOrdinal = viewState;
-    } else {
-      await this.initializeState();
+    if (stored === undefined) {
+      if (this.config.startFrom === "head") {
+        const watermark = this.settledWatermark();
+        const settled = await watermark.refresh();
+        // The head, not settledThrough: any open write elsewhere holds that at 0.
+        const head = Math.max(settled, watermark.status().head);
+        await this.initializeState(head);
+        this.resetCursor(head);
+        this.initialized = true;
+        return;
+      }
+      await this.initializeState(0);
+      stored = 0;
     }
 
-    let page = await this.operationIndex.getSinceOrdinal(this.lastOrdinal);
-    while (page.results.length > 0) {
-      const ops = this.config.rebuildStateOnInit
-        ? await this.rebuildStateForOperations(page.results)
-        : page.results;
-      await this.indexOperations(ops);
-
-      if (!page.next) break;
-      page = await page.next();
-    }
+    this.resetCursor(stored);
+    this.initialized = true;
+    await this.replayFromCursor();
   }
 
-  /**
-   * Template method: runs domain-specific commitOperations, then persists
-   * state and updates consistency tracking.
-   */
-  async indexOperations(items: OperationWithContext[]): Promise<void> {
-    if (items.length === 0) return;
+  /** The live path: never moves the cursor. */
+  indexOperations(items: OperationWithContext[]): Promise<void> {
+    if (items.length === 0) return Promise.resolve();
+    return this.reserveOperations(items).apply();
+  }
 
-    await this.commitOperations(items);
+  /** Holds a queued batch as live, so a sweep neither takes nor passes it. */
+  reserveOperations(items: OperationWithContext[]): IReadModelReservation {
+    const cursor = this.cursor;
+    const owned = this.claimLive(items);
+    const unmark = this.markLive(owned);
+    let done = false;
+    return {
+      apply: () => {
+        if (done) return Promise.resolve();
+        done = true;
+        // A cursor reset since the claim dropped it.
+        if (cursor !== this.cursor) {
+          unmark();
+          return this.indexOperations(items);
+        }
+        if (owned.length === 0) {
+          unmark();
+          return Promise.resolve();
+        }
+        return this.applyChunked(owned, unmark);
+      },
+      release: () => {
+        if (done) return;
+        done = true;
+        cursor.settle(owned.map(ordinalOf), false);
+        unmark();
+      },
+    };
+  }
 
-    await this.db.transaction().execute(async (trx) => {
-      await this.saveState(trx, items);
-    });
+  async sweep(
+    settledThrough: number,
+    present: readonly number[],
+    signal?: AbortSignal,
+  ): Promise<SweepResult> {
+    const startedAt = performance.now();
+    const from = this.cursor.appliedThrough;
+    const range = present.filter(
+      (ordinal) => ordinal > from && ordinal <= settledThrough,
+    );
+    const mine = this.cursor.claim(this.cursor.missing(range));
 
-    this.updateConsistencyTracker(items);
+    let replayed = 0;
+    let reapplied = 0;
+    let blockedAt: SweepBlockedAt | undefined;
+
+    if (mine.size > 0) {
+      let late: OperationWithContext[];
+      try {
+        late = await this.operationIndex.getByOrdinals([...mine], signal);
+      } catch (error) {
+        this.cursor.settle(mine, false);
+        throw error;
+      }
+
+      const found = new Set(late.map(ordinalOf));
+      this.cursor.settle(
+        [...mine].filter((ordinal) => !found.has(ordinal)),
+        true,
+      );
+
+      for (const group of groupByStream(late)) {
+        const outcome = await this.sweepStream(group, signal);
+        replayed += outcome.replayed;
+        reapplied += outcome.reapplied;
+        blockedAt ??= outcome.blockedAt;
+      }
+
+      if (replayed > 0) {
+        this.catchUpLogger.warn(
+          "@consumer applied @n operations its live path never received: ordinals @first..@last",
+          this.consumerId,
+          replayed,
+          Math.min(...found),
+          Math.max(...found),
+        );
+      }
+    }
+
+    const to = this.cursor.target(settledThrough, range);
+    if (to > from) {
+      await this.moveCursor(to);
+    }
+    this.cursor.enforceLimit();
+
+    return {
+      consumerId: this.consumerId,
+      from,
+      to: this.cursor.appliedThrough,
+      durationMs: performance.now() - startedAt,
+      replayed,
+      reapplied,
+      ...(blockedAt !== undefined ? { blockedAt } : {}),
+    };
   }
 
   /**
@@ -89,15 +413,67 @@ export class BaseReadModel implements IReadModel {
     await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
   }
 
-  // Subclass does domain-specific work here (snapshots, relationships, processor routing, etc.).
+  /** The cursor, for subclasses: every present ordinal at or below it is applied. */
+  protected get lastOrdinal(): number {
+    return this.cursor.appliedThrough;
+  }
+
+  /** Called after the cursor advances. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected onCursorAdvanced(appliedThrough: number): void {}
+
+  /** Writes through `trx` when given: the purge fence's transaction. */
   protected async commitOperations(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     items: OperationWithContext[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    trx?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {}
 
-  /**
-   * Rebuilds document state for each operation using the write cache.
-   */
+  /** The handle document_purges is read through; `db` may be the fence trx. */
+  protected purgeLookup(db: Kysely<any>): Kysely<any> {
+    return db;
+  }
+
+  /** False when the batch writes no rows, so the fence opens no transaction. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected writesRows(items: OperationWithContext[]): boolean {
+    return true;
+  }
+
+  /** Every delivery commits through here. */
+  protected async commitFenced(items: OperationWithContext[]): Promise<void> {
+    const fence = this.config.purgeFence ?? "locked";
+    if (fence === "none") {
+      await this.commitOperations(items);
+      return;
+    }
+    if (items.length === 0 || !this.writesRows(items)) {
+      if (items.length > 0) await this.commitOperations(items);
+      return;
+    }
+
+    const ids = purgeFenceIds(items);
+    if (fence === "skip") {
+      const live = dropPurged(
+        items,
+        await findPurged(this.purgeLookup(this.db), ids),
+      );
+      if (live.length > 0) await this.commitOperations(live);
+      return;
+    }
+
+    await this.db.transaction().execute(async (trx) => {
+      await acquirePurgeLocks(trx, ids, "shared");
+      const live = dropPurged(
+        items,
+        await findPurged(this.purgeLookup(trx), ids),
+      );
+      if (live.length > 0) await this.commitOperations(live, trx);
+    });
+  }
+
+  /** Rebuilds resultingState as the executor writes it: scopes plus header. */
   protected async rebuildStateForOperations(
     operations: OperationWithContext[],
   ): Promise<OperationWithContext[]> {
@@ -118,7 +494,10 @@ export class BaseReadModel implements IReadModel {
         operation: op.operation,
         context: {
           ...op.context,
-          resultingState: JSON.stringify(document),
+          resultingState: JSON.stringify({
+            ...document.state,
+            header: document.header,
+          }),
         },
       });
     }
@@ -131,8 +510,7 @@ export class BaseReadModel implements IReadModel {
    * Returns undefined if no state exists for this read model.
    */
   protected async loadState(): Promise<number | undefined> {
-    const viewStateDb = this.db as unknown as Kysely<DocumentViewDatabase>;
-    const row = await viewStateDb
+    const row = await this.db
       .selectFrom("ViewState")
       .select("lastOrdinal")
       .where("readModelId", "=", this.config.readModelId)
@@ -144,37 +522,14 @@ export class BaseReadModel implements IReadModel {
   /**
    * Initializes the ViewState row for this read model.
    */
-  protected async initializeState(): Promise<void> {
-    const viewStateDb = this.db as unknown as Kysely<DocumentViewDatabase>;
-    await viewStateDb
+  protected async initializeState(lastOrdinal = 0): Promise<void> {
+    await this.db
       .insertInto("ViewState")
       .values({
         readModelId: this.config.readModelId,
-        lastOrdinal: 0,
+        lastOrdinal,
       })
-      .execute();
-  }
-
-  /**
-   * Saves the last processed ordinal to the ViewState table.
-   */
-  protected async saveState(
-    trx: Transaction<DocumentViewDatabase>,
-    items: OperationWithContext[],
-  ): Promise<void> {
-    let maxOrdinal = 0;
-    for (const item of items) {
-      maxOrdinal = Math.max(maxOrdinal, item.context.ordinal);
-    }
-    this.lastOrdinal = maxOrdinal;
-
-    await trx
-      .updateTable("ViewState")
-      .set({
-        lastOrdinal: maxOrdinal,
-        lastOperationTimestamp: new Date(),
-      })
-      .where("readModelId", "=", this.config.readModelId)
+      .onConflict((oc) => oc.column("readModelId").doNothing())
       .execute();
   }
 
@@ -182,8 +537,13 @@ export class BaseReadModel implements IReadModel {
    * Updates the consistency tracker with the processed operations.
    */
   protected updateConsistencyTracker(items: OperationWithContext[]): void {
-    const coordinates: ConsistencyCoordinate[] = [];
+    this.consistencyTracker.update(this.coordinatesOf(items));
+  }
 
+  private coordinatesOf(
+    items: OperationWithContext[],
+  ): ConsistencyCoordinate[] {
+    const coordinates: ConsistencyCoordinate[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i]!;
       coordinates.push({
@@ -193,7 +553,383 @@ export class BaseReadModel implements IReadModel {
         operationIndex: item.operation.index,
       });
     }
+    return coordinates;
+  }
 
-    this.consistencyTracker.update(coordinates);
+  private settledWatermark(): ISettledWatermark {
+    this.watermark ??= new SettledWatermark(
+      createKyselyWatermarkProbe(this.db as unknown as Kysely<StorageDatabase>),
+      this.catchUpLogger,
+    );
+    return this.watermark;
+  }
+
+  private resetCursor(appliedThrough: number): void {
+    this.cursor = new ContiguousCursor(
+      appliedThrough,
+      this.maxTrackedAboveCursor,
+    );
+    this.persisted = appliedThrough;
+  }
+
+  /** Items this pass must apply; untracked ordinals always apply. */
+  private claimLive(items: OperationWithContext[]): OperationWithContext[] {
+    const mine = this.cursor.claim(items.map(ordinalOf));
+    return items.filter((item) => {
+      const ordinal = ordinalOf(item);
+      return !isTracked(ordinal) || mine.has(ordinal);
+    });
+  }
+
+  /** Marks items in flight on their streams; returns the release. */
+  private markLive(items: OperationWithContext[]): () => void {
+    const keys = new Set<string>();
+    for (const item of items) {
+      if (!isTracked(ordinalOf(item))) continue;
+      const key = streamKeyOf(item.context);
+      let ordinals = this.liveInFlight.get(key);
+      if (ordinals === undefined) {
+        ordinals = new Set();
+        this.liveInFlight.set(key, ordinals);
+      }
+      ordinals.add(ordinalOf(item));
+      keys.add(key);
+    }
+    return () => {
+      for (const item of items) {
+        this.liveInFlight
+          .get(streamKeyOf(item.context))
+          ?.delete(ordinalOf(item));
+      }
+      for (const key of keys) {
+        if (this.liveInFlight.get(key)?.size === 0)
+          this.liveInFlight.delete(key);
+      }
+    };
+  }
+
+  /** True while a live pass applies an earlier operation of the stream. */
+  private liveBelow(group: StreamGroup): boolean {
+    const ordinals = this.liveInFlight.get(streamKeyOf(group));
+    if (ordinals === undefined) return false;
+    for (const ordinal of ordinals) {
+      if (ordinal < group.lowest) return true;
+    }
+    return false;
+  }
+
+  /** Commits in chunks, yielding with no transaction open. */
+  private async applyChunked(
+    items: OperationWithContext[],
+    release = this.markLive(items),
+  ): Promise<void> {
+    try {
+      const { commitChunkSize, yieldDeadlineMs } = this.indexing;
+      let lastYield = performance.now();
+      let committed = 0;
+
+      for (let start = 0; start < items.length; start += commitChunkSize) {
+        if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
+          await yieldToMain();
+          lastYield = performance.now();
+        }
+
+        const chunk = items.slice(start, start + commitChunkSize);
+
+        try {
+          await this.commitFenced(chunk);
+        } catch (error) {
+          this.failedItem = chunk[0];
+          const prefix = items.slice(0, committed);
+          this.cursor.settle(prefix.map(ordinalOf), true);
+          this.cursor.settle(items.slice(committed).map(ordinalOf), false);
+          if (prefix.length > 0) this.updateConsistencyTracker(prefix);
+          throw error;
+        }
+
+        committed += chunk.length;
+      }
+
+      this.cursor.settle(items.map(ordinalOf), true);
+      this.cursor.enforceLimit();
+      this.updateConsistencyTracker(items);
+    } finally {
+      release();
+    }
+  }
+
+  private async replayFromCursor(): Promise<void> {
+    const settledAtBoot = await this.settledAtBoot();
+    let page = await this.operationIndex.getSinceOrdinal(
+      this.cursor.appliedThrough,
+    );
+
+    while (page.results.length > 0) {
+      const ordinals = page.results.map(ordinalOf);
+      const failed = await this.replayPage(page.results);
+
+      const pageMax = Math.max(...ordinals);
+      const to = this.cursor.target(Math.min(settledAtBoot, pageMax), ordinals);
+      if (to > this.cursor.appliedThrough) {
+        await this.moveCursor(to);
+      }
+
+      if (failed || !page.next) break;
+      page = await page.next();
+    }
+  }
+
+  /** Without a probe, boot replay applies but leaves the cursor to sweeps. */
+  private async settledAtBoot(): Promise<number> {
+    try {
+      return await this.settledWatermark().refresh();
+    } catch (error) {
+      this.catchUpLogger.warn(
+        "@consumer could not probe the settled watermark at boot; the cursor waits for a sweep: @error",
+        this.consumerId,
+        error,
+      );
+      return this.cursor.appliedThrough;
+    }
+  }
+
+  /** Returns true when a chunk failed, which ends the replay. */
+  private async replayPage(results: OperationWithContext[]): Promise<boolean> {
+    const owned = this.claimLive(results);
+    if (owned.length === 0) return false;
+    const release = this.markLive(owned);
+    try {
+      return await this.replayOwned(owned);
+    } finally {
+      release();
+    }
+  }
+
+  private async replayOwned(owned: OperationWithContext[]): Promise<boolean> {
+    let rebuilt: { items: OperationWithContext[]; absent: number[] };
+    try {
+      rebuilt = await this.rebuildIfConfigured(owned);
+    } catch (error) {
+      this.cursor.settle(owned.map(ordinalOf), false);
+      this.block(owned[0]!, error);
+      return true;
+    }
+    this.cursor.settle(rebuilt.absent, true);
+    if (rebuilt.items.length === 0) return false;
+
+    try {
+      await this.applyChunked(rebuilt.items);
+    } catch (error) {
+      this.block(this.failedItem ?? rebuilt.items[0]!, error);
+      return true;
+    }
+    return false;
+  }
+
+  private async sweepStream(
+    group: StreamGroup,
+    signal: AbortSignal | undefined,
+  ): Promise<{
+    replayed: number;
+    reapplied: number;
+    blockedAt?: SweepBlockedAt;
+  }> {
+    const owned = group.late.map(ordinalOf);
+    if (this.liveBelow(group)) {
+      this.cursor.settle(owned, false);
+      return { replayed: 0, reapplied: 0 };
+    }
+    const ownedSet = new Set(owned);
+
+    let items = group.late;
+    if (this.config.replayStreamSuffix ?? true) {
+      let suffix: OperationWithContext[];
+      try {
+        suffix = await this.operationIndex.getStreamAfter(
+          group,
+          group.lowest,
+          signal,
+        );
+      } catch (error) {
+        this.cursor.settle(owned, false);
+        return {
+          replayed: 0,
+          reapplied: 0,
+          blockedAt: this.block(group.late[0]!, error),
+        };
+      }
+      items = mergeByOrdinal(group.late, suffix);
+    }
+
+    let rebuilt: { items: OperationWithContext[]; absent: number[] };
+    try {
+      rebuilt = await this.rebuildIfConfigured(items);
+    } catch (error) {
+      this.cursor.settle(owned, false);
+      return {
+        replayed: 0,
+        reapplied: 0,
+        blockedAt: this.block(items[0]!, error),
+      };
+    }
+
+    try {
+      await this.commitFenced(rebuilt.items);
+    } catch (error) {
+      this.cursor.settle(owned, false);
+      return {
+        replayed: 0,
+        reapplied: 0,
+        blockedAt: this.block(rebuilt.items[0] ?? items[0]!, error),
+      };
+    }
+
+    this.cursor.settle(owned, true);
+    this.updateConsistencyTracker(rebuilt.items);
+    this.notifySwept(rebuilt.items);
+
+    let replayed = 0;
+    for (const item of rebuilt.items) {
+      if (ownedSet.has(ordinalOf(item))) replayed++;
+    }
+    return { replayed, reapplied: rebuilt.items.length - replayed };
+  }
+
+  /** A document gone from the write cache, or purged, is absent. */
+  private async rebuildIfConfigured(
+    items: OperationWithContext[],
+  ): Promise<{ items: OperationWithContext[]; absent: number[] }> {
+    if (!this.config.rebuildStateOnInit) {
+      return { items, absent: [] };
+    }
+
+    const rebuilt: OperationWithContext[] = [];
+    const absent: number[] = [];
+    for (const item of items) {
+      // The marker has no state to rebuild; its stream has no CREATE_DOCUMENT.
+      if (isPurgeMarker(item.operation)) {
+        rebuilt.push(item);
+        continue;
+      }
+      let result: OperationWithContext[];
+      try {
+        result = await this.rebuildStateForOperations([item]);
+      } catch (error) {
+        if (
+          !DocumentNotFoundError.isError(error) &&
+          !(await this.isPurged(item.context.documentId))
+        ) {
+          throw error;
+        }
+        this.catchUpLogger.warn(
+          "@consumer dropped ordinal @ordinal: document @documentId is gone",
+          this.consumerId,
+          ordinalOf(item),
+          item.context.documentId,
+        );
+        absent.push(ordinalOf(item));
+        continue;
+      }
+      rebuilt.push(...result);
+    }
+    return { items: rebuilt, absent };
+  }
+
+  /** A failed lookup is no answer: the caller's own error stands. */
+  private async isPurged(documentId: string): Promise<boolean> {
+    try {
+      return (await findPurged(this.purgeLookup(this.db), [documentId])).has(
+        documentId,
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private block(item: OperationWithContext, error: unknown): SweepBlockedAt {
+    const blockedAt: SweepBlockedAt = {
+      ordinal: ordinalOf(item),
+      documentId: item.context.documentId,
+      scope: item.context.scope,
+      branch: item.context.branch,
+      type: item.operation.action.type,
+      error: errorMessage(error),
+    };
+    if (this.loggedFailure !== blockedAt.ordinal) {
+      this.loggedFailure = blockedAt.ordinal;
+      this.catchUpLogger.error(
+        "@consumer cursor held at @applied: ordinal @ordinal (@documentId/@scope/@branch, @type) failed: @error",
+        this.consumerId,
+        this.cursor.appliedThrough,
+        blockedAt.ordinal,
+        blockedAt.documentId,
+        blockedAt.scope,
+        blockedAt.branch,
+        blockedAt.type,
+        blockedAt.error,
+      );
+    }
+    return blockedAt;
+  }
+
+  private notifySwept(items: OperationWithContext[]): void {
+    if (this.sweptListeners.size === 0 || items.length === 0) return;
+    const coordinates = this.coordinatesOf(items);
+    for (const listener of this.sweptListeners) {
+      listener(coordinates);
+    }
+  }
+
+  /** Compare-and-set against the value this process last wrote. */
+  private async moveCursor(to: number): Promise<void> {
+    if (to <= this.persisted) {
+      this.advanceCursor(to);
+      return;
+    }
+
+    const expected = this.persisted;
+    const result = await this.db
+      .updateTable("ViewState")
+      .set({ lastOrdinal: to, lastOperationTimestamp: new Date() })
+      .where("readModelId", "=", this.config.readModelId)
+      .where("lastOrdinal", "=", expected)
+      .executeTakeFirst();
+
+    if (Number(result.numUpdatedRows) > 0) {
+      this.persisted = to;
+      this.advanceCursor(to);
+      return;
+    }
+
+    const stored = await this.loadState();
+    if (stored === undefined) {
+      await this.initializeState(0);
+      this.lowered(0);
+      return;
+    }
+    if (stored < this.cursor.appliedThrough) {
+      this.lowered(stored);
+      return;
+    }
+    this.persisted = stored;
+    this.advanceCursor(Math.min(to, stored));
+  }
+
+  private advanceCursor(to: number): void {
+    const before = this.cursor.appliedThrough;
+    this.cursor.advance(to);
+    if (this.cursor.appliedThrough > before) {
+      this.onCursorAdvanced(this.cursor.appliedThrough);
+    }
+  }
+
+  private lowered(to: number): void {
+    this.catchUpLogger.info(
+      "@consumer cursor lowered externally from @old to @new; replaying",
+      this.consumerId,
+      this.cursor.appliedThrough,
+      to,
+    );
+    this.resetCursor(to);
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.2.2-dev.87",
+  "version": "6.2.3-dev.43",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -37,7 +37,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/codegen",
     "test": "vitest --run",
     "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
     "build": "tsdown"
@@ -64,8 +64,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@pnpm/find-workspace-dir": "^1000.1.5",
-    "@pnpm/find-workspace-packages": "^6.0.9",
     "@powerhousedao/document-engineering": "catalog:",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/npm-registry-fetch": "^8.0.9",

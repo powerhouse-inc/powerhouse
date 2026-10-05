@@ -1,9 +1,3 @@
-/**
- * A GraphQLManager over mock HTTP and gateway adapters, so a test runs without
- * real HTTP or GraphQL servers. The mount() spy captures each FetchHandler, so
- * a test can call a registered handler directly through the Fetch API.
- */
-
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
   IReactorClient,
@@ -12,23 +6,47 @@ import type {
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import { gql } from "graphql-tag";
 import type http from "node:http";
 import { vi } from "vitest";
 import type { WebSocketServer } from "ws";
-import type { AuthFetchMiddleware } from "../../src/graphql/gateway/auth-middleware.js";
+import { BaseSubgraph } from "../../src/graphql/base-subgraph.js";
+
+import {
+  createAuthFetchMiddleware,
+  type AuthFetchMiddleware,
+} from "../../src/graphql/gateway/auth-middleware.js";
+import type { IAuthorizationService } from "../../src/services/authorization.service.js";
+import type { IAttachmentClientProvider } from "../../src/services/authorized-attachment.service.js";
+import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type {
+  AdapterRouteHandle,
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
+  WsConnection,
   WsDisposer,
+  WsHandlers,
 } from "../../src/graphql/gateway/types.js";
-import type { RequireAuthFetchMiddleware } from "../../src/graphql/gateway/require-auth-middleware.js";
+import {
+  createRequireAuthFetchMiddleware,
+  type RequireAuthFetchMiddleware,
+} from "../../src/graphql/gateway/require-auth-middleware.js";
 import { GraphQLManager } from "../../src/graphql/graphql-manager.js";
-import type { Context, SubgraphClass } from "../../src/graphql/types.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../../src/services/authorization.service.js";
+import type {
+  Context,
+  ISubgraph,
+  SubgraphArgs,
+  SubgraphClass,
+} from "../../src/graphql/types.js";
+import type {
+  AuthContext,
+  AuthService,
+} from "../../src/services/auth.service.js";
 
 /** An ILogger whose methods are spies, for asserting on log calls. */
 export function makeHarnessLogger(): ILogger {
@@ -115,24 +133,32 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
 
 function makeMockHttpAdapter() {
   const mounts = new Map<string, FetchHandler>();
-  const handles = new Map<string, number>();
-  let nextHandle = 0;
+  const handles = new Map<string, AdapterRouteHandle>();
+  const disposed: AdapterRouteHandle[] = [];
+  const newHandle = (): AdapterRouteHandle => {
+    const handle: AdapterRouteHandle = {
+      dispose: vi.fn(() => {
+        disposed.push(handle);
+      }),
+    };
+    return handle;
+  };
   const adapter: IHttpAdapter = {
     setupMiddleware: vi.fn(),
     mount: vi.fn((p: string, h: FetchHandler) => {
       mounts.set(p, h);
-      handles.set(p, nextHandle);
-      return nextHandle++;
+      const handle = newHandle();
+      handles.set(p, handle);
+      return handle;
     }),
-    getRoute: vi.fn(() => nextHandle++),
+    getRoute: vi.fn(() => newHandle()),
     mountRawMiddleware: vi.fn(),
-    mountNodeRoute: vi.fn(() => nextHandle++),
-    unmount: vi.fn(),
+    mountNodeRoute: vi.fn(() => newHandle()),
     listen: vi.fn().mockResolvedValue({}),
     setupSentryErrorHandler: vi.fn(),
     handle: {},
   };
-  return { adapter, mounts, handles };
+  return { adapter, mounts, handles, disposed };
 }
 
 export type HarnessOptions = {
@@ -140,10 +166,17 @@ export type HarnessOptions = {
   enableDocumentModelSubgraphs?: boolean;
   reactorClient?: IReactorClient;
   logger?: ILogger;
+  authorizationService?: IAuthorizationService;
+  attachments?: IAttachmentClientProvider;
 };
 
 export function makeHarness(options: HarnessOptions = {}) {
-  const { adapter: httpAdapter, mounts, handles } = makeMockHttpAdapter();
+  const {
+    adapter: httpAdapter,
+    mounts,
+    handles,
+    disposed,
+  } = makeMockHttpAdapter();
   const gatewayAdapter = makeMockGatewayAdapter();
   const reactorClient = options.reactorClient ?? makeMockReactorClient();
   const httpServer = {} as http.Server;
@@ -152,36 +185,38 @@ export function makeHarness(options: HarnessOptions = {}) {
     setMaxListeners: vi.fn(),
   } as unknown as WebSocketServer;
 
-  const manager = new GraphQLManager(
-    options.path ?? "/",
+  const manager = new GraphQLManager({
+    path: options.path ?? "/",
     httpServer,
     wsServer,
     reactorClient,
-    {} as IRelationalDb,
-    {} as IAnalyticsStore,
-    {} as ISyncManager,
-    options.logger ?? makeHarnessLogger(),
+    relationalDb: {} as IRelationalDb,
+    analyticsStore: {} as IAnalyticsStore,
+    syncManager: {} as ISyncManager,
+    logger: options.logger ?? makeHarnessLogger(),
     httpAdapter,
     gatewayAdapter,
-    undefined, // authService
-    undefined, // documentPermissionService
-    {
+    featureFlags: {
       enableDocumentModelSubgraphs:
         options.enableDocumentModelSubgraphs ?? false,
     },
-    4001,
-    createAuthorizationService({
-      admins: [],
-      defaultProtection: false,
-      policy: AuthorizationPolicy.OPEN,
-    }),
-  );
+    port: 4001,
+    authorizationService:
+      options.authorizationService ??
+      createAuthorizationService({
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.OPEN,
+      }),
+    attachments: options.attachments,
+  });
 
   return {
     manager,
     httpAdapter,
     mounts,
     handles,
+    disposed,
     gatewayAdapter,
     reactorClient,
     httpServer,

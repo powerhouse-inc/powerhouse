@@ -1,5 +1,5 @@
 import {
-  browserBuildConfig,
+  buildBrowserBuildConfig,
   nodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
 import { execSync } from "node:child_process";
@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { build } from "tsdown";
 
 await build({
-  ...browserBuildConfig,
+  ...buildBrowserBuildConfig(),
   outDir: join("dist", "browser"),
 });
 

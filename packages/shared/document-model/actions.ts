@@ -24,9 +24,7 @@ import {
   DeleteOperationExampleInputSchema,
   DeleteOperationInputSchema,
   DeleteStateExampleInputSchema,
-  LoadStateActionInputSchema,
   MoveOperationInputSchema,
-  PruneActionInputSchema,
   RedoActionInputSchema,
   ReorderChangeLogItemsInputSchema,
   ReorderModuleOperationsInputSchema,
@@ -96,7 +94,6 @@ import type {
   DeleteOperationInput,
   DeleteStateExampleAction,
   DeleteStateExampleInput,
-  LoadStateAction,
   MoveOperationAction,
   MoveOperationInput,
   NOOPAction,
@@ -115,7 +112,6 @@ import type {
   ReorderOperationExamplesInput,
   ReorderStateExamplesAction,
   ReorderStateExamplesInput,
-  SchemaPruneAction,
   SetAuthorNameAction,
   SetAuthorNameInput,
   SetAuthorWebsiteAction,
@@ -196,47 +192,6 @@ export const redo = (count = 1, scope = "global") =>
     undefined,
     RedoActionInputSchema,
     scope,
-  );
-
-/**
- * Joins multiple operations into a single {@link loadState | LOAD_STATE} operation.
- *
- * @remarks
- * Useful to keep operations history smaller. Operations to prune are selected by index,
- * similar to the {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice | slice} method in Arrays.
- *
- * @param start - Index of the first operation to prune
- * @param end - Index of the last operation to prune
- * @category Actions
- */
-export const prune = (start?: number, end?: number, scope = "global") =>
-  createAction<SchemaPruneAction>(
-    "PRUNE",
-    { start, end },
-    undefined,
-    PruneActionInputSchema,
-    scope,
-  );
-
-/**
- * Replaces the state of the document.
- *
- * @remarks
- * This action shouldn't be used directly. It is dispatched by the {@link prune} action.
- *
- * @param state - State to be set in the document.
- * @param operations - Number of operations that were removed from the previous state.
- * @category Actions
- */
-export const loadState = <TState extends PHBaseState = PHBaseState>(
-  state: TState & { name: string },
-  operations: number,
-) =>
-  createAction<LoadStateAction>(
-    "LOAD_STATE",
-    { state, operations },
-    undefined,
-    LoadStateActionInputSchema,
   );
 
 export const noop = (scope = "global") =>
@@ -398,6 +353,7 @@ export async function buildOperationSignature(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
+/** @deprecated Emits a legacy SHA-1 tuple; sign through `ISigner.signAction`. */
 export async function buildSignedAction<
   TState extends PHBaseState = PHBaseState,
 >(
@@ -441,6 +397,7 @@ export async function buildSignedAction<
   return operationWithContext(operation, actionContext);
 }
 
+/** @deprecated Use `verifyActionSignature` from `@powerhousedao/reactor`. */
 export async function verifyOperationSignature(
   signature: Signature,
   signer: Omit<ActionSigner, "signatures">,
@@ -893,8 +850,6 @@ export const baseActions = {
   setPreferredEditor,
   undo,
   redo,
-  prune,
-  loadState,
   noop,
 };
 

@@ -1,6 +1,7 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
+  ISigner,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +10,7 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorClientModule } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 /**
  * Integration tests for ReactorClient subscriptions.
@@ -21,6 +23,7 @@ import { JobStatus } from "../../src/shared/types.js";
  */
 describe("ReactorClient Subscription Integration Tests", () => {
   let module: InProcessReactorClientModule;
+  let signer: ISigner;
 
   async function waitForJobCompletion(jobId: string): Promise<void> {
     await vi.waitUntil(
@@ -36,11 +39,13 @@ describe("ReactorClient Subscription Integration Tests", () => {
   }
 
   beforeEach(async () => {
+    signer = (await TestP256Signer.create()).asISigner();
     const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner(signer)
       .buildModule();
   });
 
@@ -58,7 +63,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       );
 
       const document = driveDocumentModelModule.utils.createDocument();
-      const jobInfo = await module.reactor.create(document);
+      const jobInfo = await module.reactor.create(document, signer);
 
       await waitForJobCompletion(jobInfo.id);
 
@@ -84,7 +89,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       );
 
       const document = driveDocumentModelModule.utils.createDocument();
-      const jobInfo = await module.reactor.create(document);
+      const jobInfo = await module.reactor.create(document, signer);
 
       await waitForJobCompletion(jobInfo.id);
 
@@ -116,7 +121,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       );
 
       const document = driveDocumentModelModule.utils.createDocument();
-      const jobInfo = await module.reactor.create(document);
+      const jobInfo = await module.reactor.create(document, signer);
 
       await waitForJobCompletion(jobInfo.id);
 
@@ -140,7 +145,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       );
 
       const document1 = driveDocumentModelModule.utils.createDocument();
-      const job1 = await module.reactor.create(document1);
+      const job1 = await module.reactor.create(document1, signer);
       await waitForJobCompletion(job1.id);
 
       const callCountAfterFirst = callback.mock.calls.length;
@@ -148,7 +153,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       unsubscribe();
 
       const document2 = driveDocumentModelModule.utils.createDocument();
-      const job2 = await module.reactor.create(document2);
+      const job2 = await module.reactor.create(document2, signer);
       await waitForJobCompletion(job2.id);
 
       expect(callback.mock.calls.length).toBe(callCountAfterFirst);
@@ -169,7 +174,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       );
 
       const document = driveDocumentModelModule.utils.createDocument();
-      const jobInfo = await module.reactor.create(document);
+      const jobInfo = await module.reactor.create(document, signer);
 
       await waitForJobCompletion(jobInfo.id);
 
@@ -198,7 +203,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
 
       // Create document first
       const document = driveDocumentModelModule.utils.createDocument();
-      const createJob = await module.reactor.create(document);
+      const createJob = await module.reactor.create(document, signer);
       await waitForJobCompletion(createJob.id);
 
       const createCallCount = eventReceived.mock.calls.length;
@@ -232,7 +237,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
 
       // Create document first
       const document = driveDocumentModelModule.utils.createDocument();
-      const createJob = await module.reactor.create(document);
+      const createJob = await module.reactor.create(document, signer);
       await waitForJobCompletion(createJob.id);
 
       // Clear to track update

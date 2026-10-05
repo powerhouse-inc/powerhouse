@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeCompositeCursor } from "../../src/client/cursor.js";
 import { ReactorClient } from "../../src/client/reactor-client.js";
 import { resolveFeatureFlags } from "../../src/core/feature-flags.js";
+import { topologicalSort } from "../../src/core/utils.js";
 import type { IReadGate } from "../../src/decision/read-gate.js";
 import {
   BareReadGate,
@@ -21,11 +22,21 @@ import {
 } from "../../src/decision/read-gate.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { DocumentChangeType } from "../../src/client/types.js";
-import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
+import type {
+  BatchExecutionResult,
+  ExecutionJobPlan,
+  IReactor,
+} from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
+import {
+  DocumentNotFoundError,
+  DocumentPurgedError,
+  RelationshipNotFoundError,
+} from "../../src/shared/errors.js";
 import {
   JobStatus,
   PropagationMode,
+  RelationshipChangeType,
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
@@ -35,6 +46,7 @@ import type {
   IDocumentView,
 } from "../../src/storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
+import type { Job } from "../../src/queue/types.js";
 import {
   createEmptyConsistencyToken,
   createMockDocumentIndexer,
@@ -43,6 +55,7 @@ import {
   createMockLogger,
   createMockSigner,
   createMockSubscriptionManager,
+  createTestQueue,
 } from "../factories.js";
 
 function mockOperation(index: number): Operation {
@@ -110,7 +123,16 @@ describe("ReactorClient Unit Tests", () => {
       execute: vi.fn(),
       executeBatch: vi.fn(),
       addRelationship: vi.fn(),
+      updateRelationship: vi.fn(),
       removeRelationship: vi.fn(),
+      getOutgoingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
+      getIncomingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       deleteDocument: vi.fn(),
       getJobStatus: vi.fn(),
       create: vi.fn(),
@@ -858,6 +880,56 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
+  describe("createAsync", () => {
+    it("submits the create batch and returns it without waiting", async () => {
+      const document = createMockPHDocument("doc-1");
+      const batchResult: BatchExecutionResult = {
+        jobs: {
+          create: {
+            id: "job-1",
+            documentId: "doc-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1", "job-2"] },
+          },
+          parent: {
+            id: "job-2",
+            documentId: "parent-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1", "job-2"] },
+          },
+        },
+      };
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue(batchResult);
+
+      const result = await client.createAsync(document, "parent-1");
+
+      expect(result).toBe(batchResult);
+      expect(mockReactor.executeBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "create",
+              documentId: "doc-1",
+              dependsOn: [],
+            }),
+            expect.objectContaining({
+              key: "parent",
+              documentId: "parent-1",
+              dependsOn: ["create"],
+            }),
+          ],
+        },
+        undefined,
+      );
+      expect(mockJobAwaiter.waitForJob).not.toHaveBeenCalled();
+      expect(mockReactor.get).not.toHaveBeenCalled();
+    });
+  });
+
   describe("execute", () => {
     it("should sign actions and call reactor.execute, wait for job, and return document", async () => {
       const documentId = "doc-1";
@@ -902,7 +974,11 @@ describe("ReactorClient Unit Tests", () => {
 
       const result = await client.execute(documentId, "main", actions);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        undefined,
+      );
       expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
@@ -969,7 +1045,11 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.execute(documentId, "main", actions, signal);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], signal);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        signal,
+      );
     });
 
     it("should sign multiple actions", async () => {
@@ -1006,8 +1086,16 @@ describe("ReactorClient Unit Tests", () => {
       await client.execute(documentId, "main", actions);
 
       expect(mockSigner.signAction).toHaveBeenCalledTimes(2);
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[1], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        undefined,
+      );
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[1],
+        { documentId, branch: "main" },
+        undefined,
+      );
     });
 
     it("should pass view and signal parameters", async () => {
@@ -1066,7 +1154,11 @@ describe("ReactorClient Unit Tests", () => {
 
       const result = await client.executeAsync(documentId, "main", actions);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        undefined,
+      );
       expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
@@ -1120,7 +1212,11 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.executeAsync(documentId, "main", actions, signal);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], signal);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        signal,
+      );
     });
   });
 
@@ -1164,6 +1260,7 @@ describe("ReactorClient Unit Tests", () => {
         sourceId,
         targetId,
         "child",
+        undefined,
         "main",
         mockSigner,
         undefined,
@@ -1244,10 +1341,33 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("deleteDocument", () => {
-    it("should pass signer to reactor.deleteDocument and wait for job", async () => {
-      const documentId = "doc-1";
+  describe("updateRelationship", () => {
+    const existingEdge = {
+      sourceId: "upd-parent",
+      targetId: "upd-child",
+      relationshipType: "child",
+      metadata: { order: 1 },
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
 
+    it("rejects, without dispatching, when the edge does not exist", async () => {
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockResolvedValue(
+        {
+          results: [],
+          options: { cursor: "0", limit: 1 },
+        },
+      );
+
+      await expect(
+        client.updateRelationship("upd-parent", "upd-child", "child", {
+          order: 2,
+        }),
+      ).rejects.toThrow(RelationshipNotFoundError);
+      expect(mockReactor.updateRelationship).not.toHaveBeenCalled();
+    });
+
+    it("dispatches when the edge exists", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
         documentId: "test-doc",
@@ -1256,98 +1376,548 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
+      const completedJobInfo: JobInfo = {
+        ...jobInfo,
+        status: JobStatus.READ_READY,
+      };
 
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockResolvedValue(
+        {
+          results: [existingEdge],
+          options: { cursor: "0", limit: 1 },
+        },
+      );
+      vi.mocked(mockReactor.updateRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
 
-      await client.deleteDocument(documentId);
+      await client.updateRelationship("upd-parent", "upd-child", "child", {
+        order: 2,
+      });
 
-      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
-        documentId,
+      expect(mockReactor.updateRelationship).toHaveBeenCalledWith(
+        "upd-parent",
+        "upd-child",
+        "child",
+        { order: 2 },
+        "main",
         mockSigner,
         undefined,
       );
-      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
-        "job-1",
+    });
+  });
+
+  describe("moveRelationship metadata carry", () => {
+    const jobInfo: JobInfo = {
+      id: "job-1",
+      documentId: "test-doc",
+      status: JobStatus.PENDING,
+      createdAtUtcIso: new Date().toISOString(),
+      consistencyToken: createEmptyConsistencyToken(),
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
+    };
+
+    it("propagates a failed metadata read without removing the edge", async () => {
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockRejectedValue(
+        new Error("read side unavailable"),
+      );
+
+      await expect(
+        client.moveRelationship("source-1", "target-1", "child-1", "child"),
+      ).rejects.toThrow("read side unavailable");
+      expect(mockReactor.removeRelationship).not.toHaveBeenCalled();
+    });
+
+    it("reads the edge with one directed query rather than paging the source", async () => {
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockResolvedValue(
+        {
+          results: [
+            {
+              sourceId: "source-1",
+              targetId: "child-1",
+              relationshipType: "child",
+              metadata: { order: 7 },
+              createdAt: new Date(0),
+              updatedAt: new Date(0),
+            },
+          ],
+          options: { cursor: "0", limit: 1 },
+        },
+      );
+      vi.mocked(mockReactor.removeRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.addRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue({
+        ...jobInfo,
+        status: JobStatus.READ_READY,
+      });
+
+      await client.moveRelationship("source-1", "target-1", "child-1", "child");
+
+      expect(
+        mockDocumentIndexer.getDirectedRelationships,
+      ).toHaveBeenCalledTimes(1);
+      expect(mockDocumentIndexer.getDirectedRelationships).toHaveBeenCalledWith(
+        "source-1",
+        "child-1",
+        ["child"],
+        { cursor: "0", limit: 1 },
+        undefined,
+        undefined,
+      );
+      expect(mockDocumentIndexer.getOutgoing).not.toHaveBeenCalled();
+      expect(mockReactor.addRelationship).toHaveBeenCalledWith(
+        "target-1",
+        "child-1",
+        "child",
+        { order: 7 },
+        "main",
+        mockSigner,
+        undefined,
+      );
+    });
+  });
+
+  describe("relationship edge gating", () => {
+    function edgeBetween(sourceId: string, targetId: string) {
+      return {
+        sourceId,
+        targetId,
+        relationshipType: "child",
+        metadata: { order: 1 },
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+      };
+    }
+
+    function documentWithScopes(id: string, scopes: string[]): PHDocument {
+      return {
+        header: { id, documentType: "test", branch: "main" },
+        state: Object.fromEntries(scopes.map((scope) => [scope, {}])),
+        initialState: {},
+      } as unknown as PHDocument;
+    }
+
+    /** A gate that refuses every domain scope of one named document. */
+    function clientRefusing(refusedId: string): IReactorClient {
+      const gate: IReadGate = {
+        scopePredicate: (document) =>
+          Promise.resolve((scope: string) =>
+            document.header.id === refusedId
+              ? scope === "auth" || scope === "document"
+              : true,
+          ),
+      };
+      return new ReactorClient(
+        createMockLogger(),
+        mockReactor,
+        mockSigner,
+        mockSubscriptionManager,
+        mockJobAwaiter,
+        mockDocumentIndexer,
+        mockDocumentView,
+        gate,
+      );
+    }
+
+    it("withholds an outgoing edge whose far end refuses every domain scope", async () => {
+      vi.mocked(mockReactor.getOutgoingRelationshipEdges).mockResolvedValue({
+        results: [
+          edgeBetween("p", "visible"),
+          edgeBetween("p", "hidden"),
+          edgeBetween("p", "absent"),
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          documentWithScopes("visible", ["auth", "document", "global"]),
+          documentWithScopes("hidden", ["auth", "document", "global"]),
+        ],
+        options: { cursor: "0", limit: 3 },
+      });
+
+      const result = await clientRefusing(
+        "hidden",
+      ).getOutgoingRelationshipEdges("p", "child");
+
+      expect(result.results.map((edge) => edge.targetId)).toEqual([
+        "visible",
+        "absent",
+      ]);
+      expect(mockReactor.find).toHaveBeenCalledWith(
+        { ids: ["visible", "hidden", "absent"] },
+        { subject: undefined, branch: undefined },
+        { cursor: "0", limit: 3 },
+        undefined,
         undefined,
       );
     });
 
-    it("should pass signer and signal parameters", async () => {
-      const documentId = "doc-1";
+    it("withholds an outgoing edge whose far end holds no domain scope yet", async () => {
+      vi.mocked(mockReactor.getOutgoingRelationshipEdges).mockResolvedValue({
+        results: [edgeBetween("p", "meta-only")],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [documentWithScopes("meta-only", ["auth", "document"])],
+        options: { cursor: "0", limit: 1 },
+      });
+
+      const refused = await clientRefusing(
+        "meta-only",
+      ).getOutgoingRelationshipEdges("p", "child");
+      const allowed = await clientRefusing(
+        "other",
+      ).getOutgoingRelationshipEdges("p", "child");
+
+      expect(refused.results).toHaveLength(0);
+      expect(allowed.results).toHaveLength(1);
+    });
+
+    it("withholds an incoming edge whose far end refuses every domain scope", async () => {
+      vi.mocked(mockReactor.getIncomingRelationshipEdges).mockResolvedValue({
+        results: [
+          edgeBetween("readable-parent", "c"),
+          edgeBetween("hidden-parent", "c"),
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          documentWithScopes("readable-parent", ["auth", "document", "global"]),
+          documentWithScopes("hidden-parent", ["auth", "document", "global"]),
+        ],
+        options: { cursor: "0", limit: 2 },
+      });
+
+      const result = await clientRefusing(
+        "hidden-parent",
+      ).getIncomingRelationshipEdges("c", "child");
+
+      expect(result.results.map((edge) => edge.sourceId)).toEqual([
+        "readable-parent",
+      ]);
+    });
+
+    // Its model declares domain scopes the read model has not indexed yet.
+    it("judges a listed document holding no domain scope yet on the declared ones", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [documentWithScopes("meta-only", ["auth", "document"])],
+        options: { cursor: "0", limit: 10 },
+      });
+
+      const refused = await clientRefusing("meta-only").find({
+        ids: ["meta-only"],
+      });
+      const allowed = await clientRefusing("other").find({
+        ids: ["meta-only"],
+      });
+
+      expect(refused.results).toHaveLength(0);
+      expect(allowed.results.map((d) => d.header.id)).toEqual(["meta-only"]);
+    });
+
+    it("lists a document handed over with no state at all", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          {
+            header: { id: "stateless", documentType: "test", branch: "main" },
+          } as unknown as PHDocument,
+        ],
+        options: { cursor: "0", limit: 10 },
+      });
+
+      const listed = await clientRefusing("stateless").find({
+        ids: ["stateless"],
+      });
+
+      expect(listed.results.map((d) => d.header.id)).toEqual(["stateless"]);
+    });
+  });
+
+  describe("deleteDocument", () => {
+    function edge(sourceId: string, targetId: string) {
+      return {
+        sourceId,
+        targetId,
+        relationshipType: "child",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+
+    function givenIncoming(incoming: Record<string, string[]>): void {
+      vi.mocked(mockDocumentIndexer.getIncoming).mockImplementation((id) =>
+        Promise.resolve({
+          results: (incoming[id] ?? []).map((source) => edge(source, id)),
+          options: { cursor: "0", limit: 100 },
+        }),
+      );
+    }
+
+    function batchJobsEcho(): void {
+      vi.mocked(mockReactor.executeBatch).mockImplementation((request) =>
+        Promise.resolve({
+          jobs: Object.fromEntries(
+            request.jobs.map((plan) => [
+              plan.key,
+              {
+                id: plan.key,
+                documentId: plan.documentId,
+                status: JobStatus.PENDING,
+                createdAtUtcIso: new Date().toISOString(),
+                consistencyToken: createEmptyConsistencyToken(),
+                meta: { batchId: "test", batchJobIds: [plan.key] },
+              } satisfies JobInfo,
+            ]),
+          ),
+        }),
+      );
+    }
+
+    function submittedPlans(): ExecutionJobPlan[] {
+      expect(mockReactor.executeBatch).toHaveBeenCalledTimes(1);
+      return vi.mocked(mockReactor.executeBatch).mock.calls[0][0].jobs;
+    }
+
+    function label(plan: ExecutionJobPlan): string {
+      if (plan.key.startsWith("delete:")) return plan.key;
+      const input = plan.actions[0].input as {
+        sourceId: string;
+        targetId: string;
+      };
+      return `${input.sourceId}->${input.targetId}`;
+    }
+
+    /** Each document's queue in the order executeBatch enqueues it. */
+    function queues(plans: ExecutionJobPlan[]): Record<string, string[]> {
+      const byKey = new Map(plans.map((plan) => [plan.key, plan]));
+      const result: Record<string, string[]> = {};
+      for (const key of topologicalSort(plans)) {
+        const plan = byKey.get(key)!;
+        (result[plan.documentId] ??= []).push(label(plan));
+      }
+      return result;
+    }
+
+    function dependencies(plans: ExecutionJobPlan[]): Record<string, string[]> {
+      return Object.fromEntries(
+        plans.map((plan) => [label(plan), plan.dependsOn]),
+      );
+    }
+
+    it("submits a signed delete as a batch and waits for it", async () => {
+      batchJobsEcho();
+
+      await client.deleteDocument("doc-1");
+
+      const plans = submittedPlans();
+      expect(plans).toHaveLength(1);
+      expect(plans[0]).toMatchObject({
+        key: "delete:doc-1",
+        documentId: "doc-1",
+        scope: "document",
+        branch: "main",
+        dependsOn: [],
+      });
+      expect(plans[0].actions[0].type).toBe("DELETE_DOCUMENT");
+      expect(mockSigner.signAction).toHaveBeenCalledTimes(1);
+      expect(plans[0].actions[0].context?.signer).toBeDefined();
+      expect(mockReactor.deleteDocument).not.toHaveBeenCalled();
+      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
+        "delete:doc-1",
+        undefined,
+      );
+    });
+
+    it("passes the signal to the batch and the waits", async () => {
+      batchJobsEcho();
       const signal = new AbortController().signal;
 
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        documentId: "test-doc",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-1"] },
-      };
+      await client.deleteDocument("doc-1", PropagationMode.None, signal);
 
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
-
-      await client.deleteDocument(documentId, PropagationMode.None, signal);
-
-      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
-        documentId,
-        mockSigner,
+      expect(mockReactor.executeBatch).toHaveBeenCalledWith(
+        expect.anything(),
         signal,
       );
-      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
+      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
+        "delete:doc-1",
+        signal,
+      );
     });
 
-    it("should pass signer and cascade delete children when propagate is Cascade", async () => {
-      const parentId = "parent-1";
-      const childId = "child-1";
-      const signal = new AbortController().signal;
+    it("orders each incoming removal after its target's delete", async () => {
+      batchJobsEcho();
+      givenIncoming({ "doc-1": ["drive-1"] });
 
-      const parentJobInfo: JobInfo = {
-        id: "job-parent",
-        documentId: "test-doc",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-parent"] },
-      };
+      await client.deleteDocument("doc-1");
 
-      const childJobInfo: JobInfo = {
-        id: "job-child",
-        documentId: "test-doc",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-child"] },
-      };
-
-      vi.mocked(mockDocumentIndexer.getOrphanedChildren).mockResolvedValue([
-        childId,
+      const plans = submittedPlans();
+      expect(plans.map((plan) => [plan.documentId, plan.dependsOn])).toEqual([
+        ["doc-1", []],
+        ["drive-1", ["delete:doc-1"]],
       ]);
+      expect(plans[1].scope).toBe("document");
+      expect(plans[1].actions[0].type).toBe("REMOVE_RELATIONSHIP");
+      expect(plans[1].actions[0].input).toMatchObject({
+        sourceId: "drive-1",
+        targetId: "doc-1",
+        relationshipType: "child",
+      });
+    });
 
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValue(childJobInfo);
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(childJobInfo);
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(
-        parentJobInfo,
-      );
+    it("cascades children first, each removal after its target's delete", async () => {
+      batchJobsEcho();
+      const signal = new AbortController().signal;
+      givenIncoming({
+        "drive-1": ["outside"],
+        "child-1": ["drive-1"],
+        "child-2": ["drive-1"],
+        "grandchild-1": ["child-1"],
+      });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["child-1", "child-2"])
+        .mockResolvedValueOnce(["child-1", "child-2", "grandchild-1"])
+        .mockResolvedValueOnce(["child-1", "child-2", "grandchild-1"]);
 
-      await client.deleteDocument(parentId, PropagationMode.Cascade, signal);
+      await client.deleteDocument("drive-1", PropagationMode.Cascade, signal);
 
       expect(mockDocumentIndexer.getOrphanedChildren).toHaveBeenCalledWith(
-        [parentId],
+        ["drive-1"],
         ["child"],
         signal,
       );
-      expect(mockReactor.deleteDocument).toHaveBeenCalledTimes(2);
-      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
-        childId,
-        mockSigner,
-        signal,
+      const plans = submittedPlans();
+      expect(queues(plans)).toEqual({
+        "grandchild-1": ["delete:grandchild-1"],
+        "child-1": ["child-1->grandchild-1", "delete:child-1"],
+        "child-2": ["delete:child-2"],
+        "drive-1": ["drive-1->child-2", "drive-1->child-1", "delete:drive-1"],
+        outside: ["outside->drive-1"],
+      });
+      expect(dependencies(plans)).toMatchObject({
+        "child-1->grandchild-1": ["delete:grandchild-1"],
+        "drive-1->child-1": ["delete:child-1"],
+        "drive-1->child-2": ["delete:child-2"],
+        "outside->drive-1": ["delete:drive-1"],
+      });
+      expect(mockReactor.deleteDocument).not.toHaveBeenCalled();
+      expect(mockReactor.removeRelationship).not.toHaveBeenCalled();
+      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledTimes(plans.length);
+    });
+
+    it("runs a nested drive's own removals before its delete", async () => {
+      batchJobsEcho();
+      givenIncoming({
+        "drive-n": ["drive-r"],
+        "doc-k": ["drive-r"],
+        "doc-m": ["drive-n"],
+      });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["drive-n", "doc-k"])
+        .mockResolvedValueOnce(["drive-n", "doc-k", "doc-m"])
+        .mockResolvedValueOnce(["drive-n", "doc-k", "doc-m"]);
+
+      await client.deleteDocument("drive-r", PropagationMode.Cascade);
+
+      const plans = submittedPlans();
+      expect(queues(plans)).toEqual({
+        "doc-m": ["delete:doc-m"],
+        "drive-n": ["drive-n->doc-m", "delete:drive-n"],
+        "doc-k": ["delete:doc-k"],
+        "drive-r": ["drive-r->doc-k", "drive-r->drive-n", "delete:drive-r"],
+      });
+      expect(dependencies(plans)).toMatchObject({
+        "drive-n->doc-m": ["delete:doc-m"],
+        "drive-r->doc-k": ["delete:doc-k"],
+        "drive-r->drive-n": ["delete:drive-n"],
+      });
+    });
+
+    /** Drains plans through the real queue, retrying the named job once. */
+    async function drainRetrying(
+      plans: ExecutionJobPlan[],
+      retryOnce: string,
+    ): Promise<string[]> {
+      const queue = createTestQueue();
+      const byKey = new Map(plans.map((plan) => [plan.key, plan]));
+      for (const key of topologicalSort(plans)) {
+        const plan = byKey.get(key)!;
+        const job: Job = {
+          id: plan.key,
+          kind: "mutation",
+          documentId: plan.documentId,
+          scope: plan.scope,
+          branch: plan.branch,
+          actions: plan.actions,
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: plan.dependsOn,
+          maxRetries: 3,
+          errorHistory: [],
+          meta: { batchId: "batch", batchJobIds: [] },
+        };
+        await queue.enqueue(job);
+      }
+      const ran: string[] = [];
+      let retried = false;
+      for (;;) {
+        const handle = await queue.dequeueNext();
+        if (!handle) break;
+        handle.start();
+        if (handle.job.id === retryOnce && !retried) {
+          retried = true;
+          await queue.retryJob(handle.job.id);
+          continue;
+        }
+        ran.push(label(byKey.get(handle.job.id)!));
+        handle.complete();
+      }
+      expect(await queue.hasJobs(), "queue drained").toBe(false);
+      return ran;
+    }
+
+    it("cannot deadlock when a delete in a cycle is retried", async () => {
+      batchJobsEcho();
+      givenIncoming({ root: ["child"], child: ["root"] });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["child"])
+        .mockResolvedValueOnce(["child"]);
+
+      await client.deleteDocument("root", PropagationMode.Cascade);
+
+      const ran = await drainRetrying(submittedPlans(), "delete:child");
+      expect(ran).toHaveLength(4);
+      expect(ran.indexOf("child->root")).toBeLessThan(
+        ran.indexOf("delete:child"),
       );
-      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
-        parentId,
-        mockSigner,
-        signal,
+      expect(ran.indexOf("delete:child")).toBeLessThan(
+        ran.indexOf("root->child"),
       );
+      expect(ran.indexOf("root->child")).toBeLessThan(
+        ran.indexOf("delete:root"),
+      );
+    });
+
+    it("gives an edge back into the root no dependency", async () => {
+      batchJobsEcho();
+      givenIncoming({ root: ["child"], child: ["root"] });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["child"])
+        .mockResolvedValueOnce(["child"]);
+
+      await client.deleteDocument("root", PropagationMode.Cascade);
+
+      const plans = submittedPlans();
+      expect(queues(plans)).toEqual({
+        child: ["child->root", "delete:child"],
+        root: ["root->child", "delete:root"],
+      });
+      expect(dependencies(plans)).toEqual({
+        "child->root": [],
+        "delete:child": [],
+        "root->child": ["delete:child"],
+        "delete:root": [],
+      });
     });
   });
 
@@ -1717,25 +2287,21 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when deleteDocument job fails", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
-        documentId: "test-doc",
+        documentId: "doc-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
-      const failedJobInfo: JobInfo = {
-        id: "job-1",
-        documentId: "test-doc",
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue({
+        jobs: { "delete:doc-1": jobInfo },
+      });
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue({
+        ...jobInfo,
         status: JobStatus.FAILED,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-1"] },
         error: { name: "Error", message: "Delete document failed", stack: "" },
-      };
-
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
-      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+      });
 
       await expect(client.deleteDocument("doc-1")).rejects.toThrow(
         "Delete document failed",
@@ -1743,69 +2309,37 @@ describe("ReactorClient Unit Tests", () => {
     });
 
     it("should throw error when any cascade delete job fails", async () => {
-      const parentId = "parent-1";
-      const childId = "child-1";
-
-      const childJobInfo: JobInfo = {
-        id: "job-child",
-        documentId: "test-doc",
+      const pending = (id: string): JobInfo => ({
+        id,
+        documentId: id,
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-child"] },
-      };
-
-      const parentJobInfo: JobInfo = {
-        id: "job-parent",
-        documentId: "test-doc",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-parent"] },
-      };
-
-      const failedChildJobInfo: JobInfo = {
-        id: "job-child",
-        documentId: "test-doc",
-        status: JobStatus.FAILED,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-child"] },
-        error: { name: "Error", message: "Delete child failed", stack: "" },
-      };
-
-      const completedParentJobInfo: JobInfo = {
-        id: "job-parent",
-        documentId: "test-doc",
-        status: JobStatus.READ_READY,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-parent"] },
-      };
-
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
-        results: [
-          {
-            sourceId: parentId,
-            targetId: childId,
-            relationshipType: "child",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-        options: { cursor: "0", limit: 100 },
+        meta: { batchId: "test", batchJobIds: ["job-child", "job-parent"] },
       });
 
-      vi.mocked(mockReactor.deleteDocument)
-        .mockResolvedValueOnce(childJobInfo)
-        .mockResolvedValueOnce(parentJobInfo);
-
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren).mockResolvedValue([
+        "child-1",
+      ]);
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue({
+        jobs: {
+          "delete:child-1": pending("job-child"),
+          "delete:parent-1": pending("job-parent"),
+        },
+      });
       vi.mocked(mockJobAwaiter.waitForJob)
-        .mockResolvedValueOnce(failedChildJobInfo)
-        .mockResolvedValueOnce(completedParentJobInfo);
+        .mockResolvedValueOnce({
+          ...pending("job-child"),
+          status: JobStatus.FAILED,
+          error: { name: "Error", message: "Delete child failed", stack: "" },
+        })
+        .mockResolvedValueOnce({
+          ...pending("job-parent"),
+          status: JobStatus.READ_READY,
+        });
 
       await expect(
-        client.deleteDocument(parentId, PropagationMode.Cascade),
+        client.deleteDocument("parent-1", PropagationMode.Cascade),
       ).rejects.toThrow("Delete child failed");
     });
   });
@@ -1943,9 +2477,9 @@ describe("ReactorClient Unit Tests", () => {
       expect((filtered.initialState as any).local).toBeUndefined();
     });
 
-    it("keeps the auth scope in a scope-narrowed subscription fetch", async () => {
-      // Without it the fetch omits the policy, decide() reads an absent policy
-      // as uninitialized, and the gate allows everything.
+    it("fetches a scope-narrowed subscription whole, then narrows", async () => {
+      // A narrowed fetch could omit the policy or every domain scope, and
+      // withholding would be decided on neither.
       let onCreated: ((result: { results: string[] }) => void) | undefined;
       vi.mocked(mockSubscriptionManager.onDocumentCreated).mockImplementation(
         (handler: any) => {
@@ -1957,19 +2491,24 @@ describe("ReactorClient Unit Tests", () => {
         docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
       );
 
-      client.subscribe({} as any, () => {}, {
+      const callback = vi.fn();
+      client.subscribe({} as any, callback, {
         scopes: ["global"],
         subject: { address: "0xreader" },
       });
 
       onCreated?.({ results: ["d1"] });
 
-      await vi.waitFor(() => {
-        expect(mockReactor.get).toHaveBeenCalled();
-      });
+      await vi.waitFor(() => expect(callback).toHaveBeenCalled());
       const viewArg = vi.mocked(mockReactor.get).mock.calls[0][1];
-      expect(viewArg?.scopes).toContain("auth");
-      expect(viewArg?.scopes).toContain("global");
+      expect(viewArg?.scopes).toBeUndefined();
+      expect(viewArg?.subject).toEqual({ address: "0xreader" });
+      const event = callback.mock.calls[0][0] as { documents: PHDocument[] };
+      expect(Object.keys(event.documents[0].state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
     });
 
     it("falls back to the client's own signer when no subject is given", async () => {
@@ -2369,6 +2908,120 @@ describe("ReactorClient Unit Tests", () => {
         ]);
       });
 
+      it("delivers every readable id of a multi-document delete, gating each", async () => {
+        const deleted = vi.fn();
+        let fire: ((ids: string[]) => void) | undefined;
+        const manager = createMockSubscriptionManager({
+          onDocumentDeleted: vi.fn((cb: (ids: string[]) => void) => {
+            fire = cb;
+            return () => {};
+          }) as never,
+        });
+
+        const subscribing = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          manager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        const otherReaderPolicy = {
+          version: 1,
+          grants: [
+            {
+              id: "g-other",
+              description: "someone else reads global",
+              effect: "allow",
+              principal: { address: "0xother" },
+              capability: { can: "read", scope: "global" },
+            },
+          ],
+        };
+        vi.mocked(mockReactor.get).mockImplementation((id) =>
+          Promise.resolve(
+            docWithScopes(
+              id,
+              id === "d1" ? otherReaderPolicy : readGlobalPolicy,
+              { global: { x: 1 } },
+            ),
+          ),
+        );
+
+        subscribing.subscribe({}, deleted, {
+          subject: { address: "0xreader" },
+        });
+
+        fire?.(["d1", "d2", "d3"]);
+        await vi.waitFor(() => expect(deleted).toHaveBeenCalledTimes(2));
+
+        expect(deleted.mock.calls.map((call) => call[0])).toEqual([
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d2" },
+          },
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d3" },
+          },
+        ]);
+      });
+
+      it("marks a Deleted event purged when a purge marker applied it", async () => {
+        const deleted = vi.fn();
+        let fire:
+          | ((ids: string[], info?: { purged?: true }) => void)
+          | undefined;
+        const manager = createMockSubscriptionManager({
+          onDocumentDeleted: vi.fn(
+            (cb: (ids: string[], info?: { purged?: true }) => void) => {
+              fire = cb;
+              return () => {};
+            },
+          ) as never,
+        });
+
+        const subscribing = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          manager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        vi.mocked(mockReactor.get).mockImplementation((id) =>
+          Promise.reject(new DocumentPurgedError(id)),
+        );
+        vi.mocked(mockDocumentView.exists).mockResolvedValue([false]);
+
+        subscribing.subscribe({}, deleted, {
+          subject: { address: "0xreader" },
+        });
+
+        fire?.(["d1"], { purged: true });
+        fire?.(["d2"]);
+        await vi.waitFor(() => expect(deleted).toHaveBeenCalledTimes(2));
+
+        expect(deleted.mock.calls.map((call) => call[0])).toEqual([
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d1", purged: true },
+          },
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d2" },
+          },
+        ]);
+      });
+
       /**
        * Gating is asynchronous, so an event needing a slow group fetch can be
        * overtaken by the event behind it unless delivery is ordered.
@@ -2429,6 +3082,11 @@ describe("ReactorClient Unit Tests", () => {
             mockDocumentIndexer,
             mockDocumentView,
             gate,
+          );
+
+          // The delete is gated on the document read at its deletion boundary.
+          vi.mocked(mockReactor.get).mockResolvedValue(
+            docWithScopes("d1", readGlobalPolicy, { global: { x: 0 } }),
           );
 
           const unsubscribe = client.subscribe({}, callback, {
@@ -2554,6 +3212,81 @@ describe("ReactorClient Unit Tests", () => {
 
           await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
           expect(deliveredXs(callback)).toEqual([2]);
+        });
+      });
+
+      describe("gating a relationship event", () => {
+        function subscribeToRelationships(logger = createMockLogger()) {
+          const callback = vi.fn();
+          let fire:
+            | ((parentId: string, childId: string, type: string) => void)
+            | undefined;
+          const manager = createMockSubscriptionManager({
+            onRelationshipChanged: vi.fn((cb: typeof fire) => {
+              fire = cb;
+              return () => {};
+            }) as never,
+          });
+          const client = new ReactorClient(
+            logger,
+            mockReactor,
+            createMockSigner(),
+            manager,
+            mockJobAwaiter,
+            mockDocumentIndexer,
+            mockDocumentView,
+            new BareReadGate(),
+          );
+          client.subscribe({}, callback, { subject: { address: "0xreader" } });
+          return {
+            callback,
+            added: () =>
+              fire?.("parent", "child", RelationshipChangeType.Added),
+          };
+        }
+
+        it("reads parent and child concurrently", async () => {
+          const pending: string[] = [];
+          vi.mocked(mockReactor.get).mockImplementation((id: string) => {
+            pending.push(id);
+            return new Promise(() => {});
+          });
+          const { added } = subscribeToRelationships();
+
+          added();
+
+          await vi.waitFor(() =>
+            expect(pending.sort()).toEqual(["child", "parent"]),
+          );
+        });
+
+        it("surfaces the read's own error when the absence check fails too", async () => {
+          const logger = createMockLogger();
+          const failed = vi.spyOn(logger, "error");
+          const readFailure = new Error("read side unavailable");
+          vi.mocked(mockReactor.get).mockRejectedValue(readFailure);
+          vi.mocked(mockDocumentView.exists).mockRejectedValue(
+            new Error("existence check unavailable"),
+          );
+          const { callback, added } = subscribeToRelationships(logger);
+
+          added();
+
+          await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+          expect(failed.mock.calls[0][2]).toBe(readFailure);
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("delivers without an absence check for a document not found", async () => {
+          vi.mocked(mockReactor.get).mockRejectedValue(
+            new DocumentNotFoundError("child"),
+          );
+          const { callback, added } = subscribeToRelationships();
+
+          added();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalled());
+          expect(mockDocumentView.exists).not.toHaveBeenCalled();
         });
       });
     });

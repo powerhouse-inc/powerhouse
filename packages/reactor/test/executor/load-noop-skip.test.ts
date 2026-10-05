@@ -1,4 +1,7 @@
-import type { Operation } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelDocument,
+  Operation,
+} from "@powerhousedao/shared/document-model";
 import {
   addModule,
   deriveOperationId,
@@ -147,7 +150,7 @@ describe("the skip a load job leaves on a NOOP", () => {
     expect(sortedFirst?.skip).toBe(2);
   });
 
-  it("restores the marker skip when the reshuffle zeroed it", async () => {
+  it("leaves a re-appended local NOOP's skip at zero", async () => {
     const docId = await undoneDocument("noop-sorts-later");
 
     const localNoopId = (await globalOps(docId)).find(
@@ -155,9 +158,8 @@ describe("the skip a load job leaves on a NOOP", () => {
     )?.action.id;
     expect(localNoopId).toBeDefined();
 
-    // An ordinary operation sorts first this time and takes the batch skip, so
-    // the local NOOP is re-appended behind it with its skip zeroed like every
-    // other non-first write.
+    // An ordinary operation sorts first and takes the batch skip, which retires
+    // m0 as well. The NOOP that undid m0 is re-appended behind it.
     const load = await reactor.load(docId, "main", [
       incoming(docId, 0, {
         id: "incoming-module",
@@ -172,10 +174,12 @@ describe("the skip a load job leaves on a NOOP", () => {
       2,
     );
 
-    // Left at zero the marker would undo nothing: the rebuild reads the flag,
-    // not the count, and only treats a NOOP as a marker while the skip is
-    // positive. This is why the loop that restores it exists.
+    // m0 is not re-appended, so a positive skip would undo m1 in its place.
     const reappended = after.filter((op) => op.action.id === localNoopId).pop();
-    expect(reappended?.skip).toBe(1);
+    expect(reappended?.skip).toBe(0);
+    const document = await reactor.get<DocumentModelDocument>(docId);
+    expect(
+      document.state.global.specifications[0].modules.map((entry) => entry.id),
+    ).toEqual(["m1"]);
   });
 });

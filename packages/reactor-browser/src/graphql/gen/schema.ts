@@ -177,7 +177,6 @@ export type DocumentModelResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<DocumentModelGlobalState>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type DocumentOperationsFilterInput = {
@@ -189,6 +188,22 @@ export type DocumentOperationsFilterInput = {
   readonly timestampTo?: InputMaybe<Scalars["String"]["input"]>;
 };
 
+export type DocumentRelationship = {
+  readonly createdAt: Scalars["DateTime"]["output"];
+  readonly metadata?: Maybe<Scalars["JSONObject"]["output"]>;
+  readonly relationshipType: Scalars["String"]["output"];
+  readonly sourceId: Scalars["String"]["output"];
+  readonly targetId: Scalars["String"]["output"];
+  readonly updatedAt: Scalars["DateTime"]["output"];
+};
+
+export type DocumentRelationshipResultPage = {
+  readonly cursor?: Maybe<Scalars["String"]["output"]>;
+  readonly hasNextPage: Scalars["Boolean"]["output"];
+  readonly hasPreviousPage: Scalars["Boolean"]["output"];
+  readonly items: ReadonlyArray<DocumentRelationship>;
+};
+
 export type DocumentWithChildren = {
   readonly childIds: ReadonlyArray<Scalars["String"]["output"]>;
   readonly document: PhDocument;
@@ -197,7 +212,12 @@ export type DocumentWithChildren = {
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
-  readonly result: Scalars["JSONObject"]["output"];
+  /**
+   * What the job produced, once it has produced anything. Nullable for the same
+   * reason as `JobInfo.result`: a job that has not written yet has produced
+   * nothing, and an empty object would claim otherwise.
+   */
+  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly status: Scalars["String"]["output"];
 };
 
@@ -257,53 +277,66 @@ export type Mutation = {
   readonly renameDocument: PhDocument;
   readonly setPreferredEditor: PhDocument;
   readonly touchChannel: TouchChannelResult;
+  readonly updateRelationship: PhDocument;
 };
 
 export type MutationAddRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
+  metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationCreateDocumentArgs = {
   document: Scalars["JSONObject"]["input"];
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationCreateEmptyDocumentArgs = {
   documentType: Scalars["String"]["input"];
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationDeleteDocumentArgs = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  identifier?: InputMaybe<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
 };
 
 export type MutationDeleteDocumentsArgs = {
-  identifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  idsOrSlugs?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   propagate?: InputMaybe<PropagationMode>;
 };
 
 export type MutationExecuteArgs = {
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationExecuteAsyncArgs = {
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationMoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceParentIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
-  targetParentIdentifier: Scalars["String"]["input"];
+  sourceParentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceParentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetParentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetParentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationMutateDocumentArgs = {
@@ -320,29 +353,44 @@ export type MutationMutateDocumentAsyncArgs = {
 
 export type MutationPushSyncEnvelopesArgs = {
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRemoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRenameDocumentArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   name: Scalars["String"]["input"];
 };
 
 export type MutationSetPreferredEditorArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationTouchChannelArgs = {
   input: TouchChannelInput;
+};
+
+export type MutationUpdateRelationshipArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
+  relationshipType: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type OperationContext = {
@@ -385,7 +433,9 @@ export type OperationWithContextInput = {
 export type OperationsFilterInput = {
   readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
-  readonly documentId: Scalars["String"]["input"];
+  /** @deprecated Use documentIdOrSlug. */
+  readonly documentId?: InputMaybe<Scalars["String"]["input"]>;
+  readonly documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
   readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
@@ -415,7 +465,6 @@ export type PhDocumentResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<PhDocument>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type PagingInput = {
@@ -424,11 +473,32 @@ export type PagingInput = {
   readonly offset?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
+export type PeerAgreement = {
+  readonly collectionId: Scalars["String"]["output"];
+  readonly limitedBy: ReadonlyArray<PeerAgreementLimit>;
+  readonly local: Scalars["JSONObject"]["output"];
+  readonly members: ReadonlyArray<PeerAgreementMember>;
+};
+
+export type PeerAgreementLimit = {
+  readonly protocol: Scalars["String"]["output"];
+  readonly remoteNames: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
+export type PeerAgreementMember = {
+  readonly announced: Scalars["Boolean"]["output"];
+  readonly features: Scalars["JSONObject"]["output"];
+  readonly protocols: Scalars["JSONObject"]["output"];
+  readonly remoteName: Scalars["String"]["output"];
+};
+
 export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
   readonly hasMore: Scalars["Boolean"]["output"];
+  readonly manifestRevision?: Maybe<Scalars["String"]["output"]>;
+  readonly peerManifestRevision?: Maybe<Scalars["String"]["output"]>;
 };
 
 export enum PropagationMode {
@@ -438,9 +508,11 @@ export enum PropagationMode {
 
 export type Query = {
   readonly document?: Maybe<DocumentWithChildren>;
+  readonly documentIncomingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentIncomingRelationships: PhDocumentResultPage;
   readonly documentModels: DocumentModelResultPage;
   readonly documentOperations: ReactorOperationResultPage;
+  readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
@@ -472,6 +544,7 @@ export type Query = {
   readonly evaluateActions: ActionEvaluations;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
+  readonly peerAgreement: PeerAgreement;
   /**
    * Polls for sync envelopes from a channel.
    *
@@ -484,17 +557,28 @@ export type Query = {
    * would stop receiving those too.
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
+  readonly syncHolds: ReadonlyArray<SyncHold>;
 };
 
 export type QueryDocumentArgs = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  identifier?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryDocumentIncomingRelationshipEdgesArgs = {
+  paging?: InputMaybe<PagingInput>;
+  relationshipType?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -508,17 +592,27 @@ export type QueryDocumentOperationsArgs = {
   paging?: InputMaybe<PagingInput>;
 };
 
+export type QueryDocumentOutgoingRelationshipEdgesArgs = {
+  paging?: InputMaybe<PagingInput>;
+  relationshipType?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+};
+
 export type QueryDocumentOutgoingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryEvaluateActionsArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   candidates: ReadonlyArray<ActionCandidateInput>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryFindDocumentsArgs = {
@@ -531,10 +625,21 @@ export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
 };
 
+export type QueryPeerAgreementArgs = {
+  collectionId: Scalars["String"]["input"];
+};
+
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
+};
+
+export type QuerySyncHoldsArgs = {
+  documentId?: InputMaybe<Scalars["String"]["input"]>;
+  remoteName?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -553,7 +658,6 @@ export type ReactorOperationResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<ReactorOperation>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type ReactorSigner = {
@@ -614,6 +718,7 @@ export type Revision = {
 };
 
 export type SearchFilterInput = {
+  /** @deprecated Ignored. Filter by type or parentId. */
   readonly identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly parentId?: InputMaybe<Scalars["String"]["input"]>;
   readonly type?: InputMaybe<Scalars["String"]["input"]>;
@@ -656,16 +761,38 @@ export enum SyncEnvelopeType {
   Operations = "OPERATIONS",
 }
 
+export type SyncHold = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly heldAtUtcMs: Scalars["String"]["output"];
+  readonly reason: SyncHoldReason;
+  readonly remoteName: Scalars["String"]["output"];
+};
+
+export type SyncHoldReason = {
+  readonly peerSupports: ReadonlyArray<Scalars["Int"]["output"]>;
+  readonly protocol: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
+};
+
+export type SyncRefusalInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+  readonly kind?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type TouchChannelInput = {
   readonly collectionId: Scalars["String"]["input"];
   readonly filter: RemoteFilterInput;
   readonly id: Scalars["String"]["input"];
+  readonly manifest?: InputMaybe<Scalars["JSONObject"]["input"]>;
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
 };
 
 export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
 };
 
@@ -688,6 +815,15 @@ export type PhDocumentFieldsFragment = {
   }>;
 };
 
+export type DocumentRelationshipFieldsFragment = {
+  readonly sourceId: string;
+  readonly targetId: string;
+  readonly relationshipType: string;
+  readonly metadata?: NonNullable<unknown> | null | undefined;
+  readonly createdAt: string | Date;
+  readonly updatedAt: string | Date;
+};
+
 export type GetDocumentModelsQueryVariables = Exact<{
   namespace?: InputMaybe<Scalars["String"]["input"]>;
   paging?: InputMaybe<PagingInput>;
@@ -695,7 +831,6 @@ export type GetDocumentModelsQueryVariables = Exact<{
 
 export type GetDocumentModelsQuery = {
   readonly documentModels: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -757,7 +892,6 @@ export type GetDocumentWithOperationsQuery = {
           readonly lastModifiedAtUtcIso: string | Date;
           readonly operations?:
             | {
-                readonly totalCount: number;
                 readonly hasNextPage: boolean;
                 readonly hasPreviousPage: boolean;
                 readonly cursor?: string | null | undefined;
@@ -825,7 +959,6 @@ export type GetDocumentOutgoingRelationshipsQueryVariables = Exact<{
 
 export type GetDocumentOutgoingRelationshipsQuery = {
   readonly documentOutgoingRelationships: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -854,7 +987,6 @@ export type GetDocumentIncomingRelationshipsQueryVariables = Exact<{
 
 export type GetDocumentIncomingRelationshipsQuery = {
   readonly documentIncomingRelationships: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -874,6 +1006,52 @@ export type GetDocumentIncomingRelationshipsQuery = {
   };
 };
 
+export type GetDocumentOutgoingRelationshipEdgesQueryVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  relationshipType?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+  paging?: InputMaybe<PagingInput>;
+}>;
+
+export type GetDocumentOutgoingRelationshipEdgesQuery = {
+  readonly documentOutgoingRelationshipEdges: {
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly cursor?: string | null | undefined;
+    readonly items: ReadonlyArray<{
+      readonly sourceId: string;
+      readonly targetId: string;
+      readonly relationshipType: string;
+      readonly metadata?: NonNullable<unknown> | null | undefined;
+      readonly createdAt: string | Date;
+      readonly updatedAt: string | Date;
+    }>;
+  };
+};
+
+export type GetDocumentIncomingRelationshipEdgesQueryVariables = Exact<{
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+  paging?: InputMaybe<PagingInput>;
+}>;
+
+export type GetDocumentIncomingRelationshipEdgesQuery = {
+  readonly documentIncomingRelationshipEdges: {
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly cursor?: string | null | undefined;
+    readonly items: ReadonlyArray<{
+      readonly sourceId: string;
+      readonly targetId: string;
+      readonly relationshipType: string;
+      readonly metadata?: NonNullable<unknown> | null | undefined;
+      readonly createdAt: string | Date;
+      readonly updatedAt: string | Date;
+    }>;
+  };
+};
+
 export type FindDocumentsQueryVariables = Exact<{
   search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
@@ -882,7 +1060,6 @@ export type FindDocumentsQueryVariables = Exact<{
 
 export type FindDocumentsQuery = {
   readonly findDocuments: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -909,7 +1086,6 @@ export type GetDocumentOperationsQueryVariables = Exact<{
 
 export type GetDocumentOperationsQuery = {
   readonly documentOperations: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -1121,11 +1297,36 @@ export type AddRelationshipMutationVariables = Exact<{
   sourceIdentifier: Scalars["String"]["input"];
   targetIdentifier: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
+  metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type AddRelationshipMutation = {
   readonly addRelationship: {
+    readonly id: string;
+    readonly slug?: string | null | undefined;
+    readonly name: string;
+    readonly documentType: string;
+    readonly state: NonNullable<unknown>;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
+  };
+};
+
+export type UpdateRelationshipMutationVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
+  metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type UpdateRelationshipMutation = {
+  readonly updateRelationship: {
     readonly id: string;
     readonly slug?: string | null | undefined;
     readonly name: string;
@@ -1255,7 +1456,7 @@ export type JobChangesSubscription = {
   readonly jobChanges: {
     readonly jobId: string;
     readonly status: string;
-    readonly result: NonNullable<unknown>;
+    readonly result?: NonNullable<unknown> | null | undefined;
     readonly error?: string | null | undefined;
   };
 };
@@ -1264,12 +1465,16 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
   channelId: Scalars["String"]["input"];
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
 }>;
 
 export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
     readonly hasMore: boolean;
+    readonly manifestRevision?: string | null | undefined;
+    readonly peerManifestRevision?: string | null | undefined;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1350,11 +1555,13 @@ export type TouchChannelMutation = {
   readonly touchChannel: {
     readonly success: boolean;
     readonly ackOrdinal: number;
+    readonly manifest?: NonNullable<unknown> | null | undefined;
   };
 };
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type PushSyncEnvelopesMutation = { readonly pushSyncEnvelopes: boolean };
@@ -1374,6 +1581,16 @@ export const PhDocumentFieldsFragmentDoc = gql`
     lastModifiedAtUtcIso
   }
 `;
+export const DocumentRelationshipFieldsFragmentDoc = gql`
+  fragment DocumentRelationshipFields on DocumentRelationship {
+    sourceId
+    targetId
+    relationshipType
+    metadata
+    createdAt
+    updatedAt
+  }
+`;
 export const GetDocumentModelsDocument = gql`
   query GetDocumentModels($namespace: String, $paging: PagingInput) {
     documentModels(namespace: $namespace, paging: $paging) {
@@ -1384,7 +1601,6 @@ export const GetDocumentModelsDocument = gql`
         version
         specification
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -1443,7 +1659,6 @@ export const GetDocumentWithOperationsDocument = gql`
               }
             }
           }
-          totalCount
           hasNextPage
           hasPreviousPage
           cursor
@@ -1470,7 +1685,6 @@ export const GetDocumentOutgoingRelationshipsDocument = gql`
       items {
         ...PHDocumentFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -1494,13 +1708,58 @@ export const GetDocumentIncomingRelationshipsDocument = gql`
       items {
         ...PHDocumentFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
     }
   }
   ${PhDocumentFieldsFragmentDoc}
+`;
+export const GetDocumentOutgoingRelationshipEdgesDocument = gql`
+  query GetDocumentOutgoingRelationshipEdges(
+    $sourceIdentifier: String!
+    $relationshipType: String
+    $view: ViewFilterInput
+    $paging: PagingInput
+  ) {
+    documentOutgoingRelationshipEdges(
+      sourceIdentifier: $sourceIdentifier
+      relationshipType: $relationshipType
+      view: $view
+      paging: $paging
+    ) {
+      items {
+        ...DocumentRelationshipFields
+      }
+      hasNextPage
+      hasPreviousPage
+      cursor
+    }
+  }
+  ${DocumentRelationshipFieldsFragmentDoc}
+`;
+export const GetDocumentIncomingRelationshipEdgesDocument = gql`
+  query GetDocumentIncomingRelationshipEdges(
+    $targetIdentifier: String!
+    $relationshipType: String
+    $view: ViewFilterInput
+    $paging: PagingInput
+  ) {
+    documentIncomingRelationshipEdges(
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
+      view: $view
+      paging: $paging
+    ) {
+      items {
+        ...DocumentRelationshipFields
+      }
+      hasNextPage
+      hasPreviousPage
+      cursor
+    }
+  }
+  ${DocumentRelationshipFieldsFragmentDoc}
 `;
 export const FindDocumentsDocument = gql`
   query FindDocuments(
@@ -1512,7 +1771,6 @@ export const FindDocumentsDocument = gql`
       items {
         ...PHDocumentFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -1556,7 +1814,6 @@ export const GetDocumentOperationsDocument = gql`
           }
         }
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -1692,12 +1949,34 @@ export const AddRelationshipDocument = gql`
     $sourceIdentifier: String!
     $targetIdentifier: String!
     $relationshipType: String!
+    $metadata: JSONObject
     $branch: String
   ) {
     addRelationship(
       sourceIdentifier: $sourceIdentifier
       targetIdentifier: $targetIdentifier
       relationshipType: $relationshipType
+      metadata: $metadata
+      branch: $branch
+    ) {
+      ...PHDocumentFields
+    }
+  }
+  ${PhDocumentFieldsFragmentDoc}
+`;
+export const UpdateRelationshipDocument = gql`
+  mutation UpdateRelationship(
+    $sourceIdentifier: String!
+    $targetIdentifier: String!
+    $relationshipType: String!
+    $metadata: JSONObject
+    $branch: String
+  ) {
+    updateRelationship(
+      sourceIdentifier: $sourceIdentifier
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
+      metadata: $metadata
       branch: $branch
     ) {
       ...PHDocumentFields
@@ -1794,11 +2073,15 @@ export const PollSyncEnvelopesDocument = gql`
     $channelId: String!
     $outboxAck: Int!
     $outboxLatest: Int!
+    $manifestRevision: String
+    $refusals: [SyncRefusalInput!]
   ) {
     pollSyncEnvelopes(
       channelId: $channelId
       outboxAck: $outboxAck
       outboxLatest: $outboxLatest
+      manifestRevision: $manifestRevision
+      refusals: $refusals
     ) {
       envelopes {
         type
@@ -1858,6 +2141,8 @@ export const PollSyncEnvelopesDocument = gql`
         errorType
       }
       hasMore
+      manifestRevision
+      peerManifestRevision
     }
   }
 `;
@@ -1866,12 +2151,19 @@ export const TouchChannelDocument = gql`
     touchChannel(input: $input) {
       success
       ackOrdinal
+      manifest
     }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`
-  mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-    pushSyncEnvelopes(envelopes: $envelopes)
+  mutation PushSyncEnvelopes(
+    $envelopes: [SyncEnvelopeInput!]!
+    $peerManifestRevision: String
+  ) {
+    pushSyncEnvelopes(
+      envelopes: $envelopes
+      peerManifestRevision: $peerManifestRevision
+    )
   }
 `;
 
@@ -1980,6 +2272,42 @@ export function getSdk(
             signal,
           }),
         "GetDocumentIncomingRelationships",
+        "query",
+        variables,
+      );
+    },
+    GetDocumentOutgoingRelationshipEdges(
+      variables: GetDocumentOutgoingRelationshipEdgesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDocumentOutgoingRelationshipEdgesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentOutgoingRelationshipEdgesQuery>({
+            document: GetDocumentOutgoingRelationshipEdgesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentOutgoingRelationshipEdges",
+        "query",
+        variables,
+      );
+    },
+    GetDocumentIncomingRelationshipEdges(
+      variables: GetDocumentIncomingRelationshipEdgesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDocumentIncomingRelationshipEdgesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentIncomingRelationshipEdgesQuery>({
+            document: GetDocumentIncomingRelationshipEdgesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentIncomingRelationshipEdges",
         "query",
         variables,
       );
@@ -2178,6 +2506,24 @@ export function getSdk(
             signal,
           }),
         "AddRelationship",
+        "mutation",
+        variables,
+      );
+    },
+    UpdateRelationship(
+      variables: UpdateRelationshipMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateRelationshipMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateRelationshipMutation>({
+            document: UpdateRelationshipDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "UpdateRelationship",
         "mutation",
         variables,
       );

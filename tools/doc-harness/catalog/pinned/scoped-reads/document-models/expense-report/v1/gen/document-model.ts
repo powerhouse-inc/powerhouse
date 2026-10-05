@@ -1,0 +1,112 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/expense-report",
+  name: "Expense Report",
+  extension: "exprpt",
+  description:
+    "An expense report whose global content and confidential reviewer notes live in different scopes, so a read can serve one and withhold the other.",
+  author: {
+    name: "Powerhouse",
+    website: "https://powerhouse.inc",
+  },
+  specifications: [
+    {
+      version: 1,
+      changeLog: [],
+      state: {
+        global: {
+          schema:
+            "type ExpenseReportState {\n  expenses: [Expense!]!\n}\n\ntype Expense {\n  id: ID!\n  memo: String!\n  amountCents: Int!\n  status: ExpenseStatus!\n  approvedBy: String\n}\n\nenum ExpenseStatus {\n  PENDING\n  APPROVED\n}",
+          initialValue: '{"expenses":[]}',
+          examples: [],
+        },
+        local: {
+          schema:
+            "type ExpenseReportLocalState {\n  reviewNotes: [ReviewNote!]!\n}\n\ntype ReviewNote {\n  expenseId: ID!\n  note: String!\n}",
+          initialValue: '{"reviewNotes":[]}',
+          examples: [],
+        },
+      },
+      modules: [
+        {
+          id: "9c1d4a72-6e8b-4f3a-b5d0-000000000001",
+          name: "expenses",
+          description:
+            "Expense operations. Reducers validate domain invariants only; who may approve is decided by the platform auth scope, not in here.",
+          operations: [
+            {
+              id: "9c1d4a72-6e8b-4f3a-b5d0-000000000101",
+              name: "SUBMIT_EXPENSE",
+              description: "Submit an expense for approval.",
+              schema:
+                "input SubmitExpenseInput {\n  id: ID!\n  memo: String!\n  amountCents: Int!\n}",
+              template: "",
+              reducer:
+                'if (state.expenses.some((expense) => expense.id === action.input.id)) {\n  throw new DuplicateExpenseError(`Expense ${action.input.id} already exists`);\n}\nstate.expenses.push({\n  id: action.input.id,\n  memo: action.input.memo,\n  amountCents: action.input.amountCents,\n  status: "PENDING",\n  approvedBy: null,\n});',
+              errors: [
+                {
+                  id: "duplicateExpense",
+                  name: "DuplicateExpense",
+                  code: "DUPLICATE_EXPENSE",
+                  description: "An expense with this id already exists",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "9c1d4a72-6e8b-4f3a-b5d0-000000000102",
+              name: "APPROVE_EXPENSE",
+              description:
+                "Approve a pending expense. The approver is read from the signer context for display; whether they MAY approve is platform policy.",
+              schema: "input ApproveExpenseInput {\n  id: ID!\n}",
+              template: "",
+              reducer:
+                'const expense = state.expenses.find(\n  (candidate) => candidate.id === action.input.id,\n);\nif (!expense) {\n  throw new ExpenseNotFoundError(`No expense ${action.input.id}`);\n}\nif (expense.status === "APPROVED") {\n  throw new AlreadyApprovedError(`Expense ${action.input.id} is already approved`);\n}\nexpense.status = "APPROVED";\nexpense.approvedBy = action.context?.signer?.user?.address ?? "anonymous";',
+              errors: [
+                {
+                  id: "expenseNotFound",
+                  name: "ExpenseNotFound",
+                  code: "EXPENSE_NOT_FOUND",
+                  description: "No expense exists with this id",
+                  template: "",
+                },
+                {
+                  id: "alreadyApproved",
+                  name: "AlreadyApproved",
+                  code: "ALREADY_APPROVED",
+                  description: "The expense is already approved",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "9c1d4a72-6e8b-4f3a-b5d0-000000000200",
+          name: "review",
+          description: "The reviewers' own notes, kept in the local scope.",
+          operations: [
+            {
+              id: "9c1d4a72-6e8b-4f3a-b5d0-000000000201",
+              name: "ADD_REVIEW_NOTE",
+              description: "Record a reviewer's note about an expense.",
+              schema:
+                "input AddReviewNoteInput {\n  expenseId: ID!\n  note: String!\n}",
+              template: "",
+              reducer:
+                "state.reviewNotes.push({\n  expenseId: action.input.expenseId,\n  note: action.input.note,\n});",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};

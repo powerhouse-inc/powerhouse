@@ -34,10 +34,7 @@ describe("readEntries", () => {
 
   it("tolerates a BOM, CRLF line endings and a trailing blank line", () => {
     const path = join(scratch(), "rows.jsonl");
-    writeFileSync(
-      path,
-      '﻿{"id":"T-001","n":1}\r\n{"id":"T-002","n":2}\r\n\r\n',
-    );
+    writeFileSync(path, '﻿{"id":"T-001","n":1}\r\n{"id":"T-002","n":2}\r\n\r\n');
 
     const result = readEntries(path, Row);
 

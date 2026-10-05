@@ -507,9 +507,16 @@ describe("the published declarations", () => {
    */
   it("records the one dependency that still leaks a store path", () => {
     expect(
-      declarationOffenders((file) => file.includes("@powerhousedao/shared")),
+      declarationOffenders((file) =>
+        file.includes("@powerhousedao/shared"),
+      ).map((line) =>
+        line.replace(
+          /\/clis\/index-[A-Za-z0-9_-]+\.d\.mts/,
+          "/clis/<chunk>.d.mts",
+        ),
+      ),
     ).toEqual([
-      "@powerhousedao/shared/dist/clis/build-config.d.mts: node_modules\\/\\.pnpm",
+      "@powerhousedao/shared/dist/clis/<chunk>.d.mts: node_modules\\/\\.pnpm",
     ]);
   });
 });
@@ -560,20 +567,20 @@ describe("the strictest possible consumer", () => {
             // The chunk names are content hashes: they change whenever a
             // workspace package is rebuilt, which says nothing about whether
             // the published declarations got better or worse.
-            .replace(/\/(index|types)-[A-Za-z0-9_-]+\.d\.ts/, "/$1-<hash>.d.ts")
+            .replace(/\/(index|types)-[A-Za-z0-9_-]+\.d\.ts/, "/<chunk>.d.ts")
             .trim(),
         )
         .sort();
     }
     expect(diagnostics).toEqual([
-      "node_modules/@powerhousedao/shared/dist/index-<hash>.d.ts: error TS2304: Cannot find name 'FileSystemFileHandle'.",
-      "node_modules/@powerhousedao/shared/dist/index-<hash>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
-      "node_modules/@powerhousedao/shared/dist/index-<hash>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
-      "node_modules/@powerhousedao/shared/dist/types-<hash>.d.ts: error TS2304: Cannot find name 'FileSystemFileHandle'.",
-      "node_modules/@powerhousedao/shared/dist/types-<hash>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
-      "node_modules/@powerhousedao/shared/dist/types-<hash>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
-      "node_modules/@powerhousedao/shared/dist/types-<hash>.d.ts: error TS2307: Cannot find module 'react' or its corresponding type declarations.",
-      "node_modules/@powerhousedao/shared/dist/types-<hash>.d.ts: error TS7016: Could not find a declaration file for module 'luxon'. '<path>' implicitly has an 'any' type.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2304: Cannot find name 'FileSystemFileHandle'.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2304: Cannot find name 'FileSystemFileHandle'.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2304: Cannot find name 'JsonWebKey'.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS2307: Cannot find module 'react' or its corresponding type declarations.",
+      "node_modules/@powerhousedao/shared/dist/<chunk>.d.ts: error TS7016: Could not find a declaration file for module 'luxon'. '<path>' implicitly has an 'any' type.",
     ]);
     // The packed model's own declarations are not among them.
     expect(diagnostics.filter((line) => line.includes("@ph-fixture"))).toEqual(

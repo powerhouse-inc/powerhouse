@@ -3,15 +3,18 @@ import {
   AttachmentNotFound,
   AttachmentPending,
   HashMismatch,
+  InvalidAttachmentMetadata,
   InvalidAttachmentRef,
   ReservationNotFound,
   SizeMismatch,
   UploadTooLarge,
   createRef,
   parseAttachmentDownloadTarget,
+  validateReserveMetadata,
   type AttachmentBuildResult,
   type AttachmentDownloadTarget,
   type ReserveAttachmentOptions,
+  type ReserveMetadata,
 } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import type { AttachmentHash } from "@powerhousedao/reactor";
@@ -20,6 +23,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type { AttachmentActorContext } from "./auth.js";
+import type { AttachmentUrlSigner } from "./url-signer.js";
 
 const logger = childLogger(["switchboard", "attachments"]);
 
@@ -29,13 +33,6 @@ const RETRY_AFTER_SECONDS = 5;
 // accept either case from the wire and normalise before lookup. This keeps
 // the API forgiving for hand-typed URLs without changing storage semantics.
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
-// eslint-disable-next-line no-control-regex
-const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
-// RFC 6838 token chars; allows optional `; param=value` pairs (token or quoted-string).
-const MIME_TYPE_PATTERN =
-  /^[!#$%&'*+\-.^_`|~\w]+\/[!#$%&'*+\-.^_`|~\w]+(?:\s*;\s*[!#$%&'*+\-.^_`|~\w]+=(?:[!#$%&'*+\-.^_`|~\w]+|"(?:[^"\\\r\n]|\\[^\r\n])*"))*$/;
-const MAX_FILENAME_LEN = 255;
-const MAX_MIMETYPE_LEN = 255;
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
@@ -90,29 +87,20 @@ export function parseReserveOptions(
 ): ReserveAttachmentOptions | null {
   if (input === null || typeof input !== "object") return null;
   const obj = input as Record<string, unknown>;
-  if (
-    typeof obj.mimeType !== "string" ||
-    obj.mimeType.length === 0 ||
-    obj.mimeType.length > MAX_MIMETYPE_LEN ||
-    !MIME_TYPE_PATTERN.test(obj.mimeType)
-  ) {
-    return null;
+  const { mimeType, fileName } = obj;
+  const extension = obj.extension ?? null;
+  try {
+    validateReserveMetadata({
+      mimeType,
+      fileName,
+      extension,
+    } as ReserveMetadata);
+  } catch (err) {
+    if (err instanceof InvalidAttachmentMetadata) return null;
+    throw err;
   }
-  if (
-    typeof obj.fileName !== "string" ||
-    obj.fileName.length === 0 ||
-    obj.fileName.length > MAX_FILENAME_LEN ||
-    CONTROL_CHARS.test(obj.fileName)
-  ) {
-    return null;
-  }
-  let extension: string | null = null;
-  if (typeof obj.extension === "string") {
-    if (obj.extension.length === 0 || /[\\/]/.test(obj.extension)) return null;
-    extension = obj.extension;
-  } else if (obj.extension !== undefined && obj.extension !== null) {
-    return null;
-  }
+  if (typeof mimeType !== "string" || typeof fileName !== "string") return null;
+  if (extension !== null && typeof extension !== "string") return null;
 
   // Hash-first mode: clientHash triggers this path; sizeBytes is required alongside it.
   // A body with sizeBytes but no clientHash falls through to the legacy path unchanged.
@@ -132,8 +120,8 @@ export function parseReserveOptions(
       return null;
     }
     return {
-      mimeType: obj.mimeType,
-      fileName: obj.fileName,
+      mimeType,
+      fileName,
       extension,
       clientHash: obj.clientHash.toLowerCase() as AttachmentHash,
       sizeBytes: obj.sizeBytes,
@@ -141,8 +129,8 @@ export function parseReserveOptions(
   }
 
   return {
-    mimeType: obj.mimeType,
-    fileName: obj.fileName,
+    mimeType,
+    fileName,
     extension,
   };
 }
@@ -261,28 +249,51 @@ export function makeUploadHandler(attachments: AttachmentBuildResult) {
   };
 }
 
-export function makeDownloadHandler(attachments: AttachmentBuildResult) {
-  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+export function makeDownloadHandler(
+  attachments: AttachmentBuildResult,
+  attachmentAccess: IAttachmentAccessService,
+  urlSigner: AttachmentUrlSigner | null,
+) {
+  return async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    _body?: unknown,
+    actor?: AttachmentActorContext,
+  ): Promise<void> => {
     const hash = extractParam(req, "hash");
     if (!hash || !HASH_PATTERN.test(hash)) {
       sendError(res, 400, "Invalid attachment hash");
       return;
     }
 
+    const canonicalHash = hash.toLowerCase() as AttachmentHash;
+    const grant = await resolveByteGrant(
+      req,
+      canonicalHash,
+      actor,
+      attachmentAccess,
+      urlSigner,
+    );
+    if (!admitGrant(res, grant)) return;
+
     const controller = new AbortController();
     req.once("close", () => controller.abort());
 
-    const canonicalHash = hash.toLowerCase() as AttachmentHash;
     let response;
     try {
-      response = await attachments.store.get(canonicalHash, controller.signal);
+      response = await attachments.store.get(
+        canonicalHash,
+        controller.signal,
+        grant.documentId,
+      );
     } catch (err) {
       if (err instanceof AttachmentPending) {
         res.statusCode = 202;
+        res.setHeader("Cache-Control", "private");
         res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
         res.setHeader(
           "Attachment-Pending",
-          JSON.stringify({
+          buildPendingHeader({
             expiresAtUtc: err.expiresAtUtc,
             ...(err.metadata ?? {}),
           }),
@@ -296,6 +307,7 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
 
     const { header, body } = response;
     res.statusCode = 200;
+    res.setHeader("Cache-Control", "private");
     res.setHeader("Content-Type", header.mimeType);
     res.setHeader("Content-Length", String(header.sizeBytes));
     res.setHeader(
@@ -310,7 +322,25 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
   };
 }
 
-function buildMetadataHeader(header: {
+// Node rejects header values above U+00FF. Escaping everything outside
+// printable ASCII keeps the header valid; JSON.parse restores the original.
+function toAsciiJson(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[\u007f-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
+export function buildPendingHeader(pending: {
+  expiresAtUtc: string | null;
+  mimeType?: string;
+  fileName?: string;
+  sizeBytes?: number;
+}): string {
+  return toAsciiJson(pending);
+}
+
+export function buildMetadataHeader(header: {
   mimeType: string;
   fileName: string;
   sizeBytes: number;
@@ -318,7 +348,7 @@ function buildMetadataHeader(header: {
   createdAtUtc: string;
   lastAccessedAtUtc: string;
 }): string {
-  return JSON.stringify({
+  return toAsciiJson({
     mimeType: header.mimeType,
     fileName: header.fileName,
     sizeBytes: header.sizeBytes,
@@ -328,8 +358,17 @@ function buildMetadataHeader(header: {
   });
 }
 
-export function makeStatHandler(attachments: AttachmentBuildResult) {
-  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+export function makeStatHandler(
+  attachments: AttachmentBuildResult,
+  attachmentAccess: IAttachmentAccessService,
+  urlSigner: AttachmentUrlSigner | null,
+) {
+  return async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    _body?: unknown,
+    actor?: AttachmentActorContext,
+  ): Promise<void> => {
     const hash = extractParam(req, "hash");
     if (!hash || !HASH_PATTERN.test(hash)) {
       sendError(res, 400, "Invalid attachment hash");
@@ -337,6 +376,15 @@ export function makeStatHandler(attachments: AttachmentBuildResult) {
     }
 
     const canonicalHash = hash.toLowerCase() as AttachmentHash;
+    const grant = await resolveByteGrant(
+      req,
+      canonicalHash,
+      actor,
+      attachmentAccess,
+      urlSigner,
+    );
+    if (!admitGrant(res, grant)) return;
+
     let header;
     try {
       header = await attachments.store.stat(canonicalHash);
@@ -345,12 +393,13 @@ export function makeStatHandler(attachments: AttachmentBuildResult) {
       return;
     }
 
+    res.setHeader("Cache-Control", "private");
     if (header.status === "pending") {
       res.statusCode = 202;
       res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
       res.setHeader(
         "Attachment-Pending",
-        JSON.stringify({
+        buildPendingHeader({
           expiresAtUtc: header.expiresAtUtc,
           mimeType: header.mimeType,
           fileName: header.fileName,
@@ -424,6 +473,40 @@ const ATTACHMENT_NOT_FOUND_BODY = { error: "Attachment not found" };
 const MAX_DOWNLOAD_TARGET_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 /**
+ * How long a download target may live, by default.
+ *
+ * The authorization behind a presigned URL is decided once, when it is issued,
+ * and the URL keeps working until it expires however the document's policy
+ * changes in between. A week of that is a revocation that does not revoke: an
+ * account deactivated, a company reassigned or a group left, and the bytes stay
+ * fetchable by anyone holding the link. Minutes are enough to open a file;
+ * days are only enough to lose control of it.
+ *
+ * A deployment that needs longer sets ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS,
+ * still bounded by the signing ceiling above.
+ */
+const DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS = 300;
+
+/**
+ * The ceiling in force, read per call so a deployment can set it without the
+ * value being frozen at import — which is also what lets a test cover it.
+ * Anything unparseable falls back to the default rather than to the maximum:
+ * a typo must not quietly widen the window it was meant to narrow.
+ */
+function downloadTargetTtlCapSeconds(): number {
+  const configured = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+  if (configured === undefined) return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
+  const parsed = Number(configured);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    logger.warn(
+      `Ignoring invalid ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS="${configured}" (expected a positive integer number of seconds) — using ${DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS}`,
+    );
+    return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
+  }
+  return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
+}
+
+/**
  * Returns the single `documentId` query value, or null when it is missing,
  * duplicated, blank, or oversized. Validation happens before authorization so
  * malformed requests never reach the access service.
@@ -446,32 +529,121 @@ function extractSingleDocumentId(req: IncomingMessage): string | null {
 }
 
 /**
- * Returns the requested target TTL in seconds: undefined when absent,
- * "invalid" when malformed (duplicated, non-integer, or non-positive), and
- * otherwise the value clamped to the presigning ceiling.
+ * Returns the target TTL in seconds, or "invalid" when the caller's own value
+ * is malformed (duplicated, non-integer, or non-positive).
+ *
+ * The cap applies whether or not the caller asked for a lifetime: omitting
+ * `expiresIn` used to fall through to whatever the storage backend was
+ * configured with, which would make the ceiling something a client opts out of
+ * by saying nothing.
  */
-function extractExpiresIn(
-  req: IncomingMessage,
-): number | undefined | "invalid" {
-  if (!req.url) return undefined;
+function extractExpiresIn(req: IncomingMessage): number | "invalid" {
+  const cap = downloadTargetTtlCapSeconds();
+  if (!req.url) return cap;
   let url: URL;
   try {
     url = new URL(req.url, "http://switchboard.invalid");
   } catch {
-    return undefined;
+    return cap;
   }
   const values = url.searchParams.getAll("expiresIn");
-  if (values.length === 0) return undefined;
+  if (values.length === 0) return cap;
   if (values.length > 1) return "invalid";
   const parsed = Number(values[0]);
   if (!Number.isInteger(parsed) || parsed <= 0) return "invalid";
-  return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
+  return Math.min(parsed, cap);
+}
+
+type ByteGrant =
+  | { kind: "granted"; documentId: string }
+  | { kind: "denied" }
+  | { kind: "unavailable" }
+  | { kind: "error" };
+
+function singleQueryValue(
+  params: URLSearchParams,
+  name: string,
+): string | null {
+  const values = params.getAll(name);
+  return values.length === 1 ? values[0] : null;
+}
+
+/**
+ * Byte routes serve only under a grant: a signed URL minted by the
+ * download-target route, or a documentId the caller may read the attachment
+ * through. A signed request is judged by its signature alone.
+ */
+async function resolveByteGrant(
+  req: IncomingMessage,
+  hash: AttachmentHash,
+  actor: AttachmentActorContext | undefined,
+  attachmentAccess: IAttachmentAccessService,
+  urlSigner: AttachmentUrlSigner | null,
+): Promise<ByteGrant> {
+  let params: URLSearchParams;
+  try {
+    params = new URL(req.url ?? "", "http://switchboard.invalid").searchParams;
+  } catch {
+    return { kind: "denied" };
+  }
+  const documentId = extractSingleDocumentId(req);
+  if (documentId === null) return { kind: "denied" };
+
+  if (params.has("signature") || params.has("expires")) {
+    const signature = singleQueryValue(params, "signature");
+    const expires = singleQueryValue(params, "expires");
+    if (!urlSigner || signature === null || expires === null) {
+      return { kind: "denied" };
+    }
+    return urlSigner.verify(hash, documentId, expires, signature)
+      ? { kind: "granted", documentId }
+      : { kind: "denied" };
+  }
+
+  let decision;
+  try {
+    decision = await attachmentAccess.canReadAttachment({
+      documentId,
+      attachmentRef: createRef(hash),
+      userAddress: actor?.user?.address,
+      appKey: actor?.user?.appKey,
+    });
+  } catch (err) {
+    logger.error("Attachment access decision failed: @error", err);
+    return { kind: "error" };
+  }
+  if (decision.kind === "projection-unavailable") {
+    return { kind: "unavailable" };
+  }
+  if (decision.kind === "denied") return { kind: "denied" };
+  return { kind: "granted", documentId: decision.documentId };
+}
+
+/** Answers a refused grant; true when the request may proceed. */
+function admitGrant(
+  res: ServerResponse,
+  grant: ByteGrant,
+): grant is { kind: "granted"; documentId: string } {
+  switch (grant.kind) {
+    case "granted":
+      return true;
+    case "denied":
+      // 404, never 403: a refusal must not reveal that the hash exists.
+      sendJson(res, 404, ATTACHMENT_NOT_FOUND_BODY);
+      return false;
+    case "unavailable":
+      sendError(res, 503, "Attachment downloads are temporarily unavailable");
+      return false;
+    case "error":
+      sendError(res, 500, "Internal error");
+      return false;
+  }
 }
 
 /**
  * Base URL of this Switchboard as seen by the caller, used to build
- * filesystem `switchboard` download targets that point back at the existing
- * authenticated byte route.
+ * filesystem `switchboard` download targets that point back at the signed
+ * byte route.
  */
 function requestBaseUrl(req: IncomingMessage): string | null {
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -491,6 +663,7 @@ function requestBaseUrl(req: IncomingMessage): string | null {
 export function makeDownloadTargetHandler(
   attachments: AttachmentBuildResult,
   attachmentAccess: IAttachmentAccessService,
+  urlSigner: AttachmentUrlSigner | null,
 ) {
   return async (
     req: IncomingMessage,
@@ -533,6 +706,7 @@ export function makeDownloadTargetHandler(
         documentId,
         attachmentRef: createRef(canonicalHash),
         userAddress: actor?.user?.address,
+        appKey: actor?.user?.appKey,
       });
     } catch (err) {
       logger.error("Attachment access decision failed: @error", err);
@@ -580,17 +754,27 @@ export function makeDownloadTargetHandler(
         return;
       }
     } else {
+      if (!urlSigner) {
+        sendError(res, 503, "Attachment download signing is not configured");
+        return;
+      }
       const base = requestBaseUrl(req);
       if (!base) {
         sendError(res, 500, "Internal error");
         return;
       }
+      const signed = urlSigner.sign(
+        canonicalHash,
+        decision.documentId,
+        expiresIn,
+      );
       try {
         target = parseAttachmentDownloadTarget({
           kind: "switchboard",
           method: "GET",
-          url: `${base}/attachments/${canonicalHash}`,
+          url: `${base}/attachments/${canonicalHash}?${signed.query}`,
           headers: {},
+          expiresAtUtc: signed.expiresAtUtc,
         });
       } catch {
         sendError(res, 500, "Internal error");

@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsdown",
     "generate-test-projects": "bun run ./generate-test-projects-script.ts",
-    "test": "bun test --timeout 1000000 --preload ./setup.ts ./tests/*.test.ts",
+    "test": "bun test --timeout 1000000 --preload ./setup.ts ./tests",
     "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"
   },
   "dependencies": {
@@ -39,6 +39,7 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

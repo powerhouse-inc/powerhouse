@@ -194,10 +194,14 @@ describe("InMemoryQueue hot-path performance", () => {
     const t1 = process.hrtime.bigint();
 
     const done = new Set<string>();
+    let dependencyOrderHeld = true;
     for (const { id, deps } of seen) {
-      expect(deps.every((dep) => done.has(dep))).toBe(true);
+      if (!deps.every((dep) => done.has(dep))) {
+        dependencyOrderHeld = false;
+      }
       done.add(id);
     }
+    expect(dependencyOrderHeld).toBe(true);
     expect(await queue.hasJobs()).toBe(false);
     if (process.env.PH_BENCH_VERBOSE) {
       const heap = process.memoryUsage().heapUsed;

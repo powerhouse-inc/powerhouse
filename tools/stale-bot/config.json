@@ -1,0 +1,22 @@
+{
+  "stateDir": "state",
+  "pollSeconds": 3600,
+  "maxTasksPerRun": null,
+  "stale": {
+    "repo": "powerhouse-inc/powerhouse",
+    "repoPath": "~/powerhouse",
+    "staleLabel": "Stale",
+    "exemptLabels": ["help wanted", "good first issue", "dependencies"],
+    "daysBeforeStale": 60,
+    "daysBeforeClose": 7,
+    "botLogins": [],
+    "maxStalePerSweep": 30,
+    "maxClosePerSweep": 30,
+    "maxUnstalePerSweep": 30,
+    "sweepEveryHours": 24,
+    "coolDays": 30,
+    "roundTimeoutMin": 10,
+    "model": null,
+    "dryRun": false
+  }
+}

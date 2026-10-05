@@ -10,6 +10,7 @@ interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   readonly title: ReactNode;
   readonly docId: string;
   readonly scope: string;
+  readonly scopes: readonly string[];
   readonly onChangeScope: (scope: string) => void;
   readonly onClose: () => void;
   readonly documentState?: object;
@@ -22,6 +23,7 @@ export function Header(props: Props) {
     title,
     docId,
     scope,
+    scopes,
     onChangeScope,
     onClose,
     className,
@@ -57,7 +59,7 @@ export function Header(props: Props) {
           />
         )}
         <Branch />
-        <Scope onChange={onChangeScope} value={scope} />
+        <Scope onChange={onChangeScope} scopes={scopes} value={scope} />
       </div>
     </header>
   );

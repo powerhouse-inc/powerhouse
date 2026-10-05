@@ -2,18 +2,27 @@ import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-mo
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import type { GenerateCodeFirstDocumentModelArgs } from "file-builders";
+import type { PieceAuthKind, PieceTriggerStrategy } from "file-builders";
 import {
+  getPieceNames,
   pruneManifestSection,
+  syncPiecesRegistration,
   syncProjectAiToolsExport,
   tsMorphGenerateApp,
   tsMorphGenerateCodeFirstDocumentModel,
   tsMorphGenerateCodeFirstSubgraph,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
+  tsMorphGeneratePiece,
+  tsMorphGeneratePieceAction,
+  tsMorphGeneratePieceTrigger,
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
+import { derivePieceId } from "name-builders";
 import { readdirSync } from "node:fs";
+import { join } from "node:path";
+import { readPackage } from "read-pkg";
 import {
   filter,
   isDefined,
@@ -32,6 +41,7 @@ import {
   getProcessorMetadata,
   getSubgraphMetadata,
   loadDocumentModelInDir,
+  readPiecesList,
 } from "utils";
 import { loadDocumentModel } from "./utils.js";
 
@@ -122,6 +132,8 @@ export async function generateEditor(
 export async function generateAllEditors(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
   const projectDir = editorsDir.getParentOrThrow().getPath();
+  // The project starts without files, so load the ones discovery reads.
+  project.addSourceFilesAtPaths(join(editorsDir.getPath(), "*", "module.ts"));
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const editorsToAdd = pipe(
@@ -247,6 +259,7 @@ export async function generateAllSubgraphs(project: Project) {
     "subgraphs",
   );
   const projectDir = subgraphsDir.getParentOrThrow().getPath();
+  project.addSourceFilesAtPaths(join(subgraphsDir.getPath(), "*", "index.ts"));
   /* The subgraph's name is found in the `index.ts` file */
   const subgraphNames = pipe(
     subgraphsDir.getDirectories(),
@@ -289,6 +302,11 @@ export async function generateAllProcessors(project: Project) {
     "processors",
   );
   const projectDir = processorsDir.getParentOrThrow().getPath();
+  // connect.ts and switchboard.ts decide each processor's apps.
+  project.addSourceFilesAtPaths([
+    join(processorsDir.getPath(), "*.ts"),
+    join(processorsDir.getPath(), "*", "*.ts"),
+  ]);
   const processorsToGenerate = pipe(
     processorsDir.getDirectories(),
     map((dir) => dir.getBaseName()),
@@ -306,6 +324,117 @@ export async function generateAllProcessors(project: Project) {
   );
 }
 
+function piecesProjectDir(project: Project) {
+  const { directory } = getOrCreateDirectory(project, "pieces");
+  return directory.getParentOrThrow().getPath();
+}
+
+// Tolerant of a project with no package.json: `generateAll` runs over whatever
+// is on disk, and only a piece id derived from the package name needs it.
+async function readProjectPackage(project: Project) {
+  const projectDir = piecesProjectDir(project);
+  try {
+    const pkg = await readPackage({ cwd: projectDir, normalize: false });
+    return { projectDir, packageName: pkg.name ?? "" };
+  } catch {
+    return { projectDir, packageName: "" };
+  }
+}
+
+// The directory under pieces/ a part is being added to; a project with one
+// piece needs no flag, and with more than one the choice is the user's.
+function resolvePieceDir(project: Project, pieceDir?: string): string {
+  const { directory: piecesDir } = getOrCreateDirectory(project, "pieces");
+  project.addSourceFilesAtPaths(join(piecesDir.getPath(), "*", "index.ts"));
+  const dirNames = piecesDir
+    .getDirectories()
+    .filter((directory) => directory.getSourceFile("index.ts") !== undefined)
+    .map((directory) => directory.getBaseName());
+  if (pieceDir !== undefined) {
+    const kebabCaseDir = kebabCase(pieceDir);
+    if (!dirNames.includes(kebabCaseDir)) {
+      throw new Error(
+        `No piece in pieces/${kebabCaseDir}. This project ships: ${dirNames.join(", ") || "none"}`,
+      );
+    }
+    return kebabCaseDir;
+  }
+  if (dirNames.length === 1) return dirNames[0];
+  if (dirNames.length === 0) {
+    throw new Error(
+      "This project ships no piece yet. Run `ph generate piece <name>` first.",
+    );
+  }
+  throw new Error(
+    `This project ships more than one piece; pass --piece <${dirNames.join("|")}>.`,
+  );
+}
+
+export async function generatePiece(
+  args: {
+    pieceName: string;
+    pieceId?: string;
+    auth?: PieceAuthKind;
+    description?: string;
+  },
+  project: Project,
+) {
+  const { packageName } = await readProjectPackage(project);
+  const names = getPieceNames(args.pieceName);
+  if (args.pieceId === undefined && packageName === "") {
+    throw new Error(
+      "Cannot derive a piece id: this project's package.json has no name. Pass --id.",
+    );
+  }
+  const pieceId =
+    args.pieceId ??
+    derivePieceId({
+      packageName,
+      slug: names.kebabCaseName,
+      hasOtherPieces: readPiecesList(project).length > 0,
+    }).id;
+  await tsMorphGeneratePiece({
+    project,
+    pieceName: args.pieceName,
+    pieceId,
+    auth: args.auth ?? "custom",
+    description: args.description ?? `Connect to ${names.displayName}.`,
+  });
+}
+
+export async function generatePieceAction(
+  args: { pieceDir?: string; actionName: string },
+  project: Project,
+) {
+  await tsMorphGeneratePieceAction({
+    project,
+    pieceDir: resolvePieceDir(project, args.pieceDir),
+    actionName: args.actionName,
+  });
+}
+
+export async function generatePieceTrigger(
+  args: {
+    pieceDir?: string;
+    triggerName: string;
+    strategy?: PieceTriggerStrategy;
+  },
+  project: Project,
+) {
+  await tsMorphGeneratePieceTrigger({
+    project,
+    pieceDir: resolvePieceDir(project, args.pieceDir),
+    triggerName: args.triggerName,
+    strategy: args.strategy ?? "polling",
+  });
+}
+
+/* Re-registers every piece on disk in the list and the manifest; scaffolds nothing */
+export async function generateAllPieces(project: Project, only?: string) {
+  const { packageName } = await readProjectPackage(project);
+  await syncPiecesRegistration({ project, packageName, only });
+}
+
 /* Runs each module type's generateAll{moduleType} function for the current project */
 export async function generateAll(project: Project) {
   await generateAllDocumentModels(project);
@@ -313,5 +442,6 @@ export async function generateAll(project: Project) {
   await generateAllApps(project);
   await generateAllSubgraphs(project);
   await generateAllProcessors(project);
+  await generateAllPieces(project);
   syncProjectAiToolsExport(project);
 }

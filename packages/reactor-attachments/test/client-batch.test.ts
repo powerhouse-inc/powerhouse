@@ -218,9 +218,8 @@ function makeService(overrides: Partial<IAttachmentService> = {}) {
     } as unknown as IAttachmentUpload;
     return Promise.resolve(handle);
   });
-  const get = vi.fn(
-    (): Promise<AttachmentResponse> =>
-      Promise.resolve({ header: HEADER, body: body() }),
+  const get = vi.fn((): Promise<AttachmentResponse> =>
+    Promise.resolve({ header: HEADER, body: body() }),
   );
   const service = {
     reserve,
@@ -607,14 +606,17 @@ describe("AttachmentClient upload/download batches", () => {
       ref: AttachmentRef;
       header: AttachmentHeader;
     }>();
-    const reserve = vi.fn(
-      (): Promise<IAttachmentUpload> =>
-        Promise.resolve({
-          reservationId: "res",
-          ref: null,
-          expiresAtUtc: "",
-          send: vi.fn(() => sendGate.promise),
-        } as unknown as IAttachmentUpload),
+    const sending = deferred<void>();
+    const reserve = vi.fn((): Promise<IAttachmentUpload> =>
+      Promise.resolve({
+        reservationId: "res",
+        ref: null,
+        expiresAtUtc: "",
+        send: vi.fn(() => {
+          sending.resolve();
+          return sendGate.promise;
+        }),
+      } as unknown as IAttachmentUpload),
     );
     const { service } = makeService({ reserve });
     const client = createAttachmentClient(service);
@@ -628,8 +630,7 @@ describe("AttachmentClient upload/download batches", () => {
         throttleMs: 0,
       },
     );
-    // Give the first item time to reach its blocked transfer.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await sending.promise;
 
     expect(events.filter((e) => e.index === 0).map((e) => e.stage)).toEqual([
       "hashing",

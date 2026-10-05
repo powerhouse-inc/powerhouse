@@ -18,9 +18,7 @@
     }
   },
   "todo": {
-    "codes": [
-      "comment.llm-tell"
-    ]
+    "codes": ["comment.llm-tell"]
   },
   "ts": {
     "comments": {

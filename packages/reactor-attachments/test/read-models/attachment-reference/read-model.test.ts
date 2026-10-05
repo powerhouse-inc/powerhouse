@@ -3,15 +3,18 @@ import type {
   IConsistencyTracker,
   IDocumentModelRegistry,
   IOperationIndex,
+  ISettledWatermark,
   IWriteCache,
   PagedResults,
 } from "@powerhousedao/reactor";
-import type {
-  Action,
-  DocumentModelModule,
-  DocumentSpecification,
-  OperationSpecification,
-  OperationWithContext,
+import {
+  purgeDocumentAction,
+  purgeMarkerOperation,
+  type Action,
+  type DocumentModelModule,
+  type DocumentSpecification,
+  type OperationSpecification,
+  type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { describe, expect, it, vi } from "vitest";
@@ -114,13 +117,46 @@ function op(
   };
 }
 
+/** A PURGE_DOCUMENT marker for the document, at the ordinal. */
+function purgeItem(documentId: string, ordinal: number): OperationWithContext {
+  const action = purgeDocumentAction(
+    { documentId, documentType: "example/attachments", requestId: "req" },
+    { timestampUtcMs: "2026-07-22T00:00:00.000Z" },
+  );
+  return {
+    operation: purgeMarkerOperation(action),
+    context: {
+      documentId,
+      documentType: "example/attachments",
+      scope: "document",
+      branch: "main",
+      ordinal,
+    },
+  };
+}
+
 type FakeCursorDb = Kysely<DocumentViewDatabase> & {
   cursor: number | undefined;
   failNextSave: boolean;
+  purged: Set<string>;
 };
 
 function cursorDb(cursor?: number): FakeCursorDb {
-  const state = { cursor, failNextSave: false };
+  const state = { cursor, failNextSave: false, purged: new Set<string>() };
+  const update = (value: { lastOrdinal: number }) => {
+    const chain = {
+      where: () => chain,
+      executeTakeFirst: () => {
+        if (state.failNextSave) {
+          state.failNextSave = false;
+          return Promise.reject(new Error("cursor save failed"));
+        }
+        state.cursor = value.lastOrdinal;
+        return Promise.resolve({ numUpdatedRows: 1n });
+      },
+    };
+    return chain;
+  };
   const db = {
     get cursor() {
       return state.cursor;
@@ -134,9 +170,16 @@ function cursorDb(cursor?: number): FakeCursorDb {
     set failNextSave(value: boolean) {
       state.failNextSave = value;
     },
+    get purged() {
+      return state.purged;
+    },
     selectFrom: () => ({
       select: () => ({
         where: () => ({
+          execute: () =>
+            Promise.resolve(
+              [...state.purged].map((documentId) => ({ documentId })),
+            ),
           executeTakeFirst: () =>
             Promise.resolve(
               state.cursor === undefined
@@ -148,31 +191,15 @@ function cursorDb(cursor?: number): FakeCursorDb {
     }),
     insertInto: () => ({
       values: (value: { lastOrdinal: number }) => ({
-        execute: () => {
-          state.cursor = value.lastOrdinal;
-          return Promise.resolve();
-        },
+        onConflict: () => ({
+          execute: () => {
+            state.cursor ??= value.lastOrdinal;
+            return Promise.resolve();
+          },
+        }),
       }),
     }),
-    transaction: () => ({
-      execute: (callback: (trx: unknown) => Promise<void>) =>
-        callback({
-          updateTable: () => ({
-            set: (value: { lastOrdinal: number }) => ({
-              where: () => ({
-                execute: () => {
-                  if (state.failNextSave) {
-                    state.failNextSave = false;
-                    return Promise.reject(new Error("cursor save failed"));
-                  }
-                  state.cursor = value.lastOrdinal;
-                  return Promise.resolve();
-                },
-              }),
-            }),
-          }),
-        }),
-    }),
+    updateTable: () => ({ set: update }),
   };
   return db as unknown as FakeCursorDb;
 }
@@ -184,17 +211,55 @@ function page(
   return { results, options: { cursor: "0", limit: 100 }, next };
 }
 
+/** As the index does: everything above `ordinal`, ordered by ordinal ascending. */
+function since(
+  store: readonly OperationWithContext[],
+  ordinal: number,
+): PagedResults<OperationWithContext> {
+  return page(
+    store
+      .filter((item) => item.context.ordinal > ordinal)
+      .sort((left, right) => left.context.ordinal - right.context.ordinal),
+  );
+}
+
 function operationIndex(
   results: OperationWithContext[] = [],
 ): IOperationIndex & { getSinceOrdinal: ReturnType<typeof vi.fn> } {
   return {
     getSinceOrdinal: vi.fn((ordinal: number) =>
+      Promise.resolve(since(results, ordinal)),
+    ),
+    getByOrdinals: vi.fn((ordinals: readonly number[]) =>
       Promise.resolve(
-        page(results.filter((item) => item.context.ordinal > ordinal)),
+        results
+          .filter((item) => ordinals.includes(item.context.ordinal))
+          .sort((left, right) => left.context.ordinal - right.context.ordinal),
       ),
     ),
+    getStreamAfter: vi.fn(() => Promise.resolve([])),
   } as unknown as IOperationIndex & {
     getSinceOrdinal: ReturnType<typeof vi.fn>;
+  };
+}
+
+/** Everything in the store is settled. */
+function storeWatermark(
+  store: readonly OperationWithContext[],
+): ISettledWatermark {
+  const settled = () =>
+    store.reduce((max, item) => Math.max(max, item.context.ordinal), 0);
+  return {
+    get settledThrough() {
+      return settled();
+    },
+    refresh: () => Promise.resolve(settled()),
+    onAdvance: () => () => {},
+    status: () => ({
+      head: settled(),
+      settledThrough: settled(),
+      waitingOn: [],
+    }),
   };
 }
 
@@ -205,8 +270,9 @@ function dependencies(options?: {
   compiler?: AttachmentSchemaCompiler;
   writer?: IAttachmentReferenceWriter;
 }) {
+  const store = options?.indexOperations ?? [];
   const db = cursorDb(options?.cursor);
-  const index = operationIndex(options?.indexOperations);
+  const index = operationIndex(store);
   const registry = {
     getModule: vi.fn(() => options?.module ?? standardModule),
   } as unknown as IDocumentModelRegistry & {
@@ -214,8 +280,10 @@ function dependencies(options?: {
   };
   const compiler = options?.compiler ?? new AttachmentSchemaCompiler();
   const addReferences = vi.fn(() => Promise.resolve());
+  const removeDocuments = vi.fn(() => Promise.resolve());
   const writer =
-    options?.writer ?? ({ addReferences } as IAttachmentReferenceWriter);
+    options?.writer ??
+    ({ addReferences, removeDocuments } as IAttachmentReferenceWriter);
   const tracker = { update: vi.fn() } as unknown as IConsistencyTracker;
   const model = new AttachmentReferenceReadModel(
     db,
@@ -226,7 +294,25 @@ function dependencies(options?: {
     compiler,
     writer,
   );
-  return { addReferences, compiler, db, index, model, registry, tracker };
+  model.attachCatchUp(storeWatermark(store), 100_000);
+  const sweep = () => {
+    const present = store
+      .map((item) => item.context.ordinal)
+      .sort((left, right) => left - right);
+    return model.sweep(Math.max(0, ...present), present);
+  };
+  return {
+    addReferences,
+    removeDocuments,
+    compiler,
+    db,
+    index,
+    model,
+    registry,
+    store,
+    sweep,
+    tracker,
+  };
 }
 
 describe("AttachmentReferenceReadModel", () => {
@@ -258,11 +344,17 @@ describe("AttachmentReferenceReadModel", () => {
     ]);
   });
 
-  it("ignores failed operations while advancing their ordinal", async () => {
-    const { addReferences, db, model, registry } = dependencies();
-    await model.indexOperations([op(1, "UNKNOWN", {}, "document-1", "failed")]);
+  it("ignores failed operations while a sweep advances past their ordinal", async () => {
+    const failed = op(1, "UNKNOWN", {}, "document-1", "failed");
+    const { addReferences, db, model, registry, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [failed],
+    });
+    await model.indexOperations([failed]);
     expect(addReferences).not.toHaveBeenCalled();
     expect(registry.getModule).not.toHaveBeenCalled();
+
+    await sweep();
     expect(db.cursor).toBe(1);
   });
 
@@ -278,6 +370,7 @@ describe("AttachmentReferenceReadModel", () => {
           return Promise.resolve();
         },
       ),
+      removeDocuments: vi.fn(),
     };
     const { model } = dependencies({ writer });
     await model.indexOperations([op(1)]);
@@ -320,125 +413,102 @@ describe("AttachmentReferenceReadModel", () => {
     expect(db.cursor).toBe(2);
   });
 
-  it("restores ordinal 99 after failure at 100, then refills 100 and 101", async () => {
+  it("holds the cursor at 99 after a failure at 100, then a sweep refills 100", async () => {
     const addReferences = vi
       .fn()
       .mockRejectedValueOnce(new Error("insert failed"))
       .mockResolvedValue(undefined);
-    const { db, index, model } = dependencies({
+    const { db, model, store, sweep } = dependencies({
       cursor: 99,
-      writer: { addReferences },
+      writer: { addReferences, removeDocuments: vi.fn() },
     });
     await model.init();
-    const refill = vi.fn((ordinal: number) =>
-      Promise.resolve(
-        page(
-          [op(100), op(101)].filter((item) => item.context.ordinal > ordinal),
-        ),
-      ),
-    );
-    Object.assign(index, { getSinceOrdinal: refill });
+    store.push(op(100), op(101));
+
     await expect(model.indexOperations([op(100)])).rejects.toThrow(
       "insert failed",
     );
-    expect(db.cursor).toBe(99);
-
     await model.indexOperations([op(101)]);
-    expect(refill).toHaveBeenCalledWith(99);
+    await sweep();
+
     expect(addReferences).toHaveBeenLastCalledWith([
       expect.objectContaining({ ordinal: 100 }),
-      expect.objectContaining({ ordinal: 101 }),
     ]);
     expect(db.cursor).toBe(101);
   });
 
-  it("serializes cross-document calls in global ordinal order", async () => {
-    let releaseFirst!: () => void;
-    const firstBlocked = new Promise<void>((resolve) => {
-      releaseFirst = resolve;
+  it("keeps what it applied when a sweep's cursor write fails", async () => {
+    const { addReferences, db, model, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [op(1)],
     });
-    const committed: number[] = [];
-    const writer: IAttachmentReferenceWriter = {
-      addReferences: vi.fn(
-        async (references: readonly AttachmentReferenceInput[]) => {
-          committed.push(...references.map(({ ordinal }) => ordinal));
-          if (references[0]?.ordinal === 1) await firstBlocked;
-        },
-      ),
-    };
-    const { model } = dependencies({ writer });
-    const first = model.indexOperations([op(1, undefined, undefined, "alpha")]);
-    const second = model.indexOperations([op(2, undefined, undefined, "beta")]);
-    await Promise.resolve();
-    expect(committed).toEqual([1]);
-    releaseFirst();
-    await Promise.all([first, second]);
-    expect(committed).toEqual([1, 2]);
-  });
-
-  it("replays idempotently when insert succeeds but cursor save fails", async () => {
-    const stored = new Set<string>();
-    const addReferences = vi.fn(
-      (references: readonly AttachmentReferenceInput[]) => {
-        for (const reference of references) {
-          stored.add(`${reference.documentId}:${reference.ref}`);
-        }
-        return Promise.resolve();
-      },
-    );
-    const writer: IAttachmentReferenceWriter = {
-      addReferences,
-    };
-    const { db, model } = dependencies({ cursor: 0, writer });
-    db.failNextSave = true;
-    await expect(model.indexOperations([op(1)])).rejects.toThrow(
-      "cursor save failed",
-    );
-    expect(db.cursor).toBe(0);
     await model.indexOperations([op(1)]);
-    expect(stored.size).toBe(1);
-    expect(addReferences).toHaveBeenCalledTimes(2);
+
+    db.failNextSave = true;
+    await expect(sweep()).rejects.toThrow("cursor save failed");
+    expect(db.cursor).toBe(0);
+
+    await sweep();
+    expect(addReferences).toHaveBeenCalledTimes(1);
     expect(db.cursor).toBe(1);
   });
 
-  it("ignores processed ordinals", async () => {
-    const { addReferences, model } = dependencies({ cursor: 5 });
+  it("drops a redelivered ordinal at or below the cursor", async () => {
+    const { addReferences, db, index, model } = dependencies({ cursor: 5 });
     await model.init();
+    index.getSinceOrdinal.mockClear();
+
     await model.indexOperations([op(4), op(5)]);
+
     expect(addReferences).not.toHaveBeenCalled();
+    expect(index.getSinceOrdinal).not.toHaveBeenCalled();
+    expect(db.cursor).toBe(5);
   });
 
-  it("keeps errors observable and the queue reusable", async () => {
+  it("keeps errors observable and the live path reusable", async () => {
     const addReferences = vi
       .fn()
       .mockRejectedValueOnce(new Error("visible failure"))
       .mockResolvedValue(undefined);
-    const { db, model } = dependencies({ writer: { addReferences } });
+    const { db, model, sweep } = dependencies({
+      cursor: 0,
+      writer: { addReferences, removeDocuments: vi.fn() },
+      indexOperations: [op(1)],
+    });
     await expect(model.indexOperations([op(1)])).rejects.toThrow(
       "visible failure",
     );
     await model.indexOperations([op(1)]);
+    await sweep();
+    expect(addReferences).toHaveBeenCalledTimes(2);
     expect(db.cursor).toBe(1);
   });
 
-  it("keeps a missing-module cursor retryable and gap-recovers after registration", async () => {
-    const { db, index, model, registry } = dependencies({ cursor: 0 });
+  it("keeps a missing-module operation retryable and sweeps it after registration", async () => {
+    const { addReferences, db, model, registry, store, sweep } = dependencies({
+      cursor: 0,
+    });
     await model.init();
-    registry.getModule.mockImplementationOnce(() => {
+    store.push(op(1), op(2, "ATTACH_FILES", { refs: [REF_B] }));
+    registry.getModule.mockImplementation(() => {
       throw new Error("module not registered");
     });
     await expect(model.indexOperations([op(1)])).rejects.toThrow(
       "module not registered",
     );
-    expect(db.cursor).toBe(0);
+
+    const held = await sweep();
+    expect(held.to).toBe(0);
+    expect(held.blockedAt).toMatchObject({ ordinal: 1 });
 
     registry.getModule.mockReturnValue(standardModule);
-    index.getSinceOrdinal.mockResolvedValue(
-      page([op(1), op(2, "ATTACH_FILES", { refs: [REF_B] })]),
-    );
-    await model.indexOperations([op(2, "ATTACH_FILES", { refs: [REF_B] })]);
-
-    expect(index.getSinceOrdinal).toHaveBeenCalledWith(0);
+    await sweep();
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 1 }),
+    ]);
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 2 }),
+    ]);
     expect(db.cursor).toBe(2);
   });
 
@@ -468,20 +538,86 @@ describe("AttachmentReferenceReadModel", () => {
     expect(addReferences).not.toHaveBeenCalled();
   });
 
-  it("fills internal gaps across pages and rejects unresolved gaps", async () => {
-    const { db, index, model } = dependencies({ cursor: 9 });
-    await model.init();
-    index.getSinceOrdinal.mockResolvedValueOnce(
-      page([op(10)], () => Promise.resolve(page([op(11), op(12)]))),
-    );
-    await model.indexOperations([op(10), op(12)]);
-    expect(db.cursor).toBe(12);
+  it("catches up across a permanent hole on init instead of throwing", async () => {
+    const { addReferences, db, model } = dependencies({
+      cursor: 10,
+      indexOperations: [op(11), op(13)],
+    });
 
-    const unresolved = dependencies({ cursor: 20 });
-    await unresolved.model.init();
-    await expect(unresolved.model.indexOperations([op(22)])).rejects.toThrow(
-      "missing ordinal 21",
+    await expect(model.init()).resolves.toBeUndefined();
+
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 11 }),
+      expect.objectContaining({ ordinal: 13 }),
+    ]);
+    expect(db.cursor).toBe(13);
+  });
+
+  it("deletes a purged document's references on its marker, live and swept", async () => {
+    const marker = purgeItem("document-1", 3);
+    const {
+      addReferences,
+      db,
+      model,
+      registry,
+      removeDocuments,
+      store,
+      sweep,
+    } = dependencies({ cursor: 0 });
+    await model.init();
+    db.purged.add("document-1");
+
+    await model.indexOperations([
+      op(2, "ATTACH_FILES", { refs: [REF_B] }),
+      marker,
+    ]);
+    expect(removeDocuments).toHaveBeenCalledWith(["document-1"]);
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ documentId: "document-2" }),
+    ]);
+    expect(registry.getModule).toHaveBeenCalledTimes(1);
+
+    removeDocuments.mockClear();
+    store.push(op(2, "ATTACH_FILES", { refs: [REF_B] }), marker);
+    await sweep();
+    expect(removeDocuments).not.toHaveBeenCalled();
+    expect(db.cursor).toBe(3);
+  });
+
+  it("drops a purged document's operations and applies its marker in a sweep", async () => {
+    const { addReferences, db, model, removeDocuments, store, sweep } =
+      dependencies({ cursor: 0 });
+    await model.init();
+    db.purged.add("document-1");
+    store.push(
+      op(1, "ATTACH_FILES", { refs: [REF_A] }, "document-1"),
+      op(2, "ATTACH_FILES", { refs: [REF_B] }),
+      purgeItem("document-1", 5),
+      op(6, "ATTACH_FILES", { refs: [REF_A] }),
     );
-    expect(unresolved.db.cursor).toBe(20);
+
+    await sweep();
+
+    expect(addReferences.mock.calls.flat(2)).toEqual([
+      expect.objectContaining({ documentId: "document-2" }),
+      expect.objectContaining({ documentId: "document-6" }),
+    ]);
+    expect(removeDocuments).toHaveBeenCalledWith(["document-1"]);
+    expect(db.cursor).toBe(6);
+  });
+
+  it("P7: indexes a reference whose batch never arrived, without a later batch", async () => {
+    const { addReferences, db, model, store, sweep } = dependencies({
+      cursor: 0,
+    });
+    await model.init();
+
+    store.push(op(1));
+    await sweep();
+
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ref: REF_A, ordinal: 1 }),
+    ]);
+    expect(db.cursor).toBe(1);
   });
 });

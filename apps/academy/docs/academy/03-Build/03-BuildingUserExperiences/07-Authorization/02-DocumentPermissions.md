@@ -223,21 +223,9 @@ These tables are automatically created by database migrations when you enable `D
 #### Get document access info
 
 ```graphql
-query GetDocumentAccess($documentId: String!) {
-  documentAccess(documentId: $documentId) {
+query GetDocumentAccess($documentIdOrSlug: String!) {
+  documentAccess(documentIdOrSlug: $documentIdOrSlug) {
     documentId
-    groupPermissions {
-      documentId
-      groupId
-      group {
-        id
-        name
-        description
-        members
-      }
-      permission
-      grantedBy
-    }
     permissions {
       documentId
       userAddress
@@ -276,8 +264,8 @@ query ListGroups {
 #### Check operation permission
 
 ```graphql
-query CanExecute($documentId: String!, $operation: String!) {
-  canExecuteOperation(documentId: $documentId, operationType: $operation)
+query CanExecute($documentIdOrSlug: String!, $operation: String!) {
+  canExecuteOperation(documentIdOrSlug: $documentIdOrSlug, operationType: $operation)
 }
 ```
 
@@ -312,25 +300,14 @@ query GetUserGroups($userAddress: String!) {
 #### Get operation permissions
 
 ```graphql
-query GetOperationPermissions($documentId: String!, $operationType: String!) {
-  operationPermissions(documentId: $documentId, operationType: $operationType) {
+query GetOperationPermissions($documentIdOrSlug: String!, $operationType: String!) {
+  operationPermissions(documentIdOrSlug: $documentIdOrSlug, operationType: $operationType) {
     documentId
     operationType
     userPermissions {
       documentId
       operationType
       userAddress
-      grantedBy
-      createdAt
-    }
-    groupPermissions {
-      documentId
-      operationType
-      groupId
-      group {
-        id
-        name
-      }
       grantedBy
       createdAt
     }
@@ -365,12 +342,12 @@ These operation permissions provide fine-grained control over specific actions w
 
 ```graphql
 mutation GrantDocumentPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $userAddress: String!
   $permission: DocumentPermissionLevel!
 ) {
   grantDocumentPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     userAddress: $userAddress
     permission: $permission
   ) {
@@ -387,8 +364,8 @@ mutation GrantDocumentPermission(
 #### Revoke document permission from user
 
 ```graphql
-mutation RevokeDocumentPermission($documentId: String!, $userAddress: String!) {
-  revokeDocumentPermission(documentId: $documentId, userAddress: $userAddress)
+mutation RevokeDocumentPermission($documentIdOrSlug: String!, $userAddress: String!) {
+  revokeDocumentPermission(documentIdOrSlug: $documentIdOrSlug, userAddress: $userAddress)
 }
 ```
 
@@ -476,12 +453,12 @@ mutation RevokeGroupPermission($documentId: String!, $groupId: Int!) {
 
 ```graphql
 mutation GrantOperationPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $operationType: String!
   $userAddress: String!
 ) {
   grantOperationPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     operationType: $operationType
     userAddress: $userAddress
   ) {
@@ -498,12 +475,12 @@ mutation GrantOperationPermission(
 
 ```graphql
 mutation RevokeOperationPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $operationType: String!
   $userAddress: String!
 ) {
   revokeOperationPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     operationType: $operationType
     userAddress: $userAddress
   )
@@ -558,15 +535,14 @@ mutation RevokeGroupOperationPermission(
 #### Create document
 
 ```graphql
-mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
-  createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+mutation CreateDocument($document: JSONObject!, $parentIdOrSlug: String) {
+  createDocument(document: $document, parentIdOrSlug: $parentIdOrSlug) {
     id
     name
     documentType
     state
     createdAtUtcIso
     lastModifiedAtUtcIso
-    parentId
   }
 }
 ```
@@ -574,13 +550,10 @@ mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
 #### Create empty document
 
 ```graphql
-mutation CreateEmptyDocument(
-  $documentType: String!
-  $parentIdentifier: String
-) {
+mutation CreateEmptyDocument($documentType: String!, $parentIdOrSlug: String) {
   createEmptyDocument(
     documentType: $documentType
-    parentIdentifier: $parentIdentifier
+    parentIdOrSlug: $parentIdOrSlug
   ) {
     id
     name
@@ -588,23 +561,22 @@ mutation CreateEmptyDocument(
     state
     createdAtUtcIso
     lastModifiedAtUtcIso
-    parentId
   }
 }
 ```
 
-#### Mutate document
+#### Execute actions on a document
 
 ```graphql
-mutation MutateDocument(
-  $documentIdentifier: String!
-  $actions: [JSONObject!]!
-  $view: ViewFilterInput
+mutation Execute(
+  $documentIdOrSlug: String!
+  $actions: [ActionInput!]!
+  $branch: String
 ) {
-  mutateDocument(
-    documentIdentifier: $documentIdentifier
+  execute(
+    documentIdOrSlug: $documentIdOrSlug
     actions: $actions
-    view: $view
+    branch: $branch
   ) {
     id
     name
@@ -623,12 +595,12 @@ mutation MutateDocument(
 
 ```graphql
 mutation RenameDocument(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $name: String!
   $branch: String
 ) {
   renameDocument(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     name: $name
     branch: $branch
   ) {
@@ -636,7 +608,6 @@ mutation RenameDocument(
     name
     documentType
     lastModifiedAtUtcIso
-    parentId
   }
 }
 ```
@@ -644,8 +615,8 @@ mutation RenameDocument(
 #### Delete document
 
 ```graphql
-mutation DeleteDocument($identifier: String!, $propagate: PropagationMode) {
-  deleteDocument(identifier: $identifier, propagate: $propagate)
+mutation DeleteDocument($idOrSlug: String!, $propagate: PropagationMode) {
+  deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
 }
 ```
 
@@ -1049,12 +1020,12 @@ Give Finance Manager permission to execute the `ADD_FILE` operation for creating
 
 ```graphql
 mutation GrantOperationPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $operationType: String!
   $userAddress: String!
 ) {
   grantOperationPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     operationType: $operationType
     userAddress: $userAddress
   ) {
@@ -1069,7 +1040,7 @@ mutation GrantOperationPermission(
 
 ```json
 {
-  "documentId": "drive-uuid-1234-5678-abcd",
+  "documentIdOrSlug": "drive-uuid-1234-5678-abcd",
   "operationType": "ADD_FILE",
   "userAddress": "0xalice...finance"
 }
@@ -1527,18 +1498,10 @@ query MyPermissions {
 **Audit all access to sensitive document:**
 
 ```graphql
-query AuditDocumentAccess($docId: String!) {
-  documentAccess(documentId: $docId) {
+query AuditDocumentAccess($documentIdOrSlug: String!) {
+  documentAccess(documentIdOrSlug: $documentIdOrSlug) {
     permissions {
       userAddress
-      permission
-      grantedBy
-    }
-    groupPermissions {
-      group {
-        name
-        members
-      }
       permission
       grantedBy
     }
@@ -1549,8 +1512,8 @@ query AuditDocumentAccess($docId: String!) {
 **Verify if user can perform specific operation:**
 
 ```graphql
-query CheckOperationAccess($docId: String!, $operation: String!) {
-  canExecuteOperation(documentId: $docId, operationType: $operation)
+query CheckOperationAccess($documentIdOrSlug: String!, $operation: String!) {
+  canExecuteOperation(documentIdOrSlug: $documentIdOrSlug, operationType: $operation)
 }
 ```
 

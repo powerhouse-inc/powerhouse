@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src", "test", "*.config.ts", "package.json"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../pieces-framework"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../shared"
+    },
+    {
+      "path": "../workflow"
+    }
+  ]
+}

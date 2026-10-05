@@ -1,4 +1,10 @@
-import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type {
+  ColumnType,
+  Generated,
+  Insertable,
+  Selectable,
+  Updateable,
+} from "kysely";
 
 export interface OperationTable {
   id: Generated<number>;
@@ -73,6 +79,13 @@ export interface SyncRemoteTable {
   pull_last_failure_utc_ms: string | null;
   pull_failure_count: number;
   bound_address: string | null;
+  peer_manifest: string | null;
+  // bigint: pg returns a string, PGlite may return a number.
+  peer_manifest_at_utc_ms: ColumnType<
+    string | number | null,
+    number | null,
+    number | null
+  >;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -104,6 +117,33 @@ export interface SyncDeadLetterTable {
   created_at: Generated<Date>;
 }
 
+export interface SyncHoldTable {
+  remote_name: string;
+  document_id: string;
+  branch: string;
+  protocol: string;
+  version: number;
+  held_at_utc_ms: ColumnType<string | number, number, number>;
+}
+
+/** A received purge marker awaiting its outcome (migration 025). */
+export interface SyncReceivedMarkerTable {
+  remote_name: string;
+  marker_id: string;
+  document_id: string;
+  branch: string;
+  operation: ColumnType<unknown, string, string>;
+  received_at_utc_ms: ColumnType<string | number, number, number>;
+}
+
+/** A remote's refusal of a purge marker (migration 026). */
+export interface SyncPurgeRefusalTable {
+  remote_name: string;
+  document_id: string;
+  branch: string;
+  refused_at_utc_ms: ColumnType<string | number, number, number>;
+}
+
 /**
  * One (document, group) reference ever discovered from an auth operation's
  * input. Rows are never updated or deleted (see migration 017).
@@ -111,6 +151,19 @@ export interface SyncDeadLetterTable {
 export interface GroupReferenceTable {
   documentId: string;
   groupId: string;
+}
+
+/** Rows a purge removed, per table. */
+export type PurgeRemovedRows = { [table: string]: number };
+
+/** The tombstone of a purged document (migration 024). */
+export interface DocumentPurgeTable {
+  documentId: string;
+  // bigint: pg returns a string, PGlite may return a number.
+  ordinal: ColumnType<string | number, number, number>;
+  removedRows: ColumnType<PurgeRemovedRows, string, string>;
+  purgedAtUtc: ColumnType<Date, Date | string, Date | string>;
+  requestId: string;
 }
 
 export interface Database {
@@ -122,6 +175,10 @@ export interface Database {
   sync_remotes: SyncRemoteTable;
   sync_cursors: SyncCursorTable;
   sync_dead_letters: SyncDeadLetterTable;
+  sync_holds: SyncHoldTable;
+  sync_received_markers: SyncReceivedMarkerTable;
+  sync_purge_refusals: SyncPurgeRefusalTable;
+  document_purges: DocumentPurgeTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;
@@ -192,6 +249,9 @@ export type UpdateableSyncRemote = Updateable<SyncRemoteTable>;
 export type SyncCursorRow = Selectable<SyncCursorTable>;
 export type InsertableSyncCursor = Insertable<SyncCursorTable>;
 export type UpdateableSyncCursor = Updateable<SyncCursorTable>;
+
+export type DocumentPurgeRow = Selectable<DocumentPurgeTable>;
+export type InsertableDocumentPurge = Insertable<DocumentPurgeTable>;
 
 export type SyncDeadLetterRow = Selectable<SyncDeadLetterTable>;
 export type InsertableSyncDeadLetter = Insertable<SyncDeadLetterTable>;

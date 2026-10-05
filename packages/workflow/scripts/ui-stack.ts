@@ -1,0 +1,1399 @@
+// The live stack the UI screenshots and UI tests run against: switchboard
+// (workflows on, in-memory) plus Connect, seeded per drive.
+import {
+  chromium,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
+import { blockKey } from "@powerhousedao/pieces-framework/block-type";
+import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
+import { spawn, type ChildProcess, execSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import type * as ConnectionModel from "../document-models/connection/v1/index.js";
+import type * as WorkflowModel from "../document-models/workflow/v1/index.js";
+
+export const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+export const ROOT = resolve(PKG, "../..");
+const SWITCHBOARD_PORT = 4001;
+const CONNECT_PORT = Number(process.env.UI_SHOTS_CONNECT_PORT ?? 3100);
+export const SWITCHBOARD = `http://localhost:${SWITCHBOARD_PORT}`;
+export const CONNECT = `http://localhost:${CONNECT_PORT}`;
+
+// Connect's production build by default; UI_CONNECT_DEV=1 runs Vite's dev
+// server instead, for writing tests against source with HMR.
+export function connectDev(): boolean {
+  return process.env.UI_CONNECT_DEV === "1";
+}
+
+// The Connect build bundles this package's dist, from the consumer project.
+const CONSUMER = join(ROOT, "test/test-consumer-project");
+const CONNECT_BUILD = join(CONSUMER, ".ph/connect-build/dist");
+const PH_CLI = join(ROOT, "clis/ph-cli/dist/cli.mjs");
+
+// ─── servers ────────────────────────────────────────────────────────────────
+
+const RUNTIME_URL = `${SWITCHBOARD}/graphql/workflow-runtime`;
+
+async function isUp(url: string): Promise<boolean> {
+  try {
+    // The runtime subgraph registers last; a GraphQL answer means ready.
+    const res =
+      url === RUNTIME_URL
+        ? await fetch(url, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: '{"query":"{ __typename }"}',
+            signal: AbortSignal.timeout(2000),
+          })
+        : await fetch(url, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function waitUp(url: string, name: string, timeoutMs = 120_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await isUp(url)) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`${name} did not come up at ${url}`);
+}
+
+function startServer(
+  name: string,
+  cmd: string,
+  args: string[],
+  cwd: string,
+  env: Record<string, string> = {},
+): ChildProcess {
+  const child = spawn(cmd, args, {
+    cwd,
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const prefix = `[${name}] `;
+  const pipe = (chunk: Buffer) => {
+    if (!process.env.UI_SHOTS_VERBOSE) return;
+    process.stdout.write(
+      chunk
+        .toString()
+        .split("\n")
+        .map((l) => (l ? prefix + l : l))
+        .join("\n"),
+    );
+  };
+  child.stdout.on("data", pipe);
+  child.stderr.on("data", pipe);
+  return child;
+}
+
+/** Starts whichever of switchboard / Connect is not already listening. */
+export async function ensureServers(): Promise<ChildProcess[]> {
+  const started: ChildProcess[] = [];
+  if (!(await isUp(RUNTIME_URL))) {
+    console.log(`▶ starting switchboard on :${SWITCHBOARD_PORT}`);
+    started.push(
+      startServer(
+        "switchboard",
+        "node",
+        ["dist/index.mjs"],
+        join(ROOT, "apps/switchboard"),
+        {
+          PORT: String(SWITCHBOARD_PORT),
+          PH_PGLITE_IN_MEMORY: "1",
+          PH_WORKFLOWS_ENABLED: "true",
+          // Loopback only, so tests can reach the services they start.
+          PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES: "127.0.0.1/32",
+          // Overrides the .env registry, so a release cannot change the catalog.
+          PH_REGISTRY_URL: "",
+        },
+      ),
+    );
+  }
+  if (!(await isUp(CONNECT))) {
+    if (connectDev()) {
+      console.log(`▶ starting Connect (vite dev) on :${CONNECT_PORT}`);
+      started.push(
+        startServer(
+          "connect",
+          "pnpm",
+          [
+            "exec",
+            "vite",
+            "dev",
+            "--port",
+            String(CONNECT_PORT),
+            "--strictPort",
+          ],
+          join(ROOT, "apps/connect"),
+        ),
+      );
+    } else {
+      buildConnectIfStale();
+      console.log(`▶ starting Connect (preview) on :${CONNECT_PORT}`);
+      started.push(
+        startServer(
+          "connect",
+          "node",
+          [
+            PH_CLI,
+            "connect",
+            "preview",
+            "--port",
+            String(CONNECT_PORT),
+            "--strictPort",
+          ],
+          CONSUMER,
+        ),
+      );
+    }
+  }
+  await waitUp(RUNTIME_URL, "switchboard");
+  await waitUp(CONNECT, "Connect");
+  return started;
+}
+
+/** Builds Connect when it is missing or older than this package's dist. */
+export function buildConnectIfStale(): void {
+  const built = join(CONNECT_BUILD, "index.html");
+  const dist = join(PKG, "dist/browser/index.js");
+  if (
+    existsSync(built) &&
+    (!existsSync(dist) || statSync(built).mtimeMs >= statSync(dist).mtimeMs)
+  ) {
+    return;
+  }
+  console.log("▶ building Connect");
+  execSync(`node ${PH_CLI} connect build --workflows true`, {
+    cwd: CONSUMER,
+    stdio: process.env.UI_SHOTS_VERBOSE ? "inherit" : "ignore",
+  });
+}
+
+// Connect dev imports the package's dist stylesheet; regenerate it from source.
+// Written only when it changed: every write makes Vite reload open pages.
+export async function buildCss(): Promise<void> {
+  if (!connectDev()) return;
+  const target = join(PKG, "dist/style.css");
+  const scratch = join(PKG, ".ui-shots/style.css");
+  mkdirSync(dirname(scratch), { recursive: true });
+  execSync(`pnpm exec tailwindcss -i ./style.css -o ${scratch}`, {
+    cwd: PKG,
+    stdio: "ignore",
+  });
+  let css = readFileSync(scratch, "utf8");
+  try {
+    css += "\n" + readFileSync(join(PKG, "dist/browser/style.css"), "utf8");
+  } catch {
+    // No browser build yet; Connect dev loads the canvas CSS from source.
+  }
+  const current = existsSync(target) ? readFileSync(target, "utf8") : "";
+  if (css === current) return;
+  writeFileSync(target, css);
+  // Let Vite pick up the change before any page loads.
+  await new Promise((r) => setTimeout(r, 2000));
+}
+
+// ─── dynamic imports ────────────────────────────────────────────────────────
+
+const IMPORT_FAILED = /Failed to fetch dynamically imported module/;
+
+/**
+ * page.evaluate for a function that imports from Vite first: a re-optimise
+ * fails that import, and nothing has run yet, so it is safe to try again.
+ */
+export async function evaluateImporting<A, R>(
+  page: Page,
+  fn: (arg: A) => Promise<R>,
+  arg: A,
+): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await page.evaluate(fn as (arg: unknown) => Promise<R>, arg);
+    } catch (error) {
+      if (attempt >= 2 || !IMPORT_FAILED.test(String(error))) throw error;
+      await page.waitForLoadState("load");
+    }
+  }
+}
+
+// Thrown before any write: the app is booting, or reloaded under the call.
+const REACTOR_GONE =
+  /Failed to fetch dynamically imported module|reading '(?:client|reactorClientModule)'|Execution context was destroyed/;
+
+/** evaluateImporting for a function that needs Connect's reactor client. */
+export async function evaluateWithReactor<A, R>(
+  page: Page,
+  fn: (arg: A) => Promise<R>,
+  arg: A,
+): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    await page.waitForLoadState("load");
+    await page.waitForFunction(
+      () => !!(window as unknown as PhWindow).ph?.reactorClientModule?.client,
+      undefined,
+      { timeout: 30_000, polling: 250 },
+    );
+    try {
+      return await page.evaluate(fn as (arg: unknown) => Promise<R>, arg);
+    } catch (error) {
+      if (attempt >= 3 || !REACTOR_GONE.test(String(error))) throw error;
+    }
+  }
+}
+
+// Modules tests import on demand; each can make Vite find a new dependency.
+const WARM_MODULES = [
+  "packages/workflow/document-models/workflow/v1/index.ts",
+  "packages/workflow/document-models/connection/v1/index.ts",
+  "packages/workflow/editors/index.ts",
+  "packages/workflow/test/ui/harness/prop-controls.tsx",
+];
+
+/**
+ * Imports everything once so Vite's dep optimiser settles before the tests:
+ * a re-optimise mid-run reloads every open page. Done once a round passes
+ * without a reload.
+ */
+export async function warmConnect(): Promise<void> {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    for (let round = 0; round < 4; round++) {
+      await page.goto(CONNECT);
+      await page.waitForLoadState("load");
+      const failed = await page
+        .evaluate(
+          async ({ root, modules }) => {
+            (window as { __warm?: boolean }).__warm = true;
+            const results = await Promise.allSettled(
+              modules.map(
+                (path) => import(/* @vite-ignore */ `/@fs${root}/${path}`),
+              ),
+            );
+            return results.filter((result) => result.status === "rejected")
+              .length;
+          },
+          { root: ROOT, modules: WARM_MODULES },
+        )
+        .catch(() => -1);
+      // A re-optimise answers with a full reload shortly after the imports.
+      await page.waitForTimeout(3000);
+      const kept = await page
+        .evaluate(() => (window as { __warm?: boolean }).__warm === true)
+        .catch(() => false);
+      if (failed === 0 && kept) return;
+    }
+    console.warn("Connect still re-optimising after warm-up");
+  } finally {
+    await browser.close();
+  }
+}
+
+// ─── harness pages ──────────────────────────────────────────────────────────
+
+const HARNESS_DIR = join(PKG, ".ui-shots/harness");
+
+/** Bundles the harnesses the build can't import from source. */
+export async function buildHarnesses(): Promise<void> {
+  if (connectDev()) return;
+  const { build } = await import("rolldown");
+  rmSync(HARNESS_DIR, { recursive: true, force: true });
+  await build({
+    input: { "prop-controls": join(PKG, "test/ui/harness/prop-controls.tsx") },
+    platform: "browser",
+    transform: { define: { "process.env.NODE_ENV": '"production"' } },
+    output: { dir: HARNESS_DIR, format: "esm" },
+    // "use client" directives, which a plain bundle ignores.
+    logLevel: "silent",
+  });
+}
+
+/**
+ * Opens a harness on a page styled like Connect and returns its mount. The
+ * build's own page, minus its app, plus the harness bundle; dev imports source.
+ */
+export async function openHarness<A>(
+  page: Page,
+  name: string,
+): Promise<(arg: A) => Promise<void>> {
+  if (connectDev()) {
+    await page.goto(CONNECT);
+    await page.waitForLoadState("load");
+    return (arg) =>
+      evaluateImporting(
+        page,
+        async ({ path, arg }) => {
+          const harness = (await import(path)) as {
+            mount: (arg: unknown) => void;
+          };
+          harness.mount(arg);
+        },
+        { path: `/@fs${PKG}/test/ui/harness/${name}.tsx`, arg },
+      );
+  }
+  await page.route(`${CONNECT}/__harness/**`, async (route) => {
+    const file = new URL(route.request().url()).pathname.slice(
+      "/__harness/".length,
+    );
+    if (file) return route.fulfill({ path: join(HARNESS_DIR, file) });
+    const html = readFileSync(join(CONNECT_BUILD, "index.html"), "utf8")
+      .replace(/<script type="module"[^>]*src="[^"]*"><\/script>/g, "")
+      .replace(/<link rel="modulepreload"[^>]*>/g, "")
+      .replace(
+        "</body>",
+        `<script type="module">import { mount } from "/__harness/${name}.js"; window.__harness = mount;</script></body>`,
+      );
+    return route.fulfill({ contentType: "text/html", body: html });
+  });
+  await page.goto(`${CONNECT}/__harness/`);
+  await page.waitForFunction(() => "__harness" in window);
+  return (arg) =>
+    page.evaluate((a) => {
+      (window as unknown as { __harness: (a: unknown) => void }).__harness(a);
+    }, arg as unknown);
+}
+
+// ─── document models in the page ────────────────────────────────────────────
+
+const MODEL_SOURCES = {
+  "powerhouse/workflow": "document-models/workflow/v1/index.ts",
+  "powerhouse/connection": "document-models/connection/v1/index.ts",
+};
+
+/**
+ * Defines window.__uiModel(type), a document model's actions and utils, and
+ * window.__uiDrives(), Connect's drive actions. A string, since tsx wraps
+ * named functions in a __name helper the page lacks.
+ */
+function pageHelpersScript(): string {
+  const drives = connectDev()
+    ? `/@fs${ROOT}/packages/reactor-browser/src/actions/drive.ts`
+    : "@powerhousedao/reactor-browser";
+  const sources = connectDev()
+    ? Object.fromEntries(
+        Object.entries(MODEL_SOURCES).map(([type, path]) => [
+          type,
+          `/@fs${PKG}/${path}`,
+        ]),
+      )
+    : null;
+  return `window.__uiModel = async (type) => {
+  const sources = ${JSON.stringify(sources)};
+  if (sources) return import(sources[type]);
+  for (let attempt = 0; attempt < 40; attempt++) {
+    for (const pkg of window.ph?.vetraPackageManager?.packages ?? []) {
+      for (const model of pkg.documentModels ?? []) {
+        const id = model.documentModel?.global?.id ?? model.documentModel?.id;
+        if (id === type) return { ...model.actions, utils: model.utils };
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error("No document model " + type + " in Connect's packages");
+};
+window.__uiDrives = () => import(${JSON.stringify(drives)});`;
+}
+
+// ─── seeding ────────────────────────────────────────────────────────────────
+
+// A block as a step or the trigger stores it.
+export interface StepBlock {
+  pieceName: string;
+  pieceVersion: string;
+  actionName: string;
+}
+
+export interface TriggerBlock {
+  pieceName: string;
+  pieceVersion: string;
+  triggerName: string;
+}
+
+type AnyBlock = StepBlock | TriggerBlock;
+
+function refOf(block: AnyBlock) {
+  return "triggerName" in block
+    ? {
+        pieceName: block.pieceName,
+        pieceVersion: block.pieceVersion,
+        kind: "trigger" as const,
+        name: block.triggerName,
+      }
+    : {
+        pieceName: block.pieceName,
+        pieceVersion: block.pieceVersion,
+        kind: "action" as const,
+        name: block.actionName,
+      };
+}
+
+// Keyed by blockKey: one entry per block, whatever version it pins.
+type Defaults = Record<string, Record<string, unknown>>;
+
+export function defaultsOf(
+  defaults: Defaults,
+  block: AnyBlock,
+): Record<string, unknown> {
+  return defaults[blockKey(refOf(block))] ?? {};
+}
+
+// Each block's piece defaults, which the editor writes when a step is added.
+// Descriptors don't change during a run: one answer per block, per process.
+const descriptorProps = new Map<string, Promise<Record<string, unknown>>>();
+
+function blockPropDefaults(
+  ref: ReturnType<typeof refOf>,
+): Promise<Record<string, unknown>> {
+  const cacheKey = JSON.stringify(ref);
+  let pending = descriptorProps.get(cacheKey);
+  if (!pending) {
+    pending = fetchPropDefaults(ref);
+    pending.catch(() => descriptorProps.delete(cacheKey));
+    descriptorProps.set(cacheKey, pending);
+  }
+  return pending;
+}
+
+async function fetchPropDefaults(
+  ref: ReturnType<typeof refOf>,
+): Promise<Record<string, unknown>> {
+  const data = await gql<{
+    workflowRuntime: {
+      blockDescriptor: {
+        action?: {
+          props?: { name: string; type: string; defaultValue?: unknown }[];
+        };
+        trigger?: {
+          props?: { name: string; type: string; defaultValue?: unknown }[];
+        };
+      } | null;
+    };
+  }>(
+    "/graphql/workflow-runtime",
+    `query($block: BlockInput!) { workflowRuntime { blockDescriptor(block: $block) } }`,
+    { block: ref },
+  );
+  const entry =
+    data.workflowRuntime.blockDescriptor?.action ??
+    data.workflowRuntime.blockDescriptor?.trigger;
+  return Object.fromEntries(
+    (entry?.props ?? [])
+      .filter(
+        (prop) => prop.type !== "MARKDOWN" && prop.defaultValue !== undefined,
+      )
+      .map((prop) => [prop.name, prop.defaultValue]),
+  );
+}
+
+export async function blockDefaults(blocks: AnyBlock[]): Promise<Defaults> {
+  const refs = new Map<string, ReturnType<typeof refOf>>();
+  for (const block of blocks) {
+    const ref = refOf(block);
+    if (!refs.has(blockKey(ref))) refs.set(blockKey(ref), ref);
+  }
+  const entries = await Promise.all(
+    [...refs].map(
+      async ([key, ref]) => [key, await blockPropDefaults(ref)] as const,
+    ),
+  );
+  return Object.fromEntries(entries);
+}
+
+export async function gql<T>(path: string, query: string, variables = {}) {
+  const res = await fetch(`${SWITCHBOARD}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query, variables }),
+  });
+  const body = (await res.json()) as {
+    data?: T;
+    errors?: { message: string }[];
+  };
+  if (body.errors?.length) throw new Error(body.errors[0].message);
+  return body.data as T;
+}
+
+async function createRemoteDrive(slug: string): Promise<string> {
+  const data = await gql<{ DocumentDrive: { createDocument: { id: string } } }>(
+    "/graphql/document-drive",
+    `mutation($slug: String!) { DocumentDrive { createDocument(name: "Workflows", slug: $slug, preferredEditor: "workflow-studio") { id } } }`,
+    { slug },
+  );
+  return data.DocumentDrive.createDocument.id;
+}
+
+export async function createSecret(
+  value: string,
+  label: string,
+): Promise<string> {
+  const data = await gql<{
+    workflowRuntime: { createSecret: { ref: string } };
+  }>(
+    "/graphql/workflow-runtime",
+    `mutation($v: String!, $l: String) { workflowRuntime { createSecret(value: $v, label: $l) { ref } } }`,
+    { v: value, l: label },
+  );
+  return data.workflowRuntime.createSecret.ref;
+}
+
+interface PieceListing {
+  version: string;
+  entries: { name: string }[];
+}
+
+// Cached per process, like the descriptors.
+const listings = new Map<string, Promise<PieceListing>>();
+
+function pieceListing(
+  kind: "pieceActions" | "pieceTriggers",
+  pkg: string,
+): Promise<PieceListing> {
+  const key = `${kind} ${pkg}`;
+  let pending = listings.get(key);
+  if (!pending) {
+    pending = fetchPieceListing(kind, pkg);
+    pending.catch(() => listings.delete(key));
+    listings.set(key, pending);
+  }
+  return pending;
+}
+
+async function fetchPieceListing<K extends "pieceActions" | "pieceTriggers">(
+  kind: K,
+  pkg: string,
+): Promise<PieceListing> {
+  const data = await gql<{
+    workflowRuntime: Record<
+      K,
+      {
+        version: string;
+        actions?: { name: string }[];
+        triggers?: { name: string }[];
+      }
+    >;
+  }>(
+    "/graphql/workflow-runtime",
+    `query($p: String!) { workflowRuntime { ${kind}(packageName: $p) } }`,
+    { p: pkg },
+  );
+  const listing = data.workflowRuntime[kind];
+  return {
+    version: listing.version,
+    entries: listing.actions ?? listing.triggers ?? [],
+  };
+}
+
+/** A piece action pinned to the version the runtime lists. */
+export async function pieceAction(
+  pkg: string,
+  action: string,
+): Promise<StepBlock> {
+  const listing = await pieceListing("pieceActions", pkg);
+  if (!listing.entries.some((entry) => entry.name === action)) {
+    throw new Error(`No action ${action} in ${pkg}`);
+  }
+  return { pieceName: pkg, pieceVersion: listing.version, actionName: action };
+}
+
+/** A piece trigger pinned to the version the runtime lists. */
+export async function pieceTrigger(
+  pkg: string,
+  trigger: string,
+): Promise<TriggerBlock> {
+  const listing = await pieceListing("pieceTriggers", pkg);
+  if (!listing.entries.some((entry) => entry.name === trigger)) {
+    throw new Error(`No trigger ${trigger} in ${pkg}`);
+  }
+  return {
+    pieceName: pkg,
+    pieceVersion: listing.version,
+    triggerName: trigger,
+  };
+}
+
+/** A core piece action (branch, assert), pinned to the installed core piece. */
+export function coreAction(name: string): Promise<StepBlock> {
+  return pieceAction(CORE_PIECE_NAME, name);
+}
+
+/** A core piece trigger (manual, schedule, webhook). */
+export function coreTrigger(name: string): Promise<TriggerBlock> {
+  return pieceTrigger(CORE_PIECE_NAME, name);
+}
+
+type SeedRole = "http" | "parseUrl" | "openai" | "slack";
+
+interface SeedInput {
+  drive: string;
+  blocks: Record<SeedRole, StepBlock> & {
+    schedule: TriggerBlock;
+    manual: TriggerBlock;
+  };
+  botTokenRef: string;
+  // Each block's piece defaults, by the role it plays in the seed.
+  defaults: Record<SeedRole | "schedule" | "manual", Record<string, unknown>>;
+}
+
+export interface Seeded {
+  digest: string;
+  smoke: string;
+  ping: string;
+  connection: string;
+}
+
+export interface PhWindow {
+  __uiModel?: (type: keyof typeof MODEL_SOURCES) => Promise<unknown>;
+  __uiDrives?: () => Promise<{
+    addRemoteDrive(url: string): Promise<string>;
+    deleteDrive(id: string): Promise<void>;
+  }>;
+  ph?: {
+    reactorClientModule?: {
+      client: {
+        drives: {
+          addFile(
+            drive: string,
+            doc: unknown,
+          ): Promise<{ header: { id: string } }>;
+          addFolder(
+            drive: string,
+            name: string,
+            parentFolder?: string,
+          ): Promise<{ state: unknown }>;
+        };
+        execute(
+          id: string,
+          branch: string,
+          actions: unknown[],
+        ): Promise<unknown>;
+        rename(id: string, name: string): Promise<unknown>;
+        get(id: string): Promise<unknown>;
+      };
+      reactorModule?: { syncModule?: { syncManager?: unknown } };
+    };
+    drives?: { header: { id: string } }[];
+  };
+}
+
+/** Creates the documents through Connect's reactor, which syncs them up. */
+function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
+  return evaluateWithReactor(
+    page,
+    async ({ drive, blocks, botTokenRef, defaults }) => {
+      const w = window as unknown as PhWindow;
+      const client = w.ph!.reactorClientModule!.client;
+      const wf = (await w.__uiModel!(
+        "powerhouse/workflow",
+      )) as typeof WorkflowModel;
+      const cn = (await w.__uiModel!(
+        "powerhouse/connection",
+      )) as typeof ConnectionModel;
+
+      // The drive can be readable before it accepts files, so the first add
+      // retries; inline because tsx wraps named functions in a missing __name.
+      let conn: { header: { id: string } } | undefined;
+      for (let attempt = 0; !conn; attempt++) {
+        try {
+          conn = await client.drives.addFile(drive, cn.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      const connection = conn.header.id;
+      await client.execute(connection, "main", [
+        cn.setConnectionName({ name: "Ops Slack" }),
+        cn.setConnector({
+          connectorId: "@activepieces/piece-slack",
+          authType: "CUSTOM_AUTH",
+        }),
+        cn.setSecretRef({
+          id: "bot-token",
+          name: "botToken",
+          ref: botTokenRef,
+        }),
+        cn.setAccountLabel({ accountLabel: "ops@acme.dev" }),
+        cn.recordCheckResult({
+          status: "OK",
+          checkedAt: new Date().toISOString(),
+        }),
+      ]);
+      await client.rename(connection, "Ops Slack");
+
+      const digestDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const digest = digestDoc.header.id;
+      await client.execute(digest, "main", [
+        wf.setWorkflowName({ name: "Daily digest" }),
+        wf.setWorkflowDescription({
+          description:
+            "Fetch overnight metrics, summarise them and post to #ops.",
+        }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.schedule,
+          config: {
+            ...defaults.schedule,
+            mode: "cron",
+            cron: "0 8 * * *",
+          },
+        }),
+        wf.addStep({
+          id: "fetch",
+          key: "fetch",
+          name: "Fetch metrics",
+          ...blocks.http,
+          config: {
+            ...defaults.http,
+            method: "GET",
+            url: "https://metrics.acme.dev/overnight",
+          },
+        }),
+        wf.addStep({
+          id: "summarise",
+          key: "summarise",
+          name: "Summarise",
+          ...blocks.openai,
+          config: {
+            ...defaults.openai,
+            prompt: "Summarise {{steps.fetch.output.body}} in three bullets.",
+          },
+        }),
+        wf.addStep({
+          id: "post",
+          key: "post",
+          name: "Post to #ops",
+          ...blocks.slack,
+          connectionId: connection,
+          config: {
+            ...defaults.slack,
+            channel: "#ops",
+            text: "{{steps.summarise.output}}",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "fetch", port: "next" }),
+        wf.addEdge({ id: "e2", from: "fetch", to: "summarise", port: "next" }),
+        wf.addEdge({ id: "e3", from: "summarise", to: "post", port: "next" }),
+        wf.setVariable({
+          id: "v1",
+          key: "channel",
+          value: "#ops",
+          description: "Where the digest goes",
+        }),
+        // Publishing is what turns a workflow on, as in the editor.
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(digest, "Daily digest");
+
+      const smokeDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const smoke = smokeDoc.header.id;
+      await client.execute(smoke, "main", [
+        wf.setWorkflowName({ name: "Link checker" }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.manual,
+          config: { ...defaults.manual },
+        }),
+        wf.addStep({
+          id: "parse",
+          key: "parse",
+          name: "Parse URL",
+          ...blocks.parseUrl,
+          config: {
+            ...defaults.parseUrl,
+            url: "https://acme.dev/docs?page=2",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
+        // Publishing is what turns a workflow on, as in the editor.
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(smoke, "Link checker");
+
+      const pingDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const ping = pingDoc.header.id;
+      await client.execute(ping, "main", [
+        wf.setWorkflowName({ name: "Uptime ping" }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.manual,
+          config: { ...defaults.manual },
+        }),
+        wf.addStep({
+          id: "parse",
+          key: "parse",
+          name: "Parse URL",
+          ...blocks.parseUrl,
+          config: {
+            ...defaults.parseUrl,
+            url: "https://status.acme.dev/health",
+          },
+        }),
+        wf.addStep({
+          id: "ping",
+          key: "ping",
+          name: "Ping host",
+          ...blocks.http,
+          config: {
+            ...defaults.http,
+            method: "GET",
+            url: "http://127.0.0.1:9/health",
+          },
+        }),
+        wf.addStep({
+          id: "alert",
+          key: "alert",
+          name: "Alert #ops",
+          ...blocks.slack,
+          connectionId: connection,
+          config: {
+            ...defaults.slack,
+            channel: "#ops",
+            text: "Host down: {{steps.parse.output.hostname}}",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
+        wf.addEdge({ id: "e2", from: "parse", to: "ping", port: "next" }),
+        wf.addEdge({ id: "e3", from: "ping", to: "alert", port: "next" }),
+        // Publishing is what turns a workflow on, as in the editor.
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(ping, "Uptime ping");
+
+      return { digest, smoke, ping, connection };
+    },
+    input,
+  );
+}
+
+/** Resolves once the switchboard serves the workflow for design-time calls. */
+export async function waitServed(workflowId: string, stepId: string) {
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    try {
+      await gql(
+        "/graphql/workflow-runtime",
+        `query($w: String!, $s: String!) { workflowRuntime { stepOutputTree(workflowId: $w, stepId: $s) } }`,
+        { w: workflowId, s: stepId },
+      );
+      return;
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+}
+
+/** Fires a manual workflow once it has synced to the switchboard. */
+export async function fireWhenSynced(workflowId: string, payload?: unknown) {
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    try {
+      return await gql(
+        "/graphql/workflow-runtime",
+        `mutation($id: String!, $payload: Unknown) { workflowRuntime { fire(workflowId: $id, payload: $payload) { runId status } } }`,
+        { id: workflowId, payload: payload ?? null },
+      );
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+}
+
+// ─── a seeded Connect page ───────────────────────────────────────────────────
+
+const VIEWPORT = { width: 1440, height: 900 };
+
+export interface ConnectPage {
+  context: BrowserContext;
+  page: Page;
+}
+
+export interface SeededPage extends ConnectPage {
+  seeded: Seeded;
+  drive: string;
+}
+
+/** A fresh browser context with Connect booted, workflows on and no drives. */
+export async function openConnect(
+  browser: Browser,
+  options: {
+    colorScheme?: "light" | "dark";
+    viewport?: { width: number; height: number };
+  } = {},
+): Promise<ConnectPage> {
+  const context = await browser.newContext({
+    viewport: options.viewport ?? VIEWPORT,
+    colorScheme: options.colorScheme ?? "light",
+    // The build's service worker precaches the whole app.
+    serviceWorkers: "block",
+  });
+  await context.addInitScript({ content: pageHelpersScript() });
+  await context.route("**/powerhouse.config.json", async (route) => {
+    const response = await route.fetch();
+    const config = (await response.json()) as {
+      connect: { app?: object; drives: { defaultDrives: unknown[] } };
+    };
+    config.connect.app = { ...config.connect.app, workflowsEnabled: true };
+    config.connect.drives.defaultDrives = [];
+    await route.fulfill({ response, json: config });
+  });
+
+  const page = await context.newPage();
+  await page.goto(CONNECT);
+  const accept = page.getByRole("button", {
+    name: "Accept configured cookies",
+  });
+  await accept.click({ timeout: 15_000 }).catch(() => {});
+  await waitForSync(page);
+  return { context, page };
+}
+
+// Connect can add remote drives once its sync manager is up.
+function waitForSync(page: Page) {
+  return page.waitForFunction(
+    () =>
+      !!(window as unknown as PhWindow).ph?.reactorClientModule?.reactorModule
+        ?.syncModule?.syncManager,
+    undefined,
+    { timeout: 60_000, polling: 250 },
+  );
+}
+
+/** Whether a reused page still runs Connect with its reactor. */
+export async function isHealthy(page: Page): Promise<boolean> {
+  if (page.isClosed()) return false;
+  return page
+    .evaluate(
+      () =>
+        !!(window as unknown as PhWindow).ph?.reactorClientModule?.reactorModule
+          ?.syncModule?.syncManager,
+    )
+    .catch(() => false);
+}
+
+/**
+ * Back to Connect's home page, without a reload: no test routes, the default
+ * viewport and no modal open.
+ */
+export async function resetConnect(page: Page): Promise<void> {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await page.setViewportSize(VIEWPORT);
+  await page.keyboard.press("Escape").catch(() => {});
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent("ph:setModal", { detail: { modal: undefined } }),
+    );
+    window.history.pushState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+}
+
+// Adds the drive through Connect's own addRemoteDrive, then waits until the
+// local reactor can read it. Safe to repeat.
+async function attachDrive(page: Page, slug: string, id: string) {
+  await evaluateWithReactor(
+    page,
+    async ({ url }) => {
+      const drives = await (window as unknown as PhWindow).__uiDrives!();
+      await drives.addRemoteDrive(url);
+    },
+    { url: `${SWITCHBOARD}/d/${slug}` },
+  );
+  await page.waitForFunction(
+    async (driveId) => {
+      const client = (window as unknown as PhWindow).ph?.reactorClientModule
+        ?.client;
+      return !!(await client?.get(driveId).catch(() => null));
+    },
+    id,
+    { timeout: 60_000, polling: 250 },
+  );
+  // Alone on the home page: an earlier test's drive may still be listed.
+  await page.waitForFunction(
+    (driveId) => {
+      const drives = (window as unknown as PhWindow).ph?.drives ?? [];
+      return drives.length === 1 && drives[0].header.id === driveId;
+    },
+    id,
+    { timeout: 30_000, polling: 100 },
+  );
+}
+
+/**
+ * Removes a drive from Connect's reactor, so the next one is alone on home.
+ * From the home page, so Connect has no open document to warn about.
+ */
+export async function detachDrive(page: Page, id: string): Promise<void> {
+  await resetConnect(page);
+  await page.evaluate(async (driveId) => {
+    const drives = await (window as unknown as PhWindow).__uiDrives!();
+    await drives.deleteDrive(driveId);
+  }, id);
+}
+
+/**
+ * A new remote drive, added to an open Connect page and holding the demo
+ * documents unless `seed` is false.
+ */
+export async function addSeededDrive(
+  page: Page,
+  options: {
+    // False leaves the drive empty, for tests that add their own documents.
+    seed?: boolean;
+  } = {},
+): Promise<{ drive: string; seeded: Seeded }> {
+  const driveSlug = `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const drive = await createRemoteDrive(driveSlug);
+  await attachDrive(page, driveSlug, drive);
+  if (options.seed === false) return { drive, seeded: unseeded() };
+
+  const [http, parseUrl, openai, slack, schedule, manual] = await Promise.all([
+    pieceAction("@activepieces/piece-http", "send_request"),
+    pieceAction("@activepieces/piece-http", "parse_url"),
+    pieceAction("@activepieces/piece-openai", "ask_chatgpt"),
+    pieceAction("@activepieces/piece-slack", "send_channel_message"),
+    coreTrigger("schedule"),
+    coreTrigger("manual"),
+  ]);
+  const blocks = { http, parseUrl, openai, slack, schedule, manual };
+  const botTokenRef = await createSecret(
+    "xoxb-demo-token",
+    "Ops Slack · Bot Token",
+  );
+  const known = await blockDefaults(Object.values(blocks));
+  const defaults = Object.fromEntries(
+    Object.entries(blocks).map(([role, block]) => [
+      role,
+      defaultsOf(known, block),
+    ]),
+  ) as SeedInput["defaults"];
+  // A cold Vite server re-optimises deps and reloads the page once, which
+  // can land mid-seed; wait for the reactor again and start over.
+  const retries = connectDev() ? 2 : 0;
+  let seeded: Seeded | undefined;
+  for (let attempt = 0; !seeded; attempt++) {
+    try {
+      seeded = await seedInBrowser(page, {
+        drive,
+        blocks,
+        botTokenRef,
+        defaults,
+      });
+    } catch (error) {
+      if (attempt >= retries) throw error;
+      // The reload may not have started yet; let it land before re-checking.
+      await page.waitForTimeout(2000);
+      await page.waitForLoadState("load");
+      await waitForSync(page);
+      await attachDrive(page, driveSlug, drive);
+    }
+  }
+  // One succeeded and one failed run, for the runs views.
+  await Promise.all([
+    fireWhenSynced(seeded.smoke),
+    fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" }),
+  ]);
+  return { drive, seeded };
+}
+
+/** A fresh browser context on a new remote drive holding the demo documents. */
+export async function openSeededPage(
+  browser: Browser,
+  options: {
+    colorScheme?: "light" | "dark";
+    viewport?: { width: number; height: number };
+    seed?: boolean;
+  } = {},
+): Promise<SeededPage> {
+  const connect = await openConnect(browser, options);
+  return { ...connect, ...(await addSeededDrive(connect.page, options)) };
+}
+
+// Stands in for the seed on an unseeded drive; reading it is a test bug.
+function unseeded(): Seeded {
+  return new Proxy({} as Seeded, {
+    get(_target, key) {
+      if (typeof key === "symbol" || key === "then") return undefined;
+      throw new Error(`No seeded ${String(key)}: this test runs with seed off`);
+    },
+  });
+}
+
+// ─── extra documents, for tests that need their own ────────────────────────
+
+export interface WorkflowSpec {
+  name: string;
+  trigger: TriggerBlock & { config: Record<string, unknown> };
+  // Run in order after the trigger.
+  steps: (StepBlock & {
+    key: string;
+    name: string;
+    config: Record<string, unknown>;
+    connectionId?: string;
+  })[];
+  // False leaves it a draft that has never been turned on.
+  enabled?: boolean;
+}
+
+/** Adds a workflow, enabled unless told otherwise, through Connect's reactor. */
+export async function createWorkflowInBrowser(
+  page: Page,
+  drive: string,
+  input: WorkflowSpec,
+): Promise<string> {
+  const defaults = await blockDefaults([input.trigger, ...input.steps]);
+  const spec: WorkflowSpec = {
+    ...input,
+    trigger: {
+      ...input.trigger,
+      config: {
+        ...defaultsOf(defaults, input.trigger),
+        ...input.trigger.config,
+      },
+    },
+    steps: input.steps.map((step) => ({
+      ...step,
+      config: { ...defaultsOf(defaults, step), ...step.config },
+    })),
+  };
+  return evaluateWithReactor(
+    page,
+    async ({ drive, spec }) => {
+      const w = window as unknown as PhWindow;
+      const client = w.ph!.reactorClientModule!.client;
+      const wf = (await w.__uiModel!(
+        "powerhouse/workflow",
+      )) as typeof WorkflowModel;
+      // An unseeded drive may not accept files yet; as in the seed, retry.
+      let doc: { header: { id: string } } | undefined;
+      for (let attempt = 0; !doc; attempt++) {
+        try {
+          doc = await client.drives.addFile(drive, wf.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      const id = doc.header.id;
+      const actions: unknown[] = [
+        wf.setWorkflowName({ name: spec.name }),
+        wf.setTrigger({ id: "trigger", ...spec.trigger }),
+      ];
+      let from = "trigger";
+      for (const step of spec.steps) {
+        actions.push(wf.addStep({ id: step.key, ...step }));
+        actions.push(
+          wf.addEdge({ id: `e-${step.key}`, from, to: step.key, port: "next" }),
+        );
+        from = step.key;
+      }
+      if (spec.enabled !== false) {
+        actions.push(
+          wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+          wf.setWorkflowStatus({ status: "ENABLED" }),
+        );
+      }
+      await client.execute(id, "main", actions);
+      await client.rename(id, spec.name);
+      return id;
+    },
+    { drive, spec },
+  );
+}
+
+export interface ConnectionSpec {
+  name: string;
+  connectorId: string;
+  authType: "SECRET_TEXT" | "BASIC_AUTH" | "CUSTOM_AUTH";
+  config: Record<string, unknown>;
+  // Field name to secret:// ref, from createSecret.
+  secrets: Record<string, string>;
+}
+
+/** Adds a configured connection to the drive through Connect's reactor. */
+export function createConnectionInBrowser(
+  page: Page,
+  drive: string,
+  spec: ConnectionSpec,
+): Promise<string> {
+  return evaluateWithReactor(
+    page,
+    async ({ drive, spec }) => {
+      const w = window as unknown as PhWindow;
+      const client = w.ph!.reactorClientModule!.client;
+      const cn = (await w.__uiModel!(
+        "powerhouse/connection",
+      )) as typeof ConnectionModel;
+      // An unseeded drive may not accept files yet; as in the seed, retry.
+      let doc: { header: { id: string } } | undefined;
+      for (let attempt = 0; !doc; attempt++) {
+        try {
+          doc = await client.drives.addFile(drive, cn.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      const id = doc.header.id;
+      const actions: unknown[] = [
+        cn.setConnectionName({ name: spec.name }),
+        cn.setConnector({
+          connectorId: spec.connectorId,
+          authType: spec.authType,
+        }),
+        cn.setConfig({ config: spec.config }),
+      ];
+      for (const [name, ref] of Object.entries(spec.secrets)) {
+        actions.push(cn.setSecretRef({ id: `secret-${name}`, name, ref }));
+      }
+      await client.execute(id, "main", actions);
+      await client.rename(id, spec.name);
+      return id;
+    },
+    { drive, spec },
+  );
+}
+
+export interface RunResult {
+  id: string;
+  status: string;
+  error: string | null;
+  steps: {
+    stepKey: string;
+    status: string;
+    output: unknown;
+    error: string | null;
+  }[];
+}
+
+/** Fires a workflow and waits for its run to finish. */
+export async function fireAndWait(
+  workflowId: string,
+  payload?: unknown,
+): Promise<RunResult> {
+  const fired = (await fireWhenSynced(workflowId, payload)) as {
+    workflowRuntime: { fire: { runId: string } };
+  };
+  const runId = fired.workflowRuntime.fire.runId;
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    const data = await gql<{ workflowRuntime: { run: RunResult | null } }>(
+      "/graphql/workflow-runtime",
+      `query($id: String!) { workflowRuntime { run(id: $id) { id status error steps { stepKey status output error } } } }`,
+      { id: runId },
+    );
+    const run = data.workflowRuntime.run;
+    if (run && run.status !== "RUNNING") return run;
+    if (Date.now() > deadline) throw new Error(`Run ${runId} never finished`);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
+// ─── navigation ─────────────────────────────────────────────────────────────
+
+// The seeded drive's tile on Connect's home page.
+export async function openDrive(page: Page) {
+  await page
+    .getByRole("heading", { name: "Workflows", level: 3, exact: true })
+    .click();
+  await page.getByRole("heading", { name: "Workflows", level: 2 }).waitFor();
+}
+
+export async function selectInSidebar(page: Page, name: string) {
+  await page
+    .getByRole("complementary")
+    .getByRole("button", { name, exact: true })
+    .click();
+}
+
+export async function openWorkflowEditor(page: Page, name = "Daily digest") {
+  await openDrive(page);
+  await selectInSidebar(page, name);
+  await page.getByRole("button", { name: "Edit workflow" }).click();
+  await page.locator(".react-flow__node").first().waitFor();
+}
+
+// Review screenshots, taken only when UI_SHOTS_DIR says where they go.
+export async function shot(page: Page, name: string): Promise<void> {
+  const dir = process.env.UI_SHOTS_DIR;
+  if (!dir) return;
+  mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: join(dir, `${name}.png`) });
+}
+
+// A workflow document's global state, read from Connect's reactor.
+export function workflowState<T = Record<string, unknown>>(
+  page: Page,
+  id: string,
+): Promise<T> {
+  return page.evaluate(async (workflowId) => {
+    const client = (window as unknown as PhWindow).ph!.reactorClientModule!
+      .client;
+    const document = (await client.get(workflowId)) as {
+      state: { global: unknown };
+    };
+    return document.state.global;
+  }, id) as Promise<T>;
+}
+
+// Matches the node's title exactly: "Summarise" never finds "Summarise metrics".
+export function canvasNode(page: Page, title: string) {
+  return page
+    .locator(".react-flow__node")
+    .filter({ has: page.getByText(title, { exact: true }) });
+}
+
+/** Opens a canvas add button's block picker, clicking again only while shut. */
+export async function openPicker(
+  page: Page,
+  button: Locator,
+): Promise<Locator> {
+  const picker = page.locator('[data-selector-open="true"]');
+  await expect(async () => {
+    if (!(await picker.isVisible())) await button.click();
+    await expect(picker).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
+  return picker;
+}
+
+/** Fails if `read` ever stops matching over `ms`: for "nothing was written". */
+export async function expectSteady<T>(
+  read: () => Promise<T>,
+  check: (value: T) => void,
+  ms = 1500,
+): Promise<void> {
+  const until = Date.now() + ms;
+  for (;;) {
+    check(await read());
+    if (Date.now() >= until) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "@fixture/classic-package",
+  "version": "4.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module"
+}

@@ -28,6 +28,7 @@ coverage/
 coverage-reports/
 vitest-timings.json
 .env
+.env.local
 playwright-report/
 test-results/
 __screenshots__/
@@ -36,6 +37,8 @@ __pycache__/
 hotseat.json
 .hotseat
 # Local agent-workflow scratch (plans' ledgers, briefs, review packages)
+/.audit/
+/.tasks/
 .superpowers/
 .mcp.json
 HOTSEAT.md
@@ -46,3 +49,5 @@ pnpm-publish-summary.json
 .renown.json
 .keypair.json
 .mcp.json
+
+.ui-shots/

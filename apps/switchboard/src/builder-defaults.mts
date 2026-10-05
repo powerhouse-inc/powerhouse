@@ -14,6 +14,7 @@ import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
@@ -44,10 +45,18 @@ export type SwitchboardReactorDefaultsOptions = {
   documentModelLoader?: IDocumentModelLoader;
   logger?: ILogger;
   /**
-   * Identity signer (typically from `getRenownSignerConfig`). Applied to the
-   * `ReactorClientBuilder`; omit for unsigned operation.
+   * Identity signer (typically from `getRenownSignerConfig`). Signs client
+   * writes and the operations the executor synthesizes, in pooled workers
+   * through `workerSigner`; omit for unsigned operation.
    */
   signer?: SignerConfig;
+  /**
+   * Which keys may sign as which users (typically from
+   * `getRenownTrustPolicyConfig`); wins over one carried by `signer`.
+   */
+  trustPolicy?: Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy">;
+  /** What the client creates new documents as; see `resolveCreateSignaturePolicy`. */
+  createSignaturePolicy?: SignaturePolicy;
 };
 
 /**
@@ -123,5 +132,18 @@ export function applySwitchboardReactorDefaults(
 
   if (options.signer) {
     clientBuilder.withSigner(options.signer);
+    reactorBuilder.withSigner(
+      options.signer.signer,
+      options.signer.workerSigner,
+    );
+  }
+
+  if (options.createSignaturePolicy) {
+    clientBuilder.withCreateSignaturePolicy(options.createSignaturePolicy);
+  }
+
+  const trust = options.trustPolicy ?? options.signer;
+  if (trust?.trustPolicy) {
+    reactorBuilder.withTrustPolicy(trust.trustPolicy, trust.workerTrustPolicy);
   }
 }

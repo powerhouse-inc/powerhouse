@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "esnext",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "./dist/types",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["index.ts", "document-models/**/*", "editors/**/*"],
+  "exclude": ["dist"]
+}

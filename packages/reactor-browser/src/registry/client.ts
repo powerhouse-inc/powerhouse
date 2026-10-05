@@ -1,5 +1,9 @@
 import type { PackageInfo } from "@powerhousedao/shared/registry";
-import { getPackages, getPackagesByDocumentType } from "./fetchers.js";
+import {
+  getPackages,
+  getPackagesByDocumentType,
+  searchPackages,
+} from "./fetchers.js";
 import type { PublishEvent } from "./types.js";
 
 function cdnUrlToApiUrl(cdnUrl: string): string {
@@ -22,13 +26,8 @@ export class RegistryClient {
   }
 
   async searchPackages(query: string): Promise<PackageInfo[]> {
-    const packages = await this.getPackages();
-    if (!query) return packages;
-    const lowerQuery = query.toLowerCase();
-    // Match on package name only (not description).
-    return packages.filter((pkg) =>
-      pkg.name.toLowerCase().includes(lowerQuery),
-    );
+    if (!query) return this.getPackages();
+    return await searchPackages(this.apiUrl, query);
   }
 
   onPublish(callback: (event: PublishEvent) => void): () => void {

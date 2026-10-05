@@ -3,8 +3,11 @@ import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import {
   collectHeldSyncOperations,
   touchChannel,
+  holdPollRefusals,
+  recordPollMarkerRefusals,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
+  silenceUnversionedPoll,
 } from "../../src/graphql/reactor/resolvers.js";
 
 /**
@@ -110,16 +113,41 @@ export function createResolverBridge(
         channelId: string;
         outboxAck: number;
         outboxLatest: number;
+        manifestRevision?: string | null;
+        refusals?: Array<{
+          documentId: string;
+          branch: string;
+          kind?: string | null;
+        }> | null;
       };
+
+      holdPollRefusals(syncManager, variables.channelId, variables.refusals);
+      await recordPollMarkerRefusals(
+        syncManager,
+        variables.channelId,
+        variables.refusals,
+      );
+      await silenceUnversionedPoll(
+        syncManager,
+        variables.channelId,
+        variables.manifestRevision,
+      );
 
       // Resolved only for a gated target: an ungated poll must reach the
       // resolver's own channel lookup, whose "Channel not found" is what a
       // puller recovering from a deleted channel branches on.
       let held = new Set<string>();
+      let gatedIds: Set<string> | undefined;
       if (target.servingGate) {
         const remote = syncManager.getById(variables.channelId);
+        // Snapshot once: the gate awaits, and the outbox can grow while it does.
+        const gated = [
+          ...remote.channel.outbox.items,
+          ...remote.channel.deadLetter.items,
+        ];
+        gatedIds = new Set(gated.map((syncOp) => syncOp.id));
         held = await collectHeldSyncOperations(
-          [...remote.channel.outbox.items, ...remote.channel.deadLetter.items],
+          gated,
           target.servingGate,
           target.subject ?? {},
           undefined,
@@ -131,6 +159,7 @@ export function createResolverBridge(
         variables,
         new Set<string>(),
         held,
+        gatedIds,
       );
 
       if (logEnabled && result.envelopes.length > 0) {
@@ -157,6 +186,8 @@ export function createResolverBridge(
           envelopes: normalizedEnvelopes,
           ackOrdinal: result.ackOrdinal,
           hasMore: result.hasMore,
+          manifestRevision: result.manifestRevision,
+          peerManifestRevision: result.peerManifestRevision,
         },
       });
     }
@@ -212,6 +243,7 @@ export function createResolverBridge(
             branch: string;
           };
           sinceTimestampUtcMs: string;
+          manifest?: unknown;
         };
       };
 

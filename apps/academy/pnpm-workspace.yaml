@@ -1,0 +1,7 @@
+# The academy is its own pnpm root, outside the monorepo workspace.
+minimumReleaseAge: 10080
+
+allowBuilds:
+  "core-js": false
+  "@swc/core": true
+  esbuild: true

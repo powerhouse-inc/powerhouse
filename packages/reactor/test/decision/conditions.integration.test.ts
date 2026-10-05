@@ -1,9 +1,5 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type {
-  Action,
-  Grant,
-  Operation,
-} from "@powerhousedao/shared/document-model";
+import type { Grant, Operation } from "@powerhousedao/shared/document-model";
 import {
   addModule,
   garbageCollect,
@@ -17,22 +13,10 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
+import { signedAs, TRUST_ANY_SIGNER } from "../utils/signed-as.js";
 
 const ADMIN = "0xAdmin";
 const WRITER = "0xWriter";
-
-function signedBy<T extends Action>(action: T, address: string): T {
-  return {
-    ...action,
-    context: {
-      signer: {
-        user: { address, networkId: "", chainId: 0 },
-        app: { name: "test", key: "" },
-        signatures: [],
-      },
-    },
-  };
-}
 
 const adminGrant: Grant = {
   id: "g-admin",
@@ -73,6 +57,7 @@ describe("conditions end to end", () => {
           authConditions,
         },
       })
+      .withTrustPolicy(TRUST_ANY_SIGNER)
       .build();
   }
 
@@ -144,7 +129,7 @@ describe("conditions end to end", () => {
       await settle(
         (
           await reactor.execute(docId, "main", [
-            signedBy(addModule({ id: "m1", name: "m1" }), WRITER),
+            await signedAs(addModule({ id: "m1", name: "m1" }), WRITER, docId),
           ])
         ).id,
       ),
@@ -156,7 +141,7 @@ describe("conditions end to end", () => {
       await settle(
         (
           await reactor.execute(docId, "main", [
-            signedBy(setModelName({ name: "locked" }), ADMIN),
+            await signedAs(setModelName({ name: "locked" }), ADMIN, docId),
           ])
         ).id,
       ),
@@ -166,7 +151,7 @@ describe("conditions end to end", () => {
     const refusal = await settle(
       (
         await reactor.execute(docId, "main", [
-          signedBy(addModule({ id: "m2", name: "m2" }), WRITER),
+          await signedAs(addModule({ id: "m2", name: "m2" }), WRITER, docId),
         ])
       ).id,
     );
@@ -178,7 +163,7 @@ describe("conditions end to end", () => {
       await settle(
         (
           await reactor.execute(docId, "main", [
-            signedBy(addModule({ id: "m3", name: "m3" }), ADMIN),
+            await signedAs(addModule({ id: "m3", name: "m3" }), ADMIN, docId),
           ])
         ).id,
       ),
@@ -195,7 +180,7 @@ describe("conditions end to end", () => {
       await settle(
         (
           await reactor.execute(docId, "main", [
-            signedBy(addModule({ id: "m1", name: "m1" }), WRITER),
+            await signedAs(addModule({ id: "m1", name: "m1" }), WRITER, docId),
           ])
         ).id,
       ),
@@ -211,7 +196,7 @@ describe("conditions end to end", () => {
       await settle(
         (
           await reactor.execute(docId, "main", [
-            signedBy(setModelName({ name: "locked" }), ADMIN),
+            await signedAs(setModelName({ name: "locked" }), ADMIN, docId),
           ])
         ).id,
       ),
@@ -251,8 +236,8 @@ describe("conditions end to end", () => {
       const refusal = await settle(
         (
           await reactor.execute(docId, "main", [
-            signedBy(setModelName({ name: "locked" }), WRITER),
-            signedBy(addModule({ id: "m1", name: "m1" }), WRITER),
+            await signedAs(setModelName({ name: "locked" }), WRITER, docId),
+            await signedAs(addModule({ id: "m1", name: "m1" }), WRITER, docId),
           ])
         ).id,
       );
@@ -271,7 +256,7 @@ describe("conditions end to end", () => {
     const refusal = await settle(
       (
         await reactor.execute(docId, "main", [
-          signedBy(addModule({ id: "m1", name: "m1" }), WRITER),
+          await signedAs(addModule({ id: "m1", name: "m1" }), WRITER, docId),
         ])
       ).id,
     );

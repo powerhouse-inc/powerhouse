@@ -12,6 +12,7 @@ import {
   type JobFailedEvent,
   type JobRunningEvent,
   type JobWriteReadyEvent,
+  type SignatureRefusedEvent,
 } from "../../../src/events/types.js";
 import type {
   IExecutorWorker,
@@ -104,6 +105,12 @@ class FakeWorker implements IExecutorWorker {
     if (this.loadModelImpl) {
       await this.loadModelImpl(entry);
     }
+  }
+
+  evictions: string[][] = [];
+
+  evictPurged(documentIds: string[]): void {
+    this.evictions.push(documentIds);
   }
 
   isIdle(): boolean {
@@ -366,6 +373,43 @@ describe("WorkerPoolJobExecutorManager", () => {
       await manager.stop(true);
     });
 
+    it("broadcasts a committed marker's id to every worker", async () => {
+      const marker = makeOpWithAction(
+        "doc-1",
+        "PURGE_DOCUMENT",
+        { documentId: "doc-1" },
+        "document",
+      );
+      const setNameOp = makeOpWithAction("doc-2", "SET_NAME", { name: "x" });
+      const workers: FakeWorker[] = [];
+      const manager = buildManager((i) => {
+        const worker = new FakeWorker({
+          index: i,
+          outcome: (job) => ({
+            result: { job, success: true, duration: 1 },
+            writeReady: makeWriteReady(
+              job,
+              job.documentId === "doc-1" ? [marker] : [setNameOp],
+            ),
+          }),
+        });
+        workers.push(worker);
+        return worker;
+      });
+      await manager.start(3);
+
+      await queue.enqueue(createTestJob({ id: "job-2", documentId: "doc-2" }));
+      await queue.enqueue(createTestJob({ id: "job-1", documentId: "doc-1" }));
+      await vi.waitFor(() =>
+        expect(workers.map((worker) => worker.evictions)).toEqual([
+          [["doc-1"]],
+          [["doc-1"]],
+          [["doc-1"]],
+        ]),
+      );
+      await manager.stop(true);
+    });
+
     it("emits JOB_RUNNING before dispatch", async () => {
       const manager = buildManager(
         (i) =>
@@ -551,6 +595,47 @@ describe("WorkerPoolJobExecutorManager", () => {
       );
       await flush(100);
       expect(writeReadyEvents).toHaveLength(0);
+      await manager.stop(true);
+    });
+  });
+
+  describe("signature refusals", () => {
+    it("re-emits a worker's refusals on the parent bus", async () => {
+      const refusal: SignatureRefusedEvent = {
+        jobId: "refused-job",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actionId: "a-1",
+        code: "BAD_SIGNATURE",
+        scheme: "legacy-renown",
+        path: "load",
+        enforced: true,
+        reason: "does not verify",
+      };
+      const manager = buildManager(
+        (i) =>
+          new FakeWorker({
+            index: i,
+            outcome: (job) => ({
+              result: { job, success: true, operations: [] },
+              signatureRefusals: [refusal],
+            }),
+          }),
+      );
+      await manager.start(1);
+
+      const seen: SignatureRefusedEvent[] = [];
+      eventBus.subscribe(
+        ReactorEventTypes.SIGNATURE_REFUSED,
+        (_t: number, data: SignatureRefusedEvent) => {
+          seen.push(data);
+        },
+      );
+
+      await queue.enqueue(createTestJob({ id: "refused-job" }));
+      await flush(100);
+      expect(seen).toEqual([refusal]);
       await manager.stop(true);
     });
   });

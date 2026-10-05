@@ -1,8 +1,13 @@
 import type {
   InProcessReactorClientModule,
   IReactorClient,
+  UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
+import type { IErasureService } from "@powerhousedao/reactor-privacy";
+import type { PrivacyOptions } from "./privacy.mjs";
+import type { WorkflowTriggersCapability } from "./workflow-runtime.mjs";
+export type { WorkflowTriggersCapability };
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
@@ -40,9 +45,6 @@ export type IdentityOptions = {
 
   /** Base url of the Renown instance to use */
   baseUrl?: string;
-
-  /** If true, unsigned actions will be rejected */
-  requireSignatures?: boolean;
 };
 
 export type StartServerOptions = {
@@ -67,6 +69,14 @@ export type StartServerOptions = {
    * pieces as needed.
    */
   reactor?: InProcessReactorClientModule;
+  /**
+   * Route uncaught exceptions, and unhandled rejections nothing else listens
+   * for, through the reactor's SIGTERM shutdown, so PGlite stores are flushed
+   * before the process exits with code 1. Installed once the switchboard's own reactor is built;
+   * ignored when `reactor` is passed. For process entry points only, since
+   * it adds process-wide listeners.
+   */
+  fatalErrorShutdown?: boolean;
   /**
    * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
    * (install/uninstall mutations) plus dynamic package resolution.
@@ -102,7 +112,16 @@ export type StartServerOptions = {
   identity?: IdentityOptions;
   /** Base URL for the attachment service; defaults to `PH_SWITCHBOARD_PUBLIC_URL` then `http(s)://localhost:${port}`. */
   attachmentServiceUrl?: string;
+  /** Mount the MCP server at `/mcp`. On by default; `false` wins over
+   * MCP_ENABLED, which can turn it off but never on. */
   mcp?: boolean;
+  /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
+   * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
+  workflows?: {
+    enabled?: boolean;
+  };
+  /** The GDPR add-on; off unless this or PH_PRIVACY_ENABLED turns it on. */
+  privacy?: PrivacyOptions;
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
   enableDocumentModelSubgraphs?: boolean;
@@ -159,6 +178,14 @@ export type StartServerOptions = {
     enabled?: boolean;
     dbPoolSize?: number;
   };
+  /**
+   * Stored documents at protocol versions this build does not run: "refuse"
+   * (the default) fails the boot with a StoredDocumentsRefusedError;
+   * "read-only" starts with a warning and keeps those documents read-only.
+   * Unset falls back to the REACTOR_UNSUPPORTED_STORED_DOCUMENTS env var.
+   * Ignored when `reactor` is passed.
+   */
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments;
 };
 
 export type SwitchboardReactor = {
@@ -168,6 +195,15 @@ export type SwitchboardReactor = {
   attachmentService: IAttachmentService;
   /** Whether the authoritative attachment-reference projection is active. */
   attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
+  /** Whether the workflow runtime's operation intake is indexing. Undefined
+   * when workflows are off; unavailable means no document trigger fires. */
+  workflowTriggers?: WorkflowTriggersCapability;
+  /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
+  workflowsEnabled: boolean;
+  /** Present when the privacy add-on runs: its erasure service. */
+  privacy?: { erasure: IErasureService };
+  /** Whether `/mcp` is mounted, after the option and MCP_ENABLED. */
+  mcpEnabled: boolean;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

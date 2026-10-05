@@ -10,6 +10,8 @@ import {
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
 import {
+  checkSharedDeps,
+  formatSharedDepWarnings,
   mergePwaConfig,
   type PHConnectPwa,
   type PwaContribution,
@@ -21,12 +23,14 @@ import {
   PwaConfigSchema,
 } from "@powerhousedao/shared/document-model";
 import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
+import { getSharedDeps } from "./shared-deps.js";
 import {
   resolveFragmentAssetUrls,
   writeMergedPwaFragment,
 } from "./utils/pwa-idb.js";
 import { refreshPwaManifestLink } from "./utils/pwa-manifest-link.js";
 import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
+import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "json" };
 
 type PackageMeta = {
   name: string;
@@ -58,20 +62,72 @@ type PackageWithMeta = PackageMeta & {
   spec?: string;
 };
 
-async function fetchPackageJsonVersion(
+type FetchedPackageJson = {
+  version?: string;
+  dependencies?: Record<string, unknown>;
+  peerDependencies?: Record<string, unknown>;
+};
+
+async function fetchPackageJson(
   baseUrl: string,
-): Promise<string | undefined> {
+): Promise<FetchedPackageJson | null> {
   try {
     const res = await fetch(baseUrl);
-    if (!res.ok) return undefined;
-    const pkg = (await res.json()) as { version?: unknown };
-    return typeof pkg.version === "string" ? pkg.version : undefined;
+    if (!res.ok) return null;
+    const pkg = (await res.json()) as {
+      version?: unknown;
+      dependencies?: Record<string, unknown>;
+      peerDependencies?: Record<string, unknown>;
+    };
+    return {
+      version: typeof pkg.version === "string" ? pkg.version : undefined,
+      dependencies: pkg.dependencies,
+      peerDependencies: pkg.peerDependencies,
+    };
   } catch {
-    return undefined;
+    return null;
   }
 }
 
+async function fetchPackageJsonVersion(
+  baseUrl: string,
+): Promise<string | undefined> {
+  return (await fetchPackageJson(baseUrl))?.version;
+}
+
+/**
+ * Human-readable warnings for shared-dep mismatches between a package's npm
+ * `package.json` (as served by the CDN) and the host's shared-deps version
+ * table. Empty when either side is unavailable — a dev / vendor-off host has
+ * no table to compare against, and a missing package.json means the check
+ * can't run. Used by both the install flow and the package-manager UI.
+ */
+export function sharedDepMismatchWarnings(
+  pkgJson: FetchedPackageJson | null,
+  hostVersions: Record<string, string> | null | undefined,
+): string[] {
+  if (!pkgJson || !hostVersions) return [];
+  return formatSharedDepWarnings(checkSharedDeps(pkgJson, hostVersions));
+}
+
 const LOCAL_PACKAGE_NAME = "Local" as const;
+
+// Package CSS goes in external-packages: above Connect's reset so it can style
+// its editors, below Connect's utilities so it can't override them.
+export const LAYER_ORDER =
+  "@layer theme, base, components, external-packages, utilities;";
+const LAYER_ORDER_ATTR = "data-ph-layer-order";
+
+// Layer order is set by the first declaration in the document, and a project's
+// style.css declares Tailwind's layers first, so this goes first in <head>.
+
+export function declareExternalPackagesLayer(): void {
+  if (document.head.querySelector(`style[${LAYER_ORDER_ATTR}]`)) return;
+  const order = document.createElement("style");
+  order.setAttribute(LAYER_ORDER_ATTR, "");
+  order.textContent = LAYER_ORDER;
+  document.head.prepend(order);
+}
 
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
@@ -102,6 +158,7 @@ export class BrowserPackageManager implements IPackageManager {
     localPackage?: DocumentModelLib<any>,
     localPackageVersion?: string,
     studioMode?: boolean,
+    workflowsEnabled?: boolean,
   ) {
     this.addLocalPackage(common.manifest.name, common, commonPkg.version);
     // Vetra is builder-only and not CDN-loadable; lazy-load it (code-split
@@ -109,6 +166,16 @@ export class BrowserPackageManager implements IPackageManager {
     if (studioMode) {
       const vetra = await import("@powerhousedao/vetra");
       this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
+    }
+    // Same shape for the workflow package, behind its own independent flag.
+    // Only the package root: `./pieces` and `./reactor` are node-only.
+    if (workflowsEnabled) {
+      const workflow = await import("@powerhousedao/workflow");
+      this.addLocalPackage(
+        workflow.manifest.name,
+        workflow,
+        workflowPkg.version,
+      );
     }
     if (localPackage) {
       this.updateLocalPackage(localPackage, localPackageVersion);
@@ -217,6 +284,16 @@ export class BrowserPackageManager implements IPackageManager {
       return this.#localPackageVersion;
     }
     return this.#storage.get(packageName)?.version;
+  }
+
+  /**
+   * The spec the user requested when this package was installed (e.g.
+   * `name@dev` or `name@6.2.1`). Undefined for bare-name installs, legacy
+   * entries, and local packages — the Package Manager treats that as the
+   * `latest` stream when picking update targets.
+   */
+  getPackageSpec(packageName: string): string | undefined {
+    return this.#storage.get(packageName)?.spec;
   }
 
   async addPackage(packageSpec: string): Promise<PackageManagerInstallResult> {
@@ -347,9 +424,25 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
     });
-    packageWithMeta.version = await fetchPackageJsonVersion(
+    const pkgJson = await fetchPackageJson(
       `${this.#cdnUrl}/${name}/package.json`,
     );
+    packageWithMeta.version = pkgJson?.version;
+
+    // Non-blocking warning: a package that pins a shared dep at a version
+    // the host's vendor was built without still installs, but the host's
+    // copy is what runs — surface the mismatch before it surprises the
+    // user at runtime.
+    const warnings = sharedDepMismatchWarnings(
+      pkgJson,
+      (await getSharedDeps())?.versions,
+    );
+    if (warnings.length > 0) {
+      console.error(
+        `[package-manager] shared-deps mismatch for ${name}:\n` +
+          warnings.join("\n"),
+      );
+    }
 
     return packageWithMeta;
   }
@@ -426,6 +519,7 @@ export class BrowserPackageManager implements IPackageManager {
     const existing = this.#stylesheets.get(name);
     if (existing) return existing;
 
+    declareExternalPackagesLayer();
     const style = document.createElement("style");
     style.textContent = `@import url("${href}") layer(external-packages);`;
     document.head.appendChild(style);

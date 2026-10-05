@@ -7,10 +7,12 @@ import type {
   Operation,
   OperationContext,
   PHDocument,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
   generateId,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -70,6 +72,17 @@ import { TestChannel } from "./sync/channels/test-channel.js";
 /**
  * Creates a mock logger for testing that no-ops all log methods.
  */
+export type Deferred<T = void> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+};
+
+export function deferred<T = void>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
 export function createMockLogger(): ILogger {
   const logger: ILogger = {
     level: "error",
@@ -117,12 +130,37 @@ export const memoryFsBackend: TestFsBackend = () =>
     cleanup: () => Promise.resolve(),
   });
 
-/**
- * AtomicNodeFs against a fresh tempdir per test. The tempdir is removed in
- * `cleanup` after the PGLite instance has been closed.
- */
+let migratedAtomicSnapshot: Promise<Buffer> | undefined;
+
+/** Snapshot of a data dir migrated to REACTOR_SCHEMA over AtomicNodeFs, built once per worker. */
+function getMigratedAtomicSnapshot(): Promise<Buffer> {
+  migratedAtomicSnapshot ??= (async () => {
+    const dir = await fsp.mkdtemp(
+      path.join(os.tmpdir(), "reactor-atomic-template-"),
+    );
+    try {
+      const pg = new PGlite({ fs: new AtomicNodeFs(dir) });
+      const db = new Kysely<DatabaseSchema>({
+        dialect: new PGliteDialect(pg),
+      });
+      const result = await runMigrations(db, REACTOR_SCHEMA);
+      if (!result.success && result.error) {
+        throw new Error(`Template migration failed: ${result.error.message}`);
+      }
+      await pg.close();
+      return await fsp.readFile(path.join(dir, "snapshot.bin"));
+    } finally {
+      await fsp.rm(dir, { recursive: true, force: true });
+    }
+  })();
+  return migratedAtomicSnapshot;
+}
+
+/** AtomicNodeFs in a fresh tempdir per test, restored from the migrated snapshot. */
 export const atomicNodeFsBackend: TestFsBackend = async () => {
+  const snapshot = await getMigratedAtomicSnapshot();
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "reactor-atomic-"));
+  await fsp.writeFile(path.join(dir, "snapshot.bin"), snapshot);
   return {
     fs: new AtomicNodeFs(dir),
     cleanup: async () => {
@@ -154,6 +192,8 @@ export async function createTestOperationStore(
   backend: TestFsBackend = memoryFsBackend,
 ): Promise<{
   db: Kysely<DatabaseSchema>;
+  baseDb: Kysely<DatabaseSchema>;
+  schema: string;
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
   cleanup: () => Promise<void>;
@@ -172,7 +212,7 @@ export async function createTestOperationStore(
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
 
-  return { db, store, keyframeStore, cleanup };
+  return { db, baseDb, schema: REACTOR_SCHEMA, store, keyframeStore, cleanup };
 }
 
 /**
@@ -182,19 +222,18 @@ export async function createTestOperationStore(
  */
 export async function createTestOperationStorePostgres(): Promise<{
   db: Kysely<DatabaseSchema>;
+  baseDb: Kysely<DatabaseSchema>;
+  schema: string;
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
   cleanup: () => Promise<void>;
 }> {
   const schema = `reactor_test_${process.pid}_${pgTestSchemaCounter++}`;
-  const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PostgresDialect({
-      pool: new Pool({ connectionString: PG_TEST_URL }),
-    }),
-  });
+  const { baseDb, drop } = await createPostgresTestDatabase(schema);
 
   const result = await runMigrations(baseDb, schema);
   if (!result.success && result.error) {
+    await drop();
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
@@ -204,17 +243,11 @@ export async function createTestOperationStorePostgres(): Promise<{
 
   return {
     db,
+    baseDb,
+    schema,
     store,
     keyframeStore,
-    cleanup: async () => {
-      try {
-        await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE`.execute(
-          baseDb,
-        );
-      } finally {
-        await baseDb.destroy();
-      }
-    },
+    cleanup: drop,
   };
 }
 
@@ -483,13 +516,16 @@ export function createDocModelDocument(
     slug?: string;
     documentType?: string;
     state?: any;
+    signaturePolicy?: SignaturePolicy;
   } = {},
 ): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
+  // A fixed id cannot be content-addressed, so it defaults to legacy.
+  const policy = overrides.signaturePolicy ?? (overrides.id ? "legacy" : null);
+  const created = documentModelDocumentModelModule.utils.createDocument();
+  const baseDocument = policy
+    ? withSignaturePolicy(created, policy, { id: overrides.id })
+    : created;
 
-  if (overrides.id) {
-    baseDocument.header.id = overrides.id;
-  }
   if (overrides.slug) {
     baseDocument.header.slug = overrides.slug;
   }
@@ -629,6 +665,8 @@ export function createMockOperationStore(
       latestTimestamp: new Date(0).toISOString(),
     }),
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
+    findOperationIds: vi.fn().mockResolvedValue(new Set()),
+    getOperationsByIds: vi.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as IOperationStore;
 }
@@ -645,6 +683,7 @@ export function createMockDocumentMetaCache(
       hash: { algorithm: "sha256", encoding: "base64" },
     },
     documentType: "powerhouse/document-model",
+    protocolVersions: undefined,
     documentScopeRevision: 1,
   };
 
@@ -880,7 +919,9 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
     getOrphanedChildren: vi.fn().mockResolvedValue([]),
     hasRelationship: vi.fn().mockResolvedValue(false),
     getUndirectedRelationships: vi.fn().mockResolvedValue([]),
-    getDirectedRelationships: vi.fn().mockResolvedValue([]),
+    getDirectedRelationships: vi
+      .fn()
+      .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
     findPath: vi.fn().mockResolvedValue(null),
     findAncestors: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
     getRelationshipTypes: vi.fn().mockResolvedValue([]),
@@ -943,16 +984,47 @@ const PG_TEST_URL =
 
 let pgTestSchemaCounter = 0;
 
+/**
+ * A database per storage. Kysely's migrator introspects every schema in its
+ * database, so a schema another file drops mid-query fails the migration.
+ */
+async function createPostgresTestDatabase(name: string): Promise<{
+  baseDb: Kysely<DatabaseSchema>;
+  drop: () => Promise<void>;
+}> {
+  const admin = new Pool({ connectionString: PG_TEST_URL });
+  await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+  await admin.query(`CREATE DATABASE "${name}"`);
+  const url = new URL(PG_TEST_URL);
+  url.pathname = `/${name}`;
+  const pool = new Pool({ connectionString: url.toString() });
+  // FORCE terminates what is still connected when the database is dropped.
+  pool.on("error", (error: Error & { code?: string }) => {
+    if (error.code !== "57P01") throw error;
+  });
+  const baseDb = new Kysely<DatabaseSchema>({
+    dialect: new PostgresDialect({ pool }),
+  });
+  return {
+    baseDb,
+    drop: async () => {
+      try {
+        await baseDb.destroy();
+      } finally {
+        await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+        await admin.end();
+      }
+    },
+  };
+}
+
 export async function createTestSyncStoragePostgres(): Promise<TestSyncStorage> {
   const schema = `reactor_test_${process.pid}_${pgTestSchemaCounter++}`;
-  const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PostgresDialect({
-      pool: new Pool({ connectionString: PG_TEST_URL }),
-    }),
-  });
+  const { baseDb, drop } = await createPostgresTestDatabase(schema);
 
   const result = await runMigrations(baseDb, schema);
   if (!result.success && result.error) {
+    await drop();
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
@@ -966,15 +1038,7 @@ export async function createTestSyncStoragePostgres(): Promise<TestSyncStorage> 
     syncRemoteStorage,
     syncCursorStorage,
     syncDeadLetterStorage,
-    cleanup: async () => {
-      try {
-        await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE`.execute(
-          baseDb,
-        );
-      } finally {
-        await baseDb.destroy();
-      }
-    },
+    cleanup: drop,
   };
 }
 
@@ -1102,104 +1166,6 @@ export function createTestChannelFactory(
       channelRegistry.set(remoteId, channel);
 
       return channel;
-    },
-  };
-}
-
-/**
- * Creates a signed test operation using the SimpleSigner.
- *
- * @param signer - The SimpleSigner instance to sign with
- * @param overrides - Optional operation overrides
- * @returns Promise resolving to a signed operation
- */
-export async function createSignedTestOperation(
-  signer: any,
-  documentId: string,
-  overrides: Partial<Operation> = {},
-): Promise<Operation> {
-  const operation = createTestOperation(documentId, overrides);
-  const publicKey = signer.getPublicKey();
-
-  const signerData: any = {
-    user: { address: "0x123", chainId: 1, networkId: "1" },
-    app: { name: "test", key: publicKey },
-    signatures: [],
-  };
-
-  const dataToSign = JSON.stringify({
-    action: operation.action,
-    index: operation.index,
-    timestamp: operation.timestampUtcMs,
-  });
-
-  const signatureHex = await signer.sign(new TextEncoder().encode(dataToSign));
-
-  const signature: any = [
-    operation.timestampUtcMs,
-    publicKey,
-    operation.action.id,
-    "",
-    `0x${signatureHex}`,
-  ];
-
-  signerData.signatures = [signature];
-
-  return {
-    ...operation,
-    action: {
-      ...operation.action,
-      context: {
-        ...operation.action.context,
-        signer: signerData,
-      },
-    },
-  };
-}
-
-/**
- * Creates a signed test action using the SimpleSigner.
- *
- * @param signer - The SimpleSigner instance to sign with
- * @param overrides - Optional action overrides
- * @returns Promise resolving to a signed action
- */
-export async function createSignedTestAction(
-  signer: any,
-  overrides: Partial<Action> = {},
-): Promise<Action> {
-  const action = createTestAction(overrides);
-  const publicKey = signer.getPublicKey();
-
-  const signerData: any = {
-    user: { address: "0x123", chainId: 1, networkId: "1" },
-    app: { name: "test", key: publicKey },
-    signatures: [],
-  };
-
-  const dataToSign = JSON.stringify({
-    action: action,
-    index: 0,
-    timestamp: action.timestampUtcMs,
-  });
-
-  const signatureHex = await signer.sign(new TextEncoder().encode(dataToSign));
-
-  const signature: any = [
-    action.timestampUtcMs,
-    publicKey,
-    action.id,
-    "",
-    `0x${signatureHex}`,
-  ];
-
-  signerData.signatures = [signature];
-
-  return {
-    ...action,
-    context: {
-      ...action.context,
-      signer: signerData,
     },
   };
 }

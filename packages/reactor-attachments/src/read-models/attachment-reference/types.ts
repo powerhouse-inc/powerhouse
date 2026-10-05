@@ -11,8 +11,12 @@ export interface AttachmentReferenceInput {
 
 export interface IAttachmentReferenceReader {
   hasReference(documentId: string, ref: AttachmentRef): Promise<boolean>;
+  /** The scopes whose operations reference the attachment; empty when none. */
+  referencingScopes(documentId: string, ref: AttachmentRef): Promise<string[]>;
 }
 
 export interface IAttachmentReferenceWriter {
   addReferences(references: readonly AttachmentReferenceInput[]): Promise<void>;
+  /** Deletes every reference of the documents; for a purged document. */
+  removeDocuments(documentIds: readonly string[]): Promise<void>;
 }

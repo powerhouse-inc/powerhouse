@@ -85,6 +85,8 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
 };
 ```
 
+For attachments, a resolver calls `subgraph.attachmentsFor(ctx)`, which returns an `IAttachmentClient` bound to the request's caller. See [Attachment service](/academy/Reference/Reactor/AttachmentService#inside-the-switchboard).
+
 **In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `client`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
 
 ```typescript
@@ -125,13 +127,14 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 | `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules            |
 | `getDocumentModelModule(documentType)`                                         | Get a specific document model module              |
 
-The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision:
+The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision. On the client it also names the subject the read is gated for:
 
 ```typescript
 type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
+  subject?: AuthSubject; // client read gate only, ignored by IReactor
 };
 ```
 
@@ -154,6 +157,8 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
 | `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
+| `createAsync(document, parentIdentifier?)`                                                  | Submit a create and return immediately with its jobs (`create`, `parent`) |
+| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs |
 | `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
 | `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
 | `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle |

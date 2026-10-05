@@ -19,6 +19,7 @@ type FakeRemote = {
     outbox: FakeOutbox;
     inbox: { ackOrdinal: number };
     deadLetter: { items: SyncOperation[] };
+    notePoll: () => void;
   };
 };
 
@@ -87,9 +88,12 @@ function makeSyncManager(items: SyncOperation[]): ISyncManager {
       outbox: { items },
       inbox: { ackOrdinal: 0 },
       deadLetter: { items: [] },
+      notePoll: () => {},
     },
   };
   return {
+    localManifest: () => ({ revision: "server" }),
+
     getById: (id: string) => {
       if (id !== CHANNEL_ID) {
         throw new Error(`Unknown channel: ${id}`);

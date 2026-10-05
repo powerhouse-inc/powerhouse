@@ -18,18 +18,23 @@ import {
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
   actions,
-  createPresignedHeader,
+  createCopyHeader,
   generateId,
   normalizeDocumentModelVersion,
+  requestedSignaturePolicy,
+  withSignaturePolicy,
   type Action,
   type CreateDocumentActionInput,
   type ISigner,
   type PHDocument,
+  type PHDocumentHeader,
+  type ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
   createDocumentAction,
+  deleteDocumentAction,
   removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
@@ -48,12 +53,29 @@ import type { IDriveClient, IReactorClient } from "./types.js";
  * for batch execution. The back-reference is captured but never invoked
  * during construction, so the partial-`this` hazard does not apply.
  */
+/** A copy keeps its source's versions; selection fills only the keys it lacks. */
+function withSelectedVersions(
+  header: PHDocumentHeader,
+  selected: ProtocolVersions,
+): Pick<PHDocumentHeader, "documentType" | "protocolVersions"> {
+  return {
+    documentType: header.documentType,
+    protocolVersions: header.protocolVersions
+      ? { ...selected, ...header.protocolVersions }
+      : undefined,
+  };
+}
+
 export class DriveClient implements IDriveClient {
   constructor(
     private readonly client: IReactorClient,
     private readonly logger: ILogger,
     private readonly reactor: IReactor,
     private readonly signer: ISigner,
+    private readonly resolveReference: (
+      identifier: string,
+      signal?: AbortSignal,
+    ) => Promise<string>,
   ) {}
 
   async create(
@@ -61,13 +83,25 @@ export class DriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose("drives.create(@input)", input);
-    const driveDoc = driveCreateDocument({
-      global: {
-        name: input.global.name || "",
-        icon: input.global.icon ?? null,
-        nodes: [],
+    const driveDoc = withSignaturePolicy(
+      driveCreateDocument({
+        global: {
+          name: input.global.name || "",
+          icon: input.global.icon ?? null,
+          nodes: [],
+        },
+      }),
+      requestedSignaturePolicy(
+        input,
+        await this.client.getCreateSignaturePolicy(),
+      ),
+      {
+        protocolVersions: {
+          ...(await this.client.getCreateProtocolVersions(undefined, signal)),
+          ...input.protocolVersions,
+        },
       },
-    });
+    );
     if (input.preferredEditor) {
       driveDoc.header.meta = {
         ...driveDoc.header.meta,
@@ -95,6 +129,7 @@ export class DriveClient implements IDriveClient {
     );
 
     const documentId = document.header.id;
+    const driveId = await this.resolveReference(driveIdentifier, signal);
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
@@ -130,9 +165,10 @@ export class DriveClient implements IDriveClient {
           ),
           initialState: document.state,
         }),
-        addRelationshipAction(driveIdentifier, documentId, "child"),
+        addRelationshipAction(driveId, documentId, "child"),
       ],
       this.signer,
+      { documentId, branch: "main" },
       signal,
     );
 
@@ -146,6 +182,7 @@ export class DriveClient implements IDriveClient {
         }),
       ],
       this.signer,
+      { documentId: driveId, branch: "main" },
       signal,
     );
 
@@ -172,7 +209,7 @@ export class DriveClient implements IDriveClient {
       [
         {
           key: "drive",
-          documentId: driveIdentifier,
+          documentId: driveId,
           scope: getSharedActionScope(driveActions),
           branch: "main",
           actions: driveActions,
@@ -219,16 +256,18 @@ export class DriveClient implements IDriveClient {
 
   async removeNode(
     driveIdentifier: string,
-    nodeId: string,
+    nodeIdentifier: string,
     signal?: AbortSignal,
   ): Promise<void> {
     this.logger.verbose(
-      "drives.removeNode(@driveIdentifier, @nodeId)",
+      "drives.removeNode(@driveIdentifier, @nodeIdentifier)",
       driveIdentifier,
-      nodeId,
+      nodeIdentifier,
     );
+    const driveId = await this.resolveReference(driveIdentifier, signal);
+    const nodeId = await this.resolveReference(nodeIdentifier, signal);
     const drive = await this.client.get<DocumentDriveDocument>(
-      driveIdentifier,
+      driveId,
       undefined,
       signal,
     );
@@ -242,7 +281,7 @@ export class DriveClient implements IDriveClient {
       if (!exists) {
         throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
       }
-      await this.removeFileNode(driveIdentifier, nodeId, signal);
+      await this.removeFileNode(driveId, nodeId, signal);
       return;
     }
 
@@ -252,10 +291,10 @@ export class DriveClient implements IDriveClient {
         drive.state.global.nodes,
       ).filter(isFileNode);
       for (const file of fileDescendants) {
-        await this.removeFileNode(driveIdentifier, file.id, signal);
+        await this.removeFileNode(driveId, file.id, signal);
       }
       await this.client.execute(
-        driveIdentifier,
+        driveId,
         "main",
         [deleteNodeAction({ id: nodeId })],
         signal,
@@ -263,7 +302,7 @@ export class DriveClient implements IDriveClient {
       return;
     }
 
-    await this.removeFileNode(driveIdentifier, nodeId, signal);
+    await this.removeFileNode(driveId, nodeId, signal);
   }
 
   async renameNode(
@@ -392,6 +431,11 @@ export class DriveClient implements IDriveClient {
       resolvedNamesByTargetId.set(entry.targetId, resolved);
     }
 
+    const policy = await this.client.getCreateSignaturePolicy();
+    const base = await this.client.getCreateProtocolVersions(
+      drive.header.id,
+      signal,
+    );
     for (const entry of copyPlan) {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
@@ -403,9 +447,10 @@ export class DriveClient implements IDriveClient {
       // already current.
       const duplicated: PHDocument = {
         ...srcDoc,
-        header: createPresignedHeader(
+        header: createCopyHeader(
+          withSelectedVersions(srcDoc.header, base),
           entry.targetId,
-          srcDoc.header.documentType,
+          policy,
         ),
         initialState: srcDoc.state,
         operations: {},
@@ -415,6 +460,8 @@ export class DriveClient implements IDriveClient {
       if (resolvedName) {
         duplicated.header.name = resolvedName;
       }
+      // A v2-required copy takes a derived id, which the drive's node must name.
+      entry.targetId = duplicated.header.id;
       await this.addFile(
         driveIdentifier,
         duplicated,
@@ -489,7 +536,6 @@ export class DriveClient implements IDriveClient {
       results: slice,
       options: effective,
       ...(hasMore ? { nextCursor: String(endIndex) } : {}),
-      totalCount: filtered.length,
     };
   }
 
@@ -544,60 +590,60 @@ export class DriveClient implements IDriveClient {
     fileId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    const relationshipActions: Action[] = await signActions(
-      [removeRelationshipAction(driveId, fileId, "child")],
-      this.signer,
-      signal,
-    );
     const driveActions: Action[] = await signActions(
       [deleteNodeAction({ id: fileId })],
       this.signer,
+      { documentId: driveId, branch: "main" },
+      signal,
+    );
+    // Alone, so a drive that refuses the removal leaves the file untouched.
+    await this.runJobs(
+      [
+        {
+          key: "drive",
+          documentId: driveId,
+          scope: getSharedActionScope(driveActions),
+          branch: "main",
+          actions: driveActions,
+          dependsOn: [],
+        },
+      ],
       signal,
     );
 
-    const batchResult = await this.reactor.executeBatch(
-      {
-        jobs: [
-          {
-            key: "relationship",
-            documentId: driveId,
-            scope: getSharedActionScope(relationshipActions),
-            branch: "main",
-            actions: relationshipActions,
-            dependsOn: [],
-          },
-          {
-            key: "drive",
-            documentId: driveId,
-            scope: getSharedActionScope(driveActions),
-            branch: "main",
-            actions: driveActions,
-            dependsOn: ["relationship"],
-          },
-        ],
-      },
-      signal,
-    );
-
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.client.waitForJob(job, signal),
-      ),
-    );
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
-
-    const deleteJob = await this.reactor.deleteDocument(
-      fileId,
+    const deleteActions: Action[] = await signActions(
+      [deleteDocumentAction(fileId)],
       this.signer,
+      { documentId: fileId, branch: "main" },
       signal,
     );
-    const deleteCompleted = await this.client.waitForJob(deleteJob, signal);
-    if (deleteCompleted.status === JobStatus.FAILED) {
-      throw new Error(deleteCompleted.error?.message);
-    }
+    const relationshipActions: Action[] = await signActions(
+      [removeRelationshipAction(driveId, fileId, "child")],
+      this.signer,
+      { documentId: driveId, branch: "main" },
+      signal,
+    );
+    // The drive's remotes are served the delete while the file is a member.
+    await this.runJobs(
+      [
+        {
+          key: "delete",
+          documentId: fileId,
+          scope: getSharedActionScope(deleteActions),
+          branch: "main",
+          actions: deleteActions,
+          dependsOn: [],
+        },
+        {
+          key: "relationship",
+          documentId: driveId,
+          scope: getSharedActionScope(relationshipActions),
+          branch: "main",
+          actions: relationshipActions,
+          dependsOn: ["delete"],
+        },
+      ],
+      signal,
+    );
   }
 }

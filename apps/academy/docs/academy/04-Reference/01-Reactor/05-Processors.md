@@ -46,6 +46,8 @@ await reactorModule?.processorManager.registerFactory(id, factory);
 
 A `ProcessorFactory` is called once per drive. It receives the drive header and returns the processors for that drive:
 
+A drive must exist before any processor runs. The manager calls the factories when it sees a `CREATE_DOCUMENT` operation whose document type is a drive container (`powerhouse/document-drive` or `powerhouse/reactor-drive` by default, see `withDriveContainerTypes`). Until a drive exists, a registered factory is never invoked and no operations are routed, even for plain documents that match a filter. In a standalone reactor, create a drive before you expect `onOperations` to fire.
+
 ```typescript
 import type { PHDocumentHeader } from "document-model";
 
@@ -54,6 +56,8 @@ type ProcessorFactory = (
   processorApp?: ProcessorApp,
 ) => Promise<ProcessorRecord[]> | ProcessorRecord[];
 ```
+
+The header is the drive's header as it was created, from its `CREATE_DOCUMENT` operation. That holds for a drive created while the factory is registered and for one that already existed when `registerFactory` is called (after a restart, say): earlier releases passed such a late registration a minimal header with only `id` and `documentType` set. A factory that selects drives by `slug` or `name` therefore now makes its processors on a late registration too, and they backfill from their persisted cursor, or per `startFrom` if they have none. Only a purged drive's header is still minimal, since its header is erased with it. The manager reads a late registration's headers from the operation index, a few drives at a time.
 
 Return `[]` to create no processors for a drive. The factory may be sync or async. The `processorApp?` parameter is part of the type but the manager **never supplies it** — it calls `factory(driveHeader)` with one argument. Read the running app from `module.processorApp` instead (see [the processor host](#the-processor-host)).
 
@@ -82,7 +86,7 @@ interface IProcessor {
 
 `onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`.
 
-`onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated.
+`onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated. It is not a deletion signal; see [Deletion and erasure](#deletion-and-erasure).
 
 Most processors subclass `RelationalDbProcessor` rather than implementing `IProcessor` by hand. Its constructor takes `(namespace, filter, relationalDb)`, and you implement `onOperations`, `initAndUpgrade`, and `onDisconnect`. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for the relational DB surface.
 
@@ -122,7 +126,7 @@ export const todoIndexerFactoryBuilder: ProcessorFactoryBuilder =
       scope: ["global"],
     };
 
-    const processor = new TodoIndexer(namespace, filter, store);
+    const processor = new TodoIndexer(namespace, filter, store, driveHeader.id);
     return [{ processor, filter }];
   };
 ```
@@ -187,11 +191,11 @@ interface IProcessorHostModuleBase {
 - **`analyticsStore`** — the analytics store for time-series rollups.
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
-- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute.
+- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute. Do not `await client.execute()` from inside `onOperations`. The promise resolves only at `READ_READY`, which the current batch cannot reach while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
 - **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
 - **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
-- **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
+- **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. In Switchboard it makes no caller check, because a processor acts for no caller. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
 These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `client` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
 
@@ -199,7 +203,7 @@ These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`.
 
 ## Catch-up and ordering
 
-Each processor has a **cursor** that records the highest operation `ordinal` it has handled. The manager tracks this per processor as `TrackedProcessor`:
+Each processor has a **cursor**, `lastOrdinal`: the highest operation `ordinal` it has taken, pulled back below any batch it failed to take. The manager tracks this per processor as `TrackedProcessor`:
 
 ```typescript
 type TrackedProcessor = {
@@ -216,21 +220,34 @@ type TrackedProcessor = {
 };
 ```
 
-**Ordering.** Operations arrive sorted by global ordinal. On each batch the manager filters to operations with `ordinal > lastOrdinal`, applies the filter, and calls `onOperations` on the matches. On success it advances `lastOrdinal` to the maximum ordinal in the batch (including unmatched operations), so the cursor moves forward even when nothing matched.
+**Ordering.** Batches reach the manager one document at a time, and different documents are projected in parallel, so a processor is not called in global ordinal order: a call may carry an ordinal lower than one an earlier call carried. Within one document's scope and branch, operations arrive in ordinal order; across documents there is no ordering guarantee. A processor receives one `onOperations` call at a time: each processor has its own delivery queue, and the next call begins after the previous one resolves. Batches that queue up behind a call are delivered together in the next one, in the order they arrived. A slow processor delays only its own queue. On each batch the manager applies the filter and queues the matches, minus any a backfill has already delivered. On success it raises `lastOrdinal` to the batch's maximum ordinal (including unmatched operations) when that is higher. Delivery is at-least-once: a processor may see an operation again after a restart or a retry, or when a backfill reads an operation whose live batch is still on its way to the manager. A crash between two concurrently projected documents, after the higher ordinal's cursor was persisted, can leave the lower ordinals unreplayed.
 
 **`startFrom`.** When a processor is first created and no cursor row exists yet:
 
 - `"beginning"` (the default) starts the cursor at ordinal 0, so the processor backfills the drive's full history.
-- `"current"` starts the cursor at the manager's current ordinal, so the processor sees only operations from now on.
+- `"current"` starts the cursor just below the drive's creation when the processor is created from the drive's creation batch, and at the manager's current ordinal when a late `registerFactory` creates it, so the processor sees only its drive's history or only what comes next.
 
 `startFrom` applies **only on first creation**. Once a cursor row exists, it is ignored — the persisted cursor wins. Restarting the reactor never re-runs `startFrom`.
 
-**Backfill and replay.** When a processor's `lastOrdinal` is behind the manager, the manager pages through history with `operationIndex.getSinceOrdinal(lastOrdinal)`, filters each page, calls `onOperations`, advances the cursor to the page's max ordinal, persists it, and follows the continuation until exhausted. This runs when a factory registers against a drive that already has history, and after a restart to replay anything missed while the reactor was down.
+**Backfill and replay.** When a processor's `lastOrdinal` is behind the manager, the manager pages through history with `operationIndex.getSinceOrdinal(lastOrdinal)`, filters each page, calls `onOperations`, advances the cursor to the page's max ordinal, persists it, and follows the continuation until exhausted. This runs when a factory registers against a drive that already has history, and after a restart to replay anything missed while the reactor was down. Backfill runs on the processor's queue, so other documents keep indexing and other processors keep receiving; live batches for a processor that is backfilling wait behind it and skip whatever the backfill already delivered. `registerFactory` resolves once the factory has run and its processors are bound, before their backfills finish; to wait for a backfill, watch the processor's `lastOrdinal` through `get()` or `getAll()`.
 
 **Persistence.** Cursors are stored in the `ProcessorCursor` table, keyed by `processorId`, and survive restarts. On startup the manager rehydrates every cursor, then catch-up replays the gap.
 
-**Failure isolation.** Processors run in parallel, each in its own try/catch. If `onOperations` throws, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor stops advancing. Other processors are unaffected. There is no automatic retry: an errored processor stays errored and is skipped on later batches until you call `tracked.retry()` (which re-activates it and re-runs backfill) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
+**Failure isolation.** Processors run in parallel, each on its own queue. If `onOperations` throws, or a backfill page cannot be read, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor is set below the lowest ordinal of the batch that failed. Other processors are unaffected. There is no automatic retry: an errored processor stays errored, and later batches that match it are skipped and pull its cursor below them likewise, until you call `tracked.retry()` (which re-activates it and replays from the cursor) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
+
+A check for purged documents that keeps failing, as during a database failover, does not error the processor. After its retries (about 80 seconds of backoff) the processor parks: it stays `status: "active"` with the failure in `lastError` and `lastErrorTimestamp`, its cursor holds below the batch it could not check, later batches are skipped without holding other processors, and the check is retried every 30 seconds with each failure logged. Once the check answers, `lastError` clears and the processor replays from its cursor. A processor parked when the reactor stops starts active on the next start, and replays from its cursor.
 
 To inspect state, use the manager: `get(processorId)` for one processor or `getAll()` for every tracked processor across all drives.
+
+## Deletion and erasure
+
+A processor owns the rows it writes, and it must erase a document's rows when the document is deleted. The reactor removes its own records of a deleted or purged document; nothing else removes a processor's. A processor that ignores deletions keeps a purged document's rows. There is no purge callback, and `IProcessor` has no other hook for it.
+
+- `DELETE_DOCUMENT` and `PURGE_DOCUMENT` both name the document in `operation.action.input.documentId`. Treat them alike. `PURGE_DOCUMENT` is the marker a purge leaves in the log; a reactor that missed the deletion receives only the marker.
+- Both are `document`-scope operations. A filter whose `scope` omits `"document"` never receives them.
+- The marker can arrive without `resultingState`, after the document's `DELETE_DOCUMENT`, and more than once. Handle deletions before parsing `resultingState`, and make the handler idempotent.
+- Operations of a purged document other than its marker are not delivered, whether routed live or read by a backfill. The check takes no lock, so a delivery racing the purge can still land; the marker that follows erases it.
+- When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or its marker), then `onDisconnect`. The drive's own deletion reaches them whatever their filter, so a processor can drop the storage it keeps for that drive. `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` for this.
+- A processor that was not running at its drive's deletion (its factory was not registered yet after a restart, or was being reloaded), or whose `onOperations` threw on it, still receives it: the next time its factory is registered, the factory is called for the deleted drive and that processor receives only the drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` if the drive has been purged since, then `onDisconnect`. Neither `registerFactory` nor a later registration or unregistration under the same identifier waits for that delivery, so a processor that hangs on it holds no reload; a re-registration delivers the deletion again only if the delivery in flight settles with the drive still owed. An errored processor receives its drive's deletion too. A processor whose `onOperations` throws on its drive's deletion stays in `getAll()` as errored, and its `retry()` calls the factory for the drive and delivers the deletion again. The factory receives the drive's header as it was at creation, except for a drive that has been purged: its header is erased with it, so the factory receives a minimal header with only `id` and `documentType` set. A factory that selects drives by `slug` or `name` then makes no processor for the drive, and the deletion stays owed; the manager logs a warning. Only the rows of processors that received the deletion are removed. A factory registered for the first time after a drive's deletion never had processors for that drive and is not called for it. Unregistering a factory keeps its cursor rows as released: a re-registration starts every processor afresh, per `startFrom`, but still owes the deletion of a drive deleted in between. The rows of a factory that is never registered again stay in `ProcessorCursor`.
 
 For how processors relate to sync and remote drives, see [Synchronization](/academy/Reference/Reactor/Synchronization). For the document types a filter can target, see the [Document model registry](/academy/Reference/Reactor/DocumentModelRegistry).

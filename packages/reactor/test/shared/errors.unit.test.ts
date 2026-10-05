@@ -102,38 +102,38 @@ describe("errors", () => {
   });
 
   describe("InvalidSignatureError", () => {
-    it("should create error with document ID and reason", () => {
+    it("carries the document, the code and the reason", () => {
       const error = new InvalidSignatureError(
         "doc-123",
+        "HASH_MISMATCH",
         "signature verification failed",
       );
 
       expect(error.name).toBe("InvalidSignatureError");
       expect(error.documentId).toBe("doc-123");
+      expect(error.code).toBe("HASH_MISMATCH");
       expect(error.reason).toBe("signature verification failed");
       expect(error.message).toBe(
-        "Invalid signature in document doc-123: signature verification failed",
+        "Invalid signature in document doc-123 [HASH_MISMATCH]: signature verification failed",
       );
     });
 
-    it("should handle different reasons", () => {
-      const error = new InvalidSignatureError(
-        "doc-456",
-        "signer not authorized",
-      );
+    it("is recognised by name once it has lost its prototype", () => {
+      const error = new InvalidSignatureError("doc-123", "BAD_SIGNATURE", "x");
+      const crossed = new Error(error.message);
+      crossed.name = error.name;
 
-      expect(error.documentId).toBe("doc-456");
-      expect(error.reason).toBe("signer not authorized");
-      expect(error.message).toContain("signer not authorized");
+      expect(InvalidSignatureError.isError(crossed)).toBe(true);
+      expect(InvalidSignatureError.isError(new Error("x"))).toBe(false);
     });
 
     it("should have a stack trace", () => {
-      const error = new InvalidSignatureError("doc-123", "test reason");
+      const error = new InvalidSignatureError("doc-123", "BAD_SIGNATURE", "r");
       expect(error.stack).toBeDefined();
     });
 
     it("should be an instance of Error", () => {
-      const error = new InvalidSignatureError("doc-123", "test reason");
+      const error = new InvalidSignatureError("doc-123", "BAD_SIGNATURE", "r");
       expect(error).toBeInstanceOf(Error);
     });
   });

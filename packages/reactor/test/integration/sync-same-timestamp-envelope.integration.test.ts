@@ -1,3 +1,4 @@
+import { settledAtHead } from "../catch-up/helpers.js";
 import type {
   Operation,
   OperationWithContext,
@@ -77,6 +78,36 @@ class SmallPageOperationIndex implements IOperationIndex {
     return this.inner.get(documentId, view, paging, signal);
   }
 
+  getCollectionsInRange(
+    after: number,
+    through: number,
+    among?: readonly string[],
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getCollectionsInRange(after, through, among, signal);
+  }
+
+  getOrdinalsInRange(
+    after: number,
+    through: number,
+    limit: number,
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getOrdinalsInRange(after, through, limit, signal);
+  }
+
+  getByOrdinals(ordinals: readonly number[], signal?: AbortSignal) {
+    return this.inner.getByOrdinals(ordinals, signal);
+  }
+
+  getStreamAfter(
+    stream: Parameters<IOperationIndex["getStreamAfter"]>[0],
+    after: number,
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getStreamAfter(stream, after, signal);
+  }
+
   getSinceOrdinal(
     ordinal: number,
     paging?: PagingOptions,
@@ -95,6 +126,22 @@ class SmallPageOperationIndex implements IOperationIndex {
 
   getGroupReferencers(groupId: string, signal?: AbortSignal) {
     return this.inner.getGroupReferencers(groupId, signal);
+  }
+
+  getOrdinalsByOpIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getOrdinalsByOpIds(
+      documentId,
+      scope,
+      branch,
+      opIds,
+      signal,
+    );
   }
 }
 
@@ -144,6 +191,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
       mockReactor,
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
   });
 

@@ -16,6 +16,7 @@ import {
   type InProcessReactorClientModule,
   type JwtHandler,
   type PoolInstrumentation,
+  UnsupportedStoredProtocolError,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
@@ -25,6 +26,7 @@ import {
   PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
   resolveRenownConfig,
+  type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
   type IPackageLoader,
@@ -33,6 +35,7 @@ import {
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
+import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import {
   DriveNodeView,
   NodeProcessor,
@@ -47,6 +50,7 @@ import {
   RENOWN_READ_MODEL_SUBGRAPH,
   type CredentialCheck,
   type IRenown,
+  type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
@@ -63,6 +67,15 @@ import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
+import {
+  installFatalErrorShutdown,
+  triggerFatalShutdown,
+} from "./fatal-shutdown.mjs";
+import {
+  resolvePrivacy,
+  startPrivacy,
+  type RunningPrivacy,
+} from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   assertProjectionWorkerSupported,
@@ -75,6 +88,14 @@ import {
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
+import { resolveMcpEnabled } from "./mcp-flag.mjs";
+import {
+  WORKFLOW_PACKAGE_NAME,
+  composeWorkflowRuntime,
+  assertWorkflowPackageLoadable,
+  resolveWorkflowsEnabled,
+  type ComposedWorkflowRuntime,
+} from "./workflow-runtime.mjs";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
 import {
@@ -85,8 +106,18 @@ import {
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
-import { getRenownSignerConfig, initRenown } from "./renown.js";
+import { resolveCreateSignaturePolicy } from "./create-signature-policy.mjs";
+import {
+  assertWorkerTrustPolicy,
+  getRenownSignerConfig,
+  getRenownTrustPolicyConfig,
+  initRenown,
+} from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
+import {
+  StoredDocumentsRefusedError,
+  resolveUnsupportedStoredDocuments,
+} from "./unsupported-stored-documents.mjs";
 import {
   addDefaultDrive,
   addDefaultReactorDrive,
@@ -103,8 +134,6 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
-const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
-const REQUIRE_SIGNATURES_DEFAULT = false;
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
@@ -118,6 +147,11 @@ const PGLITE_FLUSH_INTERVAL_MS = (() => {
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 100;
 })();
+
+// A store that cannot persist must not keep accepting writes.
+function onPgliteFlushError(err: unknown): void {
+  triggerFatalShutdown("PGlite snapshot flush failed", err);
+}
 
 // When set, runs both reactor and read-model PGLite instances purely in-memory.
 const PGLITE_IN_MEMORY = process.env.PH_PGLITE_IN_MEMORY === "1";
@@ -149,6 +183,16 @@ export function isPortAvailable(port: number): Promise<boolean> {
 /** The powerhouse.config.json this run reads, defaulting to the cwd copy. */
 function resolveConfigPath(configFile: string | undefined): string {
   return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
+}
+
+// An unreadable config file means "not configured", not a boot failure:
+// workflows are opt-in.
+function readConfigWorkflowsEnabled(configPath: string): boolean {
+  try {
+    return getConfig(configPath).workflows?.enabled ?? false;
+  } catch {
+    return false;
+  }
 }
 
 async function resolveServerPort(
@@ -233,7 +277,11 @@ async function createReactorKysely(opts: {
   const pglite = inMemory
     ? new PGlite()
     : new PGlite({
-        fs: new AtomicNodeFs(reactorPgliteDir, { logger, flushIntervalMs }),
+        fs: new AtomicNodeFs(reactorPgliteDir, {
+          logger,
+          flushIntervalMs,
+          onFlushError: onPgliteFlushError,
+        }),
       });
   logger.info(
     inMemory
@@ -394,12 +442,23 @@ async function initServer(
         "The executor worker pool (REACTOR_WORKERS) is not supported in dev mode: Vite-loaded document models cannot cross a worker-thread boundary",
       );
     }
+    assertWorkerTrustPolicy({
+      workers: workerPool.numWorkers,
+      authEnforcement:
+        resolveReactorFeatureFlags(process.env).flags.authEnforcement === true,
+      renownSource: renownConfig.source,
+    });
     if (!reactorDbUrl || !isPostgresUrl(reactorDbUrl)) {
       throw new Error(
         "The executor worker pool (REACTOR_WORKERS) requires a Postgres reactor database — set PH_REACTOR_DATABASE_URL or PH_SWITCHBOARD_DATABASE_URL. PGlite cannot be shared across worker threads.",
       );
     }
   }
+
+  const unsupportedStoredDocuments = resolveUnsupportedStoredDocuments(
+    options.unsupportedStoredDocuments,
+    process.env,
+  );
 
   let projectionWorker = resolveProjectionWorkerOptions(
     options.projectionWorker,
@@ -450,6 +509,21 @@ async function initServer(
     });
   }
 
+  // Registry packages import from the on-disk cache, which workers can read.
+  const registryPackageNames = new Set(
+    (registryPackages ?? "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean),
+  );
+  const resolveRegistryModels = async (
+    identifier: string,
+  ): Promise<string | null> =>
+    httpLoader && registryPackageNames.has(identifier)
+      ? ((await httpLoader.cachePackage(identifier)).entries.documentModels ??
+        null)
+      : null;
+
   const reactorLogger = logger.child(["reactor"]);
   // Latched: dropWriteReady reports the fatal once per dropped job.
   let projectionWorkerFatalFired = false;
@@ -465,9 +539,26 @@ async function initServer(
     // SIGTERM takes the builder's withSignalHandlers() path: kill, hooks, db.
     process.kill(process.pid, "SIGTERM");
   };
+  // Resolved in startSwitchboard, which owns the flag mechanism; initServer
+  // only reads the answer.
+  const workflowsEnabled = options.workflows?.enabled === true;
+  // Resolved before the reactor is built: a bad secret fails the boot early.
+  const privacyConfig = resolvePrivacy(options.privacy, process.env);
+
+  // Through the package manager like any other, so one route carries the
+  // models, the subgraphs and the piece.
+  if (workflowsEnabled) {
+    await assertWorkflowPackageLoadable();
+    if (!packages.includes(WORKFLOW_PACKAGE_NAME)) {
+      packages.push(WORKFLOW_PACKAGE_NAME);
+    }
+  }
+
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // Bound once the api serves the renown read model; see `localCredentialCheck`.
+  let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
     documentModels: DocumentModelModule[],
     {
@@ -533,7 +624,8 @@ async function initServer(
       .withFeatures({
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
-      });
+      })
+      .withUnsupportedStoredDocuments(unsupportedStoredDocuments);
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
@@ -581,7 +673,33 @@ async function initServer(
           : undefined,
       logger: reactorLogger,
       signer: renown
-        ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
+        ? getRenownSignerConfig(renown, options.identity?.keypairPath)
+        : undefined,
+      createSignaturePolicy: resolveCreateSignaturePolicy(process.env, {
+        hasSigner: renown !== null,
+        logger,
+      }),
+      trustPolicy: reactorFeatureFlags.authEnforcement
+        ? await getRenownTrustPolicyConfig(
+            renownConfig.source === "self"
+              ? {
+                  source: "self",
+                  request: (query, variables) =>
+                    localRenownRequest
+                      ? localRenownRequest(query, variables)
+                      : Promise.reject(
+                          new Error(
+                            "The local renown read model is not bound yet",
+                          ),
+                        ),
+                }
+              : {
+                  source: "remote",
+                  renownUrl: renownConfig.url,
+                  switchboardUrl: renownConfig.switchboardUrl,
+                },
+            renown,
+          )
         : undefined,
     });
 
@@ -597,6 +715,7 @@ async function initServer(
       const workerSources = await resolveWorkerModelSources(
         packages,
         reactorLogger,
+        { resolveRemote: resolveRegistryModels },
       );
       reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
         numWorkers: workerPool.numWorkers,
@@ -643,6 +762,7 @@ async function initServer(
         const workerSources = await resolveWorkerModelSources(
           packages,
           reactorLogger,
+          { resolveRemote: resolveRegistryModels },
         );
         reactorBuilder.withDocumentModelSources(workerSources);
       }
@@ -670,7 +790,23 @@ async function initServer(
       if (apiRef.current) await apiRef.current.dispose();
     });
 
-    const module = await clientBuilder.buildModule();
+    let module: InProcessReactorClientModule;
+    try {
+      module = await clientBuilder.buildModule();
+    } catch (error) {
+      try {
+        await baseKysely.destroy();
+      } catch (destroyError) {
+        logger.error(
+          "Aborting boot: reactor database destroy failed: @error",
+          destroyError,
+        );
+      }
+      if (UnsupportedStoredProtocolError.isError(error)) {
+        throw new StoredDocumentsRefusedError(error);
+      }
+      throw error;
+    }
 
     if (module.reactorModule) {
       const instrumentation = new ReactorInstrumentation(module.reactorModule);
@@ -688,6 +824,9 @@ async function initServer(
     });
 
     ownedReactorModule = module;
+    if (options.fatalErrorShutdown) {
+      installFatalErrorShutdown(logger);
+    }
 
     return {
       module,
@@ -746,7 +885,11 @@ async function initServer(
     const { VitePackageLoader, createViteLogger, startViteServer } =
       await import("@powerhousedao/reactor-api/vite");
     vite = await startViteServer(process.cwd(), createViteLogger(logger));
-    viteLoader = VitePackageLoader.build(vite);
+    // Packages switchboard brings, like the workflow package, resolve from
+    // here when the project does not install them itself.
+    viteLoader = VitePackageLoader.build(vite, {
+      resolveFrom: [import.meta.url],
+    });
   }
 
   // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
@@ -794,7 +937,11 @@ async function initServer(
           new ReadModelPGlite({
             fs: new AtomicNodeFs(
               connectionString ?? (readModelPgliteDir as string),
-              { logger, flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS },
+              {
+                logger,
+                flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
+                onFlushError: onPgliteFlushError,
+              },
             ),
             parsers: PGLITE_UTC_PARSERS,
           });
@@ -839,18 +986,16 @@ async function initServer(
           "(@powerhousedao/renown-package) or set RENOWN_SOURCE=remote.",
       );
     }
-    localCredentialCheck = createLocalCredentialVerifier(
-      (query, variables) =>
-        manager.executeSubgraphQuery(
-          RENOWN_READ_MODEL_SUBGRAPH,
-          query,
-          variables,
-        ),
-      {
-        onError: (error) =>
-          logger.error("Renown read model query failed: @error", error),
-      },
-    );
+    localRenownRequest = (query, variables) =>
+      manager.executeSubgraphQuery(
+        RENOWN_READ_MODEL_SUBGRAPH,
+        query,
+        variables,
+      );
+    localCredentialCheck = createLocalCredentialVerifier(localRenownRequest, {
+      onError: (error) =>
+        logger.error("Renown read model query failed: @error", error),
+    });
     logger.info(
       "Renown credentials will be verified against this switchboard's own " +
         "renown read model",
@@ -873,6 +1018,90 @@ async function initServer(
 
   const lateSubgraphs: Promise<unknown>[] = [];
 
+  // The workflow runtime is a switchboard component: composed from what the
+  // api handed back, registered like any other late subgraph.
+  let workflows: ComposedWorkflowRuntime | undefined;
+  if (workflowsEnabled) {
+    workflows = await composeWorkflowRuntime({
+      reactorClient: client,
+      clientModule: options.reactor ?? ownedReactorModule,
+      relationalDb: api.relationalDb,
+      // A Postgres read model outlives the pod; a key file beside it would not.
+      secretsKeyFile: readModelPgliteDir === null ? false : undefined,
+      attachments: createAttachmentClient(api.attachments.service),
+      // The workflow package's own HTTP namespace: its webhook endpoints live
+      // under it, not under the reactor's.
+      webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
+      http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+      authorizationService: api.authorizationService,
+      // The manager that already loads this reactor's packages: the project it
+      // runs in is one of them, so its own pieces arrive with the rest.
+      pieces: api.packageManager,
+      pieceRegistryUrl: registryUrl,
+      logger: logger.child(["workflow-runtime"]),
+    });
+
+    const WorkflowRuntimeSubgraph = workflows.subgraph;
+    const workflowSubgraph = new WorkflowRuntimeSubgraph({
+      reactorClient: client,
+      http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
+      relationalDb: api.relationalDb,
+      analyticsStore: undefined as never,
+      graphqlManager,
+      syncManager: api.syncManager,
+      authorizationService: graphqlManager.getAuthorizationService(),
+      path: graphqlManager.getBasePath(),
+      attachments: api.attachmentClientProvider,
+    });
+
+    lateSubgraphs.push(
+      graphqlManager
+        .registerSubgraphInstance(workflowSubgraph, "graphql", false)
+        .catch((error: unknown) => {
+          logger.error(
+            "Failed to register workflow-runtime subgraph: @error",
+            error,
+          );
+        }),
+    );
+
+    await workflows.start();
+    logger.info("Workflow runtime started");
+  }
+
+  let privacy: RunningPrivacy | undefined;
+  if (privacyConfig.enabled) {
+    // The caller's reactor signs with a signer only the caller knows.
+    const signer = options.reactor
+      ? options.privacy?.signer
+      : (options.privacy?.signer ?? renown?.signer);
+    try {
+      privacy = await startPrivacy({
+        config: privacyConfig,
+        reactorModule: (options.reactor ?? ownedReactorModule)?.reactorModule,
+        signer,
+        authorizationService: api.authorizationService,
+        documentPermissionService: api.documentPermissionService,
+        graphqlManager,
+        reactorClient: client,
+        logger: logger.child(["privacy"]),
+      });
+    } catch (error) {
+      await workflows?.stop();
+      await abortBoot(api);
+      throw error;
+    }
+  }
+
+  // Ahead of the api: the runtime's store lives in the read-model database
+  // that dispose closes, and its children outlive the reactor otherwise.
+  const shutdown = async () => {
+    await privacy?.stop();
+    await workflows?.stop();
+    await api.dispose();
+  };
+  apiRef.current = { dispose: shutdown };
+
   // Wire up dynamic package management if HTTP loader is configured
   if (httpLoader) {
     const packageManagementService = new PackageManagementService({
@@ -883,7 +1112,14 @@ async function initServer(
     });
 
     packageManagementService.setOnModelsChanged(() => {
-      graphqlManager.regenerateDocumentModelSubgraphs().catch(logger.error);
+      graphqlManager
+        .regenerateDocumentModelSubgraphs()
+        .catch((error: unknown) => {
+          logger.error(
+            "Failed to regenerate document model subgraphs: @error",
+            error,
+          );
+        });
     });
 
     const packagesSubgraph = new PackagesSubgraph({
@@ -895,6 +1131,8 @@ async function initServer(
       path: graphqlManager.getBasePath(),
       authorizationService: graphqlManager.getAuthorizationService(),
       packageManagementService,
+      http: graphqlManager.scopeForPackage("@powerhousedao/switchboard"),
+      attachments: api.attachmentClientProvider,
     });
 
     lateSubgraphs.push(
@@ -911,10 +1149,19 @@ async function initServer(
       readModel: driveNodeView,
     });
 
+    const authorizationService = graphqlManager.getAuthorizationService();
     const reactorDriveSubgraph = {
       name: "reactor-drive",
       path: graphqlManager.getBasePath(),
-      resolvers: createReactorDriveResolvers(),
+      resolvers: createReactorDriveResolvers({
+        reactorClient: client,
+        readModel: driveNodeView,
+        hostCanRead: (documentId, address) =>
+          authorizationService.canRead(
+            documentId as CanonicalDocumentId,
+            address,
+          ),
+      }),
       typeDefs: reactorDriveSubgraphTypeDefs,
       reactorClient: client,
       relationalDb: undefined as never,
@@ -1020,9 +1267,13 @@ async function initServer(
     reactor: client,
     attachmentService,
     attachmentReferenceProjection: api.attachmentReferenceProjection,
+    workflowTriggers: workflows?.triggers,
+    workflowsEnabled,
+    privacy: privacy ? { erasure: privacy.erasure } : undefined,
+    mcpEnabled: options.mcp !== false,
     renown,
     port: serverPort,
-    shutdown: () => api.dispose(),
+    shutdown,
   };
 }
 
@@ -1065,12 +1316,15 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  const requireSignatures =
-    options.identity?.requireSignatures ??
-    (await featureFlags.getBooleanValue(
-      REQUIRE_SIGNATURES,
-      REQUIRE_SIGNATURES_DEFAULT,
-    ));
+  options.mcp = await resolveMcpEnabled({ featureFlags, option: options.mcp });
+
+  const configPathForFlags = resolveConfigPath(options.configFile);
+  const workflowsEnabled = await resolveWorkflowsEnabled({
+    featureFlags,
+    override: options.workflows?.enabled,
+    configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
+  });
+  options.workflows = { enabled: workflowsEnabled };
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1080,7 +1334,6 @@ export const startSwitchboard = async (
   );
   options.identity = {
     ...options.identity,
-    requireSignatures,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
   };
 
@@ -1089,7 +1342,8 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
-        REQUIRE_SIGNATURES: requireSignatures,
+        MCP_ENABLED: options.mcp,
+        PH_WORKFLOWS_ENABLED: workflowsEnabled,
       },
       null,
       2,
@@ -1114,7 +1368,11 @@ export const startSwitchboard = async (
     return await initServer(serverPort, options, renown, renownConfig);
   } catch (e) {
     Sentry.captureException(e);
-    logger.error("App crashed: @error", e);
+    if (StoredDocumentsRefusedError.isError(e)) {
+      logger.error(e.message);
+    } else {
+      logger.error("App crashed: @error", e);
+    }
     throw e;
   }
 };
@@ -1124,7 +1382,11 @@ export {
   type SwitchboardReactorDefaultsOptions,
 } from "./builder-defaults.mjs";
 export * from "./types.js";
+export {
+  StoredDocumentsRefusedError,
+  resolveUnsupportedStoredDocuments,
+} from "./unsupported-stored-documents.mjs";
 
 if (import.meta.main) {
-  await startSwitchboard();
+  await startSwitchboard({ fatalErrorShutdown: true });
 }

@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.2-dev.87",
+  "version": "6.2.3-dev.43",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -52,7 +52,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/document-model",
     "test": "vitest --run",
     "test:watch": "vitest watch",
     "build": "tsx ./build.ts"
@@ -62,7 +62,6 @@
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
     "graphql": "catalog:",
-    "jest": "^30.0.5",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
@@ -71,7 +70,6 @@
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
-    "jszip": "^3.10.1",
     "zod": "catalog:"
   },
   "peerDependencies": {
@@ -82,7 +80,7 @@
       "optional": true
     }
   },
-  "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
+  "description": "Powerhouse document model \u2014 foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [
     "powerhouse",
     "vetra",

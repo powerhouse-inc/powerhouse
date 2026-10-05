@@ -1,5 +1,8 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { Operation } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type Operation,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import { type OperationIndexEntry } from "../cache/operation-index-types.js";
 import type { ChannelError } from "./errors.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
@@ -112,6 +115,15 @@ export function filterOperations(
 
     return true;
   });
+}
+
+/** Markers pass every remote filter, as they pass sinceTimestamp. */
+export function filterForRemote(
+  operations: OperationWithContext[],
+  filter: RemoteFilter,
+): OperationWithContext[] {
+  const kept = new Set(filterOperations(operations, filter));
+  return operations.filter((op) => kept.has(op) || isPurgeMarker(op));
 }
 
 /**
@@ -553,6 +565,16 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
       return "SIGNATURE_INVALID";
     case "HashMismatchError":
       return "HASH_MISMATCH";
+    case "UnsupportedProtocolVersionError":
+      return "UNSUPPORTED_PROTOCOL";
+    case "DocumentPurgedError":
+      return "DOCUMENT_PURGED";
+    case "DocumentNotDeletedError":
+    case "GroupInUseError":
+    case "PurgeTooLargeError":
+      return "PURGE_PRECONDITION";
+    case "ReservedActionError":
+      return "RESERVED_ACTION";
     default:
       return "UNCLASSIFIED";
   }
@@ -567,11 +589,19 @@ export function syncOperationErrorType(
 
 /** Dead-letter types that must not stop the document syncing. */
 const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
-  new Set(["AUTH_TIMESTAMP_NOT_MONOTONIC"]);
+  new Set([
+    "AUTH_TIMESTAMP_NOT_MONOTONIC",
+    "UNSUPPORTED_PROTOCOL",
+    "PEER_PROTOCOL_UNSUPPORTED",
+    "DOCUMENT_PURGED",
+    "PURGE_PRECONDITION",
+    "MARKER_REFUSED",
+  ]);
 
 /**
  * A held auth operation must not quarantine: reconciling the two policies needs
- * the traffic a quarantine would stop.
+ * the traffic a quarantine would stop. A protocol refusal concerns one peer,
+ * and quarantine is global to the document.
  */
 export function quarantinesDocument(
   errorType: SyncOperationErrorType,

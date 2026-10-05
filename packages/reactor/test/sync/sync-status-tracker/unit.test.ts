@@ -50,6 +50,10 @@ function createMockChannel(): IChannel {
     }),
     onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     triggerPull: vi.fn(),
+    notePoll: vi.fn(),
+    lastHolderPollUtcMs: vi.fn().mockReturnValue(undefined),
+    setLocalManifest: vi.fn(),
+    onPeerManifest: vi.fn().mockReturnValue(() => {}),
   };
 }
 

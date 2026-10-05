@@ -18,6 +18,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";
 const TEST_SCOPE = "global";
+const TARGET = { documentId: TEST_DOC_ID, branch: TEST_BRANCH };
 
 describe("RenownCryptoSigner and Verifier Integration", () => {
   let keyStorage: MemoryKeyStorage;
@@ -47,14 +48,14 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
 
     expect(signature).toHaveLength(5);
     const [timestamp, signerKey, hash, prevStateHash, signatureHex] = signature;
 
     expect(timestamp).toMatch(/^\d+$/);
     expect(signerKey.startsWith("did:key:z")).toBe(true);
-    expect(hash).toBeDefined();
+    expect(hash).toMatch(/^v2:[A-Za-z0-9_-]{43}$/);
     expect(prevStateHash).toBe("");
     expect(signatureHex.startsWith("0x")).toBe(true);
     expect(signatureHex.length).toBeGreaterThan(2);
@@ -71,7 +72,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
 
     const signedAction: Action = {
       ...action,
@@ -113,7 +114,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
     const [timestamp, signerKey, hash, prevStateHash] = signature;
     const tamperedSignature: Signature = [
       timestamp,
@@ -163,7 +164,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
 
     const signedAction: Action = {
       ...action,
@@ -263,7 +264,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       },
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
 
     const signedAction: Action = {
       ...action,
@@ -318,7 +319,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "document",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
 
     const signedAction: Action = {
       ...action,
@@ -366,8 +367,8 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature1 = await signer.signAction(action1);
-    const signature2 = await signer.signAction(action2);
+    const signature1 = await signer.signAction(action1, TARGET);
+    const signature2 = await signer.signAction(action2, TARGET);
 
     expect(signature1[2]).not.toBe(signature2[2]);
     expect(signature1[4]).not.toBe(signature2[4]);
@@ -384,7 +385,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, TARGET);
 
     const newKeyStorage = new MemoryKeyStorage();
     const newRenownCrypto = await new RenownCryptoBuilder()

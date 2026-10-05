@@ -2,11 +2,15 @@ import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   DocumentModelModule,
   PHDocument,
+  PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import {
   createBaseState,
   createPresignedHeader,
   createZip,
+  hasDerivedDocumentId,
+  signaturePolicyOf,
+  v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addFileWithProgress } from "../src/actions/document.js";
@@ -15,10 +19,13 @@ const DOCUMENT_TYPE = "test/import";
 const SOURCE_ID = "source-document-id";
 const DRIVE_ID = "drive-1";
 
-function sourceDocument(): PHDocument {
-  const header = createPresignedHeader(SOURCE_ID, DOCUMENT_TYPE);
+function sourceDocument(
+  header: PHDocumentHeader = {
+    ...createPresignedHeader(SOURCE_ID, DOCUMENT_TYPE),
+    protocolVersions: { "base-reducer": 2 },
+  },
+): PHDocument {
   header.name = "Imported";
-  header.protocolVersions = { "base-reducer": 2 };
   const state = {
     ...createBaseState(undefined, { version: 1 }),
     global: { value: "x" },
@@ -66,6 +73,7 @@ function stubReactorClient(
   rejectClaims: (documentId: string, attempt: number) => boolean = () => false,
 ) {
   const claimed: string[] = [];
+  const headers: PHDocumentHeader[] = [];
   const modules = [documentModelModule()];
   const client = {
     get: (identifier: string) => {
@@ -84,6 +92,7 @@ function stubReactorClient(
     drives: {
       addFile: (_driveId: string, document: PHDocument) => {
         claimed.push(document.header.id);
+        headers.push(document.header);
         if (rejectClaims(document.header.id, claimed.length)) {
           return Promise.reject(takenIdError(document.header.id));
         }
@@ -91,7 +100,7 @@ function stubReactorClient(
       },
     },
   };
-  return { client, claimed };
+  return { client, claimed, headers };
 }
 
 function installClient(client: unknown): void {
@@ -202,5 +211,68 @@ describe("importing a .phd whose id may be taken", () => {
       "drive read failed",
     );
     expect(claimed).toEqual([]);
+  });
+});
+
+describe("importing a v2-required .phd", () => {
+  afterEach(() => {
+    delete window.ph;
+  });
+
+  async function v2File(header: PHDocumentHeader): Promise<File> {
+    const data = await createZip(sourceDocument(header));
+    return new File([new Uint8Array(data)], "source.phd");
+  }
+
+  function v2Header(): PHDocumentHeader {
+    return createPresignedHeader(
+      undefined,
+      DOCUMENT_TYPE,
+      v2RequiredProtocolVersions(),
+    );
+  }
+
+  it("keeps the zip's id and the header it derives from when the id is free", async () => {
+    const source = v2Header();
+    const { client, claimed, headers } = stubReactorClient(() =>
+      Promise.resolve(false),
+    );
+    installClient(client);
+
+    await addFileWithProgress(await v2File({ ...source }), DRIVE_ID);
+
+    expect(claimed).toEqual([source.id]);
+    expect(hasDerivedDocumentId(headers[0])).toBe(true);
+  });
+
+  it("mints a derived id when the zip's id is taken", async () => {
+    const source = v2Header();
+    const { client, claimed, headers } = stubReactorClient(() =>
+      Promise.resolve(true),
+    );
+    installClient(client);
+
+    await addFileWithProgress(await v2File({ ...source }), DRIVE_ID);
+
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0]).not.toBe(source.id);
+    expect(signaturePolicyOf(headers[0])).toBe("v2-required");
+    expect(hasDerivedDocumentId(headers[0])).toBe(true);
+  });
+
+  it("mints a derived id when the zip's id does not derive from its header", async () => {
+    const { client, claimed, headers } = stubReactorClient(() =>
+      Promise.resolve(false),
+    );
+    installClient(client);
+
+    await addFileWithProgress(
+      await v2File({ ...v2Header(), id: SOURCE_ID }),
+      DRIVE_ID,
+    );
+
+    expect(client.isDocumentIdTaken).not.toHaveBeenCalled();
+    expect(claimed[0]).not.toBe(SOURCE_ID);
+    expect(hasDerivedDocumentId(headers[0])).toBe(true);
   });
 });

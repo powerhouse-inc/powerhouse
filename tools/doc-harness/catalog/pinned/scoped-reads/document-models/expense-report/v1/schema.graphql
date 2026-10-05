@@ -1,0 +1,65 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type ExpenseReportState {
+  expenses: [Expense!]!
+}
+
+type Expense {
+  id: ID!
+  memo: String!
+  amountCents: Int!
+  status: ExpenseStatus!
+  approvedBy: String
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+}
+
+type ExpenseReportLocalState {
+  reviewNotes: [ReviewNote!]!
+}
+
+type ReviewNote {
+  expenseId: ID!
+  note: String!
+}
+
+# expenses
+
+input SubmitExpenseInput {
+  id: ID!
+  memo: String!
+  amountCents: Int!
+}
+
+input ApproveExpenseInput {
+  id: ID!
+}
+
+# review
+
+input AddReviewNoteInput {
+  expenseId: ID!
+  note: String!
+}

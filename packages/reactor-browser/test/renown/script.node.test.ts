@@ -148,6 +148,7 @@ describe("Renown on script", () => {
 
     const signatureA = await signerA.signActionWithResultingState(
       actionWithContext,
+      { documentId: doc.header.id, branch: "main" },
       predictedResultingHash,
     );
 

@@ -17,21 +17,16 @@ import type {
   DeleteStateExampleInput,
   DocumentModelGlobalState,
   DocumentSpecification,
-  LoadStateActionInput,
-  LoadStateActionStateInput,
   ModuleSpecification,
   MoveOperationInput,
   OperationErrorSpecification,
   OperationSpecification,
-  PruneActionInput,
   ReorderChangeLogItemsInput,
   ReorderModuleOperationsInput,
   ReorderModulesInput,
   ReorderOperationErrorsInput,
   ReorderOperationExamplesInput,
   ReorderStateExamplesInput,
-  SchemaLoadStateAction,
-  SchemaPruneAction,
   SchemaRedoAction,
   SchemaSetNameAction,
   SchemaSetPreferredEditorAction,
@@ -72,10 +67,6 @@ export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
 
-export const Load_StateSchema = z.enum(["LOAD_STATE"]);
-
-export const PruneSchema = z.enum(["PRUNE"]);
-
 export const RedoSchema = z.enum(["REDO"]);
 
 export const Set_NameSchema = z.enum(["SET_NAME"]);
@@ -90,64 +81,11 @@ export function OperationScopeSchema(): z.ZodString {
 
 export function DocumentActionSchema() {
   return z.union([
-    LoadStateActionSchema(),
-    PruneActionSchema(),
     RedoActionSchema(),
     SetNameActionSchema(),
     SetPreferredEditorActionSchema(),
     UndoActionSchema(),
   ]);
-}
-
-export function LoadStateActionSchema(): z.ZodObject<
-  Properties<SchemaLoadStateAction>
-> {
-  return z.object({
-    id: z.string(),
-    timestampUtcMs: z.string(),
-    input: z.lazy(() => LoadStateActionInputSchema()),
-    type: Load_StateSchema,
-    scope: OperationScopeSchema(),
-  });
-}
-
-export function LoadStateActionInputSchema(): z.ZodObject<
-  Properties<LoadStateActionInput>
-> {
-  return z.object({
-    operations: z.number(),
-    state: z.lazy(() => LoadStateActionStateInputSchema()),
-  });
-}
-
-export function LoadStateActionStateInputSchema(): z.ZodObject<
-  Properties<LoadStateActionStateInput>
-> {
-  return z.object({
-    data: z.unknown().nullish(),
-    name: z.string(),
-  });
-}
-
-export function PruneActionSchema(): z.ZodObject<
-  Properties<SchemaPruneAction>
-> {
-  return z.object({
-    id: z.string(),
-    timestampUtcMs: z.string(),
-    input: z.lazy(() => PruneActionInputSchema()),
-    type: PruneSchema,
-    scope: OperationScopeSchema(),
-  });
-}
-
-export function PruneActionInputSchema(): z.ZodObject<
-  Properties<PruneActionInput>
-> {
-  return z.object({
-    end: z.number().nullish(),
-    start: z.number().nullish(),
-  });
 }
 
 export function RedoActionInputSchema() {
@@ -766,6 +704,22 @@ export const PowerhouseModulesSchema = z
   .array(PowerhouseModuleSchema)
   .optional();
 
+// A piece the package ships, listed like any other module: `id` is the piece
+// name a block type refers to, `name` its display name. The rest is what
+// `ph build` learns by loading the built piece once, and it writes it only to
+// the manifest copy under dist, so a source manifest never has to carry it.
+export const PieceModuleSchema = PowerhouseModuleSchema.extend({
+  version: z.string().optional(),
+  description: z.string().optional(),
+  // Both relative to the package root: the piece directory in npm-bundle shape
+  // (package.json + entry, so a registry can serve it on its own), and the
+  // metadata written beside it.
+  bundle: z.string().optional(),
+  descriptor: z.string().optional(),
+});
+
+export const PieceModulesSchema = z.array(PieceModuleSchema).optional();
+
 export const PublisherSchema = z.object({
   name: z.string().optional(),
   url: z.string().optional(),
@@ -781,7 +735,9 @@ export const ConfigEntrySchema = z.object({
   type: ConfigEntryTypeSchema,
   description: z.string().optional(),
   required: z.boolean().optional(),
-  default: z.boolean().optional(),
+  // The value the host falls back to, spelled as the env var would be. Only
+  // meaningful for `var`; a `secret` has no default worth publishing.
+  default: z.string().optional(),
 });
 
 // PWA / service-worker overrides a package contributes to a Connect build.
@@ -916,6 +872,10 @@ export const ManifestSchema = z.object({
   editors: PowerhouseModulesSchema,
   processors: PowerhouseModulesSchema,
   subgraphs: PowerhouseModulesSchema,
+  // Connector pieces the package ships, built under pieces/ and loaded by a
+  // host that runs them. Optional like every other module list, so a package
+  // that ships none says nothing.
+  pieces: PieceModulesSchema,
   config: z.array(ConfigEntrySchema).optional(),
   pwa: PwaConfigSchema.optional(),
 });

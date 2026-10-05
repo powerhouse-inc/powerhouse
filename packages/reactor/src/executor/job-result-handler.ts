@@ -6,14 +6,24 @@ import type { IQueue } from "../queue/interfaces.js";
 import { RetryAccounting } from "../queue/types.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { ModuleNotFoundError } from "../registry/errors.js";
+import {
+  ModelNotWorkerImportableError,
+  ModuleNotFoundError,
+} from "../registry/errors.js";
 import {
   AuthorizationDeniedError,
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
+  DocumentNotDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
   ExcessiveReshuffleError,
+  GroupInUseError,
   InvalidOperationTimestampError,
+  InvalidSignatureError,
+  PurgeTooLargeError,
+  ReservedActionError,
+  UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import {
@@ -41,10 +51,12 @@ export interface IJobResultHandler {
 
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
+    const documentId = (error as { documentId?: unknown }).documentId;
     return {
       name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
+      ...(typeof documentId === "string" ? { documentId } : {}),
     };
   }
   return {
@@ -78,13 +90,24 @@ export class JobResultHandler implements IJobResultHandler {
     }
 
     // Attempt model recovery before exhausting retries
-    if (result.error && ModuleNotFoundError.isError(result.error)) {
+    if (
+      result.error &&
+      ModuleNotFoundError.isError(result.error) &&
+      typeof result.error.documentType === "string"
+    ) {
       let modelLoaded = false;
       try {
-        await this.resolver.ensureModelLoaded(result.error.documentType);
+        await this.resolver.recoverMissingModel(
+          result.error.documentType,
+          result.error.requestedVersion,
+        );
         modelLoaded = true;
-      } catch {
-        // Model could not be loaded, fall through to normal failure path
+      } catch (error) {
+        // No retry can reach a model the workers cannot import.
+        if (ModelNotWorkerImportableError.isError(error)) {
+          this.failNow(handle, error);
+          return;
+        }
       }
 
       if (modelLoaded) {
@@ -132,6 +155,7 @@ export class JobResultHandler implements IJobResultHandler {
     if (
       result.error &&
       DocumentNotFoundError.isError(result.error) &&
+      !DocumentPurgedError.isError(result.error) &&
       handle.job.kind === "load"
     ) {
       handle.defer();
@@ -152,19 +176,18 @@ export class JobResultHandler implements IJobResultHandler {
         AuthTimestampNotMonotonicError.isError(result.error) ||
         InvalidOperationTimestampError.isError(result.error) ||
         ExcessiveReshuffleError.isError(result.error) ||
+        // A refusal is a function of the write's content.
+        InvalidSignatureError.isError(result.error) ||
         // The action's snapshot stays stale; the client retries with a fresh read.
-        UpgradePreconditionFailedError.isError(result.error))
+        UpgradePreconditionFailedError.isError(result.error) ||
+        UnsupportedProtocolVersionError.isError(result.error) ||
+        DocumentPurgedError.isError(result.error) ||
+        DocumentNotDeletedError.isError(result.error) ||
+        GroupInUseError.isError(result.error) ||
+        PurgeTooLargeError.isError(result.error) ||
+        ReservedActionError.isError(result.error))
     ) {
-      const errorInfo = toErrorInfo(result.error);
-      this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_FAILED, {
-          jobId: handle.job.id,
-          error: result.error,
-          job: handle.job,
-        })
-        .catch(() => {});
-      handle.fail(errorInfo);
+      this.failNow(handle, result.error);
       return;
     }
 
@@ -218,6 +241,19 @@ export class JobResultHandler implements IJobResultHandler {
 
       handle.fail(fullErrorInfo);
     }
+  }
+
+  private failNow(handle: IJobExecutionHandle, error: Error): void {
+    const errorInfo = toErrorInfo(error);
+    this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
+    this.eventBus
+      .emit(ReactorEventTypes.JOB_FAILED, {
+        jobId: handle.job.id,
+        error,
+        job: handle.job,
+      })
+      .catch(() => {});
+    handle.fail(errorInfo);
   }
 
   /** How many times this job has already lost an append-condition race. */

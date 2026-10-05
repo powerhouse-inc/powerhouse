@@ -1,0 +1,14 @@
+{
+  "name": "@fixture/mixed-package",
+  "description": "A package with a document model and a piece.",
+  "category": "Fixtures",
+  "documentModels": [
+    {
+      "id": "fixture/thing",
+      "name": "Thing"
+    }
+  ],
+  "editors": [],
+  "processors": [],
+  "subgraphs": []
+}

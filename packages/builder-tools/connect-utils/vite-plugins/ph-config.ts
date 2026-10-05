@@ -2,11 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 import type { PowerhousePackage } from "@powerhousedao/config";
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import type {
+  PHConnectRuntimeConfig,
+  PowerhouseConfig,
+} from "@powerhousedao/shared/clis";
 import {
   buildRuntimeConfig,
-  DEFAULT_CONNECT_CONFIG,
   deepMerge,
+  resolveSourceConnect,
+  workflowsSettingConflict,
 } from "@powerhousedao/shared/connect";
 import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 
@@ -14,6 +18,8 @@ export type PhConfigPluginOptions = {
   packages: PowerhousePackage[];
   projectRoot?: string;
   connect?: PHConnectRuntimeConfig;
+  /** The source's top-level `workflows` block; `connect.app.workflowsEnabled` falls back to it. */
+  workflows?: PowerhouseConfig["workflows"];
   /**
    * Project-wide package registry URL — the effective value (CLI override
    * `??` source) the caller has already resolved. Copied verbatim into the
@@ -54,14 +60,20 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
 
   // Precedence ladder (lowest → highest) for the emitted connect.* block:
   //   DEFAULT_CONNECT_CONFIG  (base — fills in any field nothing else supplied)
+  //     < source.workflows    (project-wide `workflows.enabled`)
   //     < source.connect      (user's hand-edited powerhouse.config.json)
   //     < cliConnectOverride  (`ph connect build --json` + individual flags)
   //
   // Env vars are NOT a layer in this ladder. The Connect SPA's runtime
   // configuration is exclusively set via `powerhouse.config.json` or CLI
   // overrides (`ph connect build --<field>` / `ph connect config --<field>`).
-  const sourceConnect = options.connect ?? {};
-  const withDefaults = deepMerge(DEFAULT_CONNECT_CONFIG, sourceConnect);
+  const sourceSettings = {
+    connect: options.connect,
+    workflows: options.workflows,
+  };
+  const conflict = workflowsSettingConflict(sourceSettings);
+  if (conflict) console.warn(`[powerhouse] ${conflict}`);
+  const withDefaults = resolveSourceConnect(sourceSettings);
   const mergedConnect = options.cliConnectOverride
     ? deepMerge(withDefaults, options.cliConnectOverride)
     : withDefaults;

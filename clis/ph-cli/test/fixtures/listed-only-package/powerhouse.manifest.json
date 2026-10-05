@@ -1,0 +1,9 @@
+{
+  "name": "@fixture/listed-only-package",
+  "description": "A package that lists a piece it has no directory for.",
+  "category": "Fixtures",
+  "documentModels": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": []
+}

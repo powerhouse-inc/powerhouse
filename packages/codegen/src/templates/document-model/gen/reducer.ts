@@ -65,7 +65,7 @@ function makeOperationInputSchemaInvocation(operation: OperationSpecification) {
   if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ${constantCaseOperationName}");
 `.raw;
   }
-  return ts`${operationInputSchema}().parse(action.input);`.raw;
+  return ts`memoizedSchema(${operationInputSchema}).parse(action.input);`.raw;
 }
 
 function makeOperationsObjectName(
@@ -126,6 +126,27 @@ function makeModuleOperationsCaseStatements(
     .join("\n");
 }
 
+function makeSchemaMemo(modules: ModuleSpecification[]) {
+  const validates = modules.some((module) =>
+    module.operations.some((operation) => operation.schema !== null),
+  );
+  if (!validates) {
+    return "";
+  }
+  return ts`
+const schemaMemo = new Map<() => unknown, unknown>();
+
+function memoizedSchema<T>(makeSchema: () => T): T {
+  let schema = schemaMemo.get(makeSchema) as T | undefined;
+  if (schema === undefined) {
+    schema = makeSchema();
+    schemaMemo.set(makeSchema, schema);
+  }
+  return schema;
+}
+`.raw;
+}
+
 export const documentModelGenReducerFileTemplate = (
   v: DocumentModelFileMakerArgs,
 ) =>
@@ -139,6 +160,8 @@ import type { ${v.phStateName} } from "${v.versionImportPath}";
 ${makeModulesOperationsImports(v.specification.modules, v.camelCaseDocumentType)}
 
 ${makeOperationInputSchemaImports(v.specification.modules)}
+
+${makeSchemaMemo(v.specification.modules)}
 
 const stateReducer: StateReducer<${v.phStateName}> =
     (state, action, dispatch) => {

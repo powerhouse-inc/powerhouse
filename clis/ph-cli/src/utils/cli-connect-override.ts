@@ -14,13 +14,18 @@
 // individual --flag values merge on top, so a flag beats a conflicting --json
 // value.
 
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import type {
+  PHConnectDefaultDrive,
+  PHConnectRuntimeConfig,
+} from "@powerhousedao/shared/clis";
 import { deepMerge } from "@powerhousedao/shared/connect";
+import { mergeDefaultDrives } from "./merge-default-drives.js";
 import type { ConnectBuildArgs, ConnectStudioArgs } from "../types.js";
 import {
   normalizeKey,
   parseCliValue,
   validateConnectKeyValue,
+  validateConnectPatch,
 } from "./connect-config-validation.js";
 import { parseDefaultDrivesUrl } from "./parse-default-drives.js";
 
@@ -50,6 +55,7 @@ export type ConnectFlagInput = {
   renownSwitchboardUrl?: string | undefined;
   allowAddDrive?: boolean | undefined;
   externalPackages?: boolean | undefined;
+  workflows?: boolean | undefined;
   remoteDrivesEnabled?: boolean | undefined;
   remoteDrivesAllowAdd?: boolean | undefined;
   remoteDrivesAllowDelete?: boolean | undefined;
@@ -69,36 +75,11 @@ export type ConnectFlagInput = {
   drivesPreserveStrategy?: string | undefined;
 };
 
-/**
- * Parse the `--json` payload (if any). Throws on malformed JSON or on a
- * non-object root with a clear, command-line-visible error.
- */
+// Schema-validates `--json` so unknown keys, a `connect` wrapper or wrong
+// types fail instead of being dropped from the dist config.
 function parseJsonOverride(raw: string | undefined): PlainObject {
   if (raw === undefined || raw === "") return {};
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(
-      `--json: invalid JSON (${msg}). Expected a partial 'connect.*' blob, e.g. --json '{"renown":{"url":"..."}}'.`,
-      { cause: e },
-    );
-  }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(
-      `--json: payload must be a JSON object, got ${typeof parsed}.`,
-    );
-  }
-  return parsed as PlainObject;
-}
-
-/**
- * Re-exported for `runConnectConfig` so the same JSON validation runs for
- * both `build --json` and `config --json`.
- */
-export function parseConnectJsonArg(raw: string | undefined): PlainObject {
-  return parseJsonOverride(raw);
+  return validateConnectPatch(raw, "ph connect build") as PlainObject;
 }
 
 function setIfDefined<V>(
@@ -126,7 +107,7 @@ export function wasFlagExplicitlyPassed(longName: string): boolean {
 }
 
 /**
- * Build a `connect.*` partial from the 19 field flags. Only includes paths
+ * Build a `connect.*` partial from the 20 field flags. Only includes paths
  * the user explicitly set (undefined values are excluded).
  *
  * Single source of truth for the flag → JSON-path mapping; consumed by both
@@ -138,6 +119,7 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   const app: PlainObject = {};
   setIfDefined(app, "basePath", args.basePath);
   setIfDefined(app, "logLevel", args.logLevel);
+  setIfDefined(app, "workflowsEnabled", args.workflows);
   if (Object.keys(app).length > 0) out.app = app;
 
   const renown: PlainObject = {};
@@ -230,6 +212,7 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
     renownSwitchboardUrl: args.renownSwitchboardUrl,
     allowAddDrive: args.allowAddDrive,
     externalPackages: args.externalPackages,
+    workflows: args.workflows,
     remoteDrivesEnabled: args.remoteDrivesEnabled,
     remoteDrivesAllowAdd: args.remoteDrivesAllowAdd,
     remoteDrivesAllowDelete: args.remoteDrivesAllowDelete,
@@ -325,8 +308,12 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
  * `callerOverride` is supplied by wrappers around studio (notably `ph vetra`,
  * which sets default drives + preserveStrategy directly). The flag override
  * deep-merges on top of it: caller choices apply for every flag the user
- * didn't type, but an explicitly passed flag (e.g. `--default-drives-url`)
- * always wins.
+ * didn't type, and an explicitly passed flag wins for its own field —
+ * except `drives.defaultDrives`, which merges additively: a flag's drives
+ * are appended to the caller's list (de-duplicated by drive identity) rather
+ * than replacing it, so vetra's own drives stay in Connect's default set.
+ * Without a caller override (plain `ph connect studio`) only the flag can
+ * carry defaultDrives, so that command's behavior is unchanged.
  */
 export function buildStudioConnectOverride(
   args: ConnectStudioArgs,
@@ -349,10 +336,29 @@ export function buildStudioConnectOverride(
   // Studio commands (`ph connect studio`, `ph vetra`) always run in studio
   // mode: Connect loads the vetra package and offers builder document types.
   const studioOverride: PHConnectRuntimeConfig = { app: { studioMode: true } };
-  return [callerOverride, flagOverride, studioOverride]
+  const layers = [callerOverride, flagOverride, studioOverride].filter(
+    (o): o is PHConnectRuntimeConfig =>
+      o !== undefined && Object.keys(o).length > 0,
+  );
+  const merged = layers.reduce(
+    (acc, o) => deepMerge(acc, o),
+    {} as PHConnectRuntimeConfig,
+  );
+
+  // `deepMerge` replaces arrays, so the flag's defaultDrives would clobber
+  // the caller's list; re-apply them as the de-duplicated union instead.
+  // Only needed when two or more layers contribute default drives (the
+  // plain-studio single-layer case is already exactly the flag's list).
+  const driveGroups = layers
+    .map((l) => l.drives?.defaultDrives)
     .filter(
-      (o): o is PHConnectRuntimeConfig =>
-        o !== undefined && Object.keys(o).length > 0,
-    )
-    .reduce((acc, o) => deepMerge(acc, o), {} as PHConnectRuntimeConfig);
+      (d): d is PHConnectDefaultDrive[] => Array.isArray(d) && d.length > 0,
+    );
+  if (driveGroups.length > 1) {
+    merged.drives = {
+      ...merged.drives,
+      defaultDrives: mergeDefaultDrives(...driveGroups),
+    };
+  }
+  return merged;
 }

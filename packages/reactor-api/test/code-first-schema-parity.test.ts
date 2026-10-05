@@ -20,41 +20,6 @@ const ROOTS = readdirSync(GOLDENS)
   .map((file) => file.replace(".definition.json", ""))
   .sort();
 
-/**
- * The stored-SDL path namespaces any word that follows `type ` in a
- * description, such as "document type ids", as if it named a type. It then
- * prefixes that word everywhere, field names included, and prefixes real type
- * names inside descriptions. The structured path does neither. Each entry maps
- * text the stored path prints to the text the structured path prints instead.
- */
-const STORED_SDL_REGEX_DEFECTS: Readonly<
-  Record<string, Readonly<Record<string, string>>>
-> = {
-  "app-module": { AppModule_ids: "ids" },
-  "document-editor": {
-    DocumentEditor_id: "id",
-    DocumentEditor_listed: "listed",
-  },
-  "processor-module": { ProcessorModule_id: "id" },
-  "vetra-package": {
-    "VetraPackage_Author/": "Author/",
-    "VetraPackage_Author's": "Author's",
-  },
-};
-
-/** The stored path's schema with its known regex renames undone. */
-function withoutRegexDefects(
-  stored: string,
-  defects: Readonly<Record<string, string>>,
-): string {
-  return printSchema(
-    Object.entries(defects).reduce(
-      (sdl, [mangled, text]) => sdl.replaceAll(mangled, text),
-      stored,
-    ),
-  );
-}
-
 function readJson(file: string): unknown {
   return JSON.parse(readFileSync(`${GOLDENS}${file}`, "utf8"));
 }
@@ -83,23 +48,13 @@ describe.each(ROOTS)("the %s golden", (root) => {
     ...schemaFirst,
     definition: readJson(`${root}.definition.json`),
   } as DocumentModelModule;
-  const defects = STORED_SDL_REGEX_DEFECTS[root] as
-    | (typeof STORED_SDL_REGEX_DEFECTS)[string]
-    | undefined;
 
   it.each([false, true])(
     "serves the same schema from both paths with useNewApi: %s",
     (useNewApi) => {
       const stored = servedSchema(schemaFirst, useNewApi);
       const structured = servedSchema(codeFirst, useNewApi);
-      if (defects === undefined) {
-        expect(structured).toBe(stored);
-      } else {
-        for (const mangled of Object.keys(defects)) {
-          expect(stored).toContain(mangled);
-        }
-        expect(structured).toBe(withoutRegexDefects(stored, defects));
-      }
+      expect(structured).toBe(stored);
     },
   );
 });

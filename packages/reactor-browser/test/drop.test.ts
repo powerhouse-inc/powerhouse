@@ -12,6 +12,7 @@ import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { truncateAllTables } from "../src/pglite/drop.js";
+import { createP256Signer } from "./utils/p256-signer.js";
 
 describe("truncateAllTables", () => {
   let pg: PGlite;
@@ -39,6 +40,7 @@ describe("truncateAllTables", () => {
       .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner(await createP256Signer())
       .buildModule();
 
     const doc = documentModelDocumentModelModule.utils.createDocument();
@@ -63,6 +65,7 @@ describe("truncateAllTables", () => {
       .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner(await createP256Signer())
       .buildModule();
 
     await expect(truncateAllTables(pg)).resolves.not.toThrow();
@@ -77,15 +80,14 @@ describe("truncateAllTables", () => {
       .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner(await createP256Signer())
       .buildModule();
 
     const parent = documentModelDocumentModelModule.utils.createDocument();
-    parent.header.id = "parent-doc";
     await module.client.create(parent);
 
     const child = documentModelDocumentModelModule.utils.createDocument();
-    child.header.id = "child-doc";
-    await module.client.create(child, "parent-doc");
+    await module.client.create(child, parent.header.id);
 
     const tablesBefore = await sql<{ tablename: string }>`
       SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}

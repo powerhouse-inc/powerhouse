@@ -20,15 +20,25 @@ import type http from "node:http";
 import path from "node:path";
 import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
+import {
+  CORE_PACKAGE_NAME,
+  HttpRouteService,
+  type IHttpScope,
+} from "../http/index.js";
 import { debounce } from "../packages/util.js";
-import type { AuthService } from "../services/auth.service.js";
-import type { IAuthorizationService } from "../services/authorization.service.js";
+import type { AuthService, User } from "../services/auth.service.js";
+import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
+import type {
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
 } from "../utils/create-schema.js";
+import { callerSubject } from "./base-subgraph.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import {
   getAuthContext,
@@ -41,14 +51,18 @@ import {
 } from "./gateway/drive-middleware.js";
 import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
-import type {
-  FetchHandler,
-  GatewayContextFactory,
-  IGatewayAdapter,
-  IHttpAdapter,
-  RouteHandle,
-  SubgraphDefinition,
-  WsDisposer,
+import {
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+  type FetchHandler,
+  type GatewayContextFactory,
+  type IGatewayAdapter,
+  type IHttpAdapter,
+  type AdapterRouteHandle,
+  type SubgraphDefinition,
+  type WsConnection,
+  type WsDisposer,
+  type WsHandlers,
 } from "./gateway/types.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 
@@ -107,12 +121,121 @@ export type GraphqlManagerFeatureFlags = {
   enableDocumentModelSubgraphs?: boolean;
 };
 
+/** Dependencies and settings for a {@link GraphQLManager}. */
+export type GraphQLManagerOptions = {
+  path: string;
+  httpServer: http.Server;
+  wsServer: WebSocketServer;
+  reactorClient: IReactorClient;
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  syncManager: ISyncManager;
+  logger: ILogger;
+  httpAdapter: IHttpAdapter;
+  gatewayAdapter: IGatewayAdapter<Context>;
+  authService?: AuthService;
+  documentPermissionService?: DocumentPermissionService;
+  /** Defaults to every flag on. */
+  featureFlags?: GraphqlManagerFeatureFlags;
+  /** Defaults to 4001. */
+  port?: number;
+  authorizationService: IAuthorizationService;
+  /** Resolvers dispatch to it for reactor-drive parents. */
+  reactorDriveClient?: IDriveClient;
+  syncServingGate?: SyncScopeGate;
+  httpRoutes?: HttpRouteService;
+  attachments?: IAttachmentClientProvider;
+};
+
 /**
  * The registration-source label for document-model-generated subgraphs, so
  * they can be pruned like package-contributed ones (see
  * regenerateDocumentModelSubgraphs).
  */
 const DOCUMENT_MODEL_SUBGRAPH_SOURCE = "document-models";
+
+// Returning `false` closes 4403 with the reason `Forbidden`, so every refusal
+// looks alike and a client cannot tell "sign in" from "that token is no good".
+
+// An explicit close wins over the one graphql-ws would send, and carries a
+// reason. Under `graphql-ws/use/ws` the connection is `ctx.extra`, whose
+// `socket` is the `ws` WebSocket; narrowed here so the adapters keep passing a
+// plain object through.
+function refuseConnection(connection: WsConnection, reason: string): false {
+  const { socket } = connection as {
+    socket?: { close?: (code: number, reason: string) => void };
+  };
+  socket?.close?.(4403, reason);
+  return false;
+}
+
+// The two halves of WebSocket auth: who is connected, and whether at all.
+
+// graphql-ws calls `context` per operation and `onConnect` once per connection.
+
+// A throw from `context` closes 4500, which clients treat as fatal; 4403 retries.
+
+// So every refusal happens in `onConnect`, and `context` only reads the verdict.
+
+// Admission matches HTTP: a bad bearer is refused, an absent one is no user.
+
+// Anonymous is refused only under REQUIRE_AUTHENTICATED_CALLER, as for fetch.
+
+// WS needs its own check: `ws` owns the upgrade, so the fetch chain never runs.
+
+// Admitted anonymous connections authorize per document, as they do over SSE.
+export function createWsAuthHandlers(opts: {
+  authService?: AuthService;
+  /** Whether anonymous callers are refused; read at call time, not at build time. */
+  requireAuthenticatedCaller: () => boolean;
+  logger: ILogger;
+  buildContext: (
+    connectionParams: Record<string, unknown>,
+    user?: User,
+  ) => Context;
+}): WsHandlers<Context> {
+  const resolved = new WeakMap<WsConnection, User | undefined>();
+
+  return {
+    onConnect: async (connectionParams, connection) => {
+      let user: User | null = null;
+
+      if (opts.authService) {
+        try {
+          user =
+            await opts.authService.authenticateWebSocketConnection(
+              connectionParams,
+            );
+        } catch (error) {
+          // `warn`: the caller sent a bad token, the server is fine.
+          opts.logger.warn(
+            "Refusing WebSocket connection: @error",
+            error instanceof Error ? error.message : error,
+          );
+          return refuseConnection(connection, WS_CLOSE_REASON_BEARER_REJECTED);
+        }
+      }
+
+      if (user === null && opts.requireAuthenticatedCaller()) {
+        opts.logger.warn(
+          "Refusing anonymous WebSocket connection: an authenticated caller is required",
+        );
+        return refuseConnection(
+          connection,
+          WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+        );
+      }
+
+      resolved.set(connection, user ?? undefined);
+      return true;
+    },
+
+    context: (connectionParams, connection) =>
+      Promise.resolve(
+        opts.buildContext(connectionParams, resolved.get(connection)),
+      ),
+  };
+}
 
 export class GraphQLManager {
   private initialized = false;
@@ -135,10 +258,10 @@ export class GraphQLManager {
   >();
 
   /** subgraphPath → the http adapter handle of its mounted route. */
-  private readonly subgraphRouteHandles = new Map<string, RouteHandle>();
+  private readonly subgraphRouteHandles = new Map<string, AdapterRouteHandle>();
 
-  /** Handle of the currently mounted supergraph SSE route, if any. */
-  private sseRouteHandle: RouteHandle | undefined;
+  /** Mounted SSE routes, keyed by path: the supergraph's and each subgraph's. */
+  private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
 
   /**
    * Package name → the subgraph instances registered from it, keyed by
@@ -161,31 +284,47 @@ export class GraphQLManager {
    */
   readonly reactorDriveClient?: IDriveClient;
   private readonly authorizationService: IAuthorizationService;
+  /** Route service in use: the injected one, or one built on first need. */
+  #fallbackRoutes: HttpRouteService | undefined;
 
-  constructor(
-    private readonly path: string,
-    private readonly httpServer: http.Server,
-    private readonly wsServer: WebSocketServer,
-    private readonly reactorClient: IReactorClient,
-    private readonly relationalDb: IRelationalDb,
-    private readonly analyticsStore: IAnalyticsStore,
-    private readonly syncManager: ISyncManager,
-    private readonly logger: ILogger,
-    private readonly httpAdapter: IHttpAdapter,
-    private readonly gatewayAdapter: IGatewayAdapter<Context>,
-    private readonly authService?: AuthService,
-    private readonly documentPermissionService?: DocumentPermissionService,
-    private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
-    private readonly port: number = 4001,
-    authorizationService?: IAuthorizationService,
-    reactorDriveClient?: IDriveClient,
-    private readonly syncServingGate?: SyncScopeGate,
-  ) {
-    if (!authorizationService) {
-      throw new Error("GraphQLManager requires an authorizationService");
-    }
-    this.authorizationService = authorizationService;
-    this.reactorDriveClient = reactorDriveClient;
+  private readonly path: string;
+  private readonly httpServer: http.Server;
+  private readonly wsServer: WebSocketServer;
+  private readonly reactorClient: IReactorClient;
+  private readonly relationalDb: IRelationalDb;
+  private readonly analyticsStore: IAnalyticsStore;
+  private readonly syncManager: ISyncManager;
+  private readonly logger: ILogger;
+  private readonly httpAdapter: IHttpAdapter;
+  private readonly gatewayAdapter: IGatewayAdapter<Context>;
+  private readonly authService?: AuthService;
+  private readonly documentPermissionService?: DocumentPermissionService;
+  private readonly featureFlags: GraphqlManagerFeatureFlags;
+  private readonly port: number;
+  private readonly syncServingGate?: SyncScopeGate;
+  private readonly httpRoutes?: HttpRouteService;
+  private readonly attachments?: IAttachmentClientProvider;
+
+  constructor(options: GraphQLManagerOptions) {
+    this.path = options.path;
+    this.httpServer = options.httpServer;
+    this.wsServer = options.wsServer;
+    this.reactorClient = options.reactorClient;
+    this.relationalDb = options.relationalDb;
+    this.analyticsStore = options.analyticsStore;
+    this.syncManager = options.syncManager;
+    this.logger = options.logger;
+    this.httpAdapter = options.httpAdapter;
+    this.gatewayAdapter = options.gatewayAdapter;
+    this.authService = options.authService;
+    this.documentPermissionService = options.documentPermissionService;
+    this.featureFlags = options.featureFlags ?? DefaultFeatureFlags;
+    this.port = options.port ?? 4001;
+    this.authorizationService = options.authorizationService;
+    this.reactorDriveClient = options.reactorDriveClient;
+    this.syncServingGate = options.syncServingGate;
+    this.httpRoutes = options.httpRoutes;
+    this.attachments = options.attachments;
 
     this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
 
@@ -237,7 +376,7 @@ export class GraphQLManager {
     // request 404s.
     const driveRoutePath = path.posix.join(this.path, "d/:drive");
     const driveMatcher = match<{ drive: string }>(driveRoutePath);
-    this.httpAdapter.mount(driveRoutePath, async (request: Request) => {
+    const driveInfoHandler = async (request: Request): Promise<Response> => {
       const url = new URL(request.url);
       const matched = driveMatcher(url.pathname);
       const driveIdOrSlug = matched ? matched.params.drive : undefined;
@@ -249,9 +388,27 @@ export class GraphQLManager {
         );
       }
 
+      const user = getAuthContext(request)?.user;
       try {
-        const driveDoc =
-          await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
+        // Read as the caller, so a drive whose domain it may not read serves
+        // its header alone; discovery must still reach graphqlEndpoint.
+        const driveDoc = await this.reactorClient.get<DocumentDriveDocument>(
+          driveIdOrSlug,
+          { subject: callerSubject(user) },
+        );
+
+        // Drive metadata is a document read, so it answers to the same
+        // authorization as every GraphQL read (`assertCanReadCanonical`).
+        // 404 rather than 403: a caller who may not read the drive must not
+        // be able to tell "protected" from "does not exist" by probing slugs.
+        const canRead = await this.authorizationService.canRead(
+          driveDoc.header.id as CanonicalDocumentId,
+          user?.address,
+        );
+        if (!canRead) {
+          this.logger.debug(`Drive read refused: ${driveIdOrSlug}`);
+          return Response.json({ error: "Drive not found" }, { status: 404 });
+        }
 
         const forwardedProto = request.headers
           .get("x-forwarded-proto")
@@ -274,19 +431,42 @@ export class GraphQLManager {
         const basePath = forwardedPrefix + localBase;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
+        // Absent when the gate stripped it.
+        const global = (driveDoc.state as Partial<typeof driveDoc.state>)
+          .global;
         return Response.json({
           id: driveDoc.header.id,
           slug: driveDoc.header.slug,
           meta: driveDoc.header.meta,
-          name: driveDoc.state.global.name || driveDoc.header.name,
-          icon: driveDoc.state.global.icon ?? undefined,
+          name: global?.name || driveDoc.header.name,
+          icon: global?.icon ?? undefined,
           ...(graphqlEndpoint && { graphqlEndpoint }),
         });
       } catch (error: unknown) {
-        this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
+        this.logger.debug(
+          "Drive not found: @drive (@error)",
+          driveIdOrSlug,
+          error,
+        );
         return Response.json({ error: "Drive not found" }, { status: 404 });
       }
-    });
+    };
+
+    // Identity resolution only — deliberately not the full
+    // `#composeFetchMiddleware` chain. Drive discovery is the one read a
+    // client makes before it can authenticate anything: Connect reads
+    // `graphqlEndpoint` from here to register the sync remote, so a blanket
+    // require-auth gate would leave an anonymous caller unable to ever reach
+    // the authenticated surface. The bearer is read when present (an invalid
+    // one is still a 401 from the auth middleware) and the drive is then
+    // authorized individually, above. The drive-shard middleware is skipped
+    // too: any healthy backend can answer this route.
+    this.httpAdapter.mount(
+      driveRoutePath,
+      this.#authMiddleware
+        ? this.#authMiddleware(driveInfoHandler)
+        : driveInfoHandler,
+    );
     this.logger.info(`Registered REST endpoint: GET ${driveRoutePath}`);
 
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
@@ -349,7 +529,8 @@ export class GraphQLManager {
         await this.registerSubgraph(subgraph, supergraph, true);
       } catch (error) {
         this.logger.error(
-          `Failed to setup core subgraph ${subgraph.name}`,
+          "Failed to setup core subgraph @subgraph: @error",
+          subgraph.name,
           error,
         );
       }
@@ -379,6 +560,7 @@ export class GraphQLManager {
       }
       try {
         const subgraphInstance = new DocumentModelSubgraph(documentModel, {
+          http: this.scopeForPackage(CORE_PACKAGE_NAME),
           relationalDb: this.relationalDb,
           analyticsStore: this.analyticsStore,
           reactorClient: this.reactorClient,
@@ -388,6 +570,7 @@ export class GraphQLManager {
           documentPermissionService: this.documentPermissionService,
           authorizationService: this.authorizationService,
           syncServingGate: this.syncServingGate,
+          attachments: this.attachments,
         });
 
         await this.#addSubgraphInstance(
@@ -399,7 +582,8 @@ export class GraphQLManager {
         registeredNames.add(subgraphInstance.name);
       } catch (error) {
         this.logger.error(
-          `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
+          "Failed to setup document model subgraph for @documentType: @error",
+          documentModel.documentModel.global.id,
           error instanceof Error ? error.message : error,
         );
         this.logger.debug("@error", error);
@@ -520,9 +704,10 @@ export class GraphQLManager {
 
         const routeHandle = this.subgraphRouteHandles.get(subgraphPath);
         if (routeHandle !== undefined) {
-          this.httpAdapter.unmount(routeHandle);
+          routeHandle.dispose();
           this.subgraphRouteHandles.delete(subgraphPath);
         }
+        this.#disposeSSERoute(subgraphPath);
 
         const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
         if (wsDisposer) {
@@ -583,10 +768,29 @@ export class GraphQLManager {
   }
 
   /**
+   * The HTTP scope a package's subgraphs get. Falls back to a scope over a
+   * throwaway service when route hosting is not configured, so a subgraph can
+   * always rely on `args.http` existing.
+   */
+  scopeForPackage(packageName: string): IHttpScope {
+    this.#fallbackRoutes ??=
+      this.httpRoutes ??
+      new HttpRouteService({
+        httpAdapter: this.httpAdapter,
+        basePath: this.path,
+        authService: this.authService,
+      });
+    // Non-throwing: a package key with no usable name yields a scope that
+    // refuses registrations, rather than taking the host down at boot.
+    return this.#fallbackRoutes.scopeForOrNull(packageName);
+  }
+
+  /**
    * Register a subgraph class. `packageName` labels the resulting instance
    * with its contributing package so the instance can be torn down when the
    * package is removed or drops the subgraph (see unregisterPackage and
-   * prunePackageSubgraphs).
+   * prunePackageSubgraphs), and decides the namespace its REST routes and
+   * webhooks live under.
    */
   async registerSubgraph(
     subgraph: SubgraphClass,
@@ -595,6 +799,11 @@ export class GraphQLManager {
     packageName?: string,
   ) {
     const subgraphInstance = new subgraph({
+      // Left undefined, the subgraph is core rather than contributed, and its
+      // routes hang off reactor-api's own namespace. Not defaulted in the
+      // parameter, because `undefined` is what keeps a core subgraph out of
+      // `packageSubgraphs` and so out of package teardown.
+      http: this.scopeForPackage(packageName ?? CORE_PACKAGE_NAME),
       relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
       reactorClient: this.reactorClient,
@@ -604,6 +813,7 @@ export class GraphQLManager {
       documentPermissionService: this.documentPermissionService,
       authorizationService: this.authorizationService,
       syncServingGate: this.syncServingGate,
+      attachments: this.attachments,
     });
 
     return this.#addSubgraphInstance(
@@ -622,12 +832,37 @@ export class GraphQLManager {
    * package has no registered subgraphs.
    */
   async unregisterPackage(packageName: string): Promise<void> {
+    // Routes and webhooks belong to the package, not to its subgraphs, so this
+    // runs before the early return below: a package may contribute a processor
+    // that registers routes and no subgraph at all, and its routes still have
+    // to go. A route that outlives its package answers against unloaded code.
+    this.#disposeHttpScope(packageName);
+
     const byName = this.packageSubgraphs.get(packageName);
     if (!byName || byName.size === 0) return;
     for (const instance of Array.from(byName.values())) {
       await this.#removeSubgraphInstance(instance);
     }
     await this.updateRouter();
+  }
+
+  /**
+   * Releases the package's HTTP scope: every route it mounted, and its webhook
+   * registrations. Idempotent, and silent for a package that never had one.
+   */
+  #disposeHttpScope(packageName: string): void {
+    const routes = this.#fallbackRoutes ?? this.httpRoutes;
+    try {
+      routes?.disposeScope(packageName);
+    } catch (error) {
+      // Teardown must not be the thing that fails: a package whose name never
+      // resolved to a namespace has nothing mounted to release anyway.
+      this.logger.warn(
+        `Failed to release HTTP routes for "@package": @error`,
+        packageName,
+        error,
+      );
+    }
   }
 
   /**
@@ -757,32 +992,6 @@ export class GraphQLManager {
     this.contextFields = { ...this.contextFields, ...fields };
   }
 
-  async #createWebSocketContext(
-    connectionParams: Record<string, unknown>,
-  ): Promise<Context> {
-    let user = null;
-
-    if (this.authService) {
-      user =
-        await this.authService.authenticateWebSocketConnection(
-          connectionParams,
-        );
-    }
-
-    const context: Context = {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      headers: connectionParams as any,
-      db: this.relationalDb,
-      ...this.getAdditionalContextFields(),
-    };
-
-    if (user) {
-      context.user = user;
-    }
-
-    return context;
-  }
-
   #makeContextFactory(): GatewayContextFactory<Context> {
     return (request: Request): Promise<Context> => {
       const authCtx = getAuthContext(request);
@@ -801,9 +1010,22 @@ export class GraphQLManager {
     };
   }
 
-  #makeWsContextFactory() {
-    return (connectionParams: Record<string, unknown>): Promise<Context> =>
-      this.#createWebSocketContext(connectionParams);
+  #makeWsContextFactory(): WsHandlers<Context> {
+    return createWsAuthHandlers({
+      authService: this.authService,
+      // Read at call time: init() installs this after the manager is built.
+      requireAuthenticatedCaller: () =>
+        this.#requireAuthMiddleware !== undefined,
+      logger: this.logger,
+      // `user` comes last, as in the HTTP context: no extra field supplies it.
+      buildContext: (connectionParams, user) => ({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        headers: connectionParams as any,
+        db: this.relationalDb,
+        ...this.getAdditionalContextFields(),
+        user,
+      }),
+    });
   }
 
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
@@ -1016,11 +1238,17 @@ export class GraphQLManager {
       ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
       : `http://localhost:${this.port}`;
 
-    return Array.from(subgraphs.entries()).map(([subgraphPath, subgraph]) => ({
-      name: subgraphPath.replace("/", ":"),
-      typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
-      url: `${herokuOrLocal}${subgraphPath}`,
-    }));
+    return Array.from(subgraphs.entries()).map(([subgraphPath, subgraph]) => {
+      const module = this.#buildSubgraphSchemaModule(subgraph);
+      return {
+        name: subgraphPath.replace("/", ":"),
+        typeDefs: module.typeDefs,
+        // In-process form: the stitching adapter merges these resolvers into
+        // the supergraph; federation adapters ignore the field.
+        resolvers: module.resolvers,
+        url: `${herokuOrLocal}${subgraphPath}`,
+      };
+    });
   }
 
   async #createSupergraphGateway() {
@@ -1061,10 +1289,7 @@ export class GraphQLManager {
     if (modules.length === 0) {
       // No subscription-capable subgraphs left: drop the SSE route rather
       // than keep serving an empty merged schema.
-      if (this.sseRouteHandle !== undefined) {
-        this.httpAdapter.unmount(this.sseRouteHandle);
-        this.sseRouteHandle = undefined;
-      }
+      this.#disposeSSERoute(superGraphPath);
       return;
     }
 
@@ -1094,14 +1319,22 @@ export class GraphQLManager {
       contextFactory: this.#makeContextFactory(),
     });
     const handler = this.#composeFetchMiddleware(rawHandler);
-    // This handler is re-created on every router update: replace the
-    // previous SSE route instead of piling another one on top of it.
-    if (this.sseRouteHandle !== undefined) {
-      this.httpAdapter.unmount(this.sseRouteHandle);
+    // Re-created on every router update: replace this path's previous route
+    // rather than pile another on top of it, and leave other paths' alone.
+    this.#disposeSSERoute(basePath);
+    this.sseRouteHandles.set(
+      ssePath,
+      this.httpAdapter.mount(ssePath, handler, { exact: true }),
+    );
+  }
+
+  #disposeSSERoute(basePath: string): void {
+    const ssePath = basePath + "/stream";
+    const handle = this.sseRouteHandles.get(ssePath);
+    if (handle !== undefined) {
+      handle.dispose();
+      this.sseRouteHandles.delete(ssePath);
     }
-    this.sseRouteHandle = this.httpAdapter.mount(ssePath, handler, {
-      exact: true,
-    });
   }
 
   /**

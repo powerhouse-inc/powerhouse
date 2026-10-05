@@ -14,7 +14,7 @@ import {
  * prefilled query and auth header are silently dropped.
  */
 const sampleQuery =
-  "query GetDoc($identifier: String!) { document(identifier: $identifier) { document { state } } }";
+  "query GetDoc($idOrSlug: String!) { document(idOrSlug: $idOrSlug) { document { state } } }";
 
 function encodeExplorerState(state: Record<string, unknown>) {
   return compressToEncodedURIComponent(JSON.stringify(state));
@@ -24,13 +24,13 @@ describe("decodeExplorerUrlState", () => {
   it("round-trips document, variables and headers", () => {
     const encoded = encodeExplorerState({
       document: sampleQuery,
-      variables: JSON.stringify({ identifier: "doc-1" }, null, 2),
+      variables: JSON.stringify({ idOrSlug: "doc-1" }, null, 2),
       headers: JSON.stringify({ Authorization: "Bearer t" }),
     });
 
     expect(decodeExplorerUrlState(encoded)).toEqual({
       query: sampleQuery,
-      variables: JSON.stringify({ identifier: "doc-1" }, null, 2),
+      variables: JSON.stringify({ idOrSlug: "doc-1" }, null, 2),
       headers: { Authorization: "Bearer t" },
     });
   });
@@ -38,12 +38,12 @@ describe("decodeExplorerUrlState", () => {
   it("omits headers when the payload has none", () => {
     const encoded = encodeExplorerState({
       document: sampleQuery,
-      variables: JSON.stringify({ identifier: "doc-1" }),
+      variables: JSON.stringify({ idOrSlug: "doc-1" }),
     });
 
     expect(decodeExplorerUrlState(encoded)).toEqual({
       query: sampleQuery,
-      variables: JSON.stringify({ identifier: "doc-1" }),
+      variables: JSON.stringify({ idOrSlug: "doc-1" }),
       headers: undefined,
     });
   });
@@ -64,7 +64,7 @@ describe("decodeExplorerUrlState", () => {
 
 describe("renderGraphqlPlayground", () => {
   it("renders a string defaultQuery plus a variables prop and fetcher headers", () => {
-    const variables = '{"identifier":"doc-1"}';
+    const variables = '{"idOrSlug":"doc-1"}';
     const html = renderGraphqlPlayground(
       "/graphql",
       sampleQuery,

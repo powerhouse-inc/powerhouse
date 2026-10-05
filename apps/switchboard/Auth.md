@@ -133,6 +133,57 @@ interface AuthConfig {
 - **Document Owners**: implicit ADMIN on documents they create
 - **Per-Document Grants**: READ / WRITE / ADMIN granted to users or groups, inherited from protected ancestors
 
+#### Attachments
+
+An attachment is readable by whoever may read the document that references it.
+`GET /attachments/:hash/download-target` decides that twice over: the caller
+must be able to read the document's `global` scope, and the reference index
+must confirm that the document really does reference this hash. A denial is a
+single generic `404` either way, so it never tells the caller which of the two
+failed.
+
+Which model answers the first half is the deployment's choice, and by default it
+is the permission tables above — unchanged.
+
+```bash
+# Decide an attachment read with the referencing document's own policy
+export ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY=true
+```
+
+With it on, the document's **own policy** decides, evaluated for the caller's
+subject: their address *and* the `did:key` of the app instance whose token
+authenticated them, because a grant can name either and a document's creator is
+recorded by key. It needs a policy model to evaluate, which auth enforcement is
+what supplies, and refuses to boot without one rather than leave the tables
+deciding while the configuration says otherwise.
+
+Why a deployment would want it: one whose documents carry policies keeps no rows
+in the permission tables, so asking those tables about such a document returns
+whatever the host-wide policy says — under `OPEN`, `true`, for every caller
+including an anonymous one. Handing out bytes on that answer gives the file to
+anyone who learns its hash, which the document's own state may well have told
+them before their access was taken away.
+
+Two things to know before turning it on. A document that carries **no** policy
+stays readable, because an uninitialized policy is not a denial — unless the
+host also sets `DEFAULT_PROTECTION`, which tells the gate to withhold what it
+cannot decide, and then attachments on unpolicied documents are refused along
+with everything else about them. And every non-browser client that downloads
+bytes — an extraction worker, an indexer — needs a read grant of its own on the
+documents it fetches, or it stops working the moment this is enabled.
+
+The presigned URL a target carries is short-lived by design: the authorization
+behind it is decided once, when it is issued, and the URL keeps working until it
+expires however the policy changes in between. The default ceiling is **300
+seconds**, and it applies whether or not the caller asked for a lifetime —
+otherwise omitting `expiresIn` would be a way to opt out of it.
+
+```bash
+# Raise it if a deployment genuinely needs longer; still bounded by the
+# 7-day maximum a SigV4 signature can carry.
+export ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS=1800
+```
+
 ### 6. **Session Management**
 
 Advanced session handling with multiple active sessions:
@@ -220,6 +271,49 @@ It requires a caller to be resolvable at all, so it refuses to boot without
 `RESOLVE_CALLER_IDENTITY=true` or `AUTH_ENABLED=true` — with identity
 resolution off, no bearer is ever read and it would reject every caller,
 including authenticated ones.
+
+It also covers the attachment routes, which are mounted on the HTTP adapter and
+never pass the GraphQL fetch chain. Their own 401 keys on `AUTH_ENABLED`, so
+without this switch a deployment running `OPEN` serves them to anyone; with it,
+every attachment route refuses a caller it cannot name — `download-target` and
+the `GET`/`HEAD /attachments/:hash` byte routes included, even though they
+decide per document (or by a signed URL) on their own. A filesystem signed
+download URL therefore needs a bearer too while this switch is on.
+
+##### Serving one path anonymously
+
+Some products have a flow that runs *before* sign-in: previewing an invitation
+from the code in its e-mail, for instance, so the screen can say who the
+invitation is for. That flow has no caller by definition, and the floor above
+would answer it a `401`.
+
+```bash
+export REQUIRE_AUTHENTICATED_CALLER=true
+export REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS=/graphql/public
+```
+
+Comma-separated, so several paths are one variable:
+
+```bash
+export REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS=/graphql/public,/graphql/invites
+```
+
+Each entry is matched against the request's **pathname, in full** — never as a
+prefix, so `/graphql/public` does not also exempt `/graphql/public-admin`. A
+trailing slash on either side is ignored; a leading slash is required, and a
+path without one is refused at boot rather than left as an exemption that
+silently never applies. Configuring exemptions while the floor is off is
+refused too: it would describe a protection the server is not applying.
+
+The exempt paths are named in the boot log, because the one question worth
+asking about this floor is what is still open.
+
+Every entry is a hole in it. Only ever name a path that serves operations which
+are safe without a caller, and prefer a route mounted for exactly that purpose
+over exempting one that also serves something else. Note what this switch does
+**not** reach, in either configuration: routes registered directly on the HTTP
+adapter (`/health`, `/ready`, `/explorer`, `/d/:drive`) and package HTTP routes,
+which declare their own `auth` per route.
 
 #### Configuration File Method
 

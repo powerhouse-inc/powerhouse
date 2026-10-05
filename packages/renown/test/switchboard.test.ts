@@ -7,21 +7,46 @@ import type { PowerhouseVerifiableCredential } from "../src/types.js";
 interface ReactorCall {
   query: string;
   variables: Record<string, unknown>;
+  authorization?: string;
 }
 
-// Route reactor mutations/queries by operation and record request bodies.
+// Route reactor mutations/queries by operation and record request bodies. Any
+// request matching an `errors` marker fails, simulating a missing operation.
 function mockReactor(
-  opts: { renownUsers?: unknown[]; createId?: string } = {},
+  opts: {
+    renownUsers?: unknown[];
+    renownCredentials?: unknown[];
+    createId?: string;
+    errors?: { match: string; message: string }[];
+  } = {},
 ) {
   const calls: ReactorCall[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
     const body = JSON.parse(
       (init?.body as string | undefined) ?? "{}",
     ) as ReactorCall;
-    calls.push(body);
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({ ...body, authorization: headers.Authorization });
+    const failure = opts.errors?.find((e) => body.query.includes(e.match));
+    if (failure) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ errors: [{ message: failure.message }] }),
+          { status: 200 },
+        ),
+      );
+    }
     let data: unknown = {};
-    if (body.query.includes("renownUsers")) {
+    if (body.query.includes("renown_upsertProfile")) {
+      data = { renown_upsertProfile: opts.createId ?? "doc-new" };
+    } else if (body.query.includes("renown_revokeCredential")) {
+      data = { renown_revokeCredential: true };
+    } else if (body.query.includes("renownCredentials")) {
+      data = { renownCredentials: opts.renownCredentials ?? [] };
+    } else if (body.query.includes("renownUsers")) {
       data = { renownUsers: opts.renownUsers ?? [] };
+    } else if (body.query.includes("renown_issueCredential")) {
+      data = { renown_issueCredential: opts.createId ?? "doc-new" };
     } else if (body.query.includes("createEmptyDocument")) {
       data = { createEmptyDocument: { id: opts.createId ?? "doc-new" } };
     } else if (body.query.includes("mutateDocument")) {
@@ -393,63 +418,335 @@ describe("SwitchboardClient", () => {
   });
 
   describe("issueCredential", () => {
-    it("creates a credential doc and INITs it with the credential fields", async () => {
+    it("issues via renown_issueCredential with the credential fields", async () => {
       const calls = mockReactor({ createId: "cred-doc-1" });
       const documentId = await client.issueCredential(makeCredential());
 
       expect(documentId).toBe("cred-doc-1");
-      const [init] = mutateActions(calls);
-      expect(init.type).toBe("INIT");
-      expect(init.input.id).toBe("urn:uuid:cred-1");
-      expect(init.input.credentialSubject).toEqual({
+      const issue = calls.find((c) =>
+        c.query.includes("renown_issueCredential"),
+      );
+      const input = issue?.variables.input as {
+        id: string;
+        credentialSubject: { id: string; app: string };
+        proof: { proofValue: string };
+      };
+      expect(input.id).toBe("urn:uuid:cred-1");
+      expect(input.credentialSubject).toEqual({
         id: APP_DID,
         app: "test-app",
       });
-      const proof = init.input.proof as { proofValue: string };
-      expect(proof.proofValue).toBe("0xsignature");
-    });
-  });
-
-  describe("findOrCreateUser", () => {
-    it("creates a user with SET_ETH_ADDRESS when none exists", async () => {
-      const calls = mockReactor({ renownUsers: [], createId: "user-doc-1" });
-      const documentId = await client.findOrCreateUser(ADDRESS, {
-        username: "alice",
-      });
-
-      expect(documentId).toBe("user-doc-1");
-      const actions = mutateActions(calls);
-      expect(actions.map((a) => a.type)).toEqual([
-        "SET_ETH_ADDRESS",
-        "SET_USERNAME",
-      ]);
-      expect(actions[0].input).toEqual({ ethAddress: ADDRESS });
+      expect(input.proof.proofValue).toBe("0xsignature");
     });
 
-    it("updates an existing user without recreating it", async () => {
+    it("falls back to generic createEmptyDocument + INIT on an older switchboard", async () => {
       const calls = mockReactor({
-        renownUsers: [{ documentId: "user-doc-9", ethAddress: ADDRESS }],
+        createId: "cred-doc-1",
+        errors: [
+          {
+            match: "renown_issueCredential",
+            message:
+              'Cannot query field "renown_issueCredential" on type "Mutation".',
+          },
+        ],
       });
-      const documentId = await client.findOrCreateUser(ADDRESS, {
-        userImage: "http://img.test/a.png",
+      const documentId = await client.issueCredential(makeCredential());
+
+      expect(documentId).toBe("cred-doc-1");
+      expect(
+        calls.some((c) => c.query.includes("renown_issueCredential")),
+      ).toBe(true);
+      expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+        true,
+      );
+      const [init] = mutateActions(calls);
+      expect(init.type).toBe("INIT");
+    });
+
+    it("does NOT fall back when the resolver rejects the credential", async () => {
+      const calls = mockReactor({
+        errors: [
+          {
+            match: "renown_issueCredential",
+            message:
+              "Invalid request: EIP-712 proof signature does not match issuer",
+          },
+        ],
       });
 
-      expect(documentId).toBe("user-doc-9");
+      await expect(client.issueCredential(makeCredential())).rejects.toThrow(
+        /signature/i,
+      );
+      // A resolver rejection must not silently write via the generic path.
       expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
         false,
       );
-      const actions = mutateActions(calls);
-      expect(actions.map((a) => a.type)).toEqual(["SET_USER_IMAGE"]);
     });
   });
 
+  describe("issueCredential fallback classification", () => {
+    const missingField =
+      'Cannot query field "renown_issueCredential" on type "Mutation".';
+
+    it.each([
+      ["a missing mutation field", missingField],
+      [
+        "a missing field plus its unknown input type",
+        `Unknown type "RenownCredential_InitInput".; ${missingField}`,
+      ],
+      [
+        "only the unknown input type",
+        'Unknown type "RenownCredential_InitInput".',
+      ],
+      [
+        "a JSON-encoded relay of the old-server error",
+        `request failed (400): ${JSON.stringify([{ message: missingField }])}`,
+      ],
+    ])("falls back on %s", async (_label, message) => {
+      const calls = mockReactor({
+        createId: "cred-doc-1",
+        errors: [{ match: "renown_issueCredential", message }],
+      });
+      await expect(client.issueCredential(makeCredential())).resolves.toBe(
+        "cred-doc-1",
+      );
+      expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+        true,
+      );
+    });
+
+    it.each([
+      [
+        "an input-coercion error from a new server",
+        'Variable "$input" got invalid value { extra: 1 }; Field "extra" is not defined by type "RenownCredential_InitInput".',
+      ],
+      [
+        "an unknown-type mention inside a coercion error",
+        'Variable "$input" got invalid value 1; Unknown type "RenownCredential_InitInput".',
+      ],
+      ["a rate limit", "Rate limited"],
+    ])("rethrows %s without falling back", async (_label, message) => {
+      const calls = mockReactor({
+        errors: [{ match: "renown_issueCredential", message }],
+      });
+      await expect(client.issueCredential(makeCredential())).rejects.toThrow(
+        message,
+      );
+      expect(calls).toHaveLength(1);
+    });
+  });
+
+  describe("upsertUserProfile", () => {
+    const upsertCall = (calls: ReactorCall[]) =>
+      calls.find((c) => c.query.includes("renown_upsertProfile"));
+
+    it("calls renown_upsertProfile with the login token as a bearer", async () => {
+      const calls = mockReactor({ createId: "user-doc-1" });
+      const documentId = await client.upsertUserProfile(
+        ADDRESS,
+        { username: "alice" },
+        { token: "jwt-token" },
+      );
+
+      expect(documentId).toBe("user-doc-1");
+      const call = upsertCall(calls);
+      expect(call?.variables).toEqual({ address: ADDRESS, username: "alice" });
+      expect(call?.authorization).toBe("Bearer jwt-token");
+      // One self-authenticating request; nothing through the generic path.
+      expect(calls).toHaveLength(1);
+    });
+
+    it("sends a personal_sign signature and timestamp without a bearer", async () => {
+      const calls = mockReactor({ createId: "user-doc-1" });
+      await client.upsertUserProfile(
+        ADDRESS,
+        { username: "alice", userImage: "http://img.test/a.png" },
+        { signature: "0xsig", timestamp: "2026-09-28T12:00:00.000Z" },
+      );
+
+      const call = upsertCall(calls);
+      expect(call?.variables).toEqual({
+        address: ADDRESS,
+        username: "alice",
+        userImage: "http://img.test/a.png",
+        signature: "0xsig",
+        timestamp: "2026-09-28T12:00:00.000Z",
+      });
+      expect(call?.authorization).toBeUndefined();
+    });
+
+    it("sends the bearer through a request-function transport", async () => {
+      const request = vi.fn(() =>
+        Promise.resolve({ renown_upsertProfile: "user-doc-1" }),
+      );
+      await new SwitchboardClient(request).upsertUserProfile(
+        ADDRESS,
+        { username: "alice" },
+        { token: "jwt-token" },
+      );
+      expect(request).toHaveBeenCalledWith(
+        expect.stringContaining("renown_upsertProfile"),
+        { address: ADDRESS, username: "alice" },
+        { token: "jwt-token" },
+      );
+    });
+
+    describe("on a switchboard without renown_upsertProfile", () => {
+      const missing = {
+        match: "renown_upsertProfile",
+        message:
+          'Cannot query field "renown_upsertProfile" on type "Mutation".',
+      };
+
+      it("falls back to creating the user with the bearer token", async () => {
+        const calls = mockReactor({
+          renownUsers: [],
+          createId: "user-doc-1",
+          errors: [missing],
+        });
+        const documentId = await client.upsertUserProfile(
+          ADDRESS,
+          { username: "alice" },
+          { token: "jwt-token" },
+        );
+
+        expect(documentId).toBe("user-doc-1");
+        const actions = mutateActions(calls);
+        expect(actions.map((a) => a.type)).toEqual([
+          "SET_ETH_ADDRESS",
+          "SET_USERNAME",
+        ]);
+        const createCall = calls.find((c) =>
+          c.query.includes("createEmptyDocument"),
+        );
+        expect(createCall?.authorization).toBe("Bearer jwt-token");
+      });
+
+      it("falls back to updating an existing user without creating a document", async () => {
+        const calls = mockReactor({
+          renownUsers: [{ documentId: "user-doc-9", ethAddress: ADDRESS }],
+          errors: [missing],
+        });
+        const documentId = await client.upsertUserProfile(
+          ADDRESS,
+          { userImage: "http://img.test/a.png" },
+          { token: "jwt-token" },
+        );
+
+        expect(documentId).toBe("user-doc-9");
+        expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+          false,
+        );
+        const actions = mutateActions(calls);
+        expect(actions.map((a) => a.type)).toEqual(["SET_USER_IMAGE"]);
+      });
+    });
+
+    it.each([
+      "Forbidden",
+      "Invalid request: username exceeds 255 characters",
+      "Rate limited",
+    ])(
+      "rethrows a resolver rejection (%s) without falling back",
+      async (message) => {
+        const calls = mockReactor({
+          errors: [{ match: "renown_upsertProfile", message }],
+        });
+
+        await expect(
+          client.upsertUserProfile(
+            ADDRESS,
+            { username: "alice" },
+            { token: "jwt-token" },
+          ),
+        ).rejects.toThrow(message);
+        expect(calls).toHaveLength(1);
+      },
+    );
+  });
+
   describe("revokeCredential", () => {
-    it("applies a REVOKE action to the document", async () => {
+    const revokeCall = (calls: ReactorCall[]) =>
+      calls.find((c) => c.query.includes("renown_revokeCredential"));
+
+    it("calls renown_revokeCredential with the login token as a bearer", async () => {
       const calls = mockReactor();
-      await client.revokeCredential("cred-doc-1", "compromised");
+      await client.revokeCredential("urn:uuid:cred-1", { token: "jwt-token" });
+
+      const call = revokeCall(calls);
+      expect(call?.variables).toEqual({ credentialId: "urn:uuid:cred-1" });
+      expect(call?.authorization).toBe("Bearer jwt-token");
+      expect(calls).toHaveLength(1);
+    });
+
+    it("sends a personal_sign signature and timestamp without a bearer", async () => {
+      const calls = mockReactor();
+      await client.revokeCredential("urn:uuid:cred-1", {
+        signature: "0xsig",
+        timestamp: "2026-09-28T12:00:00.000Z",
+      });
+
+      const call = revokeCall(calls);
+      expect(call?.variables).toEqual({
+        credentialId: "urn:uuid:cred-1",
+        signature: "0xsig",
+        timestamp: "2026-09-28T12:00:00.000Z",
+      });
+      expect(call?.authorization).toBeUndefined();
+    });
+
+    it("falls back to a REVOKE action on the credential's documents", async () => {
+      const calls = mockReactor({
+        renownCredentials: [
+          makeRow({ documentId: "cred-doc-1" }),
+          makeRow({ documentId: "other-doc", credentialId: "urn:uuid:other" }),
+        ],
+        errors: [
+          {
+            match: "renown_revokeCredential",
+            message:
+              'Cannot query field "renown_revokeCredential" on type "Mutation".',
+          },
+        ],
+      });
+      await client.revokeCredential("urn:uuid:cred-1", { token: "jwt-token" });
+
+      const mutations = calls.filter((c) => c.query.includes("mutateDocument"));
+      expect(mutations).toHaveLength(1);
+      expect(mutations[0].variables.documentIdentifier).toBe("cred-doc-1");
+      expect(mutations[0].authorization).toBe("Bearer jwt-token");
       const [revoke] = mutateActions(calls);
       expect(revoke.type).toBe("REVOKE");
-      expect(revoke.input.reason).toBe("compromised");
     });
+
+    it("fails the fallback when no live document holds the credential", async () => {
+      mockReactor({
+        renownCredentials: [],
+        errors: [
+          {
+            match: "renown_revokeCredential",
+            message:
+              'Cannot query field "renown_revokeCredential" on type "Mutation".',
+          },
+        ],
+      });
+      await expect(
+        client.revokeCredential("urn:uuid:cred-1", { token: "jwt-token" }),
+      ).rejects.toThrow(/not found/i);
+    });
+
+    it.each(["Forbidden", "Not found", "Rate limited"])(
+      "rethrows a resolver rejection (%s) without falling back",
+      async (message) => {
+        const calls = mockReactor({
+          errors: [{ match: "renown_revokeCredential", message }],
+        });
+
+        await expect(
+          client.revokeCredential("urn:uuid:cred-1", { token: "jwt-token" }),
+        ).rejects.toThrow(message);
+        expect(calls).toHaveLength(1);
+      },
+    );
   });
 });

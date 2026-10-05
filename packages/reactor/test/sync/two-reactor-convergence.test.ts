@@ -2,6 +2,7 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   garbageCollect,
   sortOperations,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
@@ -244,8 +245,12 @@ async function connectDocuments(setup: Setup, ids: string[]): Promise<void> {
 
 async function createDocuments(setup: Setup, ids: string[]): Promise<void> {
   for (const id of ids) {
-    const document = driveDocumentModelModule.utils.createDocument();
-    document.header.id = id;
+    // Fixed ids and unsigned execute calls: legacy.
+    const document = withSignaturePolicy(
+      driveDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id },
+    );
     const info = await setup.reactorA.create(document);
     await settle(setup.reactorA, info.id);
   }

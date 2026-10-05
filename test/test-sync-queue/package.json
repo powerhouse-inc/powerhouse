@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsx src/cli.ts",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint test/test-sync-queue"
   },
   "dependencies": {
     "colorette": "catalog:",

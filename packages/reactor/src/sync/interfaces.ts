@@ -1,3 +1,4 @@
+import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import type {
   DriveCollectionId,
   IOperationIndex,
@@ -5,6 +6,8 @@ import type {
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { IMailbox } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
+import type { IPeerAgreement } from "./peer-agreement.js";
 import type {
   SyncStatus,
   SyncStatusChangeCallback,
@@ -14,6 +17,8 @@ import type {
   ConnectionStateSnapshot,
   RemoteFilter,
   RemoteOptions,
+  RemotePeer,
+  SyncHold,
   SyncResult,
 } from "./types.js";
 
@@ -77,7 +82,51 @@ export interface IChannel {
    * not poll (e.g. push-only response channels) should treat this as a no-op.
    */
   triggerPull(): void;
+
+  /**
+   * Records that this channel's holder just interacted with it.
+   *
+   * Only a served channel has a holder to hear from; a channel that polls a
+   * remote itself should treat this as a no-op, as with triggerPull.
+   */
+  notePoll(): void;
+
+  /**
+   * When this channel's holder last interacted with it, if it has one.
+   *
+   * A channel that polls a remote itself reports undefined: the only liveness
+   * it knows is the remote's, which says nothing about whether anyone still
+   * wants what this replica holds for it. Reporting a timestamp is the
+   * channel's own claim that it serves a holder, and is what makes it
+   * eligible to be removed when that holder goes silent.
+   */
+  lastHolderPollUtcMs(): number | undefined;
+
+  /**
+   * Read on every handshake, so the peer always hears the current manifest.
+   * A channel without it never announces, and its peer sees a silent peer.
+   */
+  setLocalManifest?(provider: () => PeerManifest): void;
+
+  /**
+   * Fires when the peer's manifest changes; null for a silent peer. A channel
+   * whose peer announces through the sync manager, or that omits this, never
+   * fires.
+   */
+  onPeerManifest?(callback: PeerManifestListener): () => void;
+
+  /** Hears the remote's next report of this refused marker again. */
+  forgetMarkerRefusal?(documentId: string, branch: string): void;
 }
+
+/**
+ * `undelivered`: outbox items the channel sent that the peer never received,
+ * to be judged as unsent. The channel awaits the listener before sending more.
+ */
+export type PeerManifestListener = (
+  manifest: PeerManifest | null,
+  undelivered?: readonly SyncOperation[],
+) => void | Promise<void>;
 
 /**
  * Factory for creating channel instances.
@@ -128,6 +177,8 @@ export type RemoteMeta = {
   channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;
+  /** Undefined: the peer has not been heard from. */
+  peer?: RemotePeer;
 };
 
 // A configured remote: cloneable `meta` plus the live `channel`.
@@ -190,6 +241,8 @@ export interface ISyncManager {
    * @param filter - Optional filter for operations (defaults to no filtering)
    * @param options - Optional remote configuration options
    * @param id - Optional ID for the remote (generated if not provided)
+   * @param peer - The peer's manifest when it announced one on creation;
+   *   null for a silent peer, undefined when not yet heard
    * @returns Promise that resolves with the created remote
    * @throws Error if a remote with this name already exists
    */
@@ -200,7 +253,23 @@ export interface ISyncManager {
     filter?: RemoteFilter,
     options?: RemoteOptions,
     id?: string,
+    peer?: PeerManifest | null,
   ): Promise<Remote>;
+
+  /** Records what a remote's peer announced; null for a silent peer. */
+  setPeerManifest(id: string, manifest: PeerManifest | null): Promise<void>;
+
+  /** What this reactor announces to its peers. */
+  localManifest(): PeerManifest;
+
+  /** Documents held back from remotes whose peers cannot run them. */
+  listHolds(filter?: {
+    remoteName?: string;
+    documentId?: string;
+  }): Promise<SyncHold[]>;
+
+  /** Agreement over every persisted remote, live or not. */
+  agreement(): IPeerAgreement;
 
   /**
    * Binds a remote to an address, so only that address may poll it.
@@ -215,6 +284,13 @@ export interface ISyncManager {
    * @throws Error if the remote does not exist, or is bound to another address
    */
   bindRemote(id: string, boundAddress: string): Promise<void>;
+
+  /**
+   * Settles once the named remotes' received markers are stored, or every
+   * remote's when none are named; rejects if a write failed. A push is
+   * answered after it.
+   */
+  receiptsStored?(remoteNames?: Iterable<string>): Promise<void>;
 
   /**
    * Triggers a one-shot pull for the named remote. Useful for Manual poll-behavior

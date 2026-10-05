@@ -12,6 +12,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
+    scopes: ["global", "local"],
     value: "global",
     onChange: () => {},
   },

@@ -119,6 +119,16 @@ describe("ph connect config", () => {
       expect(printed.branding).toBeDefined();
       expect(printed.app).toBeDefined();
     });
+
+    it("shows app.workflowsEnabled following the top-level workflows.enabled", async () => {
+      writeSource({ workflows: { enabled: true } });
+      await runConnectConfig(mk({}));
+      const printed = JSON.parse(stdoutChunks.join("")) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(printed.app.workflowsEnabled).toBe(true);
+    });
   });
 
   // ---------------- Get mode ----------------

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ChannelError,
+  DriveRequestError,
   GraphQLRequestError,
   isDriveAuthError,
   PollingChannelError,
@@ -30,7 +31,49 @@ describe("PollingChannelError", () => {
   });
 });
 
+describe("DriveRequestError", () => {
+  it("captures message and status code", () => {
+    const err = new DriveRequestError("boom", 401);
+    expect(err.name).toBe("DriveRequestError");
+    expect(err.message).toBe("boom");
+    expect(err.statusCode).toBe(401);
+  });
+
+  it("allows omitting the status code", () => {
+    expect(new DriveRequestError("offline").statusCode).toBeUndefined();
+  });
+});
+
 describe("isDriveAuthError", () => {
+  // Drive discovery (GET /d/:drive) is REST, so its refusals arrive as
+  // DriveRequestError. Before this they were bare Errors, which this
+  // predicate rejected — so a switchboard refusing the caller surfaced as
+  // "drive not reachable" and never prompted a login.
+  it("is true for a DriveRequestError carrying 401 or 403", () => {
+    expect(isDriveAuthError(new DriveRequestError("nope", 401))).toBe(true);
+    expect(isDriveAuthError(new DriveRequestError("nope", 403))).toBe(true);
+  });
+
+  it("is false for a DriveRequestError carrying any other status", () => {
+    // 404 in particular: the drive info endpoint answers an unauthorized
+    // caller with the same 404 it gives a missing drive, so that slugs cannot
+    // be enumerated. Treating 404 as an auth error would pop a login modal on
+    // every mistyped URL.
+    for (const status of [400, 404, 500, 503]) {
+      expect(isDriveAuthError(new DriveRequestError("nope", status))).toBe(
+        false,
+      );
+    }
+  });
+
+  it("is false for a DriveRequestError with no status (network failure)", () => {
+    expect(isDriveAuthError(new DriveRequestError("offline"))).toBe(false);
+  });
+
+  it("is false for a bare Error, whatever it says", () => {
+    expect(isDriveAuthError(new Error("Forbidden: 401"))).toBe(false);
+  });
+
   it("is true for HTTP 401 and 403", () => {
     expect(isDriveAuthError(new GraphQLRequestError("nope", "http", 401))).toBe(
       true,

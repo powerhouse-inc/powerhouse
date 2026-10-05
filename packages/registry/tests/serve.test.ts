@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { CdnCache, isExactVersion } from "../src/cdn.js";
+import { isExactVersion } from "../src/cdn.js";
 import {
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
   DEFAULT_STORAGE_DIR_NAME,
@@ -100,15 +100,18 @@ async function unpublishVersion(name: string, version: string): Promise<void> {
     versions: Record<string, unknown>;
     "dist-tags"?: Record<string, string>;
     _attachments?: Record<string, unknown>;
+    readme?: string;
   };
 
   delete doc.versions[version];
+  // Verdaccio 7 accepts the rewrite only with the fields npm sends
+  doc.readme ??= "";
   const remaining = Object.keys(doc.versions);
   for (const [tag, v] of Object.entries(doc["dist-tags"] ?? {})) {
     if (v === version) doc["dist-tags"]![tag] = remaining[remaining.length - 1];
   }
-  const shortName = name.startsWith("@") ? name.split("/")[1] : name;
-  if (doc._attachments) delete doc._attachments[`${shortName}-${version}.tgz`];
+  // npm sends the rewrite without attachments
+  delete doc._attachments;
 
   const put = await fetch(`${REGISTRY_URL}/${encoded}/-rev/${doc._rev}`, {
     method: "PUT",
@@ -144,77 +147,6 @@ describe("isExactVersion", () => {
     expect(isExactVersion("1.2.3-a b")).toBe(false);
     expect(isExactVersion("1.2.3-x\r\ny")).toBe(false);
     expect(isExactVersion("1.2.3+x;y")).toBe(false);
-  });
-});
-
-// Real CdnCache pointed at a dead registry port: no mocks. Verifies the
-// resolveVersion contract the 503 fallback in middleware depends on — a
-// network failure throws (distinct from a 404 not-found), and the cached
-// fallback is found from disk.
-describe("resolveVersion upstream failure (real, dead upstream)", () => {
-  const testDir = import.meta.dirname;
-  const cacheDir = path.join(testDir, "./.test-output-resolve");
-
-  beforeAll(async () => {
-    await rm(cacheDir, { recursive: true, force: true });
-    await mkdir(cacheDir, { recursive: true });
-  });
-
-  afterAll(async () => {
-    await rm(cacheDir, { recursive: true, force: true });
-  });
-
-  it("throws on a network error rather than returning null", async () => {
-    // Port 1 has nothing listening — fetch rejects.
-    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
-    await expect(cdn.resolveVersion("any-pkg", "latest")).rejects.toThrow();
-  });
-
-  it("getLatestCachedVersion supplies the 503 fallback from disk", () => {
-    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
-    expect(cdn.getLatestCachedVersion("cached-pkg")).toBeNull();
-    mkdirSync(path.join(cacheDir, "cached-pkg", "2.0.0"), { recursive: true });
-    mkdirSync(path.join(cacheDir, "cached-pkg", "1.0.0"), { recursive: true });
-    expect(cdn.getLatestCachedVersion("cached-pkg")).toBe("2.0.0");
-  });
-});
-
-describe("CdnCache.reconcileVersions", () => {
-  const testDir = import.meta.dirname;
-  const cacheDir = path.join(testDir, "./.test-output-reconcile");
-
-  beforeAll(async () => {
-    await rm(cacheDir, { recursive: true, force: true });
-    await mkdir(cacheDir, { recursive: true });
-  });
-
-  afterAll(async () => {
-    await rm(cacheDir, { recursive: true, force: true });
-  });
-
-  it("removes cached versions absent from the survivor set", () => {
-    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
-    for (const v of ["1.0.0", "1.0.1", "2.0.0"]) {
-      mkdirSync(path.join(cacheDir, "recon-pkg", v), { recursive: true });
-    }
-    const removed = cdn.reconcileVersions("recon-pkg", ["1.0.1", "2.0.0"]);
-    expect(removed).toEqual(["1.0.0"]);
-    expect(existsSync(path.join(cacheDir, "recon-pkg", "1.0.0"))).toBe(false);
-    expect(existsSync(path.join(cacheDir, "recon-pkg", "1.0.1"))).toBe(true);
-    expect(existsSync(path.join(cacheDir, "recon-pkg", "2.0.0"))).toBe(true);
-  });
-
-  it("removes the package dir when no version survives locally", () => {
-    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
-    mkdirSync(path.join(cacheDir, "gone-pkg", "0.0.5"), { recursive: true });
-    const removed = cdn.reconcileVersions("gone-pkg", ["0.0.3"]);
-    expect(removed).toEqual(["0.0.5"]);
-    expect(existsSync(path.join(cacheDir, "gone-pkg"))).toBe(false);
-  });
-
-  it("is a no-op for an uncached package", () => {
-    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
-    expect(cdn.reconcileVersions("never-cached", ["1.0.0"])).toEqual([]);
   });
 });
 
@@ -270,6 +202,24 @@ describe("registry CDN serving", () => {
 
   afterAll(() => {
     server.close();
+  });
+
+  it("reports jobs, requests and the process at /-/metrics", async () => {
+    const res = await fetch(`${REGISTRY_URL}/-/metrics`);
+    expect(res.headers.get("content-type")).toMatch(
+      /^text\/plain; version=0\.0\.4/,
+    );
+    const body = await res.text();
+    expect(body).toMatch(
+      /registry_job_duration_seconds_count\{kind="process",outcome="done"\} [1-9]/,
+    );
+    expect(body).toMatch(
+      /registry_http_requests_total\{route="cdn",method="GET",status="2xx"\} [1-9]/,
+    );
+    expect(body).toContain("registry_listen_connected 1");
+    expect(body).toContain("# TYPE registry_jobs gauge");
+    expect(body).toMatch(/nodejs_eventloop_delay_seconds\{quantile="0.99"\} /);
+    expect(body).toMatch(/process_resident_memory_bytes \d+/);
   });
 
   it("serves file bytes with the correct Content-Type", async () => {
@@ -371,13 +321,12 @@ describe("registry CDN serving", () => {
   });
 
   // Single-version unpublish is a manifest rewrite, not a tarball DELETE, so
-  // the CDN cache must be reconciled or the removed version keeps serving.
-  it("purges the CDN cache when a single version is unpublished", async () => {
+  // the removed version's artifacts must go or it keeps serving.
+  it("drops a single unpublished version", async () => {
     const pkg = "unpub-test-pkg";
     await publishPackage(pkg, "1.0.0", { "index.js": "// v1" });
     await publishPackage(pkg, "2.0.0", { "index.js": "// v2" });
 
-    // Both pinned versions warm into the cache via the publish hook.
     for (const v of ["1.0.0", "2.0.0"]) {
       await vi.waitFor(
         async () => {
@@ -390,29 +339,28 @@ describe("registry CDN serving", () => {
 
     await unpublishVersion(pkg, "1.0.0");
 
-    // Reconcile is fired async from the manifest-rewrite response, so poll for
-    // the removed version's cache dir to disappear.
-    const goneDir = path.join(
+    const artifacts = path.join(
       workDir,
       DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+      "artifacts",
       pkg,
-      "1.0.0",
     );
-    const keptDir = path.join(
-      workDir,
-      DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
-      pkg,
-      "2.0.0",
+    await vi.waitFor(
+      () => expect(existsSync(path.join(artifacts, "1.0.0"))).toBe(false),
+      { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
     );
-    await vi.waitFor(() => expect(existsSync(goneDir)).toBe(false), {
-      timeout: POLL_TIMEOUT,
-      interval: POLL_INTERVAL,
-    });
+    const gone = await fetch(`${REGISTRY_URL}/-/cdn/${pkg}@1.0.0/index.js`);
+    expect(gone.status).toBe(404);
 
-    // The surviving version's cache is untouched and still served.
-    expect(existsSync(keptDir)).toBe(true);
+    expect(existsSync(path.join(artifacts, "2.0.0"))).toBe(true);
     const kept = await fetch(`${REGISTRY_URL}/-/cdn/${pkg}@2.0.0/index.js`);
     expect(kept.ok).toBe(true);
     expect(await kept.text()).toBe("// v2");
+
+    // Caches keep the old bytes under the same URL, so the version stays retired
+    await expect(
+      publishPackage(pkg, "1.0.0", { "index.js": "// v1 again" }),
+    ).rejects.toThrow(/409.*unpublished/);
+    await publishPackage(pkg, "3.0.0", { "index.js": "// v3" });
   }, 30000);
 });

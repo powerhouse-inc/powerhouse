@@ -1,3 +1,4 @@
+import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
@@ -32,6 +33,7 @@ export class GqlResponseChannel implements IChannel {
   private lastPersistedOutboxOrdinal: number = 0;
   private evictedOutboxFloor: number = Number.POSITIVE_INFINITY;
   private appliedOutboxOrdinal: number = 0;
+  private lastPollUtcMs: number = Date.now();
   private connectionState: ConnectionState = "connecting";
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
@@ -47,7 +49,7 @@ export class GqlResponseChannel implements IChannel {
     this.cursorStorage = cursorStorage;
     this.isShutdown = false;
 
-    this.inbox = new Mailbox();
+    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
     this.outbox = new Mailbox();
     this.deadLetter = new Mailbox();
 
@@ -66,8 +68,9 @@ export class GqlResponseChannel implements IChannel {
       this.forgetEvictedBelow(syncOps);
     });
 
-    this.inbox.onRemoved((syncOps) => {
-      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+    // The inbox ack, which never passes a marker still awaiting its load.
+    this.inbox.onRemoved(() => {
+      const maxOrdinal = this.inbox.ackOrdinal;
       if (maxOrdinal > this.lastPersistedInboxOrdinal) {
         this.lastPersistedInboxOrdinal = maxOrdinal;
         this.cursorStorage
@@ -98,7 +101,7 @@ export class GqlResponseChannel implements IChannel {
     return {
       state: this.connectionState,
       failureCount: 0,
-      lastSuccessUtcMs: 0,
+      lastSuccessUtcMs: this.lastPollUtcMs,
       lastFailureUtcMs: 0,
       pushBlocked: false,
       pushFailureCount: 0,
@@ -116,6 +119,24 @@ export class GqlResponseChannel implements IChannel {
 
   /** Response channels are push-driven; resolvers populate mailboxes directly. */
   triggerPull(): void {}
+
+  notePoll(): void {
+    this.lastPollUtcMs = Date.now();
+  }
+
+  /** This channel is served: its holder's polls are the liveness it reports. */
+  lastHolderPollUtcMs(): number | undefined {
+    return this.lastPollUtcMs;
+  }
+
+  /** The client announces through touchChannel, which the sync manager serves. */
+  setLocalManifest(_provider: () => PeerManifest): void {}
+
+  onPeerManifest(
+    _callback: (manifest: PeerManifest | null) => void,
+  ): () => void {
+    return () => {};
+  }
 
   async init(): Promise<void> {
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox

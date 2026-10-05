@@ -15,6 +15,7 @@ import {
   generateId,
   groupDocumentType,
   initializeAuth,
+  protocolVersionsFor,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -23,6 +24,7 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
+import { signedAs, TRUST_ANY_SIGNER } from "../utils/signed-as.js";
 
 type GroupPHState = PHBaseState & {
   global: { members: string[] };
@@ -83,19 +85,6 @@ function action(type: string, scope: string, input: unknown): Action {
   } as Action;
 }
 
-function signedBy<T extends Action>(anAction: T, address: string): T {
-  return {
-    ...anAction,
-    context: {
-      signer: {
-        user: { address, networkId: "", chainId: 0 },
-        app: { name: "test", key: "" },
-        signatures: [],
-      },
-    },
-  };
-}
-
 const MEMBER = "0xMember";
 const ADMIN = "0xAdmin";
 
@@ -122,6 +111,7 @@ describe("group convergence across replicas", () => {
           authGroups: true,
         },
       })
+      .withTrustPolicy(TRUST_ANY_SIGNER)
       .build();
   }
 
@@ -184,6 +174,7 @@ describe("group convergence across replicas", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = groupDoc.header.id;
     await settle(origin, (await origin.create(groupDoc)).id);
@@ -237,7 +228,7 @@ describe("group convergence across replicas", () => {
       origin,
       (
         await origin.execute(targetId, "main", [
-          signedBy(addModule({ id: "m1", name: "m1" }), MEMBER),
+          await signedAs(addModule({ id: "m1", name: "m1" }), MEMBER, targetId),
         ])
       ).id,
     );

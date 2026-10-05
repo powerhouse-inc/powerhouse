@@ -9,7 +9,11 @@ import {
   createDocumentAndFillBasicData,
   navigateToVetraDrive,
 } from "./helpers/document.js";
-import { expect, test } from "./helpers/fixtures.js";
+import {
+  expect,
+  reactorWorkerModeRequested,
+  test,
+} from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
 import {
@@ -33,6 +37,11 @@ import {
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
 test.describe.configure({ mode: "serial", timeout: DESCRIBE_TIMEOUT });
 const DOCUMENT_NAME = "ToDoDocument";
+
+// Publish and the consumer Connect never touch the Vetra page's reactor, so
+// they would only repeat the default-mode run.
+const SKIP_IN_WORKER_MODE =
+  "Covered by the default-mode run: independent of the reactor worker flag";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
   documentType: "powerhouse/todo",
@@ -266,6 +275,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
 });
 
 test("Build and Publish to Registry", async () => {
+  test.skip(reactorWorkerModeRequested(), SKIP_IN_WORKER_MODE);
   test.setTimeout(180_000);
 
   const testDir = process.cwd();
@@ -368,6 +378,7 @@ test("Build and Publish to Registry", async () => {
 });
 
 test("Install Package in Consumer Project", async ({ browser }) => {
+  test.skip(reactorWorkerModeRequested(), SKIP_IN_WORKER_MODE);
   test.setTimeout(10 * 60 * 1000); // 10 minutes for build + preview + UI
 
   // Step 1: Install dependencies for the consumer project
@@ -549,6 +560,7 @@ test("Install Package in Consumer Project", async ({ browser }) => {
 });
 
 test("Change registry URL at runtime and install from new registry", async () => {
+  test.skip(reactorWorkerModeRequested(), SKIP_IN_WORKER_MODE);
   test.setTimeout(10 * 60 * 1000); // 10 minutes for republish + UI flow
 
   // Continuation of the previous test — reuse its browser context so the
@@ -586,9 +598,13 @@ test("Change registry URL at runtime and install from new registry", async () =>
     .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
   await expect(installedRow).toBeVisible({ timeout: 30_000 });
 
-  // The 3-dot menu button is the only <button> on the row; the dropdown
-  // emits a "Uninstall" menu item once open.
-  const rowDotsButton = installedRow.locator("button").first();
+  // The row's 3-dot menu button opens the dropdown that carries the
+  // "Uninstall" menu item. Target it by accessible name: the row also
+  // carries a version-picker button once its registry metadata has loaded,
+  // so "first button" is no longer unambiguous.
+  const rowDotsButton = installedRow.getByRole("button", {
+    name: "Package actions",
+  });
   await rowDotsButton.click();
   const uninstallMenuItem = page.getByText("Uninstall", { exact: true });
   await expect(uninstallMenuItem).toBeVisible({ timeout: 10_000 });

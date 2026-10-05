@@ -23,7 +23,16 @@ describe("parseRecordAllOptions", () => {
   it("runs every benchmark when none is named", () => {
     expect(
       parseRecordAllOptions([]).targets.map((target) => target.name),
-    ).toEqual(["auth", "events", "queue", "queue-only", "cache", "sync"]);
+    ).toEqual([
+      "auth",
+      "auth-storage",
+      "events",
+      "queue",
+      "queue-only",
+      "cache",
+      "processors",
+      "sync",
+    ]);
   });
 
   it("takes a subset", () => {

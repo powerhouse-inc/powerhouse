@@ -13,13 +13,19 @@ import type {
   IRelationalDb,
   ProcessorFactory,
 } from "@powerhousedao/shared/processors";
+import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
 import type { IAttachmentAccessService } from "./services/attachment-access.service.js";
+import type { IAttachmentClientProvider } from "./services/authorized-attachment.service.js";
+import type { IAuthorizationService } from "./services/authorization.service.js";
 import type { AuthService } from "./services/auth.service.js";
 export type {
   IPackageLoader,
   IPackageLoaderOptions,
+  IPackagePieceSource,
+  PackagePiece,
+  PackagePieceEntry,
 } from "./packages/types.js";
 
 /**
@@ -28,6 +34,10 @@ export type {
  */
 export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   attachments: IAttachmentClient;
+  // `http` comes from the host-agnostic base, deliberately as the portable
+  // scope rather than this package's richer one. A processor runs in the
+  // browser too, so the surface it can rely on is the Fetch-shaped half; the
+  // node-shaped additions belong to a subgraph, which only ever runs here.
 }
 
 /** @deprecated Use `IProcessorHostModule`. */
@@ -40,13 +50,32 @@ export type ReadinessGate = {
 
 export type API = {
   httpAdapter: IHttpAdapter;
+  /** Hands each package a namespaced slice of the HTTP surface. */
+  httpRoutes: HttpRouteService;
   graphqlManager: GraphQLManager;
   packages: IPackageManager;
   attachments: AttachmentBuildResult;
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
   /** Document-authorized attachment read decisions; see AttachmentAccessService. */
   attachmentAccess: IAttachmentAccessService;
+  /** Caller-bound attachment clients for subgraphs the host constructs itself. */
+  attachmentClientProvider: IAttachmentClientProvider;
   authService: AuthService | undefined;
+  /**
+   * Whether this deployment refuses anonymous callers
+   * (`REQUIRE_AUTHENTICATED_CALLER`). Carried here because routes mounted
+   * straight on the HTTP adapter never pass the GraphQL fetch chain, so its
+   * require-auth middleware cannot reach them: a host-composed route reads the
+   * resolved value from the API rather than the environment, so one variable
+   * cannot end up half applied.
+   */
+  requireAuthenticatedCaller: boolean;
+  /** The service the subgraphs decide with, for a component the host composes
+   * after boot: it must authorize with this one, not one of its own. */
+  authorizationService: IAuthorizationService;
+  /** The read-model relational store, for the same host-composed component:
+   * its tables belong in this database and nothing else hands one over. */
+  relationalDb: IRelationalDb;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,
    * closes WebSocket and HTTP servers, destroys knex pools, and closes any

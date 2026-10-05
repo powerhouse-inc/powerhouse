@@ -1,10 +1,7 @@
 import {
   actions,
   type Action,
-  type AppActionSigner,
   type ISigner,
-  type Signature,
-  type UserActionSigner,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,42 +9,24 @@ import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
-function createTestSigner(name: string, publicKey: string): ISigner {
-  const app: AppActionSigner = { name, key: publicKey };
-  const user: UserActionSigner = {
-    address: "0x123",
-    chainId: 1,
-    networkId: "eip155",
-  };
-
-  return {
-    app,
-    user,
-    publicKey: {} as CryptoKey,
-    sign: vi.fn().mockResolvedValue(new Uint8Array(0)),
-    verify: vi.fn().mockResolvedValue(undefined),
-    signAction: vi.fn().mockImplementation((): Promise<Signature> => {
-      return Promise.resolve<Signature>([
-        String(Date.now() / 1000),
-        publicKey,
-        "action-hash",
-        "prev-state-hash",
-        "0xsignature",
-      ]);
-    }),
-  };
+function spiedSigner(key: TestP256Signer): ISigner {
+  const signer = key.asISigner();
+  return { ...signer, signAction: vi.fn(signer.signAction) };
 }
 
 describe("Signature Preservation", () => {
   let signerA: ISigner;
   let signerB: ISigner;
+  let keyB: TestP256Signer;
   let reactorClient: IReactorClient;
   let reactor: IReactor;
 
   beforeEach(async () => {
-    signerA = createTestSigner("signerA", "did:key:zA");
-    signerB = createTestSigner("signerB", "did:key:zB");
+    signerA = spiedSigner(await TestP256Signer.create());
+    keyB = await TestP256Signer.create();
+    signerB = spiedSigner(keyB);
 
     expect(signerA.app!.key).not.toBe(signerB.app!.key);
 
@@ -69,25 +48,12 @@ describe("Signature Preservation", () => {
   it("should NOT overwrite pre-signed actions", async () => {
     const doc = await reactorClient.createEmpty("powerhouse/document-model");
 
-    const signatureB: Signature = [
-      String(Date.now() / 1000),
-      signerB.app!.key,
-      "action-hash-b",
-      "prev-state-hash-b",
-      "0xsignatureB",
-    ];
-
     const baseAction = actions.setName("Test Document");
-    const preSignedAction: Action = {
-      ...baseAction,
-      context: {
-        signer: {
-          user: signerB.user ?? { address: "", chainId: 0, networkId: "" },
-          app: signerB.app!,
-          signatures: [signatureB],
-        },
-      },
-    };
+    const signatureB = await keyB.v2Tuple(baseAction, {
+      documentId: doc.header.id,
+      branch: "main",
+    });
+    const preSignedAction: Action = keyB.signed(baseAction, signatureB);
 
     const callsBeforeExecute = (signerA.signAction as ReturnType<typeof vi.fn>)
       .mock.calls.length;

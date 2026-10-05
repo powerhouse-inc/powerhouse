@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts", "fixture-piece/**/*.ts"],
+  "references": [
+    { "path": "../../clis/ph-cli" },
+    { "path": "../../packages/pieces-framework" },
+    { "path": "../../packages/registry" },
+    { "path": "../../packages/shared" },
+    { "path": "../e2e-utils" }
+  ]
+}

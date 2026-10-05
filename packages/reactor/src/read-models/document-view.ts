@@ -7,12 +7,14 @@ import type {
 import {
   createAuthState,
   isDenied,
+  isPurgeMarker,
 } from "@powerhousedao/shared/document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
@@ -27,7 +29,11 @@ import {
   type ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
-import { BaseReadModel } from "./base-read-model.js";
+import {
+  BaseReadModel,
+  defaultReadModelIndexingConfig,
+  type ReadModelIndexingConfig,
+} from "./base-read-model.js";
 import type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
@@ -35,7 +41,27 @@ import type {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
+/**
+ * What a single-document read of a deleted document returns. A listing omits a
+ * deleted document under either value.
+ */
+export enum DeletedDocumentRead {
+  /**
+   * The document reads as missing: `get` throws and `resolveIdOrSlug` does not
+   * match its id.
+   */
+  NotFound = "NotFound",
+  /**
+   * The document's state as of the deletion, with `state.document.isDeleted`
+   * telling the caller what it holds. Only meaningful with `documentDecisions`,
+   * which is what makes deletion positional.
+   */
+  StateAtDeletion = "StateAtDeletion",
+}
+
 export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
+  static override readonly commitsInFenceTransaction = true;
+
   private _db: Kysely<Database>;
 
   constructor(
@@ -44,19 +70,21 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
-    /**
-     * Whether a single-document read serves a deleted document's state as of the
-     * deletion rather than hiding it. Only meaningful with `documentDecisions`,
-     * which is what makes deletion positional. Listings omit it either way.
-     */
-    private readonly servesDeletionBoundary: boolean,
+    private readonly deletedDocumentRead: DeletedDocumentRead,
+    indexing: ReadModelIndexingConfig = defaultReadModelIndexingConfig,
   ) {
     super(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: DOCUMENT_VIEW_READ_MODEL, rebuildStateOnInit: true },
+      {
+        readModelId: DOCUMENT_VIEW_READ_MODEL,
+        rebuildStateOnInit: true,
+        indexing,
+        replayStreamSuffix: false,
+        purgeFence: "locked",
+      },
     );
     this._db = db;
   }
@@ -70,15 +98,28 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
    * without either fall back to header/document/auth, because their sibling
    * echoes may be stale. All other action types index only header and their
    * own scope.
+   *
+   * Every row accepts a write only from an operation whose global ordinal is
+   * at least the one the row already carries, so an older duplicate from a
+   * sweep, boot replay or chunk interleave never rolls a scope back.
    */
   protected override async commitOperations(
     items: OperationWithContext[],
+    fenced?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {
-    await this._db.transaction().execute(async (trx) => {
+    const write = async (trx: Transaction<Database>) => {
       for (const item of items) {
         const { operation, context } = item;
-        const { documentId, scope, branch, documentType, resultingState } =
-          context;
+        // Its rows went in the purge transaction; the marker writes none back.
+        if (isPurgeMarker(operation)) continue;
+        const {
+          documentId,
+          scope,
+          branch,
+          documentType,
+          resultingState,
+          ordinal,
+        } = context;
         const { index, hash } = operation;
 
         if (!resultingState) {
@@ -125,10 +166,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               deletedAt: now,
               lastOperationIndex: index,
               lastOperationHash: hash,
+              lastOperationOrdinal: ordinal,
               lastUpdatedAt: now,
             })
             .where("documentId", "=", documentId)
             .where("branch", "=", branch)
+            .where("lastOperationOrdinal", "<=", ordinal)
             .execute();
 
           // The content has to say so too, or a caller served the boundary state
@@ -143,6 +186,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .where("documentId", "=", documentId)
               .where("branch", "=", branch)
               .where("scope", "=", "document")
+              .where("lastOperationOrdinal", "<=", ordinal)
               .execute();
           }
 
@@ -197,13 +241,36 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         }
 
         for (const [scopeName, scopeState] of scopesToIndex) {
+          // The previous `content` is the whole prior scope state - hundreds of
+          // kilobytes of jsonb on a large drive - and only the header-meta
+          // carry-over below reads it. Selecting it unconditionally made every
+          // write pay to decompress and ship a copy of the state it was about
+          // to overwrite.
+          const needsExistingContent =
+            scopeName === "header" && preserveHeaderMeta;
+
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
-            .selectAll()
+            .select([
+              "slug",
+              "name",
+              "isDeleted",
+              "snapshotVersion",
+              "lastOperationOrdinal",
+            ])
+            .$if(needsExistingContent, (qb) => qb.select("content"))
             .where("documentId", "=", documentId)
             .where("scope", "=", scopeName)
             .where("branch", "=", branch)
             .executeTakeFirst();
+
+          // An older operation carries stale state for the whole scope.
+          if (
+            existingSnapshot !== undefined &&
+            existingSnapshot.lastOperationOrdinal > ordinal
+          ) {
+            continue;
+          }
 
           const newState =
             typeof scopeState === "object" && scopeState !== null
@@ -224,7 +291,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               name = headerName;
             }
 
-            if (preserveHeaderMeta && existingSnapshot) {
+            if (needsExistingContent && existingSnapshot) {
               const existingHeader = existingSnapshot.content as Record<
                 string,
                 unknown
@@ -265,6 +332,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .set({
                 lastOperationIndex: index,
                 lastOperationHash: hash,
+                lastOperationOrdinal: ordinal,
                 lastUpdatedAt: new Date(),
                 snapshotVersion: existingSnapshot.snapshotVersion + 1,
                 content: newState,
@@ -274,6 +342,8 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .where("documentId", "=", documentId)
               .where("scope", "=", scopeName)
               .where("branch", "=", branch)
+              // Repeats the guard where the database can enforce it.
+              .where("lastOperationOrdinal", "<=", ordinal)
               .execute();
           } else {
             const snapshot: InsertableDocumentSnapshot = {
@@ -287,6 +357,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               documentType,
               lastOperationIndex: index,
               lastOperationHash: hash,
+              lastOperationOrdinal: ordinal,
               identifiers: null,
               metadata: null,
               deletedAt: null,
@@ -296,7 +367,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           }
         }
       }
-    });
+    };
+
+    if (fenced) {
+      await write(fenced as unknown as Transaction<Database>);
+      return;
+    }
+    await this._db.transaction().execute(write);
   }
 
   async exists(
@@ -348,15 +425,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       scopesToQuery = [];
     }
 
-    // Unfiltered when serving the boundary state; `state.document.isDeleted` tells
-    // the caller what it holds. Listings keep the filter either way.
     let query = this._db
       .selectFrom("DocumentSnapshot")
       .selectAll()
       .where("documentId", "=", documentId)
       .where("branch", "=", branch);
 
-    if (!this.servesDeletionBoundary) {
+    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
       query = query.where("isDeleted", "=", false);
     }
 
@@ -367,7 +442,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const snapshots = await query.execute();
 
     if (snapshots.length === 0) {
-      throw new Error(`Document not found: ${documentId}`);
+      throw new DocumentNotFoundError(
+        documentId,
+        `Document not found: ${documentId}`,
+      );
     }
 
     if (signal?.aborted) {
@@ -564,34 +642,28 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
     const limit = paging?.limit || 100;
 
-    const documents: PHDocument[] = [];
-    const processedDocumentIds = new Set<string>();
-    const allDocumentIds: string[] = [];
-
-    const snapshots = await this._db
+    const rows = await this._db
       .selectFrom("DocumentSnapshot")
-      .selectAll()
+      .select("documentId")
+      .select((eb) => eb.fn.max("lastUpdatedAt").as("lastUpdatedAt"))
       .where("documentType", "=", type)
       .where("branch", "=", branch)
       .where("isDeleted", "=", false)
+      .groupBy("documentId")
       .orderBy("lastUpdatedAt", "desc")
+      .orderBy("documentId", "asc")
+      .offset(startIndex)
+      .limit(limit + 1)
       .execute();
 
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    for (const snapshot of snapshots) {
-      if (processedDocumentIds.has(snapshot.documentId)) {
-        continue;
-      }
+    const hasMore = rows.length > limit;
+    const docsToFetch = rows.slice(0, limit).map((row) => row.documentId);
 
-      processedDocumentIds.add(snapshot.documentId);
-      allDocumentIds.push(snapshot.documentId);
-    }
-
-    const docsToFetch = allDocumentIds.slice(startIndex, startIndex + limit);
-
+    const documents: PHDocument[] = [];
     for (const documentId of docsToFetch) {
       if (signal?.aborted) {
         throw new Error("Operation aborted");
@@ -610,14 +682,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       }
     }
 
-    const hasMore = allDocumentIds.length > startIndex + limit;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
     return {
       results: documents,
       options: paging || { cursor: "0", limit: 100 },
       nextCursor,
-      totalCount: allDocumentIds.length,
       next: hasMore
         ? () =>
             this.findByType(
@@ -722,7 +792,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       .where("documentId", "=", identifier)
       .where("branch", "=", branch);
 
-    if (!this.servesDeletionBoundary) {
+    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
       idCheckQuery = idCheckQuery.where("isDeleted", "=", false);
     }
 
@@ -757,7 +827,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const resolvedDocumentId = idMatchDocId || slugMatchDocId;
 
     if (!resolvedDocumentId) {
-      throw new Error(`Document not found: ${identifier}`);
+      throw new DocumentNotFoundError(
+        identifier,
+        `Document not found: ${identifier}`,
+      );
     }
 
     return resolvedDocumentId;

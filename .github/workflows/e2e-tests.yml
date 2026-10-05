@@ -1,10 +1,25 @@
 name: E2E Tests
 
+# paths-ignore, not an allowlist: these suites exercise nearly the whole stack
+# (ph CLI, codegen, connect, reactor), so enumerating what affects them would
+# silently skip real regressions. Only prose and the docs site are excluded.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "apps/academy/**"
+      - ".claude/**"
+      - "LICENSE"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "apps/academy/**"
+      - ".claude/**"
+      - "LICENSE"
   # Allow manual triggering for testing
   workflow_dispatch:
 
@@ -42,7 +57,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 12.5.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -56,7 +71,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       - name: Build
         run: pnpm build
@@ -114,7 +129,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 12.5.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -128,7 +143,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       - name: Build
         run: pnpm build
@@ -170,18 +185,41 @@ jobs:
           path: test/package-e2e/test-results/
           retention-days: 30
 
-  analytics-engine-integration-tests:
-    name: Run Analytics Engine Integration Tests
+  workflow-piece-e2e-tests:
+    name: Run Workflow Piece E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          # The PR's base commit, for the workflow UI filter below.
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: diff
+        uses: ./.github/actions/changed-files
+
+      # The workflow UI suite runs on PRs that touch what it exercises, and
+      # always on main, so a break arriving through Connect or a shared
+      # package still surfaces right after it merges.
+      - name: Decide whether to run the workflow UI tests
+        id: workflow-ui
+        env:
+          FILES: ${{ steps.diff.outputs.files }}
+        run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif printf '%s\n' $FILES | grep -qE '^(packages/workflow/|packages/reactor-workflow/|packages/pieces-framework/|apps/switchboard/src/workflow/|\.github/workflows/e2e-tests\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 12.5.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -195,16 +233,96 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
+      # The UI suite's Postgres piece test needs this image; pull it while
+      # the build runs, so the test doesn't.
+      - name: Pull the Postgres image in the background
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: nohup docker pull postgres:16-alpine > /tmp/postgres-pull.log 2>&1 &
+
+      # The suite publishes the workspace to a local registry and installs
+      # switchboard from it, so the tarballs have to carry dist output.
       - name: Build
         run: pnpm build
 
       - name: Re-link workspace bins now that dist files exist
         run: pnpm rebuild --recursive
 
-      - name: Build packages that depend on generated binaries
-        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
+      # The UI suite runs against Connect's production build, which bundles
+      # the workflow package's dist.
+      - name: Build Connect for the workflow UI tests
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: node ../../clis/ph-cli/dist/cli.mjs connect build --workflows true
+        working-directory: ./test/test-consumer-project
+
+      # No browser: the suite drives switchboard's GraphQL directly, and names
+      # the failed assertions in its own output.
+      - name: Run workflow piece E2E flow
+        run: pnpm test:e2e:workflow-piece
+
+      - name: Resolve Playwright version
+        if: steps.workflow-ui.outputs.run == 'true'
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: ./packages/workflow
+
+      - name: Cache Playwright browsers
+        if: steps.workflow-ui.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./packages/workflow
+
+      # Starts switchboard from dist and serves the Connect build, then drives
+      # the workflow editors in a browser; each test seeds its own drive.
+      - name: Run workflow UI tests
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: pnpm --filter @powerhousedao/workflow test:ui
+
+      # Also on success, so a test that passed on retry leaves its trace.
+      - name: Upload workflow UI report
+        uses: actions/upload-artifact@v4
+        if: always() && steps.workflow-ui.outputs.run == 'true'
+        with:
+          name: workflow-ui-playwright-report
+          path: |
+            packages/workflow/playwright-report/
+            packages/workflow/test-results/
+          retention-days: 30
+
+  analytics-engine-integration-tests:
+    name: Run Analytics Engine Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      # Only the analytics browser package and the workspace packages it depends on.
+      - name: Install and build
+        run: bash .github/actions/setup/install-and-build.sh "@powerhousedao/analytics-engine-browser..."
 
       - name: Resolve Playwright version
         id: playwright-version
@@ -264,7 +382,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 12.5.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -278,7 +396,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       # The recipes resolve the Powerhouse packages through `link:` paths into
       # this checkout, and every package's exports point at dist/, so a full
@@ -301,18 +419,25 @@ jobs:
           path: recipes-checkout/semantic-search/.model-cache
           key: hf-model-Xenova-all-MiniLM-L6-v2-q8
 
-      # drive-override's demo creates 10,000 documents and takes ~112s locally;
-      # every other recipe is under 7s. 600s leaves headroom on a slow runner
-      # without masking a genuine hang.
+      # drive-override's demo creates 10,000 documents, ~290s of the ~550s suite
+      # on CI, so it runs on main and manual runs only. 600s covers it there.
       - name: Run recipe suite against this checkout
-        run: pnpm test:e2e:recipes --timeout 600
+        run: >-
+          pnpm test:e2e:recipes --timeout 600
+          ${{ github.event_name == 'pull_request' && '--skip drive-override' || '' }}
         env:
           RECIPES_DIR: ${{ github.workspace }}/recipes-checkout
 
   notify-discord:
-    if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure')
+    if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure')
     runs-on: ubuntu-24.04
-    needs: [vetra-e2e-tests, package-e2e-tests, recipes-e2e-tests]
+    needs:
+      [
+        vetra-e2e-tests,
+        package-e2e-tests,
+        workflow-piece-e2e-tests,
+        recipes-e2e-tests,
+      ]
     steps:
       - name: Send Discord notification
         env:
@@ -321,6 +446,7 @@ jobs:
           # Aggregate over the dev/worker matrix; the run link shows which leg failed.
           VETRA_RESULT: ${{ needs.vetra-e2e-tests.result }}
           PACKAGE_RESULT: ${{ needs.package-e2e-tests.result }}
+          WORKFLOW_PIECE_RESULT: ${{ needs.workflow-piece-e2e-tests.result }}
           RECIPES_RESULT: ${{ needs.recipes-e2e-tests.result }}
         run: |
           DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
@@ -338,6 +464,13 @@ jobs:
               FAILED_JOBS="Package E2E"
             else
               FAILED_JOBS="$FAILED_JOBS, Package E2E"
+            fi
+          fi
+          if [ "$WORKFLOW_PIECE_RESULT" = "failure" ]; then
+            if [ -z "$FAILED_JOBS" ]; then
+              FAILED_JOBS="Workflow Piece E2E"
+            else
+              FAILED_JOBS="$FAILED_JOBS, Workflow Piece E2E"
             fi
           fi
           if [ "$RECIPES_RESULT" = "failure" ]; then
@@ -365,6 +498,7 @@ jobs:
       [
         vetra-e2e-tests,
         package-e2e-tests,
+        workflow-piece-e2e-tests,
         recipes-e2e-tests,
         analytics-engine-integration-tests,
       ]

@@ -1,4 +1,8 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  localSupports,
+  PEER_CAPABILITIES,
+} from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndexTxn } from "../../../src/cache/operation-index-types.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
@@ -6,12 +10,16 @@ import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
 import { selectDecisionModel } from "../../../src/decision/registered-model.js";
-import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
+import {
+  NOOP_DOCUMENT_LOCKS,
+  type ExecutionStores,
+} from "../../../src/executor/execution-scope.js";
 import {
   targetDocumentId,
   TouchedStreams,
 } from "../../../src/executor/util.js";
 import type { Job } from "../../../src/queue/types.js";
+import { DocumentPurgedError } from "../../../src/shared/errors.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
@@ -84,6 +92,7 @@ function createHarness(
     writeCache: writeCache as unknown as IWriteCache,
     documentMetaCache,
     collectionMembershipCache,
+    documentLocks: NOOP_DOCUMENT_LOCKS,
   };
   const flags = {
     documentDecisions: false,
@@ -98,6 +107,7 @@ function createHarness(
     DEFAULT_DRIVE_CONTAINER_TYPES,
     flags,
     selectDecisionModel(flags, registry),
+    localSupports(PEER_CAPABILITIES, flags).protocols,
   );
   return {
     handler,
@@ -317,6 +327,24 @@ describe("DocumentActionHandler", () => {
         /source document drive-1 not found.*doc missing/,
       );
       expect(harness.indexTxn.write).not.toHaveBeenCalled();
+    });
+
+    it("keeps a purged source's own error", async () => {
+      harness.writeCache.getState.mockRejectedValueOnce(
+        new DocumentPurgedError("drive-1"),
+      );
+      const action = buildAction("ADD_RELATIONSHIP", {
+        sourceId: "drive-1",
+        targetId: "doc-2",
+        relationshipType: "drive/child",
+      });
+      const job = buildJob({ actions: [action] });
+
+      const result = await execute(harness, job, action);
+
+      expect(result.success).toBe(false);
+      expect(DocumentPurgedError.isError(result.error)).toBe(true);
+      expect(result.error?.message).toBe("Document drive-1 was purged");
     });
   });
 
@@ -548,6 +576,7 @@ describe("DocumentActionHandler", () => {
           DEFAULT_DRIVE_CONTAINER_TYPES,
           flags,
           selectDecisionModel(flags, registry),
+          localSupports(PEER_CAPABILITIES, flags).protocols,
         ),
       };
     }

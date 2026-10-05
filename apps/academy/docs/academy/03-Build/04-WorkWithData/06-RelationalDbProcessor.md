@@ -64,6 +64,7 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
   await db.schema
     .createTable("todo") // Creates a new table named "todo"
+    .addColumn("document_id", "varchar(255)", (col) => col.notNull()) // The document the row came from
     .addColumn("task", "varchar(255)") // Text column for the task description (max 255 characters)
     .addColumn("status", "boolean") // Boolean column for completion status (true/false)
     .addPrimaryKeyConstraint("todo_pkey", ["task"]) // Makes "task" the primary key (unique identifier)
@@ -80,6 +81,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 **Design Considerations:**
 
 - We're using `task` as the primary key, which means each task description must be unique
+- `document_id` records which document each row came from, so the processor can delete a document's rows when the document is deleted (see [Erase a deleted document](#erase-a-deleted-document))
 - The `varchar(255)` limit ensures reasonable memory usage
 - The `boolean` status makes it easy to filter completed vs. incomplete tasks
 - Consider adding timestamps (`created_at`, `updated_at`) for audit trails in production applications
@@ -109,6 +111,7 @@ Check your `processors/todo-indexer/schema.ts` file after generation - it will c
 // This is what gets auto-generated based on your migration
 export interface Database {
   todo: {
+    document_id: string;
     task: string;
     status: boolean;
   };
@@ -160,11 +163,17 @@ export const todoIndexerProcessorFactory =
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
       documentType: ["powerhouse/todo-list"], // Only process todo-list documents
-      scope: ["global"], // Process global changes (not user-specific)
+      scope: ["global", "document"], // Global changes, plus deletions
     };
 
-    // Create the processor instance
-    const processor = new TodoIndexerProcessor(namespace, filter, store);
+    // Create the processor instance. The drive id is what `isNamespaceDrive`
+    // compares a deleted document's id against.
+    const processor = new TodoIndexerProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [
       {
         processor,
@@ -179,7 +188,7 @@ export const todoIndexerProcessorFactory =
 - **`branch`**: Which document branches to monitor (usually "main" for production data)
 - **`documentId`**: Specific document IDs to watch ("\*" means all documents)
 - **`documentType`**: Document types to process (ensures type safety)
-- **`scope`**: Whether to process global changes or user-specific ones
+- **`scope`**: Which scopes to process. `"global"` carries shared state changes; `"document"` carries `DELETE_DOCUMENT` and `PURGE_DOCUMENT`, which the processor needs to erase a document's rows
 
 ## Implement the Processor Logic
 
@@ -197,7 +206,7 @@ The processor has several key methods:
 
 Processors receive a flat list of `OperationWithContext[]` items. Each item carries both the operation and its context:
 
-- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState` (JSON string of the document state after the operation)
+- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState`, a JSON string of `{ header, ...state }`. The header and each scope's state sit at the top level, so `JSON.parse(context.resultingState).global` is the global state after the operation
 - **`operation`**: `action` (with `type` and `input`), `index`, `timestampUtcMs`, `hash`
 
 ```ts
@@ -233,11 +242,27 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
     // Process each operation
     for (const { operation, context } of operations) {
+      // A deleted or purged document: remove its rows, or the drive's namespace
+      const type = operation.action.type;
+      if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+        const input = operation.action.input as { documentId?: string };
+        const documentId = input.documentId ?? context.documentId;
+        if (this.isNamespaceDrive(documentId)) {
+          await this.dropNamespace();
+          return;
+        }
+        await this.deleteDocumentRows(documentId);
+        continue;
+      }
+      // The rest of the document scope carries nothing to index
+      if (context.scope !== "global") continue;
+
       // Insert a record for each operation into the database
       // This is a simple example - you might want more sophisticated logic
       await this.relationalDb
         .insertInto("todo")
         .values({
+          document_id: context.documentId,
           // Create a unique task identifier combining document ID, operation index, and type
           task: `${context.documentId}-${operation.index}: ${operation.action.type}`,
           status: true, // Default to completed status
@@ -256,6 +281,26 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   }
 }
 ```
+
+### Erase a deleted document
+
+A processor's rows are its own: when a document is deleted or purged, the reactor removes its own records of the document, but only the processor removes the rows it wrote. A processor that ignores deletions keeps a deleted document's rows, including a purged one's. There is no separate purge callback, and `onDisconnect()` is not a deletion signal: it also runs when the processor's factory is unregistered or reloaded.
+
+Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that parses `context.resultingState`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log. A reactor that missed the `DELETE_DOCUMENT` receives only the marker, and the marker can arrive with no `resultingState` and more than once, so keep the handler idempotent. After a purge, the reactor delivers the purged document's marker and none of its earlier operations.
+
+`RelationalDbProcessor` has three helpers for this:
+
+| Method                           | What it does                                                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
+| `isNamespaceDrive(documentId)`   | `true` when `documentId` is the processor's drive and no other drive shares its namespace                             |
+| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
+
+A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+`isNamespaceDrive` needs the drive id the factory passes as the constructor's fourth argument; a processor made without it never drops its namespace. A `getNamespace` override that returns the same namespace for every drive shares it across drives, so dropping it on one drive's deletion would erase the others' rows. For such a processor `isNamespaceDrive` is `false`: the drive's deletion deletes the drive document's own rows, and each of its documents' rows go with that document's own deletion.
+
+When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 
 ## Expose Data Through a Subgraph
 
@@ -432,12 +477,12 @@ Result:
 ```json
 {
   "data": {
-    "TodoList_createDocument": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+    "TodoList_createDocument": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
   }
 }
 ```
 
-💡 **Key Insight**: The returned UUID (`72b73d31-4874-4b71-8cc3-289ed4cfbe2b`) is crucial - this is the document ID that will appear in our processor's database records, linking operations back to their source document. You will receive a different UUID.
+💡 **Key Insight**: The returned id (`pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI`) is crucial - this is the document ID that will appear in our processor's database records, linking operations back to their source document. New documents take a content-addressed id derived from their header, so you will receive a different one.
 
 ---
 
@@ -460,7 +505,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
+  "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI",
   "input": {
     "text": "complete mutation"
   }
@@ -482,7 +527,7 @@ Result:
 1. **Document Model**: Stores the operation and updates document state
 2. **Reactor**: Packages the operation as an `OperationWithContext` (with `documentId`, `documentType`, `scope`, etc.) and routes it to matching processors via `onOperations()`
 3. **Our Processor**: Automatically receives the `OperationWithContext` and creates a database record
-4. **Database**: Now contains: `"72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM"`
+4. **Database**: Now contains: `"pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-0: ADD_TODO_ITEM"`
 
 🔄 **Repeat this step 2-3 times** with different todo items to see multiple operations get processed. Each operation will have an incrementing revision number or index
 
@@ -516,7 +561,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+  "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
 }
 ```
 
@@ -527,15 +572,15 @@ Response:
   "data": {
     "todos": [
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-0: ADD_TODO_ITEM",
         "status": true
       },
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-1: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-1: ADD_TODO_ITEM",
         "status": true
       },
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-2: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-2: ADD_TODO_ITEM",
         "status": true
       }
     ],

@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "#design-system/ui";
+import { parseInstallSpec } from "@powerhousedao/shared/registry/updates";
 import { useMemo, useState } from "react";
 
 export type VersionSelection =
@@ -19,6 +20,11 @@ export interface VersionPickerProps {
   onChange: (next: VersionSelection) => void;
   disabled?: boolean;
   className?: string;
+  /**
+   * The version this row currently has installed. Marked "current" in the
+   * tag and version lists so the user can see the status quo.
+   */
+  installedVersion?: string;
 }
 
 export function resolveDefaultVersionSelection(options: {
@@ -45,8 +51,39 @@ export function resolveDefaultVersionSelection(options: {
   return { kind: "tag", value: version ?? "latest" };
 }
 
+/**
+ * Preselection for an installed package: the tag the user installed with
+ * when that tag still exists (keeps the row on its stream), otherwise the
+ * pinned installed version. Falls back to the regular default (e.g. latest)
+ * when the metadata doesn't cover the installed entry.
+ */
+export function resolveInstalledVersionSelection(options: {
+  spec?: string;
+  distTags?: Record<string, string>;
+  versions?: string[];
+  version?: string;
+}): VersionSelection {
+  const { spec, distTags, versions, version } = options;
+  const parsed = parseInstallSpec(spec);
+  if (parsed.kind === "tag" && distTags && parsed.value in distTags) {
+    return { kind: "tag", value: parsed.value };
+  }
+  if (version && versions?.includes(version)) {
+    return { kind: "version", value: version };
+  }
+  return resolveDefaultVersionSelection(options);
+}
+
 export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
-  const { distTags, versions, selected, onChange, disabled, className } = props;
+  const {
+    distTags,
+    versions,
+    selected,
+    onChange,
+    disabled,
+    className,
+    installedVersion,
+  } = props;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -153,8 +190,13 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     )}
                   >
                     <span className="truncate text-foreground">{tag}</span>
-                    <span className="truncate text-muted-foreground">
-                      {ver}
+                    <span className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground">
+                      <span className="truncate">{ver}</span>
+                      {ver === installedVersion && (
+                        <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase">
+                          current
+                        </span>
+                      )}
                     </span>
                   </button>
                 );
@@ -184,7 +226,14 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                       isSelected && "bg-muted font-semibold",
                     )}
                   >
-                    <span className="truncate text-foreground">{ver}</span>
+                    <span className="flex min-w-0 items-center gap-1.5 text-foreground">
+                      <span className="truncate">{ver}</span>
+                      {ver === installedVersion && (
+                        <span className="shrink-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                          current
+                        </span>
+                      )}
+                    </span>
                   </button>
                 );
               })}

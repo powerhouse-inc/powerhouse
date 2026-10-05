@@ -45,6 +45,7 @@ describe("BatchAggregator", () => {
       logger,
       DEFAULT_DRIVE_CONTAINER_TYPES,
       onBatchReady,
+      () => Promise.resolve(),
     );
   });
 
@@ -200,6 +201,79 @@ describe("BatchAggregator", () => {
       // Second failure for same batch should be a no-op (batch already flushed)
       await aggregator.handleJobFailed(failedEvent);
       expect(onBatchReady).toHaveBeenCalledTimes(1);
+    });
+
+    const ids = ["job-1", "job-2", "job-3"];
+    const failed = (jobId: string): JobFailedEvent => ({
+      jobId,
+      error: new Error("something broke"),
+      job: {
+        meta: { batchId: "batch-1", batchJobIds: ids },
+      } as JobFailedEvent["job"],
+    });
+    const pendingCount = (): number =>
+      (aggregator as unknown as { pendingBatches: Map<string, unknown> })
+        .pendingBatches.size;
+
+    it("forwards jobs that finish after a failed job of their batch", async () => {
+      const event1 = makeWriteReadyEvent("job-1", "batch-1", ids);
+      const event3 = makeWriteReadyEvent("job-3", "batch-1", ids);
+
+      await aggregator.enqueueWriteReady(event1);
+      await aggregator.handleJobFailed(failed("job-2"));
+      expect(onBatchReady).toHaveBeenCalledTimes(1);
+
+      await aggregator.enqueueWriteReady(event3);
+      expect(onBatchReady).toHaveBeenCalledTimes(2);
+      expect(onBatchReady).toHaveBeenLastCalledWith({
+        collectionMemberships: {},
+        entries: [{ event: event3, jobDependencies: [] }],
+      });
+      expect(pendingCount()).toBe(0);
+    });
+
+    it("forwards the batch when a job fails before any arrives", async () => {
+      const event1 = makeWriteReadyEvent("job-1", "batch-1", ids);
+      const event3 = makeWriteReadyEvent("job-3", "batch-1", ids);
+
+      await aggregator.handleJobFailed(failed("job-2"));
+      await aggregator.enqueueWriteReady(event1);
+      expect(onBatchReady).not.toHaveBeenCalled();
+
+      await aggregator.enqueueWriteReady(event3);
+      expect(onBatchReady).toHaveBeenCalledTimes(1);
+      expect(onBatchReady).toHaveBeenCalledWith({
+        collectionMemberships: {},
+        entries: [
+          { event: event1, jobDependencies: [] },
+          { event: event3, jobDependencies: ["job-1"] },
+        ],
+      });
+      expect(pendingCount()).toBe(0);
+    });
+
+    it("keeps no entry for a failure repeated after its batch finished", async () => {
+      await aggregator.enqueueWriteReady(
+        makeWriteReadyEvent("job-1", "batch-1", ids),
+      );
+      await aggregator.enqueueWriteReady(
+        makeWriteReadyEvent("job-3", "batch-1", ids),
+      );
+      await aggregator.handleJobFailed(failed("job-2"));
+      expect(pendingCount()).toBe(0);
+
+      await aggregator.handleJobFailed(failed("job-2"));
+      expect(pendingCount()).toBe(0);
+      expect(onBatchReady).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps no entry once every job of the batch failed", async () => {
+      for (const id of ids) {
+        await aggregator.handleJobFailed(failed(id));
+        await aggregator.handleJobFailed(failed(id));
+      }
+      expect(pendingCount()).toBe(0);
+      expect(onBatchReady).not.toHaveBeenCalled();
     });
   });
 
@@ -403,6 +477,7 @@ describe("BatchAggregator", () => {
         logger,
         new Set(["my-custom-drive"]),
         onBatchReady,
+        () => Promise.resolve(),
       );
 
       const customOp = makeAddRelationshipOp(

@@ -99,6 +99,7 @@ describe("JobResultHandler", () => {
 
     resolver = {
       ensureModelLoaded: vi.fn().mockResolvedValue(undefined),
+      recoverMissingModel: vi.fn().mockResolvedValue(undefined),
     };
 
     logger = createMockLogger();
@@ -180,7 +181,7 @@ describe("JobResultHandler", () => {
   });
 
   describe("model recovery (ModuleNotFoundError)", () => {
-    it("calls resolver.ensureModelLoaded and queue.retryJob on success", async () => {
+    it("calls resolver.recoverMissingModel and queue.retryJob on success", async () => {
       const error = new ModuleNotFoundError("test/type");
       const job = createTestJob({ maxRetries: 3 });
       const handle = createTestHandle(job);
@@ -188,12 +189,15 @@ describe("JobResultHandler", () => {
 
       await handler.handleResult(handle, result, callbacks());
 
-      expect(resolver.ensureModelLoaded).toHaveBeenCalledWith("test/type");
+      expect(resolver.recoverMissingModel).toHaveBeenCalledWith(
+        "test/type",
+        undefined,
+      );
       expect(queue.retryJob).toHaveBeenCalledWith(job.id, expect.any(Object));
     });
 
-    it("falls through to terminal failure when ensureModelLoaded throws", async () => {
-      vi.mocked(resolver.ensureModelLoaded).mockRejectedValue(
+    it("falls through to terminal failure when recoverMissingModel throws", async () => {
+      vi.mocked(resolver.recoverMissingModel).mockRejectedValue(
         new Error("load failed"),
       );
       const error = new ModuleNotFoundError("bad/type");
@@ -221,7 +225,7 @@ describe("JobResultHandler", () => {
 
       await handler.handleResult(handle, result, callbacks());
 
-      expect(resolver.ensureModelLoaded).toHaveBeenCalled();
+      expect(resolver.recoverMissingModel).toHaveBeenCalled();
       expect(jobTracker.markFailed).toHaveBeenCalledWith(
         job.id,
         expect.any(Object),

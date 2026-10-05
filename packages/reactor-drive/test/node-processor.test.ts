@@ -3,6 +3,8 @@ import {
   addRelationshipAction,
   ConsistencyTracker,
   createDocumentAction,
+  REACTOR_SCHEMA,
+  runMigrations,
   deleteDocumentAction,
   removeRelationshipAction,
   type IOperationIndex,
@@ -11,6 +13,7 @@ import {
 import {
   actions as documentModelActions,
   generateId,
+  purgeDocumentAction,
   type Operation,
   type OperationContext,
   type OperationWithContext,
@@ -56,6 +59,44 @@ function wrap(
   return { operation: op, context: makeContext(documentId, "document") };
 }
 
+function fileRelationship(
+  driveId: string,
+  fileId: string,
+  parentFolderId: string | null = null,
+) {
+  return wrap(
+    addRelationshipAction(driveId, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
+      kind: "file",
+      parentFolderId,
+      documentType: "powerhouse/document-model",
+    }),
+    driveId,
+  );
+}
+
+function named(documentId: string, name: string) {
+  return wrap(
+    createDocumentAction({
+      model: "powerhouse/document-model",
+      version: 0,
+      documentId,
+      name,
+    }),
+    documentId,
+  );
+}
+
+function marker(documentId: string) {
+  return wrap(
+    purgeDocumentAction({
+      documentId,
+      documentType: "powerhouse/reactor-drive",
+      requestId: "request-1",
+    }),
+    documentId,
+  );
+}
+
 describe("NodeProcessor", () => {
   let pg: PGlite;
   let db: Kysely<NodeProcessorDatabase>;
@@ -67,6 +108,7 @@ describe("NodeProcessor", () => {
     db = new Kysely<NodeProcessorDatabase>({
       dialect: new PGliteDialect(pg),
     });
+    await runMigrations(db, REACTOR_SCHEMA);
 
     await db.schema
       .createTable("ViewState")
@@ -652,5 +694,177 @@ describe("NodeProcessor", () => {
       .where("docId", "=", docId)
       .executeTakeFirst();
     expect(docName?.name).toBe("Renamed");
+  });
+  it("commits a copied subtree larger than the chunk size all at once", async () => {
+    const driveId = "drive-1";
+    const batch: OperationWithContext[] = [];
+
+    for (let i = 0; i < 55; i++) {
+      batch.push(
+        wrap(
+          addFolderAction({
+            folderId: `copied-folder-${i}`,
+            parentFolderId: null,
+            name: `Copied ${i}`,
+          }),
+          driveId,
+        ),
+      );
+    }
+
+    batch.push(
+      wrap(
+        addRelationshipAction(
+          driveId,
+          "copied-file",
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+          { kind: "file", parentFolderId: null } as unknown as Record<
+            string,
+            unknown
+          >,
+        ),
+        driveId,
+      ),
+    );
+
+    await expect(processor.indexOperations(batch)).rejects.toThrow(
+      /documentType/,
+    );
+
+    const rows = await db.selectFrom("DriveNode").selectAll().execute();
+    expect(rows).toHaveLength(0);
+
+    const viewState = await db
+      .selectFrom("ViewState")
+      .select("lastOrdinal")
+      .where("readModelId", "=", "reactor-drive-node-processor")
+      .executeTakeFirst();
+    expect(viewState?.lastOrdinal).toBe(0);
+  });
+
+  describe("purge", () => {
+    async function tombstone(documentId: string): Promise<void> {
+      await (db.withSchema(REACTOR_SCHEMA) as unknown as Kysely<any>)
+        .insertInto("document_purges")
+        .values({
+          documentId,
+          ordinal: 1,
+          removedRows: JSON.stringify({}),
+          purgedAtUtc: new Date(),
+          requestId: "request-1",
+        })
+        .execute();
+    }
+
+    async function nodesOf(id: string) {
+      return db
+        .selectFrom("DriveNode")
+        .selectAll()
+        .where((eb) => eb.or([eb("id", "=", id), eb("driveId", "=", id)]))
+        .execute();
+    }
+
+    async function nameOf(docId: string) {
+      return db
+        .selectFrom("DocumentName")
+        .select("name")
+        .where("docId", "=", docId)
+        .executeTakeFirst();
+    }
+
+    async function seedTwoDrives(): Promise<void> {
+      await processor.indexOperations([
+        named("drive-a", "Drive A"),
+        named("file-1", "Secret"),
+        wrap(
+          addFolderAction({ folderId: "fa", parentFolderId: null, name: "A" }),
+          "drive-a",
+        ),
+        wrap(
+          addFolderAction({
+            folderId: "fa-2",
+            parentFolderId: "fa",
+            name: "B",
+          }),
+          "drive-a",
+        ),
+        fileRelationship("drive-a", "file-1", "fa-2"),
+        wrap(
+          addFolderAction({ folderId: "fb", parentFolderId: null, name: "B" }),
+          "drive-b",
+        ),
+        fileRelationship("drive-b", "file-1"),
+      ]);
+    }
+
+    it("erases a purged file's node in every drive and its name", async () => {
+      await seedTwoDrives();
+      expect(await nodesOf("file-1")).toHaveLength(2);
+
+      await tombstone("file-1");
+      await processor.indexOperations([marker("file-1")]);
+
+      expect(await nodesOf("file-1")).toHaveLength(0);
+      expect(await nameOf("file-1")).toBeUndefined();
+      expect(await nodesOf("drive-a")).toHaveLength(2);
+      expect(await nodesOf("drive-b")).toHaveLength(1);
+    });
+
+    it("erases a purged drive's folders, file nodes and name", async () => {
+      await seedTwoDrives();
+      expect(await nodesOf("drive-a")).toHaveLength(3);
+
+      await tombstone("drive-a");
+      await processor.indexOperations([marker("drive-a")]);
+
+      expect(await nodesOf("drive-a")).toHaveLength(0);
+      expect(await nameOf("drive-a")).toBeUndefined();
+      expect(await nodesOf("drive-b")).toHaveLength(2);
+      expect(await nameOf("file-1")).toEqual({ name: "Secret" });
+    });
+
+    it("applies the marker a second time as a no-op", async () => {
+      await seedTwoDrives();
+      await tombstone("drive-a");
+      await processor.indexOperations([marker("drive-a")]);
+
+      await expect(
+        processor.indexOperations([marker("drive-a")]),
+      ).resolves.toBeUndefined();
+
+      expect(await nodesOf("drive-a")).toHaveLength(0);
+      expect(await nodesOf("drive-b")).toHaveLength(2);
+      expect(await nameOf("file-1")).toEqual({ name: "Secret" });
+    });
+
+    it("skips a drive's ADD_RELATIONSHIP to a purged child", async () => {
+      await tombstone("file-1");
+
+      await processor.indexOperations([
+        named("file-1", "Secret"),
+        wrap(
+          addFolderAction({ folderId: "fa", parentFolderId: null, name: "A" }),
+          "drive-a",
+        ),
+        fileRelationship("drive-a", "file-1", "fa"),
+        fileRelationship("drive-a", "file-2", "fa"),
+      ]);
+
+      expect(await nodesOf("file-1")).toHaveLength(0);
+      expect(await nameOf("file-1")).toBeUndefined();
+      const ids = (await nodesOf("drive-a")).map((row) => row.id).sort();
+      expect(ids).toEqual(["fa", "file-2"]);
+    });
+
+    it("clears a deleted drive's folders on DELETE_DOCUMENT", async () => {
+      await seedTwoDrives();
+
+      await processor.indexOperations([
+        wrap(deleteDocumentAction("drive-a"), "drive-a"),
+      ]);
+
+      expect(await nodesOf("drive-a")).toHaveLength(0);
+      expect(await nodesOf("drive-b")).toHaveLength(2);
+    });
   });
 });

@@ -25,6 +25,7 @@ export {
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type ProtocolSelection,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
@@ -62,6 +63,7 @@ export {
   type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type DegradedComponent,
   type ExecutionJobPlan,
   type InProcessReactorClientModule,
   type InProcessReactorModule,
@@ -84,7 +86,13 @@ export {
   parseDriveUrl,
   type ParsedDriveUrl,
 } from "./src/shared/drive-url.js";
-export { AuthEnforcementDisabledError } from "./src/shared/errors.js";
+export {
+  AuthEnforcementDisabledError,
+  InvalidSignatureError,
+  RelationshipNotFoundError,
+  UnsupportedStoredProtocolError,
+} from "./src/shared/errors.js";
+export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
@@ -95,21 +103,34 @@ export {
   type ConsistencyKey,
   type ConsistencyToken,
   type JobInfo,
+  type JobResultSummary,
   type PagedResults,
   type PagingOptions,
   type SearchFilter,
   type ShutdownStatus,
+  type SubmittedActionResult,
   type ViewFilter,
 } from "./src/shared/types.js";
 export {
+  SIGNATURE_REFUSAL_CODES,
+  type AdmissionPath,
+  type SignatureRefusalCode,
+  type SignatureScheme,
   type SignatureVerificationHandler,
+  type SignatureTrustPolicy,
+  type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";
+export {
+  verifyActionSignature,
+  type VerificationTarget,
+} from "./src/signer/verify-action-signature.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";
 export { ReactorSubscriptionManager } from "./src/subs/react-subscription-manager.js";
 export {
+  type DocumentDeletedInfo,
   type IReactorSubscriptionManager,
   type ISubscriptionErrorHandler,
   type SubscriptionErrorContext,
@@ -129,8 +150,11 @@ export {
   type JobFailedEvent as ReactorJobFailedEvent,
   type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
+  type CatchUpSweptEvent,
+  type PurgeMarkerContext,
   type ReadModelStage,
   type ReadModelIndexingStage,
+  type SignatureRefusedEvent,
   type Unsubscribe,
 } from "./src/events/types.js";
 
@@ -142,6 +166,8 @@ export {
   RetryAccounting,
   type Job,
   type JobAvailableEvent,
+  type JobKind,
+  type PurgeJobOptions,
 } from "./src/queue/types.js";
 
 // Job Tracker
@@ -204,7 +230,6 @@ export type {
   ResultMessage,
   SanitizedArg,
   ShutdownMessage,
-  SignatureVerifierSpec,
   WorkerMessage,
   WorkerPoolConfig,
 } from "./src/executor/worker/protocol.js";
@@ -216,6 +241,7 @@ export {
   DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
+  ModelNotWorkerImportableError,
   ModuleNotFoundError,
   NullDocumentModelResolver,
   type IDocumentModelLoader,
@@ -285,6 +311,7 @@ export {
   SeededStateReader,
   type IReadGate,
   type ReadGateOptions,
+  type SubjectScopePredicate,
 } from "./src/decision/read-gate.js";
 export { SyncScopeGate } from "./src/decision/sync-scope-gate.js";
 export {
@@ -306,9 +333,21 @@ export type {
 } from "./src/storage/kysely/types.js";
 
 // Read Models
-export { BaseReadModel } from "./src/read-models/base-read-model.js";
+export {
+  BaseReadModel,
+  DEFAULT_COMMIT_CHUNK_SIZE,
+  DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+  defaultReadModelIndexingConfig,
+  unchunkedReadModelIndexingConfig,
+  type BaseReadModelConfig,
+  type PurgeFence,
+  type ReadModelIndexingConfig,
+} from "./src/read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
-export { KyselyDocumentView } from "./src/read-models/document-view.js";
+export {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "./src/read-models/document-view.js";
 export {
   supportsLiveReadModelRegistration,
   type ILiveReadModelCoordinator,
@@ -351,9 +390,18 @@ export {
 // Synchronization
 export {
   KyselySyncCursorStorage,
+  KyselySyncHoldStorage,
+  KyselySyncPurgeRefusalStorage,
+  KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
+  type ISyncHoldStorage,
+  type ISyncPurgeRefusalStorage,
+  type ISyncReceivedMarkerStorage,
   type ISyncRemoteStorage,
+  type PurgeRefusalRecord,
+  type ReceivedMarkerRecord,
+  type SyncHoldRecord,
 } from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
@@ -368,6 +416,7 @@ export {
   GqlResponseChannelFactory,
   IntervalPollTimer,
   DRIVE_AUTH_ERROR_MESSAGES,
+  DriveRequestError,
   isDriveAuthError,
   isRecoverableGraphQLError,
   RECOVERABLE_GRAPHQL_ERROR_CODES,
@@ -406,10 +455,33 @@ export {
   quarantinesDocument,
   syncOperationErrorType,
   type RemoteFilter,
+  type LocalPeer,
   type RemoteOptions,
+  type RemotePeer,
   type RemoteRecord,
   type RemoteStatus,
   type SyncEnvelope,
+  type SyncHeldEvent,
+  type SyncHold,
+  type SyncPurgeRefusedEvent,
+  type SyncReleasedEvent,
+  type PurgeLookup,
+  type DeliveryLookup,
+  type DeliveryMembership,
+  type DeliveryRow,
+  type IDeliveryTracking,
+  type PendingDelivery,
+  supportsDeliveryTracking,
+  supportsPurgeRefusals,
+  type IPurgeRefusalRecorder,
+  MAX_POLLED_REFUSALS,
+  type PolledMarkerRefusal,
+  InMemorySyncPurgeRefusalStorage,
+  type IPeerAgreement,
+  type PeerAgreementBasis,
+  createPeerAgreement,
+  InMemorySyncHoldStorage,
+  InMemorySyncReceivedMarkerStorage,
   type SyncEnvelopeType,
   type SyncFailedEvent,
   type SyncOperationErrorType,
@@ -451,3 +523,44 @@ export type {
   ValidationResult,
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
+export * from "./src/catch-up/index.js";
+
+// Document erasure
+export {
+  isPurgeMarker,
+  PURGE_DOCUMENT,
+  type PurgeDocumentAction,
+  type PurgeDocumentActionInput,
+  type PurgeMarkerOperation,
+} from "@powerhousedao/shared/document-model";
+export {
+  DocumentNotDeletedError,
+  DocumentPurgedError,
+  GroupInUseError,
+  PurgeTooLargeError,
+  ReservedActionError,
+} from "./src/shared/errors.js";
+export {
+  acquirePurgeLocks,
+  findPurged,
+  listPurged,
+  PURGE_LOCK_BUCKETS,
+  PURGE_NS,
+  type PurgeLockMode,
+} from "./src/storage/kysely/document-purges.js";
+export type {
+  DocumentPurgeRow,
+  PurgeRemovedRows,
+} from "./src/storage/kysely/types.js";
+export {
+  appliedDelete,
+  DEFAULT_PURGE_DELETE_BATCH,
+  KyselyDocumentPurger,
+  type CollectionMember,
+  type PurgeStream,
+} from "./src/storage/kysely/document-purger.js";
+export {
+  DEFAULT_MAX_PURGE_OPERATIONS,
+  DocumentPurgeService,
+  type EnqueuePurgeOptions,
+} from "./src/admin/document-purge-service.js";

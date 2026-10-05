@@ -1,0 +1,3 @@
+# A missing module must fail, not trigger bun auto-install.
+[install]
+auto = "disable"

@@ -1,5 +1,4 @@
 import type { InProcessReactorModule } from "@powerhousedao/reactor";
-import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
@@ -8,6 +7,7 @@ import type {
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
 import { DOCUMENT_MODELS, NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
+import { buildSignedReactor } from "../signed-reactor.js";
 import {
   cpForce,
   loadDocumentModelsInDir,
@@ -33,24 +33,6 @@ async function generateDocModelProject(outDirName: string) {
   await loadDocumentModelsInDir(DOCUMENT_MODELS, outDir);
   await runTsc(outDir);
   return outDir;
-}
-
-/**
- * Polls an assertion function until it passes or the timeout is reached.
- */
-async function waitFor(fn: () => void, timeout = 5000) {
-  const start = Date.now();
-  let lastError: unknown;
-  while (Date.now() - start < timeout) {
-    try {
-      fn();
-      return;
-    } catch (e) {
-      lastError = e;
-      await new Promise((r) => setTimeout(r, 50));
-    }
-  }
-  throw lastError;
 }
 
 describe("document model e2e integration", () => {
@@ -135,33 +117,25 @@ describe("document model e2e integration", () => {
     const { BillingStatement } = docModelModule;
 
     // Build a reactor with the generated document model and the drive model
-    reactorModule = await new ReactorBuilder()
-      .withDocumentModelSources([
-        driveDocumentModelModule as unknown as DocumentModelModule,
-        BillingStatement,
-      ])
-      .buildModule();
+    const signed = await buildSignedReactor([
+      driveDocumentModelModule as unknown as DocumentModelModule,
+      BillingStatement,
+    ]);
+    reactorModule = signed.reactorModule;
 
     // Create a document using the generated utils and track its id
     const initialDoc = BillingStatement.utils.createDocument();
     const docId = initialDoc.header.id;
-    await reactorModule.reactor.create(initialDoc);
-
-    // Wait for the document to be readable
-    await waitFor(async () => {
-      const doc = (await reactorModule!.reactor.get(docId)) as PHDocument;
-      expect(doc).toBeDefined();
-    });
+    const created = await signed.client.create(initialDoc);
+    expect(created.header.id).toBe(docId);
 
     // Execute an action through the reactor
-    await reactorModule.reactor.execute(docId, "main", [
+    await signed.client.execute(docId, "main", [
       BillingStatement.actions.editStatus({ status: "ISSUED" }),
     ]);
 
     // Read the document back and verify state changed
-    await waitFor(async () => {
-      const result = (await reactorModule!.reactor.get(docId)) as PHDocument;
-      expect(scopeState(result, "global").status).toBe("ISSUED");
-    });
+    const result = await signed.client.get<PHDocument>(docId);
+    expect(scopeState(result, "global").status).toBe("ISSUED");
   });
 });

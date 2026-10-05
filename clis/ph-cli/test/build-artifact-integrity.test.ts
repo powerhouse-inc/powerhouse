@@ -115,6 +115,8 @@ describe("published source maps", () => {
           configFile: join(fixture.root, "powerhouse.config.json"),
           source: [],
           warningsAsErrors: false,
+          noSharedDeps: false,
+          ignoreTypeErrors: false,
         },
         { steps, log: () => undefined },
       );
@@ -272,6 +274,8 @@ describe("generation queue recovery", () => {
       configFile: join(fixture.root, "powerhouse.config.json"),
       outDir: "dist",
       warningsAsErrors: false,
+      noSharedDeps: false,
+      ignoreTypeErrors: false,
       promoteOutput: false,
       steps,
       log: () => undefined,

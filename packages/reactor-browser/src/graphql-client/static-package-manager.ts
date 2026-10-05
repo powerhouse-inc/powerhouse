@@ -58,6 +58,10 @@ export class StaticPackageManager implements IPackageManager {
     return undefined;
   }
 
+  getPackageSpec(_packageName: string): string | undefined {
+    return undefined;
+  }
+
   getRegistryPackages(): { name: string; version: string | undefined }[] {
     return [];
   }

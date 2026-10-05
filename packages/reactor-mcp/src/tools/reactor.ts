@@ -8,10 +8,14 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
+  AuthSubject,
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { createAction } from "@powerhousedao/shared/document-model";
+import {
+  createAction,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { inspectableDefinition } from "document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
@@ -22,6 +26,12 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 export type ReactorMcpProviderOptions = {
   client: IReactorClient;
   syncManager?: ISyncManager;
+  /**
+   * Who the tools read as. A server shared by many callers must set it, an
+   * anonymous one to an empty subject. Omitted, reads fall back to the
+   * client's signer, which only a single-user local reactor should rely on.
+   */
+  subject?: AuthSubject;
 };
 
 export const createDocumentTool = {
@@ -377,8 +387,8 @@ const _allTools = [
 export type ReactorMcpTools = ToolRecord<typeof _allTools>;
 
 export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
-  const { client, syncManager } = options;
-  // No initialization needed - client is already initialized
+  const { client, syncManager, subject } = options;
+  const view = subject ? { subject } : undefined;
 
   function getDocumentModelModule(documentType: string) {
     return client.getDocumentModelModule(documentType);
@@ -386,7 +396,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
   const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
-      const document = await client.get<PHDocument>(params.id);
+      const document = await client.get<PHDocument>(params.id, view);
       return { document: { header: document.header, state: document.state } };
     }),
 
@@ -398,7 +408,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
             `Document model for type '${params.documentType}' not found`,
           );
         }
-        const document = module.utils.createDocument();
+        const document = withSignaturePolicy(
+          module.utils.createDocument(),
+          await client.getCreateSignaturePolicy(),
+        );
         if (params.name) {
           document.header.name = params.name;
         }
@@ -418,6 +431,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       const result = await client.getOutgoingRelationships(
         params.parentId,
         "child",
+        view,
       );
       const documentIds = result.results.map((doc) => doc.header.id);
       return { documentIds };
@@ -425,6 +439,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
     deleteDocument: toolWithCallback(deleteDocumentTool, async (params) => {
       try {
+        // Routes the delete through the drive; nothing read here is returned.
         const incoming = await client.getIncomingRelationships(
           params.documentId,
           "child",
@@ -447,7 +462,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     }),
 
     addActions: toolWithCallback(addActionsTool, async (params) => {
-      const document = await client.get<PHDocument>(params.documentId);
+      const document = await client.get<PHDocument>(params.documentId, view);
       const documentModel = await getDocumentModelModule(
         document.header.documentType,
       );
@@ -477,7 +492,13 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       });
 
       // Execute actions on the document using the "main" branch
-      await client.execute(params.documentId, "main", actions);
+      await client.execute(
+        params.documentId,
+        "main",
+        actions,
+        undefined,
+        subject,
+      );
 
       return {
         success: true,
@@ -487,7 +508,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     // Drive operation implementations
     getDrives: toolWithCallback(getDrivesTool, async () => {
       // Find all documents of type "powerhouse/document-drive"
-      const result = await client.find({ type: DRIVE_DOCUMENT_TYPE });
+      const result = await client.find({ type: DRIVE_DOCUMENT_TYPE }, view);
       const driveIds = result.results.map((doc: PHDocument) => doc.header.id);
       return { driveIds };
     }),
@@ -522,14 +543,17 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         );
       }
       if (actions.length > 0) {
-        await client.execute(driveId, "main", actions);
+        await client.execute(driveId, "main", actions, undefined, subject);
       }
 
       return { driveId };
     }),
 
     getDrive: toolWithCallback(getDriveTool, async (params) => {
-      const drive = await client.get<DocumentDriveDocument>(params.driveId);
+      const drive = await client.get<DocumentDriveDocument>(
+        params.driveId,
+        view,
+      );
       return { drive: { header: drive.header, state: drive.state } };
     }),
 

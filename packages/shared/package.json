@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.2.2-dev.87",
+  "version": "6.2.3-dev.43",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -122,9 +122,14 @@
     "./build-config": {
       "source": "./clis/build-config.mts",
       "import": "./dist/clis/build-config.mjs"
+    },
+    "./build-pieces": {
+      "source": "./clis/build-pieces.mts",
+      "import": "./dist/clis/build-pieces.mjs"
     }
   },
   "dependencies": {
+    "@noble/hashes": "^1.8.0",
     "cross-spawn": "catalog:",
     "dotenv": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
@@ -141,6 +146,7 @@
     "package-manager-detector": "catalog:",
     "remeda": "catalog:",
     "safe-stable-stringify": "^2.4.3",
+    "semver": "catalog:",
     "sha1-uint8array": "^0.10.7",
     "write-package": "catalog:",
     "zocker": "catalog:",

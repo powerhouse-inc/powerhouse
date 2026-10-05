@@ -1,4 +1,5 @@
 export * from "./common.js";
+export * from "./constants.js";
 export * from "./credential.js";
 export * from "./crypto/index.js";
 export * from "./discovery.js";
@@ -6,6 +7,8 @@ export * from "./init.browser.js";
 export * from "./local-credential-verifier.js";
 export * from "./profile.js";
 export * from "./renown-builder.js";
+export * from "./signed-message.js";
+export * from "./signer-trust.js";
 // Types only: the cookie payload is a contract the browser writes and the node
 // entry reads, but its verification logic stays server-side.
 export type { RenownSessionCookie, RenownSessionProfile } from "./session.js";

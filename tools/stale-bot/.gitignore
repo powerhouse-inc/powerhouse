@@ -1,0 +1,4 @@
+# Runtime state and logs — never commit.
+state/
+logs/
+*.log

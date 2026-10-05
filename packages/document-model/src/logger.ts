@@ -42,29 +42,25 @@ const formatMessage = (
 ): [string, Record<string, any>] => {
   const meta: Record<string, any> = {};
   const uniqueTokens: string[] = [];
-
-  let results;
-  while ((results = tokenSub.exec(message)) !== null) {
-    const tokenName = results[1];
-    const index = uniqueTokens.indexOf(tokenName);
-    if (index === -1) {
-      uniqueTokens.push(tokenName);
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const replacement = replacements[uniqueTokens.length - 1];
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      meta[tokenName] = replacement;
-    }
+  for (const [, tokenName] of message.matchAll(tokenSub)) {
+    if (!uniqueTokens.includes(tokenName)) uniqueTokens.push(tokenName);
   }
+  const bound = uniqueTokens.slice(0, replacements.length);
+  bound.forEach((tokenName, i) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    meta[tokenName] = replacements[i];
+  });
 
-  // replace
-  for (const [key, value] of Object.entries(meta)) {
-    message = message.replaceAll(`@${key}`, stringify(value, includeStack));
-  }
+  // Single pass, so substituted values are never re-scanned; unbound tokens stay as written.
+  message = message.replace(tokenSub, (match, tokenName: string) =>
+    Object.hasOwn(meta, tokenName)
+      ? stringify(meta[tokenName], includeStack)
+      : match,
+  );
 
   // Any replacements past the unique-token count would otherwise be
   // silently dropped — append them so positional Errors still surface.
-  const extras = replacements.slice(uniqueTokens.length);
+  const extras = replacements.slice(bound.length);
   if (extras.length > 0) {
     message = `${message} ${extras.map((v) => stringify(v, includeStack)).join(" ")}`;
   }
@@ -128,7 +124,7 @@ export class ConsoleLogger implements ILogger {
     return this.#level <= LOG_LEVELS.debug;
   }
 
-  verbose(message: string, ...replacements: any[]): void {
+  verbose = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.verbose) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -139,9 +135,9 @@ export class ConsoleLogger implements ILogger {
 
       console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  debug(message: string, ...replacements: any[]): void {
+  debug = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.debug) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -152,9 +148,9 @@ export class ConsoleLogger implements ILogger {
 
       console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  info(message: string, ...replacements: any[]): void {
+  info = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.info) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -165,9 +161,9 @@ export class ConsoleLogger implements ILogger {
 
       console.info(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  warn(message: string, ...replacements: any[]): void {
+  warn = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.warn) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -178,9 +174,9 @@ export class ConsoleLogger implements ILogger {
 
       console.warn(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  error(message: string, ...replacements: any[]): void {
+  error = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.error) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -191,7 +187,7 @@ export class ConsoleLogger implements ILogger {
 
       console.error(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 }
 
 // Singleton instance

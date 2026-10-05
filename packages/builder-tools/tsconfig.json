@@ -4,11 +4,7 @@
     "outDir": "./.tsbuild"
   },
   "include": ["**/*"],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "connect-utils/service-worker"
-  ],
+  "exclude": ["dist", "node_modules", "connect-utils/service-worker"],
   "references": [
     {
       "path": "../config"

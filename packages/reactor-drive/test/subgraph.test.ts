@@ -37,7 +37,9 @@ describe("reactor-drive subgraph", () => {
     view = new DriveNodeView(db);
     resolvers = createReactorDriveResolvers();
     ctx = {
-      reactorClient: {} as unknown as IReactorClient,
+      reactorClient: {
+        isServed: () => Promise.resolve(true),
+      } as unknown as IReactorClient,
       readModel: view,
     };
   });

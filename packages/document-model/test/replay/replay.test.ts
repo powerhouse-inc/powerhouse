@@ -152,13 +152,11 @@ describe("cold prefix replay", () => {
     const redo = outcome("undo-redo").snapshots.at(-1);
     expect(redo?.thrown).toBe("Cannot redo: no operations in the clipboard");
 
-    // Both prune routes crash before commit, identically: the shared
-    // reducer's internal LOAD_STATE uses an older flattened shape than the
-    // loader expects. A deferred protocol correction, recorded as it is.
+    // Legacy PRUNE has no reducer handling, so both routes preserve state.
     for (const name of ["prune-global", "prune-local"]) {
-      expect(outcome(name).snapshots.at(-1)?.thrown).toContain(
-        "Cannot read properties of undefined",
-      );
+      const snapshots = outcome(name).snapshots;
+      expect(snapshots.at(-1)?.thrown).toBeNull();
+      expect(snapshots.at(-1)?.state).toBe(snapshots.at(-2)?.state);
     }
 
     // A document action reaches the header rather than the state reducer.

@@ -45,5 +45,11 @@ export async function formatSafe(
  * behavior can drift from the version the boilerplate depends on.
  */
 export async function runOxfmt() {
-  await spawnAsync("npx", [`oxfmt@${externalDevDependencies.oxfmt}`, "."]);
+  // oxfmt honours parent .gitignore files up to the git root, so a project
+  // without its own repo inside an ignored directory matches no files.
+  await spawnAsync("npx", [
+    `oxfmt@${externalDevDependencies.oxfmt}`,
+    "--no-error-on-unmatched-pattern",
+    ".",
+  ]);
 }

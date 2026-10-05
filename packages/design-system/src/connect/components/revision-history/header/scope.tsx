@@ -1,15 +1,21 @@
 import { ConnectSelect } from "../../select/select.js";
 
 type Props = {
+  readonly scopes: readonly string[];
   readonly value: string;
   readonly onChange: (value: string) => void;
 };
+
+function labelFor(scope: string) {
+  return `${scope.charAt(0).toUpperCase()}${scope.slice(1)} scope`;
+}
+
 export function Scope(props: Props) {
-  const { value, onChange } = props;
-  const items = [
-    { displayValue: "Global scope", value: "global" },
-    { displayValue: "Local scope", value: "local" },
-  ] as const;
+  const { scopes, value, onChange } = props;
+  const items = scopes.map((scope) => ({
+    displayValue: labelFor(scope),
+    value: scope,
+  }));
 
   return (
     <ConnectSelect

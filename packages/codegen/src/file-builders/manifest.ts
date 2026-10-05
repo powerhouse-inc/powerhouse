@@ -1,8 +1,4 @@
-import type {
-  ConfigEntry,
-  Manifest,
-  PowerhouseModule,
-} from "@powerhousedao/shared";
+import type { ConfigEntry, Manifest } from "@powerhousedao/shared";
 import { defaultManifest, fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
 import { loadJsonFile } from "load-json-file";
@@ -30,11 +26,16 @@ export async function getOrCreateManifestFile(
   return ManifestSchema.parse(manifestFile);
 }
 
-function makeUpdatedModulesList(
-  oldModules: PowerhouseModule[] = [],
-  newModules: PowerhouseModule[] = [],
-): PowerhouseModule[] {
-  return pipe(concat(oldModules, newModules), uniqueBy(prop("id")));
+// Generic over the entry: a `pieces` entry carries fields `PowerhouseModule`
+// has no room for, and the widened return type would drop them.
+function makeUpdatedModulesList<T extends { id: string }>(
+  oldModules: T[] = [],
+  newModules: T[] = [],
+): T[] {
+  return pipe(
+    concat(oldModules, newModules),
+    uniqueBy((module) => module.id),
+  );
 }
 /* Updates the config field of powerhouse.manifest.json assuming unique `name` fields in the `ConfigEntry` objects */
 function makeUpdatedConfig(
@@ -57,7 +58,13 @@ function makeUpdatedConfig(
  */
 export async function pruneManifestSection(
   projectDir: string,
-  kind: "documentModels" | "editors" | "apps" | "processors" | "subgraphs",
+  kind:
+    | "documentModels"
+    | "editors"
+    | "apps"
+    | "processors"
+    | "subgraphs"
+    | "pieces",
   validIds: readonly string[],
 ): Promise<void> {
   const manifestPath = join(projectDir, "powerhouse.manifest.json");
@@ -106,6 +113,17 @@ export async function createOrUpdateManifest(
       existingManifest.subgraphs,
       manifestData.subgraphs,
     ),
+    // Materialized only when there is something to put in it: a project that
+    // ships no piece should not grow an empty array on an unrelated run.
+    ...(existingManifest.pieces !== undefined ||
+    manifestData.pieces !== undefined
+      ? {
+          pieces: makeUpdatedModulesList(
+            existingManifest.pieces,
+            manifestData.pieces,
+          ),
+        }
+      : {}),
     config: makeUpdatedConfig(existingManifest.config, manifestData.config),
   };
   await writeJsonFile(manifestPath, updatedManifest, { indent: 2 });

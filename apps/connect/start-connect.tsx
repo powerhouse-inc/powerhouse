@@ -1,15 +1,18 @@
 import type { DocumentModelLib } from "@powerhousedao/shared/document-model";
-import { createRoot } from "react-dom/client";
-import { loadRuntimeConfig } from "./src/runtime-config.js";
+import { bootConnect } from "./src/boot.js";
 
-// Bootstrap the runtime config BEFORE the React tree imports. Any module that
-// imports start-connect.tsx — including the codegen-generated main.tsx —
-// suspends on this top-level await, so by the time the dynamic import of
-// AppLoader resolves, the ConfigLoader cache is warm and connect.config.ts
-// can read getRuntimeConfig() synchronously at module evaluation.
-await loadRuntimeConfig();
+// Paint the config-independent skeleton, then bootstrap the runtime config,
+// BEFORE the React tree imports. Any module that imports start-connect.tsx —
+// including the codegen-generated main.tsx — suspends on this top-level await,
+// so by the time the dynamic import of AppLoader resolves, the ConfigLoader
+// cache is warm and connect.config.ts can read getRuntimeConfig()
+// synchronously at module evaluation.
+const root = await bootConnect();
 
-const { AppLoader } = await import("./src/components/index.js");
+// `null` means startup failed and bootConnect has painted the error state; the
+// app graph must not be imported, since its modules read the config at
+// module-evaluation and would throw.
+const components = root ? await import("./src/components/index.js") : null;
 
 /* Starts your local dev server for Connect.
  *
@@ -50,13 +53,13 @@ function updateLocalPackage(pkg: DocumentModelLib<any> | ModuleNamespace) {
 }
 
 export function startConnect(localPackage: DocumentModelLib<any>) {
-  if (!window.ph) {
-    window.ph = {};
+  // Rendered into the same root the skeleton was painted into, so the swap is
+  // a reconciliation rather than a second mount point.
+  if (root && components) {
+    root.render(
+      <components.AppLoader localPackage={localPackage as DocumentModelLib} />,
+    );
   }
-
-  createRoot(document.getElementById("root")!).render(
-    <AppLoader localPackage={localPackage as DocumentModelLib} />,
-  );
 
   return {
     updateLocalPackage,

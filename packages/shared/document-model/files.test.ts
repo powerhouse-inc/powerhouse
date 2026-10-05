@@ -4,6 +4,7 @@ import { createBaseState } from "./state.js";
 import { createPresignedHeader } from "./header.js";
 import {
   createZip,
+  documentModelLoadFromInput,
   isDocumentZip,
   parseBulkArchive,
   zipEntries,
@@ -43,6 +44,14 @@ describe("isDocumentZip", () => {
 
   it("is false for non-zip bytes", async () => {
     expect(await isDocumentZip(strToU8("this is not a zip"))).toBe(false);
+  });
+});
+
+describe("documentModelLoadFromInput", () => {
+  it("rejects with fflate's invalid-zip error for non-zip bytes", async () => {
+    await expect(
+      documentModelLoadFromInput(strToU8("this is not a zip")),
+    ).rejects.toThrow("invalid zip data");
   });
 });
 

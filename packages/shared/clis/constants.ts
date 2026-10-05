@@ -94,6 +94,7 @@ export const ANALYTICS_ENGINE_CORE_PACKAGE =
   "@powerhousedao/analytics-engine-core";
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
+export const PIECES_FRAMEWORK_PACKAGE = "@powerhousedao/pieces-framework";
 
 // External peerDependencies of every generated project.
 // `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
@@ -109,15 +110,28 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
   zod: { peer: "^4", dev: "4.3.6" },
 } as const satisfies Record<string, PeerSpec>;
 
-// Per-feature deps added dynamically by codegen when required.
+// Per-feature deps added dynamically by codegen when required. `devVersioned`
+// is for a workspace package the build inlines, which no consumer provides.
 export const FEATURE_DEPENDENCIES = {
   analyticsProcessor: {
     peerVersioned: [ANALYTICS_ENGINE_CORE_PACKAGE],
     peerExternal: {},
+    devVersioned: [],
+  },
+  // Each piece is bundled whole (build-pieces.mts), framework included, so the
+  // framework is only ever needed to compile the piece's own source.
+  piece: {
+    peerVersioned: [],
+    peerExternal: {},
+    devVersioned: [PIECES_FRAMEWORK_PACKAGE],
   },
 } as const satisfies Record<
   string,
-  { peerVersioned: readonly string[]; peerExternal: Record<string, PeerSpec> }
+  {
+    peerVersioned: readonly string[];
+    peerExternal: Record<string, PeerSpec>;
+    devVersioned: readonly string[];
+  }
 >;
 
 export const VERSIONED_DEPENDENCIES = [
@@ -201,6 +215,17 @@ export const packageJsonExports = {
     browser: "./dist/browser/processors/index.js",
     node: "./dist/node/processors/index.mjs",
   },
+  // Node only, as the build is: a piece is loaded by a host process, never by
+  // the browser. Without these a package can build a piece and still fail the
+  // `packageName/pieces` import a host resolves it through.
+  "./pieces": {
+    types: "./dist/types/pieces/index.d.ts",
+    node: "./dist/node/pieces/index.mjs",
+  },
+  "./pieces/*": {
+    types: "./dist/types/pieces/*/index.d.ts",
+    node: "./dist/node/pieces/*/index.mjs",
+  },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css",
 } as const;
@@ -278,11 +303,11 @@ export const externalDevDependencies = {
   "@types/react-dom": "^19.2.3",
   "@vitejs/plugin-react": "^6.0.1",
   "@vitest/coverage-v8": "4.1.1",
-  oxfmt: "0.55.0",
+  oxfmt: "0.68.0",
   oxlint: "1.70.0",
   "oxlint-tsgolint": "0.23.0",
   tailwindcss: "^4.1.16",
-  typescript: "^5.9.3",
+  typescript: "~7.0.2",
   vite: "^8.0.10",
   "vite-tsconfig-paths": "6.1.1",
   vitest: "4.1.1",

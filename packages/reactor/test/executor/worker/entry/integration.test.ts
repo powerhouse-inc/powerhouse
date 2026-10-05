@@ -36,9 +36,6 @@ function makeInitMessage(): InitMessage {
       user: "test",
       password: "test",
     },
-    signatureVerifier: {
-      module: { packageName: "test-verifier", exportName: "factory" },
-    },
     models: [],
   };
 }

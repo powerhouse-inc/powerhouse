@@ -1,3 +1,5 @@
+import type { SignatureRefusalCode } from "../signer/types.js";
+
 /**
  * Error thrown when attempting to access a deleted document.
  */
@@ -132,6 +134,31 @@ export class InvalidOperationTimestampError extends Error {
   }
 }
 
+/** A document requires a protocol version this reactor does not run. Terminal. */
+export class UnsupportedProtocolVersionError extends Error {
+  public readonly documentId: string;
+  public readonly protocol: string;
+  public readonly version: number;
+
+  constructor(documentId: string, protocol: string, version: number) {
+    super(
+      `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`,
+    );
+    this.name = "UnsupportedProtocolVersionError";
+    this.documentId = documentId;
+    this.protocol = protocol;
+    this.version = version;
+
+    Error.captureStackTrace(this, UnsupportedProtocolVersionError);
+  }
+
+  static isError(error: unknown): error is UnsupportedProtocolVersionError {
+    return (
+      Error.isError(error) && error.name === "UnsupportedProtocolVersionError"
+    );
+  }
+}
+
 /**
  * A load would move more operations than the bound allows, indicating a real
  * divergence between local and incoming history. Counts only first-time moves,
@@ -186,20 +213,24 @@ export class CreateDocumentRequiredError extends Error {
   }
 }
 
-/**
- * Error thrown when an operation has an invalid signature.
- */
+/** The message carries the code: only name and message cross the queue. */
 export class InvalidSignatureError extends Error {
   public readonly documentId: string;
+  public readonly code: SignatureRefusalCode;
   public readonly reason: string;
 
-  constructor(documentId: string, reason: string) {
-    super(`Invalid signature in document ${documentId}: ${reason}`);
+  constructor(documentId: string, code: SignatureRefusalCode, reason: string) {
+    super(`Invalid signature in document ${documentId} [${code}]: ${reason}`);
     this.name = "InvalidSignatureError";
     this.documentId = documentId;
+    this.code = code;
     this.reason = reason;
 
     Error.captureStackTrace(this, InvalidSignatureError);
+  }
+
+  static isError(error: unknown): error is InvalidSignatureError {
+    return Error.isError(error) && error.name === "InvalidSignatureError";
   }
 }
 
@@ -268,8 +299,115 @@ export class DocumentNotFoundError extends Error {
     Error.captureStackTrace(this, DocumentNotFoundError);
   }
 
+  /** Also true for DocumentPurgedError: only the name crosses the queue. */
   static isError(error: unknown): error is DocumentNotFoundError {
-    return Error.isError(error) && error.name === "DocumentNotFoundError";
+    return (
+      Error.isError(error) &&
+      (error.name === "DocumentNotFoundError" ||
+        error.name === "DocumentPurgedError")
+    );
+  }
+}
+
+/** The document was purged; readers treat it as absent. Terminal. */
+export class DocumentPurgedError extends DocumentNotFoundError {
+  public readonly purged = true;
+
+  constructor(documentId: string, message?: string) {
+    super(documentId, message ?? `Document ${documentId} was purged`);
+    this.name = "DocumentPurgedError";
+
+    Error.captureStackTrace(this, DocumentPurgedError);
+  }
+
+  static override isError(error: unknown): error is DocumentPurgedError {
+    return Error.isError(error) && error.name === "DocumentPurgedError";
+  }
+}
+
+/** A purge was asked for a document that is not deleted. Terminal. */
+export class DocumentNotDeletedError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string, message?: string) {
+    super(message ?? `Document ${documentId} is not deleted`);
+    this.name = "DocumentNotDeletedError";
+    this.documentId = documentId;
+
+    Error.captureStackTrace(this, DocumentNotDeletedError);
+  }
+
+  static isError(error: unknown): error is DocumentNotDeletedError {
+    return Error.isError(error) && error.name === "DocumentNotDeletedError";
+  }
+}
+
+/** A surviving document's accepted auth history names the group. Terminal. */
+export class GroupInUseError extends Error {
+  public readonly groupId: string;
+  public readonly referencingDocumentIds: readonly string[];
+
+  constructor(groupId: string, referencingDocumentIds: readonly string[]) {
+    super(
+      `Group ${groupId} cannot be purged: the auth history of ${referencingDocumentIds.join(", ")} names it`,
+    );
+    this.name = "GroupInUseError";
+    this.groupId = groupId;
+    this.referencingDocumentIds = referencingDocumentIds;
+
+    Error.captureStackTrace(this, GroupInUseError);
+  }
+
+  static isError(error: unknown): error is GroupInUseError {
+    return Error.isError(error) && error.name === "GroupInUseError";
+  }
+}
+
+/** A purge above maxPurgeOperations without allowLarge. Terminal. */
+export class PurgeTooLargeError extends Error {
+  public readonly documentId: string;
+  public readonly operationCount: number;
+  public readonly maxPurgeOperations: number;
+
+  constructor(
+    documentId: string,
+    operationCount: number,
+    maxPurgeOperations: number,
+  ) {
+    super(
+      `Document ${documentId} has ${operationCount} operations, above the purge limit of ${maxPurgeOperations}; request it with allowLarge`,
+    );
+    this.name = "PurgeTooLargeError";
+    this.documentId = documentId;
+    this.operationCount = operationCount;
+    this.maxPurgeOperations = maxPurgeOperations;
+
+    Error.captureStackTrace(this, PurgeTooLargeError);
+  }
+
+  static isError(error: unknown): error is PurgeTooLargeError {
+    return Error.isError(error) && error.name === "PurgeTooLargeError";
+  }
+}
+
+/** A regular write carried an action type only the reactor issues. Terminal. */
+export class ReservedActionError extends Error {
+  public readonly documentId: string;
+  public readonly actionType: string;
+
+  constructor(documentId: string, actionType: string) {
+    super(
+      `Action ${actionType} is reserved and cannot be submitted to document ${documentId}`,
+    );
+    this.name = "ReservedActionError";
+    this.documentId = documentId;
+    this.actionType = actionType;
+
+    Error.captureStackTrace(this, ReservedActionError);
+  }
+
+  static isError(error: unknown): error is ReservedActionError {
+    return Error.isError(error) && error.name === "ReservedActionError";
   }
 }
 
@@ -304,6 +442,65 @@ export class AuthEnforcementDisabledError extends Error {
   static isError(error: unknown): error is AuthEnforcementDisabledError {
     return (
       Error.isError(error) && error.name === "AuthEnforcementDisabledError"
+    );
+  }
+}
+
+/**
+ * Error thrown when a relationship edge an operation names does not exist.
+ *
+ * Detection is by `name`, not `instanceof`: the SharedWorker RPC boundary
+ * rebuilds a thrown error from `{ name, message, stack, cause }` alone
+ * (`reactor-browser/src/rpc/error-info.ts`), so the class identity is lost in
+ * transit.
+ */
+export class RelationshipNotFoundError extends Error {
+  public readonly sourceId: string;
+  public readonly targetId: string;
+  public readonly relationshipType: string;
+
+  constructor(sourceId: string, targetId: string, relationshipType: string) {
+    super(
+      `No ${relationshipType} relationship from ${sourceId} to ${targetId}`,
+    );
+    this.name = "RelationshipNotFoundError";
+    this.sourceId = sourceId;
+    this.targetId = targetId;
+    this.relationshipType = relationshipType;
+
+    Error.captureStackTrace(this, RelationshipNotFoundError);
+  }
+
+  static isError(error: unknown): error is RelationshipNotFoundError {
+    return Error.isError(error) && error.name === "RelationshipNotFoundError";
+  }
+}
+
+/** The store holds documents at protocol versions this reactor does not run. */
+export class UnsupportedStoredProtocolError extends Error {
+  public readonly versions: readonly { protocol: string; version: number }[];
+  public readonly documents: number;
+
+  constructor(
+    versions: readonly { protocol: string; version: number }[],
+    documents: number,
+  ) {
+    const named = versions
+      .map(({ protocol, version }) => `${protocol} ${version}`)
+      .join(", ");
+    super(
+      `${documents} stored document(s) require ${named}, which this reactor does not run. Start a build that runs them, or accept them read-only with withUnsupportedStoredDocuments("read-only")`,
+    );
+    this.name = "UnsupportedStoredProtocolError";
+    this.versions = versions;
+    this.documents = documents;
+
+    Error.captureStackTrace(this, UnsupportedStoredProtocolError);
+  }
+
+  static isError(error: unknown): error is UnsupportedStoredProtocolError {
+    return (
+      Error.isError(error) && error.name === "UnsupportedStoredProtocolError"
     );
   }
 }

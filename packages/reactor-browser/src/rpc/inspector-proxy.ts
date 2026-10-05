@@ -7,6 +7,8 @@ export interface IInspectorProxy {
   resumeQueue(): Promise<void>;
   getProcessors(): Promise<unknown>;
   retryProcessor(processorId: string): Promise<void>;
+  getCatchUpStatus(): Promise<unknown>;
+  sweepCatchUp(): Promise<unknown>;
   validateDocument(documentId: string, branch?: string): Promise<unknown>;
   rebuildKeyframes(documentId: string, branch?: string): Promise<unknown>;
   rebuildSnapshots(documentId: string, branch?: string): Promise<unknown>;
@@ -23,6 +25,8 @@ export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
     getProcessors: () => ops.call("processors.getAll"),
     retryProcessor: (processorId) =>
       ops.callVoid("processors.retry", [processorId]),
+    getCatchUpStatus: () => ops.call("catchUp.status"),
+    sweepCatchUp: () => ops.call("catchUp.sweepNow"),
     validateDocument: (documentId, branch) =>
       ops.call("integrity.validate", [documentId, branch]),
     rebuildKeyframes: (documentId, branch) =>

@@ -6,3 +6,4 @@ export * from "./folder.js";
 export * from "./navigation.js";
 export * from "./registry.js";
 export * from "./wait.js";
+export * from "./workspace.js";

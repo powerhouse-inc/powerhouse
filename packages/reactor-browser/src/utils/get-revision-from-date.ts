@@ -3,7 +3,7 @@ import type { Operation } from "@powerhousedao/shared/document-model";
 export const getRevisionFromDate = (
   startDate?: Date,
   endDate?: Date,
-  operations: Operation[] = [],
+  operations: readonly Operation[] = [],
 ) => {
   if (!startDate || !endDate) return 0;
 

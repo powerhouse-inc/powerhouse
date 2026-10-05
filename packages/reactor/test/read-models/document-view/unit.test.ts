@@ -2,8 +2,12 @@ import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
-import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import {
   DocumentExistence,
   type IOperationStore,
@@ -27,6 +31,8 @@ describe("KyselyDocumentView Unit Tests", () => {
       getConflicting: vi.fn(),
       getRevisions: vi.fn(),
       getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
+      findOperationIds: vi.fn().mockResolvedValue(new Set()),
+      getOperationsByIds: vi.fn().mockResolvedValue([]),
     };
 
     mockOperationIndex = {
@@ -48,6 +54,11 @@ describe("KyselyDocumentView Unit Tests", () => {
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
       getGroupReferencers: vi.fn().mockResolvedValue([]),
+      getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
+      getCollectionsInRange: vi.fn().mockResolvedValue([]),
+      getOrdinalsInRange: vi.fn().mockResolvedValue([]),
+      getByOrdinals: vi.fn().mockResolvedValue([]),
+      getStreamAfter: vi.fn().mockResolvedValue([]),
     };
 
     mockWriteCache = {
@@ -74,11 +85,10 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockOperationIndex,
       mockWriteCache,
       mockConsistencyTracker,
-      false,
+      DeletedDocumentRead.NotFound,
     );
   });
 
-  /** A view that serves a deleted document's state as of the deletion. */
   function viewServingBoundary(): KyselyDocumentView {
     return new KyselyDocumentView(
       mockDb,
@@ -86,7 +96,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockOperationIndex,
       mockWriteCache,
       mockConsistencyTracker,
-      true,
+      DeletedDocumentRead.StateAtDeletion,
     );
   }
 
@@ -98,6 +108,9 @@ describe("KyselyDocumentView Unit Tests", () => {
       where: vi.fn().mockReturnThis(),
       distinct: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
       execute: vi.fn(),
       executeTakeFirst: vi.fn(),
       insertInto: vi.fn().mockReturnThis(),
@@ -287,9 +300,9 @@ describe("KyselyDocumentView Unit Tests", () => {
     it("should throw when document not found", async () => {
       mockDb.execute.mockResolvedValue([]);
 
-      await expect(view.get("non-existent")).rejects.toThrow(
-        "Document not found: non-existent",
-      );
+      const read = view.get("non-existent");
+      await expect(read).rejects.toThrow(DocumentNotFoundError);
+      await expect(read).rejects.toThrow("Document not found: non-existent");
     });
 
     it("should query all scopes when view.scopes is not specified", async () => {
@@ -669,56 +682,20 @@ describe("KyselyDocumentView Unit Tests", () => {
       expect(result.nextCursor).toBeUndefined();
     });
 
-    it("should deduplicate documents when multiple scopes exist", async () => {
-      const snapshots = [
-        {
-          documentId: "doc-1",
-          scope: "header",
-          content: { id: "doc-1", documentType: "test-type" },
-          branch: "main",
-          ordinal: 1,
-          isDeleted: false,
-          documentType: "test-type",
-          lastUpdatedAt: new Date(),
-        },
-        {
-          documentId: "doc-1",
-          scope: "document",
-          content: {},
-          branch: "main",
-          ordinal: 1,
-          isDeleted: false,
-          documentType: "test-type",
-          lastUpdatedAt: new Date(),
-        },
-        {
-          documentId: "doc-2",
-          scope: "header",
-          content: { id: "doc-2", documentType: "test-type" },
-          branch: "main",
-          ordinal: 1,
-          isDeleted: false,
-          documentType: "test-type",
-          lastUpdatedAt: new Date(),
-        },
-      ];
-      mockDb.execute.mockResolvedValue(snapshots);
+    it("should group snapshot rows by document", async () => {
+      await view.findByType("test-type");
 
-      vi.spyOn(view, "get").mockResolvedValue({
-        header: {
-          protocolVersions: { "base-reducer": 2 },
-          id: "doc-1",
-          documentType: "test-type",
-        },
-        state: {},
-        operations: {},
-        initialState: {},
-        clipboard: [],
-      } as any);
+      expect(mockDb.groupBy).toHaveBeenCalledWith("documentId");
+    });
 
-      const result = await view.findByType("test-type");
+    it("should page in the query and fetch one extra row", async () => {
+      await view.findByType("test-type", undefined, {
+        cursor: "20",
+        limit: 10,
+      });
 
-      expect(result.results).toHaveLength(2);
+      expect(mockDb.offset).toHaveBeenCalledWith(20);
+      expect(mockDb.limit).toHaveBeenCalledWith(11);
     });
 
     it("should skip documents that fail to retrieve", async () => {
@@ -1025,7 +1002,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         },
       ];
 
-      await expect(view.indexOperations(items)).rejects.toThrow(
+      const target = view as unknown as {
+        commitOperations: (i: typeof items) => Promise<void>;
+      };
+      await expect(target.commitOperations(items)).rejects.toThrow(
         "Failed to parse resultingState",
       );
     });

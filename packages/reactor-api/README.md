@@ -1,6 +1,6 @@
 # @powerhousedao/reactor-api
 
-A powerful API server implementation for the Powerhouse ecosystem that provides GraphQL capabilities, document processing, and package management.
+An API server for Powerhouse: GraphQL, document processing and package management.
 
 ## Features
 
@@ -39,11 +39,16 @@ const api = await startAPI(reactor, {
 
 ### API Server
 
-The API server provides a robust Express-based implementation with GraphQL support, authentication middleware, and HTTPS capabilities.
+An Express server with GraphQL, authentication middleware and HTTPS.
 
 ### Package Manager
 
 Manages document models, subgraphs, and processors through a flexible loading system that supports multiple package sources.
+
+It also finds each package's pieces through its `./pieces` export, the built
+`pieces/index.ts` list. It imports only that list, never piece code, reads each
+piece's version from the package's `package.json`, and hands the entry paths to
+the workflow runtime, which runs them in a forked worker.
 
 ### GraphQL Manager
 

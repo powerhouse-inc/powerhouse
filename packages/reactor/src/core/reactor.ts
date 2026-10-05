@@ -9,11 +9,13 @@ import type {
 import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
   addRelationshipAction,
   createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
+  updateRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type { IEventBus } from "../events/interfaces.js";
@@ -21,6 +23,7 @@ import {
   ReactorEventTypes,
   type JobFailedEvent,
   type JobPendingEvent,
+  type Unsubscribe,
 } from "../events/types.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
@@ -42,6 +45,7 @@ import type {
 import { JobStatus } from "../shared/types.js";
 import { matchesScope, throwIfAborted } from "../shared/utils.js";
 import type {
+  DocumentRelationship,
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
@@ -90,6 +94,7 @@ export class Reactor implements IReactor {
   private operationStore: IOperationStore;
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
+  private catchUp: CatchUpScheduler | undefined;
 
   constructor(
     logger: ILogger,
@@ -103,7 +108,12 @@ export class Reactor implements IReactor {
     operationStore: IOperationStore,
     eventBus: IEventBus,
     executorManager: IJobExecutorManager,
+    catchUp?: CatchUpScheduler,
+    private readonly disposers: Unsubscribe[] = [],
+    // Run last on kill(), once nothing routes to what they close.
+    private readonly closers: Array<() => Promise<void>> = [],
   ) {
+    this.catchUp = catchUp;
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
     this.queue = queue;
@@ -148,9 +158,18 @@ export class Reactor implements IReactor {
 
     const shutdownAsync = async () => {
       await this.executorManager.stop(true);
+      for (const dispose of this.disposers) dispose();
 
+      await this.catchUp?.stop();
       this.readModelCoordinator.stop();
       this.jobTracker.shutdown();
+      for (const close of this.closers) {
+        try {
+          await close();
+        } catch (error) {
+          this.logger.error("Shutdown step failed: @Error", error);
+        }
+      }
     };
 
     this.setCompleted(shutdownAsync());
@@ -294,6 +313,46 @@ export class Reactor implements IReactor {
     throwIfAborted(signal, () => new AbortError());
 
     return relationships.results.map((rel) => rel.sourceId);
+  }
+
+  async getOutgoingRelationshipEdges(
+    sourceId: string,
+    relationshipType?: string,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const relationships = await this.documentIndexer.getOutgoing(
+      sourceId,
+      relationshipType ? [relationshipType] : undefined,
+      paging,
+      consistencyToken,
+      signal,
+    );
+
+    throwIfAborted(signal, () => new AbortError());
+
+    return relationships;
+  }
+
+  async getIncomingRelationshipEdges(
+    targetId: string,
+    relationshipType?: string,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const relationships = await this.documentIndexer.getIncoming(
+      targetId,
+      relationshipType ? [relationshipType] : undefined,
+      paging,
+      consistencyToken,
+      signal,
+    );
+
+    throwIfAborted(signal, () => new AbortError());
+
+    return relationships;
   }
 
   async getOperations(
@@ -483,9 +542,15 @@ export class Reactor implements IReactor {
       initialState: document.state,
     });
 
+    const branch = document.header.branch || "main";
     let actions: Action[] = [createAction, upgradeAction];
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: document.header.id, branch },
+        signal,
+      );
     }
 
     const jobId = uuidv4();
@@ -496,7 +561,7 @@ export class Reactor implements IReactor {
       kind: "mutation",
       documentId: document.header.id,
       scope: "document",
-      branch: "main",
+      branch,
       actions,
       operations: [],
       createdAt: new Date().toISOString(),
@@ -540,7 +605,12 @@ export class Reactor implements IReactor {
     let action = deleteDocumentAction(id);
 
     if (signer) {
-      action = await signAction(action, signer, signal);
+      action = await signAction(
+        action,
+        signer,
+        { documentId: id, branch: "main" },
+        signal,
+      );
     }
 
     const jobId = uuidv4();
@@ -752,8 +822,8 @@ export class Reactor implements IReactor {
         throwIfAborted(signal, () => new AbortError());
         const jobPlan = request.jobs.find((j) => j.key === key)!;
         const jobId = planKeyToJobId.get(key)!;
-        const queueHint = jobPlan.dependsOn.map(
-          (depKey) => planKeyToJobId.get(depKey)!,
+        const queueHint = jobPlan.dependsOn.map((depKey) =>
+          planKeyToJobId.get(depKey)!,
         );
         const job: Job = {
           id: jobId,
@@ -893,26 +963,69 @@ export class Reactor implements IReactor {
     sourceId: string,
     targetId: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
     branch: string = "main",
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     this.logger.verbose(
-      "addRelationship(@sourceId, @targetId, @relationshipType, @branch)",
+      "addRelationship(@sourceId, @targetId, @relationshipType, @metadata, @branch)",
       sourceId,
       targetId,
       relationshipType,
+      metadata,
       branch,
     );
 
     throwIfAborted(signal, () => new AbortError());
 
     let actions: Action[] = [
-      addRelationshipAction(sourceId, targetId, relationshipType),
+      addRelationshipAction(sourceId, targetId, relationshipType, metadata),
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: sourceId, branch },
+        signal,
+      );
+    }
+
+    return await this.execute(sourceId, branch, actions, signal);
+  }
+
+  async updateRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
+    branch: string = "main",
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    this.logger.verbose(
+      "updateRelationship(@sourceId, @targetId, @relationshipType, @metadata, @branch)",
+      sourceId,
+      targetId,
+      relationshipType,
+      metadata,
+      branch,
+    );
+
+    throwIfAborted(signal, () => new AbortError());
+
+    let actions: Action[] = [
+      updateRelationshipAction(sourceId, targetId, relationshipType, metadata),
+    ];
+
+    if (signer) {
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: sourceId, branch },
+        signal,
+      );
     }
 
     return await this.execute(sourceId, branch, actions, signal);
@@ -941,7 +1054,12 @@ export class Reactor implements IReactor {
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: sourceId, branch },
+        signal,
+      );
     }
 
     return await this.execute(sourceId, branch, actions, signal);

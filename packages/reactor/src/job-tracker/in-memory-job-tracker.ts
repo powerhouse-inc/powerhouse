@@ -9,6 +9,7 @@ import {
 import {
   createConsistencyToken,
   createEmptyConsistencyToken,
+  summarizeSubmittedActions,
 } from "../executor/util.js";
 import type { Job } from "../queue/types.js";
 import type { ErrorInfo } from "../shared/types.js";
@@ -66,6 +67,13 @@ export class InMemoryJobTracker implements IJobTracker {
         ...job,
         status: JobStatus.WRITE_READY,
         consistencyToken,
+        // A reducer error or a denial leaves the job on its way to READ_READY,
+        // so the status alone cannot tell the caller one of its actions was
+        // rejected. This is where it finds out.
+        result: summarizeSubmittedActions(
+          event.operations,
+          event.submittedActionIds,
+        ),
       });
     }
   }

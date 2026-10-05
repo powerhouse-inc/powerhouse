@@ -1,3 +1,552 @@
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** log moveRelationship failures with their arguments in order ([9a25fe4dca](https://github.com/powerhouse-inc/powerhouse/commit/9a25fe4dca))
+- pass package names, step keys and error text to the logger as arguments ([fd81243791](https://github.com/powerhouse-inc/powerhouse/commit/fd81243791))
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.37 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.36 (2026-10-01)
+
+### 🚀 Features
+
+- **reactor-api:** gate attachment service calls for one subject ([2f8e6bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/2f8e6bdc4b))
+- **reactor-api:** give subgraphs a caller-bound attachment client ([4c299b1197](https://github.com/powerhouse-inc/powerhouse/commit/4c299b1197))
+- **reactor-api:** admit attachment callers by the routes' rule ([7df80f2167](https://github.com/powerhouse-inc/powerhouse/commit/7df80f2167))
+- **reactor-api:** declare caller-bound attachment types ([d6748866bc](https://github.com/powerhouse-inc/powerhouse/commit/d6748866bc))
+
+### 🩹 Fixes
+
+- **reactor-api:** accept any non-signal options object when reading documentId ([8ae4f7dbe0](https://github.com/powerhouse-inc/powerhouse/commit/8ae4f7dbe0))
+- **reactor-api:** read reserve options once before checking and delegating ([af9aa43838](https://github.com/powerhouse-inc/powerhouse/commit/af9aa43838))
+- **reactor-api:** never let an extra context field become the WebSocket caller ([96bcd61eb7](https://github.com/powerhouse-inc/powerhouse/commit/96bcd61eb7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.35 (2026-10-01)
+
+### 🚀 Features
+
+- ⚠️  **registry:** serve every replica from Postgres and S3, processing publishes in a worker ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+- **reactor-api:** name auth subgraph document arguments by what they accept ([f99112f9bd](https://github.com/powerhouse-inc/powerhouse/commit/f99112f9bd))
+- **reactor-api:** name per-model subgraph document arguments by what they accept ([2842b3ef1e](https://github.com/powerhouse-inc/powerhouse/commit/2842b3ef1e))
+- **reactor-api:** name reactor subgraph document arguments by what they accept ([900779e852](https://github.com/powerhouse-inc/powerhouse/commit/900779e852))
+- **reactor-api:** add argument alias helpers for renamed GraphQL arguments ([f280181674](https://github.com/powerhouse-inc/powerhouse/commit/f280181674))
+- **reactor:** persist marker refusals and report polled ones ([26c9bfc91a](https://github.com/powerhouse-inc/powerhouse/commit/26c9bfc91a))
+- **switchboard:** run the privacy add-on behind PH_PRIVACY_ENABLED ([38c9a43856](https://github.com/powerhouse-inc/powerhouse/commit/38c9a43856))
+- **reactor-api:** expose permission rows and their erasure to reactor-privacy ([5855adec4b](https://github.com/powerhouse-inc/powerhouse/commit/5855adec4b))
+- **reactor-privacy:** erase requested documents on a serial schedule ([f4f31289a1](https://github.com/powerhouse-inc/powerhouse/commit/f4f31289a1))
+- **reactor-privacy:** serve disclosure and erasure to supreme admins only ([7a6b5232cb](https://github.com/powerhouse-inc/powerhouse/commit/7a6b5232cb))
+- **reactor-privacy:** scaffold the package and its migration ledger ([152ecff77b](https://github.com/powerhouse-inc/powerhouse/commit/152ecff77b))
+- **reactor-api:** require a document admin for a pushed PURGE_DOCUMENT ([ad7ed375c0](https://github.com/powerhouse-inc/powerhouse/commit/ad7ed375c0))
+- **reactor-drive:** erase a purged document's nodes in NodeProcessor ([5a608e73bf](https://github.com/powerhouse-inc/powerhouse/commit/5a608e73bf))
+- **reactor-attachments:** delete a purged document's attachment references ([4121c83347](https://github.com/powerhouse-inc/powerhouse/commit/4121c83347))
+
+### 🩹 Fixes
+
+- **reactor-api:** link a created document to a drive by its resolved id ([db05e3bd20](https://github.com/powerhouse-inc/powerhouse/commit/db05e3bd20))
+- **reactor-api:** remove a drive node by its resolved id on deleteDocument ([aeb2a23e10](https://github.com/powerhouse-inc/powerhouse/commit/aeb2a23e10))
+- **reactor:** fail a push whose received marker was not stored ([1d0b7371ee](https://github.com/powerhouse-inc/powerhouse/commit/1d0b7371ee))
+- **reactor:** a drive's purge does not require a live former member ([e8266b1035](https://github.com/powerhouse-inc/powerhouse/commit/e8266b1035))
+- **reactor-privacy:** warn and record lastError while a leaked purge blocks dispatch ([cd6fe4f022](https://github.com/powerhouse-inc/powerhouse/commit/cd6fe4f022))
+- **reactor-privacy:** reopen every failed request with no failed item each tick ([d9c19c3837](https://github.com/powerhouse-inc/powerhouse/commit/d9c19c3837))
+- **reactor-api:** ignore polled refusals of an unknown kind ([aac4a3e752](https://github.com/powerhouse-inc/powerhouse/commit/aac4a3e752))
+- **reactor-api:** fail a poll with a recoverable code when a refusal is not recorded ([3ab1c92f7b](https://github.com/powerhouse-inc/powerhouse/commit/3ab1c92f7b))
+- **reactor:** keep a polled marker refusal only when the marker was owed ([07cae595da](https://github.com/powerhouse-inc/powerhouse/commit/07cae595da))
+- **reactor:** persist a purge refusal only from a MARKER_REFUSED dead letter ([ef2c3f4729](https://github.com/powerhouse-inc/powerhouse/commit/ef2c3f4729))
+- **reactor:** keep a received marker across a restart until its outcome ([db5c57747a](https://github.com/powerhouse-inc/powerhouse/commit/db5c57747a))
+- **reactor-api:** serve a restarted client what it never acknowledged ([a8ceabdf61](https://github.com/powerhouse-inc/powerhouse/commit/a8ceabdf61))
+
+### 🔥 Performance
+
+- **reactor-privacy:** dispatch the next purge without rescanning the backlog ([5de3703ebf](https://github.com/powerhouse-inc/powerhouse/commit/5de3703ebf))
+
+### ⚠️  Breaking Changes
+
+- **registry:** serve every replica from Postgres and S3, processing publishes in a worker  ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+  /packages and /pieces return pages ({items,total,limit,offset,hasMore}) instead of full arrays, and piece bundles move to /-/pieces/bundled/<name>/<version>.tgz.
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.34 (2026-09-30)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **reactor-api:** add the syncHolds and peerAgreement queries ([9f475e2f9](https://github.com/powerhouse-inc/powerhouse/commit/9f475e2f9))
+- **reactor-api:** carry peer manifests on touchChannel and poll revisions ([5bef322a4](https://github.com/powerhouse-inc/powerhouse/commit/5bef322a4))
+
+### 🩹 Fixes
+
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+- **reactor-api:** resolve dev-loader modules first and resolve host packages outside the project ([0285a3ae8](https://github.com/powerhouse-inc/powerhouse/commit/0285a3ae8))
+- **reactor:** report refusals of polled rows so the server holds them ([a970307ee](https://github.com/powerhouse-inc/powerhouse/commit/a970307ee))
+- **reactor:** name the gated-under server revision on push and hold before resending ([e5d9bd7ed](https://github.com/powerhouse-inc/powerhouse/commit/e5d9bd7ed))
+- **reactor-api:** silence a client whose poll names no revision before serving it ([74bb202ac](https://github.com/powerhouse-inc/powerhouse/commit/74bb202ac))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- ⚠️  take a piece's version from its package, and validate ph connect build --json ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### 🩹 Fixes
+
+- **reactor-api:** expire webhook delivery dedupe keys on their own TTL ([f022e81b9](https://github.com/powerhouse-inc/powerhouse/commit/f022e81b9))
+- **reactor-api:** prefix subgraph types from the parsed SDL, not its text ([f75ee3fcd](https://github.com/powerhouse-inc/powerhouse/commit/f75ee3fcd))
+
+### ⚠️  Breaking Changes
+
+- take a piece's version from its package, and validate ph connect build --json  ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve a package's pieces from the host when reactor-api can't ([3c6440dea](https://github.com/powerhouse-inc/powerhouse/commit/3c6440dea))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.27 (2026-09-28)
+
+### 🚀 Features
+
+- **reactor-api:** let IHttpAdapter.listen bind a given host ([acb966320](https://github.com/powerhouse-inc/powerhouse/commit/acb966320))
+
+### 🩹 Fixes
+
+- leave totalCount as it was; #3107 removes it ([#3107](https://github.com/powerhouse-inc/powerhouse/issues/3107))
+- **reactor-api:** gate sync serving through the policy below authEnforcement ([8accf43c8](https://github.com/powerhouse-inc/powerhouse/commit/8accf43c8))
+- **reactor-api:** read drive info as the caller and gate analytics ([ca9c8337f](https://github.com/powerhouse-inc/powerhouse/commit/ca9c8337f))
+- **reactor-api:** read generated document-model subgraphs as the caller ([b1ab86529](https://github.com/powerhouse-inc/powerhouse/commit/b1ab86529))
+- **reactor-api:** return reactor subgraph mutation results read as the caller ([43426a383](https://github.com/powerhouse-inc/powerhouse/commit/43426a383))
+- **reactor-mcp:** read MCP tools as the request's subject ([6b526382b](https://github.com/powerhouse-inc/powerhouse/commit/6b526382b))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+- **reactor-api:** gate jobs through the reactor's read gate ([00070c2be](https://github.com/powerhouse-inc/powerhouse/commit/00070c2be))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor-api:** gate job status on the job document's auth scope ([225258bdb](https://github.com/powerhouse-inc/powerhouse/commit/225258bdb))
+- **reactor-api:** read documentChanges as each subscriber's subject ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- **reactor-api:** let IHttpAdapter.listen bind a given host ([acb966320](https://github.com/powerhouse-inc/powerhouse/commit/acb966320))
+
+### 🩹 Fixes
+
+- leave totalCount as it was; #3107 removes it ([#3107](https://github.com/powerhouse-inc/powerhouse/issues/3107))
+- **reactor-api:** gate sync serving through the policy below authEnforcement ([8accf43c8](https://github.com/powerhouse-inc/powerhouse/commit/8accf43c8))
+- **reactor-api:** read drive info as the caller and gate analytics ([ca9c8337f](https://github.com/powerhouse-inc/powerhouse/commit/ca9c8337f))
+- **reactor-api:** read generated document-model subgraphs as the caller ([b1ab86529](https://github.com/powerhouse-inc/powerhouse/commit/b1ab86529))
+- **reactor-api:** return reactor subgraph mutation results read as the caller ([43426a383](https://github.com/powerhouse-inc/powerhouse/commit/43426a383))
+- **reactor-mcp:** read MCP tools as the request's subject ([6b526382b](https://github.com/powerhouse-inc/powerhouse/commit/6b526382b))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+- **reactor-api:** gate jobs through the reactor's read gate ([00070c2be](https://github.com/powerhouse-inc/powerhouse/commit/00070c2be))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor-api:** gate job status on the job document's auth scope ([225258bdb](https://github.com/powerhouse-inc/powerhouse/commit/225258bdb))
+- **reactor-api:** read documentChanges as each subscriber's subject ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.25 (2026-09-25)
+
+### 🚀 Features
+
+- **workflow:** show run data in a lazy-loaded tree with copyable references, and scope the connection picker to the drive ([1d286f4a6](https://github.com/powerhouse-inc/powerhouse/commit/1d286f4a6))
+- **reactor-api:** serve an attachment only to callers who may read its document ([#3109](https://github.com/powerhouse-inc/powerhouse/pull/3109))
+
+### 🩹 Fixes
+
+- **ci:** let the release skip the transpiler TypeScript 7 broke ([#36306](https://github.com/powerhouse-inc/powerhouse/issues/36306))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor-api:** exempt named paths from the authenticated-caller floor, and carry it to the attachment routes ([#3108](https://github.com/powerhouse-inc/powerhouse/pull/3108))
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+
+### 🩹 Fixes
+
+- **reactor-api:** keep each subgraph's SSE route mounted ([bae6f0dce](https://github.com/powerhouse-inc/powerhouse/commit/bae6f0dce))
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🩹 Fixes
+
+- **reactor-api:** a failing node route answers 500 instead of crashing the process ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🩹 Fixes
+
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.21 (2026-09-22)
+
+### 🚀 Features
+
+- **reactor-api:** keep a package's pieces when it comes from a registry ([06c2bc6df](https://github.com/powerhouse-inc/powerhouse/commit/06c2bc6df))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.20 (2026-09-22)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.19 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.18 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.17 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.16 (2026-09-21)
+
+### 🩹 Fixes
+
+- **reactor-api:** withhold sync entries the serving gate never evaluated ([8f76e3e12](https://github.com/powerhouse-inc/powerhouse/commit/8f76e3e12))
+- **reactor-api:** realpath the temp root the vite loader test watches ([814c83372](https://github.com/powerhouse-inc/powerhouse/commit/814c83372))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.15 (2026-09-20)
+
+### 🩹 Fixes
+
+- **reactor-api:** withhold sync entries the serving gate never evaluated ([8f76e3e12](https://github.com/powerhouse-inc/powerhouse/commit/8f76e3e12))
+- **reactor-api:** realpath the temp root the vite loader test watches ([814c83372](https://github.com/powerhouse-inc/powerhouse/commit/814c83372))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.14 (2026-09-19)
+
+### 🚀 Features
+
+- **ph-cli:** build pieces on ph build ([3913b0796](https://github.com/powerhouse-inc/powerhouse/commit/3913b0796))
+- **doc-harness:** serve rendered reports and transcripts from mastra studio ([fd64a4661](https://github.com/powerhouse-inc/powerhouse/commit/fd64a4661))
+- **doc-harness:** workflows, steps, and the run/resume/inspect commands ([0e116d226](https://github.com/powerhouse-inc/powerhouse/commit/0e116d226))
+- **doc-harness:** pilot task catalog with pinned recipe inputs ([74bc26129](https://github.com/powerhouse-inc/powerhouse/commit/74bc26129))
+- **doc-harness:** workspace wiring and core schemas for the docs-validation harness ([5c591ac69](https://github.com/powerhouse-inc/powerhouse/commit/5c591ac69))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.13 (2026-09-18)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.12 (2026-09-17)
+
+### 🚀 Features
+
+- **switchboard:** own the workflow runtime, feed it through a read model, and take workflows out of reactor-api ([#3042](https://github.com/powerhouse-inc/powerhouse/issues/3042))
+- **reactor-workflow:** the workflow engine, composed in reactor-api behind the workflows flag ([cb807bf5d](https://github.com/powerhouse-inc/powerhouse/commit/cb807bf5d))
+- **workflow:** the Connect-loaded workflow package, and the workflows flag in reactor-api ([0953fc254](https://github.com/powerhouse-inc/powerhouse/commit/0953fc254))
+- **pieces-framework:** vendor the Activepieces piece framework as a Powerhouse package ([3da5dbea8](https://github.com/powerhouse-inc/powerhouse/commit/3da5dbea8))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
+## 6.2.3-dev.10 (2026-09-16)
+
+### 🚀 Features
+
+- **reactor-api:** relationship metadata over GraphQL, and edge-shaped reads ([619c16537](https://github.com/powerhouse-inc/powerhouse/commit/619c16537))
+
+### 🩹 Fixes
+
+- **reactor-api:** a filtered page counts what it serves ([9cade568e](https://github.com/powerhouse-inc/powerhouse/commit/9cade568e))
+- **reactor-api:** the job subscription's result is nullable, like the query's ([b3bb5bb02](https://github.com/powerhouse-inc/powerhouse/commit/b3bb5bb02))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.9 (2026-09-15)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.8 (2026-09-15)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.7 (2026-09-14)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.6 (2026-09-14)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.5 (2026-09-13)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor-api:** stop rewriting Vite's log lines on the way to the console ([13e4ac042](https://github.com/powerhouse-inc/powerhouse/commit/13e4ac042))
+- say why a websocket auth refusal closed, and retry on that answer ([f773b8e67](https://github.com/powerhouse-inc/powerhouse/commit/f773b8e67))
+- **reactor-api:** authorize the drive info endpoint ([3994f0ad1](https://github.com/powerhouse-inc/powerhouse/commit/3994f0ad1))
+- **reactor-api:** answer a tokenless websocket as the http path does ([bb20f8945](https://github.com/powerhouse-inc/powerhouse/commit/bb20f8945))
+- **document-model:** make ConsoleLogger methods safe to detach ([686032a9a](https://github.com/powerhouse-inc/powerhouse/commit/686032a9a))
+- **reactor-api:** bind the channel a push names, and stamp liveness only for work ([2534dd22a](https://github.com/powerhouse-inc/powerhouse/commit/2534dd22a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor-api:** stop rewriting Vite's log lines on the way to the console ([13e4ac042](https://github.com/powerhouse-inc/powerhouse/commit/13e4ac042))
+- say why a websocket auth refusal closed, and retry on that answer ([f773b8e67](https://github.com/powerhouse-inc/powerhouse/commit/f773b8e67))
+- **reactor-api:** authorize the drive info endpoint ([3994f0ad1](https://github.com/powerhouse-inc/powerhouse/commit/3994f0ad1))
+- **reactor-api:** answer a tokenless websocket as the http path does ([bb20f8945](https://github.com/powerhouse-inc/powerhouse/commit/bb20f8945))
+- **document-model:** make ConsoleLogger methods safe to detach ([686032a9a](https://github.com/powerhouse-inc/powerhouse/commit/686032a9a))
+- **reactor-api:** bind the channel a push names, and stamp liveness only for work ([2534dd22a](https://github.com/powerhouse-inc/powerhouse/commit/2534dd22a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.3 (2026-09-11)
+
+### 🚀 Features
+
+- **reactor-api:** add in-process stitching gateway adapter ([#1565](https://github.com/powerhouse-inc/powerhouse/issues/1565))
+
+### 🩹 Fixes
+
+- **reactor-api:** address review findings on the stitching gateway adapter ([222e575d9](https://github.com/powerhouse-inc/powerhouse/commit/222e575d9))
+- **claude:** bench-loop offers the after-record a fix produced instead of counting its FIXED citation as read ([c4b4690be](https://github.com/powerhouse-inc/powerhouse/commit/c4b4690be))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
+## 6.2.3-dev.2 (2026-09-10)
+
+### 🩹 Fixes
+
+- **ci:** roll out prod registry on production releases ([354085855](https://github.com/powerhouse-inc/powerhouse/commit/354085855))
+- **switchboard-lb:** keep a webhook token out of the logs and traces ([5cfdb6e93](https://github.com/powerhouse-inc/powerhouse/commit/5cfdb6e93))
+
+### ❤️ Thank You
+
+- acaldas
+- froid1911
+
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+- **reactor-api:** host package HTTP routes and webhooks in core ([235829f91](https://github.com/powerhouse-inc/powerhouse/commit/235829f91))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes

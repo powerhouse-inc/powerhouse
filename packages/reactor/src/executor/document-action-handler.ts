@@ -1,5 +1,6 @@
 import type {
   CreateDocumentAction,
+  CreateDocumentActionInput,
   DeleteDocumentActionInput,
   Operation,
   PHDocument,
@@ -53,6 +54,9 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
+  ReservedActionError,
+  UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
@@ -61,6 +65,7 @@ import type {
   ExecutingJob,
   JobResult,
   PendingWrite,
+  ProtocolSupport,
   ReactorFeatureFlags,
 } from "./types.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
@@ -75,19 +80,55 @@ import {
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
   refusalError,
+  relationshipTarget,
   targetDocumentId,
   updateDocumentRevision,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 export class DocumentActionHandler {
+  private readonly loggedUnregisteredProtocols = new Set<string>();
+
   constructor(
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
     private driveContainerTypes: ReadonlySet<string>,
     private featureFlags: ReactorFeatureFlags,
     private decisionModel: RegisteredDecisionModel,
+    private protocolSupport: ProtocolSupport,
   ) {}
+
+  /** Keys this reactor does not register are admitted: it cannot judge them. */
+  unsupportedProtocol(
+    documentId: string,
+    protocolVersions: { readonly [protocol: string]: number } | undefined,
+  ): UnsupportedProtocolVersionError | undefined {
+    for (const [protocol, version] of Object.entries(protocolVersions ?? {})) {
+      const supported = this.protocolSupport[protocol] as
+        | readonly number[]
+        | undefined;
+      if (supported === undefined) {
+        if (!this.loggedUnregisteredProtocols.has(protocol)) {
+          this.loggedUnregisteredProtocols.add(protocol);
+          this.logger.info(
+            "Admitting document @documentId with unregistered protocol @protocol @version",
+            documentId,
+            protocol,
+            version,
+          );
+        }
+        continue;
+      }
+      if (!supported.includes(version)) {
+        return new UnsupportedProtocolVersionError(
+          documentId,
+          protocol,
+          version,
+        );
+      }
+    }
+    return undefined;
+  }
 
   /** Whether the write arrives with its evaluation already decided. */
   private alreadyEvaluated(executing: ExecutingJob): boolean {
@@ -125,6 +166,12 @@ export class DocumentActionHandler {
         return this.executeRemoveRelationship(write, executing);
       case "UPDATE_RELATIONSHIP":
         return this.executeUpdateRelationship(write, executing);
+      case "PURGE_DOCUMENT":
+        return buildErrorResult(
+          executing.job,
+          new ReservedActionError(executing.job.documentId, action.type),
+          executing.startTime,
+        );
       default:
         return buildErrorResult(
           executing.job,
@@ -305,6 +352,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(job.documentId, job.branch, {
       state: standing.state.document,
       documentType: standing.header.documentType,
+      protocolVersions: standing.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -351,6 +399,15 @@ export class DocumentActionHandler {
       };
     }
 
+    const input = action.input as CreateDocumentActionInput;
+    const unsupported = this.unsupportedProtocol(
+      input.documentId,
+      input.protocolVersions,
+    );
+    if (unsupported) {
+      return buildErrorResult(job, unsupported, startTime);
+    }
+
     const document = createDocumentFromAction(action as CreateDocumentAction);
 
     let operation = createOperation(action, 0, skip, {
@@ -359,9 +416,10 @@ export class DocumentActionHandler {
       branch: job.branch,
     });
 
+    // Header last: a state key named "header" must not replace it.
     const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
       ...document.state,
+      header: document.header,
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
@@ -421,6 +479,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: 1,
     });
 
@@ -558,6 +617,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -787,9 +847,10 @@ export class DocumentActionHandler {
       branch: job.branch,
     });
 
+    // Header last: a state key named "header" must not replace it.
     const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
       ...document.state,
+      header: document.header,
     };
     // Vouches that every scope echoed here was fetched fresh before the
     // migration ran. Upgrade operations persisted by executors that never
@@ -858,6 +919,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -871,10 +933,32 @@ export class DocumentActionHandler {
     );
   }
 
-  private executeAddRelationship(
+  /** A submitted write naming a purged target was refused at job start. */
+  private async isTargetPurged(
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): Promise<boolean> {
+    const target = relationshipTarget(write.action);
+    if (target === undefined || !executing.purgeFence) {
+      return false;
+    }
+    return executing.purgeFence.isPurged(target);
+  }
+
+  private async executeAddRelationship(
     write: PendingWrite,
     executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
+    let targetPurged: boolean;
+    try {
+      targetPurged = await this.isTargetPurged(write, executing);
+    } catch (error) {
+      return buildErrorResult(
+        executing.job,
+        error instanceof Error ? error : new Error(String(error)),
+        executing.startTime,
+      );
+    }
     return this.withRelationshipAction(
       "ADD_RELATIONSHIP",
       write,
@@ -886,7 +970,10 @@ export class DocumentActionHandler {
             )
           : null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
+        if (
+          !targetPurged &&
+          this.driveContainerTypes.has(sourceDoc.header.documentType)
+        ) {
           const collectionId = DriveCollectionId.forDrive(
             input.sourceId,
             j.branch,
@@ -898,17 +985,31 @@ export class DocumentActionHandler {
     );
   }
 
-  private executeRemoveRelationship(
+  private async executeRemoveRelationship(
     write: PendingWrite,
     executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
+    // The purge reopened the target's memberships so they serve its marker.
+    let targetPurged: boolean;
+    try {
+      targetPurged = await this.isTargetPurged(write, executing);
+    } catch (error) {
+      return buildErrorResult(
+        executing.job,
+        error instanceof Error ? error : new Error(String(error)),
+        executing.startTime,
+      );
+    }
     return this.withRelationshipAction(
       "REMOVE_RELATIONSHIP",
       write,
       executing,
       null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
+        if (
+          !targetPurged &&
+          this.driveContainerTypes.has(sourceDoc.header.documentType)
+        ) {
           const collectionId = DriveCollectionId.forDrive(
             input.sourceId,
             j.branch,
@@ -986,7 +1087,11 @@ export class DocumentActionHandler {
       // name JobResultHandler classifies by and leave a missing source document
       // burning the retry limit on a load that fails the same way every time.
       // The message still names the source, since a relationship tolerates a
-      // missing target but not a missing source.
+      // missing target but not a missing source. A purged source keeps its
+      // own error, which is terminal rather than deferred.
+      if (DocumentPurgedError.isError(error)) {
+        return buildErrorResult(job, error, startTime);
+      }
       if (DocumentNotFoundError.isError(error)) {
         return buildErrorResult(
           job,
@@ -1079,6 +1184,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,
       documentType: sourceDoc.header.documentType,
+      protocolVersions: sourceDoc.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 

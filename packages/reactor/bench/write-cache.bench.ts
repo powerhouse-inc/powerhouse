@@ -1,8 +1,43 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import { mkdirSync, writeFileSync } from "node:fs";
 import {
+  AddFileInputSchema,
+  AddFolderInputSchema,
+  assignNodes,
+  defaultGlobalState,
+  driveDocumentModelModule,
+  handleTargetNameCollisions,
+  insertNodeSorted,
+  isFileNode,
+  isValidName,
+  nodeReducer,
+  readNodes,
+  sortNodesById,
+  type AddFileAction,
+  type AddFolderAction,
+  type DocumentDriveGlobalState,
+  type DocumentDrivePHState,
+  type FileNode,
+  type Listener,
+  type Node as DriveNode,
+  type Trigger,
+} from "@powerhousedao/shared/document-drive";
+import {
+  baseCreateDocument,
+  createReducer,
+  defaultPHState as defaultDocumentModelPHState,
   deriveOperationId,
+  documentModelReducer,
   generateId,
+  isDocumentAction,
+  type Action,
+  type DocumentModelModule,
+  type DocumentModelPHState,
+  type ModuleSpecification,
+  type Operation,
   type PHDocument,
+  type Reducer,
+  type SignalDispatch,
+  type StateReducer,
 } from "@powerhousedao/shared/document-model";
 import type { Options as BenchOptions } from "tinybench";
 import { bench, describe } from "vitest";
@@ -49,14 +84,16 @@ type Fixture = {
  */
 let pendingTeardown: Promise<void> = Promise.resolve();
 
-async function createFixture(): Promise<Fixture> {
+async function createFixture(
+  module: DocumentModelModule<DocumentDrivePHState> = driveDocumentModelModule,
+): Promise<Fixture> {
   await pendingTeardown;
 
   const { db, store, keyframeStore, cleanup } =
     await createTestOperationStore();
 
   const registry = new DocumentModelRegistry();
-  registry.registerModules(driveDocumentModelModule);
+  registry.registerModules(module);
 
   const destroy = async (): Promise<void> => {
     try {
@@ -87,26 +124,53 @@ async function createFixture(): Promise<Fixture> {
  * `throws` makes tinybench rethrow a failing task instead of parking the
  * error on result.error, dispatching no event and reporting a passing suite.
  */
+type BenchCaseOptions = {
+  /**
+   * A floor on samples, for cases whose iteration is slower than `time`.
+   * tinybench defaults it to 10, so only a larger value changes anything.
+   */
+  iterations?: number;
+  /** The module the case's registry holds, when it must not be the plain one. */
+  module?: DocumentModelModule<DocumentDrivePHState>;
+  /**
+   * Turns on the in-situ replay stamps for this case: the accumulators are
+   * cleared once prepare has finished, so nothing prepare replays is counted,
+   * and the run phase files its decomposition under this label, both to the
+   * sidecar the recorder reads and to stdout.
+   */
+  stamps?: string;
+};
+
 function benchCase<TState>(
   name: string,
   time: number,
   prepare: (fixture: Fixture) => Promise<TState>,
   measure: (state: TState) => Promise<void>,
+  caseOptions: BenchCaseOptions = {},
 ): void {
   let fixture: Fixture | undefined = undefined;
   let state: TState | undefined = undefined;
 
   const options: BenchOptions = {
     time,
+    iterations: caseOptions.iterations,
     throws: true,
     setup: async () => {
-      fixture = await createFixture();
+      fixture = await createFixture(caseOptions.module);
       state = await prepare(fixture);
+
+      if (caseOptions.stamps !== undefined) {
+        resetReplayStamps();
+      }
     },
-    teardown: () => {
+    teardown: (_task, mode) => {
       const finished = fixture;
       fixture = undefined;
       state = undefined;
+
+      if (caseOptions.stamps !== undefined && mode === "run") {
+        recordReplayStamps(caseOptions.stamps);
+      }
 
       if (finished) {
         pendingTeardown = finished.destroy();
@@ -190,6 +254,44 @@ async function createDocumentInStore(
   });
 }
 
+/**
+ * The action stored at `index` by `appendOperations`. Extracted so a case that
+ * replays without a store replays the same actions a stored replay reads back.
+ */
+function syntheticAction(
+  documentId: string,
+  index: number,
+): AddFileAction | AddFolderAction {
+  const isFile = index % 2 === 1;
+
+  if (isFile) {
+    return {
+      id: `${documentId}-action-${index}`,
+      type: "ADD_FILE",
+      scope: SCOPE,
+      timestampUtcMs: Date.now().toString(),
+      input: {
+        id: `${documentId}-file-${index}`,
+        name: `file-${index}.txt`,
+        documentType: "powerhouse/document-model",
+        parentFolder: null,
+      },
+    };
+  }
+
+  return {
+    id: `${documentId}-action-${index}`,
+    type: "ADD_FOLDER",
+    scope: SCOPE,
+    timestampUtcMs: Date.now().toString(),
+    input: {
+      id: `${documentId}-folder-${index}`,
+      name: `Folder ${index}`,
+      parentFolder: null,
+    },
+  };
+}
+
 /** Appends `count` global-scope operations at contiguous indices 0..count-1. */
 async function appendOperations(
   store: IOperationStore,
@@ -197,8 +299,6 @@ async function appendOperations(
   count: number,
 ): Promise<void> {
   for (let index = 0; index < count; index++) {
-    const isFile = index % 2 === 1;
-
     await store.apply(
       documentId,
       DOCUMENT_TYPE,
@@ -212,24 +312,7 @@ async function appendOperations(
           skip: 0,
           hash: `${documentId}-hash-${index}`,
           timestampUtcMs: new Date().toISOString(),
-          action: {
-            id: `${documentId}-action-${index}`,
-            type: isFile ? "ADD_FILE" : "ADD_FOLDER",
-            scope: SCOPE,
-            timestampUtcMs: Date.now().toString(),
-            input: isFile
-              ? {
-                  id: `${documentId}-file-${index}`,
-                  name: `file-${index}.txt`,
-                  documentType: "powerhouse/document-model",
-                  parentFolder: null,
-                }
-              : {
-                  id: `${documentId}-folder-${index}`,
-                  name: `Folder ${index}`,
-                  parentFolder: null,
-                },
-          },
+          action: syntheticAction(documentId, index),
         });
       },
     );
@@ -519,83 +602,76 @@ describe("Write Cache Warm Miss Performance", () => {
   );
 });
 
+type LruSnapshot = {
+  documentId: string;
+  document: PHDocument;
+};
+
 type LruState = {
   fixture: Fixture;
-  documentIds: string[];
+  snapshots: LruSnapshot[];
   config: WriteCacheConfig;
 };
 
+/** Both legs put this many documents, so only the capacity below them varies. */
+const LRU_DOCUMENT_COUNT = 12;
+
+/** Half the documents, so putting all twelve evicts six of them. */
+const LRU_EVICTING_CAPACITY = 6;
+
+/** Snapshots are rebuilt here so no PGlite read sits in the timed loop. */
+async function prepareLru(
+  fixture: Fixture,
+  maxDocuments: number,
+): Promise<LruState> {
+  const documentIds = await populateManyDocuments(fixture, LRU_DOCUMENT_COUNT);
+  const snapshots: LruSnapshot[] = [];
+
+  for (const documentId of documentIds) {
+    const document = await documentAtRevision(fixture, documentId, 0);
+    snapshots.push({ documentId, document: assertLastIndex(document, 0) });
+  }
+
+  return {
+    fixture,
+    snapshots,
+    config: {
+      maxDocuments,
+      ringBufferSize: 5,
+      keyframeInterval: 1_000_000,
+    },
+  } satisfies LruState;
+}
+
+/** One putState pass; only a cache at capacity evicts before it touches. */
+async function measureLruPuts(state: LruState): Promise<void> {
+  const cache = await freshCache(state.fixture, state.config);
+
+  for (const snapshot of state.snapshots) {
+    cache.putState(
+      snapshot.documentId,
+      SCOPE,
+      BRANCH,
+      0,
+      snapshot.document,
+      SnapshotPosition.Head,
+    );
+  }
+}
+
 describe("Write Cache LRU Eviction Performance", () => {
   benchCase(
-    "LRU eviction (filling cache to capacity)",
+    "LRU eviction (filling cache to capacity) over 12 documents, capacity 6",
     2000,
-    async (fixture) => {
-      const documentIds = await populateManyDocuments(fixture, 15);
-      assertLastIndex(await documentAtRevision(fixture, documentIds[0], 0), 0);
-
-      return {
-        fixture,
-        documentIds,
-        config: {
-          maxDocuments: 10,
-          ringBufferSize: 5,
-          keyframeInterval: 1_000_000,
-        },
-      } satisfies LruState;
-    },
-    async (state) => {
-      const cache = await freshCache(state.fixture, state.config);
-
-      for (const documentId of state.documentIds) {
-        const document = await cache.getState(documentId, SCOPE, BRANCH, 0);
-        cache.putState(
-          documentId,
-          SCOPE,
-          BRANCH,
-          0,
-          document,
-          SnapshotPosition.Head,
-        );
-      }
-    },
+    (fixture) => prepareLru(fixture, LRU_EVICTING_CAPACITY),
+    measureLruPuts,
   );
 
   benchCase(
-    "LRU access pattern (updating access order)",
+    "LRU access pattern (updating access order) over 12 documents, capacity 12",
     2000,
-    async (fixture) => {
-      const documentIds = await populateManyDocuments(fixture, 5);
-      assertLastIndex(await documentAtRevision(fixture, documentIds[0], 0), 0);
-
-      return {
-        fixture,
-        documentIds,
-        config: {
-          maxDocuments: 5,
-          ringBufferSize: 5,
-          keyframeInterval: 1_000_000,
-        },
-      } satisfies LruState;
-    },
-    async (state) => {
-      const cache = await freshCache(state.fixture, state.config);
-
-      for (const documentId of state.documentIds) {
-        const document = await cache.getState(documentId, SCOPE, BRANCH, 0);
-        cache.putState(
-          documentId,
-          SCOPE,
-          BRANCH,
-          0,
-          document,
-          SnapshotPosition.Head,
-        );
-      }
-
-      for (const documentId of state.documentIds) {
-        await cache.getState(documentId, SCOPE, BRANCH, 0);
-      }
-    },
+    (fixture) => prepareLru(fixture, LRU_DOCUMENT_COUNT),
+    measureLruPuts,
   );
 });
 
@@ -633,7 +709,9 @@ async function measureManualRebuild(
       if (document === undefined) {
         document = state.module.utils.createDocument();
       }
-      document = state.module.reducer(document, storedOp.action);
+      document = state.module.reducer(document, storedOp.action, undefined, {
+        replayOptions: { operation: storedOp },
+      });
     }
 
     if (result.nextCursor) {
@@ -773,3 +851,1880 @@ describe("Write Cache Keyframe Performance", () => {
     measureKeyframeWrites,
   );
 });
+
+type ReplayStamps = {
+  wallNs: bigint;
+  bodyNs: bigint;
+  wallCalls: number;
+  bodyCalls: number;
+};
+
+/**
+ * Accumulators for the in-situ decomposition of a cold-miss replay. A tinybench
+ * case mean is the wall time of the whole measured function, so a sub-interval
+ * of one reducer call cannot be a case of its own; these totals are the only
+ * way to separate the custom reducer body, which runs on a mutative draft,
+ * from the create() draft and finalize around it. `bodyCalls` is counted
+ * separately from `wallCalls` because the two need not be equal.
+ */
+let replayStamps: ReplayStamps = {
+  wallNs: 0n,
+  bodyNs: 0n,
+  wallCalls: 0,
+  bodyCalls: 0,
+};
+
+function resetReplayStamps(): void {
+  replayStamps = { wallNs: 0n, bodyNs: 0n, wallCalls: 0, bodyCalls: 0 };
+}
+
+/**
+ * One label's decomposition, in the shape the sidecar carries. A later reader
+ * has only the record, so the raw totals and both call counts are stored
+ * alongside the per-call figures rather than left to be recovered from them.
+ */
+type ReplayStampReading = {
+  label: string;
+  wallCalls: number;
+  bodyCalls: number;
+  wallMs: number;
+  bodyMs: number;
+  wallUsPerCall: number;
+  bodyUsPerWallCall: number;
+  outsideUsPerWallCall: number;
+  bodyUsPerBodyCall: number;
+  bodySharePct: number;
+};
+
+/** Every reading this process has taken, by label. */
+const replayReadings = new Map<string, ReplayStampReading>();
+
+/** One leg's split, as per-node slopes over the four op counts. */
+type MirrorSplitReading = {
+  leg: MirrorLeg;
+  counts: number[];
+  fullUsPerNode: number;
+  collisionScanUsPerNode: number;
+  sortUsPerNode: number;
+  touchUsPerNode: number;
+  floorUsPerNode: number;
+  wrapperUsPerNode: number;
+  stampedBodyUsPerNode: number;
+  realBodyUsPerNode: number;
+  collisionScanSharePct: number;
+  sortSharePct: number;
+  touchSharePct: number;
+  floorSharePct: number;
+  scanPlusSortSharePct: number;
+  mirrorOverRealSlope: number;
+};
+
+/** Every split this process has taken, by leg. */
+const mirrorSplitReadings = new Map<MirrorLeg, MirrorSplitReading>();
+
+/**
+ * Where the recorder reads the decomposition from. `--outputJson` carries case
+ * means and nothing else, so a figure that only ever reached stdout is absent
+ * from the record that cites it; this file is how the split survives the run.
+ */
+const REPLAY_STAMPS_FILE = new URL(
+  "./results/write-cache-stamps.json",
+  import.meta.url,
+);
+
+/**
+ * Files one label's decomposition and rewrites the sidecar.
+ *
+ * Body intervals are nested inside wall intervals, so `wallNs - bodyNs` is
+ * what the call spent outside the custom reducer and cannot go negative.
+ * Dividing that and `bodyNs` by `wallCalls` keeps the three figures additive;
+ * a body mean over `bodyCalls` is a different quantity, because the base
+ * reducer may invoke the state reducer any number of times per
+ * `module.reducer` call - once per op normally, once per replayed operation
+ * for an UNDO, and not at all for a scope it handles itself.
+ */
+function recordReplayStamps(label: string): void {
+  const { wallNs, bodyNs, wallCalls, bodyCalls } = replayStamps;
+
+  if (wallCalls === 0 || bodyCalls === 0) {
+    console.log(`replay stamps | ${label} | no reducer calls recorded`);
+    return;
+  }
+
+  const reading: ReplayStampReading = {
+    label,
+    wallCalls,
+    bodyCalls,
+    wallMs: Number(wallNs) / 1e6,
+    bodyMs: Number(bodyNs) / 1e6,
+    wallUsPerCall: Number(wallNs) / 1000 / wallCalls,
+    bodyUsPerWallCall: Number(bodyNs) / 1000 / wallCalls,
+    outsideUsPerWallCall: Number(wallNs - bodyNs) / 1000 / wallCalls,
+    bodyUsPerBodyCall: Number(bodyNs) / 1000 / bodyCalls,
+    bodySharePct: (Number(bodyNs) / Number(wallNs)) * 100,
+  };
+
+  replayReadings.set(label, reading);
+  writeReplayStamps();
+
+  console.log(
+    [
+      `replay stamps | ${label}`,
+      `reducer calls ${wallCalls} (body ${bodyCalls})`,
+      `module.reducer wall ${reading.wallUsPerCall.toFixed(3)} us/call`,
+      `reducer body in draft ${reading.bodyUsPerWallCall.toFixed(3)} us/call`,
+      `create() draft+finalize+base ${reading.outsideUsPerWallCall.toFixed(3)} us/call`,
+      `body per state-reducer call ${reading.bodyUsPerBodyCall.toFixed(3)} us`,
+      `body share ${reading.bodySharePct.toFixed(1)}%`,
+    ].join(" | "),
+  );
+}
+
+/**
+ * A full overwrite of every reading taken so far. The map starts empty on each
+ * run, so the file cannot carry a stamp from an earlier one, and writing after
+ * every case means a suite that dies partway still leaves what it measured.
+ */
+function writeReplayStamps(): void {
+  const payload = {
+    version: 2,
+    stamps: [...replayReadings.values()],
+    splits: [...mirrorSplitReadings.values()],
+  };
+
+  try {
+    mkdirSync(new URL("./results/", import.meta.url), { recursive: true });
+    writeFileSync(REPLAY_STAMPS_FILE, `${JSON.stringify(payload, null, 2)}\n`);
+  } catch (error) {
+    // Never fail a measured run over the sidecar. The console line still
+    // carries the reading, and a recorder that finds no file refuses loudly.
+    console.error("bench: could not write replay stamps", error);
+  }
+}
+
+/**
+ * The input validation the generated reducer runs before it touches state.
+ * `AddFileInputSchema()` builds a fresh zod object on every action rather than
+ * reusing a cached one - gen/reducer.ts:37 does exactly this - so the cost is
+ * per-call in production and not an artifact of the bench. The validation-only
+ * leg calls this same function, so the two legs cannot drift apart on the path
+ * they share.
+ */
+const benchSchemaMemo = new Map<() => unknown, unknown>();
+
+/**
+ * The generated reducer builds each input schema once and reuses it, so the
+ * mirror has to do the same or it prices a construction production no longer
+ * pays.
+ */
+function memoizedSchema<T>(makeSchema: () => T): T {
+  let schema = benchSchemaMemo.get(makeSchema) as T | undefined;
+  if (schema === undefined) {
+    schema = makeSchema();
+    benchSchemaMemo.set(makeSchema, schema);
+  }
+  return schema;
+}
+
+function validateDriveInput(action: Action): void {
+  if (action.type === "ADD_FILE") {
+    memoizedSchema(AddFileInputSchema).parse((action as AddFileAction).input);
+    return;
+  }
+
+  if (action.type === "ADD_FOLDER") {
+    memoizedSchema(AddFolderInputSchema).parse(
+      (action as AddFolderAction).input,
+    );
+  }
+}
+
+/**
+ * The drive model's own custom reducer body for the two action types this
+ * bench replays, reassembled from the exported node reducer and its input
+ * schemas because the generated module keeps its state reducer private. It
+ * returns undefined for a handled action, as the generated one does, so the
+ * base reducer keeps the draft's mutations instead of replacing state.
+ */
+function applyDriveBody(
+  state: DocumentDrivePHState,
+  action: Action,
+  dispatch?: SignalDispatch,
+): DocumentDrivePHState | undefined {
+  if (isDocumentAction(action)) {
+    return state;
+  }
+
+  if (action.type === "ADD_FILE") {
+    const fileAction = action as AddFileAction;
+    validateDriveInput(fileAction);
+    nodeReducer.addFileOperation(state.global, fileAction, dispatch);
+    return undefined;
+  }
+
+  if (action.type === "ADD_FOLDER") {
+    const folderAction = action as AddFolderAction;
+    validateDriveInput(folderAction);
+    nodeReducer.addFolderOperation(state.global, folderAction, dispatch);
+    return undefined;
+  }
+
+  return state;
+}
+
+const stampedDriveStateReducer: StateReducer<DocumentDrivePHState> = (
+  state,
+  action,
+  dispatch,
+) => {
+  const startedAt = process.hrtime.bigint();
+
+  try {
+    return applyDriveBody(
+      state as unknown as DocumentDrivePHState,
+      action,
+      dispatch,
+    );
+  } finally {
+    replayStamps.bodyNs += process.hrtime.bigint() - startedAt;
+    replayStamps.bodyCalls += 1;
+  }
+};
+
+const stampedDriveReducer = createReducer<DocumentDrivePHState>(
+  stampedDriveStateReducer,
+);
+
+const instrumentedDriveReducer: Reducer<DocumentDrivePHState> = (
+  document,
+  action,
+  dispatch,
+  reducerOptions,
+) => {
+  const startedAt = process.hrtime.bigint();
+
+  try {
+    return stampedDriveReducer(document, action, dispatch, reducerOptions);
+  } finally {
+    replayStamps.wallNs += process.hrtime.bigint() - startedAt;
+    replayStamps.wallCalls += 1;
+  }
+};
+
+/**
+ * The drive module with a timed reducer in place of the generated one. Only the
+ * decomposition cases register it, so the six suites above keep measuring the
+ * plain module and stay comparable with the recorded series.
+ */
+const instrumentedDriveModule: DocumentModelModule<DocumentDrivePHState> = {
+  ...driveDocumentModelModule,
+  reducer: instrumentedDriveReducer,
+};
+
+const replayActionCache = new Map<
+  number,
+  (AddFileAction | AddFolderAction)[]
+>();
+
+/** The same actions `appendOperations` stores, built once per op count. */
+function replayActions(count: number): (AddFileAction | AddFolderAction)[] {
+  const cached = replayActionCache.get(count);
+
+  if (cached) {
+    return cached;
+  }
+
+  const actions: (AddFileAction | AddFolderAction)[] = [];
+
+  for (let index = 0; index < count; index++) {
+    actions.push(syntheticAction(DOCUMENT_ID, index));
+  }
+
+  replayActionCache.set(count, actions);
+  return actions;
+}
+
+/** Op count and the time budget every leg of that count is given. */
+const REPLAY_DECOMPOSITION_CASES: [number, number][] = [
+  [100, 2000],
+  [500, 6000],
+  [1000, 8000],
+  [2000, 8000],
+];
+
+/**
+ * A sample floor for the instrumented leg alone, whose iteration at 2000 ops
+ * costs about two seconds and would otherwise take the four samples its budget
+ * buys. tinybench's own default is 10, so 20 is the first value that does
+ * anything; the other legs are cheap enough that the budget already buys them
+ * dozens of samples.
+ */
+const INSTRUMENTED_ITERATIONS = 20;
+
+/**
+ * Why a cold-miss rebuild costs about 39x for 10x the operations. Each op count
+ * gets a suite of its own, because the recorder derives one spread per suite:
+ * holding the count fixed makes that spread a statement about the three
+ * mechanisms, where a single suite over every count would pair the largest
+ * count's replay against the smallest count's reducer body and call the ratio
+ * a decomposition.
+ *
+ * The three legs nest. A full cold miss through a module whose reducer is
+ * timed; the drive reducer body alone on plain state, with no mutative draft
+ * and no base reducer; and the input validation that body opens with. The two
+ * gaps between them price the draft and the schema separately, and the stamps
+ * the first leg files split its own replay from the inside.
+ */
+for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
+  describe(`Write Cache Cold Miss Replay Decomposition (${count} ops)`, () => {
+    benchCase(
+      `cold miss ${count} ops: instrumented cold-miss replay`,
+      budgetMs,
+      async (fixture) => {
+        await populateSingleDocument(fixture, count);
+        assertLastIndex(
+          await documentAtRevision(fixture, DOCUMENT_ID, count - 1),
+          count - 1,
+        );
+        return fixture;
+      },
+      async (fixture) => {
+        const cache = await freshCache(fixture, NO_KEYFRAMES);
+        await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, count - 1);
+      },
+      {
+        iterations: INSTRUMENTED_ITERATIONS,
+        module: instrumentedDriveModule,
+        stamps: `cold miss ${count} ops`,
+      },
+    );
+
+    bench(
+      `cold miss ${count} ops: reducer body on plain state`,
+      () => {
+        const state = driveDocumentModelModule.utils.createState({
+          global: defaultGlobalState(),
+        });
+        const actions = replayActions(count);
+
+        for (const action of actions) {
+          applyDriveBody(state, action);
+        }
+      },
+      { time: budgetMs, throws: true },
+    );
+
+    bench(
+      `cold miss ${count} ops: input validation only`,
+      () => {
+        const actions = replayActions(count);
+
+        for (const action of actions) {
+          validateDriveInput(action);
+        }
+      },
+      { time: budgetMs, throws: true },
+    );
+  });
+}
+
+type MirrorVariant = {
+  /** The case-name fragment naming which statements the variant runs. */
+  label: string;
+  /**
+   * The two scans over the list the read returned: node.ts:23/59 find and
+   * utils.ts:164 collisions, with node.ts:27/63 isValidName between them. The
+   * read itself is not under this flag, because the real body reads once at
+   * node.ts:22/58 and the assignment at :47/76 consumes what it read, so a
+   * variant that skipped it would not be able to write.
+   */
+  reads: boolean;
+  /**
+   * The comparator pass inside that one assignment (utils.ts:170
+   * insertNodeSorted calling utils.ts:147 freezeSortedById). Dropping it still
+   * copies the list, still freezes the copy and still assigns it once, so the
+   * difference it makes is the comparator and not the shape of the write.
+   */
+  sort: boolean;
+};
+
+type MirrorSplitStamps = {
+  wallNs: bigint;
+  readNs: bigint;
+  writeNs: bigint;
+  bodyNs: bigint;
+  calls: number;
+};
+
+type MirrorLeg = "draft" | "plain";
+
+type MirrorSample = {
+  leg: MirrorLeg;
+  label: string;
+  count: number;
+  stamps: MirrorSplitStamps;
+};
+
+type NodeBodyApply = (
+  state: DocumentDriveGlobalState,
+  action: AddFileAction | AddFolderAction,
+) => void;
+
+function createMirrorStamps(): MirrorSplitStamps {
+  return { wallNs: 0n, readNs: 0n, writeNs: 0n, bodyNs: 0n, calls: 0 };
+}
+
+function resetMirrorStamps(stamps: MirrorSplitStamps): void {
+  stamps.wallNs = 0n;
+  stamps.readNs = 0n;
+  stamps.writeNs = 0n;
+  stamps.bodyNs = 0n;
+  stamps.calls = 0;
+}
+
+function stampStart(stamps: MirrorSplitStamps | undefined): bigint {
+  return stamps === undefined ? 0n : process.hrtime.bigint();
+}
+
+function addReadStamp(
+  stamps: MirrorSplitStamps | undefined,
+  startedAt: bigint,
+): void {
+  if (stamps !== undefined) {
+    stamps.readNs += process.hrtime.bigint() - startedAt;
+  }
+}
+
+function addWriteStamp(
+  stamps: MirrorSplitStamps | undefined,
+  startedAt: bigint,
+): void {
+  if (stamps !== undefined) {
+    stamps.writeNs += process.hrtime.bigint() - startedAt;
+  }
+}
+
+/**
+ * insertNodeSorted with its comparator pass under the variant. Everything else
+ * the real write does is unconditional: the copy the new list is built from,
+ * the freeze that keeps assigning it to a mutative draft from starting a
+ * finalize walk (utils.ts:147), and the single assignment through assignNodes
+ * (utils.ts:187). Only the sort is
+ * gone when `sort` is false, so the difference between the two variants is the
+ * comparator and nothing else.
+ */
+function insertNodeForVariant(
+  nodes: readonly DriveNode[],
+  node: DriveNode,
+  sort: boolean,
+): readonly DriveNode[] {
+  if (sort) {
+    return insertNodeSorted(nodes, node);
+  }
+
+  return Object.freeze([...nodes, node]);
+}
+
+/**
+ * A mirror of nodeReducer.addFileOperation and addFolderOperation
+ * (packages/shared/document-drive/src/reducers/node.ts:21-82 and the
+ * readNodes, handleTargetNameCollisions and insertNodeSorted it calls at
+ * src/utils.ts:132, :194, :170 and :187).
+ *
+ * It is statement-for-statement again, re-derived at reactorSha 88da88929 from
+ * the body as T-016, T-020 and T-023 left it: one readNodes(state) call whose
+ * result both scans reuse, and one assignNodes(state, insertNodeSorted(nodes,
+ * node))
+ * that sorts and freezes a plain array. The helpers are the real ones, called
+ * here, not copies of them, so the drift T-022 filed -- two state.nodes reads
+ * through the draft and an in-place push and sort, which is the pre-T-016
+ * shape -- cannot come back by a helper changing underneath this file. What
+ * can still drift is the statement order and the gating, so this must be
+ * re-checked against node.ts on every future run: the `real body (fidelity
+ * reference)` cases in the same suite run the actual reducer through the
+ * identical harness, and the mirror's claim to represent it is the ratio
+ * between them, which anyone can read off the record rather than take on
+ * assertion.
+ *
+ * It exists only so a variant can drop the read scans or the comparator while
+ * running every other statement, which is what splits the per-node tax.
+ *
+ * Deliberate differences, all of them per-call constants that cancel out of a
+ * per-node slope: the real addFileOperation ends in an optional dispatch call,
+ * which this harness leaves undefined exactly as the plain-state leg of the
+ * decomposition suite above does, and the two hrtime pairs that bracket the
+ * read and write intervals are only taken for the variant that carries
+ * `stamps`, where the real leg takes one pair for the whole body.
+ */
+function mirroredNodeBody(
+  state: DocumentDriveGlobalState,
+  action: AddFileAction | AddFolderAction,
+  variant: MirrorVariant,
+  stamps: MirrorSplitStamps | undefined,
+): void {
+  if (action.type === "ADD_FILE") {
+    const input = action.input;
+    const readStartedAt = stampStart(stamps);
+    const nodes = readNodes(state);
+    let name = input.name;
+
+    if (variant.reads) {
+      if (nodes.find((node) => node.id === input.id)) {
+        throw new Error(`Node with id ${input.id} already exists!`);
+      }
+
+      if (!isValidName(input.name)) {
+        throw new Error(
+          `Invalid name: '${input.name}'. Names must not be empty or contain control characters.`,
+        );
+      }
+
+      name = handleTargetNameCollisions({
+        nodes,
+        srcName: input.name,
+        srcKind: "file",
+        targetParentFolder: input.parentFolder || null,
+      });
+    }
+
+    addReadStamp(stamps, readStartedAt);
+
+    const writeStartedAt = stampStart(stamps);
+
+    const fileNode: FileNode = {
+      id: input.id,
+      name,
+      kind: "file",
+      parentFolder: input.parentFolder ?? null,
+      documentType: input.documentType,
+    };
+    assignNodes(state, insertNodeForVariant(nodes, fileNode, variant.sort));
+
+    addWriteStamp(stamps, writeStartedAt);
+    return;
+  }
+
+  const input = action.input;
+  const readStartedAt = stampStart(stamps);
+  const nodes = readNodes(state);
+  let name = input.name;
+
+  if (variant.reads) {
+    if (nodes.find((node) => node.id === input.id)) {
+      throw new Error(`Node with id ${input.id} already exists!`);
+    }
+
+    if (!isValidName(input.name)) {
+      throw new Error(
+        `Invalid name: '${input.name}'. Names must not be empty or contain control characters.`,
+      );
+    }
+
+    name = handleTargetNameCollisions({
+      nodes,
+      srcName: input.name,
+      srcKind: "folder",
+      targetParentFolder: input.parentFolder || null,
+    });
+  }
+
+  addReadStamp(stamps, readStartedAt);
+
+  const writeStartedAt = stampStart(stamps);
+
+  assignNodes(
+    state,
+    insertNodeForVariant(
+      nodes,
+      {
+        ...input,
+        name,
+        kind: "folder",
+        parentFolder: input.parentFolder ?? null,
+      },
+      variant.sort,
+    ),
+  );
+
+  addWriteStamp(stamps, writeStartedAt);
+}
+
+/** The real reducer bodies the mirror claims to represent, one whole stamp. */
+function stampedRealNodeBody(
+  state: DocumentDriveGlobalState,
+  action: AddFileAction | AddFolderAction,
+  stamps: MirrorSplitStamps,
+): void {
+  const startedAt = process.hrtime.bigint();
+
+  try {
+    if (action.type === "ADD_FILE") {
+      nodeReducer.addFileOperation(state, action, undefined);
+      return;
+    }
+
+    nodeReducer.addFolderOperation(state, action, undefined);
+  } finally {
+    stamps.bodyNs += process.hrtime.bigint() - startedAt;
+  }
+}
+
+/**
+ * The operations the cold-miss replay feeds the reducer, built once per op
+ * count. The leg has to pass them: a replayed operation carrying a hash is the
+ * only thing that stops the base reducer hashing the whole scope state on every
+ * call (packages/shared/document-model/reducer.ts:639-642), which is O(nodes)
+ * and would sit in every variant's mean as a wrapper an order of magnitude
+ * larger than the body being split. kysely-write-cache.ts:966 passes exactly
+ * `skip`, `replayOptions.operation` and `skipIndexValidation`.
+ */
+const replayOperationCache = new Map<number, Operation[]>();
+
+function replayStoredOperations(count: number): Operation[] {
+  const cached = replayOperationCache.get(count);
+
+  if (cached) {
+    return cached;
+  }
+
+  const operations: Operation[] = replayActions(count).map((action, index) => ({
+    id: deriveOperationId(DOCUMENT_ID, SCOPE, BRANCH, action.id),
+    index,
+    skip: 0,
+    hash: `${DOCUMENT_ID}-hash-${String(index)}`,
+    timestampUtcMs: new Date().toISOString(),
+    action,
+  }));
+
+  replayOperationCache.set(count, operations);
+  return operations;
+}
+
+/**
+ * The draft leg: the same base reducer the cold-miss replay runs, so the state
+ * the body mutates is the real nested mutative draft create() builds at
+ * packages/shared/document-model/reducer.ts:556. Returning undefined keeps the
+ * draft's mutations, as the generated state reducer does.
+ */
+function mirrorDraftReducer(
+  apply: NodeBodyApply,
+): Reducer<DocumentDrivePHState> {
+  const stateReducer: StateReducer<DocumentDrivePHState> = (state, action) => {
+    apply(
+      (state as unknown as DocumentDrivePHState).global,
+      action as AddFileAction | AddFolderAction,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentDrivePHState>(stateReducer);
+}
+
+function leastSquaresSlope(xs: number[], ys: number[]): number {
+  const n = xs.length;
+  const meanX = xs.reduce((total, value) => total + value, 0) / n;
+  const meanY = ys.reduce((total, value) => total + value, 0) / n;
+  let covariance = 0;
+  let variance = 0;
+
+  for (let index = 0; index < n; index++) {
+    covariance += (xs[index] - meanX) * (ys[index] - meanY);
+    variance += (xs[index] - meanX) ** 2;
+  }
+
+  return covariance / variance;
+}
+
+/**
+ * Per-node cost from the four op counts. A replay of N ops grows the node list
+ * from 0 to N-1, so the mean list a call scans is (N-1)/2 long and the per-node
+ * cost is twice the slope of per-call time against N -- the method T-016 used
+ * for the 0.7402 us/node figure this suite splits.
+ */
+function perNodeSlope(
+  samples: MirrorSample[],
+  read: (s: MirrorSample) => number,
+): number {
+  return (
+    2 *
+    leastSquaresSlope(
+      samples.map((sample) => sample.count),
+      samples.map(read),
+    )
+  );
+}
+
+const MIRROR_VARIANTS: MirrorVariant[] = [
+  { label: "mirrored body: reads + push + sort", reads: true, sort: true },
+  { label: "mirrored body: push + sort, no reads", reads: false, sort: true },
+  { label: "mirrored body: reads + push, no sort", reads: true, sort: false },
+  { label: "mirrored body: push only", reads: false, sort: false },
+];
+
+const MIRROR_FULL_LABEL = MIRROR_VARIANTS[0].label;
+const MIRROR_NO_READS_LABEL = MIRROR_VARIANTS[1].label;
+const MIRROR_NO_SORT_LABEL = MIRROR_VARIANTS[2].label;
+const MIRROR_PUSH_ONLY_LABEL = MIRROR_VARIANTS[3].label;
+/** Marked: these price what the sweep holds fixed, so no spread pairs them. */
+const MIRROR_REAL_LABEL = "real body (fidelity reference) [reference]";
+const MIRROR_NO_BODY_LABEL =
+  "no body: create() + base reducer only [reference]";
+
+/** Registration order, which the report reads the samples back in. */
+const MIRROR_LABELS: string[] = [
+  MIRROR_REAL_LABEL,
+  MIRROR_NO_BODY_LABEL,
+  ...MIRROR_VARIANTS.map((variant) => variant.label),
+];
+
+/** Op count and the time budget each split case needs; `iterations` sets n. */
+const READ_WRITE_SPLIT_CASES: [number, number][] = [
+  [100, 1000],
+  [500, 1000],
+  [1000, 1000],
+  [2000, 1000],
+];
+
+const mirrorSamples: MirrorSample[] = [];
+
+function mirrorSampleFor(
+  leg: MirrorLeg,
+  label: string,
+  count: number,
+): MirrorSample {
+  const sample: MirrorSample = {
+    leg,
+    label,
+    count,
+    stamps: createMirrorStamps(),
+  };
+  mirrorSamples.push(sample);
+  return sample;
+}
+
+function usPerCall(sample: MirrorSample, ns: bigint): number {
+  return sample.stamps.calls === 0
+    ? 0
+    : Number(ns) / 1000 / sample.stamps.calls;
+}
+
+function wallUsPerCall(sample: MirrorSample): number {
+  return usPerCall(sample, sample.stamps.wallNs);
+}
+
+function legSamples(leg: MirrorLeg, label: string): MirrorSample[] {
+  return mirrorSamples.filter(
+    (sample) => sample.leg === leg && sample.label === label,
+  );
+}
+
+function reportMirrorLeg(leg: MirrorLeg): void {
+  for (const label of MIRROR_LABELS) {
+    const samples = legSamples(leg, label);
+    console.log(
+      [
+        `read/write split | ${leg} | ${label}`,
+        ...samples.map(
+          (sample) =>
+            `${String(sample.count)} ops ${wallUsPerCall(sample).toFixed(3)} us/call`,
+        ),
+      ].join(" | "),
+    );
+  }
+
+  const full = legSamples(leg, MIRROR_FULL_LABEL);
+  const noReads = legSamples(leg, MIRROR_NO_READS_LABEL);
+  const noSort = legSamples(leg, MIRROR_NO_SORT_LABEL);
+  const pushOnly = legSamples(leg, MIRROR_PUSH_ONLY_LABEL);
+  const noBody = legSamples(leg, MIRROR_NO_BODY_LABEL);
+  const real = legSamples(leg, MIRROR_REAL_LABEL);
+
+  const fullSlope = perNodeSlope(full, wallUsPerCall);
+  const noReadsSlope = perNodeSlope(noReads, wallUsPerCall);
+  const noSortSlope = perNodeSlope(noSort, wallUsPerCall);
+  const pushOnlySlope = perNodeSlope(pushOnly, wallUsPerCall);
+  const noBodySlope = perNodeSlope(noBody, wallUsPerCall);
+
+  const readScan = fullSlope - noReadsSlope;
+  const sortCompare = fullSlope - noSortSlope;
+  const touch = noReadsSlope + noSortSlope - pushOnlySlope - fullSlope;
+  const readShare = readScan / fullSlope;
+
+  console.log(
+    [
+      `read/write split | ${leg} | per-node wall slopes`,
+      `full ${fullSlope.toFixed(4)}`,
+      `no reads ${noReadsSlope.toFixed(4)}`,
+      `no sort ${noSortSlope.toFixed(4)}`,
+      `push only ${pushOnlySlope.toFixed(4)}`,
+      `no body ${noBodySlope.toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+  console.log(
+    [
+      `read/write split | ${leg} | buckets from the case means, summing to the full wall slope`,
+      `read scan ${readScan.toFixed(4)}`,
+      `sort comparator ${sortCompare.toFixed(4)}`,
+      `touch, being any child drafts and finalize the statements still force ${touch.toFixed(4)}`,
+      `the read copy, the insert copy, the freeze, the assignment and everything the wrapper does anyway ${pushOnlySlope.toFixed(4)}`,
+      `full wall ${fullSlope.toFixed(4)} us/node`,
+      `cross-check read scan with the touch ${(noSortSlope - pushOnlySlope).toFixed(4)}`,
+      `cross-check sort with the touch ${(noReadsSlope - pushOnlySlope).toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+  console.log(
+    [
+      `read/write split | ${leg} | shares of the full per-node wall slope from the case means`,
+      `read scan ${(readShare * 100).toFixed(1)}%`,
+      `sort comparator ${((sortCompare / fullSlope) * 100).toFixed(1)}%`,
+      `touch ${((touch / fullSlope) * 100).toFixed(1)}%`,
+      `copies, freeze, assignment and wrapper ${((pushOnlySlope / fullSlope) * 100).toFixed(1)}%`,
+      `what survives removing the read scans from the draft ${((noReadsSlope / fullSlope) * 100).toFixed(1)}%`,
+      `wrapper the body does not induce, from the no-body case ${noBodySlope.toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+
+  const stampedRead = perNodeSlope(full, (sample) =>
+    usPerCall(sample, sample.stamps.readNs),
+  );
+  const stampedWrite = perNodeSlope(full, (sample) =>
+    usPerCall(sample, sample.stamps.writeNs),
+  );
+  const stampedBody = stampedRead + stampedWrite;
+  const realBody = perNodeSlope(real, (sample) =>
+    usPerCall(sample, sample.stamps.bodyNs),
+  );
+
+  mirrorSplitReadings.set(leg, {
+    leg,
+    counts: full.map((sample) => sample.count),
+    fullUsPerNode: fullSlope,
+    collisionScanUsPerNode: readScan,
+    sortUsPerNode: sortCompare,
+    touchUsPerNode: touch,
+    floorUsPerNode: pushOnlySlope,
+    wrapperUsPerNode: noBodySlope,
+    stampedBodyUsPerNode: stampedBody,
+    realBodyUsPerNode: realBody,
+    collisionScanSharePct: readShare * 100,
+    sortSharePct: (sortCompare / fullSlope) * 100,
+    touchSharePct: (touch / fullSlope) * 100,
+    floorSharePct: (pushOnlySlope / fullSlope) * 100,
+    scanPlusSortSharePct: ((readScan + sortCompare) / fullSlope) * 100,
+    mirrorOverRealSlope: stampedBody / realBody,
+  });
+  writeReplayStamps();
+
+  console.log(
+    [
+      `read/write split | ${leg} | stamped body sub-intervals`,
+      `reads ${stampedRead.toFixed(4)}`,
+      `insert+sort ${stampedWrite.toFixed(4)}`,
+      `body total ${stampedBody.toFixed(4)} us/node`,
+      `insert+sort share of body ${((stampedWrite / stampedBody) * 100).toFixed(1)}%`,
+    ].join(" | "),
+  );
+  console.log(
+    [
+      `read/write split | ${leg} | fidelity`,
+      `mirror body ${stampedBody.toFixed(4)} us/node`,
+      `real body ${realBody.toFixed(4)} us/node`,
+      `mirror/real slope ${(stampedBody / realBody).toFixed(4)}x`,
+      `wrapper (full wall - mirror body) ${(fullSlope - stampedBody).toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+
+  for (const sample of full) {
+    const reference = real.find((item) => item.count === sample.count);
+
+    if (reference === undefined) {
+      continue;
+    }
+
+    console.log(
+      [
+        `read/write split | ${leg} | fidelity per call | ${String(sample.count)} ops`,
+        `mirror full wall ${wallUsPerCall(sample).toFixed(3)}`,
+        `real body wall ${wallUsPerCall(reference).toFixed(3)} us/call`,
+        `ratio ${(wallUsPerCall(sample) / wallUsPerCall(reference)).toFixed(4)}x`,
+        `mirror body ${usPerCall(sample, sample.stamps.readNs + sample.stamps.writeNs).toFixed(3)}`,
+        `real body ${usPerCall(reference, reference.stamps.bodyNs).toFixed(3)} us/call`,
+        `ratio ${(Number(sample.stamps.readNs + sample.stamps.writeNs) / Number(reference.stamps.bodyNs) / (sample.stamps.calls / reference.stamps.calls)).toFixed(4)}x`,
+      ].join(" | "),
+    );
+  }
+}
+
+function reportMirrorSplit(): void {
+  reportMirrorLeg("draft");
+  reportMirrorLeg("plain");
+}
+
+/**
+ * The `no body` baseline runs the wrapper and nothing else. Its node list stays
+ * empty while its operation history grows exactly as every other variant's
+ * does, so its slope is the create()/base-reducer cost per replayed operation
+ * and subtracting it leaves the reducer body the split is about.
+ */
+function mirrorApplyFor(
+  label: string,
+  variant: MirrorVariant | undefined,
+  sample: MirrorSample,
+): NodeBodyApply {
+  if (label === MIRROR_NO_BODY_LABEL) {
+    return () => undefined;
+  }
+
+  if (variant === undefined) {
+    return (state, action) => stampedRealNodeBody(state, action, sample.stamps);
+  }
+
+  return (state, action) =>
+    mirroredNodeBody(
+      state,
+      action,
+      variant,
+      label === MIRROR_FULL_LABEL ? sample.stamps : undefined,
+    );
+}
+
+function everyMirrorSampleRan(): boolean {
+  return mirrorSamples.every((sample) => sample.stamps.calls > 0);
+}
+
+/**
+ * How the per-node cost of a drive add-node reducer call splits between the
+ * read scans at node.ts:23/59 and utils.ts:164 and the single sorted, frozen
+ * assignment at node.ts:47/76. A tinybench case mean is the wall time of a
+ * whole measured function, so no case can be a sub-interval of one reducer
+ * call; instead each leg runs the mirrored body four ways over the same
+ * growing node list -- with the scans and the comparator, without the scans,
+ * without the comparator, and with neither -- plus a no-body baseline, and the
+ * differences between those means carry the split into the record without
+ * needing the stamps. Every variant still reads the list and still assigns it
+ * with the new node, so the list grows identically and the scan lengths a
+ * variant pays are the ones the full body pays.
+ *
+ * The read the scans share is therefore in every variant, including the ones
+ * named `no reads`: what the reads flag drops is the two O(n) scans over the
+ * list, not the O(n) copy that produced it. The copy, the second copy the
+ * insert makes, the freeze and the assignment all sit in the `push only`
+ * floor, which is why that floor is a slope and not a constant. `full - no
+ * reads` is the scans, `full - no sort` is the comparator, and what those two
+ * leave between the push-only and full means is the touch: the child drafts a
+ * statement forces by reaching an element through the draft proxy, and the
+ * finalize that unwraps them.
+ *
+ * That touch term is the reason the two differences were not additive while
+ * the body still worked on the draft. On the body as T-016, T-020 and T-023
+ * left it, that term should now collapse toward noise on BOTH legs, not only
+ * on the plain one: the scans run over a plain copy readNodes took from the base
+ * list, the comparator sorts a plain array, and the assignment is frozen, so
+ * no statement in the body reaches a node through the proxy. A draft leg that
+ * still shows a large touch term, or a draft-over-plain full slope far above
+ * 1, means a statement has started touching the draft again -- which is what
+ * this suite is now for, rather than the 12.6x tax T-016 measured and removed.
+ * The report still prints the split three ways, and the stamped sub-intervals
+ * printed alongside charge that residue to the reads, the way the read
+ * statements see it in the real body.
+ */
+describe("Write Cache Cold Miss Replay Read/Write Split", () => {
+  for (const leg of ["draft", "plain"] satisfies MirrorLeg[]) {
+    for (const label of MIRROR_LABELS) {
+      const variant = MIRROR_VARIANTS.find((item) => item.label === label);
+
+      for (const [count, budgetMs] of READ_WRITE_SPLIT_CASES) {
+        const sample = mirrorSampleFor(leg, label, count);
+        const apply: NodeBodyApply = mirrorApplyFor(label, variant, sample);
+        const reducer = leg === "draft" ? mirrorDraftReducer(apply) : undefined;
+
+        bench(
+          `${leg} leg ${String(count)} ops: ${label}`,
+          () => {
+            const operations = replayStoredOperations(count);
+            const startedAt = process.hrtime.bigint();
+
+            if (reducer === undefined) {
+              const state = driveDocumentModelModule.utils.createState({
+                global: defaultGlobalState(),
+              });
+
+              for (const operation of operations) {
+                apply(
+                  state.global,
+                  operation.action as AddFileAction | AddFolderAction,
+                );
+              }
+            } else {
+              let document = driveDocumentModelModule.utils.createDocument();
+
+              for (const operation of operations) {
+                document = reducer(document, operation.action, undefined, {
+                  skip: operation.skip,
+                  replayOptions: { operation },
+                  skipIndexValidation: true,
+                });
+              }
+            }
+
+            sample.stamps.wallNs += process.hrtime.bigint() - startedAt;
+            sample.stamps.calls += operations.length;
+          },
+          {
+            time: budgetMs,
+            iterations: 10,
+            throws: true,
+            setup: () => {
+              resetMirrorStamps(sample.stamps);
+            },
+            teardown: (_task, mode) => {
+              if (mode === "run" && everyMirrorSampleRan()) {
+                reportMirrorSplit();
+              }
+            },
+          },
+        );
+      }
+    }
+  }
+});
+
+/** A node list at one size in both shapes a reader can hold it: the array sortNodesById froze (packages/shared/document-drive/src/utils.ts:147-158), and a plain copy of the same elements in the same order. */
+type NodeListPair = {
+  count: number;
+  frozen: readonly DriveNode[];
+  plain: DriveNode[];
+  /** Last in id order, and the folder holding it, so every scan visits all `count` elements. */
+  target: FileNode;
+  targetParentFolder: string;
+};
+
+type NodeListLeg = "frozen" | "plain";
+
+/** One scan the client read path runs, against whichever leg a case holds. */
+type NodeScan = {
+  suite: string;
+  label: string;
+  /** Something read off the result, so no case can be optimised away unrun. */
+  run: (nodes: readonly DriveNode[], pair: NodeListPair) => number;
+};
+
+const NODE_LIST_SIZES: number[] = [100, 1000, 5000];
+const NODE_SCAN_TIME_MS = 500;
+const NODES_PER_FOLDER = 50;
+
+let nodeScanSink = 0;
+let nodeScanCasesRun = 0;
+
+function folderIdFor(index: number): string {
+  const folder = Math.floor(index / NODES_PER_FOLDER) * NODES_PER_FOLDER;
+  return `node-${String(folder).padStart(6, "0")}`;
+}
+
+function buildNodeListPair(count: number): NodeListPair {
+  const built: DriveNode[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const id = `node-${String(index).padStart(6, "0")}`;
+
+    if (index % NODES_PER_FOLDER === 0) {
+      built.push({
+        id,
+        name: `folder ${String(index)}`,
+        kind: "folder",
+        parentFolder: null,
+      });
+      continue;
+    }
+
+    built.push({
+      id,
+      name: `document ${String(index)}`,
+      kind: "file",
+      parentFolder: folderIdFor(index),
+      documentType: DOCUMENT_TYPE,
+    });
+  }
+
+  const frozen = sortNodesById(built);
+  const last = frozen[frozen.length - 1];
+
+  if (!isFileNode(last)) {
+    throw new Error("the last node in id order has to be a file node");
+  }
+
+  return {
+    count,
+    frozen,
+    plain: [...frozen],
+    target: last,
+    targetParentFolder: folderIdFor(count - 1),
+  };
+}
+
+/** The scans as their call sites write them: drive-client.ts:235, :365, :396, :449 find by id and :473-477 copies or filters the list; reactor-browser actions/document.ts:74, :873, :912, :966, :1001, :1165, :1180 find by id and :87 finds by name, type and parent folder. The copy is the control -- it reads every element and calls no predicate, which is the shape T-023 measured the freeze leaving alone. */
+const NODE_SCANS: NodeScan[] = [
+  {
+    suite: "Client Node Lookup: find by id",
+    label: "find by id",
+    run: (nodes, pair) => {
+      const node = nodes.find((n) => n.id === pair.target.id);
+      return node === undefined ? 0 : node.name.length;
+    },
+  },
+  {
+    suite: "Client Node Lookup: find by name, type and parent folder",
+    label: "find by name, type and parent folder",
+    run: (nodes, pair) => {
+      const node = nodes.find(
+        (n) =>
+          isFileNode(n) &&
+          n.name === pair.target.name &&
+          n.documentType === pair.target.documentType &&
+          n.parentFolder === pair.target.parentFolder,
+      );
+      return node === undefined ? 0 : node.name.length;
+    },
+  },
+  {
+    suite: "Client Node Lookup: filter by parent folder",
+    label: "filter by parent folder",
+    run: (nodes, pair) =>
+      nodes.filter((n) => (n.parentFolder ?? null) === pair.targetParentFolder)
+        .length,
+  },
+  {
+    suite: "Client Node Lookup: copy the whole list",
+    label: "copy the whole list",
+    run: (nodes) => [...nodes].length,
+  },
+];
+
+const NODE_SCAN_CASES = NODE_SCANS.length * NODE_LIST_SIZES.length * 2;
+
+/** One line saying the scans found what they looked for, so a case that found nothing cannot pass for a fast one. */
+function reportNodeScans(): void {
+  console.log(
+    [
+      "client node lookup",
+      `${String(nodeScanCasesRun)} cases ran`,
+      `scan results summed to ${String(nodeScanSink)}`,
+    ].join(" | "),
+  );
+}
+
+/** What a client node lookup costs now that the list is frozen: the write path reads it through readNodes, which copies it first (utils.ts:132), and the read path scans it in place. A case is one call over one of two lists differing in nothing but Object.freeze, so its mean is the per-lookup wall time and a pair is the multiple the freeze costs; both legs visit every element and the name counts those visits, so the recorder's spread at a size is the freeze and never a difference in list length. The shared sub-microsecond harness floor is a larger share of the 100-node scans than of the 5000-node ones, which makes the smallest size the conservative end. */
+for (const scan of NODE_SCANS) {
+  describe(scan.suite, () => {
+    for (const count of NODE_LIST_SIZES) {
+      const pair = buildNodeListPair(count);
+
+      for (const leg of ["frozen", "plain"] satisfies NodeListLeg[]) {
+        const nodes: readonly DriveNode[] =
+          leg === "frozen" ? pair.frozen : pair.plain;
+
+        bench(
+          `${scan.label}, ${leg} list (${String(count)} node ops)`,
+          () => {
+            nodeScanSink += scan.run(nodes, pair);
+          },
+          {
+            time: NODE_SCAN_TIME_MS,
+            throws: true,
+            teardown: (_task, mode) => {
+              if (mode !== "run") {
+                return;
+              }
+
+              nodeScanCasesRun += 1;
+
+              if (nodeScanCasesRun === NODE_SCAN_CASES) {
+                reportNodeScans();
+              }
+            },
+          },
+        );
+      }
+    }
+  });
+}
+
+/** The packages/shared assigns outside node.ts that have T-023's shape. */
+const SURVEY_SITES: string[] = [
+  "document-drive/src/reducers/drive.ts:51 state.listeners = state.listeners.filter",
+  "document-drive/src/reducers/drive.ts:69 state.triggers = state.triggers.filter",
+  "document-model/reducers.ts:194 latestSpec.modules = latestSpec.modules.filter",
+  "document-model/reducers.ts:386 mod.operations = mod.operations.filter",
+  "document-model/reducers.ts:397 mod.operations = mod.operations.filter",
+  "document-model/reducers.ts:472 scopeState.examples = scopeState.examples.filter",
+];
+
+type SurveyAssignLeg =
+  | "filter the draft, assign unfrozen"
+  | "read base, filter, assign unfrozen"
+  | "read base, filter, assign frozen";
+
+const SURVEY_ASSIGN_LEGS: SurveyAssignLeg[] = [
+  "filter the draft, assign unfrozen",
+  "read base, filter, assign unfrozen",
+  "read base, filter, assign frozen",
+];
+
+type SurveyReadLeg = "frozen" | "plain";
+
+const SURVEY_READ_LEGS: SurveyReadLeg[] = ["frozen", "plain"];
+
+/** 5 is a drive's production listener count; 1000 shows per-element growth. */
+const SURVEY_SIZES: number[] = [5, 50, 500, 1000];
+const SURVEY_TIME_MS = 500;
+
+let surveySink = 0;
+let surveyCasesRun = 0;
+
+/** The assigned list, built the way the leg names; base is the untouched list. */
+function surveyFilteredList<TItem>(
+  draftList: TItem[],
+  baseList: readonly TItem[],
+  keep: (item: TItem) => boolean,
+  leg: SurveyAssignLeg,
+): TItem[] {
+  if (leg === "filter the draft, assign unfrozen") {
+    return draftList.filter(keep);
+  }
+
+  const filtered = baseList.filter(keep);
+
+  if (leg === "read base, filter, assign frozen") {
+    return Object.freeze(filtered) as TItem[];
+  }
+
+  return filtered;
+}
+
+function surveyListenerId(index: number): string {
+  return `listener-${String(index).padStart(6, "0")}`;
+}
+
+function surveyModuleId(index: number): string {
+  return `module-${String(index).padStart(6, "0")}`;
+}
+
+/** Listeners shaped as addListenerOperation stores them. */
+function buildSurveyListeners(count: number): Listener[] {
+  const listeners: Listener[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    listeners.push({
+      listenerId: surveyListenerId(index),
+      label: `listener ${String(index)}`,
+      block: false,
+      system: false,
+      filter: {
+        branch: [BRANCH],
+        documentId: [DOCUMENT_ID],
+        documentType: [DOCUMENT_TYPE],
+        scope: [SCOPE],
+      },
+      callInfo: {
+        transmitterType: "Internal",
+        name: `transmitter-${String(index)}`,
+        data: "",
+      },
+    });
+  }
+
+  return listeners;
+}
+
+/** Modules carry one operation each, so the finalize walk recurses a level. */
+function buildSurveyModules(count: number): ModuleSpecification[] {
+  const modules: ModuleSpecification[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    modules.push({
+      id: surveyModuleId(index),
+      name: `module ${String(index)}`,
+      description: `module ${String(index)} description`,
+      operations: [
+        {
+          id: `operation-${String(index).padStart(6, "0")}`,
+          name: `OPERATION_${String(index)}`,
+          description: null,
+          errors: [],
+          examples: [],
+          reducer: null,
+          schema: null,
+          template: null,
+          scope: SCOPE,
+        },
+      ],
+    });
+  }
+
+  return modules;
+}
+
+/** A replayed operation, whose hash keeps the reducer from rehashing a scope. */
+function surveyOperation(
+  scope: string,
+  type: string,
+  input: object,
+): Operation {
+  const action: Action = {
+    id: `survey-${type}`,
+    type,
+    scope,
+    timestampUtcMs: Date.now().toString(),
+    input,
+  };
+
+  return {
+    id: deriveOperationId(DOCUMENT_ID, scope, BRANCH, action.id),
+    index: 0,
+    skip: 0,
+    hash: `survey-hash-${type}`,
+    timestampUtcMs: new Date().toISOString(),
+    action,
+  };
+}
+
+/** A drive document holding the listeners on its local scope, unfrozen. */
+function surveyDriveDocument(
+  listeners: Listener[],
+): PHDocument<DocumentDrivePHState> {
+  const document = driveDocumentModelModule.utils.createDocument();
+  document.state.local.listeners = listeners;
+  return document;
+}
+
+/** A document model whose latest specification holds the modules, unfrozen. */
+function surveyDocumentModelDocument(
+  modules: ModuleSpecification[],
+): PHDocument<DocumentModelPHState> {
+  const document = baseCreateDocument<DocumentModelPHState>(
+    (state) => ({ ...defaultDocumentModelPHState(), ...state }),
+    undefined,
+    "powerhouse/document-model",
+  );
+
+  document.state.global.specifications = [
+    {
+      changeLog: [],
+      modules,
+      state: {
+        global: { examples: [], initialValue: "", schema: "" },
+        local: { examples: [], initialValue: "", schema: "" },
+      },
+      version: 1,
+    },
+  ];
+
+  return document;
+}
+
+/** removeListenerOperation with its one statement under the leg. */
+function surveyListenerReducer(
+  leg: SurveyAssignLeg,
+  base: readonly Listener[],
+  removedId: string,
+): Reducer<DocumentDrivePHState> {
+  const stateReducer: StateReducer<DocumentDrivePHState> = (state, action) => {
+    const local = (state as unknown as DocumentDrivePHState).local;
+    local.listeners = surveyFilteredList(
+      local.listeners,
+      base,
+      (listener) => listener.listenerId !== removedId,
+      leg,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentDrivePHState>(stateReducer);
+}
+
+/** deleteModuleOperation with its one statement under the leg. */
+function surveyModuleReducer(
+  leg: SurveyAssignLeg,
+  base: readonly ModuleSpecification[],
+  removedId: string,
+): Reducer<DocumentModelPHState> {
+  const stateReducer: StateReducer<DocumentModelPHState> = (state, action) => {
+    const global = (state as unknown as DocumentModelPHState).global;
+    const latestSpec = global.specifications[global.specifications.length - 1];
+    latestSpec.modules = surveyFilteredList(
+      latestSpec.modules,
+      base,
+      (specModule) => specModule.id !== removedId,
+      leg,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentModelPHState>(stateReducer);
+}
+
+/** The sites surveyed and one line saying the cases did the claimed work. */
+function reportSurvey(): void {
+  console.log(
+    [
+      "reducer draft array survey",
+      `${String(surveyCasesRun)} cases ran`,
+      `results summed to ${String(surveySink)}`,
+      `sites surveyed: ${SURVEY_SITES.join(" ; ")}`,
+    ].join(" | "),
+  );
+}
+
+const SURVEY_ASSIGN_CASES = SURVEY_SIZES.length * SURVEY_ASSIGN_LEGS.length * 2;
+const SURVEY_READ_CASES = SURVEY_SIZES.length * SURVEY_READ_LEGS.length * 4;
+const SURVEY_CASES = SURVEY_ASSIGN_CASES + SURVEY_READ_CASES;
+
+function countSurveyCase(): void {
+  surveyCasesRun += 1;
+
+  if (surveyCasesRun === SURVEY_CASES) {
+    reportSurvey();
+  }
+}
+
+/** One dispatched REMOVE_LISTENER, whose predicate visits every listener. */
+describe("Reducer Draft Assign Survey: drive listeners", () => {
+  for (const count of SURVEY_SIZES) {
+    const base = buildSurveyListeners(count);
+    const removedId = surveyListenerId(count - 1);
+    const document = surveyDriveDocument(base);
+    const operation = surveyOperation("local", "REMOVE_LISTENER", {
+      listenerId: removedId,
+    });
+
+    for (const leg of SURVEY_ASSIGN_LEGS) {
+      const reducer = surveyListenerReducer(leg, base, removedId);
+
+      bench(
+        `drive listeners, ${leg} (${String(count)} listener ops)`,
+        () => {
+          const next = reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            replayOptions: { operation },
+            skipIndexValidation: true,
+          });
+          surveySink += next.state.local.listeners.length;
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const next = reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            });
+
+            if (next.state.local.listeners.length !== count - 1) {
+              throw new Error(
+                `drive listener survey at ${String(count)} kept ${String(next.state.local.listeners.length)} of ${String(count)}`,
+              );
+            }
+
+            countSurveyCase();
+          },
+        },
+      );
+    }
+  }
+});
+
+/** The same statement on a nested draft: the spec is reached through it. */
+describe("Reducer Draft Assign Survey: document-model spec modules", () => {
+  for (const count of SURVEY_SIZES) {
+    const base = buildSurveyModules(count);
+    const removedId = surveyModuleId(count - 1);
+    const document = surveyDocumentModelDocument(base);
+    const operation = surveyOperation(SCOPE, "DELETE_MODULE", {
+      id: removedId,
+    });
+
+    for (const leg of SURVEY_ASSIGN_LEGS) {
+      const reducer = surveyModuleReducer(leg, base, removedId);
+
+      bench(
+        `document-model spec modules, ${leg} (${String(count)} module ops)`,
+        () => {
+          const next = reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            replayOptions: { operation },
+            skipIndexValidation: true,
+          });
+          surveySink += next.state.global.specifications[0].modules.length;
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const next = reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            });
+            const remaining = next.state.global.specifications[0].modules;
+
+            if (remaining.length !== count - 1) {
+              throw new Error(
+                `module survey at ${String(count)} kept ${String(remaining.length)} of ${String(count)}`,
+              );
+            }
+
+            countSurveyCase();
+          },
+        },
+      );
+    }
+  }
+});
+
+/** One scan a reducer runs, against whichever shape of the list a case holds. */
+type SurveyScan = {
+  suite: string;
+  label: string;
+  unit: string;
+  frozen: (count: number) => readonly unknown[];
+  plain: (count: number) => unknown[];
+  run: (list: readonly unknown[], targetId: string) => number;
+  targetId: (count: number) => string;
+};
+
+const surveyListenerLists = new Map<number, Listener[]>();
+const surveyModuleLists = new Map<number, ModuleSpecification[]>();
+
+function surveyListenerList(count: number): Listener[] {
+  const cached = surveyListenerLists.get(count);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = buildSurveyListeners(count);
+  surveyListenerLists.set(count, built);
+  return built;
+}
+
+function surveyModuleList(count: number): ModuleSpecification[] {
+  const cached = surveyModuleLists.get(count);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = buildSurveyModules(count);
+  surveyModuleLists.set(count, built);
+  return built;
+}
+
+/** The predicates those reducers read their lists back with, both shapes. */
+const SURVEY_SCANS: SurveyScan[] = [
+  {
+    suite: "Reducer List Read Survey: drive listeners, find by id",
+    label: "drive listeners find by id",
+    unit: "listener ops",
+    frozen: (count) => Object.freeze([...surveyListenerList(count)]),
+    plain: (count) => [...surveyListenerList(count)],
+    run: (list, targetId) => {
+      const found = (list as readonly Listener[]).find(
+        (listener) => listener.listenerId === targetId,
+      );
+      return found === undefined ? 0 : 1;
+    },
+    targetId: (count) => surveyListenerId(count - 1),
+  },
+  {
+    suite: "Reducer List Read Survey: drive listeners, filter by id",
+    label: "drive listeners filter by id",
+    unit: "listener ops",
+    frozen: (count) => Object.freeze([...surveyListenerList(count)]),
+    plain: (count) => [...surveyListenerList(count)],
+    run: (list, targetId) =>
+      (list as readonly Listener[]).filter(
+        (listener) => listener.listenerId !== targetId,
+      ).length,
+    targetId: (count) => surveyListenerId(count - 1),
+  },
+  {
+    suite: "Reducer List Read Survey: document-model spec modules, find by id",
+    label: "document-model spec modules find by id",
+    unit: "module ops",
+    frozen: (count) => Object.freeze([...surveyModuleList(count)]),
+    plain: (count) => [...surveyModuleList(count)],
+    run: (list, targetId) => {
+      const found = (list as readonly ModuleSpecification[]).find(
+        (specModule) => specModule.id === targetId,
+      );
+      return found === undefined ? 0 : found.name.length;
+    },
+    targetId: (count) => surveyModuleId(count - 1),
+  },
+  {
+    suite:
+      "Reducer List Read Survey: document-model spec modules, filter by id",
+    label: "document-model spec modules filter by id",
+    unit: "module ops",
+    frozen: (count) => Object.freeze([...surveyModuleList(count)]),
+    plain: (count) => [...surveyModuleList(count)],
+    run: (list, targetId) =>
+      (list as readonly ModuleSpecification[]).filter(
+        (specModule) => specModule.id !== targetId,
+      ).length,
+    targetId: (count) => surveyModuleId(count - 1),
+  },
+];
+
+for (const scan of SURVEY_SCANS) {
+  describe(scan.suite, () => {
+    for (const count of SURVEY_SIZES) {
+      const targetId = scan.targetId(count);
+      const frozen = scan.frozen(count);
+      const plain = scan.plain(count);
+
+      for (const leg of SURVEY_READ_LEGS) {
+        const list: readonly unknown[] = leg === "frozen" ? frozen : plain;
+
+        bench(
+          `${scan.label}, ${leg} list (${String(count)} ${scan.unit})`,
+          () => {
+            surveySink += scan.run(list, targetId);
+          },
+          {
+            time: SURVEY_TIME_MS,
+            throws: true,
+            teardown: (_task, mode) => {
+              if (mode !== "run") {
+                return;
+              }
+
+              if (Object.isFrozen(list) !== (leg === "frozen")) {
+                throw new Error(
+                  `${scan.label} at ${String(count)} ran its ${leg} leg over the wrong shape`,
+                );
+              }
+
+              countSurveyCase();
+            },
+          },
+        );
+      }
+    }
+  });
+}
+
+function surveyOperationId(index: number): string {
+  return `operation-${String(index).padStart(6, "0")}`;
+}
+
+function buildSurveyTriggers(count: number): Trigger[] {
+  const triggers: Trigger[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    triggers.push({
+      id: `trigger-${String(index).padStart(6, "0")}`,
+      type: "PullResponder",
+      data: {
+        interval: "1",
+        listenerId: surveyListenerId(index),
+        url: "http://localhost",
+      },
+    });
+  }
+
+  return triggers;
+}
+
+function buildSurveyExamples(count: number): { id: string; value: string }[] {
+  const examples: { id: string; value: string }[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    examples.push({
+      id: `example-${String(index).padStart(6, "0")}`,
+      value: "{}",
+    });
+  }
+
+  return examples;
+}
+
+type RealReducerCase = {
+  type: string;
+  unit: string;
+  setup: (count: number) => { run: () => number; expected: number };
+};
+
+function replayArgs(operation: Operation) {
+  return {
+    skip: operation.skip,
+    replayOptions: { operation },
+    skipIndexValidation: true,
+  };
+}
+
+function realDriveCase(
+  type: string,
+  unit: string,
+  measure: (state: DocumentDrivePHState) => number,
+  input: (count: number) => object,
+): RealReducerCase {
+  return {
+    type,
+    unit,
+    setup: (count) => {
+      const document = driveDocumentModelModule.utils.createDocument();
+      document.state.local.listeners = buildSurveyListeners(count);
+      document.state.local.triggers = buildSurveyTriggers(count);
+      const operation = surveyOperation("local", type, input(count));
+      return {
+        run: () =>
+          measure(
+            driveDocumentModelModule.reducer(
+              document,
+              operation.action,
+              undefined,
+              replayArgs(operation),
+            ).state,
+          ),
+        expected: count - 1,
+      };
+    },
+  };
+}
+
+function realDocumentModelCase(
+  type: string,
+  unit: string,
+  measure: (state: DocumentModelPHState) => number,
+  input: (count: number) => object,
+  expected: (count: number) => number,
+): RealReducerCase {
+  return {
+    type,
+    unit,
+    setup: (count) => {
+      const document = surveyDocumentModelDocument(buildSurveyModules(count));
+      document.state.global.specifications[0].state.global.examples =
+        buildSurveyExamples(count);
+      const operation = surveyOperation(SCOPE, type, input(count));
+      return {
+        run: () =>
+          measure(
+            documentModelReducer(
+              document,
+              operation.action,
+              undefined,
+              replayArgs(operation),
+            ).state,
+          ),
+        expected: expected(count),
+      };
+    },
+  };
+}
+
+function latestModules(state: DocumentModelPHState): ModuleSpecification[] {
+  const specifications = state.global.specifications;
+  return specifications[specifications.length - 1].modules;
+}
+
+function operationCount(state: DocumentModelPHState): number {
+  return latestModules(state).reduce(
+    (total, specModule) => total + specModule.operations.length,
+    0,
+  );
+}
+
+/** The six T-043 sites, dispatched through the reducers that ship them. */
+const REAL_REDUCER_CASES: RealReducerCase[] = [
+  realDriveCase(
+    "REMOVE_LISTENER",
+    "listener ops",
+    (state) => state.local.listeners.length,
+    (count) => ({ listenerId: surveyListenerId(count - 1) }),
+  ),
+  realDriveCase(
+    "REMOVE_TRIGGER",
+    "trigger ops",
+    (state) => state.local.triggers.length,
+    (count) => ({ triggerId: `trigger-${String(count - 1).padStart(6, "0")}` }),
+  ),
+  realDocumentModelCase(
+    "DELETE_MODULE",
+    "module ops",
+    (state) => latestModules(state).length,
+    (count) => ({ id: surveyModuleId(count - 1) }),
+    (count) => count - 1,
+  ),
+  realDocumentModelCase(
+    "DELETE_OPERATION",
+    "module ops",
+    operationCount,
+    (count) => ({ id: surveyOperationId(count - 1) }),
+    (count) => count - 1,
+  ),
+  realDocumentModelCase(
+    "MOVE_OPERATION",
+    "module ops",
+    (state) => latestModules(state)[0].operations.length,
+    (count) => ({
+      operationId: surveyOperationId(count - 1),
+      newModuleId: surveyModuleId(0),
+    }),
+    () => 2,
+  ),
+  realDocumentModelCase(
+    "DELETE_STATE_EXAMPLE",
+    "example ops",
+    (state) => state.global.specifications[0].state.global.examples.length,
+    (count) => ({
+      scope: SCOPE,
+      id: `example-${String(count - 1).padStart(6, "0")}`,
+    }),
+    (count) => count - 1,
+  ),
+];
+
+let realReducerSink = 0;
+
+for (const realCase of REAL_REDUCER_CASES) {
+  describe(`Real Reducer Draft Assign: ${realCase.type}`, () => {
+    for (const count of SURVEY_SIZES) {
+      const { run, expected } = realCase.setup(count);
+
+      bench(
+        `${realCase.type} (${String(count)} ${realCase.unit})`,
+        () => {
+          realReducerSink += run();
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const result = run();
+
+            if (result !== expected) {
+              throw new Error(
+                `${realCase.type} at ${String(count)} gave ${String(result)}, expected ${String(expected)} (sink ${String(realReducerSink)})`,
+              );
+            }
+          },
+        },
+      );
+    }
+  });
+}

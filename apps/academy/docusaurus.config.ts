@@ -11,6 +11,20 @@ const config: Config = {
     "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
   ],
 
+  // Umami analytics (self-hosted). data-domains counts only the production
+  // host, so the dev/staging deploys and local `docusaurus start` stay out.
+  scripts: [
+    {
+      src: "https://umami.monitoring.vetra.io/script.js",
+      defer: true,
+      "data-website-id": "5a9bd03e-f330-4fa1-8087-b0475030f365",
+      "data-domains": "academy.vetra.io",
+      "data-do-not-track": "true",
+      "data-exclude-search": "true",
+      "data-performance": "true",
+    },
+  ],
+
   future: {
     v4: true,
   },

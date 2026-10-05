@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 export default defineConfig({
   entry: ["src/index.ts", "src/node.ts"],
@@ -8,6 +9,7 @@ export default defineConfig({
     neverBundle: [/^node:/],
   },
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });

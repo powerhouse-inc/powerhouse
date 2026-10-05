@@ -1,3 +1,7 @@
+import {
+  assertPiecesOutDir,
+  planPieces,
+} from "@powerhousedao/shared/build-pieces";
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -94,14 +98,19 @@ export async function runBuild(
 ): Promise<GenerationResult> {
   const packageRoot = selectedPackageRoot(args);
   await assertManifestNameMatchesPackage(packageRoot);
+  assertPiecesOutDir({
+    outDir: args.outDir,
+    pieces: planPieces(packageRoot, args.outDir),
+  });
 
   return await runGeneration({
     packageRoot,
     configFile: selectedConfigFile(args),
+    allowMissingConfig: args.configFile === undefined,
     outDir: args.outDir,
     cliSources: selectedCliSources(args),
     warningsAsErrors: args.warningsAsErrors,
-    steps: options.steps ?? (await createGenerationSteps(args.outDir)),
+    steps: options.steps ?? (await createGenerationSteps(args.outDir, args)),
     log: options.log ?? writeStderr,
     ...(options.promoteOutput !== undefined && {
       promoteOutput: options.promoteOutput,
@@ -159,7 +168,12 @@ export async function runPublishCheck(
     warningsAsErrors: args.warningsAsErrors,
   };
   const { exitCode } = await runPrepack(
-    { ...selection, debug: args.debug },
+    {
+      ...selection,
+      debug: args.debug,
+      noSharedDeps: false,
+      ignoreTypeErrors: false,
+    },
     options,
   );
   return {

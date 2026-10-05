@@ -1,4 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { defaultCatchUpConfig } from "../../src/catch-up/types.js";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -8,6 +9,7 @@ import {
   type ReadModelBatchCompletedEvent,
 } from "../../src/events/types.js";
 import { ProjectionShardManager } from "../../src/projection/projection-shard-manager.js";
+import { defaultReadModelIndexingConfig } from "../../src/read-models/base-read-model.js";
 import type { DbConfig } from "../../src/projection/protocol.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { JobMeta } from "../../src/shared/types.js";
@@ -129,6 +131,8 @@ describe("ProjectionShardManager", () => {
         "document-indexer",
       ],
       postReadyKinds: [],
+      indexing: defaultReadModelIndexingConfig,
+      catchUp: defaultCatchUpConfig,
       factory,
       logger: new ConsoleLogger(["test"]),
       hostBus: bus,
@@ -279,6 +283,8 @@ describe("ProjectionShardManager", () => {
         models: [],
         preReadyKinds: ["document-view", "document-indexer"],
         postReadyKinds: [],
+        indexing: defaultReadModelIndexingConfig,
+        catchUp: defaultCatchUpConfig,
         factory,
         logger: new ConsoleLogger(["test"]),
         hostBus: new EventBus(),

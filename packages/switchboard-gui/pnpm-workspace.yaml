@@ -1,0 +1,6 @@
+# Its own pnpm root, outside the monorepo workspace. Links design-system, so
+# install the monorepo root first.
+minimumReleaseAge: 10080
+
+allowBuilds:
+  esbuild: true

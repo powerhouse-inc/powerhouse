@@ -17,6 +17,14 @@ import {
   type SharingType,
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  DEFAULT_SIGNATURE_POLICY,
+  requestedSignaturePolicy,
+  withSignaturePolicy,
+  type ProtocolVersions,
+  type SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
+import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
 
@@ -114,6 +122,18 @@ export async function waitForDocumentReady(
   });
 }
 
+/** The full client's creation default, else the library's. */
+async function createSignaturePolicy(): Promise<SignaturePolicy> {
+  const client = window.ph?.reactorClientModule?.client;
+  return client ? client.getCreateSignaturePolicy() : DEFAULT_SIGNATURE_POLICY;
+}
+
+/** What the full client selects for a drive, which has no parent. */
+async function createProtocolVersions(): Promise<ProtocolVersions> {
+  const client = window.ph?.reactorClientModule?.client;
+  return client ? client.getCreateProtocolVersions() : {};
+}
+
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
@@ -125,19 +145,29 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     throw new Error("ReactorClient not initialized");
   }
 
-  const driveDoc = driveCreateDocument({
-    global: {
-      name: input.global.name || "",
-      icon: input.global.icon ?? null,
-      nodes: [],
+  // A configured id (e.g. a local default drive) overrides the generated one,
+  // and only a legacy drive can take a chosen id. Empty strings are the "not
+  // provided" signal used by the Add Drive modal.
+  const driveDoc = withSignaturePolicy(
+    driveCreateDocument({
+      global: {
+        name: input.global.name || "",
+        icon: input.global.icon ?? null,
+        nodes: [],
+      },
+    }),
+    requestedSignaturePolicy(
+      input,
+      input.id ? "legacy" : await createSignaturePolicy(),
+    ),
+    {
+      id: input.id || undefined,
+      protocolVersions: {
+        ...(await createProtocolVersions()),
+        ...input.protocolVersions,
+      },
     },
-  });
-
-  // A configured id (e.g. a local default drive) overrides the generated one.
-  // Empty strings are the "not provided" signal used by the Add Drive modal.
-  if (input.id) {
-    driveDoc.header.id = input.id;
-  }
+  );
 
   if (preferredEditor) {
     driveDoc.header.meta = { preferredEditor };
@@ -163,15 +193,24 @@ export async function addRemoteDrive(
     throw new Error("Sync not initialized");
   }
 
-  // Fetch drive info from the REST endpoint to get both id and graphqlEndpoint
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to resolve drive info from ${url}`);
+  // Fetch drive info from the REST endpoint to get both id and graphqlEndpoint.
+  // Sends the Renown token when there is one: a switchboard running
+  // DOCUMENT_PERMISSIONS refuses a protected drive to an anonymous caller even
+  // when the logged-in user holds a grant on it.
+  //
+  // Guarded by the same auth handler as the registration below: discovery is
+  // the FIRST call that can be refused, so a rejection here has to prompt the
+  // login too. Before this, it threw a bare Error outside the try and the
+  // refusal surfaced as "drive not reachable".
+  let driveInfo;
+  try {
+    driveInfo = await fetchDriveInfo(url);
+  } catch (error) {
+    if (isDriveAuthError(error)) {
+      showPHModal({ type: "driveAuthRequired" });
+    }
+    throw error;
   }
-  const driveInfo = (await response.json()) as {
-    id: string;
-    graphqlEndpoint: string;
-  };
 
   const resolvedDriveId = driveId ?? driveInfo.id;
   const collectionId = DriveCollectionId.forDrive(resolvedDriveId);

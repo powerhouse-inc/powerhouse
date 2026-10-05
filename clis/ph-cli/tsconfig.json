@@ -5,7 +5,7 @@
     "outDir": "./.tsbuild"
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"],
+  "exclude": ["dist", "node_modules", "test/fixtures/*/dist"],
   "references": [
     {
       "path": "../../apps/switchboard"

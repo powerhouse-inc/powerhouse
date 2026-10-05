@@ -19,7 +19,7 @@ const SWITCHBOARD_SERVER_PATH = path.resolve(
   "../../../apps/switchboard/src/server.mts",
 );
 
-const PORT = 4001;
+const PORT = Number(process.env.PH_LOAD_TEST_PORT ?? 4001);
 const CLIENT_COUNT = 4;
 const DURATION = 15_000;
 const MUTATION_INTERVAL = 1_000;
@@ -475,6 +475,33 @@ async function main(): Promise<void> {
       console.log(green("[PASS] All client states converged"));
     } else {
       passed = false;
+    }
+
+    // Documents that were never written to converge trivially: a refused
+    // mutation fails its job without failing the client that submitted it.
+    const written = validStates.map((s) => ({
+      label: s.label,
+      count:
+        (
+          s.data as {
+            perScope?: Partial<Record<string, { skipZeroCount: number }>>;
+          }
+        ).perScope?.global?.skipZeroCount ?? 0,
+    }));
+    const unwritten = written.filter((w) => w.count === 0);
+    if (unwritten.length === 0) {
+      console.log(
+        green(
+          `[PASS] Mutations applied (${written.map((w) => w.count).join(", ")} global ops)`,
+        ),
+      );
+    } else {
+      passed = false;
+      console.log(
+        red(
+          `[FAIL] No global operations on: ${unwritten.map((w) => w.label).join(", ")}`,
+        ),
+      );
     }
   }
 

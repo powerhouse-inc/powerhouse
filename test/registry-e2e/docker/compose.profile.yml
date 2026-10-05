@@ -1,0 +1,8 @@
+# Opens registry-1's inspector on localhost:4939 so a CDP client can record
+# CPU profiles. Use with STRESS_COMPOSE_OVERRIDE=docker/compose.profile.yml.
+services:
+  registry-1:
+    environment:
+      NODE_OPTIONS: --max-old-space-size=768 --inspect=0.0.0.0:9229
+    ports:
+      - "127.0.0.1:4939:9229"

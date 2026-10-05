@@ -28,6 +28,7 @@ export const ConnectPackageManager: React.FC = () => {
     isLoadingMoreAvailable,
     availableError,
     ensureAvailableLoaded,
+    ensureInstalledMetadataLoaded,
     fetchAvailablePage,
     loadMoreAvailable,
     setAvailableSearch,
@@ -124,6 +125,7 @@ export const ConnectPackageManager: React.FC = () => {
         }}
         onAvailableSearchChange={setAvailableSearch}
         onAvailableTabOpen={ensureAvailableLoaded}
+        onInstalledTabOpen={ensureInstalledMetadataLoaded}
         onInstall={handleInstall}
         onUninstall={handleUninstall}
       />

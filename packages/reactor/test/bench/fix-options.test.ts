@@ -62,6 +62,7 @@ describe("parseFixOptions", () => {
     ]);
     expect(options).toEqual({
       subcommand: "criterion",
+      mode: "ratio",
       before: "before.json",
       caseName: "Cold miss rebuild (1000 operations)",
       maxRatio: 0.65,
@@ -86,6 +87,99 @@ describe("parseFixOptions", () => {
         "0.65",
       ]),
     ).toThrow("--fail-ratio must be above --max-ratio");
+  });
+
+  it("parses a bound on the after-run alone, with no --before", () => {
+    expect(
+      parseFixOptions([
+        "criterion",
+        "--case",
+        "shadow walk 1000",
+        "--max-ms",
+        "0.2",
+        "--fail-at",
+        "0.5",
+      ]),
+    ).toEqual({
+      subcommand: "criterion",
+      mode: "bound",
+      before: "",
+      caseName: "shadow walk 1000",
+      over: "",
+      direction: "at-most",
+      threshold: 0.2,
+      failAt: 0.5,
+      control: "",
+      controlTolerance: 0.1,
+      out: "bench/results/criterion.json",
+    });
+    const growth = parseFixOptions([
+      "criterion",
+      "--case",
+      "shadow walk 100",
+      "--over",
+      "shadow walk 10",
+      "--min-growth",
+      "3",
+      "--fail-at",
+      "1.5",
+    ]);
+    expect(growth).toMatchObject({
+      mode: "bound",
+      over: "shadow walk 10",
+      direction: "at-least",
+      threshold: 3,
+      failAt: 1.5,
+    });
+  });
+
+  it("refuses a bound that mixes thresholds or puts the miss line on the wrong side", () => {
+    const base = ["criterion", "--case", "x"];
+    expect(() =>
+      parseFixOptions([...base, "--max-ms", "1", "--min-ms", "2"]),
+    ).toThrow("Give one threshold");
+    expect(() =>
+      parseFixOptions([...base, "--max-ms", "1", "--max-ratio", "0.5"]),
+    ).toThrow("Give one threshold");
+    expect(() => parseFixOptions([...base, "--min-growth", "3"])).toThrow(
+      "--min-growth needs --over",
+    );
+    expect(() =>
+      parseFixOptions([...base, "--max-ms", "1", "--over", "y"]),
+    ).toThrow("--over needs --max-growth or --min-growth");
+    expect(() =>
+      parseFixOptions([...base, "--max-ms", "1", "--fail-at", "0.5"]),
+    ).toThrow("--fail-at must be above --max-ms");
+    expect(() =>
+      parseFixOptions([
+        ...base,
+        "--over",
+        "y",
+        "--min-growth",
+        "3",
+        "--fail-at",
+        "4",
+      ]),
+    ).toThrow("--fail-at must be below --min-growth");
+    expect(() =>
+      parseFixOptions([...base, "--max-ms", "1", "--control", "c"]),
+    ).toThrow("--control needs --before");
+    expect(() =>
+      parseFixOptions([...base, "--max-ms", "1", "--fail-ratio", "2"]),
+    ).toThrow("a bound uses --fail-at");
+    expect(() =>
+      parseFixOptions([
+        "criterion",
+        "--before",
+        "b.json",
+        "--case",
+        "x",
+        "--max-ratio",
+        "0.9",
+        "--fail-at",
+        "2",
+      ]),
+    ).toThrow("--fail-at applies to a bound");
   });
 
   it("collects repeated --changed for ci and rejects flags on the wrong verb", () => {

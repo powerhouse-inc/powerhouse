@@ -1,0 +1,5 @@
+--- 2: self-update success (npm prefix env -> sandbox)
+Updating ph-cmd via npm (npm install -g ph-cmd@latest)...
+
+changed 91 packages in 2s
+Updated ph-cmd from 6.2.1 to 6.2.2. The new version takes effect on your next 'ph' run.

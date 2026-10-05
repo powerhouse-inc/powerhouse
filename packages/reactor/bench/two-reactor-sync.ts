@@ -14,9 +14,9 @@
  * 2. A collection is identified by the document that belongs to it. Syncing a
  *    fixed name like "collection1" registers remotes for a collection nothing
  *    is a member of: it connects, reports healthy, and transfers nothing. The
- *    ids are deterministic, so the remotes can be registered up front - which
- *    they have to be, because the outbox is filled from JOB_WRITE_READY as
- *    writes happen. A remote added afterwards never sees them, and pulling
+ *    ids are derived before the create, so the remotes can be registered up
+ *    front - which they have to be, because the outbox is filled from
+ *    JOB_WRITE_READY as writes happen. A remote added afterwards never sees them, and pulling
  *    them later is the backfill this transport cannot do.
  * 3. Concurrent writes still have to be awaited somewhere. `void execute(...)`
  *    hides a rejection and leaves the bench waiting on convergence that can
@@ -48,10 +48,10 @@
  *
  * Alongside the timing, each case attributes its jobs from the lifecycle
  * events and from the read-model coordinator's own stage split: queue wait
- * (JOB_PENDING to JOB_RUNNING), apply (to JOB_WRITE_READY), index and index
- * chain wait, split into the writes this harness submitted, loads from the
- * peer, and loads that re-appended operations the side had already written,
- * which is what a reshuffle does.
+ * (JOB_PENDING to JOB_RUNNING), apply (to JOB_WRITE_READY), index, index
+ * chain wait and post-ready, split into the writes this harness submitted,
+ * loads from the peer, and loads that re-appended operations the side had
+ * already written, which is what a reshuffle does.
  * Those land in the record's derived list. The Contention case exists for
  * this: it is Baseline with the writer alternating per operation and nothing
  * else changed, so the cost of two reactors writing one document can be read
@@ -63,12 +63,25 @@
  * JOB_READ_READY emit, and the wait dominates it: 92% of it in Baseline and
  * 99% in Heavy Load, growing with operations per document rather than with
  * the cost of indexing. READMODEL_BATCH_COMPLETED already carries the stages
- * apart, so index is pre-ready plus emit and the wait is its own bucket. The
- * post-ready stage runs after JOB_READ_READY is emitted and is in neither.
+ * apart, so index is pre-ready plus emit and the wait is its own bucket.
+ *
+ * Post-ready is the fourth stage on that same event and its own bucket too. It
+ * runs after JOB_READ_READY is emitted, so it is outside index by construction,
+ * but it is not bookkeeping: the default coordinator runs the
+ * subscription-notification read model and the processor manager there, and
+ * both touch the store on every batch. Left unread it was the one stage of
+ * read-model cost no record carried.
  */
 
 import { readFileSync } from "node:fs";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  localPeerManifest,
+  PEER_CAPABILITIES,
+  type ISigner,
+  type PeerManifest,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { Bench } from "tinybench";
 import type { DerivedRatio } from "./records/benchmark-schema.js";
 import {
@@ -84,6 +97,7 @@ import {
 import { DriveCollectionId } from "../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";
+import { signActions } from "../src/core/utils.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import { ReactorEventTypes } from "../src/events/types.js";
@@ -101,6 +115,7 @@ import type { IChannelFactory } from "../src/sync/interfaces.js";
 import { SyncBuilder } from "../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 import { TestChannel } from "../test/sync/channels/test-channel.js";
+import { TestP256Signer } from "../test/utils/p256-signer.js";
 
 type TwoReactorSetup = {
   reactorA: IReactor;
@@ -113,6 +128,9 @@ type TwoReactorSetup = {
   /** Remote name to its peer's, filled in per document by connectDocuments. */
   peerMapping: Map<string, string>;
   tracker: SyncTracker;
+  signers: Map<IReactor, ISigner>;
+  /** The documents' derived ids, known once they are made in beforeEach. */
+  ids: string[];
 };
 
 type JobStamp = {
@@ -126,6 +144,7 @@ type JobStamp = {
   batches: number;
   chainWaitMs: number;
   indexMs: number;
+  postReadyMs: number;
 };
 
 type SideRecord = {
@@ -145,10 +164,12 @@ type JobBucket = {
   jobs: number;
   queueWaitMs: number;
   applyMs: number;
-  /** Divisor for the two below: the jobs whose coordinator split arrived. */
+  /** Divisor for the three below: the jobs whose coordinator split arrived. */
   indexedJobs: number;
   indexMs: number;
   chainWaitMs: number;
+  /** The stage after JOB_READ_READY, which no case mean can contain. */
+  postReadyMs: number;
   reAppendedOps: number;
 };
 
@@ -175,6 +196,7 @@ function emptyBucket(): JobBucket {
     indexedJobs: 0,
     indexMs: 0,
     chainWaitMs: 0,
+    postReadyMs: 0,
     reAppendedOps: 0,
   };
 }
@@ -196,6 +218,7 @@ function addBucket(into: JobBucket, from: JobBucket): void {
   into.indexedJobs += from.indexedJobs;
   into.indexMs += from.indexMs;
   into.chainWaitMs += from.chainWaitMs;
+  into.postReadyMs += from.postReadyMs;
   into.reAppendedOps += from.reAppendedOps;
 }
 
@@ -220,6 +243,7 @@ function stampFor(record: SideRecord, jobId: string): JobStamp {
       batches: 0,
       chainWaitMs: 0,
       indexMs: 0,
+      postReadyMs: 0,
     };
     record.stamps.set(jobId, stamp);
   }
@@ -301,6 +325,7 @@ class SyncTracker {
             stamp.batches += 1;
             stamp.chainWaitMs += event.chainWaitDurationMs;
             stamp.indexMs += event.preReadyDurationMs + event.emitDurationMs;
+            stamp.postReadyMs += event.postReadyDurationMs;
           },
         ),
         eventBus.subscribe<JobFailedEvent>(
@@ -360,6 +385,7 @@ class SyncTracker {
           bucket.indexedJobs += 1;
           bucket.indexMs += stamp.indexMs;
           bucket.chainWaitMs += stamp.chainWaitMs;
+          bucket.postReadyMs += stamp.postReadyMs;
         }
         bucket.reAppendedOps += stamp.reAppended;
       }
@@ -524,6 +550,10 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     [moduleA.reactor, eventBusA],
     [moduleB.reactor, eventBusB],
   ]);
+  const signers = new Map<IReactor, ISigner>([
+    [moduleA.reactor, (await TestP256Signer.create()).asISigner()],
+    [moduleB.reactor, (await TestP256Signer.create()).asISigner()],
+  ]);
 
   return {
     reactorA: moduleA.reactor,
@@ -535,6 +565,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     eventBusB,
     peerMapping,
     tracker,
+    signers,
+    ids: [],
   };
 }
 
@@ -545,21 +577,23 @@ async function submitWrite(
   docId: string,
   actions: Parameters<IReactor["execute"]>[2],
 ): Promise<void> {
-  const info = await reactor.execute(docId, "main", actions);
+  const signed = await signActions(actions, setup.signers.get(reactor)!, {
+    documentId: docId,
+    branch: "main",
+  });
+  const info = await reactor.execute(docId, "main", signed);
   setup.tracker.track(reactor, info.id);
 }
 
 /** Creates documents on the chosen side; the caller waits for convergence. */
 async function createDocuments(
   setup: TwoReactorSetup,
-  ids: string[],
+  documents: PHDocument[],
   sideFor: (setup: TwoReactorSetup, index: number) => IReactor,
 ): Promise<void> {
-  for (const [index, id] of ids.entries()) {
-    const document = driveDocumentModelModule.utils.createDocument();
-    document.header.id = id;
+  for (const [index, document] of documents.entries()) {
     const reactor = sideFor(setup, index);
-    const info = await reactor.create(document);
+    const info = await reactor.create(document, setup.signers.get(reactor));
     setup.tracker.track(reactor, info.id);
   }
 }
@@ -568,6 +602,7 @@ async function createDocuments(
 async function connectDocuments(
   setup: TwoReactorSetup,
   ids: string[],
+  peer?: PeerManifest,
 ): Promise<void> {
   const filter = { documentId: [], scope: [], branch: "main" };
   for (const id of ids) {
@@ -582,12 +617,18 @@ async function connectDocuments(
       collectionId,
       { type: "internal", parameters: {} },
       filter,
+      undefined,
+      undefined,
+      peer,
     );
     await setup.moduleB.syncModule!.syncManager.add(
       toA,
       collectionId,
       { type: "internal", parameters: {} },
       filter,
+      undefined,
+      undefined,
+      peer,
     );
   }
 }
@@ -733,6 +774,12 @@ function bucketRatios(
       unit: "ms",
       note: `${indexNote}; time the batch sat behind earlier batches for the same documentId:scope:branch before indexing started`,
     },
+    {
+      name: `${label}: ${kind} post-ready`,
+      value: round(bucket.postReadyMs / bucket.indexedJobs),
+      unit: "ms",
+      note: `${indexNote}; the coordinator's post-ready read models, which run after JOB_READ_READY is emitted and are therefore in neither index nor the convergence mean`,
+    },
   );
   return ratios;
 }
@@ -765,7 +812,7 @@ function describeAttribution(attribution: Attribution): string {
   const per = (bucket: JobBucket) =>
     bucket.jobs === 0
       ? "none"
-      : `${bucket.jobs} jobs, wait ${round(bucket.queueWaitMs / bucket.jobs)}ms, apply ${round(bucket.applyMs / bucket.jobs)}ms, index ${perIndexed(bucket.indexMs, bucket)} and chain wait ${perIndexed(bucket.chainWaitMs, bucket)} over ${bucket.indexedJobs} indexed`;
+      : `${bucket.jobs} jobs, wait ${round(bucket.queueWaitMs / bucket.jobs)}ms, apply ${round(bucket.applyMs / bucket.jobs)}ms, index ${perIndexed(bucket.indexMs, bucket)}, chain wait ${perIndexed(bucket.chainWaitMs, bucket)} and post-ready ${perIndexed(bucket.postReadyMs, bucket)} over ${bucket.indexedJobs} indexed`;
   return [
     `local: ${per(attribution.local)}`,
     `load: ${per(attribution.load)}`,
@@ -780,11 +827,13 @@ type Scenario = {
   name: string;
   /** The case's name in records before the timed window changed; "" if never renamed. */
   continues: string;
-  ids: string[];
+  documents: number;
   /** Which side creates each document. */
   creatorFor: (setup: TwoReactorSetup, index: number) => IReactor;
   /** Submits every write; the harness waits for convergence afterwards. */
   write: (setup: TwoReactorSetup, ids: string[]) => Promise<void>[];
+  /** What each remote's peer announced; undefined leaves it silent. */
+  peer?: PeerManifest;
 };
 
 type Lifecycle = {
@@ -800,18 +849,22 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
   return {
     beforeEach: async () => {
       setup = await setupTwoReactors();
-      await connectDocuments(setup, scenario.ids);
-      await createDocuments(setup, scenario.ids, scenario.creatorFor);
+      const documents = Array.from({ length: scenario.documents }, () =>
+        driveDocumentModelModule.utils.createDocument(),
+      );
+      setup.ids = documents.map((document) => document.header.id);
+      await connectDocuments(setup, setup.ids, scenario.peer);
+      await createDocuments(setup, documents, scenario.creatorFor);
       await setup.tracker.whenConverged(
         setup.reactorA,
         setup.reactorB,
-        scenario.ids,
+        setup.ids,
       );
     },
     afterEach: async () => {
       const current = setup!;
       try {
-        await assertConverged(current.reactorA, current.reactorB, scenario.ids);
+        await assertConverged(current.reactorA, current.reactorB, current.ids);
         addAttribution(
           attributionFor(scenario.name),
           current.tracker.attribution(),
@@ -829,11 +882,11 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
 async function run(scenario: Scenario): Promise<void> {
   const current = setup!;
   current.tracker.resetStamps();
-  await Promise.all(scenario.write(current, scenario.ids));
+  await Promise.all(scenario.write(current, current.ids));
   await current.tracker.whenConverged(
     current.reactorA,
     current.reactorB,
-    scenario.ids,
+    current.ids,
   );
 }
 
@@ -841,11 +894,42 @@ const alternating = (setup: TwoReactorSetup, index: number) =>
   index % 2 === 0 ? setup.reactorA : setup.reactorB;
 const sideA = (setup: TwoReactorSetup) => setup.reactorA;
 
+/** A peer on a build without erasure: gateOutbound runs on every outbox page. */
+const WITHOUT_DOCUMENT_PURGE = localPeerManifest(
+  PEER_CAPABILITIES.filter(
+    (capability) => capability.name !== "document-purge",
+  ),
+  {},
+);
+
 const scenarios: Scenario[] = [
   {
     name: "Baseline: 10 documents, 10 operations each (writes to convergence)",
     continues: "Baseline: 10 documents, 10 operations each",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i)),
+    documents: 10,
+    creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        const reactor = i < 5 ? setup.reactorA : setup.reactorB;
+        for (let j = 0; j < 10; j++) {
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Doc ${i} Update ${j}`,
+              }),
+            ]),
+          );
+        }
+      }
+      return writes;
+    },
+  },
+  {
+    name: "Outbound gating: Baseline, peers announce everything but document-purge (writes to convergence)",
+    continues: "",
+    peer: WITHOUT_DOCUMENT_PURGE,
+    documents: 10,
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -867,7 +951,7 @@ const scenarios: Scenario[] = [
   {
     name: "Contention: 10 documents, 10 operations each, writer alternates per operation (writes to convergence)",
     continues: "",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 400)),
+    documents: 10,
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -889,7 +973,7 @@ const scenarios: Scenario[] = [
   {
     name: "Conflicts: 5 documents, 20 conflicting operations each (writes to convergence)",
     continues: "Conflicts: 5 documents, 20 conflicting operations each",
-    ids: Array.from({ length: 5 }, (_, i) => deterministicId("doc", i + 100)),
+    documents: 5,
     creatorFor: sideA,
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -911,7 +995,7 @@ const scenarios: Scenario[] = [
   {
     name: "Heavy Load: 50 documents, 100 operations each (writes to convergence)",
     continues: "Heavy Load: 50 documents, 100 operations each",
-    ids: Array.from({ length: 50 }, (_, i) => deterministicId("doc", i + 200)),
+    documents: 50,
     creatorFor: alternating,
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -931,12 +1015,13 @@ const scenarios: Scenario[] = [
     },
   },
   {
-    name: "Deep Hierarchy: 10 documents with nested structures (writes to convergence)",
-    continues: "Deep Hierarchy: 10 documents with nested structures",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 300)),
+    name: "Deep Hierarchy: 10 documents with nested structures (writes to convergence), single writer per document",
+    continues:
+      "Deep Hierarchy: 10 documents with nested structures (writes to convergence)",
+    documents: 10,
     creatorFor: sideA,
     write: (setup, ids) => {
-      const { reactorA, reactorB } = setup;
+      const { reactorA } = setup;
       const writes: Promise<void>[] = [];
       for (const [i, docId] of ids.entries()) {
         let parentFolder: string | null = null;
@@ -952,7 +1037,7 @@ const scenarios: Scenario[] = [
             ]),
           );
           writes.push(
-            submitWrite(setup, reactorB, docId, [
+            submitWrite(setup, reactorA, docId, [
               driveDocumentModelModule.actions.addFile({
                 id: deterministicId("file", i * 100 + level),
                 name: `File at Level ${level}`,
@@ -962,6 +1047,50 @@ const scenarios: Scenario[] = [
             ]),
           );
           parentFolder = folderId;
+        }
+      }
+      return writes;
+    },
+  },
+  {
+    name: "Document Count: 50 documents, 10 operations each (writes to convergence)",
+    continues: "",
+    documents: 50,
+    creatorFor: alternating,
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        const reactor = alternating(setup, i);
+        for (let j = 0; j < 10; j++) {
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Wide ${i} Update ${j}`,
+              }),
+            ]),
+          );
+        }
+      }
+      return writes;
+    },
+  },
+  {
+    name: "History Depth: 10 documents, 100 operations each (writes to convergence)",
+    continues: "",
+    documents: 10,
+    creatorFor: alternating,
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        const reactor = alternating(setup, i);
+        for (let j = 0; j < 100; j++) {
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Deep ${i} Update ${j}`,
+              }),
+            ]),
+          );
         }
       }
       return writes;
@@ -1061,7 +1190,14 @@ for (const scenario of scenarios) {
 
 say("Running Two-Reactor Sync Benchmarks...\n");
 
-await bench.run();
+try {
+  await bench.run();
+} catch (error) {
+  process.stderr.write(
+    `sync bench failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}\n`,
+  );
+  process.exit(1);
+}
 
 if (record) {
   const target = findTarget("sync");

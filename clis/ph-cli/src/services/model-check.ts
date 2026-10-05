@@ -208,11 +208,14 @@ async function runReleaseCheck(
     let buildError: unknown;
     try {
       const { runBuild } = await import("./build.js");
-      result = await runBuild(args, {
-        promoteOutput: false,
-        log: streams.err,
-        ...(options.steps !== undefined && { steps: options.steps }),
-      });
+      result = await runBuild(
+        { ...args, noSharedDeps: false, ignoreTypeErrors: false },
+        {
+          promoteOutput: false,
+          log: streams.err,
+          ...(options.steps !== undefined && { steps: options.steps }),
+        },
+      );
     } catch (error) {
       buildError = error;
     }

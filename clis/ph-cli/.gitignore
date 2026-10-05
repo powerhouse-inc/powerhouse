@@ -6,3 +6,10 @@ processors
 .ph
 src/version.ts
 build/
+# built output of the test fixtures ph build runs against
+test/fixtures/*/dist
+test/fixtures/*/*.tsbuildinfo
+# the fixtures are source, even where they use the generated directory names
+!test/fixtures/*/document-models
+!test/fixtures/*/editors
+!test/fixtures/*/processors

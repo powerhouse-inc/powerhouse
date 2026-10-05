@@ -181,10 +181,16 @@ const BASE_MODEL_SPECIFIERS = [
 export async function resolveWorkerModelSources(
   packages: string[],
   logger: ILogger,
+  options: {
+    /** Cached file for a package not installed locally, e.g. from a registry. */
+    resolveRemote?: (identifier: string) => Promise<string | null>;
+  } = {},
 ): Promise<FileModelSource[]> {
   const sources: FileModelSource[] = [];
   for (const identifier of [...BASE_MODEL_SPECIFIERS, ...packages]) {
-    const filePath = await resolveModelModuleFile(identifier);
+    const filePath =
+      (await resolveModelModuleFile(identifier)) ??
+      (await resolveRemoteSafely(identifier, options.resolveRemote, logger));
     if (!filePath) {
       logger.warn(
         `Worker model sources: no importable document-models entry for "${identifier}", skipping`,
@@ -194,6 +200,22 @@ export async function resolveWorkerModelSources(
     sources.push({ filePath });
   }
   return sources;
+}
+
+async function resolveRemoteSafely(
+  identifier: string,
+  resolveRemote: ((identifier: string) => Promise<string | null>) | undefined,
+  logger: ILogger,
+): Promise<string | null> {
+  if (!resolveRemote) return null;
+  try {
+    return await resolveRemote(identifier);
+  } catch (error) {
+    logger.warn(
+      `Worker model sources: could not cache "${identifier}" from the registry: ${String(error)}`,
+    );
+    return null;
+  }
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { ILogger } from "document-model";
+import type { CatchUpStatus } from "../catch-up/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -7,6 +8,12 @@ import {
   type ReadModelIndexedEvent,
   type ReadModelIndexingStage,
 } from "../events/types.js";
+import {
+  indexReserved,
+  releaseBatch,
+  reserveBatch,
+  type BatchReservations,
+} from "../read-models/coordinator.js";
 import type {
   ILiveReadModelCoordinator,
   IReadModel,
@@ -76,8 +83,14 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
 
     const enqueuedAt = performance.now();
     const key = this.queueKeyFor(event);
+    const reservations = reserveBatch(
+      this.indexedReadModels(),
+      event.operations,
+      this.logger,
+    );
+    const run = () => this.runHostChain(event, enqueuedAt, reservations);
     const previous = this.chains.get(key) ?? Promise.resolve();
-    const current = previous.then(() => this.runHostChain(event, enqueuedAt));
+    const current = previous.then(run, run);
 
     this.chains.set(key, current);
     void current.finally(() => {
@@ -102,6 +115,14 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
 
   getChainDepth(): number {
     return this.manager.getChainDepth() + this.chains.size;
+  }
+
+  indexedReadModels(): readonly IReadModel[] {
+    return [...this.preReady, ...this.postReady];
+  }
+
+  catchUpStatuses(): CatchUpStatus[] {
+    return this.manager.catchUpStatuses();
   }
 
   /** Worker chains flush first, so every relayed read-ready is in `chains`. */
@@ -129,6 +150,19 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
   private async runHostChain(
     event: JobReadReadyEvent,
     enqueuedAt: number,
+    reservations: BatchReservations,
+  ): Promise<void> {
+    try {
+      await this.runHostBatch(event, enqueuedAt, reservations);
+    } finally {
+      releaseBatch(reservations);
+    }
+  }
+
+  private async runHostBatch(
+    event: JobReadReadyEvent,
+    enqueuedAt: number,
+    reservations: BatchReservations,
   ): Promise<void> {
     const chainWaitDurationMs = performance.now() - enqueuedAt;
     const preReadyStart = performance.now();
@@ -136,7 +170,7 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     try {
       await Promise.all(
         this.preReady.map((readModel) =>
-          this.indexWithTiming(readModel, "pre_ready", event),
+          this.indexWithTiming(readModel, "pre_ready", event, reservations),
         ),
       );
     } catch (error) {
@@ -166,7 +200,7 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     try {
       await Promise.all(
         this.postReady.map((readModel) =>
-          this.indexWithTiming(readModel, "post_ready", event),
+          this.indexWithTiming(readModel, "post_ready", event, reservations),
         ),
       );
     } catch (error) {
@@ -196,11 +230,12 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     readModel: IReadModel,
     stage: ReadModelIndexingStage,
     event: JobReadReadyEvent,
+    reservations: BatchReservations,
   ): Promise<void> {
     const start = performance.now();
     let success = false;
     try {
-      await readModel.indexOperations(event.operations);
+      await indexReserved(readModel, event.operations, reservations);
       success = true;
     } finally {
       this.emitReadModelIndexed({

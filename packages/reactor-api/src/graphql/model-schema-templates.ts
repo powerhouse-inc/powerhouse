@@ -1,6 +1,6 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { pascalCase } from "change-case";
-import type { DocumentNode } from "graphql";
+import { Kind, parse, print, type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 
 /**
@@ -82,13 +82,27 @@ export function generateModelSchema(
 
 function printModuleSchemas(modules: ModelProjection["modules"]): string {
   return modules
-    .map(
-      ({ name, sdl }) =>
-        `"""
-       Module: ${pascalCase(name)}
-       """
-       ${sdl}`,
-    )
+    .map(({ name, sdl }) => {
+      const document = parse(sdl);
+      const [first, ...rest] = document.definitions;
+      if (first && "description" in first && first.description === undefined) {
+        return print({
+          ...document,
+          definitions: [
+            {
+              ...first,
+              description: {
+                kind: Kind.STRING,
+                value: `Module: ${pascalCase(name)}`,
+                block: true,
+              },
+            },
+            ...rest,
+          ],
+        });
+      }
+      return print(document);
+    })
     .join("\n");
 }
 
@@ -205,7 +219,7 @@ function generateNewApiSchema(projection: ModelProjection): DocumentNode {
 
     input ${documentName}_SearchFilterInput {
       parentId: String
-      identifiers: [String!]
+      identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
     }
   `;
 
@@ -241,7 +255,6 @@ function generateNewApiSchema(projection: ModelProjection): DocumentNode {
     """
     type ${documentName}_DocumentResultPage {
       items: [${documentName}MutationResult!]!
-      totalCount: Int!
       hasNextPage: Boolean!
       hasPreviousPage: Boolean!
       cursor: String
@@ -252,7 +265,7 @@ function generateNewApiSchema(projection: ModelProjection): DocumentNode {
   const queries = `
     type ${documentName}Queries {
       """Get a specific ${documentName} document by identifier"""
-      document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+      document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
 
       """Get all ${documentName} documents (paged)"""
       documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
@@ -261,10 +274,10 @@ function generateNewApiSchema(projection: ModelProjection): DocumentNode {
       findDocuments(search: ${documentName}_SearchFilterInput, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get outgoing relationships of a ${documentName} document"""
-      documentOutgoingRelationships(sourceIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get incoming relationships to a ${documentName} document"""
-      documentIncomingRelationships(targetIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
     }
   `;
 
@@ -283,16 +296,16 @@ function generateNewApiSchema(projection: ModelProjection): DocumentNode {
 
   // Mutations nested under ${documentName} namespace
   const createDocumentMutation = initialStateInputSchema
-    ? `createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
-    : `createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
-  const createEmptyDocumentMutation = `createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
+    ? `createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
+    : `createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), preferredEditor: String): ${documentName}MutationResult!`;
+  const createEmptyDocumentMutation = `createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): ${documentName}MutationResult!`;
 
   const operationMutations = projection.operations
     .flatMap(({ camelName, inputTypeName }) => [
       // Sync mutation
-      `${camelName}(docId: PHID!, input: ${inputTypeName}!): ${documentName}MutationResult!`,
+      `${camelName}(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ${inputTypeName}!): ${documentName}MutationResult!`,
       // Async mutation
-      `${camelName}Async(docId: PHID!, input: ${inputTypeName}!): String!`,
+      `${camelName}Async(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ${inputTypeName}!): String!`,
     ])
     .join("\n        ");
 

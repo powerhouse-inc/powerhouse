@@ -297,6 +297,140 @@ describe("Relationship Operations", () => {
     });
   });
 
+  describe("IReactor relationship metadata", () => {
+    it("carries metadata from addRelationship through to the indexed edge", async () => {
+      await createDocument(createDocModelDocument({ id: "parent-meta-1" }));
+      await createDocument(createDocModelDocument({ id: "child-meta-1" }));
+
+      const job = await reactor.addRelationship(
+        "parent-meta-1",
+        "child-meta-1",
+        "child",
+        { parentFolderId: "folder-A" },
+      );
+      await waitForJobCompletion(job.id);
+
+      const edges = await waitForOutgoingCount("parent-meta-1", 1);
+      expect(edges[0].metadata).toEqual({ parentFolderId: "folder-A" });
+    });
+
+    it("updateRelationship replaces metadata on the existing edge", async () => {
+      await createDocument(createDocModelDocument({ id: "parent-meta-2" }));
+      await createDocument(createDocModelDocument({ id: "child-meta-2" }));
+
+      await waitForJobCompletion(
+        (
+          await reactor.addRelationship(
+            "parent-meta-2",
+            "child-meta-2",
+            "child",
+            { order: 1 },
+          )
+        ).id,
+      );
+      await waitForOutgoingCount("parent-meta-2", 1);
+
+      await waitForJobCompletion(
+        (
+          await reactor.updateRelationship(
+            "parent-meta-2",
+            "child-meta-2",
+            "child",
+            { order: 2 },
+          )
+        ).id,
+      );
+
+      await vi.waitUntil(
+        async () => {
+          const page = await documentIndexer.getOutgoing("parent-meta-2", [
+            "child",
+          ]);
+          return (
+            (page.results[0]?.metadata as { order?: number } | undefined)
+              ?.order === 2
+          );
+        },
+        { timeout: 5000 },
+      );
+    });
+
+    it("getOutgoingRelationshipEdges returns the edge rows with metadata", async () => {
+      await createDocument(createDocModelDocument({ id: "parent-meta-3" }));
+      await createDocument(createDocModelDocument({ id: "child-meta-3" }));
+
+      await waitForJobCompletion(
+        (
+          await reactor.addRelationship(
+            "parent-meta-3",
+            "child-meta-3",
+            "child",
+            { label: "outgoing" },
+          )
+        ).id,
+      );
+      await waitForOutgoingCount("parent-meta-3", 1);
+
+      const outgoing =
+        await reactor.getOutgoingRelationshipEdges("parent-meta-3");
+      expect(outgoing.results).toHaveLength(1);
+      expect(outgoing.results[0]).toMatchObject({
+        sourceId: "parent-meta-3",
+        targetId: "child-meta-3",
+        relationshipType: "child",
+        metadata: { label: "outgoing" },
+      });
+      expect(outgoing.results[0].createdAt).toBeInstanceOf(Date);
+      expect(outgoing.results[0].updatedAt).toBeInstanceOf(Date);
+
+      const incoming = await reactor.getIncomingRelationshipEdges(
+        "child-meta-3",
+        "child",
+      );
+      expect(incoming.results).toHaveLength(1);
+      expect(incoming.results[0].metadata).toEqual({ label: "outgoing" });
+
+      const filteredOut = await reactor.getOutgoingRelationshipEdges(
+        "parent-meta-3",
+        "no-such-type",
+      );
+      expect(filteredOut.results).toHaveLength(0);
+    });
+
+    it("re-adding an existing relationship does not overwrite its metadata", async () => {
+      await createDocument(createDocModelDocument({ id: "parent-meta-4" }));
+      await createDocument(createDocModelDocument({ id: "child-meta-4" }));
+
+      await waitForJobCompletion(
+        (
+          await reactor.addRelationship(
+            "parent-meta-4",
+            "child-meta-4",
+            "child",
+            { order: 1 },
+          )
+        ).id,
+      );
+      await waitForOutgoingCount("parent-meta-4", 1);
+
+      const reAdd = await reactor.addRelationship(
+        "parent-meta-4",
+        "child-meta-4",
+        "child",
+        { order: 99 },
+      );
+      await waitForJobCompletion(reAdd.id);
+      const reAddStatus = await reactor.getJobStatus(reAdd.id);
+      await documentIndexer.waitForConsistency(reAddStatus.consistencyToken);
+
+      const page = await documentIndexer.getOutgoing("parent-meta-4", [
+        "child",
+      ]);
+      expect(page.results).toHaveLength(1);
+      expect(page.results[0].metadata).toEqual({ order: 1 });
+    });
+  });
+
   describe("updateRelationship", () => {
     it("mutates DocumentRelationship.metadata while preserving createdAt", async () => {
       const parentDoc = createDocModelDocument({ id: "parent-update-1" });

@@ -1,0 +1,278 @@
+# @powerhousedao/pieces-framework
+
+Powerhouse's published copy of the [Activepieces](https://www.activepieces.com)
+piece framework, so a piece can be authored outside their monorepo.
+
+It also carries `ctx.reactor`, which is internal: it is served to
+`@powerhousedao/piece-reactor` alone — the piece whose actions are that surface
+— and every other piece finds the member throwing, however it was loaded and
+whoever shipped it. Nothing you write should reach for it.
+
+## Why this package exists
+
+Activepieces pieces are written against `@activepieces/pieces-framework` and
+`@activepieces/pieces-common`. Since Activepieces v0.86.0 most pieces ship as
+self-contained bundles with the framework inlined, and upstream stopped
+publishing those two packages to npm. Anyone authoring a piece outside the
+Activepieces monorepo has nothing to install.
+
+"Most", not all: their bundler externalises what esbuild cannot trace, so a
+piece can still declare a dependency — 21 of the 760 published ones do. A
+reactor installs those before loading the piece, with lifecycle scripts
+disabled, which is why one needing a postinstall or a native build will not
+run there whatever version is pinned.
+
+This package vendors the framework, `pieces-common` and the two core packages
+they depend on from a pinned upstream tag (see [UPSTREAM.md](./UPSTREAM.md)),
+publishes them as ESM under the Powerhouse release train, and adds the
+Powerhouse types on top. The authoring API is upstream's, unchanged.
+
+```ts
+import {
+  createAction,
+  createPiece,
+  PieceAuth,
+  Property,
+} from "@powerhousedao/pieces-framework";
+import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
+```
+
+## Writing a piece for a reactor package
+
+1. **Start from a reactor package.** `ph init` gives you one; then add the
+   framework:
+
+   ```sh
+   pnpm add -D @powerhousedao/pieces-framework
+   ```
+
+   A dev dependency: `ph build` inlines the framework into each piece bundle.
+   The types need `@types/node`, which a `ph init` project already has.
+
+2. **Write the piece** in `pieces/<name>/index.ts` with `createPiece`,
+   `createAction`, `createTrigger` and `Property`, exactly as an Activepieces
+   piece:
+
+   ```ts
+   import {
+     createAction,
+     createPiece,
+     PieceAuth,
+     Property,
+   } from "@powerhousedao/pieces-framework";
+
+   const listInvoices = createAction({
+     auth: invoicesAuth,
+     name: "list_invoices",
+     displayName: "List invoices",
+     description: "Invoices in the billing system",
+     props: {
+       since: Property.ShortText({ displayName: "Since", required: false }),
+     },
+     async run(ctx) {
+       return clientFor(ctx.auth).listInvoices(ctx.propsValue.since);
+     },
+   });
+
+   export const invoices = createPiece({
+     displayName: "Invoices",
+     logoUrl: "https://example.com/invoices.png",
+     authors: ["acme"],
+     auth: invoicesAuth,
+     actions: [listInvoices],
+     triggers: [],
+   });
+   ```
+
+   A piece connects a reactor to something outside it. Reading and writing
+   Powerhouse documents is the reactor piece's job, and a workflow composes the
+   two as separate steps.
+
+   To give a connection a status and an account label in Connect, declare
+   `validate` and `getConnectionIdentifier` on the auth. Both are handed the
+   flat auth value (here the props themselves, not `{ type, props }`):
+
+   ```ts
+   const invoicesAuth = PieceAuth.CustomAuth({
+     displayName: "Invoices",
+     required: true,
+     props: {
+       base_url: Property.ShortText({
+         displayName: "Base URL",
+         required: true,
+       }),
+       token: PieceAuth.SecretText({ displayName: "Token", required: true }),
+     },
+     validate: async ({ auth }) => {
+       try {
+         await clientFor(auth).ping();
+         return { valid: true };
+       } catch (error) {
+         return { valid: false, error: String(error) };
+       }
+     },
+     getConnectionIdentifier: async ({ auth }) =>
+       (await clientFor(auth).me()).email,
+   });
+   ```
+
+   A reactor runs `validate` for the check's result and, when it passes,
+   `getConnectionIdentifier` for the account label. The label is best-effort:
+   returning `undefined` or throwing keeps the previous label and still passes
+   the check.
+
+3. **Register it.** List the piece in `pieces/index.ts` as a `PackagePiece`
+   and in the package manifest under `"pieces"`:
+
+   ```ts
+   import type { PackagePiece } from "@powerhousedao/pieces-framework";
+
+   export const pieces: PackagePiece[] = [
+     {
+       name: "@acme/pieces-invoices",
+       entry: "dist/node/pieces/invoices/index.mjs",
+     },
+   ];
+   ```
+
+   `entry` is the built module, relative to the package root: `ph build`
+   emits `pieces/<name>/index.ts` to `dist/node/pieces/<name>/index.mjs`.
+
+4. **Build.** `ph build` bundles each `pieces/<name>/index.ts` on its own
+   into `dist/node/pieces/<name>/index.mjs`, with everything but node
+   built-ins inlined — the framework, its dependencies and the shared set that
+   document models and subgraphs leave to the host — because a host runs a
+   piece in a forked worker with no `node_modules` beside it. It then loads
+   each built piece once, in a child process, and writes two files next to it:
+   `descriptor.json`, the piece's own `metadata()` in the Activepieces
+   `PieceMetadata` shape (display name, logo, auth, every action and trigger
+   with its properties), and a `package.json` that makes the directory a
+   complete bundle. The `pieces` list in `dist/powerhouse.manifest.json` gets
+   each piece's version, description, `bundle` and `descriptor` paths, so a
+   registry can offer the piece before anyone installs the package. A piece's
+   version is always the package's own: the build writes it, and refuses a
+   list entry that declares one.
+
+   A package that ships only pieces is still an ordinary reactor package: it
+   carries the same boilerplate as any other, including a root `index.ts`,
+   `document-models/index.ts`, `editors/index.ts` and `style.css`, even when
+   those are empty. `ph build` runs every step for it unchanged, so there is
+   no piece-only mode to know about. The host that runs pieces on a reactor
+   (the workflow runtime) reads the `pieces` list and imports each `entry`.
+
+   Bundling with esbuild to ESM instead of `ph build`? `form-data`, which
+   `./common` uses, is CommonJS, so pass
+   `--banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`
+   or the bundle throws `Dynamic require of "util" is not supported` on import.
+
+## `./host`, for the host and not for piece authors
+
+A host that _runs_ pieces needs more than the authoring API: stored prop values
+arrive as strings from a form and have to be coerced to what the piece's
+`props` declare, outbound requests have to be checked against the private
+address space, and a thrown HTTP client error has to be turned into something a
+user can read. Activepieces does all three in its engine; `./host` re-exports
+that code so a Powerhouse host does not reimplement it.
+
+```ts
+import {
+  formatPieceError,
+  processors,
+  propsProcessor,
+  ssrfIpClassifier,
+} from "@powerhousedao/pieces-framework/host";
+```
+
+From the engine, coercion of what an editor stored into what a piece's `props`
+declare:
+
+- `processors` — `PropertyType` → coercion function, for the eleven types that
+  need one, and `numberProcessor`, `checkboxProcessor`, `dateTimeProcessor`,
+  `fileProcessor`, `jsonProcessor`, `objectProcessor`, `textProcessor` and
+  `multiSelectProcessor` individually.
+- `arrayZipperProcessor` — turns an object of parallel arrays into `ARRAY`
+  items; `ARRAY` has no entry in the map.
+- `propsProcessor.applyProcessorsAndValidators` — a whole props map at once,
+  auth and nested `ARRAY`/`DYNAMIC` props included, returning the processed
+  input and per-key validation errors.
+- `dynamicPropKeys` — escapes and restores `DYNAMIC` prop keys around a form
+  that treats `.` and `[` as path separators.
+- `ProcessorFn`, and `PropertySettings` (ours, see
+  [UPSTREAM.md](./UPSTREAM.md)) for the stored `DYNAMIC` schema.
+
+From `core-utils`, the two host jobs that are not coercion:
+
+- `ssrfIpClassifier.isBlockedIp({ ip, allowList })` — blocks every non-unicast
+  range, with CIDR entries in the allow list.
+- `formatPieceError` — lifts the API message out of an HTTP-shaped error,
+  strips an HTML error page down to its text and caps serialization depth;
+  with `tryParseFriendlyPieceError` and the `FriendlyPieceError` type.
+
+Nothing here belongs in a piece: a piece is handed values that are already
+coerced. `.` and `./common` are unchanged, and `test/surface.test.ts` holds them
+that way.
+
+The consumer is [`@powerhousedao/reactor-workflow`](../reactor-workflow), which
+runs pieces on a reactor: its `context/normalize.ts` dispatches to `processors`,
+its `worker/egress.ts` classifies with `ssrfIpClassifier`, and its worker runs a
+thrown piece error through `formatPieceError` before redacting it.
+
+The coercion half comes from `@activepieces/engine`, of which this package
+vendors only the prop-coercion files, for the reasons in
+[UPSTREAM.md](./UPSTREAM.md). `dayjs` (the DATE_TIME processor) and `ipaddr.js`
+(the classifier) are runtime dependencies because `./host` reaches them.
+
+## `./block-type`, block identity and versions
+
+A workflow names a block the way Activepieces does, with three fields:
+`pieceName`, `pieceVersion` and `actionName` for a step, or `triggerName` for a
+trigger. The engine's own blocks are a piece too, `@powerhousedao/piece-core`
+(`CORE_PIECE_NAME` in `./workflow`). This module has no dependencies and is safe
+in the browser, so the editor and the runtime share it.
+
+A piece's version is the version of its package. The version is exact semver
+2.0: prereleases and build metadata are allowed, ranges and dist-tags are not.
+
+- `isExactVersion(v)` says whether a version can be pinned.
+- `blockKey({ pieceName, kind, name })` is the version-free identity as one
+  string, for map and cache keys.
+- `compareVersions(a, b)` orders by semver precedence.
+- `pickClosestVersion(requested, available)` returns `{ version, match }`,
+  picking the first rule that matches:
+  1. The exact version (`exact`).
+  2. The highest same-major version at or above the request (`compatible`).
+  3. The highest same-major version below the request (`fallback`).
+  4. The highest version of any major (`fallback`).
+
+  For `0.x`, same major means same minor.
+
+## Publishing the same piece to Activepieces
+
+A piece written against this package is a plain Activepieces piece. To
+contribute it upstream, scaffold one in the Activepieces monorepo with
+`npm run cli pieces create`, copy your `src/` over its own, rewrite the import
+specifiers (`@powerhousedao/pieces-framework` to
+`@activepieces/pieces-framework`, `@powerhousedao/pieces-framework/common` to
+`@activepieces/pieces-common`) and run `npm run build-piece <name>`.
+
+## Syncing upstream
+
+```sh
+pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.91.0
+```
+
+`scripts/sync-upstream.mts` is the only thing that writes `upstream/` and
+`test/upstream/`. It fetches the tag, copies the four piece source trees plus a
+named handful of engine files, rewrites
+them to ESM with `.js` specifiers and type-only imports, formats them, applies
+a short list of literal patches that fail loudly when upstream changes, and
+records every file's upstream path and hash in `upstream/MANIFEST.json`.
+Details in [UPSTREAM.md](./UPSTREAM.md).
+
+## License
+
+MIT. The vendored Activepieces code keeps its original MIT license and
+copyright, reproduced verbatim in [LICENSE](./LICENSE) alongside the Powerhouse
+notice for everything else. The framework is inlined into every piece an
+external developer builds, which is why this package is MIT rather than AGPL
+like the rest of the Powerhouse monorepo.

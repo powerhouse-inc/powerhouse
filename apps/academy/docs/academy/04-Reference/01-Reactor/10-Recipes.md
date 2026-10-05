@@ -105,8 +105,8 @@ Treating the Reactor as an automation engine: one operation triggers work on oth
 Creates a dependency-ordered set of documents in a single `IReactor.executeBatch` call and tracks each job's lifecycle live via the EventBus.
 
 - One `executeBatch` submits a graph of jobs; each job's `dependsOn` (referencing other jobs by key) lets the Reactor resolve ordering and parallelism across both document and drive scopes.
-- Subscribe to `JOB_PENDING` / `JOB_RUNNING` / `JOB_WRITE_READY` / `JOB_READ_READY` / `JOB_FAILED` on the EventBus, mapping `result.jobs[key].id` back to each job for a live progress view.
-- `JobAwaiter` reconciles events that arrived after `executeBatch` returned, so awaiting a terminal status is race-free.
+- Subscribe to `JOB_PENDING` / `JOB_RUNNING` / `JOB_WRITE_READY` / `JOB_READ_READY` / `JOB_FAILED` on the EventBus before calling `executeBatch`. Jobs with no dependencies start running while the call is still in flight. Job ids are only known once `result.jobs[key].id` comes back, so buffer events by `jobId` and map them to keys after the call returns.
+- `JobAwaiter` (`new JobAwaiter(eventBus, (jobId, signal) => reactor.getJobStatus(jobId, signal))`) reads the current status before it waits, so `waitForJob(jobId)` resolves even when the job finished during `executeBatch`.
 
 **Source** · [`src/create-project.ts`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress/src/create-project.ts) · [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress/src/index.ts)
 **Concepts** · `IReactor.executeBatch` · `dependsOn` · `IEventBus.subscribe` · `JobAwaiter.waitForJob` — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage), [Error Handling](/academy/Reference/Reactor/ErrorHandling)
@@ -200,11 +200,11 @@ A read-only processor that counts operations per signer address over a sliding w
 A standalone script that builds cryptographically signed operations with an `ISigner` and verifies each one per-signature, detecting tampered and unsigned operations.
 
 - Builds a self-contained ECDSA P-256 `ISigner` with `RenownCryptoBuilder` plus in-memory key storage — no filesystem or network.
-- `buildSignedAction` advances the document through the reducer between actions, so each signature captures the correct previous-state hash; `verifyOperationSignature` checks each signature tuple.
+- `buildSignedAction` advances the document through the reducer between actions, so each signature captures the correct previous-state hash. A reactor checks these tuples itself when it stores a write; see [Signature Verification](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification).
 - Tamper and unsigned detection: corrupting a signature element or removing `action.context` flips verification to invalid / unsigned respectively.
 
 **Source** · [`src/verify-operations.ts`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier/src/verify-operations.ts) · [`src/verify-operations.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier/src/verify-operations.test.ts)
-**Concepts** · `ISigner` · `RenownCryptoSigner` · `buildSignedAction` · `verifyOperationSignature` — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage)
+**Concepts** · `ISigner` · `RenownCryptoSigner` · `buildSignedAction` · signature tuples — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage)
 
 ## Document-model patterns
 

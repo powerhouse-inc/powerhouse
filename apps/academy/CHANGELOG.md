@@ -1,3 +1,439 @@
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.37 (2026-10-01)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.36 (2026-10-01)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.35 (2026-10-01)
+
+### 🚀 Features
+
+- ⚠️  **registry:** serve every replica from Postgres and S3, processing publishes in a worker ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+- **reactor:** submit a document create without waiting for it ([eadc4397fd](https://github.com/powerhouse-inc/powerhouse/commit/eadc4397fd))
+- **switchboard:** run the privacy add-on behind PH_PRIVACY_ENABLED ([38c9a43856](https://github.com/powerhouse-inc/powerhouse/commit/38c9a43856))
+- **reactor-privacy:** erase requested documents on a serial schedule ([f4f31289a1](https://github.com/powerhouse-inc/powerhouse/commit/f4f31289a1))
+- **reactor-privacy:** serve disclosure and erasure to supreme admins only ([7a6b5232cb](https://github.com/powerhouse-inc/powerhouse/commit/7a6b5232cb))
+- **reactor-privacy:** scaffold the package and its migration ledger ([152ecff77b](https://github.com/powerhouse-inc/powerhouse/commit/152ecff77b))
+- **reactor-drive:** erase a purged document's nodes in NodeProcessor ([5a608e73bf](https://github.com/powerhouse-inc/powerhouse/commit/5a608e73bf))
+- **reactor-attachments:** delete a purged document's attachment references ([4121c83347](https://github.com/powerhouse-inc/powerhouse/commit/4121c83347))
+
+### 🩹 Fixes
+
+- **reactor:** a drive's purge does not require a live former member ([e8266b1035](https://github.com/powerhouse-inc/powerhouse/commit/e8266b1035))
+- **reactor-privacy:** warn and record lastError while a leaked purge blocks dispatch ([cd6fe4f022](https://github.com/powerhouse-inc/powerhouse/commit/cd6fe4f022))
+- **reactor-privacy:** reopen every failed request with no failed item each tick ([d9c19c3837](https://github.com/powerhouse-inc/powerhouse/commit/d9c19c3837))
+- **reactor:** bound the drive header reads of a late registration ([ecc435b71f](https://github.com/powerhouse-inc/powerhouse/commit/ecc435b71f))
+- **reactor-api:** ignore polled refusals of an unknown kind ([aac4a3e752](https://github.com/powerhouse-inc/powerhouse/commit/aac4a3e752))
+- **reactor-api:** fail a poll with a recoverable code when a refusal is not recorded ([3ab1c92f7b](https://github.com/powerhouse-inc/powerhouse/commit/3ab1c92f7b))
+- **reactor:** keep a polled marker refusal only when the marker was owed ([07cae595da](https://github.com/powerhouse-inc/powerhouse/commit/07cae595da))
+- **reactor:** park a processor through a tombstone lookup outage ([2e57eb5faf](https://github.com/powerhouse-inc/powerhouse/commit/2e57eb5faf))
+- **reactor:** let re-registration run past a hung owed deletion ([7d64621f1d](https://github.com/powerhouse-inc/powerhouse/commit/7d64621f1d))
+- **reactor:** persist a purge refusal only from a MARKER_REFUSED dead letter ([ef2c3f4729](https://github.com/powerhouse-inc/powerhouse/commit/ef2c3f4729))
+- **reactor:** list processors that threw on their drive's deletion ([fd411760a9](https://github.com/powerhouse-inc/powerhouse/commit/fd411760a9))
+- **reactor:** bound tombstone lookup retries and close processors on kill ([a0838dbee6](https://github.com/powerhouse-inc/powerhouse/commit/a0838dbee6))
+- **reactor:** stop registerFactory and init awaiting owed deletions ([88017fc40a](https://github.com/powerhouse-inc/powerhouse/commit/88017fc40a))
+- **reactor:** hand factories the drive's creation header, not a minimal one ([ecf43e54a1](https://github.com/powerhouse-inc/powerhouse/commit/ecf43e54a1))
+- **reactor:** release a factory's cursor rows on unregister instead of deleting them ([34e14393cb](https://github.com/powerhouse-inc/powerhouse/commit/34e14393cb))
+- **reactor:** keep a deleted drive's cursor rows until each processor has its deletion ([731112ce06](https://github.com/powerhouse-inc/powerhouse/commit/731112ce06))
+- **shared:** match a relational processor's own drive by id, not namespace ([78175ef110](https://github.com/powerhouse-inc/powerhouse/commit/78175ef110))
+
+### 🔥 Performance
+
+- **reactor-privacy:** dispatch the next purge without rescanning the backlog ([5de3703ebf](https://github.com/powerhouse-inc/powerhouse/commit/5de3703ebf))
+
+### ⚠️  Breaking Changes
+
+- **registry:** serve every replica from Postgres and S3, processing publishes in a worker  ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+  /packages and /pieces return pages ({items,total,limit,offset,hasMore}) instead of full arrays, and piece bundles move to /-/pieces/bundled/<name>/<version>.tgz.
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.34 (2026-09-30)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+
+### 🩹 Fixes
+
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.32 (2026-09-29)
+
+### 🚀 Features
+
+- **connect:** configure OpenPanel via the runtime config ([#3140](https://github.com/powerhouse-inc/powerhouse/pull/3140))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **ph-cli:** install the dependencies generate commands add ([04bfa515f](https://github.com/powerhouse-inc/powerhouse/commit/04bfa515f))
+- **ph-cli:** let pieces reach localhost in vetra and dev mode ([8fdc048e6](https://github.com/powerhouse-inc/powerhouse/commit/8fdc048e6))
+- **ph-cli:** seed a Workflows drive in vetra when workflows are on ([6e855808e](https://github.com/powerhouse-inc/powerhouse/commit/6e855808e))
+- workflows.enabled turns on workflows in Connect too ([5e8292472](https://github.com/powerhouse-inc/powerhouse/commit/5e8292472))
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** renew webhook trigger subscriptions ([4fc6bfea6](https://github.com/powerhouse-inc/powerhouse/commit/4fc6bfea6))
+
+### 🩹 Fixes
+
+- **codegen:** scaffold every hook a piece needs, with field comments ([b63fe72cf](https://github.com/powerhouse-inc/powerhouse/commit/b63fe72cf))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **reactor-workflow:** refuse a secrets master key other than the one secrets were stored with ([87cfde0f5](https://github.com/powerhouse-inc/powerhouse/commit/87cfde0f5))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.28 (2026-09-28)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.27 (2026-09-28)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.26 (2026-09-26)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.25 (2026-09-25)
+
+### 🚀 Features
+
+- **workflow:** show run data in a lazy-loaded tree with copyable references, and scope the connection picker to the drive ([1d286f4a6](https://github.com/powerhouse-inc/powerhouse/commit/1d286f4a6))
+
+### 🩹 Fixes
+
+- **ci:** let the release skip the transpiler TypeScript 7 broke ([#36306](https://github.com/powerhouse-inc/powerhouse/issues/36306))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+- type-safe piece authoring, upstream connection hooks, and a ph build that typechecks first ([#3082](https://github.com/powerhouse-inc/powerhouse/pull/3082))
+- **academy:** Umami tracking ([#3089](https://github.com/powerhouse-inc/powerhouse/pull/3089))
+
+### 🩹 Fixes
+
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Frank @froid1911
+
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🔥 Performance
+
+- **reactor:** deliver queued live batches to a processor in one call ([002dc6821](https://github.com/powerhouse-inc/powerhouse/commit/002dc6821))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🩹 Fixes
+
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.21 (2026-09-22)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.20 (2026-09-22)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.19 (2026-09-21)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.18 (2026-09-21)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.17 (2026-09-21)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.16 (2026-09-21)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.15 (2026-09-20)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.14 (2026-09-19)
+
+### 🚀 Features
+
+- **ph-cli:** build pieces on ph build ([3913b0796](https://github.com/powerhouse-inc/powerhouse/commit/3913b0796))
+- **doc-harness:** serve rendered reports and transcripts from mastra studio ([fd64a4661](https://github.com/powerhouse-inc/powerhouse/commit/fd64a4661))
+- **doc-harness:** workflows, steps, and the run/resume/inspect commands ([0e116d226](https://github.com/powerhouse-inc/powerhouse/commit/0e116d226))
+- **doc-harness:** pilot task catalog with pinned recipe inputs ([74bc26129](https://github.com/powerhouse-inc/powerhouse/commit/74bc26129))
+- **doc-harness:** workspace wiring and core schemas for the docs-validation harness ([5c591ac69](https://github.com/powerhouse-inc/powerhouse/commit/5c591ac69))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.13 (2026-09-18)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.12 (2026-09-17)
+
+### 🚀 Features
+
+- **switchboard:** own the workflow runtime, feed it through a read model, and take workflows out of reactor-api ([#3042](https://github.com/powerhouse-inc/powerhouse/issues/3042))
+- **reactor-workflow:** the workflow engine, composed in reactor-api behind the workflows flag ([cb807bf5d](https://github.com/powerhouse-inc/powerhouse/commit/cb807bf5d))
+- **workflow:** the Connect-loaded workflow package, and the workflows flag in reactor-api ([0953fc254](https://github.com/powerhouse-inc/powerhouse/commit/0953fc254))
+- **pieces-framework:** vendor the Activepieces piece framework as a Powerhouse package ([3da5dbea8](https://github.com/powerhouse-inc/powerhouse/commit/3da5dbea8))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
+## 6.2.3-dev.10 (2026-09-16)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.9 (2026-09-15)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.8 (2026-09-15)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.7 (2026-09-14)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.6 (2026-09-14)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.5 (2026-09-13)
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.3 (2026-09-11)
+
+### 🚀 Features
+
+- **reactor-api:** add in-process stitching gateway adapter ([#1565](https://github.com/powerhouse-inc/powerhouse/issues/1565))
+
+### 🩹 Fixes
+
+- **claude:** bench-loop offers the after-record a fix produced instead of counting its FIXED citation as read ([c4b4690be](https://github.com/powerhouse-inc/powerhouse/commit/c4b4690be))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- froid1911
+
+## 6.2.3-dev.2 (2026-09-10)
+
+### 🚀 Features
+
+- **ph-cmd:** ph self-update command and outdated notice ([506336b32](https://github.com/powerhouse-inc/powerhouse/commit/506336b32))
+
+### 🩹 Fixes
+
+- **ci:** roll out prod registry on production releases ([354085855](https://github.com/powerhouse-inc/powerhouse/commit/354085855))
+- **switchboard-lb:** keep a webhook token out of the logs and traces ([5cfdb6e93](https://github.com/powerhouse-inc/powerhouse/commit/5cfdb6e93))
+
+### ❤️ Thank You
+
+- acaldas
+- froid1911
+
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+- **reactor:** report the hybrid host chain's batch metrics ([2715ea9a6](https://github.com/powerhouse-inc/powerhouse/commit/2715ea9a6))
+- **reactor:** fail startup on a projection worker whose init throws ([2d70a9c8d](https://github.com/powerhouse-inc/powerhouse/commit/2d70a9c8d))
+- **reactor:** reject a projection worker db that is not the parent's database ([23f037022](https://github.com/powerhouse-inc/powerhouse/commit/23f037022))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes

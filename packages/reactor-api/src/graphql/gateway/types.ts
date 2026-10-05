@@ -13,9 +13,54 @@ export type GatewayContextFactory<TContext = unknown> = (
   request: Request,
 ) => Promise<TContext>;
 
+// Opaque per-connection key carrying what `onConnect` resolved to `context`.
+
+/** Under graphql-ws this is `ctx.extra`, created once per socket. */
+export type WsConnection = object;
+
+// Called per operation, so it must be pure: verifying belongs in `onConnect`.
 export type WsContextFactory<TContext = unknown> = (
   connectionParams: Record<string, unknown>,
+  connection: WsConnection,
 ) => Promise<TContext>;
+
+// Admits a connection once, at `ConnectionInit`; `false` closes 4403, retryable.
+
+// It must never throw: an escaping exception closes 4500, which is fatal.
+export type WsConnectHandler = (
+  connectionParams: Record<string, unknown>,
+  connection: WsConnection,
+) => Promise<boolean>;
+
+// One object, so no adapter can thread `context` without `onConnect`.
+export type WsHandlers<TContext = unknown> = {
+  onConnect: WsConnectHandler;
+  context: WsContextFactory<TContext>;
+};
+
+// Why a WebSocket handshake was refused, carried as the reason on a 4403 close.
+
+// A wire contract. A client reads these to tell an auth refusal -- which no
+// number of retries clears, only a credential change -- from a transient close.
+
+// Both stay 4403: graphql-ws keeps that code retryable, and a reconnect
+// re-evaluates `connectionParams`, so a socket refused before a sign-in does
+// succeed after one. 4401 would kill it before a fresh token could be offered.
+
+// Keep the values stable. A close reason caps at 123 UTF-8 bytes.
+
+/** No authenticated caller resolved, and REQUIRE_AUTHENTICATED_CALLER wants one. */
+export const WS_CLOSE_REASON_AUTHENTICATION_REQUIRED =
+  "authentication-required";
+
+/** A bearer was sent and could not be verified. */
+export const WS_CLOSE_REASON_BEARER_REJECTED = "bearer-rejected";
+
+/** Every reason a refusal closes with, for a client matching on the set. */
+export const WS_AUTH_CLOSE_REASONS = [
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+] as const;
 
 export type WsDisposer = { dispose: () => void | Promise<void> };
 
@@ -23,20 +68,42 @@ export type WsDisposer = { dispose: () => void | Promise<void> };
 export type FetchHandler = (request: Request) => Promise<Response>;
 
 /**
- * Opaque identifier for a registered route. Returned by `mount()`,
- * `getRoute()`, and `mountNodeRoute()`; pass it to `unmount()` to remove
- * the route.
+ * Handle to a route registered directly on the adapter. Packages hot-reload,
+ * so every registration is reversible; disposing a route that is already gone
+ * is a no-op.
+ *
+ * The handle *is* the capability to remove that one route: holding it is the
+ * only way to take the route back, and it cannot name any other. An opaque
+ * integer would let any holder remove any route by arithmetic, and a caller
+ * that disposed twice would eventually free somebody else's registration once
+ * ids were reused.
+ *
+ * Distinct from the `ScopedRouteHandle` a package's HTTP scope hands back,
+ * which also carries the public URL the route answers on — at this layer there
+ * is no namespace to build one from and no knowledge of the host's origin.
  */
-export type RouteHandle = number;
+export interface AdapterRouteHandle {
+  dispose(): void;
+}
 
 /**
- * A framework-agnostic description of a federated subgraph service.
- * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph SDL.
+ * A framework-agnostic description of one subgraph.
+ * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph:
+ * federation adapters treat it as a service to call over HTTP, while the
+ * stitching adapter merges its typeDefs and resolvers in-process.
  */
 export type SubgraphDefinition = {
   name: string;
   typeDefs: DocumentNode;
   url: string;
+  /**
+   * The subgraph's resolver map, in-process form. Optional: federation
+   * adapters (Apollo, Mercurius) execute subgraphs over HTTP and ignore this,
+   * while stitching-style adapters merge these resolvers directly into the
+   * supergraph schema. Subgraph authors never see this field - it is filled
+   * in by the gateway manager from the subgraph's own resolvers.
+   */
+  resolvers?: Record<string, unknown>;
 };
 
 export interface IGatewayAdapter<TContext = unknown> {
@@ -53,8 +120,10 @@ export interface IGatewayAdapter<TContext = unknown> {
   ): Promise<FetchHandler>;
 
   /**
-   * Create a federation gateway handler that composes all subgraphs into a supergraph.
-   * getSubgraphs is called eagerly (during setup) and again on every updateSupergraph() call.
+   * Create a handler that composes all subgraphs into a supergraph (a
+   * federation gateway, or a merged in-process schema under the stitching
+   * adapter). getSubgraphs is called eagerly (during setup) and again on every
+   * updateSupergraph() call.
    */
   createSupergraphHandler(
     getSubgraphs: () => SubgraphDefinition[],
@@ -63,20 +132,47 @@ export interface IGatewayAdapter<TContext = unknown> {
   ): Promise<FetchHandler>;
 
   /**
-   * Recompose the supergraph SDL from the current subgraph list and push the update
-   * to the running federation gateway. No-op if createSupergraphHandler() has not
-   * been called yet.
+   * Recompose the supergraph from the current subgraph list and push the update
+   * to the running gateway (a federation gateway, or a merged in-process schema
+   * under the stitching adapter). No-op if createSupergraphHandler() has not
+   * been called yet, or after stop().
    */
   updateSupergraph(): Promise<void>;
 
-  /** Attach WebSocket subscriptions. Returns a disposer. */
+  // Attach WebSocket subscriptions. Both halves of `handlers` must be passed on.
+
+  /** Without `onConnect`, refusing would mean throwing: an unretryable 4500. */
   attachWebSocket(
     wsServer: WebSocketServer,
     schema: GraphQLSchema,
-    contextFactory: WsContextFactory<TContext>,
+    handlers: WsHandlers<TContext>,
   ): WsDisposer;
 
   stop(): Promise<void>;
+}
+
+/**
+ * Methods a node route may bind. OPTIONS is excluded: the framework's CORS
+ * plugin owns preflight, and a duplicate registration conflicts at startup.
+ */
+export type HttpMethod = "DELETE" | "GET" | "HEAD" | "PATCH" | "POST" | "PUT";
+
+export interface NodeRouteOptions {
+  /** Serve sub-paths too, not just an exact path match. */
+  prefix?: boolean;
+
+  /**
+   * Deliver the request body as the client sent it: unparsed and byte-exact.
+   * The handler reads `req` itself; the `body` argument stays undefined.
+   *
+   * Without this, the body has already been parsed by the time the handler
+   * runs, so a signature computed over the raw payload cannot be verified —
+   * re-encoding loses key order, whitespace and duplicate keys. This is the
+   * one capability a webhook endpoint cannot do without, and the reason a
+   * route needs to be dispatched ahead of the body parsers rather than behind
+   * them.
+   */
+  rawBody?: boolean;
 }
 
 export interface IHttpAdapter {
@@ -87,7 +183,7 @@ export interface IHttpAdapter {
   }): void;
 
   /**
-   * Mount a Fetch API handler. Returns a handle for {@link unmount}.
+   * Mount a Fetch API handler. Returns a handle whose `dispose()` removes it.
    * - exact = false (default): exact path match.
    * - exact = true: prefix match - handler also receives all sub-paths.
    *
@@ -97,23 +193,28 @@ export interface IHttpAdapter {
   mount(
     path: string,
     handler: FetchHandler,
-    options?: { exact?: boolean },
-  ): RouteHandle;
+    options?: {
+      prefix?: boolean;
+      /** @deprecated Misleading name: this always meant *prefix*, not exact. */
+      exact?: boolean;
+    },
+  ): AdapterRouteHandle;
 
   /**
    * Register a GET-only route that returns a Fetch Response (for health,
-   * explorer, etc.). Returns a handle for {@link unmount}.
+   * explorer, etc.). Returns a handle whose `dispose()` removes it.
    */
   getRoute(
     path: string,
     handler: (request: Request) => Response | Promise<Response>,
-  ): RouteHandle;
+  ): AdapterRouteHandle;
 
   /**
    * Start listening on the given port. Returns the underlying http.Server
-   * so callers can attach WebSocket servers.
+   * so callers can attach WebSocket servers. Without `host` it binds the
+   * wildcard address.
    */
-  listen(port: number, tls?: TlsOptions): Promise<http.Server>;
+  listen(port: number, tls?: TlsOptions, host?: string): Promise<http.Server>;
 
   /**
    * Mount a raw Connect/Express-compatible middleware function (e.g. Vite dev
@@ -129,29 +230,20 @@ export interface IHttpAdapter {
    *
    * The req/res objects are `http.IncomingMessage`/`http.ServerResponse`
    * (Express Request/Response are compatible subtypes). Returns a handle
-   * for {@link unmount}.
+   * whose `dispose()` removes it.
    */
   mountNodeRoute(
-    method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
+    method: HttpMethod,
     path: string,
-    // Node route handlers may be synchronous or async; the adapter
-    // fire-and-forgets the returned promise.
+    // Node route handlers may be synchronous or async; the adapter does not
+    // await them, and answers a throw or rejection with a 500.
     handler: (
       req: http.IncomingMessage,
       res: http.ServerResponse,
       body?: unknown,
     ) => void | Promise<void>,
-  ): RouteHandle;
-
-  /**
-   * Remove a route registered by `mount()`, `getRoute()`, or
-   * `mountNodeRoute()`, identified by the handle that call returned.
-   * No-op for unknown or already-removed handles.
-   *
-   * `mountRawMiddleware` is intentionally not removable: raw framework
-   * middleware (e.g. a Vite dev server) is not a single route.
-   */
-  unmount(handle: RouteHandle): void;
+    options?: NodeRouteOptions,
+  ): AdapterRouteHandle;
 
   /**
    * Register framework-specific Sentry error-capturing middleware after all routes

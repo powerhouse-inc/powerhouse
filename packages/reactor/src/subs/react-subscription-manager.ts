@@ -6,12 +6,16 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import type {
+  DocumentDeletedInfo,
   IReactorSubscriptionManager,
   ISubscriptionErrorHandler,
 } from "./types.js";
 
 type DocumentCreatedCallback = (result: PagedResults<string>) => void;
-type DocumentDeletedCallback = (documentIds: string[]) => void;
+type DocumentDeletedCallback = (
+  documentIds: string[],
+  info?: DocumentDeletedInfo,
+) => void;
 type DocumentStateUpdatedCallback = (result: PagedResults<PHDocument>) => void;
 type RelationshipChangedCallback = (
   parentId: string,
@@ -145,6 +149,7 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
     documentIds: string[],
     documentTypes?: Map<string, string>,
     parentIds?: Map<string, string | null>,
+    info?: DocumentDeletedInfo,
   ): void {
     for (const subscription of this.deletedSubscriptions.values()) {
       const filteredIds = this.filterDocumentIds(
@@ -156,7 +161,11 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
 
       if (filteredIds.length > 0) {
         try {
-          subscription.callback(filteredIds);
+          if (info) {
+            subscription.callback(filteredIds, info);
+          } else {
+            subscription.callback(filteredIds);
+          }
         } catch (error) {
           this.errorHandler.handleError(error, {
             eventType: "deleted",

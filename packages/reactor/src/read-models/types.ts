@@ -17,6 +17,7 @@ export interface DocumentSnapshotTable {
   documentType: string;
   lastOperationIndex: number;
   lastOperationHash: string;
+  lastOperationOrdinal: Generated<number>;
   lastUpdatedAt: Generated<Date>;
   snapshotVersion: Generated<number>;
   identifiers: unknown; // JSONB type - stored as object
@@ -33,6 +34,9 @@ export interface SlugMappingTable {
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }
+
+/** A cursor row whose factory is unregistered; it only records a drive's data. */
+export const RELEASED_CURSOR_STATUS = "released";
 
 export interface ProcessorCursorTable {
   processorId: string;

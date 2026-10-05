@@ -1,3 +1,4 @@
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import type { OperationSpecification } from "@powerhousedao/shared/document-model";
 import {
@@ -192,7 +193,9 @@ describe("addActions", () => {
         .buildModule();
       const { client } = reactorModule;
       try {
-        const document = await client.create(model.utils.createDocument());
+        const document = await client.create(
+          withSignaturePolicy(model.utils.createDocument(), "legacy"),
+        );
         const provider = await createReactorMcpProvider({ client });
         const result = await provider.tools.addActions.callback({
           documentId: document.header.id,

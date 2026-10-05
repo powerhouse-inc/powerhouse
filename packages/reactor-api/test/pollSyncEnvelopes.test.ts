@@ -23,6 +23,7 @@ type FakeRemote = {
     outbox: FakeOutbox;
     inbox: { ackOrdinal: number };
     deadLetter: { items: SyncOperation[] };
+    notePoll: () => void;
   };
 };
 
@@ -88,9 +89,12 @@ function makeSyncManager(items: SyncOperation[]): ISyncManager {
       outbox: { items },
       inbox: { ackOrdinal: 0 },
       deadLetter: { items: [] },
+      notePoll: () => {},
     },
   };
   return {
+    localManifest: () => ({ revision: "server" }),
+
     getById: (id: string) => {
       if (id !== CHANNEL_ID) {
         throw new Error(`Unknown channel: ${id}`);
@@ -495,6 +499,7 @@ describe("holding outbox entries the caller may not read", () => {
       };
       inbox: { ackOrdinal: number };
       deadLetter: { items: SyncOperation[] };
+      notePoll: () => void;
     };
   };
 
@@ -527,9 +532,12 @@ describe("holding outbox entries the caller may not read", () => {
         },
         inbox: { ackOrdinal: 0 },
         deadLetter: { items: [] },
+        notePoll: () => {},
       },
     };
     const syncManager = {
+      localManifest: () => ({ revision: "server" }),
+
       getById: (id: string) => {
         if (id !== CHANNEL_ID) throw new Error(`Unknown channel: ${id}`);
         return remote;
@@ -697,5 +705,120 @@ describe("holding outbox entries the caller may not read", () => {
     );
 
     expect(result.deadLetters.map((d) => d.documentId)).toEqual(["doc-served"]);
+  });
+});
+
+/**
+ * The gate decides against a snapshot of the outbox and its verdict arrives one
+ * or more awaits later, by which time the outbox may hold entries it never saw.
+ * Those carry no verdict, so serving them would hand over a scope nobody
+ * authorized -- the regression behind an intermittent leak of a withheld
+ * `global` scope in the serving-policy suite.
+ */
+describe("entries the gate never evaluated", () => {
+  it("withholds an outbox entry that arrived after the gate's snapshot", () => {
+    const gated = makeSyncOp("job-gated", "doc-gated", [1, 2]);
+    const ungated = makeSyncOp("job-late", "doc-late", [3, 4]);
+    const syncManager = makeSyncManager([gated, ungated]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(),
+      new Set(["job-gated"]),
+    );
+
+    expect(result.envelopes.map((e) => e.key)).toEqual(["job-gated"]);
+  });
+
+  it("leaves the late entry's counters untouched, so a later poll serves it", () => {
+    const ungated = makeSyncOp("job-late", "doc-late", [1, 2]);
+    const syncManager = makeSyncManager([ungated]);
+
+    pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(),
+      new Set<string>(),
+    );
+
+    expect(ungated.deliveredCount).toBe(0);
+    expect(ungated.emittedCount).toBe(0);
+  });
+
+  it("withholds a dead letter that arrived after the gate's snapshot", () => {
+    const syncManager = makeSyncManager([]);
+    const gatedLetter = makeSyncOp("dl-gated", "doc-gated", [1]);
+    const lateLetter = makeSyncOp("dl-late", "doc-late", [2]);
+    const remote = (
+      syncManager as unknown as { getById: (id: string) => FakeRemote }
+    ).getById(CHANNEL_ID);
+    remote.channel.deadLetter.items.push(gatedLetter, lateLetter);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(),
+      new Set(["dl-gated"]),
+    );
+
+    expect(result.deadLetters.map((d) => d.documentId)).toEqual(["doc-gated"]);
+  });
+
+  it("serves everything when no gate ran, so an open host is unaffected", () => {
+    const a = makeSyncOp("job-a", "doc-a", [1]);
+    const b = makeSyncOp("job-b", "doc-b", [2]);
+    const syncManager = makeSyncManager([a, b]);
+
+    const result = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 0,
+    });
+
+    expect(result.envelopes.map((e) => e.key)).toEqual(["job-a", "job-b"]);
+  });
+});
+
+describe("pollSyncEnvelopes after a client restart", () => {
+  it("serves again what the client confirmed before restarting and never acked", () => {
+    const syncOp = makeSyncOp("job-1", "doc-1", [5, 6, 7]);
+    const syncManager = makeSyncManager([syncOp]);
+    const poll = (outboxLatest: number) =>
+      pollSyncEnvelopes(syncManager, {
+        channelId: CHANNEL_ID,
+        outboxAck: 4,
+        outboxLatest,
+      });
+
+    expect(poll(0).envelopes).toHaveLength(1);
+    // Received through 7, not applied: no ack moves, nothing is re-served.
+    expect(poll(7).envelopes).toHaveLength(0);
+    expect(syncOp.deliveredCount).toBe(3);
+
+    // Restarted with its persisted cursor at 4.
+    const result = poll(4);
+    expect(
+      result.envelopes[0].operations.map(
+        (o: OperationWithContext) => o.context.ordinal,
+      ),
+    ).toEqual([5, 6, 7]);
+  });
+
+  it("does not serve a forbidden document again", () => {
+    const syncOp = makeSyncOp("job-1", "doc-1", [5, 6, 7]);
+    const syncManager = makeSyncManager([syncOp]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(["doc-1"]),
+    );
+
+    expect(result.envelopes).toHaveLength(0);
+    expect(syncOp.deliveredCount).toBe(3);
   });
 });

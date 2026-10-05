@@ -1,4 +1,10 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  HoldReason,
+  OperationWithContext,
+  PeerCapability,
+  PeerCapabilityFlags,
+  PeerManifest,
+} from "@powerhousedao/shared/document-model";
 import type { DriveCollectionId } from "../cache/operation-index-types.js";
 
 export enum ChannelScheme {
@@ -103,8 +109,20 @@ export type SyncOperationErrorType =
    * quarantine would stop.
    */
   | "AUTH_TIMESTAMP_NOT_MONOTONIC"
+  /** The document requires a protocol version this reactor does not run. */
+  | "UNSUPPORTED_PROTOCOL"
+  /** A peer wrote into a document at a version it does not announce. */
+  | "PEER_PROTOCOL_UNSUPPORTED"
   /** An arriving operation carried a timestamp that is not an ISO-8601 instant. */
   | "INVALID_TIMESTAMP"
+  /** The document was purged here; its operations are dropped, not kept. */
+  | "DOCUMENT_PURGED"
+  /** A purge's precondition failed; the document itself is unaffected. */
+  | "PURGE_PRECONDITION"
+  /** A peer sent a reserved action type as a regular write. */
+  | "RESERVED_ACTION"
+  /** A peer's purge marker was refused; the document keeps syncing. */
+  | "MARKER_REFUSED"
   /** No classification applies, including rows written before the field. */
   | "UNCLASSIFIED";
 
@@ -153,6 +171,34 @@ export type ChannelConfig = {
   parameters: Record<string, unknown>;
 };
 
+/** What this reactor announces, and the flags its support is a function of. */
+export type LocalPeer = {
+  capabilities: readonly PeerCapability[];
+  flags: PeerCapabilityFlags;
+  /** The signer's did:key, when configured. */
+  appKey?: string;
+  /** The manifest's start sequence; defaults to the process start time. */
+  sequence?: number;
+  /** A document's protocolVersions; undefined when it is not stored here. */
+  protocolVersionsOf?: (
+    documentId: string,
+    branch: string,
+  ) => Promise<{ [protocol: string]: number } | undefined>;
+  /** Drops a purged document from the host cache behind protocolVersionsOf. */
+  forgetDocument?: (documentId: string) => void;
+};
+
+/** The tombstone index, as the sync manager reads it at startup. */
+export type PurgeLookup = {
+  listPurged(): Promise<string[]>;
+};
+
+/** What the peer announced, and when; a null manifest is a silent peer. */
+export type RemotePeer = {
+  manifest: PeerManifest | null;
+  receivedAtUtcMs: number;
+};
+
 export type RemoteRecord = {
   id: string;
   name: string;
@@ -161,6 +207,8 @@ export type RemoteRecord = {
   filter: RemoteFilter;
   options: RemoteOptions;
   status: RemoteStatus;
+  /** Undefined: the peer has not been heard from. */
+  peer?: RemotePeer;
 };
 
 /**
@@ -174,7 +222,40 @@ export const SyncEventTypes = {
   SYNC_FAILED: 20003,
   DEAD_LETTER_ADDED: 20004,
   CONNECTION_STATE_CHANGED: 20005,
+  SYNC_HELD: 20006,
+  SYNC_RELEASED: 20007,
+  PURGE_REFUSED: 20008,
 } as const;
+
+/** A document held back from one remote because its peer cannot run it. */
+export type SyncHold = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  reason: HoldReason;
+  heldAtUtcMs: number;
+};
+
+export type SyncHeldEvent = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  reason: HoldReason;
+};
+
+/** A remote reported it could not apply a purged document's marker. */
+export type SyncPurgeRefusedEvent = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  errorMessage: string;
+};
+
+export type SyncReleasedEvent = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+};
 
 /**
  * Event emitted when all SyncOperations for a job are queued in outboxes.

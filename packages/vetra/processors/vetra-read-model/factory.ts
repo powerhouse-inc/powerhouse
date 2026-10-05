@@ -27,7 +27,8 @@ export const vetraReadModelFactoryBuilder: ProcessorFactoryBuilder = (
           branch: ["main"],
           documentId: ["*"],
           documentType: ["powerhouse/package"],
-          scope: ["global"],
+          // "document" carries DELETE_DOCUMENT and PURGE_DOCUMENT.
+          scope: ["global", "document"],
         },
       },
     ];

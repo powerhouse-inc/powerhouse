@@ -13,6 +13,12 @@ export const tsconfigPathsTemplate = json`
 "editors/*": [
   "./editors/*/index.ts"
 ],
+"pieces": [
+  "./pieces/index.ts"
+],
+"pieces/*": [
+  "./pieces/*/index.ts"
+],
 "processors/*": [
   "./processors/*/index.ts"
 ],

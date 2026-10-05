@@ -59,6 +59,7 @@ export type GenerationSteps = {
 type GenerationRequest = {
   readonly packageRoot: string;
   readonly configFile: string;
+  readonly allowMissingConfig?: boolean;
   readonly outDir: string;
   readonly cliSources?: readonly string[] | undefined;
   readonly warningsAsErrors: boolean;
@@ -172,9 +173,9 @@ export async function runGeneration(
   const previous = pendingGenerations.get(packageRoot) ?? Promise.resolve();
   const pending = previous.then(async () => {
     try {
-      return await generate(request);
+      return await generate({ ...request, packageRoot });
     } finally {
-      discardScratch(request.packageRoot);
+      discardScratch(packageRoot);
     }
   });
   const settled = pending.then(
@@ -300,6 +301,17 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     await promote();
     return { status: "ok", exitCode: 0, phases, report: undefined };
   };
+
+  if (
+    request.allowMissingConfig &&
+    request.cliSources === undefined &&
+    !existsSync(request.configFile)
+  ) {
+    log(
+      "⚠ This package declares no definitionSources. Add one; a future release will fail this build.\n",
+    );
+    return await buildWithoutEvidence();
+  }
 
   const resolution = loader.resolve({
     configFile: request.configFile,

@@ -178,7 +178,7 @@ For the full configuration model, precedence ladder, and the complete list of `c
 
 ### Connect container env vars
 
-Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — similar to pre-running `ph connect config --json '{...}'` on the dist file, but the payload keeps the `connect` wrapper (see below). The SPA then reads the file as usual.
 
 #### Container shape and secrets
 
@@ -190,7 +190,7 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 
 Connect does **not** read any database variables — it is a static frontend. Database connection strings belong on the Switchboard service (see below).
 
-Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
+Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below. OpenPanel analytics works the same way: set `connect.openPanel.clientId` (plus `apiUrl` for a self-hosted OpenPanel) to enable it; an empty `clientId`, the default, keeps it off.
 
 #### `PH_CONNECT_CONFIG_JSON` (operator-wins)
 
@@ -214,13 +214,17 @@ docker run \
         "dsn": "https://prod-key@sentry.io/1",
         "env": "prod",
         "tracing": true
+      },
+      "openPanel": {
+        "clientId": "your-openpanel-client-id",
+        "apiUrl": "https://openpanel.example/api"
       }
     }
   }' \
   connect:latest
 ```
 
-The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). The same shape that `ph connect config --json` accepts is what `PH_CONNECT_CONFIG_JSON` accepts here.
+The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). `PH_CONNECT_CONFIG_JSON` takes the whole-file shape, with the `connect` wrapper. `ph connect config --json` and `ph connect build --json` differ: they take the `connect.*` block alone.
 
 **Invalid input behaviour:** malformed JSON or a non-object payload aborts container startup with a clear stderr message rather than silently dropping the operator's intent.
 

@@ -28,8 +28,8 @@ envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX}' < /etc/ngin
 # ============================================================
 #
 # Operators inject runtime config via a single env var, PH_CONNECT_CONFIG_JSON,
-# carrying the JSON they want applied to the dist file. Same shape as
-# `ph connect config --json '{...}'`. The entrypoint deep-merges it into the
+# carrying the JSON they want applied to the dist file: the whole file's shape,
+# `connect` wrapper included (unlike `ph connect config --json`). The entrypoint deep-merges it into the
 # dist `powerhouse.config.json` with **operator-wins** semantics: a concrete
 # leaf in the env JSON (including false / "" / [] / 0) overwrites whatever
 # the build baked; a `null` leaf (or an omitted key) keeps the existing

@@ -13,29 +13,35 @@ import {
   defaultBaseState,
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
+  DOCUMENT_SCOPE_ACTION_TYPES,
+  mentionedGroupIds,
+  operationOutcome,
+  targetDocumentId,
 } from "@powerhousedao/shared/document-model";
+import type { SnapshotPosition } from "../cache/write-cache-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { Job } from "../queue/types.js";
 import {
   AuthorizationDeniedError,
   DocumentDeletedError,
+  DocumentPurgedError,
 } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
+  JobResultSummary,
+  SubmittedActionResult,
 } from "../shared/types.js";
+import type { DocumentLocks } from "./execution-scope.js";
 import type { JobResult, TouchedStream } from "./types.js";
 
 export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
 
 /** Actions the reactor reduces itself, onto the document scope. */
-export const DOCUMENT_SCOPE_ACTIONS: ReadonlySet<string> = new Set([
-  "CREATE_DOCUMENT",
-  "DELETE_DOCUMENT",
-  "UPGRADE_DOCUMENT",
-  "ADD_RELATIONSHIP",
-  "REMOVE_RELATIONSHIP",
-  "UPDATE_RELATIONSHIP",
-]);
+export const DOCUMENT_SCOPE_ACTIONS = DOCUMENT_SCOPE_ACTION_TYPES;
+
+/** Shared with the signers, so a signature and its write name one document. */
+export { targetDocumentId };
 
 /**
  * `CREATE_DOCUMENT` is exempt by necessity: it runs before the document exists,
@@ -55,38 +61,6 @@ export type TargetedAction = {
   type: string;
   input: unknown;
 };
-
-/**
- * The document a document-scope action writes to, which is not always the job's
- * own document: delete and upgrade name it in `input.documentId`, and the
- * relationship actions in `input.sourceId`. `execute` only checks that a batch
- * shares one scope, so a caller can submit an action whose target is a document
- * other than the one the job is keyed by. The policy gate has to follow the
- * action rather than the job, or it decides against a policy the caller may
- * control instead of the one guarding the write.
- */
-export function targetDocumentId(
-  action: TargetedAction,
-  fallback: string,
-): string {
-  const input = action.input as
-    | { documentId?: unknown; sourceId?: unknown }
-    | undefined;
-
-  if (
-    action.type === "ADD_RELATIONSHIP" ||
-    action.type === "REMOVE_RELATIONSHIP" ||
-    action.type === "UPDATE_RELATIONSHIP"
-  ) {
-    return typeof input?.sourceId === "string" && input.sourceId.length > 0
-      ? input.sourceId
-      : fallback;
-  }
-
-  return typeof input?.documentId === "string" && input.documentId.length > 0
-    ? input.documentId
-    : fallback;
-}
 
 /**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
@@ -354,4 +328,204 @@ export class TouchedStreams {
   [Symbol.iterator](): IterableIterator<TouchedStream> {
     return this.streams.values();
   }
+}
+
+/**
+ * The ids of the actions the caller handed to a job. Load and reevaluation
+ * jobs write operations nobody submitted, so they report none.
+ */
+export function submittedActionIds(job: Job): string[] {
+  return job.kind === "mutation" ? job.actions.map((action) => action.id) : [];
+}
+
+/**
+ * Reports what became of each submitted action.
+ *
+ * A job's operations can include ones it only moved to a new index, so only
+ * those carrying a submitted action are reported. Returns undefined when the
+ * job submitted nothing, which keeps `JobInfo.result` null for the jobs that
+ * have no caller to answer to.
+ */
+export function summarizeSubmittedActions(
+  operations: OperationWithContext[],
+  submitted: string[] | undefined,
+): JobResultSummary | undefined {
+  if (!submitted || submitted.length === 0) {
+    return undefined;
+  }
+
+  const ids = new Set(submitted);
+  const actions: SubmittedActionResult[] = [];
+  for (const { operation, context } of operations) {
+    if (!ids.has(operation.action.id)) {
+      continue;
+    }
+    actions.push({
+      actionId: operation.action.id,
+      scope: context.scope,
+      index: operation.index,
+      ...operationOutcome(operation),
+    });
+  }
+
+  if (actions.length === 0) {
+    return undefined;
+  }
+
+  return {
+    actions,
+    allApplied: actions.every((action) => action.kind === "applied"),
+  };
+}
+
+/** Tombstones a job has read, each under the shared lock it took first. */
+export class PurgeFence {
+  constructor(
+    private readonly locks: DocumentLocks,
+    private readonly checked: Set<string>,
+    private readonly purged: Set<string>,
+  ) {}
+
+  /** Locks and reads an id the job start did not resolve. */
+  async isPurged(documentId: string): Promise<boolean> {
+    await this.isPurgedMany([documentId]);
+    return this.purged.has(documentId);
+  }
+
+  /** Locks and reads the unresolved ids in one lock and one lookup. */
+  async isPurgedMany(documentIds: readonly string[]): Promise<Set<string>> {
+    const unchecked = [...new Set(documentIds)].filter(
+      (id) => !this.checked.has(id),
+    );
+    if (unchecked.length > 0) {
+      await this.locks.shared(unchecked);
+      const found = await this.locks.purged(unchecked);
+      for (const id of unchecked) this.checked.add(id);
+      for (const id of found) this.purged.add(id);
+    }
+    return new Set(documentIds.filter((id) => this.purged.has(id)));
+  }
+}
+
+/** Locks and checks an id on its first read; a purged id reads as purged. */
+export class FencedWriteCache implements IWriteCache {
+  private readonly evicted = new Set<string>();
+
+  constructor(
+    private readonly inner: IWriteCache,
+    private readonly purgeFence: PurgeFence,
+    private readonly evict: (documentId: string) => void,
+  ) {}
+
+  /** Fences ids known before their reads in one round trip. */
+  async fence(documentIds: readonly string[]): Promise<void> {
+    await this.purgeFence.isPurgedMany(documentIds);
+  }
+
+  async getState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision?: number,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    if (await this.purgeFence.isPurged(documentId)) {
+      if (!this.evicted.has(documentId)) {
+        this.evicted.add(documentId);
+        this.evict(documentId);
+      }
+      throw new DocumentPurgedError(documentId);
+    }
+    return this.inner.getState(
+      documentId,
+      scope,
+      branch,
+      targetRevision,
+      signal,
+    );
+  }
+
+  putState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    position: SnapshotPosition,
+  ): void {
+    this.inner.putState(
+      documentId,
+      scope,
+      branch,
+      revision,
+      document,
+      position,
+    );
+  }
+
+  putRun(
+    documentId: string,
+    scope: string,
+    branch: string,
+    run: readonly { revision: number; document: PHDocument }[],
+  ): void {
+    this.inner.putRun(documentId, scope, branch, run);
+  }
+
+  invalidate(documentId: string, scope?: string, branch?: string): number {
+    return this.inner.invalidate(documentId, scope, branch);
+  }
+
+  clear(): void {
+    this.inner.clear();
+  }
+
+  startup(): Promise<void> {
+    return this.inner.startup();
+  }
+
+  shutdown(): Promise<void> {
+    return this.inner.shutdown();
+  }
+}
+
+type RelationshipInput = { sourceId?: unknown; targetId?: unknown };
+
+/** The target whose membership an ADD or REMOVE_RELATIONSHIP writes. */
+export function relationshipTarget(action: {
+  type: string;
+  input: unknown;
+}): string | undefined {
+  if (
+    action.type !== "ADD_RELATIONSHIP" &&
+    action.type !== "REMOVE_RELATIONSHIP"
+  ) {
+    return undefined;
+  }
+  const target = (action.input as RelationshipInput | undefined)?.targetId;
+  return typeof target === "string" && target.length > 0 ? target : undefined;
+}
+
+/** The ids a job's locks cover, sorted: its write ids and groups it names. */
+export function jobWriteIds(job: Job): string[] {
+  const ids = new Set<string>([job.documentId]);
+  const actions = [
+    ...job.actions,
+    ...job.operations.map((operation) => operation.action),
+  ];
+  for (const action of actions) {
+    if (DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+      ids.add(targetDocumentId(action, job.documentId));
+    }
+    const target = relationshipTarget(action);
+    if (target !== undefined) {
+      ids.add(target);
+    }
+    if (action.scope === "auth") {
+      for (const groupId of mentionedGroupIds(action)) {
+        ids.add(groupId);
+      }
+    }
+  }
+  return [...ids].sort();
 }

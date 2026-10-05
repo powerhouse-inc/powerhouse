@@ -13,8 +13,16 @@ type Captured = {
   ) => void | Promise<void>;
 };
 
-function makeFakeApi(authService: AuthService | undefined): {
-  api: Pick<API, "httpAdapter" | "authService">;
+type FakeApi = Pick<
+  API,
+  "httpAdapter" | "authService" | "requireAuthenticatedCaller"
+>;
+
+function makeFakeApi(
+  authService: AuthService | undefined,
+  requireAuthenticatedCaller = false,
+): {
+  api: FakeApi;
   captured: Captured[];
 } {
   const captured: Captured[] = [];
@@ -29,7 +37,8 @@ function makeFakeApi(authService: AuthService | undefined): {
       },
     },
     authService,
-  } as unknown as Pick<API, "httpAdapter" | "authService">;
+    requireAuthenticatedCaller,
+  } as unknown as FakeApi;
   return { api, captured };
 }
 
@@ -136,6 +145,28 @@ describe("mountAuthenticatedNodeRoute", () => {
       user: undefined,
       authEnabled: true,
     });
+  });
+
+  it("carries the deployment's authenticated-caller floor onto the route, over allowAnonymous", async () => {
+    // auth_enabled false is the shape a deployment running the document
+    // policies has: the boundary policy is OPEN, and this floor is what keeps
+    // an anonymous caller off the attachment routes.
+    const verifyBearer = vi.fn(() =>
+      Promise.resolve({ user: undefined, admins: [], auth_enabled: false }),
+    );
+    const authService = { verifyBearer } as unknown as AuthService;
+    const { api, captured } = makeFakeApi(authService, true);
+    const inner = vi.fn();
+
+    mountAuthenticatedNodeRoute(api, "GET", "/x", inner, {
+      allowAnonymous: true,
+    });
+
+    const res = makeRes();
+    await captured[0].handler(makeReq(), res);
+
+    expect(res.statusCode).toBe(401);
+    expect(inner).not.toHaveBeenCalled();
   });
 
   it("mounts a wrapper that forwards the anonymous actor when authService is undefined", async () => {

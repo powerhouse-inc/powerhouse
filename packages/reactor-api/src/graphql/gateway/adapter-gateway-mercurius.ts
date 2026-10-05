@@ -21,8 +21,8 @@ import type {
   GatewayContextFactory,
   IGatewayAdapter,
   SubgraphDefinition,
-  WsContextFactory,
   WsDisposer,
+  WsHandlers,
 } from "./types.js";
 
 /**
@@ -116,15 +116,17 @@ export class MercuriusGatewayAdapter implements IGatewayAdapter<Context> {
   attachWebSocket(
     wsServer: WebSocketServer,
     schema: GraphQLSchema,
-    contextFactory: WsContextFactory<Context>,
+    handlers: WsHandlers<Context>,
   ): WsDisposer {
     // Use graphql-ws directly; Mercurius's own subscription transport is
     // Fastify-specific and not applicable here.
     return useServer(
       {
         schema,
-        context: async (ctx: { connectionParams?: Record<string, unknown> }) =>
-          contextFactory(ctx.connectionParams ?? {}),
+        onConnect: (ctx) =>
+          handlers.onConnect(ctx.connectionParams ?? {}, ctx.extra as object),
+        context: (ctx) =>
+          handlers.context(ctx.connectionParams ?? {}, ctx.extra as object),
       },
       wsServer,
     );

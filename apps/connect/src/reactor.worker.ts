@@ -7,12 +7,14 @@ import {
   ReactorClientBuilder,
   type ChannelConfig,
   type Database,
+  type ICatchUp,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
   type Remote,
   type RemoteFilter,
   type RemoteOptions,
+  type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
@@ -23,7 +25,11 @@ import {
   type ReactorIdentity,
   type WorkerMigrationState,
 } from "@powerhousedao/reactor-browser/rpc";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  PeerManifest,
+  SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
   type IProcessorManager,
@@ -31,11 +37,17 @@ import {
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import {
+  loadFlaggedDocumentModels,
+  toDocumentModelModules,
+} from "./reactor-worker-models.js";
+import {
   BrowserKeyStorage,
-  createSignatureVerifier,
   RenownCryptoBuilder,
-  RenownCryptoSigner,
+  type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
+import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
+import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
+import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -59,45 +71,36 @@ import {
 
 console.info("[reactor.worker] module evaluating");
 
-// Matches the main thread's RenownBuilder("connect").
-const RENOWN_APP_NAME = "connect";
-
 // Common models the tab bundles as a local package; not CDN-loadable, so the
-// worker imports them directly. Vetra is builder-only and lazy-loaded below.
-function toDocumentModelModules(candidates: unknown[]): DocumentModelModule[] {
-  return candidates.filter(
-    (m): m is DocumentModelModule =>
-      typeof m === "object" &&
-      m !== null &&
-      "documentModel" in m &&
-      "reducer" in m,
-  );
-}
-
+// worker imports them directly. Vetra and workflow are flag-gated chunks.
 const commonBundledModels = toDocumentModelModules(
   Object.values(commonDocumentModels),
 );
-
-// Not CDN-loadable, so it can't ride the packageSpecs path; lazy-import the
-// bundled chunk only in studio mode.
-async function loadVetraDocumentModels(): Promise<DocumentModelModule[]> {
-  const vetraDocumentModels =
-    await import("@powerhousedao/vetra/document-models");
-  return toDocumentModelModules(Object.values(vetraDocumentModels));
-}
 
 type WorkerConstruct = {
   namespace: string;
   relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
+  // Absolute-URL shared-deps import map from the main thread; lets package
+  // sources that import shared deps load as blobs in the worker (import
+  // maps don't apply here).
+  sharedImports?: Record<string, string>;
   studioMode?: boolean;
+  // Loads the workflow package's document models. Independent of studioMode.
+  workflowsEnabled?: boolean;
   // The worker has no runtime config, so the chain its bearer tokens are scoped
   // to is passed in; leaving it unset would sign for a chain nobody issues on.
   renownChainId?: number;
   // Same reason: enforcement flags arrive from the tab. Absent means all off,
   // which is what a tab on an older build sends.
   featureFlags?: Partial<ReactorFeatureFlags>;
+  // What new documents are created as; absent means the reactor's default.
+  createSignaturePolicy?: SignaturePolicy;
+  // Absent means the reactor's default, refuse.
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments;
+  // Where the trust policy verifies signers under authEnforcement.
+  renownEndpoints?: RenownTrustEndpoints;
 };
 
 type ModelRegistry = {
@@ -125,6 +128,7 @@ const owned: OwnedStorage = {};
 let inspectorQueue: InMemoryQueue | undefined;
 let inspectorProcessors: IProcessorManager | undefined;
 let inspectorIntegrity: DocumentIntegrityService | undefined;
+let inspectorCatchUp: ICatchUp | undefined;
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -241,6 +245,20 @@ const inMemoryBackup: BackupStrategy = {
   commit: () => Promise.resolve(),
 };
 
+async function releaseStores(): Promise<void> {
+  const stores = [relational.pg, owned.reactorPg];
+  relational.pg = undefined;
+  relational.db = undefined;
+  owned.reactorPg = undefined;
+  for (const store of stores) {
+    try {
+      await store?.close();
+    } catch (error) {
+      console.error("[reactor.worker] closing a store failed:", error);
+    }
+  }
+}
+
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
@@ -299,14 +317,22 @@ const host = new ReactorHost({
         cdnUrl: construct.cdnUrl,
         importPackage: (url) =>
           import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
+        sharedImports: construct.sharedImports,
+        importSource: (source) =>
+          import(
+            /* @vite-ignore */ URL.createObjectURL(
+              new Blob([source], { type: "text/javascript" }),
+            )
+          ) as Promise<Record<string, unknown>>,
       });
       const loaded = await loader.loadPackages(construct.packageSpecs);
-      const vetraModels = construct.studioMode
-        ? await loadVetraDocumentModels()
-        : [];
+      const flaggedModels = await loadFlaggedDocumentModels({
+        studioMode: construct.studioMode,
+        workflowsEnabled: construct.workflowsEnabled,
+      });
       const models = baseDocumentModels.concat(
         commonBundledModels,
-        vetraModels,
+        flaggedModels,
         loaded,
       );
       phase = "opening pglite stores";
@@ -333,30 +359,37 @@ const host = new ReactorHost({
       phase = "building crypto";
       console.info(`[reactor.worker] boot: ${phase}`);
       const crypto = await buildWorkerCrypto(construct.renownChainId);
-      signer = new RenownCryptoSigner(
+      phase = "building signer";
+      const built = await createWorkerSignerConfig(
         crypto,
-        RENOWN_APP_NAME,
+        construct,
         currentIdentity ?? undefined,
       );
+      signer = built.signer;
       const jwtHandler: JwtHandler = async () =>
         currentIdentity
           ? crypto.getBearerToken(currentIdentity.address, { expiresIn: 10 })
           : undefined;
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
-      const builder = new ReactorClientBuilder()
-        .withSigner({ signer, verifier: createSignatureVerifier() })
-        .withReactorBuilder(
-          new ReactorBuilder()
-            .withDocumentModelSources(models)
-            .withChannelScheme(ChannelScheme.CONNECT)
-            .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
-            .withJwtHandler(jwtHandler)
-            .withKysely(
-              new Kysely<Database>({ dialect: new PGliteDialect(pg) }),
-            ),
+      const reactorBuilder = new ReactorBuilder()
+        .withDocumentModelSources(models)
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
+        .withJwtHandler(jwtHandler)
+        .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+      if (construct.unsupportedStoredDocuments) {
+        reactorBuilder.withUnsupportedStoredDocuments(
+          construct.unsupportedStoredDocuments,
         );
+      }
+      const builder = new ReactorClientBuilder()
+        .withSigner(built.signerConfig)
+        .withReactorBuilder(reactorBuilder);
       builder.withDocumentModelLoader(loader);
+      if (construct.createSignaturePolicy) {
+        builder.withCreateSignaturePolicy(construct.createSignaturePolicy);
+      }
       const module = await builder.buildModule();
       registry = module.reactorModule?.documentModelRegistry;
       syncManager = module.reactorModule?.syncModule?.syncManager;
@@ -365,6 +398,7 @@ const host = new ReactorHost({
         inspectorQueue =
           rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
         inspectorProcessors = rm.processorManager;
+        inspectorCatchUp = rm.catchUp;
         inspectorIntegrity = new DocumentIntegrityService(
           rm.keyframeStore,
           rm.operationStore,
@@ -391,7 +425,9 @@ const host = new ReactorHost({
       return module.client;
     } catch (error) {
       console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
-      throw error;
+      // The next hello rebuilds, which reopens both stores.
+      await releaseStores();
+      throw toStoredDocumentsRefused(error);
     }
   },
   registerPackages: async (specs) => {
@@ -435,6 +471,18 @@ const host = new ReactorHost({
       case "bindRemote":
         await syncManager.bindRemote(args[0] as string, args[1] as string);
         return undefined;
+      case "setPeerManifest":
+        await syncManager.setPeerManifest(
+          args[0] as string,
+          args[1] as PeerManifest | null,
+        );
+        return undefined;
+      case "peerAgreementBasis":
+        return syncManager.agreement().basis();
+      case "listHolds":
+        return syncManager.listHolds(
+          args[0] as { remoteName?: string; documentId?: string } | undefined,
+        );
       case "remove":
         await syncManager.remove(args[0] as string);
         return undefined;
@@ -522,6 +570,16 @@ const host = new ReactorHost({
         await inspectorProcessors?.get(processorId)?.retry();
         return undefined;
       }
+      case "catchUp.status":
+        if (!inspectorCatchUp) {
+          throw new Error("Catch-up not available");
+        }
+        return inspectorCatchUp.status();
+      case "catchUp.sweepNow":
+        if (!inspectorCatchUp) {
+          throw new Error("Catch-up not available");
+        }
+        return inspectorCatchUp.sweepNow();
       case "integrity.validate": {
         if (!inspectorIntegrity) {
           throw new Error("Integrity service not available");

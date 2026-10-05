@@ -247,7 +247,7 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   const created = await gql(
     "document-model",
     `mutation ($name: String!, $drive: String) {
-       DocumentModel { createDocument(name: $name, parentIdentifier: $drive) { id } }
+       DocumentModel { createDocument(name: $name, parentIdOrSlug: $drive) { id } }
      }`,
     { name: MODEL_NAME, drive: VETRA_DRIVE },
   );
@@ -259,8 +259,8 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   const call = async (field: string, input: Record<string, unknown>) => {
     await gql(
       "document-model",
-      `mutation ($docId: PHID!, $input: DocumentModel_${field[0].toUpperCase()}${field.slice(1)}Input!) {
-         DocumentModel { ${field}(docId: $docId, input: $input) { id } }
+      `mutation ($docId: String!, $input: DocumentModel_${field[0].toUpperCase()}${field.slice(1)}Input!) {
+         DocumentModel { ${field}(documentIdOrSlug: $docId, input: $input) { id } }
        }`,
       { docId: modelDocId, input },
     );
@@ -303,7 +303,7 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   const editorCreated = await gql(
     "document-editor",
     `mutation ($name: String!, $drive: String) {
-       DocumentEditor { createDocument(name: $name, parentIdentifier: $drive) { id } }
+       DocumentEditor { createDocument(name: $name, parentIdOrSlug: $drive) { id } }
      }`,
     { name: "BugReproEditor", drive: VETRA_DRIVE },
   );
@@ -318,8 +318,8 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   ) => {
     await gql(
       "document-editor",
-      `mutation ($docId: PHID!, $input: ${inputType}!) {
-         DocumentEditor { ${field}(docId: $docId, input: $input) { id } }
+      `mutation ($docId: String!, $input: ${inputType}!) {
+         DocumentEditor { ${field}(documentIdOrSlug: $docId, input: $input) { id } }
        }`,
       { docId: editorDocId, input },
     );
@@ -333,7 +333,7 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   await gql(
     "r",
     `mutation ($id: String!, $actions: [ActionInput!]!) {
-       execute(documentIdentifier: $id, actions: $actions) { id }
+       execute(documentIdOrSlug: $id, actions: $actions) { id }
      }`,
     {
       id: editorDocId,
@@ -400,7 +400,7 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   await gql(
     "r",
     `mutation ($id: String!, $actions: [ActionInput!]!) {
-       execute(documentIdentifier: $id, actions: $actions) { id }
+       execute(documentIdOrSlug: $id, actions: $actions) { id }
      }`,
     {
       id: modelDocId,

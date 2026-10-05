@@ -1,8 +1,10 @@
 import {
+  PURGE_DOCUMENT,
   type Operation,
   type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import { sql, type Kysely, type Transaction } from "kysely";
+import { DocumentPurgedError } from "../../shared/errors.js";
 import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import { throwIfAborted } from "../../shared/utils.js";
 import { paginateRows } from "./pagination.js";
@@ -18,6 +20,7 @@ import {
   type OperationFilter,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
+import { findPurged } from "./document-purges.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
 class _UniqueConstraintContext extends Error {
@@ -35,6 +38,7 @@ class _UniqueConstraintContext extends Error {
 
 export class KyselyOperationStore implements IOperationStore {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -42,9 +46,14 @@ export class KyselyOperationStore implements IOperationStore {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationStore {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationStore {
     const instance = new KyselyOperationStore(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -176,6 +185,13 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (operations.length === 0) {
       return [];
+    }
+
+    const purgedHead = this.liveIds?.has(documentId)
+      ? undefined
+      : await this.refusePurgedAppend(trx, documentId, operations);
+    if (purgedHead !== undefined) {
+      return purgedHead;
     }
 
     if (condition) {
@@ -425,6 +441,53 @@ export class KyselyOperationStore implements IOperationStore {
     return storedRows.map((row) => this.rowToOperation(row));
   }
 
+  /** A purged stream refuses appends; a marker gets the stored one back. */
+  private async refusePurgedAppend(
+    trx: Transaction<Database>,
+    documentId: string,
+    operations: InsertableOperation[],
+  ): Promise<Operation[] | undefined> {
+    const purged = await findPurged(trx, [documentId]);
+    if (!purged.has(documentId)) {
+      return undefined;
+    }
+    if (!operations.every((operation) => this.isMarker(operation))) {
+      throw new DocumentPurgedError(documentId);
+    }
+    const rows = await trx
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where(sql<boolean>`action->>'type' = ${PURGE_DOCUMENT}`)
+      .orderBy("index", "asc")
+      .execute();
+    return rows.map((row) => this.rowToOperation(row));
+  }
+
+  private isMarker(operation: InsertableOperation): boolean {
+    return this.actionType(operation) === PURGE_DOCUMENT;
+  }
+
+  private actionType(operation: InsertableOperation): string | undefined {
+    let action: unknown = operation.action;
+    if (typeof action === "string") {
+      try {
+        action = JSON.parse(action);
+      } catch {
+        return undefined;
+      }
+    }
+    if (
+      typeof action === "object" &&
+      action !== null &&
+      "type" in action &&
+      typeof action.type === "string"
+    ) {
+      return action.type;
+    }
+    return undefined;
+  }
+
   /** True when the staged write creates a document rather than appending to one. */
   private isCreate(operations: InsertableOperation[]): boolean {
     for (const operation of operations) {
@@ -450,6 +513,14 @@ export class KyselyOperationStore implements IOperationStore {
     return false;
   }
 
+  /**
+   * The paging cursor here encodes the index to resume from (one past the
+   * last row returned), not the last row's own index. This keeps "0" an
+   * unambiguous start-of-stream sentinel even when a page ends at index 0
+   * (e.g. `limit: 1` on a fresh stream), which would otherwise make
+   * `nextCursor` equal the start cursor and loop a caller that walks pages
+   * forever.
+   */
   async getSince(
     documentId: string,
     scope: string,
@@ -500,8 +571,10 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (paging) {
       const cursorValue = Number.parseInt(paging.cursor, 10);
-      if (cursorValue > 0) {
-        query = query.where("index", ">", cursorValue);
+      // The cursor is the index to resume from; "0" (or anything unparsable)
+      // means the start of the stream and filters nothing.
+      if (Number.isFinite(cursorValue) && cursorValue > 0) {
+        query = query.where("index", ">=", cursorValue);
       }
 
       if (paging.limit) {
@@ -514,7 +587,7 @@ export class KyselyOperationStore implements IOperationStore {
     return paginateRows(
       rows,
       paging,
-      (row) => row.index,
+      (row) => row.index + 1,
       (row) => this.rowToOperation(row),
       (cursor, limit) =>
         this.getSince(
@@ -567,6 +640,12 @@ export class KyselyOperationStore implements IOperationStore {
     );
   }
 
+  /**
+   * The paging cursor here encodes the index to resume from (one past the
+   * last row returned), not the last row's own index, for the same reason as
+   * `getSince`: a page ending at index 0 must not produce a cursor that is
+   * indistinguishable from the start-of-stream sentinel.
+   */
   async getConflicting(
     documentId: string,
     scope: string,
@@ -588,8 +667,10 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (paging) {
       const cursorValue = Number.parseInt(paging.cursor, 10);
-      if (cursorValue > 0) {
-        query = query.where("index", ">", cursorValue);
+      // The cursor is the index to resume from; "0" (or anything unparsable)
+      // means the start of the stream and filters nothing.
+      if (Number.isFinite(cursorValue) && cursorValue > 0) {
+        query = query.where("index", ">=", cursorValue);
       }
 
       if (paging.limit) {
@@ -602,7 +683,7 @@ export class KyselyOperationStore implements IOperationStore {
     return paginateRows(
       rows,
       paging,
-      (row) => row.index,
+      (row) => row.index + 1,
       (row) => this.rowToOperation(row),
       (cursor, limit) =>
         this.getConflicting(
@@ -623,25 +704,20 @@ export class KyselyOperationStore implements IOperationStore {
   ): Promise<DocumentRevisions> {
     throwIfAborted(signal);
 
-    // Get the latest operation for each scope in a single query
-    // Uses a subquery to find operations where the index equals the max index for that scope
+    // The head of each scope in one pass. `index` is unique per
+    // (documentId, scope, branch) -- the unique_revision constraint -- so the
+    // largest index in a scope identifies exactly one operation, and taking the
+    // maximum is the same answer as selecting the row that carries it. Asking
+    // for the maximum directly lets Postgres aggregate a single ordered walk of
+    // unique_revision instead of re-running a per-scope subquery once for every
+    // operation row in the document.
     const scopeRevisions = await this.queryExecutor
-      .selectFrom("Operation as o1")
-      .select(["o1.scope", "o1.index", "o1.timestampUtcMs"])
-      .where("o1.documentId", "=", documentId)
-      .where("o1.branch", "=", branch)
-      .where((eb) =>
-        eb(
-          "o1.index",
-          "=",
-          eb
-            .selectFrom("Operation as o2")
-            .select((eb2) => eb2.fn.max("o2.index").as("maxIndex"))
-            .where("o2.documentId", "=", eb.ref("o1.documentId"))
-            .where("o2.branch", "=", eb.ref("o1.branch"))
-            .where("o2.scope", "=", eb.ref("o1.scope")),
-        ),
-      )
+      .selectFrom("Operation")
+      .select("scope")
+      .select((eb) => eb.fn.max("index").as("index"))
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .groupBy("scope")
       .execute();
 
     // Asked separately because the largest timestamp is not always on the
@@ -683,6 +759,62 @@ export class KyselyOperationStore implements IOperationStore {
     return latest?.latestTimestamp
       ? new Date(latest.latestTimestamp).toISOString()
       : undefined;
+  }
+
+  async findOperationIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    throwIfAborted(signal);
+
+    if (opIds.length === 0) {
+      return new Set();
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("Operation")
+      .select("opId")
+      .distinct()
+      .where("opId", "in", opIds)
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .execute();
+
+    return new Set(rows.map((row) => row.opId));
+  }
+
+  async getOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    throwIfAborted(signal);
+
+    if (opIds.length === 0) {
+      return [];
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("Operation")
+      .selectAll()
+      .where("opId", "in", opIds)
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .orderBy("index", "asc")
+      .execute();
+
+    const latest = new Map<string, Operation>();
+    for (const row of rows) {
+      latest.set(row.opId, this.rowToOperation(row));
+    }
+    return [...latest.values()];
   }
 
   private rowToOperation(row: OperationRow): Operation {

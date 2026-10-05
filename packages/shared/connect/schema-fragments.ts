@@ -148,6 +148,11 @@ export const phConnectRuntimeConfigSchema = {
             "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
           default: false,
         },
+        workflowsEnabled: {
+          type: "boolean",
+          description:
+            "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Falls back to the top-level `workflows.enabled`; set it to override that for Connect. Independent of studioMode. False when neither is set.",
+        },
       },
     },
     ai: {
@@ -360,6 +365,35 @@ export const phConnectRuntimeConfigSchema = {
         },
       },
     },
+    openPanel: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "OpenPanel product analytics. Set `clientId` to enable; an empty `clientId` disables it. Events are only sent after the user accepts analytics cookies. Takes precedence over the build-time PH_CONNECT_OPENPANEL_* env vars.",
+      properties: {
+        clientId: {
+          type: "string",
+          description:
+            "OpenPanel client id. Empty string disables OpenPanel entirely.",
+          default: "",
+        },
+        apiUrl: {
+          type: "string",
+          description:
+            "OpenPanel API URL for self-hosted instances (e.g. 'https://openpanel.example/api'). Omit to use OpenPanel's hosted API.",
+        },
+        trackUiEvents: {
+          type: "boolean",
+          description: "Track UI events.",
+          default: true,
+        },
+        trackOperations: {
+          type: "boolean",
+          description: "Track document operations.",
+          default: true,
+        },
+      },
+    },
     instance: {
       type: "object",
       additionalProperties: false,
@@ -418,6 +452,20 @@ export const phConnectRuntimeConfigSchema = {
               default: false,
             },
           },
+        },
+        createSignaturePolicy: {
+          type: "string",
+          enum: ["legacy", "v2-required"],
+          description:
+            "What new documents are created as. `v2-required` documents accept only v2 action signatures and take content-addressed ids; set `legacy` while any peer Connect syncs with predates them. Existing documents keep their policy.",
+          default: "v2-required",
+        },
+        unsupportedStoredDocuments: {
+          type: "string",
+          enum: ["refuse", "read-only"],
+          description:
+            "What the reactor does when this browser's store holds documents at protocol versions this build does not run. `refuse` fails the boot and names the versions; `read-only` boots and keeps those documents read-only.",
+          default: "refuse",
         },
       },
     },

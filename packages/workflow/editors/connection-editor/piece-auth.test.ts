@@ -1,0 +1,269 @@
+import { describe, expect, it } from "vitest";
+import {
+  connectorIdForPiece,
+  isAuthComplete,
+  isConfigValueMissing,
+  packageFromConnectorId,
+  planForConnection,
+  planFromAuth,
+  plansFromAuth,
+  UNKNOWN_AUTH,
+  type AuthPlan,
+} from "./piece-auth.js";
+
+describe("planFromAuth", () => {
+  it("maps SECRET_TEXT to a single secret field", () => {
+    const plan = planFromAuth({
+      type: "SECRET_TEXT",
+      displayName: "API Token",
+      required: true,
+    });
+    expect(plan.authType).toBe("SECRET_TEXT");
+    expect(plan.supported).toBe(true);
+    expect(plan.configFields).toEqual([]);
+    expect(plan.secretFields).toHaveLength(1);
+    expect(plan.secretFields[0]).toMatchObject({
+      name: "value",
+      displayName: "API Token",
+      required: true,
+    });
+  });
+
+  it("splits CUSTOM_AUTH props into config and secrets", () => {
+    const plan = planFromAuth({
+      type: "CUSTOM_AUTH",
+      props: {
+        base_url: {
+          displayName: "Base URL",
+          required: true,
+          type: "SHORT_TEXT",
+        },
+        api_key: {
+          displayName: "API Key",
+          required: true,
+          type: "SECRET_TEXT",
+        },
+      },
+    });
+    expect(plan.authType).toBe("CUSTOM_AUTH");
+    expect(plan.configFields.map((field) => field.name)).toEqual(["base_url"]);
+    expect(plan.secretFields.map((field) => field.name)).toEqual(["api_key"]);
+  });
+
+  it("maps BASIC_AUTH to username config + password secret", () => {
+    const plan = planFromAuth({ type: "BASIC_AUTH" });
+    expect(plan.configFields.map((field) => field.name)).toEqual(["username"]);
+    expect(plan.secretFields.map((field) => field.name)).toEqual(["password"]);
+  });
+
+  it("asks an OAUTH2 method for its app and props", () => {
+    const plan = planFromAuth({
+      type: "OAUTH2",
+      props: {
+        subdomain: {
+          type: "SHORT_TEXT",
+          displayName: "Subdomain",
+          required: true,
+        },
+      },
+    });
+    expect(plan).toMatchObject({
+      authType: "OAUTH2",
+      supported: true,
+      oauth2: true,
+    });
+    expect(plan.configFields.map((field) => field.name)).toEqual([
+      "client_id",
+      "subdomain",
+    ]);
+    expect(plan.secretFields.map((field) => field.name)).toEqual([
+      "client_secret",
+    ]);
+  });
+
+  it("reads a loaded piece's props list as well as a listing's record", () => {
+    const plan = planFromAuth({
+      type: "OAUTH2",
+      props: [
+        { name: "region", type: "STATIC_DROPDOWN", displayName: "Region" },
+      ],
+    });
+    expect(plan.configFields.map((field) => field.name)).toEqual([
+      "client_id",
+      "region",
+    ]);
+  });
+
+  it("marks OIDC unsupported", () => {
+    const plan = planFromAuth({ type: "OIDC" });
+    expect(plan.authType).toBe("OIDC");
+    expect(plan.supported).toBe(false);
+  });
+
+  it("prefers a supported method from a multi-auth array", () => {
+    const plan = planFromAuth([
+      { type: "OIDC" },
+      { type: "SECRET_TEXT", displayName: "Bot Token" },
+    ]);
+    expect(plan.authType).toBe("SECRET_TEXT");
+    expect(plan.supported).toBe(true);
+  });
+
+  it("defaults to NONE when authless", () => {
+    expect(planFromAuth(null).authType).toBe("NONE");
+    expect(planFromAuth(undefined).supported).toBe(true);
+    expect(planFromAuth({ type: "NONE" }).supported).toBe(true);
+  });
+
+  it("marks an auth type it doesn't know as unsupported, never as NONE", () => {
+    const plan = planFromAuth({ type: "SAML", displayName: "Single sign-on" });
+    expect(plan).toMatchObject({
+      authType: UNKNOWN_AUTH,
+      declaredType: "SAML",
+      supported: false,
+      configFields: [],
+      secretFields: [],
+    });
+  });
+
+  it("still prefers a known method over an unknown one", () => {
+    expect(
+      planFromAuth([{ type: "SAML" }, { type: "SECRET_TEXT" }]).authType,
+    ).toBe("SECRET_TEXT");
+  });
+});
+
+describe("isConfigValueMissing", () => {
+  it("treats undefined, null and empty string as missing", () => {
+    expect(isConfigValueMissing(undefined)).toBe(true);
+    expect(isConfigValueMissing(null)).toBe(true);
+    expect(isConfigValueMissing("")).toBe(true);
+  });
+
+  it("treats false and 0 as present", () => {
+    expect(isConfigValueMissing(false)).toBe(false);
+    expect(isConfigValueMissing(0)).toBe(false);
+  });
+});
+
+describe("isAuthComplete", () => {
+  const plan: AuthPlan = {
+    authType: "CUSTOM_AUTH",
+    configFields: [
+      { name: "host", displayName: "Host", required: true },
+      { name: "port", displayName: "Port", required: false },
+    ],
+    secretFields: [{ name: "token", displayName: "Token", required: true }],
+    supported: true,
+  };
+
+  it("is complete once every required field is filled", () => {
+    expect(
+      isAuthComplete(plan, { host: "a" }, new Map([["token", "ref-1"]])),
+    ).toBe(true);
+  });
+
+  it("is incomplete when a required config value is missing, null or empty", () => {
+    expect(isAuthComplete(plan, {}, new Map([["token", "ref-1"]]))).toBe(false);
+    expect(
+      isAuthComplete(plan, { host: null }, new Map([["token", "ref-1"]])),
+    ).toBe(false);
+    expect(
+      isAuthComplete(plan, { host: "" }, new Map([["token", "ref-1"]])),
+    ).toBe(false);
+  });
+
+  it("is incomplete when a required secret ref is missing", () => {
+    expect(isAuthComplete(plan, { host: "a" }, new Map())).toBe(false);
+  });
+
+  it("ignores optional fields whether filled or not", () => {
+    const withOptionalSecret: AuthPlan = {
+      ...plan,
+      secretFields: [
+        ...plan.secretFields,
+        { name: "refresh", displayName: "Refresh", required: false },
+      ],
+    };
+    const token = new Map([["token", "ref-1"]]);
+    expect(isAuthComplete(withOptionalSecret, { host: "a" }, token)).toBe(true);
+    expect(
+      isAuthComplete(
+        withOptionalSecret,
+        { host: "a", port: 8080 },
+        new Map([...token, ["refresh", "ref-2"]]),
+      ),
+    ).toBe(true);
+    // An optional value never stands in for a required one.
+    expect(
+      isAuthComplete(
+        withOptionalSecret,
+        { port: 8080 },
+        new Map([["refresh", "ref-2"]]),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("connector ids", () => {
+  it("derives the piece short name", () => {
+    expect(connectorIdForPiece("@activepieces/piece-gotify")).toBe(
+      "@activepieces/piece-gotify#gotify",
+    );
+  });
+
+  it("round-trips back to the package name", () => {
+    expect(packageFromConnectorId("@activepieces/piece-gotify#gotify")).toBe(
+      "@activepieces/piece-gotify",
+    );
+    expect(packageFromConnectorId("@activepieces/piece-slack")).toBe(
+      "@activepieces/piece-slack",
+    );
+  });
+});
+
+describe("sign-in methods", () => {
+  const slack = [
+    { type: "OAUTH2", displayName: "Connection", required: true },
+    {
+      type: "CUSTOM_AUTH",
+      displayName: "Bot Token",
+      required: true,
+      props: {
+        botToken: {
+          type: "SECRET_TEXT",
+          displayName: "Bot Token",
+          required: true,
+        },
+      },
+    },
+  ];
+
+  it("lists each method in the piece's order, runnable or not", () => {
+    expect(
+      plansFromAuth(slack).map((plan) => [plan.authType, plan.supported]),
+    ).toEqual([
+      ["OAUTH2", true],
+      ["CUSTOM_AUTH", true],
+    ]);
+  });
+
+  it("uses the connection's method, or the first runnable one", () => {
+    expect(planForConnection(slack, "CUSTOM_AUTH").secretFields).toMatchObject([
+      { name: "botToken" },
+    ]);
+    expect(planForConnection(slack, "OAUTH2").authType).toBe("OAUTH2");
+    // OIDC can't run, so a connection still on it falls back.
+    const aws = [{ type: "OIDC" }, ...slack.slice(1)];
+    expect(planForConnection(aws, "OIDC").authType).toBe("CUSTOM_AUTH");
+  });
+
+  it("takes the runtime's refusal of a method at its word", () => {
+    const refreshing = {
+      type: "CUSTOM_AUTH",
+      props: {},
+      unsupported: "CustomAuth refresh is not supported yet",
+    };
+    expect(planFromAuth(refreshing).supported).toBe(false);
+  });
+});

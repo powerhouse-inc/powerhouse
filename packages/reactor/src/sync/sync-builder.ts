@@ -1,3 +1,4 @@
+import type { ISettledWatermark } from "../catch-up/types.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -6,13 +7,22 @@ import type { IEventBus } from "../events/interfaces.js";
 import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
+  ISyncHoldStorage,
+  ISyncPurgeRefusalStorage,
+  ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
+import { deliveryAt } from "../storage/kysely/delivery-lookup.js";
+import { listPurged } from "../storage/kysely/document-purges.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
+import { KyselySyncHoldStorage } from "../storage/kysely/sync-hold-storage.js";
+import { KyselySyncPurgeRefusalStorage } from "../storage/kysely/sync-purge-refusal-storage.js";
+import { KyselySyncReceivedMarkerStorage } from "../storage/kysely/sync-received-marker-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
+import type { LocalPeer } from "./types.js";
 import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 
 export class SyncBuilder {
@@ -20,6 +30,9 @@ export class SyncBuilder {
   private remoteStorage?: ISyncRemoteStorage;
   private cursorStorage?: ISyncCursorStorage;
   private deadLetterStorage?: ISyncDeadLetterStorage;
+  private holdStorage?: ISyncHoldStorage;
+  private receivedMarkerStorage?: ISyncReceivedMarkerStorage;
+  private purgeRefusalStorage?: ISyncPurgeRefusalStorage;
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -42,6 +55,21 @@ export class SyncBuilder {
     return this;
   }
 
+  withHoldStorage(storage: ISyncHoldStorage): this {
+    this.holdStorage = storage;
+    return this;
+  }
+
+  withReceivedMarkerStorage(storage: ISyncReceivedMarkerStorage): this {
+    this.receivedMarkerStorage = storage;
+    return this;
+  }
+
+  withPurgeRefusalStorage(storage: ISyncPurgeRefusalStorage): this {
+    this.purgeRefusalStorage = storage;
+    return this;
+  }
+
   withMaxDeadLettersPerRemote(limit: number): this {
     this.config.maxDeadLettersPerRemote = limit;
     return this;
@@ -57,6 +85,11 @@ export class SyncBuilder {
     return this;
   }
 
+  withStaleRemotePollWindowMs(windowMs: number): this {
+    this.config.staleRemotePollWindowMs = windowMs;
+    return this;
+  }
+
   build(
     reactor: IReactor,
     logger: ILogger,
@@ -64,6 +97,8 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    watermark: ISettledWatermark,
+    localPeer?: LocalPeer,
   ): ISyncManager {
     const module = this.buildModule(
       reactor,
@@ -72,6 +107,8 @@ export class SyncBuilder {
       eventBus,
       db,
       driveContainerTypes,
+      watermark,
+      localPeer,
     );
     return module.syncManager;
   }
@@ -83,6 +120,8 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    watermark: ISettledWatermark,
+    localPeer?: LocalPeer,
   ): InProcessSyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
@@ -92,6 +131,11 @@ export class SyncBuilder {
     const cursorStorage = this.cursorStorage ?? new KyselySyncCursorStorage(db);
     const deadLetterStorage =
       this.deadLetterStorage ?? new KyselySyncDeadLetterStorage(db);
+    const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);
+    const receivedMarkerStorage =
+      this.receivedMarkerStorage ?? new KyselySyncReceivedMarkerStorage(db);
+    const purgeRefusalStorage =
+      this.purgeRefusalStorage ?? new KyselySyncPurgeRefusalStorage(db);
 
     const syncManager = new SyncManager(
       logger,
@@ -103,13 +147,21 @@ export class SyncBuilder {
       reactor,
       eventBus,
       driveContainerTypes,
+      watermark,
       this.config,
+      localPeer,
+      holdStorage,
+      { listPurged: () => listPurged(db) },
+      receivedMarkerStorage,
+      { at: (documentId, ordinal) => deliveryAt(db, documentId, ordinal) },
+      purgeRefusalStorage,
     );
 
     return {
       remoteStorage,
       cursorStorage,
       deadLetterStorage,
+      holdStorage,
       channelFactory: this.channelFactory,
       syncManager,
     };

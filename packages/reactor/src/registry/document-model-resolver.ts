@@ -1,7 +1,11 @@
 import { childLogger } from "document-model";
 import { resolveModelSources } from "../core/model-sources.js";
 import type { ModelManifestEntry } from "../executor/worker/protocol.js";
-import { DuplicateModuleError, ModuleNotFoundError } from "./errors.js";
+import {
+  DuplicateModuleError,
+  ModelNotWorkerImportableError,
+  ModuleNotFoundError,
+} from "./errors.js";
 import type {
   IDocumentModelLoader,
   IDocumentModelRegistry,
@@ -9,6 +13,8 @@ import type {
 
 export interface IDocumentModelResolver {
   ensureModelLoaded(documentType: string): Promise<void>;
+  /** Makes a model an executor reported missing available to it again. */
+  recoverMissingModel(documentType: string, version?: number): Promise<void>;
 }
 
 /**
@@ -32,6 +38,8 @@ export class DocumentModelResolver implements IDocumentModelResolver {
   private broadcastHook: ModelLoadedBroadcastHook | null = null;
   private modelLoadedHook: ((documentType: string) => Promise<void>) | null =
     null;
+  // Importable sources per type, re-sent to workers that report one missing.
+  private importableEntries = new Map<string, ModelManifestEntry[]>();
   private readonly logger = childLogger(["reactor", "document-model-resolver"]);
 
   constructor(
@@ -54,6 +62,37 @@ export class DocumentModelResolver implements IDocumentModelResolver {
    */
   setModelLoadedHook(hook: (documentType: string) => Promise<void>): void {
     this.modelLoadedHook = hook;
+  }
+
+  /** Records importable entries registered outside the resolver (boot sources). */
+  rememberManifest(entries: ModelManifestEntry[]): void {
+    for (const entry of entries) {
+      const known = this.importableEntries.get(entry.documentType) ?? [];
+      if (!known.some((k) => k.version === entry.version)) {
+        known.push(entry);
+      }
+      this.importableEntries.set(entry.documentType, known);
+    }
+  }
+
+  // Host-side load if missing; with workers, re-send its importable entries.
+  async recoverMissingModel(
+    documentType: string,
+    version?: number,
+  ): Promise<void> {
+    await this.ensureModelLoaded(documentType);
+    if (!this.broadcastHook) {
+      return;
+    }
+    const entries = (this.importableEntries.get(documentType) ?? []).filter(
+      (entry) => version === undefined || entry.version === String(version),
+    );
+    if (entries.length === 0) {
+      throw new ModelNotWorkerImportableError(documentType, version);
+    }
+    for (const entry of entries) {
+      await this.broadcastHook(entry);
+    }
   }
 
   async ensureModelLoaded(documentType: string): Promise<void> {
@@ -115,6 +154,7 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     }
     // Importable sources carry manifest entries; live modules do not, so a
     // module source registers host-side only and workers never hear of it.
+    this.rememberManifest(resolved.manifest);
     if (this.broadcastHook) {
       for (const entry of resolved.manifest) {
         await this.broadcastHook(entry);
@@ -130,7 +170,11 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     try {
       await this.modelLoadedHook(documentType);
     } catch (error) {
-      this.logger.warn(`MODEL_LOADED hook failed: ${documentType}`, error);
+      this.logger.warn(
+        "MODEL_LOADED hook failed: @documentType: @error",
+        documentType,
+        error,
+      );
     }
   }
 }
@@ -154,5 +198,9 @@ export class NullDocumentModelResolver implements IDocumentModelResolver {
     }
 
     return Promise.reject(new ModuleNotFoundError(documentType));
+  }
+
+  recoverMissingModel(documentType: string): Promise<void> {
+    return this.ensureModelLoaded(documentType);
   }
 }

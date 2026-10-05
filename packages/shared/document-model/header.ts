@@ -1,6 +1,15 @@
+import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
 import type { PHDocumentHeader } from "./documents.js";
 import type { Signature } from "./signatures.js";
+import {
+  DEFAULT_SIGNATURE_POLICY,
+  deriveDocumentId,
+  protocolVersionsFor,
+  signaturePolicyOf,
+  type ProtocolVersions,
+  type SignaturePolicy,
+} from "./signature-policy.js";
 import type { ISigner, SigningParameters } from "./types.js";
 import { generateId } from "./utils.js";
 
@@ -30,15 +39,20 @@ export async function createVerificationSigner(
   return {
     publicKey: cryptoKey,
 
-    async sign(_data: Uint8Array): Promise<Uint8Array> {
-      throw new Error("verification-only signer cannot sign data");
+    sign(_data: Uint8Array): Promise<Uint8Array> {
+      return Promise.reject(
+        new Error("verification-only signer cannot sign data"),
+      );
     },
 
-    async signAction(
+    signAction(
       _action: Action,
+      _target: ActionSigningTarget,
       _abortSignal?: AbortSignal,
     ): Promise<Signature> {
-      throw new Error("verification-only signer cannot sign actions");
+      return Promise.reject(
+        new Error("verification-only signer cannot sign actions"),
+      );
     },
 
     async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
@@ -153,30 +167,101 @@ export const validateHeader = async (
  * Creates a header that has yet to be signed. This header is not valid, but
  * can be input into {@link createSignedHeader} to create a signed header.
  *
+ * With `protocolVersions` requiring v2 signatures the header takes a random
+ * nonce and the id {@link deriveDocumentId} gives, so `id` must be omitted.
+ *
  * @returns An unsigned header for a document.
  */
 export const createPresignedHeader = (
-  id: string = generateId(),
+  id?: string,
   documentType = "",
+  protocolVersions?: ProtocolVersions,
 ): PHDocumentHeader => {
-  return {
-    id,
+  const createdAtUtcIso = new Date().toISOString();
+  const header: PHDocumentHeader = {
+    id: id ?? generateId(),
     sig: {
       publicKey: {},
       nonce: "",
     },
     documentType,
-    createdAtUtcIso: new Date().toISOString(),
+    createdAtUtcIso,
     slug: "",
     name: "",
     branch: "main",
     revision: {
       document: 0,
     },
-    lastModifiedAtUtcIso: new Date().toISOString(),
+    lastModifiedAtUtcIso: createdAtUtcIso,
     meta: {},
   };
+  if (protocolVersions === undefined) {
+    return header;
+  }
+
+  header.protocolVersions = { ...protocolVersions };
+  if (signaturePolicyOf(header) === "legacy") {
+    return header;
+  }
+
+  if (id !== undefined) {
+    throw new Error(
+      `A v2-required document's id is derived from its header; cannot use ${id}`,
+    );
+  }
+  header.sig.nonce = generateId();
+  header.id = deriveDocumentId({
+    documentType,
+    createdAtUtcIso,
+    nonce: header.sig.nonce,
+    protocolVersions: header.protocolVersions,
+  });
+  return header;
 };
+
+/**
+ * A header for a copy of a document headed `source`. A copy is v2-required
+ * when its source is or when `policy` asks for it, and then takes a derived id;
+ * otherwise it takes `id`. It keeps the source's other protocol versions.
+ */
+export function createCopyHeader(
+  source: Pick<PHDocumentHeader, "documentType" | "protocolVersions">,
+  id?: string,
+  policy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
+): PHDocumentHeader {
+  const base = source.protocolVersions ?? {};
+  if (signaturePolicyOf(source) === "v2-required" || policy === "v2-required") {
+    return createPresignedHeader(
+      undefined,
+      source.documentType,
+      protocolVersionsFor("v2-required", base),
+    );
+  }
+  const header = createPresignedHeader(id, source.documentType);
+  if (source.protocolVersions) {
+    header.protocolVersions = { ...source.protocolVersions };
+  }
+  return header;
+}
+
+/** Whether a v2-required `header` carries the id its params derive. */
+export function hasDerivedDocumentId(header: PHDocumentHeader): boolean {
+  if (signaturePolicyOf(header) === "legacy" || !header.protocolVersions) {
+    return false;
+  }
+  try {
+    return (
+      deriveDocumentId({
+        documentType: header.documentType,
+        createdAtUtcIso: header.createdAtUtcIso,
+        nonce: header.sig.nonce,
+        protocolVersions: header.protocolVersions,
+      }) === header.id
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Creates a new, signed header for a document. This will replace the id of the

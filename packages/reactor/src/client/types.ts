@@ -9,8 +9,22 @@ import type {
   AuthSubject,
   DocumentModelModule,
   Operation,
+  PeerCapability,
+  PeerCapabilityFlags,
   PHDocument,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+import type { IPeerAgreement } from "../sync/peer-agreement.js";
+
+/** What creation selects protocol versions from. */
+export type ProtocolSelection = {
+  capabilities: readonly PeerCapability[];
+  flags: PeerCapabilityFlags;
+  /** Absent without sync: no members, so the local preference. */
+  agreement?: () => IPeerAgreement;
+  collectionsOf: (documentIds: string[]) => Promise<Record<string, string[]>>;
+};
 
 import type {
   BatchExecutionRequest,
@@ -27,7 +41,10 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "../shared/types.js";
-import type { OperationFilter } from "../storage/interfaces.js";
+import type {
+  DocumentRelationship,
+  OperationFilter,
+} from "../storage/interfaces.js";
 
 /**
  * Describes the types of document changes that can occur.
@@ -51,6 +68,8 @@ export type DocumentChangeEvent = {
   context?: {
     parentId?: string;
     childId?: string;
+    /** On a Deleted event: a purge marker applied the deletion. */
+    purged?: true;
   };
 };
 
@@ -62,6 +81,10 @@ export type CreateDocumentOptions = {
   parentIdentifier?: string;
   /** Optional version of the document model to use (defaults to latest) */
   documentModelVersion?: number;
+  /** Merged over the model's defaults; `signature: 2` makes it v2-required. */
+  protocolVersions?: { [protocol: string]: number };
+  /** Overrides the client's creation default for this document. */
+  signaturePolicy?: SignaturePolicy;
 };
 
 /** Retries taken when an upgrade conflicts with concurrent edits. */
@@ -356,7 +379,53 @@ export interface IReactorClient {
   ): Promise<PagedResults<PHDocument>>;
 
   /**
-   * Filters documents by criteria and returns a list of them
+   * Retrieves the outgoing relationship edges of a source document.
+   *
+   * Unlike {@link IReactorClient.getOutgoingRelationships}, which returns the
+   * documents at the far end, this returns the edges themselves, carrying the
+   * metadata and timestamps recorded against each relationship.
+   *
+   * @param sourceIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - Optional relationship type to filter by
+   * @param view - Optional filter containing branch and scopes information
+   * @param paging - Optional pagination options
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The matching relationship edges and paging cursor
+   */
+  getOutgoingRelationshipEdges(
+    sourceIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>>;
+
+  /**
+   * Retrieves the incoming relationship edges of a target document.
+   *
+   * Unlike {@link IReactorClient.getIncomingRelationships}, which returns the
+   * documents at the far end, this returns the edges themselves, carrying the
+   * metadata and timestamps recorded against each relationship.
+   *
+   * @param targetIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - Optional relationship type to filter by
+   * @param view - Optional filter containing branch and scopes information
+   * @param paging - Optional pagination options
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The matching relationship edges and paging cursor
+   */
+  getIncomingRelationshipEdges(
+    targetIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>>;
+
+  /**
+   * Filters documents by criteria and returns a list of them. A document the
+   * view's subject may read no domain scope of is withheld, not served as its
+   * header and always-readable scopes.
    *
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
@@ -370,6 +439,13 @@ export interface IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
+
+  /** Whether {@link find} would serve the document; false when it is absent. */
+  isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean>;
 
   /**
    * Predicts whether the subject would be admitted to execute each of a set of
@@ -417,7 +493,24 @@ export interface IReactorClient {
   ): Promise<ActionEvaluations>;
 
   /**
-   * Creates a document and waits for completion
+   * The signature policy this client gives the documents it creates when the
+   * caller does not choose one. It never changes an existing document.
+   */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
+
+  /**
+   * protocolVersions for a new document under `parentIdentifier`, before the
+   * signature policy: what this reactor and the direct peers of the parent's
+   * collections agree on. Without a parent, the local preference.
+   */
+  getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions>;
+
+  /**
+   * Creates a document and waits for completion. The document keeps the
+   * signature policy and id its header carries.
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param parentIdentifier - Optional "id" or "slug" of parent document
@@ -431,6 +524,22 @@ export interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
+   * Submits what {@link create} submits and returns without waiting. The
+   * batch holds a `create` job and, with a parent, a `parent` job that
+   * depends on it; a failed `create` still releases `parent`.
+   *
+   * @param document - Document with optional id, slug, parent, model type, and initial state
+   * @param parentIdentifier - Optional "id" or "slug" of parent document
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The submitted jobs, keyed `create` and `parent`
+   */
+  createAsync(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
+
+  /**
    * Creates an empty document and waits for completion
    *
    * @param documentModelType - Type of document to create
@@ -442,6 +551,21 @@ export interface IReactorClient {
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument>;
+
+  /**
+   * Submits what {@link createEmpty} submits and returns without waiting;
+   * see {@link createAsync}. The new document's id is `jobs.create.documentId`.
+   *
+   * @param documentModelType - Type of document to create
+   * @param options - Optional creation options (parentIdentifier, documentModelVersion)
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The submitted jobs, keyed `create` and `parent`
+   */
+  createEmptyAsync(
+    documentModelType: string,
+    options?: CreateDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
 
   /**
    * Retrieves the document model module matching the version a document is
@@ -597,9 +721,13 @@ export interface IReactorClient {
   /**
    * Adds a relationship between two documents and waits for completion.
    *
+   * Adding a relationship that already exists is a no-op, metadata included.
+   * Use {@link IReactorClient.updateRelationship} to change an existing edge.
+   *
    * @param sourceIdentifier - Source document id or slug
    * @param targetIdentifier - Target document id or slug
    * @param relationshipType - Relationship type identifier
+   * @param metadata - Optional metadata to attach to the relationship
    * @param branch - Optional branch to add the relationship to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
@@ -608,6 +736,28 @@ export interface IReactorClient {
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+
+  /**
+   * Replaces the metadata of an existing relationship and waits for completion.
+   * The relationship's createdAt is preserved.
+   *
+   * @param sourceIdentifier - Source document id or slug
+   * @param targetIdentifier - Target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param metadata - The metadata to store; null clears it
+   * @param branch - Optional branch holding the relationship, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated source document
+   */
+  updateRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
@@ -713,7 +863,9 @@ export interface IReactorClient {
   waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
-   * Subscribes to changes for documents matching specified filters
+   * Subscribes to changes for documents matching specified filters, gated as
+   * `find` is: an event naming a document the view's subject may read no domain
+   * scope of is withheld.
    *
    * @param search - Search filter options (type, parentId, identifiers)
    * @param callback - Function called when documents change with the change event details

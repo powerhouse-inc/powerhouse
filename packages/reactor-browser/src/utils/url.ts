@@ -2,7 +2,11 @@ import type {
   DocumentDriveDocument,
   Node,
 } from "@powerhousedao/shared/document-drive";
+import { isDerivedDocumentId } from "@powerhousedao/shared/document-model";
 import slug from "slug";
+
+// Length of the base64url id a v2-required document gets.
+const DERIVED_ID_LENGTH = 43;
 
 // Returns url with base path plus provided path
 export function resolveUrlPathname(path: string) {
@@ -26,12 +30,14 @@ export function makeDriveUrlComponent(
   return `/d/${slug(drive.header.slug)}`;
 }
 
-/** Makes a URL component for a node. */
+/**
+ * Makes a URL component for a node: `<slugged name>-<id>`. The id is kept
+ * verbatim, since a v2-required id is case-sensitive base64url.
+ */
 export function makeNodeSlug(node: Node | undefined) {
   if (!node) return "";
-  const nodeName = node.name;
-  if (!nodeName) return slug(node.id);
-  return slug(`${nodeName}-${node.id}`);
+  const nameSlug = node.name ? slug(node.name) : "";
+  return nameSlug ? `${nameSlug}-${node.id}` : node.id;
 }
 
 /** Extracts the node slug from a path.
@@ -53,9 +59,17 @@ export function findUuid(input: string | undefined) {
   return match?.[0];
 }
 
+/** The v2-required document id a slug ends with, if any. */
+export function findDerivedId(input: string | undefined) {
+  if (!input || input.length < DERIVED_ID_LENGTH) return undefined;
+  const start = input.length - DERIVED_ID_LENGTH;
+  if (start > 0 && input[start - 1] !== "-") return undefined;
+  const candidate = input.slice(start);
+  return isDerivedDocumentId(candidate) ? candidate : undefined;
+}
+
 export function extractNodeIdFromSlug(nodeSlug: string | undefined) {
-  const nodeId = findUuid(nodeSlug);
-  return nodeId;
+  return findUuid(nodeSlug) ?? findDerivedId(nodeSlug);
 }
 
 export function extractNodeIdFromPath(path: string) {
@@ -75,8 +89,7 @@ export function extractDriveSlugFromPath(path: string) {
 }
 
 export function extractDriveIdFromSlug(driveSlug: string | undefined) {
-  const driveId = findUuid(driveSlug);
-  return driveId;
+  return findUuid(driveSlug) ?? findDerivedId(driveSlug);
 }
 
 export function extractDriveIdFromPath(path: string) {

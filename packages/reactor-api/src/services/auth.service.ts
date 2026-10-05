@@ -1,7 +1,8 @@
+import type { RouteUser } from "@powerhousedao/shared/processors";
 import { verifyAuthBearerToken } from "@renown/sdk";
 
 type VerifiedCredential =
-  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
+  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | (infer T)
     ? T
     : never;
 
@@ -50,25 +51,12 @@ interface CredentialCacheEntry {
   expiresAt: number;
 }
 
-export interface User {
-  address: string;
-  chainId: number;
-  networkId: string;
-
-  /**
-   * The did:key of the app instance that issued this request's token, taken
-   * from the verified credential's issuer.
-   *
-   * It is the same value a signer presents as its app key when it signs an
-   * action, which is what a document records as its creator. Carrying it here
-   * is what lets a request decide as the same principal the write path
-   * presents, rather than as an address with no key.
-   *
-   * Authenticated, not asserted: the token is verified by resolving this very
-   * DID, so a caller cannot name someone else's.
-   */
-  appKey: string;
-}
+/**
+ * The authenticated principal. The shape is declared once in
+ * `@powerhousedao/shared/processors` as `RouteUser`, so a route handler and a
+ * resolver agree on it without either package redeclaring it.
+ */
+export type User = RouteUser;
 
 export interface AuthContext {
   user?: User;
@@ -174,6 +162,9 @@ export class AuthService {
     }
   }
 
+  // `null` when there is nobody to resolve: resolution off, or no bearer sent.
+
+  /** Throws only for a bearer that is present and unusable, as HTTP 401s it. */
   async authenticateWebSocketConnection(
     connectionParams: Record<string, unknown>,
   ): Promise<User | null> {
@@ -183,15 +174,12 @@ export class AuthService {
 
     const authHeader = connectionParams.authorization as string | undefined;
     if (!authHeader) {
-      /* Refusing a tokenless connection is enforcement, not resolution. When
-         only `resolveIdentity` is on the policy is still `OPEN`, so admit it
-         with no user — the same answer `authenticateRequest` gives an HTTP
-         request that carries no bearer. Without this, turning on identity
-         resolution silently breaks every unauthenticated subscription. */
-      if (!this.config.enabled) {
-        return null;
-      }
-      throw new Error("Missing authorization in connection parameters");
+      // Resolution, not enforcement: `verifyBearer` answers the same.
+
+      // Refusing anonymous is onConnect's, keyed on REQUIRE_AUTHENTICATED_CALLER.
+
+      // Subscriptions themselves authorize per document.
+      return null;
     }
 
     const token = authHeader.split(" ")[1];

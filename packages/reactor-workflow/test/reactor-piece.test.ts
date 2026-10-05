@@ -1,0 +1,359 @@
+// The reactor piece end to end: the registry finds the built bundle, the
+// worker runs the piece in a child process, and its reactor calls come back
+// to a port standing in for the host's reactor client.
+import {
+  ActivepiecesBlockExecutor,
+  sourcedResolver,
+  type PieceResolver,
+  type ReactorPort,
+} from "../src/pieces/index.js";
+import type { BlockExecution, LocalPiece } from "../src/pieces/index.js";
+import type { PackagePiece } from "../src/pieces/index.js";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, isAbsolute, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { BlockResolver } from "../src/reactor/block-resolver.js";
+import { PieceRegistry } from "../src/reactor/piece-registry.js";
+import { stepBlock } from "../src/pieces/engine/types.js";
+
+const PIECE = "@powerhousedao/piece-reactor";
+const packageRoot = fileURLToPath(new URL("..", import.meta.url));
+
+// The piece ships built, so this runs against the module a reactor would load
+// rather than a second bundle of the same source.
+const require = createRequire(import.meta.url);
+function builtPieceRoot(): string | undefined {
+  let root: string;
+  try {
+    root = dirname(require.resolve("@powerhousedao/workflow/package.json"));
+  } catch {
+    return undefined;
+  }
+  return existsSync(
+    join(root, "dist", "node", "pieces", "reactor", "index.mjs"),
+  )
+    ? root
+    : undefined;
+}
+const workflowRoot = builtPieceRoot();
+
+// What the host's package manager reports: the package's own list, with every
+// declared entry resolved against the package root.
+async function builtPieces(root: string | undefined): Promise<LocalPiece[]> {
+  if (!root) return [];
+  const listPath = join(root, "dist", "node", "pieces", "index.mjs");
+  const list = (await import(pathToFileURL(listPath).href)) as {
+    pieces: PackagePiece[];
+  };
+  const { version } = JSON.parse(
+    readFileSync(join(root, "package.json"), "utf8"),
+  ) as { version: string };
+  return list.pieces.map((piece) => {
+    const where = piece.entry ?? piece.bundle ?? "";
+    const path = isAbsolute(where) ? where : join(root, where);
+    return {
+      name: piece.name,
+      version,
+      ...(piece.entry ? { entryPath: path } : { bundleDir: path }),
+    };
+  });
+}
+
+// Every call the piece made, and what the port answered with.
+function stubPort(): ReactorPort & { calls: string[] } {
+  const calls: string[] = [];
+  let submitted: string[] = [];
+  const summary = (documentId: string, name = "Invoice") => ({
+    documentId,
+    documentType: "powerhouse/workflow",
+    name,
+    slug: "invoice",
+    state: { name },
+  });
+  return {
+    calls,
+    models() {
+      calls.push("models");
+      return Promise.resolve([
+        { documentType: "powerhouse/workflow", name: "Workflow" },
+        { documentType: "powerhouse/connection", name: "Connection" },
+      ]);
+    },
+    model(documentType) {
+      calls.push(`model ${documentType}`);
+      return Promise.resolve({
+        documentType,
+        name: "Workflow",
+        stateSchema: "type WorkflowState { name: String }",
+        actions: [
+          { type: "SET_NAME", module: "base", inputSchema: null },
+          {
+            type: "ADD_STEP",
+            module: "steps",
+            inputSchema: "input AddStepInput { key: String! }",
+          },
+        ],
+      });
+    },
+    get(input) {
+      calls.push(`get ${input.documentId}`);
+      return Promise.resolve(
+        summary(input.documentId, submitted.length ? "Renamed" : "Invoice"),
+      );
+    },
+    find(input) {
+      calls.push(`find ${JSON.stringify(input)}`);
+      return Promise.resolve([
+        summary("doc-1", "Invoice March"),
+        summary("doc-2", "Receipt"),
+      ]);
+    },
+    submitCreate(input) {
+      calls.push(
+        `create ${input.documentType} parent=${input.parentId ?? "-"} name=${input.name ?? "-"}`,
+      );
+      return Promise.resolve({
+        documentId: "new-1",
+        jobIds: ["job-create"],
+        followUps: [],
+      });
+    },
+    submit(input) {
+      calls.push(
+        `submit ${input.documentId} ${input.actions.map((a) => a.type).join(",")}`,
+      );
+      submitted = input.actions.map((_, index) => `action-${index}`);
+      return Promise.resolve({ jobId: "job-1", actionIds: submitted });
+    },
+    wait(input) {
+      calls.push(`wait ${input.jobId}`);
+      return Promise.resolve({
+        jobId: input.jobId,
+        status: "READ_READY",
+        actions: submitted.map((actionId) => ({ actionId, kind: "applied" })),
+      });
+    },
+  };
+}
+
+function execution(actionName: string, config: unknown): BlockExecution {
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName: PIECE,
+    pieceVersion: "0.0.1",
+    actionName,
+    config,
+  };
+  return { block: stepBlock(step), config, step };
+}
+
+let registry: PieceRegistry;
+let resolver: PieceResolver;
+let executor: ActivepiecesBlockExecutor;
+let port: ReturnType<typeof stubPort>;
+
+describe.skipIf(!workflowRoot)("the reactor piece", () => {
+  beforeAll(async () => {
+    registry = new PieceRegistry();
+    registry.setPieces(await builtPieces(workflowRoot));
+    resolver = sourcedResolver({
+      cacheDir: packageRoot,
+      lookup: registry.lookup,
+    });
+  }, 60_000);
+
+  beforeEach(() => {
+    port = stubPort();
+    executor = new ActivepiecesBlockExecutor({
+      cacheDir: packageRoot,
+      resolver,
+      // Host-bound: the installed copy runs whatever the block pins.
+      resolveBlock: (block) =>
+        new BlockResolver({ local: registry.lookup }).resolve(block),
+      reactor: port,
+    });
+  });
+
+  afterEach(() => {
+    executor.dispose();
+  });
+
+  it("lists the document types the reactor holds", async () => {
+    const result = await executor.execute(execution("document-types", {}));
+
+    expect(result.output).toEqual({
+      count: 2,
+      types: [
+        { documentType: "powerhouse/workflow", name: "Workflow" },
+        { documentType: "powerhouse/connection", name: "Connection" },
+      ],
+    });
+  });
+
+  it("creates a document and applies its initial actions", async () => {
+    const result = await executor.execute(
+      execution("document-create", {
+        documentType: "powerhouse/workflow",
+        name: "Invoice",
+        parentId: "drive-1",
+        actions: [{ type: "ADD_STEP", input: { key: "fetch" } }],
+      }),
+    );
+
+    expect(port.calls).toEqual([
+      // The name travels with the create — the port is what names a document,
+      // whichever path it took — so only the author's actions are dispatched.
+      "create powerhouse/workflow parent=drive-1 name=Invoice",
+      "wait job-create",
+      "get new-1",
+      "submit new-1 ADD_STEP",
+      "wait job-1",
+      "get new-1",
+    ]);
+    expect(result.output).toEqual({
+      documentId: "new-1",
+      documentType: "powerhouse/workflow",
+      name: "Renamed",
+      state: { name: "Renamed" },
+    });
+  });
+
+  it("takes the document type and actions from a model's JSON payload", async () => {
+    await executor.execute(
+      execution("document-create", {
+        parse: "extract",
+        payload:
+          '```json\n{"documentType":"powerhouse/connection","name":"From model","actions":[{"type":"SET_NAME","input":{"name":"x"}}]}\n```',
+      }),
+    );
+
+    expect(port.calls[0]).toBe(
+      "create powerhouse/connection parent=- name=From model",
+    );
+  });
+
+  it("refuses an action the step did not allow", async () => {
+    await expect(
+      executor.execute(
+        execution("document-dispatch", {
+          documentId: "doc-1",
+          actions: [{ type: "DELETE_DOCUMENT" }],
+          allowedActions: "SET_NAME, ADD_STEP",
+        }),
+      ),
+    ).rejects.toThrow(/not allowed here: DELETE_DOCUMENT/);
+    expect(port.calls).toEqual([]);
+  });
+
+  it("refuses a document id inside prose by default", async () => {
+    await expect(
+      executor.execute(
+        execution("document-dispatch", {
+          documentId:
+            'The document is "01234567-89ab-cdef-0123-456789abcdef" — dispatch there.',
+          actions: [{ type: "SET_NAME", input: { name: "x" } }],
+        }),
+      ),
+    ).rejects.toThrow(/not a document id/);
+    expect(port.calls).toEqual([]);
+  });
+
+  it("digs a document id out of prose when asked to extract", async () => {
+    const documentId =
+      'The document is "01234567-89ab-cdef-0123-456789abcdef" — dispatch there.';
+    const result = await executor.execute(
+      execution("document-dispatch", {
+        parse: "extract",
+        documentId,
+        actions: [{ type: "SET_NAME", input: { name: "x" } }],
+      }),
+    );
+
+    expect(port.calls).toEqual([
+      "submit 01234567-89ab-cdef-0123-456789abcdef SET_NAME",
+      "wait job-1",
+      "get 01234567-89ab-cdef-0123-456789abcdef",
+    ]);
+    expect(result.output).toMatchObject({ extractedFrom: { documentId } });
+  });
+
+  it("filters found documents by name and caps the list", async () => {
+    const result = await executor.execute(
+      execution("document-find", {
+        documentType: "powerhouse/workflow",
+        name: "invoice",
+      }),
+    );
+
+    expect(port.calls).toEqual(['find {"documentType":"powerhouse/workflow"}']);
+    expect(result.output).toEqual({
+      count: 1,
+      documents: [expect.objectContaining({ documentId: "doc-1" })],
+    });
+  });
+
+  it("hands the host a state match, which is how a step binds to a document", async () => {
+    // The index cannot query state; this is the only way a workflow finds the
+    // document that carries a given order id, invoice number or external key.
+    const result = await executor.execute(
+      execution("document-find", {
+        documentType: "powerhouse/workflow",
+        matchPath: "orderId",
+        matchValue: "order-a",
+        includeState: true,
+      }),
+    );
+
+    expect(port.calls).toEqual([
+      'find {"documentType":"powerhouse/workflow","match":{"path":"orderId","value":"order-a"},"withState":true}',
+    ]);
+    expect(result.output).toMatchObject({ count: 2 });
+  });
+
+  it("refuses a half-written state match instead of returning everything", async () => {
+    // A field with no value would otherwise read as "no filter", handing a step
+    // that asked for one document every document of the type.
+    await expect(
+      executor.execute(
+        execution("document-find", {
+          documentType: "powerhouse/workflow",
+          matchPath: "orderId",
+        }),
+      ),
+    ).rejects.toThrow(/set together or not at all/);
+    expect(port.calls).toEqual([]);
+  });
+
+  it("reads a schema, narrowed to one action when asked", async () => {
+    const result = await executor.execute(
+      execution("document-schema", {
+        documentType: "powerhouse/workflow",
+        actionType: "ADD_STEP",
+      }),
+    );
+
+    expect(result.output).toEqual({
+      documentType: "powerhouse/workflow",
+      name: "Workflow",
+      stateSchema: "type WorkflowState { name: String }",
+      actions: [
+        {
+          type: "ADD_STEP",
+          module: "steps",
+          inputSchema: "input AddStepInput { key: String! }",
+        },
+      ],
+    });
+  });
+
+  it("resolves the type from a document id when none was given", async () => {
+    await executor.execute(
+      execution("document-schema", { documentId: "doc-9" }),
+    );
+
+    expect(port.calls).toEqual(["get doc-9", "model powerhouse/workflow"]);
+  });
+});

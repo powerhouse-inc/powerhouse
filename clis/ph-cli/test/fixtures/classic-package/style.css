@@ -1,0 +1,3 @@
+/* The stylesheet `ph build` hands to Tailwind. A fixture has no design-system
+   to import, so it is bare. */
+@import "tailwindcss";

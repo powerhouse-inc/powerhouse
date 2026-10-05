@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.2.2-dev.87",
+  "version": "6.2.3-dev.43",
   "description": "",
   "keywords": [],
   "author": "",
@@ -67,7 +67,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/powerhouse-vetra-packages",
     "test": "vitest --run",
     "build": "tsx ./build",
     "test:watch": "vitest",
@@ -123,6 +123,7 @@
     "thememirror": "^2.0.1",
     "tsdown": "catalog:",
     "tsx": "catalog:",
+    "typescript": "catalog:",
     "zod": "catalog:"
   }
 }

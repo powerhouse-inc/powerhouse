@@ -1,22 +1,33 @@
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   OperationWithContext,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
+  actionSignerIdentity,
   baseReducerVersion,
   decide,
   garbageCollect,
+  groupDocumentType,
+  isPurgeMarker,
+  purgeDocumentAction,
+  purgeMarkerOperation,
+  type PurgeMarkerOperation,
   hashDocumentStateForScope,
   isUndoRedo,
   mentionedGroupIds,
+  localSupports,
   normalizeDocumentModelVersion,
+  PEER_CAPABILITIES,
   sortOperations,
+  withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
@@ -25,18 +36,28 @@ import type {
 } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+  type PurgeMarkerContext,
+} from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   AuthorizationDeniedError,
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
+  DocumentNotDeletedError,
+  DocumentPurgedError,
   ExcessiveReshuffleError,
+  GroupInUseError,
   InvalidOperationTimestampError,
+  InvalidSignatureError,
+  PurgeTooLargeError,
+  ReservedActionError,
 } from "../shared/errors.js";
+import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import { yieldToMain } from "../shared/utils.js";
-import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   AppendConditionFailedError,
   type AppendCondition,
@@ -55,8 +76,19 @@ import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
-import { SignatureVerifier } from "./signature-verifier.js";
-import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
+import {
+  DEFAULT_TRUST_TIMEOUT_MS,
+  SignatureAdmission,
+  type CommittedWrite,
+  type MutationAdmission,
+} from "./signature-admission.js";
+import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
+import { PassthroughSigner } from "../signer/passthrough-signer.js";
+import type { SignatureTrustPolicy } from "../signer/types.js";
+import {
+  DEFAULT_DEFERRED_JOB_TTL_MS,
+  DEFAULT_MAX_PURGE_OPERATIONS,
+} from "./types.js";
 import type {
   ExecutingJob,
   JobExecutorConfig,
@@ -72,7 +104,13 @@ import {
   DOCUMENT_SCOPE_ACTIONS,
   getNextIndexForScope,
   isGenesisOperation,
+  FencedWriteCache,
+  jobWriteIds,
+  PurgeFence,
   refusalError,
+  relationshipTarget,
+  submittedActionIds,
+  targetDocumentId,
   TouchedStreams,
 } from "./util.js";
 
@@ -86,6 +124,34 @@ function isValidISOTimestamp(value: string): boolean {
   }
   return !isNaN(new Date(value).getTime());
 }
+
+type ExecuteInScopeParams = {
+  job: Job;
+  startTime: number;
+  stores: ExecutionStores;
+  signal?: AbortSignal;
+  touchedStreams: TouchedStreams;
+  postCommitInvalidations: TouchedStream[];
+  postCommitMembershipInvalidations: string[];
+  postCommitMetaInvalidations: string[];
+};
+
+/** What a purge transaction needs once its path has decided to purge. */
+type PurgeCommit = {
+  purger: KyselyDocumentPurger;
+  marker: PurgeMarkerOperation;
+  documentType: string;
+  held: PurgeHeld;
+  sourceRemote: string;
+  collectionIds: string[];
+  survivors: string[];
+  appliedDeletion?: true;
+};
+
+type PurgeHeld = {
+  streams: { scope: string; branch: string }[];
+  branches: string[];
+};
 
 type ProcessActionsResult = {
   success: boolean;
@@ -140,6 +206,61 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
+/** The ids of a purge job's request, which a drive purge may precede. */
+function purgeRequestDocumentIds(job: Job): string[] {
+  const ids = job.meta.purgeRequestDocumentIds;
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === "string")
+    : [];
+}
+
+const MARKER_INPUT_KEYS: ReadonlySet<string> = new Set([
+  "documentId",
+  "documentType",
+  "purgedAtUtcIso",
+  "requestId",
+]);
+
+/** A peer's marker must name this job's id on main and carry nothing else. */
+function malformedMarker(job: Job): InvalidSignatureError | undefined {
+  const marker = job.operations.find((operation) => isPurgeMarker(operation));
+  const action = marker?.action;
+  const input = action?.input as Record<string, unknown> | null | undefined;
+  const refuse = (reason: string) =>
+    new InvalidSignatureError(
+      job.documentId,
+      "ID_MISMATCH",
+      `marker ${action?.id ?? "?"} ${reason}`,
+    );
+  if (typeof input !== "object" || input === null) {
+    return refuse("carries no input");
+  }
+  const extra = Object.keys(input).filter((key) => !MARKER_INPUT_KEYS.has(key));
+  if (extra.length > 0) {
+    return refuse(`carries unexpected input ${extra.join(", ")}`);
+  }
+  for (const key of MARKER_INPUT_KEYS) {
+    if (typeof input[key] !== "string" || input[key] === "") {
+      return refuse(`input.${key} is not a non-empty string`);
+    }
+  }
+  const purgedAt = Date.parse(input.purgedAtUtcIso as string);
+  if (
+    Number.isNaN(purgedAt) ||
+    new Date(purgedAt).toISOString() !== input.purgedAtUtcIso
+  ) {
+    return refuse("input.purgedAtUtcIso is not an ISO timestamp");
+  }
+  if (
+    input.documentId !== job.documentId ||
+    job.branch !== "main" ||
+    action?.scope !== "document"
+  ) {
+    return refuse(`does not purge ${job.documentId} on document/main`);
+  }
+  return undefined;
+}
+
 class JobRollbackSignal extends Error {
   constructor(readonly result: JobResult) {
     super("job rolled back");
@@ -151,10 +272,15 @@ export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
   private featureFlags: ReactorFeatureFlags;
   private decisionModel: RegisteredDecisionModel;
-  private signatureVerifierModule: SignatureVerifier;
+  private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
+  private signer: ISigner;
 
+  /**
+   * `signer` signs the operations the reducer synthesizes; unsigned if omitted.
+   * `trustPolicy` decides which keys may sign as which users at admission.
+   */
   constructor(
     private logger: ILogger,
     private registry: IDocumentModelRegistry,
@@ -166,9 +292,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     private collectionMembershipCache: ICollectionMembershipCache,
     private driveContainerTypes: ReadonlySet<string>,
     config: JobExecutorConfig,
-    signatureVerifier?: SignatureVerificationHandler,
     executionScope?: IExecutionScope,
+    signer?: ISigner,
+    trustPolicy?: SignatureTrustPolicy,
   ) {
+    this.signer = signer ?? new PassthroughSigner();
+    // Resolved separately so reads are plain booleans; the config keeps what
+    // the caller passed, because that is what crosses to a pooled worker. The
+    // builder validates too, but a pooled worker is constructed directly from
+    // the flags that crossed the boundary.
+    this.featureFlags = resolveFeatureFlags(config.featureFlags);
     this.config = {
       featureFlags: config.featureFlags ?? {},
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
@@ -181,21 +314,37 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
       batchApplies: config.batchApplies ?? true,
+      signatureVerification: config.signatureVerification ?? "enforce",
+      protocolSupport:
+        config.protocolSupport ??
+        localSupports(PEER_CAPABILITIES, this.featureFlags).protocols,
+      maxPurgeOperations:
+        config.maxPurgeOperations ?? DEFAULT_MAX_PURGE_OPERATIONS,
     };
 
-    // Resolved separately so reads are plain booleans; the config keeps what
-    // the caller passed, because that is what crosses to a pooled worker. The
-    // builder validates too, but a pooled worker is constructed directly from
-    // the flags that crossed the boundary.
-    this.featureFlags = resolveFeatureFlags(config.featureFlags);
     this.decisionModel = selectDecisionModel(this.featureFlags, registry);
-    this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
+    this.signatureAdmission = new SignatureAdmission(
+      this.config.signatureVerification,
+      logger,
+      eventBus,
+      this.featureFlags.documentDecisions ? "write-cache" : "meta",
+      {
+        signer: this.signer,
+        authEnforcement: this.featureFlags.authEnforcement,
+        policy: trustPolicy,
+        timeoutMs: Math.min(
+          DEFAULT_TRUST_TIMEOUT_MS,
+          this.config.jobTimeoutMs / 2,
+        ),
+      },
+    );
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
       driveContainerTypes,
       this.featureFlags,
       this.decisionModel,
+      this.config.protocolSupport,
     );
     this.executionScope =
       executionScope ??
@@ -236,6 +385,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Entries handlers request invalidated only after the transaction commits
     const postCommitInvalidations: TouchedStream[] = [];
     const postCommitMembershipInvalidations: string[] = [];
+    const postCommitMetaInvalidations: string[] = [];
 
     let outcome: ScopeOutcome;
     try {
@@ -248,6 +398,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           touchedStreams,
           postCommitInvalidations,
           postCommitMembershipInvalidations,
+          postCommitMetaInvalidations,
         });
 
         if (!scoped.result.success) {
@@ -274,6 +425,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       this.collectionMembershipCache.invalidate(documentId);
     }
 
+    for (const documentId of postCommitMetaInvalidations) {
+      this.documentMetaCache.invalidate(documentId);
+    }
+
     const { pendingEvent } = outcome;
     if (pendingEvent) {
       this.eventBus
@@ -298,19 +453,13 @@ export class SimpleJobExecutor implements IJobExecutor {
    * write-ready event is handed back rather than emitted, because a job that
    * has not committed yet has nothing to announce.
    */
-  private async executeInScope(params: {
-    job: Job;
-    startTime: number;
-    stores: ExecutionStores;
-    signal?: AbortSignal;
-    touchedStreams: TouchedStreams;
-    postCommitInvalidations: TouchedStream[];
-    postCommitMembershipInvalidations: string[];
-  }): Promise<ScopeOutcome> {
+  private async executeInScope(
+    params: ExecuteInScopeParams,
+  ): Promise<ScopeOutcome> {
     const {
       job,
       startTime,
-      stores,
+      stores: scopeStores,
       signal,
       touchedStreams,
       postCommitInvalidations,
@@ -318,6 +467,76 @@ export class SimpleJobExecutor implements IJobExecutor {
     } = params;
 
     let pendingEvent: JobWriteReadyEvent | undefined;
+
+    if (job.kind === "mutation") {
+      const reserved = job.actions.find((action) => isPurgeMarker(action));
+      if (reserved) {
+        return {
+          result: buildErrorResult(
+            job,
+            new ReservedActionError(job.documentId, reserved.type),
+            startTime,
+          ),
+        };
+      }
+    }
+
+    if (
+      job.kind === "purge" ||
+      (job.kind === "load" && job.operations.some((op) => isPurgeMarker(op)))
+    ) {
+      return this.executePurge(params);
+    }
+
+    const lockedIds = jobWriteIds(job);
+    const lockFailure = (error: unknown) => ({
+      result: buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      ),
+    });
+    try {
+      await scopeStores.documentLocks.shared(lockedIds);
+    } catch (error) {
+      return lockFailure(error);
+    }
+    let purged: Set<string>;
+    try {
+      purged = await scopeStores.documentLocks.purged(lockedIds);
+    } catch (error) {
+      return lockFailure(error);
+    }
+    const purgedRefusal = this.purgedRefusal(job, purged);
+    if (purgedRefusal) {
+      return { result: buildErrorResult(job, purgedRefusal, startTime) };
+    }
+    const purgeFence = new PurgeFence(
+      scopeStores.documentLocks,
+      new Set(lockedIds),
+      purged,
+    );
+    const stores: ExecutionStores = {
+      ...scopeStores,
+      writeCache: new FencedWriteCache(
+        scopeStores.writeCache,
+        purgeFence,
+        (documentId) => {
+          scopeStores.writeCache.invalidate(documentId);
+          scopeStores.documentMetaCache.invalidate(documentId);
+        },
+      ),
+    };
+
+    const unsupported = await this.unsupportedStoredProtocol(
+      job,
+      stores,
+      signal,
+    );
+    if (unsupported) {
+      return { result: buildErrorResult(job, unsupported, startTime) };
+    }
+
     const indexTxn = stores.operationIndex.start();
 
     if (job.kind === "load") {
@@ -332,6 +551,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
+        purgeFence,
       });
       if (loadResult.success && loadResult.operationsWithContext) {
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
@@ -371,6 +591,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
+        purgeFence,
       });
       if (reevalResult.success && reevalResult.operationsWithContext) {
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
@@ -398,13 +619,65 @@ export class SimpleJobExecutor implements IJobExecutor {
       return { result: reevalResult, pendingEvent };
     }
 
-    const positioned = await this.positionByTimestamp(job, stores, signal);
+    let admission: MutationAdmission;
+    try {
+      admission = await this.signatureAdmission.admitMutation(
+        job,
+        stores,
+        signal,
+      );
+    } catch (error) {
+      return {
+        result: buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        ),
+      };
+    }
+    if (admission.kind === "refused") {
+      return { result: buildErrorResult(job, admission.error, startTime) };
+    }
+
+    let committed: OperationWithContext[];
+    try {
+      committed = await this.reloadCommitted(
+        admission.committed,
+        stores,
+        signal,
+      );
+    } catch (error) {
+      return {
+        result: buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        ),
+      };
+    }
+    const committedIds = new Set(
+      admission.committed.map((write) => write.actionId),
+    );
+    const fresh: Job =
+      committedIds.size === 0
+        ? job
+        : {
+            ...job,
+            actions: job.actions.filter(
+              (action) => !committedIds.has(action.id),
+            ),
+          };
+    if (fresh.actions.length === 0) {
+      return this.committedOutcome(job, committed, [], [], stores, startTime);
+    }
+
+    const positioned = await this.positionByTimestamp(fresh, stores, signal);
     if (positioned.error) {
       return { result: buildErrorResult(job, positioned.error, startTime) };
     }
 
     const executing: ExecutingJob = {
-      job,
+      job: fresh,
       startTime,
       indexTxn,
       stores,
@@ -414,6 +687,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       postCommitInvalidations,
       postCommitMembershipInvalidations,
       touchedStreams,
+      purgeFence,
     };
 
     const actionResult = await this.processActions(
@@ -453,19 +727,547 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...indexTxn.getMembershipInvalidations(),
     );
 
-    if (actionResult.operationsWithContext.length > 0) {
-      for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
-        actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+    for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
+      actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+    }
+    return this.committedOutcome(
+      job,
+      committed,
+      actionResult.operationsWithContext,
+      actionResult.generatedOperations,
+      stores,
+      startTime,
+    );
+  }
+
+  /** A load names only its own id purged; a foreign one is ID_MISMATCH. */
+  private purgedRefusal(job: Job, purged: Set<string>): Error | undefined {
+    if (purged.size === 0) {
+      return undefined;
+    }
+    if (purged.has(job.documentId)) {
+      return new DocumentPurgedError(job.documentId);
+    }
+    const actions = [
+      ...job.actions,
+      ...job.operations.map((operation) => operation.action),
+    ];
+    for (const action of actions) {
+      if (!DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+        continue;
       }
+      const target = targetDocumentId(action, job.documentId);
+      if (!purged.has(target)) {
+        continue;
+      }
+      if (job.kind === "mutation") {
+        return new DocumentPurgedError(target);
+      }
+      return new InvalidSignatureError(
+        job.documentId,
+        "ID_MISMATCH",
+        `${action.type} ${action.id} in ${job.documentId} writes purged ${target}`,
+      );
+    }
+    if (job.kind !== "mutation") {
+      return undefined;
+    }
+    for (const action of job.actions) {
+      const target = relationshipTarget(action);
+      if (
+        action.type === "ADD_RELATIONSHIP" &&
+        target !== undefined &&
+        purged.has(target)
+      ) {
+        return new DocumentPurgedError(
+          target,
+          `${action.type} target ${target} was purged`,
+        );
+      }
+      if (action.scope !== "auth") {
+        continue;
+      }
+      const group = mentionedGroupIds(action).find((id) => purged.has(id));
+      if (group !== undefined) {
+        return new DocumentPurgedError(
+          group,
+          `${action.type} names purged group ${group}`,
+        );
+      }
+    }
+    return undefined;
+  }
+
+  /** A purge job or a marker load: the exclusive lock is the job's only lock. */
+  private async executePurge(
+    params: ExecuteInScopeParams,
+  ): Promise<ScopeOutcome> {
+    const { job, startTime, stores } = params;
+    const fail = (error: unknown): ScopeOutcome => ({
+      result: buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      ),
+    });
+
+    if (job.kind === "load") {
+      const malformed = malformedMarker(job);
+      if (malformed) {
+        return fail(malformed);
+      }
+    }
+
+    const purger = stores.purger;
+    if (!purger) {
+      return fail(
+        new Error(`Purge of ${job.documentId} needs a transactional scope`),
+      );
+    }
+
+    try {
+      await stores.documentLocks.exclusive(job.documentId);
+    } catch (error) {
+      return fail(error);
+    }
+    let alreadyPurged: boolean;
+    try {
+      const purged = await stores.documentLocks.purged([job.documentId]);
+      alreadyPurged = purged.has(job.documentId);
+    } catch (error) {
+      return fail(error);
+    }
+    // Nothing written; the empty event is what moves the job to READ_READY.
+    if (alreadyPurged) {
+      return {
+        result: {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        },
+        pendingEvent: {
+          jobId: job.id,
+          operations: [],
+          jobMeta: job.meta,
+          collectionMemberships: {},
+        },
+      };
+    }
+
+    let commit: PurgeCommit | Error;
+    try {
+      commit =
+        job.kind === "purge"
+          ? await this.preparePurgeJob(params, purger)
+          : await this.preparePurgeLoad(params, purger);
+    } catch (error) {
+      return fail(error);
+    }
+    if (commit instanceof Error) {
+      return fail(commit);
+    }
+
+    try {
+      return await this.commitPurge(params, commit);
+    } catch (error) {
+      return fail(error);
+    }
+  }
+
+  /** Preconditions 1-5, then the marker this host signs. */
+  private async preparePurgeJob(
+    params: ExecuteInScopeParams,
+    purger: KyselyDocumentPurger,
+  ): Promise<PurgeCommit | Error> {
+    const { job, stores, signal } = params;
+    const documentId = job.documentId;
+    if (!job.purge) {
+      return new Error(`Purge job ${job.id} carries no purge options`);
+    }
+
+    const held = await this.heldStreams(purger, documentId);
+    if (held.branches.length === 0) {
+      return new DocumentNotDeletedError(
+        documentId,
+        `Document ${documentId} is not held here`,
+      );
+    }
+
+    let documentType: string | undefined;
+    for (const branch of held.branches) {
+      let meta;
+      try {
+        meta = await stores.documentMetaCache.getDocumentMeta(
+          documentId,
+          branch,
+          signal,
+        );
+      } catch (error) {
+        return new DocumentNotDeletedError(
+          documentId,
+          `Document ${documentId} has no readable state on ${branch}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      if (!meta.state.isDeleted) {
+        return new DocumentNotDeletedError(
+          documentId,
+          `Document ${documentId} is not deleted on branch ${branch}`,
+        );
+      }
+      documentType ??= meta.documentType;
+    }
+    if (documentType === undefined) {
+      return new DocumentNotDeletedError(documentId);
+    }
+
+    if (documentType === groupDocumentType) {
+      const referencers = await purger.groupReferencersInHistory(documentId);
+      if (referencers.length > 0) {
+        return new GroupInUseError(documentId, referencers);
+      }
+    }
+
+    let survivors: string[] = [];
+    if (this.driveContainerTypes.has(documentType)) {
+      const requested = new Set(purgeRequestDocumentIds(job));
+      const members = await this.driveMembers(
+        purger,
+        stores,
+        documentId,
+        held.branches,
+      );
+      const blocking = members.required.filter((id) => !requested.has(id));
+      if (blocking.length > 0) {
+        return new DocumentNotDeletedError(
+          documentId,
+          `Drive ${documentId} cannot be purged: ${blocking.join(", ")} neither purged nor in the request`,
+        );
+      }
+      survivors = members.survivors;
+    }
+
+    const operationCount = await purger.operationCount(documentId);
+    if (
+      operationCount > this.config.maxPurgeOperations &&
+      !job.purge.allowLarge
+    ) {
+      return new PurgeTooLargeError(
+        documentId,
+        operationCount,
+        this.config.maxPurgeOperations,
+      );
+    }
+
+    const marker = await this.signMarker(
+      documentId,
+      documentType,
+      job.purge.requestId,
+      signal,
+    );
+    return {
+      purger,
+      marker,
+      documentType,
+      held,
+      sourceRemote: "",
+      collectionIds: [],
+      survivors,
+    };
+  }
+
+  /** A peer's marker, admitted alone; a receiver cannot refuse an erasure. */
+  private async preparePurgeLoad(
+    params: ExecuteInScopeParams,
+    purger: KyselyDocumentPurger,
+  ): Promise<PurgeCommit | Error> {
+    const { job, stores, signal } = params;
+    const documentId = job.documentId;
+    const marker = job.operations.find((operation) =>
+      isPurgeMarker(operation),
+    ) as PurgeMarkerOperation;
+
+    const refusal = await this.signatureAdmission.admitMarker(
+      job,
+      marker,
+      signal,
+    );
+    if (refusal) {
+      return refusal;
+    }
+
+    const held = await this.heldStreams(purger, documentId);
+    let documentType = marker.action.input.documentType;
+    let appliedDeletion = held.branches.length > 0;
+    if (held.branches.length > 0) {
+      try {
+        const meta = await stores.documentMetaCache.getDocumentMeta(
+          documentId,
+          held.branches.includes("main") ? "main" : held.branches[0],
+          signal,
+        );
+        documentType = meta.documentType;
+        appliedDeletion = !meta.state.isDeleted;
+      } catch {
+        // Unreadable state is still erased; the marker names the type.
+      }
+    }
+
+    let survivors: string[] = [];
+    if (this.driveContainerTypes.has(documentType)) {
+      const members = await this.driveMembers(
+        purger,
+        stores,
+        documentId,
+        held.branches,
+      );
+      survivors = [...members.required, ...members.survivors];
+    }
+
+    const sourceRemote =
+      typeof job.meta.sourceRemote === "string" ? job.meta.sourceRemote : "";
+    const collectionId = sourceRemote
+      ? await purger.remoteCollection(sourceRemote)
+      : undefined;
+
+    return {
+      purger,
+      marker: purgeMarkerOperation(marker.action),
+      documentType,
+      held,
+      sourceRemote,
+      collectionIds: collectionId === undefined ? [] : [collectionId],
+      survivors,
+      ...(appliedDeletion ? { appliedDeletion: true } : {}),
+    };
+  }
+
+  /** Execution: delete, write the marker and its twin, tombstone, reopen. */
+  private async commitPurge(
+    params: ExecuteInScopeParams,
+    commit: PurgeCommit,
+  ): Promise<ScopeOutcome> {
+    const { job, startTime, stores, signal, touchedStreams } = params;
+    const { purger, marker, documentType, held, sourceRemote } = commit;
+    const documentId = job.documentId;
+
+    const streams = [...held.streams, { scope: "document", branch: "main" }];
+    for (const stream of streams) {
+      touchedStreams.add(documentId, stream.scope, stream.branch);
+      params.postCommitInvalidations.push({ documentId, ...stream });
+    }
+    params.postCommitMetaInvalidations.push(documentId);
+
+    const removedRows = await purger.deleteRows(documentId);
+
+    const [stored] = await stores.operationStore.apply(
+      documentId,
+      documentType,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(marker);
+      },
+      signal,
+    );
+
+    const indexTxn = stores.operationIndex.start();
+    indexTxn.write([
+      {
+        ...stored,
+        documentId,
+        documentType,
+        scope: "document",
+        branch: "main",
+        sourceRemote,
+      },
+    ]);
+    const [ordinal] = await stores.operationIndex.commit(indexTxn, signal);
+
+    await purger.writeTombstone({
+      documentId,
+      ordinal,
+      removedRows,
+      purgedAtUtc: marker.action.input.purgedAtUtcIso,
+      requestId: marker.action.input.requestId,
+    });
+    const collections = await purger.reopenMemberships(
+      documentId,
+      ordinal,
+      commit.collectionIds,
+    );
+
+    params.postCommitMembershipInvalidations.push(
+      documentId,
+      ...commit.survivors,
+      ...indexTxn.getMembershipInvalidations(),
+    );
+
+    const context: PurgeMarkerContext = {
+      documentId,
+      scope: "document",
+      branch: "main",
+      documentType,
+      ordinal,
+      ...(commit.appliedDeletion ? { appliedDeletion: true } : {}),
+    };
+    const operationWithContext: OperationWithContext = {
+      operation: stored,
+      context,
+    };
+    return {
+      result: {
+        job,
+        success: true,
+        operations: [stored],
+        operationsWithContext: [operationWithContext],
+        duration: Date.now() - startTime,
+      },
+      pendingEvent: {
+        jobId: job.id,
+        operations: [operationWithContext],
+        jobMeta: job.meta,
+        collectionMemberships: { [documentId]: collections },
+      },
+    };
+  }
+
+  private async heldStreams(
+    purger: KyselyDocumentPurger,
+    documentId: string,
+  ): Promise<PurgeHeld> {
+    const streams = await purger.streams(documentId);
+    const branches = [
+      ...new Set(
+        streams
+          .filter((stream) => stream.scope === "document")
+          .map((stream) => stream.branch),
+      ),
+    ];
+    return { streams, branches };
+  }
+
+  /** Members a drive purge needs gone, and those living on elsewhere. */
+  private async driveMembers(
+    purger: KyselyDocumentPurger,
+    stores: ExecutionStores,
+    driveId: string,
+    branches: string[],
+  ): Promise<{ required: string[]; survivors: string[] }> {
+    const required = new Set<string>();
+    const survivors = new Set<string>();
+    for (const branch of branches.length > 0 ? branches : ["main"]) {
+      const collectionId = DriveCollectionId.forDrive(driveId, branch).key;
+      const members = await purger.collectionMembers(
+        collectionId,
+        driveId,
+        branch,
+      );
+      const purged = await stores.documentLocks.purged(
+        members.map((member) => member.documentId),
+      );
+      for (const member of members) {
+        if (purged.has(member.documentId)) {
+          continue;
+        }
+        if (member.required) {
+          required.add(member.documentId);
+        } else {
+          survivors.add(member.documentId);
+        }
+      }
+    }
+    return { required: [...required], survivors: [...survivors] };
+  }
+
+  /** The marker, signed by this executor's signer as any peer admits it. */
+  private async signMarker(
+    documentId: string,
+    documentType: string,
+    requestId: string,
+    signal?: AbortSignal,
+  ): Promise<PurgeMarkerOperation> {
+    const action = purgeDocumentAction({ documentId, documentType, requestId });
+    const signature = await this.signer.signAction(
+      action,
+      { documentId, branch: "main" },
+      signal,
+    );
+    return purgeMarkerOperation({
+      ...action,
+      context: {
+        signer: {
+          ...actionSignerIdentity(this.signer),
+          signatures: [signature],
+        },
+      },
+    });
+  }
+
+  /** A stored document at a version this reactor does not run is read-only here. */
+  private async unsupportedStoredProtocol(
+    job: Job,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<Error | undefined> {
+    let versions;
+    try {
+      // Read the way admission reads: with decisions on, execution bypasses the meta cache.
+      versions =
+        this.featureFlags.documentDecisions && job.kind !== "load"
+          ? (
+              await stores.writeCache.getState(
+                job.documentId,
+                "document",
+                job.branch,
+                undefined,
+                signal,
+              )
+            ).header.protocolVersions
+          : (
+              await stores.documentMetaCache.getDocumentMeta(
+                job.documentId,
+                job.branch,
+                signal,
+              )
+            ).protocolVersions;
+    } catch {
+      // Not stored yet, or unreadable: the job's own reads decide.
+      return undefined;
+    }
+    return this.documentActionHandler.unsupportedProtocol(
+      job.documentId,
+      versions,
+    );
+  }
+
+  /**
+   * A successful mutation's result and the write-ready event it owes, carrying
+   * what earlier attempts committed ahead of what this one wrote.
+   */
+  private async committedOutcome(
+    job: Job,
+    reloaded: OperationWithContext[],
+    written: OperationWithContext[],
+    generated: Operation[],
+    stores: ExecutionStores,
+    startTime: number,
+  ): Promise<ScopeOutcome> {
+    const operationsWithContext = [...reloaded, ...written];
+    let pendingEvent: JobWriteReadyEvent | undefined;
+    if (operationsWithContext.length > 0) {
       const collectionMemberships =
         await this.getCollectionMembershipsForOperations(
-          actionResult.operationsWithContext,
+          operationsWithContext,
           stores,
         );
       pendingEvent = {
         jobId: job.id,
-        operations: actionResult.operationsWithContext,
+        operations: operationsWithContext,
         jobMeta: job.meta,
+        submittedActionIds: submittedActionIds(job),
         collectionMemberships,
       };
     }
@@ -474,12 +1276,99 @@ export class SimpleJobExecutor implements IJobExecutor {
       result: {
         job,
         success: true as const,
-        operations: actionResult.generatedOperations,
-        operationsWithContext: actionResult.operationsWithContext,
+        operations: [...reloaded.map((entry) => entry.operation), ...generated],
+        operationsWithContext,
         duration: Date.now() - startTime,
       },
       pendingEvent,
     };
+  }
+
+  /**
+   * The stored operations of writes an earlier attempt committed, as a fresh
+   * write would report them. State is rebuilt from the write cache, and left
+   * out when it cannot be.
+   */
+  private async reloadCommitted(
+    writes: CommittedWrite[],
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
+    const streams = new Map<string, CommittedWrite[]>();
+    for (const write of writes) {
+      const key = `${write.documentId}\u0000${write.scope}\u0000${write.branch}`;
+      streams.set(key, [...(streams.get(key) ?? []), write]);
+    }
+
+    const reloaded: OperationWithContext[] = [];
+    for (const group of streams.values()) {
+      const { documentId, scope, branch } = group[0];
+      const opIds = [...new Set(group.map((write) => write.opId))];
+      const operations = await stores.operationStore.getOperationsByIds(
+        documentId,
+        scope,
+        branch,
+        opIds,
+        signal,
+      );
+      const ordinals = await stores.operationIndex.getOrdinalsByOpIds(
+        documentId,
+        scope,
+        branch,
+        opIds,
+        signal,
+      );
+      const { documentType } = await stores.documentMetaCache.getDocumentMeta(
+        documentId,
+        branch,
+        signal,
+      );
+      for (const operation of operations.sort((a, b) => a.index - b.index)) {
+        reloaded.push({
+          operation,
+          context: {
+            documentId,
+            scope,
+            branch,
+            documentType,
+            resultingState: await this.rebuiltState(
+              stores,
+              { documentId, scope, branch },
+              operation,
+              signal,
+            ),
+            ordinal: ordinals.get(operation.id) ?? 0,
+          },
+        });
+      }
+    }
+    return reloaded;
+  }
+
+  private async rebuiltState(
+    stores: ExecutionStores,
+    stream: TouchedStream,
+    operation: Operation,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    try {
+      const document = await stores.writeCache.getState(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        operation.index,
+        signal,
+      );
+      return JSON.stringify({ ...document.state, header: document.header });
+    } catch (error) {
+      this.logger.warn(
+        "No state for committed operation @OperationId in @Stream: @Error",
+        operation.id,
+        stream,
+        error,
+      );
+      return undefined;
+    }
   }
 
   /**
@@ -530,21 +1419,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
-
-    try {
-      await this.signatureVerifierModule.verifyActions(
-        job.documentId,
-        job.branch,
-        actions,
-      );
-    } catch (error) {
-      return {
-        success: false,
-        generatedOperations,
-        operationsWithContext,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
 
     for (const action of actions) {
       if (
@@ -735,7 +1609,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentVersion = docMeta.state.version;
     }
 
-    // UNDO, REDO, PRUNE, and any operation carrying a skip need the full
+    // UNDO, REDO, and any operation carrying a skip need the full
     // operation history to replay state correctly: a skip rewinds the stream
     // past the operations it supersedes, so the base state is the one standing
     // before them, not the head. The write cache stores sliced documents (last
@@ -748,7 +1622,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // left the resulting state derived from the superseded lineage, which is
     // what the document view stores and serves; the write cache recovered on
     // its next cold read and the read model never did.
-    if (isUndoRedo(action) || action.type === "PRUNE" || skip > 0) {
+    if (isUndoRedo(action) || skip > 0) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
@@ -869,11 +1743,14 @@ export class SimpleJobExecutor implements IJobExecutor {
               protocolVersion,
             }
           : { skip, branch: job.branch, protocolVersion };
-        updatedDocument = module.reducer(
-          document as PHDocument,
-          action,
-          undefined,
-          reducerOptions,
+        updatedDocument = withProtocolVersions(
+          module.reducer(
+            document as PHDocument,
+            action,
+            undefined,
+            reducerOptions,
+          ),
+          document.header.protocolVersions,
         );
       } catch (error) {
         const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;
@@ -900,6 +1777,30 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (!isUndoRedo(action)) {
       newOperation.skip = skip;
+    }
+
+    // A peer's synthesized operation arrives signed and is admitted as is.
+    if (
+      deniedReason === undefined &&
+      sourceOperation === undefined &&
+      !executing.replayingAcceptedHistory &&
+      isSynthesized(action, newOperation, document.operations[scope] ?? [])
+    ) {
+      try {
+        await signSynthesized(
+          newOperation,
+          action,
+          { documentId: job.documentId, scope, branch: job.branch },
+          this.signer,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
     }
 
     const resultingState = JSON.stringify({
@@ -1077,7 +1978,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    *   apply and its own reasons for it.
    * - A positional or replayed run carries skips and re-appended operations,
    *   whose indices are not a simple ascending run from the head.
-   * - UNDO, REDO, PRUNE and NOOP-with-skip each invalidate the write cache to
+   * - UNDO, REDO and NOOP-with-skip each invalidate the write cache to
    *   force a full-history rebuild, so they cannot be reduced against state
    *   threaded from the write before them.
    * - The auth scope decides later writes against the policy earlier ones
@@ -1107,7 +2008,6 @@ export class SimpleJobExecutor implements IJobExecutor {
         write.sourceOperation === undefined &&
         !DOCUMENT_SCOPE_ACTIONS.has(type) &&
         !isUndoRedo(write.action) &&
-        type !== "PRUNE" &&
         type !== "NOOP"
       );
     });
@@ -1342,7 +2242,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     ).results.filter((operation) => !isGenesisOperation(operation));
 
     // Nothing to move here, but still below another scope's newest operation.
-    if (conflicting.length === 0) {
+    const nothingToMove = async (): Promise<PositionedWrites> => {
       if (!this.featureFlags.authEnforcement) {
         return plain();
       }
@@ -1352,6 +2252,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         this.appendedOperations(job, revisions.revision[job.scope] ?? 0),
         signal,
       );
+    };
+
+    if (conflicting.length === 0) {
+      return nothingToMove();
     }
 
     const nextIndex = revisions.revision[job.scope] ?? 0;
@@ -1360,6 +2264,47 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (operation.index < firstConflicting) {
         firstConflicting = operation.index;
       }
+    }
+
+    // The conflicting rows are not what the stream applies. An earlier reshuffle
+    // leaves the operations it retracted next to their re-appended copies, and its
+    // own backdated write, older than this one, sits between them. So re-append
+    // what the stream still applies from the first conflicting operation on,
+    // whatever its timestamp, and nothing a skip has already retracted.
+    const stored = (
+      await stores.operationStore.getSince(
+        job.documentId,
+        job.scope,
+        job.branch,
+        firstConflicting - 1,
+        undefined,
+        undefined,
+        signal,
+      )
+    ).results;
+    const conflictingIds = new Set(
+      conflicting.map((operation) => operation.id),
+    );
+    const effective = garbageCollect(sortOperations(stored)).filter(
+      (operation) => !isGenesisOperation(operation),
+    );
+    const firstMoving = effective.findIndex((operation) =>
+      conflictingIds.has(operation.id),
+    );
+    const moving = firstMoving === -1 ? [] : effective.slice(firstMoving);
+
+    if (moving.length === 0) {
+      return nothingToMove();
+    }
+
+    // A moving operation that heads an earlier reshuffle retracts what sits below
+    // it. Retracting that operation without reaching as far would bring those back.
+    let firstRetracted = moving[0].index;
+    for (const operation of moving) {
+      firstRetracted = Math.min(
+        firstRetracted,
+        operation.index - operation.skip,
+      );
     }
 
     // Given positions rather than stored rows, so a tie puts the new write
@@ -1377,8 +2322,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
 
     const merged = reshuffleByTimestamp(
-      { index: nextIndex, skip: retractionSkip(nextIndex, firstConflicting) },
-      conflicting,
+      { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
+      moving,
       incoming,
     );
 
@@ -1653,7 +2598,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       const result = await this.processActions(
         tail.map((operation, i) => ({
           action: operation.action,
-          skip: i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
+          skip:
+            i === 0
+              ? retractionSkip(nextIndex, tail[0].index - tail[0].skip)
+              : 0,
           sourceRemote: "",
           deniedReason: reevaluated[firstChange + i],
         })),
@@ -1817,76 +2765,70 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    let minIncomingIndex = Number.POSITIVE_INFINITY;
-    let minIncomingTimestamp = job.operations[0]?.timestampUtcMs || "";
-    for (const operation of job.operations) {
-      minIncomingIndex = Math.min(minIncomingIndex, operation.index);
-      const ts = operation.timestampUtcMs || "";
-      if (Date.parse(ts) < Date.parse(minIncomingTimestamp)) {
-        minIncomingTimestamp = ts;
+    // Reselected after a drop, so a refused operation cannot widen the window.
+    const dropped = new Set<Operation>();
+    const admitted = new Set<Operation>();
+    let selection = await this.selectLoadWrites(
+      job,
+      job.operations,
+      stores,
+      signal,
+    );
+    for (;;) {
+      const unadmitted = selection.incomingOpsToApply.filter(
+        (operation) => !admitted.has(operation),
+      );
+      if (unadmitted.length === 0) {
+        break;
       }
-    }
 
-    let conflictingOps: Operation[];
-    try {
-      const conflictingResult = await stores.operationStore.getConflicting(
-        job.documentId,
-        scope,
-        job.branch,
-        minIncomingTimestamp,
-        undefined,
-        signal,
-      );
-
-      conflictingOps = conflictingResult.results;
-    } catch {
-      conflictingOps = [];
-    }
-
-    let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
-    if (conflictingOps.length > 0) {
-      const minConflictingIndex = Math.min(
-        ...conflictingOps.map((op) => op.index),
-      );
+      let refused: Set<Operation>;
       try {
-        const allOpsResult = await stores.operationStore.getSince(
-          job.documentId,
-          scope,
-          job.branch,
-          minConflictingIndex - 1,
-          undefined,
-          undefined,
+        refused = await this.signatureAdmission.admitLoad(
+          job,
+          unadmitted,
+          stores,
           signal,
         );
-        allOpsFromMinConflictingIndex = allOpsResult.results;
-      } catch {
-        allOpsFromMinConflictingIndex = conflictingOps;
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
       }
-    }
 
-    const incomingActionIds = new Set(job.operations.map((op) => op.action.id));
-
-    const nonSupersededOps = conflictingOps.filter((op) => {
-      // A local op at an index below the incoming batch's lowest index with no
-      // overlapping action.id is a predecessor of the incoming ops, not a
-      // concurrent conflict. Including it would force a reshuffle that
-      // re-inserts identical history at new indices, which cascades when many
-      // ops share timestamps (bulk imports). Local ops whose action.id matches
-      // an incoming op are kept so dedup + reshuffle can remap them correctly
-      // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < minIncomingIndex && !incomingActionIds.has(op.action.id)) {
-        return false;
-      }
-      for (const laterOp of allOpsFromMinConflictingIndex) {
-        if (laterOp.index > op.index && laterOp.skip > 0) {
-          const logicalIndex = laterOp.index - laterOp.skip;
-          if (logicalIndex <= op.index) {
-            return false;
-          }
+      for (const operation of unadmitted) {
+        if (refused.has(operation)) {
+          dropped.add(operation);
+        } else {
+          admitted.add(operation);
         }
       }
-      return true;
-    });
+      if (refused.size === 0) {
+        break;
+      }
+
+      const remaining = job.operations.filter(
+        (operation) => !dropped.has(operation),
+      );
+      if (remaining.length === 0) {
+        return {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        };
+      }
+      selection = await this.selectLoadWrites(job, remaining, stores, signal);
+    }
+
+    const {
+      nonSupersededOps,
+      allOpsFromMinConflictingIndex,
+      incomingOpsToApply,
+    } = selection;
 
     // Creation holds the first two indexes for the life of the document, so it
     // never moves however far back the conflicting range reaches. The auth stream
@@ -1933,17 +2875,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       const logicalSkip = latestRevision - minLogicalIndex;
       if (logicalSkip > skipCount) skipCount = logicalSkip;
     }
-
-    const existingActionIds = new Set(
-      nonSupersededOps.map((op) => op.action.id),
-    );
-    const seenIncomingActionIds = new Set<string>();
-    const incomingOpsToApply = job.operations.filter((op) => {
-      if (existingActionIds.has(op.action.id)) return false;
-      if (seenIncomingActionIds.has(op.action.id)) return false;
-      seenIncomingActionIds.add(op.action.id);
-      return true;
-    });
 
     if (incomingOpsToApply.length === 0) {
       return {
@@ -2015,8 +2946,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     // into the next reshuffle and drives the cost toward the excessive-
     // reshuffle limit. Peers get the shortened skip too, and compute a
     // different superseded set than the reactor that sent it.
+    const incomingIds = new Set(
+      incomingOpsToApply.map((operation) => operation.action.id),
+    );
     for (const operation of reshuffledOperations) {
-      if (operation.action.type === "NOOP" && operation.skip === 0) {
+      // A local NOOP's target stays behind; a skip would undo another operation.
+      if (
+        operation.action.type === "NOOP" &&
+        operation.skip === 0 &&
+        incomingIds.has(operation.action.id)
+      ) {
         operation.skip = 1;
       }
     }
@@ -2093,6 +3032,167 @@ export class SimpleJobExecutor implements IJobExecutor {
       operations: result.generatedOperations,
       operationsWithContext: result.operationsWithContext,
       duration: Date.now() - startTime,
+    };
+  }
+
+  /** The conflicting window a load opens, and which of its operations are new. */
+  private async selectLoadWrites(
+    job: Job,
+    operations: Operation[],
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<{
+    nonSupersededOps: Operation[];
+    allOpsFromMinConflictingIndex: Operation[];
+    incomingOpsToApply: Operation[];
+  }> {
+    const scope = job.scope;
+
+    let minIncomingIndex = Number.POSITIVE_INFINITY;
+    let minIncomingTimestamp = operations[0]?.timestampUtcMs || "";
+    for (const operation of operations) {
+      minIncomingIndex = Math.min(minIncomingIndex, operation.index);
+      const ts = operation.timestampUtcMs || "";
+      if (Date.parse(ts) < Date.parse(minIncomingTimestamp)) {
+        minIncomingTimestamp = ts;
+      }
+    }
+
+    let conflictingOps: Operation[];
+    try {
+      const conflictingResult = await stores.operationStore.getConflicting(
+        job.documentId,
+        scope,
+        job.branch,
+        minIncomingTimestamp,
+        undefined,
+        signal,
+      );
+
+      conflictingOps = conflictingResult.results;
+    } catch {
+      conflictingOps = [];
+    }
+
+    let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
+    if (conflictingOps.length > 0) {
+      const minConflictingIndex = Math.min(
+        ...conflictingOps.map((op) => op.index),
+      );
+      try {
+        const allOpsResult = await stores.operationStore.getSince(
+          job.documentId,
+          scope,
+          job.branch,
+          minConflictingIndex - 1,
+          undefined,
+          undefined,
+          signal,
+        );
+        allOpsFromMinConflictingIndex = allOpsResult.results;
+      } catch {
+        allOpsFromMinConflictingIndex = conflictingOps;
+      }
+    }
+
+    const incomingActionIds = new Set(operations.map((op) => op.action.id));
+
+    // The nearest later operation whose skip reaches `op`, if any.
+    const supersededBy = (op: Operation): Operation | undefined => {
+      let nearest: Operation | undefined;
+      for (const laterOp of allOpsFromMinConflictingIndex) {
+        if (
+          laterOp.index > op.index &&
+          laterOp.skip > 0 &&
+          laterOp.index - laterOp.skip <= op.index &&
+          (nearest === undefined || laterOp.index < nearest.index)
+        ) {
+          nearest = laterOp;
+        }
+      }
+      return nearest;
+    };
+
+    // Held only in superseded rows: undone stays undone, rewound is re-applied.
+    const undoneActionIds = new Set<string>();
+    let predecessorBound = minIncomingIndex;
+    const rowsByActionId = new Map<string, Operation[]>();
+    for (const op of conflictingOps) {
+      if (incomingActionIds.has(op.action.id)) {
+        rowsByActionId.set(op.action.id, [
+          ...(rowsByActionId.get(op.action.id) ?? []),
+          op,
+        ]);
+      }
+    }
+    const liveOps = new Set<Operation>();
+    for (const op of conflictingOps) {
+      if (supersededBy(op) === undefined) {
+        liveOps.add(op);
+      }
+    }
+    for (const [actionId, rows] of rowsByActionId) {
+      if (rows.some((row) => liveOps.has(row))) {
+        continue;
+      }
+      if (rows.some((row) => supersededBy(row)?.action.type === "NOOP")) {
+        undoneActionIds.add(actionId);
+      } else {
+        predecessorBound = Math.min(
+          predecessorBound,
+          Math.max(...rows.map((row) => row.index)),
+        );
+      }
+    }
+
+    const nonSupersededOps = conflictingOps.filter((op) => {
+      // A local op at an index below the incoming batch's lowest index with no
+      // overlapping action.id is a predecessor of the incoming ops, not a
+      // concurrent conflict. Including it would force a reshuffle that
+      // re-inserts identical history at new indices, which cascades when many
+      // ops share timestamps (bulk imports). Local ops whose action.id matches
+      // an incoming op are kept so dedup + reshuffle can remap them correctly
+      // (e.g. cross-reactor reshuffle rebroadcast).
+      if (op.index < predecessorBound && !incomingActionIds.has(op.action.id)) {
+        return false;
+      }
+      return liveOps.has(op);
+    });
+
+    // The skip rewinds from here, so each live row from here goes back.
+    let rewoundFrom = Number.POSITIVE_INFINITY;
+    for (const op of nonSupersededOps) {
+      if (!isGenesisOperation(op)) {
+        rewoundFrom = Math.min(rewoundFrom, op.index - op.skip);
+      }
+    }
+    const reappended = new Set(nonSupersededOps.map((op) => op.index));
+    for (const op of allOpsFromMinConflictingIndex) {
+      if (
+        op.index >= rewoundFrom &&
+        !reappended.has(op.index) &&
+        supersededBy(op) === undefined
+      ) {
+        nonSupersededOps.push(op);
+      }
+    }
+
+    const existingActionIds = new Set(
+      nonSupersededOps.map((op) => op.action.id),
+    );
+    const seenIncomingActionIds = new Set<string>();
+    const incomingOpsToApply = operations.filter((op) => {
+      if (existingActionIds.has(op.action.id)) return false;
+      if (undoneActionIds.has(op.action.id)) return false;
+      if (seenIncomingActionIds.has(op.action.id)) return false;
+      seenIncomingActionIds.add(op.action.id);
+      return true;
+    });
+
+    return {
+      nonSupersededOps,
+      allOpsFromMinConflictingIndex,
+      incomingOpsToApply,
     };
   }
 

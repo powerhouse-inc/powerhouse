@@ -2,20 +2,25 @@ import {
   type ActionCandidate,
   type ActionEvaluations,
   AuthEnforcementDisabledError,
+  ChannelError,
+  ChannelErrorSource,
   consolidateSyncOperations,
+  type DocumentRelationship,
   DriveCollectionId,
   envelopesToSyncOperations,
   type IDriveClient,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
+  JobStatus,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type RemoteFilter,
   type SearchFilter,
+  supportsPurgeRefusals,
   syncOperationErrorType,
-  type SyncOperation,
+  SyncOperation,
   type SyncScopeGate,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -23,11 +28,19 @@ import type {
   AuthSubject,
   DocumentModelModule,
   Operation,
+  PeerManifest,
   PHDocument,
+} from "@powerhousedao/shared/document-model";
+import {
+  readPeerManifest,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
-import { AuthEvaluationUnsupportedError } from "../errors.js";
+import {
+  AuthEvaluationUnsupportedError,
+  RefusalNotRecordedError,
+} from "../errors.js";
 import { isDriveContainerType } from "./constants.js";
 
 const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
@@ -53,11 +66,34 @@ function pickDriveClient(
   return reactorClient.drives;
 }
 
+/**
+ * A mutation's document re-read as the caller, since the client reads it back
+ * as its signer. A caller who may write but not read gets it stripped.
+ */
+async function readAsCaller(
+  reactorClient: IReactorClient,
+  document: PHDocument,
+  subject: AuthSubject | undefined,
+  branch?: string,
+): Promise<PHDocument> {
+  if (!subject) {
+    return document;
+  }
+  try {
+    return await reactorClient.get(document.header.id, { subject, branch });
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to read the document back: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
 export const MAX_OPERATIONS_PER_ENVELOPE = 25;
 export const MAX_OPERATIONS_PER_PAGE = 100;
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
+  toDocumentRelationshipResultPage,
   toGqlActionEvaluation,
   toDocumentModelResultPage,
   toGqlJobInfo,
@@ -73,6 +109,7 @@ import type {
   ActionEvaluations as GqlActionEvaluations,
   ActionInput,
   DocumentModelResultPage,
+  DocumentRelationshipResultPage,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
   PhDocumentResultPage,
@@ -124,7 +161,7 @@ export async function documentModels(
 export async function document(
   reactorClient: IReactorClient,
   args: {
-    identifier: string;
+    idOrSlug: string;
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;
@@ -146,7 +183,7 @@ export async function document(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.get(args.identifier, view);
+    result = await reactorClient.get(args.idOrSlug, view);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -156,7 +193,7 @@ export async function document(
   let children: PagedResults<PHDocument>;
   try {
     children = await reactorClient.getOutgoingRelationships(
-      args.identifier,
+      args.idOrSlug,
       "child",
       view,
     );
@@ -181,7 +218,7 @@ export async function document(
 export async function documentOutgoingRelationships(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
+    sourceIdOrSlug: string;
     relationshipType: string;
     view?: {
       branch?: string | null;
@@ -218,7 +255,7 @@ export async function documentOutgoingRelationships(
   let result: PagedResults<PHDocument>;
   try {
     result = await reactorClient.getOutgoingRelationships(
-      args.sourceIdentifier,
+      args.sourceIdOrSlug,
       args.relationshipType,
       view,
       paging,
@@ -241,7 +278,7 @@ export async function documentOutgoingRelationships(
 export async function documentIncomingRelationships(
   reactorClient: IReactorClient,
   args: {
-    targetIdentifier: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     view?: {
       branch?: string | null;
@@ -278,7 +315,7 @@ export async function documentIncomingRelationships(
   let result: PagedResults<PHDocument>;
   try {
     result = await reactorClient.getIncomingRelationships(
-      args.targetIdentifier,
+      args.targetIdOrSlug,
       args.relationshipType,
       view,
       paging,
@@ -296,6 +333,133 @@ export async function documentIncomingRelationships(
       `Failed to convert incoming relationships to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+export async function documentOutgoingRelationshipEdges(
+  reactorClient: IReactorClient,
+  args: {
+    sourceIdOrSlug: string;
+    relationshipType?: string | null;
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+    paging?: {
+      cursor?: string | null;
+      limit?: number | null;
+    } | null;
+  },
+  subject?: AuthSubject,
+): Promise<DocumentRelationshipResultPage> {
+  const view = toRelationshipViewFilter(args.view, subject);
+  const paging = toRelationshipPagingOptions(args.paging);
+
+  let result: PagedResults<DocumentRelationship>;
+  try {
+    result = await reactorClient.getOutgoingRelationshipEdges(
+      args.sourceIdOrSlug,
+      fromInputMaybe(args.relationshipType),
+      view,
+      paging,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch outgoing relationship edges: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toDocumentRelationshipResultPage(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert outgoing relationship edges to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function documentIncomingRelationshipEdges(
+  reactorClient: IReactorClient,
+  args: {
+    targetIdOrSlug: string;
+    relationshipType?: string | null;
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+    paging?: {
+      cursor?: string | null;
+      limit?: number | null;
+    } | null;
+  },
+  subject?: AuthSubject,
+): Promise<DocumentRelationshipResultPage> {
+  const view = toRelationshipViewFilter(args.view, subject);
+  const paging = toRelationshipPagingOptions(args.paging);
+
+  let result: PagedResults<DocumentRelationship>;
+  try {
+    result = await reactorClient.getIncomingRelationshipEdges(
+      args.targetIdOrSlug,
+      fromInputMaybe(args.relationshipType),
+      view,
+      paging,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch incoming relationship edges: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toDocumentRelationshipResultPage(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert incoming relationship edges to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+function toRelationshipViewFilter(
+  input:
+    | {
+        branch?: string | null;
+        scopes?: readonly string[] | null;
+      }
+    | null
+    | undefined,
+  subject?: AuthSubject,
+): ViewFilter | undefined {
+  if (!input) {
+    return subject ? { subject } : undefined;
+  }
+
+  return {
+    subject,
+    branch: fromInputMaybe(input.branch),
+    scopes: toMutableArray(fromInputMaybe(input.scopes)),
+  };
+}
+
+function toRelationshipPagingOptions(
+  input:
+    | {
+        cursor?: string | null;
+        limit?: number | null;
+      }
+    | null
+    | undefined,
+): PagingOptions | undefined {
+  if (!input) {
+    return undefined;
+  }
+
+  const cursor = fromInputMaybe(input.cursor);
+  const limit = fromInputMaybe(input.limit);
+  if (!cursor && !limit) {
+    return undefined;
+  }
+
+  return { cursor: cursor || "", limit: limit || 10 };
 }
 
 export async function findDocuments(
@@ -360,11 +524,30 @@ export async function findDocuments(
   }
 }
 
+/**
+ * The answer for a job the caller may not see, shaped as the reactor answers
+ * an unknown one so that the two cannot be told apart.
+ */
+function unknownJob(jobId: string): JobInfo {
+  const now = new Date().toISOString();
+  return {
+    id: jobId,
+    documentId: "",
+    status: JobStatus.FAILED,
+    createdAtUtcIso: now,
+    completedAtUtcIso: now,
+    error: { name: "Error", message: "Job not found", stack: "" },
+    consistencyToken: { version: 1, createdAtUtcIso: now, coordinates: [] },
+    meta: { batchId: jobId, batchJobIds: [jobId] },
+  };
+}
+
 export async function jobStatus(
   reactorClient: IReactorClient,
   args: {
     jobId: string;
   },
+  serves: (documentId: string) => Promise<boolean>,
 ): Promise<GqlJobInfo> {
   let result: JobInfo;
   try {
@@ -373,6 +556,9 @@ export async function jobStatus(
     throw new GraphQLError(
       `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
+  }
+  if (!(await serves(result.documentId))) {
+    result = unknownJob(args.jobId);
   }
 
   try {
@@ -388,7 +574,7 @@ export async function documentOperations(
   reactorClient: IReactorClient,
   args: {
     filter: {
-      documentId: string;
+      documentIdOrSlug: string;
       branch?: string | null;
       scopes?: readonly string[] | null;
       actionTypes?: readonly string[] | null;
@@ -446,7 +632,7 @@ export async function documentOperations(
   let result: PagedResults<Operation>;
   try {
     result = await reactorClient.getOperations(
-      args.filter.documentId,
+      args.filter.documentIdOrSlug,
       view,
       operationFilter,
       paging,
@@ -482,7 +668,7 @@ export async function documentOperations(
 export async function evaluateActions(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     branch?: string | null;
     candidates: ReadonlyArray<{
       scope: string;
@@ -502,7 +688,7 @@ export async function evaluateActions(
   let result: ActionEvaluations;
   try {
     result = await reactorClient.evaluateActions(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       branch,
       candidates,
       subject,
@@ -529,9 +715,10 @@ export async function createDocument(
   reactorClient: IReactorClient,
   args: {
     document: unknown;
-    parentIdentifier?: string | null;
+    parentIdOrSlug?: string | null;
   },
   reactorDriveClient?: IDriveClient,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate that document is a PHDocument
   if (!args.document || typeof args.document !== "object") {
@@ -545,21 +732,24 @@ export async function createDocument(
     throw new GraphQLError("Invalid document: missing or invalid header");
   }
 
-  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
 
   let result: PHDocument;
   try {
-    if (parentIdentifier) {
-      const parent = await reactorClient.get(parentIdentifier);
+    if (parentIdOrSlug) {
+      const parent = await reactorClient.get(
+        parentIdOrSlug,
+        subject && { subject },
+      );
       if (isDriveContainerType(parent.header.documentType)) {
         const driveClient = pickDriveClient(
           reactorClient,
           parent.header.documentType,
           reactorDriveClient,
         );
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } else {
-        result = await reactorClient.create(document, parentIdentifier);
+        result = await reactorClient.create(document, parentIdOrSlug);
       }
     } else {
       result = await reactorClient.create(document);
@@ -569,6 +759,8 @@ export async function createDocument(
       `Failed to create document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject);
 
   try {
     return toGqlPhDocument(result);
@@ -583,23 +775,30 @@ export async function createEmptyDocument(
   reactorClient: IReactorClient,
   args: {
     documentType: string;
-    parentIdentifier?: string | null;
+    parentIdOrSlug?: string | null;
     name?: string | null;
   },
   reactorDriveClient?: IDriveClient,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
   const name = fromInputMaybe(args.name);
 
   let result: PHDocument;
   try {
-    if (parentIdentifier) {
-      const parent = await reactorClient.get(parentIdentifier);
+    if (parentIdOrSlug) {
+      const parent = await reactorClient.get(
+        parentIdOrSlug,
+        subject && { subject },
+      );
       if (isDriveContainerType(parent.header.documentType)) {
         const module = await reactorClient.getDocumentModelModule(
           args.documentType,
         );
-        const document = module.utils.createDocument();
+        const document = withSignaturePolicy(
+          module.utils.createDocument(),
+          await reactorClient.getCreateSignaturePolicy(),
+        );
         if (name) {
           document.header.name = name;
         }
@@ -608,10 +807,10 @@ export async function createEmptyDocument(
           parent.header.documentType,
           reactorDriveClient,
         );
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } else {
         result = await reactorClient.createEmpty(args.documentType, {
-          parentIdentifier,
+          parentIdentifier: parentIdOrSlug,
         });
       }
     } else {
@@ -622,6 +821,8 @@ export async function createEmptyDocument(
       `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject);
 
   try {
     return toGqlPhDocument(result);
@@ -636,15 +837,16 @@ export async function createDocumentWithInitialState(
   reactorClient: IReactorClient,
   args: {
     documentType: string;
-    parentIdentifier?: string | null;
+    parentIdOrSlug?: string | null;
     name?: string | null;
     slug?: string | null;
     preferredEditor?: string | null;
     initialState: Record<string, Record<string, unknown>>;
   },
   reactorDriveClient?: IDriveClient,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
   const name = fromInputMaybe(args.name);
   const slug = fromInputMaybe(args.slug);
   const preferredEditor = fromInputMaybe(args.preferredEditor);
@@ -658,7 +860,10 @@ export async function createDocumentWithInitialState(
     );
   }
 
-  const document = module.utils.createDocument();
+  const document = withSignaturePolicy(
+    module.utils.createDocument(),
+    await reactorClient.getCreateSignaturePolicy(),
+  );
 
   // Only merge specification-defined scopes (e.g., global, local).
   // Protected scopes like "auth" and "document" are excluded.
@@ -683,10 +888,10 @@ export async function createDocumentWithInitialState(
   }
 
   let result: PHDocument;
-  if (parentIdentifier) {
+  if (parentIdOrSlug) {
     let parent: PHDocument;
     try {
-      parent = await reactorClient.get(parentIdentifier);
+      parent = await reactorClient.get(parentIdOrSlug, subject && { subject });
     } catch (error) {
       throw new GraphQLError(
         `Parent document not found: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -700,7 +905,7 @@ export async function createDocumentWithInitialState(
         reactorDriveClient,
       );
       try {
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -708,7 +913,7 @@ export async function createDocumentWithInitialState(
       }
     } else {
       try {
-        result = await reactorClient.create(document, parentIdentifier);
+        result = await reactorClient.create(document, parentIdOrSlug);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document with parent: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -724,6 +929,8 @@ export async function createDocumentWithInitialState(
       );
     }
   }
+
+  result = await readAsCaller(reactorClient, result, subject);
 
   try {
     return toGqlPhDocument(result);
@@ -748,10 +955,11 @@ const DEFAULT_BRANCH = "main";
 export async function execute(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     actions: readonly ActionInput[];
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const actions = toSubmittableActions(args.actions);
   const branch = fromInputMaybe(args.branch) ?? DEFAULT_BRANCH;
@@ -759,9 +967,11 @@ export async function execute(
   let result: PHDocument;
   try {
     result = await reactorClient.execute(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       branch,
       actions,
+      undefined,
+      subject,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -788,7 +998,7 @@ export async function execute(
 export async function executeAsync(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     actions: readonly ActionInput[];
     branch?: string | null;
   },
@@ -799,7 +1009,7 @@ export async function executeAsync(
   let job: JobInfo;
   try {
     job = await reactorClient.executeAsync(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       branch,
       actions,
     );
@@ -822,6 +1032,7 @@ export async function mutateDocument(
       scopes?: readonly string[] | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate actions
   let validatedActions;
@@ -845,6 +1056,8 @@ export async function mutateDocument(
       args.documentIdentifier,
       branch,
       validatedActions,
+      undefined,
+      subject,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -907,18 +1120,19 @@ export async function mutateDocumentAsync(
 export async function renameDocument(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     name: string;
     branch?: string | null;
   },
   signal?: AbortSignal,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
   let result: PHDocument;
   try {
     result = await reactorClient.rename(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       args.name,
       branch,
       signal,
@@ -928,6 +1142,8 @@ export async function renameDocument(
       `Failed to rename document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -941,11 +1157,12 @@ export async function renameDocument(
 export async function setPreferredEditor(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     preferredEditor?: string | null;
     branch?: string | null;
   },
   signal?: AbortSignal,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
   const preferredEditor = fromInputMaybe(args.preferredEditor) ?? null;
@@ -953,7 +1170,7 @@ export async function setPreferredEditor(
   let result: PHDocument;
   try {
     result = await reactorClient.setPreferredEditor(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       preferredEditor,
       branch,
       signal,
@@ -963,6 +1180,8 @@ export async function setPreferredEditor(
       `Failed to set preferred editor: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -976,20 +1195,24 @@ export async function setPreferredEditor(
 export async function addRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
-    targetIdentifier: string;
+    sourceIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
+    metadata?: Record<string, unknown> | null;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
+  const metadata = fromInputMaybe(args.metadata);
 
   let result: PHDocument;
   try {
     result = await reactorClient.addRelationship(
-      args.sourceIdentifier,
-      args.targetIdentifier,
+      args.sourceIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
+      metadata,
       branch,
     );
   } catch (error) {
@@ -997,6 +1220,49 @@ export async function addRelationship(
       `Failed to add relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function updateRelationship(
+  reactorClient: IReactorClient,
+  args: {
+    sourceIdOrSlug: string;
+    targetIdOrSlug: string;
+    relationshipType: string;
+    metadata?: Record<string, unknown> | null;
+    branch?: string | null;
+  },
+  subject?: AuthSubject,
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  const branch = fromInputMaybe(args.branch);
+  // The action's metadata is required and nullable: omitting it clears the edge.
+  const metadata = fromInputMaybe(args.metadata) ?? null;
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.updateRelationship(
+      args.sourceIdOrSlug,
+      args.targetIdOrSlug,
+      args.relationshipType,
+      metadata,
+      branch,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to update relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1010,19 +1276,20 @@ export async function addRelationship(
 export async function removeRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
-    targetIdentifier: string;
+    sourceIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
   let result: PHDocument;
   try {
     result = await reactorClient.removeRelationship(
-      args.sourceIdentifier,
-      args.targetIdentifier,
+      args.sourceIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
       branch,
     );
@@ -1031,6 +1298,8 @@ export async function removeRelationship(
       `Failed to remove relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1044,12 +1313,13 @@ export async function removeRelationship(
 export async function moveRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceParentIdentifier: string;
-    targetParentIdentifier: string;
-    targetIdentifier: string;
+    sourceParentIdOrSlug: string;
+    targetParentIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<{
   source: ReturnType<typeof toGqlPhDocument>;
   target: ReturnType<typeof toGqlPhDocument>;
@@ -1059,9 +1329,9 @@ export async function moveRelationship(
   let result: { source: PHDocument; target: PHDocument };
   try {
     result = await reactorClient.moveRelationship(
-      args.sourceParentIdentifier,
-      args.targetParentIdentifier,
-      args.targetIdentifier,
+      args.sourceParentIdOrSlug,
+      args.targetParentIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
       branch,
     );
@@ -1070,6 +1340,11 @@ export async function moveRelationship(
       `Failed to move relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = {
+    source: await readAsCaller(reactorClient, result.source, subject, branch),
+    target: await readAsCaller(reactorClient, result.target, subject, branch),
+  };
 
   try {
     return {
@@ -1086,7 +1361,7 @@ export async function moveRelationship(
 export async function deleteDocument(
   reactorClient: IReactorClient,
   args: {
-    identifier: string;
+    idOrSlug: string;
     propagate?: GqlPropagationMode | null;
   },
   reactorDriveClient?: IDriveClient,
@@ -1095,7 +1370,7 @@ export async function deleteDocument(
 
   try {
     const incoming = await reactorClient.getIncomingRelationships(
-      args.identifier,
+      args.idOrSlug,
       "child",
     );
     const driveParent = incoming.results.find((p) =>
@@ -1107,9 +1382,10 @@ export async function deleteDocument(
         driveParent.header.documentType,
         reactorDriveClient,
       );
-      await driveClient.removeNode(driveParent.header.id, args.identifier);
+      const documentId = await reactorClient.resolveIdOrSlug(args.idOrSlug);
+      await driveClient.removeNode(driveParent.header.id, documentId);
     } else {
-      await reactorClient.deleteDocument(args.identifier, propagate);
+      await reactorClient.deleteDocument(args.idOrSlug, propagate);
     }
     return true;
   } catch (error) {
@@ -1122,15 +1398,15 @@ export async function deleteDocument(
 export async function deleteDocuments(
   reactorClient: IReactorClient,
   args: {
-    identifiers: readonly string[];
+    idsOrSlugs: readonly string[];
     propagate?: GqlPropagationMode | null;
   },
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
-  const identifiers = [...args.identifiers];
+  const idsOrSlugs = [...args.idsOrSlugs];
 
   try {
-    await reactorClient.deleteDocuments(identifiers, propagate);
+    await reactorClient.deleteDocuments(idsOrSlugs, propagate);
     return true;
   } catch (error) {
     throw new GraphQLError(
@@ -1159,19 +1435,31 @@ export async function touchChannel(
         branch: string;
       };
       sinceTimestampUtcMs: string;
+      manifest?: unknown;
     };
   },
   boundAddress?: string,
-): Promise<{ success: boolean; ackOrdinal: number }> {
-  try {
-    const remote = syncManager.getById(args.input.id);
+): Promise<{
+  success: boolean;
+  ackOrdinal: number;
+  manifest: PeerManifest;
+}> {
+  // A touch without a manifest is a client without the feature: silent.
+  const peer = readPeerManifest(args.input.manifest);
 
-    return {
-      success: true,
-      ackOrdinal: remote.channel.inbox.ackOrdinal,
-    };
+  let existing;
+  try {
+    existing = syncManager.getById(args.input.id);
   } catch {
     // getById will throw if the remote does not exist
+  }
+  if (existing) {
+    await syncManager.setPeerManifest(args.input.id, peer);
+    return {
+      success: true,
+      ackOrdinal: existing.channel.inbox.ackOrdinal,
+      manifest: syncManager.localManifest(),
+    };
   }
 
   const filter: RemoteFilter = {
@@ -1196,6 +1484,7 @@ export async function touchChannel(
       filter,
       options,
       args.input.id,
+      peer,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -1203,7 +1492,50 @@ export async function touchChannel(
     );
   }
 
-  return { success: true, ackOrdinal: 0 };
+  return {
+    success: true,
+    ackOrdinal: 0,
+    manifest: syncManager.localManifest(),
+  };
+}
+
+export async function syncHolds(
+  syncManager: ISyncManager,
+  args: { remoteName?: string | null; documentId?: string | null },
+) {
+  const holds = await syncManager.listHolds({
+    remoteName: args.remoteName ?? undefined,
+    documentId: args.documentId ?? undefined,
+  });
+  return holds.map((hold) => ({
+    ...hold,
+    reason: { ...hold.reason, peerSupports: [...hold.reason.peerSupports] },
+    heldAtUtcMs: String(hold.heldAtUtcMs),
+  }));
+}
+
+export function peerAgreement(
+  syncManager: ISyncManager,
+  args: { collectionId: string },
+) {
+  const agreement = syncManager.agreement();
+  const members = [...agreement.members([args.collectionId])].map(
+    ([remoteName, supports]) => ({
+      remoteName,
+      announced: "revision" in supports,
+      protocols: supports.protocols,
+      features: supports.features,
+    }),
+  );
+  return {
+    collectionId: args.collectionId,
+    local: agreement.local(),
+    members,
+    limitedBy: Object.keys(agreement.basis().wanted).map((protocol) => ({
+      protocol,
+      remoteNames: agreement.limitedBy(args.collectionId, protocol),
+    })),
+  };
 }
 
 /**
@@ -1280,9 +1612,12 @@ export function pollSyncEnvelopes(
     channelId: string;
     outboxAck: number;
     outboxLatest: number;
+    manifestRevision?: string | null;
+    refusals?: ReadonlyArray<PollRefusal> | null;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
+  gatedOpIds?: ReadonlySet<string>,
 ): {
   envelopes: any[];
   ackOrdinal: number;
@@ -1296,7 +1631,18 @@ export function pollSyncEnvelopes(
     operationCount: number;
   }>;
   hasMore: boolean;
+  manifestRevision: string;
+  peerManifestRevision: string | null;
 } {
+  // The gate ran against a snapshot taken before its first await, so an entry
+  // the outbox gained while it was deciding carries no verdict. Serving one
+  // would hand over a scope nobody authorized, so an entry the gate never saw
+  // is held exactly like one it refused -- withheld, not consumed, which leaves
+  // it in the outbox for the next poll to evaluate properly.
+  const isHeld = (syncOp: SyncOperation): boolean =>
+    heldOpIds.has(syncOp.id) ||
+    (gatedOpIds !== undefined && !gatedOpIds.has(syncOp.id));
+
   let remote;
   try {
     remote = syncManager.getById(args.channelId);
@@ -1306,14 +1652,21 @@ export function pollSyncEnvelopes(
     );
   }
 
+  // The subgraph's drive and binding checks run before this call, so reaching
+  // here is an authorized poll: the only evidence the switchboard has that this
+  // channel still has a holder.
+  remote.channel.notePoll();
+
+  const revisions = {
+    manifestRevision: syncManager.localManifest().revision,
+    peerManifestRevision: remote.meta.peer?.manifest?.revision ?? null,
+  };
+
   // Dead-letter items can originate from failed inbox jobs whose documentId is
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
   const deadLetters = remote.channel.deadLetter.items
-    .filter(
-      (syncOp) =>
-        !forbiddenIds.has(syncOp.documentId) && !heldOpIds.has(syncOp.id),
-    )
+    .filter((syncOp) => !forbiddenIds.has(syncOp.documentId) && !isHeld(syncOp))
     .map((syncOp) => ({
       documentId: syncOp.documentId,
       error: syncOp.error?.message ?? "Unknown error",
@@ -1377,6 +1730,7 @@ export function pollSyncEnvelopes(
       ackOrdinal: remote.channel.inbox.ackOrdinal,
       deadLetters,
       hasMore: false,
+      ...revisions,
     };
   }
 
@@ -1404,7 +1758,7 @@ export function pollSyncEnvelopes(
     // entry was delivered and may be evicted. A hold sets no hasMore either --
     // there is no later page that would serve it, so claiming one would spin the
     // puller.
-    if (heldOpIds.has(syncOp.id)) continue;
+    if (isHeld(syncOp)) continue;
 
     // Advance the per-syncOp delivery cursor past leading ops the client has
     // both received (outboxLatest) and we have previously emitted
@@ -1416,6 +1770,16 @@ export function pollSyncEnvelopes(
     // but unconfirmed ops re-emit on the next poll.
     syncOp.deliveredCount ??= 0;
     syncOp.emittedCount ??= 0;
+    // A restarted client polls from its cursor; a forbidden drain stays put.
+    if (!forbiddenIds.has(syncOp.documentId)) {
+      while (
+        syncOp.deliveredCount > 0 &&
+        syncOp.operations[syncOp.deliveredCount - 1].context.ordinal >
+          args.outboxLatest
+      ) {
+        syncOp.deliveredCount -= 1;
+      }
+    }
     while (
       syncOp.deliveredCount < syncOp.emittedCount &&
       syncOp.operations[syncOp.deliveredCount].context.ordinal <=
@@ -1514,6 +1878,7 @@ export function pollSyncEnvelopes(
     ackOrdinal: remote.channel.inbox.ackOrdinal,
     deadLetters,
     hasMore,
+    ...revisions,
   };
 }
 
@@ -1539,6 +1904,111 @@ type SyncEnvelopeArg = {
   dependsOn?: string[];
 };
 
+export type PollRefusal = {
+  documentId: string;
+  branch: string;
+  kind?: string | null;
+};
+
+const MARKER_REFUSAL = "marker";
+
+/**
+ * The client's UNSUPPORTED_PROTOCOL refusals of polled rows. Each becomes a hold
+ * for that client, as a pushed refusal does, rather than counting as delivered.
+ * A refused marker is not a hold: {@link recordPollMarkerRefusals} takes it.
+ * A kind this server does not know is ignored.
+ */
+export function holdPollRefusals(
+  syncManager: ISyncManager,
+  channelId: string,
+  all: ReadonlyArray<PollRefusal> | null | undefined,
+): void {
+  const refusals = all?.filter(
+    (refusal) => refusal.kind === undefined || refusal.kind === null,
+  );
+  if (!refusals?.length) return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  const refused = refusals.map((refusal) => {
+    const syncOp = new SyncOperation(
+      crypto.randomUUID(),
+      "",
+      [],
+      remote.meta.name,
+      refusal.documentId,
+      [],
+      refusal.branch,
+      [],
+    );
+    syncOp.failed(
+      new ChannelError(
+        ChannelErrorSource.Outbox,
+        new Error(`Refused by ${remote.meta.name}`),
+        "UNSUPPORTED_PROTOCOL",
+      ),
+    );
+    return syncOp;
+  });
+  remote.channel.deadLetter.add(...refused);
+}
+
+/**
+ * The client's refusals of purge markers it polled. Persisted before the poll is
+ * served; a failure fails the poll, and the client reports them again. The sync
+ * manager keeps only refusals of markers this remote was owed.
+ */
+export async function recordPollMarkerRefusals(
+  syncManager: ISyncManager,
+  channelId: string,
+  all: ReadonlyArray<PollRefusal> | null | undefined,
+): Promise<void> {
+  const refusals = all?.filter((refusal) => refusal.kind === MARKER_REFUSAL);
+  if (!refusals?.length) return;
+  if (!supportsPurgeRefusals(syncManager)) return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  try {
+    await syncManager.recordPolledMarkerRefusals(
+      remote.meta.name,
+      refusals.map(({ documentId, branch }) => ({ documentId, branch })),
+    );
+  } catch (error) {
+    throw new RefusalNotRecordedError(error);
+  }
+}
+
+/**
+ * A poll naming no revision is from a client without peer agreement: it is
+ * recorded silent, and what it can no longer run is held, before it is served.
+ */
+export async function silenceUnversionedPoll(
+  syncManager: ISyncManager,
+  channelId: string,
+  manifestRevision: string | null | undefined,
+): Promise<void> {
+  if (typeof manifestRevision === "string") return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  if (remote.meta.peer?.manifest) {
+    await syncManager.setPeerManifest(channelId, null);
+  }
+}
+
 /**
  * Receives sync envelopes pushed by a client and adds them to the
  * appropriate channel inboxes.
@@ -1547,7 +2017,7 @@ type SyncEnvelopeArg = {
  * It must be preserved because the inbox mailbox tracks applied ordinals
  * and returns the highest one as `ackOrdinal` in pollSyncEnvelopes.
  */
-export function pushSyncEnvelopes(
+export async function pushSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     envelopes: SyncEnvelopeArg[];
@@ -1569,6 +2039,12 @@ export function pushSyncEnvelopes(
     if (!envelope.operations || envelope.operations.length === 0) {
       continue;
     }
+
+    // A Manual-poll holder never polls on a schedule, so a push is the only
+    // liveness it ever reports. It is stamped below the empty-envelope exit,
+    // and after the caller's per-operation checks upstream: an envelope
+    // carrying nothing is authorized by nothing, so it proves nothing.
+    remote.channel.notePoll();
 
     const syncOps = envelopesToSyncOperations(
       envelope as Parameters<typeof envelopesToSyncOperations>[0],
@@ -1596,5 +2072,15 @@ export function pushSyncEnvelopes(
     remote.channel.inbox.add(...consolidated);
   }
 
-  return Promise.resolve(true);
+  // A received marker is stored before the pusher hears it arrived.
+  try {
+    await syncManager.receiptsStored?.(
+      [...remoteSyncOps.keys()].map((remote) => remote.meta.name),
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to store received markers: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  return true;
 }

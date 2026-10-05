@@ -618,14 +618,6 @@ const CLEAR_WITHOUT_INPUT = `[
   }
 ]`;
 
-/**
- * `loadStateOperation` reads `input.state.data`; the base `loadState` creator
- * spreads the state next to `name` instead, so the loader backfills auth on
- * `undefined`.
- */
-const FLATTENED_LOAD_STATE_REJECTION =
-  "Cannot read properties of undefined (reading 'auth')";
-
 const NESTED_UNKNOWN_KEYS = {
   id: "todo-extra",
   title: "extra",
@@ -1096,9 +1088,8 @@ const LOAD_ROWS: readonly DispatchRow[] = [
     compatibility: "core-v1",
     expected: {
       outcome: "applied",
-      // LOAD_STATE replaces the whole state object with the snapshot, so
-      // every scope the snapshot omits is gone.
-      state: { global: { title: "loaded", todos: [] }, local: { note: "l" } },
+      // Legacy LOAD_STATE no longer has reducer handling.
+      state: PARITY_EMPTY,
       hash: "computed",
       errors: NO_ERRORS,
       dispatches: [],
@@ -1112,18 +1103,18 @@ const LOAD_ROWS: readonly DispatchRow[] = [
     documentVersion: 1,
     scope: "global",
     actionType: "LOAD_STATE",
-    // The shape `pruneOperation` builds: the state spread next to `name`.
+    // Retained input shape from the removed loadState creator.
     input: { name: "loaded", ...PARITY_EMPTY },
     compatibility: "core-v1-retained",
     creator: "loadState",
     creatorArgs: [{ name: "loaded", ...PARITY_EMPTY }, 0],
     expected: {
-      outcome: "reducer-rejected",
+      outcome: "creator-rejected",
       state: PARITY_EMPTY,
       hash: "none",
       errors: {
         ...NO_ERRORS,
-        reducerRejection: FLATTENED_LOAD_STATE_REJECTION,
+        creatorRejection: "the actions map has no creator loadState",
       },
       dispatches: [],
     },
@@ -1248,16 +1239,7 @@ const REDO_ROWS: readonly DispatchRow[] = [
   },
 ];
 
-/**
- * Two deferred protocol corrections, recorded rather than repaired:
- *
- * - `pruneOperation` replaces the pruned range with the base `loadState`
- *   action, whose flattened input the loader cannot read, so every prune is
- *   rejected before it commits.
- * - `prune(start, end, "local")` accepts the scope and then reads and
- *   rewrites global history regardless, which the third row observes on a
- *   history that has local operations and no global ones.
- */
+/** Legacy pruning creators are absent from both authoring paths. */
 const PRUNE_ROWS: readonly DispatchRow[] = [
   {
     id: "prune/creator-global",
@@ -1276,12 +1258,12 @@ const PRUNE_ROWS: readonly DispatchRow[] = [
     creator: "prune",
     creatorArgs: [0, 2],
     expected: {
-      outcome: "reducer-rejected",
+      outcome: "creator-rejected",
       state: parityWith([TODO_A, TODO_B]),
       hash: "none",
       errors: {
         ...NO_ERRORS,
-        reducerRejection: FLATTENED_LOAD_STATE_REJECTION,
+        creatorRejection: "the actions map has no creator prune",
       },
       dispatches: [],
     },
@@ -1303,12 +1285,12 @@ const PRUNE_ROWS: readonly DispatchRow[] = [
     creator: "prune",
     creatorArgs: [0, 1, "local"],
     expected: {
-      outcome: "reducer-rejected",
+      outcome: "creator-rejected",
       state: parityWith([TODO_A], "n"),
       hash: "none",
       errors: {
         ...NO_ERRORS,
-        reducerRejection: FLATTENED_LOAD_STATE_REJECTION,
+        creatorRejection: "the actions map has no creator prune",
       },
       dispatches: [],
     },
@@ -1328,12 +1310,12 @@ const PRUNE_ROWS: readonly DispatchRow[] = [
     creator: "prune",
     creatorArgs: [0, 1, "local"],
     expected: {
-      outcome: "reducer-rejected",
+      outcome: "creator-rejected",
       state: parityWith([], "n"),
       hash: "none",
       errors: {
         ...NO_ERRORS,
-        reducerRejection: "No global operations found",
+        creatorRejection: "the actions map has no creator prune",
       },
       dispatches: [],
     },
