@@ -91,7 +91,12 @@ import {
   type CommittedWrite,
   type MutationAdmission,
 } from "./signature-admission.js";
-import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
+import {
+  isSynthesized,
+  signSynthesized,
+  synthesizedActionId,
+  SYNTHESIZING_TYPES,
+} from "./synthesized-signing.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type { SignatureTrustPolicy } from "../signer/types.js";
 import {
@@ -2506,6 +2511,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    // An UNDO or REDO is stored under its synthesized id, so on base-reducer 3
+    // it is positioned by that id; the submitted one would sort it elsewhere
+    // than every receiver does.
+    const positioned = new Map<Action, Action>();
+    const positionedAs = (action: Action): Action => {
+      if (!baseReducer3 || !SYNTHESIZING_TYPES.has(action.type)) {
+        return action;
+      }
+      let stand = positioned.get(action);
+      if (stand === undefined) {
+        stand = { ...action, id: synthesizedActionId(action.id) };
+        positioned.set(action, stand);
+      }
+      return stand;
+    };
+
     // Base-reducer 3 stores a job in the order every receiver sorts it into,
     // and a tie with a stored row is broken by action id, not arrival.
     let first: Operation | undefined;
@@ -2517,7 +2538,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           skip: 0,
           hash: "",
           timestampUtcMs: action.timestampUtcMs,
-          action,
+          action: positionedAs(action),
         }) as Operation;
       job = {
         ...job,
@@ -2625,16 +2646,23 @@ export class SimpleJobExecutor implements IJobExecutor {
           skip: 0,
           hash: "",
           timestampUtcMs: action.timestampUtcMs,
-          action,
+          action: positionedAs(action),
         }) as Operation,
     );
 
+    // Positioned, each submitted action goes back on its row to be executed.
+    const submittedFor = new Map(
+      [...positioned].map(([action, stand]) => [stand, action]),
+    );
     const merged = reshuffleByTimestamp(
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
       { canonical: baseReducer3 },
-    );
+    ).map((operation) => {
+      const action = submittedFor.get(operation.action);
+      return action === undefined ? operation : { ...operation, action };
+    });
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
 
