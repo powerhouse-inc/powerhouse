@@ -489,8 +489,11 @@ export async function addDocument(
       documentModelModule.utils.createDocument(),
       await reactorClient.getCreateSignaturePolicy(),
       {
-        protocolVersions:
-          await reactorClient.getCreateProtocolVersions(driveId),
+        protocolVersions: await reactorClient.getCreateProtocolVersions(
+          driveId,
+          undefined,
+          documentType,
+        ),
       },
     );
   if (!document) {
@@ -1146,7 +1149,11 @@ async function _duplicateDocument(
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
   // A copy keeps its source's versions; selection fills the keys it lacks.
-  const selected = await reactor.getCreateProtocolVersions(driveId);
+  const selected = await reactor.getCreateProtocolVersions(
+    driveId,
+    undefined,
+    document.header.documentType,
+  );
   const header = createCopyHeader(
     {
       documentType: document.header.documentType,

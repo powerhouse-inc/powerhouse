@@ -1,3 +1,4 @@
+import { fitCreateBaseReducer } from "../core/create-base-reducer.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   Action,
@@ -774,6 +775,7 @@ export class ReactorClient implements IReactorClient {
   async getCreateProtocolVersions(
     parentIdentifier?: string,
     signal?: AbortSignal,
+    documentType?: string,
   ): Promise<ProtocolVersions> {
     const { capabilities, flags, agreement, collectionsOf } =
       this.protocolSelection;
@@ -799,7 +801,7 @@ export class ReactorClient implements IReactorClient {
       }
     }
     // Members narrow every negotiated protocol except base-reducer.
-    return {
+    const selected = {
       ...selectProtocolVersions({ capabilities, flags, members }),
       "base-reducer": selectProtocolVersions({
         capabilities,
@@ -807,6 +809,20 @@ export class ReactorClient implements IReactorClient {
         members: [],
       })["base-reducer"],
     };
+    if (documentType === undefined) {
+      return selected;
+    }
+    const modules = await this.reactor.getDocumentModels(
+      documentType,
+      undefined,
+      signal,
+    );
+    return fitCreateBaseReducer(
+      selected,
+      documentType,
+      modules.results,
+      this.logger,
+    );
   }
 
   /**
@@ -889,7 +905,11 @@ export class ReactorClient implements IReactorClient {
       meta: document.header.meta,
       protocolVersions:
         document.header.protocolVersions ??
-        (await this.getCreateProtocolVersions(parentIdentifier, signal)),
+        (await this.getCreateProtocolVersions(
+          parentIdentifier,
+          signal,
+          document.header.documentType,
+        )),
     };
 
     const createActions: Action[] = await signActions(
@@ -1033,6 +1053,7 @@ export class ReactorClient implements IReactorClient {
     const base = await this.getCreateProtocolVersions(
       options?.parentIdentifier,
       signal,
+      documentModelType,
     );
     const document = withSignaturePolicy(
       module.utils.createDocument(),

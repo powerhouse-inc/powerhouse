@@ -141,7 +141,11 @@ export class ReactorDriveClient implements IDriveClient {
       meta: document.header.meta,
       protocolVersions:
         document.header.protocolVersions ??
-        (await this.reactor.getCreateProtocolVersions(driveIdentifier, signal)),
+        (await this.reactor.getCreateProtocolVersions(
+          driveIdentifier,
+          signal,
+          document.header.documentType,
+        )),
     };
 
     const metadata: DriveChildFileMetadata = {
