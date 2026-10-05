@@ -236,11 +236,16 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
       );
     }
 
-    await reactorModule.syncModule!.syncManager.add(
+    const { syncManager } = reactorModule.syncModule!;
+    // No peer answers the handshake; the remote stands for one on this build.
+    await syncManager.add(
       REMOTE,
       DriveCollectionId.forDrive(driveId),
       { type: "internal", parameters: {} },
       { documentId: [], scope: [], branch: "main" },
+      undefined,
+      undefined,
+      syncManager.localManifest(),
     );
     await vi.waitUntil(() => channel().outbox.latestOrdinal > 0, {
       timeout: 10_000,

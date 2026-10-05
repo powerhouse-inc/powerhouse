@@ -55,7 +55,7 @@ let nextFlags: Partial<ReactorFeatureFlags> = {};
 const withPeerCapabilities = ReactorBuilder.prototype.withPeerCapabilities;
 
 async function node(fleet: Fleet, name: string, v3: boolean): Promise<Node> {
-  nextFlags = v3 ? undoV3Flags() : {};
+  nextFlags = v3 ? undoV3Flags() : { undoV3: false };
   try {
     return await fleet.node(name, WIDE);
   } finally {
@@ -67,7 +67,7 @@ async function node(fleet: Fleet, name: string, v3: boolean): Promise<Node> {
 const manifest = (v3: boolean) =>
   localPeerManifest(
     mergePeerCapabilities(PEER_CAPABILITIES, [testProtocol(WIDE)]),
-    v3 ? { undoV3: true } : {},
+    { undoV3: v3 },
   );
 
 async function created(at: Node, id: string, versions: typeof V2) {

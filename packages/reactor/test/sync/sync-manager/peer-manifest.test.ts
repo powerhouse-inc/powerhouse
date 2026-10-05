@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
+import { resolveFeatureFlags } from "../../../src/core/feature-flags.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
@@ -232,7 +233,12 @@ describe.each(testSyncStorageBackends)(
       const manager = await start();
       const manifest = manager.localManifest();
       expect(manifest).toEqual(
-        localPeerManifest(PEER_CAPABILITIES, {}, undefined, manifest.sequence),
+        localPeerManifest(
+          PEER_CAPABILITIES,
+          resolveFeatureFlags(),
+          undefined,
+          manifest.sequence,
+        ),
       );
       expect(manifest.sequence).toBeGreaterThan(0);
     });

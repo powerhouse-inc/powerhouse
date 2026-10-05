@@ -12,6 +12,9 @@ import type { IReactor } from "../../src/core/types.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
+const V2 = { "base-reducer": 2 };
+const V3 = { "base-reducer": 3 };
+
 /**
  * Positional auth evaluation reads each stream up to a timestamp, so it needs
  * the effective stream -- the one left after skips are applied -- to run in
@@ -76,6 +79,7 @@ describe("effective stream timestamp order", () => {
     const document = createDocModelDocument({
       id: "probe-doc",
       slug: "probe-doc",
+      protocolVersions: V2,
     });
 
     // Both reactors hold the document.
@@ -137,12 +141,83 @@ describe("effective stream timestamp order", () => {
     expect(Date.parse(rows[2].t)).toBeLessThan(Date.parse(rows[1].t));
   });
 
+  it("is ordered by timestamp on base-reducer 3 when the incoming index sits above the head", async () => {
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+    const document = createDocModelDocument({
+      id: "probe-doc-3",
+      slug: "probe-doc-3",
+      protocolVersions: V3,
+    });
+
+    let info = await reactorA.create(document);
+    const createToken = await settle(reactorA, info.id);
+    const createOps = await reactorA.getOperations(
+      document.header.id,
+      { branch: "main", scopes: ["document"] },
+      undefined,
+      undefined,
+      createToken,
+    );
+    info = await reactorB.load(
+      document.header.id,
+      "main",
+      createOps.document.results,
+    );
+    await settle(reactorB, info.id);
+
+    for (const name of ["A0", "A1", "A2"]) {
+      vi.advanceTimersByTime(1000);
+      const job = await reactorA.execute(document.header.id, "main", [
+        setModelName({ name }),
+      ]);
+      await settle(reactorA, job.id);
+    }
+    const aOps = await globalOps(reactorA, document.header.id);
+
+    vi.advanceTimersByTime(100_000);
+    for (const name of ["B0", "B1"]) {
+      vi.advanceTimersByTime(1000);
+      const job = await reactorB.execute(document.header.id, "main", [
+        setModelName({ name }),
+      ]);
+      await settle(reactorB, job.id);
+    }
+
+    // The same load that base-reducer 2 takes as a trivial append.
+    info = await reactorB.load(document.header.id, "main", [aOps.at(-1)!]);
+    const token = await settle(reactorB, info.id);
+
+    const after = await globalOps(reactorB, document.header.id, token);
+
+    // The load is positioned by timestamp, so A2 lands before B's operations.
+    const effective = garbageCollect(after) as typeof after;
+    expect(
+      effective.map((o) => (o.action.input as { name?: string }).name),
+    ).toEqual(["A2", "B0", "B1"]);
+    expect(
+      effective.every(
+        (o, i) =>
+          i === 0 ||
+          Date.parse(effective[i - 1].timestampUtcMs) <=
+            Date.parse(o.timestampUtcMs),
+      ),
+    ).toBe(true);
+
+    const doc = await reactorB.get<
+      ReturnType<typeof documentModelDocumentModelModule.utils.createDocument>
+    >(document.header.id, { branch: "main" });
+    expect(doc.state.global.name).toBe("B1");
+    expect(doc.header.protocolVersions).toEqual(V3);
+  });
+
   it("is ordered by timestamp once reshuffle skips are applied", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
     const document = createDocModelDocument({
       id: "probe-doc-2",
       slug: "probe-doc-2",
+      protocolVersions: V2,
     });
 
     let info = await reactorA.create(document);
@@ -227,8 +302,7 @@ describe("effective stream timestamp order", () => {
     ).length;
     expect(modules).toBe(5);
 
-    // The skip was applied on a document carrying base-reducer 2, which is the
-    // only version the reactor stamps.
-    expect(doc.header.protocolVersions).toEqual({ "base-reducer": 2 });
+    // The skip was applied on a document carrying base-reducer 2.
+    expect(doc.header.protocolVersions).toEqual(V2);
   });
 });
