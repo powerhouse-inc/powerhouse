@@ -5,6 +5,7 @@ import {
   upgradeDocumentAction,
   type BatchExecutionRequest,
   type ExecutionJobPlan,
+  type CopyNodeOptions,
   type IDriveClient,
   type IReactorClient,
   type PagedResults,
@@ -391,7 +392,13 @@ export class ReactorDriveClient implements IDriveClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
+    if (options?.protocolVersions) {
+      throw new Error(
+        "ReactorDriveClient.copyNode replays the source's operations and cannot override its protocolVersions",
+      );
+    }
     const srcNode = await this.readModel.getNode(
       driveIdentifier,
       srcNodeId,

@@ -43,7 +43,7 @@ import { getSharedActionScope, signActions } from "../core/utils.js";
 import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { parsePagingOptions } from "../shared/utils.js";
-import type { IDriveClient, IReactorClient } from "./types.js";
+import type { CopyNodeOptions, IDriveClient, IReactorClient } from "./types.js";
 
 /**
  * Implementation of {@link IDriveClient}.
@@ -53,16 +53,18 @@ import type { IDriveClient, IReactorClient } from "./types.js";
  * for batch execution. The back-reference is captured but never invoked
  * during construction, so the partial-`this` hazard does not apply.
  */
-/** A copy keeps its source's versions; selection fills only the keys it lacks. */
+/** The source's versions under `override`; selection fills the keys both lack. */
 function withSelectedVersions(
   header: PHDocumentHeader,
   selected: ProtocolVersions,
+  override: ProtocolVersions | undefined,
 ): Pick<PHDocumentHeader, "documentType" | "protocolVersions"> {
   return {
     documentType: header.documentType,
-    protocolVersions: header.protocolVersions
-      ? { ...selected, ...header.protocolVersions }
-      : undefined,
+    protocolVersions:
+      header.protocolVersions || override
+        ? { ...selected, ...header.protocolVersions, ...override }
+        : undefined,
   };
 }
 
@@ -389,6 +391,7 @@ export class DriveClient implements IDriveClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose(
       "drives.copyNode(@driveIdentifier, @srcNodeId, @targetParentFolderId)",
@@ -448,7 +451,7 @@ export class DriveClient implements IDriveClient {
       const duplicated: PHDocument = {
         ...srcDoc,
         header: createCopyHeader(
-          withSelectedVersions(srcDoc.header, base),
+          withSelectedVersions(srcDoc.header, base, options?.protocolVersions),
           entry.targetId,
           policy,
         ),

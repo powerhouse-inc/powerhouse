@@ -108,6 +108,11 @@ export type UndoRedoAvailability = {
   canRedo: boolean;
 };
 
+export type CopyNodeOptions = {
+  /** Merged over each source's versions, e.g. `{ "base-reducer": 3 }` to copy to v3. */
+  protocolVersions?: ProtocolVersions;
+};
+
 /**
  * Drive-aware operations grouped under `client.drives`.
  *
@@ -193,13 +198,15 @@ export interface IDriveClient {
 
   /**
    * Copies a node (and its subtree, if it is a folder) within a drive.
-   * Each copied file gets a new id and a duplicated document.
+   * Each copied file gets a new id and a duplicated document, which keeps its
+   * source's protocolVersions unless `options.protocolVersions` overrides them.
    */
   copyNode(
     driveIdentifier: string,
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument>;
 
   /**

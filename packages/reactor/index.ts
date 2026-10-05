@@ -23,6 +23,7 @@ export {
   type ActionCandidate,
   type ActionEvaluations,
   type DocumentChangeEvent,
+  type CopyNodeOptions,
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,

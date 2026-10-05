@@ -510,6 +510,20 @@ describe("ReactorDriveClient Integration", () => {
     });
   });
 
+  describe("base-reducer at creation", () => {
+    it("refuses a copy that overrides its source's versions", async () => {
+      const file = await driveClient.addFile(
+        driveId,
+        makeChildDocument("Source"),
+      );
+      await expect(
+        driveClient.copyNode(driveId, file.header.id, undefined, undefined, {
+          protocolVersions: { "base-reducer": 3 },
+        }),
+      ).rejects.toThrow(/cannot override its protocolVersions/);
+    });
+  });
+
   describe("migrateLegacyDriveState", () => {
     it("projects documentType and parent linkages through the real reactor", async () => {
       const folderRootId = "legacy-folder-root";
