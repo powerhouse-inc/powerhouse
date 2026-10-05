@@ -25,6 +25,12 @@ import { buildSingleJobMeta } from "./utils.js";
 
 export const GROUP_REEVALUATION_TRIGGER = "group-reevaluation-trigger";
 
+/** Base-reducer 3 retracts membership with a RETRACT. */
+const membershipChangeTypes: readonly string[] = [
+  ...groupMembershipActionTypes,
+  "RETRACT",
+];
+
 function isMembershipChange({
   operation,
   context,
@@ -32,9 +38,7 @@ function isMembershipChange({
   return (
     context.documentType === groupDocumentType &&
     context.scope === "global" &&
-    (groupMembershipActionTypes as readonly string[]).includes(
-      operation.action.type,
-    )
+    membershipChangeTypes.includes(operation.action.type)
   );
 }
 
@@ -98,9 +102,7 @@ export class GroupReevaluationTrigger extends BaseReadModel {
       .where("ordinal", "<=", settledThrough)
       .where("documentType", "=", groupDocumentType)
       .where("scope", "=", "global")
-      .where(sql<string>`action->>'type'`, "in", [
-        ...groupMembershipActionTypes,
-      ])
+      .where(sql<string>`action->>'type'`, "in", [...membershipChangeTypes])
       .orderBy("ordinal", "asc")
       .execute();
     return super.sweep(

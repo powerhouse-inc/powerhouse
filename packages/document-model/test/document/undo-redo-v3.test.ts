@@ -100,6 +100,25 @@ describe("base-reducer 3", () => {
       );
     });
 
+    it("stamps the RETRACT with the submitted timestamp under a fresh id", () => {
+      const document = dispatch(createV3Document(), increment());
+      const submitted = {
+        ...undo(),
+        timestampUtcMs: "2020-01-01T00:00:00.000Z",
+      };
+      const redone = { ...redo(), timestampUtcMs: "2020-01-02T00:00:00.000Z" };
+
+      const undone = countReducer(document, submitted);
+      const row = last(undone);
+      const redoRow = last(countReducer(undone, redone));
+
+      expect(row.action.id).not.toBe(submitted.id);
+      expect(row.action.timestampUtcMs).toBe(submitted.timestampUtcMs);
+      expect(row.timestampUtcMs).toBe(submitted.timestampUtcMs);
+      expect(redoRow.action.id).not.toBe(redone.id);
+      expect(redoRow.timestampUtcMs).toBe(redone.timestampUtcMs);
+    });
+
     it("skips an action that threw", () => {
       const a = increment();
       const document = dispatch(createV3Document(), a, error());

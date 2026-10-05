@@ -4,6 +4,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { isBaseReducer3 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import {
   DocumentNotFoundError,
@@ -263,6 +264,7 @@ export async function evaluateByPosition<M>(
       document: before,
       operations: [...storedOperations, ...operations],
       apply: definition.foldEvaluatedScope,
+      reducerFor: definition.evaluatedScopeReducer?.(before),
     });
   } else {
     walked.push({
@@ -303,13 +305,23 @@ export async function evaluateByPosition<M>(
         throw error;
       }
 
+      // Base-reducer 3 derives the stream by the rule, which reads its
+      // RETRACTs; elsewhere they stay unread, as before.
+      const reducerFor = isBaseReducer3(before.header)
+        ? projection.scopeReducer?.(before)
+        : undefined;
+      const actionTypes =
+        reducerFor === undefined
+          ? projection.decidingActions
+          : [...projection.decidingActions, "RETRACT"];
+
       const streamOperations = (
         await operationStore.getSince(
           query.documentId,
           query.scope,
           query.branch,
           -1,
-          { actionTypes: projection.decidingActions },
+          { actionTypes },
           undefined,
           signal,
         )
@@ -322,6 +334,7 @@ export async function evaluateByPosition<M>(
         document: before,
         operations: streamOperations,
         apply: projection.apply,
+        reducerFor,
       });
       derivedEntries.push({ name: projection.name, query });
     }
