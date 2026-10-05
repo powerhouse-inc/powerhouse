@@ -801,6 +801,8 @@ export async function createEmptyDocument(
           {
             protocolVersions: await reactorClient.getCreateProtocolVersions(
               parent.header.id,
+              undefined,
+              args.documentType,
             ),
           },
         );
@@ -871,6 +873,8 @@ export async function createDocumentWithInitialState(
     {
       protocolVersions: await reactorClient.getCreateProtocolVersions(
         parentIdOrSlug ?? undefined,
+        undefined,
+        args.documentType,
       ),
     },
   );

@@ -489,8 +489,11 @@ export async function addDocument(
       documentModelModule.utils.createDocument(),
       await reactorClient.getCreateSignaturePolicy(),
       {
-        protocolVersions:
-          await reactorClient.getCreateProtocolVersions(driveId),
+        protocolVersions: await reactorClient.getCreateProtocolVersions(
+          driveId,
+          undefined,
+          documentType,
+        ),
       },
     );
   if (!document) {
@@ -583,7 +586,11 @@ async function createImportedDocument(
   for (let attempt = 1; ; attempt++) {
     let header: PHDocumentHeader;
     if (!v2Required) {
-      header = createPresignedHeader(documentId, document.header.documentType);
+      header = createPresignedHeader(
+        documentId,
+        document.header.documentType,
+        document.header.protocolVersions,
+      );
     } else if (keepsId && attempt === 1) {
       header = createPresignedHeader(documentId, document.header.documentType);
       header.createdAtUtcIso = document.header.createdAtUtcIso;
@@ -1142,7 +1149,11 @@ async function _duplicateDocument(
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
   // A copy keeps its source's versions; selection fills the keys it lacks.
-  const selected = await reactor.getCreateProtocolVersions(driveId);
+  const selected = await reactor.getCreateProtocolVersions(
+    driveId,
+    undefined,
+    document.header.documentType,
+  );
   const header = createCopyHeader(
     {
       documentType: document.header.documentType,

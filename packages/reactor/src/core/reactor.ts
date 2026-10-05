@@ -17,6 +17,7 @@ import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { scopeDerivation } from "../cache/kysely-write-cache.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
+import { fitCreateBaseReducer } from "./create-base-reducer.js";
 import {
   addRelationshipAction,
   createDocumentAction,
@@ -602,7 +603,13 @@ export class Reactor implements IReactor {
       branch: document.header.branch,
       meta: document.header.meta,
       protocolVersions:
-        document.header.protocolVersions ?? this.createProtocolVersions,
+        document.header.protocolVersions ??
+        fitCreateBaseReducer(
+          this.createProtocolVersions,
+          document.header.documentType,
+          this.documentModelRegistry.getAllModules(),
+          this.logger,
+        ),
     };
 
     const createAction = createDocumentAction(createInput);

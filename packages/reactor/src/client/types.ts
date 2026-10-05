@@ -513,13 +513,16 @@ export interface IReactorClient {
 
   /**
    * protocolVersions for a new document under `parentIdentifier`, before the
-   * signature policy. base-reducer is always the local preference. Every other
-   * negotiated protocol is what this reactor and the direct peers of the
-   * parent's collections agree on, or the local preference without a parent.
+   * signature policy. base-reducer is always the local preference, except 2
+   * for a `documentType` with a registered reducer not built by
+   * `createReducer`. Every other negotiated protocol is what this reactor and
+   * the direct peers of the parent's collections agree on, or the local
+   * preference without a parent.
    */
   getCreateProtocolVersions(
     parentIdentifier?: string,
     signal?: AbortSignal,
+    documentType?: string,
   ): Promise<ProtocolVersions>;
 
   /**

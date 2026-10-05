@@ -150,7 +150,11 @@ export class DriveClient implements IDriveClient {
       meta: document.header.meta,
       protocolVersions:
         document.header.protocolVersions ??
-        (await this.client.getCreateProtocolVersions(driveId, signal)),
+        (await this.client.getCreateProtocolVersions(
+          driveId,
+          signal,
+          document.header.documentType,
+        )),
     };
 
     const documentActions: Action[] = await signActions(

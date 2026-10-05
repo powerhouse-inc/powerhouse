@@ -301,6 +301,8 @@ export class SubgraphReactorPort implements ReactorPort {
       {
         protocolVersions: await this.client.getCreateProtocolVersions(
           target.driveId,
+          undefined,
+          input.documentType,
         ),
       },
     );

@@ -391,6 +391,8 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           {
             protocolVersions: await client.getCreateProtocolVersions(
               params.driveId,
+              undefined,
+              params.documentType,
             ),
           },
         );
