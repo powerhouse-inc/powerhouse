@@ -1059,3 +1059,14 @@ Per the 2026-10-05 user decisions (router behind a flag). Built by Opus fleet, t
 Commits: f2b5fa2aad, 364808ab47, e6e77bb672, 3d988dafa8, 608487c9cc (initial); 0b8ed3d27f, 20aa537d17, 52c2bd9e23, 7f38a71c03 (review fixes).
 
 **Next:** live pass (flag-off = normal Connect; flag-on = RoutingReactorClient over two backends) + screenshots, then Stage P (performance).
+
+### Stage 4 live pass — round 1 (2026-10-05): boot-brick found & fixed
+
+Live pass (monorepo `apps/connect` vite dev server, not vetra — Connect depends on reactor packages via workspace:*, so the dev server serves branch source directly; far lighter than vetra). Findings:
+- **Flag OFF verified live**: `window.ph.reactorClient` is the ordinary `ReactorClient`, no router — identical to pre-Stage-4. The invariant holds in a real browser.
+- **Flag ON with a remote drive bricked boot** (real defect, not caught by mocked unit tests): the router built correctly over [connect-local, switchboard-remote], but Connect's boot `find` (drive enumeration) and `isDocumentIdTaken` (default-drive create) fanned across both backends; the remote's 6-method v1 surface threw unsupported, the router escalated to `FanInPartialFailureError` → React ErrorBoundary → app never mounted.
+- **Fixed in two review-gated rounds** (reactor-router 88→104 tests): (1) fan-in reads tolerate a capability-limited backend by excluding+logging it; (2) tightened after review found the first cut was too broad — the exclusion is now **per-read**: `find` tolerates (row union, all-excluded = hard error); `isDocumentIdTaken` is **routed** to the serving-else-primary backend (it's on the create path); `isServed` uses a true-wins/all-false-with-gap-fails-loud existence fan-in; relationship reads are **routed to the owner**; `isOperationNotSupported` tightened to instanceof/structured-code in-realm + full-message-shape across RPC (no bare prefix match, so a genuine error isn't swallowed); `FanInPartialFailureError` now carries excluded backends. Net: no fan-in read can return a confidently-wrong boolean/scalar, and no legitimate flag-on LOCAL operation breaks on the remote's incapacity.
+- Commits: 099b4a0641, 75a9424dfc (round 1); 4b889fa6fe (round 2, per-read policy).
+- **Known v1 limitation (documented):** remote drives are not enumerated by `find` until the remote GraphQL surface is completed (deferred follow-up); the exclusion is logged, not silent.
+
+Next: live re-pass with a remote drive configured — expect flag-on Connect to BOOT, router over two backends, local drives served locally.
