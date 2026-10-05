@@ -1,12 +1,12 @@
 import { castDraft, create, unsafe } from "mutative";
 import { baseActionReducer } from "./base-action-reducer.js";
 import { isDenied } from "./denied.js";
+import type { PHDocument } from "./documents.js";
 import {
   garbageCollect,
   isDocumentAction,
   sortOperations,
-  type PHDocument,
-} from "./documents.js";
+} from "./operation-order.js";
 import type { Operation } from "./operations.js";
 import type { PHBaseState } from "./state.js";
 import type {
