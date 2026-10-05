@@ -194,6 +194,67 @@ describe("Reshuffle Functions", () => {
     );
   });
 
+  describe("reshuffleByTimestamp, canonical", () => {
+    const at = "2021-01-01T00:00:00.000Z";
+    const folder = (actionId: string, index: number, skip: number) =>
+      buildOperation({
+        index,
+        skip,
+        timestampUtcMs: at,
+        action: {
+          id: actionId,
+          type: "ADD_FOLDER",
+          input: {},
+          scope: "global",
+          timestampUtcMs: at,
+        },
+      });
+
+    // The logical index is replica-local, so it never breaks a tie.
+    it("orders tied structure actions by action id, not logical index", () => {
+      const early = folder("action-B", 1, 0);
+      const late = folder("action-A", 9, 0);
+      for (const [a, b] of [
+        [[early], [late]],
+        [[late], [early]],
+      ]) {
+        expect(
+          reshuffleByTimestamp({ index: 10, skip: 0 }, a, b, {
+            canonical: true,
+          }).map((op) => op.action.id),
+        ).toEqual(["action-A", "action-B"]);
+      }
+      expect(
+        reshuffleByTimestamp({ index: 10, skip: 0 }, [early], [late]).map(
+          (op) => op.action.id,
+        ),
+      ).toEqual(["action-B", "action-A"]);
+    });
+
+    it("still puts a tied structure action ahead of other actions", () => {
+      const other = buildOperation({
+        index: 0,
+        skip: 0,
+        timestampUtcMs: at,
+        action: {
+          id: "action-0",
+          type: "SET_NAME",
+          input: {},
+          scope: "global",
+          timestampUtcMs: at,
+        },
+      });
+      expect(
+        reshuffleByTimestamp(
+          { index: 10, skip: 0 },
+          [other],
+          [folder("action-Z", 5, 0)],
+          { canonical: true },
+        ).map((op) => op.action.id),
+      ).toEqual(["action-Z", "action-0"]);
+    });
+  });
+
   describe("reshuffleByTimestamp with identical timestamps", () => {
     it("should use action id as tiebreaker when logical index and timestamps are identical", () => {
       const sameTimestamp = "2021-01-01T00:00:00.000Z";

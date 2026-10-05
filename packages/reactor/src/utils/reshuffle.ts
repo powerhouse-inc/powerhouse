@@ -35,6 +35,23 @@ export function sortOperations<TOpIndex extends OperationIndex>(
     .sort((a, b) => a.index - b.index);
 }
 
+const strictRank = (op: OperationIndex): number =>
+  STRICT_ORDER_ACTION_TYPES.has(op.action?.type ?? "") ? 0 : 1;
+
+/**
+ * Base-reducer 3's one order: timestamp, then structure actions first, then
+ * action id. Every key is the same on every replica, so a tie sorts the same
+ * wherever it is broken.
+ */
+export function compareCanonical(a: OperationIndex, b: OperationIndex): number {
+  return (
+    Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs) ||
+    strictRank(a) - strictRank(b) ||
+    (a.action?.id ?? "").localeCompare(b.action?.id ?? "") ||
+    a.id.localeCompare(b.id)
+  );
+}
+
 /**
  * Reshuffles operations by timestamp, then applies deterministic tie-breaking.
  * Used for merging concurrent operations from different branches.
@@ -45,6 +62,9 @@ export function sortOperations<TOpIndex extends OperationIndex>(
  * For other actions, action ID is prioritized to ensure a canonical cross-reactor order
  * for concurrent operations that may have diverged local indices due to prior reshuffles.
  * Logical index and operation ID are then used as deterministic tie-breakers.
+ *
+ * `canonical` sorts by {@link compareCanonical} instead, which leaves out the
+ * logical index: it is replica-local, so two replicas can disagree on its sign.
  *
  * Example:
  * [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, 2:0, B3:0, B4:2, B5:0]
@@ -57,9 +77,14 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
   startIndex: { index: number; skip: number },
   opsA: TOp[],
   opsB: TOp[],
+  options: { canonical?: boolean } = {},
 ): TOp[] {
   return [...opsA, ...opsB]
     .sort((a, b) => {
+      if (options.canonical) {
+        return compareCanonical(a, b);
+      }
+
       const timestampDiff =
         new Date(a.timestampUtcMs).getTime() -
         new Date(b.timestampUtcMs).getTime();

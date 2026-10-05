@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   addModule,
+  createAction,
   deriveOperationId,
   redo,
   replayDocument,
@@ -666,6 +667,9 @@ export async function recordScenario(
 ): Promise<RecordedScenario> {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(CORPUS_START));
+  // Action stamps never repeat within a process. One stamp here shows the clock
+  // stepping back from the previous scenario, so this one's stamps start fresh.
+  createAction("NOOP");
   const ctx = new CorpusContext(scenario.kind, scenario.name);
   try {
     await scenario.run(ctx);
