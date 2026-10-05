@@ -13,6 +13,9 @@ vi.mock("@powerhousedao/shared/registry", () => ({
   checkNpmAuth: vi.fn(),
   npmPublish: vi.fn(),
 }));
+vi.mock("../src/services/build.js", () => ({
+  runPublishCheck: vi.fn(),
+}));
 
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
 import {
@@ -20,8 +23,10 @@ import {
   npmPublish,
   resolveRegistryUrl,
 } from "@powerhousedao/shared/registry";
+import type * as buildService from "../src/services/build.js";
+import { runPublishCheck } from "../src/services/build.js";
 
-const mockGetProjectInfo = vi.mocked(getPowerhouseProjectInfo);
+const mockRunPublishCheck = vi.mocked(runPublishCheck);
 const mockResolveRegistryUrl = vi.mocked(resolveRegistryUrl);
 const mockCheckNpmAuth = vi.mocked(checkNpmAuth);
 const mockNpmPublish = vi.mocked(npmPublish);
@@ -32,12 +37,10 @@ describe("publish", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockGetProjectInfo.mockResolvedValue({
-      projectPath: "/test/project",
-      localProjectPath: "/test/project",
-      globalProjectPath: undefined,
-      packageManager: "npm",
-      isGlobal: false,
+    mockRunPublishCheck.mockResolvedValue({
+      exitCode: 0,
+      packageRoot: "/test/project",
+      prepackEnvironment: {},
     });
 
     mockResolveRegistryUrl.mockReturnValue(DEFAULT_REGISTRY_URL);
@@ -53,13 +56,23 @@ describe("publish", () => {
     registry?: string;
     debug?: boolean;
     forwardedArgs?: string[];
+    configFile?: string;
+    source?: string[];
+    warningsAsErrors?: boolean;
+    outDir?: string;
   }) {
     const { publish } = await import("../src/commands/publish.js");
     const handler = (
       publish as unknown as { handler: (_args: typeof args) => void }
     ).handler;
 
-    return handler({ forwardedArgs: [], ...args });
+    return handler({
+      forwardedArgs: [],
+      source: [],
+      warningsAsErrors: false,
+      outDir: "dist",
+      ...args,
+    });
   }
 
   it("should pass registry flag to resolveRegistryUrl", async () => {
@@ -127,18 +140,128 @@ describe("publish", () => {
     errorSpy.mockRestore();
   });
 
-  it("should throw when project path is not found", async () => {
-    mockGetProjectInfo.mockResolvedValue({
+  it("exits with the release check's own code, before any registry request", async () => {
+    const exitError = new Error("process.exit");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw exitError;
+    });
+    mockRunPublishCheck.mockResolvedValue({
+      exitCode: 2,
+      packageRoot: "/test/project",
+      prepackEnvironment: {},
+    });
+
+    await expect(runPublishHandler({})).rejects.toThrow("process.exit");
+
+    expect(exitSpy.mock.calls).toEqual([[2]]);
+    expect(mockResolveRegistryUrl).not.toHaveBeenCalled();
+    expect(mockCheckNpmAuth).not.toHaveBeenCalled();
+    expect(mockNpmPublish).not.toHaveBeenCalled();
+
+    exitSpy.mockRestore();
+  });
+
+  it("runs the release check before it resolves the registry or checks credentials", async () => {
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const events: string[] = [];
+    mockRunPublishCheck.mockImplementation(() => {
+      events.push("check");
+      return Promise.resolve({
+        exitCode: 0,
+        packageRoot: "/test/project",
+        prepackEnvironment: {},
+      });
+    });
+    mockResolveRegistryUrl.mockImplementation(() => {
+      events.push("registry");
+      return DEFAULT_REGISTRY_URL;
+    });
+    mockCheckNpmAuth.mockImplementation(() => {
+      events.push("auth");
+      return Promise.resolve("testuser");
+    });
+    mockNpmPublish.mockImplementation(() => {
+      events.push("publish");
+      return Promise.resolve({ stdout: "published" });
+    });
+
+    await runPublishHandler({});
+
+    expect(events).toEqual(["check", "registry", "auth", "publish"]);
+    expect(exitSpy.mock.calls).toEqual([[0]]);
+
+    exitSpy.mockRestore();
+  });
+
+  it("publishes the package the release check selected", async () => {
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    mockRunPublishCheck.mockResolvedValue({
+      exitCode: 0,
+      packageRoot: "/test/nested",
+      prepackEnvironment: {},
+    });
+
+    await runPublishHandler({
+      configFile: "/test/nested/powerhouse.config.json",
+    });
+
+    expect(mockResolveRegistryUrl).toHaveBeenCalledWith({
+      registry: undefined,
+      projectPath: "/test/nested",
+    });
+    expect(mockNpmPublish).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: "/test/nested" }),
+    );
+
+    exitSpy.mockRestore();
+  });
+
+  it("exits 2 when the release check could not run", async () => {
+    const exitError = new Error("process.exit");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw exitError;
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRunPublishCheck.mockRejectedValue(
+      new Error("Could not find project path."),
+    );
+
+    await expect(runPublishHandler({})).rejects.toThrow("process.exit");
+
+    expect(exitSpy.mock.calls).toEqual([[2]]);
+    expect(mockNpmPublish).not.toHaveBeenCalled();
+
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("rejects outside a Powerhouse project when no --config-file is given", async () => {
+    vi.mocked(getPowerhouseProjectInfo).mockResolvedValue({
       projectPath: undefined,
       localProjectPath: undefined,
       globalProjectPath: undefined,
       packageManager: "npm",
       isGlobal: false,
     });
+    const { runPublishCheck: realRunPublishCheck } = await vi.importActual<
+      typeof buildService
+    >("../src/services/build.js");
 
-    await expect(runPublishHandler({})).rejects.toThrow(
-      "Could not find project path",
-    );
+    await expect(
+      realRunPublishCheck({
+        registry: undefined,
+        configFile: undefined,
+        source: [],
+        outDir: "dist",
+        warningsAsErrors: false,
+        debug: false,
+        forwardedArgs: [],
+      }),
+    ).rejects.toThrow("Could not find project path.");
   });
 
   it("should forward extra args to npmPublish", async () => {

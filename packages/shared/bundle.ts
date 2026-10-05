@@ -44,7 +44,7 @@ await build({
 // Sub-paths so cli.ts and command files can import only what they need
 // without pulling the full clis bundle on the cold path.
 await build({
-  entry: ["clis/args/*.ts"],
+  entry: ["clis/args/*.ts", "!clis/args/*.test.ts"],
   outDir: "dist/clis/args",
   platform: "node",
   clean: false,
@@ -55,6 +55,8 @@ await build({
 await build({
   entry: [
     "clis/constants.ts",
+    "clis/definition-sources.ts",
+    "clis/file-system/get-config-strict.ts",
     "clis/project-ports.ts",
     "clis/project-env.ts",
     "clis/utils.ts",

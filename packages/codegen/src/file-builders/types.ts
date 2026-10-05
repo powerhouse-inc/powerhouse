@@ -4,6 +4,7 @@ import type {
   ModuleSpecification,
 } from "@powerhousedao/shared/document-model";
 import type {
+  getCodeFirstDocumentModelVariableNames,
   getDocumentModelVariableNames,
   getEditorVariableNames,
 } from "name-builders";
@@ -67,6 +68,24 @@ export type DocumentModelFileMakerArgs = DocumentModelVariableNames & {
 
 export type DocumentModelModuleFileMakerArgs = DocumentModelFileMakerArgs & {
   module: ModuleSpecification;
+};
+
+export type GenerateCodeFirstDocumentModelArgs = {
+  /** The model name as the author typed it. */
+  name: string;
+  documentType: string;
+  author: { name: string; website: string | null };
+};
+
+export type CodeFirstDocumentModelTemplateArgs = ReturnType<
+  typeof getCodeFirstDocumentModelVariableNames
+> &
+  GenerateCodeFirstDocumentModelArgs;
+
+export type CodeFirstGenerationResult = {
+  /** Project-relative paths of the files written or updated. */
+  written: string[];
+  registration: "created" | "converted" | "added" | "unchanged";
 };
 
 export type CommandEntry = {

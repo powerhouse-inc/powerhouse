@@ -1,5 +1,6 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
 import { accessToken } from "../src/commands/access-token.js";
+import { build as buildCmd } from "../src/commands/build.js";
 import { build, connect, preview, studio } from "../src/commands/connect.js";
 import { generateAllCmd } from "../src/commands/generate-all.js";
 import { generateAppCmd } from "../src/commands/generate-app.js";
@@ -14,7 +15,16 @@ import { install } from "../src/commands/install.js";
 import { list } from "../src/commands/list.js";
 import { login } from "../src/commands/login.js";
 import { migrate } from "../src/commands/migrate.js";
+import {
+  model,
+  modelCheck,
+  modelInspect,
+  modelPrepack,
+} from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
+import { publish } from "../src/commands/publish.js";
+import { scalar, scalarInspect } from "../src/commands/scalar.js";
+import { subgraphInspect } from "../src/commands/subgraph.js";
 import { switchboard } from "../src/commands/switchboard.js";
 import { uninstall } from "../src/commands/uninstall.js";
 import { vetra } from "../src/commands/vetra.js";
@@ -33,10 +43,19 @@ const commands = [
   { name: "connect studio", command: studio },
   { name: "connect build", command: build },
   { name: "connect preview", command: preview },
+  { name: "build", command: buildCmd },
+  { name: "publish", command: publish },
   { name: "access token", command: accessToken },
   { name: "inspect", command: inspect },
   { name: "list", command: list },
   { name: "migrate", command: migrate },
+  { name: "model", command: model },
+  { name: "model check", command: modelCheck },
+  { name: "model inspect", command: modelInspect },
+  { name: "model prepack", command: modelPrepack },
+  { name: "subgraph inspect", command: subgraphInspect },
+  { name: "scalar", command: scalar },
+  { name: "scalar inspect", command: scalarInspect },
   { name: "switchboard", command: switchboard },
   { name: "login", command: login },
   { name: "install", command: install },

@@ -3,17 +3,27 @@ import { command } from "cmd-ts";
 
 export const build = command({
   name: "build",
+  description: `Compile, check, bundle, and verify this package, then replace its output.
+
+A failed build leaves the published tree unchanged. TypeScript runs first. For a
+code-first package, the definition check runs against that compilation, and a
+project that installs the packed tarball imports the bundles before the build
+promotes anything.
+
+Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.`,
   args: buildArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
     }
     try {
-      const { runBuild } = await import("../services/build.js");
-      await runBuild(args);
+      const { logRefusal, runBuild } = await import("../services/build.js");
+      const result = await runBuild(args);
+      await logRefusal(result);
+      process.exit(result.exitCode);
     } catch (error) {
       console.error(error);
-      process.exit(1);
+      process.exit(2);
     }
   },
 });

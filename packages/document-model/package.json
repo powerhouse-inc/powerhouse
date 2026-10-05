@@ -33,6 +33,16 @@
       "node": "./dist/node.mjs",
       "types": "./dist/node.d.mts"
     },
+    "./tooling": {
+      "source": "./tooling.ts",
+      "import": "./dist/tooling.js",
+      "types": "./dist/tooling.d.ts"
+    },
+    "./scalars": {
+      "source": "./scalars.ts",
+      "import": "./dist/scalars.js",
+      "types": "./dist/scalars.d.ts"
+    },
     "./core": {
       "source": "./index.ts",
       "import": "./dist/index.js",
@@ -51,17 +61,26 @@
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
-    "change-case": "catalog:",
+    "graphql": "catalog:",
     "jest": "^30.0.5",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "jszip": "^3.10.1"
+    "change-case": "catalog:",
+    "jszip": "^3.10.1",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "graphql": "^16"
+  },
+  "peerDependenciesMeta": {
+    "graphql": {
+      "optional": true
+    }
   },
   "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [

@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-08T20:56:57.400Z
-> Total Documents: 110
+> Generated: 2026-10-05T16:49:41.302Z
+> Total Documents: 115
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -6764,6 +6764,499 @@ A version-1 policy holds at most 100 grants. A condition holds at most 100 nodes
 - [React Hooks](/academy/Reference/EditorsUI/ReactHooks) — `useCanExecute`.
 - [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing) — where a subject's address and app key come from.
 - [Cookbook](/academy/Lookup/Cookbook) — runnable recipes: `document-acl`, `scoped-reads`, `group-principals`, `revocation-race`.
+
+---
+
+
+## Choose an approach
+
+> Source: https://academy.vetra.io/academy/Reference/DocumentModels/CodeFirst/ChooseYourApproach
+
+You can write a document model in two ways. In the schema-first approach, you write GraphQL SDL and `model.json`, and `ph generate` writes the TypeScript. In the code-first approach, you write the model in TypeScript. You choose per model, so one package can hold models of both kinds, and one reactor can serve both.
+
+| | Schema-first | Code-first |
+| - | - | - |
+| What you edit | GraphQL SDL and `model.json` | A TypeScript declaration |
+| Edit loop | Edit, run `ph generate`, typecheck, test | Edit, typecheck, run `ph model check`, test |
+| Connect model editor | Edits the model definition | Shows the model definition read-only |
+| Generated files | `ph generate` rewrites `gen/`. Do not edit it. | None. You own every file. |
+| Use it when | You want to edit the model in Connect | You want type checking, safe renames, and no generated files |
+
+## Both approaches produce the same module
+
+Both approaches produce a `DocumentModelModule` with a stored specification, a reducer, action creators, and utilities. For two equivalent declarations, the results match on these points:
+
+- The stored specification and the action types.
+- How the reducer validates input and replays operations.
+- The GraphQL schema and how the resolvers behave.
+- Which loaders can see the model, and the transport flags.
+
+A test suite checks this. It writes a code-first declaration for every model in the Powerhouse repository and compares the compiled result byte for byte with the schema-first original.
+
+## How you edit each one
+
+You edit a schema-first model as data. The Connect model editor writes the definition, and `ph generate` writes TypeScript from it. The files in `gen/` are generator output, so your edits there are lost on the next run.
+
+You edit a code-first model as code. `ph model check` compiles the declaration and reports each problem it finds. No tool rewrites your files. In Connect, the definition of a code-first model is read-only. Documents of that model stay editable.
+
+## Pick one
+
+Use schema-first when someone who does not write code authors the model, or when you want to edit the model in Connect.
+
+Use code-first when the model lives in a TypeScript codebase. You get rename refactors and go-to-definition across the model, and you do not commit generated files.
+
+You can change your mind later. A package with a code-first model can add a schema-first model next to it, and `ph generate` does not touch the code-first one.
+
+---
+
+
+## Code-first quickstart
+
+> Source: https://academy.vetra.io/academy/Reference/DocumentModels/CodeFirst/Quickstart
+
+In this guide, you create a code-first `todo` model, check it, test it, and then add a second version.
+
+## Create the model
+
+Run this command in your package:
+
+```bash
+ph generate document-model --code-first todo
+```
+
+The command writes the same layout as a schema-first model, without a `gen/` directory:
+
+```text
+document-models/todo/index.ts                         the model family and the package exports
+document-models/todo/upgrades/versions.ts             the versions the model publishes
+document-models/todo/upgrades/upgrade-manifest.ts     the versions, and the upgrade to each later version
+document-models/todo/upgrades/index.ts
+document-models/todo/v1/index.ts                      the modules that version 1 includes
+document-models/todo/v1/definition.ts                 the state and its types
+document-models/todo/v1/modules/items.ts              the operations
+document-models/todo/v1/tests/document-model.test.ts
+document-models/todo/v1/tests/items.test.ts
+```
+
+The command also registers the model in two files:
+
+- `powerhouse.config.json` gets an entry under `definitionSources`. `ph model check` reads this list.
+- `document-models/index.ts` gets a re-export. Every host loader reads this file.
+
+**WARNING:**
+If you remove the model from `document-models/index.ts`, the model still compiles, checks, and passes its tests, but your package does not publish it.
+
+
+## Check the model
+
+```bash
+ph model check
+```
+
+The command compiles each source in `definitionSources` and reports every problem in the declarations. Run it after each edit. `tsc` cannot do this check, because a code-first declaration compiles only when its module runs.
+
+The exit code tells you the result:
+
+- `0`: the check passed, or the package is schema-first and nothing was checked.
+- `1`: a declaration is invalid.
+- `2`: the tool could not finish.
+
+To get the report as one JSON object on stdout, add `--json`. Use this form when a script or an agent reads the result.
+
+## Test the model
+
+```bash
+pnpm test
+```
+
+The generated tests run the reducer, one declared error, and the input validation that the declaration implies.
+
+## Edit the model
+
+No tool regenerates these files, so your edits stay. For example, add a field to the state in `v1/definition.ts`, or add an operation in `v1/modules/items.ts`. Then run `ph model check` again.
+
+See [Types and fields with `ph`](../docs/docs/02-TypesAndFields.md) for the field builders, required fields, and package scalars.
+
+## Add a version
+
+Each version is a directory. To add version 2:
+
+1. Copy `v1/` to `v2/`.
+2. In `v2/definition.ts`, set `version: 2` and change the state.
+3. In `v2/index.ts`, rename the export to `todoV2Definition`.
+4. Create `upgrades/v2.ts`. Export `v2` from it: the `UpgradeTransition` that changes a version 1 document into a version 2 document.
+5. In `upgrades/versions.ts`, set `supportedVersions = [1, 2] as const` and `latestVersion = supportedVersions[1]`.
+6. In `upgrades/upgrade-manifest.ts`, import `v2` and set `upgrades: { v2 }`. The manifest type requires the `v2` key as soon as `versions.ts` lists version 2.
+7. In `index.ts`, add `todoV2Definition` to `versions`, export `todoV2 = todoFamily.at(2)`, and add `todoV2` to `documentModels`.
+
+A schema-first model keeps the same files in `upgrades/`, in the same form. The difference is that you write them yourself. `ph model check` compares the manifest with the versions and reports an error in two cases:
+
+- The manifest lists different versions from `versions.ts`.
+- The manifest has no transition for a version after version 1.
+
+**NOTE:**
+`ph model check` and `ph model inspect` do not write files. `ph build` writes the build output.
+
+---
+
+
+## Types and fields with `ph`
+
+> Source: https://academy.vetra.io/academy/Reference/DocumentModels/CodeFirst/TypesAndFields
+
+You build every code-first declaration with `ph`, which you import from `document-model`. `ph` has two kinds of builder: named types and field uses.
+
+## Named types and field uses
+
+A named type has a name. You declare it once and refer to it from fields. The named-type builders are `ph.object`, `ph.input`, `ph.enum`, `ph.interface`, and `ph.union`. Each one takes a name as its first argument and adds a top-level type to the model's SDL.
+
+A field use describes one field inside a type and has no name of its own. The field-use builders are the scalar builders, such as `ph.String`, `ph.PHID`, and `ph.DateTime`, plus `ph.list` and `ph.ref`.
+
+```ts
+
+
+const Priority = ph.enum("Priority", { values: ["LOW", "HIGH"] });
+
+const Item = ph.object("Item", {
+  fields: {
+    id: ph.OID({ required: true }),        // a field use
+    priority: ph.ref(Priority),            // a reference to a named type
+    tags: ph.list(ph.String({ required: true })),
+  },
+});
+```
+
+To use a named type in a field, wrap it in `ph.ref`. If you put the named type in the field directly, the declaration fails. A named type adds a type definition to the SDL, and a field needs a field use.
+
+## Mark required fields with `required`
+
+Every field is optional unless you pass `{ required: true }`. A required field is non-null in the SDL. There is no `optional` option, no `nullable` option, and no `.required()` method.
+
+With one way to mark a required field, each declaration has exactly one SDL form. That keeps the declaration comparable with its stored specification. `required` works the same way on a scalar, a list, and a reference:
+
+```ts
+ph.String()                                  // String
+ph.String({ required: true })                // String!
+ph.list(ph.String({ required: true }))       // [String!]
+ph.list(ph.String(), { required: true })     // [String]!
+```
+
+## Declarations that fail
+
+The declarations below fail as soon as the module runs. Each failure reports a diagnostic that tells you how to fix it. All four would otherwise produce a model whose runtime behavior does not match its TypeScript types.
+
+**A scalar builder that is not called.** `ph.String` is the builder, and `ph.String()` is the field. If a field holds `ph.String` without the call, the diagnostic is `PH-SCALAR-FACTORY-AS-FIELD`.
+
+**A named type in a field.** `ph.object(...)` declares a type. To use it in a field, wrap it in `ph.ref(...)`. Otherwise the diagnostic is `PH-DEF-TYPE-AS-FIELD`.
+
+**An operation name that changes when the action creator name is derived from it.** An operation named `setPHID` gets the action creator name `setPhid`. The TypeScript key and the runtime key would then differ. The diagnostic tells you to rename the operation to `setPhid`.
+
+**An input type with the wrong name.** The stored format ties the name of an operation's input type to the operation. The `setTitle` operation takes `SetTitleInput`. If you name the input `TitleInput`, the diagnostic tells you the name it expects.
+
+## Declare a scalar for your package
+
+`ph` includes the catalog scalars, such as `ph.PHID`. To add a scalar of your own, call `defineScalar`. The catalog scalars use the same function. `defineScalar` returns a builder that you call in a field the same way you call `ph.PHID`.
+
+```ts
+
+
+export const HexColor = defineScalar({
+  name: "HexColor",
+  description: "A six-digit hexadecimal color, such as #1a2b3c.",
+  representation: "string",
+  validator: z.string().regex(/^#[0-9a-f]{6}$/i),
+  zodSource: "z.string().regex(/^#[0-9a-f]{6}$/i)",
+});
+
+const Label = ph.object("Label", {
+  fields: { color: HexColor({ required: true }) },
+});
+```
+
+`defineScalar` requires `name`, `description`, `representation`, `validator`, and `zodSource`. The other options have defaults.
+
+- `validator` checks each value at runtime.
+- `zodSource` is the same rule written as source text, for generated code. No tool compares `validator` with `zodSource`. When you change one, change the other.
+- If you omit `coercion`, `defineScalar` derives it from `validator` and `representation`.
+
+A package scalar then works like a catalog scalar:
+
+- The model definition lists the scalar in `scalars`, with the implementation `package#HexColor` and its full definition. The definition is included because no catalog has it.
+- Action creators and reducers check its values with `validator`.
+- The GraphQL host declares the scalar with its description and uses its coercion.
+
+The GraphQL name of the scalar depends on where you use it:
+
+- In a document model, the host adds the model prefix, the same as for the model's types. In a `Todo` model, `HexColor` becomes `Todo_HexColor`.
+- In a code-first subgraph, the scalar keeps its own name, `HexColor`, the same as the subgraph's types.
+- A catalog scalar keeps its name and its existing host binding.
+
+### Naming rules
+
+A package scalar cannot use the name of a catalog scalar, a GraphQL built-in scalar, or a named type in the same model or subgraph.
+
+Declare each scalar once and import its builder where you need it. If one package has two different declarations with the same name, `ph model check` reports an error. So a scalar name refers to one scalar in all models and subgraphs of the package.
+
+**WARNING:**
+When you change a scalar declaration, you change the definition of every model that uses it. The change can also make some stored operations fail when they replay.
+
+---
+
+
+## Definition tooling
+
+> Source: https://academy.vetra.io/academy/Reference/DocumentModels/CodeFirst/Tooling
+
+## `definitionSources`
+
+The `definitionSources` field in `powerhouse.config.json` lists the modules that hold code-first declarations.
+
+```json
+{
+  "definitionSources": {
+    "formatVersion": 1,
+    "mode": "code-first",
+    "entries": [{ "specifier": "./document-models/todo/index.ts" }]
+  }
+}
+```
+
+| Property | Meaning |
+| -------- | ------- |
+| `formatVersion` | The format of this field. The current format is `1`. |
+| `mode` | `code-first` or `schema-first`. |
+| `entries` | The modules to check. Required when `mode` is `code-first`. |
+| `entries[].specifier` | A POSIX path relative to the package root. It starts with `./` and cannot point outside the package. |
+| `entries[].exportPath` | Optional. A list of property names. It selects one property of the imported module instead of the whole module. |
+
+A package with no code-first models also declares the field:
+
+```json
+{ "definitionSources": { "formatVersion": 1, "mode": "schema-first" } }
+```
+
+`ph init` writes this declaration into every new package.
+
+If the field is missing, the tooling does not pick a default. `ph build` still builds the package, prints a warning, and does not approve it for release. A future release will fail the build.
+
+`ph generate document-model --code-first` writes the field for you:
+
+- If the field is missing, the command creates it with the new model as the only entry.
+- If `mode` is `schema-first`, the command changes it to `code-first` and adds the new model.
+- If `mode` is `code-first`, the command adds the new model to `entries`. If the model is already listed, the file does not change.
+- If the command cannot merge the field, it stops before it writes any file. This happens when `formatVersion` is not `1` or when an entry is invalid.
+
+### Select sources on the command line
+
+`--source` replaces the configured entries for one run. Without `--source`, the command uses every configured entry. A `--source` value names one entry by its specifier. To select a property inside the module, add an RFC 6901 JSON pointer after `#`:
+
+```bash
+ph model check --source './document-models/todo/index.ts#/todoV1'
+```
+
+## `ph model check`
+
+Compiles the selected sources and reports every diagnostic.
+
+| Exit code | `status` | Meaning |
+| --------- | -------- | ------- |
+| 0 | `ok` | Every selected definition compiled and passed. |
+| 0 | `skipped` | The package declares `schema-first`. Nothing was checked. |
+| 1 | `invalid` | A declaration is wrong. The diagnostics say what to fix. |
+| 2 | `failed` | The tool could not finish. For example, a source threw an error on import, or the package did not typecheck. |
+
+**WARNING:**
+Exit code `0` can mean `skipped`. In a schema-first package, a script that treats `0` as "the models are valid" is wrong. Read `status` from the `--json` output instead of the exit code.
+
+
+| Option | Effect |
+| ------ | ------ |
+| `--json` | Writes one JSON report to stdout and logs to stderr. |
+| `--release` | Checks the staged release candidate instead of the working tree. |
+| `--warnings-as-errors` | Makes warnings fail the check. Each diagnostic keeps its own severity. |
+| `--watch` | Runs the check again after each change. |
+| `--json-lines` | With `--watch`, writes one JSON report per line. |
+
+## `ph model inspect` and `ph scalar inspect`
+
+With `--json`, these commands print a compiled definition as canonical JSON. Without it, they print a short summary. They do not write files.
+
+```bash
+ph model inspect 'acme/todo@1' --json
+ph scalar inspect Amount_Money --json
+```
+
+The JSON output is canonical, so you can diff the output of two releases directly.
+
+## SDL parsing happens only in tooling
+
+The code that runs in a host never parses GraphQL SDL. A declaration describes its types in one of two ways:
+
+- With `ph` builders.
+- With a GraphQL AST in its `graphQLCompatibility` field. Use this field for SDL that `ph` cannot express.
+
+To create the AST, call `schemaFirstGraphQLDocument` from `document-model/tooling` with your SDL, and paste the result into the declaration. The result has no source locations. The parser stays in `document-model/tooling`, so a host that imports your package does not load it.
+
+A declaration that keeps its SDL as an AST goes through the same edit and release checks as any other declaration. Use the AST to keep an exact schema, not to skip validation.
+
+---
+
+
+## Diagnostics reference
+
+> Source: https://academy.vetra.io/academy/Reference/DocumentModels/CodeFirst/Diagnostics
+
+This page lists every diagnostic that the definition tooling reports, grouped by the phase that reports it.
+
+## Diagnostic fields
+
+Each diagnostic is a structured record. `ph model check --json` writes diagnostics as JSON, so a script or an agent can read them without parsing text.
+
+| Field | Meaning |
+| ----- | ------- |
+| `code` | A stable identifier, such as `PH-DM-DECLARATION-INVALID`. |
+| `severity` | `error` or `warning`. |
+| `phase` | The check that found the problem. |
+| `source` | The configured source that the diagnostic is about, when there is one. |
+| `definition` | The model or subgraph that the diagnostic is about. |
+| `path` | The location inside the declaration. |
+| `message` | A description of the problem. |
+| `expected`, `received` | The value the tool expected and the value it found, when these apply. |
+| `repair` | One instruction that fixes the problem. |
+| `related` | Other locations that help explain the problem. For example, where a duplicate ID was first used. |
+
+`path` is a location inside the declaration, not a position in a file. A diagnostic has the same `path` for a declaration written in TypeScript and for one read from a stored specification.
+
+## Severity
+
+An `error` makes the report `invalid`, and `ph model check` exits with code `1`. A `warning` alone does not change the exit code. To make warnings fail the check, pass `--warnings-as-errors`. Each diagnostic keeps its own severity.
+
+## Example
+
+```json
+{
+  "code": "PH-DM-DECLARATION-INVALID",
+  "severity": "error",
+  "phase": "definition",
+  "definition": {
+    "kind": "document-model",
+    "key": "acme/todo",
+    "version": 1
+  },
+  "path": ["modules", "0", "operations", "0", "key"],
+  "message": "Operation key \"setPHID\" derives creator key \"setPhid\", so the typed and the runtime action creator keys would differ.",
+  "expected": "setPhid",
+  "received": "setPHID",
+  "repair": "Rename the operation to \"setPhid\"."
+}
+```
+
+## `configuration` phase
+
+Reads `powerhouse.config.json` and its `definitionSources` field.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-CONFIG-DUPLICATE-SOURCE` | error | Two entries point to the same module and export path. |
+| `PH-CONFIG-SOURCE-INVALID` | error | A specifier or an export pointer is malformed. |
+| `PH-CONFIG-SOURCE-OUTSIDE-PACKAGE` | error | A source path or a symlink target points outside the package root. |
+| `PH-CONFIG-SOURCES-MISSING` | error | No definition sources are selected, or the selected list is empty. |
+| `PH-CONFIG-VERSION-UNSUPPORTED` | error | `definitionSources.formatVersion` is not a version this release supports. |
+
+## `typecheck` phase
+
+Compiles the package's TypeScript before the tool imports any source.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-PKG-TYPECHECK-FAILED` | error | The TypeScript build of the release profile failed. |
+
+## `import` phase
+
+Imports each configured source module.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-IMPORT-FAILED` | error | A configured source could not be imported. Sources that do not depend on it are still checked. |
+
+## `definition` phase
+
+Compiles each declaration into a structured definition.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-DEF-ENUM-VALUES-INVALID` | error | An enum has no values, a repeated value, or a reserved value. |
+| `PH-DEF-FIELD-INVALID` | error | A field holds something that is neither a field use nor a named type. |
+| `PH-DEF-FIELD-OPTION-UNSUPPORTED` | error | A field use has a validation option other than `required`. |
+| `PH-DEF-IMPLEMENTS-INVALID` | error | An object implements something that is not a `ph.interface`, or lists the same interface twice. |
+| `PH-DEF-NAME-INVALID` | error | A type, field, or enum value name is not a valid GraphQL name, or is a reserved name. |
+| `PH-DEF-OPTION-INVALID` | error | A builder option is malformed. For example, it has the wrong type, it is a getter, it uses a symbol key, it is not a plain object, or it sets a default to `undefined`. |
+| `PH-DEF-REFERENCE-TARGET-INVALID` | error | The argument of `ph.ref` is not a named type. For example, it is a field use, another reference, `undefined`, or an input with no name. |
+| `PH-DEF-TYPE-AS-FIELD` | error | A named type is used as a field without `ph.ref`. |
+| `PH-DEF-UNION-MEMBERS-INVALID` | error | A union has no members, a repeated member, or a member that is not a `ph.object`. |
+| `PH-DM-COMPATIBILITY-INVALID` | error | The compatibility data is malformed, or it does not match the declaration. |
+| `PH-DM-DECLARATION-INVALID` | error | A part of a model declaration is missing, malformed, or not supported, or was not created by the builder functions. The part can be a model, module, operation, error, example, version, or family. |
+| `PH-DM-DEFAULT-UNSUPPORTED` | error | A field of the document state or of an action input declares a GraphQL default value. |
+| `PH-DM-DUPLICATE-ACTION` | error | Two operations produce the same stored action type. |
+| `PH-DM-DUPLICATE-NAME` | error | Two declarations produce the same module name, GraphQL type name, or action creator name. |
+| `PH-DM-IDENTITY-INVALID` | error | An ID in the declaration is malformed, or two declarations produce the same ID. |
+| `PH-DM-IDENTITY-REUSED` | warning | The installed stored specification already uses one ID for two declarations. You cannot fix this in your package, because a change would alter stored data. |
+| `PH-DM-INITIAL-VALUE-INVALID` | error | The initial value of a scope cannot be stored as a JSON string, or the state validator of that scope rejects it. |
+| `PH-DM-SCOPE-UNSUPPORTED` | error | A definition uses a scope other than `global` or `local`. |
+| `PH-DM-STATE-ROOT-INVALID` | error | A required state root type is missing, is not an object, or has the wrong name. |
+| `PH-DM-TYPE-POSITION-INVALID` | error | An input type is used where an output type is expected, or an output type where an input type is expected. |
+| `PH-SCALAR-AUTHOR-DECLARATION-UNSUPPORTED` | error | A definition source exports a scalar that `defineScalar` did not create, or exports a catalog scalar as its own. |
+| `PH-SCALAR-DECLARATION-INVALID` | error | A scalar declaration has an invalid name, description, validator, or coercion. |
+| `PH-SCALAR-FACTORY-AS-FIELD` | error | A scalar builder is used as a field without being called. |
+| `PH-SCALAR-ZERO-VALUE-INVALID` | error | A scalar has no zero value, or its own coercion rejects its zero value. |
+| `PH-SG-COMPUTED-FIELD-INVALID` | error | A computed field is malformed, has no subgraph entry, has two entries, or has an entry but no type declares the field. |
+| `PH-SG-DEFINITION-INVALID` | error | A published subgraph definition does not have the expected shape. |
+| `PH-SG-ENTRY-INVALID` | error | A subgraph entry is malformed, was not created by the builder functions, or has no resolver where the builder requires one. |
+
+## `composition` phase
+
+Builds the host GraphQL schema from all registered models and subgraphs.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-GQL-COORDINATE-OWNED` | warning | Two subgraphs define the same field on the same type. |
+| `PH-GQL-FEDERATION-UNSUPPORTED` | error | A code-first subgraph uses Apollo Federation 2 features. This version does not support them. |
+| `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | Two subgraphs define a type with the same name but a different shape. |
+| `PH-SCALAR-RESOLVER-SHADOWED` | warning | A resolver that you wrote uses the name of a catalog scalar. |
+| `PH-SCALAR-UNREGISTERED` | warning | The SDL uses a scalar that the catalog has no entry for. |
+| `PH-SG-SCHEMA-INVALID` | error | The subgraph schema, with the types that the host adds, does not build or is not valid. |
+
+## `package` phase
+
+Checks the package as a whole, or a release candidate.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-PKG-DEFINITION-UNINSPECTABLE` | error | The tool cannot read a selected export without running code. For example, the export is a getter or a Proxy. |
+| `PH-PKG-DEFINITION-UNRECOGNIZED` | error | A selected source exports no compiled definition. |
+| `PH-PKG-LOGICAL-COLLISION` | error | Two different exports in the package have the same model, upgrade manifest, or subgraph key. |
+| `PH-PKG-PACKED-CONSUMER-FAILED` | error | A test install of the packed package could not import it in Node or in a browser. |
+| `PH-PKG-RELEASE-EVIDENCE-MISSING` | error | A release check ran without the required typecheck or the test install of the packed package. |
+| `PH-SCALAR-DUPLICATE-NAME` | error | Two scalar declarations use the same name. This includes a catalog scalar declared twice, a package scalar with a catalog or built-in name, and two different package scalars. |
+
+## `authorization` phase
+
+Checks authorization rules in a declaration.
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `PH-AUTH-UNSUPPORTED` | error | A document model declares authorization rules. This version does not support them. |
+
+## Reserved codes
+
+The catalog defines these codes, but no check reports them in this release.
+
+| Code | Phase | Severity | Meaning |
+| ---- | ----- | -------- | ------- |
+| `PH-REPLAY-DIVERGENCE` | `replay` | error | A recorded history replays to different results in the schema-first and code-first versions of a model. |
+| `PH-SCALAR-COERCION-NORMALIZES` | `definition` | warning | A strict coercion returns a value that differs from the input it accepted. |
+| `PH-SCALAR-POSITION-UNSUPPORTED` | `definition` | warning | A later validation profile rejects the scalar in a stored position. |
+| `PH-SCALAR-VALUE-NOT-JSON` | `definition` | warning | A strict scalar that is stored accepts a value that is not JSON. |
 
 ---
 
@@ -13665,10 +14158,19 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Connect Studio](#connect-studio)
 - [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
+- [Build](#build)
+- [Publish](#publish)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [List](#list)
 - [Migrate](#migrate)
+- [Model](#model)
+- [Model Check](#model-check)
+- [Model Inspect](#model-inspect)
+- [Model Prepack](#model-prepack)
+- [Subgraph Inspect](#subgraph-inspect)
+- [Scalar](#scalar)
+- [Scalar Inspect](#scalar-inspect)
 - [Switchboard](#switchboard)
 - [Login](#login)
 - [Install](#install)
@@ -13696,6 +14198,8 @@ Generate a document model
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
+
+**Code First** - Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources - Usage: `--code-first <str>`
 
 
 ### Flags
@@ -13806,6 +14310,8 @@ Generate a subgraph
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
+
+**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name. - Usage: `--code-first`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -14146,6 +14652,78 @@ NOTE: You must run `ph connect build` first
 **Help** - show help - Usage: `--help, -h`
 
 
+## Build
+Compile, check, bundle, and verify this package, then replace its output.
+
+A failed build leaves the published tree unchanged. TypeScript runs first. For a
+code-first package, the definition check runs against that compilation, and a
+project that installs the packed tarball imports the bundles before the build
+promotes anything.
+
+Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
+
+
+### Options
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Publish
+
+Publish a package to the Powerhouse registry. This is a thin wrapper around npm publish
+that automatically sets the registry URL.
+
+**What it does:**
+- 1. Resolves the registry URL (--registry flag &gt; PH_REGISTRY_URL env &gt; powerhouse.config.json &gt; default)
+- 2. Checks authentication with the registry via npm whoami
+- 3. Forwards all additional arguments to npm publish
+  
+
+
+### Options
+**Registry** - Registry URL to publish to (overrides config and environment) - Usage: `--registry <str>`
+
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+---
+
+## Parameters
+
+### Arguments
+**Npm Args *[required]*** - Extra arguments forwarded to npm publish (e.g. --tag dev) - Usage: `[...npm-args]`
+
+
 ## Access Token
 
 The access-token command generates a bearer token for API authentication. This token
@@ -14274,6 +14852,188 @@ Run migrations
 ### Flags
 **Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model
+Check, inspect, and gate this package's document-model definitions. Use with `check`, `inspect`, or `prepack`.
+
+## Model Check
+Compile this package's definition sources and report what is wrong with them.
+
+`tsc` cannot run this check, because a code-first declaration compiles when its
+module is evaluated and `tsc` never evaluates modules. Run it after every edit.
+
+Exit codes:
+  0  ok, or skipped. Read `status`, because a skipped package was not checked
+     at all and is never release approval.
+  1  invalid. The declarations were checked and something is wrong with them.
+  2  failed. A configuration, import, or tooling error stopped the check, and
+     nothing was decided.
+
+Output:
+  ph model check --json                 one report on stdout, logs on stderr
+  ph model check --watch                human output, follows edits
+  ph model check --watch --json-lines   one report per line, newest only
+
+Quote a --source value. zsh with extendedglob reads an unquoted '#' as a glob
+operator and fails with "no matches found".
+  ph model check --source './src/models.ts#/invoiceFamily'
+
+
+### Options
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
+**Json Lines** - With --watch, emit one report per line as newline-delimited JSON. - Usage: `--json-lines`
+
+**Default:** `false`
+**Release** - Run the release profile, which also requires a typecheck and a packed-consumer import. - Usage: `--release`
+
+**Default:** `false`
+**Watch** - Re-check after every change until interrupted. - Usage: `--watch`
+
+**Default:** `false`
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model Inspect
+Print the exact structured definition of one compiled model.
+
+  ph model inspect &lt;documentType&gt;@&lt;version&gt; --json
+
+Writes nothing. The envelope is canonical JSON, so you can diff the output of
+two releases.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Document Type Version *[required]*** - The model to inspect, as powerhouse/invoice@1. - Usage: `<documentType@version>`
+
+
+### Options
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model Prepack
+Run this package's release check before a package manager writes its tarball.
+
+Wire it as the package's `prepack` script so `npm pack`, `pnpm pack`, and a raw
+`npm publish` all pass through it. It reuses the generation `ph build` already
+completed when that generation still covers this tree, and runs one otherwise.
+
+Exit codes: 0 approved, 1 the declarations are wrong, 2 the check could not run.
+
+
+### Options
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Subgraph Inspect
+Print the exact structured definition of one compiled subgraph.
+
+  ph subgraph inspect &lt;name&gt; --json
+
+Writes nothing, constructs no host, and calls no resolver factory. The envelope
+is canonical JSON, so you can diff the output of two releases.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - The subgraph to inspect, by the name it registers under. - Usage: `<name>`
+
+
+### Options
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Scalar
+Read the compiler-owned scalar catalog. Use with `inspect`.
+
+## Scalar Inspect
+Print the installed catalog's entry for one scalar: its definition, its digest,
+and where its coercion came from.
+
+  ph scalar inspect &lt;name&gt; --json
+
+Reads the compiler's own catalog, so it needs no package and no config.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - The scalar to inspect, as Amount_Money. - Usage: `<name>`
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

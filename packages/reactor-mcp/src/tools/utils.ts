@@ -3,8 +3,10 @@ import { camelCase } from "change-case";
 import type {
   Action,
   DocumentModelModule,
-  Operation,
+  DocumentModelOperationDefinition,
+  OperationSpecification,
 } from "@powerhousedao/shared/document-model";
+import { inspectableDefinition } from "document-model";
 import type { z } from "zod";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 
@@ -66,8 +68,10 @@ export function toolWithCallback<T extends ToolSchema>(
   };
 }
 
-export function validateDocumentModelAction(
-  documentModelModule: DocumentModelModule,
+export function validateDocumentModelAction<
+  TModule extends Pick<DocumentModelModule, "documentModel" | "actions">,
+>(
+  documentModelModule: TModule,
   action: Action,
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -83,16 +87,21 @@ export function validateDocumentModelAction(
   const latestSpec =
     globalState.specifications[globalState.specifications.length - 1];
 
-  // Search through modules to find the operation that matches the action type (in SCREAMING_SNAKE_CASE)
-  let operation: (Operation & { scope: string }) | null = null;
+  const inspection = inspectableDefinition(documentModelModule);
+  let operation:
+    | DocumentModelOperationDefinition
+    | OperationSpecification
+    | undefined;
 
-  for (const module of latestSpec.modules) {
-    const unsafeOperationOrActionOrSomething = module.operations.find(
-      (op) => op.name === action.type,
-    ) as unknown as Operation & { scope: string };
-    if (unsafeOperationOrActionOrSomething) {
-      operation = unsafeOperationOrActionOrSomething;
-      break;
+  if (inspection !== null) {
+    operation = inspection.definition.specifications
+      .find((specification) => specification.version === inspection.version)
+      ?.modules.flatMap((module) => module.operations)
+      .find((entry) => entry.actionType === action.type);
+  } else {
+    for (const module of latestSpec.modules) {
+      operation = module.operations.find((entry) => entry.name === action.type);
+      if (operation) break;
     }
   }
 
@@ -103,15 +112,13 @@ export function validateDocumentModelAction(
     return { isValid: false, errors };
   }
 
-  // Convert action type from SCREAMING_SNAKE_CASE to camelCase to match action creators
-  const camelCaseActionType = camelCase(action.type);
-
-  // Check if action creator exists in documentModelModule.actions
-  const actionCreator = documentModelModule.actions[camelCaseActionType];
+  const creatorKey =
+    "creatorKey" in operation ? operation.creatorKey : camelCase(action.type);
+  const actionCreator = documentModelModule.actions[creatorKey];
 
   if (!actionCreator) {
     errors.push(
-      `Action creator "${camelCaseActionType}" for action type "${action.type}" is not defined in documentModelDocumentModelModule.actions`,
+      `Action creator "${creatorKey}" for action type "${action.type}" is not defined in documentModelDocumentModelModule.actions`,
     );
     return { isValid: false, errors };
   }

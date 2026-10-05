@@ -203,6 +203,7 @@ export async function writeProjectRootFiles(
     name,
     tag,
     version,
+    packageManager,
   });
   const powerhouseConfig = await buildPowerhouseConfigTemplate({
     name,

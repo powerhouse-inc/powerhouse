@@ -12,6 +12,7 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { createAction } from "@powerhousedao/shared/document-model";
+import { inspectableDefinition } from "document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -298,12 +299,34 @@ export const addRemoteDriveTool = {
 
 export const getDocumentModelSchemaTool = {
   name: "getDocumentModelSchema",
-  description: "Get the schema of a document model",
+  description:
+    "Get the schema of a document model. A code-first model also returns its " +
+    'compiled `definition` and `authoring.mode: "code-first"`. Edit that ' +
+    "definition in the model's package repository and rebuild the package, " +
+    "not through document actions.",
   inputSchema: {
     type: z.string().describe("Type of the document model"),
   },
   outputSchema: {
     schema: z.unknown().describe("Schema of the document model"),
+    definition: z
+      .unknown()
+      .optional()
+      .describe(
+        "Compiled definition of a code-first model. Omitted for a schema-first " +
+          "model, which is edited as its own document-model document.",
+      ),
+    authoring: z
+      .object({
+        mode: z.literal("code-first"),
+        writableThroughDocumentActions: z.literal(false),
+      })
+      .optional()
+      .describe(
+        "Set on a code-first model. Edit the declaration in the package " +
+          "repository and rebuild the package. No document action writes " +
+          "this definition.",
+      ),
   },
 } as const satisfies ToolSchema;
 
@@ -586,7 +609,15 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         if (!schema) {
           throw new Error(`Document model '${params.type}' not found`);
         }
-        return { schema };
+        const inspection = inspectableDefinition(documentModel);
+        if (inspection === null) {
+          return { schema };
+        }
+        return {
+          schema,
+          definition: inspection.definition,
+          authoring: inspection.authoring,
+        };
       },
     ),
   } as const;

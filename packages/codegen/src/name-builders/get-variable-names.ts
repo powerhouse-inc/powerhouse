@@ -122,6 +122,21 @@ export function getDocumentModelVariableNames(documentModelName: string) {
   };
 }
 
+export function getCodeFirstDocumentModelVariableNames(
+  documentModelName: string,
+) {
+  const names = getDocumentModelVariableNames(documentModelName);
+  const { camelCaseDocumentType } = names;
+  return {
+    ...names,
+    contextName: `${camelCaseDocumentType}Context`,
+    itemsModuleName: `${camelCaseDocumentType}Items`,
+    familyName: `${camelCaseDocumentType}Family`,
+    moduleV1Name: `${camelCaseDocumentType}V1`,
+    definitionV1Name: `${camelCaseDocumentType}V1Definition`,
+  };
+}
+
 function makeNormalizedError(error: OperationErrorSpecification) {
   if (!error.name) {
     throw new Error("Error name is required");

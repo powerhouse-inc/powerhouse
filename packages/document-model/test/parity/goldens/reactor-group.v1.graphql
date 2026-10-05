@@ -1,0 +1,31 @@
+"""
+A member address list gated by the group document's own auth scope. Addresses
+are stored as given and compared case-insensitively, matching how { address }
+principals are compared during auth evaluation.
+"""
+type ReactorGroupState {
+  """Display name of the group."""
+  name: String!
+  """Free-text description of the group's purpose."""
+  description: String!
+  """Member wallet addresses. No duplicates under case-insensitive comparison."""
+  members: [String!]!
+}
+
+# group
+
+input SetGroupNameInput {
+  name: String!
+}
+
+input SetGroupDescriptionInput {
+  description: String!
+}
+
+input AddMemberInput {
+  address: String!
+}
+
+input RemoveMemberInput {
+  address: String!
+}

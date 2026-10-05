@@ -1,7 +1,7 @@
 import { build } from "tsdown";
 
 await build({
-  entry: ["index.ts", "mock.ts"],
+  entry: ["index.ts", "mock.ts", "tooling.ts", "scalars.ts"],
   outDir: "dist",
   platform: "neutral",
   clean: true,

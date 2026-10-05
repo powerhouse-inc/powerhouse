@@ -1,20 +1,24 @@
 import { camelCase, kebabCase, pascalCase } from "change-case";
+import type { CodeFirstGenerationResult } from "file-builders";
 import { createOrUpdateManifest } from "file-builders";
+import { existsSync } from "node:fs";
 import path from "path";
 import { filter, isTruthy, map, pipe, uniqueBy } from "remeda";
 import {
+  codeFirstSubgraphTemplate,
   customSubgraphResolversTemplate,
   customSubgraphSchemaTemplate,
   subgraphIndexFileTemplate,
   subgraphLibFileTemplate,
 } from "templates";
-import type { Project } from "ts-morph";
+import type { Project, SourceFile } from "ts-morph";
 import {
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
+import { planDefinitionSourceRegistration } from "./definition-sources.js";
 
 export async function tsMorphGenerateSubgraph(args: {
   subgraphName: string;
@@ -119,13 +123,6 @@ export async function makeSubgraphsIndexFile(args: {
     project,
     path.join(subgraphsDir, "index.ts"),
   );
-  const existingExportNames = pipe(
-    sourceFile.getExportDeclarations(),
-    map((exportDeclaration) =>
-      exportDeclaration.getNamespaceExport()?.getName(),
-    ),
-    filter(isTruthy),
-  );
 
   const exportDeclarations = pipe(
     project.getDirectoryOrThrow(subgraphsDir).getDescendantSourceFiles(),
@@ -144,12 +141,91 @@ export async function makeSubgraphsIndexFile(args: {
         .getDirectory()
         .getBaseName(),
     })),
-    filter(({ name }) => !existingExportNames.includes(name)),
     map(({ name, subgraphDir }) => ({
       namespaceExport: name,
       moduleSpecifier: `./${subgraphDir}/index.js`,
     })),
   );
-  sourceFile.addExportDeclarations(exportDeclarations);
+  addMissingNamespaceExports(sourceFile, exportDeclarations);
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+function addMissingNamespaceExports(
+  sourceFile: SourceFile,
+  exportDeclarations: { namespaceExport: string; moduleSpecifier: string }[],
+) {
+  const existingExportNames = sourceFile
+    .getExportDeclarations()
+    .map((exportDeclaration) =>
+      exportDeclaration.getNamespaceExport()?.getName(),
+    );
+  sourceFile.addExportDeclarations(
+    exportDeclarations.filter(
+      ({ namespaceExport }) => !existingExportNames.includes(namespaceExport),
+    ),
+  );
+}
+
+/**
+ * Writes a code-first subgraph declaration, then registers it in
+ * `definitionSources`, so a failed write leaves the config untouched. Exports
+ * it from `subgraphs/index.ts` under the name of its inner constant, in the
+ * project for the caller to save. Refuses to overwrite an existing
+ * declaration.
+ */
+export async function tsMorphGenerateCodeFirstSubgraph(args: {
+  subgraphName: string;
+  project: Project;
+}): Promise<CodeFirstGenerationResult> {
+  const { subgraphName, project } = args;
+  const kebabCaseName = kebabCase(subgraphName);
+  const pascalCaseName = pascalCase(subgraphName);
+  const exportName = `${pascalCaseName}Subgraph`;
+  const { directory: subgraphsDir } = getOrCreateDirectory(
+    project,
+    "subgraphs",
+  );
+  const subgraphsDirPath = subgraphsDir.getPath();
+  const projectDir = subgraphsDir.getParentOrThrow().getPath();
+  const declarationPath = `subgraphs/${kebabCaseName}.ts`;
+  if (existsSync(path.join(projectDir, declarationPath))) {
+    throw new Error(
+      `Refusing to overwrite ${declarationPath}. Delete it, or choose another name.`,
+    );
+  }
+
+  const { registration, commit } = await planDefinitionSourceRegistration(
+    projectDir,
+    { specifier: `./${declarationPath}` },
+  );
+  const declaration = getOrCreateSourceFile(
+    project,
+    path.join(projectDir, declarationPath),
+  ).sourceFile;
+  declaration.replaceWithText(
+    codeFirstSubgraphTemplate({
+      name: subgraphName,
+      exportName,
+      pascalCaseName,
+      camelCaseName: camelCase(subgraphName),
+      kebabCaseName,
+    }),
+  );
+  await formatSourceFileWithPrettier(declaration);
+  await declaration.save();
+  await commit();
+
+  const index = getOrCreateSourceFile(
+    project,
+    path.join(subgraphsDirPath, "index.ts"),
+  ).sourceFile;
+  addMissingNamespaceExports(index, [
+    {
+      namespaceExport: exportName,
+      moduleSpecifier: `./${kebabCaseName}.js`,
+    },
+  ]);
+  await formatSourceFileWithPrettier(index);
+
+  return { written: [declarationPath, "subgraphs/index.ts"], registration };
 }

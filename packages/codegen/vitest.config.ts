@@ -15,6 +15,7 @@ export default defineConfig({
     include: [
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
+      "test/**/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

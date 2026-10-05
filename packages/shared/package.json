@@ -91,6 +91,14 @@
       "source": "./clis/constants.ts",
       "import": "./dist/clis/constants.mjs"
     },
+    "./clis/definition-sources": {
+      "source": "./clis/definition-sources.ts",
+      "import": "./dist/clis/definition-sources.mjs"
+    },
+    "./clis/config-strict": {
+      "source": "./clis/file-system/get-config-strict.ts",
+      "import": "./dist/clis/file-system/get-config-strict.mjs"
+    },
     "./clis/project-ports": {
       "source": "./clis/project-ports.ts",
       "import": "./dist/clis/project-ports.mjs"

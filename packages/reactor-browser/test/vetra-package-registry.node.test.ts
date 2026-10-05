@@ -1,8 +1,11 @@
 import { DocumentModelRegistry } from "@powerhousedao/reactor";
 import type { DocumentModelLib } from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setVetraPackageManager } from "../src/hooks/vetra-packages.js";
-import type { IPackageManager, IPackagesListener } from "../src/types/vetra.js";
+import {
+  fakePackageManager,
+  stubConnectWindow,
+} from "./utils/package-manager.js";
 
 const DOC_TYPE = "test/upgrade-repro";
 
@@ -44,42 +47,6 @@ function fakePackage(
   } as unknown as DocumentModelLib;
 }
 
-function fakePackageManager(initial: DocumentModelLib[]): IPackageManager & {
-  emit: (packages: DocumentModelLib[]) => void;
-} {
-  const listeners = new Set<IPackagesListener>();
-  const manager = {
-    registryUrl: null,
-    packages: initial,
-    addPackage: () => {
-      throw new Error("not implemented");
-    },
-    addPackages: () => [],
-    removePackage: () => undefined,
-    updateLocalPackage: () => undefined,
-    subscribe: (handler: IPackagesListener) => {
-      listeners.add(handler);
-      return () => listeners.delete(handler);
-    },
-    getPackageSource: () => null,
-    getPackageVersion: () => undefined,
-    getRegistryPackages: () => [],
-    addLocalPackage: () => undefined,
-    load: () => {
-      throw new Error("not implemented");
-    },
-    emit(packages: DocumentModelLib[]) {
-      manager.packages = packages;
-      for (const listener of listeners) {
-        listener({ packages });
-      }
-    },
-  };
-  return manager as unknown as IPackageManager & {
-    emit: (packages: DocumentModelLib[]) => void;
-  };
-}
-
 /**
  * Reproduces the Vetra studio "release v2" flow at the registry level.
  *
@@ -100,21 +67,15 @@ function fakePackageManager(initial: DocumentModelLib[]): IPackageManager & {
  */
 describe("vetra package manager registry sync across a v2 release", () => {
   let registry: DocumentModelRegistry;
+  let restoreWindow: () => void;
 
   beforeEach(() => {
     registry = new DocumentModelRegistry();
-    (globalThis as { window?: unknown }).window = {
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      dispatchEvent: () => true,
-      ph: {
-        reactorClientModule: {
-          reactorModule: {
-            documentModelRegistry: registry,
-          },
-        },
-      },
-    };
+    restoreWindow = stubConnectWindow(registry);
+  });
+
+  afterEach(() => {
+    restoreWindow();
   });
 
   it("keeps the new v2 module when the local package regenerates with [v1, v2]", () => {
@@ -126,11 +87,9 @@ describe("vetra package manager registry sync across a v2 release", () => {
     // Release v2: codegen regenerates the package; vite HMR swaps it in
     // place. The regenerated barrel exports BOTH versions plus the upgrade
     // manifest (see test/versioned-documents/document-models).
-    (
-      packageManager as unknown as {
-        emit: (packages: DocumentModelLib[]) => void;
-      }
-    ).emit([fakePackage([fakeModule(1), fakeModule(2)], [fakeManifest(2)])]);
+    packageManager.emit([
+      fakePackage([fakeModule(1), fakeModule(2)], [fakeManifest(2)]),
+    ]);
 
     // The manifest is swapped in correctly...
     expect(registry.getUpgradeManifest(DOC_TYPE).latestVersion).toBe(2);
@@ -145,11 +104,7 @@ describe("vetra package manager registry sync across a v2 release", () => {
     const packageManager = fakePackageManager([fakePackage([fakeModule(1)])]);
     setVetraPackageManager(packageManager);
 
-    const emit = (
-      packageManager as unknown as {
-        emit: (packages: DocumentModelLib[]) => void;
-      }
-    ).emit.bind(packageManager);
+    const emit = packageManager.emit.bind(packageManager);
 
     // The release flow regenerates more than once (release action, then the
     // pending schema edit); each update carries [v1, v2]. v2 can never

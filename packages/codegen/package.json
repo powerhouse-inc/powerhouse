@@ -38,6 +38,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "test": "vitest --run",
     "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
     "build": "tsdown"
   },
@@ -45,7 +46,6 @@
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
-    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",
     "arg": "^5.0.2",
@@ -66,6 +66,7 @@
   "devDependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.5",
     "@pnpm/find-workspace-packages": "^6.0.9",
+    "@powerhousedao/document-engineering": "catalog:",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/npm-registry-fetch": "^8.0.9",
     "graphql": "catalog:",

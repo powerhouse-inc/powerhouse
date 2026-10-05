@@ -1,0 +1,230 @@
+{
+  "kind": "powerhouse.document-model",
+  "formatVersion": 1,
+  "compatibility": {
+    "identity": "derived-v1",
+    "scalarCoercion": "document-engineering-1.40",
+    "serialization": "canonical-v1"
+  },
+  "model": {
+    "documentType": "test/invoice",
+    "graphQLName": "Invoice",
+    "name": "Invoice",
+    "description": "An invoice.",
+    "extension": "invoice",
+    "author": {
+      "name": "Powerhouse",
+      "website": "https://powerhouse.inc"
+    }
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "scalars": [],
+      "graphQLCompatibility": null,
+      "types": [
+        {
+          "kind": "object",
+          "name": "InvoiceState",
+          "description": null,
+          "fields": [
+            {
+              "key": "title",
+              "name": "title",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            }
+          ]
+        }
+      ],
+      "state": {
+        "global": {
+          "root": {
+            "kind": "named",
+            "name": "InvoiceState",
+            "required": true
+          },
+          "initialValue": {
+            "title": ""
+          },
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "type InvoiceState {\n  title: String!\n}\n",
+            "initialValue": "{\"title\":\"\"}",
+            "examples": []
+          }
+        },
+        "local": {
+          "root": null,
+          "initialValue": {},
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "",
+            "initialValue": "{}",
+            "examples": []
+          }
+        }
+      },
+      "modules": [
+        {
+          "id": "f9da3499-2dd8-5bf9-a4e7-57ede96b73ec",
+          "key": "header",
+          "name": "Header",
+          "description": null,
+          "operations": [
+            {
+              "id": "1afcd120-c207-5806-aa56-2e77a944a256",
+              "key": "setTitle",
+              "name": "SetTitle",
+              "description": null,
+              "actionType": "SET_TITLE",
+              "creatorKey": "setTitle",
+              "scope": "global",
+              "input": {
+                "kind": "input",
+                "name": "SetTitleInput",
+                "description": null,
+                "unknownKeys": "preserve",
+                "fields": [
+                  {
+                    "key": "title",
+                    "name": "title",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  }
+                ]
+              },
+              "errors": [],
+              "examples": [],
+              "template": null,
+              "reducer": null
+            }
+          ]
+        }
+      ],
+      "changeLog": []
+    },
+    {
+      "version": 2,
+      "scalars": [],
+      "graphQLCompatibility": null,
+      "types": [
+        {
+          "kind": "object",
+          "name": "InvoiceState",
+          "description": null,
+          "fields": [
+            {
+              "key": "title",
+              "name": "title",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "note",
+              "name": "note",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": false
+              }
+            }
+          ]
+        }
+      ],
+      "state": {
+        "global": {
+          "root": {
+            "kind": "named",
+            "name": "InvoiceState",
+            "required": true
+          },
+          "initialValue": {
+            "title": "",
+            "note": null
+          },
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "type InvoiceState {\n  title: String!\n  note: String\n}\n",
+            "initialValue": "{\"title\":\"\",\"note\":null}",
+            "examples": []
+          }
+        },
+        "local": {
+          "root": null,
+          "initialValue": {},
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "",
+            "initialValue": "{}",
+            "examples": []
+          }
+        }
+      },
+      "modules": [
+        {
+          "id": "f9da3499-2dd8-5bf9-a4e7-57ede96b73ec",
+          "key": "header",
+          "name": "Header",
+          "description": null,
+          "operations": [
+            {
+              "id": "1afcd120-c207-5806-aa56-2e77a944a256",
+              "key": "setTitle",
+              "name": "SetTitle",
+              "description": null,
+              "actionType": "SET_TITLE",
+              "creatorKey": "setTitle",
+              "scope": "global",
+              "input": {
+                "kind": "input",
+                "name": "SetTitleInput",
+                "description": null,
+                "unknownKeys": "preserve",
+                "fields": [
+                  {
+                    "key": "title",
+                    "name": "title",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  }
+                ]
+              },
+              "errors": [],
+              "examples": [],
+              "template": null,
+              "reducer": null
+            }
+          ]
+        }
+      ],
+      "changeLog": []
+    }
+  ]
+}

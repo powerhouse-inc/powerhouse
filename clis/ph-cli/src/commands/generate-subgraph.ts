@@ -36,6 +36,11 @@ export const generateSubgraphCmd = command({
       description:
         "Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/",
     }),
+    codeFirst: flag({
+      long: "code-first",
+      description:
+        "Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name.",
+    }),
     ...debugArgs,
   },
   handler: async (args) => {

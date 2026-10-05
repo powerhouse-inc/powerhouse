@@ -1,0 +1,31 @@
+{
+  "kind": "powerhouse.scalar-inspection",
+  "formatVersion": 1,
+  "compilerVersion": "<compiler-version>",
+  "selection": {
+    "kind": "scalar",
+    "key": "Amount_Money"
+  },
+  "status": "ok",
+  "source": {
+    "catalog": "powerhouse.catalog"
+  },
+  "digest": "sha256:e7e108f5b7731d735175d47456272d9f8e504607c88538a3aab4d174b11d7248",
+  "definition": {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Money",
+    "representation": "number",
+    "persistable": true,
+    "description": "A monetary amount represented as a number.",
+    "zero": {
+      "kind": "value",
+      "value": 0
+    },
+    "coercion": {
+      "source": "explicit"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  "diagnostics": []
+}

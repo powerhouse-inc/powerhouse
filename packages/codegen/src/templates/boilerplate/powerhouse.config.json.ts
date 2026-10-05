@@ -1,3 +1,4 @@
+import { DEFINITION_SOURCES_FORMAT_VERSION } from "@powerhousedao/shared/clis/definition-sources";
 import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
@@ -38,6 +39,10 @@ export async function buildPowerhouseConfigTemplate(
     editorsDir: "./editors",
     processorsDir: "./processors",
     subgraphsDir: "./subgraphs",
+    definitionSources: {
+      formatVersion: DEFINITION_SOURCES_FORMAT_VERSION,
+      mode: "schema-first",
+    },
     studio: { port: ports.studioPort },
     reactor: { port: ports.switchboardPort },
     packages: [],

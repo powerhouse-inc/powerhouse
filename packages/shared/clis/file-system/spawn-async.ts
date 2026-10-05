@@ -42,7 +42,11 @@ export function spawnAsync(
         resolve(stdout.trim());
       } else {
         reject(
-          new Error(stderr.trim() || `${command} exited with code ${code}`),
+          new Error(
+            stderr.trim() ||
+              stdout.trim() ||
+              `${command} exited with code ${code}`,
+          ),
         );
       }
     });

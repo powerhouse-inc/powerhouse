@@ -1,0 +1,59 @@
+"""
+The first line of the description.
+The second line, which keeps its break.
+"""
+enum Priority {
+  LOW
+  "The default."
+  MEDIUM
+  HIGH @deprecated(reason: "Use MEDIUM.")
+}
+
+"Anything with an identity."
+interface Node {
+  id: ID!
+}
+
+"A \"quoted\" phrase, a tab\there, and a trailing backslash \\"
+type Task implements Node {
+  id: ID!
+  "The one-line summary."
+  title: String!
+  note: String @deprecated(reason: "Notes moved to comments.")
+  priority: Priority!
+  labels: [String!]!
+  optionalLabels: [String]
+  matrix: [[Int!]]!
+  owner: Person
+  assignee("As of this moment." at: DateTime, fallbackPriority: Priority = LOW): Assignee
+  audited: Boolean @audit(level: 2, tags: ["a", "b"]) @internal
+}
+
+type Person {
+  id: ID!
+}
+
+type Robot {
+  id: ID!
+}
+
+"Who a task can be assigned to."
+union Assignee = Person | Robot
+
+input TaskFilterInput {
+  priority: Priority = HIGH
+  page: PagingInput = {size: 10, cursor: null, order: LOW}
+  titles: [String!] = ["a", "b"]
+  note: String = null
+  metadata: JSONObject = {nested: {count: 1}, flag: true}
+}
+
+input PagingInput {
+  size: Int!
+  cursor: String
+  order: Priority
+}
+
+input ClearInput {
+  _empty: Boolean
+}

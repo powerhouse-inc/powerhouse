@@ -6,7 +6,15 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "test/tooling/fixtures",
+    // A fixture package is compiled in its own tree, against its own
+    // node_modules. It imports `@powerhousedao/reactor-api`, which this
+    // package may not depend on.
+    "test/fixtures/loaders/loader-package"
+  ],
   "references": [
     {
       "path": "../shared"

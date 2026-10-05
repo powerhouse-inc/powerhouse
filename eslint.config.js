@@ -96,6 +96,13 @@ const unsafeIgnoredFiles = [
   // Plain .mjs model-source fixture imported by both the host and worker
   // threads; deliberately outside the TypeScript project service.
   "packages/reactor/test/core/fixtures/model-barrel.mjs",
+  // Definition-source fixture packages: they import "document-model" by its
+  // published name, which only resolves once a test copies them out of this
+  // package, so they are excluded from the TypeScript project service.
+  "packages/document-model/test/tooling/fixtures/**",
+  // A fixture package is compiled in its own tree, against its own
+  // node_modules, so this project's service cannot parse it.
+  "packages/document-model/test/fixtures/loaders/loader-package/**",
 ];
 
 /** All of the files that are ignored by eslint */
@@ -581,6 +588,12 @@ const loggerRulesConfig = {
   rules: loggerRules,
 };
 
+/** The definition compiler calls no deprecated API, such as Zod's no-op `.finite()`. */
+const definitionDeprecationConfig = {
+  files: ["packages/document-model/src/definition/**/*.ts"],
+  rules: { "@typescript-eslint/no-deprecated": "error" },
+};
+
 const cliColdPathConfig = {
   files: [
     "clis/ph-cli/src/cli.ts",
@@ -717,6 +730,7 @@ export default defineConfig(
   unsafeConfig,
   generatedFilesConfig,
   cliColdPathConfig,
+  definitionDeprecationConfig,
   loggerRulesConfig,
   tailwindConfig,
 );

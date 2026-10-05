@@ -10,6 +10,8 @@ import {
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
+import { structuredOperationNames } from "./structured-model-schema.js";
+import { structuredModelOf } from "./structured-projection.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
 import type {
   PhDocument,
@@ -131,6 +133,39 @@ export interface DocumentModelSubgraphResolvers<
 }
 
 /**
+ * Resolves a union value to the first member that has a field no sibling has,
+ * or to the first member when none matches.
+ */
+function unionResolver(
+  documentName: string,
+  members: readonly string[],
+  fieldsByObject: ReadonlyMap<string, readonly string[]>,
+): DocumentModelResolverMap {
+  const uniqueFields = new Map(
+    members.map((member) => {
+      const others = new Set(
+        members
+          .filter((candidate) => candidate !== member)
+          .flatMap((candidate) => fieldsByObject.get(candidate) ?? []),
+      );
+      const own = fieldsByObject.get(member) ?? [];
+      return [member, own.filter((field) => !others.has(field))] as const;
+    }),
+  );
+  return {
+    __resolveType: (obj: Record<string, unknown>) => {
+      for (const member of members) {
+        const fields = uniqueFields.get(member) ?? [];
+        if (fields.length > 0 && fields.some((field) => field in obj)) {
+          return `${documentName}_${member}`;
+        }
+      }
+      return `${documentName}_${members[0]}`;
+    },
+  };
+}
+
+/**
  * New document model subgraph that uses reactorClient instead of legacy reactor.
  * This class auto-generates GraphQL queries and mutations for a document model.
  */
@@ -142,10 +177,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     super(args);
     this.documentModel = documentModel;
     this.name = kebabCase(documentModel.documentModel.global.name);
-    this.typeDefs = generateDocumentModelSchema(
-      this.documentModel.documentModel.global,
-      { useNewApi: true },
-    );
+    this.typeDefs = generateDocumentModelSchema(this.documentModel, {
+      useNewApi: true,
+    });
     this.resolvers = this.generateResolvers();
   }
 
@@ -170,14 +204,39 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   }
 
   /**
-   * Generate __resolveType functions for union types found in the document model schema.
-   * Parses the state schema to find union definitions and their member types,
-   * then uses unique field presence to discriminate between member types at runtime.
+   * Builds `__resolveType` for each union the model's state declares. A
+   * code-first model reads its structured types. A schema-first model parses
+   * its state schema. Both pick the member by the presence of a field unique
+   * to it.
    */
   private generateUnionResolvers(): Record<string, DocumentModelResolverMap> {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
+    const structured = structuredModelOf(this.documentModel);
+    if (structured !== null) {
+      const stateTypes = [
+        ...structured.segments.global,
+        ...structured.segments.local,
+      ];
+      const fieldsByObject = new Map(
+        stateTypes.flatMap((type) =>
+          type.kind === "object"
+            ? [[type.name, type.fields.map((field) => field.name)] as const]
+            : [],
+        ),
+      );
+      const resolvers: Record<string, DocumentModelResolverMap> = {};
+      for (const type of stateTypes) {
+        if (type.kind !== "union" || type.members.length === 0) continue;
+        resolvers[`${documentName}_${type.name}`] = unionResolver(
+          documentName,
+          type.members,
+          fieldsByObject,
+        );
+      }
+      return resolvers;
+    }
     const specification =
       this.documentModel.documentModel.global.specifications.at(-1);
     if (!specification) return {};
@@ -215,31 +274,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       const memberTypes = def.types?.map((t) => t.name.value) ?? [];
       if (memberTypes.length === 0) continue;
 
-      // Compute unique fields per member type
-      const uniqueFields: Record<string, string[]> = {};
-      for (const memberType of memberTypes) {
-        const ownFields = objectFieldsMap.get(memberType) ?? [];
-        const otherFields = new Set(
-          memberTypes
-            .filter((t) => t !== memberType)
-            .flatMap((t) => objectFieldsMap.get(t) ?? []),
-        );
-        uniqueFields[memberType] = ownFields.filter((f) => !otherFields.has(f));
-      }
-
       const prefixedUnionName = `${documentName}_${unionName}`;
-
-      resolvers[prefixedUnionName] = {
-        __resolveType: (obj: Record<string, unknown>) => {
-          for (const memberType of memberTypes) {
-            const fields = uniqueFields[memberType] ?? [];
-            if (fields.length > 0 && fields.some((f) => f in obj)) {
-              return `${documentName}_${memberType}`;
-            }
-          }
-          return `${documentName}_${memberTypes[0]}`;
-        },
-      };
+      resolvers[prefixedUnionName] = unionResolver(
+        documentName,
+        memberTypes,
+        objectFieldsMap,
+      );
     }
 
     return resolvers;
@@ -254,12 +294,15 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
+    const structured = structuredModelOf(this.documentModel);
     const operations =
-      this.documentModel.documentModel.global.specifications
-        .at(-1)
-        ?.modules.flatMap((module) =>
-          module.operations.filter((op) => op.name),
-        ) ?? [];
+      structured !== null
+        ? structuredOperationNames(structured).map((name) => ({ name }))
+        : (this.documentModel.documentModel.global.specifications
+            .at(-1)
+            ?.modules.flatMap((module) =>
+              module.operations.filter((op) => op.name),
+            ) ?? []);
 
     return {
       ...this.generateUnionResolvers(),

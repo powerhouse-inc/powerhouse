@@ -1,14 +1,21 @@
-import {
-  browserBuildConfig,
-  nodeBuildConfig,
-} from "@powerhousedao/shared/build-config";
-import { execSync } from "node:child_process";
+import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { detect, resolveCommand } from "package-manager-detector";
 import { readPackage } from "read-pkg";
-import { build as tsdownBuild } from "tsdown";
-import type { BuildArgs } from "../types.js";
+import type { BuildArgs, PublishArgs } from "../types.js";
+import { createGenerationSteps } from "./definitions/build-steps.js";
+import {
+  type GenerationResult,
+  type GenerationSteps,
+  readRetainedApproval,
+  runGeneration,
+} from "./definitions/generation.js";
+import {
+  selectedCliSources,
+  selectedConfigFile,
+  selectedPackageRoot,
+  selectedSourceSetDigest,
+} from "./definitions/selection.js";
 
 /**
  * A Powerhouse package's `powerhouse.manifest.json` "name" must match its
@@ -44,59 +51,129 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
   }
 }
 
-export async function runBuild(args: BuildArgs) {
-  const { outDir } = args;
+type RunBuildOptions = {
+  readonly steps?: GenerationSteps;
+  readonly log?: (text: string) => void;
+  readonly promoteOutput?: boolean;
+};
 
-  // Fail fast if the manifest name and package.json name have drifted apart.
-  await assertManifestNameMatchesPackage(process.cwd());
+const writeStderr = (text: string): void => {
+  process.stderr.write(text);
+};
 
-  await tsdownBuild({
-    ...browserBuildConfig,
-    outDir: join(outDir, "browser"),
+const PUBLISH_SELECTION_ENV = "PH_PUBLISH_SELECTION";
+
+type PublishSelection = Pick<
+  BuildArgs,
+  "outDir" | "configFile" | "source" | "warningsAsErrors"
+>;
+
+function publishSelection(): PublishSelection | undefined {
+  const raw = process.env[PUBLISH_SELECTION_ENV];
+  if (raw === undefined) return undefined;
+  const parsed = JSON.parse(raw) as Partial<PublishSelection>;
+  if (
+    typeof parsed.outDir !== "string" ||
+    typeof parsed.configFile !== "string" ||
+    !Array.isArray(parsed.source) ||
+    typeof parsed.warningsAsErrors !== "boolean"
+  ) {
+    throw new Error(`${PUBLISH_SELECTION_ENV} is not a publish selection.`);
+  }
+  return {
+    outDir: parsed.outDir,
+    configFile: parsed.configFile,
+    source: parsed.source.map(String),
+    warningsAsErrors: parsed.warningsAsErrors,
+  };
+}
+
+export async function runBuild(
+  args: BuildArgs,
+  options: RunBuildOptions = {},
+): Promise<GenerationResult> {
+  const packageRoot = selectedPackageRoot(args);
+  await assertManifestNameMatchesPackage(packageRoot);
+
+  return await runGeneration({
+    packageRoot,
+    configFile: selectedConfigFile(args),
+    outDir: args.outDir,
+    cliSources: selectedCliSources(args),
+    warningsAsErrors: args.warningsAsErrors,
+    steps: options.steps ?? (await createGenerationSteps(args.outDir)),
+    log: options.log ?? writeStderr,
+    ...(options.promoteOutput !== undefined && {
+      promoteOutput: options.promoteOutput,
+    }),
   });
+}
 
-  await tsdownBuild({
-    ...nodeBuildConfig,
-    outDir: join(outDir, "node"),
+export async function runPrepack(
+  hookArgs: BuildArgs,
+  options: RunBuildOptions = {},
+): Promise<GenerationResult> {
+  const args = { ...hookArgs, ...publishSelection() };
+  const log = options.log ?? writeStderr;
+  const retained = readRetainedApproval({
+    packageRoot: selectedPackageRoot(args),
+    outDir: args.outDir,
+    warningsAsErrors: args.warningsAsErrors,
+    sourceSetDigest: selectedSourceSetDigest(args),
   });
-
-  const detectResult = await detect();
-  const agent = detectResult?.agent ?? "npm";
-
-  // Emit types with tsc
-  const tscCommand = resolveCommand(agent, "execute-local", ["tsc", "--build"]);
-  if (tscCommand === null) {
-    console.error(
-      "You need to have typescript installed to use the `build` command.",
-    );
-    process.exit(1);
+  if (retained.ok) {
+    log("✔ Reusing the completed release check for this revision.\n");
+    return {
+      status: "ok",
+      exitCode: 0,
+      phases: [],
+      report: retained.approval.report,
+    };
   }
-  console.log("\n▶ Emitting types via tsc...");
-  try {
-    execSync(`${tscCommand.command} ${tscCommand.args.join(" ")}`, {
-      stdio: "inherit",
-    });
-    console.log("✔ Types emitted to", join(outDir, "types"));
-  } catch {
-    console.warn(
-      "✘ tsc reported errors above; declarations were still written. Fix the errors to keep types accurate.",
-    );
-  }
+  log(`▶ Running a release check: ${retained.reason}.\n`);
+  const result = await runBuild(args, { ...options, log });
+  await logRefusal(result, log);
+  return result;
+}
 
-  const executeLocalCommand = resolveCommand(agent, "execute-local", [
-    "tailwindcss",
-    "-i",
-    "./style.css",
-    "-o",
-    "./dist/style.css",
-  ]);
-  if (executeLocalCommand === null) {
-    console.error(
-      "You need to have tailwindcss installed to use the `build` command.",
-    );
-    process.exit(1);
+export async function runPublishCheck(
+  args: PublishArgs,
+  options: RunBuildOptions = {},
+): Promise<{
+  readonly exitCode: 0 | 1 | 2;
+  readonly packageRoot: string;
+  readonly prepackEnvironment: Readonly<Record<string, string>>;
+}> {
+  let packageRoot: string;
+  if (args.configFile === undefined) {
+    const { projectPath } = await getPowerhouseProjectInfo();
+    if (!projectPath) throw new Error("Could not find project path.");
+    packageRoot = projectPath;
+  } else {
+    packageRoot = selectedPackageRoot(args);
   }
-  execSync(
-    `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
+  const selection: PublishSelection = {
+    outDir: args.outDir,
+    configFile: selectedConfigFile(args, packageRoot),
+    source: args.source,
+    warningsAsErrors: args.warningsAsErrors,
+  };
+  const { exitCode } = await runPrepack(
+    { ...selection, debug: args.debug },
+    options,
   );
+  return {
+    exitCode,
+    packageRoot,
+    prepackEnvironment: { [PUBLISH_SELECTION_ENV]: JSON.stringify(selection) },
+  };
+}
+
+export async function logRefusal(
+  result: GenerationResult,
+  log: (text: string) => void = writeStderr,
+): Promise<void> {
+  if (result.status === "ok" || result.report === undefined) return;
+  const { renderHuman } = await import("./model-check.js");
+  log(`${renderHuman(result.report)}\n`);
 }

@@ -1,10 +1,13 @@
 import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
+import type { GenerateCodeFirstDocumentModelArgs } from "file-builders";
 import {
   pruneManifestSection,
   syncProjectAiToolsExport,
   tsMorphGenerateApp,
+  tsMorphGenerateCodeFirstDocumentModel,
+  tsMorphGenerateCodeFirstSubgraph,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGenerateProcessor,
@@ -37,6 +40,13 @@ export async function generateDocumentModel(
   project: Project,
 ) {
   await tsMorphGenerateDocumentModel(documentModelState, project);
+}
+
+export async function generateCodeFirstDocumentModel(
+  args: GenerateCodeFirstDocumentModelArgs,
+  project: Project,
+) {
+  return await tsMorphGenerateCodeFirstDocumentModel(args, project);
 }
 
 /* Runs generate for each document model json file found in the project's `document-models` directory  */
@@ -221,6 +231,13 @@ export async function generateAllApps(project: Project) {
 }
 export async function generateSubgraph(subgraphName: string, project: Project) {
   await tsMorphGenerateSubgraph({ subgraphName, project });
+}
+
+export async function generateCodeFirstSubgraph(
+  subgraphName: string,
+  project: Project,
+) {
+  return await tsMorphGenerateCodeFirstSubgraph({ subgraphName, project });
 }
 
 /* Runs generate for each directory found in the project's `subgraphs` directory  */

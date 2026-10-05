@@ -25,7 +25,9 @@ export default defineConfig({
     // their own runners / environment requirements; folding them in is a
     // separate effort.
     include: [
+      "clis/definition-sources.test.ts",
       "clis/source-config-schema.test.ts",
+      "clis/file-system/get-config-strict.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
       "clis/args/vetra-ports.test.ts",
@@ -36,6 +38,8 @@ export default defineConfig({
       "connect/pwa-manifest.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-transport.test.ts",
+      "document-model/definition-types.test.ts",
+      "document-model/subgraph-definition-types.test.ts",
       "document-model/files.test.ts",
       "document-model/mock.test.ts",
       "document-model/signature-transport.test.ts",

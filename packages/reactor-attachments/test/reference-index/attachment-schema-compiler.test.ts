@@ -4,6 +4,7 @@ import type {
   DocumentSpecification,
   OperationSpecification,
 } from "@powerhousedao/shared/document-model";
+import { defineDocumentModel, defineScalar, ph } from "document-model";
 import { describe, expect, it } from "vitest";
 import { AttachmentSchemaCompiler } from "../../index.js";
 
@@ -510,6 +511,83 @@ describe("AttachmentSchemaCompiler", () => {
         action("ATTACH_FILE", { legacyRef: REF_A, currentRef: REF_C }),
       ),
     ).toEqual([REF_C]);
+  });
+
+  it("declares the package scalars a code-first module's definition names", () => {
+    const { validator, zodSource } = ph.EmailAddress.binding;
+    const ContactEmail = defineScalar({
+      name: "ContactEmail",
+      description: "An email address the package owns.",
+      representation: "string",
+      validator,
+      zodSource,
+    });
+    const contacts = defineDocumentModel({
+      id: "test/contacts",
+      name: "Contacts",
+      description: "",
+      extension: "contacts",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("ContactsState", {
+            fields: { email: ContactEmail(), card: ph.AttachmentRef() },
+          }),
+          initialValue: { email: null, card: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const edits = contacts.module("edits", {
+      operations: ({ global }) => ({
+        setContact: global({
+          input: ph.input({
+            fields: {
+              email: ContactEmail({ required: true }),
+              card: ph.AttachmentRef(),
+            },
+          }),
+          reduce(state, input) {
+            state.email = input.email;
+            state.card = input.card ?? null;
+          },
+        }),
+      }),
+    });
+    const module = contacts.finalize({
+      modules: [edits],
+    }) as unknown as DocumentModelModule;
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      "SET_CONTACT",
+    );
+    expect(
+      extractor.extract(
+        action("SET_CONTACT", { email: "ada@example.com", card: REF_A }),
+      ),
+    ).toEqual([REF_A]);
+  });
+
+  it("reads no package scalars from a definition that fails the wire shape", () => {
+    const module = {
+      ...documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            "input AttachFileInput { ref: AttachmentRef }",
+          ),
+        ]),
+      ]),
+      definition: { foo: 1 },
+    } as unknown as DocumentModelModule;
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      "ATTACH_FILE",
+    );
+    expect(extractor.extract(action("ATTACH_FILE", { ref: REF_A }))).toEqual([
+      REF_A,
+    ]);
   });
 
   it("caches by module identity and action type", () => {

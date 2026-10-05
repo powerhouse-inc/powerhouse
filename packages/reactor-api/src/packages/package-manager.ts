@@ -4,17 +4,15 @@ import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
-import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { childLogger, documentModelDocumentModelModule } from "document-model";
+import { childLogger } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
 import { watchFile } from "node:fs";
+import { CORE_DOCUMENT_MODEL_MODULES } from "./core-document-models.js";
 import type {
   IPackageLoader,
   IPackageManager,
@@ -165,22 +163,9 @@ export class PackageManager implements IPackageManager {
 
     const documentModelModuleMap = new Map<string, DocumentModelModule[]>();
 
-    // static prereqs
-    documentModelModuleMap.set("document-drive", [
-      driveDocumentModelModule as unknown as DocumentModelModule,
-    ]);
-
-    documentModelModuleMap.set("document-model", [
-      documentModelDocumentModelModule as unknown as DocumentModelModule,
-    ]);
-
-    documentModelModuleMap.set("reactor-drive", [
-      reactorDriveDocumentModelModule as unknown as DocumentModelModule,
-    ]);
-
-    documentModelModuleMap.set("reactor-group", [
-      ReactorGroupV1 as unknown as DocumentModelModule,
-    ]);
+    for (const [name, module] of Object.entries(CORE_DOCUMENT_MODEL_MODULES)) {
+      documentModelModuleMap.set(name, [module]);
+    }
 
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];

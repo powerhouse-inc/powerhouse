@@ -1,5 +1,4 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
-import { generatorTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type {
   Action,
   DocumentModelModule,
@@ -7,6 +6,8 @@ import type {
   OperationSpecification,
 } from "@powerhousedao/shared/document-model";
 import { constantCase, pascalCase } from "change-case";
+import { inspectableDefinition, packageScalarNames } from "document-model";
+import { orderedScalarNames, scalarCatalog } from "document-model/scalars";
 import {
   buildASTSchema,
   getNamedType,
@@ -28,13 +29,14 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-const CODEGEN_SCALAR_NAMES = new Set([
-  "Unknown",
-  "DateTime",
-  "Address",
-  ATTACHMENT_REF_TYPE,
-  ...Object.keys(generatorTypeDefs as Record<string, string>),
-]);
+/**
+ * Every catalog scalar except `JSONObject`, matching the scalars codegen maps.
+ * A model may declare `JSONObject` itself, and a second declaration here would
+ * fail as a duplicate.
+ */
+const CODEGEN_SCALAR_NAMES: ReadonlySet<string> = new Set(
+  orderedScalarNames(scalarCatalog.names, [], ["JSONObject"]),
+);
 
 type CompilerContext = {
   actionType: string;
@@ -150,12 +152,31 @@ function selectOperation(
   return matches[0];
 }
 
+/**
+ * The package scalars a code-first module's specification declares. Its
+ * stored SDL references them without declaring them, as it does catalog
+ * scalars, and only the structured definition names them. A module whose
+ * definition fails the wire-shape check declares none.
+ */
+function modulePackageScalars(
+  module: DocumentModelModule,
+  context: CompilerContext,
+): readonly string[] {
+  const specification = inspectableDefinition(
+    module,
+  )?.definition.specifications.find(
+    (candidate) => candidate.version === context.version,
+  );
+  return specification === undefined ? [] : packageScalarNames(specification);
+}
+
 function buildEffectiveSchema(
   specification: DocumentSpecification,
+  packageScalars: readonly string[],
   context: CompilerContext,
 ): GraphQLSchema {
   const scalarSchemas = Array.from(
-    CODEGEN_SCALAR_NAMES,
+    [...CODEGEN_SCALAR_NAMES, ...packageScalars],
     (name) => `scalar ${name}`,
   );
   const stateSchemas = Object.values(specification.state).map(
@@ -460,7 +481,11 @@ function compileExtractor(
   if (selected === null || selected.operation.schema === null) {
     return new SchemaCompiledAttachmentExtractor(context, null);
   }
-  const effectiveSchema = buildEffectiveSchema(specification, context);
+  const effectiveSchema = buildEffectiveSchema(
+    specification,
+    modulePackageScalars(module, context),
+    context,
+  );
 
   const operationName = selected.operation.name;
   if (operationName === null) {

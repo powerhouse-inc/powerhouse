@@ -228,10 +228,19 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Connect Studio](#connect-studio)
 - [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
+- [Build](#build)
+- [Publish](#publish)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [List](#list)
 - [Migrate](#migrate)
+- [Model](#model)
+- [Model Check](#model-check)
+- [Model Inspect](#model-inspect)
+- [Model Prepack](#model-prepack)
+- [Subgraph Inspect](#subgraph-inspect)
+- [Scalar](#scalar)
+- [Scalar Inspect](#scalar-inspect)
 - [Switchboard](#switchboard)
 - [Login](#login)
 - [Install](#install)
@@ -261,6 +270,8 @@ Generate a document model
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
+
+**Code First** - Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources - Usage: `--code-first <str>`
 
 
 
@@ -385,6 +396,8 @@ Generate a subgraph
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
+
+**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name. - Usage: `--code-first`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -745,6 +758,86 @@ NOTE: You must run `ph connect build` first
 **Help** - show help - Usage: `--help, -h`
 
 
+## Build
+Compile, check, bundle, and verify this package, then replace its output.
+
+A failed build leaves the published tree unchanged. TypeScript runs first. For a
+code-first package, the definition check runs against that compilation, and a
+project that installs the packed tarball imports the bundles before the build
+promotes anything.
+
+Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
+
+
+
+### Options
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Publish
+
+Publish a package to the Powerhouse registry. This is a thin wrapper around npm publish
+that automatically sets the registry URL.
+
+**What it does:**
+- 1. Resolves the registry URL (--registry flag &gt; PH_REGISTRY_URL env &gt; powerhouse.config.json &gt; default)
+- 2. Checks authentication with the registry via npm whoami
+- 3. Forwards all additional arguments to npm publish
+  
+
+
+
+### Options
+**Registry** - Registry URL to publish to (overrides config and environment) - Usage: `--registry <str>`
+
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+
+
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Npm Args *[required]*** - Extra arguments forwarded to npm publish (e.g. --tag dev) - Usage: `[...npm-args]`
+
+
 ## Access Token
 
 The access-token command generates a bearer token for API authentication. This token
@@ -887,6 +980,207 @@ Run migrations
 ### Flags
 **Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model
+Check, inspect, and gate this package's document-model definitions. Use with `check`, `inspect`, or `prepack`.
+
+## Model Check
+Compile this package's definition sources and report what is wrong with them.
+
+`tsc` cannot run this check, because a code-first declaration compiles when its
+module is evaluated and `tsc` never evaluates modules. Run it after every edit.
+
+Exit codes:
+  0  ok, or skipped. Read `status`, because a skipped package was not checked
+     at all and is never release approval.
+  1  invalid. The declarations were checked and something is wrong with them.
+  2  failed. A configuration, import, or tooling error stopped the check, and
+     nothing was decided.
+
+Output:
+  ph model check --json                 one report on stdout, logs on stderr
+  ph model check --watch                human output, follows edits
+  ph model check --watch --json-lines   one report per line, newest only
+
+Quote a --source value. zsh with extendedglob reads an unquoted '#' as a glob
+operator and fails with "no matches found".
+  ph model check --source './src/models.ts#/invoiceFamily'
+
+
+
+### Options
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+
+
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
+**Json Lines** - With --watch, emit one report per line as newline-delimited JSON. - Usage: `--json-lines`
+
+**Default:** `false`
+**Release** - Run the release profile, which also requires a typecheck and a packed-consumer import. - Usage: `--release`
+
+**Default:** `false`
+**Watch** - Re-check after every change until interrupted. - Usage: `--watch`
+
+**Default:** `false`
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model Inspect
+Print the exact structured definition of one compiled model.
+
+  ph model inspect &lt;documentType&gt;@&lt;version&gt; --json
+
+Writes nothing. The envelope is canonical JSON, so you can diff the output of
+two releases.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Document Type Version *[required]*** - The model to inspect, as powerhouse/invoice@1. - Usage: `<documentType@version>`
+
+
+
+
+### Options
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model Prepack
+Run this package's release check before a package manager writes its tarball.
+
+Wire it as the package's `prepack` script so `npm pack`, `pnpm pack`, and a raw
+`npm publish` all pass through it. It reuses the generation `ph build` already
+completed when that generation still covers this tree, and runs one otherwise.
+
+Exit codes: 0 approved, 1 the declarations are wrong, 2 the check could not run.
+
+
+
+### Options
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+
+
+### Flags
+**Warnings As Errors** - Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning". - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Subgraph Inspect
+Print the exact structured definition of one compiled subgraph.
+
+  ph subgraph inspect &lt;name&gt; --json
+
+Writes nothing, constructs no host, and calls no resolver factory. The envelope
+is canonical JSON, so you can diff the output of two releases.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - The subgraph to inspect, by the name it registers under. - Usage: `<name>`
+
+
+
+
+### Options
+**Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
+
+**Source 
+Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
+
+
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Scalar
+Read the compiler-owned scalar catalog. Use with `inspect`.
+
+## Scalar Inspect
+Print the installed catalog's entry for one scalar: its definition, its digest,
+and where its coercion came from.
+
+  ph scalar inspect &lt;name&gt; --json
+
+Reads the compiler's own catalog, so it needs no package and no config.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - The scalar to inspect, as Amount_Money. - Usage: `<name>`
+
+
+
+
+### Flags
+**Json** - Print exactly one JSON document on stdout and nothing else. Human output always goes to stderr. - Usage: `--json`
+
+**Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

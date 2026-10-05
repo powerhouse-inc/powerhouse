@@ -9,13 +9,19 @@ import {
 import { mapValues } from "remeda";
 import { packageJsonTemplate, toYarnResolutions } from "templates";
 
+/**
+ * pnpm 10 reads `resolutions` as its own overrides and rejects the glob
+ * selectors in it with `ERR_PNPM_INVALID_SELECTOR`, so a pnpm project gets the
+ * pins from `pnpm-workspace.yaml` instead.
+ */
 export async function buildBoilerplatePackageJson(args: {
   name: string;
   tag?: string;
   version?: string;
   workspace?: boolean;
+  packageManager?: string;
 }) {
-  const { name, tag, version } = args;
+  const { name, tag, version, packageManager } = args;
   const workspacePeers = await makeVersionedDependenciesMap({
     names: VERSIONED_PEER_DEPENDENCIES,
     tag,
@@ -43,6 +49,8 @@ export async function buildBoilerplatePackageJson(args: {
     name,
     peerDependencies,
     devDependencies,
-    toYarnResolutions(BOILERPLATE_DEPENDENCY_OVERRIDES),
+    packageManager === "pnpm"
+      ? undefined
+      : toYarnResolutions(BOILERPLATE_DEPENDENCY_OVERRIDES),
   );
 }

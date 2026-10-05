@@ -23,6 +23,26 @@ import { getConfig } from "../file-system/get-config.js";
 
 export const AGENTS: Agent[] = _AGENTS;
 
+export const configFile = option({
+  type: optional(string),
+  long: "config-file",
+  description:
+    "Path to the powerhouse.config.json that selects the package. Its directory becomes the package root.",
+});
+
+const definitionSource = multioption({
+  type: array(string),
+  long: "source",
+  description:
+    "Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.",
+  defaultValue: () => [],
+});
+
+export const definitionSelectionArgs = {
+  configFile,
+  source: definitionSource,
+};
+
 export const debugArgs = {
   debug: flag({
     type: optional(boolean),
@@ -31,14 +51,28 @@ export const debugArgs = {
   }),
 };
 
+export const warningsAsErrors = flag({
+  type: boolean,
+  long: "warnings-as-errors",
+  description:
+    'Treat definition warnings as failures. This changes the reported status and the exit code; a warning still reports severity "warning".',
+  defaultValue: () => false,
+  defaultValueIsSerializable: true,
+});
+
+export const outDir = option({
+  type: string,
+  long: "out-dir",
+  description:
+    "Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.",
+  defaultValue: () => "dist" as const,
+  defaultValueIsSerializable: true,
+});
+
 export const buildArgs = {
-  outDir: option({
-    type: string,
-    long: "out-dir",
-    description: "Where to output the bundled code",
-    defaultValue: () => "dist" as const,
-    defaultValueIsSerializable: true,
-  }),
+  outDir,
+  ...definitionSelectionArgs,
+  warningsAsErrors,
   ...debugArgs,
 };
 

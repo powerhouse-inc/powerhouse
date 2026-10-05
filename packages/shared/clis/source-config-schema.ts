@@ -14,6 +14,74 @@ import {
 } from "../connect/schema-fragments.js";
 import { LOG_LEVELS } from "./constants.js";
 
+const definitionSourcesSchema = {
+  type: "object",
+  description:
+    "Explicit definition-source selection. Required for `ph model check`. Build and publish accept legacy configs that omit this field.",
+  oneOf: [
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["formatVersion", "mode", "entries"],
+      description:
+        "Code-first: every listed TypeScript module is imported and its definitions are checked.",
+      properties: {
+        formatVersion: {
+          const: 1,
+          description: "Definition-source format version. Only 1 is supported.",
+        },
+        mode: {
+          const: "code-first",
+          description: "This package declares its models in TypeScript.",
+        },
+        entries: {
+          type: "array",
+          minItems: 1,
+          description:
+            "At least one definition source. An empty list is invalid.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["specifier"],
+            properties: {
+              specifier: {
+                type: "string",
+                pattern: "^\\./",
+                description:
+                  "POSIX package-relative module path beginning with './'. It may not leave the package root.",
+              },
+              exportPath: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "Exact property keys into the imported namespace. Omit it to select the namespace root.",
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["formatVersion", "mode"],
+      description:
+        "Schema-first: this package authors its models as SDL plus model.json, and definition checking is explicitly skipped.",
+      properties: {
+        formatVersion: {
+          const: 1,
+          description: "Definition-source format version. Only 1 is supported.",
+        },
+        mode: {
+          const: "schema-first",
+          description:
+            "This package declares no code-first root. `entries` is forbidden here.",
+        },
+      },
+    },
+  ],
+} as const;
+
 export const SOURCE_CONFIG_SCHEMA_ID =
   "https://powerhouse.inc/schemas/powerhouse.source.json";
 
@@ -242,5 +310,6 @@ export const sourceConfigSchema = {
       description:
         "Connect-specific UI customisations. Copied verbatim into the runtime config at build time.",
     },
+    definitionSources: definitionSourcesSchema,
   },
 } as const;

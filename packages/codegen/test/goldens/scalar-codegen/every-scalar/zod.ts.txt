@@ -1,0 +1,60 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import * as z from "zod";
+import type { ScalarsState } from "./types.js";
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K]>;
+}>;
+
+type definedNonNullAny = {};
+
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
+  v !== undefined && v !== null;
+
+export const definedNonNullAnySchema = z
+  .any()
+  .refine((v) => isDefinedNonNullAny(v));
+
+export function ScalarsStateSchema(): z.ZodObject<Properties<ScalarsState>> {
+  return z.object({
+    __typename: z.literal("ScalarsState").optional(),
+    fAddress: z
+      .custom<`${string}:0x${string}`>((val) =>
+        /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string),
+      )
+      .nullish(),
+    fAmount: z
+      .object({ unit: z.string().optional(), value: z.number() })
+      .nullish(),
+    fAmount_Crypto: z.object({ unit: z.string(), value: z.string() }).nullish(),
+    fAmount_Currency: z
+      .object({ unit: z.string(), value: z.string() })
+      .nullish(),
+    fAmount_Fiat: z.object({ unit: z.string(), value: z.number() }).nullish(),
+    fAmount_Money: z.number().nullish(),
+    fAmount_Percentage: z.number().nullish(),
+    fAmount_Tokens: z.number().nullish(),
+    fAttachmentRef: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
+    fCurrency: z.string().nullish(),
+    fDate: z.iso.datetime().nullish(),
+    fDateTime: z.iso.datetime().nullish(),
+    fEmailAddress: z.email().nullish(),
+    fEthereumAddress: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{40}$/, {
+        error: "Invalid Ethereum address format",
+      })
+      .nullish(),
+    fOID: z.string().nullish(),
+    fOLabel: z.string().nullish(),
+    fPHID: z.string().nullish(),
+    fURL: z.url().nullish(),
+    fUnknown: z.unknown().nullish(),
+    fUpload: z.any().nullish(),
+  });
+}

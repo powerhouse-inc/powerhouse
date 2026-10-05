@@ -1,0 +1,43 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type ScalarsState {
+  fPHID: PHID
+  fOID: OID
+  fOLabel: OLabel
+  fCurrency: Currency
+  fEmailAddress: EmailAddress
+  fEthereumAddress: EthereumAddress
+  fURL: URL
+  fDate: Date
+  fDateTime: DateTime
+  fAmount_Money: Amount_Money
+  fAmount_Percentage: Amount_Percentage
+  fAmount_Tokens: Amount_Tokens
+  fAmount: Amount
+  fAmount_Fiat: Amount_Fiat
+  fAmount_Crypto: Amount_Crypto
+  fAmount_Currency: Amount_Currency
+  fUpload: Upload
+  fAddress: Address
+  fAttachmentRef: AttachmentRef
+  fUnknown: Unknown
+}

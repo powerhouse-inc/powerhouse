@@ -1,10 +1,24 @@
 import { BOILERPLATE_DEPENDENCY_OVERRIDES } from "@powerhousedao/shared/clis";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   pnpmWorkspaceTemplate,
   packageJsonTemplate,
   toYarnResolutions,
 } from "templates";
+import { buildBoilerplatePackageJson } from "./package.json.js";
+
+vi.mock("@powerhousedao/shared/clis", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  makeVersionedDependenciesMap: () => Promise.resolve({}),
+}));
+
+async function generated(packageManager: string): Promise<{
+  resolutions?: Record<string, string>;
+}> {
+  return JSON.parse(
+    await buildBoilerplatePackageJson({ name: "test-project", packageManager }),
+  ) as { resolutions?: Record<string, string> };
+}
 
 describe("boilerplate dependency overrides", () => {
   it("renders the override pins as pnpm overrides in pnpm-workspace.yaml", () => {
@@ -47,5 +61,14 @@ describe("boilerplate dependency overrides", () => {
   it("omits the resolutions block when none are provided", () => {
     const out = packageJsonTemplate("test-project", {}, { vitest: "4.1.1" });
     expect(JSON.parse(out)).not.toHaveProperty("resolutions");
+  });
+
+  it("writes the block for every package manager except pnpm", async () => {
+    for (const packageManager of ["npm", "yarn", "bun"]) {
+      expect((await generated(packageManager)).resolutions).toEqual(
+        toYarnResolutions(BOILERPLATE_DEPENDENCY_OVERRIDES),
+      );
+    }
+    expect(await generated("pnpm")).not.toHaveProperty("resolutions");
   });
 });
