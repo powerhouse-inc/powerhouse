@@ -2968,8 +2968,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       // Document meta not found -- continue with load (may be a new document)
     }
 
-    // Base-reducer 3 skips are this replica's own rewinds, never an undo.
-    const receiverSkips = docMeta?.protocolVersions?.["base-reducer"] === 3;
+    // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
+    // its conflict window is the receiver's.
+    const baseReducer3 = docMeta?.protocolVersions?.["base-reducer"] === 3;
 
     // Without DCB, we reject entire load jobs. With DCB we are able to
     // accept/deny individual operations.
@@ -3025,7 +3026,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     let selection = await this.selectLoadWrites(
       job,
       job.operations,
-      receiverSkips,
+      baseReducer3,
       stores,
       signal,
     );
@@ -3079,7 +3080,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       selection = await this.selectLoadWrites(
         job,
         remaining,
-        receiverSkips,
+        baseReducer3,
         stores,
         signal,
       );
@@ -3182,7 +3183,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               index: latestRevision + i,
               // A trivial append rewinds nothing.
-              skip: receiverSkips ? 0 : operation.skip,
+              skip: baseReducer3 ? 0 : operation.skip,
             }))
         : reshuffleByTimestamp(
             {
@@ -3215,7 +3216,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const operation of reshuffledOperations) {
       // A local NOOP's target stays behind; a skip would undo another operation.
       if (
-        !receiverSkips &&
+        !baseReducer3 &&
         operation.action.type === "NOOP" &&
         operation.skip === 0 &&
         incomingIds.has(operation.action.id)
@@ -3303,7 +3304,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async selectLoadWrites(
     job: Job,
     operations: Operation[],
-    receiverSkips: boolean,
+    baseReducer3: boolean,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<{
@@ -3401,7 +3402,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
       if (
-        !receiverSkips &&
+        !baseReducer3 &&
         rows.some((row) => supersededBy(row)?.action.type === "NOOP")
       ) {
         undoneActionIds.add(actionId);
@@ -3413,6 +3414,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
+    const minIncomingAt = Date.parse(minIncomingTimestamp);
     const nonSupersededOps = conflictingOps.filter((op) => {
       // A local op at an index below the incoming batch's lowest index with no
       // overlapping action.id is a predecessor of the incoming ops, not a
@@ -3421,7 +3423,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       // ops share timestamps (bulk imports). Local ops whose action.id matches
       // an incoming op are kept so dedup + reshuffle can remap them correctly
       // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < predecessorBound && !incomingActionIds.has(op.action.id)) {
+      //
+      // On base-reducer 3 a row stamped after the earliest incoming row always
+      // moves, whatever the sender's indexes, so order follows the row set.
+      if (
+        op.index < predecessorBound &&
+        !incomingActionIds.has(op.action.id) &&
+        !(baseReducer3 && Date.parse(op.timestampUtcMs) > minIncomingAt)
+      ) {
         return false;
       }
       return liveOps.has(op);
