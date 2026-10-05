@@ -25,10 +25,11 @@ export interface ConversionDeps {
   hostFs?: SyncTreeHostFs;
 }
 
+// Backoff doubles per retry; five keeps a scanner-held file to ~3 s.
 const RM_OPTIONS = {
   recursive: true,
   force: true,
-  maxRetries: 10,
+  maxRetries: 5,
   retryDelay: 100,
 } as const;
 
@@ -126,7 +127,14 @@ export async function convertSnapshotDir(
   await fs.rename(s.converting, s.dir);
   syncDirectory(parent, deps.hostFs);
   await deps.afterStep?.("renameNew");
-  await fs.rm(s.old, RM_OPTIONS);
+  try {
+    await fs.rm(s.old, RM_OPTIONS);
+  } catch (err) {
+    // The converted dir is in place; recoverConversion removes .old next boot.
+    deps.logger.warn(
+      `Could not remove ${s.old} after conversion; it is removed at the next boot: ${String(err)}`,
+    );
+  }
   await deps.afterStep?.("removeOld");
 
   const convertedBytes = await treeBytes(s.dir);

@@ -131,6 +131,14 @@ against 49267b7e78. Entries read `path:line (symbol) — what — why`.
   (initdb, extraction, PG16 restore) no longer syncs per file; one tree
   sync after the work. Its own deviations are recorded in that plan.
 
+- `packages/reactor-api/src/pglite/convert-snapshot-dir.ts` (`RM_OPTIONS`,
+  step (e)) — the old dir's removal retries five times, not ten, and a
+  failure there is a warning, not an error — `fs.rm` doubles its delay per
+  retry, so ten retries wait about 100 s when a scanner holds a fresh file
+  on Windows; `check-windows` timed out the first conversion test at 90 s
+  while its siblings took 5 s to 28 s. The converted dir is already in
+  place at that point and `recoverConversion` removes `.old` next boot.
+
 ## Reactor tests
 
 - `packages/reactor/test/factories.ts:131-139` (`nodeFsBackend`) — the

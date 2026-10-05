@@ -138,12 +138,12 @@ describe("convertSnapshotDir", { timeout: 90_000 }, () => {
 
   /** snapshot.bin alone, or beside the loose tree it was migrated from. */
   async function makeSnapshotStore(options: { keepLoose?: boolean } = {}) {
-    await fs.cp(templateDir, dir, { recursive: true });
-    await writeSnapshotFromDir(dir, snapshot);
-    if (options.keepLoose) return;
-    for (const name of await fs.readdir(dir)) {
-      if (name !== "snapshot.bin") await fs.rm(path.join(dir, name), RM);
+    if (options.keepLoose) {
+      await fs.cp(templateDir, dir, { recursive: true });
+    } else {
+      await fs.mkdir(dir);
     }
+    await writeSnapshotFromDir(templateDir, snapshot);
   }
 
   async function siblings(): Promise<{
