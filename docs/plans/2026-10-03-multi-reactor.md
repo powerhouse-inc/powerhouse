@@ -1087,3 +1087,11 @@ Screenshots (OFF vs ON, live diagnostic overlay) delivered to the user. **Stage 
 - Stage 4 Connect (WP-B/C/E): DONE, live-verified. Loose ends above.
 - Stage 5 (NEW, user-deferred): multi-reactor Switchboard host (gateway-granularity rework + switchboard-lb). Design-led, not started.
 - Stage P (performance): memory (~18GB Accounts), DB size (PGlite 2GB ceiling, journal), speed. Baselines banked. Resource-heavy/soak-based — do when actively monitoring.
+
+### Stage 4 — remote-read surface over GraphQL: DONE (reviewed + fixed) 2026-10-05
+
+The documented v1 limitation (remote drives excluded from `find`) is LIFTED. `GraphQLReactorClient` now serves `find` + all four relationship reads over the Switchboard `findDocuments` query, so the remote is a real contributing backend in the router's `find` union. Built, review-gated, all 6 review findings fixed (incl. a silently-wrong-rows bug: a present-but-empty `ids:[]`/`slugs:[]` was served as an all-documents query — now refused per the reactor contract's presence semantics).
+- Single source of truth: `findIsServableOverGraphQL(search, view)` (exported from reactor-browser, consulted by the connect adapter) refuses iff the search names ids/slugs (present, any length) OR the view is point-in-time — each a genuine limit of a type/parentId@head surface. Unservable → typed `ReactorOperationNotSupportedError` → router excludes that read; genuine GraphQL/transport errors still propagate loud.
+- Residual honest degradation (the Switchboard surface genuinely cannot express these): `find` by ids/slugs, and point-in-time `find`. Everything still unimplemented (drive choreography, jobs, batches, relationship writes) keeps the typed by-name refusal.
+- Tests: reactor-browser 260, reactor-router 105, connect 343; tsc/lint clean. Commits fc767150de, 3cc18cec9f (feature); 0dcf680a70, 43ec7e22ff (review fixes).
+- **Not yet live-verified** against a real Switchboard — needs the local vetra switchboard (7452, no external cloud load) with the connect dev server's remote backend pointed at it; do when actively monitoring resources (one vetra + one browser). Unit tests + review give high confidence pending that.
