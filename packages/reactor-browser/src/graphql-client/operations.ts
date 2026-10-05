@@ -111,3 +111,62 @@ export type MutateDocumentWithOperationsResult = {
     } | null;
   };
 };
+
+/**
+ * The atomic batch mutation, the wire form of `IReactor.executeBatch`.
+ *
+ * Hand-authored rather than generated for the same reason the mutation above
+ * is: one request carries a list of jobs, each a signed `ExecutionJobInput`
+ * mirroring the reactor's `ExecutionJobPlan`, and the result pairs each plan key
+ * with the completed `JobInfo` that applied it, so the client can rebuild the
+ * `{ jobs }` record `IReactor.executeBatch` returns. The mutation is synchronous
+ * server-side, so every returned job is already complete.
+ */
+export const ExecuteBatchDocument = gql`
+  mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
+    executeBatch(jobs: $jobs) {
+      jobs {
+        key
+        job {
+          id
+          status
+          error
+          createdAt
+          completedAt
+        }
+      }
+    }
+  }
+`;
+
+/** One job of an {@link ExecuteBatchVariables} request, a signed plan entry. */
+export type ExecuteBatchJobInput = {
+  key: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope: Scalars["String"]["input"];
+  branch?: Scalars["String"]["input"];
+  actions: ReadonlyArray<ActionInput>;
+  dependsOn: ReadonlyArray<Scalars["String"]["input"]>;
+};
+
+export type ExecuteBatchVariables = {
+  jobs: ReadonlyArray<ExecuteBatchJobInput>;
+};
+
+/** The `JobInfo` selection of {@link ExecuteBatchDocument}. */
+export type ExecuteBatchJobInfo = {
+  readonly id: string;
+  readonly status: string;
+  readonly error?: string | null;
+  readonly createdAt: string | Date;
+  readonly completedAt?: string | Date | null;
+};
+
+export type ExecuteBatchResult = {
+  readonly executeBatch: {
+    readonly jobs: ReadonlyArray<{
+      readonly key: string;
+      readonly job: ExecuteBatchJobInfo;
+    }>;
+  };
+};
