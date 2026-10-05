@@ -3014,8 +3014,16 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
         signal,
       );
-    } catch {
-      // Document meta not found -- continue with load (may be a new document)
+    } catch (error) {
+      // Not found: the load may create the document. Any other failure would
+      // read a base-reducer 3 document as base-reducer 2.
+      if (!DocumentNotFoundError.isError(error)) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
     }
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
