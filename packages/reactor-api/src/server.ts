@@ -19,6 +19,7 @@ import type { SyncScopeGate } from "@powerhousedao/reactor";
 import {
   AttachmentBuilder,
   AttachmentReferenceIndexBuilder,
+  KyselyAttachmentStore,
 } from "@powerhousedao/reactor-attachments";
 import type {
   AttachmentBuildResult,
@@ -378,7 +379,15 @@ export function getExplorerPrefix(basePath: string): string {
  * no fetch-on-reference replicator, so it reports `hasReplicator: false` with
  * the bytes it holds; the replicator counters stay at their empty default,
  * which the inspection shape documents as not-meaningful in that case.
+ *
+ * The store kind is derived from the built store rather than asserted, so a
+ * host that one day serves attachments from a different store reports what it
+ * actually has instead of a stale "kysely".
  */
+function attachmentStoreKind(store: unknown): string {
+  return store instanceof KyselyAttachmentStore ? "kysely" : "unknown";
+}
+
 function buildAttachmentInspectionStore(
   attachments: AttachmentBuildResult,
 ): IInspectableAttachmentStore {
@@ -387,7 +396,7 @@ function buildAttachmentInspectionStore(
       const bytesHeld = await attachments.store.storageUsed();
       return {
         present: true,
-        storeKind: "kysely",
+        storeKind: attachmentStoreKind(attachments.store),
         hasReplicator: false,
         replicatorRunning: false,
         backlogScanned: false,
