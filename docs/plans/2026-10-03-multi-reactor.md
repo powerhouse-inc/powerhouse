@@ -1109,3 +1109,20 @@ Emerged from live use of the Reactor Monitor against the running distyra↔vetra
 6. **Monitor persistence** — localStorage monitoring sets (named descriptor groups) + active set + create/delete; reactors survive refresh.
 Shared infra: the 12-step IInspector→wire→subgraph→remote-client→tab pattern (reuse QueueTab/SyncTab templates) for the inspection-backed tabs (1,2,4b).
 Sequencing: quick wins (§6,§4a,§5) → inspection track (§2,§1,§4b) → workflows (§3). Each through /code-review. §5 implementation dispatched first.
+
+---
+
+## Milestone (VISIBLE, not started — needs careful design): Complete the remote backend's write + drive-choreography surface over GraphQL
+
+**Status:** backlog / parked for deliberate design. Making it visible per user (2026-10-05); do NOT start without a design pass.
+
+**What:** the router's remote Switchboard backend (`apps/connect/src/store/remote-switchboard-backend.ts`) today delegates a DOCUMENT subset over GraphQL — reads (`get`, `subscribe`, `getOperations`, `find`, the 4 relationship reads) AND single-document writes (`execute`, `create`, `deleteDocument`). Everything else throws the typed `ReactorOperationNotSupportedError`:
+- **drive choreography** (`drives.*`: addDrive, drive-level node/file ops),
+- **relationship WRITES** (addRelationship, etc.),
+- **jobs**, **batches** (single-backend).
+
+This milestone = wire those over the Switchboard GraphQL so a remote drive is a fully first-class backend (create/manage drives, write relationships, submit jobs/batches to it). Single-backend scope only.
+
+**Why it needs thought (not a mechanical fill-in):** drive choreography + jobs have ordering/idempotency/auth semantics that must map faithfully onto GraphQL mutations; relationship writes touch the graph model; batches need the Switchboard's batch/job intake. Each needs a faithful GraphQL mapping + the honest-degradation story preserved.
+
+**Explicitly NOT this milestone (stays deferred, harder):** CROSS-backend atomic operations — `CrossBackendBatchError` / `CrossBackendRelationshipError` (a batch or relationship spanning two independent reactors). That's the distributed-transaction (2PC/saga) problem, same family as the deferred W0.9 reshuffle strategy; the v1 invariant (refuse loudly, never half-apply across backends) holds until that's solved conceptually.
