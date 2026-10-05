@@ -263,6 +263,8 @@ function mulberry32(seed: number): () => number {
 type Variant = {
   /** Clock skew, backdated writes, and partial and repeated delivery. */
   adversarial: boolean;
+  /** Writes often reuse the previous stamp, on the same node or another. */
+  ties?: boolean;
 };
 
 const reducer = driveDocumentModelModule.reducer;
@@ -318,6 +320,13 @@ async function runCase(
   const random = mulberry32(seed);
   const int = (n: number) => Math.floor(random() * n);
   const pick = <T>(items: readonly T[]): T => items[int(items.length)];
+  // Seeded, so a tie breaks the same way when a seed is replayed.
+  const hex = (n: number) =>
+    Array.from({ length: n }, () => int(16).toString(16)).join("");
+  const seeded = <T extends Action>(action: T): T => ({
+    ...action,
+    id: `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`,
+  });
 
   const replicas = nodes.slice(0, 2 + int(2));
   const skew = new Map(
@@ -331,13 +340,18 @@ async function runCase(
     let writes = 0;
     const known: string[] = [];
     // A synthesized RETRACT is stamped when executed, so stamps follow the clock.
+    let previous: string | undefined;
     const stamp = async (node: Node) => {
-      await sleep(2);
       writes++;
+      if (variant.ties && previous !== undefined && random() < 0.4) {
+        return previous;
+      }
+      await sleep(2);
       const jitter = variant.adversarial && random() < 0.2 ? -int(4) : 0;
-      return new Date(
+      previous = new Date(
         Date.now() + (skew.get(node.name)! + jitter) * 1000,
       ).toISOString();
+      return previous;
     };
     const write = async (node: Node, action: Action, label: string) => {
       const refused = await execute(node, id, action);
@@ -362,10 +376,10 @@ async function runCase(
             : driveDocumentModelModule.actions.setDriveName({
                 name: `n${writes}`,
               });
-        await write(node, { ...action, timestampUtcMs }, action.type);
+        await write(node, seeded({ ...action, timestampUtcMs }), action.type);
       } else if (roll < 0.55) {
         const isUndo = random() < 0.55;
-        const action = isUndo ? undo() : redo();
+        const action = seeded(isUndo ? undo() : redo());
         await write(node, action, action.type);
       } else if (roll < 0.65) {
         const rows = await storedRows(node.module, id);
@@ -383,7 +397,7 @@ async function runCase(
         if (target === undefined) continue;
         await write(
           node,
-          { ...retract(target), timestampUtcMs: await stamp(node) },
+          seeded({ ...retract(target), timestampUtcMs: await stamp(node) }),
           `RETRACT(${target.slice(0, 8)})`,
         );
       } else if (variant.adversarial) {
@@ -516,6 +530,11 @@ describe("base-reducer 3, reactor-level differential property", () => {
 
   it("replicas agree under skew, backdated writes, and partial and repeated delivery", async () => {
     await runSeeds(0x4c1, { adversarial: true });
+  }, 300_000);
+
+  // Same-node and cross-node ties, under the adversarial schedule.
+  it("replicas agree when writes share timestamps", async () => {
+    await runSeeds(0x4c2, { adversarial: true, ties: true });
   }, 300_000);
 
   // selectLoadWrites leaves out receiver rows below the sender's lowest index.

@@ -53,6 +53,7 @@ import {
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotDeletedError,
+  DocumentNotFoundError,
   DocumentPurgedError,
   ExcessiveReshuffleError,
   GroupInUseError,
@@ -71,7 +72,7 @@ import {
   type AppendCondition,
   type IOperationStore,
 } from "../storage/interfaces.js";
-import { reshuffleByTimestamp } from "../utils/reshuffle.js";
+import { compareCanonical, reshuffleByTimestamp } from "../utils/reshuffle.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import {
   decideAtHead,
@@ -2407,10 +2408,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    * would overwrite the verdict every other replica computes for it.
    */
   private async positionByTimestamp(
-    job: Job,
+    submitted: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
+    let job = submitted;
     const plain = (): PositionedWrites => ({
       writes: job.actions.map((action) => ({
         action,
@@ -2422,6 +2424,25 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
       return plain();
+    }
+
+    // Read the way admission reads: with decisions on, execution bypasses the
+    // meta cache. A create has nothing stored to order against.
+    let baseReducer3 = false;
+    try {
+      const documentScope = await stores.writeCache.getState(
+        job.documentId,
+        "document",
+        job.branch,
+        undefined,
+        signal,
+      );
+      baseReducer3 =
+        documentScope.header.protocolVersions?.["base-reducer"] === 3;
+    } catch (error) {
+      if (!DocumentNotFoundError.isError(error)) {
+        throw error;
+      }
     }
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
@@ -2477,7 +2498,31 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    if (!backdated) {
+    // Base-reducer 3 stores a job in the order every receiver sorts it into,
+    // and a tie with a stored row is broken by action id, not arrival.
+    let first: Operation | undefined;
+    if (baseReducer3) {
+      const asRow = (action: Action) =>
+        ({
+          id: action.id,
+          index: 0,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: action.timestampUtcMs,
+          action,
+        }) as Operation;
+      job = {
+        ...job,
+        actions: [...job.actions].sort((a, b) =>
+          compareCanonical(asRow(a), asRow(b)),
+        ),
+      };
+      first = asRow(job.actions[0]);
+    }
+    const tied =
+      baseReducer3 && earliestAt === Date.parse(revisions.latestTimestamp);
+
+    if (!backdated && !tied) {
       return plain();
     }
 
@@ -2490,11 +2535,15 @@ export class SimpleJobExecutor implements IJobExecutor {
         undefined,
         signal,
       )
-    ).results.filter((operation) => !isGenesisOperation(operation));
+    ).results.filter(
+      (operation) =>
+        !isGenesisOperation(operation) &&
+        (first === undefined || compareCanonical(operation, first) > 0),
+    );
 
     // Nothing to move here, but still below another scope's newest operation.
     const nothingToMove = async (): Promise<PositionedWrites> => {
-      if (!this.featureFlags.authEnforcement) {
+      if (!backdated || !this.featureFlags.authEnforcement) {
         return plain();
       }
       return this.evaluatePositioned(
@@ -2558,8 +2607,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // Given positions rather than stored rows, so a tie puts the new write
-    // after what is already there.
+    // Given positions rather than stored rows, so on base-reducer 2 a tied
+    // structure action goes after what is already there.
     const incoming = job.actions.map(
       (action, i) =>
         ({
@@ -2576,6 +2625,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
+      { canonical: baseReducer3 },
     );
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
@@ -2964,8 +3014,16 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
         signal,
       );
-    } catch {
-      // Document meta not found -- continue with load (may be a new document)
+    } catch (error) {
+      // Not found: the load may create the document. Any other failure would
+      // read a base-reducer 3 document as base-reducer 2.
+      if (!DocumentNotFoundError.isError(error)) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
     }
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
@@ -3095,6 +3153,18 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Creation holds the first two indexes for the life of the document, so it
     // never moves however far back the conflicting range reaches. The auth stream
     // moves nothing at all.
+    // Before the cost check: a re-delivered row pulls everything after it into
+    // the window, and a load that writes nothing must not fail on its size.
+    if (baseReducer3 && incomingOpsToApply.length === 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
     const existingOpsToReshuffle = monotonicAuthStream
       ? []
       : nonSupersededOps.filter((operation) => !isGenesisOperation(operation));
@@ -3178,13 +3248,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       existingOpsToReshuffle.length === 0 && skipCount === 0
         ? incomingOpsToApply
             .slice()
-            .sort(
-              (a, b) =>
-                // A sender's reshuffle puts its rows out of timestamp order,
-                // and base-reducer 3 does not read the skip that orders them.
-                (baseReducer3
-                  ? Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs)
-                  : 0) || a.index - b.index,
+            .sort((a, b) =>
+              // A sender's reshuffle puts its rows out of timestamp order,
+              // and base-reducer 3 does not read the skip that orders them.
+              baseReducer3 ? compareCanonical(a, b) : a.index - b.index,
             )
             .map((operation, i) => ({
               ...operation,
@@ -3202,6 +3269,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               id: operation.id,
             })),
+            { canonical: baseReducer3 },
           );
 
     // A NOOP is the v2 undo marker, and it is only a marker while its skip is
@@ -3421,7 +3489,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const minIncomingAt = Date.parse(minIncomingTimestamp);
     const nonSupersededOps = conflictingOps.filter((op) => {
       // A local op at an index below the incoming batch's lowest index with no
       // overlapping action.id is a predecessor of the incoming ops, not a
@@ -3431,12 +3498,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       // an incoming op are kept so dedup + reshuffle can remap them correctly
       // (e.g. cross-reactor reshuffle rebroadcast).
       //
-      // On base-reducer 3 a row stamped after the earliest incoming row always
-      // moves, whatever the sender's indexes, so order follows the row set.
+      // On base-reducer 3 every conflicting row moves, whatever the sender's
+      // indexes, so order follows the row set and a tie with an incoming row
+      // is broken by action id.
       if (
+        !baseReducer3 &&
         op.index < predecessorBound &&
-        !incomingActionIds.has(op.action.id) &&
-        !(baseReducer3 && Date.parse(op.timestampUtcMs) > minIncomingAt)
+        !incomingActionIds.has(op.action.id)
       ) {
         return false;
       }
