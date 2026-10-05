@@ -297,12 +297,7 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
       );
     }
 
-    await reactorModule.syncModule!.syncManager.add(
-      REMOTE,
-      DriveCollectionId.forDrive(driveId),
-      { type: "internal", parameters: {} },
-      { documentId: [], scope: [], branch: "main" },
-    );
+    await addRemoteOnThisBuild(reactorModule, REMOTE, driveId);
     await vi.waitUntil(() => channel().outbox.latestOrdinal > 0, {
       timeout: 10_000,
     });
@@ -350,18 +345,31 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     );
   }
 
+  /** No peer answers the handshake; the remote stands for one on this build. */
+  async function addRemoteOnThisBuild(
+    reactorModule: InProcessReactorModule,
+    name: string,
+    driveId: string,
+  ): Promise<void> {
+    const { syncManager } = reactorModule.syncModule!;
+    await syncManager.add(
+      name,
+      DriveCollectionId.forDrive(driveId),
+      { type: "internal", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      undefined,
+      undefined,
+      syncManager.localManifest(),
+    );
+  }
+
   async function addRemote(
     reactorModule: InProcessReactorModule,
     name: string,
     driveId: string,
     sentTo: Harness["sentTo"],
   ): Promise<void> {
-    await reactorModule.syncModule!.syncManager.add(
-      name,
-      DriveCollectionId.forDrive(driveId),
-      { type: "internal", parameters: {} },
-      { documentId: [], scope: [], branch: "main" },
-    );
+    await addRemoteOnThisBuild(reactorModule, name, driveId);
     await vi.waitUntil(() => sentTo(name).length > 0, { timeout: 10_000 });
   }
 
