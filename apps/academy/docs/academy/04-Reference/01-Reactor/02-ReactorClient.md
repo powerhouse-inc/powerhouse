@@ -1036,7 +1036,7 @@ moveNode(
 
 ### `copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document.
+Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document, which keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them. See [Undo and redo](/academy/Reference/Reactor/UndoRedo) for copying a document to base-reducer 3.
 
 ```typescript
 copyNode(
@@ -1044,6 +1044,7 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
+  options?: { protocolVersions?: ProtocolVersions },
 ): Promise<DocumentDriveDocument>
 ```
 
