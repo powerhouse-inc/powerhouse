@@ -167,7 +167,7 @@ export type PHConnectReactorFeatureFlags = {
   authGroups?: boolean;
   /** Evaluate `where` / `match` conditions on grants. */
   authConditions?: boolean;
-  /** Support base-reducer 3 (id-targeted undo). */
+  /** Support base-reducer 3 (id-targeted undo); on by default. */
   undoV3?: boolean;
 };
 

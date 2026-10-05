@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-05T15:15:19.927Z
+> Generated: 2026-10-05T16:28:02.254Z
 > Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -7602,28 +7602,40 @@ How a document stores an undo depends on its base-reducer version, `header.proto
 On version 3 a retraction names its target, so where it lands in the stream does not change what it undoes. Replicas that hold the same operations derive the same state, whatever order the operations arrived in.
 
 **INFO:**
-Base-reducer 3 needs the `undoV3` reactor flag, which defaults to off. A reactor without it refuses to create a version 3 document and never receives one from a peer.
+Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor with it off refuses to create a version 3 document and never receives one from a peer.
 
 
-## Turning it on
+## Turning it off
 
-| Host        | Setting                                                                  |
-| ----------- | ------------------------------------------------------------------------ |
-| Switchboard | `REACTOR_UNDO_V3=true`                                                   |
-| Connect     | `connect.reactor.featureFlags.undoV3` in `powerhouse.config.json`        |
-| Library     | `ReactorBuilder.withExecutorConfig({ featureFlags: { undoV3: true } })` |
+| Host        | Setting                                                                   |
+| ----------- | ------------------------------------------------------------------------- |
+| Switchboard | `REACTOR_UNDO_V3=false`                                                   |
+| Connect     | `connect.reactor.featureFlags.undoV3: false` in `powerhouse.config.json`  |
+| Library     | `ReactorBuilder.withExecutorConfig({ featureFlags: { undoV3: false } })` |
 
-`undoV3` has no prerequisites. Leave it off until every peer that syncs with the host runs a release that has it.
+`undoV3` has no prerequisites. A peer that runs without it is held from version 3 documents until it upgrades.
 
-A document is version 3 only if it was created that way:
+## Which version a document takes
+
+A document's version is fixed when it is created. A create through a reactor with `undoV3` on takes version 3, and with it off version 2, unless the call names a version:
 
 ```typescript
 const document = await client.createEmpty("powerhouse/todo-list", {
+  protocolVersions: { "base-reducer": 2 },
+});
+```
+
+A document headed outside a reactor, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is added to a drive.
+
+An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
+
+```typescript
+await client.drives.copyNode(driveId, nodeId, targetFolderId, undefined, {
   protocolVersions: { "base-reducer": 3 },
 });
 ```
 
-An existing document keeps its version.
+The copy starts from the source's current state, so the source's history cannot be undone in it. A copy without `protocolVersions` keeps its source's version. `ReactorDriveClient` replays the source's history into the copy and refuses `protocolVersions`.
 
 ## Undoing from a client
 

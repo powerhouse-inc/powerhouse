@@ -454,8 +454,8 @@ export const phConnectRuntimeConfigSchema = {
             undoV3: {
               type: "boolean",
               description:
-                "Support base-reducer 3 (id-targeted undo). Off until every syncing peer runs a release with it.",
-              default: false,
+                "Support base-reducer 3 (id-targeted undo), which new documents then take. A peer without it is held from base-reducer 3 documents until it upgrades.",
+              default: true,
             },
           },
         },

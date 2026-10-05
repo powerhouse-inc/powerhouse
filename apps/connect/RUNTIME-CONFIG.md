@@ -56,7 +56,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
     "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },
-    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false, "undoV3": false }, "createSignaturePolicy": "v2-required", "unsupportedStoredDocuments": "refuse" },
+    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false, "undoV3": true }, "createSignaturePolicy": "v2-required", "unsupportedStoredDocuments": "refuse" },
     "pwa":       { ... } // build-time only, see below
   }
 }
@@ -95,8 +95,9 @@ The reactor Connect runs in the browser takes the same five flags a switchboard
 does. The four enforcement flags, `documentDecisions`, `authEnforcement`,
 `authGroups` and `authConditions`, each require the one before it, and the
 reactor refuses to build a set that skips one. `undoV3` supports base-reducer 3
-(id-targeted undo) and has no prerequisites; leave it off until every syncing
-peer runs a release with it. All default `false`.
+(id-targeted undo), which new documents then take; it has no prerequisites and
+defaults `true`. A peer without it is held from base-reducer 3 documents until
+it upgrades. The enforcement flags default `false`.
 
 ```jsonc
 "reactor": {
