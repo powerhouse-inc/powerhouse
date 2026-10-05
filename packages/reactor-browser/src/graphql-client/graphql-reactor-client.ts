@@ -1,6 +1,7 @@
 import type {
   DocumentChangeEvent,
   DocumentChangeType,
+  DocumentRelationship,
   OperationFilter,
   PagedResults,
   PagingOptions,
@@ -28,8 +29,10 @@ import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
+  type DocumentRelationshipFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
+  type PhDocumentFieldsFragment,
   type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
@@ -269,6 +272,186 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     };
   }
 
+  /**
+   * Filters documents by criteria over the Switchboard's `findDocuments` query.
+   *
+   * The query filters by `type` and `parentId` only. A search naming `ids` or
+   * `slugs` is refused rather than served, because the query ignores those
+   * fields -- running it would return every document instead of the named ones,
+   * a silently wrong answer. The router's remote backend turns this refusal into
+   * its typed not-supported signal so the collection-spanning read excludes this
+   * backend instead of merging the wrong page; drive enumeration itself filters
+   * by `type`, which is served.
+   *
+   * `view.revision` is rejected by {@link viewFilterInputFromViewFilter}: the
+   * Switchboard read API has no revision argument.
+   */
+  async find<TDocument extends PHDocument = PHDocument>(
+    search: SearchFilter,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<TDocument>> {
+    if (searchNamesIdentifiers(search)) {
+      throw new Error(
+        "GraphQLReactorClient.find cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId",
+      );
+    }
+
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.FindDocuments(
+      {
+        search: { type: search.type, parentId: search.parentId },
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults<TDocument>(
+      result.findDocuments,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.find<TDocument>(search, view, { cursor, limit }, signal),
+    );
+  }
+
+  async getOutgoingRelationships(
+    sourceIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentOutgoingRelationships(
+      {
+        sourceIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults(
+      result.documentOutgoingRelationships,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.getOutgoingRelationships(
+          sourceIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getIncomingRelationships(
+    targetIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentIncomingRelationships(
+      {
+        targetIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults(
+      result.documentIncomingRelationships,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.getIncomingRelationships(
+          targetIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getOutgoingRelationshipEdges(
+    sourceIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentOutgoingRelationshipEdges(
+      {
+        sourceIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toRelationshipResults(
+      result.documentOutgoingRelationshipEdges,
+      paging ?? defaultPaging,
+      (cursor, limit) =>
+        this.getOutgoingRelationshipEdges(
+          sourceIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getIncomingRelationshipEdges(
+    targetIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentIncomingRelationshipEdges(
+      {
+        targetIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toRelationshipResults(
+      result.documentIncomingRelationshipEdges,
+      paging ?? defaultPaging,
+      (cursor, limit) =>
+        this.getIncomingRelationshipEdges(
+          targetIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
@@ -476,6 +659,67 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       variables,
       signal: options?.signal,
     });
+  }
+
+  /**
+   * Shapes a document result page into the reactor's {@link PagedResults}.
+   *
+   * The items carry the same `PHDocumentFields` fragment as `get`, so the same
+   * adapter rebuilds each one. `hasNextPage` gates the cursor exactly as
+   * `getOperations` does: no cursor means no `next`.
+   */
+  private toDocumentResults<TDocument extends PHDocument = PHDocument>(
+    page: {
+      items: ReadonlyArray<PhDocumentFieldsFragment>;
+      hasNextPage: boolean;
+      cursor?: string | null;
+    },
+    effectivePaging: PagingOptions,
+    branch: string | undefined,
+    next: (cursor: string, limit: number) => Promise<PagedResults<TDocument>>,
+  ): PagedResults<TDocument> {
+    const nextCursor = page.hasNextPage
+      ? (page.cursor ?? undefined)
+      : undefined;
+    return {
+      results: page.items.map((item) =>
+        phDocumentFromGetDocument<TDocument>(item, branch),
+      ),
+      options: effectivePaging,
+      nextCursor,
+      next: nextCursor
+        ? () => next(nextCursor, effectivePaging.limit)
+        : undefined,
+    };
+  }
+
+  /**
+   * Shapes a relationship-edge result page into the reactor's
+   * {@link PagedResults}, restoring each edge's `Date` fields.
+   */
+  private toRelationshipResults(
+    page: {
+      items: ReadonlyArray<DocumentRelationshipFieldsFragment>;
+      hasNextPage: boolean;
+      cursor?: string | null;
+    },
+    effectivePaging: PagingOptions,
+    next: (
+      cursor: string,
+      limit: number,
+    ) => Promise<PagedResults<DocumentRelationship>>,
+  ): PagedResults<DocumentRelationship> {
+    const nextCursor = page.hasNextPage
+      ? (page.cursor ?? undefined)
+      : undefined;
+    return {
+      results: page.items.map((edge) => documentRelationshipFromEdge(edge)),
+      options: effectivePaging,
+      nextCursor,
+      next: nextCursor
+        ? () => next(nextCursor, effectivePaging.limit)
+        : undefined,
+    };
   }
 
   /**
@@ -744,6 +988,39 @@ function pagingInputFromPaging(
     return undefined;
   }
   return { cursor: paging.cursor, limit: paging.limit };
+}
+
+/**
+ * Whether a search filters by `ids` or `slugs`, which the Switchboard
+ * `findDocuments` query cannot honour (it filters by `type` and `parentId`).
+ */
+function searchNamesIdentifiers(search: SearchFilter): boolean {
+  return (
+    (search.ids !== undefined && search.ids.length > 0) ||
+    (search.slugs !== undefined && search.slugs.length > 0)
+  );
+}
+
+/** Rebuilds a relationship edge from its GraphQL fields. */
+function documentRelationshipFromEdge(
+  edge: DocumentRelationshipFieldsFragment,
+): DocumentRelationship {
+  const relationship: DocumentRelationship = {
+    sourceId: edge.sourceId,
+    targetId: edge.targetId,
+    relationshipType: edge.relationshipType,
+    createdAt: dateFromDateTime(edge.createdAt),
+    updatedAt: dateFromDateTime(edge.updatedAt),
+  };
+  if (edge.metadata !== undefined && edge.metadata !== null) {
+    relationship.metadata = edge.metadata as Record<string, unknown>;
+  }
+  return relationship;
+}
+
+/** The `DateTime` scalar deserializes as either an ISO string or a `Date`. */
+function dateFromDateTime(value: string | Date): Date {
+  return value instanceof Date ? value : new Date(value);
 }
 
 /**

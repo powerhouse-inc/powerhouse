@@ -1,16 +1,50 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
+  FindDocumentsQuery,
+  GetDocumentIncomingRelationshipEdgesQuery,
   GetDocumentOperationsQuery,
+  GetDocumentOutgoingRelationshipsQuery,
   GetDocumentQuery,
 } from "../../src/graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
 import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
 
 type OperationsPage = GetDocumentOperationsQuery["documentOperations"];
+type FindPage = FindDocumentsQuery["findDocuments"];
+type RelationshipsPage =
+  GetDocumentOutgoingRelationshipsQuery["documentOutgoingRelationships"];
+type EdgesPage =
+  GetDocumentIncomingRelationshipEdgesQuery["documentIncomingRelationshipEdges"];
 
 type MockSdk = {
   GetDocument: ReturnType<typeof vi.fn>;
   GetDocumentOperations: ReturnType<typeof vi.fn>;
+  FindDocuments: ReturnType<typeof vi.fn>;
+  GetDocumentOutgoingRelationships: ReturnType<typeof vi.fn>;
+  GetDocumentIncomingRelationships: ReturnType<typeof vi.fn>;
+  GetDocumentOutgoingRelationshipEdges: ReturnType<typeof vi.fn>;
+  GetDocumentIncomingRelationshipEdges: ReturnType<typeof vi.fn>;
+};
+
+const documentFields = {
+  id: "doc-1",
+  slug: "my-doc",
+  name: "My Doc",
+  documentType: "powerhouse/document-drive",
+  state: { global: { name: "hello" }, local: {} },
+  createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+  lastModifiedAtUtcIso: "2026-01-02T00:00:00.000Z",
+  revisionsList: [
+    { scope: "global", revision: 7 },
+    { scope: "document", revision: 1 },
+  ],
+};
+
+const emptyFindPage: FindPage = {
+  items: [],
+  hasNextPage: false,
+  hasPreviousPage: false,
+  cursor: null,
 };
 
 const documentPayload: GetDocumentQuery = {
@@ -45,6 +79,19 @@ function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
     GetDocumentOperations: vi
       .fn()
       .mockResolvedValue({ documentOperations: emptyOperationsPage }),
+    FindDocuments: vi.fn().mockResolvedValue({ findDocuments: emptyFindPage }),
+    GetDocumentOutgoingRelationships: vi
+      .fn()
+      .mockResolvedValue({ documentOutgoingRelationships: emptyFindPage }),
+    GetDocumentIncomingRelationships: vi
+      .fn()
+      .mockResolvedValue({ documentIncomingRelationships: emptyFindPage }),
+    GetDocumentOutgoingRelationshipEdges: vi.fn().mockResolvedValue({
+      documentOutgoingRelationshipEdges: emptyFindPage,
+    }),
+    GetDocumentIncomingRelationshipEdges: vi.fn().mockResolvedValue({
+      documentIncomingRelationshipEdges: emptyFindPage,
+    }),
     ...overrides,
   };
 }
@@ -349,5 +396,221 @@ describe("GraphQLReactorClient.getOperations", () => {
       createClientWith(sdk).getOperations("doc-1", { revision: 3 }),
     ).rejects.toThrow("point-in-time views are not supported");
     expect(sdk.GetDocumentOperations).not.toHaveBeenCalled();
+  });
+});
+
+describe("GraphQLReactorClient.find", () => {
+  const findPage: FindPage = {
+    items: [documentFields, { ...documentFields, id: "doc-2", slug: "doc-2" }],
+    hasNextPage: true,
+    hasPreviousPage: false,
+    cursor: "cursor-2",
+  };
+
+  it("maps the found documents onto PHDocuments", async () => {
+    const sdk = createMockSdk({
+      FindDocuments: vi.fn().mockResolvedValue({ findDocuments: findPage }),
+    });
+    const results = await createClientWith(sdk).find({
+      type: "powerhouse/document-drive",
+    });
+
+    expect(results.results).toHaveLength(2);
+    expect(results.results[0].header.id).toBe("doc-1");
+    expect(results.results[0].header.documentType).toBe(
+      "powerhouse/document-drive",
+    );
+    expect(results.results[1].header.id).toBe("doc-2");
+    expect(results.results[0].header.revision).toEqual({
+      global: 7,
+      document: 1,
+    });
+  });
+
+  it("passes type, parentId, view and paging into the query", async () => {
+    const sdk = createMockSdk();
+    await createClientWith(sdk).find(
+      { type: "powerhouse/document-drive", parentId: "drive-1" },
+      { branch: "draft", scopes: ["global"] },
+      { cursor: "cursor-1", limit: 25 },
+    );
+
+    expect(sdk.FindDocuments).toHaveBeenCalledWith(
+      {
+        search: { type: "powerhouse/document-drive", parentId: "drive-1" },
+        view: { branch: "draft", scopes: ["global"] },
+        paging: { cursor: "cursor-1", limit: 25 },
+      },
+      undefined,
+      undefined,
+    );
+  });
+
+  it("maps paging metadata and follows the next page", async () => {
+    const findDocuments = vi
+      .fn()
+      .mockResolvedValueOnce({ findDocuments: findPage })
+      .mockResolvedValueOnce({ findDocuments: emptyFindPage });
+    const sdk = createMockSdk({ FindDocuments: findDocuments });
+
+    const first = await createClientWith(sdk).find(
+      { type: "powerhouse/document-drive" },
+      undefined,
+      { cursor: "cursor-1", limit: 2 },
+    );
+
+    expect(first.nextCursor).toBe("cursor-2");
+    expect(first.options).toEqual({ cursor: "cursor-1", limit: 2 });
+
+    const second = await first.next?.();
+    expect(second?.results).toEqual([]);
+    const secondVariables = findDocuments.mock.calls[1]?.[0] as {
+      paging?: { cursor: string; limit: number };
+    };
+    expect(secondVariables.paging).toEqual({ cursor: "cursor-2", limit: 2 });
+  });
+
+  it("omits next and nextCursor on the last page", async () => {
+    const sdk = createMockSdk();
+    const results = await createClientWith(sdk).find({ type: "x" });
+
+    expect(results.results).toEqual([]);
+    expect(results.nextCursor).toBeUndefined();
+    expect(results.next).toBeUndefined();
+    expect(results.options).toEqual({ cursor: "0", limit: 100 });
+  });
+
+  it("refuses a search naming ids, which the query cannot honour", async () => {
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk).find({ ids: ["doc-1"] }),
+    ).rejects.toThrow(/cannot filter by ids or slugs/);
+    expect(sdk.FindDocuments).not.toHaveBeenCalled();
+  });
+
+  it("refuses a search naming slugs", async () => {
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk).find({ slugs: ["my-doc"] }),
+    ).rejects.toThrow(/cannot filter by ids or slugs/);
+    expect(sdk.FindDocuments).not.toHaveBeenCalled();
+  });
+
+  it("rejects point-in-time views", async () => {
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk).find({ type: "x" }, { revision: 3 }),
+    ).rejects.toThrow("point-in-time views are not supported");
+    expect(sdk.FindDocuments).not.toHaveBeenCalled();
+  });
+
+  it("propagates GraphQL transport errors", async () => {
+    const sdk = createMockSdk({
+      FindDocuments: vi.fn().mockRejectedValue(new Error("boom")),
+    });
+
+    await expect(createClientWith(sdk).find({ type: "x" })).rejects.toThrow(
+      "boom",
+    );
+  });
+});
+
+describe("GraphQLReactorClient relationship reads", () => {
+  const relationshipsPage: RelationshipsPage = {
+    items: [documentFields],
+    hasNextPage: false,
+    hasPreviousPage: false,
+    cursor: null,
+  };
+
+  const edgesPage: EdgesPage = {
+    items: [
+      {
+        sourceId: "doc-1",
+        targetId: "doc-2",
+        relationshipType: "cites",
+        metadata: { note: "see appendix" },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-03T00:00:00.000Z",
+      },
+      {
+        sourceId: "doc-1",
+        targetId: "doc-3",
+        relationshipType: "cites",
+        metadata: null,
+        createdAt: "2026-01-02T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      },
+    ],
+    hasNextPage: false,
+    hasPreviousPage: false,
+    cursor: null,
+  };
+
+  it("maps outgoing relationship documents and passes the type", async () => {
+    const sdk = createMockSdk({
+      GetDocumentOutgoingRelationships: vi.fn().mockResolvedValue({
+        documentOutgoingRelationships: relationshipsPage,
+      }),
+    });
+    const results = await createClientWith(sdk).getOutgoingRelationships(
+      "doc-1",
+      "cites",
+    );
+
+    expect(results.results).toHaveLength(1);
+    expect(results.results[0].header.id).toBe("doc-1");
+    expect(sdk.GetDocumentOutgoingRelationships).toHaveBeenCalledWith(
+      {
+        sourceIdentifier: "doc-1",
+        relationshipType: "cites",
+        view: undefined,
+        paging: undefined,
+      },
+      undefined,
+      undefined,
+    );
+  });
+
+  it("maps incoming relationship edges, restoring dates and dropping null metadata", async () => {
+    const sdk = createMockSdk({
+      GetDocumentIncomingRelationshipEdges: vi
+        .fn()
+        .mockResolvedValue({ documentIncomingRelationshipEdges: edgesPage }),
+    });
+    const results =
+      await createClientWith(sdk).getIncomingRelationshipEdges("doc-2");
+
+    expect(results.results).toHaveLength(2);
+    expect(results.results[0]).toMatchObject({
+      sourceId: "doc-1",
+      targetId: "doc-2",
+      relationshipType: "cites",
+      metadata: { note: "see appendix" },
+    });
+    expect(results.results[0].createdAt).toBeInstanceOf(Date);
+    expect(results.results[0].createdAt.toISOString()).toBe(
+      "2026-01-01T00:00:00.000Z",
+    );
+    expect(results.results[1].metadata).toBeUndefined();
+  });
+
+  it("forwards an optional relationship type on the edges query", async () => {
+    const sdk = createMockSdk();
+    await createClientWith(sdk).getOutgoingRelationshipEdges("doc-1");
+
+    expect(sdk.GetDocumentOutgoingRelationshipEdges).toHaveBeenCalledWith(
+      {
+        sourceIdentifier: "doc-1",
+        relationshipType: undefined,
+        view: undefined,
+        paging: undefined,
+      },
+      undefined,
+      undefined,
+    );
   });
 });
