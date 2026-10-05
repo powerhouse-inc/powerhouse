@@ -180,7 +180,6 @@ describe("reevaluateDocument on base-reducer 3", () => {
     expect(await headModules(docId)).toEqual(["m1", "m2"]);
   });
 
-  // Red: reevaluateIfCriteriaMet drops the pass's re-appended rows from the job result.
   it("serves the state the pass re-derived", async () => {
     const { docId, document } = await history();
     await copy(docId, "document");
