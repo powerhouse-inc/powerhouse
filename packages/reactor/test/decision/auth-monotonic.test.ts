@@ -119,17 +119,19 @@ describe("the monotonic auth timestamp rule", () => {
     reactor = await build(true);
     const docId = await authInitializedDocument(reactor, "monotonic-tie");
 
-    // Wound back exactly, because settling advances the fake clock. The rule is
-    // strictly greater, so an equal timestamp is refused.
+    // Stamped explicitly: createAction never repeats a millisecond. The rule
+    // is strictly greater, so an equal timestamp is refused.
     const stored = await reactor.getOperations(docId, {
       branch: "main",
       scopes: ["auth"],
     });
     const newest = stored.auth.results[0].timestampUtcMs;
-    vi.setSystemTime(new Date(newest));
 
     const tied = await reactor.execute(docId, "main", [
-      setGrant({ grant: { ...GLOBAL_GRANT, description: "tied" } }),
+      {
+        ...setGrant({ grant: { ...GLOBAL_GRANT, description: "tied" } }),
+        timestampUtcMs: newest,
+      },
     ]);
 
     await expect(settle(reactor, tied.id)).rejects.toThrow(
@@ -137,8 +139,8 @@ describe("the monotonic auth timestamp rule", () => {
     );
   });
 
-  // Two actions built in one tick share a millisecond, which comparing each
-  // against one stored maximum would let through.
+  // Two actions sharing a millisecond, which comparing each against one stored
+  // maximum would let through.
   it("rejects a batch whose own auth actions share a timestamp", async () => {
     reactor = await build(true);
 
@@ -147,9 +149,13 @@ describe("the monotonic auth timestamp rule", () => {
     await settle(reactor, created.id);
     const docId = document.header.id;
 
+    const init = initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] });
     const batch = await reactor.execute(docId, "main", [
-      initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] }),
-      setGrant({ grant: GLOBAL_GRANT }),
+      init,
+      {
+        ...setGrant({ grant: GLOBAL_GRANT }),
+        timestampUtcMs: init.timestampUtcMs,
+      },
     ]);
 
     await expect(settle(reactor, batch.id)).rejects.toThrow(

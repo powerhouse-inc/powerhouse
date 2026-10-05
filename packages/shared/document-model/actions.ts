@@ -215,6 +215,21 @@ export const retract = (target: string, scope = "global") =>
 
 // TODO improve base actions type
 
+let lastClockMs = 0;
+let lastStampMs = 0;
+
+/**
+ * Strictly increasing per process, so one client's actions never share a
+ * millisecond and their order survives a reorder by timestamp. A clock that
+ * steps back is followed rather than outrun.
+ */
+function nextActionTimestamp(): string {
+  const now = Date.now();
+  lastStampMs = now < lastClockMs || now > lastStampMs ? now : lastStampMs + 1;
+  lastClockMs = now;
+  return new Date(lastStampMs).toISOString();
+}
+
 /**
  * Helper function to be used by action creators.
  *
@@ -250,7 +265,7 @@ export function createAction<TAction extends Action>(
 
   const action: Action = {
     id: generateId(),
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: nextActionTimestamp(),
     type,
     input,
     scope,
