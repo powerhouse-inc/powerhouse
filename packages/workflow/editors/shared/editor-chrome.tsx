@@ -5,10 +5,11 @@ import {
   useDocumentById,
 } from "@powerhousedao/reactor-browser";
 import {
-  isBaseReducer3,
   undo,
   type Action,
+  type BaseReducerVersion,
   type Operation,
+  type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "./controls.js";
@@ -18,8 +19,10 @@ import {
   editedSince,
   effectiveOperations,
   headIndex,
+  planRetraction,
   planUndo,
   redoActions,
+  retractions,
   undoProtocolVersion,
   type UndoPolicy,
 } from "./undo-plan.js";
@@ -60,6 +63,14 @@ async function globalHistory(documentId: string): Promise<Operation[]> {
   return all;
 }
 
+// Undefined when the header names no known version.
+function headerVersion(
+  document: PHDocument | undefined,
+): BaseReducerVersion | undefined {
+  const value = document?.header.protocolVersions?.["base-reducer"];
+  return value === 1 || value === 2 || value === 3 ? value : undefined;
+}
+
 // Text fields keep the browser's own undo.
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -74,14 +85,16 @@ function isEditable(target: EventTarget | null): boolean {
 export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   const [document, dispatch] = useDocumentById(props.documentId);
   const policy = props.policy ?? NO_SKIP;
-  const v3 = document !== undefined && isBaseReducer3(document.header);
+  const v3 = headerVersion(document) === 3;
   // Base-reducer 3 reads it from the history, which the cache doesn't hold.
   const [canUndoV3, setCanUndoV3] = useState(false);
   const canUndo = v3
     ? canUndoV3
     : Object.values(document?.header.revision ?? {}).some(Boolean);
   // Edits undone here, newest last: the reactor keeps no clipboard to redo
-  // from. Any other edit after `head` voids them.
+  // from. Any other edit after `head` voids them. On base-reducer 3 an entry
+  // holds the RETRACTs the undo sent, which redo retracts by id, so the
+  // edit's own rows come back.
   const [undone, setUndone] = useState<Action[][]>([]);
   const head = useRef(-1);
   const own = useRef(new Set<string>());
@@ -118,20 +131,47 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       });
   };
 
+  const versionNow = async (): Promise<BaseReducerVersion> =>
+    Promise.resolve(undoProtocolVersion(document!.header));
+  // The actions an undo sends, and what redo takes back; null if nothing.
+  const undoOf = (
+    history: Operation[],
+    protocolVersion: BaseReducerVersion,
+  ): { send: Action[]; undone: Action[] } | null => {
+    switch (protocolVersion) {
+      case 1:
+      case 2: {
+        const plan = planUndo(
+          effectiveOperations(history, protocolVersion),
+          policy,
+        );
+        if (!plan) return null;
+        return {
+          send: [
+            ...Array.from({ length: plan.undos }, () => undo()),
+            ...plan.replay,
+          ],
+          undone: plan.undone,
+        };
+      }
+      case 3: {
+        const targets = planRetraction(history, policy);
+        if (!targets) return null;
+        const sent = retractions(targets);
+        return { send: sent, undone: sent };
+      }
+    }
+  };
+
   const doUndo = () =>
     run(async () => {
+      const protocolVersion = await versionNow();
       const history = await globalHistory(props.documentId);
-      const plan = planUndo(
-        effectiveOperations(history, undoProtocolVersion(document!.header)),
-        policy,
-      );
+      const plan = undoOf(history, protocolVersion);
       if (!plan) return;
       const keep = !stale(history);
       try {
-        await send([
-          ...Array.from({ length: plan.undos }, () => undo()),
-          ...plan.replay,
-        ]);
+        await send(plan.send);
       } finally {
         if (await settle(headIndex(history))) {
           setUndone((list) => [...(keep ? list : []), plan.undone]);
@@ -142,12 +182,16 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     run(async () => {
       const last = undone.at(-1);
       if (!last) return;
+      const protocolVersion = await versionNow();
       const history = await globalHistory(props.documentId);
       if (stale(history)) {
         setUndone([]);
         return;
       }
-      const again = redoActions(last);
+      const again =
+        protocolVersion === 3
+          ? retractions(last.map((action) => action.id))
+          : redoActions(last);
       for (const action of again) own.current.add(action.id);
       try {
         await send(again);
@@ -159,9 +203,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     });
 
   // Read by the key handler and the effects, which don't rerun for them.
-  const latest = useRef({ doUndo, doRedo, stale });
+  const latest = useRef({ doUndo, doRedo, stale, policy });
   useEffect(() => {
-    latest.current = { doUndo, doRedo, stale };
+    latest.current = { doUndo, doRedo, stale, policy };
   });
 
   // An edit made elsewhere voids what is left to redo.
@@ -184,7 +228,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     let active = true;
     void globalHistory(props.documentId)
       .then((history) => {
-        if (active) setCanUndoV3(canUndoOn3(history));
+        if (active) setCanUndoV3(canUndoOn3(history, latest.current.policy));
       })
       .catch(() => undefined);
     return () => {

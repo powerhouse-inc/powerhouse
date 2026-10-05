@@ -1,11 +1,8 @@
 import {
-  deriveScope,
   undoTarget,
   type Action,
   type Operation,
-  type PHDocument,
   type PHDocumentHeader,
-  type StateReducer,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
@@ -14,10 +11,13 @@ import {
   effectiveOperations,
   groupedAction,
   headIndex,
+  liveOperations,
   newUndoGroup,
+  planRetraction,
   planUndo,
   redoAction,
   redoActions,
+  retractions,
   undoGroupOf,
   undoProtocolVersion,
   type UndoPolicy,
@@ -193,7 +193,7 @@ describe("effectiveOperations", () => {
   });
 });
 
-describe("effectiveOperations on base-reducer 3", () => {
+describe("planRetraction on base-reducer 3", () => {
   // Skip is only a reshuffle's rewind on base-reducer 3, so 0 on every row.
   const row = (index: number, type: string, extra: Partial<Operation> = {}) =>
     op(index, type, { skip: 0, ...extra });
@@ -203,45 +203,23 @@ describe("effectiveOperations on base-reducer 3", () => {
   };
   const ids = (operations: readonly Operation[]) =>
     operations.map((operation) => operation.action.id);
-
-  // FAIL throws, as an action whose precondition no longer holds does.
-  const reducer: StateReducer = (state, action) => {
-    if (action.type === "FAIL") throw new Error("fails");
-    return state;
-  };
-  const document = {
-    header: { id: "doc", protocolVersions: { "base-reducer": 3 } },
-    state: { global: {} },
-    initialState: { global: {} },
-    operations: {},
-    clipboard: [],
-  } as unknown as PHDocument;
-  const appliedOf = (stream: readonly Operation[]) =>
-    deriveScope(document, stream, () => reducer, "global").applied;
-  const effective = (stream: readonly Operation[]) =>
-    effectiveOperations(stream, 3, appliedOf(stream));
-
-  // Dispatches `count` UNDOs as the reducer resolves them, returning the
-  // targets in the order they were retracted.
-  const undoTargets = (stream: readonly Operation[], count: number) => {
+  const grouped = (operation: Operation, group: string): Operation => ({
+    ...operation,
+    action: groupedAction(operation.action, group),
+  });
+  // Appends one RETRACT per target, as the batch the editor sends lands.
+  const land = (stream: readonly Operation[], targets: readonly string[]) => {
     const next = [...stream];
-    const targets: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const target = undoTarget(next, appliedOf(next));
-      if (target === undefined) break;
-      targets.push(target);
+    for (const target of targets) {
       next.push(retraction(headIndex(next) + 1, target));
     }
-    return targets;
+    return next;
   };
 
-  it("keeps plain content and undoes the last edit with one UNDO", () => {
+  it("retracts the last edit by id", () => {
     const ops = [row(0, "ADD_STEP"), row(1, "SET_STEP_CONFIG")];
-    expect(ids(effective(ops))).toEqual(["action-0", "action-1"]);
-    expect(planUndo(effective(ops), policy)).toMatchObject({
-      undos: 1,
-      undone: [ops[1].action],
-    });
+    expect(ids(liveOperations(ops))).toEqual(["action-0", "action-1"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
   });
 
   it("drops retracted rows and the RETRACTs themselves", () => {
@@ -250,8 +228,8 @@ describe("effectiveOperations on base-reducer 3", () => {
       row(1, "SET_STEP_CONFIG"),
       retraction(2, "action-1"),
     ];
-    expect(ids(effective(ops))).toEqual(["action-0"]);
-    expect(planUndo(effective(ops), policy)?.undone).toEqual([ops[0].action]);
+    expect(ids(liveOperations(ops))).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
   });
 
   it("keeps a row a redo revived", () => {
@@ -261,106 +239,110 @@ describe("effectiveOperations on base-reducer 3", () => {
       retraction(2, "action-1"),
       retraction(3, "action-2"),
     ];
-    expect(ids(effective(ops))).toEqual(["action-0", "action-1"]);
-    expect(planUndo(effective(ops), policy)).toMatchObject({
-      undos: 1,
-      undone: [ops[1].action],
-    });
-    expect(undoTargets(ops, 1)).toEqual(["action-1"]);
+    expect(ids(liveOperations(ops))).toEqual(["action-0", "action-1"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
   });
 
-  it("drops denied rows, and a denied RETRACT retracts nothing", () => {
+  it("passes over denied rows, NOOPs and the runtime's facts", () => {
     const denied = { deniedReason: "no grant permits this operation" };
     const ops = [
       row(0, "ADD_STEP"),
-      row(1, "SET_STEP_CONFIG", denied),
-      row(2, "UPDATE_STEP"),
-      { ...retraction(3, "action-2"), ...denied },
+      row(1, "UPDATE_STEP"),
+      row(2, "SET_STEP_CONFIG", denied),
+      row(3, "NOOP"),
+      row(4, "SET_LAST_TEST"),
+      row(5, "SET_LAST_RUN"),
     ];
-    expect(ids(effective(ops))).toEqual(["action-0", "action-2"]);
-    expect(undoTargets(ops, 2)).toEqual(["action-2", "action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
   });
 
-  it("drops NOOPs without letting them retract anything", () => {
+  it("never retracts a base action", () => {
     const ops = [
       row(0, "ADD_STEP"),
-      row(1, "NOOP"),
-      row(2, "SET_STEP_CONFIG"),
-      row(3, "NOOP"),
+      row(1, "SET_NAME"),
+      row(2, "SET_PREFERRED_EDITOR"),
     ];
-    expect(ids(effective(ops))).toEqual(["action-0", "action-2"]);
-    expect(planUndo(effective(ops), policy)?.undos).toBe(1);
-    expect(undoTargets(ops, 1)).toEqual(["action-2"]);
+    expect(ids(liveOperations(ops))).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
   });
 
-  it("drops a row that does not apply, so no UNDO is spent on it", () => {
-    const ops = [row(0, "ADD_STEP"), row(1, "SET_STEP_CONFIG"), row(2, "FAIL")];
-    expect(ids(effective(ops))).toEqual(["action-0", "action-1"]);
-    expect(planUndo(effective(ops), policy)?.undos).toBe(1);
-  });
-
-  it("reads which rows apply from `applied`, not a stored error", () => {
+  it("retracts a live row whether or not it threw", () => {
     const ops = [
       row(0, "ADD_STEP"),
       row(1, "SET_STEP_CONFIG", { error: "Step not found" }),
     ];
-    const both = new Set(["action-0", "action-1"]);
-    expect(effectiveOperations(ops, 3, both)).toEqual([
-      ops[0],
-      { ...ops[1], error: undefined },
-    ]);
-    // Without a reducer to derive `applied`, the stored error decides.
-    expect(ids(effectiveOperations(ops, 3))).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
   });
 
-  it("plans one UNDO per row the edit and the facts after it retract", () => {
+  it("retracts every live row of the last edit's group together", () => {
     const group = newUndoGroup();
-    const inGroup = (operation: Operation): Operation => ({
-      ...operation,
-      action: groupedAction(operation.action, group),
-    });
     const ops = [
       row(0, "SET_WORKFLOW_NAME"),
-      inGroup(row(1, "ADD_STEP")),
-      row(2, "FAIL"),
-      inGroup(row(3, "ADD_EDGE")),
-      row(4, "SET_LAST_TEST"),
-      row(5, "SET_LAST_RUN"),
+      grouped(row(1, "ADD_STEP"), group),
+      row(2, "SET_LAST_TEST"),
+      grouped(row(3, "ADD_EDGE"), group),
+      row(4, "SET_LAST_RUN"),
     ];
-    const plan = planUndo(effective(ops), policy);
-    expect(plan?.undos).toBe(4);
-    expect(plan?.undone.map((action) => action.type)).toEqual([
-      "ADD_STEP",
-      "ADD_EDGE",
-    ]);
-    expect(plan?.replay.map((action) => action.type)).toEqual([
-      "SET_LAST_TEST",
-    ]);
-    expect(undoTargets(ops, plan!.undos)).toEqual(
-      [ops[5], ops[4], ops[3], ops[1]].map((entry) => entry.action.id),
-    );
+    const targets = planRetraction(ops, policy)!;
+    expect(targets).toEqual([ops[1].action.id, ops[3].action.id]);
+    expect(planRetraction(land(ops, targets), policy)).toEqual(["action-0"]);
   });
 
-  it("leaves base-reducer 1 and 2 alone when given `applied`", () => {
+  // A rename sends SET_WORKFLOW_NAME, then SET_NAME, ungrouped.
+  it("undoes a rename and then the grouped edit before it, as the reactor would", () => {
+    const group = newUndoGroup();
     const ops = [
-      op(0, "ADD_STEP"),
-      op(1, "SET_STEP_CONFIG", { error: "Step not found" }),
-      op(2, "NOOP"),
-      op(3, "UPDATE_STEP"),
+      grouped(row(0, "ADD_STEP"), group),
+      grouped(row(1, "ADD_EDGE"), group),
+      row(2, "SET_WORKFLOW_NAME"),
+      row(3, "SET_NAME"),
     ];
-    for (const version of [1, 2] as const) {
-      expect(effectiveOperations(ops, version, new Set())).toEqual(
-        effectiveOperations(ops, version),
-      );
-    }
+    const all = new Set(ids(ops));
+    expect(planRetraction(ops, policy)).toEqual(["action-2"]);
+    expect(undoTarget(ops, all)).toBe("action-2");
+
+    const after = land(ops, ["action-2"]);
+    expect(planRetraction(after, policy)).toEqual([
+      ops[0].action.id,
+      ops[1].action.id,
+    ]);
   });
 
-  it("can undo while an UNDO has applied content to retract", () => {
-    const failed = { error: "Step not found" };
-    const ops = [row(0, "ADD_STEP"), row(1, "UPDATE_STEP", failed)];
-    expect(canUndoOn3([...ops, row(2, "NOOP")])).toBe(true);
-    expect(canUndoOn3([...ops, retraction(2, "action-0")])).toBe(false);
-    expect(canUndoOn3([])).toBe(false);
+  it("brings the edit back when redo retracts the undo's RETRACTs", () => {
+    const group = newUndoGroup();
+    const ops = [
+      row(0, "SET_WORKFLOW_NAME"),
+      grouped(row(1, "ADD_STEP"), group),
+      grouped(row(2, "ADD_EDGE"), group),
+    ];
+    const targets = planRetraction(ops, policy)!;
+    const undone = land(ops, targets);
+    expect(ids(liveOperations(undone))).toEqual(["action-0"]);
+
+    const undoRows = undone.slice(ops.length).map((entry) => entry.action.id);
+    const redone = land(undone, undoRows);
+    expect(ids(liveOperations(redone))).toEqual(ids(ops));
+    expect(planRetraction(redone, policy)).toEqual(targets);
+  });
+
+  it("can undo while a live edit is left", () => {
+    const ops = [row(0, "ADD_STEP"), row(1, "SET_LAST_RUN")];
+    expect(canUndoOn3([...ops, row(2, "NOOP")], policy)).toBe(true);
+    expect(canUndoOn3([...ops, retraction(2, "action-0")], policy)).toBe(false);
+    expect(canUndoOn3([], policy)).toBe(false);
+  });
+
+  it("sends one RETRACT per id", () => {
+    expect(
+      retractions(["action-1", "action-2"]).map((action) => [
+        action.type,
+        action.scope,
+        action.input,
+      ]),
+    ).toEqual([
+      ["RETRACT", "global", { target: "action-1" }],
+      ["RETRACT", "global", { target: "action-2" }],
+    ]);
   });
 });
 
