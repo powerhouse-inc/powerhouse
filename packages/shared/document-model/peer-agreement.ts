@@ -70,6 +70,14 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
   },
 ];
 
+/** `base-reducer`'s preference with no reactor flags, which shared never holds. */
+export const FLAGLESS_BASE_REDUCER_VERSION: number = (
+  PEER_CAPABILITIES.find(
+    (capability) =>
+      capability.kind === "protocol" && capability.name === "base-reducer",
+  ) as ProtocolCapability
+).preferred!({});
+
 /** `base` plus `extra`; an extra replaces a base entry of the same name. */
 export function mergePeerCapabilities(
   base: readonly PeerCapability[],

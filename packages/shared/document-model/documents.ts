@@ -2,6 +2,7 @@ import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
 import { hashBrowser } from "./crypto.js";
 import { isDenied } from "./denied.js";
+import { FLAGLESS_BASE_REDUCER_VERSION } from "./peer-agreement.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
@@ -205,7 +206,9 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
     name: header.name,
     branch: header.branch,
     meta: header.meta,
-    protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+    protocolVersions: header.protocolVersions ?? {
+      "base-reducer": FLAGLESS_BASE_REDUCER_VERSION,
+    },
   };
   const upgradeInput: UpgradeDocumentActionInput = {
     model: header.documentType,
@@ -266,7 +269,7 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
     documentType,
     protocolVersions === undefined
       ? protocolVersionsFor("v2-required")
-      : { "base-reducer": 2, ...protocolVersions },
+      : { "base-reducer": FLAGLESS_BASE_REDUCER_VERSION, ...protocolVersions },
   );
 
   const phDocument: PHDocument<TState> = {

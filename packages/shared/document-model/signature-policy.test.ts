@@ -23,6 +23,7 @@ import type {
   UpgradeDocumentAction,
 } from "./types.js";
 import { applyUpgradeDocumentAction } from "./upgrades.js";
+import { FLAGLESS_BASE_REDUCER_VERSION } from "./peer-agreement.js";
 
 const params: DocumentIdParams = {
   documentType: "test/doc",
@@ -237,6 +238,44 @@ describe("baseCreateDocument", () => {
         protocolVersions: input.protocolVersions!,
       }),
     ).toBe(document.header.id);
+  });
+});
+
+describe("a document headed outside a reactor", () => {
+  it("takes the base-reducer entry's flagless preference, 2", () => {
+    expect(FLAGLESS_BASE_REDUCER_VERSION).toBe(2);
+    expect(v2RequiredProtocolVersions()["base-reducer"]).toBe(2);
+    expect(protocolVersionsFor("legacy")["base-reducer"]).toBe(2);
+
+    const document = baseCreateDocument(
+      () => createBaseState(),
+      undefined,
+      "test/doc",
+    );
+    const input = createInputOf(document);
+    expect(input.protocolVersions?.["base-reducer"]).toBe(2);
+    expect(
+      deriveDocumentId({
+        documentType: input.model,
+        createdAtUtcIso: input.signing!.createdAtUtcIso,
+        nonce: input.signing!.nonce,
+        protocolVersions: { "base-reducer": 2, signature: 2 },
+      }),
+    ).toBe(document.header.id);
+  });
+
+  it("takes the version its caller names", () => {
+    const document = baseCreateDocument(
+      () => createBaseState(),
+      undefined,
+      "test/doc",
+      v2RequiredProtocolVersions({ "base-reducer": 3 }),
+    );
+    expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
+    expect(createInputOf(document).protocolVersions?.["base-reducer"]).toBe(3);
+    expect(
+      protocolVersionsFor("v2-required", { "base-reducer": 3 })["base-reducer"],
+    ).toBe(3);
   });
 });
 

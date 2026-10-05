@@ -1,6 +1,7 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./action-signature.js";
 import { bytesToBase64Url } from "./crypto.js";
+import { FLAGLESS_BASE_REDUCER_VERSION } from "./peer-agreement.js";
 
 /** The `protocolVersions` key that fixes a document's signature requirement. */
 export const SIGNATURE_PROTOCOL = "signature";
@@ -41,12 +42,12 @@ export function signaturePolicyOf(
     : "legacy";
 }
 
-/** `protocolVersions` for a new v2-required document. */
+/** `protocolVersions` for a new v2-required document, over `base`. */
 export function v2RequiredProtocolVersions(
   base: ProtocolVersions = {},
 ): ProtocolVersions {
   return {
-    "base-reducer": 2,
+    "base-reducer": FLAGLESS_BASE_REDUCER_VERSION,
     ...base,
     [SIGNATURE_PROTOCOL]: SIGNATURE_PROTOCOL_V2,
   };
@@ -80,7 +81,7 @@ export function protocolVersionsFor(
     return v2RequiredProtocolVersions(base);
   }
   const { [SIGNATURE_PROTOCOL]: _signature, ...rest } = base;
-  return { "base-reducer": 2, ...rest };
+  return { "base-reducer": FLAGLESS_BASE_REDUCER_VERSION, ...rest };
 }
 
 /** What the id of a v2-required document is a hash of. */
