@@ -1070,3 +1070,20 @@ Live pass (monorepo `apps/connect` vite dev server, not vetra — Connect depend
 - **Known v1 limitation (documented):** remote drives are not enumerated by `find` until the remote GraphQL surface is completed (deferred follow-up); the exclusion is logged, not silent.
 
 Next: live re-pass with a remote drive configured — expect flag-on Connect to BOOT, router over two backends, local drives served locally.
+
+### Stage 4 live pass — round 2 (2026-10-05): PASS, screenshots delivered
+
+Monorepo apps/connect vite dev server, a remote drive configured, the per-read fan-in fix (4b889fa6fe) in place. Verified in a real browser via `window.ph.reactorClient`:
+- **Flag OFF (default):** client = `ReactorClient`, no router — identical to pre-Stage-4 Connect. (`?multiReactor=false` / unset.)
+- **Flag ON (`?multiReactor=true`):** client = `RoutingReactorClient`; `describeRouting().backends = ["connect-local","switchboard-remote"]`; the app BOOTS cleanly (no ErrorBoundary). Console confirms the designed degradation: "Multi-reactor routing enabled; remote Switchboard backend at …/graphql" then repeated "find: backend switchboard-remote is not applicable to this read and was excluded from the fan-in (...)" — remote skipped + logged, never crashed, never silent.
+Screenshots (OFF vs ON, live diagnostic overlay) delivered to the user. **Stage 4 CONNECT side (WP-B/C/E) is COMPLETE and live-verified.**
+
+### Stage 4 — remaining loose ends (not blocking the Connect milestone)
+- **WP-A** Switchboard inspection operator pass: the inspection subgraph is already mounted/read-gated live; remaining = verify operator-token (PH_INSPECTION_ADMIN/SQL) access against a running Switchboard. Needs a live Switchboard — do when actively watching resources (not fire-and-forget).
+- **Remote-backend GraphQL surface completion (the documented v1 follow-up):** implement `find` (and relationship reads) over the Switchboard GraphQL so remote drives are actually enumerated instead of excluded. Package-only, unit-testable against the in-repo reactor-api schema without a live server. This is the natural next step to make flag-on fully useful.
+
+### Roadmap state after this milestone
+- Stages 0–3 + router client: DONE, live-verified.
+- Stage 4 Connect (WP-B/C/E): DONE, live-verified. Loose ends above.
+- Stage 5 (NEW, user-deferred): multi-reactor Switchboard host (gateway-granularity rework + switchboard-lb). Design-led, not started.
+- Stage P (performance): memory (~18GB Accounts), DB size (PGlite 2GB ceiling, journal), speed. Baselines banked. Resource-heavy/soak-based — do when actively monitoring.
