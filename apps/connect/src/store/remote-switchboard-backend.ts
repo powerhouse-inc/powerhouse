@@ -16,10 +16,10 @@
  *
  * `find` over GraphQL enumerates remote drives, so a remote reactor is now a
  * contributing backend in the router's collection-spanning fan-in rather than
- * an excluded one. One narrow case still degrades: the Switchboard
- * `findDocuments` query filters by `type`/`parentId` only, so a search naming
- * `ids`/`slugs` is refused with the typed signal -- drive enumeration filters
- * by `type`, which is served.
+ * an excluded one. Narrow cases still degrade: the Switchboard `findDocuments`
+ * query filters by `type`/`parentId` only, at head, so a search naming
+ * `ids`/`slugs` or a point-in-time view is refused with the typed signal --
+ * drive enumeration filters by `type` at head, which is served.
  *
  * The error being TYPED (not a bare `Error`) is load-bearing for the router's
  * fan-in reads: a collection-spanning read recognises a refusing backend as NOT
@@ -33,8 +33,13 @@ import {
   POLLING_CHANNEL_TYPE,
   type IDriveClient,
   type IReactorClient,
+  type SearchFilter,
+  type ViewFilter,
 } from "@powerhousedao/reactor";
-import { GraphQLReactorClient } from "@powerhousedao/reactor-browser";
+import {
+  findIsServableOverGraphQL,
+  GraphQLReactorClient,
+} from "@powerhousedao/reactor-browser";
 import { ReactorOperationNotSupportedError } from "@powerhousedao/reactor-router";
 import type {
   ReactorBackend,
@@ -47,9 +52,10 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
  * The `IReactorClient` members the GraphQL client serves by straight delegation.
  *
  * `find` is served too but is NOT listed here: it is handled specially so a
- * search naming `ids`/`slugs` -- which the Switchboard `findDocuments` query
- * cannot honour -- refuses with the typed signal rather than returning every
- * document. See {@link asFullReactorClient}.
+ * search naming `ids`/`slugs` or a point-in-time view -- which the Switchboard
+ * `findDocuments` query cannot honour -- refuses with the typed signal rather
+ * than returning every document or the head revision. See
+ * {@link asFullReactorClient}.
  */
 const DELEGATED_METHODS: ReadonlySet<string> = new Set([
   "get",
@@ -66,24 +72,6 @@ const DELEGATED_METHODS: ReadonlySet<string> = new Set([
 
 /** The read members served, for the not-supported message's served-list. */
 const SERVED_METHODS: readonly string[] = [...DELEGATED_METHODS, "find"];
-
-/**
- * Whether a search filters by `ids` or `slugs`. The Switchboard `findDocuments`
- * query filters only by `type`/`parentId`, so an identifier-named search cannot
- * be served over GraphQL and is refused with the typed signal.
- */
-function findSearchIsServable(search: unknown): boolean {
-  if (typeof search !== "object" || search === null) {
-    return true;
-  }
-  const { ids, slugs } = search as {
-    ids?: readonly string[];
-    slugs?: readonly string[];
-  };
-  const namesIds = ids !== undefined && ids.length > 0;
-  const namesSlugs = slugs !== undefined && slugs.length > 0;
-  return !namesIds && !namesSlugs;
-}
 
 /**
  * A remote reactor reached over HTTP/GraphQL is not this process's to open,
@@ -142,14 +130,19 @@ function asFullReactorClient(
     });
   };
 
-  // `find` is served, except for an ids/slugs search the GraphQL query cannot
-  // honour: that refuses with the typed signal so the router's fan-in excludes
-  // this backend from the union rather than merging a wrongly-unfiltered page.
+  // `find` is served, except for a search or view the GraphQL query cannot
+  // honour: an ids/slugs search or a point-in-time view refuses with the typed
+  // signal so the router's fan-in excludes this backend from the union rather
+  // than merging a wrongly-unfiltered or head-instead-of-revision page. The
+  // single `findIsServableOverGraphQL` predicate -- shared with the client's own
+  // `find` -- is what decides this, so the rule cannot drift between the two.
   const find = (...args: unknown[]): unknown => {
-    if (!findSearchIsServable(args[0])) {
+    const search = args[0] as SearchFilter;
+    const view = args[1] as ViewFilter | undefined;
+    if (!findIsServableOverGraphQL(search, view)) {
       return notSupported(
         "find",
-        "the Switchboard findDocuments query filters only by type and parentId, so a search naming ids or slugs cannot be served over GraphQL (multi-reactor stage 4, WP-E)",
+        "the Switchboard findDocuments query filters only by type and parentId at head, so a search naming ids or slugs, or a point-in-time view, cannot be served over GraphQL (multi-reactor stage 4, WP-E)",
       );
     }
     return (gql.find as (...callArgs: unknown[]) => unknown)(...args);

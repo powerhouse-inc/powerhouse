@@ -81,6 +81,73 @@ describe("remote Switchboard backend read surface", () => {
     ).toThrow(ReactorOperationNotSupportedError);
   });
 
+  it("refuses a find with a present-but-empty ids array, never returning rows", () => {
+    const client = backendClient();
+    let thrown: unknown;
+    try {
+      (client as unknown as { find: (search: unknown) => unknown }).find({
+        ids: [],
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ReactorOperationNotSupportedError);
+    expect(isOperationNotSupported(thrown)).toBe(true);
+  });
+
+  it("refuses a find with a present-but-empty slugs array", () => {
+    const client = backendClient();
+
+    expect(() =>
+      (client as unknown as { find: (search: unknown) => unknown }).find({
+        slugs: [],
+      }),
+    ).toThrow(ReactorOperationNotSupportedError);
+  });
+
+  it("refuses a mixed type-and-empty-ids find rather than serving all of the type", () => {
+    const client = backendClient();
+
+    expect(() =>
+      (client as unknown as { find: (search: unknown) => unknown }).find({
+        type: "x",
+        ids: [],
+      }),
+    ).toThrow(ReactorOperationNotSupportedError);
+  });
+
+  it("refuses a point-in-time view find with the typed signal, not a plain error", () => {
+    const client = backendClient();
+    let thrown: unknown;
+    try {
+      (
+        client as unknown as {
+          find: (search: unknown, view: unknown) => unknown;
+        }
+      ).find({ type: "powerhouse/document-drive" }, { revision: 3 });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ReactorOperationNotSupportedError);
+    expect(isOperationNotSupported(thrown)).toBe(true);
+    const typed = thrown as ReactorOperationNotSupportedError;
+    expect(typed.operation).toBe("find");
+  });
+
+  it("serves a latest-view (no revision) find by delegating rather than refusing", () => {
+    const client = backendClient();
+    const result = (
+      client as unknown as {
+        find: (search: unknown, view: unknown) => Promise<unknown>;
+      }
+    ).find({ type: "powerhouse/document-drive" }, { branch: "draft" });
+
+    expect(typeof result.then).toBe("function");
+    result.catch(() => undefined);
+  });
+
   it("serves the relationship reads by delegating to the GraphQL client", () => {
     const client = backendClient();
     const relationshipClient = client as unknown as {
