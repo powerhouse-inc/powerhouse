@@ -60,10 +60,9 @@ describe("useDocumentUndoRedo", () => {
     vi.restoreAllMocks();
   });
 
-  describe.each([
-    ["base-reducer 2", 2],
-    ["a header without protocol versions", undefined],
-  ])("on %s", (_, baseReducer) => {
+  describe("on base-reducer 2", () => {
+    const baseReducer = 2;
+
     it("reads revisions and the clipboard and dispatches UNDO and REDO", () => {
       state.document = makeDocument({ baseReducer, global: 2, clipboard: 1 });
       const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
@@ -91,8 +90,39 @@ describe("useDocumentUndoRedo", () => {
     });
   });
 
+  // The light client's header: the client resolves the version itself.
+  describe("on a header without protocol versions", () => {
+    it("undoes and redoes through the client", async () => {
+      state.document = makeDocument({ global: 2, clipboard: 1 });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      result.current.undo();
+      result.current.redo();
+
+      expect(client.undo).toHaveBeenCalledWith("doc-1", "global");
+      await waitFor(() =>
+        expect(client.redo).toHaveBeenCalledWith("doc-1", "global"),
+      );
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it("takes availability from the client, not revisions or the clipboard", async () => {
+      client = makeClient({ canUndo: false, canRedo: true });
+      state.client = client;
+      state.document = makeDocument({ global: 2 });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      await waitFor(() => expect(result.current.canRedo).toBe(true));
+      expect(result.current.canUndo).toBe(false);
+      expect(client.undoRedoAvailability).toHaveBeenCalledWith(
+        "doc-1",
+        "global",
+      );
+    });
+  });
+
   describe("on base-reducer 3", () => {
-    it("undoes and redoes through the client", () => {
+    it("undoes and redoes through the client", async () => {
       state.document = makeDocument({ baseReducer: 3, global: 2 });
       const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
 
@@ -100,7 +130,9 @@ describe("useDocumentUndoRedo", () => {
       result.current.redo();
 
       expect(client.undo).toHaveBeenCalledWith("doc-1", "global");
-      expect(client.redo).toHaveBeenCalledWith("doc-1", "global");
+      await waitFor(() =>
+        expect(client.redo).toHaveBeenCalledWith("doc-1", "global"),
+      );
       expect(dispatch).not.toHaveBeenCalled();
     });
 

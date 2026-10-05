@@ -28,11 +28,20 @@ const UNAVAILABLE: UndoRedoAvailability = { canUndo: false, canRedo: false };
 const UNDO_SCOPE = "global";
 
 /**
- * Whether undo and redo go through the reactor client. Light-client headers
- * carry no protocol versions and take the dispatch path.
+ * Whether undo and redo go through the reactor client: on base-reducer 3, and
+ * on a light-client header, which carries no protocol versions and whose
+ * client resolves every version.
  */
-function isBaseReducer3(document: PHDocument | undefined): boolean {
-  return document?.header.protocolVersions?.["base-reducer"] === 3;
+function undoesThroughClient(
+  client: IReactorBrowserClient | undefined,
+  document: PHDocument | undefined,
+): boolean {
+  if (!client || !document) return false;
+  const version = document.header.protocolVersions?.["base-reducer"];
+  if (version === 3) return true;
+  return (
+    version === undefined && typeof client.undoRedoAvailability === "function"
+  );
 }
 
 // The latest availability read per document, shared by every hook asking at
@@ -67,11 +76,14 @@ function readAvailability(
 /**
  * Undo and redo through the reactor client, so the author signs the RETRACT
  * it submits. Availability is read when the global or document revision
- * changes. Returns undefined unless the document is on base-reducer 3.
+ * changes. Returns undefined unless the document is on base-reducer 3 or its
+ * header carries no protocol versions.
  */
 export function useBaseReducer3UndoRedo(document: PHDocument | undefined) {
   const client = useReactorClient();
-  const documentId = isBaseReducer3(document) ? document?.header.id : undefined;
+  const documentId = undoesThroughClient(client, document)
+    ? document?.header.id
+    : undefined;
   const revision = `${document?.header.revision[UNDO_SCOPE] ?? 0}:${document?.header.revision.document ?? 0}`;
   const [availability, setAvailability] = useState<{
     documentId?: string;
@@ -128,9 +140,10 @@ function hasRevisions(document: PHDocument | undefined) {
 /**
  * Returns undo state and an undo dispatcher for a document.
  *
- * On base-reducer 3 both come from the reactor client. Otherwise `canUndo` is
- * true when the document has at least one non-zero revision count across any
- * revision scope, and undo dispatches UNDO.
+ * On base-reducer 3, and on a header without protocol versions, both come from
+ * the reactor client. Otherwise `canUndo` is true when the document has at
+ * least one non-zero revision count across any revision scope, and undo
+ * dispatches UNDO.
  */
 export function useUndo(documentId: string | undefined) {
   const [document, dispatch] = useDocumentById(documentId);
@@ -148,9 +161,10 @@ export function useUndo(documentId: string | undefined) {
 /**
  * Returns redo state and a redo dispatcher for a document.
  *
- * On base-reducer 3 both come from the reactor client. Otherwise `canRedo` is
- * true when the document clipboard contains at least one operation that can be
- * reapplied, and redo dispatches REDO.
+ * On base-reducer 3, and on a header without protocol versions, both come from
+ * the reactor client. Otherwise `canRedo` is true when the document clipboard
+ * contains at least one operation that can be reapplied, and redo dispatches
+ * REDO.
  */
 export function useRedo(documentId: string | undefined) {
   const [document, dispatch] = useDocumentById(documentId);
