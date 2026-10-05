@@ -25,7 +25,7 @@ import {
   mentionedGroupIds,
   normalizeDocumentModelVersion,
   referencedGroupIds,
-  stateReducerOf,
+  requireStateReducer,
 } from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
@@ -184,29 +184,24 @@ function applyModelOperation(
   return reducer(document, operation.action);
 }
 
-/** Applies nothing, which is what an unresolvable model reducer derives. */
-const applyNothing: StateReducer = () => undefined;
-
 /**
  * Base-reducer 3: the state reducer registered for the document's own type, at
- * its stamped version. Unresolvable, it applies nothing, so conditions read the
- * base state and never widen access.
+ * its stamped version. Unresolvable, it throws as the executor does, rather
+ * than applying nothing and letting the base state satisfy a condition.
  */
 function modelStateReducers(
   registry: IDocumentModelRegistry,
   document: PHDocument,
 ): ReducerFor {
-  let stateReducer: StateReducer | undefined;
-  try {
-    const version = normalizeDocumentModelVersion(
-      (document.state as { document?: { version?: number } }).document?.version,
-    );
-    const module = registry.getModule(document.header.documentType, version);
-    stateReducer = stateReducerOf(module.reducer) as StateReducer | undefined;
-  } catch {
-    stateReducer = undefined;
-  }
-  const reducer = stateReducer ?? applyNothing;
+  const version = normalizeDocumentModelVersion(
+    (document.state as { document?: { version?: number } }).document?.version,
+  );
+  const module = registry.getModule(document.header.documentType, version);
+  const reducer = requireStateReducer(
+    module.reducer,
+    document.header.documentType,
+    version,
+  ) as StateReducer;
   return () => reducer;
 }
 

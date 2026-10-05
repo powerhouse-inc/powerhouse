@@ -264,7 +264,9 @@ export async function evaluateByPosition<M>(
       document: before,
       operations: [...storedOperations, ...operations],
       apply: definition.foldEvaluatedScope,
-      reducerFor: definition.evaluatedScopeReducer?.(before),
+      reducerFor: isBaseReducer3(before.header)
+        ? definition.evaluatedScopeReducer?.(before)
+        : undefined,
     });
   } else {
     walked.push({

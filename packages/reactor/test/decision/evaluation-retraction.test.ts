@@ -1,5 +1,6 @@
 import type {
   Action,
+  DocumentModelModule,
   Grant,
   Operation,
   PHDocument,
@@ -15,13 +16,18 @@ import {
   setGrant,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
-import { authDecisionModel } from "../../src/decision/auth-decision-model.js";
+import {
+  authConditionsDecisionModel,
+  authDecisionModel,
+} from "../../src/decision/auth-decision-model.js";
 import { evaluateByPosition } from "../../src/decision/evaluation.js";
 import type {
   DecisionModel,
   DecisionStores,
   DecisionTarget,
 } from "../../src/decision/types.js";
+import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import { ModuleNotFoundError } from "../../src/registry/errors.js";
 import { BASE_REDUCER_3_VERSIONS } from "../factories.js";
 
 const DOCUMENT_ID = "retraction-doc";
@@ -237,5 +243,57 @@ describe("evaluateByPosition with RETRACT", () => {
       undefined,
       AUTH_NO_GRANT_REASON,
     ]);
+  });
+});
+
+describe("evaluateByPosition without the evaluated document's state reducer", () => {
+  const anyone: Grant = {
+    id: "g-anyone",
+    description: "anyone",
+    effect: "allow",
+    principal: { anyone: true },
+    capability: { can: "execute", scope: "*" },
+  };
+  const evaluate = (
+    versions: ProtocolVersions,
+    registry: DocumentModelRegistry,
+  ) =>
+    evaluateByPosition(
+      authConditionsDecisionModel(registry),
+      TARGET,
+      { scope: "global", operations: [at(set("w"), 1)] },
+      stores(versions, {
+        auth: [at(initializeAuth({ version: 1, grants: [anyone] }), 0)],
+      }),
+    );
+
+  it("throws on base-reducer 3 when the model is not registered", async () => {
+    await expect(
+      evaluate(BASE_REDUCER_3_VERSIONS, new DocumentModelRegistry()),
+    ).rejects.toThrow(ModuleNotFoundError);
+  });
+
+  it("throws on base-reducer 3 when the reducer wraps no state reducer", async () => {
+    const registry = new DocumentModelRegistry();
+    registry.registerModules({
+      version: 1,
+      reducer: (document: PHDocument) => document,
+      actions: {},
+      utils: {},
+      documentModel: { global: { id: "t" }, local: {} },
+    } as unknown as DocumentModelModule);
+
+    await expect(evaluate(BASE_REDUCER_3_VERSIONS, registry)).rejects.toThrow(
+      "Cannot replay t v1 on base-reducer 3",
+    );
+  });
+
+  it("applies nothing on base-reducer 2, as before", async () => {
+    expect(
+      await evaluate(
+        { "base-reducer": 2 } as ProtocolVersions,
+        new DocumentModelRegistry(),
+      ),
+    ).toEqual([undefined]);
   });
 });
