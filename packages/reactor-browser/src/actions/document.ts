@@ -583,7 +583,11 @@ async function createImportedDocument(
   for (let attempt = 1; ; attempt++) {
     let header: PHDocumentHeader;
     if (!v2Required) {
-      header = createPresignedHeader(documentId, document.header.documentType);
+      header = createPresignedHeader(
+        documentId,
+        document.header.documentType,
+        document.header.protocolVersions,
+      );
     } else if (keepsId && attempt === 1) {
       header = createPresignedHeader(documentId, document.header.documentType);
       header.createdAtUtcIso = document.header.createdAtUtcIso;
