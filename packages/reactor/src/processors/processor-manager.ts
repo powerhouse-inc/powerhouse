@@ -496,11 +496,11 @@ export class ProcessorManager
     });
   }
 
+  /** Waits out the failed delivery, which may still be settling, then retries. */
   private async retryOwed(factoryId: string, driveId: string): Promise<void> {
     const factory = this.factoryRegistry.get(factoryId);
-    const deletion = this.deletedDrives.get(driveId);
-    if (!factory || !deletion || this.stopped) return;
-    await this.eraseDrive(factoryId, factory, driveId, deletion);
+    if (!factory) return;
+    await this.eraseOwedDrive(factoryId, factory, driveId);
   }
 
   /** Forgets a deleted drive once no cursor row owes its deletion. */
