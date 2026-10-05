@@ -245,12 +245,17 @@ async function publishedLists(
       : [];
   if (fromRegistry.status === "rejected") {
     logger.warn(
-      `Piece registry ${source?.baseUrl ?? "?"} did not answer: ${String(fromRegistry.reason)}`,
+      "Piece registry @url did not answer: @error",
+      source?.baseUrl ?? "?",
+      String(fromRegistry.reason),
     );
   }
   if (fromCloud.status === "rejected") {
     if (registry.length === 0) throw asError(fromCloud.reason);
-    logger.warn(`Serving registry pieces only: ${String(fromCloud.reason)}`);
+    logger.warn(
+      "Serving registry pieces only: @error",
+      String(fromCloud.reason),
+    );
     return { registry, cloud: [] };
   }
   return { registry, cloud: asList(fromCloud.value) };

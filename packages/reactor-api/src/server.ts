@@ -1245,7 +1245,8 @@ async function _setupAPI(
           return fn(moduleFor(packageName));
         } catch (e) {
           logger.error(
-            `Error initializing processor factory for package ${packageName}:`,
+            "Error initializing processor factory for package @package: @error",
+            packageName,
             e,
           );
 

@@ -101,7 +101,10 @@ export function intervalFromSchedules(
   const cron = schedule.cronExpression;
   const intervalMs = cronIntervalMs(cron);
   if (intervalMs === undefined) {
-    logger.warn(`Unsupported setSchedule cron "${cron}"; using the default`);
+    logger.warn(
+      'Unsupported setSchedule cron "@cron"; using the default',
+      cron,
+    );
     return Math.max(defaultMs, MIN_INTERVAL_MS);
   }
   return intervalMs;

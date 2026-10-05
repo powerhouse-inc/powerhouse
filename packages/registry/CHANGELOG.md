@@ -1,3 +1,71 @@
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🚀 Features
+
+- **registry:** report package and version counts, job error reasons, and longer latencies ([3c3f772ca2](https://github.com/powerhouse-inc/powerhouse/commit/3c3f772ca2))
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+- **registry:** drop listed packages with no stored manifest on import ([7cc87d9df1](https://github.com/powerhouse-inc/powerhouse/commit/7cc87d9df1))
+- **registry:** pace and retry artifact uploads, and retry failed versions ([2704910ee5](https://github.com/powerhouse-inc/powerhouse/commit/2704910ee5))
+
+### 🔥 Performance
+
+- **registry:** report catalog counts only from the process that runs jobs ([20cdaf77b9](https://github.com/powerhouse-inc/powerhouse/commit/20cdaf77b9))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+### 🩹 Fixes
+
+- **registry:** run the worker's first full reconcile a tick after it starts ([53c9087bf7](https://github.com/powerhouse-inc/powerhouse/commit/53c9087bf7))
+- **registry:** backfill only tagged versions of packages published here ([86d78be13a](https://github.com/powerhouse-inc/powerhouse/commit/86d78be13a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.38 (2026-10-01)
+
+### 🩹 Fixes
+
+- **registry:** run the worker's first full reconcile a tick after it starts ([53c9087bf7](https://github.com/powerhouse-inc/powerhouse/commit/53c9087bf7))
+- **registry:** backfill only tagged versions of packages published here ([86d78be13a](https://github.com/powerhouse-inc/powerhouse/commit/86d78be13a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 ### 🚀 Features

@@ -4,7 +4,9 @@ import { createPGliteDatabase } from "../src/db/database.js";
 import { migrate } from "../src/db/migrations.js";
 import { enqueue } from "../src/jobs.js";
 import {
+  catalogMetrics,
   databaseMetrics,
+  errorReason,
   Metrics,
   routeGroup,
   serveMetrics,
@@ -84,6 +86,66 @@ describe("metrics", () => {
       );
     } finally {
       server.close();
+      await db.close();
+    }
+  });
+
+  it("counts listed packages and versions by status", async () => {
+    const db = await createPGliteDatabase();
+    await migrate(db);
+    await db.query(
+      `INSERT INTO registry_packages (name, local, listed_manifest) VALUES
+         ('listed', true, '{"name":"listed"}'), ('unlisted', true, NULL),
+         ('mirrored', false, '{"name":"mirrored"}')`,
+    );
+    await db.query(
+      `INSERT INTO registry_versions (package, version, status, permanent) VALUES
+         ('listed', '1.0.0', 'ready', false), ('listed', '1.1.0', 'pending', false),
+         ('unlisted', '1.0.0', 'failed', false), ('unlisted', '0.9.0', 'failed', true)`,
+    );
+    const metrics = new Metrics();
+    catalogMetrics(metrics, db);
+    try {
+      const body = await metrics.render();
+      expect(body).toContain('registry_packages{state="local"} 2');
+      expect(body).toContain('registry_packages{state="listed"} 1');
+      expect(body).toContain('registry_versions{status="ready"} 1');
+      expect(body).toContain('registry_versions{status="pending"} 1');
+      expect(body).toContain('registry_versions{status="failed"} 1');
+      expect(body).toContain('registry_versions{status="failed_permanent"} 1');
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("names why a job failed with a few reasons", () => {
+    expect(errorReason(new Error("Please reduce your request rate"))).toBe(
+      "s3_throttled",
+    );
+    expect(
+      errorReason(Object.assign(new Error("x"), { name: "SlowDown" })),
+    ).toBe("s3_throttled");
+    expect(errorReason(new Error("metadata for a returned 404"))).toBe(
+      "not_found",
+    );
+    expect(errorReason(new Error("piece taken"), true)).toBe("permanent");
+    expect(
+      errorReason(Object.assign(new Error("x"), { name: "TimeoutError" })),
+    ).toBe("timeout");
+    expect(errorReason("boom")).toBe("other");
+  });
+
+  it("leaves catalog counts to the process that runs jobs", async () => {
+    const db = await createPGliteDatabase();
+    await migrate(db);
+    const metrics = new Metrics();
+    databaseMetrics(metrics, db);
+    try {
+      const body = await metrics.render();
+      expect(body).toContain("registry_jobs{");
+      expect(body).not.toContain("registry_packages{");
+      expect(body).not.toContain("registry_versions{");
+    } finally {
       await db.close();
     }
   });

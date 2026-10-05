@@ -27,6 +27,7 @@ import { migrate, migrateOnBoot, prepareSchema } from "./db/migrations.js";
 import { EventBus } from "./events.js";
 import {
   CONTENT_TYPE as METRICS_CONTENT_TYPE,
+  catalogMetrics,
   databaseMetrics,
   httpMetrics,
   Metrics,
@@ -92,6 +93,7 @@ interface StorageArgs {
   s3SecretAccessKey?: string;
   s3KeyPrefix?: string;
   s3ForcePathStyle: boolean;
+  s3MaxWritesPerSecond?: number;
 }
 
 function s3From(args: StorageArgs): S3Config | undefined {
@@ -104,6 +106,7 @@ function s3From(args: StorageArgs): S3Config | undefined {
     secretAccessKey: args.s3SecretAccessKey,
     keyPrefix: args.s3KeyPrefix,
     s3ForcePathStyle: args.s3ForcePathStyle,
+    maxWritesPerSecond: args.s3MaxWritesPerSecond,
   };
 }
 
@@ -462,6 +465,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
       console.log(`  Renown auth: ${config.renown.publicUrl}`);
     }
     if (workers > 0) {
+      catalogMetrics(metrics, runtime.db);
       worker = startWorker(processorContext(runtime, localUrl), {
         concurrency: workers,
         webhooks: runtime.webhooks,
@@ -525,6 +529,7 @@ export async function runWorker(args: WorkerCommandArgs) {
   if (args.metricsPort !== undefined) {
     processMetrics(metrics);
     databaseMetrics(metrics, runtime.db);
+    catalogMetrics(metrics, runtime.db);
     metricsServer = await serveMetrics(metrics, args.metricsPort);
   }
   const worker = await startWorker(
@@ -599,8 +604,11 @@ async function readStoredManifest(
     return JSON.parse(
       (await res.Body?.transformToString()) ?? "null",
     ) as object;
-  } catch {
-    return null;
+  } catch (err) {
+    // Only a missing manifest is an answer; a throttled read must not look like one
+    const name = (err as { name?: string }).name;
+    if (name === "NoSuchKey" || name === "NotFound") return null;
+    throw err;
   }
 }
 
@@ -647,21 +655,31 @@ export async function runImportVerdaccioState(
 
   const pool = new pg.Pool({ connectionString: args.databaseUrl });
   let pruned: string[] = [];
+  let gone = 0;
   try {
     const store = new S3DatabasePostgres(pool, pluginLogger);
     await store.init();
     // The manifest index lets the worker reconcile without fetching metadata
+    const missing: string[] = [];
     for (const name of names) {
       const manifest = await readStoredManifest(s3, s3Config, name);
       if (manifest) await store.record(name, manifest);
+      else missing.push(name);
     }
+    // Listed with no stored manifest: Verdaccio's package list fails on one
+    for (const name of missing) names.delete(name);
+    await pool.query("DELETE FROM verdaccio_packages WHERE name = ANY($1)", [
+      missing,
+    ]);
+    gone = missing.length;
     for (const name of names) {
       await pool.query(
         "INSERT INTO verdaccio_packages (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
         [name],
       );
     }
-    pruned = await pruneCachedPackages(pool, [...names]);
+    // Without Verdaccio's state file there's no list to prune against
+    if (legacy.list) pruned = await pruneCachedPackages(pool, [...names]);
     for (const token of legacy.tokens ?? []) {
       await pool.query(
         `INSERT INTO verdaccio_tokens ("user", key, token) VALUES ($1, $2, $3)
@@ -680,6 +698,6 @@ export async function runImportVerdaccioState(
     await pool.end();
   }
   console.log(
-    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s)`,
+    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s), dropped ${gone} with no stored manifest`,
   );
 }

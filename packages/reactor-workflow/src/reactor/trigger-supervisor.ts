@@ -185,7 +185,10 @@ export function intervalFromSchedules(
   const cron = schedule.cronExpression;
   const intervalMs = cronIntervalMs(cron);
   if (intervalMs === undefined) {
-    logger.warn(`Unsupported setSchedule cron "${cron}"; using the default`);
+    logger.warn(
+      'Unsupported setSchedule cron "@cron"; using the default',
+      cron,
+    );
     return Math.max(defaultMs, MIN_INTERVAL_MS);
   }
   return intervalMs;
@@ -423,7 +426,8 @@ export class TriggerSupervisor {
     // provider while the first goes on delivering to nobody.
     if (existing?.status === "ENABLED" && existing.config_hash === hash) {
       logger.warn(
-        `Workflow ${workflowId} could not be resolved, and its trigger row is left as it stands: a registration from before this reactor started is presumed live, and releasing it needs the binding that would not resolve. ${message}`,
+        `Workflow ${workflowId} could not be resolved, and its trigger row is left as it stands: a registration from before this reactor started is presumed live, and releasing it needs the binding that would not resolve. @error`,
+        message,
       );
       return;
     }
@@ -778,7 +782,8 @@ export class TriggerSupervisor {
       this.enableRetries.delete(binding.workflowId);
       store.clearUnmigratedTriggerState(binding.workflowId);
       logger.info(
-        `Enabled ${blockLabel(binding.block)} for workflow ${binding.workflowId} (every ${intervalMs}ms)`,
+        `Enabled @block for workflow ${binding.workflowId} (every ${intervalMs}ms)`,
+        blockLabel(binding.block),
       );
     } catch (error) {
       this.enabledOk.delete(binding.workflowId);
@@ -818,10 +823,11 @@ export class TriggerSupervisor {
         ...pieceColumns(binding),
       });
       logger.error(
-        `onEnable failed for workflow ${binding.workflowId} (${failures}x): ${message}` +
+        `onEnable failed for workflow ${binding.workflowId} (${failures}x): @error` +
           (retryAt
             ? `; retrying at ${retryAt.toISOString()}`
             : "; not retrying"),
+        message,
       );
     }
   }
@@ -969,7 +975,8 @@ export class TriggerSupervisor {
         consecutive_failures: (existing?.consecutive_failures ?? 0) + 1,
       });
       logger.error(
-        `Invalid schedule for workflow ${binding.workflowId}: ${message}`,
+        `Invalid schedule for workflow ${binding.workflowId}: @error`,
+        message,
       );
     }
   }
@@ -1149,7 +1156,8 @@ export class TriggerSupervisor {
         failures,
       );
       logger.warn(
-        `onRenew failed for workflow ${row.workflow_id} (${failures}x): ${message}; retrying at ${retryAt.toISOString()}`,
+        `onRenew failed for workflow ${row.workflow_id} (${failures}x): @error; retrying at ${retryAt.toISOString()}`,
+        message,
       );
     }
   }
@@ -1183,7 +1191,8 @@ export class TriggerSupervisor {
       this.enabledOk.delete(binding.workflowId);
       await store.setTriggerStatus(row.workflow_id, "ERROR", message);
       logger.error(
-        `Schedule fire failed for workflow ${row.workflow_id}: ${message}`,
+        `Schedule fire failed for workflow ${row.workflow_id}: @error`,
+        message,
       );
     }
   }
@@ -1224,7 +1233,8 @@ export class TriggerSupervisor {
         failures,
       );
       logger.warn(
-        `Poll failed for workflow ${row.workflow_id} (${failures}x): ${message}`,
+        `Poll failed for workflow ${row.workflow_id} (${failures}x): @error`,
+        message,
       );
     }
   }

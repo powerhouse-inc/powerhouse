@@ -676,7 +676,8 @@ function resolveProjectCollisions(
   }
   for (const [key, workflows] of contested) {
     logger.warn(
-      `Project store key "${key}" was written by ${workflows.join(", ")}; keeping the value last updated, from ${winner.get(key)}, and discarding the rest`,
+      `Project store key "@key" was written by ${workflows.join(", ")}; keeping the value last updated, from ${winner.get(key)}, and discarding the rest`,
+      key,
     );
   }
   return winner;

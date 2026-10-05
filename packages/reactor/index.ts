@@ -241,6 +241,7 @@ export {
   DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
+  ModelNotWorkerImportableError,
   ModuleNotFoundError,
   NullDocumentModelResolver,
   type IDocumentModelLoader,

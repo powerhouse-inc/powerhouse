@@ -1125,9 +1125,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
         } catch (error) {
           this.logger.error(
-            "Error in moveRelationship(@args): @Error @args",
-            error,
+            "Error in moveRelationship(@args): @Error",
             args,
+            error,
           );
           throw error;
         }

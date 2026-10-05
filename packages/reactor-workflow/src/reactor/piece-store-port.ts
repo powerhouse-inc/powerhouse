@@ -110,9 +110,10 @@ export function createPieceStorePort(
         return store.setPieceStoreValue(scope, partition(scope), key, value);
       }
       logger.warn(
-        `Rejected ${key}=${showCursor(value)} from workflow ${flowKey()}; keeping ${
-          isPlausibleCursor(kept, now) ? String(kept) : "no cursor"
-        }`,
+        `Rejected @key=@value from workflow ${flowKey()}; keeping @kept`,
+        key,
+        showCursor(value),
+        isPlausibleCursor(kept, now) ? String(kept) : "no cursor",
       );
       // With nothing to fall back to the key is dropped, so the next poll
       // fails loudly rather than running on a cursor nobody chose.

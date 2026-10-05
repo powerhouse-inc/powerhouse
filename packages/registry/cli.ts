@@ -22,6 +22,11 @@ import {
 } from "./src/run.js";
 
 // Where the registry keeps its files and state, shared by every role
+const positiveFromEnv = (name: string) => () => {
+  const n = Number(process.env[name]);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+};
+
 const storageArgs = {
   storageDir: option({
     long: "storage-dir",
@@ -80,6 +85,13 @@ const storageArgs = {
     defaultValue: () => process.env.S3_FORCE_PATH_STYLE !== "false",
     defaultValueIsSerializable: true,
   }),
+  s3MaxWritesPerSecond: option({
+    long: "s3-max-writes-per-second",
+    type: optional(number),
+    description:
+      "Artifact uploads per second (default 150); Hetzner throttles a bucket past 750 requests per second. Env PH_REGISTRY_S3_MAX_WRITES_PER_SECOND",
+    defaultValue: positiveFromEnv("PH_REGISTRY_S3_MAX_WRITES_PER_SECOND"),
+  }),
   databaseUrl: option({
     long: "database-url",
     type: optional(string),
@@ -121,11 +133,6 @@ const migrateOnBootArg = option({
   description:
     "Apply database migrations at startup (true/false). Defaults to true without --database-url, else false; env PH_REGISTRY_MIGRATE_ON_BOOT",
 });
-
-const positiveFromEnv = (name: string) => () => {
-  const n = Number(process.env[name]);
-  return Number.isInteger(n) && n > 0 ? n : undefined;
-};
 
 const dbPoolMaxArg = option({
   long: "db-pool-max",

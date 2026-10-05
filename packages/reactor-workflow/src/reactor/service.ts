@@ -1060,7 +1060,8 @@ export class WorkflowRuntimeService {
       this.registry.delete(workflowId);
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Webhook trigger rejected for ${workflowId}: ${message}`,
+        `Webhook trigger rejected for ${workflowId}: @error`,
+        message,
       );
       // An ERROR row, as for any trigger that cannot arm; cleared on re-registration.
       this.unarmed.add(workflowId);
@@ -2065,7 +2066,10 @@ export class WorkflowRuntimeService {
     if (!run.ok) {
       const message =
         run.error instanceof Error ? run.error.message : String(run.error);
-      this.logger.error(`Webhook run failed for ${workflowId}: ${message}`);
+      this.logger.error(
+        `Webhook run failed for ${workflowId}: @error`,
+        message,
+      );
       return {
         status: 500,
         contentType: JSON_CONTENT_TYPE,
@@ -2175,7 +2179,8 @@ export class WorkflowRuntimeService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Webhook secret unavailable for ${workflowId}: ${message}`,
+        `Webhook secret unavailable for ${workflowId}: @error`,
+        message,
       );
       return undefined;
     }
@@ -2769,7 +2774,9 @@ export class WorkflowRuntimeService {
           return { piece, descriptor };
         } catch (error) {
           this.logger.warn(
-            `Could not describe the package piece "${piece.name}": ${String(error)}`,
+            'Could not describe the package piece "@piece": @error',
+            piece.name,
+            String(error),
           );
           return undefined;
         }
@@ -2803,7 +2810,7 @@ export class WorkflowRuntimeService {
       published = await fetchPieceCatalog();
     } catch (error) {
       if (entries.length === 0) throw error;
-      this.logger.warn(`Serving package pieces only: ${String(error)}`);
+      this.logger.warn("Serving package pieces only: @error", String(error));
       published = [];
     }
     const publishedVersions = new Map(
@@ -2854,7 +2861,10 @@ export class WorkflowRuntimeService {
       );
     } catch (error) {
       // The published half is still worth serving without them.
-      this.logger.warn(`Could not index the package pieces: ${String(error)}`);
+      this.logger.warn(
+        "Could not index the package pieces: @error",
+        String(error),
+      );
     }
     return searchBlocks(query, limit, local);
   }
@@ -3437,7 +3447,8 @@ export class WorkflowRuntimeService {
       });
     } catch (error) {
       this.logger.warn(
-        `Could not journal the test of "${record.key}" on workflow ${workflowId}`,
+        `Could not journal the test of "@step" on workflow ${workflowId}: @error`,
+        record.key,
         error,
       );
       return;
@@ -3462,7 +3473,8 @@ export class WorkflowRuntimeService {
       ]);
     } catch (error) {
       this.logger.warn(
-        `Could not record the last test of "${record.key}" on workflow ${workflowId}`,
+        `Could not record the last test of "@step" on workflow ${workflowId}: @error`,
+        record.key,
         error,
       );
     }
@@ -3629,7 +3641,8 @@ export class WorkflowRuntimeService {
                       if (journalFailed) return;
                       journalFailed = true;
                       this.logger.warn(
-                        `Run ${runId}: journaling step "${record.key}" failed; the run continues without per-step durability`,
+                        `Run ${runId}: journaling step "@step" failed; the run continues without per-step durability: @error`,
+                        record.key,
                         error,
                       );
                     }
@@ -3828,7 +3841,8 @@ export class WorkflowRuntimeService {
         })) ?? null;
     } catch (error) {
       this.logger.warn(
-        `Could not journal the test of "${step.key}" on workflow ${workflowId}`,
+        `Could not journal the test of "@step" on workflow ${workflowId}: @error`,
+        step.key,
         error,
       );
     }
@@ -3890,7 +3904,8 @@ export class WorkflowRuntimeService {
         await store.finishRun(runId, result);
       } catch (error) {
         this.logger.warn(
-          `Run ${runId}: closing the test of "${step.key}" out failed`,
+          `Run ${runId}: closing the test of "@step" out failed: @error`,
+          step.key,
           error,
         );
       }

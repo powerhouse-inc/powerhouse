@@ -1,3 +1,77 @@
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🚀 Features
+
+- **registry:** report package and version counts, job error reasons, and longer latencies ([3c3f772ca2](https://github.com/powerhouse-inc/powerhouse/commit/3c3f772ca2))
+
+### 🩹 Fixes
+
+- pass package names, step keys and error text to the logger as arguments ([fd81243791](https://github.com/powerhouse-inc/powerhouse/commit/fd81243791))
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+- **reactor-api:** log moveRelationship failures with their arguments in order ([9a25fe4dca](https://github.com/powerhouse-inc/powerhouse/commit/9a25fe4dca))
+- **reactor-workflow:** pass piece labels to the logger as arguments ([f71232fd86](https://github.com/powerhouse-inc/powerhouse/commit/f71232fd86))
+- **registry:** pace and retry artifact uploads, and retry failed versions ([2704910ee5](https://github.com/powerhouse-inc/powerhouse/commit/2704910ee5))
+- **registry:** drop listed packages with no stored manifest on import ([7cc87d9df1](https://github.com/powerhouse-inc/powerhouse/commit/7cc87d9df1))
+- **shared:** update pieces-framework and workflow with ph update and ph use ([5305ebea35](https://github.com/powerhouse-inc/powerhouse/commit/5305ebea35))
+- **shared:** link use-local packages to the directory that declares their name ([9141440d4d](https://github.com/powerhouse-inc/powerhouse/commit/9141440d4d))
+- **shared:** minify piece bundles and stop emitting their source maps ([65ece1d90e](https://github.com/powerhouse-inc/powerhouse/commit/65ece1d90e))
+
+### 🔥 Performance
+
+- **registry:** report catalog counts only from the process that runs jobs ([20cdaf77b9](https://github.com/powerhouse-inc/powerhouse/commit/20cdaf77b9))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+### 🩹 Fixes
+
+- **registry:** backfill only tagged versions of packages published here ([86d78be13a](https://github.com/powerhouse-inc/powerhouse/commit/86d78be13a))
+- **registry:** run the worker's first full reconcile a tick after it starts ([53c9087bf7](https://github.com/powerhouse-inc/powerhouse/commit/53c9087bf7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.38 (2026-10-01)
+
+### 🩹 Fixes
+
+- **registry:** backfill only tagged versions of packages published here ([86d78be13a](https://github.com/powerhouse-inc/powerhouse/commit/86d78be13a))
+- **registry:** run the worker's first full reconcile a tick after it starts ([53c9087bf7](https://github.com/powerhouse-inc/powerhouse/commit/53c9087bf7))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 ### 🚀 Features

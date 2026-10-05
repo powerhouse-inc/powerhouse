@@ -13,7 +13,7 @@ import {
   wakeWorkers,
   type Job,
 } from "./jobs.js";
-import type { WorkerMetrics } from "./metrics.js";
+import { errorReason, type WorkerMetrics } from "./metrics.js";
 import type { PublisherIdentity } from "./notifications/types.js";
 import type { WebhookStore } from "./notifications/webhook.js";
 import {
@@ -94,8 +94,8 @@ const QUICK_MISSING = `
                         AND j.version = r.version)
    LIMIT 1000`;
 
-// Every tagged version of every manifest: no row, or pending with no job for
-// a while; untagged versions are processed when first requested
+// Every tagged version of every manifest: no row, failed an hour ago, or pending
+// with no job for a while; untagged versions are processed when first requested
 const FULL_MISSING = `
   SELECT DISTINCT m.name, v.version
     FROM verdaccio_manifests m
@@ -103,6 +103,11 @@ const FULL_MISSING = `
     LEFT JOIN registry_versions r ON r.package = m.name AND r.version = v.version
    WHERE m.updated_at < now() - interval '30 seconds' AND ${PUBLISHED}
      AND (r.package IS NULL
+       OR (r.status = 'failed' AND NOT r.permanent
+           AND r.updated_at < now() - interval '1 hour'
+           AND NOT EXISTS (SELECT 1 FROM registry_jobs j
+                            WHERE j.kind = 'process' AND j.package = m.name
+                              AND j.version = v.version))
        OR (r.status = 'pending' AND r.updated_at < now() - interval '5 minutes'
            AND NOT EXISTS (SELECT 1 FROM registry_jobs j
                             WHERE j.kind = 'process' AND j.package = m.name
@@ -208,7 +213,14 @@ async function runJob(
     job.priority === BACKGROUND_PRIORITY &&
     (await publishedHere(ctx.db, job.package)) === false
   ) {
-    await ctx.db.transaction(finish);
+    await ctx.db.transaction(async (tx) => {
+      // Not listed either, or the unpublished check would queue it every pass
+      await tx.query(
+        "UPDATE registry_packages SET local = false WHERE name = $1 AND local",
+        [job.package],
+      );
+      await finish(tx);
+    });
     return;
   }
   if (job.kind === "process") {
@@ -297,11 +309,22 @@ export async function startWorker(
         const finalAttempt =
           err instanceof PermanentError || job.attempts >= MAX_ATTEMPTS;
         observe(finalAttempt ? "failed" : "retry");
+        options.metrics?.jobErrors.inc({
+          kind: job.kind,
+          reason: errorReason(err, err instanceof PermanentError),
+        });
         try {
           if (!finalAttempt) {
             await retry(ctx.db, job, message);
           } else {
-            if (job.kind === "process") await failVersion(ctx, job, message);
+            if (job.kind === "process") {
+              await failVersion(
+                ctx,
+                job,
+                message,
+                err instanceof PermanentError,
+              );
+            }
             await complete(ctx.db, job);
           }
         } catch (recordErr) {
