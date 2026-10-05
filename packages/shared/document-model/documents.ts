@@ -5,7 +5,13 @@ import { isDenied } from "./denied.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
-import { stateReducerOf } from "./reducer.js";
+import {
+  garbageCollect,
+  isDocumentAction,
+  nextSkipNumber,
+  sortOperations,
+} from "./operation-order.js";
+import { stateReducerOf } from "./state-reducer.js";
 import {
   deriveScope,
   positionalOperations,
@@ -174,12 +180,6 @@ export function isUndoRedo(action: Action): action is UndoRedoAction {
 
 export function isUndo(action: Action): action is UndoAction {
   return action.type === "UNDO";
-}
-
-export function isDocumentAction(action: Action): action is DocumentAction {
-  return ["SET_NAME", "SET_PREFERRED_EDITOR", "UNDO", "REDO"].includes(
-    action.type,
-  );
 }
 
 /**
@@ -972,28 +972,6 @@ export function checkCleanedOperationsIntegrity(
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 
-export function garbageCollect<TOpIndex extends OperationIndex>(
-  sortedOperations: TOpIndex[],
-) {
-  const result: TOpIndex[] = [];
-
-  let i = sortedOperations.length - 1;
-
-  while (i > -1) {
-    result.unshift(sortedOperations[i]);
-    const skipUntil =
-      (sortedOperations[i]?.index || 0) - (sortedOperations[i]?.skip || 0) - 1;
-
-    let j = i - 1;
-    while (j > -1 && (sortedOperations[j]?.index || 0) > skipUntil) {
-      j--;
-    }
-
-    i = j;
-  }
-
-  return result;
-}
 export function addUndo(sortedOperations: Operation[]) {
   const operationsCopy = [...sortedOperations];
   const latestOperation = operationsCopy[operationsCopy.length - 1];
@@ -1036,14 +1014,6 @@ export function addUndo(sortedOperations: Operation[]) {
 
 // [0:0 2:0 1:0 3:3 3:1] => [0:0 1:0 2:0 3:1 3:3]
 // Sort by index _and_ skip number
-export function sortOperations<TOpIndex extends OperationIndex>(
-  operations: TOpIndex[],
-): TOpIndex[] {
-  return operations
-    .slice()
-    .sort((a, b) => a.skip - b.skip)
-    .sort((a, b) => a.index - b.index);
-}
 
 // [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, 2:0, B3:0, B4:2, B5:0]
 // GC               => [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, B4:2, B5:0]
@@ -1306,26 +1276,6 @@ function getMaxIndex(sortedOperations: OperationIndex[]) {
 // [0:0 1:1 2:0 3:1] => 3
 // [0:0 1:1 2:0 3:3] => -1
 // [50:50 100:50 150:50 151:0 152:0 153:0 154:3] => 53
-
-export function nextSkipNumber(sortedOperations: OperationIndex[]) {
-  if (sortedOperations.length < 1) {
-    return -1;
-  }
-
-  const cleanedOperations = garbageCollect(sortedOperations);
-
-  let nextSkip =
-    (cleanedOperations[cleanedOperations.length - 1]?.skip || 0) + 1;
-
-  if (cleanedOperations.length > 1) {
-    nextSkip += cleanedOperations[cleanedOperations.length - 2]?.skip || 0;
-  }
-
-  return (cleanedOperations[cleanedOperations.length - 1]?.index || -1) <
-    nextSkip
-    ? -1
-    : nextSkip;
-}
 
 export function checkOperationsIntegrity(operations: Operation[]) {
   return checkCleanedOperationsIntegrity(
@@ -1624,3 +1574,5 @@ export function updateHeaderRevision(
     header,
   };
 }
+
+export { garbageCollect, isDocumentAction, nextSkipNumber, sortOperations };
