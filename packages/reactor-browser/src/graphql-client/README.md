@@ -180,6 +180,7 @@ interface:
 | Method                                                  | Notes                                                                                                                                                |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `find(search, view?, paging?, signal?)`                 | By `type` and `parentId` at head. `ids`, `slugs` or a point-in-time view throw `GraphQLOperationNotSupportedError`; see `findIsServableOverGraphQL`. |
+| `isServed(identifier, view?, signal?)`                  | Asks `documentServed`, the gate `find` passes. A point-in-time view, or a Switchboard without the query, throws `GraphQLOperationNotSupportedError`.  |
 | `get{Outgoing,Incoming}Relationships`                   | Paged documents.                                                                                                                                     |
 | `get{Outgoing,Incoming}RelationshipEdges`               | Paged edges.                                                                                                                                         |
 | `executeBatch(request, signal?)`                        | Signs each job for its resolved id and emits the changes. A FAILED job throws `BatchJobFailedError` with every job's state.                          |

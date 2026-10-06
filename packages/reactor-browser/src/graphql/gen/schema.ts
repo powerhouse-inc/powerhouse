@@ -623,6 +623,7 @@ export type Query = {
   readonly documentOperations: ReactorOperationResultPage;
   readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
+  readonly documentServed: Scalars["Boolean"]["output"];
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
    * set of candidate operations, without submitting any of them. A UI asks this to
@@ -718,6 +719,11 @@ export type QueryDocumentOutgoingRelationshipsArgs = {
   relationshipType: Scalars["String"]["input"];
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryDocumentServedArgs = {
+  idOrSlug: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -1314,6 +1320,13 @@ export type GetJobStatusQuery = {
     | null
     | undefined;
 };
+
+export type GetDocumentServedQueryVariables = Exact<{
+  idOrSlug: Scalars["String"]["input"];
+  view?: InputMaybe<ViewFilterInput>;
+}>;
+
+export type GetDocumentServedQuery = { readonly documentServed: boolean };
 
 export type GetCreateDefaultsQueryVariables = Exact<{
   parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -2107,6 +2120,11 @@ export const GetJobStatusDocument = gql`
   }
   ${JobInfoFieldsFragmentDoc}
 `;
+export const GetDocumentServedDocument = gql`
+  query GetDocumentServed($idOrSlug: String!, $view: ViewFilterInput) {
+    documentServed(idOrSlug: $idOrSlug, view: $view)
+  }
+`;
 export const GetCreateDefaultsDocument = gql`
   query GetCreateDefaults($parentIdOrSlug: String) {
     createDefaults(parentIdOrSlug: $parentIdOrSlug) {
@@ -2654,6 +2672,24 @@ export function getSdk(
             signal,
           }),
         "GetJobStatus",
+        "query",
+        variables,
+      );
+    },
+    GetDocumentServed(
+      variables: GetDocumentServedQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDocumentServedQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentServedQuery>({
+            document: GetDocumentServedDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentServed",
         "query",
         variables,
       );

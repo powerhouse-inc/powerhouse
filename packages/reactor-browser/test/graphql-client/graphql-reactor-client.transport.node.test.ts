@@ -114,3 +114,30 @@ describe("GraphQLReactorClient create defaults over the wire", () => {
     ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
   });
 });
+
+describe("GraphQLReactorClient.isServed over the wire", () => {
+  it("sends one documentServed query carrying the view", async () => {
+    const { url, received } = await serve(() => ({
+      status: 200,
+      body: JSON.stringify({ data: { documentServed: false } }),
+    }));
+
+    expect(await clientFor(url).isServed("doc-1", { branch: "draft" })).toBe(
+      false,
+    );
+    expect(received).toHaveLength(1);
+    expect(received[0].body.operationName).toBe("GetDocumentServed");
+    expect(received[0].body.variables).toEqual({
+      idOrSlug: "doc-1",
+      view: { branch: "draft" },
+    });
+  });
+
+  it("refuses with a typed error against a Switchboard without documentServed", async () => {
+    const { url } = await serve(() => unknownField("documentServed"));
+
+    await expect(clientFor(url).isServed("doc-1")).rejects.toBeInstanceOf(
+      GraphQLOperationNotSupportedError,
+    );
+  });
+});

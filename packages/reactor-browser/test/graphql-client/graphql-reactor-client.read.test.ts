@@ -22,6 +22,7 @@ type EdgesPage =
 
 type MockSdk = {
   GetDocument: ReturnType<typeof vi.fn>;
+  GetDocumentServed: ReturnType<typeof vi.fn>;
   GetDocumentOperations: ReturnType<typeof vi.fn>;
   FindDocuments: ReturnType<typeof vi.fn>;
   GetDocumentOutgoingRelationships: ReturnType<typeof vi.fn>;
@@ -80,6 +81,7 @@ const emptyOperationsPage: OperationsPage = {
 function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
   return {
     GetDocument: vi.fn().mockResolvedValue(documentPayload),
+    GetDocumentServed: vi.fn().mockResolvedValue({ documentServed: true }),
     GetDocumentOperations: vi
       .fn()
       .mockResolvedValue({ documentOperations: emptyOperationsPage }),
@@ -270,6 +272,93 @@ describe("GraphQLReactorClient.get", () => {
     });
 
     await expect(createClientWith(sdk).get("doc-1")).rejects.toThrow("boom");
+  });
+});
+
+describe("GraphQLReactorClient.isServed", () => {
+  it("asks documentServed and never reads the document", async () => {
+    const sdk = createMockSdk();
+    const controller = new AbortController();
+
+    const served = await createClientWith(sdk).isServed(
+      "doc-1",
+      undefined,
+      controller.signal,
+    );
+
+    expect(served).toBe(true);
+    expect(sdk.GetDocumentServed).toHaveBeenCalledWith(
+      { idOrSlug: "doc-1", view: undefined },
+      undefined,
+      controller.signal,
+    );
+    expect(sdk.GetDocument).not.toHaveBeenCalled();
+  });
+
+  it("answers false when the Switchboard does not serve the document", async () => {
+    const sdk = createMockSdk({
+      GetDocumentServed: vi.fn().mockResolvedValue({ documentServed: false }),
+    });
+
+    expect(await createClientWith(sdk).isServed("doc-1")).toBe(false);
+  });
+
+  it("carries the view's branch and scopes", async () => {
+    const sdk = createMockSdk();
+
+    await createClientWith(sdk).isServed("doc-1", {
+      branch: "draft",
+      scopes: ["global"],
+    });
+
+    expect(sdk.GetDocumentServed).toHaveBeenCalledWith(
+      { idOrSlug: "doc-1", view: { branch: "draft", scopes: ["global"] } },
+      undefined,
+      undefined,
+    );
+  });
+
+  it("refuses a point-in-time view without a request", async () => {
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk).isServed("doc-1", { revision: { global: 3 } }),
+    ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
+    expect(sdk.GetDocumentServed).not.toHaveBeenCalled();
+  });
+
+  it("refuses with a typed error against a Switchboard without documentServed", async () => {
+    const olderServer = Object.assign(new Error("validation failed"), {
+      response: {
+        status: 400,
+        errors: [
+          {
+            message: 'Cannot query field "documentServed" on type "Query".',
+            extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+          },
+        ],
+      },
+    });
+    const sdk = createMockSdk({
+      GetDocumentServed: vi.fn().mockRejectedValue(olderServer),
+    });
+
+    const served = createClientWith(sdk).isServed("doc-1");
+
+    await expect(served).rejects.toBeInstanceOf(
+      GraphQLOperationNotSupportedError,
+    );
+    await expect(served).rejects.toMatchObject({ operation: "isServed" });
+    expect(sdk.GetDocument).not.toHaveBeenCalled();
+  });
+
+  it("throws a failure to decide rather than answering false", async () => {
+    const failure = new Error("storage unavailable");
+    const sdk = createMockSdk({
+      GetDocumentServed: vi.fn().mockRejectedValue(failure),
+    });
+
+    await expect(createClientWith(sdk).isServed("doc-1")).rejects.toBe(failure);
   });
 });
 

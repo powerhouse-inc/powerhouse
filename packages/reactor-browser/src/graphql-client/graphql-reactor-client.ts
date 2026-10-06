@@ -246,6 +246,38 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  /**
+   * Whether the Switchboard would serve the document to this client's caller,
+   * from its `documentServed` query: the same read gate `find` passes. Absent
+   * or withheld is `false`; a failure to decide throws.
+   *
+   * A point-in-time view throws {@link GraphQLOperationNotSupportedError}, as
+   * does a Switchboard without the query.
+   */
+  async isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    try {
+      const result = await this.sdk.GetDocumentServed(
+        { idOrSlug: identifier, view: viewInput },
+        undefined,
+        signal,
+      );
+      return result.documentServed;
+    } catch (error) {
+      if (queriesUnknownField(error, "documentServed")) {
+        throw new GraphQLOperationNotSupportedError(
+          "isServed",
+          "the Switchboard predates the documentServed query",
+        );
+      }
+      throw error;
+    }
+  }
+
   async getOperations(
     documentIdentifier: string,
     view?: ViewFilter,
