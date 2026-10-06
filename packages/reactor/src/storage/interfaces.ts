@@ -1018,7 +1018,8 @@ export interface ISyncDeadLetterStorage {
   ): Promise<PagedResults<DeadLetterRecord>>;
 
   /**
-   * Adds a dead letter. Duplicate ids are silently ignored. Throws
+   * Adds a dead letter. A duplicate id keeps its row but takes the new
+   * error source, message and type. Throws
    * DocumentPurgedError, persisting nothing, when the document is purged.
    *
    * @param deadLetter - The dead letter record to persist

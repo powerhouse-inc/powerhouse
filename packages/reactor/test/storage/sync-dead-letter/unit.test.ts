@@ -191,6 +191,26 @@ describe("KyselySyncDeadLetterStorage", () => {
       expect(page.results).toHaveLength(1);
     });
 
+    it("keeps the latest failure when the same id dead-letters again", async () => {
+      await storage.add(
+        createDeadLetter({ errorType: "HASH_MISMATCH", errorMessage: "first" }),
+      );
+      await storage.add(
+        createDeadLetter({
+          errorType: "AUTH_TIMESTAMP_NOT_MONOTONIC",
+          errorMessage: "second",
+        }),
+      );
+
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(1);
+      expect(page.results[0].errorType).toBe("AUTH_TIMESTAMP_NOT_MONOTONIC");
+      expect(page.results[0].errorMessage).toBe("second");
+      await expect(storage.listQuarantinedDocumentIds()).resolves.not.toContain(
+        "doc-1",
+      );
+    });
+
     it("should preserve operations as JSON", async () => {
       const dl = createDeadLetter({
         operations: [
