@@ -84,7 +84,15 @@ import {
   type PolledMarkerRefusal,
 } from "./purge-refusals.js";
 import { createPeerAgreement, type IPeerAgreement } from "./peer-agreement.js";
+import type { IMailbox } from "./mailbox.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
+import {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
 import { SyncOperation } from "./sync-operation.js";
 import {
   SyncStatusTracker,
@@ -252,7 +260,12 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
 }
 
 export class SyncManager
-  implements ISyncManager, ISyncAdmin, IDeliveryTracking, IPurgeRefusalRecorder
+  implements
+    ISyncManager,
+    ISyncAdmin,
+    ISyncInspector,
+    IDeliveryTracking,
+    IPurgeRefusalRecorder
 {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -1410,6 +1423,62 @@ export class SyncManager
 
   list(): Remote[] {
     return Array.from(this.remotes.values());
+  }
+
+  async inspectRemote(remoteName: string): Promise<RemoteSyncInspection> {
+    const remote = this.getByName(remoteName);
+    return this.inspectionOf(remote);
+  }
+
+  async inspectRemotes(): Promise<RemoteSyncInspection[]> {
+    const out: RemoteSyncInspection[] = [];
+    for (const remote of [...this.remotes.values()]) {
+      out.push(await this.inspectionOf(remote));
+    }
+    return out;
+  }
+
+  async listDeadLetters(
+    remoteName: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<DeadLetterPage> {
+    this.getByName(remoteName);
+    const page = await this.deadLetterStorage.list(remoteName, {
+      cursor: cursor ?? "0",
+      limit: limit ?? this.config.maxDeadLettersPerRemote,
+    });
+    return { remoteName, results: page.results, nextCursor: page.nextCursor };
+  }
+
+  private async inspectionOf(remote: Remote): Promise<RemoteSyncInspection> {
+    const cursors = await this.cursorStorage.list(remote.meta.name);
+    const cursorInfo = (
+      cursorType: "inbox" | "outbox",
+      mailbox: IMailbox,
+    ): RemoteCursorInfo => {
+      const stored = cursors.find((c) => c.cursorType === cursorType);
+      return {
+        cursorType,
+        cursorOrdinal: stored?.cursorOrdinal ?? 0,
+        lastSyncedAtUtcMs: stored?.lastSyncedAtUtcMs,
+        liveAckOrdinal: mailbox.ackOrdinal,
+        liveLatestOrdinal: mailbox.latestOrdinal,
+      };
+    };
+    const { channel } = remote;
+    return {
+      remoteName: remote.meta.name,
+      remoteId: remote.meta.id,
+      inboxCursor: cursorInfo("inbox", channel.inbox),
+      outboxCursor: cursorInfo("outbox", channel.outbox),
+      mailboxDepths: {
+        inbox: channel.inbox.items.length,
+        outbox: channel.outbox.items.length,
+        deadLetter: channel.deadLetter.items.length,
+      },
+      connection: deriveConnectionHealth(channel.getConnectionState()),
+    };
   }
 
   waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {

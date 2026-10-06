@@ -165,6 +165,7 @@ export class SyncBuilder {
       channelFactory: this.channelFactory,
       syncManager,
       syncAdmin: syncManager,
+      syncInspector: syncManager,
     };
   }
 }
