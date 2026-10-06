@@ -708,9 +708,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     if (this.listeners.length === 0) {
       return;
     }
+    type Written = { documentId: string; branch: string };
     const deleted = new Set<string>();
-    const created = new Set<string>();
-    const touched = new Set<string>();
+    const created = new Map<string, Written>();
+    const touched = new Map<string, Written>();
+    const keyOf = (written: Written) =>
+      `${written.branch}\u0000${written.documentId}`;
     for (const job of request.jobs) {
       const info = jobs[job.key] as JobInfo | undefined;
       if (!info || (info.status as string) !== "READ_READY") continue;
@@ -719,12 +722,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         deleted.add(info.documentId);
         continue;
       }
+      const own = { documentId: info.documentId, branch: job.branch };
       if (types.has("CREATE_DOCUMENT")) {
-        created.add(info.documentId);
+        created.set(keyOf(own), own);
       }
-      touched.add(info.documentId);
-      for (const coordinate of info.consistencyToken.coordinates) {
-        touched.add(coordinate.documentId);
+      touched.set(keyOf(own), own);
+      for (const { documentId, branch } of info.consistencyToken.coordinates) {
+        touched.set(keyOf({ documentId, branch }), { documentId, branch });
       }
     }
 
@@ -736,27 +740,30 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       });
     }
 
-    const read = async (documentId: string) => {
+    const read = async ({ documentId, branch }: Written) => {
       try {
-        return await this.get(documentId, undefined, signal);
+        return await this.get(documentId, { branch }, signal);
       } catch (error) {
         logger.warn(
-          "GraphQLReactorClient: could not read @documentId to announce a batch change: @error",
+          "GraphQLReactorClient: could not read @documentId on @branch to announce a batch change: @error",
           documentId,
+          branch,
           error,
         );
         return undefined;
       }
     };
-    const readAll = async (documentIds: string[]) =>
-      (await Promise.all(documentIds.map(read))).filter(
+    const readAll = async (written: Written[]) =>
+      (await Promise.all(written.map(read))).filter(
         (document) => document !== undefined,
       );
     // Read concurrently, emit in order: Created before Updated.
     const [createdDocuments, updatedDocuments] = await Promise.all([
-      readAll([...created].filter((id) => !deleted.has(id))),
+      readAll([...created.values()].filter((w) => !deleted.has(w.documentId))),
       readAll(
-        [...touched].filter((id) => !deleted.has(id) && !created.has(id)),
+        [...touched.entries()]
+          .filter(([key, w]) => !deleted.has(w.documentId) && !created.has(key))
+          .map(([, w]) => w),
       ),
     ]);
     if (createdDocuments.length > 0) {

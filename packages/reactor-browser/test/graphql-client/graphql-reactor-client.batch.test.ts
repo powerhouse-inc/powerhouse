@@ -484,6 +484,47 @@ describe("GraphQLReactorClient.executeBatch", () => {
     ]);
   });
 
+  it("reads an announced document on the branch the job wrote to", async () => {
+    const coordinate = {
+      documentId: "drive-1",
+      scope: "global",
+      branch: "feature",
+      operationIndex: 3,
+    };
+    const sdk = createMockSdk({
+      ExecuteBatch: vi.fn().mockResolvedValue({
+        executeBatch: {
+          jobs: [
+            {
+              key: "drive",
+              job: serverJob("job-drive", "drive-1", {
+                consistencyToken: {
+                  version: 1,
+                  createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+                  coordinates: [coordinate],
+                },
+              }),
+            },
+          ],
+        },
+      }),
+    });
+    const client = createClientWith(sdk, { realtime: false });
+    const events: DocumentChangeEvent[] = [];
+    client.subscribe({}, (event) => events.push(event));
+
+    await client.executeBatch({
+      jobs: [{ ...removeFileBatch.jobs[0], branch: "feature" }],
+    });
+
+    expect(sdk.GetDocument).toHaveBeenCalledTimes(1);
+    expect(sdk.GetDocument.mock.calls[0][0]).toMatchObject({
+      identifier: "drive-1",
+      view: { branch: "feature" },
+    });
+    expect(events[0].documents[0].header.branch).toBe("feature");
+  });
+
   it("reads nothing back to announce when nobody is subscribed", async () => {
     const sdk = createMockSdk();
 
