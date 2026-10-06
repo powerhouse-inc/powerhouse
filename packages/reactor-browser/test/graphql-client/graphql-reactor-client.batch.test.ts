@@ -4,20 +4,17 @@ import { serializeSignature } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
-  ReactorGraphQLClient,
-  RunDocumentOptions,
-} from "../../src/graphql/types.js";
+  ExecuteBatchMutation,
+  ExecuteBatchMutationVariables,
+} from "../../src/graphql/gen/schema.js";
+import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
 import {
   GraphQLReactorClient,
   type GraphQLReactorClientOptions,
 } from "../../src/graphql-client/graphql-reactor-client.js";
-import type {
-  ExecuteBatchResult,
-  ExecuteBatchVariables,
-} from "../../src/graphql-client/operations.js";
 
 type MockSdk = {
-  RunDocument: ReturnType<typeof vi.fn>;
+  ExecuteBatch: ReturnType<typeof vi.fn>;
   GetJobStatus: ReturnType<typeof vi.fn>;
   GetDocument: ReturnType<typeof vi.fn>;
   SetPreferredEditor: ReturnType<typeof vi.fn>;
@@ -35,29 +32,11 @@ const parentDriveDocument = {
   revisionsList: [{ scope: "global", revision: 1 }],
 };
 
-const batchPayload: ExecuteBatchResult = {
+const batchPayload: ExecuteBatchMutation = {
   executeBatch: {
     jobs: [
-      {
-        key: "drive",
-        job: {
-          id: "job-drive",
-          status: "READ_READY",
-          error: null,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          completedAt: "2026-01-01T00:00:01.000Z",
-        },
-      },
-      {
-        key: "delete",
-        job: {
-          id: "job-delete",
-          status: "READ_READY",
-          error: null,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          completedAt: "2026-01-01T00:00:01.000Z",
-        },
-      },
+      { key: "drive", job: serverJob("job-drive", "drive-1") },
+      { key: "delete", job: serverJob("job-delete", "file-1") },
     ],
   },
 };
@@ -75,15 +54,9 @@ const editorDocument = {
 
 function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
   return {
-    RunDocument: vi.fn().mockResolvedValue(batchPayload),
+    ExecuteBatch: vi.fn().mockResolvedValue(batchPayload),
     GetJobStatus: vi.fn().mockResolvedValue({
-      jobStatus: {
-        id: "job-x",
-        status: "READ_READY",
-        error: null,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        completedAt: "2026-01-01T00:00:01.000Z",
-      },
+      jobStatus: serverJob("job-x", "doc-1"),
     }),
     GetDocument: vi
       .fn()
@@ -106,9 +79,8 @@ function createClientWith(
   });
 }
 
-function batchVariables(sdk: MockSdk): ExecuteBatchVariables {
-  const options = sdk.RunDocument.mock.calls[0][0] as RunDocumentOptions;
-  return options.variables as ExecuteBatchVariables;
+function batchVariables(sdk: MockSdk): ExecuteBatchMutationVariables {
+  return sdk.ExecuteBatch.mock.calls[0][0] as ExecuteBatchMutationVariables;
 }
 
 const signature: Signature = [
@@ -192,9 +164,7 @@ describe("GraphQLReactorClient.executeBatch", () => {
     const sdk = createMockSdk();
     await createClientWith(sdk).executeBatch(removeFileBatch);
 
-    const options = sdk.RunDocument.mock.calls[0][0] as RunDocumentOptions;
-    expect(options.operationName).toBe("ExecuteBatch");
-    expect(options.operationType).toBe("mutation");
+    expect(sdk.ExecuteBatch).toHaveBeenCalledTimes(1);
 
     const jobs = batchVariables(sdk).jobs;
     expect(jobs).toHaveLength(2);
@@ -273,7 +243,7 @@ describe("GraphQLReactorClient.executeBatch", () => {
     ).resolves.toBeDefined();
     // No baseline fetch, no reducer prediction: each action is signed bare.
     expect(signAction).toHaveBeenCalledTimes(2);
-    expect(sdk.RunDocument).toHaveBeenCalledTimes(1);
+    expect(sdk.ExecuteBatch).toHaveBeenCalledTimes(1);
   });
 
   it("pushes actions unsigned when there is no signer", async () => {
@@ -306,18 +276,16 @@ describe("GraphQLReactorClient.executeBatch", () => {
 
   it("throws naming the failed plan key and the partial-state caveat when a job comes back FAILED", async () => {
     const sdk = createMockSdk({
-      RunDocument: vi.fn().mockResolvedValue({
+      ExecuteBatch: vi.fn().mockResolvedValue({
         executeBatch: {
           jobs: [
             {
               key: "drive",
-              job: {
-                id: "job-drive",
+              job: serverJob("job-drive", "drive-1", {
                 status: "FAILED",
                 error: "drive refused the removal",
-                createdAt: "2026-01-01T00:00:00.000Z",
-                completedAt: "2026-01-01T00:00:01.000Z",
-              },
+                errorName: "DocumentAlreadyExistsError",
+              }),
             },
           ],
         },
@@ -329,6 +297,9 @@ describe("GraphQLReactorClient.executeBatch", () => {
     });
 
     await expect(run).rejects.toThrow(/Batch job "drive" failed/);
+    await expect(run).rejects.toMatchObject({
+      name: "DocumentAlreadyExistsError",
+    });
     await expect(run).rejects.toThrow("drive refused the removal");
     await expect(run).rejects.toThrow(/ordering-only, not atomic/);
     await expect(run).rejects.toThrow(
@@ -338,7 +309,7 @@ describe("GraphQLReactorClient.executeBatch", () => {
 
   it("rejects when the mutation fails", async () => {
     const sdk = createMockSdk({
-      RunDocument: vi.fn().mockRejectedValue(new Error("batch rejected")),
+      ExecuteBatch: vi.fn().mockRejectedValue(new Error("batch rejected")),
     });
 
     await expect(
@@ -459,6 +430,133 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
       documentIdentifier: "doc-1",
       preferredEditor: undefined,
       branch: undefined,
+    });
+  });
+});
+
+/** A job as the Switchboard's JobInfoFields selection reports it. */
+function serverJob(
+  id: string,
+  documentId: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id,
+    documentId,
+    status: "READ_READY",
+    result: null,
+    error: null,
+    errorName: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    completedAt: "2026-01-01T00:00:01.000Z",
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+      coordinates: [
+        { documentId, scope: "global", branch: "main", operationIndex: 7 },
+      ],
+    },
+    meta: { batchId: "batch-9", batchJobIds: ["job-drive", "job-delete"] },
+    ...overrides,
+  };
+}
+
+describe("jobs carry what the server reported, never placeholders", () => {
+  it("waitForJob by id returns the job's real document id, token and batch", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi
+        .fn()
+        .mockResolvedValue({ jobStatus: serverJob("job-x", "doc-1") }),
+    });
+
+    const job = await createClientWith(sdk).waitForJob("job-x");
+
+    expect(job.documentId).toBe("doc-1");
+    expect(job.consistencyToken).toEqual({
+      version: 1,
+      createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+      coordinates: [
+        {
+          documentId: "doc-1",
+          scope: "global",
+          branch: "main",
+          operationIndex: 7,
+        },
+      ],
+    });
+    expect(job.meta).toEqual({
+      batchId: "batch-9",
+      batchJobIds: ["job-drive", "job-delete"],
+    });
+  });
+
+  it("waitForJob by id keeps a failed job's error class name", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi.fn().mockResolvedValue({
+        jobStatus: serverJob("job-x", "doc-1", {
+          status: "FAILED",
+          error: "revision moved",
+          errorName: "UpgradePreconditionFailedError",
+        }),
+      }),
+    });
+
+    const job = await createClientWith(sdk).waitForJob("job-x");
+
+    expect(job.error?.name).toBe("UpgradePreconditionFailedError");
+    expect(job.error?.message).toBe("revision moved");
+  });
+
+  it("waitForJob passes the server's unknown-job answer through as the reactor's", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi.fn().mockResolvedValue({
+        jobStatus: serverJob("job-x", "", {
+          status: "FAILED",
+          error: "Job not found",
+          errorName: "Error",
+        }),
+      }),
+    });
+
+    const job = await createClientWith(sdk).waitForJob("job-x");
+
+    expect(job.documentId).toBe("");
+    expect(job.status).toBe("FAILED");
+  });
+
+  it("executeBatch returns the document id the server resolved, not the one sent", async () => {
+    const payload = {
+      executeBatch: {
+        jobs: [
+          { key: "drive", job: serverJob("job-drive", "drive-1") },
+          { key: "delete", job: serverJob("job-delete", "file-1") },
+        ],
+      },
+    };
+    const sdk = createMockSdk({
+      ExecuteBatch: vi.fn().mockResolvedValue(payload),
+    });
+    const bySlug: BatchExecutionRequest = {
+      jobs: [
+        { ...removeFileBatch.jobs[0], documentId: "my-drive" },
+        removeFileBatch.jobs[1],
+      ],
+    };
+
+    const result = await createClientWith(sdk).executeBatch(bySlug);
+
+    expect(result.jobs.drive.documentId).toBe("drive-1");
+    expect(result.jobs.drive.consistencyToken.coordinates).toEqual([
+      {
+        documentId: "drive-1",
+        scope: "global",
+        branch: "main",
+        operationIndex: 7,
+      },
+    ]);
+    expect(result.jobs.delete.meta).toEqual({
+      batchId: "batch-9",
+      batchJobIds: ["job-drive", "job-delete"],
     });
   });
 });

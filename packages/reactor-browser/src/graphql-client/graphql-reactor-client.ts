@@ -6,6 +6,7 @@ import type {
   DocumentRelationship,
   ExecutionJobPlan,
   JobInfo,
+  JobResultSummary,
   JobStatus,
   OperationFilter,
   PagedResults,
@@ -39,6 +40,7 @@ import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
   type DocumentRelationshipFieldsFragment,
+  type JobInfoFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
   type PhDocumentFieldsFragment,
@@ -60,10 +62,6 @@ import {
 } from "./auth.js";
 import { GraphQLOperationNotSupportedError } from "./errors.js";
 import {
-  ExecuteBatchDocument,
-  type ExecuteBatchJobInfo,
-  type ExecuteBatchResult,
-  type ExecuteBatchVariables,
   MutateDocumentWithOperationsDocument,
   type MutateDocumentWithOperationsResult,
   type MutateDocumentWithOperationsVariables,
@@ -602,30 +600,25 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       }),
     );
 
-    const variables: ExecuteBatchVariables = { jobs: jobInputs };
-    const result = await this.sdk.RunDocument<ExecuteBatchResult>({
-      operationName: "ExecuteBatch",
-      operationType: "mutation",
-      document: ExecuteBatchDocument,
-      variables,
+    const result = await this.sdk.ExecuteBatch(
+      { jobs: jobInputs },
+      undefined,
       signal,
-    });
-
-    const documentIdByKey = new Map(
-      request.jobs.map((job) => [job.key, job.documentId]),
     );
+
     const jobs: Record<string, JobInfo> = {};
     for (const entry of result.executeBatch.jobs) {
       if (entry.job.status === "FAILED" || entry.job.error != null) {
         const reason = entry.job.error ?? "unknown error";
-        throw new Error(
+        const error = new Error(
           `Batch job "${entry.key}" failed: ${reason}. The batch is ordering-only, not atomic: jobs ordered before "${entry.key}" may already have committed, and re-submitting re-applies every job that already succeeded.`,
         );
+        if (entry.job.errorName != null) {
+          error.name = entry.job.errorName;
+        }
+        throw error;
       }
-      jobs[entry.key] = jobInfoFromGql(
-        entry.job,
-        documentIdByKey.get(entry.key) ?? "",
-      );
+      jobs[entry.key] = jobInfoFromGql(entry.job);
     }
     return { jobs };
   }
@@ -655,7 +648,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     if (!status) {
       throw new Error(`Job not found: ${jobOrId}`);
     }
-    return jobInfoFromGql(status, "");
+    return jobInfoFromGql(status);
   }
 
   /**
@@ -1244,10 +1237,8 @@ function viewIsPointInTime(view?: ViewFilter): boolean {
  * can serve a `find`. It is servable iff the search names neither `ids` nor
  * `slugs` (present, regardless of length) AND the view is not point-in-time:
  * each is a by-contract limitation of a surface that filters only by
- * `type`/`parentId` at head. Both the client's own `find` and the connect
- * router adapter consult this one predicate so the rule cannot drift between
- * them; the adapter turns an unservable search into its typed not-supported
- * signal so the router excludes the backend rather than failing the read.
+ * `type`/`parentId` at head. Exported so a caller can route around an
+ * unservable search instead of catching the error `find` throws for it.
  */
 export function findIsServableOverGraphQL(
   search: SearchFilter,
@@ -1377,33 +1368,44 @@ function documentModelVersion(document: PHDocument): number {
 }
 
 /**
- * Rebuilds a reactor {@link JobInfo} from the batch mutation's `JobInfo`
- * selection.
- *
- * The consistency token and batch meta are placeholders: the batch is
- * synchronous, so a completed job needs neither to be waited on, and
- * `DriveClient` reads only `status` and `error`. The `documentId` is the one the
- * caller sent for this plan key, which the selection does not echo back.
+ * Rebuilds a reactor {@link JobInfo} from what the server reported. An unknown
+ * job arrives as the reactor's own: FAILED with an empty `documentId`.
  */
-function jobInfoFromGql(job: ExecuteBatchJobInfo, documentId: string): JobInfo {
-  const createdAtUtcIso = isoStringFromDateTime(job.createdAt);
+function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
+  const token = job.consistencyToken;
+  if (token.version !== 1) {
+    throw new Error(
+      `Job ${job.id} carries consistency token version ${token.version}, which this client cannot read`,
+    );
+  }
   const info: JobInfo = {
     id: job.id,
-    documentId,
+    documentId: job.documentId,
     status: job.status as JobStatus,
-    createdAtUtcIso,
+    createdAtUtcIso: isoStringFromDateTime(job.createdAt),
     consistencyToken: {
       version: 1,
-      createdAtUtcIso,
-      coordinates: [],
+      createdAtUtcIso: token.createdAtUtcIso,
+      coordinates: token.coordinates.map((coordinate) => ({ ...coordinate })),
     },
-    meta: { batchId: job.id, batchJobIds: [job.id] },
+    meta: {
+      batchId: job.meta.batchId,
+      batchJobIds: [...job.meta.batchJobIds],
+    },
   };
   if (job.completedAt != null) {
     info.completedAtUtcIso = isoStringFromDateTime(job.completedAt);
   }
+  if (job.result != null) {
+    info.result = job.result as JobResultSummary;
+  }
   if (job.error != null) {
-    info.error = { name: "Error", message: job.error, stack: "" };
+    // The server keeps stacks to itself; a message always comes with its name.
+    info.error = {
+      name: job.errorName ?? "Error",
+      message: job.error,
+      stack: "",
+    };
   }
   return info;
 }

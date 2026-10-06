@@ -1279,11 +1279,27 @@ export type GetJobStatusQuery = {
   readonly jobStatus?:
     | {
         readonly id: string;
+        readonly documentId: string;
         readonly status: string;
         readonly result?: NonNullable<unknown> | null | undefined;
         readonly error?: string | null | undefined;
+        readonly errorName?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
+        readonly consistencyToken: {
+          readonly version: number;
+          readonly createdAtUtcIso: string;
+          readonly coordinates: ReadonlyArray<{
+            readonly documentId: string;
+            readonly scope: string;
+            readonly branch: string;
+            readonly operationIndex: number;
+          }>;
+        };
+        readonly meta: {
+          readonly batchId: string;
+          readonly batchJobIds: ReadonlyArray<string>;
+        };
       }
     | null
     | undefined;
@@ -1387,11 +1403,27 @@ export type MutateDocumentAsyncMutationVariables = Exact<{
 export type MutateDocumentAsyncMutation = {
   readonly mutateDocumentAsync: {
     readonly id: string;
+    readonly documentId: string;
     readonly status: string;
     readonly result?: NonNullable<unknown> | null | undefined;
     readonly error?: string | null | undefined;
+    readonly errorName?: string | null | undefined;
     readonly createdAt: string | Date;
     readonly completedAt?: string | Date | null | undefined;
+    readonly consistencyToken: {
+      readonly version: number;
+      readonly createdAtUtcIso: string;
+      readonly coordinates: ReadonlyArray<{
+        readonly documentId: string;
+        readonly scope: string;
+        readonly branch: string;
+        readonly operationIndex: number;
+      }>;
+    };
+    readonly meta: {
+      readonly batchId: string;
+      readonly batchJobIds: ReadonlyArray<string>;
+    };
   };
 };
 
@@ -2049,14 +2081,10 @@ export const GetDocumentOperationsDocument = gql`
 export const GetJobStatusDocument = gql`
   query GetJobStatus($jobId: String!) {
     jobStatus(jobId: $jobId) {
-      id
-      status
-      result
-      error
-      createdAt
-      completedAt
+      ...JobInfoFields
     }
   }
+  ${JobInfoFieldsFragmentDoc}
 `;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
@@ -2129,14 +2157,10 @@ export const MutateDocumentAsyncDocument = gql`
       actions: $actions
       branch: $branch
     ) {
-      id
-      status
-      result
-      error
-      createdAt
-      completedAt
+      ...JobInfoFields
     }
   }
+  ${JobInfoFieldsFragmentDoc}
 `;
 export const ExecuteBatchDocument = gql`
   mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
