@@ -14,14 +14,23 @@ import {
 import {
   DraftBanner,
   PublishButton,
+  PublishedMissingNote,
   PublishState,
+  ReactorDenialNote,
   StatusToggle,
   usePublish,
 } from "./PublishControls.js";
+import { useReactorAccessDenial, useSignInGate } from "../reactor-hooks.js";
 import { StepPanel, TriggerPanel } from "./StepPanel.js";
 import { useWorkflowCheck } from "./use-validity.js";
 import { VariablesEditor } from "./VariablesEditor.js";
-import { useBlockResolutions, useDesignTime } from "./design-time.js";
+import {
+  useBlockForms,
+  useBlockResolutions,
+  useDesignTime,
+} from "./design-time.js";
+import { blockRefKey } from "./query-keys.js";
+import { missingInPublished } from "./reactor-view.js";
 import { BlockResolutionsProvider, VersionSummary } from "./version-badge.js";
 import { stepBlock, triggerBlock } from "./blocks.js";
 import { WorkflowCanvas } from "./WorkflowCanvas.js";
@@ -43,6 +52,11 @@ export function WorkflowEditorApp(props: {
     model.trigger && model.trigger.id === selectedId ? model.trigger : null;
   const showVariables = selectedId === VARIABLES_VIEW;
   const workflowId = useDesignTime()?.workflowId ?? "";
+  const signIn = useSignInGate();
+  const denial = useReactorAccessDenial(
+    workflowId || undefined,
+    `${model.published?.version ?? 0}:${model.status}`,
+  );
   const trigger = useMemo(
     () => (model.trigger ? triggerBlock(model.trigger) : undefined),
     [model.trigger],
@@ -57,6 +71,22 @@ export function WorkflowEditorApp(props: {
     [model.trigger, trigger, model.steps],
   );
   const resolutions = useBlockResolutions(workflowId, blocks);
+  // What runs is the snapshot, so its gaps are told apart from the draft's.
+  const publishedBlocks = useMemo(
+    () => model.published?.blocks ?? [],
+    [model.published],
+  );
+  const publishedForms = useBlockForms(publishedBlocks);
+  const publishedMissing = missingInPublished(
+    publishedBlocks.map((block) => {
+      const form = publishedForms.get(blockRefKey(block));
+      return {
+        label: block.label,
+        reactorConnectionId: block.reactorConnectionId,
+        requireReactor: form && form !== "loading" ? form.requireReactor : null,
+      };
+    }),
+  );
   const draftBlocks = useMemo(
     () => blocks.map((entry) => entry.block),
     [blocks],
@@ -72,7 +102,7 @@ export function WorkflowEditorApp(props: {
   return (
     <BlockResolutionsProvider resolutions={resolutions} blocks={draftBlocks}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 border-b border-solid border-foreground/10 bg-background px-4 py-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-solid border-foreground/10 bg-background px-4 py-2">
           {props.leading ? (
             <>
               {props.leading}
@@ -82,7 +112,7 @@ export function WorkflowEditorApp(props: {
           <input
             key={model.name}
             aria-label="Workflow name"
-            className="min-w-0 max-w-72 rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
+            className="min-w-16 max-w-72 shrink rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
             defaultValue={model.name}
             placeholder="Untitled workflow"
             spellCheck={false}
@@ -98,6 +128,8 @@ export function WorkflowEditorApp(props: {
             v{model.version}
           </span>
           <PublishState model={model} />
+          <PublishedMissingNote missing={publishedMissing} />
+          <ReactorDenialNote denial={denial} />
           <VersionSummary resolutions={resolutions} onSelect={setSelectedId} />
           <span className="ml-auto flex items-center gap-3">
             {props.trailing}
@@ -138,6 +170,7 @@ export function WorkflowEditorApp(props: {
             publishing={publishing}
             onPublish={publish}
             onSelect={setSelectedId}
+            signIn={signIn}
           />
         </div>
         <div className="flex min-h-0 flex-1">
@@ -156,6 +189,7 @@ export function WorkflowEditorApp(props: {
                 onPublish={publish}
                 onDiscard={callbacks.discardChanges}
                 onSelect={setSelectedId}
+                signIn={signIn}
               />
             </div>
           </div>
@@ -194,6 +228,7 @@ export function WorkflowEditorApp(props: {
                       callbacks={callbacks}
                       onClose={() => setSelectedId(null)}
                       readOnly={model.readOnly}
+                      publishedVersion={model.published?.version}
                     />
                   ) : null}
                 </div>

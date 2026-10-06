@@ -1721,6 +1721,12 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../reactor
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3

@@ -85,3 +85,30 @@ describe("connectionUsage", () => {
     expect(enabledDependents(usage)).toBe(1);
   });
 });
+
+describe("reactor connection usage", () => {
+  it("finds steps and triggers that bind it as their reactor connection", () => {
+    const usage = connectionUsage("reactor-1", [
+      workflow("a", {
+        trigger: {
+          id: "t",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          triggerName: "changed",
+          reactorConnectionId: "reactor-1",
+        },
+        steps: [
+          { ...step("write"), reactorConnectionId: "reactor-1" },
+          step("send", "reactor-1"),
+          step("other", "x"),
+        ],
+      }),
+    ]);
+    expect(usage).toHaveLength(1);
+    expect(usage[0].trigger).toBe(true);
+    expect(usage[0].reactorTrigger).toBe(true);
+    expect(usage[0].steps.map((s) => s.key)).toEqual(["write", "send"]);
+    // Only the reactor bindings declare document access.
+    expect(usage[0].reactorSteps.map((s) => s.key)).toEqual(["write"]);
+  });
+});

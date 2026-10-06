@@ -1,9 +1,5 @@
-import type {
-  DocumentChangeEvent,
-  IReactorClient,
-  SearchFilter,
-  ViewFilter,
-} from "@powerhousedao/reactor";
+import type { DocumentChangeEvent, IReactorClient } from "../client/types.js";
+import type { SearchFilter, ViewFilter } from "../shared/types.js";
 import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { dehydratePage } from "./paging.js";
 import { SubscriptionStore } from "./subscription.js";

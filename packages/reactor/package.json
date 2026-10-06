@@ -14,6 +14,11 @@
       "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./rpc": {
+      "source": "./src/rpc/index.ts",
+      "types": "./dist/rpc.d.ts",
+      "import": "./dist/rpc.js"
     }
   },
   "files": [

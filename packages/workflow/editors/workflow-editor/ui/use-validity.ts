@@ -29,6 +29,7 @@ export interface CheckedBlock {
   block: BlockRef;
   config: unknown;
   connectionId: string | null;
+  reactorConnectionId?: string | null;
   propertySettings?: PropertySettingModel[] | null;
   skip?: boolean;
   // Ports of the edges leaving this block, checked against the declared ones.
@@ -67,7 +68,13 @@ function unknownDynamic(
         !storedSchema(block.propertySettings, prop.name),
     )
     .map((prop) =>
-      resolverInputFor(block.block, prop, config, block.connectionId),
+      resolverInputFor(
+        block.block,
+        prop,
+        config,
+        block.connectionId,
+        block.reactorConnectionId,
+      ),
     );
 }
 
@@ -92,6 +99,7 @@ export function useBlockCheck(block: CheckedBlock): BlockCheck {
       block: block.block,
       config: block.config,
       connectionId: block.connectionId,
+      reactorConnectionId: block.reactorConnectionId,
       propertySettings: block.propertySettings,
       skip: block.skip,
       resolveDynamic: lookup,
@@ -154,6 +162,7 @@ export function useWorkflowCheck(model: WorkflowModel): WorkflowCheck {
         block: block.block,
         config: block.config,
         connectionId: block.connectionId,
+        reactorConnectionId: block.reactorConnectionId,
         propertySettings: block.propertySettings,
         skip: block.skip,
         resolveDynamic: lookup,

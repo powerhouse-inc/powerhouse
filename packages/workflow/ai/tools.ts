@@ -207,7 +207,7 @@ export const getConnectorsTool: PhAiToolDescriptor = {
 export const getConnectionsTool: PhAiToolDescriptor = {
   name: "getConnections",
   description:
-    "Lists the project's connection documents with their credential status: which required secrets and config values are still missing, and the last account label. Secret values are never included.",
+    "Lists the project's connection documents with their credential status: which required secrets and config values are still missing, and the last account label. Secret values are never included. A connection with authType REACTOR is bound through a step's or trigger's reactorConnectionId, never connectionId.",
   inputSchema: {},
   annotations: { title: "Get Connections", ...READ_ONLY },
   callback: () => getConnections(),

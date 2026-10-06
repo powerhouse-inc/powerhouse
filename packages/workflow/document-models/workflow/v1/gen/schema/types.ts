@@ -82,6 +82,7 @@ export type AddStepInput = {
   pieceVersion: Scalars["String"]["input"];
   position?: InputMaybe<AddStepPositionInput>;
   propertySettings?: InputMaybe<Array<AddStepPropertySettingInput>>;
+  reactorConnectionId?: InputMaybe<Scalars["PHID"]["input"]>;
   retry?: InputMaybe<AddStepRetryPolicyInput>;
   skip?: InputMaybe<Scalars["Boolean"]["input"]>;
   timeoutSeconds?: InputMaybe<Scalars["Int"]["input"]>;
@@ -235,6 +236,7 @@ export type SetTriggerInput = {
   pieceName: Scalars["String"]["input"];
   pieceVersion: Scalars["String"]["input"];
   propertySettings?: InputMaybe<Array<SetTriggerPropertySettingInput>>;
+  reactorConnectionId?: InputMaybe<Scalars["PHID"]["input"]>;
   triggerName: Scalars["String"]["input"];
 };
 
@@ -283,6 +285,8 @@ export type TriggerBinding = {
   /** Exact semver of the piece, e.g. '1.2.0'. */
   pieceVersion: Scalars["String"]["output"];
   propertySettings: Maybe<Array<PropertySetting>>;
+  /** Reactor connection document id, when the trigger declares requireReactor. */
+  reactorConnectionId: Maybe<Scalars["PHID"]["output"]>;
   /** Trigger name within the piece, e.g. 'schedule' or 'new_message'. */
   triggerName: Scalars["String"]["output"];
   /** Timestamp of the last real edit; a lastTest before it is stale. */
@@ -300,6 +304,7 @@ export type UpdateStepInput = {
   pieceName?: InputMaybe<Scalars["String"]["input"]>;
   pieceVersion?: InputMaybe<Scalars["String"]["input"]>;
   position?: InputMaybe<UpdateStepPositionInput>;
+  reactorConnectionId?: InputMaybe<Scalars["PHID"]["input"]>;
   retry?: InputMaybe<UpdateStepRetryPolicyInput>;
   skip?: InputMaybe<Scalars["Boolean"]["input"]>;
   timeoutSeconds?: InputMaybe<Scalars["Int"]["input"]>;
@@ -390,6 +395,8 @@ export type WorkflowStep = {
   pieceVersion: Scalars["String"]["output"];
   position: Maybe<Point>;
   propertySettings: Maybe<Array<PropertySetting>>;
+  /** Reactor connection document id, when the action declares requireReactor. */
+  reactorConnectionId: Maybe<Scalars["PHID"]["output"]>;
   /** Per-step override of the workflow default retry policy. */
   retry: Maybe<RetryPolicy>;
   /** Skipped steps are passed over at run time. */

@@ -1,4 +1,5 @@
-import { createAction, reactorOf } from "@powerhousedao/pieces-framework";
+import { createAction } from "@powerhousedao/pieces-framework";
+import { describeModel } from "../documents.js";
 import { ConfigReader } from "../parse.js";
 import {
   actionTypeProp,
@@ -14,6 +15,7 @@ export const documentSchemaAction = createAction({
   displayName: "Get document schema",
   description: "Action and state schemas of a document type.",
   requireAuth: false,
+  requireReactor: "read",
   props: {
     documentType: documentTypeProp(
       "Document type",
@@ -33,24 +35,26 @@ export const documentSchemaAction = createAction({
     parse: parseProp(),
   },
   run: async (ctx) => {
-    const reactor = reactorOf(ctx);
+    const reactor = ctx.reactor;
     const { actionType } = ctx.propsValue;
     const reader = ConfigReader.of(BLOCK, ctx.propsValue.parse);
-    let documentType =
+    const documentType =
       typeof ctx.propsValue.documentType === "string"
-        ? ctx.propsValue.documentType
+        ? ctx.propsValue.documentType.trim()
         : "";
     // A document id is accepted in place of a type, for expression-fed steps.
     const fromId = documentType
       ? undefined
       : reader.documentId(ctx.propsValue.documentId, "documentId");
-    if (fromId) {
-      documentType = (await reactor.get({ documentId: fromId })).documentType;
-    }
-    if (!documentType) {
+    if (!documentType && !fromId) {
       throw new Error(`${BLOCK}: "documentType" is required`);
     }
-    const model = await reactor.model(documentType);
+    const module = fromId
+      ? await reactor.getDocumentModelModuleForDocument(
+          await reactor.get(fromId),
+        )
+      : await reactor.getDocumentModelModule(documentType);
+    const model = describeModel(module);
     return {
       documentType: model.documentType,
       name: model.name,

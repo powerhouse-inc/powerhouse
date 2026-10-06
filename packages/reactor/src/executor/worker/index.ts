@@ -1,4 +1,5 @@
 export { createForwardingLogger } from "./forwarding-logger.js";
+export { loadDocumentModelSpec } from "./load-spec.js";
 export { errorToInfo, sanitizeArg } from "./sanitize.js";
 
 function resolveWorkerEntryPath(): string {
