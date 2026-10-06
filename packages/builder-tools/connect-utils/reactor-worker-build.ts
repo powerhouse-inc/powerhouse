@@ -604,6 +604,21 @@ export function findBundleSpecifierOffenders(
   entry: string = REACTOR_WORKER_ENTRY,
 ): { file: string; specs: string[] }[] {
   const offenders: { file: string; specs: string[] }[] = [];
+  walkBundleGraph(bundleDir, entry, (file, code) => {
+    const specs = findDisallowedSpecifiers(code);
+    if (specs.length > 0) offenders.push({ file, specs });
+    return true;
+  });
+  return offenders;
+}
+
+// Visits each JS file reachable from `entry` via relative imports, stopping
+// as soon as `visit` returns false.
+function walkBundleGraph(
+  bundleDir: string,
+  entry: string,
+  visit: (file: string, code: string) => boolean,
+): void {
   const seen = new Set<string>();
   const queue = [entry];
   while (queue.length > 0) {
@@ -614,14 +629,12 @@ export function findBundleSpecifierOffenders(
     if (!existsSync(full) || statSync(full).isDirectory()) continue;
     if (!rel.endsWith(".js") && !rel.endsWith(".mjs")) continue;
     const code = readFileSync(full, "utf8");
-    const specs = findDisallowedSpecifiers(code);
-    if (specs.length > 0) offenders.push({ file: rel, specs });
+    if (!visit(rel, code)) return;
     for (const spec of findRelativeSpecifiers(code)) {
       const next = normalizeBundlePath(rel, spec);
       if (next) queue.push(next);
     }
   }
-  return offenders;
 }
 
 function assertWorkerResolvable(bundleDir: string): void {
@@ -634,6 +647,17 @@ function assertWorkerResolvable(bundleDir: string): void {
   }
 }
 
+// Page-only code that survives minification: the dynamic-base expression
+// (`(globalThis.__PH_DYNAMIC_BASE__||"/")`, set by the serving proxy on the
+// main thread only) and the event Vite's preload helper dispatches on
+// `window` (the helper also appends `<link>` tags to `document`).
+const WORKER_UNSAFE_MARKERS = ["__PH_DYNAMIC_BASE__", "vite:preloadError"];
+
+/** The page-only markers present in `code`, in a fixed order. */
+export function findWorkerUnsafeMarkers(code: string): string[] {
+  return WORKER_UNSAFE_MARKERS.filter((marker) => code.includes(marker));
+}
+
 /**
  * The subset of the vendor's entries a worker may import.
  *
@@ -643,9 +667,12 @@ function assertWorkerResolvable(bundleDir: string): void {
  * closure reaches such an import would kill the worker on its first load —
  * and the chunk graph is shared across vendor entries, so even a React-free
  * module (e.g. an rpc subpath) can be entangled with React through a shared
- * chunk. Each entry's own closure inside the vendor dir decides: clean
- * closure, worker-safe; anything bare in it (or a missing entry file),
- * bundled into the worker instead.
+ * chunk. The vendor is also built for the page: a dynamic-base build rewrites
+ * its asset URLs onto a global only the page sets, and its dynamic imports go
+ * through Vite's preload helper, which needs `document`. Each entry's own
+ * closure inside the vendor dir decides: clean closure, worker-safe; anything
+ * bare or page-only in it (see {@link findWorkerUnsafeMarkers}), or a missing
+ * entry file, bundled into the worker instead.
  */
 export function workerSafeVendorImports(
   vendorDir: string,
@@ -655,9 +682,14 @@ export function workerSafeVendorImports(
   for (const [spec, url] of Object.entries(vendorImports)) {
     const entryFile = url.slice(url.lastIndexOf("/") + 1);
     if (!existsSync(join(vendorDir, entryFile))) continue;
-    if (findBundleSpecifierOffenders(vendorDir, entryFile).length === 0) {
-      safe[spec] = url;
-    }
+    let clean = true;
+    walkBundleGraph(vendorDir, entryFile, (_file, code) => {
+      clean =
+        findDisallowedSpecifiers(code).length === 0 &&
+        findWorkerUnsafeMarkers(code).length === 0;
+      return clean;
+    });
+    if (clean) safe[spec] = url;
   }
   return safe;
 }

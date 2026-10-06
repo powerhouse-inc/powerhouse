@@ -17,6 +17,7 @@ import {
   distDirFingerprint,
   findBundleSpecifierOffenders,
   findDisallowedSpecifiers,
+  findWorkerUnsafeMarkers,
   prebuildReactorWorker,
   REACTOR_WORKER_ENTRY,
   resolveOwnPackageVersion,
@@ -112,6 +113,24 @@ describe("workerSafeVendorImports", () => {
       join(vendorDir, "chunks/shared-ui.js"),
       `import { useState } from "react";\nexport const hook = useState;\n`,
     );
+    // Dynamic-base asset URL: the global it reads is set on the page only.
+    writeFileSync(
+      join(vendorDir, "pglite.js"),
+      `export * from "./chunks/pglite-impl.js";\n`,
+    );
+    writeFileSync(
+      join(vendorDir, "chunks/pglite-impl.js"),
+      `export const wasm = new URL((globalThis.__PH_DYNAMIC_BASE__||"/")+"assets/x.wasm", import.meta.url);\n`,
+    );
+    // Vite's preload helper: touches document and window.
+    writeFileSync(
+      join(vendorDir, "lazy.js"),
+      `import { p } from "./chunks/preload-helper.js";\nexport const load = () => p(() => import("./chunks/zod-impl.js"));\n`,
+    );
+    writeFileSync(
+      join(vendorDir, "chunks/preload-helper.js"),
+      `export const p = (f) => f().catch((err) => { const e = new Event("vite:preloadError"); e.payload = err; window.dispatchEvent(e); });\n`,
+    );
   });
 
   afterAll(() => {
@@ -126,6 +145,35 @@ describe("workerSafeVendorImports", () => {
         missing: "/__vendor__/missing.js",
       }),
     ).toEqual({ zod: "/__vendor__/zod.js" });
+  });
+
+  it("demotes entries whose closure reaches page-only code", () => {
+    expect(
+      workerSafeVendorImports(vendorDir, {
+        zod: "/__vendor__/zod.js",
+        "@electric-sql/pglite": "/__vendor__/pglite.js",
+        lazy: "/__vendor__/lazy.js",
+      }),
+    ).toEqual({ zod: "/__vendor__/zod.js" });
+  });
+});
+
+describe("findWorkerUnsafeMarkers", () => {
+  it("names each page-only marker present", () => {
+    expect(
+      findWorkerUnsafeMarkers(
+        `const u=(globalThis.__PH_DYNAMIC_BASE__||"/")+"assets/x.wasm";` +
+          `const e=new Event("vite:preloadError");`,
+      ),
+    ).toEqual(["__PH_DYNAMIC_BASE__", "vite:preloadError"]);
+  });
+
+  it("is empty for worker-safe code", () => {
+    expect(
+      findWorkerUnsafeMarkers(
+        `const u=new URL("./assets/x.wasm",import.meta.url);`,
+      ),
+    ).toEqual([]);
   });
 });
 
