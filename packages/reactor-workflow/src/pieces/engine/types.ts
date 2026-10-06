@@ -37,6 +37,9 @@ export interface WorkflowStepDef {
   propertySettings?: PropertySettingDef[] | null;
   // Passed over at run time: not executed, continues on "next" with a null output.
   skip?: boolean | null;
+  // The author's retry block, unresolved; `effectiveRetryPolicy` reads it.
+  // Falls back to the workflow policy's `defaultRetry`.
+  retry?: unknown;
 }
 
 export interface WorkflowEdgeDef {
@@ -88,11 +91,16 @@ export interface BlockExecutor {
 
 // REPLAYED: output reused from a prior run's journal instead of executing.
 // SKIPPED: never reached, or flagged `skip` (then it carries port "next").
+// INDETERMINATE: the step neither returned nor failed — a host call it made
+// timed out, so a write it asked for may well have been committed. Reporting
+// that as FAILED would be a claim nobody can stand behind, so it is its own
+// state: it takes no port, ends the run, and never replays on rerun.
 export type StepExecutionStatus =
   | "SUCCEEDED"
   | "FAILED"
   | "SKIPPED"
-  | "REPLAYED";
+  | "REPLAYED"
+  | "INDETERMINATE";
 
 export interface StepExecutionRecord {
   stepId: string;
@@ -115,9 +123,15 @@ export interface StepExecutionRecord {
   piece?: StepPieceRecord;
   // Hash of the step definition it ran from; rerun replays only an unchanged one.
   configHash?: string;
+  // How many times the block ran, when its retry policy let it run more than
+  // once. Absent for a single attempt, so an unretried step journals as it did.
+  attempts?: number;
 }
 
-export type WorkflowRunStatus = "SUCCEEDED" | "FAILED";
+// CANCELLED: the run passed its `runTimeoutSeconds`, or a firing was skipped
+// because the workflow's concurrency mode is SINGLETON and a run was active.
+// Neither is a failure of the workflow, which is why it is not FAILED.
+export type WorkflowRunStatus = "SUCCEEDED" | "FAILED" | "CANCELLED";
 
 export interface WorkflowRunResult {
   status: WorkflowRunStatus;

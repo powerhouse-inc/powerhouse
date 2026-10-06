@@ -69,6 +69,10 @@ export interface StepExecutionRow {
   version_note: string | null;
   // Hash of the step definition it ran from; rerun replays only on a match.
   config_hash: string | null;
+  // How many times the block ran, when its retry policy let it run more than
+  // once. Null for a single attempt, which is what every row written before
+  // retry was enforced holds.
+  attempts: number | null;
 }
 
 // A document a run's steps were handed through the reactor port.
@@ -314,6 +318,15 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
         // column already exists
       }
     }
+  }
+  // Additive migration for enforced step retry: how many times a step ran.
+  try {
+    await db.schema
+      .alterTable("step_execution")
+      .addColumn("attempts", "integer")
+      .execute();
+  } catch {
+    // column already exists
   }
   try {
     await db.schema
@@ -941,6 +954,7 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     version_match: step.piece?.match ?? null,
     version_note: step.piece?.note ?? null,
     config_hash: step.configHash ?? null,
+    attempts: step.attempts ?? null,
   };
 }
 
@@ -1081,6 +1095,7 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "version_match",
   "version_note",
   "config_hash",
+  "attempts",
 ] as const satisfies readonly Exclude<
   keyof StepExecutionRow,
   "input" | "output"
@@ -1205,6 +1220,28 @@ export class WorkflowRunStore {
       );
     }
     return recovered;
+  }
+
+  /**
+   * Closes a run out as CANCELLED, with the reason as its error.
+   *
+   * Two callers, one meaning — "this run did not finish, and the workflow is
+   * not at fault": a firing SINGLETON concurrency refused, and a run that
+   * passed its `runTimeoutSeconds`. Separate from `failRun` because a
+   * CANCELLED run is not rerunnable and must not read as a workflow defect.
+   */
+  async cancelRun(runId: string, reason: string): Promise<void> {
+    this.runsInFlight.delete(runId);
+    if (erasedRuns.delete(runId)) return;
+    await this.db
+      .updateTable("run")
+      .set({
+        status: "CANCELLED",
+        error: redactMessage(reason),
+        ended_at: new Date().toISOString(),
+      })
+      .where("id", "=", runId)
+      .execute();
   }
 
   // The durable record of a matched trigger, written before the operation

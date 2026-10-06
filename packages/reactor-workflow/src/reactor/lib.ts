@@ -322,6 +322,9 @@ export function stepDefinition(
     timeoutSeconds: step.timeoutSeconds,
     propertySettings: propertySettings(step.propertySettings),
     skip: step.skip,
+    // The author's retry block, which the coordinator resolves against the
+    // workflow policy's defaultRetry.
+    retry: step.retry,
   };
 }
 

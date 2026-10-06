@@ -5,9 +5,21 @@ import {
   secretsFor,
 } from "../activepieces/worker/redact.js";
 import { PieceWorkerError } from "../activepieces/worker/host.js";
-import { evaluateCondition, type ExpressionScope } from "./expressions.js";
+import {
+  evaluateCondition,
+  unavailableValue,
+  UnavailableValueError,
+  type ExpressionScope,
+} from "./expressions.js";
+import {
+  effectiveRetryPolicy,
+  isRetryableError,
+  retryDelayMs,
+  type EffectiveRetryPolicy,
+} from "./retry.js";
 import { resolveStepInput } from "./step-input.js";
 import { checkDynamicProperties } from "./dynamic-props.js";
+import { isIndeterminateError } from "../activepieces/indeterminate.js";
 import {
   referenceDocuments,
   undeclaredPortEdges,
@@ -25,6 +37,22 @@ import {
   type WorkflowStepDef,
 } from "./types.js";
 
+/** One step a prior run already completed, as a rerun replays it. */
+export interface ReplayedStep {
+  output?: unknown;
+  port?: string | null;
+  /**
+   * The step SUCCEEDED, but the run journal truncated its output past the
+   * payload cap, so there is nothing to replay.
+   *
+   * It still replays, rather than running again: the step had side effects and
+   * re-running it would charge the card twice (backlog item 15). Its scope
+   * entry carries an unavailable value instead of data, so a downstream step
+   * that reads `steps.<key>.output…` fails the rerun by name.
+   */
+  outputTruncated?: boolean;
+}
+
 export interface RunWorkflowOptions {
   definition: WorkflowDefinition;
   executor: BlockExecutor;
@@ -32,7 +60,16 @@ export interface RunWorkflowOptions {
   triggerPayload?: unknown;
   // Journaled outputs from a prior run, keyed by step id; matching steps
   // replay (output injected, port re-taken) instead of executing.
-  completedSteps?: Map<string, { output?: unknown; port?: string | null }>;
+  completedSteps?: Map<string, ReplayedStep>;
+  // The workflow policy's `defaultRetry`, for steps with no `retry` of their
+  // own. Absent enforces no retry, which is what a definition with no policy
+  // (every legacy document) means.
+  defaultRetry?: EffectiveRetryPolicy | null;
+  // Epoch ms the run must be over by (`policy.runTimeoutSeconds`). Checked
+  // before each step and while a retry waits; past it the run is CANCELLED.
+  deadline?: number;
+  // Test seam for the retry waits, so a suite does not sleep through them.
+  sleep?: (ms: number) => Promise<void>;
   // Called as each step reaches a terminal state, so a run that dies
   // mid-flight leaves the steps it finished behind. Ordinal is execution
   // order; skips are excluded, being knowable only once the run completes.
@@ -118,8 +155,25 @@ export async function runWorkflow(
   // edgeId -> taken; an edge is decided once its source ran or was skipped.
   const edgeDecisions = new Map<string, boolean>();
   let runFailed: string | undefined;
+  // Set instead of runFailed when the run ran out of time: the workflow did
+  // not fail, it was stopped, and the status says so.
+  let runCancelled: string | undefined;
   let runFailedName: string | undefined;
   let executedCount = 0;
+  const sleep =
+    options.sleep ??
+    ((ms: number) =>
+      new Promise<void>((resolve) => {
+        // A pending retry wait must not be what keeps the process alive.
+        setTimeout(resolve, ms).unref();
+      }));
+
+  // Null while there is time left; the reason once there is not.
+  const outOfTime = (): string | undefined => {
+    if (options.deadline === undefined) return undefined;
+    if (Date.now() < options.deadline) return undefined;
+    return "Run exceeded its runTimeoutSeconds and was cancelled";
+  };
 
   // A failing journal write must not cost us the step's completed work: the
   // run carries on, and finishRun's final sweep repairs the missing row.
@@ -218,98 +272,163 @@ export async function runWorkflow(
         return;
       }
       const port = replay.port ?? "next";
+      // Truncated: the step is completed, its output is not available. Both
+      // halves have to be true at once, or the rerun either re-runs a side
+      // effect or hands a marker on as data.
+      const output = replay.outputTruncated
+        ? unavailableValue(
+            `Output of step "${step.key}" is unavailable: it succeeded in the ` +
+              "run being rerun, but the run journal truncated its output past " +
+              "the payload cap. The step is not re-run, because it had side " +
+              "effects. Fire the workflow again instead of rerunning it.",
+          )
+        : replay.output;
       const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
         pieceName: step.pieceName,
         blockName: step.actionName,
         status: "REPLAYED",
-        output: replay.output,
+        // Journaled as the marker it was, not as the wrapper: the wrapper is a
+        // run-scope device and carries its reason on a symbol.
+        output: replay.outputTruncated ? undefined : replay.output,
         port,
         configHash: stepConfigHash(step),
       };
       records.set(step.id, record);
       await journal(record);
-      scope.steps[step.key] = { output: replay.output };
+      scope.steps[step.key] = { output };
       decideOutgoing(step.id, port);
       return;
     }
+
+    // One resolved policy per step: its own `retry`, else the workflow's. A
+    // step that DECLARES a block overrides, whatever the block resolves to —
+    // `{maxAttempts: 1}` is an author saying "not this one", and inheriting
+    // the workflow default over it would be the opposite of an override.
+    const retry =
+      step.retry === undefined || step.retry === null
+        ? (options.defaultRetry ?? null)
+        : effectiveRetryPolicy(step.retry);
+    const maxAttempts = retry?.maxAttempts ?? 1;
     const startedAt = new Date().toISOString();
     let input: unknown;
-    try {
-      input = resolveStepInput(step, scope);
-      checkDynamicProperties(input, step.propertySettings);
-      const result = await executor.execute({
-        block: stepBlock(step),
-        config: input,
-        connectionId: step.connectionId,
-        reactorConnectionId: step.reactorConnectionId,
-        step,
-        ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
-      });
-      const port = result.port ?? "next";
-      const values = [...runSecrets, ...(result.redactValues ?? [])];
-      const record: StepExecutionRecord = {
-        stepId: step.id,
-        key: step.key,
-        pieceName: step.pieceName,
-        blockName: step.actionName,
-        status: "SUCCEEDED",
-        input: journaled(input, values),
-        // Documents go into the record as references; the scope keeps them whole.
-        output: journaled(referenceDocuments(result.output), values),
-        port,
-        startedAt,
-        endedAt: new Date().toISOString(),
-        ...withPiece(pieceRecord(result.resolution)),
-        configHash: stepConfigHash(step),
-      };
-      records.set(step.id, record);
-      await journal(record);
-      scope.steps[step.key] = { output: result.output };
-      decideOutgoing(step.id, port);
-    } catch (error) {
-      // A failed step is exactly where an input gets inspected, so it is
-      // redacted with the same secrets the successful path uses.
-      const values = [...runSecrets, ...secretsFor(error)];
-      const detail = redactMessage(errorMessage(error), { values });
-      const errorName = errorNameOf(error);
-      const record: StepExecutionRecord = {
-        stepId: step.id,
-        key: step.key,
-        pieceName: step.pieceName,
-        blockName: step.actionName,
-        status: "FAILED",
-        input: journaled(input, values),
-        error: detail,
-        ...(errorName ? { errorName } : {}),
-        startedAt,
-        endedAt: new Date().toISOString(),
-        ...withPiece(pieceRecord(resolutionOf(error))),
-        configHash: stepConfigHash(step),
-      };
-      records.set(step.id, record);
-      await journal(record);
-      // The same redacted text the journal took: an error-port branch writing
-      // the reason somewhere a person will read must not widen what a failure
-      // discloses.
-      scope.steps[step.key] = { error: detail };
-      decideOutgoing(step.id, "error");
-      const errorHandled = definition.edges.some(
-        (edge) => edge.from === step.id && edgeDecisions.get(edge.id),
-      );
-      if (!errorHandled) {
-        runFailed = `Step "${step.key}" failed: ${detail}`;
-        runFailedName = errorName;
+
+    for (let attempt = 1; ; attempt++) {
+      const attempts = attempt > 1 ? { attempts: attempt } : {};
+      try {
+        input = resolveStepInput(step, scope);
+        checkDynamicProperties(input, step.propertySettings);
+        const result = await executor.execute({
+          block: stepBlock(step),
+          config: input,
+          connectionId: step.connectionId,
+          reactorConnectionId: step.reactorConnectionId,
+          step,
+          ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
+        });
+        const port = result.port ?? "next";
+        const values = [...runSecrets, ...(result.redactValues ?? [])];
+        const record: StepExecutionRecord = {
+          stepId: step.id,
+          key: step.key,
+          pieceName: step.pieceName,
+          blockName: step.actionName,
+          status: "SUCCEEDED",
+          input: journaled(input, values),
+          // Documents go into the record as references; the scope keeps them whole.
+          output: journaled(referenceDocuments(result.output), values),
+          port,
+          startedAt,
+          endedAt: new Date().toISOString(),
+          ...withPiece(pieceRecord(result.resolution)),
+          configHash: stepConfigHash(step),
+          ...attempts,
+        };
+        records.set(step.id, record);
+        await journal(record);
+        scope.steps[step.key] = { output: result.output };
+        decideOutgoing(step.id, port);
+        return;
+      } catch (error) {
+        // A failed step is exactly where an input gets inspected, so it is
+        // redacted with the same secrets the successful path uses.
+        const values = [...runSecrets, ...secretsFor(error)];
+        const detail = redactMessage(errorMessage(error), { values });
+        const errorName = errorNameOf(error);
+        // A host call that timed out may have committed the write it asked
+        // for, so neither the step's failure nor its success is knowable. It
+        // is not retried either: a retry would be a second write.
+        const indeterminate = isIndeterminateError(error);
+        const expired = outOfTime();
+        const retryable =
+          retry !== null &&
+          attempt < maxAttempts &&
+          !indeterminate &&
+          // A value that is gone stays gone, and an expression that names
+          // nothing names nothing on the next attempt either.
+          !(error instanceof UnavailableValueError) &&
+          expired === undefined &&
+          isRetryableError(retry, error);
+        if (retryable) {
+          const waitMs = retryDelayMs(retry, attempt + 1);
+          if (waitMs > 0) await sleep(waitMs);
+          // The wait may have taken the run past its deadline; the next
+          // attempt's own check catches that and stops.
+          continue;
+        }
+        const failedAfter = attempt > 1 ? ` after ${attempt} attempts` : "";
+        const record: StepExecutionRecord = {
+          stepId: step.id,
+          key: step.key,
+          pieceName: step.pieceName,
+          blockName: step.actionName,
+          status: indeterminate ? "INDETERMINATE" : "FAILED",
+          input: journaled(input, values),
+          error: detail,
+          ...(errorName ? { errorName } : {}),
+          startedAt,
+          endedAt: new Date().toISOString(),
+          ...withPiece(pieceRecord(resolutionOf(error))),
+          configHash: stepConfigHash(step),
+          ...attempts,
+        };
+        records.set(step.id, record);
+        if (indeterminate) {
+          await journal(record);
+          // No port, so nothing downstream runs and no error branch claims to
+          // have handled something that may have succeeded.
+          runFailed = `Step "${step.key}" is INDETERMINATE: ${detail}`;
+          runFailedName = errorName;
+          return;
+        }
+        await journal(record);
+        // The same redacted text the journal took: an error-port branch
+        // writing the reason somewhere a person will read must not widen what
+        // a failure discloses.
+        scope.steps[step.key] = { error: detail };
+        decideOutgoing(step.id, "error");
+        const errorHandled = definition.edges.some(
+          (edge) => edge.from === step.id && edgeDecisions.get(edge.id),
+        );
+        if (!errorHandled) {
+          runFailed = `Step "${step.key}" failed${failedAfter}: ${detail}`;
+          runFailedName = errorName;
+        }
+        return;
       }
     }
   };
 
   let progressed = true;
-  while (progressed && !runFailed) {
+  while (progressed && !runFailed && !runCancelled) {
     progressed = false;
     for (const step of definition.steps) {
       if (records.has(step.id)) continue;
+      // Before the step, never during it: a step is the unit of work and
+      // killing one mid-flight would leave a side effect with no record.
+      runCancelled = outOfTime();
+      if (runCancelled) break;
       const inbound = inboundEdges(step);
       if (isEntryStep(step)) {
         await executeStep(step);
@@ -345,13 +464,20 @@ export async function runWorkflow(
     ? deadPortWarnings(definition, options.declaredPorts)
     : [];
   const noted = warnings.length > 0 ? { warnings } : {};
-  return runFailed
-    ? {
-        status: "FAILED",
-        steps,
-        error: runFailed,
-        ...(runFailedName ? { errorName: runFailedName } : {}),
-        ...noted,
-      }
-    : { status: "SUCCEEDED", steps, ...noted };
+  if (runFailed) {
+    return {
+      status: "FAILED",
+      steps,
+      error: runFailed,
+      ...(runFailedName ? { errorName: runFailedName } : {}),
+      ...noted,
+    };
+  }
+  // The deadline is the last word: a run whose final step happened to finish
+  // in time still reads CANCELLED if the loop stopped for the clock, and the
+  // steps it did complete are journaled either way.
+  if (runCancelled) {
+    return { status: "CANCELLED", steps, error: runCancelled, ...noted };
+  }
+  return { status: "SUCCEEDED", steps, ...noted };
 }
