@@ -60,7 +60,10 @@ import {
   makeAuthMiddleware,
   type BearerTokenProvider,
 } from "./auth.js";
-import { GraphQLOperationNotSupportedError } from "./errors.js";
+import {
+  BatchJobFailedError,
+  GraphQLOperationNotSupportedError,
+} from "./errors.js";
 import {
   MutateDocumentWithOperationsDocument,
   type MutateDocumentWithOperationsResult,
@@ -557,9 +560,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * shaped like `IReactor.executeBatch`'s so the reference `DriveClient`
    * consumes it unchanged.
    *
-   * Ordering only -- NOT atomic: each job commits independently, there is no
-   * batch rollback, and re-submitting after a partial failure re-applies the
-   * jobs that already succeeded.
+   * Not atomic: each job commits on its own and a failed job still releases
+   * its dependents. A FAILED job throws {@link BatchJobFailedError}, naming the
+   * first failed plan key and carrying every job's final state.
    *
    * Each job's actions are signed independently for the job's own
    * `(documentId, branch)` target -- the per-action signing the reactor's own
@@ -571,11 +574,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * each action bare is exactly what the in-process `DriveClient` relies on.
    *
    * The mutation is synchronous server-side: a job it returns is already
-   * complete, so {@link waitForJob} resolves from it without polling. The
-   * server resolver throws on a job failure, and as a second guard this method
-   * inspects each returned job and throws if any came back `FAILED` or carrying
-   * an error, so every caller is protected rather than only the ones that
-   * check per-job status themselves.
+   * settled, so {@link waitForJob} resolves from it without polling.
    */
   async executeBatch(
     request: BatchExecutionRequest,
@@ -604,17 +603,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     const jobs: Record<string, JobInfo> = {};
     for (const entry of result.executeBatch.jobs) {
-      if (entry.job.status === "FAILED" || entry.job.error != null) {
-        const reason = entry.job.error ?? "unknown error";
-        const error = new Error(
-          `Batch job "${entry.key}" failed: ${reason}. The batch is ordering-only, not atomic: jobs ordered before "${entry.key}" may already have committed, and re-submitting re-applies every job that already succeeded.`,
-        );
-        if (entry.job.errorName != null) {
-          error.name = entry.job.errorName;
-        }
-        throw error;
-      }
       jobs[entry.key] = jobInfoFromGql(entry.job);
+    }
+    const failed = request.jobs.find(
+      (job) => (jobs[job.key]?.status as string | undefined) === "FAILED",
+    );
+    if (failed) {
+      throw new BatchJobFailedError(failed.key, jobs);
     }
     return { jobs };
   }

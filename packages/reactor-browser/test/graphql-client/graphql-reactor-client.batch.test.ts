@@ -1,4 +1,7 @@
-import type { BatchExecutionRequest } from "@powerhousedao/reactor";
+import type {
+  BatchExecutionRequest,
+  DocumentChangeEvent,
+} from "@powerhousedao/reactor";
 import type {
   Action,
   ISigner,
@@ -15,7 +18,10 @@ import type {
   ReactorGraphQLClient,
   RunDocumentOptions,
 } from "../../src/graphql/types.js";
-import { GraphQLOperationNotSupportedError } from "../../src/graphql-client/errors.js";
+import {
+  BatchJobFailedError,
+  GraphQLOperationNotSupportedError,
+} from "../../src/graphql-client/errors.js";
 import {
   GraphQLReactorClient,
   type GraphQLReactorClientOptions,
@@ -314,16 +320,17 @@ describe("GraphQLReactorClient.executeBatch", () => {
     });
   });
 
-  it("throws naming the failed plan key and the partial-state caveat when a job comes back FAILED", async () => {
+  it("throws BatchJobFailedError with every job's state when a job comes back FAILED", async () => {
     const sdk = createMockSdk({
       ExecuteBatch: vi.fn().mockResolvedValue({
         executeBatch: {
           jobs: [
+            { key: "drive", job: serverJob("job-drive", "drive-1") },
             {
-              key: "drive",
-              job: serverJob("job-drive", "drive-1", {
+              key: "delete",
+              job: serverJob("job-delete", "file-1", {
                 status: "FAILED",
-                error: "drive refused the removal",
+                error: "file-1 already exists",
                 errorName: "DocumentAlreadyExistsError",
               }),
             },
@@ -332,19 +339,17 @@ describe("GraphQLReactorClient.executeBatch", () => {
       }),
     });
 
-    const run = createClientWith(sdk).executeBatch({
-      jobs: [removeFileBatch.jobs[0]],
-    });
+    const thrown = await createClientWith(sdk)
+      .executeBatch(removeFileBatch)
+      .catch((error: unknown) => error);
 
-    await expect(run).rejects.toThrow(/Batch job "drive" failed/);
-    await expect(run).rejects.toMatchObject({
-      name: "DocumentAlreadyExistsError",
-    });
-    await expect(run).rejects.toThrow("drive refused the removal");
-    await expect(run).rejects.toThrow(/ordering-only, not atomic/);
-    await expect(run).rejects.toThrow(
-      /re-applies every job that already succeeded/,
-    );
+    expect(BatchJobFailedError.isError(thrown)).toBe(true);
+    const error = thrown as BatchJobFailedError;
+    expect(error.message).toBe("file-1 already exists");
+    expect(error.key).toBe("delete");
+    expect(error.jobs.drive.status).toBe("READ_READY");
+    expect(error.jobs.delete.error?.name).toBe("DocumentAlreadyExistsError");
+    expect((error.cause as Error).name).toBe("DocumentAlreadyExistsError");
   });
 
   it("rejects when the mutation fails", async () => {
