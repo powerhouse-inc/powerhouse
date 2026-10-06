@@ -19,7 +19,7 @@
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { hostname } from "node:os";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const logger = childLogger(["workflow", "runtime", "singleton"]);
 
@@ -57,6 +57,9 @@ const LEASE_ID = "workflow-runtime";
 interface SingletonLeaseRow {
   id: string;
   owner: string;
+  /** Random per claim, never configured: two processes under one stable
+   * owner name still hold different instances. */
+  instance: string;
   acquired_at: string;
   heartbeat_at: string;
   expires_at: string;
@@ -116,9 +119,10 @@ export interface AcquireSingletonOptions {
   storageId?: string;
   ttlMs?: number;
   heartbeatMs?: number;
-  /** Called when a heartbeat finds the lease taken: this process is no longer
-   * the singleton and whatever it is still running is a second writer. */
-  onLost?: (owner: string) => void;
+  /** Called once, when a heartbeat finds the lease held by another claim
+   * (another process, or a newer one under the same owner name). Receives
+   * the current holder's owner name, if any. */
+  onLost?: (heldBy: string | undefined) => void;
   now?: () => Date;
   env?: Record<string, string | undefined>;
 }
@@ -160,6 +164,7 @@ async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
     .createTable("singleton_lease")
     .addColumn("id", "text", (col) => col.primaryKey())
     .addColumn("owner", "text", (col) => col.notNull())
+    .addColumn("instance", "text", (col) => col.notNull())
     .addColumn("acquired_at", "text", (col) => col.notNull())
     .addColumn("heartbeat_at", "text", (col) => col.notNull())
     .addColumn("expires_at", "text", (col) => col.notNull())
@@ -176,7 +181,8 @@ async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
  * 1. `INSERT … ON CONFLICT DO NOTHING RETURNING` — the first ever boot.
  * 2. `UPDATE … WHERE owner = me OR expires_at <= now RETURNING` — our own
  *    lease back (a restart under a stable owner name), or a dead one taken
- *    over once it has expired.
+ *    over once it has expired. Either way the row gets this claim's instance,
+ *    so the previous holder's heartbeat and release no longer match.
  * 3. Neither matched: someone live holds it, and we refuse by name.
  */
 export async function acquireWorkflowSingletonLease(
@@ -188,6 +194,7 @@ export async function acquireWorkflowSingletonLease(
   const heartbeatMs = options.heartbeatMs ?? SINGLETON_HEARTBEAT_MS;
   const owner =
     options.owner ?? singletonOwnerName(options.env, options.storageId);
+  const instance = randomUUID();
 
   const db = (await options.relationalDb.createNamespace(
     "workflow_runtime",
@@ -209,6 +216,7 @@ export async function acquireWorkflowSingletonLease(
       .values({
         id: LEASE_ID,
         owner,
+        instance,
         acquired_at: times.heartbeat_at,
         ...times,
       })
@@ -218,7 +226,7 @@ export async function acquireWorkflowSingletonLease(
     if (inserted !== undefined) return true;
     const taken = await db
       .updateTable("singleton_lease")
-      .set({ owner, acquired_at: times.heartbeat_at, ...times })
+      .set({ owner, instance, acquired_at: times.heartbeat_at, ...times })
       .where("id", "=", LEASE_ID)
       .where((eb) =>
         eb.or([
@@ -250,49 +258,61 @@ export async function acquireWorkflowSingletonLease(
   let timer: NodeJS.Timeout | undefined;
   let lost = false;
 
-  const heartbeat = async (): Promise<boolean> => {
-    const renewed = await db
-      .updateTable("singleton_lease")
-      .set(stamps())
-      .where("id", "=", LEASE_ID)
-      .where("owner", "=", owner)
-      .returning("owner")
-      .executeTakeFirst();
-    return renewed !== undefined;
-  };
-
   const stop = () => {
     if (timer) clearInterval(timer);
     timer = undefined;
   };
 
+  const markLost = async () => {
+    lost = true;
+    stop();
+    let heldBy: string | undefined;
+    try {
+      const held = await db
+        .selectFrom("singleton_lease")
+        .select("owner")
+        .where("id", "=", LEASE_ID)
+        .executeTakeFirst();
+      heldBy = held?.owner;
+    } catch {
+      heldBy = undefined;
+    }
+    log.error(
+      `Workflow singleton lease of "${owner}" is now held by ` +
+        `"${heldBy ?? "nobody"}"; this process no longer owns workflow ` +
+        "execution and stops running it.",
+    );
+    options.onLost?.(heldBy);
+  };
+
+  // Keyed on the instance as well as the owner: under a stable owner name an
+  // old process must never renew a newer process's claim.
+  const heartbeat = async (): Promise<boolean> => {
+    if (lost) return false;
+    const renewed = await db
+      .updateTable("singleton_lease")
+      .set(stamps())
+      .where("id", "=", LEASE_ID)
+      .where("owner", "=", owner)
+      .where("instance", "=", instance)
+      .returning("owner")
+      .executeTakeFirst();
+    if (renewed !== undefined) return true;
+    if (!lost) await markLost();
+    return false;
+  };
+
   return {
     owner,
     startHeartbeat() {
-      if (timer) return;
+      if (timer || lost) return;
       timer = setInterval(() => {
-        void heartbeat().then(
-          (held) => {
-            if (held || lost) return;
-            lost = true;
-            stop();
-            // Loud, and not fatal: killing the process here would turn a
-            // database hiccup into an outage. What the operator has to know is
-            // that this process is now a SECOND writer.
-            log.error(
-              `Workflow singleton lease was taken from "${owner}": this ` +
-                "reactor is no longer the designated workflow owner and is " +
-                "now a second writer against one run journal. Stop one of " +
-                "them.",
-            );
-            options.onLost?.(owner);
-          },
-          (error: unknown) => {
-            // A failed renewal is not a lost lease; the next tick retries
-            // well inside the TTL.
-            log.warn("Workflow singleton heartbeat failed: @error", error);
-          },
-        );
+        // A failed renewal is not a lost lease: the lease and the journal
+        // share one database, so a process that cannot renew cannot write
+        // either. The next tick retries.
+        heartbeat().catch((error: unknown) => {
+          log.warn("Workflow singleton heartbeat failed: @error", error);
+        });
       }, heartbeatMs);
       // The claim must not be what keeps the process alive.
       timer.unref();
@@ -306,6 +326,7 @@ export async function acquireWorkflowSingletonLease(
           .deleteFrom("singleton_lease")
           .where("id", "=", LEASE_ID)
           .where("owner", "=", owner)
+          .where("instance", "=", instance)
           .execute();
       } catch (error) {
         // The lease expires on its own; a failed release costs the next boot

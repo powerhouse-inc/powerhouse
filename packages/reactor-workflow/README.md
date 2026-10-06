@@ -102,6 +102,10 @@ the sweeps and the supervisor are per process.
   immediately instead of waiting out the TTL.
 - An **expired** lease is taken over: a killed process does not lock workflows
   out until a human intervenes.
+- Each claim records a random **instance** token, never configured. Heartbeat
+  and release match on owner and instance, so during a rolling deploy under
+  one stable owner name the old process can neither renew nor delete the new
+  process's lease.
 - A heartbeat that finds the lease taken logs an **error** naming the owner and
   stops renewing. It does not kill the process: a database hiccup must not
   become an outage, and what the operator needs is to be told that this reactor

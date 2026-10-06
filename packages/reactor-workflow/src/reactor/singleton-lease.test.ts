@@ -1,7 +1,7 @@
 // Workflow execution is a singleton (multi-reactor plan, agreed decision 3).
 // The claim is what enforces it: a second live process over one run journal is
 // refused by name rather than left to fail the first one's runs.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import {
   acquireWorkflowSingletonLease,
@@ -25,13 +25,14 @@ function fixture() {
   return {
     relationalDb,
     advance: (ms: number) => (clock += ms),
-    acquire: (owner: string, ttlMs = 60_000) =>
+    acquire: (owner: string, ttlMs = 60_000, onLost?: () => void) =>
       acquireWorkflowSingletonLease({
         relationalDb,
         logger: silent,
         owner,
         ttlMs,
         now: () => new Date(clock),
+        onLost,
       }),
   };
 }
@@ -153,4 +154,47 @@ describe("the workflow singleton lease", () => {
     expect(rebooted.owner).toBe(owner);
     expect(await rebooted.heartbeat()).toBe(true);
   });
+});
+
+// A rolling deploy under a stable PH_WORKFLOWS_SINGLETON_OWNER: the old pod and
+// the new one share the owner name, so only the per-claim instance tells them
+// apart.
+describe("two processes under one owner name", () => {
+  const takeovers = [
+    ["after the old lease expired", 1_001],
+    ["while the old lease is still live", 0],
+  ] as const;
+
+  it.each(takeovers)(
+    "keeps the new process's lease when the old one releases %s",
+    async (_, wait) => {
+      const { acquire, advance } = fixture();
+      const oldPod = await acquire("switchboard-0", 1_000);
+      advance(wait);
+      const newPod = await acquire("switchboard-0", 1_000);
+
+      await oldPod.release();
+
+      expect(await newPod.heartbeat()).toBe(true);
+      await expect(acquire("someone-else", 1_000)).rejects.toBeInstanceOf(
+        WorkflowSingletonConflictError,
+      );
+    },
+  );
+
+  it.each(takeovers)(
+    "tells the old process it lost the lease %s, without renewing it",
+    async (_, wait) => {
+      const { acquire, advance } = fixture();
+      const lost = vi.fn();
+      const oldPod = await acquire("switchboard-0", 1_000, lost);
+      advance(wait);
+      const newPod = await acquire("switchboard-0", 1_000);
+
+      expect(await oldPod.heartbeat()).toBe(false);
+      expect(await oldPod.heartbeat()).toBe(false);
+      expect(lost).toHaveBeenCalledTimes(1);
+      expect(await newPod.heartbeat()).toBe(true);
+    },
+  );
 });
