@@ -1666,6 +1666,7 @@ export class WorkflowRuntimeService {
   // journal write for every matched fire are awaited; execution is not, so
   // runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
+    if (this.closed) return;
     const hints = collectLifecycleParentHints(operations);
     for (const { operation, context } of operations) {
       if (context.scope !== DOCUMENT_SCOPE && context.scope !== "global") {
@@ -2172,10 +2173,15 @@ export class WorkflowRuntimeService {
     this.triggerSupervisor?.stop();
   }
 
+  // Set by shutdown. A runtime that lost the workflow singleton is shut down
+  // while its reactor keeps serving, so nothing may start a run after it.
+  private closed = false;
+
   // Teardown for the whole runtime, driven by the host. The run children
   // outlive the reactor otherwise — they are forked, not
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
+    this.closed = true;
     clearInterval(this.retentionTimer);
     for (const { timer } of this.resolutionRetries.values())
       clearTimeout(timer);
@@ -2362,6 +2368,8 @@ export class WorkflowRuntimeService {
   /** A delivery the service has already rate-limited, verified, de-duplicated and
    * answered any challenge for; all that is left is deciding what it means. */
   async deliverWebhook(request: WebhookRequest): Promise<WebhookReply> {
+    // Retryable: the sender tries again, and reaches the owner that runs it.
+    if (this.closed) return { status: 503 };
     const workflowId = request.key;
     const registration = this.liveWebhook(workflowId);
     // A waiting test samples the delivery; an armed workflow still runs it.
@@ -4002,6 +4010,11 @@ export class WorkflowRuntimeService {
     // row the run finishes in.
     enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
+    if (this.closed) {
+      throw new Error(
+        `Workflow ${workflowId} was not run: this workflow runtime has shut down`,
+      );
+    }
     // `policy.runTimeoutSeconds` is measured from HERE, the moment the firing
     // reaches the runtime — not from admission. The queue wait is part of the
     // time the run took: computing the deadline after admit() meant a firing

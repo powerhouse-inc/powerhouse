@@ -285,6 +285,20 @@ describe("WorkflowRuntimeService webhooks", () => {
       expect(await replyFor(undefined, "CANCELLED")).toBe(500);
     });
 
+    // A runtime shut down after losing the workflow singleton sits on a live
+    // reactor; the sender has to retry against the owner instead.
+    it("answers 503 and starts no run once the runtime has shut down", async () => {
+      await arm({ responseMode: "async" });
+      service.shutdown();
+      await expect(service.fire(WORKFLOW)).rejects.toThrow("shut down");
+      const fire = vi.spyOn(service, "fire");
+
+      const reply = await service.deliverWebhook(request());
+
+      expect(reply.status).toBe(503);
+      expect(fire).not.toHaveBeenCalled();
+    });
+
     it("answers 500 when the run throws", async () => {
       await arm({ responseMode: "sync" });
       vi.spyOn(service, "fire").mockRejectedValue(new Error("no such step"));
