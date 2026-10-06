@@ -106,23 +106,26 @@ export const ConsistencyTokenDTO = z
 export const JobInfoDTO = z
   .object({
     id: z.string(),
-    documentId: z.string(),
     status: z.string(),
     result: JSONObjectDTO.nullable().optional(),
     error: z.string().nullable().optional(),
-    errorName: z.string().nullable().optional(),
     createdAt: DateTimeDTO,
     completedAt: DateTimeDTO.nullable().optional(),
-    consistencyToken: ConsistencyTokenDTO,
-    meta: z
-      .object({ batchId: z.string(), batchJobIds: z.array(z.string()) })
-      .strip(),
   })
   .strip();
 
+export const JobInfoFieldsDTO = JobInfoDTO.extend({
+  documentId: z.string(),
+  errorName: z.string().nullable().optional(),
+  consistencyToken: ConsistencyTokenDTO,
+  meta: z
+    .object({ batchId: z.string(), batchJobIds: z.array(z.string()) })
+    .strip(),
+}).strip();
+
 export const BatchExecutionResultDTO = z
   .object({
-    jobs: z.array(z.object({ key: z.string(), job: JobInfoDTO }).strip()),
+    jobs: z.array(z.object({ key: z.string(), job: JobInfoFieldsDTO }).strip()),
   })
   .strip();
 
