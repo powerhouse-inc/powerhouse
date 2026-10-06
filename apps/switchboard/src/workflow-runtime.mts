@@ -65,8 +65,14 @@ export type WorkflowTriggersCapability =
       status: "unavailable";
       reason:
         | "in-process-reactor-module-unavailable"
-        | "live-read-model-registration-unsupported";
+        | "live-read-model-registration-unsupported"
+        | "workflow-singleton-lost";
     };
+
+const SINGLETON_LOST: WorkflowTriggersCapability = {
+  status: "unavailable",
+  reason: "workflow-singleton-lost",
+};
 
 /** The slice of switchboard's OpenFeature client this needs. */
 export interface BooleanFlagSource {
@@ -194,12 +200,16 @@ export interface ComposeWorkflowRuntimeDeps {
    * before it is used, so a connection string's credentials go no further.
    */
   storageId?: string;
+  /** Called once when another claim takes the singleton. The runtime has
+   * already shut down; it stays down until the host restarts. */
+  onSingletonLost?: (heldBy: string | undefined) => void;
 }
 
 export interface ComposedWorkflowRuntime {
   subgraph: SubgraphClass;
-  /** Whether document operations reach the runtime at all. */
-  triggers: WorkflowTriggersCapability;
+  /** Whether document operations reach the runtime at all; unavailable once
+   * the singleton is lost. */
+  readonly triggers: WorkflowTriggersCapability;
   /** The owner name this host holds the workflow singleton under; undefined
    * when the lease was not taken (a suite that opted out). */
   singletonOwner?: string;
@@ -416,6 +426,7 @@ export async function composeWorkflowRuntime(
   // run that is not this process's — i.e. a second replica booting fails the
   // first replica's live runs. The claim is what makes the plan's singleton
   // decision structural instead of documented; it refuses by name.
+  const loss: SingletonLoss = { lost: false };
   const lease =
     deps.singletonLease === false
       ? undefined
@@ -423,10 +434,15 @@ export async function composeWorkflowRuntime(
           relationalDb: deps.relationalDb,
           logger: deps.logger,
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
+          onLost: (heldBy) => {
+            loss.lost = true;
+            loss.tearDown?.();
+            deps.onSingletonLost?.(heldBy);
+          },
         });
 
   try {
-    return await composeClaimed(engine, deps, lease);
+    return await composeClaimed(engine, deps, lease, loss);
   } catch (error) {
     // Renewing since the claim, so a compose that fails hands it back.
     await lease?.release();
@@ -438,10 +454,17 @@ type SingletonLease = Awaited<
   ReturnType<WorkflowEngineModule["acquireWorkflowSingletonLease"]>
 >;
 
+// Losing the lease shuts the runtime down; tearDown is set once it exists.
+interface SingletonLoss {
+  lost: boolean;
+  tearDown?: () => void;
+}
+
 async function composeClaimed(
   engine: WorkflowEngineModule,
   deps: ComposeWorkflowRuntimeDeps,
   lease: SingletonLease | undefined,
+  loss: SingletonLoss,
 ): Promise<ComposedWorkflowRuntime> {
   // The same registry the host installs packages from, so a piece it indexes
   // is reachable without a second setting to keep in step.
@@ -504,9 +527,18 @@ async function composeClaimed(
   }
 
   let stopped = false;
+  let tornDown = false;
   const oauthCallback: ScopedRouteHandle | undefined = deps.http
     ? registerOAuthCallback(deps.http, runtime)
     : undefined;
+  const tearDown = () => {
+    if (tornDown) return;
+    tornDown = true;
+    oauthCallback?.dispose();
+    runtime.shutdown();
+  };
+  loss.tearDown = tearDown;
+  if (loss.lost) tearDown();
 
   return {
     subgraph: createWorkflowRuntimeSubgraph(
@@ -514,21 +546,24 @@ async function composeClaimed(
       deps.http ? { callbackUrl: callbackUrlOf(deps.http) } : undefined,
       access,
     ),
-    triggers,
+    get triggers() {
+      return loss.lost ? SINGLETON_LOST : triggers;
+    },
     ...(lease ? { singletonOwner: lease.owner } : {}),
 
     async start() {
+      if (tornDown) return;
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();
+      if (tornDown) return;
       runtime.startTriggerSupervisor();
     },
 
     async stop() {
       if (stopped) return;
       stopped = true;
-      oauthCallback?.dispose();
-      runtime.shutdown();
+      tearDown();
       // Released, so the next boot owns workflows immediately instead of
       // waiting out the lease TTL.
       await lease?.release();

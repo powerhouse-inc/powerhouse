@@ -377,6 +377,55 @@ describe("composeWorkflowRuntime", () => {
     }
   });
 
+  // A rolling deploy under one stable owner name: the next pod's claim wins,
+  // and this one must stop running workflows rather than become a second
+  // writer. There is no re-claim; it stays down until restarted.
+  it("shuts the runtime down when a newer claim takes the singleton", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const lost = vi.fn();
+    let newer:
+      | Awaited<ReturnType<typeof engine.acquireWorkflowSingletonLease>>
+      | undefined;
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const workflows = await compose(clientModule, {
+        relationalDb,
+        storageId: "/srv/slot-a",
+        onSingletonLost: lost,
+      });
+      await workflows.start();
+      expect(workflows.triggers).toEqual({ status: "available" });
+
+      newer = await engine.acquireWorkflowSingletonLease({
+        relationalDb,
+        storageId: "/srv/slot-a",
+        logger: stubLogger(),
+      });
+      expect(newer.owner).toBe(workflows.singletonOwner);
+
+      await vi.advanceTimersByTimeAsync(engine.SINGLETON_HEARTBEAT_MS);
+      await vi.waitFor(() => expect(lost).toHaveBeenCalledWith(newer!.owner));
+      expect(lost).toHaveBeenCalledTimes(1);
+      expect(workflows.triggers).toEqual({
+        status: "unavailable",
+        reason: "workflow-singleton-lost",
+      });
+      // Only the newer claim's heartbeat is left running.
+      expect(vi.getTimerCount()).toBe(1);
+
+      await workflows.start();
+      expect(vi.getTimerCount()).toBe(1);
+
+      await workflows.stop();
+      expect(await newer.heartbeat()).toBe(true);
+    } finally {
+      await newer?.release();
+      vi.useRealTimers();
+    }
+  });
+
   it("composes without a claim only when the host opts out", async () => {
     const clientModule = await buildReactorModule();
     const relationalDb = createRelationalDb(pglite()) as IRelationalDb;

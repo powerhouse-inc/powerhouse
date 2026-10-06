@@ -1039,6 +1039,16 @@ async function initServer(
         pieceRegistryUrl: registryUrl,
         models: workerModels,
         logger: logger.child(["workflow-runtime"]),
+        // No re-claim: re-arming needs a fresh compose, so workflows come
+        // back on the next boot.
+        onSingletonLost: (heldBy) => {
+          logger.error(
+            `Another process ("${heldBy ?? "unknown"}") took the workflow ` +
+              "singleton. This Switchboard has stopped its workflow runtime " +
+              "and runs no workflows until it is restarted; everything else " +
+              "serves normally.",
+          );
+        },
       });
     } catch (error) {
       // Without the claim this host must not run workflows, but everything
@@ -1282,7 +1292,10 @@ async function initServer(
     reactor: client,
     attachmentService,
     attachmentReferenceProjection: api.attachmentReferenceProjection,
-    workflowTriggers: workflows?.triggers,
+    // Read live: losing the singleton turns it unavailable.
+    get workflowTriggers() {
+      return workflows?.triggers;
+    },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: privacy ? { erasure: privacy.erasure } : undefined,

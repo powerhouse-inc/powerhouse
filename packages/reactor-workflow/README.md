@@ -106,10 +106,15 @@ the sweeps and the supervisor are per process.
   and release match on owner and instance, so during a rolling deploy under
   one stable owner name the old process can neither renew nor delete the new
   process's lease.
-- A heartbeat that finds the lease taken logs an **error** naming the owner and
-  stops renewing. It does not kill the process: a database hiccup must not
-  become an outage, and what the operator needs is to be told that this reactor
-  is now a second writer.
+- A heartbeat that finds the lease held by another claim logs an **error**
+  naming the holder, stops renewing and calls `onLost`. The host shuts the
+  runtime down: no trigger, webhook or manual run starts after that, and the
+  host reports its triggers unavailable. It does not re-claim; workflows come
+  back on the next boot, since re-arming needs a fresh compose. A renewal that
+  fails with a database error is not a loss: the lease and the journal share
+  one database, so the next tick retries.
+- Nothing fences the journal itself: writes do not check the lease, so a
+  process keeps writing until its next heartbeat (up to 20s) notices the loss.
 - **A refused claim does not take the API down.** The host boots WITHOUT the
   workflow runtime and warns, naming the current owner: no trigger fires here
   and the workflow GraphQL face is absent, while inspection, GraphQL, sync, MCP
