@@ -113,6 +113,6 @@ function emptyOperationsForScopes(
 }
 
 /** The `DateTime` scalar deserializes as either an ISO string or a `Date`. */
-function isoStringFromDateTime(value: string | Date): string {
+export function isoStringFromDateTime(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : value;
 }
