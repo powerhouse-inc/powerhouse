@@ -97,10 +97,7 @@ function Studio(props: { children?: ReactNode }) {
           )
         : addDocument(driveId, name, documentType);
     created
-      .then((node) => {
-        select(node.id);
-        setSelectedNode(node.id);
-      })
+      .then((node) => go(node.id, node.id))
       .catch((error: unknown) => {
         toast?.(
           error instanceof Error
@@ -125,10 +122,15 @@ function Studio(props: { children?: ReactNode }) {
     );
   };
 
-  const showRuns = (node: FileNode | null) => {
-    setSelectedNode(undefined);
-    select(node?.id);
+  // One history entry per click: when the open editor changes, Connect pushes
+  // its path and the selection rides on that entry.
+  const go = (id: string | undefined, editor?: string) => {
+    const before = window.location.pathname;
+    if ((editor ?? null) !== (selectedNodeId ?? null)) setSelectedNode(editor);
+    select(id, { replace: window.location.pathname !== before });
   };
+
+  const showRuns = (node: FileNode | null) => go(node?.id);
 
   // Resolved from the drive each render, so a deleted node drops out on its own.
   const liveTarget = workflows.find((node) => node.id === selectedId) ?? null;
@@ -138,14 +140,14 @@ function Studio(props: { children?: ReactNode }) {
   const wasEditing = useRef(editorOpen);
   useEffect(() => {
     if (wasEditing.current && !editorOpen && connectionSelected)
-      select(undefined);
+      select(undefined, { replace: true });
     wasEditing.current = editorOpen;
   }, [editorOpen, connectionSelected, select]);
   // A deleted node must not keep the hash pointing at nothing.
   const selectionExists = fileNodes.some((node) => node.id === selectedId);
   useEffect(() => {
     if (selectedId && fileNodes.length > 0 && !selectionExists)
-      select(undefined);
+      select(undefined, { replace: true });
   }, [fileNodes.length, select, selectedId, selectionExists]);
   // One feed per pane, shared by the header and the table: the focused
   // workflow's runs, or every run in this drive.
@@ -186,14 +188,8 @@ function Studio(props: { children?: ReactNode }) {
         onReorderWorkflow={reorder}
         onShowAllRuns={() => showRuns(null)}
         onOpenWorkflow={(node) => showRuns(node)}
-        onEditWorkflow={(node) => {
-          select(node.id);
-          setSelectedNode(node.id);
-        }}
-        onOpenConnection={(node) => {
-          select(node.id);
-          setSelectedNode(node.id);
-        }}
+        onEditWorkflow={(node) => go(node.id, node.id)}
+        onOpenConnection={(node) => go(node.id, node.id)}
         onCreateWorkflow={() =>
           create(WORKFLOW_TYPE, "Workflow", workflows.length)
         }
@@ -222,15 +218,15 @@ function Studio(props: { children?: ReactNode }) {
                 key={liveTarget.id}
                 node={liveTarget}
                 runs={runs}
-                onEdit={() => setSelectedNode(liveTarget.id)}
-                onDeleted={() => select(undefined)}
+                onEdit={() => go(liveTarget.id, liveTarget.id)}
+                onDeleted={() => select(undefined, { replace: true })}
               />
             ) : (
               <WorkflowBoard
                 runs={runs}
                 order={workflows.map((node) => node.id)}
                 creating={creating}
-                onOpen={(workflowId) => select(workflowId)}
+                onOpen={(workflowId) => go(workflowId)}
                 onCreate={() =>
                   create(WORKFLOW_TYPE, "Workflow", workflows.length)
                 }
