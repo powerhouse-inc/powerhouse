@@ -556,7 +556,8 @@ async function composeClaimed(
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();
-      if (tornDown) return;
+      // Lost or stopped while registering.
+      if (loss.lost || stopped) return;
       runtime.startTriggerSupervisor();
     },
 
