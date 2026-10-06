@@ -10,7 +10,7 @@ import {
   generateId,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentAction } from "../../../src/actions/index.js";
 import {
   DocumentAlreadyExistsError,
@@ -570,7 +570,7 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       ).rejects.toThrow(DuplicateOperationError);
     });
 
-    it("(e) resolves a unique-constraint violation inside a job transaction without deadlocking", async () => {
+    it("(e) throws DuplicateOperationError inside a job transaction without a doomed replay lookup", async () => {
       const doc1Id = generateId();
       const doc2Id = generateId();
       const scope = "global";
@@ -600,6 +600,10 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
         txn.addOperations(op);
       });
 
+      const replayLookup = vi.spyOn(
+        Object.getPrototypeOf(store) as { findIdempotentReplay: () => unknown },
+        "findIdempotentReplay",
+      );
       const outcome = await Promise.race([
         db
           .transaction()
@@ -627,7 +631,10 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
         ),
       ]);
 
+      const lookups = replayLookup.mock.calls.length;
+      replayLookup.mockRestore();
       expect(outcome).toBe("duplicate");
+      expect(lookups).toBe(0);
 
       const stored = await store.getSince(doc1Id, scope, branch, -1);
       expect(stored.results).toHaveLength(1);

@@ -36,6 +36,13 @@ class _UniqueConstraintContext extends Error {
   }
 }
 
+function duplicateOf(ctx: _UniqueConstraintContext): DuplicateOperationError {
+  const op = ctx.stagedOps[0];
+  return new DuplicateOperationError(
+    `${op.opId} at index ${op.index} with skip ${op.skip}`,
+  );
+}
+
 export class KyselyOperationStore implements IOperationStore {
   private trx?: Transaction<Database>;
   private liveIds?: ReadonlySet<string>;
@@ -91,8 +98,9 @@ export class KyselyOperationStore implements IOperationStore {
         }
       }
 
+      // The violation aborted the caller's transaction, so no lookup can run on it.
       if (uniqueCtx !== null) {
-        return this.resolveUniqueConstraint(uniqueCtx);
+        throw duplicateOf(uniqueCtx);
       }
 
       return executeResult!;
@@ -130,7 +138,6 @@ export class KyselyOperationStore implements IOperationStore {
     }
   }
 
-  /** Looks up on the caller's executor: `this.db` inside a transaction deadlocks single-connection PGlite. */
   private async resolveUniqueConstraint(
     ctx: _UniqueConstraintContext,
   ): Promise<Operation[]> {
@@ -138,7 +145,7 @@ export class KyselyOperationStore implements IOperationStore {
 
     try {
       replayOps = await this.findIdempotentReplay(
-        this.queryExecutor,
+        this.db,
         ctx.documentId,
         ctx.scope,
         ctx.branch,
@@ -153,10 +160,7 @@ export class KyselyOperationStore implements IOperationStore {
       return replayOps;
     }
 
-    const op = ctx.stagedOps[0];
-    throw new DuplicateOperationError(
-      `${op.opId} at index ${op.index} with skip ${op.skip}`,
-    );
+    throw duplicateOf(ctx);
   }
 
   private async executeApply(
