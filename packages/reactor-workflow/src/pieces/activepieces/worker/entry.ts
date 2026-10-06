@@ -7,10 +7,22 @@ import {
   UnsupportedContextMemberError,
 } from "../context/action.js";
 import { RemoteKeyValueStore } from "../context/remote-store.js";
-import { RemoteReactorService } from "../context/reactor.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
 import { setHostCallTimeout } from "./host-call.js";
+import {
+  openWorkerReactor,
+  type WorkerReactorSession,
+} from "./reactor-provider.js";
+import type { ReactorOption } from "../context/reactor-option.js";
+import {
+  DocumentModelUnavailableError,
+  ReactorAccessDeniedError,
+  ReactorActionsFailedError,
+  ReactorJobFailedError,
+  ReactorJobPendingError,
+  ReactorRequestClosedError,
+} from "@powerhousedao/pieces-framework";
 import { jsonSafe } from "./json-safe.js";
 import { formatPieceError } from "@powerhousedao/pieces-framework/host";
 import { redactError, redactMessage } from "./redact.js";
@@ -61,10 +73,6 @@ import type {
   WorkerResponse,
 } from "./protocol.js";
 
-// Before any piece module is loaded, so a piece cannot keep a pristine copy of
-// the socket layer from a request that carried no policy.
-installEgressGuard();
-
 const loadedPieces = new Map<string, Promise<LoadedPiece>>();
 // One store per scope, alive for the worker's lifetime (in-memory phase:
 // state survives runs but not worker replacement).
@@ -106,6 +114,23 @@ function redactValuesOf(message: WorkerRequestMessage): string[] {
   return request.redactValues ?? [];
 }
 
+// Reactor errors cross the RPC as plain Errors told apart by `name`.
+const REACTOR_ERROR_NAMES = new Set<string>([
+  DocumentModelUnavailableError,
+  ReactorAccessDeniedError,
+  ReactorActionsFailedError,
+  ReactorJobFailedError,
+  ReactorJobPendingError,
+  ReactorRequestClosedError,
+]);
+
+function errorName(error: unknown, fallback: string | undefined): string {
+  if (typeof error !== "object" || error === null) return fallback || "Error";
+  const named = (error as { name?: unknown }).name;
+  if (typeof named === "string" && REACTOR_ERROR_NAMES.has(named)) return named;
+  return error.constructor.name || fallback || "Error";
+}
+
 function serializeError(
   error: unknown,
   values: string[] = [],
@@ -118,13 +143,14 @@ function serializeError(
   }
   // The framework's own formatter first: it lifts an HTTP status, the request
   // and response, and a message out of an HTML error page. Redaction stays last.
-  const { __apErrorVersion, message, errorName, ...http } =
-    formatPieceError(error);
+  const {
+    __apErrorVersion,
+    message,
+    errorName: formattedName,
+    ...http
+  } = formatPieceError(error);
   return {
-    name:
-      (typeof error === "object" && error !== null && error.constructor.name) ||
-      errorName ||
-      "Error",
+    name: errorName(error, formattedName),
     message: redactMessage(message, { values }),
     properties: redactError(
       { ...properties, ...(jsonSafe(http) as Record<string, unknown>) },
@@ -148,19 +174,48 @@ function consumeTlsFlag(): boolean {
   return poisoned;
 }
 
+// The session's client under its declaration, for a run-time context.
+function reactorOption(
+  session: WorkerReactorSession | undefined,
+): ReactorOption {
+  if (!session) return {};
+  return session.requireReactor === "write"
+    ? { requireReactor: "write", reactor: session.client }
+    : { requireReactor: "read", reactor: session.client };
+}
+
 async function handleResolveOptions(
   message: ResolveOptionsMessage,
 ): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request);
+  const block =
+    request.kind === "trigger"
+      ? getTriggers(piece)[request.actionName]
+      : getActions(piece)[request.actionName];
+  const session = await openWorkerReactor(
+    request.reactor,
+    (block as { requireReactor?: unknown } | undefined)?.requireReactor,
+  );
+  try {
+    return await resolveOptions(message, piece, session);
+  } finally {
+    session?.close();
+  }
+}
+
+async function resolveOptions(
+  message: ResolveOptionsMessage,
+  piece: ApPiece,
+  session: WorkerReactorSession | undefined,
+): Promise<WorkerResponse> {
+  const { request } = message;
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
     projectId: request.projectId,
     // Design-time default: an empty flows listing instead of a throwing stub.
     flows: { list: () => Promise.resolve({ data: [] }) },
-    ...(request.reactorAccess
-      ? { reactor: new RemoteReactorService({ deadline: request.deadline }) }
-      : {}),
+    ...(session ? { reactor: session.client } : {}),
   });
   const refresherValues = {
     ...(request.auth !== undefined ? { auth: request.auth } : {}),
@@ -275,14 +330,34 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     ? new RemoteKeyValueStore()
     : undefined;
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
-  // Host-served reactor access, for a piece that ships inside a reactor package.
-  const reactor = request.reactorAccess
-    ? new RemoteReactorService({
-        deadline: request.deadline,
-        store: durableStore,
-        stepName: request.identity?.stepName,
-      })
-    : undefined;
+  const session = await openWorkerReactor(
+    request.reactor,
+    action.requireReactor,
+  );
+  try {
+    return await runAction(message, action, {
+      files,
+      durableStore,
+      liveOutput,
+      reactor: reactorOption(session),
+    });
+  } finally {
+    session?.close();
+  }
+}
+
+async function runAction(
+  message: RunMessage,
+  action: ReturnType<typeof getActions>[string],
+  services: {
+    files: StagedFilesService | DataUriFilesService;
+    durableStore: RemoteKeyValueStore | undefined;
+    liveOutput: RemoteOutput | undefined;
+    reactor: ReactorOption;
+  },
+): Promise<WorkerResponse> {
+  const { request } = message;
+  const { files, durableStore, liveOutput, reactor } = services;
   // Before the props are normalised, not after: a processor that cannot coerce
   // says so on console.error, and the worker's stdio goes nowhere.
   const restoreConsole = request.captureLogs ? captureConsole() : undefined;
@@ -302,7 +377,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       ? new InMemoryConnectionsProvider(request.connections)
       : undefined,
     output: liveOutput,
-    reactor,
+    ...reactor,
     resumePayload: request.resumePayload,
     executionType: request.executionType,
     identity: request.identity,
@@ -356,16 +431,6 @@ async function handleTriggerHook(
   const snapshot = request.durableStore
     ? undefined
     : new InMemoryKeyValueStore(request.storeState);
-  const durableStore = snapshot ? undefined : new RemoteKeyValueStore();
-  // Host-served reactor access, on the same terms as handleRun: the gate is
-  // the host's, and absence leaves the context's throwing stub in place.
-  const reactor = request.reactorAccess
-    ? new RemoteReactorService({
-        deadline: request.deadline,
-        store: durableStore,
-        stepName: request.identity?.stepName,
-      })
-    : undefined;
   const runsPiece = request.hook === "run" || request.hook === "test";
   // Teardown is never refused: a config that no longer validates must still
   // release what onEnable registered.
@@ -377,10 +442,14 @@ async function handleTriggerHook(
           trigger.props,
           request.propsValue,
         );
+  const session = await openWorkerReactor(
+    request.reactor,
+    trigger.requireReactor,
+  );
   const handle = buildTriggerContext({
     propsValue,
     auth: request.auth,
-    store: snapshot ?? durableStore,
+    store: snapshot ?? new RemoteKeyValueStore(),
     hostPartitionedStore: request.durableStore,
     // Test hooks write under a separate prefix, never the live cursor.
     storePrefix: request.hook === "test" ? "test" : "",
@@ -390,9 +459,14 @@ async function handleTriggerHook(
     webhookUrl: request.webhookUrl,
     server: request.server,
     files: runsPiece ? new DataUriFilesService() : undefined,
-    reactor,
+    ...reactorOption(session),
   });
-  const output = await runTriggerHook(trigger, request.hook, handle);
+  let output: unknown;
+  try {
+    output = await runTriggerHook(trigger, request.hook, handle);
+  } finally {
+    session?.close();
+  }
   return {
     id: message.id,
     type: "result",
@@ -545,7 +619,14 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
   }
 }
 
-process.on("message", (message: unknown) => {
+// Called once by the child's entry, before any piece module is loaded.
+export function startPieceWorker(): void {
+  // A piece cannot then keep a pristine copy of the socket layer.
+  installEgressGuard();
+  process.on("message", onMessage);
+}
+
+function onMessage(message: unknown): void {
   if (!isWorkerMessage(message)) return;
   // Deferred so a synchronous throw — a malformed egress policy — becomes a
   // rejection the handler below reports, instead of killing the child.
@@ -563,4 +644,4 @@ process.on("message", (message: unknown) => {
     }))
     .then((response) => process.send?.(response))
     .catch(() => process.exit(1));
-});
+}

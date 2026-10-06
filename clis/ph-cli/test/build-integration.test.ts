@@ -467,6 +467,14 @@ describe("runBuild on a generated piece", () => {
       { pieceDir: "open-data", actionName: "list-datasets" },
       project,
     );
+    await generatePieceAction(
+      {
+        pieceDir: "open-data",
+        actionName: "archive-dataset",
+        requireReactor: "write",
+      },
+      project,
+    );
     await generatePieceTrigger(
       { pieceDir: "open-data", triggerName: "new-dataset" },
       project,
@@ -506,7 +514,7 @@ describe("runBuild on a generated piece", () => {
       slug: "open-data",
       displayName: "Open Data",
       description: "Connect to Open Data.",
-      actions: ["list-datasets"],
+      actions: ["archive-dataset", "list-datasets"],
       triggers: ["dataset-published", "new-dataset"],
     },
   ];
@@ -521,7 +529,7 @@ describe("runBuild on a generated piece", () => {
       version: string;
       displayName: string;
       description: string;
-      actions: Record<string, { displayName: string }>;
+      actions: Record<string, { displayName: string; requireReactor?: string }>;
       triggers: Record<string, { displayName: string }>;
     };
     for (const piece of pieces) {
@@ -546,6 +554,12 @@ describe("runBuild on a generated piece", () => {
       expect(descriptor.displayName).toBe(piece.displayName);
       expect(Object.keys(descriptor.actions).sort()).toEqual(piece.actions);
       expect(Object.keys(descriptor.triggers).sort()).toEqual(piece.triggers);
+      // The declaration survives the bundler and the describe step.
+      for (const [name, action] of Object.entries(descriptor.actions)) {
+        expect(action.requireReactor).toBe(
+          name === "archive-dataset" ? "write" : undefined,
+        );
+      }
 
       expect(
         readJson<Record<string, unknown>>(join(pieceDir, "package.json")),

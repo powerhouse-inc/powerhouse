@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.3-dev.43",
+  "version": "6.2.3-dev.45",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -79,7 +79,6 @@
     "@powerhousedao/reactor-privacy": "workspace:*",
     "@powerhousedao/reactor-workflow": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
-    "@powerhousedao/pglite-fs": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@renown/sdk": "workspace:*",
     "@sentry/node": "^10.53.1",

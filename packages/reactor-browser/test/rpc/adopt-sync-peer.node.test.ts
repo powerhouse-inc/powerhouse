@@ -5,10 +5,13 @@ import {
   sendRemoveSyncPeer,
   type AdoptSyncPeerParams,
 } from "../../src/rpc/adopt-sync-peer.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
+import {
+  MessageRouter,
+  type IRpcTransport,
+  type OwnerMessage,
+  type RpcMessage,
+} from "@powerhousedao/reactor/rpc";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
-import type { IRpcTransport } from "../../src/rpc/transport.js";
-import type { OwnerMessage, RpcMessage } from "../../src/rpc/protocol.js";
 
 const FILTER: RemoteFilter = { documentId: [], scope: [], branch: "main" };
 

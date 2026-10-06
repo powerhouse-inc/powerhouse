@@ -1,7 +1,10 @@
-import { Listeners } from "./listeners.js";
-import type { MessageRouter } from "./message-router.js";
+import {
+  Listeners,
+  type MessageRouter,
+  type WorkerInspectorInfo,
+  type WorkerMigrationState,
+} from "@powerhousedao/reactor/rpc";
 import { RPC_DEFAULT_TIMEOUT_MS, toVoid } from "./op-channel.js";
-import type { WorkerInspectorInfo, WorkerMigrationState } from "./protocol.js";
 
 export interface IWorkerAdminClient {
   info(): Promise<WorkerInspectorInfo>;

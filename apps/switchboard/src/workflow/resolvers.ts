@@ -162,6 +162,7 @@ function toStepRecord(row: StepExecutionRow) {
     output: parseJson(row.output),
     port: row.port,
     error: row.error,
+    errorName: row.error_name,
     startedAt: row.started_at,
     endedAt: row.ended_at,
     pieceVersion: row.piece_version,
@@ -181,6 +182,7 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
     triggerPayload: parseJson(row.trigger_payload),
     status: row.status,
     error: row.error,
+    errorName: row.error_name,
     startedAt: row.started_at,
     endedAt: row.ended_at,
     rerunOf: row.rerun_of,
@@ -188,6 +190,35 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
     warningNotes: parseJson(row.warning_notes) ?? [],
     steps: steps.map(toStepRecord),
   };
+}
+
+export type ReadAssertion = (
+  documentId: string,
+  ctx: Context,
+) => Promise<unknown>;
+
+/** Who the host signs as: the principal a target document must grant. */
+export interface ReactorIdentity {
+  address: string | null;
+  key: string;
+}
+
+/** What the editor needs to decide on sign-in and grants (ADR 0005 §8). */
+export interface ReactorAccessInfo {
+  authEnforcement: boolean;
+  authConditions: boolean;
+  identity: ReactorIdentity | null;
+}
+
+// Strict when the host does not say.
+const UNKNOWN_ACCESS: ReactorAccessInfo = {
+  authEnforcement: true,
+  authConditions: false,
+  identity: null,
+};
+
+function signedIn(ctx: Context): boolean {
+  return Boolean(ctx.user?.address);
 }
 
 export interface OAuthRouting {
@@ -254,6 +285,9 @@ export const getResolvers = (
   runtime: WorkflowRuntimeService,
   authorizationService: IAuthorizationService,
   oauth?: OAuthRouting,
+  access: ReactorAccessInfo = UNKNOWN_ACCESS,
+  // The subgraph's own read gate; fields that need it refuse without one.
+  assertCanRead?: ReadAssertion,
 ): Record<string, unknown> => {
   return {
     Query: {
@@ -261,6 +295,20 @@ export const getResolvers = (
     },
     WorkflowRuntimeQueries: {
       health: () => "ok",
+      authEnforcement: () => access.authEnforcement,
+      reactorIdentity: (_parent: unknown, _args: unknown, ctx: Context) =>
+        signedIn(ctx) ? access.identity : null,
+      authConditions: (_parent: unknown, _args: unknown, ctx: Context) =>
+        signedIn(ctx) ? access.authConditions : null,
+      reactorAccessDenial: async (
+        _parent: unknown,
+        args: { workflowId: string },
+        ctx: Context,
+      ) => {
+        if (!assertCanRead) throw new GraphQLError("No read check configured");
+        await assertCanRead(args.workflowId, ctx);
+        return runtime.reactorAccessDenial(args.workflowId) ?? null;
+      },
       blockDescriptor: (_parent: unknown, args: { block: BlockInput }) =>
         runtime.blockDescriptor(blockRef(args.block)),
       blockOptions: (
@@ -271,6 +319,7 @@ export const getResolvers = (
           input?: unknown;
           connectionId?: string | null;
           searchValue?: string | null;
+          reactorConnectionId?: string | null;
         },
         ctx: Context,
       ) =>
@@ -281,6 +330,7 @@ export const getResolvers = (
           args.connectionId ?? undefined,
           ctx,
           args.searchValue ?? undefined,
+          args.reactorConnectionId ?? undefined,
         ),
       pieceCatalog: () => runtime.pieceCatalog(),
       pieceActions: (_parent: unknown, args: PieceArgs) =>

@@ -4,6 +4,7 @@ import {
   redactMessage,
   secretsFor,
 } from "../activepieces/worker/redact.js";
+import { PieceWorkerError } from "../activepieces/worker/host.js";
 import {
   evaluateCondition,
   unavailableValue,
@@ -19,7 +20,10 @@ import {
 import { resolveStepInput } from "./step-input.js";
 import { checkDynamicProperties } from "./dynamic-props.js";
 import { isIndeterminateError } from "../activepieces/indeterminate.js";
-import { undeclaredPortEdges } from "@powerhousedao/pieces-framework/workflow";
+import {
+  referenceDocuments,
+  undeclaredPortEdges,
+} from "@powerhousedao/pieces-framework/workflow";
 import { stepConfigHash } from "./canonical.js";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import { blockLabel, pieceRecord, resolutionOf } from "./resolution.js";
@@ -131,6 +135,12 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
+// A piece's own error crosses the worker inside a PieceWorkerError.
+export function errorNameOf(error: unknown): string | undefined {
+  if (error instanceof PieceWorkerError) return error.serialized.name;
+  return error instanceof Error ? error.name : undefined;
+}
+
 // A record is journal material, read back by the editor and kept in the
 // database, so it never carries the live value a downstream step reads.
 function journaled(value: unknown, values: string[] | undefined): unknown {
@@ -163,6 +173,7 @@ export async function runWorkflow(
   // Set instead of runFailed when the run ran out of time: the workflow did
   // not fail, it was stopped, and the status says so.
   let runCancelled: string | undefined;
+  let runFailedName: string | undefined;
   let executedCount = 0;
   const sleep =
     options.sleep ??
@@ -346,6 +357,7 @@ export async function runWorkflow(
           block: stepBlock(step),
           config: input,
           connectionId: step.connectionId,
+          reactorConnectionId: step.reactorConnectionId,
           step,
           ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
         });
@@ -358,7 +370,8 @@ export async function runWorkflow(
           blockName: step.actionName,
           status: "SUCCEEDED",
           input: journaled(input, values),
-          output: journaled(result.output, values),
+          // Documents go into the record as references; the scope keeps them whole.
+          output: journaled(referenceDocuments(result.output), values),
           port,
           startedAt,
           endedAt: new Date().toISOString(),
@@ -463,6 +476,7 @@ export async function runWorkflow(
     const values = [...runSecrets, ...secretsFor(error)];
     const detail = redactMessage(errorMessage(error), { values });
     const indeterminate = isIndeterminateError(error);
+    const errorName = errorNameOf(error);
     const record: StepExecutionRecord = {
       stepId: step.id,
       key: step.key,
@@ -471,6 +485,7 @@ export async function runWorkflow(
       status: indeterminate ? "INDETERMINATE" : "FAILED",
       input: journaled(input, values),
       error: detail,
+      ...(errorName ? { errorName } : {}),
       startedAt,
       endedAt: new Date().toISOString(),
       ...withPiece(pieceRecord(resolutionOf(error))),
@@ -483,6 +498,7 @@ export async function runWorkflow(
       // No port, so nothing downstream runs and no error branch claims to
       // have handled something that may have succeeded.
       runFailed = `Step "${step.key}" is INDETERMINATE: ${detail}`;
+      runFailedName = errorName;
       return;
     }
     if (outcome.cancelled !== undefined) {
@@ -500,6 +516,7 @@ export async function runWorkflow(
     if (!errorHandled) {
       const failedAfter = attempt > 1 ? ` after ${attempt} attempts` : "";
       runFailed = `Step "${step.key}" failed${failedAfter}: ${detail}`;
+      runFailedName = errorName;
     }
   }
 
@@ -550,7 +567,15 @@ export async function runWorkflow(
     ? deadPortWarnings(definition, options.declaredPorts)
     : [];
   const noted = warnings.length > 0 ? { warnings } : {};
-  if (runFailed) return { status: "FAILED", steps, error: runFailed, ...noted };
+  if (runFailed) {
+    return {
+      status: "FAILED",
+      steps,
+      error: runFailed,
+      ...(runFailedName ? { errorName: runFailedName } : {}),
+      ...noted,
+    };
+  }
   // The deadline is the last word: a run whose final step happened to finish
   // in time still reads CANCELLED if the loop stopped for the clock, and the
   // steps it did complete are journaled either way.

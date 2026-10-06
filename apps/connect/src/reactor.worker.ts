@@ -12,7 +12,6 @@ import {
   SelfHealingPGliteClient,
   StorageHealthTracker,
   type Database,
-  type IDocumentModelRegistry,
   type IReactorDbQuery,
   type ISyncInspector,
   type ISyncManager,
@@ -33,10 +32,7 @@ import {
   type WorkerMigrationState,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
-import type {
-  DocumentModelModule,
-  SignaturePolicy,
-} from "@powerhousedao/shared/document-model";
+import type { SignaturePolicy } from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
   type IRelationalDb,
@@ -53,6 +49,10 @@ import {
   loadFlaggedDocumentModels,
   toDocumentModelModules,
 } from "./reactor-worker-models.js";
+import {
+  createWorkerModelRegistrar,
+  type WorkerModelRegistrar,
+} from "./reactor-worker-registry.js";
 import {
   BrowserKeyStorage,
   RenownCryptoBuilder,
@@ -123,16 +123,8 @@ type WorkerConstruct = {
   packageSources?: WorkerPackageSource[];
 };
 
-type ModelRegistry = Pick<
-  IDocumentModelRegistry,
-  | "registerModules"
-  | "unregisterModules"
-  | "registerUpgradeManifests"
-  | "unregisterUpgradeManifests"
->;
-
 let loader: WorkerPackageLoader | undefined;
-let registry: ModelRegistry | undefined;
+let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: (ISyncManager & ISyncInspector) | undefined;
 // The brokered-local-sync port registry for the live build. A LocalChannel
@@ -186,67 +178,6 @@ const inspectorDb: IReactorDbQuery = {
   },
 };
 let currentIdentity: ReactorIdentity | null = null;
-const registeredKeys = new Set<string>();
-
-function modelKey(module: DocumentModelModule): string {
-  return `${module.documentModel.global.id}@${module.version ?? 1}`;
-}
-
-// Register only the delta; the registry rejects duplicate (type, version) pairs.
-function registerNewModules(): void {
-  if (!loader || !registry) {
-    return;
-  }
-  const fresh = loader.models.filter((m) => !registeredKeys.has(modelKey(m)));
-  if (fresh.length === 0) {
-    return;
-  }
-  registry.registerModules(...fresh);
-  for (const m of fresh) {
-    registeredKeys.add(modelKey(m));
-  }
-}
-
-// A reloaded source replaced modules under the same (type, version) keys, so
-// the delta registration above would skip them. Drop the whole version family
-// from the registry and the bookkeeping - the tab hook does the same - and
-// let registerNewModules re-add the loader's fresh modules.
-function replaceRegistryFamilies(types: string[]): void {
-  if (!registry || types.length === 0) {
-    return;
-  }
-  registry.unregisterModules(...types);
-  const typeSet = new Set(types);
-  for (const key of [...registeredKeys]) {
-    const type = key.slice(0, key.lastIndexOf("@"));
-    if (typeSet.has(type)) {
-      registeredKeys.delete(key);
-    }
-  }
-}
-
-// Models entries ship upgrade manifests beside their modules; replace per
-// type so a watch rebuild's manifest wins over the boot-time one.
-function registerLoaderManifests(): void {
-  if (!loader || !registry) {
-    return;
-  }
-  const manifests = loader.upgradeManifests;
-  if (manifests.length === 0) {
-    return;
-  }
-  registry.unregisterUpgradeManifests(
-    ...manifests.map((manifest) => manifest.documentType),
-  );
-  for (const result of registry.registerUpgradeManifests(...manifests)) {
-    if (result.status === "error") {
-      console.error(
-        "[reactor.worker] failed to register upgrade manifest:",
-        result.error,
-      );
-    }
-  }
-}
 
 // Rebuild renown crypto from the shared renownKeyDB keypair (origin-scoped IndexedDB).
 async function buildWorkerCrypto(chainId: number | undefined) {
@@ -456,11 +387,11 @@ const host = new ReactorHost({
         studioMode: construct.studioMode,
         workflowsEnabled: construct.workflowsEnabled,
       });
-      const models = baseDocumentModels.concat(
+      const staticModels = baseDocumentModels.concat(
         commonBundledModels,
         flaggedModels,
-        loader.models,
       );
+      const models = staticModels.concat(loader.models);
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
 
@@ -596,7 +527,10 @@ const host = new ReactorHost({
         builder.withCreateSignaturePolicy(construct.createSignaturePolicy);
       }
       const module = await builder.buildModule();
-      registry = module.reactorModule?.documentModelRegistry;
+      const registry = module.reactorModule?.documentModelRegistry;
+      registrar = registry
+        ? createWorkerModelRegistrar(registry, staticModels)
+        : undefined;
       syncManager = module.reactorModule?.syncModule?.syncManager;
       const rm = module.reactorModule;
       if (rm) {
@@ -614,12 +548,10 @@ const host = new ReactorHost({
           storageHealth,
         });
       }
-      for (const m of models) {
-        registeredKeys.add(modelKey(m));
-      }
+      registrar?.markRegistered(models);
       // Manifests ride along in the models entries the loader imported; the
       // builder only saw the modules.
-      registerLoaderManifests();
+      registrar?.syncManifests(loader.upgradeManifests);
       for (const type of FORWARDED_EVENT_TYPES) {
         module.eventBus.subscribe(type, (forwardedType, event) =>
           host.broadcastBusEvent(forwardedType, event),
@@ -658,12 +590,17 @@ const host = new ReactorHost({
       return;
     }
     await loader.loadPackages(specs);
-    if (sources && sources.length > 0) {
-      const { types } = await loader.reloadSources(sources);
-      replaceRegistryFamilies(types);
+    const { types, failures } = await loader.reloadSources(sources ?? []);
+    if (registrar) {
+      registrar.replaceFamilies(types, loader.models);
+      registrar.syncManifests(loader.upgradeManifests);
     }
-    registerNewModules();
-    registerLoaderManifests();
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map((failure) => failure.error),
+        `Failed to reload package source(s): ${failures.map((failure) => failure.name).join(", ")}`,
+      );
+    }
   },
   onIdentity: (user) => {
     currentIdentity = user;

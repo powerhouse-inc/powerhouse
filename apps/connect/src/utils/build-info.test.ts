@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  getAppBuildId,
-  getVersion,
-  needsWorkerBuildDigest,
-} from "./build-info.js";
+import { getAppBuildId, getVersion } from "./build-info.js";
 
 // No vite `define` for CONNECT_GIT_SHA is wired into vitest.config.ts (see
 // vite.config.ts, which only does that for the real app build), so
@@ -39,27 +35,5 @@ describe("getAppBuildId", () => {
   it("carries no worker build digest of its own", () => {
     delete process.env.WORKSPACE_GIT_SHA;
     expect(getAppBuildId()).not.toContain("+");
-  });
-});
-
-describe("needsWorkerBuildDigest", () => {
-  const originalSha = process.env.WORKSPACE_GIT_SHA;
-
-  afterEach(() => {
-    if (originalSha === undefined) {
-      delete process.env.WORKSPACE_GIT_SHA;
-    } else {
-      process.env.WORKSPACE_GIT_SHA = originalSha;
-    }
-  });
-
-  it("is false where a baked-in git sha already identifies the build", () => {
-    process.env.WORKSPACE_GIT_SHA = "deadbeef1234";
-    expect(needsWorkerBuildDigest()).toBe(false);
-  });
-
-  it("is true in dev, where the static version does not move on a rebuild", () => {
-    delete process.env.WORKSPACE_GIT_SHA;
-    expect(needsWorkerBuildDigest()).toBe(true);
   });
 });

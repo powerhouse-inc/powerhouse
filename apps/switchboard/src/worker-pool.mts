@@ -4,7 +4,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export type WorkerCountInput = number | "auto";
 
@@ -169,6 +169,40 @@ const BASE_MODEL_SPECIFIERS = [
   "@powerhousedao/reactor-drive",
   "@powerhousedao/reactor-group/document-models",
 ];
+
+// As the reactor builder tells a module from the rest of a source's exports.
+function isModelModule(value: unknown): boolean {
+  const candidate = value as {
+    reducer?: unknown;
+    documentModel?: { global?: { id?: unknown } };
+  } | null;
+  return (
+    typeof candidate?.reducer === "function" &&
+    typeof candidate.documentModel?.global?.id === "string"
+  );
+}
+
+// Drops sources that fail to import or export no model. For workflow pieces
+// only: a missing model means "unavailable to pieces", not a failed boot.
+export async function keepImportableSources(
+  sources: FileModelSource[],
+  logger: ILogger,
+): Promise<FileModelSource[]> {
+  const kept: FileModelSource[] = [];
+  for (const source of sources) {
+    try {
+      const exports = (await import(
+        pathToFileURL(source.filePath).href
+      )) as Record<string, unknown>;
+      if (Object.values(exports).some(isModelModule)) kept.push(source);
+    } catch (error) {
+      logger.warn(
+        `Worker model sources: "${source.filePath}" does not import, so workflow pieces will not see its models: ${String(error)}`,
+      );
+    }
+  }
+  return kept;
+}
 
 /**
  * Resolves base models and configured package identifiers to `{ filePath }`

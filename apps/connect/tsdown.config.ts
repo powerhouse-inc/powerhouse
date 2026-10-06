@@ -40,5 +40,6 @@ export default defineConfig({
   define: {
     CONNECT_VERSION: JSON.stringify(version),
     CONNECT_GIT_SHA: JSON.stringify(gitSha),
+    CONNECT_PACKAGED_DIST: "true",
   },
 });

@@ -1,6 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import "./ui/canvas.css";
 import {
+  useDocumentModelModules,
   useFileNodesInSelectedDrive,
   useSelectedDocumentId,
   useSelectedDriveId,
@@ -36,6 +37,7 @@ import {
   TONE_TEXT,
 } from "../workflow-studio/components/run-format.js";
 import { buildExpressionScope, EMPTY_SCOPE } from "./ui/expression-scope.js";
+import { documentShape, stateFieldsFromSdl } from "./ui/document-shape.js";
 import { DesignTimeProvider } from "./ui/design-time.js";
 import {
   ExpressionScopeSourceProvider,
@@ -81,7 +83,11 @@ function LastRunFact(props: { workflowId: string }) {
   if (runs.status === "pending") return null;
   const run = runs.data?.at(0) ?? null;
   if (run === null) {
-    return <span className="text-xs text-muted-foreground">Not run yet</span>;
+    return (
+      <span className="whitespace-nowrap text-xs text-muted-foreground">
+        Not run yet
+      </span>
+    );
   }
   const tone = toneOf(RUN_TONE, run.status);
   return (
@@ -105,6 +111,7 @@ function WorkflowEditor() {
   const { model, callbacks } = useWorkflowModel();
   const [document] = useSelectedWorkflowDocument();
   const workflowId = document.header.id;
+  const modules = useDocumentModelModules();
 
   // The runtime lists every connection it holds; offer only this drive's.
   // Null outside a drive, where there's nothing to scope to.
@@ -175,6 +182,25 @@ function WorkflowEditor() {
           latestRun,
           authoredOutput: (block, config) =>
             authoredOutput({ client, queryClient }, block, config),
+          // State fields from the referenced model's latest specification.
+          documentOutput: async (reference) => {
+            const referenced = modules
+              ?.filter(
+                (module) =>
+                  module.documentModel.global.id === reference.documentType,
+              )
+              .sort((a, b) => (b.version ?? 1) - (a.version ?? 1))
+              .at(0)?.documentModel.global;
+            const global = referenced
+              ? await stateFieldsFromSdl({
+                  name: referenced.name,
+                  schema:
+                    referenced.specifications.at(-1)?.state.global.schema ??
+                    null,
+                })
+              : {};
+            return documentShape(reference, global);
+          },
           testOutput: async (blockId) => {
             const block =
               model.trigger?.id === blockId
@@ -195,7 +221,7 @@ function WorkflowEditor() {
         });
       },
     }),
-    [client, queryClient, model, workflowId],
+    [client, queryClient, model, workflowId, modules],
   );
 
   return (

@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
+import { NodeFS } from "@electric-sql/pglite/nodefs";
 import {
   JobStatus,
   ReactorBuilder,
@@ -65,9 +65,7 @@ function stubLogger(): StubLogger {
 /** A reactor store holding one drive created at base-reducer 7. */
 async function seedStore(dir: string): Promise<void> {
   const db = new Kysely<Database>({
-    dialect: new ClosablePGliteDialect(
-      new PGlite({ fs: new AtomicNodeFs(dir) }),
-    ),
+    dialect: new ClosablePGliteDialect(new PGlite({ fs: new NodeFS(dir) })),
   });
   const module = await new ReactorBuilder()
     .withKysely(db)
@@ -89,7 +87,7 @@ async function seedStore(dir: string): Promise<void> {
       const { status } = await module.reactor.getJobStatus(created.id);
       return status === JobStatus.READ_READY || status === JobStatus.FAILED;
     },
-    // One job is ~40 full snapshots; the Windows runner needs the boot budget.
+    // PGlite is several times slower on the Windows runner.
     { timeout: BOOT_TIMEOUT, interval: 5 },
   );
   expect((await module.reactor.getJobStatus(created.id)).status).toBe(
@@ -97,6 +95,8 @@ async function seedStore(dir: string): Promise<void> {
   );
   await module.reactor.kill().completed;
   await db.destroy();
+  // PGlite leaves its lockfile behind after a clean close.
+  await rm(join(dir, "postmaster.pid"), { force: true });
 }
 
 // PGlite boots are several times slower on Windows runners.

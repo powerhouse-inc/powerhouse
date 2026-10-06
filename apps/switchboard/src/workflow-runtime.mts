@@ -8,6 +8,8 @@ import {
   type InProcessReactorClientModule,
   type IReactorClient,
   type IRelationalDb,
+  type ModelManifestEntry,
+  type ReactorBuilder,
 } from "@powerhousedao/reactor";
 import {
   AuthorizationPolicy,
@@ -25,6 +27,7 @@ import { parseRef } from "@powerhousedao/reactor-attachments";
 import type * as WorkflowEngine from "@powerhousedao/reactor-workflow";
 import type {
   AttachmentClientLike,
+  HostIdentity,
   WorkflowCaller,
   WorkflowRuntimeHostDeps,
 } from "@powerhousedao/reactor-workflow";
@@ -33,12 +36,17 @@ import type {
   IWebhookScope,
   ScopedRouteHandle,
 } from "@powerhousedao/shared/processors";
+import type { Principal } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import {
   callbackUrlOf,
   registerOAuthCallback,
 } from "./workflow/oauth-callback.js";
+import type {
+  ReactorAccessInfo,
+  ReactorIdentity,
+} from "./workflow/resolvers.js";
 import { createWorkflowRuntimeSubgraph } from "./workflow/subgraph.js";
 
 type WorkflowEngineModule = typeof WorkflowEngine;
@@ -127,6 +135,24 @@ export function isWorkflowSingletonConflict(
   );
 }
 
+/** The importable models piece workers load: the boot list, and a type's entries. */
+export interface ModelManifestSource {
+  modelManifest(): ModelManifestEntry[];
+  modelEntries(documentType: string): ModelManifestEntry[];
+}
+
+export function modelManifestSource(
+  builder: Pick<
+    ReactorBuilder,
+    "getResolvedModelManifest" | "getImportableEntries"
+  >,
+): ModelManifestSource {
+  return {
+    modelManifest: () => builder.getResolvedModelManifest() ?? [],
+    modelEntries: (documentType) => builder.getImportableEntries(documentType),
+  };
+}
+
 export interface ComposeWorkflowRuntimeDeps {
   reactorClient: IReactorClient;
   /** The registry this host installs packages from; pieces come from it too.
@@ -149,6 +175,8 @@ export interface ComposeWorkflowRuntimeDeps {
    * runtime with none and only published bundles resolvable. */
   pieces?: IPackagePieceSource;
   logger: ILogger;
+  /** Absent leaves pieces with no document models in their worker. */
+  models?: ModelManifestSource;
   /** Overridden by the tests; production always loads the real engine. */
   load?: () => Promise<WorkflowEngineModule>;
   /**
@@ -249,6 +277,46 @@ function writeAssertion(
     );
     if (!canWrite) throw new ForbiddenError("to write this document");
   };
+}
+
+/** What the reactor enforces and who it signs as; unknown counts as enforced. */
+export function reactorAccessOf(
+  clientModule: InProcessReactorClientModule | undefined,
+): ReactorAccessInfo {
+  const flags = clientModule?.reactorModule?.featureFlags;
+  const signer = clientModule?.signer;
+  const key = signer?.app?.key;
+  const identity: ReactorIdentity | null = key
+    ? { address: signer.user?.address ?? null, key }
+    : null;
+  return {
+    authEnforcement: flags ? flags.authEnforcement : true,
+    authConditions: flags?.authConditions === true,
+    identity,
+  };
+}
+
+/** Whom a run's created documents also grant: the host, as §8 grants it. */
+export function hostPrincipalOf(
+  access: ReactorAccessInfo,
+): Principal | undefined {
+  const identity = access.identity;
+  if (!identity) return undefined;
+  if (access.authConditions) {
+    return { match: { eq: [{ attr: "subject.key" }, { lit: identity.key }] } };
+  }
+  return identity.address ? { address: identity.address } : undefined;
+}
+
+/** Who the host signs as, so a publish it signs makes no run user. */
+export function hostIdentityOf(
+  access: ReactorAccessInfo,
+): HostIdentity | undefined {
+  const identity = access.identity;
+  if (!identity) return undefined;
+  return identity.address
+    ? { address: identity.address, key: identity.key }
+    : { key: identity.key };
 }
 
 /** A step reads any well-formed attachment, as it reads any document: a run
@@ -365,6 +433,8 @@ export async function composeWorkflowRuntime(
   // the supervisor starts, and the catalog is served from the same holder.
   if (deps.pieces) bindPackagePieces(engine.packagePieces, deps.pieces);
 
+  const access = reactorAccessOf(deps.clientModule);
+  const models = deps.models;
   const runtime = engine.createWorkflowRuntime({
     relationalDb: deps.relationalDb,
     secretsKeyFile: deps.secretsKeyFile,
@@ -375,6 +445,19 @@ export async function composeWorkflowRuntime(
       deps.authorizationService,
       deps.reactorClient,
     ),
+    // Unknown flags leave it absent, which the engine takes as on.
+    ...(deps.clientModule?.reactorModule
+      ? { authEnforcement: access.authEnforcement }
+      : {}),
+    hostPrincipal: hostPrincipalOf(access),
+    hostIdentity: hostIdentityOf(access),
+    ...(models
+      ? {
+          modelManifest: () => models.modelManifest(),
+          modelEntries: (documentType: string) =>
+            models.modelEntries(documentType),
+        }
+      : {}),
     webhooks: deps.webhooks,
     attachments: deps.attachments,
     canReadAttachmentRef,
@@ -411,6 +494,7 @@ export async function composeWorkflowRuntime(
     subgraph: createWorkflowRuntimeSubgraph(
       runtime,
       deps.http ? { callbackUrl: callbackUrlOf(deps.http) } : undefined,
+      access,
     ),
     triggers,
     ...(lease ? { singletonOwner: lease.owner } : {}),

@@ -35,6 +35,7 @@ import type {
   InitMessage,
   ModelManifestEntry,
 } from "./protocol.js";
+import { defaultLoadFactory } from "./load-spec.js";
 
 /**
  * In-worker capture of the JOB_WRITE_READY event emitted by the executor.
@@ -86,20 +87,6 @@ export type BuildWorkerExecutorOptions = {
    */
   flusher?: IStorageFlusher;
 };
-
-export async function defaultLoadFactory(spec: FactorySpec): Promise<unknown> {
-  const ref = spec.module;
-  const specifier =
-    "filePath" in ref
-      ? new URL(`file://${ref.filePath}`).href
-      : ref.packageName;
-  const mod = (await import(specifier)) as Record<string, unknown>;
-  const exported = mod[ref.exportName];
-  if (typeof exported === "function") {
-    return (exported as (args: unknown) => unknown)(spec.initArgs);
-  }
-  return exported;
-}
 
 async function loadModelManifest(
   entries: ModelManifestEntry[],

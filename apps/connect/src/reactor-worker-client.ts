@@ -71,11 +71,7 @@ export type WorkerReactorClientArgs = {
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
   onReload: (reason: string, workerGen?: string) => void;
-  /**
-   * URL of the prebuilt worker bundle (packaged deployments). Absent, the
-   * worker script resolves relative to this module, which only works where
-   * Vite bundles the worker from source (the monorepo app).
-   */
+  /** Prebuilt bundle URL; absent only for the monorepo app, where Vite bundles the worker from source. */
   workerUrl?: string;
   /**
    * URL-addressed packages the worker loads at boot: local project models
@@ -83,13 +79,11 @@ export type WorkerReactorClientArgs = {
    */
   packageSources?: WorkerPackageSource[];
   /**
-   * The resolved worker bundle's build digest (see
-   * `fetchReactorWorkerBuildDigest` in `./utils/reactor-worker-url.js`), sent
-   * as the fingerprint's own `buildDigest` field so a rebuilt dev bundle lands
-   * tabs on a fresh worker. Null where the deployment serves no bundle, where
-   * a baked-in git sha makes the token unnecessary, or where the fetch did not
-   * resolve — the host reads an absent token as unknown, not as a different
-   * build.
+   * The bundle's `sourceDigest` (see `resolvePackagedReactorWorker` in
+   * `./utils/reactor-worker-url.js`), sent as the fingerprint's own
+   * `buildDigest` field so a rebuilt bundle at the same URL lands tabs on a
+   * fresh worker. Null where the deployment serves no bundle — the host reads
+   * an absent token as unknown, not as a different build.
    */
   workerBuildDigest?: string | null;
 };

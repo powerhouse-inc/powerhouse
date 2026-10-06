@@ -147,6 +147,27 @@ describe("DocumentModelResolver", () => {
     expect(hook).toHaveBeenCalledTimes(2);
   });
 
+  it("should list boot and run-time importable entries per type", async () => {
+    vi.mocked(loader.load).mockResolvedValue({
+      filePath: FIXTURE_PATH,
+      exportName: "alphaModel",
+    });
+    const boot = {
+      documentType: "test/boot",
+      version: "1",
+      spec: { module: { filePath: FIXTURE_PATH, exportName: "bootModel" } },
+    };
+    resolver.rememberManifest([boot]);
+
+    expect(resolver.getImportableEntries("test/alpha")).toEqual([]);
+    await resolver.ensureModelLoaded("test/alpha");
+
+    expect(resolver.getImportableEntries("test/boot")).toEqual([boot]);
+    expect(
+      resolver.getImportableEntries("test/alpha").map((e) => e.documentType),
+    ).toEqual(["test/alpha"]);
+  });
+
   it("should skip broadcast when the loader returns a live module", async () => {
     const module = createMockModule("test/type");
     vi.mocked(loader.load).mockResolvedValue(module);

@@ -211,6 +211,7 @@ export {
 export {
   createForwardingLogger,
   errorToInfo,
+  loadDocumentModelSpec,
   sanitizeArg,
   workerEntryPath,
 } from "./src/executor/worker/index.js";

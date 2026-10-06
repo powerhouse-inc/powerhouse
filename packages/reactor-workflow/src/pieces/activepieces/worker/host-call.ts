@@ -4,14 +4,7 @@
 // Modelled on their engine RPC (createRpcClient): a method name, a payload, an
 // id, and failures returned as data rather than thrown across the boundary.
 import { markIndeterminate } from "../indeterminate.js";
-import {
-  REACTOR_SUBMIT,
-  REACTOR_SUBMIT_CREATE,
-  REACTOR_WAIT,
-  STORE_DELETE,
-  STORE_PUT,
-  type HostCallResponse,
-} from "./protocol.js";
+import { STORE_DELETE, STORE_PUT, type HostCallResponse } from "./protocol.js";
 
 // A host call is a local IPC round trip, so ten seconds is pathological in the
 // ordinary case. It was not in the field: a reactor dispatch under load, or a
@@ -27,16 +20,11 @@ export const DEFAULT_HOST_CALL_TIMEOUT_MS = 10_000;
  *
  * A read that times out is just a read that did not answer. A write is not:
  * the host may have written and simply not got the answer back in time, so
- * reporting it as a failure is a claim nobody can stand behind. `reactor.wait`
- * is in the set because what it waits on is a submitted write.
+ * reporting it as a failure is a claim nobody can stand behind. Reactor writes
+ * go over the reactor RPC, not a host call; their unconfirmed outcome is
+ * recognised by error name instead (`../indeterminate.ts`).
  */
-export const MUTATING_HOST_CALLS: readonly string[] = [
-  STORE_PUT,
-  STORE_DELETE,
-  REACTOR_SUBMIT,
-  REACTOR_SUBMIT_CREATE,
-  REACTOR_WAIT,
-];
+export const MUTATING_HOST_CALLS: readonly string[] = [STORE_PUT, STORE_DELETE];
 
 // Set per request from the wire; requests are serialized per worker.
 let fromWire: number | undefined;

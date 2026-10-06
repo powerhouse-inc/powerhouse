@@ -119,6 +119,7 @@ export function AddStepInputSchema(): z.ZodObject<Properties<AddStepInput>> {
     propertySettings: z
       .array(z.lazy(() => AddStepPropertySettingInputSchema()))
       .nullish(),
+    reactorConnectionId: z.string().nullish(),
     retry: z.lazy(() => AddStepRetryPolicyInputSchema().nullish()),
     skip: z.boolean().nullish(),
     timeoutSeconds: z.number().nullish(),
@@ -329,6 +330,7 @@ export function SetTriggerInputSchema(): z.ZodObject<
     propertySettings: z
       .array(z.lazy(() => SetTriggerPropertySettingInputSchema()))
       .nullish(),
+    reactorConnectionId: z.string().nullish(),
     triggerName: z.string(),
   });
 }
@@ -401,6 +403,7 @@ export function TriggerBindingSchema(): z.ZodObject<
     pieceName: z.string(),
     pieceVersion: z.string(),
     propertySettings: z.array(z.lazy(() => PropertySettingSchema())).nullish(),
+    reactorConnectionId: z.string().nullish(),
     triggerName: z.string(),
     updatedAt: z.iso.datetime().nullish(),
   });
@@ -420,6 +423,7 @@ export function UpdateStepInputSchema(): z.ZodObject<
     pieceName: z.string().nullish(),
     pieceVersion: z.string().nullish(),
     position: z.lazy(() => UpdateStepPositionInputSchema().nullish()),
+    reactorConnectionId: z.string().nullish(),
     retry: z.lazy(() => UpdateStepRetryPolicyInputSchema().nullish()),
     skip: z.boolean().nullish(),
     timeoutSeconds: z.number().nullish(),
@@ -507,6 +511,7 @@ export function WorkflowStepSchema(): z.ZodObject<Properties<WorkflowStep>> {
     pieceVersion: z.string(),
     position: z.lazy(() => PointSchema().nullish()),
     propertySettings: z.array(z.lazy(() => PropertySettingSchema())).nullish(),
+    reactorConnectionId: z.string().nullish(),
     retry: z.lazy(() => RetryPolicySchema().nullish()),
     skip: z.boolean().nullish(),
     timeoutSeconds: z.number().nullish(),

@@ -4,6 +4,7 @@ import {
   PROJECT_PACKAGE_SOURCE_NAME,
   resolveDevProjectSource,
   resolveLocalPackageSources,
+  subscribeLocalPackageChanges,
   WORKER_PACKAGES_MANIFEST,
 } from "../../src/utils/worker-package-sources.js";
 
@@ -137,6 +138,35 @@ describe("resolveLocalPackageSources", () => {
     expect(names).toEqual(["pkg", PROJECT_PACKAGE_SOURCE_NAME]);
   });
 
+  it("sends the manifest and dev probes before either resolves", async () => {
+    vi.stubGlobal("window", { location: { origin: ORIGIN } });
+    const pending: { url: string; resolve: (res: Response) => void }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (input: URL | string) =>
+          new Promise<Response>((resolve) =>
+            pending.push({ url: String(input), resolve }),
+          ),
+      ),
+    );
+
+    const result = resolveLocalPackageSources("/");
+    await vi.waitFor(() => expect(pending).toHaveLength(2));
+
+    for (const { url, resolve } of pending) {
+      resolve(
+        url.includes(WORKER_PACKAGES_MANIFEST)
+          ? json([{ name: "pkg", file: "pkg.js" }])
+          : js(),
+      );
+    }
+    expect((await result).map((s) => s.name)).toEqual([
+      "pkg",
+      PROJECT_PACKAGE_SOURCE_NAME,
+    ]);
+  });
+
   it("is empty when there is no manifest and no dev models entry", async () => {
     installFetch(() => missing());
 
@@ -161,5 +191,59 @@ describe("resolveLocalPackageSources", () => {
     const sources = await resolveLocalPackageSources("/");
 
     expect(sources.map((s) => s.name)).toEqual(["ok"]);
+  });
+});
+
+describe("subscribeLocalPackageChanges", () => {
+  function fakeManager(localPackage: object | undefined) {
+    const handlers = new Set<() => void>();
+    return {
+      localPackage,
+      subscribe(handler: () => void) {
+        handlers.add(handler);
+        return () => handlers.delete(handler);
+      },
+      notify() {
+        for (const handler of handlers) handler();
+      },
+    };
+  }
+
+  it("ignores notifications that leave the local package unchanged", () => {
+    const manager = fakeManager({ id: 1 });
+    const onChange = vi.fn();
+    subscribeLocalPackageChanges(manager, onChange);
+
+    manager.notify();
+    manager.notify();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("fires once per replacement of the local package", () => {
+    const manager = fakeManager(undefined);
+    const onChange = vi.fn();
+    subscribeLocalPackageChanges(manager, onChange);
+
+    manager.localPackage = { id: 2 };
+    manager.notify();
+    manager.notify();
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    manager.localPackage = { id: 3 };
+    manager.notify();
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops after unsubscribe", () => {
+    const manager = fakeManager({ id: 1 });
+    const onChange = vi.fn();
+    const unsubscribe = subscribeLocalPackageChanges(manager, onChange);
+
+    unsubscribe();
+    manager.localPackage = { id: 2 };
+    manager.notify();
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

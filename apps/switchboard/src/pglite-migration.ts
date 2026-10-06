@@ -1,3 +1,4 @@
+import { syncTree } from "@powerhousedao/reactor-api/pglite-node";
 import type { ILogger } from "document-model";
 import { promises as fs } from "node:fs";
 import {
@@ -9,13 +10,16 @@ import {
   type SupportedPgMajor,
 } from "./pglite-version.js";
 
-type PGliteCtor = new (
-  dataDir: string,
-  options?: Record<string, unknown>,
-) => {
+type PGliteLike = {
   waitReady: Promise<void>;
   exec: (sql: string) => Promise<unknown>;
   close: () => Promise<void>;
+  dumpDataDir: (compression: "none") => Promise<Blob>;
+};
+
+type PGliteCtor = {
+  new (dataDir: string, options?: Record<string, unknown>): PGliteLike;
+  new (options: Record<string, unknown>): PGliteLike;
 };
 
 function backupPath(dataDir: string, major: number): string {
@@ -116,7 +120,18 @@ export async function migratePgliteDir(
     ]);
     const LegacyPGlite = (legacyMod as unknown as { PGlite: PGliteCtor })
       .PGlite;
-    const pg = new LegacyPGlite(backupDir);
+    // pglite-tools 0.2.x talks to the server through files in the PGlite
+    // FS, and 0.2.17's NODEFS write drops the view's byteOffset, so every
+    // query arrives as zeros. Dump from an in-memory copy instead.
+    const onDisk = new LegacyPGlite(backupDir);
+    let tar: Blob;
+    try {
+      await onDisk.waitReady;
+      tar = await onDisk.dumpDataDir("none");
+    } finally {
+      await onDisk.close();
+    }
+    const pg = new LegacyPGlite({ loadDataDir: tar });
     try {
       await pg.waitReady;
       const file = await pgDump({ pg });
@@ -133,6 +148,7 @@ export async function migratePgliteDir(
     const currentMod = await loadPGliteModule(CURRENT_PG_MAJOR);
     const CurrentPGlite = (currentMod as unknown as { PGlite: PGliteCtor })
       .PGlite;
+    // Stock NodeFS never syncs to the host; one pass after close does.
     const pg = new CurrentPGlite(dataDir, { relaxedDurability: false });
     try {
       await pg.waitReady;
@@ -152,6 +168,7 @@ export async function migratePgliteDir(
     } finally {
       await pg.close();
     }
+    syncTree(dataDir);
   } catch (err) {
     await rollback(dataDir, backupDir, err, logger);
     throw err;

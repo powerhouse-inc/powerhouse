@@ -77,6 +77,34 @@ describe("ClosablePGliteDialect", () => {
     expect(pglite.closed).toBe(true);
   });
 
+  it("tolerates a close that rejects because the runtime aborted", async () => {
+    const pglite = new PGlite();
+    created.push(pglite);
+    const db = new Kysely({ dialect: new ClosablePGliteDialect(pglite) });
+    await sql`select 1`.execute(db);
+    const realClose = pglite.close.bind(pglite);
+    pglite.close = () => {
+      pglite.close = realClose;
+      return Promise.reject(new Error("PGlite aborted: ENOSPC"));
+    };
+
+    await expect(db.destroy()).resolves.toBeUndefined();
+  });
+
+  it("rethrows a close that fails for any other reason", async () => {
+    const pglite = new PGlite();
+    created.push(pglite);
+    const db = new Kysely({ dialect: new ClosablePGliteDialect(pglite) });
+    await sql`select 1`.execute(db);
+    const realClose = pglite.close.bind(pglite);
+    pglite.close = () => {
+      pglite.close = realClose;
+      return Promise.reject(new Error("disk gone"));
+    };
+
+    await expect(db.destroy()).rejects.toThrow("disk gone");
+  });
+
   it("is idempotent if the PGlite is already closed", async () => {
     const pglite = new PGlite();
     created.push(pglite);
@@ -114,7 +142,6 @@ describe("switchboard's reactor storage factory", () => {
       reactorPgliteDir: ".ph/unused-by-the-in-memory-branch",
       reactorPgliteMajor: 17,
       inMemory: true,
-      flushIntervalMs: 0,
       hostPoolSize: () => {
         throw new Error("the PGlite branch must not read the host pool size");
       },

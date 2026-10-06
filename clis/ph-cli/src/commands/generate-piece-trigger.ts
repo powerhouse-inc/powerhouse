@@ -32,6 +32,12 @@ export const generatePieceTriggerCmd = command({
       defaultValue: () => "polling" as const,
       defaultValueIsSerializable: true,
     }),
+    requireReactor: option({
+      type: optional(oneOf(["read", "write"] as const)),
+      long: "require-reactor",
+      description:
+        "Declare reactor access for the trigger: read, or write (which includes read). Its hooks then get context.reactor",
+    }),
     ...skipInstallArgs,
     ...debugArgs,
   },

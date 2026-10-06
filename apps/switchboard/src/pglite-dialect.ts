@@ -21,9 +21,9 @@ type IntrospectedDatabase = Parameters<Dialect["createIntrospector"]>[0];
  * both:
  *
  *  - kysely-pglite-dialect's `driver.destroy()` only nulls its reference to the
- *    PGlite client; it never calls `pglite.close()`. Without close(), WAL is
- *    not flushed and the data dir is left in a state that aborts the wasm on
- *    the next open. This closes the dialect's PGlite as part of the reactor's
+ *    PGlite client; it never calls `pglite.close()`. Without close(), the
+ *    store misses its shutdown checkpoint and the next open runs WAL
+ *    recovery. This closes the dialect's PGlite as part of the reactor's
  *    `database.destroy()` chain.
  *  - A COMMIT on an aborted transaction is answered with a ROLLBACK command tag
  *    and no error, and Kysely never inspects the tag - so `transaction()
@@ -59,8 +59,12 @@ export class ClosablePGliteDialect implements Dialect {
     const innerDestroy = driver.destroy.bind(driver);
     driver.destroy = async () => {
       await innerDestroy();
-      if (!pglite.closed) {
+      if (pglite.closed) return;
+      try {
         await pglite.close();
+      } catch (err) {
+        // An aborted runtime (Postgres PANIC) has nothing left to flush.
+        if (!/PGlite aborted/.test(String(err))) throw err;
       }
     };
     return driver;

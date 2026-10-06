@@ -17,15 +17,8 @@ import {
   INDETERMINATE_FLAG,
   isIndeterminateError,
 } from "../../../src/pieces/activepieces/indeterminate.js";
+import { ReactorJobPendingError } from "@powerhousedao/pieces-framework";
 import {
-  ReactorJobPendingError,
-  ReactorSubmitUnconfirmedError,
-} from "../../../src/pieces/activepieces/context/reactor.js";
-import {
-  REACTOR_GET,
-  REACTOR_SUBMIT,
-  REACTOR_SUBMIT_CREATE,
-  REACTOR_WAIT,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
@@ -67,23 +60,16 @@ describe("the host-call cap", () => {
 describe("which host calls are indeterminate on timeout", () => {
   it("names every call that may have committed something", () => {
     expect([...MUTATING_HOST_CALLS].sort()).toEqual(
-      [
-        REACTOR_SUBMIT,
-        REACTOR_SUBMIT_CREATE,
-        REACTOR_WAIT,
-        STORE_DELETE,
-        STORE_PUT,
-      ].sort(),
+      [STORE_DELETE, STORE_PUT].sort(),
     );
     // Reads are not in it: a read that did not answer is just a read.
     expect(MUTATING_HOST_CALLS).not.toContain(STORE_GET);
-    expect(MUTATING_HOST_CALLS).not.toContain(REACTOR_GET);
   });
 
   it("carries the distinction as an enumerable property, which survives IPC", () => {
     // The child serializes an error to a name, a message and its own
     // enumerable properties; the class does not cross the boundary.
-    const indeterminate = new HostCallIndeterminateError(REACTOR_SUBMIT, 10);
+    const indeterminate = new HostCallIndeterminateError(STORE_PUT, 10);
     expect(indeterminate.name).toBe(INDETERMINATE_ERROR_NAME);
     expect(isIndeterminateError(indeterminate)).toBe(true);
     expect(Object.keys(indeterminate)).toContain(INDETERMINATE_FLAG);
@@ -98,26 +84,30 @@ describe("which host calls are indeterminate on timeout", () => {
 
   it("recognises the marker after a round trip through the worker boundary", () => {
     // What PieceWorkerError carries: the serialized record, properties and all.
-    const crossed = Object.assign(
-      new Error("ReactorSubmitUnconfirmedError: …"),
-      {
-        serialized: {
-          name: "ReactorSubmitUnconfirmedError",
-          message: "…",
-          properties: { [INDETERMINATE_FLAG]: true },
-        },
+    const crossed = Object.assign(new Error("HostCallIndeterminateError: …"), {
+      serialized: {
+        name: INDETERMINATE_ERROR_NAME,
+        message: "…",
+        properties: { [INDETERMINATE_FLAG]: true },
       },
-    );
+    });
 
     expect(isIndeterminateError(crossed)).toBe(true);
   });
 
-  it("marks the reactor port's own unconfirmed-write errors", () => {
-    expect(isIndeterminateError(new ReactorSubmitUnconfirmedError("x"))).toBe(
-      true,
-    );
-    expect(
-      isIndeterminateError(new ReactorJobPendingError("job-1", "RUNNING")),
-    ).toBe(true);
+  it("recognises a reactor job still unfinished at the deadline by name", () => {
+    // The reactor RPC keeps only an error's name and message.
+    const pending = new Error("Reactor job job-1 was still RUNNING");
+    pending.name = ReactorJobPendingError;
+    expect(isIndeterminateError(pending)).toBe(true);
+
+    const crossed = Object.assign(new Error("…"), {
+      serialized: {
+        name: ReactorJobPendingError,
+        message: "…",
+        properties: {},
+      },
+    });
+    expect(isIndeterminateError(crossed)).toBe(true);
   });
 });

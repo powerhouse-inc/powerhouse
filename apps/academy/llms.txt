@@ -36,6 +36,7 @@
 - [02-identity-and-signing](https://academy.vetra.io/academy/Learn/deep-dives/identity-and-signing): You've seen that a document _is_ its operation log, and that the log is what syncs between peers. That raises a question every collaborative system ha
 - [01-what-are-workflows](https://academy.vetra.io/academy/Learn/workflows/what-are-workflows): You've seen two ways to make a Powerhouse system react to something. An editor reacts to a person. A processor reacts to the operation log — but it's 
 - [02-pieces-and-connections](https://academy.vetra.io/academy/Learn/workflows/pieces-and-connections): A workflow step doesn't contain code. It names one action, belonging to one piece, and carries the configuration that action needs. It names it with t
+- [03-reactor-access](https://academy.vetra.io/academy/Learn/workflows/reactor-access): A piece's action or trigger can read and write Powerhouse documents on the reactor running the workflow. Three things decide what it can reach:
 
 ## Reference
 

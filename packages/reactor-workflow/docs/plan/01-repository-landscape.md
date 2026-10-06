@@ -56,7 +56,7 @@ powerhouse/
     registry/                package registry (publish/CDN)
     renown/                  identity + credential signing
     vetra/                   Vetra reactor package: spec document models, editors, codegen processor
-    powerhouse-vetra-packages/, design-system/, common/, pglite-fs/, switchboard-gui/,
+    powerhouse-vetra-packages/, design-system/, common/, switchboard-gui/,
     opentelemetry-instrumentation-reactor/
   apps/
     connect/                 React SPA host application

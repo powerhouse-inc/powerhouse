@@ -135,9 +135,14 @@ import type {
 import {
   getDbClient,
   initAnalyticsStoreSql,
+  isPostgresConnectionString,
   type DocumentPermissionDatabase,
   type PgliteFactory,
 } from "./utils/db.js";
+import {
+  openCurrentPgliteForVerify,
+  preparePgliteDataDir,
+} from "./pglite/pglite-node.js";
 
 const defaultLogger = childLogger(["reactor-api", "server"]);
 
@@ -432,11 +437,19 @@ function resolveAttachmentStoragePath(options: Options): string {
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
   pgliteFactory: PgliteFactory | undefined,
+  logger: ILogger,
 ): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   closers: Array<() => Promise<void>>;
 }> {
+  // getDbClient is synchronous; the on-disk preflight has to run before it.
+  if (!pgliteFactory && dbPath && !isPostgresConnectionString(dbPath)) {
+    await preparePgliteDataDir(dbPath, {
+      openForVerify: openCurrentPgliteForVerify,
+      logger,
+    });
+  }
   const { db, knex, pglite } = getDbClient(dbPath, pgliteFactory);
   const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
@@ -450,7 +463,7 @@ async function initializeDatabaseAndAnalytics(
   return {
     relationalDb,
     analyticsStore,
-    closers: makeDbClosers(knex, pglite),
+    closers: makeDbClosers(knex, pglite, logger),
   };
 }
 
@@ -463,11 +476,18 @@ async function initializeDatabaseAndAnalytics(
 function makeDbClosers(
   knexInstance: { destroy: () => Promise<void> },
   pglite: PGlite | undefined,
+  logger: ILogger,
 ): Array<() => Promise<void>> {
   const closers: Array<() => Promise<void>> = [() => knexInstance.destroy()];
   if (pglite) {
     closers.push(async () => {
-      if (!pglite.closed) await pglite.close();
+      // An aborted instance (ENOSPC PANIC) is not `closed` and its close() rejects.
+      if (pglite.closed) return;
+      try {
+        await pglite.close();
+      } catch (err) {
+        logger.warn(`PGlite close failed: ${String(err)}`);
+      }
     });
   }
   return closers;
@@ -1088,6 +1108,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   } = await initializeDatabaseAndAnalytics(
     options.dbPath,
     options.pgliteFactory,
+    logger,
   );
   dbClosers.push(...analyticsClosers);
 
@@ -1098,7 +1119,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       options.dbPath,
       options.pgliteFactory,
     );
-    dbClosers.push(...makeDbClosers(knex, pglite));
+    dbClosers.push(...makeDbClosers(knex, pglite, logger));
     // Run document permission migrations
     await runMigrations(db as Kysely<unknown>);
     logger.info("Document permission migrations completed");
@@ -1132,7 +1153,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     knex: attachmentKnex,
     pglite: attachmentPglite,
   } = getDbClient(options.dbPath, options.pgliteFactory);
-  dbClosers.push(...makeDbClosers(attachmentKnex, attachmentPglite));
+  dbClosers.push(...makeDbClosers(attachmentKnex, attachmentPglite, logger));
   const ATTACHMENT_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // hourly
   const attachmentBackend = await createStartupAttachmentBackend({
     db: attachmentDb as Kysely<AttachmentDatabase>,

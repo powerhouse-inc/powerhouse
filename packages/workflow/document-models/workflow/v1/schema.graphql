@@ -99,6 +99,8 @@ type TriggerBinding {
   triggerName: String!
   "Connection document id, when the trigger's connector requires one."
   connectionId: PHID
+  "Reactor connection document id, when the trigger declares requireReactor."
+  reactorConnectionId: PHID
   "Validated against the trigger's configSchema."
   config: Unknown!
   propertySettings: [PropertySetting!]
@@ -119,6 +121,8 @@ type WorkflowStep {
   "Action name within the piece, e.g. 'branch' or 'send_request'."
   actionName: String!
   connectionId: PHID
+  "Reactor connection document id, when the action declares requireReactor."
+  reactorConnectionId: PHID
   config: Unknown!
   "ENFORCED. Per-step override of the workflow default retry policy."
   retry: RetryPolicy
@@ -244,6 +248,7 @@ input SetTriggerInput {
     pieceVersion: String!
     triggerName: String!
     connectionId: PHID
+    reactorConnectionId: PHID
     config: Unknown!
     propertySettings: [SetTriggerPropertySettingInput!]
 }
@@ -281,6 +286,7 @@ input AddStepInput {
     pieceVersion: String!
     actionName: String!
     connectionId: PHID
+    reactorConnectionId: PHID
     config: Unknown!
     retry: AddStepRetryPolicyInput
     timeoutSeconds: Int
@@ -311,6 +317,7 @@ input UpdateStepInput {
     pieceVersion: String
     actionName: String
     connectionId: PHID
+    reactorConnectionId: PHID
     config: Unknown
     retry: UpdateStepRetryPolicyInput
     timeoutSeconds: Int

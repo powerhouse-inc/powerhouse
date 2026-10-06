@@ -40,6 +40,7 @@ export const workflowTriggerOperations: WorkflowTriggerOperations = {
       pieceVersion: input.pieceVersion,
       triggerName: input.triggerName,
       connectionId: input.connectionId || null,
+      reactorConnectionId: input.reactorConnectionId || null,
       config: input.config,
       propertySettings:
         input.propertySettings === undefined

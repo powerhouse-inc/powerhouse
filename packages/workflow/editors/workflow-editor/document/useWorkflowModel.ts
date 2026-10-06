@@ -60,6 +60,31 @@ function toModel(state: WorkflowState): WorkflowModel {
       ? {
           version: state.published.version,
           publishedAt: state.published.publishedAt,
+          blocks: [
+            ...(state.published.trigger
+              ? [
+                  {
+                    id: state.published.trigger.id,
+                    label: "Trigger",
+                    pieceName: state.published.trigger.pieceName,
+                    pieceVersion: state.published.trigger.pieceVersion,
+                    kind: "trigger" as const,
+                    name: state.published.trigger.triggerName,
+                    reactorConnectionId:
+                      state.published.trigger.reactorConnectionId ?? null,
+                  },
+                ]
+              : []),
+            ...state.published.steps.map((step) => ({
+              id: step.id,
+              label: step.name || step.key,
+              pieceName: step.pieceName,
+              pieceVersion: step.pieceVersion,
+              kind: "action" as const,
+              name: step.actionName,
+              reactorConnectionId: step.reactorConnectionId ?? null,
+            })),
+          ],
         }
       : null,
     readOnly: false,
@@ -71,6 +96,7 @@ function toModel(state: WorkflowState): WorkflowModel {
           triggerName: state.trigger.triggerName,
           config: state.trigger.config,
           connectionId: state.trigger.connectionId ?? null,
+          reactorConnectionId: state.trigger.reactorConnectionId ?? null,
           ...blockState(state.trigger),
         }
       : null,
@@ -82,6 +108,7 @@ function toModel(state: WorkflowState): WorkflowModel {
       pieceVersion: step.pieceVersion,
       actionName: step.actionName,
       connectionId: step.connectionId ?? null,
+      reactorConnectionId: step.reactorConnectionId ?? null,
       config: step.config,
       retry: step.retry
         ? {
@@ -150,6 +177,7 @@ export function useWorkflowModel(): {
               triggerName: input.triggerName,
               config: input.config,
               connectionId: input.connectionId,
+              reactorConnectionId: input.reactorConnectionId,
               ...(input.propertySettings
                 ? { propertySettings: settingsInput(input.propertySettings) }
                 : {}),
@@ -306,6 +334,7 @@ export function useWorkflowModel(): {
             pieceVersion: step.pieceVersion,
             actionName: step.actionName,
             connectionId: step.connectionId,
+            reactorConnectionId: step.reactorConnectionId,
             config: step.config,
             retry: step.retry,
             timeoutSeconds: step.timeoutSeconds,
@@ -362,6 +391,7 @@ export function useWorkflowModel(): {
                     triggerName: trigger.triggerName,
                     config: plan.config,
                     connectionId: trigger.connectionId,
+                    reactorConnectionId: trigger.reactorConnectionId,
                   }),
                 ]
               : plan.config

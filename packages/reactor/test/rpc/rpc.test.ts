@@ -1,0 +1,321 @@
+import type {
+  DocumentChangeEvent,
+  IReactorClient,
+} from "../../src/client/types.js";
+import type { SearchFilter } from "../../src/shared/types.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { createReactorClientProxy } from "../../src/rpc/client-proxy.js";
+import { ReactorHostServer } from "../../src/rpc/host-server.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
+import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+function makeFakeClient() {
+  let subscriber: ((change: DocumentChangeEvent) => void) | undefined;
+  const calls: string[] = [];
+  const client = {
+    calls,
+    emit(change: DocumentChangeEvent) {
+      subscriber?.(change);
+    },
+    get(identifier: string, _view?: unknown, signal?: AbortSignal) {
+      calls.push(`get:${identifier}`);
+      if (identifier === "boom") {
+        return Promise.reject(new Error("boom"));
+      }
+      if (identifier === "hang") {
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener(
+            "abort",
+            () => reject(new Error("aborted by signal")),
+            { once: true },
+          );
+        });
+      }
+      return Promise.resolve({ id: identifier, name: "doc" });
+    },
+    resolveIdOrSlug(identifier: string) {
+      calls.push(`resolve:${identifier}`);
+      return Promise.resolve(`resolved:${identifier}`);
+    },
+    isDocumentIdTaken(documentId: string) {
+      calls.push(`taken:${documentId}`);
+      if (documentId === "boom") {
+        return Promise.reject(new Error("transport down"));
+      }
+      return Promise.resolve(documentId === "taken-id");
+    },
+    find() {
+      calls.push("find");
+      const page2 = {
+        results: [{ id: "b" }],
+        options: { cursor: "1", limit: 1 },
+      };
+      const page1 = {
+        results: [{ id: "a" }],
+        options: { cursor: "0", limit: 1 },
+        nextCursor: "1",
+        next: () => Promise.resolve(page2),
+      };
+      return Promise.resolve(page1);
+    },
+    drives: {
+      addFolder(driveId: string, name: string) {
+        calls.push(`addFolder:${driveId}/${name}`);
+        return Promise.resolve({ id: "node-1", name });
+      },
+      addFile(driveId: string, document: { header: { id: string } }) {
+        calls.push(`addFile:${driveId}/${document.header.id}`);
+        const taken = new Error(
+          `Document ${document.header.id} already exists`,
+        );
+        taken.name = "DocumentAlreadyExistsError";
+        return Promise.reject(
+          new Error("There was an error adding document", { cause: taken }),
+        );
+      },
+    },
+    subscribe(
+      search: unknown,
+      callback: (change: DocumentChangeEvent) => void,
+    ) {
+      calls.push(`sub:${JSON.stringify(search)}`);
+      subscriber = callback;
+      return () => {
+        subscriber = undefined;
+        calls.push("unsub");
+      };
+    },
+  };
+  return client;
+}
+
+function setup() {
+  const fake = makeFakeClient();
+  const channel = new MessageChannel();
+  const host = new ReactorHostServer(
+    fake as unknown as IReactorClient,
+    createPortTransport(channel.port1),
+  );
+  host.start();
+  const proxy = createReactorClientProxy(tabRouter(channel.port2));
+  const close = () => {
+    host.stop();
+    channel.port1.close();
+    channel.port2.close();
+  };
+  return { fake, proxy, close };
+}
+
+describe("reactor RPC proxy <-> host", () => {
+  let cleanup: (() => void) | undefined;
+  afterEach(() => {
+    cleanup?.();
+    cleanup = undefined;
+  });
+
+  it("round-trips a method call and its return value", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    const doc = await proxy.get("id-1");
+    expect(doc).toEqual({ id: "id-1", name: "doc" });
+    expect(fake.calls).toContain("get:id-1");
+  });
+
+  it("passes arguments through and returns scalar results", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    const resolved = await proxy.resolveIdOrSlug("slug-a");
+    expect(resolved).toBe("resolved:slug-a");
+  });
+
+  it("forwards isDocumentIdTaken in both directions", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    await expect(proxy.isDocumentIdTaken("taken-id")).resolves.toBe(true);
+    await expect(proxy.isDocumentIdTaken("free-id")).resolves.toBe(false);
+    expect(fake.calls).toContain("taken:taken-id");
+  });
+
+  it("keeps an error name through the boundary, including one it wraps", async () => {
+    // The import retries on a taken id, and it matches that error by name
+    // through the cause chain. If either is dropped here, the retry never
+    // fires in worker mode -- the mode the collision was reported from.
+    const { proxy, close } = setup();
+    cleanup = close;
+
+    const thrown = await proxy.drives
+      .addFile("drive-1", { header: { id: "taken-id" } } as never)
+      .catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(
+      "There was an error adding document",
+    );
+    expect((thrown as Error).cause).toBeInstanceOf(Error);
+    expect(((thrown as Error).cause as Error).name).toBe(
+      "DocumentAlreadyExistsError",
+    );
+  });
+
+  it("rejects isDocumentIdTaken rather than answering false on failure", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    await expect(proxy.isDocumentIdTaken("boom")).rejects.toThrow(
+      "transport down",
+    );
+  });
+
+  it("dispatches nested drives.* methods", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    const node = await proxy.drives.addFolder("drive-1", "Folder");
+    expect(node).toEqual({ id: "node-1", name: "Folder" });
+    expect(fake.calls).toContain("addFolder:drive-1/Folder");
+  });
+
+  it("propagates a thrown error with its message", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    await expect(proxy.get("boom")).rejects.toThrow("boom");
+  });
+
+  it("delivers subscription events and stops after unsubscribe", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    const received: DocumentChangeEvent[] = [];
+    const unsubscribe = proxy.subscribe(
+      { type: "todo" } as SearchFilter,
+      (change) => received.push(change),
+    );
+    await tick();
+
+    const change = {
+      type: "updated",
+      documents: [],
+    } as unknown as DocumentChangeEvent;
+    fake.emit(change);
+    await tick();
+    expect(received).toHaveLength(1);
+
+    unsubscribe();
+    await tick();
+    fake.emit(change);
+    await tick();
+    expect(received).toHaveLength(1);
+    expect(fake.calls).toContain("unsub");
+  });
+
+  it("rehydrates PagedResults.next across the boundary", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    const page1 = await proxy.find({ type: "x" } as SearchFilter);
+    expect(page1.results).toEqual([{ id: "a" }]);
+    if (!page1.next) {
+      throw new Error("expected page1 to have a next()");
+    }
+    const page2 = await page1.next();
+    expect(page2.results).toEqual([{ id: "b" }]);
+    expect(page2.next).toBeUndefined();
+  });
+
+  it("forwards an AbortSignal so the owner can cancel an in-flight call", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    const controller = new AbortController();
+    const pending = proxy.get("hang", undefined, controller.signal);
+    await tick();
+    controller.abort();
+    await expect(pending).rejects.toThrow("aborted by signal");
+  });
+
+  it("detects a duck-typed AbortSignal from another realm", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    const listeners = new Set<() => void>();
+    const foreignSignal = {
+      aborted: false,
+      addEventListener: (_type: string, cb: () => void) => listeners.add(cb),
+      removeEventListener: (_type: string, cb: () => void) =>
+        listeners.delete(cb),
+      abort() {
+        this.aborted = true;
+        for (const cb of listeners) cb();
+      },
+    };
+    const pending = proxy.get(
+      "hang",
+      undefined,
+      foreignSignal as unknown as AbortSignal,
+    );
+    await tick();
+    foreignSignal.abort();
+    await expect(pending).rejects.toThrow("aborted by signal");
+  });
+
+  it("exposes stable method references", () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    const surface = proxy as unknown as {
+      get: unknown;
+      drives: { addFolder: unknown };
+    };
+    expect(surface.get).toBe(surface.get);
+    expect(surface.drives.addFolder).toBe(surface.drives.addFolder);
+  });
+
+  it("keeps a purged Deleted event's context across the port", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    const received: DocumentChangeEvent[] = [];
+    proxy.subscribe({} as SearchFilter, (change) => received.push(change));
+    await tick();
+
+    fake.emit({
+      type: "deleted",
+      documents: [],
+      context: { childId: "doc-1", purged: true },
+    } as unknown as DocumentChangeEvent);
+    await tick();
+
+    expect(received).toEqual([
+      {
+        type: "deleted",
+        documents: [],
+        context: { childId: "doc-1", purged: true },
+      },
+    ]);
+  });
+
+  it("does not leak an unhandled rejection when subscribe throws", async () => {
+    const fake = makeFakeClient();
+    fake.subscribe = () => {
+      throw new Error("bad filter");
+    };
+    const channel = new MessageChannel();
+    const host = new ReactorHostServer(
+      fake as unknown as IReactorClient,
+      createPortTransport(channel.port1),
+    );
+    host.start();
+    const proxy = createReactorClientProxy(tabRouter(channel.port2));
+    cleanup = () => {
+      host.stop();
+      channel.port1.close();
+      channel.port2.close();
+    };
+    const unsubscribe = proxy.subscribe(
+      { type: "todo" } as SearchFilter,
+      () => undefined,
+    );
+    await tick();
+    expect(typeof unsubscribe).toBe("function");
+  });
+});

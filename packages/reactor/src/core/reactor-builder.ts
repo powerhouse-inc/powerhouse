@@ -424,6 +424,7 @@ export class ReactorBuilder {
     DEFAULT_DRIVE_CONTAINER_TYPES;
   private workerPool?: WorkerPoolOptions;
   private resolvedModelManifest?: ModelManifestEntry[];
+  private modelResolver?: DocumentModelResolver;
   private moduleOnlyModelKeys: string[] = [];
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
@@ -769,6 +770,19 @@ export class ReactorBuilder {
     return this.resolvedModelManifest;
   }
 
+  /**
+   * Importable entries for a type: the boot manifest's, plus those the
+   * document model loader added at run time once built.
+   */
+  getImportableEntries(documentType: string): ModelManifestEntry[] {
+    return (
+      this.modelResolver?.getImportableEntries(documentType) ??
+      (this.resolvedModelManifest ?? []).filter(
+        (entry) => entry.documentType === documentType,
+      )
+    );
+  }
+
   async build(): Promise<IReactor> {
     const module = await this.buildModule();
     return module.reactor;
@@ -976,6 +990,7 @@ export class ReactorBuilder {
         eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
       );
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
+      this.modelResolver = resolver;
     }
     const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
     const jobTracker = new InMemoryJobTracker(eventBus);

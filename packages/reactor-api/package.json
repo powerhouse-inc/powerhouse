@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.2.3-dev.43",
+  "version": "6.2.3-dev.45",
   "description": "GraphQL API layer for the Powerhouse reactor Ã¢â‚¬â€ auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
   "type": "module",
   "repository": {
@@ -23,6 +23,11 @@
       "source": "./src/packages/https-hooks.mts",
       "types": "./dist/https-hooks.d.mts",
       "import": "./dist/src/packages/https-hooks.mjs"
+    },
+    "./pglite-node": {
+      "source": "./src/pglite/pglite-node.ts",
+      "types": "./dist/src/pglite/pglite-node.d.mts",
+      "import": "./dist/src/pglite/pglite-node.mjs"
     },
     "./test": {
       "import": "./test/index.ts"
@@ -77,7 +82,6 @@
     "@powerhousedao/analytics-engine-pg": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@powerhousedao/pglite-fs": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-drive": "workspace:*",

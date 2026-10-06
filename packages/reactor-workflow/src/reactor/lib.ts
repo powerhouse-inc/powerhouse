@@ -17,6 +17,7 @@ import {
   type PieceStorePort,
   type ResolvedConnection,
   type EgressPolicy,
+  type ActivepiecesBlockExecutorOptions,
   type SecretProvider,
   type WorkflowDefinition,
 } from "../pieces/index.js";
@@ -36,7 +37,6 @@ import {
 } from "./run-scope.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { packagePieces } from "./piece-registry.js";
-import { SubgraphReactorPort } from "./reactor-port.js";
 import { packageFromConnectorId } from "./connector-id.js";
 import { runnableDefinition, type RunnableDefinition } from "./runnable.js";
 import type { OAuthTokenRefresher } from "./oauth.js";
@@ -260,9 +260,10 @@ export function createBlockExecutor(
   // The runtime's resolution policy, shared with triggers and design time.
   resolveBlock?: (block: BlockRef) => Promise<BlockResolution>,
   oauth?: OAuthTokenRefresher,
+  reactorAccess?: ActivepiecesBlockExecutorOptions["reactorAccess"],
 ): BlockExecutor {
-  // No handler map: the document blocks are a piece now, and they reach the
-  // reactor through the port below like any other package piece would.
+  // The document blocks are a piece; they reach the reactor through
+  // reactorAccess like any other declaring piece.
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: bundleCacheDir(),
@@ -282,9 +283,7 @@ export function createBlockExecutor(
       }),
       resolver: pieceResolver(),
       ...(resolveBlock ? { resolveBlock } : {}),
-      // Served only to a piece this reactor's packages ship; the executor
-      // withholds it from everything the resolver fetched.
-      reactor: new SubgraphReactorPort(host),
+      ...(reactorAccess ? { reactorAccess } : {}),
       connections: boundConnections(
         new DocumentConnectionResolver(host, secrets, oauth),
       ),
@@ -339,6 +338,7 @@ export function stepDefinition(
     pieceVersion: step.pieceVersion,
     actionName: step.actionName,
     connectionId: step.connectionId,
+    reactorConnectionId: step.reactorConnectionId,
     config: step.config,
     timeoutSeconds: step.timeoutSeconds,
     propertySettings: propertySettings(step.propertySettings),
@@ -363,6 +363,7 @@ export function toWorkflowDefinition(state: WorkflowState): WorkflowDefinition {
       pieceVersion: runnable.trigger.pieceVersion,
       triggerName: runnable.trigger.triggerName,
       connectionId: runnable.trigger.connectionId,
+      reactorConnectionId: runnable.trigger.reactorConnectionId,
       config: runnable.trigger.config,
       propertySettings: propertySettings(runnable.trigger.propertySettings),
     },

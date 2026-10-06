@@ -95,6 +95,15 @@ and editors/subgraphs in the worker (models are all the reactor needs).
       type; `register-packages` replaces it and a new type becomes creatable
 - [ ] distyra: rebuild worker bundle; verify against live vetra
 
+## Known limitations
+
+- In dev (`ph connect studio`), `provider: "local"` package models do not
+  reach the worker; only the `ph connect build` prebuild bundles them. The
+  project's own models do reach it through the dev models entry.
+
 ## Deviations
 
-(Recorded as implementation proceeds.)
+- Watch wiring: `store/reactor.ts` subscribes to the package manager
+  directly and forwards a `register-packages` only when its `localPackage`
+  is replaced (an HMR `updateLocalPackage`), not on every package
+  notification; `onVetraPackageManager` is no longer used there.

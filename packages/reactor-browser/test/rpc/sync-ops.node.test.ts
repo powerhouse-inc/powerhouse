@@ -4,15 +4,18 @@ import type {
 } from "@powerhousedao/reactor";
 import { describe, expect, it, vi } from "vitest";
 import { createReactorEventBusProxy } from "../../src/rpc/event-bus-proxy.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
-import type { CorrelationId, RpcMessage } from "../../src/rpc/protocol.js";
+import {
+  MessageRouter,
+  type CorrelationId,
+  type IRpcTransport,
+  type RpcMessage,
+} from "@powerhousedao/reactor/rpc";
 import { createSyncManagerProxy } from "../../src/rpc/sync-manager-proxy.js";
 import {
   dispatchSyncOp,
   SYNC_OPS,
   type InspectableSyncManager,
 } from "../../src/rpc/sync-ops.js";
-import type { IRpcTransport } from "../../src/rpc/transport.js";
 
 const inspection: RemoteSyncInspection = {
   remoteName: "accounts",

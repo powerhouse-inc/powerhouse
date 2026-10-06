@@ -5,6 +5,7 @@ import { jsonSafe } from "../worker/json-safe.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import type { ApFilesService } from "./files.js";
 import type { ConnectionsProvider } from "./props.js";
+import type { ReactorOption } from "./reactor-option.js";
 import type {
   BaseContext,
   ConnectionsManager,
@@ -13,7 +14,8 @@ import type {
   FlowsContext,
   InputPropertyMap,
   OutputContext,
-  ReactorService,
+  ReactorClient,
+  ReactorReadClient,
   RunContext,
   ServerContext,
   StepContext,
@@ -93,7 +95,9 @@ export interface ActionContextIdentity {
   stepName?: string;
 }
 
-export interface ActionContextOptions {
+export type ActionContextOptions = ActionContextBaseOptions & ReactorOption;
+
+interface ActionContextBaseOptions {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   store?: KeyValueStore;
@@ -105,9 +109,6 @@ export interface ActionContextOptions {
   // ctx.output.update, the piece's own progress report. Omitted, the member
   // throws, so a piece that depends on it fails by name rather than silently.
   output?: { update(output: unknown): Promise<void> };
-  // ctx.reactor. Served only to a piece the host loaded from an installed
-  // reactor package; for every other piece the member throws by name.
-  reactor?: ReactorService;
   // ctx.resumePayload, the delivery that woke a RESUME run. This engine never
   // suspends a run, so no request carries one yet; omitted, the member throws
   // by name instead of reading as undefined.
@@ -129,7 +130,7 @@ export interface BuiltApActionContext {
   server: ServerContext;
   files: FilesService;
   output: OutputContext;
-  reactor: ReactorService;
+  reactor: ReactorClient | ReactorReadClient;
   // The RESUME branch of the framework's ActionContext promises this
   // (ResumePayload there, a type its entry does not export). Always present,
   // real or throwing, like `reactor`.

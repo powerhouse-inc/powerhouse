@@ -9,6 +9,10 @@
 // error is usually thrown in the forked child and reaches the coordinator as a
 // `SerializedPieceError`: a name, a message, and the error's own enumerable
 // properties. The class does not survive; the property does.
+//
+// The reactor RPC keeps only an error's name and message, so a reactor job
+// still unfinished at the step deadline is recognised by its name.
+import { ReactorJobPendingError } from "@powerhousedao/pieces-framework";
 
 /** The property name, so both sides spell it once. */
 export const INDETERMINATE_FLAG = "indeterminate";
@@ -22,6 +26,16 @@ export function markIndeterminate<T extends Error>(error: T): T {
     configurable: false,
   });
   return error;
+}
+
+const INDETERMINATE_NAMES: ReadonlySet<string> = new Set([
+  ReactorJobPendingError,
+]);
+
+function named(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const name = (value as { name?: unknown }).name;
+  return typeof name === "string" && INDETERMINATE_NAMES.has(name);
 }
 
 function flagged(value: unknown): boolean {
@@ -38,10 +52,13 @@ function flagged(value: unknown): boolean {
  * and the `cause` chain (a piece that wrapped it).
  */
 export function isIndeterminateError(error: unknown): boolean {
-  if (flagged(error)) return true;
-  const serialized = (error as { serialized?: { properties?: unknown } })
-    ?.serialized;
-  if (flagged(serialized?.properties)) return true;
+  if (flagged(error) || named(error)) return true;
+  const serialized = (
+    error as { serialized?: { name?: unknown; properties?: unknown } }
+  )?.serialized;
+  if (flagged(serialized?.properties) || named(serialized)) return true;
   const cause = (error as { cause?: unknown })?.cause;
-  return cause !== undefined && cause !== error && flagged(cause);
+  return (
+    cause !== undefined && cause !== error && (flagged(cause) || named(cause))
+  );
 }

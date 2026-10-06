@@ -6,6 +6,7 @@ export { shortGitSha };
 declare const CONNECT_VERSION: string | undefined;
 declare const CONNECT_GIT_SHA: string | undefined;
 declare const PH_CONNECT_BUILD_HASH: string | undefined;
+declare const CONNECT_PACKAGED_DIST: boolean | undefined;
 
 export function getVersion(): string {
   if (typeof CONNECT_VERSION !== "undefined") return CONNECT_VERSION;
@@ -14,6 +15,11 @@ export function getVersion(): string {
     process.env.npm_package_version ??
     packageJson.version
   );
+}
+
+/** True in the tsdown dist projects install; false in the monorepo app, where Vite bundles the worker. */
+export function isPackagedConnectDist(): boolean {
+  return typeof CONNECT_PACKAGED_DIST !== "undefined" && CONNECT_PACKAGED_DIST;
 }
 
 export function getGitSha(): string {
@@ -41,16 +47,6 @@ export function getAppBuildId(): string {
   const gitSha = getGitSha();
   if (gitSha !== "unknown") return gitSha;
   return getVersion();
-}
-
-/**
- * Whether this build needs the worker bundle's content token to identify
- * itself. A baked-in git sha already identifies the build exactly, so
- * production skips the metadata fetch rather than paying a blocking round trip
- * for a value it would discard.
- */
-export function needsWorkerBuildDigest(): boolean {
-  return getGitSha() === "unknown";
 }
 
 /**

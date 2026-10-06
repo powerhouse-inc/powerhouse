@@ -90,7 +90,9 @@ ph generate piece-trigger new-record
 
 Both take `--piece <dir>` to say which piece to add to, which you can omit when
 the package ships exactly one. Each writes a stub, as the Activepieces CLI does:
-the shape is there, and the body is yours.
+the shape is there, and the body is yours. The stub declares
+`requireReactor: false`, no access to documents; see
+[Reading and writing documents](#reading-and-writing-documents).
 
 Two flags on `ph generate piece` are for maintenance rather than creation:
 `--dir <dir>` re-registers an existing piece, and `--all` refreshes the
@@ -373,15 +375,55 @@ export const crmAuth = PieceAuth.CustomAuth({
 
 ## Reading and writing documents
 
-Your piece doesn't need to. Reading and writing Powerhouse documents is what the
-reactor's own piece, `@powerhousedao/piece-reactor`, is for. Its actions
-`document-find`, `document-get`, `document-create` and `document-dispatch` are
-steps a workflow author drops in beside yours, with no code from you at all.
+Often your piece doesn't need to. The reactor's own piece,
+`@powerhousedao/piece-reactor`, has the actions `document-find`,
+`document-get`, `document-create` and `document-dispatch`, which a workflow
+author drops in beside yours with no code from you at all. A workflow that
+pulls a record from your service and records it on a document can be two
+steps: your action, then the reactor piece's `document-create` action reading
+the first step's output through an expression.
 
-So a workflow that pulls a record from your service and records it on a document
-is two steps: your action, then the reactor piece's `document-create` action
-reading the first step's output through an expression. Your piece stays a
-connector to your service, which is the thing only you can write.
+When an action does need documents, such as one that applies your model's
+operations from what your service returned, declare `requireReactor` and use
+`ctx.reactor`:
+
+```typescript
+export const crmSyncRecordAction = createAction({
+  auth: crmAuth,
+  name: "sync-record",
+  displayName: "Sync Record",
+  description: "Copies a record's name onto a document",
+  requireReactor: "write",
+  props: {
+    recordId: Property.ShortText({ displayName: "Record id", required: true }),
+    documentId: Property.ShortText({ displayName: "Document", required: true }),
+  },
+  async run(context) {
+    const { baseUrl, apiKey } = context.auth.props;
+    const response = await httpClient.sendRequest<{ name: string }>({
+      method: HttpMethod.GET,
+      url: `${baseUrl}/records/${encodeURIComponent(context.propsValue.recordId)}`,
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    const document = await context.reactor.execute(
+      context.propsValue.documentId,
+      "main",
+      [setName(response.body.name)],
+    );
+    return { header: document.header };
+  },
+});
+```
+
+`setName` comes from `@powerhousedao/shared/document-model`; your own model's
+action creators work the same way. `"read"` gives the action the read methods
+of `IReactorClient`, and `"write"` adds `create`, `createEmpty`, `execute` and
+`deleteDocument`. `false`, which the generators write by default, gives no
+`ctx.reactor`. `ph generate piece-action <name> --require-reactor read|write`
+writes the declaration for you, as does `ph generate piece-trigger`. A step
+using the action needs a reactor connection, and its run acts as the user who
+last published the workflow. [Reactor access from pieces](/academy/Learn/workflows/reactor-access)
+covers the methods, the errors and the checks.
 
 When the input comes from an AI step, set the document action's advanced
 **Parse** option to **Extract from AI output**. It reads ids and JSON out of the

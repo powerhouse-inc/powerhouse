@@ -1,5 +1,5 @@
 import type { RemoteFilter } from "@powerhousedao/reactor";
-import type { MessageRouter } from "./message-router.js";
+import type { MessageRouter } from "@powerhousedao/reactor/rpc";
 import { toVoid } from "./op-channel.js";
 
 /**

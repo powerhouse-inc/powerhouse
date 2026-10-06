@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.43)<br>
+# Powerhouse CLI Commands (6.2.3-dev.45)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -305,6 +305,10 @@ The name of the action to generate<br><br>
 The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece.<br><br>
 **usage:** `--piece, -p <str>`<br>
 
+#### Require Reactor <br>
+Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor<br><br>
+**usage:** `--require-reactor <value>`<br>
+
 
 ### flags
 #### Skip Install <br>
@@ -341,6 +345,10 @@ The piece directory under pieces/ to add the trigger to. Optional when the proje
 How the trigger fires: polled on a schedule, or delivered to a webhook<br><br>
 **usage:** `--strategy <value>`<br>
 **default**: `polling`
+#### Require Reactor <br>
+Declare reactor access for the trigger: read, or write (which includes read). Its hooks then get context.reactor<br><br>
+**usage:** `--require-reactor <value>`<br>
+
 
 ### flags
 #### Skip Install <br>

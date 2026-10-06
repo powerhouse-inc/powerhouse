@@ -6,8 +6,8 @@ import { defaultExclude, defineConfig } from "vitest/config";
 // migrations, and in the renown suite a P-256 keypair generation on top -- which
 // runs in about a second locally and several times that on a shared CI runner.
 // The default 5s is a budget for a unit test, not for that, so it is raised here
-// the same way and for the same reason as in packages/reactor, reactor-api and
-// pglite-fs. A genuinely hung test still fails, just later.
+// the same way and for the same reason as in packages/reactor and reactor-api.
+// A genuinely hung test still fails, just later.
 const REACTOR_BOOT_TIMEOUT_MS = 30_000;
 
 export default defineConfig({

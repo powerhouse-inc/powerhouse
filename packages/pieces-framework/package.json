@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/pieces-framework",
-  "version": "6.2.3-dev.43",
+  "version": "6.2.3-dev.45",
   "description": "Powerhouse's published copy of the Activepieces piece framework, widened with the reactor context.",
   "license": "MIT",
   "type": "module",
@@ -73,6 +73,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",
     "deepmerge-ts": "7.1.0",
     "prettier": "catalog:",
@@ -80,5 +82,17 @@
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@powerhousedao/reactor": {
+      "optional": true
+    },
+    "@powerhousedao/shared": {
+      "optional": true
+    }
   }
 }

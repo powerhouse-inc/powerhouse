@@ -241,6 +241,10 @@ export class BrowserPackageManager implements IPackageManager {
     return this.#packagesMemo;
   }
 
+  get localPackage(): DocumentModelLib<any> | undefined {
+    return this.#localPackage;
+  }
+
   get cdnUrl(): string | null {
     return this.#cdnUrl;
   }

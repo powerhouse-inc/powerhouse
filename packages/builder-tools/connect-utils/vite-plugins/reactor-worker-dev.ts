@@ -6,7 +6,6 @@ import {
   REACTOR_WORKER_ENTRY,
   REACTOR_WORKER_MIME,
   REACTOR_WORKER_URL_PREFIX,
-  resolveReactorWorkerSource,
   type PrebuiltReactorWorker,
 } from "../reactor-worker-build.js";
 
@@ -22,25 +21,15 @@ function withBase(base: string, p: string): string {
  * `<base>__reactor_worker__/`, building it lazily on first request.
  *
  * The dev server serves Connect from its prebuilt dist in node_modules, where
- * `dist/reactor.worker.js` is a library artifact full of bare imports that no
- * worker can resolve (import maps do not apply to workers). The tab probes
- * this stable URL (HEAD) and constructs its SharedWorker from it; without
- * this plugin the probe 404s and the worker feature reports itself
- * unavailable instead of dying opaquely.
+ * `dist/reactor.worker.js` is a library artifact no worker can resolve. The
+ * tab GETs `worker-meta.json` here (JSON, no-cache, written by
+ * `prebuildReactorWorker`) to find the bundle and fold its `sourceDigest`
+ * into its version fingerprint; without this plugin that GET fails and the
+ * worker feature reports itself unavailable instead of dying opaquely.
  *
- * The build is lazy because it is a full `vite build` of the reactor + PGlite
- * graph: sessions that never enable `reactorWorker` never pay for it. The
- * result is cached in node_modules/.ph-reactor-worker and reused across
- * server restarts until the installed Connect (or the upstream workspace
- * dists it bundles, or builder-tools itself) changes — see
- * `computeSourceDigest` in `../reactor-worker-build.ts`.
- *
- * No special-casing is needed to serve that digest: `worker-meta.json`
- * (written into the bundle dir by `prebuildReactorWorker`) falls through the
- * generic streaming branch below like any other bundle file, picks up
- * `application/json` from `REACTOR_WORKER_MIME` and `no-cache` (it ends in
- * `.json`), and `apps/connect/src/utils/reactor-worker-url.ts` fetches it to
- * fold the digest into the tab's version fingerprint in dev (W0.6).
+ * Lazy because it is a full `vite build` of the reactor + PGlite graph. The
+ * result is cached in node_modules/.ph-reactor-worker until the installed
+ * Connect, its upstream dists, or builder-tools change (`computeSourceDigest`).
  */
 export function reactorWorkerDevPlugin(projectRoot: string): Plugin {
   let base = "/";
@@ -87,20 +76,6 @@ export function reactorWorkerDevPlugin(projectRoot: string): Plugin {
         if (!prefix) return next();
         const name = url.slice(prefix.length).replace(/^\/+/, "");
         if (!name) return next();
-
-        // The tab's availability probe: answer from the source check alone so
-        // the probe stays fast; the build runs on the first real GET.
-        if (req.method === "HEAD" && name === REACTOR_WORKER_ENTRY) {
-          if (!resolveReactorWorkerSource(projectRoot)) {
-            res.statusCode = 404;
-            res.end();
-            return;
-          }
-          res.setHeader("Content-Type", "text/javascript");
-          res.statusCode = 200;
-          res.end();
-          return;
-        }
 
         void (async () => {
           const built = await ensureBuilt();

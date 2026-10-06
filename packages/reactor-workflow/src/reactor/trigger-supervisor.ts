@@ -24,9 +24,7 @@ import {
   pieceModuleRef,
   PieceWorker,
   PieceWorkerError,
-  reactorHandlers,
   secretsFor,
-  servesReactorPort,
   storeHandlers,
   type BlockMatch,
   type ConnectionRequest,
@@ -35,13 +33,15 @@ import {
   type PieceTarget,
   type EgressPolicy,
   type PieceResolver,
-  type ReactorPort,
   type PieceWorkerResult,
+  type ModelManifestSource,
   type PropertySettingDef,
+  type ReactorTap,
   type RecordedSchedule,
   type TriggerHookRequest,
   type TriggerRenew,
 } from "../pieces/index.js";
+import type { RunUser } from "./run-scope.js";
 import { childLogger } from "document-model";
 import {
   cronIntervalMs,
@@ -79,6 +79,8 @@ export interface PieceTriggerBinding {
   triggerName: string;
   config: Record<string, unknown>;
   connectionId?: string | null;
+  // A REACTOR connection, for a trigger that declares requireReactor.
+  reactorConnectionId?: string | null;
   // Author's poll cadence, from the trigger's pollEverySeconds. Overrides both
   // the piece's own setSchedule and the runtime default; the 60s floor holds.
   pollIntervalMs?: number;
@@ -136,13 +138,18 @@ export interface TriggerSupervisorOptions {
   // so a host that ships pieces in a package passes its own.
   resolver?: PieceResolver;
   worker?: PieceWorker;
+  // Sent to the supervisor's own worker; a supplied worker brings its own.
+  models?: ModelManifestSource;
+  // ctx.reactor for a trigger that declares requireReactor. `runUser` is set
+  // for a design-time test, which acts as the caller.
+  reactorAccess?: (
+    binding: PieceTriggerBinding,
+    requireReactor: "read" | "write",
+    runUser: RunUser | null | undefined,
+  ) => Promise<ReactorTap>;
   // Where a trigger's piece may connect to. Left unset it is the default
   // policy, which refuses private address space; `null` lifts it entirely.
   egress?: EgressPolicy | null;
-  // ctx.reactor for trigger hooks, behind the same servesReactorPort gate the
-  // action executor applies. Left unset, even the reactor piece's triggers
-  // get the throwing stub.
-  reactor?: ReactorPort;
   tickMs?: number;
   defaultIntervalMs?: number;
   hookTimeoutMs?: number;
@@ -296,7 +303,7 @@ export class TriggerSupervisor {
   private warnedMissingJournal = false;
 
   constructor(private readonly options: TriggerSupervisorOptions) {
-    this.worker = options.worker ?? new PieceWorker();
+    this.worker = options.worker ?? new PieceWorker({ models: options.models });
     this.tickMs = options.tickMs ?? 15_000;
     this.defaultIntervalMs =
       options.defaultIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
@@ -473,11 +480,18 @@ export class TriggerSupervisor {
 
   // Design-time sample, run against its own partitions so no key it writes can
   // alias a live one, and dropped afterwards so none of it outlives the sample.
-  test(binding: PieceTriggerBinding): Promise<unknown> {
+  test(
+    binding: PieceTriggerBinding,
+    options: { runUser?: RunUser | null } = {},
+  ): Promise<unknown> {
     return this.enqueue(async () => {
       const store = await this.options.store();
       try {
-        const result = await this.hook(binding, "test");
+        const result = await this.hook(binding, "test", {
+          ...(options.runUser !== undefined
+            ? { runUser: options.runUser }
+            : {}),
+        });
         return result.output;
       } finally {
         await this.dropTestPartitions(store, binding.workflowId);
@@ -603,6 +617,7 @@ export class TriggerSupervisor {
       isRepublish?: boolean;
       payload?: unknown;
       webhookUrl?: string;
+      runUser?: RunUser | null;
     } = {},
   ): Promise<PieceWorkerResult> {
     // onDisable still has to release what an earlier enable registered.
@@ -627,11 +642,7 @@ export class TriggerSupervisor {
     // Redacted in the child, so a hook's error crosses back without the
     // credential the connection resolved to.
     const redactValues = secretsFor(auth);
-    // The same gate, the same predicate, as the action executor: one piece
-    // reaches the reactor, and its triggers reach it on the terms its steps do.
-    const reactor = servesReactorPort(binding.packageName)
-      ? this.options.reactor
-      : undefined;
+    const reactor = await this.reactorFor(binding, hook, options.runUser);
     return this.worker.runTriggerHook(
       {
         ...pieceModuleRef(piece),
@@ -641,7 +652,6 @@ export class TriggerSupervisor {
         auth,
         ...(redactValues.length > 0 ? { redactValues } : {}),
         ...(pieceStore ? { durableStore: true } : {}),
-        ...(reactor ? { reactorAccess: true } : {}),
         identity: { flowId: binding.workflowId, projectId: PROJECT_SCOPE_KEY },
         isRepublish: options.isRepublish,
         payload: options.payload,
@@ -654,23 +664,35 @@ export class TriggerSupervisor {
       },
       {
         timeoutMs: this.hookTimeoutMs,
-        ...(pieceStore || reactor
-          ? {
-              hostCalls: {
-                ...(pieceStore ? storeHandlers(pieceStore) : {}),
-                ...(reactor ? reactorHandlers(reactor) : {}),
-              },
-            }
-          : {}),
+        ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+        ...(reactor ? { reactor } : {}),
       },
     );
   }
 
-  // A trigger's strategy, and whether the engine can run it, live in the piece
-  // descriptor. Enables are rare and the descriptor is cached per version.
-  private async deliveryFor(
+  // ctx.reactor for a declaring trigger. onDisable runs without it rather than
+  // not at all, so a revoked connection still releases what onEnable registered.
+  private async reactorFor(
     binding: PieceTriggerBinding,
-  ): Promise<TriggerRuntime> {
+    hook: TriggerHookRequest["hook"],
+    runUser: RunUser | null | undefined,
+  ): Promise<ReactorTap | undefined> {
+    const access = this.options.reactorAccess;
+    if (!access) return undefined;
+    const declared = (await this.triggerDescriptor(binding))?.requireReactor;
+    if (!declared) return undefined;
+    try {
+      return await access(binding, declared, runUser);
+    } catch (error) {
+      if (hook === "onDisable") return undefined;
+      throw error;
+    }
+  }
+
+  // Cached per version.
+  private async pieceDescriptor(
+    binding: PieceTriggerBinding,
+  ): Promise<PieceDescriptor> {
     const key = `${binding.source ?? ""}:${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
     if (!descriptor) {
@@ -687,6 +709,24 @@ export class TriggerSupervisor {
       descriptor = result.output as PieceDescriptor;
       this.descriptors.set(key, descriptor);
     }
+    return descriptor;
+  }
+
+  private async triggerDescriptor(
+    binding: PieceTriggerBinding,
+  ): Promise<PieceDescriptor["triggers"][number] | undefined> {
+    const descriptor = await this.pieceDescriptor(binding);
+    return descriptor.triggers.find(
+      (candidate) => candidate.name === binding.triggerName,
+    );
+  }
+
+  // A trigger's strategy, and whether the engine can run it, live in the piece
+  // descriptor. Enables are rare and the descriptor is cached per version.
+  private async deliveryFor(
+    binding: PieceTriggerBinding,
+  ): Promise<TriggerRuntime> {
+    const descriptor = await this.pieceDescriptor(binding);
     const trigger = descriptor.triggers.find(
       (candidate) => candidate.name === binding.triggerName,
     );

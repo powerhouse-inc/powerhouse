@@ -27,7 +27,6 @@ import {
   setAttachmentService,
   setDefaultPHGlobalConfig,
   setDocumentCache,
-  onVetraPackageManager,
   setDrives,
   setFeatures,
   setPackageDiscoveryService,
@@ -64,7 +63,6 @@ import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
-import { needsWorkerBuildDigest } from "../utils/build-info.js";
 import { isMultiReactorEnabled } from "../utils/multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import {
@@ -73,13 +71,15 @@ import {
   selectAppReactorClient,
 } from "./multi-reactor.js";
 import type { IReactorClient } from "@powerhousedao/reactor";
+import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
-  fetchReactorWorkerBuildDigest,
-  resolvePackagedReactorWorkerUrl,
+  resolvePackagedReactorWorker,
+  selectReactorWorkerSource,
 } from "../utils/reactor-worker-url.js";
 import {
   resolveDevProjectSource,
   resolveLocalPackageSources,
+  subscribeLocalPackageChanges,
 } from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
@@ -411,36 +411,35 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         return module;
       },
     };
-    // The production vendor's shared-deps table (null in dev / vendor-off
-    // builds): the worker rewrites shared imports in package sources to
-    // these absolute URLs and blob-imports the result.
-    const sharedImports = (await getSharedDeps())?.imports;
-    // Packaged deployments serve a prebuilt worker bundle at a stable path
-    // (the dist worker itself is a library artifact no worker can load);
-    // null means this is the monorepo app, where Vite bundles the worker.
-    const packagedWorkerUrl = await resolvePackagedReactorWorkerUrl();
-    // Content token for the resolved bundle, sent as the fingerprint's
-    // buildDigest so a rebuilt dev bundle lands every tab on a fresh worker
-    // (W0.6). Skipped where a baked-in git sha already identifies the build:
-    // the fetch would block boot for a value the handshake discards. Run
-    // beside the local package sources, which need nothing from it.
-    // Local project models the registry cannot serve: prebuilt bundles in
-    // production, the dev server's live project models entry in dev.
-    const [workerBuildDigest, packageSources] = await Promise.all([
-      needsWorkerBuildDigest()
-        ? fetchReactorWorkerBuildDigest(packagedWorkerUrl)
-        : Promise.resolve(null),
+    // sharedDeps is null in dev / vendor-off builds; packageSources are local
+    // models the registry cannot serve (prod prebuilds, or the live dev entry).
+    const [sharedDeps, packagedWorker, packageSources] = await Promise.all([
+      getSharedDeps(),
+      resolvePackagedReactorWorker(import.meta.env.BASE_URL),
       resolveLocalPackageSources(import.meta.env.BASE_URL),
     ]);
+    const workerSource = selectReactorWorkerSource({
+      packaged: isPackagedConnectDist(),
+      bundle: packagedWorker,
+    });
+    if (workerSource.kind === "unavailable") {
+      window.ph.loading = false;
+      throw new Error(
+        "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
+      );
+    }
     const workerClient = createWorkerReactorClientModule({
-      workerUrl: packagedWorkerUrl ?? undefined,
-      workerBuildDigest,
+      workerUrl: workerSource.kind === "bundle" ? workerSource.url : undefined,
+      // Sent as the fingerprint's own buildDigest, compared leniently by the
+      // host, so a rebuilt bundle lands every tab on a fresh worker.
+      workerBuildDigest:
+        workerSource.kind === "bundle" ? workerSource.digest : null,
       packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
-      sharedImports,
+      sharedImports: sharedDeps?.imports,
       studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
@@ -464,27 +463,22 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
-    // A vetra watch rebuild updates the tab-side registry through the package
-    // manager; in worker mode the reactor lives in the worker, so forward
-    // each update as a replace of the project's models source.
+    // A watch rebuild replaces the local package (updateLocalPackage); in
+    // worker mode the reactor lives in the worker, so forward only that.
     const { registerPackages } = workerClient.reactorClientModule;
-    onVetraPackageManager((vetraPackageManager) => {
-      vetraPackageManager.subscribe(() => {
-        void (async () => {
-          const source = await resolveDevProjectSource(
-            import.meta.env.BASE_URL,
+    subscribeLocalPackageChanges(packageManager, () => {
+      void (async () => {
+        const source = await resolveDevProjectSource(import.meta.env.BASE_URL);
+        if (!source) return;
+        try {
+          await registerPackages([source]);
+        } catch (error) {
+          logger.error(
+            "Failed to re-register project models in the reactor worker: @error",
+            error,
           );
-          if (!source) return;
-          try {
-            await registerPackages([source]);
-          } catch (error) {
-            logger.error(
-              "Failed to re-register project models in the reactor worker: @error",
-              error,
-            );
-          }
-        })();
-      });
+        }
+      })();
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.

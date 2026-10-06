@@ -19,9 +19,12 @@ import {
   INSPECTOR_OPS,
 } from "../../src/rpc/inspector-ops.js";
 import { createInspectorProxy } from "../../src/rpc/inspector-proxy.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
-import type { CorrelationId, RpcMessage } from "../../src/rpc/protocol.js";
-import type { IRpcTransport } from "../../src/rpc/transport.js";
+import {
+  MessageRouter,
+  type CorrelationId,
+  type IRpcTransport,
+  type RpcMessage,
+} from "@powerhousedao/reactor/rpc";
 
 const queueState: QueueStateSnapshot = {
   isPaused: true,

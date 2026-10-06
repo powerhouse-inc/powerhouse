@@ -13,7 +13,7 @@ import type {
   ValidationResult,
 } from "@powerhousedao/reactor";
 import { INSPECTOR_OPS } from "./inspector-ops.js";
-import type { MessageRouter } from "./message-router.js";
+import type { MessageRouter } from "@powerhousedao/reactor/rpc";
 import { opChannel } from "./op-channel.js";
 
 /**

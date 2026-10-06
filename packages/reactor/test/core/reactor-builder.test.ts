@@ -10,7 +10,11 @@ import type {
   WorkerInFlightSnapshot,
 } from "../../src/executor/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
-import type { DbConfig } from "../../src/executor/worker/protocol.js";
+import type { IReactor } from "../../src/core/types.js";
+import type {
+  DbConfig,
+  ModelManifestEntry,
+} from "../../src/executor/worker/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 import { GQL_CHANNEL_TYPE } from "../../src/sync/channels/gql-request-channel-factory.js";
 import { POLLING_CHANNEL_TYPE } from "../../src/sync/channels/gql-response-channel-factory.js";
@@ -792,6 +796,95 @@ describe("ReactorBuilder", () => {
       expect(() =>
         builder.withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory),
       ).toThrow('A channel factory for the type "local" is already registered');
+    });
+  });
+
+  describe("getImportableEntries", () => {
+    class LoadingWorker extends FakeWorker {
+      readonly loaded: ModelManifestEntry[] = [];
+      override loadModel(entry?: ModelManifestEntry): Promise<void> {
+        if (entry) this.loaded.push(entry);
+        return Promise.resolve();
+      }
+    }
+
+    const betaLoader = {
+      load: () =>
+        Promise.resolve({ filePath: FIXTURE_PATH, exportName: "betaModel" }),
+    };
+
+    const betaEntry: ModelManifestEntry = {
+      documentType: "test/beta",
+      version: "2",
+      spec: { module: { filePath: FIXTURE_PATH, exportName: "betaModel" } },
+    };
+
+    // A type the boot sources leave out, so creating one runs the loader.
+    async function loadBeta(reactor: IReactor): Promise<void> {
+      const document = documentModelDocumentModelModule.utils.createDocument();
+      document.header.documentType = "test/beta";
+      await reactor.create(document);
+    }
+
+    it("lists boot entries, and run-time loads beside the pool's broadcast", async () => {
+      const workers: LoadingWorker[] = [];
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources([
+          { filePath: FIXTURE_PATH, exportName: "alphaModel" },
+        ])
+        .withDocumentModelLoader(betaLoader)
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => {
+            const worker = new LoadingWorker(index);
+            workers.push(worker);
+            return worker;
+          },
+        });
+
+      const module = await builder.buildModule();
+      try {
+        expect(
+          builder.getImportableEntries("test/alpha").map((e) => e.version),
+        ).toEqual(["1"]);
+        expect(builder.getImportableEntries("test/beta")).toEqual([]);
+
+        await loadBeta(module.reactor);
+
+        expect(builder.getImportableEntries("test/beta")).toEqual([betaEntry]);
+        expect(workers[0]!.loaded).toEqual([betaEntry]);
+        expect(builder.getResolvedModelManifest()).toHaveLength(1);
+      } finally {
+        await module.reactor.kill();
+      }
+    });
+
+    it("lists run-time loads without a pool", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule])
+        .withDocumentModelLoader(betaLoader);
+      const module = await builder.buildModule();
+      try {
+        await loadBeta(module.reactor);
+
+        expect(builder.getImportableEntries("test/beta")).toEqual([betaEntry]);
+      } finally {
+        await module.reactor.kill();
+      }
+    });
+
+    it("lists boot entries without a loader", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        { filePath: FIXTURE_PATH, exportName: "alphaModel" },
+      ]);
+      const module = await builder.buildModule();
+      try {
+        expect(
+          builder.getImportableEntries("test/alpha").map((e) => e.documentType),
+        ).toEqual(["test/alpha"]);
+      } finally {
+        await module.reactor.kill();
+      }
     });
   });
 });

@@ -1,3 +1,57 @@
+## 6.2.3-dev.45 (2026-10-06)
+
+### 🚀 Features
+
+- retire AtomicNodeFs for a durable PGlite NodeFS with one-shot store conversion ([#3170](https://github.com/powerhouse-inc/powerhouse/pull/3170))
+- **reactor-api:** convert AtomicNodeFs snapshots to loose PGDATA ([449e4fd9ce](https://github.com/powerhouse-inc/powerhouse/commit/449e4fd9ce))
+- **reactor-api:** durable NodeFS with host fsync and periodic maintenance ([#3149](https://github.com/powerhouse-inc/powerhouse/issues/3149))
+- **reactor-api:** expose the PGlite node helpers as a subpath export ([1ee3f38b2f](https://github.com/powerhouse-inc/powerhouse/commit/1ee3f38b2f))
+- **reactor-api:** open on-disk PGlite over the durable NodeFS with a boot preflight ([1efa68c3ac](https://github.com/powerhouse-inc/powerhouse/commit/1efa68c3ac))
+- ⚠️  **reactor-workflow:** let any workflow piece read and write documents through the reactor ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+- **switchboard:** open PGlite stores over the durable NodeFS ([b5126c3056](https://github.com/powerhouse-inc/powerhouse/commit/b5126c3056))
+
+### 🩹 Fixes
+
+- **pglite:** open files read-write for the tree sync ([ce0fa23af5](https://github.com/powerhouse-inc/powerhouse/commit/ce0fa23af5))
+- **pglite:** bound the old-dir removal after conversion ([0aef46f0ca](https://github.com/powerhouse-inc/powerhouse/commit/0aef46f0ca))
+- **switchboard:** dump legacy PG16 stores from an in-memory copy ([8084fa5b1e](https://github.com/powerhouse-inc/powerhouse/commit/8084fa5b1e))
+- **switchboard:** resolve the legacy pg_dump wasm path on Windows ([c35148183a](https://github.com/powerhouse-inc/powerhouse/commit/c35148183a))
+
+### 🔥 Performance
+
+- **pglite:** sync the tree once after initdb, conversion and migration ([9ec8caf970](https://github.com/powerhouse-inc/powerhouse/commit/9ec8caf970))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** let any workflow piece read and write documents through the reactor  ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.44 (2026-10-06)
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods and timestamps to UTC ([#3175](https://github.com/powerhouse-inc/powerhouse/pull/3175))
+- **ph-cli:** ship the vetra drive icons instead of fetching them from IPFS ([#3178](https://github.com/powerhouse-inc/powerhouse/pull/3178))
+- **reactor:** let retry() on an owed deletion wait out the failed delivery ([917e7b05ce](https://github.com/powerhouse-inc/powerhouse/commit/917e7b05ce))
+- **reactor:** emit one JOB_FAILED per terminal failure ([#3173](https://github.com/powerhouse-inc/powerhouse/pull/3173))
+- **reactor:** make the reactor suite pass on Windows ([#3171](https://github.com/powerhouse-inc/powerhouse/pull/3171))
+- **reactor-api,codegen:** one acceptance rule for modules and subgraphs ([#3176](https://github.com/powerhouse-inc/powerhouse/pull/3176))
+- **reactor-workflow:** bound the step journal and trigger payloads ([#3177](https://github.com/powerhouse-inc/powerhouse/pull/3177))
+- **switchboard:** keep fatal shutdown exit codes intact ([#3174](https://github.com/powerhouse-inc/powerhouse/pull/3174))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.43 (2026-10-05)
 
 This was a version bump only, there were no code changes.

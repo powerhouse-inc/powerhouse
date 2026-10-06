@@ -43,6 +43,7 @@ export const workflowStepsOperations: WorkflowStepsOperations = {
       pieceVersion: action.input.pieceVersion,
       actionName: action.input.actionName,
       connectionId: action.input.connectionId || null,
+      reactorConnectionId: action.input.reactorConnectionId || null,
       config: action.input.config,
       retry: action.input.retry ?? null,
       timeoutSeconds: action.input.timeoutSeconds ?? null,
@@ -90,9 +91,11 @@ export const workflowStepsOperations: WorkflowStepsOperations = {
     step.pieceName = pieceName;
     step.pieceVersion = pieceVersion;
     step.actionName = actionName;
-    // null clears the connection; undefined leaves it unchanged.
+    // null clears a connection; undefined leaves it unchanged.
     if (action.input.connectionId !== undefined)
       step.connectionId = action.input.connectionId || null;
+    if (action.input.reactorConnectionId !== undefined)
+      step.reactorConnectionId = action.input.reactorConnectionId || null;
     if (action.input.config !== undefined && action.input.config !== null) {
       step.config = action.input.config;
     }

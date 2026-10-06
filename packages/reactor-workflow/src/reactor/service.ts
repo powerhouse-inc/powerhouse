@@ -4,7 +4,14 @@ import {
   blockKey,
   type BlockRef,
 } from "@powerhousedao/pieces-framework/block-type";
-import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
+import {
+  checkTriggerStrategy,
+  containsDocumentRef,
+  documentRefsIn,
+  expandDocumentRefs,
+  type DocumentReference,
+} from "@powerhousedao/pieces-framework/workflow";
+import type { ModelManifestEntry } from "@powerhousedao/reactor";
 import type {
   IWebhookEndpoints,
   IWebhookScope,
@@ -21,15 +28,15 @@ import {
   containsRedactedMarker,
   describeBuiltinPiece,
   isHostBound,
-  servesReactorPort,
   stepBlock,
   triggerBlock,
   declaredConnectionIds,
+  declaredReactorConnectionIds,
   DEFAULT_EGRESS_POLICY,
+  errorNameOf,
   resolvedBlock,
   stepConfigHash,
   pieceModuleRef,
-  reactorHandlers,
   PieceWorker,
   PieceWorkerError,
   PieceWorkerPool,
@@ -53,6 +60,9 @@ import {
   type ExpressionScope,
   type PieceWorkerSession,
   type ReplayedStep,
+  type ModelManifestSource,
+  type ReactorTap,
+  type StepReactorRequest,
   type SecretProvider,
   type SecretStore,
   type StepExecutionRecord,
@@ -67,6 +77,7 @@ import {
 } from "document-model";
 import {
   actions as connectionActions,
+  parseReactorConnectionConfig,
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
 import {
@@ -99,10 +110,10 @@ import {
   staticString,
 } from "./reactor-piece.js";
 import {
-  documentBlockTree,
   documentEventTree,
   documentFindTree,
-  documentGetTree,
+  documentReferenceTree,
+  documentTree,
   documentSchemaTree,
   documentTypesTree,
   fieldsFromSdl,
@@ -111,8 +122,10 @@ import {
   fromSample,
   lifecycleTriggerTree,
   scheduleTriggerTree,
+  treeValue,
   webhookTriggerTree,
   type OutputTree,
+  type OutputTreeNode,
 } from "./output-tree.js";
 import {
   fetchPieceActions,
@@ -140,10 +153,6 @@ import {
 import { installedPiece, installedPieces } from "./piece-registry.js";
 import { BlockResolver } from "./block-resolver.js";
 import {
-  ScopedDesignTimeReactorPort,
-  SubgraphReactorPort,
-} from "./reactor-port.js";
-import {
   bundleCacheDir,
   configuredEgress,
   createBlockExecutor,
@@ -169,7 +178,31 @@ import {
   PROJECT_SCOPE_KEY,
   testPartitionKey,
 } from "./piece-store-port.js";
-import { currentWorkflowId, withRunScope } from "./run-scope.js";
+import {
+  currentRunUser,
+  currentWorkflowId,
+  withRunScope,
+  type RunUser,
+} from "./run-scope.js";
+import {
+  assertConnectionReadable,
+  assertReactorConnectionsReadable,
+  authEnforced,
+} from "./reactor-access.js";
+import {
+  accessDenied,
+  isReactorError,
+  ReactorAccessDeniedError,
+} from "./reactor-errors.js";
+import { buildReactorRunScope } from "./run-scope-builder.js";
+import {
+  designTimeScope,
+  NO_JOURNAL,
+  reactorTap,
+  runJournal,
+  unboundReactorConnection,
+} from "./reactor-session.js";
+import { PUBLISH_WORKFLOW, runUserOfOperation } from "./run-user.js";
 import {
   ASSERT_BLOCK,
   BRANCH_BLOCK,
@@ -853,7 +886,12 @@ export class WorkflowRuntimeService {
       type: "powerhouse/workflow",
     });
     for (const document of page.results as WorkflowDocument[]) {
-      await this.updateRegistration(document.header.id, document.state.global);
+      const state = document.state.global;
+      // Denials live in memory, so a restart re-checks before arming.
+      if (state.status === "ENABLED") {
+        await this.seedReactorAccess(document.header.id, state);
+      }
+      await this.updateRegistration(document.header.id, state);
     }
 
     // Seeding nothing while endpoints exist is always a fault, and every
@@ -918,6 +956,14 @@ export class WorkflowRuntimeService {
     // Whatever this registration decides supersedes the pending retry, which
     // re-arms itself below if the catalog is still away.
     this.cancelResolutionRetry(workflowId);
+    const denial =
+      state.status === "ENABLED"
+        ? this.reactorDenials.get(workflowId)
+        : undefined;
+    if (denial) {
+      this.refuseArming(workflowId, state, denial);
+      return;
+    }
     const trigger =
       state.status === "ENABLED"
         ? runnableDefinition(state).trigger
@@ -1153,6 +1199,7 @@ export class WorkflowRuntimeService {
         triggerName: parsed.name,
         config,
         connectionId: trigger.connectionId,
+        reactorConnectionId: trigger.reactorConnectionId,
         pollIntervalMs,
         ...(settings && settings.length > 0
           ? { propertySettings: settings }
@@ -1223,6 +1270,118 @@ export class WorkflowRuntimeService {
     block: BlockRef,
   ): Promise<ParsedBlockType | undefined> {
     return resolvedBlock(await this.resolveBlock(block));
+  }
+
+  // Why the last publish or enable failed the reactor read check (ADR 0005
+  // §6). Such a workflow stays unarmed until a later publish or enable passes.
+  private readonly reactorDenials = new Map<string, string>();
+
+  // True when the denial changed, so registration must be redone.
+  private async recheckReactorAccess(
+    workflowId: string,
+    operation: OperationWithContext["operation"],
+  ): Promise<boolean> {
+    if (operation.error !== undefined) return false;
+    const type = operation.action.type;
+    const enabling =
+      type === "SET_WORKFLOW_STATUS" &&
+      (operation.action.input as { status?: string } | undefined)?.status ===
+        "ENABLED";
+    if (type !== PUBLISH_WORKFLOW && !enabling) return false;
+    const state =
+      parseWorkflowState(operation.resultingState) ??
+      (await this.host.reactorClient.get<WorkflowDocument>(workflowId)).state
+        .global;
+    const before = this.reactorDenials.get(workflowId);
+    await this.checkReactorAccess(
+      workflowId,
+      state,
+      type === PUBLISH_WORKFLOW
+        ? runUserOfOperation(operation, this.host.hostIdentity)
+        : undefined,
+    );
+    return this.reactorDenials.get(workflowId) !== before;
+  }
+
+  // Records a denial when the run user may not read the snapshot's reactor
+  // connections; any other error is thrown.
+  private async checkReactorAccess(
+    workflowId: string,
+    state: WorkflowState,
+    runUser?: RunUser | null,
+  ): Promise<void> {
+    const { trigger, steps } = runnableDefinition(state);
+    const connectionIds = declaredReactorConnectionIds({
+      trigger,
+      steps,
+      edges: [],
+    });
+    try {
+      await assertReactorConnectionsReadable(
+        this.host,
+        workflowId,
+        connectionIds,
+        runUser,
+      );
+      this.reactorDenials.delete(workflowId);
+    } catch (error) {
+      if (!isReactorError(error, ReactorAccessDeniedError)) throw error;
+      this.reactorDenials.set(workflowId, error.message);
+    }
+  }
+
+  // At seeding, a check that fails for any reason leaves the workflow unarmed.
+  private async seedReactorAccess(
+    workflowId: string,
+    state: WorkflowState,
+  ): Promise<void> {
+    try {
+      await this.checkReactorAccess(workflowId, state);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        "Could not check reactor access for workflow @workflow: @error",
+        workflowId,
+        error,
+      );
+      this.reactorDenials.set(workflowId, message);
+    }
+  }
+
+  // Why a workflow is not armed, or undefined when the reactor check passed.
+  reactorAccessDenial(workflowId: string): string | undefined {
+    return this.reactorDenials.get(workflowId);
+  }
+
+  private refuseArming(
+    workflowId: string,
+    state: WorkflowState,
+    reason: string,
+  ): void {
+    const had = this.registry.get(workflowId);
+    this.registry.delete(workflowId);
+    if (had && SUPERVISED_KINDS.has(had.kind)) this.dropSupervised(workflowId);
+    this.logger.warn(
+      "Workflow @workflow is not armed: @reason",
+      workflowId,
+      reason,
+    );
+    this.unarmed.add(workflowId);
+    const trigger = runnableDefinition(state).trigger;
+    if (!trigger) return;
+    this.supervisor()
+      .reject(
+        workflowId,
+        triggerBlock(trigger),
+        configRecord(trigger.config),
+        reason,
+      )
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Could not record the reactor access denial for workflow ${workflowId}`,
+          error,
+        );
+      });
   }
 
   // Workflows whose trigger resolved to nothing. Remembered only so the row
@@ -1398,18 +1557,23 @@ export class WorkflowRuntimeService {
       const opKey = operationKey({ operation, context });
       if (this.alreadySeen(opKey)) continue;
       if (context.scope === DOCUMENT_SCOPE) {
-        await this.matchDocumentLifecycle(operation, context, hints, opKey);
+        await this.matchDocumentLifecycle(operation, context, hints);
         await this.forgetDeletedWorkflow(operation, context);
         continue;
       }
       // A workflow edit updates the registry, then falls through: workflow docs are
       // also a document-event source, so a workflow can watch its own type.
       if (context.documentType === "powerhouse/workflow") {
+        // Publish and enable re-check reactor access first.
+        const rechecked = await this.recheckReactorAccess(
+          context.documentId,
+          operation,
+        );
         // Only a status or published-trigger change re-arms.
         await this.refreshRegistration(
           context.documentId,
           operation.resultingState,
-          true,
+          !rechecked,
         );
       }
       if (operation.error !== undefined) continue;
@@ -1440,7 +1604,7 @@ export class WorkflowRuntimeService {
           registration.workflowId,
           payload,
           registration.kind,
-          opKey,
+          `op:${opKey}`,
         );
       }
       if (context.documentType === DRIVE_DOCUMENT_TYPE) {
@@ -1449,7 +1613,6 @@ export class WorkflowRuntimeService {
           operation.action.type,
           operation.action.input,
           { index: operation.index, timestampUtcMs: operation.timestampUtcMs },
-          opKey,
         );
       }
     }
@@ -1485,16 +1648,16 @@ export class WorkflowRuntimeService {
     workflowId: string,
     payload: unknown,
     kind: string,
-    opKey: string,
+    dedupeKey: string,
   ): Promise<void> {
-    const fireKey = JSON.stringify([workflowId, opKey]);
+    const fireKey = JSON.stringify([workflowId, dedupeKey]);
     const store = await this.store();
     if (this.unjournaledFires.has(fireKey)) {
       if (!store) return;
       try {
         await store.claimDedupe(
           workflowId,
-          `op:${opKey}`,
+          dedupeKey,
           OPERATION_DEDUPE_TTL_MS,
           new Date().toISOString(),
         );
@@ -1519,7 +1682,7 @@ export class WorkflowRuntimeService {
     let claim: FireClaim;
     try {
       claim = await store.claimAndEnqueueRun(
-        `op:${opKey}`,
+        dedupeKey,
         OPERATION_DEDUPE_TTL_MS,
         new Date().toISOString(),
         enqueue,
@@ -1589,8 +1752,8 @@ export class WorkflowRuntimeService {
     );
   }
 
-  // Fires once per document, from whichever source reports it first. Only a fire that
-  // matched is recorded, so a creation with an unknown drive leaves ADD_FILE its turn.
+  // Skips the second source of a lifecycle fire; the journal's per-document claim
+  // decides. Only a match is recorded, so an unknown drive leaves ADD_FILE its turn.
   private readonly firedLifecycle = new Set<string>();
   private readonly firedLifecycleQueue: string[] = [];
 
@@ -1639,7 +1802,6 @@ export class WorkflowRuntimeService {
       parentId: string | null;
       operation: { index: number; timestampUtcMs: string };
     },
-    opKey: string,
   ): Promise<void> {
     let matched = false;
     for (const target of this.lifecycleTargets(kind)) {
@@ -1653,7 +1815,14 @@ export class WorkflowRuntimeService {
         continue;
       }
       matched = true;
-      await this.enqueueFire(target.workflowId, payload, kind, opKey);
+      // Keyed on the document, not the operation: its CREATE_DOCUMENT and the
+      // drive's ADD_FILE project concurrently, and one claim must win.
+      await this.enqueueFire(
+        target.workflowId,
+        payload,
+        kind,
+        `lifecycle:${kind}:${payload.documentId}`,
+      );
     }
     if (matched) this.recordLifecycleFired(kind, payload.documentId);
   }
@@ -1747,7 +1916,6 @@ export class WorkflowRuntimeService {
     operation: OperationWithContext["operation"],
     context: OperationWithContext["context"],
     hints: Map<string, LifecycleParentHint>,
-    opKey: string,
   ): Promise<void> {
     const kind = lifecycleKindForDocumentAction(operation.action.type);
     if (!kind) return;
@@ -1763,26 +1931,22 @@ export class WorkflowRuntimeService {
     const driveId =
       hint?.driveId ?? (await this.driveIdFromParent(hint?.parentCandidate));
     const created = kind === "document-created";
-    await this.fireLifecycle(
-      kind,
-      {
-        documentId,
-        // CREATE_DOCUMENT names the model it creates; the stored context type
-        // answers for a deletion, where the document can no longer be read.
-        documentType:
-          (created ? stringField(input, "model") : undefined) ??
-          (context.documentType || null),
-        // Only a creation carries a name; a deleted document's name is gone.
-        name: stringField(input, "name") ?? null,
-        driveId: driveId ?? null,
-        parentId: hint?.parentId ?? null,
-        operation: {
-          index: operation.index,
-          timestampUtcMs: operation.timestampUtcMs,
-        },
+    await this.fireLifecycle(kind, {
+      documentId,
+      // CREATE_DOCUMENT names the model it creates; the stored context type
+      // answers for a deletion, where the document can no longer be read.
+      documentType:
+        (created ? stringField(input, "model") : undefined) ??
+        (context.documentType || null),
+      // Only a creation carries a name; a deleted document's name is gone.
+      name: stringField(input, "name") ?? null,
+      driveId: driveId ?? null,
+      parentId: hint?.parentId ?? null,
+      operation: {
+        index: operation.index,
+        timestampUtcMs: operation.timestampUtcMs,
       },
-      opKey,
-    );
+    });
   }
 
   // The drive's fallback view: ADD_FILE always accompanies a CREATE_DOCUMENT, so it fires only
@@ -1792,7 +1956,6 @@ export class WorkflowRuntimeService {
     actionType: string,
     input: unknown,
     operation: { index: number; timestampUtcMs: string },
-    opKey: string,
   ): Promise<void> {
     const kind = lifecycleKindForDriveAction(actionType);
     if (!kind) return;
@@ -1816,18 +1979,14 @@ export class WorkflowRuntimeService {
       }
     }
 
-    await this.fireLifecycle(
-      kind,
-      {
-        documentId,
-        documentType: documentType ?? null,
-        name,
-        driveId,
-        parentId: stringField(record, "parentFolder") ?? null,
-        operation,
-      },
-      opKey,
-    );
+    await this.fireLifecycle(kind, {
+      documentId,
+      documentType: documentType ?? null,
+      name,
+      driveId,
+      parentId: stringField(record, "parentFolder") ?? null,
+      operation,
+    });
   }
 
   private triggerSupervisor?: TriggerSupervisor;
@@ -1852,13 +2011,13 @@ export class WorkflowRuntimeService {
       },
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
+      reactorAccess: (binding, requireReactor, runUser) =>
+        this.triggerReactorAccess(binding, requireReactor, runUser),
+      models: this.models,
       cacheDir: bundleCacheDir(),
       resolver: pieceResolver(),
       // Trigger hooks reach the same services steps do.
       egress: configuredEgress(),
-      // And the same reactor, behind the same gate: a reactor-piece trigger
-      // reads documents on the terms its actions already do.
-      reactor: new SubgraphReactorPort(this.host),
       // Overrides the 60s default; the 1s floor still applies.
       defaultIntervalMs:
         Number(process.env.PH_WORKFLOWS_POLL_INTERVAL_MS) || undefined,
@@ -2235,6 +2394,119 @@ export class WorkflowRuntimeService {
     }
   }
 
+  // Importable models for every piece child this runtime forks.
+  private readonly models: ModelManifestSource = {
+    entries: () => this.host.modelManifest?.() ?? [],
+    lookup: (documentType) => this.modelEntries(documentType),
+  };
+
+  // Without a type: every type the reactor has registered, plus the boot list.
+  private async modelEntries(
+    documentType: string | undefined,
+  ): Promise<ModelManifestEntry[]> {
+    const lookup = this.host.modelEntries?.bind(this.host);
+    if (!lookup) return [];
+    if (documentType !== undefined) return lookup(documentType);
+    const types = new Set(
+      (this.host.modelManifest?.() ?? []).map((entry) => entry.documentType),
+    );
+    const modules = await this.host.reactorClient.getDocumentModelModules();
+    for (const module of modules.results) {
+      types.add(module.documentModel.global.id);
+    }
+    return [...types].flatMap((type) => lookup(type));
+  }
+
+  // The requireReactor a block's descriptor declares.
+  private async declaredReactor(
+    block: ParsedBlockType,
+  ): Promise<"read" | "write" | undefined> {
+    if (builtinPiece(block.packageName)) return undefined;
+    const descriptor = await this.pieceDescriptor(targetOf(block));
+    const blocks =
+      block.kind === "trigger" ? descriptor.triggers : descriptor.actions;
+    return blocks.find((candidate) => candidate.name === block.name)
+      ?.requireReactor;
+  }
+
+  // Who a caller acts as at design time and in a single-step test.
+  private callerRunUser(ctx: WorkflowCaller | undefined): RunUser | null {
+    const subject = ctx ? this.host.subjectOf?.(ctx) : undefined;
+    return subject?.address ? { address: subject.address, subject } : null;
+  }
+
+  // The bound reactor connection's scope, which the run user must be able to read.
+  private async reactorScope(
+    reactorConnectionId: string | null | undefined,
+    requireReactor: "read" | "write",
+    runUser: RunUser | null,
+  ) {
+    if (reactorConnectionId?.includes("{{")) {
+      throw unboundReactorConnection(reactorConnectionId);
+    }
+    const base = await buildReactorRunScope(this.host, {
+      reactorConnectionId,
+      requireReactor,
+      runUser,
+    });
+    if (runUser && reactorConnectionId) {
+      await assertConnectionReadable(this.host, reactorConnectionId, runUser);
+    }
+    return base;
+  }
+
+  // ctx.reactor for a step: the run user, or the caller in a single-step test.
+  private async stepReactorAccess(
+    request: StepReactorRequest,
+  ): Promise<ReactorTap | undefined> {
+    const declared = await this.declaredReactor(request.block);
+    if (!declared) return undefined;
+    const base = await this.reactorScope(
+      request.reactorConnectionId,
+      declared,
+      currentRunUser() ?? null,
+    );
+    return reactorTap(this.host, base, runJournal());
+  }
+
+  // A live hook acts as the publisher; a design-time test passes the caller.
+  private async triggerReactorAccess(
+    binding: PieceTriggerBinding,
+    requireReactor: "read" | "write",
+    runUser: RunUser | null | undefined,
+  ): Promise<ReactorTap> {
+    const bound = binding.reactorConnectionId;
+    const user =
+      runUser !== undefined
+        ? runUser
+        : ((await assertReactorConnectionsReadable(
+            this.host,
+            binding.workflowId,
+            new Set(bound ? [bound] : []),
+          )) ?? null);
+    const base = await this.reactorScope(bound, requireReactor, user);
+    return reactorTap(this.host, base, NO_JOURNAL);
+  }
+
+  // Option resolvers read as the GraphQL caller, within a bound connection.
+  private async designReactorAccess(
+    block: ParsedBlockType,
+    ctx: WorkflowCaller | undefined,
+    reactorConnectionId: string | undefined,
+  ): Promise<ReactorTap | undefined> {
+    if (!(await this.declaredReactor(block))) return undefined;
+    const runUser = this.callerRunUser(ctx);
+    if (!runUser && authEnforced(this.host)) {
+      throw accessDenied(
+        "Design-time reactor access requires a signed-in caller while auth enforcement is on",
+      );
+    }
+    if (reactorConnectionId) {
+      await this.reactorScope(reactorConnectionId, "read", runUser);
+    }
+    return reactorTap(this.host, designTimeScope(runUser), NO_JOURNAL);
+  }
+
   private readonly descriptors = new Map<string, PieceDescriptor>();
   private designWorker?: PieceWorker;
 
@@ -2278,7 +2550,7 @@ export class WorkflowRuntimeService {
       const piece = await pieceResolver().resolve(target);
       // Loading the bundle runs the piece module's top-level code, so the
       // descriptor is built in the worker, never in the reactor process.
-      this.designWorker ??= new PieceWorker();
+      this.designWorker ??= new PieceWorker({ models: this.models });
       let output: unknown;
       try {
         const result = await this.designWorker.describePiece(
@@ -2500,6 +2772,17 @@ export class WorkflowRuntimeService {
     // leaves UNCONFIGURED behind and only a recorded check clears it, so
     // trusting the flag here refuses the first check of every connection —
     // the one an author runs the moment they finish filling it in.
+    // No credentials: the reactor decides each call, so only the config is checked.
+    if (state.authType === "REACTOR") {
+      const parsed = parseReactorConnectionConfig(state.config);
+      return this.recordCheckResult(document, {
+        ok: parsed.ok,
+        detail: parsed.ok
+          ? `Local reactor, ${parsed.config.access ?? "write"} access`
+          : parsed.error,
+        accountLabel,
+      });
+    }
     if (state.authType !== "NONE" && !hasCredentials(state)) {
       return this.recordCheckResult(document, {
         ok: false,
@@ -2570,7 +2853,7 @@ export class WorkflowRuntimeService {
     // untrusted piece code and must not run in the reactor process.
     let outcome: CheckConnectionOutcome;
     try {
-      this.designWorker ??= new PieceWorker();
+      this.designWorker ??= new PieceWorker({ models: this.models });
       const result = await this.designWorker.checkConnection(
         // A check that reaches somewhere a run could not would call a
         // connection healthy that every step using it will fail on.
@@ -3133,10 +3416,15 @@ export class WorkflowRuntimeService {
     connectionId?: string,
     ctx?: WorkflowCaller,
     searchValue?: string,
+    // The step's reactor connection, which narrows what a resolver reads.
+    reactorConnectionId?: string,
   ): Promise<unknown> {
     // Auth-dependent options() resolvers need the step's connection. Nothing
     // about the request authorizes it, so the caller's own read access does.
     if (connectionId) await this.assertCanReadDocument(connectionId, ctx);
+    if (reactorConnectionId) {
+      await this.assertCanReadDocument(reactorConnectionId, ctx);
+    }
     const resolution = await this.resolveBlock(block);
     const parsed = resolvedBlock(resolution);
     if (!parsed) {
@@ -3156,7 +3444,12 @@ export class WorkflowRuntimeService {
       ).resolve(connectionId, { piecePackage: parsed.packageName });
     }
     const piece = await pieceResolver().resolve(targetOf(parsed));
-    this.designWorker ??= new PieceWorker();
+    const reactor = await this.designReactorAccess(
+      parsed,
+      ctx,
+      reactorConnectionId,
+    );
+    this.designWorker ??= new PieceWorker({ models: this.models });
     const result = await this.designWorker.resolveOptions(
       {
         ...pieceModuleRef(piece),
@@ -3167,25 +3460,11 @@ export class WorkflowRuntimeService {
         ...(searchValue !== undefined ? { searchValue } : {}),
         auth,
         projectId: PROJECT_SCOPE_KEY,
-        // The reactor piece's options() reads the reactor it offers choices
-        // from, over the same port a step of it would use.
-
-        // The same identity rule the run path applies: design time is not a
-        // way round it, and a piece offered the member would have none.
-        ...(servesReactorPort(parsed.packageName)
-          ? { reactorAccess: true }
-          : {}),
         // Options come from the same service the step will call: the editor
         // must not offer a choice a run cannot reach.
         ...(this.designEgress ? { egress: this.designEgress } : {}),
       },
-      servesReactorPort(parsed.packageName)
-        ? {
-            hostCalls: reactorHandlers(
-              new ScopedDesignTimeReactorPort(this.host, ctx),
-            ),
-          }
-        : {},
+      reactor ? { reactor } : {},
     );
     return result.output;
   }
@@ -3241,19 +3520,12 @@ export class WorkflowRuntimeService {
         );
         return {
           source: stateChildren.length > 0 ? "schema" : "static",
-          nodes: documentGetTree(stateChildren),
+          nodes: documentTree(stateChildren),
         };
       }
       case DOCUMENT_CREATE_BLOCK:
-      case DOCUMENT_DISPATCH_BLOCK: {
-        const stateChildren = await this.stateFields(
-          staticString(record.documentType),
-        );
-        return {
-          source: stateChildren.length > 0 ? "schema" : "static",
-          nodes: documentBlockTree(stateChildren),
-        };
-      }
+      case DOCUMENT_DISPATCH_BLOCK:
+        return { source: "static", nodes: documentReferenceTree() };
       default: {
         const parsed = await this.resolvedPiece(block);
         if (!parsed) return { source: "none", nodes: [] };
@@ -3344,12 +3616,15 @@ export class WorkflowRuntimeService {
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
-    const test = await this.triggerTest(workflowId, trigger, options);
+    if (trigger.reactorConnectionId) {
+      await this.assertCanReadDocument(trigger.reactorConnectionId, ctx);
+    }
+    const test = await this.triggerTest(workflowId, trigger, options, ctx);
     const startedAt = new Date().toISOString();
     const recordTest = (
       outcome: Pick<
         StepExecutionRecord,
-        "status" | "output" | "port" | "error"
+        "status" | "output" | "port" | "error" | "errorName"
       >,
     ) =>
       this.recordTest(workflowId, state, document.header.name, {
@@ -3368,9 +3643,11 @@ export class WorkflowRuntimeService {
     } catch (error) {
       // A host call the hook made may have committed the write it asked for,
       // so the test neither succeeded nor failed. It takes no port either.
+      const errorName = errorNameOf(error);
       await recordTest({
         status: isIndeterminateError(error) ? "INDETERMINATE" : "FAILED",
         error: pieceFailureDetail(error, "Trigger test timed out"),
+        ...(errorName ? { errorName } : {}),
       });
       throw error;
     }
@@ -3383,6 +3660,7 @@ export class WorkflowRuntimeService {
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
     options: TriggerTestOptions,
+    ctx?: WorkflowCaller,
   ): Promise<{ input: unknown; sample: () => Promise<unknown> }> {
     const config = configRecord(trigger.config);
     const block = triggerBlock(trigger);
@@ -3424,7 +3702,9 @@ export class WorkflowRuntimeService {
     }
     return {
       input: binding.config,
-      sample: () => this.supervisor().test(binding),
+      // A trigger test acts as its caller.
+      sample: () =>
+        this.supervisor().test(binding, { runUser: this.callerRunUser(ctx) }),
     };
   }
 
@@ -3502,6 +3782,7 @@ export class WorkflowRuntimeService {
         status: record.status === "SUCCEEDED" ? "SUCCEEDED" : "FAILED",
         steps: [record],
         ...(error ? { error } : {}),
+        ...(record.errorName ? { errorName: record.errorName } : {}),
       });
     } catch (error) {
       this.logger.warn(
@@ -3550,6 +3831,7 @@ export class WorkflowRuntimeService {
       // trigger that arms cannot be followed by a step that cannot start.
       (block) => this.resolveBlock(block),
       this.oauthRefresher(),
+      (request) => this.stepReactorAccess(request),
     ));
   }
 
@@ -3559,6 +3841,7 @@ export class WorkflowRuntimeService {
     // A queue depth of 0 waits without limit, which is what one shared worker
     // did — a cap turns a saturated pool into failures instead of latency.
     return (this.pieceWorkers ??= new PieceWorkerPool({
+      models: this.models,
       size: Number(process.env.PH_WORKFLOWS_RUN_CONCURRENCY) || undefined,
       maxQueueDepth:
         Number(process.env.PH_WORKFLOWS_RUN_QUEUE_DEPTH) || undefined,
@@ -3596,6 +3879,7 @@ export class WorkflowRuntimeService {
     // missing value.
     let documentName: string | undefined;
     let definition: ReturnType<typeof toWorkflowDefinition>;
+    let runUser: RunUser | null | undefined;
     try {
       // "manual" is the only kind a caller can ask for; every other one is
       // system-initiated and already authorized by whatever armed the trigger.
@@ -3617,6 +3901,12 @@ export class WorkflowRuntimeService {
         );
       }
       definition = toWorkflowDefinition(state);
+      // Before each run: grants can change after the publish was checked.
+      runUser = await assertReactorConnectionsReadable(
+        this.host,
+        workflowId,
+        declaredReactorConnectionIds(definition),
+      );
     } catch (error) {
       // An adopted row is already durable: closing it out here is what keeps
       // a refused fire from leaving a PENDING run nothing will ever start.
@@ -3624,6 +3914,7 @@ export class WorkflowRuntimeService {
         await store?.failRun(
           enqueuedRunId,
           error instanceof Error ? error.message : String(error),
+          errorNameOf(error),
         );
       }
       throw error;
@@ -3712,6 +4003,7 @@ export class WorkflowRuntimeService {
           runId,
           connections,
           pieceWorker: session,
+          ...(runUser !== undefined ? { runUser } : {}),
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (journal && journaledRunId) {
@@ -3787,6 +4079,7 @@ export class WorkflowRuntimeService {
         await store.failRun(
           runId,
           error instanceof Error ? error.message : String(error),
+          errorNameOf(error),
         );
       }
       throw error;
@@ -3982,6 +4275,10 @@ export class WorkflowRuntimeService {
         });
         continue;
       }
+      // Reads re-read the documents they referenced; writes are never repeated.
+      if (containsDocumentRef(output) && (await this.rereads(current))) {
+        continue;
+      }
       completedSteps.set(row.step_id, { output, port: row.port });
     }
     return this.fire(
@@ -3991,6 +4288,14 @@ export class WorkflowRuntimeService {
       { completedSteps, rerunOf: runId },
       ctx,
     );
+  }
+
+  // Whether a rerun executes this step again rather than reuse its output.
+  private async rereads(
+    step: ReturnType<typeof stepDefinition>,
+  ): Promise<boolean> {
+    const parsed = resolvedBlock(await this.resolveBlock(stepBlock(step)));
+    return parsed ? (await this.declaredReactor(parsed)) === "read" : false;
   }
 
   // Runs one draft step against the latest test outputs of the blocks it
@@ -4012,6 +4317,9 @@ export class WorkflowRuntimeService {
     if (!step) throw new Error(`Step "${stepId}" not found`);
     if (step.connectionId) {
       await this.assertCanReadDocument(step.connectionId, ctx);
+    }
+    if (step.reactorConnectionId) {
+      await this.assertCanReadDocument(step.reactorConnectionId, ctx);
     }
     const refused = (error: string): StepTestResult => ({
       runId: null,
@@ -4090,6 +4398,8 @@ export class WorkflowRuntimeService {
           connections: declaredConnectionIds(definition),
           pieceWorker: session,
           stepTest: true,
+          // A single-step test acts as its caller.
+          runUser: this.callerRunUser(ctx),
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (store && journaledRunId) {
@@ -4114,7 +4424,9 @@ export class WorkflowRuntimeService {
     } catch (error) {
       if (store && runId) {
         const detail = error instanceof Error ? error.message : String(error);
-        await store.failRun(runId, detail).catch(() => undefined);
+        await store
+          .failRun(runId, detail, errorNameOf(error))
+          .catch(() => undefined);
         await this.noteLastTest(
           workflowId,
           { stepId: step.id, key: step.key },
@@ -4155,6 +4467,7 @@ export class WorkflowRuntimeService {
         ? { output: record.output }
         : {}),
       ...(record.error ? { error: record.error } : {}),
+      ...(record.errorName ? { errorName: record.errorName } : {}),
       durationMs,
     };
   }
@@ -4189,7 +4502,11 @@ export class WorkflowRuntimeService {
       if (sample.kind !== "succeeded") {
         return { error: untestedError("the trigger", sample) };
       }
-      const { payload, empty } = triggerSamplePayload(sample.output);
+      const read = await this.readReferencedDocuments(sample.output, ctx);
+      if ("error" in read) {
+        return { error: `The last test of the trigger read ${read.error}` };
+      }
+      const { payload, empty } = triggerSamplePayload(read.value);
       if (empty) {
         return {
           error: "Test the trigger first: its last test returned no items",
@@ -4232,10 +4549,85 @@ export class WorkflowRuntimeService {
       if (sample.kind !== "succeeded") {
         return { error: untestedError(label, sample) };
       }
-      priorSteps[candidate.key] = { output: sample.output };
-      samples.push({ label, value: sample.output });
+      const read = await this.readReferencedDocuments(sample.output, ctx);
+      if ("error" in read) {
+        return { error: `The last test of ${label} read ${read.error}` };
+      }
+      priorSteps[candidate.key] = { output: read.value };
+      samples.push({ label, value: read.value });
     }
     return { triggerPayload, priorSteps, samples };
+  }
+
+  // A journaled sample with each document it references read now, as the
+  // caller: the journal keeps references, not state.
+  private async readReferencedDocuments(
+    value: unknown,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<{ value: unknown } | { error: string }> {
+    const references = documentRefsIn(value);
+    if (references.length === 0) return { value };
+    const subject = ctx ? this.host.subjectOf?.(ctx) : undefined;
+    const key = (reference: DocumentReference) =>
+      `${reference.branch}:${reference.documentId}`;
+    const read = new Map<string, Record<string, unknown>>();
+    for (const reference of references) {
+      if (read.has(key(reference))) continue;
+      try {
+        await this.assertCanReadDocument(reference.documentId, ctx);
+        const document = await this.host.reactorClient.get(
+          reference.documentId,
+          { branch: reference.branch, ...(subject ? { subject } : {}) },
+        );
+        read.set(key(reference), {
+          header: document.header,
+          state: document.state,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        return {
+          error: `document "${reference.documentId}", which cannot be read now: ${detail}`,
+        };
+      }
+    }
+    return {
+      value: expandDocumentRefs(value, (reference) =>
+        read.get(key(reference))!,
+      ),
+    };
+  }
+
+  // A journaled sample's document references as the picker's document shape:
+  // the reference's own header fields, and the model's global state fields.
+  private async documentShapes(
+    value: unknown,
+  ): Promise<{ value: unknown; nodes: OutputTreeNode[] }> {
+    const types = [
+      ...new Set(documentRefsIn(value).map((ref) => ref.documentType)),
+    ];
+    const fields = new Map(
+      await Promise.all(
+        types.map(
+          async (type) => [type, await this.stateFields(type)] as const,
+        ),
+      ),
+    );
+    const treeOf = (reference: DocumentReference) =>
+      documentTree(fields.get(reference.documentType) ?? []);
+    const expanded = expandDocumentRefs(value, (reference) => {
+      const shape = treeValue(treeOf(reference));
+      return {
+        ...shape,
+        header: {
+          ...(shape.header as Record<string, unknown>),
+          id: reference.documentId,
+          documentType: reference.documentType,
+          branch: reference.branch,
+          revision: reference.revision,
+        },
+      };
+    });
+    return { value: expanded, nodes: fromSample(value, 0, treeOf) };
   }
 
   // A block's lastTest, read back from the journal. A test of a different
@@ -4311,12 +4703,15 @@ export class WorkflowRuntimeService {
       ctx,
     );
     if (sample.kind === "succeeded") {
-      const value = isTrigger
+      const journaled = isTrigger
         ? triggerSamplePayload(sample.output).payload
         : sample.output;
+      // Documents the test read are journaled as references; their fields
+      // come from the model, never from journaled state.
+      const { value, nodes } = await this.documentShapes(journaled);
       return {
         source: "test",
-        nodes: fromSample(value),
+        nodes,
         sample: value,
         testedAt: sample.testedAt,
         runId: sample.runId,
