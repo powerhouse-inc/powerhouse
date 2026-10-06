@@ -65,7 +65,7 @@ function observedSubgraphs(classes: readonly SubgraphClass[]) {
 describe("Node / server import", () => {
   const loader = new ImportPackageLoader();
 
-  it("reads the document-model subpath and keeps every export with the key", async () => {
+  it("reads the document-model subpath and keeps only a non-null documentModel", async () => {
     const loaded = await loader.loadDocumentModels(fixture.root);
     expect(
       observedModels(models(loaded)).map((entry) => [entry.id, entry.version]),
@@ -73,13 +73,7 @@ describe("Node / server import", () => {
       ["test/ledger", 1],
       ["test/ledger", 2],
     ]);
-    // Three exports load. Both ledger versions are kept, and the
-    // null-documentModel export is kept because this loader checks only that
-    // the key exists. The CDN loader drops it.
-    expect(loaded).toHaveLength(3);
-    expect(
-      loaded.filter((module) => module.documentModel === null),
-    ).toHaveLength(1);
+    expect(loaded).toHaveLength(2);
   });
 
   it("observes the same thing for the schema-first package", async () => {
@@ -187,7 +181,7 @@ describe("Vite / local source", () => {
     await vite.close();
   });
 
-  it("reads model subpath exports with the documentModel key", async () => {
+  it("reads model subpath exports and keeps only a non-null documentModel", async () => {
     const loader = VitePackageLoader.build(vite);
     const loaded = await loader.loadDocumentModels(fixture.root, true);
     expect(
@@ -196,10 +190,7 @@ describe("Vite / local source", () => {
       ["test/ledger", 1],
       ["test/ledger", 2],
     ]);
-    expect(loaded).toHaveLength(3);
-    expect(
-      loaded.filter((module) => module.documentModel === null),
-    ).toHaveLength(1);
+    expect(loaded).toHaveLength(2);
     const schemaFirst = await loader.loadDocumentModels(
       fixture.schemaFirstRoot,
       true,
