@@ -660,6 +660,9 @@ function parseWorkflowState(
 }
 
 // What a registration is decided from, so a draft edit can be told apart.
+// Runs an operator started rather than a trigger fired.
+const OPERATOR_RUN_KINDS: ReadonlySet<string> = new Set(["manual", "rerun"]);
+
 function registrationKey(state: WorkflowState): string {
   const trigger = runnableDefinition(state).trigger;
   // The trigger's last test never changes what arms.
@@ -4063,7 +4066,8 @@ export class WorkflowRuntimeService {
       }
       // `policy.onFailure`, enforced: PARK stops the trigger refiring, NOTIFY
       // says so where an operator will see it, IGNORE is the old behaviour.
-      if (result.status === "FAILED") {
+      // Only for a trigger's firing: an operator's run says nothing about it.
+      if (result.status === "FAILED" && !OPERATOR_RUN_KINDS.has(triggerKind)) {
         await this.applyFailureMode(policy, workflowId, runId, result.error);
       }
       const finished = { ...result, runId };

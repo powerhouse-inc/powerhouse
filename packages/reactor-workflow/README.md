@@ -298,7 +298,7 @@ new, carries one.
 | `maxParallelRuns`          | `reactor/run-gate.ts`     | Bounds PARALLEL; null is unbounded. SINGLETON and QUEUE are 1 by definition                           |
 | `runTimeoutSeconds`        | `pieces/engine/coordinator.ts` | A run deadline from FIRING time, checked between steps and bounding every retry wait; expiry ends the run CANCELLED |
 | `defaultRetry`, step `retry` | `pieces/engine/retry.ts` | Attempts, backoff, delays and `retryOn`; attempts land on the step's journal row                      |
-| `onFailure`                | `reactor/service.ts`      | PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing                               |
+| `onFailure`                | `reactor/service.ts`      | On a trigger's failed run: PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing. A failed manual run or rerun changes nothing |
 | `maxSuspensionDays`        | —                         | **Not enforced**: nothing suspends. Waitpoints, `run.pause` and `generateResumeUrl` all throw         |
 | `retainRunsDays`           | —                         | **Not enforced** per workflow; `PH_WORKFLOWS_RUN_RETENTION_DAYS` is the journal-wide control           |
 | `journalAsDocument`        | —                         | **Not enforced**: the journal is relational, and there is no run document model                       |
@@ -311,7 +311,8 @@ too. Unless an author changed them, a workflow now:
 
 1. **Serialises its runs** (QUEUE): a firing waits while a run of the same
    workflow executes.
-2. **Parks its trigger on the first terminal failure** (PARK): the trigger
+2. **Parks its trigger on the first terminal failure of a run it fired**
+   (PARK; a failed manual run or rerun does not count): the trigger
    stops firing until the workflow is re-published or re-enabled.
 3. **Has a one-hour run deadline counted from firing** (3600s): queue wait
    included; past it the run ends CANCELLED, before its next step.

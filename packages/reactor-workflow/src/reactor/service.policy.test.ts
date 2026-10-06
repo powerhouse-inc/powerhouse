@@ -287,13 +287,7 @@ describe("policy.onFailure", () => {
       updated_at: new Date().toISOString(),
     });
 
-    const run = await service.fire(
-      "wf-park",
-      undefined,
-      "manual",
-      undefined,
-      CTX,
-    );
+    const run = await service.fire("wf-park", undefined, "schedule");
 
     expect(run.status).toBe("FAILED");
     const row = await store!.getTriggerState("wf-park");
@@ -342,13 +336,7 @@ describe("policy.onFailure", () => {
     );
 
     // A terminal failure under PARK takes it out of the ENABLED set.
-    const run = await service.fire(
-      "wf-park-restart",
-      undefined,
-      "manual",
-      undefined,
-      CTX,
-    );
+    const run = await service.fire("wf-park-restart", undefined, "schedule");
     expect(run.status).toBe("FAILED");
     const parked = await store.getTriggerState("wf-park-restart");
     expect(parked?.status).toBe(PARKED_TRIGGER_STATUS);
@@ -420,7 +408,7 @@ describe("policy.onFailure", () => {
       updated_at: new Date().toISOString(),
     });
 
-    await service.fire("wf-ignore", undefined, "manual", undefined, CTX);
+    await service.fire("wf-ignore", undefined, "schedule");
 
     expect((await store!.getTriggerState("wf-ignore"))?.status).toBe("ENABLED");
   });
@@ -457,10 +445,78 @@ describe("policy.onFailure", () => {
       updated_at: new Date().toISOString(),
     });
 
-    await notifying.fire("wf-notify", undefined, "manual", undefined, CTX);
+    await notifying.fire("wf-notify", undefined, "schedule");
     notifying.shutdown();
 
     expect((await store!.getTriggerState("wf-notify"))?.status).toBe("ENABLED");
     expect(logged.join("\n")).toContain("NOTIFY");
+  });
+});
+
+function scheduleRow(workflowId: string) {
+  return {
+    workflow_id: workflowId,
+    piece_name: "@powerhousedao/piece-core",
+    trigger_name: "schedule",
+    config_hash: "h",
+    status: "ENABLED",
+    store_state: "{}",
+    interval_ms: 1000,
+    next_poll_at: null,
+    last_poll_at: null,
+    last_error: null,
+    consecutive_failures: 0,
+    lease_owner: null,
+    lease_expires_at: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// onFailure is about the trigger: an operator's own run failing says nothing
+// about whether the trigger should keep firing.
+describe("policy.onFailure on an operator's run", () => {
+  it("does not park the trigger when a manual run fails", async () => {
+    workflow("wf-park-manual", {
+      action: "boom",
+      policy: { onFailure: "PARK" },
+    });
+    const store = (await service.store())!;
+    await store.upsertTriggerState(scheduleRow("wf-park-manual"));
+
+    const run = await service.fire(
+      "wf-park-manual",
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+
+    expect(run.status).toBe("FAILED");
+    expect((await store.getTriggerState("wf-park-manual"))?.status).toBe(
+      "ENABLED",
+    );
+  });
+
+  it("does not park the trigger when a rerun fails", async () => {
+    workflow("wf-park-rerun", {
+      action: "boom",
+      policy: { onFailure: "IGNORE" },
+    });
+    const store = (await service.store())!;
+    await store.upsertTriggerState(scheduleRow("wf-park-rerun"));
+    const failed = await service.fire("wf-park-rerun", undefined, "schedule");
+    expect(failed.status).toBe("FAILED");
+    documents.apply(
+      "wf-park-rerun",
+      actions.setPolicy({ onFailure: "PARK" } as never),
+      actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+    );
+
+    const rerun = await service.rerun(failed.runId!, CTX);
+
+    expect(rerun.status).toBe("FAILED");
+    expect((await store.getTriggerState("wf-park-rerun"))?.status).toBe(
+      "ENABLED",
+    );
   });
 });
