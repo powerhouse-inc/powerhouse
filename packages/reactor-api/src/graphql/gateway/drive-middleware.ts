@@ -1,3 +1,9 @@
+import {
+  Kind,
+  OperationTypeNode,
+  parse,
+  type OperationDefinitionNode,
+} from "graphql";
 import type { DriveOwnershipCache } from "./drive-ownership-cache.js";
 import type { FetchHandler } from "./types.js";
 
@@ -73,16 +79,54 @@ async function isCacheBypassOperation(
       operationName?: unknown;
       query?: unknown;
     };
-    if (typeof body.operationName === "string") {
-      return CACHE_BYPASS_OPERATIONS.has(body.operationName);
+    const operationName =
+      typeof body.operationName === "string" ? body.operationName : undefined;
+    if (operationName !== undefined) {
+      if (CACHE_BYPASS_OPERATIONS.has(operationName)) {
+        return true;
+      }
+    } else if (
+      typeof body.query === "string" &&
+      CACHE_BYPASS_OPERATIONS.has(extractOperationName(body.query))
+    ) {
+      return true;
     }
-    if (typeof body.query === "string") {
-      return CACHE_BYPASS_OPERATIONS.has(extractOperationName(body.query));
-    }
-    return false;
+    return (
+      typeof body.query === "string" &&
+      selectsOnlyBypassFields(body.query, operationName)
+    );
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether the operation is a mutation whose every root field is a bypass
+ * operation, whatever the client named it: reactor-browser sends
+ * `CreateDocument`.
+ */
+function selectsOnlyBypassFields(
+  query: string,
+  operationName: string | undefined,
+): boolean {
+  const operations = parse(query).definitions.filter(
+    (definition): definition is OperationDefinitionNode =>
+      definition.kind === Kind.OPERATION_DEFINITION,
+  );
+  const operation =
+    operationName === undefined
+      ? operations.length === 1
+        ? operations[0]
+        : undefined
+      : operations.find((candidate) => candidate.name?.value === operationName);
+  if (!operation || operation.operation !== OperationTypeNode.MUTATION) {
+    return false;
+  }
+  return operation.selectionSet.selections.every(
+    (selection) =>
+      selection.kind === Kind.FIELD &&
+      CACHE_BYPASS_OPERATIONS.has(selection.name.value),
+  );
 }
 
 const OPERATION_NAME_PATTERN = /\b(?:mutation|query|subscription)\s+(\w+)/;
