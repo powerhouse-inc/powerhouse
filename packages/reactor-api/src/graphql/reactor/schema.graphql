@@ -82,6 +82,8 @@ type PHDocument {
   id: String!
   slug: String
   preferredEditor: String
+  meta: JSONObject
+  protocolVersions: JSONObject
   name: String!
   documentType: String!
   state: JSONObject!
