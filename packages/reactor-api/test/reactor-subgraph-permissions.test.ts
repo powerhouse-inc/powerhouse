@@ -304,6 +304,36 @@ describe("ReactorSubgraph Permission Checks", () => {
       ).toEqual(["doc-123"]);
     });
 
+    it("drops coordinates the reactor read gate does not serve, even when canRead allows them", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      mockReactorClient.isServed = vi
+        .fn()
+        .mockImplementation((documentId: string) =>
+          Promise.resolve(documentId !== "secret-parent"),
+        );
+      const ctx = createContext({ userAddress: "0xreader" });
+
+      const result = await callJobStatus(ctx);
+
+      expect(
+        result.consistencyToken.coordinates.map(
+          (coordinate: { documentId: string }) => coordinate.documentId,
+        ),
+      ).toEqual(["doc-123"]);
+    });
+
+    it("asks the read gate about each document once", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xreader" });
+
+      await callJobStatus(ctx);
+
+      const asked = vi
+        .mocked(mockReactorClient.isServed!)
+        .mock.calls.map(([documentId]) => documentId);
+      expect(asked.sort()).toEqual(["doc-123", "secret-parent"]);
+    });
+
     it("shows a supreme admin every coordinate", async () => {
       vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
       const ctx = createContext({ userAddress: "0xadmin" });
