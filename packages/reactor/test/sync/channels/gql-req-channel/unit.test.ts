@@ -224,8 +224,10 @@ describe("GqlRequestChannel", () => {
       await vi.advanceTimersByTimeAsync(20000);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      // Channel still reports as connected
-      expect(channel.getConnectionState().state).toBe("connected");
+      // "connected" is earned by a completed poll, and a paused timer runs
+      // none, so the channel correctly still reads as never-succeeded.
+      expect(channel.getConnectionState().state).toBe("connecting");
+      expect(channel.getConnectionState().lastSuccessUtcMs).toBe(0);
 
       await channel.shutdown();
     });
@@ -1634,9 +1636,12 @@ describe("GqlRequestChannel", () => {
         manualTimer,
       );
 
-      // init calls touchRemoteChannel which returns ackOrdinal
+      // init calls touchRemoteChannel which returns ackOrdinal. The autofiring
+      // timer's first poll is what earns "connected"; init alone does not.
       await channel.init();
-      expect(channel.getConnectionState().state).toBe("connected");
+      await vi.waitFor(() =>
+        expect(channel.getConnectionState().state).toBe("connected"),
+      );
 
       // Verify the touchChannel mutation requests the new fields
       const touchCall = mockFetch.mock.calls.find(
@@ -1914,10 +1919,10 @@ describe("GqlRequestChannel", () => {
       );
       await channel.init();
 
-      // Initial state after init: idle
-      expect(channel.getConnectionState().state).toBe("connected");
+      // Initial state after init: never succeeded, so still connecting
+      expect(channel.getConnectionState().state).toBe("connecting");
 
-      // After success: idle
+      // After the first completed poll: connected
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getConnectionState().state).toBe("connected");
 
