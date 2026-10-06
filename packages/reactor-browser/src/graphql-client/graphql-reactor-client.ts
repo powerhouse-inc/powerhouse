@@ -23,7 +23,6 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actionSigningTarget,
-  DEFAULT_SIGNATURE_POLICY,
   normalizeDocumentModelVersion,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
@@ -152,14 +151,6 @@ export type GraphQLReactorClientOptions = {
 
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
-
-/**
- * The protocol-version baseline a remote create falls back to when the parent
- * drive reports none, matching the reactor client's own default.
- */
-const DEFAULT_CREATE_PROTOCOL_VERSIONS: ProtocolVersions = {
-  "base-reducer": 2,
-};
 
 /** A registered `subscribe` call. */
 type ChangeListener = {
@@ -652,47 +643,33 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * The signature policy a new document takes when the caller chooses none.
-   *
-   * Known limitation: remote create uses the default signature policy. The
-   * Switchboard exposes no query for the create signature policy, so a
-   * switchboard configured with a non-default (stricter) policy is not
-   * observable over GraphQL today; such a switchboard would see remote creates
-   * under-signed relative to its own policy. This returns the same
-   * `DEFAULT_SIGNATURE_POLICY` the in-process client resolves to when nothing
-   * overrides it.
+   * Not served: the Switchboard has no query for the policy it gives new
+   * documents, and a guessed default would under-sign on a stricter host.
    */
   getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    return Promise.resolve(DEFAULT_SIGNATURE_POLICY);
+    return Promise.reject(
+      new GraphQLOperationNotSupportedError(
+        "getCreateSignaturePolicy",
+        "the Switchboard exposes no create signature policy",
+      ),
+    );
   }
 
   /**
-   * The protocol versions a new document takes, before the signature policy.
-   *
-   * Reflects the parent drive's own versions rather than a hardcoded baseline:
-   * the drive document carries `header.protocolVersions` over GraphQL, so a
-   * create under a drive on a non-default switchboard matches that drive. Falls
-   * back to {@link DEFAULT_CREATE_PROTOCOL_VERSIONS} only when there is no
-   * parent, the parent cannot be fetched, or the parent reports no versions.
+   * Not served: the versions a new document takes come from the host's peer
+   * agreement, which the Switchboard does not expose. A parent's own versions
+   * are not that answer.
    */
-  async getCreateProtocolVersions(
-    parentIdentifier?: string,
-    signal?: AbortSignal,
+  getCreateProtocolVersions(
+    _parentIdentifier?: string,
+    _signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    if (parentIdentifier === undefined) {
-      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
-    }
-    let parent: PHDocument;
-    try {
-      parent = await this.get<PHDocument>(parentIdentifier, undefined, signal);
-    } catch {
-      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
-    }
-    const versions = parent.header.protocolVersions;
-    if (versions && Object.keys(versions).length > 0) {
-      return versions;
-    }
-    return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    return Promise.reject(
+      new GraphQLOperationNotSupportedError(
+        "getCreateProtocolVersions",
+        "the Switchboard exposes no create protocol versions",
+      ),
+    );
   }
 
   /**

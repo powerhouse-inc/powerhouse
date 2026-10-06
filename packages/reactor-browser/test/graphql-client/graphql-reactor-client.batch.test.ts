@@ -8,6 +8,7 @@ import type {
   ExecuteBatchMutationVariables,
 } from "../../src/graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
+import { GraphQLOperationNotSupportedError } from "../../src/graphql-client/errors.js";
 import {
   GraphQLReactorClient,
   type GraphQLReactorClientOptions,
@@ -356,47 +357,23 @@ describe("GraphQLReactorClient.waitForJob", () => {
 });
 
 describe("GraphQLReactorClient create defaults and preferred editor", () => {
-  it("returns the documented signature policy default", async () => {
-    const policy =
-      await createClientWith(createMockSdk()).getCreateSignaturePolicy();
-    expect(policy).toBe("v2-required");
-  });
+  it("refuses the create signature policy, which the Switchboard does not expose", async () => {
+    const policy = createClientWith(createMockSdk()).getCreateSignaturePolicy();
 
-  it("reflects the parent drive's own protocol versions, not the hardcoded default", async () => {
-    const sdk = createMockSdk({
-      GetDocument: vi.fn().mockResolvedValue({
-        document: {
-          document: {
-            ...parentDriveDocument,
-            protocolVersions: { "drive-reducer": 3 },
-          },
-        },
-      }),
-    });
-
-    const versions =
-      await createClientWith(sdk).getCreateProtocolVersions("parent-1");
-
-    expect(versions).toEqual({ "drive-reducer": 3 });
-    expect(sdk.GetDocument).toHaveBeenCalledWith(
-      { identifier: "parent-1", view: undefined },
-      undefined,
-      undefined,
+    await expect(policy).rejects.toBeInstanceOf(
+      GraphQLOperationNotSupportedError,
     );
   });
 
-  it("falls back to the baseline when the parent reports no protocol versions", async () => {
-    const versions =
-      await createClientWith(createMockSdk()).getCreateProtocolVersions(
-        "parent-1",
-      );
-    expect(versions).toEqual({ "base-reducer": 2 });
-  });
-
-  it("falls back to the baseline when there is no parent", async () => {
+  it("refuses create protocol versions rather than guessing from the parent", async () => {
     const sdk = createMockSdk();
-    const versions = await createClientWith(sdk).getCreateProtocolVersions();
-    expect(versions).toEqual({ "base-reducer": 2 });
+
+    const versions =
+      createClientWith(sdk).getCreateProtocolVersions("parent-1");
+
+    await expect(versions).rejects.toBeInstanceOf(
+      GraphQLOperationNotSupportedError,
+    );
     expect(sdk.GetDocument).not.toHaveBeenCalled();
   });
 
