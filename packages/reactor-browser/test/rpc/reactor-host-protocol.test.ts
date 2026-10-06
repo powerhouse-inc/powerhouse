@@ -73,6 +73,14 @@ function rawTab(port: MessagePort) {
   return { send, reloads, workerGens, migrations };
 }
 
+function openTab(host: ReactorHost) {
+  const channel = new MessageChannel();
+  host.connect(createPortTransport(channel.port1));
+  return rawTab(channel.port2);
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 function fakeClient(calls: string[]): IReactorClient {
   return {
     get: (id: string) => {
@@ -126,6 +134,101 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     const result = await tab2.send({ k: "hello", version: V2 });
     expect(result).toMatchObject({ ok: false });
     expect(tab2.reloads).toContain("reactor version mismatch");
+  });
+
+  // A stale tab left on the old worker means two workers over one idb namespace.
+  it("reloads every connected tab onto one generation on a mismatch", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    const tab2 = openTab(host);
+    await tab2.send({ k: "hello", version: V2 });
+    await settle();
+
+    expect(tab1.reloads).toEqual(["reactor version mismatch"]);
+    expect(tab2.reloads).toEqual(["reactor version mismatch"]);
+    expect(tab1.workerGens[0]).toMatch(/^v1-build-2-/);
+    expect(tab2.workerGens).toEqual(tab1.workerGens);
+    expect(host.retired).toBe(true);
+  });
+
+  it("stops the reactor and stores of a worker a mismatch retires", async () => {
+    let retired = 0;
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onRetire: () => {
+        retired += 1;
+        return Promise.resolve();
+      },
+    });
+    await openTab(host).send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+    expect(retired).toBe(1);
+  });
+
+  // A tab that named its worker before any sibling bumped the gen lands here late.
+  it("sends a late tab on the new build away instead of serving it", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+
+    const late = openTab(host);
+    expect(await late.send({ k: "hello", version: V2 })).toEqual({
+      ok: false,
+    });
+    await settle();
+    expect(late.reloads).toEqual(["reactor version mismatch"]);
+    expect(late.workerGens).toEqual(tab1.workerGens);
+  });
+
+  it("sends every later hello away once retired, even one matching its build", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+
+    const sameBuild = openTab(host);
+    await expect(sameBuild.send({ k: "hello", version: V1 })).rejects.toThrow(
+      /retired/,
+    );
+    expect(sameBuild.workerGens).toEqual(tab1.workerGens);
+  });
+
+  it("keeps reporting the build it booted for after a mismatch", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+
+    expect(await tab1.send({ k: "admin", method: "info" })).toMatchObject({
+      appBuildId: "build-1",
+    });
+  });
+
+  // Stored gen v1-A, a switch to build B and back to A would land on this worker again.
+  it("never names its own worker as the generation to reload onto", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      namespace: "ph-reactor:ns#v1-build-1",
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V2 });
+    await openTab(host).send({ k: "hello", version: V1 });
+    await settle();
+    expect(tab1.workerGens).toHaveLength(1);
+    expect(tab1.workerGens[0]).toMatch(/^v1-build-1-/);
   });
 
   it("reloads a tab whose enforcement flags differ from the running worker's", async () => {

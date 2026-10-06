@@ -86,17 +86,25 @@ function workerGenForVersion(version: VersionFingerprint): string {
   return `v${version.rpcProtocolVersion}-${version.appBuildId}${suffix}`;
 }
 
+const VERSION_MISMATCH = "reactor version mismatch";
+const FLAGS_CHANGED = "reactor enforcement flags changed";
+
+/** Whether a reload reason comes from a build fingerprint mismatch. */
+export function isFingerprintMismatchReload(reason: string): boolean {
+  return reason === VERSION_MISMATCH || reason.startsWith(FLAGS_CHANGED);
+}
+
 /** Names what differs, so a reload is diagnosable from the tab's console. */
 function mismatchReason(
   baseline: VersionFingerprint,
   incoming: VersionFingerprint,
 ): string {
   if ((baseline.featureFlags ?? "") !== (incoming.featureFlags ?? "")) {
-    return `reactor enforcement flags changed (worker: ${
+    return `${FLAGS_CHANGED} (worker: ${
       baseline.featureFlags || "none"
     }, tab: ${incoming.featureFlags || "none"})`;
   }
-  return "reactor version mismatch";
+  return VERSION_MISMATCH;
 }
 
 // Worker names end up in devtools and IndexedDB keys, so the flag set is
@@ -406,6 +414,7 @@ export class ReactorHost {
     return false;
   }
 
+  // A mismatch retires the worker for good: every tab reloads onto one gen.
   private async handleHello(
     message: RpcHello,
     transport: IRpcTransport,
@@ -415,11 +424,11 @@ export class ReactorHost {
   ): Promise<void> {
     if (this.baseline) {
       if (!versionsCompatible(this.baseline, message.version)) {
-        transport.post({
-          k: "reload",
-          reason: mismatchReason(this.baseline, message.version),
-          workerGen: workerGenForVersion(message.version),
-        });
+        // Salted per instance: the bare gen can be this worker's own name.
+        this.retireAndReload(
+          mismatchReason(this.baseline, message.version),
+          `${workerGenForVersion(message.version)}-${this.ownerId.slice(0, 8)}`,
+        );
         reply.ok(message.id, { ok: false });
         return;
       }
