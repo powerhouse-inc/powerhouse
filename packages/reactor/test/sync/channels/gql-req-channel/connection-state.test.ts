@@ -223,6 +223,84 @@ describe("GqlRequestChannel Connection State", () => {
     await channel.shutdown();
   });
 
+  it("does not leave error on a successful push once the poll loop has stopped", async () => {
+    let polls = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pushSyncEnvelopes")) {
+        return {
+          ok: true,
+          json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+        };
+      }
+      polls++;
+      if (polls === 2) {
+        return {
+          ok: false,
+          status: 401,
+          statusText: "Unauthorized",
+          json: () => Promise.resolve({}),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("connected");
+
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(manualTimer.isRunning()).toBe(false);
+
+    channel.outbox.add(createMockSyncOperation("op-1", "remote-1", 1));
+    await vi.waitFor(() => {
+      expect(
+        mockFetch.mock.calls.some(([, init]) =>
+          String((init as RequestInit).body).includes("pushSyncEnvelopes"),
+        ),
+      ).toBe(true);
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(true);
+    await channel.shutdown();
+  });
+
   it("transitions to connected after successful poll", async () => {
     global.fetch = successFetch() as unknown as typeof global.fetch;
     const manualTimer = new ManualPollTimer();

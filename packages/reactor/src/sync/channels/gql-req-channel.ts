@@ -204,6 +204,7 @@ export class GqlRequestChannel implements IChannel {
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
   private requiresAuth: boolean = false;
+  private polling = false;
   private polledSinceStart = false;
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
@@ -347,7 +348,7 @@ export class GqlRequestChannel implements IChannel {
     this.abortController.abort();
     this.bufferedOutbox.flush();
     this.isShutdown = true;
-    this.pollTimer.stop();
+    this.stopPolling();
 
     if (this.pushRetryTimer) {
       clearTimeout(this.pushRetryTimer);
@@ -518,8 +519,15 @@ export class GqlRequestChannel implements IChannel {
   }
 
   private startPolling(): void {
+    this.polling = true;
     this.polledSinceStart = false;
     this.pollTimer.start();
+  }
+
+  private stopPolling(): void {
+    this.polling = false;
+    this.polledSinceStart = false;
+    this.pollTimer.stop();
   }
 
   /**
@@ -734,7 +742,7 @@ export class GqlRequestChannel implements IChannel {
     );
 
     if (classification === "unrecoverable") {
-      this.pollTimer.stop();
+      this.stopPolling();
       this.requiresAuth = isDriveAuthError(err);
       this.transitionConnectionState("error");
       return true;
@@ -757,7 +765,7 @@ export class GqlRequestChannel implements IChannel {
       this.channelId,
     );
 
-    this.pollTimer.stop();
+    this.stopPolling();
 
     const attemptRecovery = (attempt: number): void => {
       if (this.isShutdown) {
@@ -1166,9 +1174,11 @@ export class GqlRequestChannel implements IChannel {
         this.isPushing = false;
         this.pushBlocked = false;
         this.pushFailureCount = 0;
+        // A stopped poll loop keeps its error; a push says nothing about it.
         if (
-          this.connectionState === "reconnecting" ||
-          this.connectionState === "error"
+          this.polling &&
+          (this.connectionState === "reconnecting" ||
+            this.connectionState === "error")
         ) {
           this.transitionConnectionState(this.reachedState());
         }
