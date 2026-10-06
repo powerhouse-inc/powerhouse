@@ -69,11 +69,7 @@ export type WorkerReactorClientArgs = {
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
   onReload: (reason: string, workerGen?: string) => void;
-  /**
-   * URL of the prebuilt worker bundle (packaged deployments). Absent, the
-   * worker script resolves relative to this module, which only works where
-   * Vite bundles the worker from source (the monorepo app).
-   */
+  /** Prebuilt bundle URL; absent only for the monorepo app, where Vite bundles the worker from source. */
   workerUrl?: string;
   /** The bundle's `sourceDigest`; a rebuilt bundle at the same URL then forces a fresh worker. */
   workerDigest?: string;

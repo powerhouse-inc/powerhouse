@@ -52,3 +52,22 @@ export async function resolvePackagedReactorWorker(
     return null;
   }
 }
+
+export type ReactorWorkerSource =
+  | { kind: "bundle"; url: string; digest: string }
+  | { kind: "source" }
+  | { kind: "unavailable" };
+
+// A packaged dist's own reactor.worker.js is a library artifact no worker can load.
+export function selectReactorWorkerSource({
+  packaged,
+  bundle,
+}: {
+  packaged: boolean;
+  bundle: PackagedReactorWorker | null;
+}): ReactorWorkerSource {
+  if (bundle) {
+    return { kind: "bundle", url: bundle.url, digest: bundle.sourceDigest };
+  }
+  return packaged ? { kind: "unavailable" } : { kind: "source" };
+}

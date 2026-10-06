@@ -65,7 +65,11 @@ import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
-import { resolvePackagedReactorWorker } from "../utils/reactor-worker-url.js";
+import { isPackagedConnectDist } from "../utils/build-info.js";
+import {
+  resolvePackagedReactorWorker,
+  selectReactorWorkerSource,
+} from "../utils/reactor-worker-url.js";
 import {
   resolveDevProjectSource,
   resolveLocalPackageSources,
@@ -404,20 +408,25 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // builds): the worker rewrites shared imports in package sources to
     // these absolute URLs and blob-imports the result.
     const sharedImports = (await getSharedDeps())?.imports;
-    // Packaged deployments serve a prebuilt worker bundle at a stable path
-    // (the dist worker itself is a library artifact no worker can load);
-    // null means this is the monorepo app, where Vite bundles the worker.
-    const packagedWorker = await resolvePackagedReactorWorker(
-      import.meta.env.BASE_URL,
-    );
+    const workerSource = selectReactorWorkerSource({
+      packaged: isPackagedConnectDist(),
+      bundle: await resolvePackagedReactorWorker(import.meta.env.BASE_URL),
+    });
+    if (workerSource.kind === "unavailable") {
+      window.ph.loading = false;
+      throw new Error(
+        "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
+      );
+    }
     // Local project models the registry cannot serve: prebuilt bundles in
     // production, the dev server's live project models entry in dev.
     const packageSources = await resolveLocalPackageSources(
       import.meta.env.BASE_URL,
     );
     const workerClient = createWorkerReactorClientModule({
-      workerUrl: packagedWorker?.url,
-      workerDigest: packagedWorker?.sourceDigest,
+      workerUrl: workerSource.kind === "bundle" ? workerSource.url : undefined,
+      workerDigest:
+        workerSource.kind === "bundle" ? workerSource.digest : undefined,
       packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,

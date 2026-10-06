@@ -5,6 +5,7 @@ import {
   packagedReactorWorkerUrl,
   REACTOR_WORKER_META_PATH,
   resolvePackagedReactorWorker,
+  selectReactorWorkerSource,
 } from "../../src/utils/reactor-worker-url.js";
 
 const ORIGIN = "https://app.test";
@@ -131,5 +132,38 @@ describe("resolvePackagedReactorWorker", () => {
       vi.fn(() => Promise.reject(new TypeError("offline"))),
     );
     expect(await resolvePackagedReactorWorker("/")).toBeNull();
+  });
+});
+
+describe("selectReactorWorkerSource", () => {
+  const bundle = {
+    url: `${ORIGIN}/__reactor_worker__/reactor.worker.js`,
+    sourceDigest: "d1",
+  };
+
+  it("uses a served bundle, packaged or not", () => {
+    for (const packaged of [true, false]) {
+      expect(selectReactorWorkerSource({ packaged, bundle })).toEqual({
+        kind: "bundle",
+        url: bundle.url,
+        digest: "d1",
+      });
+    }
+  });
+
+  it("reports a packaged dist without a bundle unavailable", () => {
+    expect(selectReactorWorkerSource({ packaged: true, bundle: null })).toEqual(
+      {
+        kind: "unavailable",
+      },
+    );
+  });
+
+  it("falls back to the Vite-bundled source in the monorepo app", () => {
+    expect(
+      selectReactorWorkerSource({ packaged: false, bundle: null }),
+    ).toEqual({
+      kind: "source",
+    });
   });
 });
