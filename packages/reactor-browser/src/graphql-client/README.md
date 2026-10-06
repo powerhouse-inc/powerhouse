@@ -274,6 +274,16 @@ Return `undefined` (or an empty string) and the request goes out with no
 authorization header at all. A rejecting provider fails the request rather than
 silently downgrading to anonymous.
 
+### Drive routing
+
+A request that is known to belong to one drive carries that drive's id in a
+`Drive-Id` header, which a Switchboard load balancer pins on: `create` of a
+drive (its own id) and `execute` on a drive. Nothing else carries it, since the
+client cannot tell from an identifier alone whether it names a drive.
+
+A Switchboard that does not own the drive answers 421, and the client throws
+`GraphQLWrongBackendError` with the drive id and the server's payload.
+
 ## Typed subgraphs
 
 A Switchboard serves a project's own subgraphs next to the reactor's supergraph,

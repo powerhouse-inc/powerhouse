@@ -1,7 +1,16 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { GraphQLOperationNotSupportedError } from "../../src/graphql-client/errors.js";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  actions,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import {
+  GraphQLOperationNotSupportedError,
+  GraphQLWrongBackendError,
+} from "../../src/graphql-client/errors.js";
 import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
 
 // Reply bodies are what reactor-api's Apollo gateway and drive middleware send.
@@ -139,5 +148,214 @@ describe("GraphQLReactorClient.isServed over the wire", () => {
     await expect(clientFor(url).isServed("doc-1")).rejects.toBeInstanceOf(
       GraphQLOperationNotSupportedError,
     );
+  });
+});
+
+const DRIVE_TYPE = "powerhouse/document-drive";
+const MODEL_TYPE = "powerhouse/document-model";
+
+function wireDocument(id: string, documentType: string) {
+  return {
+    id,
+    slug: id,
+    name: id,
+    documentType,
+    state: { global: {}, local: {} },
+    revisionsList: [{ scope: "global", revision: 1 }],
+    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+    lastModifiedAtUtcIso: "2026-01-02T00:00:00.000Z",
+  };
+}
+
+const documentTypes: Record<string, string> = {
+  "drive-1": DRIVE_TYPE,
+  "doc-1": MODEL_TYPE,
+};
+
+/** A Switchboard that owns every document above. */
+function switchboard({ body }: Received): Reply {
+  const variables = (body.variables ?? {}) as Record<string, unknown>;
+  const data = (() => {
+    switch (body.operationName) {
+      case "GetDocument": {
+        const id = variables.identifier as string;
+        return {
+          document: {
+            document: wireDocument(id, documentTypes[id]),
+            childIds: [],
+          },
+        };
+      }
+      case "CreateDocument": {
+        const header = (variables.document as { header: { id: string } })
+          .header;
+        return {
+          createDocument: wireDocument(
+            header.id,
+            (variables.document as { header: { documentType: string } }).header
+              .documentType,
+          ),
+        };
+      }
+      case "MutateDocumentWithOperations": {
+        const id = variables.documentIdentifier as string;
+        return {
+          mutateDocument: {
+            ...wireDocument(id, documentTypes[id]),
+            operations: { items: [] },
+          },
+        };
+      }
+      case "GetDocumentServed":
+        return { documentServed: true };
+      case "FindDocuments":
+        return {
+          findDocuments: {
+            items: [],
+            hasNextPage: false,
+            hasPreviousPage: false,
+            cursor: null,
+          },
+        };
+      default:
+        throw new Error(`unexpected operation ${body.operationName}`);
+    }
+  })();
+  return { status: 200, body: JSON.stringify({ data }) };
+}
+
+function driveIdOf(
+  received: Received[],
+  operationName: string,
+): string | undefined {
+  const entry = received.find((r) => r.body.operationName === operationName);
+  if (!entry) {
+    throw new Error(`${operationName} was not sent`);
+  }
+  return entry.headers["drive-id"] as string | undefined;
+}
+
+describe("GraphQLReactorClient Drive-Id", () => {
+  it("names a new drive as its own Drive-Id", async () => {
+    const { url, received } = await serve(switchboard);
+    const drive = withSignaturePolicy(
+      driveDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id: "drive-new" },
+    );
+
+    await clientFor(url).create(drive);
+
+    expect(driveIdOf(received, "CreateDocument")).toBe("drive-new");
+  });
+
+  it("sends none when creating a document that is not a drive, even under a parent", async () => {
+    const { url, received } = await serve(switchboard);
+    const document = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id: "doc-new" },
+    );
+
+    await clientFor(url).create(document, "drive-1");
+
+    expect(driveIdOf(received, "CreateDocument")).toBeUndefined();
+  });
+
+  it("names the drive on a write to the drive, not on the read before it", async () => {
+    const { url, received } = await serve(switchboard);
+
+    await clientFor(url).execute("drive-1", "main", [
+      actions.setName("renamed"),
+    ]);
+
+    expect(driveIdOf(received, "GetDocument")).toBeUndefined();
+    expect(driveIdOf(received, "MutateDocumentWithOperations")).toBe("drive-1");
+  });
+
+  it("sends none on a write to a document that is not a drive", async () => {
+    const { url, received } = await serve(switchboard);
+
+    await clientFor(url).execute("doc-1", "main", [actions.setName("renamed")]);
+
+    expect(driveIdOf(received, "MutateDocumentWithOperations")).toBeUndefined();
+  });
+
+  it("sends none on reads", async () => {
+    const { url, received } = await serve(switchboard);
+    const client = clientFor(url);
+
+    await client.get("drive-1");
+    await client.isServed("drive-1");
+    await client.find({ parentId: "drive-1" });
+
+    expect(received).toHaveLength(3);
+    for (const entry of received) {
+      expect(entry.headers["drive-id"], entry.body.operationName).toBe(
+        undefined,
+      );
+    }
+  });
+});
+
+describe("GraphQLReactorClient on a 421", () => {
+  // drive-middleware.ts's wrong-shard answer, byte for byte.
+  const wrongShard = (driveId: string): Reply => ({
+    status: 421,
+    contentType: "application/json",
+    body: JSON.stringify({ error: "wrong-shard", driveId }),
+  });
+
+  it("throws GraphQLWrongBackendError carrying the server's payload", async () => {
+    const { url } = await serve(({ body }) =>
+      body.operationName === "GetDocument"
+        ? switchboard({ headers: {}, body })
+        : wrongShard("drive-1"),
+    );
+
+    const failure: unknown = await clientFor(url)
+      .execute("drive-1", "main", [actions.setName("renamed")])
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(GraphQLWrongBackendError);
+    expect(GraphQLWrongBackendError.isError(failure)).toBe(true);
+    expect(failure).toMatchObject({
+      status: 421,
+      driveId: "drive-1",
+      payload: { error: "wrong-shard", driveId: "drive-1" },
+    });
+  });
+
+  it("maps a 421 on any request, not only drive writes", async () => {
+    const { url } = await serve(() => wrongShard("drive-9"));
+
+    await expect(clientFor(url).get("doc-1")).rejects.toMatchObject({
+      name: "GraphQLWrongBackendError",
+      driveId: "drive-9",
+    });
+  });
+
+  it("keeps a body that is not JSON as text", async () => {
+    const { url } = await serve(() => ({
+      status: 421,
+      contentType: "text/plain",
+      body: "misdirected",
+    }));
+
+    await expect(clientFor(url).get("doc-1")).rejects.toMatchObject({
+      name: "GraphQLWrongBackendError",
+      driveId: "",
+      payload: "misdirected",
+    });
+  });
+
+  it("leaves other HTTP failures alone", async () => {
+    const { url } = await serve(() => ({ status: 503, body: "{}" }));
+
+    const failure: unknown = await clientFor(url)
+      .get("doc-1")
+      .catch((error: unknown) => error);
+
+    expect(GraphQLWrongBackendError.isError(failure)).toBe(false);
   });
 });

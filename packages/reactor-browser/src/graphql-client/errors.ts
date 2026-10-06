@@ -18,6 +18,36 @@ export class GraphQLOperationNotSupportedError extends Error {
 }
 
 /**
+ * The Switchboard refused a request with 421 Misdirected Request: the
+ * `Drive-Id` it carried names a drive that Switchboard does not own.
+ */
+export class GraphQLWrongBackendError extends Error {
+  readonly name = "GraphQLWrongBackendError";
+  readonly status = 421;
+  /** The drive the Switchboard refused, or `""` when its answer names none. */
+  readonly driveId: string;
+  /** The response body, parsed when it is JSON. */
+  readonly payload: unknown;
+
+  constructor(driveId: string, payload: unknown, options?: ErrorOptions) {
+    super(
+      `The Switchboard does not serve drive ${driveId === "" ? "(unnamed)" : driveId}: 421 Misdirected Request`,
+      options,
+    );
+    this.driveId = driveId;
+    this.payload = payload;
+  }
+
+  static isError(error: unknown): error is GraphQLWrongBackendError {
+    return (
+      Error.isError(error) &&
+      error.name === "GraphQLWrongBackendError" &&
+      typeof (error as Partial<GraphQLWrongBackendError>).driveId === "string"
+    );
+  }
+}
+
+/**
  * The reactor's `BatchJobFailedError`, rebuilt from a batch result; this entry
  * imports the reactor for types only. The shared name lets either `isError`
  * recognise it.

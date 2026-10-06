@@ -49,6 +49,7 @@ import {
   type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
+import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
@@ -65,6 +66,7 @@ import {
 import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
+  GraphQLWrongBackendError,
 } from "./errors.js";
 import {
   MutateDocumentWithOperationsDocument,
@@ -216,7 +218,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // The middleware wraps the generated SDK methods AND `RunDocument`, so the
     // hand-authored mutation is authenticated by the same code path.
     const middleware = makeAuthMiddleware(this.tokenProvider);
-    this.sdk = options.graphqlClient ?? createClient(options.url, middleware);
+    this.sdk = withWrongBackendErrors(
+      options.graphqlClient ?? createClient(options.url, middleware),
+    );
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
@@ -511,9 +515,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    // A new drive is pinned to the backend its own id routes to.
     const result = await this.sdk.CreateDocument(
       { document, parentIdentifier },
-      undefined,
+      isDrive(document) ? driveIdHeaders(document.header.id) : undefined,
       signal,
     );
 
@@ -572,6 +577,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         operationType: "mutation",
         document: MutateDocumentWithOperationsDocument,
         variables,
+        requestHeaders: isDrive(document)
+          ? driveIdHeaders(document.header.id)
+          : undefined,
         signal,
       });
 
@@ -1589,6 +1597,77 @@ function queriesUnknownField(error: unknown, field: string): boolean {
     (entry) =>
       typeof (entry as { message?: unknown } | null)?.message === "string" &&
       (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
+/**
+ * The header a Switchboard's drive middleware and load balancer key on. A
+ * request carries it only when it is known to belong to that one drive: the
+ * server answers any drive it does not own with 421.
+ */
+const DRIVE_ID_HEADER = "Drive-Id";
+
+function driveIdHeaders(driveId: string): Record<string, string> | undefined {
+  return driveId === "" ? undefined : { [DRIVE_ID_HEADER]: driveId };
+}
+
+function isDrive(document: PHDocument): boolean {
+  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(
+    document.header.documentType,
+  );
+}
+
+/**
+ * Wraps every SDK member so a 421 from the Switchboard's drive middleware,
+ * which graphql-request reports as a `ClientError`, surfaces as
+ * {@link GraphQLWrongBackendError}.
+ */
+function withWrongBackendErrors(
+  sdk: ReactorGraphQLClient,
+): ReactorGraphQLClient {
+  const wrapped: Record<string, unknown> = {};
+  for (const [name, member] of Object.entries(sdk)) {
+    wrapped[name] =
+      typeof member === "function"
+        ? async (...args: unknown[]) => {
+            try {
+              return await (member as (...a: unknown[]) => unknown).apply(
+                sdk,
+                args,
+              );
+            } catch (error) {
+              throw wrongBackendErrorOf(error) ?? error;
+            }
+          }
+        : member;
+  }
+  return wrapped as ReactorGraphQLClient;
+}
+
+function wrongBackendErrorOf(
+  error: unknown,
+): GraphQLWrongBackendError | undefined {
+  const response = (
+    error as {
+      response?: { status?: unknown; body?: unknown; [key: string]: unknown };
+    } | null
+  )?.response;
+  if (response?.status !== 421) {
+    return undefined;
+  }
+  let payload: unknown = response.body;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      // Not JSON: kept as the text the server sent.
+    }
+  }
+  const driveId = (payload as { driveId?: unknown } | null)?.driveId;
+  return new GraphQLWrongBackendError(
+    typeof driveId === "string" ? driveId : "",
+    payload,
+    { cause: error },
   );
 }
 
