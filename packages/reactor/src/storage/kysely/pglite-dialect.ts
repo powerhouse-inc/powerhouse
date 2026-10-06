@@ -26,7 +26,7 @@ export type PGliteSession = {
 export type HardenedPGliteDialectOptions = {
   /** Opt-in bound on waiting for the single PGlite lease; 0 (the default) waits indefinitely. */
   acquireTimeoutMs: number;
-  /** Bound on one statement that neither resolves nor rejects (a dead wasm call); 0 disables it. */
+  /** Bound on a call that never settles (a dead wasm call); a long synchronous statement still finishes. 0 disables it. */
   statementTimeoutMs: number;
   /** The bound for {@link isLongRunningStatement} statements, whose runtime scales with the data. */
   longStatementTimeoutMs: number;
@@ -285,6 +285,8 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
   private sessionFault: Error | undefined = undefined;
   /** Lets an abandoned call's late settlement be told apart from current failures. */
   private statementGeneration = 0;
+  /** A call abandoned at its deadline; PGlite would queue every later call behind it, so none is issued. */
+  private deadCall: Error | undefined = undefined;
 
   constructor(
     private readonly inner: Driver,
@@ -301,6 +303,9 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
     statement: string,
     execute: () => Promise<T>,
   ): Promise<T> {
+    if (this.deadCall !== undefined) {
+      throw new PGliteSessionPoisonedError(this.deadCall);
+    }
     const timeoutMs = this.timeoutFor(statement);
     if (timeoutMs <= 0) {
       return execute();
@@ -334,6 +339,11 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
 
   async acquireConnection(): Promise<DatabaseConnection> {
     const innerConnection = await this.acquireWithTimeout();
+
+    if (this.deadCall !== undefined) {
+      await this.inner.releaseConnection(innerConnection);
+      throw new PGliteSessionPoisonedError(this.deadCall);
+    }
 
     if (this.sessionFault !== undefined) {
       const fault = this.sessionFault;
@@ -423,7 +433,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
   async releaseConnection(connection: DatabaseConnection): Promise<void> {
     const wrapper = asWrapper(connection);
 
-    if (wrapper.suspect) {
+    if (wrapper.suspect && this.deadCall === undefined) {
       const recovered = await this.recoverSession(wrapper.transactionOpen);
       if (!recovered) {
         this.sessionFault =
@@ -460,7 +470,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
     }
 
     this.statementGeneration += 1;
-    this.sessionFault = cause;
+    this.deadCall = cause;
     this.options.onDiagnostic(
       "a PGlite statement never settled within its deadline; treating the session as poisoned",
       cause,
@@ -527,6 +537,9 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
 
   /** Kysely awaits release, so an unbounded recovery statement would hold the lease forever. */
   private async recoveryExec(statement: string): Promise<boolean> {
+    if (this.deadCall !== undefined) {
+      return false;
+    }
     const timeoutMs = this.options.recoveryTimeoutMs;
     const pending = this.client.exec(statement).then(
       () => true,
@@ -541,6 +554,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
 
     const outcome = await withDeadline(pending, timeoutMs);
     if (outcome === TIMED_OUT) {
+      this.deadCall ??= new PGliteStatementTimeoutError(timeoutMs, statement);
       this.options.onDiagnostic(
         `a PGlite recovery statement did not settle within ${timeoutMs}ms; the session is unrecoverable from SQL`,
       );

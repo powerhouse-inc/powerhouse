@@ -249,66 +249,82 @@ describe("HardenedPGliteDialect", () => {
   });
 });
 
-type HangingSession = {
+type LockedSession = {
   session: PGliteSession;
-  setHang: (pattern: RegExp | undefined) => void;
-  abandonedCount: () => number;
-  settleAbandoned: (outcome: "resolve" | "reject") => void;
-  setSlow: (pattern: RegExp | undefined, delayMs: number) => void;
+  /** The next matching call takes the lock and never settles, like a dead wasm call. */
+  kill: (pattern: RegExp | undefined) => void;
+  /** Matching calls hold the lock for `delayMs` first, like a slow call over a worker proxy. */
+  slow: (pattern: RegExp | undefined, delayMs: number) => void;
+  /** Rejects the dead call late and frees the lock. */
+  revive: () => void;
+  /** Calls the dialect has issued so far. */
+  issued: () => number;
 };
 
-/** A session whose matching statements never settle, like a dead wasm call. */
-function hangingSession(pg: PGlite): HangingSession {
-  let hang: RegExp | undefined = undefined;
-  let slow: RegExp | undefined = undefined;
+/** Every call runs under one FIFO lock, as PGlite's own query and exec do. */
+function lockedSession(pg: PGlite): LockedSession {
+  let killPattern: RegExp | undefined = undefined;
+  let slowPattern: RegExp | undefined = undefined;
   let slowDelayMs = 0;
-  const abandoned: Array<{
-    resolve: (value: never) => void;
-    reject: (error: unknown) => void;
-  }> = [];
+  let issued = 0;
+  let dead: ((error: unknown) => void) | undefined = undefined;
+  let lock: Promise<unknown> = Promise.resolve();
 
-  function intercept<T>(text: string, run: () => Promise<T>): Promise<T> {
-    if (hang?.test(text)) {
-      return new Promise<T>((resolve, reject) => {
-        abandoned.push({ resolve: resolve as (value: never) => void, reject });
-      });
-    }
-    if (slow?.test(text)) {
-      return new Promise<T>((resolve, reject) => {
-        setTimeout(() => {
-          run().then(resolve, reject);
-        }, slowDelayMs);
-      });
-    }
-    return run();
+  function run<T>(text: string, call: () => Promise<T>): Promise<T> {
+    issued += 1;
+    const result = lock.then((): Promise<T> => {
+      if (killPattern?.test(text)) {
+        killPattern = undefined;
+        return new Promise<T>((_resolve, reject) => {
+          dead = reject;
+        });
+      }
+      if (slowPattern?.test(text)) {
+        return new Promise<void>((resolve) =>
+          setTimeout(resolve, slowDelayMs),
+        ).then(call);
+      }
+      return call();
+    });
+    lock = result.catch(() => undefined);
+    return result;
   }
 
   return {
     session: {
       query: (text: string, params?: unknown[]) =>
-        intercept(text, () => pg.query(text, params)),
-      exec: (text: string) => intercept(text, () => pg.exec(text)),
+        run(text, () => pg.query(text, params)),
+      exec: (text: string) => run(text, () => pg.exec(text)),
       isInTransaction: () => pg.isInTransaction(),
     },
-    setHang: (pattern) => {
-      hang = pattern;
+    kill: (pattern) => {
+      killPattern = pattern;
     },
-    abandonedCount: () => abandoned.length,
-    settleAbandoned: (outcome) => {
-      const taken = abandoned.splice(0, abandoned.length);
-      for (const call of taken) {
-        if (outcome === "reject") {
-          call.reject(new Error("LATE-SETTLEMENT"));
-        } else {
-          call.resolve({ rows: [] } as never);
-        }
-      }
-    },
-    setSlow: (pattern, delayMs) => {
-      slow = pattern;
+    slow: (pattern, delayMs) => {
+      slowPattern = pattern;
       slowDelayMs = delayMs;
     },
+    revive: () => {
+      dead?.(new Error("LATE-SETTLEMENT"));
+      dead = undefined;
+    },
+    issued: () => issued,
   };
+}
+
+/** Fails within `withinMs` and issues no SQL, because the session is known dead. */
+async function expectFastRefusal(
+  db: Kysely<Schema>,
+  locked: LockedSession,
+  withinMs = 100,
+): Promise<void> {
+  const before = locked.issued();
+  const startedAt = Date.now();
+  await expect(sql`select 1 as x`.execute(db)).rejects.toThrow(
+    PGliteSessionPoisonedError,
+  );
+  expect(Date.now() - startedAt).toBeLessThan(withinMs);
+  expect(locked.issued()).toBe(before);
 }
 
 describe("HardenedPGliteDialect statement deadline", () => {
@@ -317,32 +333,53 @@ describe("HardenedPGliteDialect statement deadline", () => {
   async function deadlinedDb(
     overrides: {
       statementTimeoutMs?: number;
-      longStatementTimeoutMs?: number;
       onDiagnostic?: (message: string) => void;
     } = {},
-  ): Promise<{ pg: PGlite; db: Kysely<Schema>; hanging: HangingSession }> {
+  ): Promise<{ pg: PGlite; db: Kysely<Schema>; locked: LockedSession }> {
     const pg = new PGlite();
     await pg.waitReady;
     await pg.query("create table t (id int primary key)");
-    const hanging = hangingSession(pg);
+    const locked = lockedSession(pg);
     const db = new Kysely<Schema>({
-      dialect: new HardenedPGliteDialect(hanging.session, {
-        acquireTimeoutMs: 2_000,
+      dialect: new HardenedPGliteDialect(locked.session, {
         statementTimeoutMs:
           overrides.statementTimeoutMs ?? STATEMENT_TIMEOUT_MS,
-        longStatementTimeoutMs: overrides.longStatementTimeoutMs ?? 2_000,
         recoveryTimeoutMs: 500,
         onDiagnostic: overrides.onDiagnostic ?? (() => undefined),
       }),
     });
     open.push({ db, pg });
-    return { pg, db, hanging };
+    return { pg, db, locked };
   }
 
-  it("fails a never-settling statement loudly and releases the lease", async () => {
-    const { db, hanging } = await deadlinedDb();
+  it("lets a long synchronous statement finish instead of killing it", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(pg, {
+        statementTimeoutMs: 200,
+        onDiagnostic: () => undefined,
+      }),
+    });
+    open.push({ db, pg });
+    await sql`create table t (id int primary key)`.execute(db);
 
-    hanging.setHang(/^select id from t/i);
+    await sql`insert into t (id) select 1 from pg_sleep(1)`.execute(db);
+    await expect(
+      db.transaction().execute(async (trx) => {
+        await sql`insert into t (id) select 2 from pg_sleep(1)`.execute(trx);
+        return "ok";
+      }),
+    ).resolves.toBe("ok");
+
+    const rows = await sql<Row>`select id from t order by id`.execute(db);
+    expect(rows.rows).toEqual([{ id: 1 }, { id: 2 }]);
+  }, 10_000);
+
+  it("fails a never-settling statement and refuses the session without issuing more SQL", async () => {
+    const { db, locked } = await deadlinedDb();
+
+    locked.kill(/^select id from t/i);
     const hung = await sql<Row>`select id from t`.execute(db).then(
       () => undefined,
       (error: unknown) => error,
@@ -352,34 +389,25 @@ describe("HardenedPGliteDialect statement deadline", () => {
     expect((hung as PGliteSessionPoisonedError).cause).toBeInstanceOf(
       PGliteStatementTimeoutError,
     );
-    expect(hanging.abandonedCount()).toBe(1);
-
-    hanging.setHang(undefined);
-    const healthy = await sql<Row>`select id from t`.execute(db);
-    expect(healthy.rows).toEqual([]);
+    await expectFastRefusal(db, locked);
+    await expectFastRefusal(db, locked);
   });
 
-  it("discards the late settlement of an abandoned statement", async () => {
+  it("ignores the late settlement of an abandoned statement", async () => {
     const diagnostics: string[] = [];
-    const { db, hanging } = await deadlinedDb({
+    const { db, locked } = await deadlinedDb({
       onDiagnostic: (message) => diagnostics.push(message),
     });
 
-    hanging.setHang(/^insert into t/i);
+    locked.kill(/^insert into t/i);
     await expect(
       sql`insert into t (id) values (1)`.execute(db),
     ).rejects.toThrow(PGliteSessionPoisonedError);
-    hanging.setHang(undefined);
 
-    hanging.settleAbandoned("reject");
+    locked.revive();
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    const after = await sql<Row>`select id from t`.execute(db);
-    expect(after.rows).toEqual([]);
-
-    await sql`insert into t (id) values (2)`.execute(db);
-    const final = await sql<Row>`select id from t`.execute(db);
-    expect(final.rows).toEqual([{ id: 2 }]);
+    await expectFastRefusal(db, locked);
     expect(
       diagnostics.filter((message) => message.includes("never settled")),
     ).toHaveLength(1);
@@ -387,12 +415,12 @@ describe("HardenedPGliteDialect statement deadline", () => {
 
   it("does not fire on a slow statement that settles, or on a long transaction", async () => {
     const diagnostics: string[] = [];
-    const { db, hanging } = await deadlinedDb({
+    const { db, locked } = await deadlinedDb({
       statementTimeoutMs: 400,
       onDiagnostic: (message) => diagnostics.push(message),
     });
 
-    hanging.setSlow(/^insert into t/i, 120);
+    locked.slow(/^insert into t/i, 120);
     await expect(
       db.transaction().execute(async (trx) => {
         await sql`insert into t (id) values (1)`.execute(trx);
@@ -407,23 +435,10 @@ describe("HardenedPGliteDialect statement deadline", () => {
     expect(rows.rows).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
   });
 
-  it("gives a maintenance statement the long bound and a read the short one", async () => {
-    const { db, hanging } = await deadlinedDb({
-      statementTimeoutMs: 40,
-      longStatementTimeoutMs: 2_000,
-    });
+  it("fails fast after a COMMIT that never settles", async () => {
+    const { db, locked } = await deadlinedDb();
 
-    hanging.setSlow(/^(vacuum|select id from t)/i, 180);
-    await expect(queryThroughDialect(db, "vacuum t")).resolves.toEqual([]);
-    await expect(sql<Row>`select id from t`.execute(db)).rejects.toThrow(
-      PGliteSessionPoisonedError,
-    );
-  });
-
-  it("bounds a COMMIT that never settles and leaves the session usable", async () => {
-    const { db, hanging } = await deadlinedDb();
-
-    hanging.setHang(/__commit_guard/);
+    locked.kill(/__commit_guard/);
     const outcome = await db
       .transaction()
       .execute(async (trx) => {
@@ -434,19 +449,40 @@ describe("HardenedPGliteDialect statement deadline", () => {
         () => undefined,
         (error: unknown) => error,
       );
-    hanging.setHang(undefined);
 
     expect(outcome).toBeInstanceOf(PGliteSessionPoisonedError);
-    const rows = await sql<Row>`select id from t`.execute(db);
-    expect(rows.rows).toEqual([]);
+    await expectFastRefusal(db, locked);
+  }, 10_000);
+
+  it("fails fast after a ROLLBACK that never settles, keeping the job's error", async () => {
+    const { db, locked } = await deadlinedDb();
+
+    locked.kill(/^\s*rollback/i);
+    const startedAt = Date.now();
+    const outcome = await db
+      .transaction()
+      .execute(async (trx) => {
+        await sql`insert into t (id) values (1)`.execute(trx);
+        throw new Error("JOB-FAILED");
+      })
+      .then(
+        () => "resolved",
+        (error: Error) => error.message,
+      );
+    expect(outcome).toContain("JOB-FAILED");
+    expect(Date.now() - startedAt).toBeLessThan(400);
+
+    await expectFastRefusal(db, locked);
   }, 10_000);
 
   it("bounds the BEGIN retried after an aborted-transaction recovery", async () => {
     const pg = new PGlite();
     await pg.waitReady;
     let begins = 0;
+    let issued = 0;
     const session: PGliteSession = {
       query: (text: string, params?: unknown[]) => {
+        issued += 1;
         if (/^\s*(begin|start transaction)/i.test(text)) {
           begins += 1;
           if (begins === 1) {
@@ -460,12 +496,14 @@ describe("HardenedPGliteDialect statement deadline", () => {
         }
         return pg.query(text, params);
       },
-      exec: (text: string) => pg.exec(text),
+      exec: (text: string) => {
+        issued += 1;
+        return pg.exec(text);
+      },
       isInTransaction: () => false,
     };
     const db = new Kysely<Schema>({
       dialect: new HardenedPGliteDialect(session, {
-        acquireTimeoutMs: 2_000,
         statementTimeoutMs: 60,
         recoveryTimeoutMs: 500,
         onDiagnostic: () => undefined,
@@ -483,26 +521,11 @@ describe("HardenedPGliteDialect statement deadline", () => {
 
     expect(begins).toBe(2);
     expect(outcome).toBeInstanceOf(PGliteSessionPoisonedError);
-  }, 10_000);
 
-  it("bounds the release-time recovery when the session stops answering", async () => {
-    const { db, hanging } = await deadlinedDb();
-
-    hanging.setHang(/^\s*rollback|__session_probe/i);
-    const outcome = await db
-      .transaction()
-      .execute(async (trx) => {
-        await sql`insert into t (id) values (1)`.execute(trx);
-        throw new Error("JOB-FAILED");
-      })
-      .then(
-        () => "resolved",
-        (error: Error) => error.message,
-      );
-    expect(outcome).toContain("JOB-FAILED");
-
+    const before = issued;
     await expect(sql`select 1 as x`.execute(db)).rejects.toThrow(
       PGliteSessionPoisonedError,
     );
+    expect(issued).toBe(before);
   }, 10_000);
 });
