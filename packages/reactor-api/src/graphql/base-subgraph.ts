@@ -202,6 +202,23 @@ export class BaseSubgraph implements ISubgraph {
     return this.authorizationService.canRead(documentId, ctx.user?.address);
   }
 
+  /** Drops the items the host's own ACL refuses the caller. */
+  async readableByHost<T extends { id: string }>(
+    items: readonly T[],
+    ctx: Context,
+  ): Promise<T[]> {
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return [...items];
+    }
+    const readable: T[] = [];
+    for (const item of items) {
+      if (await this.canReadDocument(item.id as CanonicalDocumentId, ctx)) {
+        readable.push(item);
+      }
+    }
+    return readable;
+  }
+
   /**
    * The principal a request decides as: the authenticated caller's address, and
    * the did:key of the app instance whose token authenticated it.
