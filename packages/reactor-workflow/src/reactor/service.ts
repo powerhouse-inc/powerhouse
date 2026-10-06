@@ -3981,6 +3981,27 @@ export class WorkflowRuntimeService {
     if (parked) return skipped(parked);
     const admission = await this.runGate.admit(workflowId, policy);
     if (!admission.admitted) return skipped(admission.reason);
+    // A firing that queued read the workflow before it waited: disabled,
+    // re-published or parked meanwhile, it must not run on that old read.
+    if (admission.waited) {
+      let stale: string | undefined;
+      try {
+        stale = await this.staleAfterWait(
+          store,
+          workflowId,
+          triggerKind,
+          runnable.version,
+        );
+      } catch (error) {
+        stale =
+          "Skipped: the workflow could not be read again after this firing " +
+          `waited for its slot: ${error instanceof Error ? error.message : String(error)}`;
+      }
+      if (stale) {
+        admission.release();
+        return skipped(stale);
+      }
+    }
     // The wait itself outlived the run's deadline, so there is nothing left to
     // run it in: CANCELLED without executing a single step, rather than a side
     // effect fired long after the timeout that was supposed to bound it. The
@@ -4153,6 +4174,25 @@ export class WorkflowRuntimeService {
     const park = await store.getWorkflowPark(workflowId);
     if (!park || park.published_version < publishedVersion) return undefined;
     return `Skipped: this workflow is PARKED (${park.reason})`;
+  }
+
+  /** Why a firing that waited for its slot may no longer run, if it may not. */
+  private async staleAfterWait(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+    triggerKind: string,
+    publishedVersion: number,
+  ): Promise<string | undefined> {
+    const document =
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+    const state = document.state.global;
+    if (state.status !== "ENABLED") {
+      return `Skipped: the workflow became ${state.status} while this firing waited for its slot`;
+    }
+    if (runnableDefinition(state).version !== publishedVersion) {
+      return "Skipped: the workflow was re-published while this firing waited for its slot";
+    }
+    return this.parkedFiring(store, workflowId, triggerKind, publishedVersion);
   }
 
   /** A park recorded against an earlier published version than this state's. */

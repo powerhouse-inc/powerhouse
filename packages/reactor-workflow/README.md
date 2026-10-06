@@ -333,6 +333,9 @@ they are true.
   enqueues faster than the workflow runs, every waiter holds its payload and
   its promise, and the lane grows until the process dies. A firing that
   overflows the depth is journaled CANCELLED exactly as a SINGLETON refusal is.
+- **A firing that waited reads the workflow again before it runs.** If it is
+  no longer ENABLED, was re-published, or was parked while the firing waited,
+  the firing is journaled CANCELLED without running a step.
 - **The run deadline starts at FIRING time, not at admission.** Queue time is
   part of the time the run took: a firing that waits past its
   `runTimeoutSeconds` for a slot is CANCELLED without executing a single step,

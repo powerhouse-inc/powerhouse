@@ -14,7 +14,8 @@ interface Lane {
 
 /** What a firing may do. */
 export type GateAdmission =
-  | { admitted: true; release: () => void }
+  // `waited`: it queued, so what it read before admission may be stale.
+  | { admitted: true; waited: boolean; release: () => void }
   // SINGLETON, and a run is already going: this firing is dropped, not queued.
   // Or the queue is full: see MAX_QUEUED_FIRINGS.
   | { admitted: false; reason: string };
@@ -83,10 +84,13 @@ export class WorkflowRunGate {
     policy: EffectiveRunPolicy,
   ): Promise<GateAdmission> {
     const limit = concurrencyLimit(policy);
-    if (limit === null) return { admitted: true, release: () => undefined };
+    if (limit === null) {
+      return { admitted: true, waited: false, release: () => undefined };
+    }
 
     const lane = this.lanes.get(workflowId) ?? { active: 0, waiting: [] };
     this.lanes.set(workflowId, lane);
+    let waited = false;
 
     if (lane.active >= limit) {
       if (policy.concurrency === "SINGLETON") {
@@ -110,6 +114,7 @@ export class WorkflowRunGate {
       // The release that wakes this counts the run in on its behalf, so the
       // slot is reserved across the await and a later arrival cannot take it.
       await new Promise<void>((resolve) => lane.waiting.push(resolve));
+      waited = true;
     } else {
       lane.active += 1;
     }
@@ -117,6 +122,7 @@ export class WorkflowRunGate {
     let released = false;
     return {
       admitted: true,
+      waited,
       release: () => {
         if (released) return;
         released = true;

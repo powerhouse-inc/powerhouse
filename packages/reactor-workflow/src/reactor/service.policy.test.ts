@@ -670,3 +670,64 @@ describe("a re-publish of a PARKED workflow", () => {
     );
   }, 60_000);
 });
+
+// A QUEUE waiter used to run against the document it read before it queued,
+// so a workflow disabled or parked meanwhile still ran its side effect.
+describe("a firing that waited for its slot", () => {
+  const gate = () =>
+    (service as unknown as { runGate: WorkflowRunGate }).runGate;
+
+  it("does not run once the workflow is disabled", async () => {
+    const id = "wf-queue-disabled";
+    workflow(id, {
+      action: "slow",
+      policy: { concurrency: "QUEUE", onFailure: "IGNORE" },
+    });
+
+    const first = service.fire(id, undefined, "schedule");
+    const second = service.fire(id, undefined, "schedule");
+    await vi.waitFor(() => expect(gate().waiting(id)).toBe(1));
+    documents.apply(id, actions.setWorkflowStatus({ status: "DISABLED" }));
+
+    expect((await first).status).toBe("SUCCEEDED");
+    const queued = await second;
+    expect(queued.status).toBe("CANCELLED");
+    const store = (await service.store())!;
+    expect(await store.getSteps(queued.runId!)).toHaveLength(0);
+    expect((await store.getRun(queued.runId!))?.error).toContain("DISABLED");
+  }, 60_000);
+
+  it("does not run once the run ahead of it parked the workflow", async () => {
+    const id = "wf-queue-parked";
+    workflow(id, {
+      action: "boom",
+      policy: { concurrency: "QUEUE", onFailure: "PARK" },
+    });
+    // Holds the first run in its slot until the second is queued behind it.
+    let releaseFirst!: () => void;
+    const held = new Promise<void>((resolve) => (releaseFirst = resolve));
+    const realAdmit = gate().admit.bind(gate());
+    let admitted = 0;
+    const admit = vi
+      .spyOn(gate(), "admit")
+      .mockImplementation(async (...args) => {
+        const admission = await realAdmit(...args);
+        admitted += 1;
+        if (admitted === 1) await held;
+        return admission;
+      });
+
+    const first = service.fire(id, undefined, "schedule");
+    const second = service.fire(id, undefined, "schedule");
+    await vi.waitFor(() => expect(gate().waiting(id)).toBe(1));
+    releaseFirst();
+
+    expect((await first).status).toBe("FAILED");
+    const queued = await second;
+    admit.mockRestore();
+    expect(queued.status).toBe("CANCELLED");
+    const store = (await service.store())!;
+    expect(await store.getSteps(queued.runId!)).toHaveLength(0);
+    expect((await store.getRun(queued.runId!))?.error).toContain("PARKED");
+  }, 60_000);
+});
