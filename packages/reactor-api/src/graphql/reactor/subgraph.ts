@@ -873,6 +873,34 @@ export class ReactorSubgraph extends BaseSubgraph {
       executeBatch: async (_parent, args, ctx: Context) => {
         this.logger.debug("executeBatch(@args)", args);
         try {
+          const creation = resolvers.batchCreationOf(args.jobs);
+          if (creation) {
+            // The same rule as createDocument: write on a parent, or create.
+            if (creation.linkedFrom.length > 0) {
+              for (const parent of creation.linkedFrom) {
+                await this.assertCanWrite(parent, ctx);
+              }
+            } else {
+              this.assertCanCreate(ctx);
+            }
+
+            const result = await resolvers.executeBatch(this.reactorClient, {
+              jobs: args.jobs,
+            });
+
+            if (isDriveContainerType(creation.documentType)) {
+              this.graphqlManager.driveOwnershipCache.add(creation.documentId);
+            }
+            if (ctx.user?.address) {
+              await this.documentPermissionService?.initializeDocumentProtection(
+                creation.documentId,
+                ctx.user.address,
+                this.authorizationService.config.defaultProtection,
+              );
+            }
+            return result;
+          }
+
           const jobs = [];
           for (const job of args.jobs) {
             const handle = await this.assertCanExecuteOperations(

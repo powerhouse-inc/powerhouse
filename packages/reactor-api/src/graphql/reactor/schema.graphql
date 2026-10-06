@@ -729,6 +729,11 @@ type Mutation {
   is a completed one rather than the pending receipt the in-process reactor hands
   back. The first failed job fails the whole mutation; a batch is ordering, not a
   transaction, so jobs that already committed stay committed.
+
+  A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
+  as its first action naming the job's document. It is authorized like
+  `createDocument`: write on every document an `ADD_RELATIONSHIP` in the job
+  links it under, or the right to create when there is none.
   """
   executeBatch(jobs: [ExecutionJobInput!]!): BatchExecutionResult!
 

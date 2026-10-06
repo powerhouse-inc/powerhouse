@@ -1026,6 +1026,68 @@ export async function executeAsync(
   return toGqlJobInfo(job);
 }
 
+/** The document a batch creates, and the documents it links the new one under. */
+export type BatchCreation = {
+  documentId: string;
+  documentType: string;
+  linkedFrom: string[];
+};
+
+/** A create stands alone so nothing else rides on its authorization. */
+export function batchCreationOf(
+  jobs: readonly ExecutionJobInput[],
+): BatchCreation | undefined {
+  const creating = jobs.filter((job) =>
+    job.actions.some((action) => action.type === "CREATE_DOCUMENT"),
+  );
+  if (creating.length === 0) {
+    return undefined;
+  }
+  if (jobs.length > 1) {
+    throw new GraphQLError(
+      "A job that creates a document must be the only job in its batch",
+    );
+  }
+
+  const [job] = creating;
+  const [first, ...rest] = job.actions;
+  if (
+    first.type !== "CREATE_DOCUMENT" ||
+    rest.some((action) => action.type === "CREATE_DOCUMENT")
+  ) {
+    throw new GraphQLError(
+      "CREATE_DOCUMENT must be the first action of its job, and the only one",
+    );
+  }
+
+  const input = first.input as { documentId?: unknown; model?: unknown };
+  if (typeof input.documentId !== "string" || typeof input.model !== "string") {
+    throw new GraphQLError(
+      "CREATE_DOCUMENT input needs a documentId and model",
+    );
+  }
+  if (input.documentId !== job.documentIdOrSlug) {
+    throw new GraphQLError(
+      `CREATE_DOCUMENT names "${input.documentId}" but its job targets "${job.documentIdOrSlug}"`,
+    );
+  }
+
+  const linkedFrom = new Set<string>();
+  for (const action of rest) {
+    if (action.type !== "ADD_RELATIONSHIP") continue;
+    const { sourceId } = action.input as { sourceId?: unknown };
+    if (typeof sourceId === "string" && sourceId !== input.documentId) {
+      linkedFrom.add(sourceId);
+    }
+  }
+
+  return {
+    documentId: input.documentId,
+    documentType: input.model,
+    linkedFrom: [...linkedFrom],
+  };
+}
+
 /**
  * Runs multiple mutation jobs in dependency order and waits for all of them to
  * settle, the wire form of `IReactorClient.executeBatch`.

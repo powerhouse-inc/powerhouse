@@ -805,6 +805,254 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
+  describe("Mutation: executeBatch", () => {
+    const newId = "new-doc";
+    const driveId = "drive-123";
+
+    const completedJob = (id: string, documentId: string) => ({
+      id,
+      documentId,
+      status: "READ_READY",
+      createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+      completedAtUtcIso: "2026-01-01T00:00:01.000Z",
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+        coordinates: [],
+      },
+      meta: { batchId: id, batchJobIds: [id] },
+    });
+
+    const createAction = (documentId = newId, model = "test/document") => ({
+      id: "act-create",
+      type: "CREATE_DOCUMENT",
+      timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      scope: "document",
+      input: { documentId, model, version: 0 },
+    });
+
+    const linkAction = (sourceId: string) => ({
+      id: "act-link",
+      type: "ADD_RELATIONSHIP",
+      timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      scope: "document",
+      input: { sourceId, targetId: newId, relationshipType: "child" },
+    });
+
+    const createJob = (actions: unknown[], documentIdOrSlug = newId) => ({
+      key: "document",
+      documentIdOrSlug,
+      scope: "document",
+      branch: "main",
+      actions,
+      dependsOn: [],
+    });
+
+    let initializeDocumentProtection: ReturnType<typeof vi.fn>;
+    let ownershipAdds: string[];
+
+    const buildBatchSubgraph = (): ReactorSubgraph => {
+      initializeDocumentProtection = vi.fn().mockResolvedValue(undefined);
+      ownershipAdds = [];
+      return new ReactorSubgraph({
+        reactorClient: mockReactorClient as IReactorClient,
+        authorizationService: mockAuthorizationService as IAuthorizationService,
+        documentPermissionService: {
+          initializeDocumentProtection,
+        } as unknown as DocumentPermissionService,
+        relationalDb: {} as any,
+        analyticsStore: {} as any,
+        graphqlManager: {
+          driveOwnershipCache: {
+            has: () => false,
+            add: (id: string) => ownershipAdds.push(id),
+            remove: () => undefined,
+            size: () => 0,
+          },
+        } as any,
+        syncManager: {
+          localManifest: () => ({ revision: "server" }),
+          setPeerManifest: () => Promise.resolve(),
+        } as unknown as ISyncManager,
+      } as SubgraphArgs);
+    };
+
+    const callExecuteBatch = (jobs: unknown[], ctx: any) => {
+      const mutation = (buildBatchSubgraph().resolvers.Mutation as any)
+        ?.executeBatch;
+      return mutation(null, { jobs }, ctx);
+    };
+
+    beforeEach(() => {
+      // The document a create job names does not exist yet.
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockImplementation(
+        (identifier: string) =>
+          identifier === newId
+            ? Promise.reject(new Error(`Document not found: ${identifier}`))
+            : Promise.resolve(identifier),
+      );
+      mockReactorClient.executeBatch = vi.fn().mockResolvedValue({
+        jobs: { document: { id: "job-1", documentId: newId } },
+      });
+      vi.mocked(mockReactorClient.getJobStatus!).mockResolvedValue(
+        completedJob("job-1", newId) as any,
+      );
+    });
+
+    it("authorizes a create job by canCreate and protects the new document", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      const result = await callExecuteBatch([createJob([createAction()])], ctx);
+
+      expect(result.jobs).toHaveLength(1);
+      expect(mockAuthorizationService.canCreate).toHaveBeenCalledWith(
+        "0xcreator",
+      );
+      expect(mockAuthorizationService.canMutate).not.toHaveBeenCalled();
+      expect(initializeDocumentProtection).toHaveBeenCalledWith(
+        newId,
+        "0xcreator",
+        false,
+      );
+    });
+
+    it("refuses a create job from a caller who cannot create", async () => {
+      const ctx = createContext({});
+
+      await expect(
+        callExecuteBatch([createJob([createAction()])], ctx),
+      ).rejects.toThrow();
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+      expect(initializeDocumentProtection).not.toHaveBeenCalled();
+    });
+
+    it("requires write on the document a create job links the new one under", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [createJob([createAction(), linkAction(driveId)])],
+          ctx,
+        ),
+      ).rejects.toThrow("Forbidden");
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalledWith(
+        driveId,
+        "0xcreator",
+      );
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("creates under a parent the caller can write", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await callExecuteBatch(
+        [createJob([createAction(), linkAction(driveId)])],
+        ctx,
+      );
+
+      expect(mockReactorClient.executeBatch).toHaveBeenCalledTimes(1);
+      expect(initializeDocumentProtection).toHaveBeenCalledWith(
+        newId,
+        "0xcreator",
+        false,
+      );
+    });
+
+    it("records a created drive in the ownership cache", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await callExecuteBatch(
+        [createJob([createAction(newId, "powerhouse/document-drive")])],
+        ctx,
+      );
+
+      expect(ownershipAdds).toEqual([newId]);
+    });
+
+    it("refuses a create job batched with other jobs", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [
+            createJob([createAction()]),
+            {
+              ...createJob([]),
+              key: "drive",
+              documentIdOrSlug: driveId,
+              scope: "global",
+            },
+          ],
+          ctx,
+        ),
+      ).rejects.toThrow(/only job in its batch/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("refuses a create job whose CREATE_DOCUMENT names another document", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch([createJob([createAction("doc-123")])], ctx),
+      ).rejects.toThrow(/names "doc-123"/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("refuses a CREATE_DOCUMENT that is not its job's first action", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [createJob([linkAction(driveId), createAction()])],
+          ctx,
+        ),
+      ).rejects.toThrow(/first action/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("leaves the new document unprotected when the batch fails", async () => {
+      mockReactorClient.executeBatch = vi
+        .fn()
+        .mockRejectedValue(new Error("DocumentAlreadyExistsError"));
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch([createJob([createAction()])], ctx),
+      ).rejects.toThrow();
+      expect(initializeDocumentProtection).not.toHaveBeenCalled();
+    });
+
+    it("still gates a job on an existing document per operation", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(
+        callExecuteBatch(
+          [
+            {
+              ...createJob([
+                {
+                  id: "act-name",
+                  type: "SET_NAME",
+                  timestampUtcMs: "2026-01-01T00:00:00.000Z",
+                  scope: "global",
+                  input: { name: "x" },
+                },
+              ]),
+              documentIdOrSlug: "doc-123",
+              scope: "global",
+            },
+          ],
+          ctx,
+        ),
+      ).rejects.toThrow("Forbidden");
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+  });
+
   // ============================================================
   // Mutation: moveRelationship — assertCanWrite on both parents
   // ============================================================
