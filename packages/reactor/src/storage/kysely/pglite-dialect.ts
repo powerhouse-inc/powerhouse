@@ -1,0 +1,359 @@
+import type {
+  DatabaseConnection,
+  DatabaseIntrospector,
+  Dialect,
+  DialectAdapter,
+  Driver,
+  Kysely,
+  QueryCompiler,
+  QueryResult,
+  TransactionSettings,
+} from "kysely";
+import { CompiledQuery } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
+
+/** Structural so importing this module does not pull in the PGlite wasm bundle. */
+export type PGliteSession = {
+  query: (
+    sql: string,
+    params?: unknown[],
+  ) => Promise<{ rows: unknown[]; affectedRows?: number }>;
+  /** Simple-query execution, used for the commit guard and session recovery. */
+  exec: (sql: string) => Promise<unknown>;
+  isInTransaction: () => boolean;
+};
+
+export type HardenedPGliteDialectOptions = {
+  /** Bound on waiting for the single PGlite lease; 0 disables it. */
+  acquireTimeoutMs: number;
+  /** Where unrecoverable session faults and swallowed rollbacks are reported. */
+  onDiagnostic: (message: string, error?: unknown) => void;
+};
+
+export const DEFAULT_ACQUIRE_TIMEOUT_MS = 120_000;
+
+/** COMMIT in an aborted transaction silently rolls back; the guard raises first. */
+const COMMIT_WITH_GUARD = "select 1 as __commit_guard; commit";
+
+const PROBE = "select 1 as __session_probe";
+
+const ABORTED_TRANSACTION_CODE = "25P02";
+
+type IntrospectedDatabase = Parameters<Dialect["createIntrospector"]>[0];
+
+export class PGliteSessionError extends Error {
+  constructor(
+    message: string,
+    readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = "PGliteSessionError";
+  }
+}
+
+export class PGliteAcquireTimeoutError extends PGliteSessionError {
+  constructor(timeoutMs: number) {
+    super(
+      `Timed out after ${timeoutMs}ms waiting for the PGlite connection. The single session is held by a statement that never completed: a transaction awaiting a nested query on the base handle, or an abandoned stream iterator.`,
+    );
+    this.name = "PGliteAcquireTimeoutError";
+  }
+}
+
+export class PGliteAbortedTransactionError extends PGliteSessionError {
+  constructor(cause: unknown) {
+    super(
+      `Refusing to report a commit for an aborted transaction: COMMIT would have been answered with a ROLLBACK tag and nothing written. Underlying error: ${errorOf(cause).message}`,
+      cause,
+    );
+    this.name = "PGliteAbortedTransactionError";
+  }
+}
+
+/** No statement can clear the session (e.g. a stuck active portal). */
+export class PGliteSessionPoisonedError extends PGliteSessionError {
+  constructor(cause: unknown) {
+    super(
+      `The PGlite session is unrecoverable and cannot be reused; the component owning it must be restarted. Original error: ${errorOf(cause).message}`,
+      cause,
+    );
+    this.name = "PGliteSessionPoisonedError";
+  }
+}
+
+function errorOf(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function isAbortedTransactionError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === ABORTED_TRANSACTION_CODE) {
+    return true;
+  }
+  return errorOf(error).message.includes("current transaction is aborted");
+}
+
+/** `kysely-pglite-dialect` hardened for one shared session that a fault must not brick. */
+export class HardenedPGliteDialect implements Dialect {
+  private readonly inner: PGliteDialect;
+  private readonly options: HardenedPGliteDialectOptions;
+
+  constructor(
+    private readonly client: PGliteSession,
+    options: Partial<HardenedPGliteDialectOptions> = {},
+  ) {
+    this.inner = new PGliteDialect(client as never);
+    this.options = {
+      acquireTimeoutMs: options.acquireTimeoutMs ?? DEFAULT_ACQUIRE_TIMEOUT_MS,
+      onDiagnostic:
+        options.onDiagnostic ??
+        ((message, error) => {
+          console.error(`[pglite-dialect] ${message}`, error);
+        }),
+    };
+  }
+
+  createAdapter(): DialectAdapter {
+    return this.inner.createAdapter();
+  }
+
+  createDriver(): Driver {
+    return new HardenedPGliteDriver(
+      this.inner.createDriver(),
+      this.client,
+      this.options,
+    );
+  }
+
+  createQueryCompiler(): QueryCompiler {
+    return this.inner.createQueryCompiler();
+  }
+
+  createIntrospector(db: IntrospectedDatabase): DatabaseIntrospector {
+    return this.inner.createIntrospector(db);
+  }
+}
+
+class HardenedPGliteConnection implements DatabaseConnection {
+  failure: Error | undefined = undefined;
+  rollbackFailure: Error | undefined = undefined;
+  transactionOpen = false;
+
+  constructor(readonly inner: DatabaseConnection) {}
+
+  /** Never retried: a replay could commit alone a write meant for another consumer's transaction. */
+  async executeQuery<R>(compiledQuery: CompiledQuery): Promise<QueryResult<R>> {
+    try {
+      return await this.inner.executeQuery<R>(compiledQuery);
+    } catch (error) {
+      this.failure = errorOf(error);
+      throw error;
+    }
+  }
+
+  streamQuery<R>(
+    compiledQuery: CompiledQuery,
+    chunkSize?: number,
+  ): AsyncIterableIterator<QueryResult<R>> {
+    return this.inner.streamQuery<R>(compiledQuery, chunkSize);
+  }
+
+  get suspect(): boolean {
+    return (
+      this.failure !== undefined ||
+      this.rollbackFailure !== undefined ||
+      this.transactionOpen
+    );
+  }
+}
+
+class HardenedPGliteDriver implements Driver {
+  /** Set when release could not reset the session; each acquire retries the reset. */
+  private sessionFault: Error | undefined = undefined;
+
+  constructor(
+    private readonly inner: Driver,
+    private readonly client: PGliteSession,
+    private readonly options: HardenedPGliteDialectOptions,
+  ) {}
+
+  async init(): Promise<void> {
+    await this.inner.init();
+  }
+
+  async acquireConnection(): Promise<DatabaseConnection> {
+    const innerConnection = await this.acquireWithTimeout();
+
+    if (this.sessionFault !== undefined) {
+      const fault = this.sessionFault;
+      const recovered = await this.recoverSession(false);
+      if (!recovered) {
+        await this.inner.releaseConnection(innerConnection);
+        throw new PGliteSessionPoisonedError(fault);
+      }
+      this.sessionFault = undefined;
+    }
+
+    return new HardenedPGliteConnection(innerConnection);
+  }
+
+  /** Kysely never rolls back after a failed BEGIN, so an aborted session is reset here. */
+  async beginTransaction(
+    connection: DatabaseConnection,
+    settings: TransactionSettings,
+  ): Promise<void> {
+    const wrapper = asWrapper(connection);
+    try {
+      await this.inner.beginTransaction(wrapper.inner, settings);
+    } catch (error) {
+      wrapper.failure = errorOf(error);
+      if (!isAbortedTransactionError(error)) {
+        throw error;
+      }
+      if (!(await this.recoverSession(false))) {
+        this.sessionFault = errorOf(error);
+        throw error;
+      }
+      await this.inner.beginTransaction(wrapper.inner, settings);
+      wrapper.failure = undefined;
+    }
+    wrapper.transactionOpen = true;
+  }
+
+  async commitTransaction(connection: DatabaseConnection): Promise<void> {
+    const wrapper = asWrapper(connection);
+    try {
+      await this.client.exec(COMMIT_WITH_GUARD);
+    } catch (error) {
+      wrapper.failure = errorOf(error);
+      if (isAbortedTransactionError(error)) {
+        throw new PGliteAbortedTransactionError(error);
+      }
+      throw error;
+    }
+    wrapper.transactionOpen = false;
+    wrapper.failure = undefined;
+  }
+
+  /** Swallowed so the original failure propagates; release resets the session. */
+  async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
+    const wrapper = asWrapper(connection);
+    try {
+      await this.inner.rollbackTransaction(wrapper.inner);
+      wrapper.transactionOpen = false;
+    } catch (error) {
+      wrapper.rollbackFailure = errorOf(error);
+      this.options.onDiagnostic(
+        "rollback failed; preserving the original failure and recovering the session on release",
+        error,
+      );
+    }
+  }
+
+  async releaseConnection(connection: DatabaseConnection): Promise<void> {
+    const wrapper = asWrapper(connection);
+
+    if (wrapper.suspect) {
+      const recovered = await this.recoverSession(wrapper.transactionOpen);
+      if (!recovered) {
+        this.sessionFault =
+          wrapper.rollbackFailure ??
+          wrapper.failure ??
+          new Error("session left in a transaction");
+        this.options.onDiagnostic(
+          "the PGlite session could not be reset and is being marked unrecoverable",
+          this.sessionFault,
+        );
+      }
+    }
+
+    await this.inner.releaseConnection(wrapper.inner);
+  }
+
+  async destroy(): Promise<void> {
+    await this.inner.destroy();
+  }
+
+  /** A waiter that gave up still passes the lease on, so it cannot wedge the queue. */
+  private async acquireWithTimeout(): Promise<DatabaseConnection> {
+    const timeoutMs = this.options.acquireTimeoutMs;
+    if (timeoutMs <= 0) {
+      return this.inner.acquireConnection();
+    }
+
+    let abandoned = false;
+    const pending = this.inner.acquireConnection().then((connection) => {
+      if (!abandoned) {
+        return connection;
+      }
+      void this.inner.releaseConnection(connection).catch(() => undefined);
+      throw new PGliteAcquireTimeoutError(timeoutMs);
+    });
+
+    let handle: ReturnType<typeof setTimeout> | undefined;
+    const expiry = new Promise<never>((_resolve, reject) => {
+      handle = setTimeout(() => {
+        abandoned = true;
+        reject(new PGliteAcquireTimeoutError(timeoutMs));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([pending, expiry]);
+    } finally {
+      clearTimeout(handle);
+    }
+  }
+
+  /** Rolls back only when told to or when the probe fails, sparing another consumer's live transaction. */
+  private async recoverSession(mustEndTransaction: boolean): Promise<boolean> {
+    if (
+      !mustEndTransaction &&
+      !this.client.isInTransaction() &&
+      (await this.probeSession())
+    ) {
+      return true;
+    }
+
+    try {
+      await this.client.exec("rollback");
+    } catch (error) {
+      this.options.onDiagnostic("session rollback failed", error);
+    }
+
+    if (!(await this.probeSession())) {
+      return false;
+    }
+    return !this.client.isInTransaction();
+  }
+
+  private async probeSession(): Promise<boolean> {
+    try {
+      await this.client.exec(PROBE);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function asWrapper(connection: DatabaseConnection): HardenedPGliteConnection {
+  if (!(connection instanceof HardenedPGliteConnection)) {
+    throw new PGliteSessionError(
+      "Connection was not created by HardenedPGliteDialect",
+    );
+  }
+  return connection;
+}
+
+/** Raw SQL through the dialect's queue, instead of into whatever transaction holds the session. */
+export async function queryThroughDialect<DB>(
+  db: Kysely<DB>,
+  sql: string,
+  params?: unknown[],
+): Promise<unknown[]> {
+  const result = await db.executeQuery<unknown>(
+    CompiledQuery.raw(sql, params ?? []),
+  );
+  return [...result.rows];
+}

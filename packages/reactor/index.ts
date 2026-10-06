@@ -321,6 +321,17 @@ export {
 } from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export {
+  DEFAULT_ACQUIRE_TIMEOUT_MS,
+  HardenedPGliteDialect,
+  PGliteAbortedTransactionError,
+  PGliteAcquireTimeoutError,
+  PGliteSessionError,
+  PGliteSessionPoisonedError,
+  queryThroughDialect,
+  type HardenedPGliteDialectOptions,
+  type PGliteSession,
+} from "./src/storage/kysely/pglite-dialect.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,

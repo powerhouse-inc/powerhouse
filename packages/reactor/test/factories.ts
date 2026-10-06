@@ -18,7 +18,6 @@ import {
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect, sql } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { promises as fsp } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -26,6 +25,7 @@ import { Pool } from "pg";
 import { v4 as uuidv4 } from "uuid";
 import { afterAll, vi } from "vitest";
 import type { ICollectionMembershipCache } from "../src/cache/collection-membership-cache.js";
+import { HardenedPGliteDialect } from "../src/storage/kysely/pglite-dialect.js";
 import type {
   CachedDocumentMeta,
   IDocumentMetaCache,
@@ -148,7 +148,7 @@ function getMigratedNodeFsTemplate(): Promise<string> {
     );
     const pg = new PGlite({ fs: new NodeFS(dir) });
     const db = new Kysely<DatabaseSchema>({
-      dialect: new PGliteDialect(pg),
+      dialect: new HardenedPGliteDialect(pg),
     });
     const result = await runMigrations(db, REACTOR_SCHEMA);
     if (!result.success && result.error) {
@@ -212,7 +212,7 @@ export async function createTestOperationStore(
 }> {
   const { fs, cleanup } = await backend();
   const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PGliteDialect(new PGlite({ fs })),
+    dialect: new HardenedPGliteDialect(new PGlite({ fs })),
   });
 
   const result = await runMigrations(baseDb, REACTOR_SCHEMA);
@@ -960,7 +960,7 @@ export async function createTestSyncStorage(
 }> {
   const { fs, cleanup } = await backend();
   const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PGliteDialect(new PGlite({ fs })),
+    dialect: new HardenedPGliteDialect(new PGlite({ fs })),
   });
 
   const result = await runMigrations(baseDb, REACTOR_SCHEMA);
