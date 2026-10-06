@@ -84,5 +84,10 @@ export function makePHEventFunctions<TKey extends PHGlobalKey>(key: TKey) {
     useValue,
     setValue,
     addEventHandler,
+    // Non-react access: plain code (e.g. the worker wiring in Connect's boot)
+    // subscribes to value updates and reads the current snapshot without a
+    // render loop.
+    subscribeToValue,
+    getSnapshot,
   };
 }

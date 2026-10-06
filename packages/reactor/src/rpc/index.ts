@@ -54,4 +54,5 @@ export type {
   VersionFingerprint,
   WorkerInspectorInfo,
   WorkerMigrationState,
+  WorkerPackageSource,
 } from "./protocol.js";

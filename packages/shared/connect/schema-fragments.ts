@@ -410,7 +410,7 @@ export const phConnectRuntimeConfigSchema = {
         reactorWorker: {
           type: "boolean",
           description:
-            "Host the reactor in a shared worker instead of on the main thread. Off by default; the main-thread reactor stays the proven path until cutover is verified.",
+            "Host the reactor in a shared worker instead of on the main thread. Off by default; the main-thread reactor stays the proven path until cutover is verified. Packaged deployments load the worker from the prebuilt bundle `ph connect build` emits under __reactor_worker__/ (the dev server builds it lazily at the same path); when that bundle is absent the feature reports itself unavailable instead of starting a worker that cannot load.",
           default: false,
         },
       },

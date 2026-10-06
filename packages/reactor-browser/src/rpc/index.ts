@@ -32,6 +32,7 @@ export {
   type VersionFingerprint,
   type WorkerInspectorInfo,
   type WorkerMigrationState,
+  type WorkerPackageSource,
 } from "@powerhousedao/reactor/rpc";
 export {
   createWorkerAdminClient,
@@ -75,5 +76,6 @@ export {
 export {
   WorkerPackageLoader,
   type PackageImporter,
+  type PackageLoadFailure,
   type WorkerPackageLoaderOptions,
 } from "./worker-package-loader.js";

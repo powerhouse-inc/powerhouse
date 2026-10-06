@@ -41,6 +41,7 @@ import {
 } from "./vite-plugins/pwa-packages.js";
 import { connectPwaPlugins } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
+import { reactorWorkerDevPlugin } from "./vite-plugins/reactor-worker-dev.js";
 import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
 import { vendorImportMapPlugin } from "./vite-plugins/vendor-import-map.js";
 
@@ -467,6 +468,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // Dev-only: rewrite the importmap to Vite's pre-bundled React so Connect
       // and CDN editors share one instance (build uses reactSelfHostPlugin).
       devReactImportmapPlugin(options.dirname),
+      // Dev-only: serve the reactor SharedWorker bundle (built lazily) at the
+      // stable URL the tab probes; production builds emit it via
+      // prebuildReactorWorker in `ph connect build`.
+      reactorWorkerDevPlugin(options.dirname),
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().

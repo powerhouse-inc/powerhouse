@@ -1,4 +1,4 @@
-export type WorkerConnectionStatus = "connected" | "lost";
+export type WorkerConnectionStatus = "connected" | "lost" | "failed";
 
 let status: WorkerConnectionStatus = "connected";
 const listeners = new Set<() => void>();

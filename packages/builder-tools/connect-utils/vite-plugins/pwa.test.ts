@@ -7,7 +7,7 @@ import {
   collectProjectPwaContribution,
   validateProjectPwaConfig,
 } from "./pwa-packages.js";
-import { connectPwaPlugins } from "./pwa.js";
+import { BASE_PRECACHE, connectPwaPlugins } from "./pwa.js";
 
 describe("connectPwaPlugins", () => {
   it("emits a single self-destroying worker when offline is disabled", () => {
@@ -53,6 +53,14 @@ describe("connectPwaPlugins", () => {
         },
       }),
     ).not.toThrow();
+  });
+});
+
+describe("BASE_PRECACHE", () => {
+  it("precaches the reactor worker metadata the tab fetches at boot", () => {
+    expect(BASE_PRECACHE.globPatterns).toContain(
+      "__reactor_worker__/**/*.json",
+    );
   });
 });
 

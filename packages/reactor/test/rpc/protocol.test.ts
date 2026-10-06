@@ -19,9 +19,12 @@ function roundTrip(message: RpcMessage): Promise<RpcMessage> {
   });
 }
 
-describe("relational + live-query wire protocol (v2)", () => {
-  it("bumps RPC_PROTOCOL_VERSION for the incompatible wire change", () => {
-    expect(RPC_PROTOCOL_VERSION).toBe(2);
+describe("relational + live-query wire protocol", () => {
+  // The relational/live-query messages landed at v2; package sources took it
+  // to v3. Asserted as a floor, not an equality: a later incompatible change
+  // elsewhere must not fail this suite, whose subject is the shapes below.
+  it("keeps RPC_PROTOCOL_VERSION at or past the incompatible wire change", () => {
+    expect(RPC_PROTOCOL_VERSION).toBeGreaterThanOrEqual(2);
   });
 
   it("round-trips a db-op carrying a compiled SQL string + params", async () => {
