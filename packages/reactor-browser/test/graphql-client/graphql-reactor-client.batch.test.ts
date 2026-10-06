@@ -345,6 +345,42 @@ describe("GraphQLReactorClient.waitForJob", () => {
     expect(resolved).toMatchObject({ id: "job-x", status: "READ_READY" });
   });
 
+  it("polls a job that has not settled until it does", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi
+        .fn()
+        .mockResolvedValueOnce({
+          jobStatus: serverJob("job-x", "doc-1", {
+            status: "PENDING",
+            completedAt: null,
+          }),
+        })
+        .mockResolvedValueOnce({ jobStatus: serverJob("job-x", "doc-1") }),
+    });
+
+    const resolved = await createClientWith(sdk).waitForJob("job-x");
+
+    expect(sdk.GetJobStatus).toHaveBeenCalledTimes(2);
+    expect(resolved.status).toBe("READ_READY");
+  });
+
+  it("stops polling when aborted", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi.fn().mockResolvedValue({
+        jobStatus: serverJob("job-x", "doc-1", { status: "RUNNING" }),
+      }),
+    });
+    const controller = new AbortController();
+
+    const waiting = createClientWith(sdk).waitForJob(
+      "job-x",
+      controller.signal,
+    );
+    controller.abort(new Error("gave up"));
+
+    await expect(waiting).rejects.toThrow("gave up");
+  });
+
   it("throws when a bare job id is unknown", async () => {
     const sdk = createMockSdk({
       GetJobStatus: vi.fn().mockResolvedValue({ jobStatus: null }),

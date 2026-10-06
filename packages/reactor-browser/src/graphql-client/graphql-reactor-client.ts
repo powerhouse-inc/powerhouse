@@ -152,6 +152,8 @@ export type GraphQLReactorClientOptions = {
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
 
+const JOB_POLL_INTERVAL_MS = 250;
+
 /** A registered `subscribe` call. */
 type ChangeListener = {
   search: SearchFilter;
@@ -614,32 +616,26 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     return { jobs };
   }
 
-  /**
-   * Resolves a job the batch mutation already completed.
-   *
-   * A `JobInfo` is handed straight back: the batch mutation is synchronous, so
-   * the job it returned is terminal already and there is nothing to wait for.
-   * This is the one `DriveClient.runJobs` calls, with the job objects
-   * {@link executeBatch} returned. A bare job id is looked up once over the
-   * `jobStatus` query for callers that hold only an id.
-   */
+  /** Polls `jobStatus` until the job is READ_READY or FAILED. */
   async waitForJob(
     jobOrId: string | JobInfo,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    if (typeof jobOrId !== "string") {
+    if (typeof jobOrId !== "string" && isSettled(jobOrId)) {
       return jobOrId;
     }
-    const result = await this.sdk.GetJobStatus(
-      { jobId: jobOrId },
-      undefined,
-      signal,
-    );
-    const status = result.jobStatus;
-    if (!status) {
-      throw new Error(`Job not found: ${jobOrId}`);
+    const jobId = typeof jobOrId === "string" ? jobOrId : jobOrId.id;
+    for (;;) {
+      const result = await this.sdk.GetJobStatus({ jobId }, undefined, signal);
+      if (!result.jobStatus) {
+        throw new Error(`Job not found: ${jobId}`);
+      }
+      const job = jobInfoFromGql(result.jobStatus);
+      if (isSettled(job)) {
+        return job;
+      }
+      await delay(JOB_POLL_INTERVAL_MS, signal);
     }
-    return jobInfoFromGql(status);
   }
 
   /**
@@ -1385,6 +1381,34 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
     };
   }
   return info;
+}
+
+function isSettled(job: JobInfo): boolean {
+  const status: string = job.status;
+  return status === "READ_READY" || status === "FAILED";
+}
+
+function abortReason(signal: AbortSignal): Error {
+  const reason: unknown = signal.reason;
+  return reason instanceof Error ? reason : new Error(String(reason));
+}
+
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      if (signal) reject(abortReason(signal));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */
