@@ -830,6 +830,20 @@ const phWorkerResolve = {
     return resolved;
   },
 };
+// A worker has no window: on a failed dynamic import, the preload helper's
+// window.dispatchEvent would throw a ReferenceError in place of the real error.
+const PRELOAD_HELPER_ID = '\\0vite/preload-helper.js';
+const PRELOAD_DISPATCH = 'window.dispatchEvent(';
+const phWorkerPreloadHelper = {
+  name: 'ph-reactor-worker-preload-helper',
+  transform(code, id) {
+    if (id !== PRELOAD_HELPER_ID) return null;
+    if (code.split(PRELOAD_DISPATCH).length !== 2) {
+      this.error('expected exactly one ' + PRELOAD_DISPATCH + ' in ' + PRELOAD_HELPER_ID);
+    }
+    return { code: code.replace(PRELOAD_DISPATCH, 'globalThis.dispatchEvent?.('), map: null };
+  },
+};
 await build({
   root: dirname, configFile: false, logLevel: 'error',
   // The project's public/ dir belongs to the app build, not this bundle.
@@ -841,7 +855,7 @@ await build({
     'process.env.NODE_ENV': JSON.stringify(nodeEnv),
     'import.meta.env.BASE_URL': JSON.stringify('./'),
   },
-  plugins: [phWorkerResolve],
+  plugins: [phWorkerResolve, phWorkerPreloadHelper],
   // pglite ships nested web workers as ES-module chunks.
   worker: { format: 'es' },
   build: {

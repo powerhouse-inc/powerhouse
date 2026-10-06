@@ -1,7 +1,9 @@
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -10,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   BUILDER_TOOLS_VERSION,
@@ -550,6 +553,53 @@ describe("prebuildReactorWorker", () => {
       } finally {
         rmSync(projectDir, { recursive: true, force: true });
       }
+    },
+  );
+
+  it(
+    "surfaces a failed dynamic import's own error where there is no window",
+    { timeout: 120_000 },
+    async () => {
+      const dir = join(fixtureDir, "dynamic-import");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "lazy.js"), `export const f = () => "lazy";\n`);
+      writeFileSync(
+        join(dir, "entry.js"),
+        `export const load = () => import("./lazy.js").then((m) => m.f());\n`,
+      );
+      const bundleDir = join(dir, "out");
+
+      const built = await prebuildReactorWorker({
+        dirname: DIRNAME,
+        outDir: bundleDir,
+        entryPath: join(dir, "entry.js"),
+      });
+
+      expect(built).not.toBeNull();
+      const files = readdirSync(bundleDir).filter((f) => f.endsWith(".js"));
+      const code = files
+        .map((f) => readFileSync(join(bundleDir, f), "utf8"))
+        .join("\n");
+      expect(code).toContain("vite:preloadError");
+      expect(code).not.toContain("window.dispatchEvent");
+
+      for (const file of files.filter((f) => f.startsWith("lazy-"))) {
+        rmSync(join(bundleDir, file));
+      }
+      const run = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `const { load } = await import(${JSON.stringify(
+            pathToFileURL(join(bundleDir, REACTOR_WORKER_ENTRY)).href,
+          )});\n` +
+            `await load().then(() => console.log("resolved"), (e) => console.log(e.name, e.code));`,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(run.stderr).toBe("");
+      expect(run.stdout.trim()).toBe("Error ERR_MODULE_NOT_FOUND");
     },
   );
 
