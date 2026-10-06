@@ -705,6 +705,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     jobs: Record<string, JobInfo>,
     signal?: AbortSignal,
   ): Promise<void> {
+    if (this.listeners.length === 0) {
+      return;
+    }
     const deleted = new Set<string>();
     const created = new Set<string>();
     const touched = new Set<string>();
@@ -745,25 +748,29 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         return undefined;
       }
     };
-    const announce = async (
-      type: DocumentChangeType,
-      documentIds: string[],
-    ) => {
-      const documents = (await Promise.all(documentIds.map(read))).filter(
+    const readAll = async (documentIds: string[]) =>
+      (await Promise.all(documentIds.map(read))).filter(
         (document) => document !== undefined,
       );
-      if (documents.length > 0) {
-        this.emitChange({ type, documents });
-      }
-    };
-    await announce(
-      DOCUMENT_CHANGE_TYPE.Created,
-      [...created].filter((id) => !deleted.has(id)),
-    );
-    await announce(
-      DOCUMENT_CHANGE_TYPE.Updated,
-      [...touched].filter((id) => !deleted.has(id) && !created.has(id)),
-    );
+    // Read concurrently, emit in order: Created before Updated.
+    const [createdDocuments, updatedDocuments] = await Promise.all([
+      readAll([...created].filter((id) => !deleted.has(id))),
+      readAll(
+        [...touched].filter((id) => !deleted.has(id) && !created.has(id)),
+      ),
+    ]);
+    if (createdDocuments.length > 0) {
+      this.emitChange({
+        type: DOCUMENT_CHANGE_TYPE.Created,
+        documents: createdDocuments,
+      });
+    }
+    if (updatedDocuments.length > 0) {
+      this.emitChange({
+        type: DOCUMENT_CHANGE_TYPE.Updated,
+        documents: updatedDocuments,
+      });
+    }
   }
 
   /**

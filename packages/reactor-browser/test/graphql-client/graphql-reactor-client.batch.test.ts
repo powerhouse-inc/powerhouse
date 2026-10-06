@@ -484,6 +484,16 @@ describe("GraphQLReactorClient.executeBatch", () => {
     ]);
   });
 
+  it("reads nothing back to announce when nobody is subscribed", async () => {
+    const sdk = createMockSdk();
+
+    await createClientWith(sdk, { realtime: false }).executeBatch(
+      removeFileBatch,
+    );
+
+    expect(sdk.GetDocument).not.toHaveBeenCalled();
+  });
+
   it("announces a document a batch created", async () => {
     const sdk = createMockSdk({
       ExecuteBatch: vi.fn().mockResolvedValue({
