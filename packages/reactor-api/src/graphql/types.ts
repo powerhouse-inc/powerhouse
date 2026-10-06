@@ -15,6 +15,7 @@ import type { IncomingHttpHeaders } from "http";
 import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
+import type { IReactorInspectionSource } from "./inspection/source.js";
 
 export type SubgraphClass = typeof BaseSubgraph;
 
@@ -77,6 +78,8 @@ export type SubgraphArgs = {
    * `BaseSubgraph.attachmentsFor(ctx)`.
    */
   attachments?: IAttachmentClientProvider;
+  /** Read only by `InspectionSubgraph`, registered only when this is set. */
+  inspection?: IReactorInspectionSource;
   /**
    * The host's base path, injected by the GraphQL manager when it constructs
    * a subgraph. Subgraph code may read it, but routing ignores it: every
