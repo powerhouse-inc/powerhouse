@@ -270,6 +270,10 @@ query GetJobStatus($jobId: String!) {
   }
 }
 
+query GetDocumentServed($idOrSlug: String!, $view: ViewFilterInput) {
+  documentServed(idOrSlug: $idOrSlug, view: $view)
+}
+
 query GetCreateDefaults($parentIdOrSlug: String) {
   createDefaults(parentIdOrSlug: $parentIdOrSlug) {
     signaturePolicy

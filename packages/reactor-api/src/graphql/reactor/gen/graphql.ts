@@ -632,6 +632,7 @@ export type Query = {
   readonly documentOperations: ReactorOperationResultPage;
   readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
+  readonly documentServed: Scalars["Boolean"]["output"];
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
    * set of candidate operations, without submitting any of them. A UI asks this to
@@ -727,6 +728,11 @@ export type QueryDocumentOutgoingRelationshipsArgs = {
   relationshipType: Scalars["String"]["input"];
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryDocumentServedArgs = {
+  idOrSlug: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -1323,6 +1329,13 @@ export type GetJobStatusQuery = {
     | null
     | undefined;
 };
+
+export type GetDocumentServedQueryVariables = Exact<{
+  idOrSlug: Scalars["String"]["input"];
+  view?: InputMaybe<ViewFilterInput>;
+}>;
+
+export type GetDocumentServedQuery = { readonly documentServed: boolean };
 
 export type GetCreateDefaultsQueryVariables = Exact<{
   parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -2777,6 +2790,12 @@ export type QueryResolvers<
     ContextType,
     RequireFields<QueryDocumentOutgoingRelationshipsArgs, "relationshipType">
   >;
+  documentServed?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryDocumentServedArgs, "idOrSlug">
+  >;
   evaluateActions?: Resolver<
     ResolversTypes["ActionEvaluations"],
     ParentType,
@@ -3601,6 +3620,11 @@ export const GetJobStatusDocument = gql`
   }
   ${JobInfoFieldsFragmentDoc}
 `;
+export const GetDocumentServedDocument = gql`
+  query GetDocumentServed($idOrSlug: String!, $view: ViewFilterInput) {
+    documentServed(idOrSlug: $idOrSlug, view: $view)
+  }
+`;
 export const GetCreateDefaultsDocument = gql`
   query GetCreateDefaults($parentIdOrSlug: String) {
     createDefaults(parentIdOrSlug: $parentIdOrSlug) {
@@ -4076,6 +4100,16 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetJobStatusQuery>;
+    },
+    GetDocumentServed(
+      variables: GetDocumentServedQueryVariables,
+      options?: C,
+    ): Promise<GetDocumentServedQuery> {
+      return requester<GetDocumentServedQuery, GetDocumentServedQueryVariables>(
+        GetDocumentServedDocument,
+        variables,
+        options,
+      ) as Promise<GetDocumentServedQuery>;
     },
     GetCreateDefaults(
       variables?: GetCreateDefaultsQueryVariables,

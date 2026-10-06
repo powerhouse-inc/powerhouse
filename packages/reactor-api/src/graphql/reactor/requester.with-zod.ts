@@ -96,6 +96,9 @@ const operationValidators: OperationValidators = {
       JobInfoFieldsDTO.parse(data.jobStatus as JobInfo);
     }
   },
+  GetDocumentServed: () => {
+    // Returns a boolean
+  },
   GetCreateDefaults: (data) => {
     if (data.createDefaults) {
       CreateDefaultsDTO.parse(data.createDefaults);

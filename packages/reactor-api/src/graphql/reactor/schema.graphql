@@ -644,6 +644,10 @@ type Query {
   # Get job status
   jobStatus(jobId: String!): JobInfo
 
+  # Whether findDocuments would serve the document to the caller. Absent or
+  # withheld is false; a server that cannot decide answers with an error.
+  documentServed(idOrSlug: String!, view: ViewFilterInput): Boolean!
+
   # The signature policy and protocol versions a new document gets, under the
   # parent when one is named. A parent the caller may not read is refused.
   createDefaults(parentIdOrSlug: String): CreateDefaults!
