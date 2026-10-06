@@ -76,15 +76,47 @@ function unavailableReason(value: unknown): string | undefined {
   return typeof reason === "string" ? reason : undefined;
 }
 
+/**
+ * The reason of the first {@link unavailableValue} anywhere inside a value,
+ * however deep, or undefined when there is none.
+ *
+ * A shallow check is not enough, and that was the hole: `{{steps.charge}}`
+ * lands on the step's whole entry rather than on the wrapper, so the wrapper
+ * sits one level down as `{ output: <wrapper> }`. The path check saw an
+ * ordinary object, handed it over as data, and `JSON.stringify` then dropped
+ * the symbol on the way to the piece — the downstream step received `{}` and
+ * the reason was gone. Refusing by name is the whole point of the wrapper.
+ */
+export function unavailableValueReason(value: unknown): string | undefined {
+  const own = unavailableReason(value);
+  if (own !== undefined) return own;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = unavailableValueReason(item);
+      if (nested !== undefined) return nested;
+    }
+    return undefined;
+  }
+  if (typeof value === "object" && value !== null) {
+    for (const entry of Object.values(value)) {
+      const nested = unavailableValueReason(entry);
+      if (nested !== undefined) return nested;
+    }
+  }
+  return undefined;
+}
+
 /** True for anything {@link unavailableValue} produced, at any depth of a
  * resolved value. Lets a caller refuse before a piece is handed it. */
 export function containsUnavailableValue(value: unknown): boolean {
-  if (unavailableReason(value) !== undefined) return true;
-  if (Array.isArray(value)) return value.some(containsUnavailableValue);
-  if (typeof value === "object" && value !== null) {
-    return Object.values(value).some(containsUnavailableValue);
-  }
-  return false;
+  return unavailableValueReason(value) !== undefined;
+}
+
+/** Throws {@link UnavailableValueError} when a resolved value holds an
+ * unavailable wrapper at any depth; the gate every resolved input passes. */
+export function assertNoUnavailableValue(value: unknown): void {
+  const reason = unavailableValueReason(value);
+  if (reason !== undefined) throw new UnavailableValueError(reason);
 }
 
 const IDENT = /[A-Za-z0-9_$-]/;
@@ -241,15 +273,19 @@ export function lookupPath(
   for (const segment of segments) {
     if (current === null || typeof current !== "object") return MISSING;
     // Not missing and not readable: say which, before the path walks into it.
+    // Shallow on purpose — a container holding one unavailable entry is still
+    // readable for every other path through it.
     const blocked = unavailableReason(current);
     if (blocked !== undefined) throw new UnavailableValueError(blocked);
     const record = current as Record<string | number, unknown>;
     if (!Object.prototype.hasOwnProperty.call(record, segment)) return MISSING;
     current = record[segment];
   }
-  // The path landed ON the unavailable value itself, e.g. `steps.x.output`.
-  const blocked = unavailableReason(current);
-  if (blocked !== undefined) throw new UnavailableValueError(blocked);
+  // What the path landed on is what leaves resolution, so the check here is
+  // DEEP: `steps.x.output` lands on the wrapper itself, but `steps.x` lands on
+  // the entry holding it, and handing that over would drop the reason on the
+  // symbol and give the piece a bare `{}`.
+  assertNoUnavailableValue(current);
   return current === undefined ? MISSING : current;
 }
 
