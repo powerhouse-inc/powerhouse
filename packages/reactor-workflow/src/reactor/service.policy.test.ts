@@ -198,6 +198,42 @@ describe("policy.concurrency", () => {
     expect(spans[1][0]).toBeLessThan(spans[0][1]);
   });
 
+  // The deadline used to be computed AFTER admission, so queue time was free:
+  // a firing could wait out a whole shift under a one-second timeout and then
+  // run its side effect anyway, with its full budget intact.
+  it("cancels a firing that waited past its runTimeoutSeconds", async () => {
+    // `slow` sleeps 150ms, so a queued second firing waits at least that long
+    // for its slot — a tenth of a second is gone before it is ever admitted.
+    workflow("wf-queue-expired", {
+      action: "slow",
+      policy: {
+        concurrency: "QUEUE",
+        onFailure: "IGNORE",
+        runTimeoutSeconds: 0.1,
+      },
+    });
+
+    const fired = await Promise.all([
+      service.fire("wf-queue-expired", undefined, "manual", undefined, CTX),
+      service.fire("wf-queue-expired", undefined, "manual", undefined, CTX),
+    ]);
+
+    expect(fired.map((run) => run.status)).toContain("CANCELLED");
+    const rows = await service.runs({ workflowId: "wf-queue-expired" }, CTX);
+    // The firing that waited the first one out had nothing left to run in, so
+    // it is journaled CANCELLED naming the wait rather than running late.
+    const waited = rows.find((run) =>
+      run.row.error?.includes("waited past its runTimeoutSeconds"),
+    );
+    expect(waited).toBeDefined();
+    expect(waited!.row.status).toBe("CANCELLED");
+    // Not a step of it executed: a side effect fired long after the timeout
+    // that was supposed to bound it is the thing being prevented.
+    expect(
+      await (await service.store())!.getSteps(waited!.row.id),
+    ).toHaveLength(0);
+  }, 60_000);
+
   // A throw between admit() and the try whose finally releases would leak the
   // slot for the life of the process: SINGLETON would refuse every later
   // firing of this workflow, and nothing would ever free it.

@@ -3862,6 +3862,13 @@ export class WorkflowRuntimeService {
     // row the run finishes in.
     enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
+    // `policy.runTimeoutSeconds` is measured from HERE, the moment the firing
+    // reaches the runtime — not from admission. The queue wait is part of the
+    // time the run took: computing the deadline after admit() meant a firing
+    // could sit in a QUEUE lane for an hour under a 30-second timeout and then
+    // run anyway, with its whole budget intact. The point of a run timeout is
+    // that a trigger's work is either done inside it or not done at all.
+    const firedAt = Date.now();
     const store = await this.store();
     let state: WorkflowState;
     // Carried out of the try so the run journal can fall back to it: a
@@ -3922,15 +3929,30 @@ export class WorkflowRuntimeService {
     // row is adopted, so a dropped firing is journaled as the CANCELLED run it
     // is rather than disappearing; QUEUE and a bounded PARALLEL wait.
     const policy = effectiveRunPolicy(runnable);
+    const deadline = policy.runTimeoutSeconds
+      ? firedAt + policy.runTimeoutSeconds * 1000
+      : undefined;
     const admission = await this.runGate.admit(workflowId, policy);
-    if (!admission.admitted) {
-      return this.skipFiring(store, workflowId, enqueuedRunId, {
-        reason: admission.reason,
+    const skipped = (reason: string) =>
+      this.skipFiring(store, workflowId, enqueuedRunId, {
+        reason,
         triggerKind,
         triggerPayload,
         workflowName: runJournalName(state.name, documentName),
         workflowVersion: runnable.version,
       });
+    if (!admission.admitted) return skipped(admission.reason);
+    // The wait itself outlived the run's deadline, so there is nothing left to
+    // run it in: CANCELLED without executing a single step, rather than a side
+    // effect fired long after the timeout that was supposed to bound it. The
+    // slot goes back first — this firing is not going to use it.
+    if (deadline !== undefined && Date.now() >= deadline) {
+      admission.release();
+      return skipped(
+        `Skipped: this firing waited past its runTimeoutSeconds ` +
+          `(${policy.runTimeoutSeconds}s) for a concurrency slot and was ` +
+          "cancelled without running",
+      );
     }
 
     let runId: string | null = enqueuedRunId ?? null;
@@ -4001,11 +4023,9 @@ export class WorkflowRuntimeService {
             ...(policy.defaultRetry
               ? { defaultRetry: policy.defaultRetry }
               : {}),
-            ...(policy.runTimeoutSeconds
-              ? {
-                  deadline: Date.now() + policy.runTimeoutSeconds * 1000,
-                }
-              : {}),
+            // From firedAt, so the queue wait and the document read count
+            // against the timeout rather than being free.
+            ...(deadline !== undefined ? { deadline } : {}),
             // Journal each step as it lands, so a reactor that dies mid-run
             // still leaves a rerunnable record of the work it finished.
             onStep:

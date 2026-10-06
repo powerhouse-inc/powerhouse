@@ -2,7 +2,12 @@
 // handed to the next waiter rather than left for a later arrival.
 import { describe, expect, it } from "vitest";
 import { effectiveRunPolicy, UNENFORCED_POLICY } from "./policy.js";
-import { WorkflowRunGate } from "./run-gate.js";
+import {
+  DEFAULT_MAX_QUEUED_FIRINGS,
+  maxQueuedFirings,
+  QUEUE_DEPTH_ENV,
+  WorkflowRunGate,
+} from "./run-gate.js";
 
 const policyOf = (policy: Record<string, unknown>) =>
   effectiveRunPolicy({ policy } as never);
@@ -92,6 +97,56 @@ describe("the workflow run gate", () => {
     await gate.admit("one", policy);
 
     expect((await gate.admit("two", policy)).admitted).toBe(true);
+  });
+
+  // An unbounded QUEUE lane grows for as long as the reactor is up: a busy
+  // document-event trigger enqueues faster than the workflow runs, and every
+  // waiter holds a payload and a promise until the process dies.
+  it("refuses a firing past the queue depth, rather than growing the lane", async () => {
+    const gate = new WorkflowRunGate({ maxQueued: 2 });
+    const policy = policyOf({ concurrency: "QUEUE" });
+    const held = await gate.admit("w", policy);
+    const waiting = [gate.admit("w", policy), gate.admit("w", policy)];
+    await settled();
+    expect(gate.waiting("w")).toBe(2);
+
+    const overflow = await gate.admit("w", policy);
+
+    expect(overflow.admitted).toBe(false);
+    if (!overflow.admitted) {
+      expect(overflow.reason).toContain("queue depth");
+      // Named, so an operator can raise it.
+      expect(overflow.reason).toContain("PH_WORKFLOWS_MAX_QUEUED_FIRINGS");
+    }
+    // The refusal did not disturb the queue it declined to join.
+    expect(gate.waiting("w")).toBe(2);
+
+    // And the lane still drains in order once the slot frees up.
+    if (held.admitted) held.release();
+    const first = await waiting[0];
+    if (first.admitted) first.release();
+    await waiting[1];
+    expect(gate.waiting("w")).toBe(0);
+  });
+
+  it("bounds the PARALLEL queue too, past its maxParallelRuns", async () => {
+    const gate = new WorkflowRunGate({ maxQueued: 1 });
+    const policy = policyOf({ concurrency: "PARALLEL", maxParallelRuns: 1 });
+    await gate.admit("w", policy);
+    void gate.admit("w", policy);
+    await settled();
+
+    expect((await gate.admit("w", policy)).admitted).toBe(false);
+  });
+
+  it("reads the depth off the environment, falling back on the default", () => {
+    expect(maxQueuedFirings({})).toBe(DEFAULT_MAX_QUEUED_FIRINGS);
+    expect(maxQueuedFirings({ [QUEUE_DEPTH_ENV]: "7" })).toBe(7);
+    for (const raw of ["", "nope", "0", "-5"]) {
+      expect(maxQueuedFirings({ [QUEUE_DEPTH_ENV]: raw })).toBe(
+        DEFAULT_MAX_QUEUED_FIRINGS,
+      );
+    }
   });
 
   it("releases only once, however often a caller asks", async () => {

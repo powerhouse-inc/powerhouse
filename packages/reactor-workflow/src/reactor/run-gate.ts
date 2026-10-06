@@ -16,10 +16,42 @@ interface Lane {
 export type GateAdmission =
   | { admitted: true; release: () => void }
   // SINGLETON, and a run is already going: this firing is dropped, not queued.
+  // Or the queue is full: see MAX_QUEUED_FIRINGS.
   | { admitted: false; reason: string };
+
+export const QUEUE_DEPTH_ENV = "PH_WORKFLOWS_MAX_QUEUED_FIRINGS";
+
+/**
+ * How many firings of ONE workflow may wait for a slot.
+ *
+ * QUEUE means latency, not failure — but an unbounded queue means neither. A
+ * document-event trigger on a busy type can enqueue faster than the workflow
+ * runs for as long as the reactor is up, and every waiter holds its trigger
+ * payload, its promise and (once admitted) a worker slot. The lane grows
+ * without bound until the process dies, and nothing in the journal says why:
+ * each waiting firing is a PENDING run row nobody is executing.
+ *
+ * So the queue has a depth, and a firing that overflows it is journaled
+ * CANCELLED exactly as a SINGLETON refusal is — visible, rather than the
+ * process-killing backlog it was.
+ */
+export const DEFAULT_MAX_QUEUED_FIRINGS = 100;
+
+export function maxQueuedFirings(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = Number(env[QUEUE_DEPTH_ENV]);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX_QUEUED_FIRINGS;
+}
 
 export class WorkflowRunGate {
   private readonly lanes = new Map<string, Lane>();
+
+  // Read once per gate: an operator sets it at boot, and a lane that changed
+  // its bound mid-flight would admit and refuse on different rules.
+  private readonly maxQueued: number;
+
+  constructor(options: { maxQueued?: number } = {}) {
+    this.maxQueued = options.maxQueued ?? maxQueuedFirings();
+  }
 
   /** Runs of this workflow executing right now. */
   active(workflowId: string): number {
@@ -37,7 +69,10 @@ export class WorkflowRunGate {
    * - **PARALLEL** with no `maxParallelRuns`: no gate at all, so the hot path
    *   of a workflow that asked for nothing costs nothing.
    * - **PARALLEL** with a bound, and **QUEUE**: waits, first come first
-   *   served. Latency, not failure — which is what QUEUE means.
+   *   served. Latency, not failure — which is what QUEUE means, up to
+   *   {@link DEFAULT_MAX_QUEUED_FIRINGS} waiters. Past that the queue is full
+   *   and the firing is refused, so the caller journals it CANCELLED rather
+   *   than growing a backlog nothing bounds.
    * - **SINGLETON**: refused outright while a run is active. The caller
    *   journals the refusal rather than dropping it silently, because a firing
    *   that vanished is indistinguishable from a trigger that never fired.
@@ -60,6 +95,15 @@ export class WorkflowRunGate {
           reason:
             "Skipped: this workflow's concurrency is SINGLETON and a run was " +
             "already executing",
+        };
+      }
+      if (lane.waiting.length >= this.maxQueued) {
+        return {
+          admitted: false,
+          reason:
+            `Skipped: ${lane.waiting.length} firings of this workflow are ` +
+            `already waiting for a slot, which is its queue depth ` +
+            `(${this.maxQueued}; raise ${QUEUE_DEPTH_ENV} to allow more)`,
         };
       }
       // The release that wakes this counts the run in on its behalf, so the
