@@ -454,6 +454,7 @@ describe("prebuildReactorWorker", () => {
       expect(errorRef.message).toBeUndefined();
       expect(built).not.toBeNull();
       expect(built?.sourceDigest).toBeTruthy();
+      expect(built?.vendorImports).toEqual({ zod: "/__vendor__/zod.js" });
       const emitted = join(outDir, REACTOR_WORKER_ENTRY);
       expect(existsSync(emitted)).toBe(true);
       const code = readFileSync(emitted, "utf8");

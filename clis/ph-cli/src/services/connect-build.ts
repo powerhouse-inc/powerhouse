@@ -121,7 +121,12 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // Local project models the worker cannot get from the registry, built into
   // the worker bundle's own directory so they share its vendor.
   if (reactorWorker) {
-    await prebuildLocalWorkerPackages(dirname, outDirAbs, vendor);
+    await prebuildLocalWorkerPackages(
+      dirname,
+      outDirAbs,
+      vendor,
+      reactorWorker.vendorImports,
+    );
   }
 
   const keepDirs = [
@@ -320,6 +325,7 @@ async function prebuildLocalWorkerPackages(
   dirname: string,
   outDirAbs: string,
   vendor: PrebuiltVendor | null,
+  safeVendorImports: Record<string, string>,
 ): Promise<void> {
   const config = getConfig(join(dirname, "powerhouse.config.json"));
   const configured = (config.packages ?? [])
@@ -339,6 +345,7 @@ async function prebuildLocalWorkerPackages(
     vendor: vendor
       ? { imports: vendor.imports, dir: join(outDirAbs, "__vendor__") }
       : undefined,
+    safeVendorImports,
     nodeEnv: "production",
     errorRef,
   });

@@ -108,9 +108,14 @@ export interface PrebuiltReactorWorker {
    * build. The dev plugin serves it in `worker-meta.json` next to the
    * bundle; `apps/connect/src/utils/reactor-worker-url.ts` fetches it to
    * fold the actual built worker code into the tab's version fingerprint
-   * (W0.6 — see docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md).
+   * (W0.6).
    */
   sourceDigest: string;
+  /**
+   * The worker-safe vendor subset this bundle externalizes (see
+   * {@link workerSafeVendorImports}); empty without a vendor.
+   */
+  vendorImports: Record<string, string>;
 }
 
 /**
@@ -466,6 +471,7 @@ export async function prebuildReactorWorker(
     outDir,
     entry: REACTOR_WORKER_ENTRY,
     sourceDigest,
+    vendorImports,
   };
 
   try {
@@ -542,18 +548,22 @@ async function buildWorkerAtomic(
     assertWorkerResolvable(tmpDir);
 
     writeFileSync(join(tmpDir, META_FILE), JSON.stringify(meta, null, 2));
-
-    const oldDir = `${outDir}.old-${process.pid}-${Date.now()}`;
-    if (existsSync(outDir)) renameSync(outDir, oldDir);
-    renameSync(tmpDir, outDir);
-    // mkdtemp creates 0700; the build and the server are not always the same
-    // user (see the vendor swap for the full story).
-    chmodSync(outDir, 0o755);
-    rmSync(oldDir, { recursive: true, force: true });
+    publishDirAtomic(tmpDir, outDir);
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });
     throw err;
   }
+}
+
+/** Replace `outDir` with the finished `tmpDir`, old contents removed last. */
+export function publishDirAtomic(tmpDir: string, outDir: string): void {
+  const oldDir = `${outDir}.old-${process.pid}-${Date.now()}`;
+  if (existsSync(outDir)) renameSync(outDir, oldDir);
+  renameSync(tmpDir, outDir);
+  // mkdtemp creates 0700; the build and the server are not always the same
+  // user (see the vendor swap for the full story).
+  chmodSync(outDir, 0o755);
+  rmSync(oldDir, { recursive: true, force: true });
 }
 
 // Relative specifiers in import positions, used to walk the emitted graph.

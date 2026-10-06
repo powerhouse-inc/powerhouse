@@ -15,13 +15,11 @@
  * was built so the tab can turn it into package sources without guessing.
  */
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -29,6 +27,7 @@ import { dirname as pathDirname, join } from "node:path";
 import { workerPackageFileName } from "@powerhousedao/shared/connect";
 import {
   findBundleSpecifierOffenders,
+  publishDirAtomic,
   runWorkerBuildEntries,
   workerSafeVendorImports,
   type ReactorWorkerVendorOptions,
@@ -49,6 +48,11 @@ export interface WorkerPackagesBuildOptions {
   outDir: string;
   /** The prebuilt vendor to share dependencies with, when one was built. */
   vendor?: ReactorWorkerVendorOptions;
+  /**
+   * The vendor's worker-safe subset, when the caller already computed it
+   * (`PrebuiltReactorWorker.vendorImports`); skips walking the vendor again.
+   */
+  safeVendorImports?: Record<string, string>;
   nodeEnv?: "development" | "production";
   errorRef?: { message?: string };
 }
@@ -162,9 +166,11 @@ export async function prebuildWorkerPackages(
     return [];
   }
 
-  const vendorImports = options.vendor
-    ? workerSafeVendorImports(options.vendor.dir, options.vendor.imports)
-    : {};
+  const vendorImports =
+    options.safeVendorImports ??
+    (options.vendor
+      ? workerSafeVendorImports(options.vendor.dir, options.vendor.imports)
+      : {});
   // Entry names are the filenames minus `.js`; the subprocess appends it.
   const entries = Object.fromEntries(
     resolved.map((item) => [
@@ -220,11 +226,7 @@ export async function prebuildWorkerPackages(
       JSON.stringify(manifest, null, 2),
     );
 
-    const oldDir = `${options.outDir}.old-${process.pid}-${Date.now()}`;
-    if (existsSync(options.outDir)) renameSync(options.outDir, oldDir);
-    renameSync(tmpDir, options.outDir);
-    chmodSync(options.outDir, 0o755);
-    rmSync(oldDir, { recursive: true, force: true });
+    publishDirAtomic(tmpDir, options.outDir);
     return manifest;
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });

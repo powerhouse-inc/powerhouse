@@ -109,4 +109,29 @@ describe("prebuildWorkerPackages", () => {
       expect(existsSync(join(outDir, "stale.js"))).toBe(false);
     },
   );
+
+  it(
+    "externalizes a precomputed safe vendor subset without walking the vendor",
+    { timeout: 120_000 },
+    async () => {
+      writeProject(projectDir, `export { z } from "zod";\n`);
+      const errorRef: { message?: string } = {};
+      const built = await prebuildWorkerPackages({
+        dirname: projectDir,
+        packages: ["fixture-pkg"],
+        outDir,
+        // A walk of this nonexistent dir would demote zod.
+        vendor: {
+          imports: { zod: "/__vendor__/zod.js" },
+          dir: join(projectDir, "no-vendor"),
+        },
+        safeVendorImports: { zod: "/__vendor__/zod.js" },
+        errorRef,
+      });
+      expect(errorRef.message).toBeUndefined();
+      expect(built).toHaveLength(1);
+      const code = readFileSync(join(outDir, built![0].file), "utf8");
+      expect(code).toContain("../../__vendor__/zod.js");
+    },
+  );
 });
