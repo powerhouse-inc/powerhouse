@@ -582,8 +582,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<BatchExecutionResult> {
     const signer = this.signer ?? resolveAmbientSigner();
     const jobInputs = await Promise.all(
-      request.jobs.map(async (job) => {
-        const documentId = await this.batchWriteTarget(job, signer, signal);
+      request.jobs.map(async (job, index) => {
+        const documentId = await this.batchWriteTarget(
+          job,
+          request.jobs.slice(0, index),
+          signer,
+          signal,
+        );
         const actions = await this.signBatchJobActions(
           { ...job, documentId },
           signer,
@@ -763,26 +768,37 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   /**
    * The id a job's actions are signed for: a signature covers the document id,
-   * and the server resolves a slug before verifying. A create names its own id.
+   * and the server resolves a slug before verifying. A document created by this
+   * job or an earlier one is named by its id. When the server has no such
+   * document the identifier is used as given, and the server decides; any
+   * other failure to read it throws, so nothing is signed for a slug.
    */
   private async batchWriteTarget(
     job: ExecutionJobPlan,
+    earlier: readonly ExecutionJobPlan[],
     signer: ISigner | undefined,
     signal?: AbortSignal,
   ): Promise<string> {
+    const creates = (plan: ExecutionJobPlan) =>
+      plan.documentId === job.documentId &&
+      plan.actions.some((action) => action.type === "CREATE_DOCUMENT");
     if (
       !signer ||
       job.actions.every(isActionSigned) ||
-      job.actions.some((action) => action.type === "CREATE_DOCUMENT")
+      creates(job) ||
+      earlier.some(creates)
     ) {
       return job.documentId;
     }
-    const document = await this.get(
-      job.documentId,
-      { branch: job.branch },
+    const result = await this.sdk.GetDocument(
+      {
+        identifier: job.documentId,
+        view: viewFilterInputFromViewFilter({ branch: job.branch }),
+      },
+      undefined,
       signal,
     );
-    return document.header.id;
+    return result.document?.document.id ?? job.documentId;
   }
 
   /**

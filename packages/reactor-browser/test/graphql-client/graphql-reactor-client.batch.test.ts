@@ -381,6 +381,89 @@ describe("GraphQLReactorClient.executeBatch", () => {
     expect(batchVariables(sdk).jobs[0].documentIdOrSlug).toBe("drive-1");
   });
 
+  it("does not look up a document an earlier job in the batch creates", async () => {
+    const { signAction } = installSigner();
+    const refusal = new Error(
+      "A job that creates a document must be the only job in its batch",
+    );
+    const sdk = createMockSdk({
+      ExecuteBatch: vi.fn().mockRejectedValue(refusal),
+    });
+
+    const run = createClientWith(sdk).executeBatch({
+      jobs: [
+        {
+          key: "document",
+          documentId: "new-doc",
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "act-create",
+              type: "CREATE_DOCUMENT",
+              timestampUtcMs: "1700000007000",
+              input: { documentId: "new-doc" },
+              scope: "document",
+            },
+          ],
+          dependsOn: [],
+        },
+        {
+          key: "rename",
+          documentId: "new-doc",
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "act-rename",
+              type: "SET_NAME",
+              timestampUtcMs: "1700000007000",
+              input: { name: "renamed" },
+              scope: "global",
+            },
+          ],
+          dependsOn: ["document"],
+        },
+      ],
+    });
+
+    await expect(run).rejects.toThrow(refusal.message);
+    expect(sdk.GetDocument).not.toHaveBeenCalled();
+    expect(sdk.ExecuteBatch).toHaveBeenCalledTimes(1);
+    expect(signAction.mock.calls.map((call) => call[1] as unknown)).toEqual([
+      { documentId: "new-doc", branch: "main" },
+      { documentId: "new-doc", branch: "main" },
+    ]);
+  });
+
+  it("signs for the identifier as given when the server has no such document", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue({ document: null }),
+    });
+
+    await createClientWith(sdk).executeBatch({
+      jobs: [removeFileBatch.jobs[0]],
+    });
+
+    expect(signAction.mock.calls[0][1]).toEqual({
+      documentId: "drive-1",
+      branch: "main",
+    });
+  });
+
+  it("does not sign at all when the identifier cannot be resolved", async () => {
+    installSigner();
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockRejectedValue(new Error("network down")),
+    });
+
+    await expect(
+      createClientWith(sdk).executeBatch({ jobs: [removeFileBatch.jobs[0]] }),
+    ).rejects.toThrow("network down");
+    expect(sdk.ExecuteBatch).not.toHaveBeenCalled();
+  });
+
   it("announces the documents a batch changed and deleted", async () => {
     const sdk = createMockSdk({});
     const client = createClientWith(sdk, { realtime: false });
