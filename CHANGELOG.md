@@ -1,3 +1,36 @@
+## 6.2.3-dev.45 (2026-10-06)
+
+### 🚀 Features
+
+- retire AtomicNodeFs for a durable PGlite NodeFS with one-shot store conversion ([#3170](https://github.com/powerhouse-inc/powerhouse/pull/3170))
+- **reactor-api:** convert AtomicNodeFs snapshots to loose PGDATA ([449e4fd9ce](https://github.com/powerhouse-inc/powerhouse/commit/449e4fd9ce))
+- **reactor-api:** durable NodeFS with host fsync and periodic maintenance ([#3149](https://github.com/powerhouse-inc/powerhouse/issues/3149))
+- **reactor-api:** expose the PGlite node helpers as a subpath export ([1ee3f38b2f](https://github.com/powerhouse-inc/powerhouse/commit/1ee3f38b2f))
+- **reactor-api:** open on-disk PGlite over the durable NodeFS with a boot preflight ([1efa68c3ac](https://github.com/powerhouse-inc/powerhouse/commit/1efa68c3ac))
+- ⚠️  **reactor-workflow:** let any workflow piece read and write documents through the reactor ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+- **switchboard:** open PGlite stores over the durable NodeFS ([b5126c3056](https://github.com/powerhouse-inc/powerhouse/commit/b5126c3056))
+
+### 🩹 Fixes
+
+- **pglite:** open files read-write for the tree sync ([ce0fa23af5](https://github.com/powerhouse-inc/powerhouse/commit/ce0fa23af5))
+- **pglite:** bound the old-dir removal after conversion ([0aef46f0ca](https://github.com/powerhouse-inc/powerhouse/commit/0aef46f0ca))
+- **switchboard:** dump legacy PG16 stores from an in-memory copy ([8084fa5b1e](https://github.com/powerhouse-inc/powerhouse/commit/8084fa5b1e))
+- **switchboard:** resolve the legacy pg_dump wasm path on Windows ([c35148183a](https://github.com/powerhouse-inc/powerhouse/commit/c35148183a))
+
+### 🔥 Performance
+
+- **pglite:** sync the tree once after initdb, conversion and migration ([9ec8caf970](https://github.com/powerhouse-inc/powerhouse/commit/9ec8caf970))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** let any workflow piece read and write documents through the reactor  ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
 ## 6.2.3-dev.44 (2026-10-06)
 
 ### 🩹 Fixes
