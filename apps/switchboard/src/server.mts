@@ -84,6 +84,7 @@ import {
 import {
   buildWorkerDbConfig,
   resolveHostPoolSize,
+  keepImportableSources,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
@@ -92,9 +93,11 @@ import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
   composeWorkflowRuntime,
+  modelManifestSource,
   assertWorkflowPackageLoadable,
   resolveWorkflowsEnabled,
   type ComposedWorkflowRuntime,
+  type ModelManifestSource,
 } from "./workflow-runtime.mjs";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
@@ -557,6 +560,8 @@ async function initServer(
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // The models workers and workflow pieces import; only on a reactor built here.
+  let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
   let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
@@ -703,21 +708,29 @@ async function initServer(
         : undefined,
     });
 
+    // File sources give workers and workflow pieces importable paths for the
+    // models registered above; the builder dedupes them.
+    if (workerPool || projectionWorker || workflowsEnabled) {
+      const sources = await resolveWorkerModelSources(packages, reactorLogger, {
+        resolveRemote: resolveRegistryModels,
+      });
+      // Workers need every model; workflow pieces can do without a broken one.
+      reactorBuilder.withDocumentModelSources(
+        workerPool || projectionWorker
+          ? sources
+          : await keepImportableSources(sources, reactorLogger),
+      );
+    }
+    workerModels = modelManifestSource(reactorBuilder);
+
     if (workerPool) {
       if (!reactorDbUrl) {
         throw new Error(
           "unreachable: worker pool enabled without a reactor database URL",
         );
       }
-      // File sources give workers importable paths for the same models the
-      // live modules above registered; the builder dedupes and fails the
-      // boot if any model lacks an importable source.
-      const workerSources = await resolveWorkerModelSources(
-        packages,
-        reactorLogger,
-        { resolveRemote: resolveRegistryModels },
-      );
-      reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
+      // The builder fails the boot if a model lacks an importable source.
+      reactorBuilder.withWorkerPool({
         numWorkers: workerPool.numWorkers,
         db: buildWorkerDbConfig(reactorDbUrl, workerPool),
       });
@@ -756,15 +769,6 @@ async function initServer(
         throw new Error(
           "unreachable: projection worker enabled without a reactor database URL",
         );
-      }
-      // The projection worker rebuilds its registry from the same manifest.
-      if (!workerPool) {
-        const workerSources = await resolveWorkerModelSources(
-          packages,
-          reactorLogger,
-          { resolveRemote: resolveRegistryModels },
-        );
-        reactorBuilder.withDocumentModelSources(workerSources);
       }
       const db = {
         ...buildWorkerDbConfig(reactorDbUrl, {
@@ -1038,6 +1042,7 @@ async function initServer(
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
       pieceRegistryUrl: registryUrl,
+      models: workerModels,
       logger: logger.child(["workflow-runtime"]),
     });
 
@@ -1269,6 +1274,7 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     workflowTriggers: workflows?.triggers,
     workflowsEnabled,
+    modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: privacy ? { erasure: privacy.erasure } : undefined,
     mcpEnabled: options.mcp !== false,
     renown,

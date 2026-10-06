@@ -1,5 +1,5 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
-import { command, option, optional, positional, string } from "cmd-ts";
+import { command, oneOf, option, optional, positional, string } from "cmd-ts";
 import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceActionCmd = command({
@@ -23,6 +23,12 @@ export const generatePieceActionCmd = command({
       short: "p",
       description:
         "The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece.",
+    }),
+    requireReactor: option({
+      type: optional(oneOf(["read", "write"] as const)),
+      long: "require-reactor",
+      description:
+        "Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor",
     }),
     ...skipInstallArgs,
     ...debugArgs,

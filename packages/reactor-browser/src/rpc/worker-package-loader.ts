@@ -5,7 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { rewritePackageSource } from "@powerhousedao/shared/connect";
 import { RegistryClient } from "../registry/client.js";
-import type { WorkerPackageSource } from "./protocol.js";
+import type { WorkerPackageSource } from "@powerhousedao/reactor/rpc";
 
 export type PackageImporter = (url: string) => Promise<Record<string, unknown>>;
 

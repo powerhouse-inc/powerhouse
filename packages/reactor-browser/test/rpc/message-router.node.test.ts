@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { createWorkerAdminClient } from "../../src/rpc/admin-client.js";
-import { createReactorClientProxy } from "../../src/rpc/client-proxy.js";
+import {
+  createReactorClientProxy,
+  MessageRouter,
+  type ClientMessage,
+  type OwnerMessage,
+  type RpcMessage,
+  type IRpcTransport,
+} from "@powerhousedao/reactor/rpc";
 import { createReactorEventBusProxy } from "../../src/rpc/event-bus-proxy.js";
 import { createInspectorProxy } from "../../src/rpc/inspector-proxy.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
-import type {
-  ClientMessage,
-  OwnerMessage,
-  RpcMessage,
-} from "../../src/rpc/protocol.js";
 import { createRelationalPgliteProxy } from "../../src/rpc/relational-db-proxy.js";
 import { createSyncManagerProxy } from "../../src/rpc/sync-manager-proxy.js";
-import type { IRpcTransport } from "../../src/rpc/transport.js";
 
 function createFakeTransport() {
   const listeners = new Set<(m: RpcMessage) => void>();

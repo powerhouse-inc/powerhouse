@@ -8,6 +8,28 @@ export const schema: DocumentNode = gql`
   type WorkflowRuntimeQueries {
     health: String!
     """
+    Whether this reactor enforces document auth (REACTOR_AUTH_ENFORCEMENT).
+    On, a workflow needs a signed publish, and the host grants, to reach
+    documents. Answered to any caller.
+    """
+    authEnforcement: Boolean!
+    """
+    Who this host signs as: grant it on each document a step writes. Null for
+    a caller who is not signed in, or a host with no signer.
+    """
+    reactorIdentity: ReactorIdentity
+    """
+    REACTOR_AUTH_CONDITIONS. True: grant the host by key, with
+    { match: subject.key == key }; false: by address. Null for a caller who
+    is not signed in.
+    """
+    authConditions: Boolean
+    """
+    Why the workflow's last publish or enable got no reactor access, naming
+    the publisher and the connection; null when the check passed.
+    """
+    reactorAccessDenial(workflowId: String!): String
+    """
     Persisted runs, newest first. Scope them to one workflow, or to every
     workflow a drive holds; workflowId wins when both are given.
     """
@@ -48,6 +70,8 @@ export const schema: DocumentNode = gql`
       connectionId: String
       "What the author typed, for a DROPDOWN declared with refreshOnSearch."
       searchValue: String
+      "The step's reactor connection; its filter narrows what the resolver reads."
+      reactorConnectionId: String
     ): Unknown
     """
     Every piece this reactor offers: the core piece, its package pieces, and
@@ -225,6 +249,13 @@ export const schema: DocumentNode = gql`
     accountLabel: String
   }
 
+  type ReactorIdentity {
+    "The address the host signs as; null without a signed-in identity."
+    address: String
+    "The did:key that signs the host's operations."
+    key: String!
+  }
+
   type ConnectionCheckResult {
     ok: Boolean!
     detail: String
@@ -286,6 +317,8 @@ export const schema: DocumentNode = gql`
     output: Unknown
     port: String
     error: String
+    "The thrown error's name, e.g. ReactorAccessDeniedError."
+    errorName: String
     startedAt: String
     endedAt: String
     "The piece version that ran; null for an unresolved block."
@@ -307,6 +340,7 @@ export const schema: DocumentNode = gql`
     triggerPayload: Unknown
     status: String!
     error: String
+    errorName: String
     "When the run began executing; a PENDING run's is when it was journaled."
     startedAt: String!
     endedAt: String
@@ -344,12 +378,14 @@ export const schema: DocumentNode = gql`
     output: Unknown
     port: String
     error: String
+    errorName: String
   }
 
   type WorkflowRunPayload {
     runId: String
     status: String!
     error: String
+    errorName: String
     steps: [WorkflowStepRun!]!
   }
 
@@ -360,6 +396,7 @@ export const schema: DocumentNode = gql`
     status: String!
     output: Unknown
     error: String
+    errorName: String
     durationMs: Int!
   }
 

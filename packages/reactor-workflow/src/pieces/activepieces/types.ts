@@ -96,6 +96,8 @@ export type ApAction = Partial<
   };
   // Output ports, read only off a piece the host runs in process.
   ports?: unknown;
+  // "read" | "write"; anything else reads as undeclared.
+  requireReactor?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
   // Called instead of run by a single-step test.
   test?: (ctx: unknown) => Promise<unknown>;
@@ -122,6 +124,7 @@ export type ApTrigger = Partial<
   testStrategy?: string;
   // A form the editor draws instead of the props, e.g. "schedule".
   display?: unknown;
+  requireReactor?: unknown;
   props?: Record<string, ApProperty>;
   propertyGroups?: ApPropertyGroup[];
   outputSchema?: unknown;

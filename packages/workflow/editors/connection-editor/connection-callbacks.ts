@@ -4,6 +4,8 @@ import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import { generateId } from "document-model";
 import {
   actions,
+  defaultReactorConnectionConfig,
+  REACTOR_CONNECTOR_ID,
   type ConnectionAction,
   type ConnectionState,
 } from "document-models/connection";
@@ -77,6 +79,33 @@ export function connectionCallbacks(
           checkedAt: new Date().toISOString(),
         }),
       );
+    },
+    // Nothing to fill in, so it is ready once picked.
+    pickReactor: () => {
+      dispatch(
+        actions.setConnector({
+          connectorId: REACTOR_CONNECTOR_ID,
+          authType: "REACTOR",
+        }),
+      );
+      dispatch(actions.setConfig({ config: defaultReactorConnectionConfig() }));
+      dispatch(
+        actions.recordCheckResult({
+          status: "OK",
+          checkedAt: new Date().toISOString(),
+        }),
+      );
+    },
+    setReactorConfig: (config) => {
+      dispatch(actions.setConfig({ config }));
+      if (state.status === "UNCONFIGURED") {
+        dispatch(
+          actions.recordCheckResult({
+            status: "OK",
+            checkedAt: new Date().toISOString(),
+          }),
+        );
+      }
     },
   };
 }

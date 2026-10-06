@@ -3,10 +3,9 @@
 Powerhouse's published copy of the [Activepieces](https://www.activepieces.com)
 piece framework, so a piece can be authored outside their monorepo.
 
-It also carries `ctx.reactor`, which is internal: it is served to
-`@powerhousedao/piece-reactor` alone — the piece whose actions are that surface
-— and every other piece finds the member throwing, however it was loaded and
-whoever shipped it. Nothing you write should reach for it.
+It also adds `requireReactor`, which gives an action or trigger a
+`ctx.reactor` for reading and writing Powerhouse documents. See
+[Reactor access](#reactor-access-requirereactor-and-ctxreactor).
 
 ## Why this package exists
 
@@ -84,9 +83,9 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    });
    ```
 
-   A piece connects a reactor to something outside it. Reading and writing
-   Powerhouse documents is the reactor piece's job, and a workflow composes the
-   two as separate steps.
+   A piece usually connects a reactor to something outside it, and a workflow
+   composes it with the reactor piece's document steps. An action that needs
+   documents itself declares `requireReactor`, below.
 
    To give a connection a status and an account label in Connect, declare
    `validate` and `getConnectionIdentifier` on the auth. Both are handed the
@@ -164,6 +163,71 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    `./common` uses, is CommonJS, so pass
    `--banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`
    or the bundle throws `Dynamic require of "util" is not supported` on import.
+
+## Reactor access: `requireReactor` and `ctx.reactor`
+
+`createAction` and `createTrigger` from this package are upstream's, plus
+`requireReactor: "read" | "write" | false`. The declaration types
+`ctx.reactor` in every hook (`run` and `test`, and a trigger's other hooks):
+
+```ts
+import { createAction, Property } from "@powerhousedao/pieces-framework";
+
+export const archiveInvoice = createAction({
+  name: "archive-invoice",
+  displayName: "Archive invoice",
+  description: "Sets an invoice's status to ARCHIVED",
+  requireAuth: false,
+  requireReactor: "write",
+  props: {
+    invoiceId: Property.ShortText({ displayName: "Invoice", required: true }),
+  },
+  async run(ctx) {
+    const doc = await ctx.reactor.get(ctx.propsValue.invoiceId);
+    const invoice = await ctx.reactor.getDocumentModelModuleForDocument(doc);
+    const updated = await ctx.reactor.execute(doc.header.id, "main", [
+      invoice.actions.setStatus({ status: "ARCHIVED" }),
+    ]);
+    return { header: updated.header, state: updated.state };
+  },
+});
+```
+
+- `"read"` types `ctx.reactor` as `ReactorReadClient`, `"write"` as
+  `ReactorClient`. Both are `Pick`s of `IReactorClient`, with the client's own
+  signatures; `ReadMethods`, `WriteMethods` and `RefusedMethods` name the
+  methods. `false`, like no declaration, gives no `ctx.reactor`.
+- Writes are `create`, `createEmpty`, `execute` and `deleteDocument` (no
+  cascade). Build actions with the model's action creators, such as `setName`
+  from `@powerhousedao/shared/document-model`, `addFile` from
+  `@powerhousedao/shared/document-drive`, or `module.actions.*` from
+  `getDocumentModelModuleForDocument`, and pass them to `execute`. `execute`
+  refuses document lifecycle actions, and the client's convenience writes
+  (`rename`, relationships, upgrades, batches, `drives`) are refused. Read a
+  drive's nodes from `get(driveId)`.
+- The types come from `@powerhousedao/reactor` and `@powerhousedao/shared`,
+  which are optional, type-only peer dependencies. The build emits no import
+  of either.
+- `ph build` copies the declaration into `descriptor.json`.
+  `ph generate piece-action` and `ph generate piece-trigger` write
+  `requireReactor: false`, or the value of `--require-reactor read|write`.
+- The host serves `ctx.reactor`. Each call acts as the workflow's run user,
+  within the step's reactor connection and deadline. Writes return once
+  applied.
+- Errors cross the worker boundary by `name` and `message`, so compare
+  `error.name` against the exported constants: `ReactorAccessDeniedError`,
+  `ReactorJobFailedError`, `ReactorActionsFailedError`,
+  `ReactorJobPendingError`, `ReactorRequestClosedError` and
+  `DocumentModelUnavailableError`.
+- `Property.Dropdown`, `Property.MultiSelectDropdown` and
+  `Property.DynamicProperties` type their resolver's `ctx.reactor` as
+  `ReactorReadClient | undefined`. A declared block's resolvers read as the
+  person using the editor and never write; the client is undefined when the
+  block declares nothing.
+
+The academy page
+[Reactor access from pieces](../../apps/academy/docs/academy/02-Learn/09-workflows/03-reactor-access.mdx)
+covers the run-time rules, reactor connections and the run user.
 
 ## `./host`, for the host and not for piece authors
 

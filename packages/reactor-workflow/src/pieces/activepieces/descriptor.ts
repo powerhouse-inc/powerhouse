@@ -1,3 +1,4 @@
+import type { RequireReactor } from "@powerhousedao/pieces-framework";
 import {
   PIECE_ACTION_PORTS,
   TRIGGER_PORTS,
@@ -84,6 +85,8 @@ export interface PieceActionDescriptor {
   description?: string;
   // UI metadata only — not a credential contract (spike finding).
   requireAuth: boolean;
+  // The reactor access the step asks for; absent when it asks for none.
+  requireReactor?: RequireReactor;
   props: PiecePropDescriptor[];
   // Output ports the step can leave on; the editor draws only these.
   ports: readonly string[];
@@ -107,6 +110,7 @@ export interface PieceTriggerDescriptor {
   // A form the editor draws instead of the props, e.g. "schedule".
   display?: string;
   requireAuth: boolean;
+  requireReactor?: RequireReactor;
   props: PiecePropDescriptor[];
   ports: readonly string[];
   propertyGroups?: PiecePropertyGroupDescriptor[];
@@ -412,6 +416,11 @@ function declaredPorts(ports: unknown): readonly string[] | undefined {
     : undefined;
 }
 
+// Only a well-formed declaration is carried: a foreign bundle may hold anything.
+function declaredReactor(value: unknown): RequireReactor | undefined {
+  return value === "read" || value === "write" ? value : undefined;
+}
+
 export interface BuildDescriptorOptions {
   // Read each action's own `ports`: only a piece whose results the host routes.
   routed?: boolean;
@@ -430,6 +439,7 @@ export function buildDescriptor(
       displayName: action.displayName ?? actionName,
       description: action.description,
       requireAuth: action.requireAuth ?? false,
+      ...optional("requireReactor", declaredReactor(action.requireReactor)),
       ports:
         (options.routed ? declaredPorts(action.ports) : undefined) ??
         PIECE_ACTION_PORTS,
@@ -464,6 +474,7 @@ export function buildDescriptor(
         ? { display: trigger.display }
         : {}),
       requireAuth: trigger.requireAuth ?? false,
+      ...optional("requireReactor", declaredReactor(trigger.requireReactor)),
       ports: TRIGGER_PORTS,
       props: describeProperties(
         trigger.props,

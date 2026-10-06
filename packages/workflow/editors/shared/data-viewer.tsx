@@ -1,7 +1,13 @@
 // A run's data (a step's input or output, a trigger payload) as a foldable
 // tree, with a raw JSON view and, given a root, per-key {{references}}.
+import {
+  DOCUMENT_REF_KEY,
+  documentRefsIn,
+  isDocumentRefMarker,
+} from "@powerhousedao/pieces-framework/workflow";
 import { lazy, Suspense, useState } from "react";
 import { IconButton } from "./controls.js";
+import { DocumentRefs } from "./document-ref.js";
 
 const DataTree = lazy(() => import("./data-tree.js"));
 
@@ -59,6 +65,13 @@ export function DataViewer(props: {
   const empty = isEmpty(props.value);
   const text = stringify(props.value);
   const tree = typeof props.value === "object" && props.value !== null;
+  const references = tree ? documentRefsIn(props.value) : [];
+  // A whole value that is a reference shows as one; its other keys stay a tree.
+  const treeValue = isDocumentRefMarker(props.value)
+    ? Object.fromEntries(
+        Object.entries(props.value).filter(([key]) => key !== DOCUMENT_REF_KEY),
+      )
+    : props.value;
 
   return (
     <section
@@ -104,10 +117,17 @@ export function DataViewer(props: {
         ) : raw ? (
           <RawJson text={text} />
         ) : (
-          <div className="max-h-72 overflow-auto">
-            <Suspense fallback={<TreeSkeleton />}>
-              <DataTree value={props.value as object} root={props.root} />
-            </Suspense>
+          <div className="flex flex-col gap-2">
+            {references.length > 0 ? (
+              <DocumentRefs references={references} />
+            ) : null}
+            {isEmpty(treeValue) ? null : (
+              <div className="max-h-72 overflow-auto">
+                <Suspense fallback={<TreeSkeleton />}>
+                  <DataTree value={treeValue as object} root={props.root} />
+                </Suspense>
+              </div>
+            )}
           </div>
         )}
       </div>

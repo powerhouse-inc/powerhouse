@@ -1,11 +1,10 @@
+import type { DocumentChangeEvent, IReactorClient } from "../client/types.js";
+import type { IDocumentModelRegistry } from "../registry/index.js";
 import type {
-  DocumentChangeEvent,
-  IDocumentModelRegistry,
-  IReactorClient,
   PagingOptions,
   SearchFilter,
   ViewFilter,
-} from "@powerhousedao/reactor";
+} from "../shared/types.js";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
 import { fromErrorInfo } from "./error-info.js";

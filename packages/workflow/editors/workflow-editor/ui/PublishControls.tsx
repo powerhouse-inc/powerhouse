@@ -10,6 +10,13 @@ import {
 } from "./model.js";
 import type { WorkflowReadiness } from "./validation.js";
 
+// Under enforcement a publish must be signed, or its runs reach no documents.
+export interface PublishSignIn {
+  required: boolean;
+  pending: boolean;
+  login: () => void;
+}
+
 function blockedReason(readiness: WorkflowReadiness): string {
   if (!readiness.hasTrigger) return "Add a trigger first";
   if (readiness.firstIncomplete) return "You have incomplete steps";
@@ -40,8 +47,23 @@ export function PublishButton(props: {
   onPublish: () => void;
   onSelect: (id: string) => void;
   size?: "sm" | "md";
+  signIn?: PublishSignIn;
 }) {
   const { model, readiness } = props;
+  if (props.signIn?.required) {
+    return (
+      <Tooltip content="This Switchboard enforces document permissions, so a publish must be signed">
+        <Button
+          size={props.size ?? "sm"}
+          variant="primary"
+          disabled={props.signIn.pending}
+          onClick={props.signIn.login}
+        >
+          Sign in to publish
+        </Button>
+      </Tooltip>
+    );
+  }
   const incomplete = !readiness.ready;
   const changes = hasDraftChanges(model);
   const target = readiness.firstIncomplete;
@@ -85,7 +107,7 @@ export function PublishState(props: {
   const draft = hasDraftChanges(props.model);
   return (
     <span
-      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"
       title={
         props.model.published
           ? `Published ${new Date(props.model.published.publishedAt).toLocaleString()}`
@@ -96,11 +118,18 @@ export function PublishState(props: {
         aria-hidden
         className={`h-2 w-2 rounded-full ${draft ? "bg-wf-warn" : "bg-wf-ok"}`}
       />
-      {!props.model.published
-        ? "Draft"
-        : draft
-          ? "Unpublished changes"
-          : "Published"}
+      <span>
+        {!props.model.published
+          ? "Draft"
+          : draft
+            ? "Unpublished changes"
+            : "Published"}
+      </span>
+      {props.model.published && draft ? (
+        <span className="text-muted-foreground/80">
+          · v{props.model.published.version} live
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -136,6 +165,36 @@ export function StatusToggle(props: {
   );
 }
 
+// The live snapshot's blocks that need a reactor connection and bind none.
+export function PublishedMissingNote(props: { missing: readonly string[] }) {
+  if (props.missing.length === 0) return null;
+  return (
+    <span
+      role="alert"
+      aria-label="Published version incomplete"
+      className="shrink-0 whitespace-nowrap rounded-full bg-wf-warn/12 px-2 py-0.5 text-xs text-wf-warn"
+      title={`The published version is missing a reactor connection on: ${props.missing.join(", ")}`}
+    >
+      Live version incomplete
+    </span>
+  );
+}
+
+// Why the runtime won't give the published workflow reactor access.
+export function ReactorDenialNote(props: { denial: string | null }) {
+  if (!props.denial) return null;
+  return (
+    <span
+      role="alert"
+      aria-label="Reactor access denied"
+      className="max-w-80 truncate rounded-full bg-wf-warn/12 px-2 py-0.5 text-xs text-wf-warn"
+      title={props.denial}
+    >
+      No reactor access: {props.denial}
+    </span>
+  );
+}
+
 export function DraftBanner(props: {
   model: WorkflowModel;
   readiness: WorkflowReadiness;
@@ -144,6 +203,7 @@ export function DraftBanner(props: {
   onPublish: () => void;
   onDiscard: () => void;
   onSelect: (id: string) => void;
+  signIn?: PublishSignIn;
 }) {
   if (!hasDraftChanges(props.model)) return null;
   const { readiness } = props;
@@ -184,6 +244,7 @@ export function DraftBanner(props: {
           publishing={props.publishing}
           onPublish={props.onPublish}
           onSelect={props.onSelect}
+          signIn={props.signIn}
         />
       </span>
     </div>

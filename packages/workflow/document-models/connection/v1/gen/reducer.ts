@@ -18,6 +18,17 @@ import {
   SetSecretRefInputSchema,
 } from "./schema/zod.js";
 
+const schemaMemo = new Map<() => unknown, unknown>();
+
+function memoizedSchema<T>(makeSchema: () => T): T {
+  let schema = schemaMemo.get(makeSchema) as T | undefined;
+  if (schema === undefined) {
+    schema = makeSchema();
+    schemaMemo.set(makeSchema, schema);
+  }
+  return schema;
+}
+
 const stateReducer: StateReducer<ConnectionPHState> = (
   state,
   action,
@@ -28,7 +39,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
   }
   switch (action.type) {
     case "SET_CONNECTION_NAME": {
-      SetConnectionNameInputSchema().parse(action.input);
+      memoizedSchema(SetConnectionNameInputSchema).parse(action.input);
 
       connectionConnectionOperations.setConnectionNameOperation(
         (state as any)[action.scope],
@@ -40,7 +51,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
     }
 
     case "SET_CONNECTOR": {
-      SetConnectorInputSchema().parse(action.input);
+      memoizedSchema(SetConnectorInputSchema).parse(action.input);
 
       connectionConnectionOperations.setConnectorOperation(
         (state as any)[action.scope],
@@ -52,7 +63,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
     }
 
     case "SET_ACCOUNT_LABEL": {
-      SetAccountLabelInputSchema().parse(action.input);
+      memoizedSchema(SetAccountLabelInputSchema).parse(action.input);
 
       connectionConnectionOperations.setAccountLabelOperation(
         (state as any)[action.scope],
@@ -64,7 +75,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
     }
 
     case "SET_CONFIG": {
-      SetConfigInputSchema().parse(action.input);
+      memoizedSchema(SetConfigInputSchema).parse(action.input);
 
       connectionConfigOperations.setConfigOperation(
         (state as any)[action.scope],
@@ -76,7 +87,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
     }
 
     case "SET_SECRET_REF": {
-      SetSecretRefInputSchema().parse(action.input);
+      memoizedSchema(SetSecretRefInputSchema).parse(action.input);
 
       connectionConfigOperations.setSecretRefOperation(
         (state as any)[action.scope],
@@ -88,7 +99,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
     }
 
     case "REMOVE_SECRET_REF": {
-      RemoveSecretRefInputSchema().parse(action.input);
+      memoizedSchema(RemoveSecretRefInputSchema).parse(action.input);
 
       connectionConfigOperations.removeSecretRefOperation(
         (state as any)[action.scope],
@@ -100,7 +111,7 @@ const stateReducer: StateReducer<ConnectionPHState> = (
     }
 
     case "RECORD_CHECK_RESULT": {
-      RecordCheckResultInputSchema().parse(action.input);
+      memoizedSchema(RecordCheckResultInputSchema).parse(action.input);
 
       connectionHealthOperations.recordCheckResultOperation(
         (state as any)[action.scope],

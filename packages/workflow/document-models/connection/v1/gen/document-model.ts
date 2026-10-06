@@ -20,7 +20,7 @@ export const documentModel: DocumentModelGlobalState = {
         },
         global: {
           schema:
-            'enum ConnectionAuthType {\n  SECRET_TEXT\n  BASIC_AUTH\n  CUSTOM_AUTH\n  OAUTH2\n  OIDC\n  NONE\n}\n\nenum ConnectionStatus {\n  UNCONFIGURED\n  OK\n  ERROR\n  REVOKED\n}\n\ntype SecretRef {\n  id: OID!\n  "Matches an auth property name in the connector\'s config schema."\n  name: String!\n  "Opaque handle into the host secret provider. Not the secret."\n  ref: String!\n}\n\ntype ConnectionState {\n  name: String!\n  "Fully-qualified connector id: \'@acme/connector-imap#imap\'."\n  connectorId: String!\n  "Activepieces auth kind, so a piece\'s PieceAuth maps directly."\n  authType: ConnectionAuthType!\n  "Non-secret configuration, validated against the connector\'s auth schema."\n  config: Unknown!\n  "Secret handles; values never appear in state, operations, or the run journal."\n  secretRefs: [SecretRef!]!\n  status: ConnectionStatus!\n  lastCheckedAt: DateTime\n  lastError: String\n  "Populated by the connector\'s own metadata call. Display only."\n  accountLabel: String\n}',
+            'enum ConnectionAuthType {\n  SECRET_TEXT\n  BASIC_AUTH\n  CUSTOM_AUTH\n  OAUTH2\n  OIDC\n  NONE\n  "Reactor access for a piece\'s ctx.reactor; any piece may bind it."\n  REACTOR\n}\n\nenum ConnectionStatus {\n  UNCONFIGURED\n  OK\n  ERROR\n  REVOKED\n}\n\ntype SecretRef {\n  id: OID!\n  "Matches an auth property name in the connector\'s config schema."\n  name: String!\n  "Opaque handle into the host secret provider. Not the secret."\n  ref: String!\n}\n\n"Config of a REACTOR connection. It holds no secrets."\ntype ReactorConnectionConfig {\n  "Which reactor the connection reaches; \'local\' is the only value."\n  endpoint: String!\n  "\'read\' limits the connection to reads; absent allows what the step declares."\n  access: String\n}\n\ntype ConnectionState {\n  name: String!\n  "Fully-qualified connector id: \'@acme/connector-imap#imap\'."\n  connectorId: String!\n  "Activepieces auth kind, so a piece\'s PieceAuth maps directly."\n  authType: ConnectionAuthType!\n  "Non-secret configuration, validated against the connector\'s auth schema; a ReactorConnectionConfig for REACTOR."\n  config: Unknown!\n  "Secret handles; values never appear in state, operations, or the run journal."\n  secretRefs: [SecretRef!]!\n  status: ConnectionStatus!\n  lastCheckedAt: DateTime\n  lastError: String\n  "Populated by the connector\'s own metadata call. Display only."\n  accountLabel: String\n}',
           examples: [],
           initialValue:
             '{\n    "name": "",\n    "connectorId": "",\n    "authType": "NONE",\n    "config": {},\n    "secretRefs": [],\n    "status": "UNCONFIGURED",\n    "lastCheckedAt": null,\n    "lastError": null,\n    "accountLabel": null\n}',
@@ -47,14 +47,23 @@ export const documentModel: DocumentModelGlobalState = {
               id: "e668be97-82c8-433e-8af7-1644cfa25723",
               name: "SET_CONNECTOR",
               description:
-                "Binds the connection to a connector and auth kind; resets status to UNCONFIGURED.",
+                "Binds the connection to a connector and auth kind; resets status to UNCONFIGURED. REACTOR goes only with the reserved reactor connector id.",
               schema:
                 "input SetConnectorInput {\n    connectorId: String!\n    authType: ConnectionAuthType!\n}",
               template:
                 "Binds the connection to a connector and auth kind; resets status to UNCONFIGURED.",
               reducer:
                 'state.connectorId = action.input.connectorId;\nstate.authType = action.input.authType;\nstate.status = "UNCONFIGURED";',
-              errors: [],
+              errors: [
+                {
+                  id: "6e550820-9d17-447d-9378-a17d38262bc8",
+                  name: "ReservedConnectorError",
+                  code: "RESERVED_CONNECTOR",
+                  description:
+                    "The reserved reactor connector id goes only with authType REACTOR, and REACTOR only with it.",
+                  template: "",
+                },
+              ],
               examples: [],
               scope: "global",
             },
@@ -85,7 +94,16 @@ export const documentModel: DocumentModelGlobalState = {
               schema: "input SetConfigInput {\n    config: Unknown!\n}",
               template: "Replaces the non-secret configuration.",
               reducer: "state.config = action.input.config;",
-              errors: [],
+              errors: [
+                {
+                  id: "b9911ea4-4168-4080-b05e-8687928dc309",
+                  name: "InvalidReactorConfigError",
+                  code: "INVALID_REACTOR_CONFIG",
+                  description:
+                    "A REACTOR connection's config is not a valid ReactorConnectionConfig.",
+                  template: "",
+                },
+              ],
               examples: [],
               scope: "global",
             },
@@ -100,7 +118,15 @@ export const documentModel: DocumentModelGlobalState = {
                 "Creates or updates a secret handle, keyed by its auth property name.",
               reducer:
                 "const existing = state.secretRefs.find(\n    (secretRef) => secretRef.name === action.input.name,\n);\nif (existing) {\n    existing.ref = action.input.ref;\n} else {\n    state.secretRefs.push({\n        id: action.input.id,\n        name: action.input.name,\n        ref: action.input.ref,\n    });\n}",
-              errors: [],
+              errors: [
+                {
+                  id: "e3c42e5b-80c6-4020-8cfd-2ccc797d82b7",
+                  name: "ReactorSecretRefError",
+                  code: "REACTOR_SECRET_REF",
+                  description: "A REACTOR connection holds no secrets.",
+                  template: "",
+                },
+              ],
               examples: [],
               scope: "global",
             },

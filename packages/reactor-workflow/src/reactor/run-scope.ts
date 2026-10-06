@@ -2,10 +2,28 @@
 // sit below the coordinator. Attachment reads are authorized per document, and
 // the block executor is shared across concurrent runs, so the scope travels
 // with the async context rather than on the executor.
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type { IPieceWorker } from "../pieces/index.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
+export interface ReactorConnectionScope {
+  access: "read" | "write";
+}
 export interface RunScope {
+  // null: the snapshot was published by an unsigned operation.
+  runUser: { address: string; subject: AuthSubject } | null;
+  requireReactor: "read" | "write";
+  connection: ReactorConnectionScope;
+  deadline: number; // epoch ms
+  journal: {
+    recordDocuments(documentIds: string[]): Promise<void>;
+    recordJob(jobId: string, documentIds: string[]): Promise<void>;
+  };
+}
+
+export type RunUser = NonNullable<RunScope["runUser"]>;
+
+export interface ActiveRun {
   workflowId: string;
   runId?: string | null;
   // The connections the definition this run pinned declared; a step resolves
@@ -19,12 +37,15 @@ export interface RunScope {
   recordDocuments?: (documentIds: string[]) => Promise<void>;
   // A single-step test: actions run their test method, falling back to run.
   stepTest?: boolean;
+  // Who the run acts as; resolved only when the snapshot binds a reactor
+  // connection, and null for an unsigned publish.
+  runUser?: RunUser | null;
 }
 
-const storage = new AsyncLocalStorage<RunScope>();
+const storage = new AsyncLocalStorage<ActiveRun>();
 
 export function withRunScope<T>(
-  scope: RunScope,
+  scope: ActiveRun,
   fn: () => Promise<T>,
 ): Promise<T> {
   return storage.run(scope, fn);
@@ -58,4 +79,9 @@ export function currentPieceWorker(): IPieceWorker | undefined {
 
 export function currentStepTest(): boolean {
   return storage.getStore()?.stepTest ?? false;
+}
+
+// Undefined outside a run, or when the run binds no reactor connection.
+export function currentRunUser(): RunUser | null | undefined {
+  return storage.getStore()?.runUser;
 }

@@ -26,6 +26,8 @@ enum ConnectionAuthType {
   OAUTH2
   OIDC
   NONE
+  "Reactor access for a piece's ctx.reactor; any piece may bind it."
+  REACTOR
 }
 
 enum ConnectionStatus {
@@ -43,13 +45,21 @@ type SecretRef {
   ref: String!
 }
 
+"Config of a REACTOR connection. It holds no secrets."
+type ReactorConnectionConfig {
+  "Which reactor the connection reaches; 'local' is the only value."
+  endpoint: String!
+  "'read' limits the connection to reads; absent allows what the step declares."
+  access: String
+}
+
 type ConnectionState {
   name: String!
   "Fully-qualified connector id: '@acme/connector-imap#imap'."
   connectorId: String!
   "Activepieces auth kind, so a piece's PieceAuth maps directly."
   authType: ConnectionAuthType!
-  "Non-secret configuration, validated against the connector's auth schema."
+  "Non-secret configuration, validated against the connector's auth schema; a ReactorConnectionConfig for REACTOR."
   config: Unknown!
   "Secret handles; values never appear in state, operations, or the run journal."
   secretRefs: [SecretRef!]!

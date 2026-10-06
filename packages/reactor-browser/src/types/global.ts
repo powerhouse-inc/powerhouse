@@ -23,7 +23,7 @@ import type { IPackageManager } from "./vetra.js";
 import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
 import type { IWorkerAdminClient } from "../rpc/admin-client.js";
 import type { IInspectorProxy } from "../rpc/inspector-proxy.js";
-import type { WorkerPackageSource } from "../rpc/protocol.js";
+import type { WorkerPackageSource } from "@powerhousedao/reactor/rpc";
 
 // Browser in-process module: the full reactor graph plus the PGlite handle.
 export interface BrowserReactorModule extends InProcessReactorModule {

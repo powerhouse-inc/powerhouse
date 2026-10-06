@@ -1,4 +1,4 @@
-import type { MessageRouter } from "./message-router.js";
+import type { MessageRouter } from "@powerhousedao/reactor/rpc";
 import { opChannel } from "./op-channel.js";
 
 export interface IInspectorProxy {

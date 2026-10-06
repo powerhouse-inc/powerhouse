@@ -75,6 +75,11 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     }
   }
 
+  /** Importable entries known for a type: boot entries and run-time loads. */
+  getImportableEntries(documentType: string): ModelManifestEntry[] {
+    return [...(this.importableEntries.get(documentType) ?? [])];
+  }
+
   // Host-side load if missing; with workers, re-send its importable entries.
   async recoverMissingModel(
     documentType: string,

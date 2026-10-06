@@ -48,6 +48,7 @@ function fakeRuntime() {
     testStep: vi.fn(() => Promise.resolve({})),
     stepOutputTree: vi.fn(() => Promise.resolve({})),
     blockResolutions: vi.fn(() => Promise.resolve([])),
+    reactorAccessDenial: vi.fn((): string | undefined => undefined),
     testTrigger: vi.fn(() => Promise.resolve(null)),
     cancelTriggerTestFor: vi.fn(() => Promise.resolve(true)),
     secrets: vi.fn(() =>
@@ -68,6 +69,12 @@ function build(isAdmin: boolean) {
   const resolvers = getResolvers(
     runtime as unknown as WorkflowRuntimeService,
     authorizationService,
+    undefined,
+    undefined,
+    (documentId) =>
+      documentId === "wf-hidden"
+        ? Promise.reject(new Error("You may not read this workflow"))
+        : Promise.resolve(),
   ) as Record<string, Record<string, Resolver>>;
   return {
     runtime,
@@ -165,6 +172,25 @@ describe("the workflow resolvers and the caller", () => {
     await mutations.createSecret({}, { value: "s3cret", label: "slack" }, CTX);
 
     expect(runtime.secrets).toHaveBeenCalledTimes(1);
+  });
+
+  it("serves why a workflow got no reactor access, naming the publisher", async () => {
+    const { runtime, queries } = build(false);
+    runtime.reactorAccessDenial.mockReturnValueOnce(
+      'The publisher 0xabc cannot read reactor connection "conn-1"',
+    );
+
+    await expect(
+      queries.reactorAccessDenial({}, { workflowId: "wf-1" }, CTX),
+    ).resolves.toBe(
+      'The publisher 0xabc cannot read reactor connection "conn-1"',
+    );
+    await expect(
+      queries.reactorAccessDenial({}, { workflowId: "wf-1" }, CTX),
+    ).resolves.toBeNull();
+    await expect(
+      queries.reactorAccessDenial({}, { workflowId: "wf-hidden" }, CTX),
+    ).rejects.toThrow("You may not read this workflow");
   });
 
   it("serves the piece version a run's steps ran", async () => {

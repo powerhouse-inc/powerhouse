@@ -1,6 +1,7 @@
 import type {
   InProcessReactorClientModule,
   IReactorClient,
+  ModelManifestEntry,
   UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
@@ -200,6 +201,8 @@ export type SwitchboardReactor = {
   workflowTriggers?: WorkflowTriggersCapability;
   /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
   workflowsEnabled: boolean;
+  /** The boot list of importable models workers and workflow pieces load; empty when none are resolved. */
+  modelManifest(): ModelManifestEntry[];
   /** Present when the privacy add-on runs: its erasure service. */
   privacy?: { erasure: IErasureService };
   /** Whether `/mcp` is mounted, after the option and MCP_ENABLED. */

@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { connectReactorClient } from "../../src/rpc/connect-reactor.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
-import type { VersionFingerprint } from "../../src/rpc/protocol.js";
+import {
+  MessageRouter,
+  type VersionFingerprint,
+  createPortTransport,
+} from "@powerhousedao/reactor/rpc";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
-import { createPortTransport } from "../../src/rpc/transport.js";
 
 function tabRouter(port: MessagePort): MessageRouter {
   const router = new MessageRouter();

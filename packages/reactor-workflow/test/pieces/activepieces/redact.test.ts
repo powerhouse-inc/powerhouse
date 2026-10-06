@@ -123,6 +123,25 @@ describe("key-based redaction", () => {
       tries: [{ password: "[redacted:password]" }, { ok: true }],
     });
   });
+
+  it("keeps a document's per-scope revision, auth scope included", () => {
+    const reference = {
+      documentId: "doc-1",
+      documentType: "acme/invoice",
+      branch: "main",
+      revision: { global: 2, auth: 1 },
+    };
+    expect(redact({ $documentRef: reference })).toEqual({
+      $documentRef: reference,
+    });
+    // Anything else under "revision" is walked as usual.
+    expect(
+      redact({ documentType: "x", revision: { auth: "Bearer abc" } }),
+    ).toEqual({ documentType: "x", revision: { auth: "[redacted:auth]" } });
+    expect(redact({ revision: { auth: 1 } })).toEqual({
+      revision: { auth: "[redacted:auth]" },
+    });
+  });
 });
 
 describe("bounds", () => {

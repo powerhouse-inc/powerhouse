@@ -29,6 +29,8 @@ import {
   canReadAttachmentRef,
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
+  hostPrincipalOf,
+  reactorAccessOf,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
 } from "../src/workflow-runtime.mjs";
@@ -367,6 +369,48 @@ describe("composeWorkflowRuntime", () => {
   });
 });
 
+describe("the host's reactor access", () => {
+  const signer = { app: { key: "did:key:zHost" }, user: { address: "0xhost" } };
+  const moduleWith = (flags?: Record<string, boolean>) =>
+    ({
+      signer,
+      reactorModule: flags ? { featureFlags: flags } : undefined,
+    }) as unknown as InProcessReactorClientModule;
+
+  it("grants the host by key under auth conditions, else by address", () => {
+    const byKey = reactorAccessOf(
+      moduleWith({ authEnforcement: true, authConditions: true }),
+    );
+    expect(byKey).toEqual({
+      authEnforcement: true,
+      authConditions: true,
+      identity: { address: "0xhost", key: "did:key:zHost" },
+    });
+    expect(hostPrincipalOf(byKey)).toEqual({
+      match: { eq: [{ attr: "subject.key" }, { lit: "did:key:zHost" }] },
+    });
+
+    const byAddress = reactorAccessOf(
+      moduleWith({ authEnforcement: false, authConditions: false }),
+    );
+    expect(byAddress.authEnforcement).toBe(false);
+    expect(hostPrincipalOf(byAddress)).toEqual({ address: "0xhost" });
+  });
+
+  it("reads unknown flags as enforced and a keyless signer as no identity", () => {
+    const access = reactorAccessOf({
+      signer: {},
+      reactorModule: undefined,
+    } as unknown as InProcessReactorClientModule);
+    expect(access).toEqual({
+      authEnforcement: true,
+      authConditions: false,
+      identity: null,
+    });
+    expect(hostPrincipalOf(access)).toBeUndefined();
+  });
+});
+
 // The GraphQL manager rides on the boot result without being on its public
 // type, and the subgraph registers late: poll rather than race it.
 async function pollWorkflowSubgraph(
@@ -408,6 +452,15 @@ describe("booting Switchboard with workflows on", () => {
       expect(
         results.map(({ documentModel }) => documentModel.global.id),
       ).toContain("powerhouse/workflow");
+      // With no worker pool or projection worker, workflows alone resolve them.
+      expect(
+        switchboard.modelManifest().map((entry) => entry.documentType),
+      ).toEqual(
+        expect.arrayContaining([
+          "powerhouse/workflow",
+          "powerhouse/connection",
+        ]),
+      );
       // The subgraph is registered late, so the schema it joins arrives after
       // the boot resolves; poll rather than race it.
       await expect(pollWorkflowSubgraph(switchboard)).resolves.toMatchObject({
