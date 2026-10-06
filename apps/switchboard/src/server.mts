@@ -102,7 +102,10 @@ import {
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
 } from "./workflow-runtime.mjs";
-import { ClosablePGliteDialect } from "./pglite-dialect.js";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "./pglite-dialect.js";
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   CURRENT_PG_MAJOR,
@@ -329,10 +332,10 @@ export async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite, {
-        onDiagnostic: (message, error) =>
-          logger.error(`[pglite-dialect] ${message}: @error`, error),
-      }),
+      dialect: new ClosablePGliteDialect(
+        pglite,
+        reactorPgliteDialectOptions(logger),
+      ),
     }),
     poolInstrumentation: undefined,
   };

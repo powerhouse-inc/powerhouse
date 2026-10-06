@@ -10,6 +10,26 @@ import type {
   Driver,
   QueryCompiler,
 } from "kysely";
+import type { ILogger } from "document-model";
+import { triggerFatalShutdown } from "./fatal-shutdown.mjs";
+
+type FatalProcess = Parameters<typeof triggerFatalShutdown>[2];
+
+/** A poisoned store cannot recover in process, so it takes the fatal shutdown and a supervisor restart. */
+export function reactorPgliteDialectOptions(
+  logger: ILogger,
+  proc?: FatalProcess,
+): Partial<HardenedPGliteDialectOptions> {
+  return {
+    onDiagnostic: (message, error) =>
+      logger.error(`[pglite-dialect] ${message}: @error`, error),
+    onPoisoned: (cause) => {
+      if (!triggerFatalShutdown("PGlite session poisoned", cause, proc)) {
+        logger.error("PGlite session poisoned: @error", cause);
+      }
+    },
+  };
+}
 
 type IntrospectedDatabase = Parameters<Dialect["createIntrospector"]>[0];
 

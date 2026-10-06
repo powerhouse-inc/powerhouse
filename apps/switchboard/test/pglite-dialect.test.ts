@@ -3,7 +3,12 @@ import { Kysely, sql } from "kysely";
 import type { ILogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createReactorKysely } from "../src/server.mjs";
-import { ClosablePGliteDialect } from "../src/pglite-dialect.js";
+import { EventEmitter } from "node:events";
+import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "../src/pglite-dialect.js";
 
 type Row = { id: number };
 type Schema = { t: Row };
@@ -146,5 +151,47 @@ describe("switchboard's reactor storage factory", () => {
     expect(storage.poolInstrumentation).toBeUndefined();
 
     await storage.kysely.destroy();
+  });
+});
+
+describe("a poisoned reactor PGlite session", () => {
+  it("takes the fatal shutdown path", async () => {
+    const emitter = new EventEmitter();
+    const proc = Object.assign(emitter, {
+      pid: 1234,
+      exitCode: undefined as number | undefined,
+      kill: vi.fn(() => true),
+      exit: vi.fn(),
+    });
+    const logger = stubLogger();
+    installFatalErrorShutdown(logger, proc as never);
+
+    const pglite = new PGlite();
+    const dead = new Proxy(pglite, {
+      get(target, prop, receiver) {
+        if (prop === "query") {
+          return (text: string, params?: unknown[]) =>
+            /dead_call/.test(text)
+              ? new Promise(() => undefined)
+              : target.query(text, params);
+        }
+        const value = Reflect.get(target, prop, receiver) as unknown;
+        return typeof value === "function"
+          ? (value as (...args: unknown[]) => unknown).bind(target)
+          : value;
+      },
+    });
+    const db = new Kysely<Schema>({
+      dialect: new ClosablePGliteDialect(dead, {
+        ...reactorPgliteDialectOptions(logger, proc as never),
+        statementTimeoutMs: 50,
+      }),
+    });
+
+    await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
+
+    expect(proc.kill).toHaveBeenCalledWith(1234, "SIGTERM");
+    expect(proc.exitCode).toBe(1);
+    await pglite.close();
   });
 });
