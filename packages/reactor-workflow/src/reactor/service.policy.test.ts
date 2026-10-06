@@ -4,12 +4,14 @@ import { actions } from "@powerhousedao/workflow/document-models/workflow";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Documents } from "../../test/helpers/documents.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { packagePieces } from "./piece-registry.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
+import type { WorkflowRunGate } from "./run-gate.js";
 import type { WorkflowRuntimeService } from "./service.js";
+import { WorkflowRunStore } from "./store.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const PIECE = "@acme/piece-policy";
@@ -168,6 +170,37 @@ describe("policy.concurrency", () => {
     expect(spans).toHaveLength(2);
     // Overlapping: the later run started before the earlier one ended.
     expect(spans[1][0]).toBeLessThan(spans[0][1]);
+  });
+
+  // A throw between admit() and the try whose finally releases would leak the
+  // slot for the life of the process: SINGLETON would refuse every later
+  // firing of this workflow, and nothing would ever free it.
+  it("releases the slot when the run journal throws on the way in", async () => {
+    workflow("wf-gate-leak", {
+      action: "slow",
+      policy: { concurrency: "SINGLETON", onFailure: "IGNORE" },
+    });
+    const gate = (service as unknown as { runGate: WorkflowRunGate }).runGate;
+    const startRun = vi
+      .spyOn(WorkflowRunStore.prototype, "startRun")
+      .mockRejectedValueOnce(new Error("the journal is gone"));
+
+    await expect(
+      service.fire("wf-gate-leak", undefined, "manual", undefined, CTX),
+    ).rejects.toThrow("the journal is gone");
+    startRun.mockRestore();
+
+    expect(gate.active("wf-gate-leak")).toBe(0);
+    // And the workflow is not wedged: the next firing runs instead of being
+    // refused by a slot the failed one never gave back.
+    const next = await service.fire(
+      "wf-gate-leak",
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+    expect(next.status).toBe("SUCCEEDED");
   });
 });
 
