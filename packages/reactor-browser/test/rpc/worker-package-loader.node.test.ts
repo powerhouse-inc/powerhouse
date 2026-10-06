@@ -196,6 +196,34 @@ describe("WorkerPackageLoader", () => {
     expect(loader.loadFailures[0]?.name).toBe("broken");
   });
 
+  it("names each failed package by its package name", async () => {
+    const { loader } = loaderOver({});
+    await loader.loadPackages([
+      "@scope/versioned@1.2.3",
+      "plain@1.2.3",
+      "unversioned",
+      "@scope/unversioned",
+    ]);
+    await loader.loadSources([
+      { name: "@scope/source", url: "https://host.test/s.js" },
+      { name: "source", version: "1.0.0", url: "https://host.test/t.js" },
+    ]);
+    const { failures } = await loader.reloadSources([
+      { name: "@scope/source", url: "https://host.test/s.js?t=2" },
+    ]);
+
+    expect(loader.loadFailures.map((failure) => failure.name)).toEqual([
+      "@scope/versioned",
+      "plain",
+      "unversioned",
+      "@scope/unversioned",
+      "@scope/source",
+      "source",
+      "@scope/source",
+    ]);
+    expect(failures.map((failure) => failure.name)).toEqual(["@scope/source"]);
+  });
+
   it("keeps a source's models and manifests when its reload fails", async () => {
     const importError = new Error("syntax error");
     const { loader } = loaderOver({
@@ -215,7 +243,7 @@ describe("WorkerPackageLoader", () => {
 
     expect(result.types).toEqual([]);
     expect(result.failures).toEqual([
-      { name: "src:p", url: "https://host.test/p.js?t=2", error: importError },
+      { name: "p", url: "https://host.test/p.js?t=2", error: importError },
     ]);
     expect(moduleKeys(loader)).toEqual(["test/p@1"]);
     expect(loader.upgradeManifests.map((m) => m.documentType)).toEqual([

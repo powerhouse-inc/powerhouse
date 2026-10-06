@@ -432,7 +432,7 @@ const host = new ReactorHost({
     if (failures.length > 0) {
       throw new AggregateError(
         failures.map((failure) => failure.error),
-        `Failed to reload package source(s): ${failures.map((failure) => failure.url).join(", ")}`,
+        `Failed to reload package source(s): ${failures.map((failure) => failure.name).join(", ")}`,
       );
     }
   },

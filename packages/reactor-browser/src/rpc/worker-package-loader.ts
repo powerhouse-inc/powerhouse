@@ -32,9 +32,16 @@ type SourceReplacement =
   | { status: "stale" }
   | { status: "failed"; failure: PackageLoadFailure };
 
-function packageName(spec: string): string {
-  const at = spec.lastIndexOf("@");
-  return at > 0 ? spec.slice(0, at) : spec;
+const SOURCE_KEY_PREFIX = "src:";
+
+// Keys are registry specs (`name`, `name@1.2.3`, `@scope/name@1.2.3`) or
+// source keys (`src:<name>`, see sourceKey).
+function packageName(key: string): string {
+  if (key.startsWith(SOURCE_KEY_PREFIX)) {
+    return key.slice(SOURCE_KEY_PREFIX.length);
+  }
+  const at = key.lastIndexOf("@");
+  return at > 0 ? key.slice(0, at) : key;
 }
 
 function moduleKey(module: DocumentModelModule): string {
@@ -349,5 +356,5 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
 // Reloads replace by source NAME: a watch rebuild re-sends the same package
 // under a new cache-busted URL, which must hit the same slot.
 function sourceKey(source: WorkerPackageSource): string {
-  return `src:${source.name}`;
+  return `${SOURCE_KEY_PREFIX}${source.name}`;
 }
