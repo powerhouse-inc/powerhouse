@@ -304,10 +304,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<TDocument>> {
-    if (searchNamesIdentifiers(search)) {
+    if (!findIsServableOverGraphQL(search, view)) {
       throw new GraphQLOperationNotSupportedError(
         "find",
-        "it cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId",
+        searchNamesIdentifiers(search)
+          ? "it cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId"
+          : "point-in-time views are not supported by GraphQLReactorClient",
       );
     }
 

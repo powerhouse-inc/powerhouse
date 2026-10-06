@@ -609,9 +609,15 @@ describe("GraphQLReactorClient.find", () => {
   it("rejects point-in-time views", async () => {
     const sdk = createMockSdk();
 
-    await expect(
-      createClientWith(sdk).find({ type: "x" }, { revision: 3 }),
-    ).rejects.toThrow("point-in-time views are not supported");
+    const found = createClientWith(sdk).find({ type: "x" }, { revision: 3 });
+
+    await expect(found).rejects.toThrow(
+      "point-in-time views are not supported",
+    );
+    await expect(found).rejects.toMatchObject({
+      name: "GraphQLOperationNotSupportedError",
+      operation: "find",
+    });
     expect(sdk.FindDocuments).not.toHaveBeenCalled();
   });
 
