@@ -224,9 +224,8 @@ describe("GqlRequestChannel", () => {
       await vi.advanceTimersByTimeAsync(20000);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      // "connected" is earned by a completed poll, and a paused timer runs
-      // none, so the channel correctly still reads as never-succeeded.
-      expect(channel.getConnectionState().state).toBe("connecting");
+      // A timer that polls only on demand is connected by the touch.
+      expect(channel.getConnectionState().state).toBe("connected");
       expect(channel.getConnectionState().lastSuccessUtcMs).toBe(0);
 
       await channel.shutdown();

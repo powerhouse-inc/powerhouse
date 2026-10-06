@@ -204,6 +204,7 @@ export class GqlRequestChannel implements IChannel {
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
   private requiresAuth: boolean = false;
+  private polledSinceStart = false;
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
 
@@ -512,16 +513,29 @@ export class GqlRequestChannel implements IChannel {
     }
 
     this.pollTimer.setDelegate((signal) => this.poll(signal));
+    this.startPolling();
+    this.transitionConnectionState(this.reachedState());
+  }
+
+  private startPolling(): void {
+    this.polledSinceStart = false;
     this.pollTimer.start();
   }
 
-  /** `"connected"` is earned by a completed poll, not by starting the timer. */
+  /**
+   * `"connected"` is earned by a poll completed since the loop last started; a
+   * timer that polls only on demand earns it with the touch that started it.
+   */
   private reachedState(): ConnectionState {
-    return this.lastSuccessUtcMs === undefined ? "connecting" : "connected";
+    return this.polledSinceStart || this.pollTimer.isPaused?.() === true
+      ? "connected"
+      : "connecting";
   }
 
   private transitionConnectionState(next: ConnectionState): void {
-    if (next === "connected") this.requiresAuth = false;
+    if (next === "connected" || next === "connecting") {
+      this.requiresAuth = false;
+    }
     if (this.connectionState === next) return;
     this.connectionState = next;
     const snapshot = this.getConnectionState();
@@ -637,6 +651,7 @@ export class GqlRequestChannel implements IChannel {
 
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
+    this.polledSinceStart = true;
     this.transitionConnectionState("connected");
   }
 
@@ -761,7 +776,7 @@ export class GqlRequestChannel implements IChannel {
           if (ackOrdinal > 0) {
             trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
           }
-          this.pollTimer.start();
+          this.startPolling();
           this.transitionConnectionState(this.reachedState());
           this.resumePushAfterRecovery();
         })

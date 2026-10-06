@@ -21,4 +21,7 @@ export type IPollTimer = {
    * Used by Manual polling mode to pull on demand without resuming the schedule.
    */
   triggerNow: () => void;
+
+  /** True while the timer polls only on demand (`triggerNow`). */
+  isPaused?: () => boolean;
 };

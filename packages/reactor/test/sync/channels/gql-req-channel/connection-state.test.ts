@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IQueue } from "../../../../src/queue/interfaces.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
+import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { ConnectionStateSnapshot } from "../../../../src/sync/types.js";
 import {
   ManualPollTimer,
@@ -63,6 +65,162 @@ describe("GqlRequestChannel Connection State", () => {
     await manualTimer.tick();
     expect(channel.getConnectionState().state).toBe("connected");
     expect(channel.getConnectionState().lastSuccessUtcMs).toBeGreaterThan(0);
+  });
+
+  it("reports connected after init when its timer is paused and polls only on demand", async () => {
+    global.fetch = successFetch() as unknown as typeof global.fetch;
+    const timer = new IntervalPollTimer(
+      { totalSize: () => Promise.resolve(0) } as unknown as IQueue,
+      { startPaused: true },
+    );
+
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      timer,
+    );
+
+    await channel.init();
+    expect(channel.getConnectionState().state).toBe("connected");
+    await channel.shutdown();
+  });
+
+  it("does not let a success from before a channel-not-found recovery count as connected", async () => {
+    let polls = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      polls++;
+      if (polls === 2) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({ errors: [{ message: "Channel not found" }] }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("connected");
+
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("reconnecting");
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(channel.getConnectionState().state).toBe("connecting");
+
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("connected");
+    await channel.shutdown();
+  });
+
+  it("clears requiresAuth once a push succeeds, before any poll", async () => {
+    let pushes = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pushSyncEnvelopes")) {
+        pushes++;
+        if (pushes === 1) {
+          return {
+            ok: false,
+            status: 401,
+            statusText: "Unauthorized",
+            json: () => Promise.resolve({}),
+          };
+        }
+        return {
+          ok: true,
+          json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      new ManualPollTimer(),
+    );
+
+    await channel.init();
+    channel.outbox.add(createMockSyncOperation("op-1", "remote-1", 1));
+    await vi.waitFor(() => {
+      expect(channel.getConnectionState().requiresAuth).toBe(true);
+    });
+
+    channel.outbox.add(createMockSyncOperation("op-2", "remote-1", 2));
+    await vi.waitFor(() => {
+      expect(pushes).toBe(2);
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(channel.getConnectionState().state).not.toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(false);
+    await channel.shutdown();
   });
 
   it("transitions to connected after successful poll", async () => {
