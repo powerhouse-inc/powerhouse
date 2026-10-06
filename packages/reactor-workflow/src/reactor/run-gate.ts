@@ -66,8 +66,9 @@ export class WorkflowRunGate {
   /**
    * Takes a slot for one run.
    *
-   * - **PARALLEL** with no `maxParallelRuns`: no gate at all, so the hot path
-   *   of a workflow that asked for nothing costs nothing.
+   * - **PARALLEL** with no `maxParallelRuns`, or no policy at all: no gate,
+   *   so an unbounded workflow's hot path costs nothing. Not the default: a
+   *   workflow document starts as QUEUE.
    * - **PARALLEL** with a bound, and **QUEUE**: waits, first come first
    *   served. Latency, not failure — which is what QUEUE means, up to
    *   {@link DEFAULT_MAX_QUEUED_FIRINGS} waiters. Past that the queue is full

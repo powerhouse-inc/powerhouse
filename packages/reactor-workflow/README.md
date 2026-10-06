@@ -287,9 +287,10 @@ and editor only until W3.3: nothing read `concurrency`, `runTimeoutSeconds`,
 `defaultRetry` or `onFailure`, so an author who set them got no behaviour and
 no warning. They are enforced now, and the fields that are **not** are marked
 `NOT YET ENFORCED` in the document model's own SDL rather than left to look
-live. `reactor/policy.ts` resolves the block; a definition with **no** policy
-at all enforces nothing, which is what every legacy and hand-built definition
-has.
+live. `reactor/policy.ts` resolves the block. A definition with **no** policy
+at all enforces nothing, but only hand-built definitions lack one: `policy` is
+non-null in the workflow model since v1, so every workflow document, old or
+new, carries one.
 
 | Field                      | Where                     | Behaviour                                                                                             |
 | -------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -303,12 +304,22 @@ has.
 | `journalAsDocument`        | —                         | **Not enforced**: the journal is relational, and there is no run document model                       |
 | step `idempotencyKeyExpression` | —                    | **Not enforced**: a fire dedupes on its trigger operation or a trigger item's `_dedupe_key`           |
 
-**The document factory's defaults are `concurrency: QUEUE` and
-`onFailure: PARK`**, so enforcing them is a behaviour change for every workflow
-created from it: runs of one workflow now serialise, and a terminal failure
-takes the trigger out of the supervisor's ENABLED set until the workflow is
-re-published or re-enabled. That is what the fields have said since the first
-schema; what changed is that they are true.
+**Enforcing the policy changes every deployed workflow.** The model's initial
+values are `concurrency: QUEUE`, `onFailure: PARK` and
+`runTimeoutSeconds: 3600`, and documents written before enforcement carry them
+too. Unless an author changed them, a workflow now:
+
+1. **Serialises its runs** (QUEUE): a firing waits while a run of the same
+   workflow executes.
+2. **Parks its trigger on the first terminal failure** (PARK): the trigger
+   stops firing until the workflow is re-published or re-enabled.
+3. **Has a one-hour run deadline counted from firing** (3600s): queue wait
+   included; past it the run ends CANCELLED, before its next step.
+4. **Cancels firings past 100 waiters** (`PH_WORKFLOWS_MAX_QUEUED_FIRINGS`):
+   an overflowing firing is journaled CANCELLED instead of run.
+
+That is what the fields have said since the first schema; what changed is that
+they are true.
 
 - **Concurrency is process-local**, which is exactly right: workflow execution
   is a singleton pinned to one reactor, so this

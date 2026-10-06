@@ -8,10 +8,11 @@
 // document model's own SDL, because a knob that lies is worse than one that is
 // absent.
 //
-// A definition with NO policy at all enforces nothing. Legacy documents and
-// hand-built definitions have none, and silently acquiring QUEUE + PARK
-// because a field appeared in a later schema is not a behaviour change anyone
-// asked for. Everything the document factory creates does carry one.
+// A definition with NO policy at all enforces nothing; only hand-built
+// definitions lack one. Every workflow document carries a policy: the field
+// is non-null in the model since v1, initialised to QUEUE, PARK and a 3600s
+// run timeout. Enforcing it therefore changes every deployed workflow; the
+// README lists how.
 import {
   effectiveRetryPolicy,
   type EffectiveRetryPolicy,
@@ -34,7 +35,7 @@ export interface EffectiveRunPolicy {
   defaultRetry: EffectiveRetryPolicy | null;
 }
 
-/** Today's behaviour, for a definition that declares no policy. */
+/** The pre-enforcement behaviour, for a definition that declares no policy. */
 export const UNENFORCED_POLICY: EffectiveRunPolicy = Object.freeze({
   concurrency: "PARALLEL",
   maxParallelRuns: null,
