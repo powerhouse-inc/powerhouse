@@ -149,3 +149,67 @@ describe("a cancelled poll tick", () => {
     await channel.shutdown();
   });
 });
+
+describe("a poll whose token fetch never settles", () => {
+  it("is bounded by the request deadline and recorded as a failure", async () => {
+    let tokens = 0;
+    const fetchFn = vi.fn((_url: string, options: RequestInit) => {
+      const body = JSON.parse(options.body as string) as { query: string };
+      if (body.query.includes("touchChannel")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      });
+    });
+    const timer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig({
+        fetchFn: fetchFn as never,
+        requestTimeoutMs: 50,
+        jwtHandler: () => {
+          tokens++;
+          return tokens === 1
+            ? Promise.resolve("token")
+            : new Promise<string>(() => undefined);
+        },
+      }),
+      createMockOperationIndex(),
+      timer,
+    );
+    await channel.init();
+
+    const outcome = await Promise.race([
+      timer.tick().then(
+        () => "settled",
+        () => "settled",
+      ),
+      new Promise((resolve) => setTimeout(() => resolve("hung"), 1000)),
+    ]);
+
+    expect(outcome).toBe("settled");
+    expect(channel.getConnectionState().lastFailureUtcMs).toBeGreaterThan(0);
+    await channel.shutdown();
+  });
+});

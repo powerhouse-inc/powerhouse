@@ -1522,13 +1522,27 @@ export class GqlRequestChannel implements IChannel {
       "Content-Type": "application/json",
     };
 
-    const authHeader = await this.getAuthorizationHeader();
+    const operationMatch = query.match(/(?:query|mutation)\s+(\w+)/);
+    const operationName = operationMatch?.[1] ?? "unknown";
+
+    const timeoutMs =
+      this.config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const deadline = this.requestDeadline(timeoutMs, signal);
+
+    let authHeader: string | undefined;
+    try {
+      authHeader = await this.withDeadline(
+        this.getAuthorizationHeader(),
+        deadline,
+        `${operationName} authorization`,
+      );
+    } catch (error) {
+      deadline.dispose();
+      throw error;
+    }
     if (authHeader) {
       headers["Authorization"] = authHeader;
     }
-
-    const operationMatch = query.match(/(?:query|mutation)\s+(\w+)/);
-    const operationName = operationMatch?.[1] ?? "unknown";
 
     this.logger.verbose(
       "GQL request @channelId @operation @url vars=@variables",
@@ -1539,9 +1553,6 @@ export class GqlRequestChannel implements IChannel {
     );
 
     const fetchFn = this.config.fetchFn ?? fetch;
-    const timeoutMs =
-      this.config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-    const deadline = this.requestDeadline(timeoutMs, signal);
     let response;
     try {
       response = await this.withDeadline(
