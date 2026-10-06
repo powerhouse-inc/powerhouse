@@ -350,7 +350,7 @@ export interface ISyncManager {
 
 /** Repair levers for one remote's sync state; each is safe to repeat. */
 export interface ISyncAdmin {
-  /** Rebuilds the remote's channel, re-reading its cursors from storage. */
+  /** Rebuilds the channel from cursor storage; never drops the remote's record. */
   resetChannel(remoteName: string): Promise<void>;
 
   /** Retries a dead letter and lifts its quarantine; an unknown id is a no-op. */

@@ -333,7 +333,60 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     );
   });
 
-  it("drops a half-wired remote when reset's re-init fails (non-credential)", async () => {
+  it("leaves no torn-down remote registered when the channel factory throws", async () => {
+    await addAccounts();
+    const first = channels[0];
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      throw new Error("factory broken");
+    });
+
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow(
+      "factory broken",
+    );
+
+    expect(first.shutdown).toHaveBeenCalled();
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
+    expect(syncManager.list()).toHaveLength(0);
+    expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+
+    await syncManager.resetChannel("accounts");
+
+    expect(channels).toHaveLength(2);
+    expect(channels[1].init).toHaveBeenCalled();
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels[1] as unknown,
+    );
+  });
+
+  it("drops the fresh channel when wiring it fails before init", async () => {
+    await addAccounts();
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      const channel = createChannel();
+      channel.onConnectionStateChange = vi.fn(() => {
+        throw new Error("wire broken");
+      });
+      channels.push(channel);
+      return channel as unknown as IChannel;
+    });
+
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow(
+      "wire broken",
+    );
+
+    expect(channels).toHaveLength(2);
+    expect(channels[1].shutdown).toHaveBeenCalled();
+    expect(channels[1].init).not.toHaveBeenCalled();
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
+    expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+
+    await syncManager.resetChannel("accounts");
+
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels[2] as unknown,
+    );
+  });
+
+  it("keeps the stored record when reset's re-init fails on any error", async () => {
     await addAccounts();
     vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
       const channel = createChannel();
@@ -346,15 +399,19 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
       "config broken",
     );
 
-    // No half-wired remote is left serving inspect/triggerPull, and a
-    // non-credential failure drops the stored record too, exactly as add() does.
+    expect(channels[1].shutdown).toHaveBeenCalled();
     expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
-    expect(mockRemoteStorage.remove).toHaveBeenCalledWith("accounts");
+    expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+
+    await syncManager.resetChannel("accounts");
+
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels[2] as unknown,
+    );
   });
 
   it("keeps the stored record when reset's re-init fails on a network error", async () => {
     await addAccounts();
-    vi.mocked(mockRemoteStorage.remove).mockClear();
     vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
       const channel = createChannel();
       channel.init = vi
@@ -366,9 +423,44 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
 
     await expect(syncManager.resetChannel("accounts")).rejects.toThrow("down");
 
-    // The broken channel is dropped from the registry, but the record stays so a
-    // retry after the network recovers can re-add it (add()'s classification).
     expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
     expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it("runs concurrent resets of one remote as a single rebuild", async () => {
+    await addAccounts();
+
+    await Promise.all([
+      syncManager.resetChannel("accounts"),
+      syncManager.resetChannel("accounts"),
+    ]);
+
+    expect(channels).toHaveLength(2);
+    expect(channels[0].shutdown).toHaveBeenCalledTimes(1);
+    expect(channels[1].shutdown).not.toHaveBeenCalled();
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels[1] as unknown,
+    );
+  });
+
+  it("refuses to reset a remote that is being removed", async () => {
+    await addAccounts();
+    let releaseShutdown: (() => void) | undefined;
+    channels[0].shutdown = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseShutdown = resolve;
+        }),
+    );
+
+    const removal = syncManager.remove("accounts");
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow(
+      /being removed/,
+    );
+    releaseShutdown?.();
+    await removal;
+
+    expect(channels).toHaveLength(1);
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
   });
 });

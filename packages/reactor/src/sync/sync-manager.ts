@@ -290,6 +290,7 @@ export class SyncManager
   private derivingOutboxes = 0;
   private pruneDrainDeferred = false;
   private readonly removing = new Set<string>();
+  private readonly resets = new Map<string, Promise<void>>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private readonly watermark: ISettledWatermark;
   // remote name -> ordinal its outbox is owed through
@@ -1422,55 +1423,77 @@ export class SyncManager
     await Promise.all(this.markerWritesOf(remoteNames));
   }
 
-  async resetChannel(remoteName: string): Promise<void> {
-    const remote = this.getByName(remoteName);
-    const meta = remote.meta;
+  /** Concurrent resets of one remote share a single rebuild. */
+  resetChannel(remoteName: string): Promise<void> {
+    const inFlight = this.resets.get(remoteName);
+    if (inFlight) return inFlight;
+    const reset = this.rebuildChannel(remoteName).finally(() => {
+      this.resets.delete(remoteName);
+    });
+    this.resets.set(remoteName, reset);
+    return reset;
+  }
 
-    let fresh: Remote;
-    let unheard: SyncOperation[];
-    this.removing.add(meta.name);
-    try {
-      await this.teardownRemoteResources(remote);
-
-      const channel = this.channelFactory.instance(
-        meta.id,
-        meta.name,
-        meta.channelConfig,
-        this.cursorStorage,
-        meta.collectionId,
-        meta.filter,
-        this.operationIndex,
-        meta.options,
-      );
-      fresh = { meta, channel };
-      this.remotes.set(meta.name, fresh);
-      this.records.set(meta.name, meta);
-
-      await this.loadDeadLetters(fresh);
-      await this.restoreReceivedMarkers(fresh);
-      unheard = [...fresh.channel.inbox.items];
-      this.wireChannelCallbacks(fresh);
-    } finally {
-      this.removing.delete(meta.name);
+  /** On failure the remote is unregistered, record kept, and can be reset again. */
+  private async rebuildChannel(name: string): Promise<void> {
+    if (this.isShutdown) {
+      throw new Error("SyncManager is shutdown and cannot reset remotes");
+    }
+    if (this.removing.has(name)) {
+      throw new Error(`Remote with name '${name}' is being removed`);
+    }
+    const live = this.remotes.get(name);
+    const meta = live?.meta ?? this.records.get(name);
+    if (!meta) {
+      throw new Error(`Remote with name '${name}' does not exist`);
     }
 
+    let fresh: Remote | undefined;
+    let unheard: SyncOperation[] = [];
     try {
+      this.removing.add(name);
+      try {
+        if (live) await this.teardownRemoteResources(live);
+        const channel = this.channelFactory.instance(
+          meta.id,
+          meta.name,
+          meta.channelConfig,
+          this.cursorStorage,
+          meta.collectionId,
+          meta.filter,
+          this.operationIndex,
+          meta.options,
+        );
+        fresh = { meta, channel };
+        this.remotes.set(name, fresh);
+        await this.loadDeadLetters(fresh);
+        await this.restoreReceivedMarkers(fresh);
+        unheard = [...fresh.channel.inbox.items];
+        this.wireChannelCallbacks(fresh);
+      } finally {
+        this.removing.delete(name);
+      }
       await fresh.channel.init();
     } catch (error) {
-      await this.dropRemoteAfterFailedInit(
-        fresh,
-        !isCredentialOrNetworkError(error),
+      this.logger.error(
+        "Resetting remote @name failed; it stays down until reset again or restarted: @error",
+        name,
+        error instanceof Error ? error.message : String(error),
       );
-
+      if (fresh) {
+        await this.dropRemoteAfterFailedInit(fresh, false);
+      } else {
+        this.remotes.delete(name);
+      }
       throw error;
     }
 
     if (unheard.length > 0) this.handleInboxAdded(fresh, unheard);
-    await this.peerUpdates.get(meta.name);
+    await this.peerUpdates.get(name);
 
-    this.owe(meta.name, await this.watermarkHead());
+    this.owe(name, await this.watermarkHead());
     const backfillController = new AbortController();
-    this.backfillAbortControllers.set(meta.name, backfillController);
+    this.backfillAbortControllers.set(name, backfillController);
     void this.updateOutbox(
       fresh,
       0,
@@ -1481,12 +1504,12 @@ export class SyncManager
         if (backfillController.signal.aborted) return;
         this.logger.error(
           "Backfill failed for remote @RemoteName after reset: @Error",
-          meta.name,
+          name,
           error instanceof Error ? error : new Error(String(error)),
         );
       })
       .finally(() => {
-        this.backfillAbortControllers.delete(meta.name);
+        this.backfillAbortControllers.delete(name);
         void this.drainPrunes();
       });
   }
