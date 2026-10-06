@@ -375,6 +375,40 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(2));
   });
 
+  it("dispatches inbox items parked by the quarantine once it lifts", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    channels[0].inbox.add(
+      new SyncOperation(
+        "i1",
+        "",
+        [],
+        "accounts",
+        "doc-b",
+        ["global"],
+        "main",
+        [] as OperationWithContext[],
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).not.toHaveBeenCalled();
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(2));
+  });
+
   it("drops only the successful op's row when a requeued op succeeds and another fails", async () => {
     mockReactor = {
       load: vi

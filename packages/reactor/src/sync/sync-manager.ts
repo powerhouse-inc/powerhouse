@@ -275,6 +275,8 @@ export class SyncManager
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
+  // inbox items held back while their document was quarantined
+  private readonly parkedByQuarantine = new WeakSet<SyncOperation>();
   private readonly purgedDocumentIds = new Set<string>();
   // Requeued dead letters whose row stays until the retry's job succeeds.
   private readonly requeuedDeadLetterIds = new Set<string>();
@@ -1584,7 +1586,7 @@ export class SyncManager
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
-    this.quarantinedDocumentIds.delete(source.documentId);
+    this.liftQuarantine(source.documentId);
 
     const requeued = new SyncOperation(
       source.id,
@@ -1598,6 +1600,20 @@ export class SyncManager
     );
     this.requeuedDeadLetterIds.add(source.id);
     remote.channel.inbox.add(requeued);
+  }
+
+  /** Hands the document's parked inbox items to the apply path again. */
+  private liftQuarantine(documentId: string): void {
+    if (!this.quarantinedDocumentIds.delete(documentId)) return;
+    for (const remote of this.remotes.values()) {
+      const parked = remote.channel.inbox.items.filter(
+        (item) =>
+          item.documentId === documentId && this.parkedByQuarantine.has(item),
+      );
+      if (parked.length === 0) continue;
+      for (const item of parked) this.parkedByQuarantine.delete(item);
+      this.handleInboxAdded(remote, parked);
+    }
   }
 
   /** A failed remove leaves a row for a later clear; the op itself is durable. */
@@ -2070,6 +2086,8 @@ export class SyncManager
         dropped.push(syncOp);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
         eligible.push(syncOp);
+      } else {
+        this.parkedByQuarantine.add(syncOp);
       }
     }
     // A purged id's history is gone here; a job or a dead letter would restore it.
