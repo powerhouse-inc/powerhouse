@@ -98,6 +98,7 @@ import {
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
+  isWorkflowSingletonConflict,
   resolveWorkflowsEnabled,
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
@@ -1013,26 +1014,48 @@ async function initServer(
   // api handed back, registered like any other late subgraph.
   let workflows: ComposedWorkflowRuntime | undefined;
   if (workflowsEnabled) {
-    workflows = await composeWorkflowRuntime({
-      reactorClient: client,
-      clientModule: options.reactor ?? ownedReactorModule,
-      relationalDb: api.relationalDb,
-      // A Postgres read model outlives the pod; a key file beside it would not.
-      secretsKeyFile: readModelPgliteDir === null ? false : undefined,
-      attachments: createAttachmentClient(api.attachments.service),
-      // The workflow package's own HTTP namespace: its webhook endpoints live
-      // under it, not under the reactor's.
-      webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
-      http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
-      authorizationService: api.authorizationService,
-      // The manager that already loads this reactor's packages: the project it
-      // runs in is one of them, so its own pieces arrive with the rest.
-      pieces: api.packageManager,
-      pieceRegistryUrl: registryUrl,
-      models: workerModels,
-      logger: logger.child(["workflow-runtime"]),
-    });
-
+    try {
+      workflows = await composeWorkflowRuntime({
+        reactorClient: client,
+        clientModule: options.reactor ?? ownedReactorModule,
+        relationalDb: api.relationalDb,
+        // A Postgres read model outlives the pod; a key file beside it would not.
+        secretsKeyFile: readModelPgliteDir === null ? false : undefined,
+        // The stable half of the default singleton owner name. Absolute, so
+        // two Switchboards in different working directories differ.
+        storageId:
+          readModelPgliteDir === null
+            ? readModelPath
+            : path.resolve(readModelPath),
+        attachments: createAttachmentClient(api.attachments.service),
+        // The workflow package's own HTTP namespace: its webhook endpoints live
+        // under it, not under the reactor's.
+        webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
+        http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+        authorizationService: api.authorizationService,
+        // The manager that already loads this reactor's packages: the project it
+        // runs in is one of them, so its own pieces arrive with the rest.
+        pieces: api.packageManager,
+        pieceRegistryUrl: registryUrl,
+        models: workerModels,
+        logger: logger.child(["workflow-runtime"]),
+      });
+    } catch (error) {
+      // Without the claim this host must not run workflows, but everything
+      // else it serves still works, so it boots without the runtime.
+      if (!isWorkflowSingletonConflict(error)) throw error;
+      logger.warn(
+        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
+          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
+          "This Switchboard has booted WITHOUT the workflow runtime: no " +
+          "trigger of any kind fires here, and the workflow GraphQL face is " +
+          "absent. Everything else serves normally. Stop the other owner, or " +
+          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
+          "slot that owns workflows, then restart this one to pick them up.",
+      );
+    }
+  }
+  if (workflows) {
     const WorkflowRuntimeSubgraph = workflows.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
       reactorClient: client,
