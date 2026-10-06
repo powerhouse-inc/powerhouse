@@ -66,6 +66,7 @@ import {
   isDriveAuthError,
 } from "./errors.js";
 import type {
+  IChannel,
   IChannelFactory,
   ISyncAdmin,
   ISyncManager,
@@ -1243,11 +1244,7 @@ export class SyncManager
 
     this.remotes.set(name, remote);
     this.records.set(name, meta);
-    await this.loadDeadLetters(remote);
-    await this.restoreReceivedMarkers(remote);
-    // Restored, or pushed while the remote was reachable but unwired.
-    const unheard = [...remote.channel.inbox.items];
-    this.wireChannelCallbacks(remote);
+    const unheard = await this.wireRemote(remote);
 
     try {
       await channel.init();
@@ -1263,33 +1260,8 @@ export class SyncManager
 
       throw error;
     }
-    if (unheard.length > 0) this.handleInboxAdded(remote, unheard);
-    await this.peerUpdates.get(name);
 
-    this.owe(name, await this.watermarkHead());
-
-    // backfill asynchronously -- don't block channel registration
-    const backfillController = new AbortController();
-    this.backfillAbortControllers.set(name, backfillController);
-    void this.updateOutbox(
-      remote,
-      0,
-      OutboxMode.Backfill,
-      backfillController.signal,
-    )
-      .catch((error) => {
-        if (backfillController.signal.aborted) return;
-        this.logger.error(
-          "Backfill failed for remote @RemoteName: @Error",
-          remote.meta.name,
-          error instanceof Error ? error : new Error(String(error)),
-        );
-      })
-      .finally(() => {
-        this.backfillAbortControllers.delete(name);
-        void this.drainPrunes();
-      });
-
+    await this.activateRemote(remote, unheard, 0);
     return remote;
   }
 
@@ -1448,62 +1420,110 @@ export class SyncManager
       throw new Error(`Remote with name '${name}' does not exist`);
     }
 
-    let fresh: Remote | undefined;
-    let unheard: SyncOperation[] = [];
-    try {
-      this.removing.add(name);
+    this.removing.add(name);
+    if (live) {
       try {
-        if (live) await this.teardownRemoteResources(live);
-        const channel = this.channelFactory.instance(
-          meta.id,
-          meta.name,
-          meta.channelConfig,
-          this.cursorStorage,
-          meta.collectionId,
-          meta.filter,
-          this.operationIndex,
-          meta.options,
-        );
-        fresh = { meta, channel };
-        this.remotes.set(name, fresh);
-        await this.loadDeadLetters(fresh);
-        await this.restoreReceivedMarkers(fresh);
-        unheard = [...fresh.channel.inbox.items];
-        this.wireChannelCallbacks(fresh);
-      } finally {
-        this.removing.delete(name);
+        await this.teardownRemoteResources(live);
+      } catch (error) {
+        this.abandonReset(name, error);
+        throw error;
       }
-      await fresh.channel.init();
-    } catch (error) {
-      this.logger.error(
-        "Resetting remote @name failed; it stays down until reset again or restarted: @error",
-        name,
-        error instanceof Error ? error.message : String(error),
+    }
+
+    let channel: IChannel;
+    try {
+      channel = this.channelFactory.instance(
+        meta.id,
+        meta.name,
+        meta.channelConfig,
+        this.cursorStorage,
+        meta.collectionId,
+        meta.filter,
+        this.operationIndex,
+        meta.options,
       );
-      if (fresh) {
-        await this.dropRemoteAfterFailedInit(fresh, false);
-      } else {
-        this.remotes.delete(name);
-      }
+    } catch (error) {
+      this.abandonReset(name, error);
+      throw error;
+    }
+    const fresh: Remote = { meta, channel };
+    this.remotes.set(name, fresh);
+
+    let unheard: SyncOperation[];
+    try {
+      unheard = await this.wireRemote(fresh);
+    } catch (error) {
+      this.removing.delete(name);
+      await this.failReset(fresh, error);
+      throw error;
+    }
+    this.removing.delete(name);
+
+    try {
+      await channel.init();
+    } catch (error) {
+      await this.failReset(fresh, error);
       throw error;
     }
 
-    if (unheard.length > 0) this.handleInboxAdded(fresh, unheard);
+    await this.activateRemote(fresh, unheard, 0);
+  }
+
+  /** Before a fresh channel is registered: nothing to tear down. */
+  private abandonReset(name: string, error: unknown): void {
+    this.logResetFailure(name, error);
+    this.remotes.delete(name);
+    this.removing.delete(name);
+  }
+
+  private async failReset(fresh: Remote, error: unknown): Promise<void> {
+    this.logResetFailure(fresh.meta.name, error);
+    await this.dropRemoteAfterFailedInit(fresh, false);
+  }
+
+  private logResetFailure(name: string, error: unknown): void {
+    this.logger.error(
+      "Resetting remote @name failed; it stays down until reset again or restarted: @error",
+      name,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  /** Restores and wires the mailboxes; returns the inbox items not yet heard. */
+  private async wireRemote(remote: Remote): Promise<SyncOperation[]> {
+    await this.loadDeadLetters(remote);
+    await this.restoreReceivedMarkers(remote);
+    // Restored, or pushed while the remote was reachable but unwired.
+    const unheard = [...remote.channel.inbox.items];
+    this.wireChannelCallbacks(remote);
+    return unheard;
+  }
+
+  /** After init: hands over unheard items and starts the outbox backfill. */
+  private async activateRemote(
+    remote: Remote,
+    unheard: SyncOperation[],
+    backfillFrom: number,
+  ): Promise<void> {
+    const name = remote.meta.name;
+    if (unheard.length > 0) this.handleInboxAdded(remote, unheard);
     await this.peerUpdates.get(name);
 
     this.owe(name, await this.watermarkHead());
+
+    // backfill asynchronously -- don't block channel registration
     const backfillController = new AbortController();
     this.backfillAbortControllers.set(name, backfillController);
     void this.updateOutbox(
-      fresh,
-      0,
+      remote,
+      backfillFrom,
       OutboxMode.Backfill,
       backfillController.signal,
     )
       .catch((error) => {
         if (backfillController.signal.aborted) return;
         this.logger.error(
-          "Backfill failed for remote @RemoteName after reset: @Error",
+          "Backfill failed for remote @RemoteName: @Error",
           name,
           error instanceof Error ? error : new Error(String(error)),
         );
