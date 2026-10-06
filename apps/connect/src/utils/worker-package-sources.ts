@@ -1,5 +1,5 @@
 import type { WorkerPackageSource } from "@powerhousedao/reactor-browser/rpc";
-import { isWorkerBundleResponse } from "./reactor-worker-url.js";
+import { isWorkerBundleResponse, joinBase } from "./reactor-worker-url.js";
 
 /**
  * Where `ph connect build` publishes the prebuilt local-package model bundles
@@ -21,13 +21,6 @@ export const PROJECT_PACKAGE_SOURCE_NAME = "ph:project-package";
 
 type ManifestEntry = { name: string; version?: string; file: string };
 
-function joinBase(baseUrl: string, path: string): URL {
-  return new URL(
-    `${baseUrl}/${path}`.replace(/\/{2,}/g, "/"),
-    window.location.origin,
-  );
-}
-
 async function probeJavaScript(url: URL): Promise<boolean> {
   try {
     const res = await fetch(url, { method: "HEAD" });
@@ -42,7 +35,9 @@ async function probeJavaScript(url: URL): Promise<boolean> {
 
 async function fetchManifest(baseUrl: string): Promise<ManifestEntry[]> {
   try {
-    const res = await fetch(joinBase(baseUrl, WORKER_PACKAGES_MANIFEST));
+    const res = await fetch(
+      joinBase(baseUrl, WORKER_PACKAGES_MANIFEST, window.location.origin),
+    );
     if (!res.ok) return [];
     const parsed: unknown = await res.json();
     if (!Array.isArray(parsed)) return [];
@@ -66,7 +61,11 @@ async function fetchManifest(baseUrl: string): Promise<ManifestEntry[]> {
 export async function resolveDevProjectSource(
   baseUrl: string,
 ): Promise<WorkerPackageSource | null> {
-  const url = joinBase(baseUrl, DEV_PROJECT_MODELS_PATH);
+  const url = joinBase(
+    baseUrl,
+    DEV_PROJECT_MODELS_PATH,
+    window.location.origin,
+  );
   if (!(await probeJavaScript(url))) return null;
   url.searchParams.set("t", String(Date.now()));
   return { name: PROJECT_PACKAGE_SOURCE_NAME, url: url.href };
@@ -86,7 +85,11 @@ export async function resolveLocalPackageSources(
     sources.push({
       name: entry.name,
       version: entry.version,
-      url: joinBase(baseUrl, `${WORKER_PACKAGES_DIR}${entry.file}`).href,
+      url: joinBase(
+        baseUrl,
+        `${WORKER_PACKAGES_DIR}${entry.file}`,
+        window.location.origin,
+      ).href,
     });
   }
   const devProject = await resolveDevProjectSource(baseUrl);

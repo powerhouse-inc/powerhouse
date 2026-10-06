@@ -75,6 +75,8 @@ export type WorkerReactorClientArgs = {
    * Vite bundles the worker from source (the monorepo app).
    */
   workerUrl?: string;
+  /** The bundle's `sourceDigest`; a rebuilt bundle at the same URL then forces a fresh worker. */
+  workerDigest?: string;
   /**
    * URL-addressed packages the worker loads at boot: local project models
    * the registry cannot serve. See resolveLocalPackageSources.
@@ -147,11 +149,14 @@ export function createWorkerReactorClientModule(
   documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
   const gitSha = getGitSha();
+  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
   const clientProxy = connectReactorClient(
     router,
     {
       version: {
-        appBuildId: gitSha !== "unknown" ? gitSha : getVersion(),
+        appBuildId: args.workerDigest
+          ? `${buildId}+w.${args.workerDigest}`
+          : buildId,
         rpcProtocolVersion: RPC_PROTOCOL_VERSION,
         models: args.documentModelModules.map((m) => ({
           id: m.documentModel.global.id,

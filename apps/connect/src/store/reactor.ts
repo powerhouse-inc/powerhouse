@@ -65,7 +65,7 @@ import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
-import { resolvePackagedReactorWorkerUrl } from "../utils/reactor-worker-url.js";
+import { resolvePackagedReactorWorker } from "../utils/reactor-worker-url.js";
 import {
   resolveDevProjectSource,
   resolveLocalPackageSources,
@@ -407,14 +407,17 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // Packaged deployments serve a prebuilt worker bundle at a stable path
     // (the dist worker itself is a library artifact no worker can load);
     // null means this is the monorepo app, where Vite bundles the worker.
-    const packagedWorkerUrl = await resolvePackagedReactorWorkerUrl();
+    const packagedWorker = await resolvePackagedReactorWorker(
+      import.meta.env.BASE_URL,
+    );
     // Local project models the registry cannot serve: prebuilt bundles in
     // production, the dev server's live project models entry in dev.
     const packageSources = await resolveLocalPackageSources(
       import.meta.env.BASE_URL,
     );
     const workerClient = createWorkerReactorClientModule({
-      workerUrl: packagedWorkerUrl ?? undefined,
+      workerUrl: packagedWorker?.url,
+      workerDigest: packagedWorker?.sourceDigest,
       packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
