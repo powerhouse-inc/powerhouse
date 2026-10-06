@@ -388,7 +388,8 @@ they are true.
 ## Indeterminate steps
 
 A piece's call of its host is capped (`PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`, 10s,
-raised to the step's own `timeoutSeconds` when that is longer), and always
+raised to the step's own `timeoutSeconds` when that is longer; a trigger hook
+or a design-time call takes the same cap, raised to its own timeout), and always
 clipped to end a margin before the step's kill deadline, so the call's own
 timeout is what the step reports. A **writing** call that times out —
 `store.put`, `store.delete` — may well have been committed, so the step records

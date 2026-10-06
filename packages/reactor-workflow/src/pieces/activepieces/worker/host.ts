@@ -1,4 +1,7 @@
-import { configuredMaxFileBytes } from "../context/limits.js";
+import {
+  configuredMaxFileBytes,
+  hostCallTimeoutForStep,
+} from "../context/limits.js";
 import type { StagedFile } from "../context/files.js";
 import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
@@ -329,7 +332,12 @@ export class PieceWorker implements IPieceWorker {
     // none — which is how the pool builds them — each request carries the cap
     // derived from its step (`hostCallTimeoutForStep`), because one worker
     // serves many steps and the cap follows the step's own timeout.
-    const hostCallTimeoutMs = this.hostCallTimeoutMs ?? taps.hostCallTimeoutMs;
+    // A request with no cap of its own (a trigger hook, a design-time call)
+    // takes the operator's, raised to its own timeout, as a step does.
+    const hostCallTimeoutMs =
+      this.hostCallTimeoutMs ??
+      taps.hostCallTimeoutMs ??
+      hostCallTimeoutForStep(timeoutMs);
 
     return new Promise<PieceWorkerResult>((resolve, reject) => {
       // The kill timer's own reading, so the child can give up in time to say why.
