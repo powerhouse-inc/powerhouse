@@ -622,13 +622,13 @@ export function findBundleSpecifierOffenders(
   return offenders;
 }
 
-// Visits each JS file reachable from `entry` via relative imports, stopping
-// as soon as `visit` returns false.
+// Visits each JS file reachable from `entry` via relative imports. Stops and
+// returns false as soon as `visit` does.
 function walkBundleGraph(
   bundleDir: string,
   entry: string,
   visit: (file: string, code: string) => boolean,
-): void {
+): boolean {
   const seen = new Set<string>();
   const queue = [entry];
   while (queue.length > 0) {
@@ -639,12 +639,13 @@ function walkBundleGraph(
     if (!existsSync(full) || statSync(full).isDirectory()) continue;
     if (!rel.endsWith(".js") && !rel.endsWith(".mjs")) continue;
     const code = readFileSync(full, "utf8");
-    if (!visit(rel, code)) return;
+    if (!visit(rel, code)) return false;
     for (const spec of findRelativeSpecifiers(code)) {
       const next = normalizeBundlePath(rel, spec);
       if (next) queue.push(next);
     }
   }
+  return true;
 }
 
 function assertWorkerResolvable(bundleDir: string): void {
@@ -692,13 +693,13 @@ export function workerSafeVendorImports(
   for (const [spec, url] of Object.entries(vendorImports)) {
     const entryFile = url.slice(url.lastIndexOf("/") + 1);
     if (!existsSync(join(vendorDir, entryFile))) continue;
-    let clean = true;
-    walkBundleGraph(vendorDir, entryFile, (_file, code) => {
-      clean =
+    const clean = walkBundleGraph(
+      vendorDir,
+      entryFile,
+      (_file, code) =>
         findDisallowedSpecifiers(code).length === 0 &&
-        findWorkerUnsafeMarkers(code).length === 0;
-      return clean;
-    });
+        findWorkerUnsafeMarkers(code).length === 0,
+    );
     if (clean) safe[spec] = url;
   }
   return safe;
