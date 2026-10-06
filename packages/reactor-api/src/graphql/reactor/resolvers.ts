@@ -553,6 +553,7 @@ export async function jobStatus(
     jobId: string;
   },
   serves: (documentId: string) => Promise<boolean>,
+  readable: (documentId: string) => Promise<boolean> = serves,
 ): Promise<GqlJobInfo> {
   let result: JobInfo;
   try {
@@ -565,6 +566,18 @@ export async function jobStatus(
   if (!(await serves(result.documentId))) {
     result = unknownJob(args.jobId);
   }
+
+  // A coordinate names a document the job wrote to, such as a parent it linked.
+  const coordinates = [];
+  for (const coordinate of result.consistencyToken.coordinates) {
+    if (await readable(coordinate.documentId)) {
+      coordinates.push(coordinate);
+    }
+  }
+  result = {
+    ...result,
+    consistencyToken: { ...result.consistencyToken, coordinates },
+  };
 
   try {
     return toGqlJobInfo(result);

@@ -465,8 +465,17 @@ export class ReactorSubgraph extends BaseSubgraph {
       jobStatus: async (_parent, args, ctx: Context) => {
         this.logger.debug("jobStatus(@args)", args);
         try {
-          return await resolvers.jobStatus(this.reactorClient, args, (id) =>
-            this.servesDocument(id, ctx),
+          // The same gate as jobChanges, and coordinates are reads too.
+          const readable = (id: string): Promise<boolean> =>
+            this.authorizationService.isSupremeAdmin(ctx.user?.address)
+              ? Promise.resolve(true)
+              : this.canReadDocument(id as CanonicalDocumentId, ctx);
+          return await resolvers.jobStatus(
+            this.reactorClient,
+            args,
+            async (id) =>
+              (await this.servesDocument(id, ctx)) && (await readable(id)),
+            readable,
           );
         } catch (error) {
           this.logger.error("Error in jobStatus: @Error", error);

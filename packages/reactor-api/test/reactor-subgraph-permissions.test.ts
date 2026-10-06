@@ -238,6 +238,83 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   // Query: evaluateActions
   // ============================================================
+  describe("Query: jobStatus", () => {
+    const job = {
+      id: "job-1",
+      documentId: "doc-123",
+      status: "READ_READY",
+      createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+      completedAtUtcIso: "2026-01-01T00:00:01.000Z",
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+        coordinates: [
+          {
+            documentId: "doc-123",
+            scope: "document",
+            branch: "main",
+            operationIndex: 0,
+          },
+          {
+            documentId: "secret-parent",
+            scope: "document",
+            branch: "main",
+            operationIndex: 4,
+          },
+        ],
+      },
+      meta: { batchId: "job-1", batchJobIds: ["job-1"] },
+    };
+
+    const callJobStatus = (ctx: any) =>
+      (reactorSubgraph.resolvers.Query as any)?.jobStatus(
+        null,
+        { jobId: "job-1" },
+        ctx,
+      );
+
+    beforeEach(() => {
+      mockReactorClient.isServed = vi.fn().mockResolvedValue(true);
+      vi.mocked(mockReactorClient.getJobStatus!).mockResolvedValue(job as any);
+    });
+
+    it("answers an unknown job when the caller cannot read the job's document", async () => {
+      const ctx = createContext({ userAddress: "0xreader" });
+
+      const result = await callJobStatus(ctx);
+
+      expect(result.documentId).toBe("");
+      expect(result.status).toBe("FAILED");
+      expect(result.consistencyToken.coordinates).toEqual([]);
+    });
+
+    it("drops coordinates of documents the caller cannot read", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId === "doc-123"),
+      );
+      const ctx = createContext({ userAddress: "0xreader" });
+
+      const result = await callJobStatus(ctx);
+
+      expect(result.documentId).toBe("doc-123");
+      expect(
+        result.consistencyToken.coordinates.map(
+          (coordinate: { documentId: string }) => coordinate.documentId,
+        ),
+      ).toEqual(["doc-123"]);
+    });
+
+    it("shows a supreme admin every coordinate", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
+
+      const result = await callJobStatus(ctx);
+
+      expect(result.consistencyToken.coordinates).toHaveLength(2);
+      expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
+    });
+  });
+
   describe("Query: evaluateActions", () => {
     const callEvaluateActions = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.evaluateActions;
