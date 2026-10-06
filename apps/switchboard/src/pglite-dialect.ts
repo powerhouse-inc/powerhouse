@@ -17,7 +17,7 @@ type IntrospectedDatabase = Parameters<Dialect["createIntrospector"]>[0];
 // PGlite client — it never calls pglite.close(). Without close(), the store
 // misses its shutdown checkpoint and the next open runs WAL recovery. This
 // wrapper closes the dialect's PGlite as part of the reactor's
-// database.destroy() chain, around the reactor's hardened dialect.
+// database.destroy() chain.
 export class ClosablePGliteDialect implements Dialect {
   readonly #inner: HardenedPGliteDialect;
   readonly #pglite: PGlite;

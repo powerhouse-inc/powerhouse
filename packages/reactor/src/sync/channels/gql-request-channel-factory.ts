@@ -158,8 +158,7 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,
       }),
-      // Above the request deadline so only a stuck tick is cancelled; an
-      // unbounded request leaves the tick unbounded too.
+      // Above the request deadline, so only a stuck tick is ever cancelled.
       delegateTimeoutMs:
         requestTimeoutMs > 0
           ? Math.max(DELEGATE_TIMEOUT_FLOOR_MS, requestTimeoutMs * 2)

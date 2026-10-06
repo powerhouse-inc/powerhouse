@@ -48,11 +48,7 @@ export function calculateBackoffDelay(
 
 type TickOutcome = "success" | "failure" | "backpressure" | "stopped";
 
-/**
- * Default poll timer using setTimeout. One delegate runs at a time; a stuck
- * tick is cancelled through its signal and the next is scheduled from its
- * settlement, never alongside it.
- */
+/** setTimeout poll timer; a stuck tick is cancelled and the next waits for it to settle. */
 export class IntervalPollTimer implements IPollTimer {
   private delegate: PollDelegate | undefined;
   private timer: NodeJS.Timeout | undefined;

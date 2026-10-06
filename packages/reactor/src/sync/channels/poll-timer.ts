@@ -1,7 +1,4 @@
-/**
- * Invoked on each tick. Once `signal` aborts, the delegate must settle promptly
- * and stop mutating shared state; the next tick waits for it.
- */
+/** Once `signal` aborts, settle promptly and stop mutating shared state. */
 export type PollDelegate = (signal: AbortSignal | undefined) => Promise<void>;
 
 /**

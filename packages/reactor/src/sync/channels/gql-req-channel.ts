@@ -124,7 +124,7 @@ type DeadLetterWire = {
 
 type CursorType = "inbox" | "outbox";
 
-/** `requested` is the highest ordinal not yet taken by a write; `tail` orders the writes. */
+/** `requested`: highest ordinal no write has taken yet; `tail`: the write chain. */
 type CursorWriter = {
   persisted: number;
   requested: number;
@@ -297,12 +297,7 @@ export class GqlRequestChannel implements IChannel {
     });
   }
 
-  /**
-   * The watermark advances only once the write lands, so a failed write is
-   * retried by the next advance. Writes for one cursor row run one at a time
-   * and coalesce to the highest requested ordinal, since storage does not
-   * promise FIFO between concurrent upserts.
-   */
+  /** Advances the watermark only once the write lands; writes per row run one at a time, coalesced. */
   private persistCursor(cursorType: CursorType, ordinal: number): void {
     const writer = this.cursorWriters[cursorType];
     if (ordinal <= Math.max(writer.persisted, writer.requested)) {
@@ -434,8 +429,7 @@ export class GqlRequestChannel implements IChannel {
 
   /**
    * Re-touches once when either side's manifest moved; touching is idempotent.
-   * False only when shutting down; a failed refresh raises so the poll is
-   * recorded as a failure rather than a silent success.
+   * False only when shutting down; a failed refresh raises.
    */
   private async refreshManifestsIfStale(
     manifestRevision: string | null | undefined,
@@ -533,8 +527,7 @@ export class GqlRequestChannel implements IChannel {
   }
 
   /**
-   * Polls the remote for new sync envelopes. Every failure of the poll body,
-   * not just the fetch, is recorded through `handlePollError`.
+   * Polls the remote for new sync envelopes; any failure of the body is recorded.
    */
   private async poll(signal: AbortSignal | undefined): Promise<void> {
     if (this.isShutdown) {
@@ -1426,10 +1419,7 @@ export class GqlRequestChannel implements IChannel {
     return undefined;
   }
 
-  /**
-   * Aborted by shutdown, the poll tick's cancellation or the deadline;
-   * `expired` also bounds a fetch or body read that ignores the signal.
-   */
+  /** Aborted by shutdown, tick cancellation or the deadline; `expired` bounds what ignores it. */
   private requestDeadline(
     timeoutMs: number,
     tick: AbortSignal | undefined,

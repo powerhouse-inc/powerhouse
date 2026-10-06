@@ -130,11 +130,7 @@ export class KyselyOperationStore implements IOperationStore {
     }
   }
 
-  /**
-   * The replay lookup runs on the caller's executor: on single-connection
-   * PGlite a query on `this.db` from inside a transaction parks behind the
-   * lease that transaction holds, and neither ever finishes.
-   */
+  /** Looks up on the caller's executor: `this.db` inside a transaction deadlocks single-connection PGlite. */
   private async resolveUniqueConstraint(
     ctx: _UniqueConstraintContext,
   ): Promise<Operation[]> {
