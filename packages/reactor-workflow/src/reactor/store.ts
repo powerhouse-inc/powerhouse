@@ -196,6 +196,15 @@ export interface PieceStoreRow {
   updated_at: string;
 }
 
+// A workflow PARK took out of service, whatever its trigger kind.
+export interface WorkflowParkRow {
+  workflow_id: string;
+  // The published version that failed.
+  published_version: number;
+  reason: string;
+  parked_at: string;
+}
+
 export interface WorkflowRuntimeDB {
   run: RunRow;
   step_execution: StepExecutionRow;
@@ -203,6 +212,7 @@ export interface WorkflowRuntimeDB {
   trigger_state: TriggerStateRow;
   trigger_dedupe: TriggerDedupeRow;
   piece_store: PieceStoreRow;
+  workflow_park: WorkflowParkRow;
 }
 
 const logger = childLogger(["workflow", "runtime", "store"]);
@@ -290,6 +300,15 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("run_id", "text")
     .addColumn("created_at", "text", (col) => col.notNull())
     .addPrimaryKeyConstraint("trigger_dedupe_pk", ["workflow_id", "dedupe_key"])
+    .ifNotExists()
+    .execute();
+
+  await db.schema
+    .createTable("workflow_park")
+    .addColumn("workflow_id", "text", (col) => col.primaryKey())
+    .addColumn("published_version", "integer", (col) => col.notNull())
+    .addColumn("reason", "text", (col) => col.notNull())
+    .addColumn("parked_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();
 
@@ -1860,6 +1879,40 @@ export class WorkflowRunStore {
       .execute();
     for (const row of rows) byRun.get(row.run_id)?.push(row.document_id);
     return byRun;
+  }
+
+  async parkWorkflow(
+    workflowId: string,
+    publishedVersion: number,
+    reason: string,
+  ): Promise<void> {
+    const row = {
+      published_version: publishedVersion,
+      reason: redactMessage(reason),
+      parked_at: new Date().toISOString(),
+    };
+    await this.db
+      .insertInto("workflow_park")
+      .values({ workflow_id: workflowId, ...row })
+      .onConflict((oc) => oc.column("workflow_id").doUpdateSet(row))
+      .execute();
+  }
+
+  async getWorkflowPark(
+    workflowId: string,
+  ): Promise<WorkflowParkRow | undefined> {
+    return this.db
+      .selectFrom("workflow_park")
+      .selectAll()
+      .where("workflow_id", "=", workflowId)
+      .executeTakeFirst();
+  }
+
+  async clearWorkflowPark(workflowId: string): Promise<void> {
+    await this.db
+      .deleteFrom("workflow_park")
+      .where("workflow_id", "=", workflowId)
+      .execute();
   }
 
   async getTriggerState(

@@ -17,6 +17,7 @@ import type { WorkflowRunGate } from "./run-gate.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
 import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
+import { REACTOR_PIECE } from "./reactor-piece.js";
 
 const PIECE = "@acme/piece-policy";
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
@@ -519,4 +520,153 @@ describe("policy.onFailure on an operator's run", () => {
       "ENABLED",
     );
   });
+});
+
+function noteOp(documentId: string): OperationWithContext {
+  ordinal += 1;
+  return {
+    operation: {
+      index: ordinal,
+      timestampUtcMs: `${ordinal}`,
+      action: { type: "SET_TITLE", input: { title: `t${ordinal}` } },
+    },
+    context: {
+      documentId,
+      documentType: "powerhouse/note",
+      scope: "global",
+      branch: "main",
+      ordinal,
+    },
+  } as unknown as OperationWithContext;
+}
+
+function documentEventWorkflow(id: string) {
+  return documents.apply(
+    id,
+    actions.setTrigger({
+      id: "t1",
+      pieceName: REACTOR_PIECE,
+      pieceVersion: "1.0.0",
+      triggerName: "document-event",
+      config: { documentType: "powerhouse/note", actionType: "SET_TITLE" },
+    }),
+    actions.addStep({
+      id: "a",
+      key: "only",
+      name: "Only",
+      pieceName: PIECE,
+      pieceVersion: "1.0.0",
+      actionName: "boom",
+      config: {},
+    }),
+    actions.addEdge({ id: "e1", from: "t1", to: "a", port: "next" }),
+    actions.setPolicy({ onFailure: "PARK" } as never),
+    actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+    actions.setWorkflowStatus({ status: "ENABLED" }),
+  );
+}
+
+// PARK used to write only trigger_state, which a document-event trigger never
+// reads, so the workflow kept firing while the log said it would not.
+describe("PARK on a trigger the supervisor does not drive", () => {
+  it("stops a document-event workflow firing", async () => {
+    const id = "wf-park-event";
+    await service.onOperations([workflowOp(id, documentEventWorkflow(id))]);
+    const store = (await service.store())!;
+
+    await service.onOperations([noteOp("note-1")]);
+    await vi.waitFor(async () =>
+      expect((await store.listRuns(id)).map((run) => run.status)).toEqual([
+        "FAILED",
+      ]),
+    );
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeDefined(),
+    );
+
+    await service.onOperations([noteOp("note-2")]);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await store.listRuns(id)).toHaveLength(1);
+  });
+});
+
+// The SDL and the log both say a park lasts until the workflow is re-published
+// or re-enabled; a re-publish that left the trigger as it was used not to count.
+describe("a re-publish of a PARKED workflow", () => {
+  it("arms its schedule again with the trigger unchanged", async () => {
+    const id = "wf-park-republish";
+    const document = documents.apply(
+      id,
+      actions.setTrigger({
+        id: "t1",
+        pieceName: CORE_PIECE_NAME,
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "schedule",
+        config: { mode: "cron", cron: "0 * * * *" },
+      }),
+      actions.addStep({
+        id: "a",
+        key: "only",
+        name: "Only",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "boom",
+        config: {},
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "a", port: "next" }),
+      actions.setPolicy({ onFailure: "PARK" } as never),
+      actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    );
+    await service.onOperations([workflowOp(id, document)]);
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    expect((await service.fire(id, undefined, "schedule")).status).toBe(
+      "FAILED",
+    );
+    expect((await store.getTriggerState(id))?.status).toBe(
+      PARKED_TRIGGER_STATUS,
+    );
+
+    const republished = documents.apply(
+      id,
+      actions.setPolicy({ onFailure: "PARK", runTimeoutSeconds: 600 } as never),
+      actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+    );
+    await service.onOperations([workflowOp(id, republished)]);
+
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    expect((await service.fire(id, undefined, "schedule")).status).toBe(
+      "FAILED",
+    );
+  }, 60_000);
+
+  it("lets a document-event workflow fire again", async () => {
+    const id = "wf-park-event-republish";
+    await service.onOperations([workflowOp(id, documentEventWorkflow(id))]);
+    const store = (await service.store())!;
+    await service.onOperations([noteOp("note-r1")]);
+    await vi.waitFor(async () =>
+      expect(await store.listRuns(id)).toHaveLength(1),
+    );
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeDefined(),
+    );
+
+    const republished = documents.apply(
+      id,
+      actions.setPolicy({ onFailure: "PARK", runTimeoutSeconds: 600 } as never),
+      actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+    );
+    await service.onOperations([workflowOp(id, republished)]);
+    await service.onOperations([noteOp("note-r2")]);
+
+    await vi.waitFor(async () =>
+      expect(await store.listRuns(id)).toHaveLength(2),
+    );
+  }, 60_000);
 });

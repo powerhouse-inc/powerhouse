@@ -936,7 +936,9 @@ export class WorkflowRuntimeService {
     if (
       onlyIfChanged &&
       !this.unarmed.has(workflowId) &&
-      this.registeredAs.get(workflowId) === key
+      this.registeredAs.get(workflowId) === key &&
+      // The key leaves the version out, but a re-publish lifts a park.
+      !(await this.outdatedPark(workflowId, state))
     ) {
       return;
     }
@@ -972,6 +974,30 @@ export class WorkflowRuntimeService {
         ? runnableDefinition(state).trigger
         : undefined;
     const block = trigger ? triggerBlock(trigger) : undefined;
+    const store = await this.store();
+    // Disabling clears a park, so re-enabling arms the trigger again; so does
+    // a re-publish, which the version that failed no longer matches.
+    if (state.status !== "ENABLED") {
+      await store?.clearWorkflowPark(workflowId);
+    } else if (await this.outdatedPark(workflowId, state)) {
+      await store?.clearWorkflowPark(workflowId);
+      await this.supervisor().unpark(workflowId);
+    }
+    // A park the supervisor does not see: matching nothing is what stops it.
+    if (
+      block &&
+      (blockKey(block) === WEBHOOK_BLOCK || triggerKindOf(block)) &&
+      (await store?.getWorkflowPark(workflowId))
+    ) {
+      const had = this.registry.get(workflowId);
+      this.registry.delete(workflowId);
+      if (had && SUPERVISED_KINDS.has(had.kind))
+        this.dropSupervised(workflowId);
+      this.logger.warn(
+        `Workflow ${workflowId} is PARKED; its trigger stays unarmed until the workflow is re-published or re-enabled`,
+      );
+      return;
+    }
     if (block && blockKey(block) === WEBHOOK_BLOCK) {
       await this.registerWebhook(workflowId, block, trigger!.config);
       return;
@@ -1865,7 +1891,9 @@ export class WorkflowRuntimeService {
       context.documentId;
     this.disarmDeleted(workflowId);
     try {
-      await (await this.store())?.deleteDedupe(workflowId);
+      const store = await this.store();
+      await store?.deleteDedupe(workflowId);
+      await store?.clearWorkflowPark(workflowId);
     } catch (error) {
       this.logger.warn(
         `Could not drop the dedupe keys of deleted workflow ${workflowId}`,
@@ -1908,6 +1936,7 @@ export class WorkflowRuntimeService {
     this.dropDeleted(workflowId);
     await this.releaseDeleted(workflowId);
     await store.deleteDedupe(workflowId);
+    await store.clearWorkflowPark(workflowId);
     for (const scope of ["FLOW", "PROJECT"] as const) {
       await store.deletePieceStore(scope, testPartitionKey(scope, workflowId));
     }
@@ -3935,7 +3964,6 @@ export class WorkflowRuntimeService {
     const deadline = policy.runTimeoutSeconds
       ? firedAt + policy.runTimeoutSeconds * 1000
       : undefined;
-    const admission = await this.runGate.admit(workflowId, policy);
     const skipped = (reason: string) =>
       this.skipFiring(store, workflowId, enqueuedRunId, {
         reason,
@@ -3944,6 +3972,14 @@ export class WorkflowRuntimeService {
         workflowName: runJournalName(state.name, documentName),
         workflowVersion: runnable.version,
       });
+    const parked = await this.parkedFiring(
+      store,
+      workflowId,
+      triggerKind,
+      runnable.version,
+    );
+    if (parked) return skipped(parked);
+    const admission = await this.runGate.admit(workflowId, policy);
     if (!admission.admitted) return skipped(admission.reason);
     // The wait itself outlived the run's deadline, so there is nothing left to
     // run it in: CANCELLED without executing a single step, rather than a side
@@ -4068,7 +4104,13 @@ export class WorkflowRuntimeService {
       // says so where an operator will see it, IGNORE is the old behaviour.
       // Only for a trigger's firing: an operator's run says nothing about it.
       if (result.status === "FAILED" && !OPERATOR_RUN_KINDS.has(triggerKind)) {
-        await this.applyFailureMode(policy, workflowId, runId, result.error);
+        await this.applyFailureMode(
+          policy,
+          workflowId,
+          runnable.version,
+          runId,
+          result.error,
+        );
       }
       const finished = { ...result, runId };
       if (!ctx) return finished;
@@ -4098,6 +4140,33 @@ export class WorkflowRuntimeService {
 
   // Firings of one workflow at a time; see run-gate.ts.
   private readonly runGate = new WorkflowRunGate();
+
+  /** Why a trigger's firing of a PARKED workflow is refused; undefined when
+   * it is not parked, or when an operator started the run. */
+  private async parkedFiring(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+    triggerKind: string,
+    publishedVersion: number,
+  ): Promise<string | undefined> {
+    if (!store || OPERATOR_RUN_KINDS.has(triggerKind)) return undefined;
+    const park = await store.getWorkflowPark(workflowId);
+    if (!park || park.published_version < publishedVersion) return undefined;
+    return `Skipped: this workflow is PARKED (${park.reason})`;
+  }
+
+  /** A park recorded against an earlier published version than this state's. */
+  private async outdatedPark(
+    workflowId: string,
+    state: WorkflowState,
+  ): Promise<boolean> {
+    if (state.status !== "ENABLED") return false;
+    const park = await (await this.store())?.getWorkflowPark(workflowId);
+    return (
+      park !== undefined &&
+      runnableDefinition(state).version > park.published_version
+    );
+  }
 
   /**
    * A firing SINGLETON refused.
@@ -4145,9 +4214,9 @@ export class WorkflowRuntimeService {
    * `policy.onFailure` for a run that failed terminally.
    *
    * PARK is the document model's own default, so this is where enforcing the
-   * knob becomes visible: a terminal failure takes the trigger out of the
-   * supervisor's ENABLED set, and the schedule stops refiring until the
-   * workflow is re-published or re-enabled. That is what PARK means, and
+   * knob becomes visible: a terminal failure parks the workflow, whatever its
+   * trigger kind, and nothing fires it until it is re-published or
+   * re-enabled. That is what PARK means, and
    * leaving a broken workflow firing every minute is what it meant before.
    *
    * NOTIFY logs at error level, which is the only notification channel this
@@ -4156,6 +4225,7 @@ export class WorkflowRuntimeService {
   private async applyFailureMode(
     policy: EffectiveRunPolicy,
     workflowId: string,
+    publishedVersion: number,
     runId: string | null,
     error: string | undefined,
   ): Promise<void> {
@@ -4171,12 +4241,16 @@ export class WorkflowRuntimeService {
     }
     const store = await this.store();
     if (!store) return;
+    const reason = `Parked after a failed run (policy.onFailure = PARK): ${detail}`;
     try {
-      await store.setTriggerStatus(
-        workflowId,
-        PARKED_TRIGGER_STATUS,
-        `Parked after a failed run (policy.onFailure = PARK): ${detail}`,
-      );
+      // The park row covers every trigger kind; the trigger_state row is what
+      // stops the supervisor polling a schedule or piece trigger.
+      await store.parkWorkflow(workflowId, publishedVersion, reason);
+      await store.setTriggerStatus(workflowId, PARKED_TRIGGER_STATUS, reason);
+      const registered = this.registry.get(workflowId);
+      if (registered && !SUPERVISED_KINDS.has(registered.kind)) {
+        this.registry.delete(workflowId);
+      }
       this.logger.error(
         `Workflow ${workflowId} is PARKED after run ${runId ?? "(unjournaled)"} ` +
           "failed; its trigger will not fire again until the workflow is " +

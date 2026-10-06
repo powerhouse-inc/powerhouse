@@ -85,9 +85,10 @@ export function concurrencyLimit(policy: EffectiveRunPolicy): number | null {
   return 1;
 }
 
-/** The trigger status PARK leaves behind. Not ENABLED, so the supervisor's
- * due-trigger query does not return it and the schedule stops refiring; a
- * re-publish or re-enable arms it again, which is the way out. */
+/** The trigger status PARK leaves on a supervised trigger's row. Not ENABLED,
+ * so the supervisor's due-trigger query does not return it and the schedule
+ * stops refiring; a re-publish or re-enable arms it again. The park itself, for
+ * every trigger kind, is the store's `workflow_park` row. */
 export const PARKED_TRIGGER_STATUS = "PARKED";
 
 /** The run status a firing skipped by SINGLETON is journaled under, and the

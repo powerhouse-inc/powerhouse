@@ -338,17 +338,19 @@ they are true.
   `runTimeoutSeconds` for a slot is CANCELLED without executing a single step,
   rather than running its side effect long after the timeout that was supposed
   to bound it. The document read counts too.
-- **PARKED is terminal, and a restart does not clear it.** The park is a
-  runtime override of the document's enabled-ness: parking writes the trigger
-  row, never the document, so the document still says ENABLED and re-arming
-  from it — which is what a reboot does for every workflow it finds — would
-  un-park the broken workflow and resume firing it. A PARKED row therefore
-  stays PARKED across a restart. Only two things clear it: a **re-publish that
-  changes the trigger** (its `config_hash` differs), and a **disable then
-  re-enable** (disabling writes DISABLED over the park, and the status lives on
-  the row, so this works across a restart too). An unresolvable piece leaves a
-  PARKED row alone as well, rather than turning it ERROR and letting the ERROR
-  row's own retry arm it.
+- **PARKED holds for every trigger kind, and a restart does not clear it.** The
+  park is a runtime override of the document's enabled-ness: parking writes a
+  `workflow_park` row naming the published version that failed, never the
+  document, so the document still says ENABLED and re-arming from it — which is
+  what a reboot does for every workflow it finds — would un-park the broken
+  workflow and resume firing it. A schedule or piece trigger's `trigger_state`
+  row also turns PARKED, so the supervisor stops polling it; a document-event,
+  document-lifecycle or webhook trigger is left unregistered; and any firing
+  that still arrives is journaled CANCELLED. Only two things clear a park: a
+  **re-publish** (the published version moves past the one that failed, trigger
+  changed or not), and a **disable then re-enable**. Both work across a restart.
+  An unresolvable piece leaves a PARKED row alone as well, rather than turning
+  it ERROR and letting the ERROR row's own retry arm it.
 - **`retryOn` empty means every error is retryable.** The schema reads "error
   classes that are retryable; everything else fails terminally on attempt 1",
   but the shipped default is an empty list, and taking that literally would

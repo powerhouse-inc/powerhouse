@@ -377,6 +377,18 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.enable(binding, previous));
   }
 
+  /** A lifted park: the row is ENABLED again, as it was before the park,
+   * and the next upsert of the same binding arms it rather than skipping. */
+  unpark(workflowId: string): Promise<void> {
+    this.enabledOk.delete(workflowId);
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      const row = await store?.getTriggerState(workflowId);
+      if (row?.status !== PARKED_TRIGGER_STATUS) return;
+      await store!.setTriggerStatus(workflowId, "ENABLED");
+    });
+  }
+
   remove(workflowId: string): Promise<void> {
     const binding = this.unbind(workflowId);
     return this.enqueue(() => this.disable(workflowId, binding));
@@ -958,6 +970,8 @@ export class TriggerSupervisor {
    *
    * - a **re-publish that changes the trigger**: the `config_hash` differs, so
    *   this is a different thing to fire and the operator asked for it;
+   * - any **re-publish** at all: the service sees the published version move
+   *   past the parked one and calls {@link unpark} first;
    * - a **re-enable**: setting the document DISABLED writes DISABLED over the
    *   park, and enabling it again arms an ordinary disabled row. This works
    *   across a restart too, since the status lives on the row;

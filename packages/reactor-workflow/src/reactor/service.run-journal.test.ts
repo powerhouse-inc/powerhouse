@@ -96,6 +96,7 @@ function recordingStore(finishRun: (call: FinishCall) => Promise<void>) {
   return {
     failed,
     startRun: () => Promise.resolve("run-1"),
+    getWorkflowPark: () => Promise.resolve(undefined),
     recordStep: () => Promise.resolve(),
     finishRun: (
       _runId: string,
