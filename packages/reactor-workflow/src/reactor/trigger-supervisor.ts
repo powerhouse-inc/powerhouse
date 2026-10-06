@@ -777,6 +777,7 @@ export class TriggerSupervisor {
     const existing = await store.getTriggerState(binding.workflowId);
     const now = this.now();
     if (this.stillParked(binding.workflowId, existing, hash)) return;
+    if (await this.parkedWorkflow(store, binding.workflowId, existing)) return;
     // Only a completed enable is a republish: a retry after a failed one must
     // register again, or a piece that skips registration never delivers.
 
@@ -991,6 +992,34 @@ export class TriggerSupervisor {
         "the trigger or disable and re-enable the workflow to arm it again. " +
         "@error",
       existing.last_error ?? "(no reason recorded)",
+    );
+    return true;
+  }
+
+  /**
+   * A workflow parked while its row was not ENABLED (an ERROR row with an
+   * enable retry pending, say): the park row is the authority, so no retry or
+   * re-arm may enable it. The row is turned PARKED, and the retry dropped.
+   * The service clears a park row a re-publish or disable lifted before it
+   * arms, so one that is still here is current.
+   */
+  private async parkedWorkflow(
+    store: WorkflowRunStore,
+    workflowId: string,
+    existing: TriggerStateRow | undefined,
+  ): Promise<boolean> {
+    const park = await store.getWorkflowPark(workflowId);
+    if (!park) return false;
+    this.enableRetries.delete(workflowId);
+    if (existing && existing.status !== PARKED_TRIGGER_STATUS) {
+      await store.setTriggerStatus(
+        workflowId,
+        PARKED_TRIGGER_STATUS,
+        park.reason,
+      );
+    }
+    logger.warn(
+      `Workflow ${workflowId} is PARKED; its trigger is not armed until the workflow is re-published or re-enabled`,
     );
     return true;
   }
