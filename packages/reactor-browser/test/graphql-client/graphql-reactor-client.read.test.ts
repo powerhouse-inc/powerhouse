@@ -322,7 +322,7 @@ describe("GraphQLReactorClient.isServed", () => {
     const sdk = createMockSdk();
 
     await expect(
-      createClientWith(sdk).isServed("doc-1", { revision: { global: 3 } }),
+      createClientWith(sdk).isServed("doc-1", { revision: 3 }),
     ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
     expect(sdk.GetDocumentServed).not.toHaveBeenCalled();
   });
