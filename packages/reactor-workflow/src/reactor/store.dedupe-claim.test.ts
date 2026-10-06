@@ -86,6 +86,29 @@ describe("a redelivered operation", () => {
     expect(claim).toEqual({ outcome: "duplicate" });
   });
 
+  it("is a duplicate once an unjournaled fire records a claim that never landed", async () => {
+    const { store } = await freshStore();
+    const now = new Date().toISOString();
+    const insert = vi
+      .spyOn(
+        store as unknown as { insertPendingRun: () => Promise<void> },
+        "insertPendingRun",
+      )
+      .mockRejectedValueOnce(new Error("crash between claim and enqueue"));
+    await expect(
+      store.claimAndEnqueueRun("op:1", 60_000, now, OPTIONS),
+    ).rejects.toThrow();
+    insert.mockRestore();
+
+    expect(
+      await store.claimDedupe(OPTIONS.workflowId, "op:1", 60_000, now),
+    ).toBe(true);
+
+    expect(
+      await store.claimAndEnqueueRun("op:1", 60_000, now, OPTIONS),
+    ).toEqual({ outcome: "duplicate" });
+  });
+
   it("is still retried after a claim whose run never landed", async () => {
     const { store } = await freshStore();
     const now = new Date().toISOString();

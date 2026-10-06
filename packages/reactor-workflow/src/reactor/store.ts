@@ -1206,7 +1206,13 @@ async function claimDedupeIn(
       created_at: nowIso,
       attempts: 1,
     })
-    .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
+    // A row left unclaimed by a claim whose run never landed is taken too.
+    .onConflict((oc) =>
+      oc
+        .columns(["workflow_id", "dedupe_key"])
+        .doUpdateSet({ run_id: FIRED_WITHOUT_RUN_ID })
+        .where("trigger_dedupe.run_id", "is", null),
+    )
     .returning("dedupe_key")
     .executeTakeFirst();
   return inserted !== undefined;

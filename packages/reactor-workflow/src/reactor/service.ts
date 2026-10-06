@@ -1684,12 +1684,18 @@ export class WorkflowRuntimeService {
     if (this.unjournaledFires.has(fireKey)) {
       if (!store) return;
       try {
-        await store.claimDedupe(
+        const claimed = await store.claimDedupe(
           workflowId,
           dedupeKey,
           OPERATION_DEDUPE_TTL_MS,
           new Date().toISOString(),
         );
+        if (!claimed) {
+          // The key already stood for a fire, so this one may have doubled it.
+          this.logger.warn(
+            `Workflow ${workflowId}: a ${kind} fire this process ran unjournaled had its key already marked fired; it may have run twice`,
+          );
+        }
         this.unjournaledFires.delete(fireKey);
       } catch (error) {
         this.logger.warn(
