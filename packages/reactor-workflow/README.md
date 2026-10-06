@@ -102,6 +102,38 @@ next boot instead of vanishing; a fresh registration starts at head, so history
 is never replayed. `onOperations` journals a matched fire before it returns, so
 the cursor never passes an event that is not yet durable.
 
+**A fire that crashes the reactor is bounded.** The durable cursor is what
+makes an operation written while the runtime was down catch up — and it is also
+what re-delivers, on every boot, an operation whose fire takes the process down
+before anything is journaled (the EPIPE boot loop). So the dedupe row counts
+**deliveries**, committed before the risky work, which is the only way a crash
+that leaves nothing behind can be counted at all:
+
+- A delivery whose claim already holds a run id is an ordinary duplicate and is
+  suppressed, as before.
+- A delivery whose claim holds **no** run id is retried: the previous attempt
+  died before it journaled anything, and losing a legitimate trigger to a
+  transient store failure would be worse than the loop.
+- Past `FIRE_CRASH_BUDGET` (3) such deliveries the fire is **abandoned**, with
+  a FAILED run naming the loop — visible, and rerunnable once the cause is
+  fixed, instead of a reactor that crashes on every boot and says nothing.
+
+The **count** and the **claim** are deliberately different writes. Counting is
+its own committed transaction, because a delivery that leaves nothing behind
+has to be countable. Claiming is `run_id`, set under a `WHERE run_id IS NULL`
+guard in the SAME transaction as the run row: the guard takes the row's lock,
+so of two concurrent deliveries of one operation the second blocks until the
+first commits and then matches no row — exactly one delivery fires, and a crash
+in between rolls the claim back with the run it failed to journal. Were the
+bump to ride along inside the claim transaction, a run insert that takes the
+process down would roll the count back too and the budget could never reach its
+limit.
+
+Log writes on the piece-log and run-failure paths are truncated before the
+write (`MAX_LOG_LINE_CHARS`): a piece error carrying an HTML error page is a
+multi-megabyte write to a pipe that may be blocked, and bounding the write is
+cheaper than handling the throw.
+
 A workflow document's `DELETE_DOCUMENT` disarms it as disabling does: its
 deliveries stop once the operation is indexed, a piece trigger's `onDisable`
 runs, and then its trigger row, its FLOW `ctx.store` partition, its webhook
