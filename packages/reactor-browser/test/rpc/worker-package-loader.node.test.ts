@@ -31,8 +31,8 @@ function loaderOver(
   packageNames: string[] = [],
 ) {
   const importPackage = vi.fn((url: string) => {
+    if (!(url in namespaces)) return Promise.reject(new Error(`404 ${url}`));
     const entry = namespaces[url];
-    if (!entry) return Promise.reject(new Error(`404 ${url}`));
     return typeof entry === "function" ? entry() : Promise.resolve(entry);
   });
   const loader = new WorkerPackageLoader({
