@@ -130,6 +130,11 @@ export class KyselyOperationStore implements IOperationStore {
     }
   }
 
+  /**
+   * The replay lookup runs on the caller's executor: on single-connection
+   * PGlite a query on `this.db` from inside a transaction parks behind the
+   * lease that transaction holds, and neither ever finishes.
+   */
   private async resolveUniqueConstraint(
     ctx: _UniqueConstraintContext,
   ): Promise<Operation[]> {
@@ -137,7 +142,7 @@ export class KyselyOperationStore implements IOperationStore {
 
     try {
       replayOps = await this.findIdempotentReplay(
-        this.db,
+        this.queryExecutor,
         ctx.documentId,
         ctx.scope,
         ctx.branch,
