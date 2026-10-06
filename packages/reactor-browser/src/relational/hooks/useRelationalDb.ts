@@ -1,10 +1,9 @@
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
 import { createRelationalDb } from "@powerhousedao/reactor";
 import type { IRelationalDb as IRelationalDbCore } from "@powerhousedao/shared/processors";
-import { Kysely } from "kysely";
 import { useMemo } from "react";
 import { usePGliteDB } from "../../pglite/usePGlite.js";
-import { relationalDialect } from "../utils/relational-dialect.js";
+import { relationalKysely } from "../utils/relational-dialect.js";
 
 // Type for Relational DB instance enhanced with live capabilities
 export type RelationalDbWithLive<Schema> = IRelationalDbCore<Schema> & {
@@ -21,9 +20,7 @@ interface IRelationalDbState<Schema> {
 function createRelationalDbWithLive<Schema>(
   pgliteInstance: PGliteWithLive,
 ): RelationalDbWithLive<Schema> {
-  const baseDb = new Kysely<Schema>({
-    dialect: relationalDialect(pgliteInstance),
-  });
+  const baseDb = relationalKysely<Schema>(pgliteInstance);
   const relationalDb = createRelationalDb(baseDb);
 
   // Inject the live namespace with proper typing
