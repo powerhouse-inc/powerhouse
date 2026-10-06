@@ -1,5 +1,5 @@
-// The drive's workflows at a glance: when each starts, its chain coloured by
-// the latest run, and its recent runs. The studio's landing view.
+// The drive's workflows at a glance: each one's graph coloured by the latest
+// run, and its recent runs. The studio's landing view.
 import { useDispatch } from "@powerhousedao/reactor-browser";
 import {
   actions as workflowActions,
@@ -10,7 +10,7 @@ import { StatusToggle } from "../../workflow-editor/ui/PublishControls.js";
 import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { usePieceLogos } from "../../workflow-editor/ui/block-meta.js";
 import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
-import { MiniChain, RunStrip, type ChainLink } from "./chain.js";
+import { RunStrip } from "./chain.js";
 import {
   formatAbsolute,
   formatWhen,
@@ -19,9 +19,8 @@ import {
   toneOf,
   workflowHealth,
 } from "./run-format.js";
-import { stepOutline } from "./step-outline.js";
-import { stepBlock, triggerBlock } from "../../workflow-editor/ui/blocks.js";
 import { Button, Icon, StatusDot } from "./ui.js";
+import { WorkflowGraph } from "./WorkflowGraph.js";
 import { WorkflowMenu } from "./WorkflowMenu.js";
 
 // Its own component so each row holds its document's dispatch.
@@ -46,7 +45,6 @@ interface BoardRow {
   name: string;
   status: string;
   trigger: string;
-  links: ChainLink[];
   runs: RunRecord[];
 }
 
@@ -79,40 +77,12 @@ export function WorkflowBoard(props: {
       const workflowRuns = runs.filter(
         (run) => run.workflowId === document.header.id,
       );
-      const latest = workflowRuns.at(0);
-      const statusByKey = new Map(
-        (latest?.steps ?? []).map((step) => [step.stepKey, step.status]),
-      );
-      const outline = stepOutline({
-        triggerId: state.trigger?.id,
-        steps: state.steps,
-        edges: state.edges,
-      });
-      const links: ChainLink[] = [
-        ...(state.trigger
-          ? [
-              {
-                id: state.trigger.id,
-                block: triggerBlock(state.trigger),
-                label: "Trigger",
-                status: latest ? "SUCCEEDED" : undefined,
-              },
-            ]
-          : []),
-        ...outline.rows.map((row) => ({
-          id: row.step.id,
-          block: stepBlock(row.step),
-          label: row.step.name || row.step.key,
-          status: statusByKey.get(row.step.key),
-        })),
-      ];
       return {
         document,
         id: document.header.id,
         name: state.name || document.header.name || "Untitled workflow",
         status: state.status,
         trigger: describeTrigger(state.trigger),
-        links,
         runs: workflowRuns,
       };
     })
@@ -151,7 +121,8 @@ export function WorkflowBoard(props: {
       ) : (
         <ul
           aria-label="Workflows"
-          className="overflow-hidden rounded-xl border border-solid border-foreground/10 bg-card"
+          // Not overflow-hidden: the row menus open past the card's edge.
+          className="rounded-xl border border-solid border-foreground/10 bg-card"
         >
           {rows.map((row) => {
             const latest = row.runs.at(0);
@@ -164,15 +135,16 @@ export function WorkflowBoard(props: {
             return (
               <li
                 key={row.id}
-                className="flex items-center border-b border-solid border-foreground/10 last:border-b-0"
+                className="flex items-start border-b border-solid border-foreground/10 transition-colors first:rounded-t-xl last:rounded-b-xl last:border-b-0 hover:bg-accent/50 has-[>button:focus-visible]:bg-accent/50"
               >
                 <button
                   type="button"
-                  className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-3 px-5 py-4 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]"
+                  className="flex min-w-0 flex-1 flex-col gap-3 px-5 py-4 text-left focus-visible:outline-none"
                   onClick={() => props.onOpen(row.id)}
                 >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2">
+                  {/* One 24px line, shared with the toggle and menu beside it. */}
+                  <span className="grid h-6 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 md:grid-cols-[minmax(0,1fr)_minmax(0,10rem)_auto]">
+                    <span className="flex min-w-0 items-center gap-2">
                       <span title={health.label} className="flex">
                         <StatusDot tone={health.tone} hollow={health.hollow} />
                       </span>
@@ -185,37 +157,41 @@ export function WorkflowBoard(props: {
                         </span>
                       ) : null}
                     </span>
-                    <span className="mt-0.5 block truncate pl-4 text-[13px] text-muted-foreground">
-                      {row.trigger}
+                    <span
+                      className="hidden text-[13px] md:block"
+                      title={
+                        latest ? formatAbsolute(latest.startedAt) : undefined
+                      }
+                    >
+                      {latest ? (
+                        <>
+                          <span
+                            className={`font-medium ${latestTone === "fail" ? "text-wf-fail" : latestTone === "ok" ? "text-wf-ok" : "text-foreground"}`}
+                          >
+                            {statusLabel(latest.status)}
+                          </span>
+                          <span className="ml-1.5 text-xs text-muted-foreground">
+                            {formatWhen(latest.startedAt)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Not run yet
+                        </span>
+                      )}
                     </span>
+                    <RunStrip centered runs={row.runs} />
                   </span>
-                  <span className="hidden md:block">
-                    <MiniChain links={row.links} />
+                  {/* Scrolls rather than squeezing a wide workflow. */}
+                  <span className="block max-w-full overflow-x-auto py-1 pl-4 pr-1">
+                    <WorkflowGraph
+                      state={row.document.state.global}
+                      triggerText={row.trigger}
+                      latest={latest}
+                    />
                   </span>
-                  <span
-                    className="hidden text-[13px] md:block"
-                    title={
-                      latest ? formatAbsolute(latest.startedAt) : undefined
-                    }
-                  >
-                    {latest ? (
-                      <>
-                        <span
-                          className={`font-medium ${latestTone === "fail" ? "text-wf-fail" : latestTone === "ok" ? "text-wf-ok" : "text-foreground"}`}
-                        >
-                          {statusLabel(latest.status)}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {formatWhen(latest.startedAt)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">Not run yet</span>
-                    )}
-                  </span>
-                  <RunStrip runs={row.runs} />
                 </button>
-                <span className="flex shrink-0 items-center gap-1 pr-3">
+                <span className="mt-4 flex h-6 shrink-0 items-center gap-1 pr-3">
                   <RowToggle document={row.document} />
                   <WorkflowMenu document={row.document} />
                 </span>
