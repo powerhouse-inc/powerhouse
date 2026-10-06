@@ -2,16 +2,22 @@
 // GitHub-Actions-style run journal; opens the per-document editors inline.
 import {
   addDocument,
+  addFolder,
+  deleteNode,
   setSelectedNode,
   useDocumentSafe,
   useFileNodesInSelectedDrive,
+  useNodesInSelectedDrive,
   usePHToast,
   useSelectedDrive,
   useSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { type WorkflowDocument } from "document-models/workflow";
+import {
+  useWorkflowDocumentsInSelectedDrive,
+  type WorkflowDocument,
+} from "document-models/workflow";
 import {
   MANUAL_TRIGGER,
   sameBlock,
@@ -28,6 +34,12 @@ import { useHashSelection } from "./use-hash-selection.js";
 import { useRuns } from "./useRuns.js";
 import { WorkflowBoard } from "./WorkflowBoard.js";
 import { WorkflowHeader } from "./WorkflowHeader.js";
+import {
+  homeFolderName,
+  nextKey,
+  orderWorkflows,
+  reorderActions,
+} from "./workflow-order.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 const CONNECTION_TYPE = "powerhouse/connection";
@@ -42,8 +54,10 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
 
 function Studio(props: { children?: ReactNode }) {
   const { fireWorkflow } = useRuntimeActions();
-  const [drive] = useSelectedDrive();
+  const [drive, dispatchDrive] = useSelectedDrive();
+  const nodes = useNodesInSelectedDrive() ?? [];
   const fileNodes = useFileNodesInSelectedDrive() ?? [];
+  const workflowDocuments = useWorkflowDocumentsInSelectedDrive() ?? [];
   const selectedNode = useSelectedNode();
   const selectedNodeId = selectedNode?.id;
   const toast = usePHToast();
@@ -52,9 +66,11 @@ function Studio(props: { children?: ReactNode }) {
   const [creating, setCreating] = useState(false);
 
   const driveId = drive.header.id;
-  const workflows = fileNodes.filter(
-    (node) => node.documentType === WORKFLOW_TYPE,
+  const orderedWorkflows = orderWorkflows(
+    fileNodes.filter((node) => node.documentType === WORKFLOW_TYPE),
+    nodes,
   );
+  const workflows = orderedWorkflows.map((item) => item.node);
   const connections = fileNodes.filter(
     (node) => node.documentType === CONNECTION_TYPE,
   );
@@ -63,7 +79,24 @@ function Studio(props: { children?: ReactNode }) {
   const create = (documentType: string, baseName: string, count: number) => {
     if (creating) return;
     setCreating(true);
-    addDocument(driveId, `${baseName} ${count + 1}`, documentType)
+    const name = `${baseName} ${count + 1}`;
+    // A new workflow gets a home folder that sorts it last; a failed
+    // document removes the folder again.
+    const created =
+      documentType === WORKFLOW_TYPE
+        ? addFolder(
+            driveId,
+            homeFolderName(nextKey(orderedWorkflows), name),
+          ).then((folder) =>
+            addDocument(driveId, name, documentType, folder.id).catch(
+              async (error: unknown) => {
+                await deleteNode(driveId, folder.id).catch(() => undefined);
+                throw error;
+              },
+            ),
+          )
+        : addDocument(driveId, name, documentType);
+    created
       .then((node) => {
         select(node.id);
         setSelectedNode(node.id);
@@ -77,6 +110,19 @@ function Studio(props: { children?: ReactNode }) {
         );
       })
       .finally(() => setCreating(false));
+  };
+
+  const reorder = (from: number, to: number) => {
+    const names = new Map(
+      workflowDocuments.map((doc) => [doc.header.id, doc.state.global.name]),
+    );
+    const actions = reorderActions(orderedWorkflows, from, to, names);
+    if (actions.length === 0) return;
+    dispatchDrive(actions, (errors) =>
+      toast?.(errors[0]?.message ?? "Failed to reorder workflows", {
+        type: "error",
+      }),
+    );
   };
 
   const showRuns = (node: FileNode | null) => {
@@ -137,6 +183,7 @@ function Studio(props: { children?: ReactNode }) {
         activeId={selectedId}
         allRunsActive={!selectedId}
         creating={creating}
+        onReorderWorkflow={reorder}
         onShowAllRuns={() => showRuns(null)}
         onOpenWorkflow={(node) => showRuns(node)}
         onEditWorkflow={(node) => {
@@ -181,6 +228,7 @@ function Studio(props: { children?: ReactNode }) {
             ) : (
               <WorkflowBoard
                 runs={runs}
+                order={workflows.map((node) => node.id)}
                 creating={creating}
                 onOpen={(workflowId) => select(workflowId)}
                 onCreate={() =>

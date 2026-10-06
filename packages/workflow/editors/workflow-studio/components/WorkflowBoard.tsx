@@ -61,6 +61,8 @@ function summary(rows: BoardRow[]): string {
 
 export function WorkflowBoard(props: {
   runs: RunRecord[] | null;
+  // Workflow ids in sidebar order.
+  order: string[];
   creating: boolean;
   onOpen: (workflowId: string) => void;
   onCreate: () => void;
@@ -68,6 +70,8 @@ export function WorkflowBoard(props: {
   usePieceLogos();
   const documents = useWorkflowDocumentsInSelectedDrive() ?? [];
   const runs = props.runs ?? [];
+  const positions = new Map(props.order.map((id, i) => [id, i]));
+  const position = (id: string) => positions.get(id) ?? positions.size;
 
   const rows: BoardRow[] = documents
     .map((document) => {
@@ -112,13 +116,7 @@ export function WorkflowBoard(props: {
         runs: workflowRuns,
       };
     })
-    // Most recently run first, then by name, so the board doesn't reshuffle.
-    .sort((a, b) => {
-      const at = a.runs[0]?.startedAt ?? "";
-      const bt = b.runs[0]?.startedAt ?? "";
-      if (at !== bt) return bt.localeCompare(at);
-      return a.name.localeCompare(b.name);
-    });
+    .sort((a, b) => position(a.id) - position(b.id));
 
   return (
     <section className="mb-10">
