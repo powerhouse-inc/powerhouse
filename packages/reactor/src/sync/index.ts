@@ -1,3 +1,13 @@
+export {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
+
 export type {
   ConnectionStateChangeCallback,
   IChannel,

@@ -427,6 +427,7 @@ export {
   consolidateSyncOperations,
   channelFactoryTypes,
   envelopesToSyncOperations,
+  deriveConnectionHealth,
   GQL_CHANNEL_TYPE,
   GqlRequestChannel,
   GqlRequestChannelFactory,
@@ -434,6 +435,12 @@ export {
   GqlResponseChannelFactory,
   IntervalPollTimer,
   POLLING_CHANNEL_TYPE,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
   DRIVE_AUTH_ERROR_MESSAGES,
   DriveRequestError,
   isDriveAuthError,
@@ -546,6 +553,7 @@ export type {
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
+export * from "./src/inspector/index.js";
 
 // Document erasure
 export {

@@ -129,6 +129,12 @@ import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
+import {
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  POSTGRES_STORAGE_FACTS,
+  UNKNOWN_STORAGE_FACTS,
+} from "../inspector/storage-facts.js";
+import type { ReactorStorageFacts } from "../inspector/types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
@@ -342,6 +348,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private kyselyInstance?: Kysely<Database>;
+  private storageFactsOverride?: ReactorStorageFacts;
   private signer?: ISigner;
   private workerSigner?: FactorySpec;
   private trustPolicy?: SignatureTrustPolicy;
@@ -525,6 +532,12 @@ export class ReactorBuilder {
 
   withKysely(kysely: Kysely<Database>): this {
     this.kyselyInstance = kysely;
+    return this;
+  }
+
+  /** Declares the store's facts; without it a `withKysely` store is unknown. */
+  withStorageFacts(facts: ReactorStorageFacts): this {
+    this.storageFactsOverride = facts;
     return this;
   }
 
@@ -775,6 +788,13 @@ export class ReactorBuilder {
       (reactorDbConfig
         ? await this.createPostgresDatabase(reactorDbConfig)
         : await createDefaultDatabase());
+    const storageFacts =
+      this.storageFactsOverride ??
+      (this.kyselyInstance
+        ? UNKNOWN_STORAGE_FACTS
+        : reactorDbConfig
+          ? POSTGRES_STORAGE_FACTS
+          : IN_MEMORY_PGLITE_STORAGE_FACTS);
 
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
@@ -1275,6 +1295,7 @@ export class ReactorBuilder {
         jobTracker,
         eventBus,
       ),
+      storageFacts: { ...storageFacts },
     };
 
     catchUp.start();
