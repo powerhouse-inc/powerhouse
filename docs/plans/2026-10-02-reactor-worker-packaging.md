@@ -192,11 +192,13 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
       `prebuildReactorWorker` fails with the offending file + specifier when
       anything unresolvable survives in the emitted graph.
 - [x] `src/reactor-worker-client.ts` takes a `workerUrl`;
-      `src/store/reactor.ts` resolves it by probing
-      `<base>__reactor_worker__/reactor.worker.js` (HEAD + content-type, so
-      an SPA fallback's index.html does not count) via
-      `src/utils/reactor-worker-url.ts`, falling back to the
-      `import.meta.url` form for the monorepo app.
+      `src/store/reactor.ts` resolves it by fetching
+      `<base>__reactor_worker__/worker-meta.json` (GET + JSON content-type,
+      so an SPA fallback's index.html does not count) via
+      `src/utils/reactor-worker-url.ts`. The meta's `sourceDigest` joins the
+      version fingerprint. The monorepo app falls back to the
+      `import.meta.url` form; a packaged dist with no bundle reports the
+      worker unavailable.
 - [x] SharedWorker `error` -> `setWorkerConnectionStatus("failed")`
       immediately (not downgraded by the ping deadline), with its own banner
       copy in `connection-banner.tsx`.
@@ -235,9 +237,8 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
       explicitly on (otherwise warns and degrades). `PH_CONNECT_REACTOR_WORKER=0`
       disables the prebuild, mirroring `PH_CONNECT_VENDOR`.
 - [x] Dev server: `reactorWorkerDevPlugin` (registered in
-      `getConnectBaseViteConfig`, serve-only) answers the tab's HEAD probe
-      from the source check and builds the bundle lazily on the first GET
-      into `node_modules/.ph-reactor-worker` (self-contained in dev), with
+      `getConnectBaseViteConfig`, serve-only) builds the bundle lazily on
+      the first GET (the tab's `worker-meta.json` fetch) into `node_modules/.ph-reactor-worker` (self-contained in dev), with
       immutable caching for hashed files.
 - [x] `connect-preview` needs nothing worker-specific: the bundle is static
       files in the dist. (Preview-side immutable headers for `__vendor__/*`
@@ -324,7 +325,9 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
    map resolves. Externalizing a vendor spec whose chunk closure reaches such
    an import would kill the worker, and chunk sharing entangles even
    React-free entries. `workerSafeVendorImports` walks each vendor entry's
-   closure inside the vendor dir and demotes unsafe entries to bundling. On
+   closure inside the vendor dir and demotes unsafe entries to bundling,
+   including closures carrying page-only code (the dynamic-base expression or
+   Vite's preload helper). On
    the real production vendor this demoted bare `document-model` (entangled
    through shared chunks) while keeping the zod family shared - the naive
    plan would have shipped a dead worker.
@@ -332,13 +335,14 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
 4. **Dev serves a lazily built self-contained bundle** at the same stable
    path, instead of rewriting against dev import-map URLs: the dev vendor is
    opt-in (`PH_CONNECT_EXTERNALIZE_VENDOR=1`) and often absent, and dev does
-   not need cache sharing. The tab's HEAD probe is answered from the source
-   check so boot is never blocked on the build.
+   not need cache sharing. The tab's `worker-meta.json` fetch waits for the
+   lazy build.
 
-5. **Tab-side resolution is a probe, not config.** The tab HEAD-probes
-   `<base>__reactor_worker__/reactor.worker.js` and requires a JavaScript
-   content type (an SPA fallback answers 200 with HTML), falling back to the
-   monorepo's `import.meta.url` path. No new runtime-config field.
+5. **Tab-side resolution is a probe, not config.** The tab GETs
+   `<base>__reactor_worker__/worker-meta.json` and requires a JSON content
+   type (an SPA fallback answers 200 with HTML). Without a bundle, the
+   monorepo app falls back to its `import.meta.url` path and a packaged dist
+   reports the worker unavailable. No new runtime-config field.
 
 6. **E2E ran via playwright-cli against a static serve of the bundle**
    (ping/hello/RPC round-trip, both modes, two-tab sharing) rather than a
