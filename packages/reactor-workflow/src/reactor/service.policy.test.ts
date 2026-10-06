@@ -731,3 +731,105 @@ describe("a firing that waited for its slot", () => {
     expect((await store.getRun(queued.runId!))?.error).toContain("PARKED");
   }, 60_000);
 });
+
+function scheduleWorkflow(id: string) {
+  return documents.apply(
+    id,
+    actions.setTrigger({
+      id: "t1",
+      pieceName: CORE_PIECE_NAME,
+      pieceVersion: CORE_PIECE_VERSION,
+      triggerName: "schedule",
+      config: { mode: "cron", cron: "0 * * * *" },
+    }),
+    actions.addStep({
+      id: "a",
+      key: "only",
+      name: "Only",
+      pieceName: PIECE,
+      pieceVersion: "1.0.0",
+      actionName: "boom",
+      config: {},
+    }),
+    actions.addEdge({ id: "e1", from: "t1", to: "a", port: "next" }),
+    actions.setPolicy({ onFailure: "PARK" } as never),
+    actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+    actions.setWorkflowStatus({ status: "ENABLED" }),
+  );
+}
+
+// Runs `during` just before the run's journal closes, i.e. while it is in flight.
+function whileClosing(during: () => Promise<void>) {
+  const spy = vi.spyOn(WorkflowRunStore.prototype, "finishRun");
+  spy.mockImplementationOnce(async function (this: WorkflowRunStore, ...args) {
+    await during();
+    spy.mockRestore();
+    return this.finishRun(...args);
+  });
+  return spy;
+}
+
+// A failure that finishes after the workflow changed must not park the change.
+describe("a failed run that outlived its workflow version", () => {
+  it("does not park a workflow disabled while it ran", async () => {
+    const id = "wf-park-disabled-midrun";
+    await service.onOperations([workflowOp(id, scheduleWorkflow(id))]);
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    const finish = whileClosing(async () => {
+      const disabled = documents.apply(
+        id,
+        actions.setWorkflowStatus({ status: "DISABLED" }),
+      );
+      await service.onOperations([workflowOp(id, disabled)]);
+      await vi.waitFor(async () =>
+        expect((await store.getTriggerState(id))?.status).toBe("DISABLED"),
+      );
+    });
+
+    expect((await service.fire(id, undefined, "schedule")).status).toBe(
+      "FAILED",
+    );
+    finish.mockRestore();
+
+    expect(await store.getWorkflowPark(id)).toBeUndefined();
+    const enabled = documents.apply(
+      id,
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    );
+    await service.onOperations([workflowOp(id, enabled)]);
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+  }, 60_000);
+
+  it("does not park the version published while it ran", async () => {
+    const id = "wf-park-republished-midrun";
+    await service.onOperations([workflowOp(id, scheduleWorkflow(id))]);
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    const finish = whileClosing(async () => {
+      const republished = documents.apply(
+        id,
+        actions.setPolicy({
+          onFailure: "PARK",
+          runTimeoutSeconds: 600,
+        } as never),
+        actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+      );
+      await service.onOperations([workflowOp(id, republished)]);
+    });
+
+    expect((await service.fire(id, undefined, "schedule")).status).toBe(
+      "FAILED",
+    );
+    finish.mockRestore();
+
+    expect(await store.getWorkflowPark(id)).toBeUndefined();
+    expect((await store.getTriggerState(id))?.status).toBe("ENABLED");
+  }, 60_000);
+});

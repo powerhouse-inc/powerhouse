@@ -4201,6 +4201,30 @@ export class WorkflowRuntimeService {
     return this.parkedFiring(store, workflowId, triggerKind, publishedVersion);
   }
 
+  /** Whether the workflow is still ENABLED at this published version. An
+   * unreadable document counts as unchanged, so a failure still parks. */
+  private async stillRunsVersion(
+    workflowId: string,
+    publishedVersion: number,
+  ): Promise<boolean> {
+    let state: WorkflowState;
+    try {
+      const document =
+        await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+      state = document.state.global;
+    } catch (error) {
+      this.logger.warn(
+        `Could not re-read workflow ${workflowId} before parking it: @error`,
+        error,
+      );
+      return true;
+    }
+    return (
+      state.status === "ENABLED" &&
+      runnableDefinition(state).version === publishedVersion
+    );
+  }
+
   /** A park recorded against an earlier published version than this state's. */
   private async outdatedPark(
     workflowId: string,
@@ -4289,10 +4313,23 @@ export class WorkflowRuntimeService {
     if (!store) return;
     const reason = `Parked after a failed run (policy.onFailure = PARK): ${detail}`;
     try {
+      // The run may have outlived its version: a disable or re-publish that
+      // landed meanwhile is not the state that failed.
+      if (!(await this.stillRunsVersion(workflowId, publishedVersion))) return;
       // The park row covers every trigger kind; the trigger_state row is what
       // stops the supervisor polling a schedule or piece trigger.
-      await store.parkWorkflow(workflowId, publishedVersion, reason);
-      await store.setTriggerStatus(workflowId, PARKED_TRIGGER_STATUS, reason);
+      const trigger = await store.parkWorkflow(
+        workflowId,
+        publishedVersion,
+        reason,
+      );
+      // Checked again after the write, so a change racing the park wins: one
+      // that landed before this read is undone here, one after it clears the
+      // park in its own registration.
+      if (!(await this.stillRunsVersion(workflowId, publishedVersion))) {
+        await store.liftPark(workflowId, trigger);
+        return;
+      }
       const registered = this.registry.get(workflowId);
       if (registered && !SUPERVISED_KINDS.has(registered.kind)) {
         this.registry.delete(workflowId);

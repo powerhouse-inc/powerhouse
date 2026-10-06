@@ -18,6 +18,7 @@ import { sql, type Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
 import { CORE_PIECE_NAME } from "../pieces/index.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
+import { PARKED_TRIGGER_STATUS } from "./policy.js";
 
 export interface RunRow {
   id: string;
@@ -1910,21 +1911,62 @@ export class WorkflowRunStore {
     return byRun;
   }
 
+  /**
+   * Parks a workflow: its park row, and an ENABLED trigger_state row turned
+   * PARKED, in one transaction. True when a trigger_state row was parked.
+   */
   async parkWorkflow(
     workflowId: string,
     publishedVersion: number,
     reason: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    const now = new Date().toISOString();
     const row = {
       published_version: publishedVersion,
       reason: redactMessage(reason),
-      parked_at: new Date().toISOString(),
+      parked_at: now,
     };
-    await this.db
-      .insertInto("workflow_park")
-      .values({ workflow_id: workflowId, ...row })
-      .onConflict((oc) => oc.column("workflow_id").doUpdateSet(row))
-      .execute();
+    return this.db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto("workflow_park")
+        .values({ workflow_id: workflowId, ...row })
+        .onConflict((oc) => oc.column("workflow_id").doUpdateSet(row))
+        .execute();
+      const parked = await trx
+        .updateTable("trigger_state")
+        .set({
+          status: PARKED_TRIGGER_STATUS,
+          last_error: row.reason,
+          ...RENEW_CLEARED,
+          updated_at: now,
+        })
+        .where("workflow_id", "=", workflowId)
+        .where("status", "=", "ENABLED")
+        .returning("workflow_id")
+        .execute();
+      return parked.length > 0;
+    });
+  }
+
+  /** Undoes {@link parkWorkflow}; `trigger` says whether it parked a row. */
+  async liftPark(workflowId: string, trigger: boolean): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("workflow_park")
+        .where("workflow_id", "=", workflowId)
+        .execute();
+      if (!trigger) return;
+      await trx
+        .updateTable("trigger_state")
+        .set({
+          status: "ENABLED",
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .where("workflow_id", "=", workflowId)
+        .where("status", "=", PARKED_TRIGGER_STATUS)
+        .execute();
+    });
   }
 
   async getWorkflowPark(
