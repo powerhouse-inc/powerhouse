@@ -11,7 +11,10 @@ import type {
   ExecuteBatchMutation,
   ExecuteBatchMutationVariables,
 } from "../../src/graphql/gen/schema.js";
-import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
+import type {
+  ReactorGraphQLClient,
+  RunDocumentOptions,
+} from "../../src/graphql/types.js";
 import { GraphQLOperationNotSupportedError } from "../../src/graphql-client/errors.js";
 import {
   GraphQLReactorClient,
@@ -20,6 +23,7 @@ import {
 
 type MockSdk = {
   ExecuteBatch: ReturnType<typeof vi.fn>;
+  RunDocument: ReturnType<typeof vi.fn>;
   GetJobStatus: ReturnType<typeof vi.fn>;
   GetDocument: ReturnType<typeof vi.fn>;
   SetPreferredEditor: ReturnType<typeof vi.fn>;
@@ -60,6 +64,7 @@ const editorDocument = {
 function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
   return {
     ExecuteBatch: vi.fn().mockResolvedValue(batchPayload),
+    RunDocument: vi.fn(),
     GetJobStatus: vi.fn().mockResolvedValue({
       jobStatus: serverJob("job-x", "doc-1"),
     }),
@@ -447,37 +452,60 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     expect(sdk.GetDocument).not.toHaveBeenCalled();
   });
 
-  it("maps setPreferredEditor onto the mutation and returns the document", async () => {
-    const sdk = createMockSdk();
+  it("sets the preferred editor as a signed action through execute", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk({
+      GetDocument: vi
+        .fn()
+        .mockResolvedValue({ document: { document: editorDocument } }),
+      RunDocument: vi.fn().mockResolvedValue({
+        mutateDocument: { ...editorDocument, operations: { items: [] } },
+      }),
+    });
 
     const result = await createClientWith(sdk).setPreferredEditor(
-      "doc-1",
+      "my-doc",
       "editor-x",
-      "main",
     );
 
-    expect(sdk.SetPreferredEditor).toHaveBeenCalledWith(
-      {
-        documentIdentifier: "doc-1",
-        preferredEditor: "editor-x",
-        branch: "main",
-      },
-      undefined,
-      undefined,
-    );
+    expect(sdk.SetPreferredEditor).not.toHaveBeenCalled();
+    expect(signAction).toHaveBeenCalledTimes(1);
+    expect(signAction.mock.calls[0][1]).toEqual({
+      documentId: "doc-1",
+      branch: "main",
+    });
+    const options = sdk.RunDocument.mock.calls[0][0] as RunDocumentOptions;
+    expect(options.operationName).toBe("MutateDocumentWithOperations");
+    const variables = options.variables as {
+      documentIdentifier: string;
+      branch: string;
+      actions: Array<{ type: string; input: unknown }>;
+    };
+    expect(variables.branch).toBe("main");
+    expect(variables.actions[0]).toMatchObject({
+      type: "SET_PREFERRED_EDITOR",
+      input: { preferredEditor: "editor-x" },
+    });
     expect(result.header.id).toBe("doc-1");
   });
 
-  it("clears the preferred editor by passing null through as undefined", async () => {
-    const sdk = createMockSdk();
+  it("clears the preferred editor with a null input", async () => {
+    const sdk = createMockSdk({
+      GetDocument: vi
+        .fn()
+        .mockResolvedValue({ document: { document: editorDocument } }),
+      RunDocument: vi.fn().mockResolvedValue({
+        mutateDocument: { ...editorDocument, operations: { items: [] } },
+      }),
+    });
 
     await createClientWith(sdk).setPreferredEditor("doc-1", null);
 
-    expect(sdk.SetPreferredEditor.mock.calls[0][0]).toEqual({
-      documentIdentifier: "doc-1",
-      preferredEditor: undefined,
-      branch: undefined,
-    });
+    const options = sdk.RunDocument.mock.calls[0][0] as RunDocumentOptions;
+    const variables = options.variables as {
+      actions: Array<{ input: unknown }>;
+    };
+    expect(variables.actions[0].input).toEqual({ preferredEditor: null });
   });
 });
 

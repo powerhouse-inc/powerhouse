@@ -22,6 +22,7 @@ import type {
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  actions,
   actionSigningTarget,
   normalizeDocumentModelVersion,
   toTransportAction,
@@ -671,34 +672,21 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * Updates the preferred editor recorded in a document's header meta over the
-   * `setPreferredEditor` mutation, and announces the result as an `Updated`
-   * event. Pass `null` to clear it.
+   * Sets or, with `null`, clears the preferred editor as a client-signed
+   * action, as the in-process client does.
    */
-  async setPreferredEditor(
+  setPreferredEditor(
     documentIdentifier: string,
     preferredEditor: string | null,
-    branch?: string,
+    branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    const result = await this.sdk.SetPreferredEditor(
-      {
-        documentIdentifier,
-        preferredEditor: preferredEditor ?? undefined,
-        branch,
-      },
-      undefined,
+    return this.execute(
+      documentIdentifier,
+      branch,
+      [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
-    const updated = phDocumentFromGetDocument<PHDocument>(
-      result.setPreferredEditor,
-      branch,
-    );
-    this.emitChange({
-      type: DOCUMENT_CHANGE_TYPE.Updated,
-      documents: [updated],
-    });
-    return updated;
   }
 
   /**
