@@ -425,6 +425,24 @@ export async function composeWorkflowRuntime(
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
         });
 
+  try {
+    return await composeClaimed(engine, deps, lease);
+  } catch (error) {
+    // Renewing since the claim, so a compose that fails hands it back.
+    await lease?.release();
+    throw error;
+  }
+}
+
+type SingletonLease = Awaited<
+  ReturnType<WorkflowEngineModule["acquireWorkflowSingletonLease"]>
+>;
+
+async function composeClaimed(
+  engine: WorkflowEngineModule,
+  deps: ComposeWorkflowRuntimeDeps,
+  lease: SingletonLease | undefined,
+): Promise<ComposedWorkflowRuntime> {
   // The same registry the host installs packages from, so a piece it indexes
   // is reachable without a second setting to keep in step.
   engine.setPieceRegistryUrl(deps.pieceRegistryUrl);
@@ -500,10 +518,6 @@ export async function composeWorkflowRuntime(
     ...(lease ? { singletonOwner: lease.owner } : {}),
 
     async start() {
-      // Renewing only once the runtime is actually running: a host that threw
-      // between composing and starting leaves the lease to expire rather than
-      // holding it forever.
-      lease?.startHeartbeat();
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();

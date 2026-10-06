@@ -90,12 +90,10 @@ export class WorkflowSingletonConflictError extends Error {
   }
 }
 
-/** A held claim. The host starts the heartbeat when it starts the runtime and
- * releases on shutdown, so the next boot does not wait out the TTL. */
+/** A held claim, renewed from the moment it is taken. The host releases it on
+ * shutdown, so the next boot does not wait out the TTL. */
 export interface WorkflowSingletonLease {
   readonly owner: string;
-  /** Begins renewing. Idempotent. */
-  startHeartbeat(): void;
   /** Renews once; false when the lease is no longer ours. */
   heartbeat(): Promise<boolean>;
   /** Stops renewing and drops the row if it is still ours. */
@@ -302,21 +300,20 @@ export async function acquireWorkflowSingletonLease(
     return false;
   };
 
+  // From the claim, not from the host's start: composing can outlast the TTL.
+  timer = setInterval(() => {
+    // A failed renewal is not a lost lease: the lease and the journal share
+    // one database, so a process that cannot renew cannot write either. The
+    // next tick retries.
+    heartbeat().catch((error: unknown) => {
+      log.warn("Workflow singleton heartbeat failed: @error", error);
+    });
+  }, heartbeatMs);
+  // The claim must not be what keeps the process alive.
+  timer.unref();
+
   return {
     owner,
-    startHeartbeat() {
-      if (timer || lost) return;
-      timer = setInterval(() => {
-        // A failed renewal is not a lost lease: the lease and the journal
-        // share one database, so a process that cannot renew cannot write
-        // either. The next tick retries.
-        heartbeat().catch((error: unknown) => {
-          log.warn("Workflow singleton heartbeat failed: @error", error);
-        });
-      }, heartbeatMs);
-      // The claim must not be what keeps the process alive.
-      timer.unref();
-    },
     heartbeat,
     async release() {
       stop();

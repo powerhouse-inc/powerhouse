@@ -270,14 +270,16 @@ describe("composeWorkflowRuntime", () => {
 
   it("arms the webhooks and the supervisor on start, and stops them once", async () => {
     const webhooks = memoryWebhooks();
-    const workflows = await compose(await buildReactorModule(), {
-      webhooks: webhooks.scope,
-    });
-
-    // Intervals only, from here on: the supervisor's tick and the singleton
-    // lease's heartbeat.
+    const clientModule = await buildReactorModule();
+    // Intervals only, from here on: the singleton lease's heartbeat and the
+    // run-retention sweep from compose, then the supervisor's tick.
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     try {
+      const workflows = await compose(clientModule, {
+        webhooks: webhooks.scope,
+      });
+      expect(vi.getTimerCount()).toBe(2);
+
       await workflows.start();
 
       expect(webhooks.families.map(({ name }) => name)).toEqual(["trigger"]);
@@ -285,7 +287,7 @@ describe("composeWorkflowRuntime", () => {
       await expect(
         webhooks.families[0]!.policyFor?.("wf-unknown"),
       ).resolves.toBeUndefined();
-      expect(vi.getTimerCount()).toBe(2);
+      expect(vi.getTimerCount()).toBe(3);
 
       await workflows.stop();
       await workflows.stop();
@@ -345,6 +347,33 @@ describe("composeWorkflowRuntime", () => {
       expect(second.singletonOwner).not.toBe(first.singletonOwner);
     } finally {
       await second.stop();
+    }
+  });
+
+  it("hands the claim back when composing fails after it", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        storageId: "/srv/slot-a",
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            createWorkflowRuntime: () => {
+              throw new Error("the runtime could not be built");
+            },
+          }),
+      }),
+    ).rejects.toThrow("the runtime could not be built");
+
+    const next = await composeSecond(clientModule, relationalDb);
+    try {
+      expect(next.singletonOwner).toBeDefined();
+    } finally {
+      await next.stop();
     }
   });
 

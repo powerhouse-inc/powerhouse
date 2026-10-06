@@ -96,9 +96,9 @@ holds it (`WorkflowSingletonConflictError`). The
 always null and unread: they were per trigger, the wrong granularity, since
 the sweeps and the supervisor are per process.
 
-- The lease is valid for 60s and renewed every 20s, from `start()`, so a host
-  that threw between composing and starting leaves it to expire rather than
-  holding it forever. `stop()` releases it, so the next boot owns workflows
+- The lease is valid for 60s and renewed every 20s from the moment it is
+  claimed, so a slow compose cannot outlast it. A compose that fails after the
+  claim releases it, and so does `stop()`, so the next boot owns workflows
   immediately instead of waiting out the TTL.
 - An **expired** lease is taken over: a killed process does not lock workflows
   out until a human intervenes.

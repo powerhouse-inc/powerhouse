@@ -2,6 +2,7 @@
 // The claim is what enforces it: a second live process over one run journal is
 // refused by name rather than left to fail the first one's runs.
 import { describe, expect, it, vi } from "vitest";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import {
   acquireWorkflowSingletonLease,
@@ -25,6 +26,7 @@ function fixture() {
   return {
     relationalDb,
     advance: (ms: number) => (clock += ms),
+    now: () => new Date(clock),
     acquire: (owner: string, ttlMs = 60_000, onLost?: () => void) =>
       acquireWorkflowSingletonLease({
         relationalDb,
@@ -75,6 +77,44 @@ describe("the workflow singleton lease", () => {
     const taken = await acquire("beta", 1_000);
 
     expect(taken.owner).toBe("beta");
+  });
+
+  it("renews from the moment it is claimed, before any host start", async () => {
+    const { relationalDb, advance, now } = fixture();
+    const lease = await acquireWorkflowSingletonLease({
+      relationalDb,
+      logger: silent,
+      owner: "alpha",
+      ttlMs: 1_000,
+      heartbeatMs: 5,
+      now,
+    });
+    try {
+      advance(900);
+      const db = (await relationalDb.createNamespace(
+        "workflow_runtime",
+      )) as IRelationalDb<{ singleton_lease: { heartbeat_at: string } }>;
+      await vi.waitFor(async () => {
+        const row = await db
+          .selectFrom("singleton_lease")
+          .select("heartbeat_at")
+          .executeTakeFirstOrThrow();
+        expect(row.heartbeat_at).toBe(now().toISOString());
+      });
+      advance(600);
+
+      await expect(
+        acquireWorkflowSingletonLease({
+          relationalDb,
+          logger: silent,
+          owner: "beta",
+          ttlMs: 1_000,
+          now,
+        }),
+      ).rejects.toBeInstanceOf(WorkflowSingletonConflictError);
+    } finally {
+      await lease.release();
+    }
   });
 
   it("frees the claim on release", async () => {
