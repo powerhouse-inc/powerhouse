@@ -9,16 +9,24 @@ import { concurrencyLimit } from "./policy.js";
 
 interface Lane {
   active: number;
-  waiting: (() => void)[];
+  // Resolved true with the slot handed over, false when the gate closed.
+  waiting: ((admitted: boolean) => void)[];
 }
+
+const CLOSED_REASON =
+  "Skipped: the workflow runtime shut down while this firing waited";
 
 /** What a firing may do. */
 export type GateAdmission =
   // `waited`: it queued, so what it read before admission may be stale.
   | { admitted: true; waited: boolean; release: () => void }
   // SINGLETON, and a run is already going: this firing is dropped, not queued.
-  // Or the queue is full: see MAX_QUEUED_FIRINGS.
-  | { admitted: false; reason: string; refusal: "singleton" | "queue-full" };
+  // Or the queue is full: see MAX_QUEUED_FIRINGS. Or the runtime shut down.
+  | {
+      admitted: false;
+      reason: string;
+      refusal: "singleton" | "queue-full" | "closed";
+    };
 
 export const QUEUE_DEPTH_ENV = "PH_WORKFLOWS_MAX_QUEUED_FIRINGS";
 
@@ -45,6 +53,7 @@ export function maxQueuedFirings(env: NodeJS.ProcessEnv = process.env): number {
 
 export class WorkflowRunGate {
   private readonly lanes = new Map<string, Lane>();
+  private closed = false;
 
   // Read once per gate: an operator sets it at boot, and a lane that changed
   // its bound mid-flight would admit and refuse on different rules.
@@ -83,6 +92,8 @@ export class WorkflowRunGate {
     workflowId: string,
     policy: EffectiveRunPolicy,
   ): Promise<GateAdmission> {
+    if (this.closed)
+      return { admitted: false, reason: CLOSED_REASON, refusal: "closed" };
     const limit = concurrencyLimit(policy);
     if (limit === null) {
       return { admitted: true, waited: false, release: () => undefined };
@@ -115,7 +126,11 @@ export class WorkflowRunGate {
       }
       // The release that wakes this counts the run in on its behalf, so the
       // slot is reserved across the await and a later arrival cannot take it.
-      await new Promise<void>((resolve) => lane.waiting.push(resolve));
+      const handed = await new Promise<boolean>((resolve) =>
+        lane.waiting.push(resolve),
+      );
+      if (!handed)
+        return { admitted: false, reason: CLOSED_REASON, refusal: "closed" };
       waited = true;
     } else {
       lane.active += 1;
@@ -135,12 +150,20 @@ export class WorkflowRunGate {
         const next = lane.waiting.shift();
         if (next) {
           lane.active += 1;
-          next();
+          next(true);
           return;
         }
         this.forgetIfIdle(workflowId, lane);
       },
     };
+  }
+
+  /** Refuses every waiting and later firing: a shut-down runtime runs none. */
+  close(): void {
+    this.closed = true;
+    for (const lane of this.lanes.values()) {
+      for (const waiter of lane.waiting.splice(0)) waiter(false);
+    }
   }
 
   private forgetIfIdle(workflowId: string, lane: Lane): void {

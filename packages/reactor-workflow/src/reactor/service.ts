@@ -2186,6 +2186,7 @@ export class WorkflowRuntimeService {
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
     this.closed = true;
+    this.runGate.close();
     clearInterval(this.retentionTimer);
     for (const { timer } of this.resolutionRetries.values())
       clearTimeout(timer);
@@ -4121,7 +4122,16 @@ export class WorkflowRuntimeService {
     }
     if (parked) return skipped(parked, "parked");
     const admission = await this.runGate.admit(workflowId, policy);
+    // Shut down while it waited, or as it was handed the slot: refused, not
+    // journaled as a fresh CANCELLED run.
+    if (this.closed) {
+      if (admission.admitted) admission.release();
+      return this.refuseClosed(store, workflowId, enqueuedRunId);
+    }
     if (!admission.admitted) {
+      if (admission.refusal === "closed") {
+        return this.refuseClosed(store, workflowId, enqueuedRunId);
+      }
       return skipped(admission.reason, admission.refusal);
     }
     // A firing that queued read the workflow before it waited: disabled,

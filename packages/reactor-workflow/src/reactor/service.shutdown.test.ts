@@ -2,7 +2,9 @@
 // that keeps serving. Nothing may run after it, and nothing it adopted may be
 // left PENDING for the next owner to mistake for a fire already handled.
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { effectiveRunPolicy } from "./policy.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
+import type { WorkflowRunGate } from "./run-gate.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
@@ -45,6 +47,17 @@ function runtime(): { service: WorkflowRuntimeService; workflowId: string } {
   return { service, workflowId };
 }
 
+const gateOf = (runtimeService: WorkflowRuntimeService) =>
+  (runtimeService as unknown as { runGate: WorkflowRunGate }).runGate;
+
+const within = <T>(promise: Promise<T>, ms = 2_000) =>
+  Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`still pending after ${ms}ms`)), ms),
+    ),
+  ]);
+
 afterEach(() => {
   service?.shutdown();
   service = undefined;
@@ -73,6 +86,62 @@ describe("a runtime that has shut down", () => {
       ),
     ).rejects.toThrow("shut down");
 
+    expect((await store.getRun(runId))?.status).toBe("FAILED");
+  });
+
+  it("refuses a firing that was waiting for its slot", async () => {
+    const { service, workflowId } = runtime();
+    const store = (await service.store())!;
+    const slot = await gateOf(service).admit(
+      workflowId,
+      effectiveRunPolicy({ policy } as never),
+    );
+    const runId = await store.enqueueRun({
+      workflowId,
+      triggerKind: "document-event",
+    });
+    const firing = service.fire(
+      workflowId,
+      {},
+      "document-event",
+      undefined,
+      undefined,
+      runId,
+    );
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+
+    service.shutdown();
+
+    await expect(within(firing)).rejects.toThrow("shut down");
+    expect((await store.getRun(runId))?.status).toBe("FAILED");
+    if (slot.admitted) slot.release();
+  });
+
+  it("refuses a firing handed its slot as the runtime shut down", async () => {
+    const { service, workflowId } = runtime();
+    const store = (await service.store())!;
+    const slot = await gateOf(service).admit(
+      workflowId,
+      effectiveRunPolicy({ policy } as never),
+    );
+    const runId = await store.enqueueRun({
+      workflowId,
+      triggerKind: "document-event",
+    });
+    const firing = service.fire(
+      workflowId,
+      {},
+      "document-event",
+      undefined,
+      undefined,
+      runId,
+    );
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+
+    if (slot.admitted) slot.release();
+    service.shutdown();
+
+    await expect(within(firing)).rejects.toThrow("shut down");
     expect((await store.getRun(runId))?.status).toBe("FAILED");
   });
 

@@ -257,8 +257,8 @@ describe("fire() and the worker pool", () => {
     service.shutdown();
     release?.();
 
-    // The disposed pool is kept, so the run fails instead of forking into a
-    // replacement.
-    await expect(run).rejects.toThrow("disposed");
+    // Refused at the check after admission, before it reaches the pool, so
+    // it never forks into a replacement.
+    await expect(run).rejects.toThrow("shut down");
   });
 });

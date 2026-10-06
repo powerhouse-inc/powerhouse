@@ -160,4 +160,21 @@ describe("the workflow run gate", () => {
 
     expect(gate.active("w")).toBe(0);
   });
+
+  it("refuses its waiters and every later firing once closed", async () => {
+    const gate = new WorkflowRunGate();
+    const policy = policyOf({ concurrency: "QUEUE" });
+    const held = await gate.admit("w", policy);
+    const waiting = gate.admit("w", policy);
+    await settled();
+
+    gate.close();
+
+    const refused = await waiting;
+    expect(refused.admitted).toBe(false);
+    expect(gate.waiting("w")).toBe(0);
+    expect((await gate.admit("w", policy)).admitted).toBe(false);
+    expect((await gate.admit("other", policy)).admitted).toBe(false);
+    if (held.admitted) held.release();
+  });
 });
