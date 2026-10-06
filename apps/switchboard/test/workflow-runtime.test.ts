@@ -437,6 +437,39 @@ describe("composeWorkflowRuntime", () => {
     }
   });
 
+  it("shuts the runtime down before handing the claim back when composing fails", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const shutdowns: ReturnType<typeof vi.fn>[] = [];
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        storageId: "/srv/slot-a",
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            createWorkflowRuntime: (host) => {
+              const runtime = engine.createWorkflowRuntime(host);
+              shutdowns.push(vi.spyOn(runtime, "shutdown"));
+              return runtime;
+            },
+            WorkflowTriggersReadModel: class {
+              constructor() {
+                throw new Error("the read model could not be built");
+              }
+            } as never,
+          }),
+      }),
+    ).rejects.toThrow("the read model could not be built");
+
+    expect(shutdowns).toHaveLength(1);
+    expect(shutdowns[0]).toHaveBeenCalledOnce();
+    const next = await composeSecond(clientModule, relationalDb);
+    await next.stop();
+  });
+
   it("opens no journal when the lease is lost before the runtime exists", async () => {
     const clientModule = await buildReactorModule();
     const relationalDb = createRelationalDb(pglite()) as IRelationalDb;

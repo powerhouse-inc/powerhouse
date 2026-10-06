@@ -445,7 +445,9 @@ export async function composeWorkflowRuntime(
   try {
     return await composeClaimed(engine, deps, lease, loss);
   } catch (error) {
-    // Renewing since the claim, so a compose that fails hands it back.
+    // Renewing since the claim, so a compose that fails hands it back, after
+    // stopping whatever runtime it had already built.
+    loss.tearDown?.();
     await lease?.release();
     throw error;
   }
@@ -516,6 +518,17 @@ async function composeClaimed(
     logger: deps.logger,
   });
 
+  // Set before anything below can throw, so a failed compose stops it.
+  const routes: { oauthCallback?: ScopedRouteHandle } = {};
+  let tornDown = false;
+  const tearDown = () => {
+    if (tornDown) return;
+    tornDown = true;
+    routes.oauthCallback?.dispose();
+    runtime.shutdown();
+  };
+  loss.tearDown = tearDown;
+
   const triggers = await registerWorkflowTriggersReadModel(
     engine,
     runtime,
@@ -538,18 +551,9 @@ async function composeClaimed(
   }
 
   let stopped = false;
-  let tornDown = false;
-  const oauthCallback: ScopedRouteHandle | undefined = deps.http
-    ? registerOAuthCallback(deps.http, runtime)
-    : undefined;
-  const tearDown = () => {
-    if (tornDown) return;
-    tornDown = true;
-    oauthCallback?.dispose();
-    runtime.shutdown();
-  };
-  loss.tearDown = tearDown;
-  if (loss.lost) tearDown();
+  if (deps.http) {
+    routes.oauthCallback = registerOAuthCallback(deps.http, runtime);
+  }
 
   return {
     subgraph: createWorkflowRuntimeSubgraph(
