@@ -70,11 +70,14 @@ export {
 } from "./errors.js";
 
 export {
+  channelFactoryTypes,
   envelopesToSyncOperations,
+  GQL_CHANNEL_TYPE,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
+  POLLING_CHANNEL_TYPE,
   IntervalPollTimer,
   type GqlChannelConfig,
   type IPollTimer,

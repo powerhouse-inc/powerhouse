@@ -1,5 +1,12 @@
-export { GqlRequestChannelFactory } from "./gql-request-channel-factory.js";
-export { GqlResponseChannelFactory } from "./gql-response-channel-factory.js";
+export {
+  GQL_CHANNEL_TYPE,
+  GqlRequestChannelFactory,
+} from "./gql-request-channel-factory.js";
+export {
+  GqlResponseChannelFactory,
+  POLLING_CHANNEL_TYPE,
+} from "./gql-response-channel-factory.js";
+export { channelFactoryTypes } from "./channel-factory-types.js";
 export { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
 export { GqlResponseChannel } from "./gql-res-channel.js";
 export {

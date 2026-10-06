@@ -7,7 +7,10 @@ import { GqlResponseChannel } from "./gql-res-channel.js";
 /**
  * Factory for creating GqlResponseChannel instances.
  */
+export const POLLING_CHANNEL_TYPE = "polling";
+
 export class GqlResponseChannelFactory implements IChannelFactory {
+  readonly channelTypes: readonly string[] = [POLLING_CHANNEL_TYPE];
   private readonly logger: ILogger;
 
   constructor(logger: ILogger) {

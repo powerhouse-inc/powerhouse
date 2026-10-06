@@ -33,7 +33,10 @@ import {
  * The optional jwtHandler enables dynamic JWT token generation per-request,
  * which is useful for short-lived tokens with audience-specific claims.
  */
+export const GQL_CHANNEL_TYPE = "gql";
+
 export class GqlRequestChannelFactory implements IChannelFactory {
+  readonly channelTypes: readonly string[] = [GQL_CHANNEL_TYPE];
   private readonly logger: ILogger;
   private readonly jwtHandler?: JwtHandler;
   private readonly queue: IQueue;
