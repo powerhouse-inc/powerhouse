@@ -80,6 +80,7 @@ describe("reactorWorkerDevPlugin", () => {
       outDir,
       entry: "reactor.worker.js",
       sourceDigest: "abc123",
+      vendorImports: {},
     });
   });
 
