@@ -37,6 +37,11 @@ export class BatchJobFailedError extends Error {
   }
 
   static isError(error: unknown): error is BatchJobFailedError {
-    return Error.isError(error) && error.name === "BatchJobFailedError";
+    return (
+      Error.isError(error) &&
+      error.name === "BatchJobFailedError" &&
+      typeof (error as Partial<BatchJobFailedError>).key === "string" &&
+      typeof (error as Partial<BatchJobFailedError>).jobs === "object"
+    );
   }
 }

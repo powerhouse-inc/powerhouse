@@ -357,6 +357,13 @@ describe("GraphQLReactorClient.executeBatch", () => {
     expect((error.cause as Error).name).toBe("DocumentAlreadyExistsError");
   });
 
+  it("does not take a name-only error for a BatchJobFailedError", () => {
+    const rebuilt = new Error("file-1 already exists");
+    rebuilt.name = "BatchJobFailedError";
+
+    expect(BatchJobFailedError.isError(rebuilt)).toBe(false);
+  });
+
   it("resolves a slug to the document id before signing for it", async () => {
     const { signAction } = installSigner();
     const sdk = createMockSdk({
