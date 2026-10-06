@@ -887,6 +887,11 @@ export class ReactorSubgraph extends BaseSubgraph {
             const result = await resolvers.executeBatch(this.reactorClient, {
               jobs: args.jobs,
             });
+            if (
+              result.jobs.some((entry) => entry.job.status !== "READ_READY")
+            ) {
+              return result;
+            }
 
             if (isDriveContainerType(creation.documentType)) {
               this.graphqlManager.driveOwnershipCache.add(creation.documentId);

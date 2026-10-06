@@ -2,6 +2,7 @@ import {
   type ActionCandidate,
   type ActionEvaluations,
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   type BatchExecutionResult,
   ChannelError,
   ChannelErrorSource,
@@ -1101,22 +1102,12 @@ export function batchCreationOf(
 }
 
 /**
- * Runs multiple mutation jobs in dependency order and waits for all of them to
- * settle, the wire form of `IReactorClient.executeBatch`.
+ * Runs multiple mutation jobs in dependency order, waits for every one to
+ * settle, and returns each job's final state keyed by plan key.
  *
- * Ordering only -- NOT atomic: each job commits independently, there is no
- * batch rollback, and re-submitting after a partial failure re-applies the jobs
- * that already succeeded.
- *
- * Each job's actions go through `toSubmittableActions`, the same coercion
- * `execute` uses, so a client-signed action keeps its signature end to end. On
- * the first job failure the client's `executeBatch` throws; because the batch
- * is ordering-only, earlier jobs may already have committed, so the rethrow
- * below names the failed plan key and states that partial state may remain.
- * Each surviving job's final status is read back so the returned `JobInfo` is a
- * completed one rather than the pending receipt the reactor hands back from a
- * submission. The plan key is carried on each entry so the client can rebuild
- * the keyed record.
+ * Not atomic: each job commits on its own and a failed job still releases its
+ * dependents, so a failure is reported per job as a FAILED entry rather than a
+ * thrown error, which would lose what did commit.
  */
 export async function executeBatch(
   reactorClient: IReactorClient,
@@ -1133,53 +1124,30 @@ export async function executeBatch(
     dependsOn: [...job.dependsOn],
   }));
 
-  let result: BatchExecutionResult;
+  let outcome: BatchExecutionResult | BatchJobFailedError;
   try {
-    result = await reactorClient.executeBatch({ jobs });
+    outcome = await reactorClient.executeBatch({ jobs });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    throw new GraphQLError(
-      `Failed to execute batch: ${message}. The batch is ordering-only, not atomic: jobs that ran before the failure may already have committed, so partial state can remain, and re-submitting re-applies every job that already succeeded.`,
-    );
-  }
-
-  const pendingJobs: ReadonlyArray<readonly [string, string]> = jobs.map(
-    (job) => {
-      if (!Object.hasOwn(result.jobs, job.key)) {
-        const returnedKeys = Object.keys(result.jobs);
-        throw new GraphQLError(
-          `Batch result is missing plan key "${job.key}"; the reactor returned jobs for [${returnedKeys.join(", ")}]. Cannot read that job's status.`,
-        );
-      }
-      return [job.key, result.jobs[job.key].id] as const;
-    },
-  );
-
-  let completed: ReadonlyArray<readonly [string, JobInfo]>;
-  try {
-    completed = await Promise.all(
-      pendingJobs.map(async ([key, id]) => {
-        const status = await reactorClient.getJobStatus(id);
-        return [key, status] as const;
-      }),
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    throw new GraphQLError(`Failed to read batch job status: ${message}`);
-  }
-
-  for (const [key, job] of completed) {
-    if (job.status === JobStatus.FAILED) {
-      const reason = job.error?.message ?? "unknown error";
+    if (!BatchJobFailedError.isError(error)) {
+      const message = error instanceof Error ? error.message : "Unknown error";
       throw new GraphQLError(
-        `Batch job "${key}" failed: ${reason}. The batch is ordering-only, not atomic: jobs ordered before "${key}" may already have committed, so partial state can remain, and re-submitting re-applies every job that already succeeded.`,
+        `Failed to execute batch: ${message}. Jobs dispatched before the failure may have committed.`,
       );
     }
+    outcome = error;
   }
+  const settled = BatchJobFailedError.isError(outcome)
+    ? outcome.jobs
+    : await readBackJobs(reactorClient, jobs, outcome);
 
   try {
     return {
-      jobs: completed.map(([key, job]) => ({ key, job: toGqlJobInfo(job) })),
+      jobs: jobs.map((job) => {
+        if (!Object.hasOwn(settled, job.key)) {
+          throw new Error(`no job came back for plan key "${job.key}"`);
+        }
+        return { key: job.key, job: toGqlJobInfo(settled[job.key]) };
+      }),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -1187,6 +1155,34 @@ export async function executeBatch(
       `Failed to convert batch result to GraphQL: ${message}`,
     );
   }
+}
+
+/** The client hands back submission receipts; read each job's final state. */
+async function readBackJobs(
+  reactorClient: IReactorClient,
+  jobs: readonly ExecutionJobPlan[],
+  result: BatchExecutionResult,
+): Promise<Record<string, JobInfo>> {
+  const entries = await Promise.all(
+    jobs.map(async (job) => {
+      if (!Object.hasOwn(result.jobs, job.key)) {
+        throw new GraphQLError(
+          `Batch result is missing plan key "${job.key}"; the reactor returned jobs for [${Object.keys(result.jobs).join(", ")}]`,
+        );
+      }
+      try {
+        return [
+          job.key,
+          await reactorClient.getJobStatus(result.jobs[job.key].id),
+        ] as const;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        throw new GraphQLError(`Failed to read batch job status: ${message}`);
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function mutateDocument(

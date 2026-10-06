@@ -1159,6 +1159,24 @@ describe("ReactorSubgraph Permission Checks", () => {
       expect(initializeDocumentProtection).not.toHaveBeenCalled();
     });
 
+    it("leaves the new document unprotected when the create job comes back FAILED", async () => {
+      vi.mocked(mockReactorClient.getJobStatus!).mockResolvedValue({
+        ...completedJob("job-1", newId),
+        status: "FAILED",
+        error: { name: "DocumentAlreadyExistsError", message: "taken" },
+      } as any);
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      const result = await callExecuteBatch(
+        [createJob([createAction(newId, "powerhouse/document-drive")])],
+        ctx,
+      );
+
+      expect(result.jobs[0].job.status).toBe("FAILED");
+      expect(initializeDocumentProtection).not.toHaveBeenCalled();
+      expect(ownershipAdds).toEqual([]);
+    });
+
     it("still gates a job on an existing document per operation", async () => {
       vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xunpermitted" });

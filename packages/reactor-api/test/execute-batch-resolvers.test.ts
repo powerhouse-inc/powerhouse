@@ -1,11 +1,22 @@
-import type { IReactorClient, JobInfo } from "@powerhousedao/reactor";
+import {
+  ReactorBuilder,
+  ReactorClientBuilder,
+  type InProcessReactorClientModule,
+  type IReactorClient,
+  type JobInfo,
+} from "@powerhousedao/reactor";
+import {
+  withSignaturePolicy,
+  type DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import type { Action } from "@powerhousedao/shared/document-model";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { GraphQLObjectType } from "graphql";
 import { buildSchema } from "graphql";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { executeBatch } from "../src/graphql/reactor/resolvers.js";
 import type { ExecutionJobInput } from "../src/graphql/reactor/gen/graphql.js";
 
@@ -194,7 +205,7 @@ describe("executeBatch", () => {
     expect(getJobStatusSpy).toHaveBeenCalledWith("job-delete");
   });
 
-  it("surfaces a batch failure with the partial-state caveat", async () => {
+  it("reports a failure that happens before any job settles as an error", async () => {
     const client = {
       executeBatch: vi
         .fn()
@@ -205,56 +216,7 @@ describe("executeBatch", () => {
     const run = executeBatch(client, { jobs: [deleteFileJob] });
 
     await expect(run).rejects.toThrow("drive refused the removal");
-    await expect(run).rejects.toThrow(/ordering-only, not atomic/);
-    await expect(run).rejects.toThrow(
-      /re-applies every job that already succeeded/,
-    );
-  });
-
-  it("names the failed plan key and the partial-state caveat when a job comes back FAILED", async () => {
-    const failed = {
-      id: "job-delete",
-      documentId: "file-1",
-      status: "FAILED",
-      createdAtUtcIso: "2026-01-01T00:00:00.000Z",
-      error: { name: "Error", message: "delete rejected", stack: "" },
-      consistencyToken: {
-        version: 1,
-        createdAtUtcIso: "2026-01-01T00:00:01.000Z",
-        coordinates: [],
-      },
-      meta: { batchId: "batch-1", batchJobIds: ["job-delete"] },
-    } as unknown as JobInfo;
-    const client = {
-      executeBatch: vi.fn().mockResolvedValue({
-        jobs: {
-          drive: { id: "job-drive", documentId: "drive-1", status: "PENDING" },
-          delete: {
-            id: "job-delete",
-            documentId: "file-1",
-            status: "PENDING",
-          },
-        },
-      }),
-      getJobStatus: vi
-        .fn()
-        .mockImplementation((id: string) =>
-          Promise.resolve(
-            id === "job-delete" ? failed : completedJob("job-drive", "drive-1"),
-          ),
-        ),
-    } as unknown as IReactorClient;
-
-    const run = executeBatch(client, {
-      jobs: [deleteFileJob, deleteDocJob],
-    });
-
-    await expect(run).rejects.toThrow(/Batch job "delete" failed/);
-    await expect(run).rejects.toThrow("delete rejected");
-    await expect(run).rejects.toThrow(/ordering-only, not atomic/);
-    await expect(run).rejects.toThrow(
-      /re-applies every job that already succeeded/,
-    );
+    await expect(run).rejects.toThrow(/may have committed/);
   });
 
   it("raises a diagnosable error naming a plan key missing from the reactor result", async () => {
@@ -306,5 +268,91 @@ describe("the batch mutation surface", () => {
         "scope",
       ].sort(),
     );
+  });
+});
+
+describe("executeBatch against a real reactor client", () => {
+  let module: InProcessReactorClientModule | undefined;
+
+  afterEach(() => {
+    module?.reactor.kill();
+    module = undefined;
+  });
+
+  it("returns every job's final state, a failed one with its error name", async () => {
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ]),
+      )
+      .buildModule();
+    // A reused id is only possible on a legacy document.
+    const existing = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+    );
+    await module.client.create(existing);
+    const { header } = existing;
+
+    const result = await executeBatch(module.client, {
+      jobs: [
+        {
+          key: "rename",
+          documentIdOrSlug: header.id,
+          scope: "global",
+          actions: [
+            {
+              id: "act-rename",
+              type: "SET_NAME",
+              timestampUtcMs: new Date().toISOString(),
+              input: { name: "renamed" },
+              scope: "global",
+            },
+          ],
+          dependsOn: [],
+        },
+        {
+          key: "duplicate",
+          documentIdOrSlug: header.id,
+          scope: "document",
+          actions: [
+            {
+              id: "act-create",
+              type: "CREATE_DOCUMENT",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                model: header.documentType,
+                version: 0,
+                documentId: header.id,
+                signing: {
+                  signature: header.id,
+                  publicKey: header.sig.publicKey,
+                  nonce: header.sig.nonce,
+                  createdAtUtcIso: header.createdAtUtcIso,
+                  documentType: header.documentType,
+                },
+              },
+              scope: "document",
+            },
+          ],
+          dependsOn: ["rename"],
+        },
+      ],
+    });
+
+    expect(result.jobs.map((entry) => entry.key)).toEqual([
+      "rename",
+      "duplicate",
+    ]);
+    expect(result.jobs[0].job).toMatchObject({
+      documentId: header.id,
+      status: "READ_READY",
+    });
+    expect(result.jobs[1].job).toMatchObject({
+      documentId: header.id,
+      status: "FAILED",
+      errorName: "DocumentAlreadyExistsError",
+    });
   });
 });

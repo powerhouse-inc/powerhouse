@@ -133,9 +133,9 @@ export enum AuthDecision {
  * The outcome of a batch mutation, one entry per job the request named. The wire
  * shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
  * key rather than by position so the client can rebuild the record. The batch is
- * ordering only -- NOT atomic: each job commits independently, there is no batch
- * rollback, and re-submitting after a partial failure re-applies the jobs that
- * already succeeded.
+ * not atomic: each job commits on its own and a failed job releases its
+ * dependents, so each entry's status says what happened to that job, and
+ * re-submitting re-applies the jobs that succeeded.
  */
 export type BatchExecutionResult = {
   readonly jobs: ReadonlyArray<BatchJobResult>;
@@ -260,8 +260,8 @@ export type DocumentWithChildren = {
 /**
  * One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
  * (packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
- * order only -- NOT atomically: each job commits independently with no batch
- * rollback.
+ * order only, not atomically: each job commits on its own with no batch rollback,
+ * and a failed job still releases its dependents.
  *
  * `documentIdOrSlug` is the document the job's actions apply to -- an id that does
  * not yet exist when the job's actions create it. `actions` are coerced against
@@ -359,8 +359,12 @@ export type Mutation = {
    * through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
    * are applied and awaited before the result returns, so every returned `JobInfo`
    * is a completed one rather than the pending receipt the in-process reactor hands
-   * back. The first failed job fails the whole mutation; a batch is ordering, not a
-   * transaction, so jobs that already committed stay committed.
+   * back. A batch is ordering, not a transaction: each job commits on its own, and
+   * a failed job still releases the jobs that depend on it, so any job, before or
+   * after a failure, may have committed. A failed job is therefore returned as a
+   * FAILED entry with its `error` and `errorName`, beside the final state of every
+   * other job, rather than failing the mutation. The mutation itself fails only
+   * when no job state can be reported.
    *
    * A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
    * as its first action naming the job's document. Its other actions may only be
