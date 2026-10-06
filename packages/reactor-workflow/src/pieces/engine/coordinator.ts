@@ -520,20 +520,25 @@ export async function runWorkflow(
     }
   }
 
+  // Before a step that will execute, never during it: a step is the unit of
+  // work and killing one mid-flight would leave a side effect with no record.
+  // Not before a step that would only be skipped, so the outcome does not
+  // depend on graph shape. `??=`, not `=`: a retry wait that ran out the
+  // clock has already set this, and a timer that fired a hair early must not
+  // clear it.
+  const expiredBeforeStep = (): boolean => {
+    runCancelled ??= outOfTime();
+    return runCancelled !== undefined;
+  };
+
   let progressed = true;
   while (progressed && !runFailed && !runCancelled) {
     progressed = false;
     for (const step of definition.steps) {
       if (records.has(step.id)) continue;
-      // Before the step, never during it: a step is the unit of work and
-      // killing one mid-flight would leave a side effect with no record.
-      // `??=`, not `=`: a step whose retry wait ran out the clock has already
-      // set this, and re-reading a timer that fired a hair early would clear
-      // it and let the next step run after the run was over.
-      runCancelled ??= outOfTime();
-      if (runCancelled) break;
       const inbound = inboundEdges(step);
       if (isEntryStep(step)) {
+        if (expiredBeforeStep()) break;
         await executeStep(step);
         progressed = true;
         // Independent roots are otherwise free to run their side effects
@@ -546,6 +551,7 @@ export async function runWorkflow(
       if (!decided) continue;
       const reachable = inbound.some((edge) => edgeDecisions.get(edge.id));
       if (reachable) {
+        if (expiredBeforeStep()) break;
         await executeStep(step);
       } else {
         skipStep(step);

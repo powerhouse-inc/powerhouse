@@ -269,6 +269,34 @@ describe("the run deadline", () => {
     expect(now).toBeGreaterThanOrEqual(deadline - 1);
   });
 
+  // The outcome must not hang on graph shape: a step that would only be
+  // skipped runs nothing, so it is no reason to cancel a finished run.
+  it("does not cancel for a step that would only be skipped", async () => {
+    const deadline = Date.now() + 20;
+    const executor: BlockExecutor = {
+      execute: async (execution) => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        return { output: execution.config };
+      },
+    };
+
+    const result = await runWorkflow({
+      definition: definition(
+        [step("a", "first"), step("b", "on-error")],
+        [{ id: "e1", from: "a", to: "b", port: "error" }],
+      ),
+      executor,
+      deadline,
+    });
+
+    expect(Date.now()).toBeGreaterThan(deadline);
+    expect(result.status).toBe("SUCCEEDED");
+    expect(result.steps.map((record) => record.status)).toEqual([
+      "SUCCEEDED",
+      "SKIPPED",
+    ]);
+  });
+
   it("does not retry past the deadline", async () => {
     const executor = new FlakyExecutor(99);
 
