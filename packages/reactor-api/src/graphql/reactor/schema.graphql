@@ -214,6 +214,28 @@ type JobInfo {
   completedAt: DateTime
 }
 
+"""
+One job's outcome within a batch, pairing the plan key the caller gave with the
+job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+`IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+"""
+type BatchJobResult {
+  key: String!
+  job: JobInfo!
+}
+
+"""
+The outcome of a batch mutation, one entry per job the request named. The wire
+shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+key rather than by position so the client can rebuild the record. The batch is
+ordering only -- NOT atomic: each job commits independently, there is no batch
+rollback, and re-submitting after a partial failure re-applies the jobs that
+already succeeded.
+"""
+type BatchExecutionResult {
+  jobs: [BatchJobResult!]!
+}
+
 type DocumentChangeEvent {
   type: DocumentChangeType!
   documents: [PHDocument!]!
@@ -369,6 +391,28 @@ input ActionInput {
   input: JSONObject!
   scope: String!
   context: ActionContextInput
+}
+
+"""
+One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+(packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+order only -- NOT atomically: each job commits independently with no batch
+rollback.
+
+`documentIdOrSlug` is the document the job's actions apply to -- an id that does
+not yet exist when the job's actions create it. `actions` are coerced against
+`ActionInput` and passed through exactly as `execute` does, so a client-signed
+action keeps its signature. `scope` is the single scope every action in the job
+shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+defaults to `main`.
+"""
+input ExecutionJobInput {
+  key: String!
+  documentIdOrSlug: String!
+  scope: String!
+  branch: String
+  actions: [ActionInput!]!
+  dependsOn: [String!]!
 }
 
 # Synchronization types
@@ -675,6 +719,18 @@ type Mutation {
     actions: [ActionInput!]!
     branch: String
   ): JobInfo!
+
+  """
+  Applies multiple mutation jobs in dependency order and waits for all of them,
+  the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+  against `ActionInput` exactly as `execute` is, so client-signed actions pass
+  through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+  are applied and awaited before the result returns, so every returned `JobInfo`
+  is a completed one rather than the pending receipt the in-process reactor hands
+  back. The first failed job fails the whole mutation; a batch is ordering, not a
+  transaction, so jobs that already committed stay committed.
+  """
+  executeBatch(jobs: [ExecutionJobInput!]!): BatchExecutionResult!
 
   # Apply actions to a document (synchronous)
   mutateDocument(

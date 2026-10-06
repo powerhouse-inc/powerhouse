@@ -870,6 +870,30 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      executeBatch: async (_parent, args, ctx: Context) => {
+        this.logger.debug("executeBatch(@args)", args);
+        try {
+          const jobs = [];
+          for (const job of args.jobs) {
+            const handle = await this.assertCanExecuteOperations(
+              job.documentIdOrSlug,
+              job.actions,
+              ctx,
+            );
+            jobs.push({ ...job, documentIdOrSlug: handle.fetchIdentifier });
+          }
+
+          return await resolvers.executeBatch(this.reactorClient, { jobs });
+        } catch (error) {
+          this.logger.error(
+            "Error in executeBatch(@args): @Error",
+            args,
+            error,
+          );
+          throw error;
+        }
+      },
+
       mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument(@args)", args);
         try {
