@@ -53,6 +53,7 @@ import {
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
+import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
@@ -179,6 +180,11 @@ async function loadPgLive(major: SupportedPgMajor): Promise<PgLiveModule> {
   return import("@electric-sql/pglite/live");
 }
 
+// Called only after boot, by which point `host` exists.
+const onStorePoisoned = reloadOnPoisonedStore((reason, gen) =>
+  host.broadcastReload(reason, gen),
+);
+
 async function openRelational(namespace: string): Promise<DetectedMajor> {
   try {
     const detected = coerceMajor(
@@ -201,7 +207,7 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
     const relationalKysely = new Kysely<unknown>({
-      dialect: new HardenedPGliteDialect(pg),
+      dialect: new HardenedPGliteDialect(pg, { onPoisoned: onStorePoisoned }),
     });
     relational.kysely = relationalKysely;
     relational.db = createRelationalDb(relationalKysely);
@@ -340,7 +346,7 @@ const host = new ReactorHost({
       const pg = reactor.pg;
       owned.reactorPg = pg;
       owned.reactorDb = new Kysely<Database>({
-        dialect: new HardenedPGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(pg, { onPoisoned: onStorePoisoned }),
       });
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
