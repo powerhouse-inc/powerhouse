@@ -15,6 +15,16 @@ function manifest(documentType: string, to: number) {
 
 type Namespace = Record<string, unknown>;
 
+function deferred() {
+  let resolve!: (namespace: Namespace) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<Namespace>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 /** A loader whose URL imports come from a table the test controls. */
 function loaderOver(
   namespaces: Record<string, Namespace | (() => Promise<Namespace>)>,
@@ -213,6 +223,38 @@ describe("WorkerPackageLoader", () => {
     ]);
   });
 
+  it("lets the newest of two overlapping reloads win", async () => {
+    const first = deferred();
+    const second = deferred();
+    const { loader } = loaderOver({
+      "https://host.test/p.js?t=1": { P: fakeModel("test/p") },
+      "https://host.test/p.js?t=2": () => first.promise,
+      "https://host.test/p.js?t=3": () => second.promise,
+    });
+    await loader.loadSources([
+      { name: "p", url: "https://host.test/p.js?t=1" },
+    ]);
+
+    const older = loader.reloadSources([
+      { name: "p", url: "https://host.test/p.js?t=2" },
+    ]);
+    const newer = loader.reloadSources([
+      { name: "p", url: "https://host.test/p.js?t=3" },
+    ]);
+    second.resolve({ P2: fakeModel("test/p", 2) });
+    const newerResult = await newer;
+    first.resolve({
+      P3: fakeModel("test/p", 3),
+      Extra: fakeModel("test/extra"),
+    });
+    const olderResult = await older;
+
+    expect(newerResult).toEqual({ types: ["test/p"], failures: [] });
+    expect(olderResult).toEqual({ types: [], failures: [] });
+    expect(moduleKeys(loader)).toEqual(["test/p@2"]);
+    expect(loader.loadFailures).toEqual([]);
+  });
+
   it("drops and reports a type a reloaded source no longer exports", async () => {
     const { loader } = loaderOver({
       "https://host.test/p.js?t=1": {
@@ -231,5 +273,25 @@ describe("WorkerPackageLoader", () => {
 
     expect(types.sort()).toEqual(["test/a", "test/b"]);
     expect(moduleKeys(loader)).toEqual(["test/a@1"]);
+  });
+
+  it("shares one import between concurrent loads of the same package", async () => {
+    const { loader, importPackage } = loaderOver(
+      {
+        "https://cdn.test/pkg/browser/document-models/index.js": {
+          M: fakeModel("ph/lazy"),
+        },
+      },
+      ["pkg"],
+    );
+
+    const [a, b] = await Promise.all([
+      loader.load("ph/lazy"),
+      loader.load("ph/lazy"),
+    ]);
+
+    expect(a.documentModel.global.id).toBe("ph/lazy");
+    expect(b).toBe(a);
+    expect(importPackage).toHaveBeenCalledTimes(1);
   });
 });

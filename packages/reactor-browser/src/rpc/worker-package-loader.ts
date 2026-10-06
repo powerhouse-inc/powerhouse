@@ -29,6 +29,7 @@ export type PackageLoadFailure = {
 
 type SourceReplacement =
   | { status: "replaced"; types: Set<string> }
+  | { status: "stale" }
   | { status: "failed"; failure: PackageLoadFailure };
 
 function packageName(spec: string): string {
@@ -104,6 +105,9 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   private readonly manifestTypesBySource = new Map<string, Set<string>>();
   private readonly loadedSpecs = new Set<string>();
   private readonly failures: PackageLoadFailure[] = [];
+  private readonly pendingLoads = new Map<string, Promise<void>>();
+  private readonly generationBySource = new Map<string, number>();
+  private generation = 0;
 
   constructor(options: WorkerPackageLoaderOptions) {
     this.cdnUrl = options.cdnUrl.replace(/\/$/, "");
@@ -136,7 +140,8 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
    * watch rebuild re-sends the same source under a cache-busted URL). Returns
    * every document type touched - removed, re-added, or new - so the caller
    * can replace the registry's version families. A source whose import fails
-   * keeps its previous modules and is reported in `failures`.
+   * keeps its previous modules and is reported in `failures`; one superseded
+   * by a newer reload of the same source contributes nothing.
    */
   async reloadSources(
     sources: WorkerPackageSource[],
@@ -151,7 +156,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     for (const result of results) {
       if (result.status === "replaced") {
         for (const type of result.types) types.add(type);
-      } else {
+      } else if (result.status === "failed") {
         failures.push(result.failure);
       }
     }
@@ -235,26 +240,43 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     await this.loadFromUrl(spec, url);
   }
 
-  private async loadFromUrl(key: string, url: string): Promise<void> {
+  // Concurrent loads of one key share an import; a separate generation would
+  // mark the earlier one stale and its caller would miss the module.
+  private loadFromUrl(key: string, url: string): Promise<void> {
     if (this.loadedSpecs.has(key)) {
-      return;
+      return Promise.resolve();
     }
-    await this.replaceSource(key, url);
+    let pending = this.pendingLoads.get(key);
+    if (!pending) {
+      pending = this.replaceSource(key, url)
+        .finally(() => this.pendingLoads.delete(key))
+        .then(() => undefined);
+      this.pendingLoads.set(key, pending);
+    }
+    return pending;
   }
 
-  // A failed import leaves the key's previous modules, manifests and loaded
-  // state untouched.
+  // Only the newest call per key commits, and a failed import leaves the
+  // key's previous modules, manifests and loaded state untouched.
   private async replaceSource(
     key: string,
     url: string,
   ): Promise<SourceReplacement> {
+    const generation = ++this.generation;
+    this.generationBySource.set(key, generation);
     let namespace: Record<string, unknown>;
     try {
       namespace = await this.importNamespace(url);
     } catch (error) {
+      if (this.generationBySource.get(key) !== generation) {
+        return { status: "stale" };
+      }
       const failure = { name: packageName(key), url, error };
       this.failures.push(failure);
       return { status: "failed", failure };
+    }
+    if (this.generationBySource.get(key) !== generation) {
+      return { status: "stale" };
     }
     const types = new Set<string>();
     for (const removedKey of this.keysBySource.get(key) ?? []) {
