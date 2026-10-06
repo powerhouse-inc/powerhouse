@@ -132,6 +132,44 @@ describe("createDriveFetchMiddleware", () => {
     expect(nextCalls).toHaveLength(1);
   });
 
+  it("passes through a cache-miss mutation that only creates, whatever its name", async () => {
+    const cache = makeCache([]);
+    const handler = createDriveFetchMiddleware(cache)(next);
+
+    const res = await handler(
+      makeRequest({
+        driveId: "new-drive",
+        body: {
+          operationName: "CreateDocument",
+          query:
+            "mutation CreateDocument($d: JSONObject!) { createDocument(document: $d) { id } }",
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(nextCalls).toHaveLength(1);
+  });
+
+  it("returns 421 for a cache-miss mutation that does more than create", async () => {
+    const cache = makeCache([]);
+    const handler = createDriveFetchMiddleware(cache)(next);
+
+    const res = await handler(
+      makeRequest({
+        driveId: "drive-foreign",
+        body: {
+          operationName: "CreateAndMutate",
+          query:
+            'mutation CreateAndMutate { createDocument(document: {}) { id } mutateDocument(documentIdentifier: "x", actions: []) { id } }',
+        },
+      }),
+    );
+
+    expect(res.status).toBe(421);
+    expect(nextCalls).toHaveLength(0);
+  });
+
   it("returns 421 wrong-shard for cache-miss on a non-bypass operation", async () => {
     const cache = makeCache(["drive-a"]);
     const handler = createDriveFetchMiddleware(cache)(next);
