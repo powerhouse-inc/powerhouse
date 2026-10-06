@@ -7,6 +7,7 @@ import type {
   GetDocumentQuery,
 } from "../../src/graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
+import { GraphQLOperationNotSupportedError } from "../../src/graphql-client/errors.js";
 import {
   findIsServableOverGraphQL,
   GraphQLReactorClient,
@@ -195,9 +196,12 @@ describe("GraphQLReactorClient.get", () => {
   it("rejects point-in-time views", async () => {
     const sdk = createMockSdk();
 
-    await expect(
-      createClientWith(sdk).get("doc-1", { revision: 3 }),
-    ).rejects.toThrow("point-in-time views are not supported");
+    const read = createClientWith(sdk).get("doc-1", { revision: 3 });
+
+    await expect(read).rejects.toThrow("point-in-time views are not supported");
+    await expect(read).rejects.toSatisfy((error) =>
+      GraphQLOperationNotSupportedError.isError(error),
+    );
     expect(sdk.GetDocument).not.toHaveBeenCalled();
   });
 
@@ -486,9 +490,12 @@ describe("GraphQLReactorClient.find", () => {
   it("refuses a search naming ids, which the query cannot honour", async () => {
     const sdk = createMockSdk();
 
-    await expect(
-      createClientWith(sdk).find({ ids: ["doc-1"] }),
-    ).rejects.toThrow(/cannot filter by ids or slugs/);
+    const found = createClientWith(sdk).find({ ids: ["doc-1"] });
+
+    await expect(found).rejects.toThrow(/cannot filter by ids or slugs/);
+    await expect(found).rejects.toBeInstanceOf(
+      GraphQLOperationNotSupportedError,
+    );
     expect(sdk.FindDocuments).not.toHaveBeenCalled();
   });
 

@@ -49,6 +49,7 @@ import {
   makeAuthMiddleware,
   type BearerTokenProvider,
 } from "./auth.js";
+import { GraphQLOperationNotSupportedError } from "./errors.js";
 import {
   MutateDocumentWithOperationsDocument,
   type MutateDocumentWithOperationsResult,
@@ -281,11 +282,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * each by-contract limitations the query cannot express -- running it anyway
    * would return every document instead of the named ones, or head instead of
    * the asked-for revision, a silently wrong answer. {@link findIsServableOverGraphQL}
-   * is the single predicate that decides this; the router's remote backend
-   * consults the same predicate and turns an unservable `find` into its typed
-   * not-supported signal so the collection-spanning read excludes this backend
-   * instead of merging the wrong page. Drive enumeration itself filters by
-   * `type` at head, which is served.
+   * is the single predicate that decides this, and an unservable `find` throws
+   * {@link GraphQLOperationNotSupportedError}. Drive enumeration itself filters
+   * by `type` at head, which is served.
    */
   async find<TDocument extends PHDocument = PHDocument>(
     search: SearchFilter,
@@ -294,8 +293,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     signal?: AbortSignal,
   ): Promise<PagedResults<TDocument>> {
     if (searchNamesIdentifiers(search)) {
-      throw new Error(
-        "GraphQLReactorClient.find cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId",
+      throw new GraphQLOperationNotSupportedError(
+        "find",
+        "it cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId",
       );
     }
 
@@ -971,7 +971,8 @@ export function viewFilterInputFromViewFilter(
   }
 
   if (viewIsPointInTime(view)) {
-    throw new Error(
+    throw new GraphQLOperationNotSupportedError(
+      "view",
       "point-in-time views are not supported by GraphQLReactorClient",
     );
   }
