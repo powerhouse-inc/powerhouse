@@ -216,23 +216,18 @@ describe("workflow authoring tools", () => {
   });
 
   it("getWorkflowBlockConfig says when a block needs a reactor connection", async () => {
-    const { fetchMock } = graphqlFetch({
-      Descriptor: () => ({
-        workflowRuntime: {
-          blockDescriptor: {
-            displayName: "Docs",
-            auth: null,
-            action: {
-              displayName: "Archive invoice",
-              requireAuth: false,
-              requireReactor: "write",
-              props: [],
-            },
-          },
+    serve({
+      blockDescriptor: () => ({
+        displayName: "Docs",
+        auth: null,
+        action: {
+          displayName: "Archive invoice",
+          requireAuth: false,
+          requireReactor: "write",
+          props: [],
         },
       }),
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowBlockConfig").callback({
       pieceName: "@acme/piece-docs",
       pieceVersion: "1.0.0",
