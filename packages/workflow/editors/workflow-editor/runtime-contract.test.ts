@@ -52,6 +52,8 @@ const CALLS: { [K in Operation]: Parameters<RuntimeClient[K]> } = {
   fireWorkflow: ["wf-1", { a: 1 }],
   rerunRun: ["run-1"],
   loadBlockOptions: [BLOCK, "channel", { a: 1 }, "conn-1", "gen"],
+  fetchReactorAccess: [],
+  fetchReactorAccessDenial: ["wf-1"],
 };
 
 describe("the runtime client against the workflow-runtime schema", () => {
