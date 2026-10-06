@@ -274,6 +274,8 @@ export class SyncManager
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
   private readonly purgedDocumentIds = new Set<string>();
+  // Requeued dead letters whose row stays until the retry's job succeeds.
+  private readonly requeuedDeadLetterIds = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
@@ -1489,13 +1491,84 @@ export class SyncManager
       });
   }
 
+  /** Keeps the row until the retry succeeds, so a crash cannot lose the op. */
+  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const source = await this.findDeadLetter(remote, id);
+    if (!source) {
+      return;
+    }
+
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    this.quarantinedDocumentIds.delete(source.documentId);
+
+    const requeued = new SyncOperation(
+      source.id,
+      source.jobId,
+      source.jobDependencies,
+      source.remoteName,
+      source.documentId,
+      source.scopes,
+      source.branch,
+      source.operations,
+    );
+    this.requeuedDeadLetterIds.add(source.id);
+    remote.channel.inbox.add(requeued);
+  }
+
+  /** A failed remove leaves a row for a later clear; the op itself is durable. */
+  private async dropRequeuedDeadLetter(id: string): Promise<void> {
+    if (!this.requeuedDeadLetterIds.delete(id)) {
+      return;
+    }
+    try {
+      await this.deadLetterStorage.remove(id);
+    } catch (error) {
+      this.logger.error(
+        "Failed to remove a requeued dead letter after its retry succeeded (@id, @error)",
+        id,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
   async clearDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
     const item = remote.channel.deadLetter.get(id);
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
+    this.requeuedDeadLetterIds.delete(id);
     await this.deadLetterStorage.remove(id);
+  }
+
+  /** Live item first; else scans storage for one the capped mailbox evicted. */
+  private async findDeadLetter(
+    remote: Remote,
+    id: string,
+  ): Promise<SyncOperation | DeadLetterRecord | undefined> {
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      return item;
+    }
+    let cursor = "0";
+    for (;;) {
+      const page = await this.deadLetterStorage.list(remote.meta.name, {
+        cursor,
+        limit: this.config.maxDeadLettersPerRemote,
+      });
+      const match = page.results.find((record) => record.id === id);
+      if (match) {
+        return match;
+      }
+      if (!page.nextCursor) {
+        return undefined;
+      }
+      cursor = page.nextCursor;
+    }
   }
 
   private recordPlanKeyMapping(planKey: string, jobId: string): void {
@@ -2152,12 +2225,15 @@ export class SyncManager
 
     if (this.isShutdown) return;
 
+    let resolved = false;
     if (completedJobInfo.status !== JobStatus.FAILED) {
       syncOp.executed();
       if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      resolved = true;
     } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
       this.tombstone(syncOp.documentId);
       syncOp.executed();
+      resolved = true;
     } else {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
@@ -2177,6 +2253,8 @@ export class SyncManager
 
     this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
+
+    if (resolved) await this.dropRequeuedDeadLetter(syncOp.id);
   }
 
   /** Reloads a marker with backoff; it stays in the inbox, not dead-lettered. */
@@ -2359,12 +2437,15 @@ export class SyncManager
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
 
+      let resolved = false;
       if (completedJobInfo.status !== JobStatus.FAILED) {
         syncOp.executed();
         if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+        resolved = true;
       } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
         this.tombstone(syncOp.documentId);
         syncOp.executed();
+        resolved = true;
       } else if (
         carriesMarker(syncOp) &&
         !isRefusedMarker(completedJobInfo.error)
@@ -2381,6 +2462,8 @@ export class SyncManager
       }
 
       remote.channel.inbox.remove(syncOp);
+
+      if (resolved) await this.dropRequeuedDeadLetter(syncOp.id);
     }
   }
 

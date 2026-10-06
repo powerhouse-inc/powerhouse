@@ -7,6 +7,7 @@ import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import type {
+  DeadLetterRecord,
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
   ISyncRemoteStorage,
@@ -18,7 +19,10 @@ import type {
 import { GraphQLRequestError } from "../../../src/sync/errors.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
-import type { ConnectionStateSnapshot } from "../../../src/sync/types.js";
+import {
+  ChannelErrorSource,
+  type ConnectionStateSnapshot,
+} from "../../../src/sync/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
 
 const CONNECTED: ConnectionStateSnapshot = {
@@ -235,6 +239,68 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     await expect(syncManager.clearDeadLetter("nope", "d1")).rejects.toThrow(
       /does not exist/,
     );
+    await expect(syncManager.requeueDeadLetter("nope", "d1")).rejects.toThrow(
+      /does not exist/,
+    );
+  });
+
+  it("requeues a dead letter back into the inbox and clears quarantine", async () => {
+    await addAccounts();
+    const dl = deadLetterOp("d1", "doc-b");
+    channels[0].deadLetter.add(dl);
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
+    // The row stays until the retry succeeds; the mock never drives the apply.
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+    expect(channels[0].deadLetter.remove).toHaveBeenCalled();
+    const added = channels[0].inbox.add.mock.calls.at(-1)?.[0] as SyncOperation;
+    expect(added.id).toBe("d1");
+    expect(added.documentId).toBe("doc-b");
+  });
+
+  it("requeues a dead letter the capped mailbox evicted from storage", async () => {
+    const record: DeadLetterRecord = {
+      id: "d9",
+      jobId: "job-d9",
+      jobDependencies: [],
+      remoteName: "accounts",
+      documentId: "doc-z",
+      scopes: ["global"],
+      branch: "main",
+      operations: [],
+      errorSource: ChannelErrorSource.Inbox,
+      errorMessage: "Document not found",
+      errorType: "MISSING_OPERATIONS",
+    };
+    await addAccounts();
+    vi.mocked(mockDeadLetterStorage.list)
+      .mockResolvedValueOnce({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+        nextCursor: "1",
+      })
+      .mockResolvedValueOnce({
+        results: [record],
+        options: { cursor: "1", limit: 100 },
+      });
+
+    await syncManager.requeueDeadLetter("accounts", "d9");
+
+    const added = channels[0].inbox.add.mock.calls.at(-1)?.[0] as SyncOperation;
+    expect(added.id).toBe("d9");
+    expect(added.documentId).toBe("doc-z");
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it("treats requeue of an unknown dead letter as a no-op", async () => {
+    await addAccounts();
+    channels[0].inbox.add.mockClear();
+
+    await syncManager.requeueDeadLetter("accounts", "missing");
+
+    expect(channels[0].inbox.add).not.toHaveBeenCalled();
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
   });
 
   it("clears a dead letter without re-queuing it", async () => {
