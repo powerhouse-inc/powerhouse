@@ -73,6 +73,9 @@ export type PieceAuthKind = "none" | "secret" | "custom";
 
 export type PieceTriggerStrategy = "polling" | "webhook";
 
+/** The reactor access an action or trigger declares, as `requireReactor`. */
+export type PieceRequireReactor = "read" | "write";
+
 // The name bundle every piece template takes, computed once by the file
 // builder so no two templates spell the same piece differently.
 export type PieceNames = {

@@ -1,7 +1,9 @@
+import { DOCUMENT_REF_KEY } from "@powerhousedao/pieces-framework/workflow";
 import { describe, expect, it } from "vitest";
 import {
-  documentBlockTree,
   documentEventTree,
+  documentReferenceTree,
+  documentTree,
   fieldsFromSdl,
   fromOutputSchema,
   fromSample,
@@ -237,15 +239,53 @@ describe("fromSample", () => {
 
 describe("static trees", () => {
   it("wraps document state and event action input", () => {
-    const block = documentBlockTree([{ name: "title", type: "String!" }]);
-    expect(block.at(-1)).toMatchObject({
+    const document = documentTree([{ name: "title", type: "String!" }]);
+    expect(document.map((node) => node.name)).toEqual(["header", "state"]);
+    expect(document.at(-1)).toMatchObject({
       name: "state",
-      children: [{ name: "title", type: "String!" }],
+      children: [
+        { name: "global", children: [{ name: "title", type: "String!" }] },
+      ],
     });
+    expect(documentReferenceTree().map((node) => node.name)).toEqual([
+      "documentId",
+      "documentType",
+      "branch",
+      "revision",
+    ]);
     const event = documentEventTree([{ name: "name", type: "String!" }]);
     const action = event.find((node) => node.name === "action");
     expect(action?.children?.find((n) => n.name === "input")).toMatchObject({
       children: [{ name: "name", type: "String!" }],
     });
+  });
+});
+
+describe("fromSample with document references", () => {
+  it("shows a reference as the document shape it was given", () => {
+    const nodes = fromSample(
+      {
+        [DOCUMENT_REF_KEY]: {
+          documentId: "doc-1",
+          documentType: "acme/ticket",
+          branch: "main",
+          revision: { global: 2 },
+        },
+        extractedFrom: { documentId: "prose" },
+      },
+      0,
+      (reference) =>
+        documentTree([
+          { name: "title", type: `String! (${reference.documentType})` },
+        ]),
+    );
+    expect(nodes.map((node) => node.name)).toEqual([
+      "header",
+      "state",
+      "extractedFrom",
+    ]);
+    expect(nodes[1]?.children?.[0]?.children).toEqual([
+      { name: "title", type: "String! (acme/ticket)" },
+    ]);
   });
 });

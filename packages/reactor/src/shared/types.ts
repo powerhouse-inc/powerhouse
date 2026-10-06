@@ -22,6 +22,13 @@ export type ErrorInfo = {
   stack: string;
   /** The document the error names, when it carries one. */
   documentId?: string;
+  /**
+   * The error instance this record was derived from, when the failer had
+   * one. Carried in memory so queue.failJob can emit a JOB_FAILED whose
+   * error is the typed instance; absent on records built from strings and
+   * on anything that crossed a serialization boundary.
+   */
+  source?: Error;
 };
 
 /**

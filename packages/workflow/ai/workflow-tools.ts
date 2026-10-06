@@ -12,8 +12,10 @@ import {
   getBlockForm,
 } from "../editors/workflow-editor/runtime-api.js";
 import type { BlockFormProp } from "../editors/workflow-editor/ui/forms.js";
+import { REACTOR_CONNECTOR_ID } from "../document-models/connection/v1/src/reactor-connection.js";
 import {
   CORE_PIECE,
+  REACTOR_PIECE,
   type BlockRef,
 } from "../editors/workflow-editor/ui/blocks.js";
 import { syncRuntimeUrl } from "./runtime-url.js";
@@ -65,6 +67,7 @@ const EXPRESSIONS = [
   "Step configs and edge conditions may contain expressions in double braces.",
   "{{trigger.payload.<field>}} reads the trigger payload: for the core manual trigger the payload passed to fireWorkflow; for the reactor piece's document triggers it carries documentId, documentType, driveId and name.",
   "{{steps.<key>.output.<path>}} reads an upstream step's output by that step's key, e.g. {{steps.fetch.output.body.title}}.",
+  "The reactor piece's document-create and document-dispatch output a reference { documentId, documentType, branch, revision }, e.g. {{steps.create.output.documentId}}; read the document with document-get to use its state. document-get outputs the document as { header, state }, e.g. {{steps.get.output.state.global.name}} or {{steps.get.output.header.id}}. document-find outputs { results, nextCursor }: each result has a header (and state with includeState), and nextCursor, present while more match, goes in a later find's cursor.",
   "{{variables.<key>}} reads a workflow variable.",
   "'a' || 'b' picks the first non-empty value, e.g. {{trigger.payload.url || 'https://example.com'}}.",
   "A whole-string expression yields the raw value; text around expressions is interpolated.",
@@ -76,6 +79,7 @@ const GRAPH_RULES = [
   "A step names its block with pieceName, pieceVersion and actionName; the trigger with pieceName, pieceVersion and triggerName. pieceVersion is an exact semver: copy the fields getWorkflowPieceBlocks or listWorkflowCoreBlocks return.",
   `The built-in blocks (manual, schedule and webhook triggers, branch and assert) belong to the piece ${CORE_PIECE}.`,
   "Steps whose piece needs a connection must set connectionId to a powerhouse/connection document id (see getConnections).",
+  `Every step and trigger whose block reports requireReactor (getWorkflowBlockConfig) must set reactorConnectionId to a powerhouse/connection document with authType REACTOR and connectorId ${REACTOR_CONNECTOR_ID} (see getConnections); the ${REACTOR_PIECE} blocks all do. Without one the block gets no reactor access and fails. The connection's config { endpoint: "local", access?: "read", filter?: { documentType?, documentId?, driveId?, actionType? } } limits which documents it reads and writes. connectionId stays for credentials; a document block normally needs none.`,
   "Runs execute the published snapshot, not the draft. PUBLISH_WORKFLOW only snapshots the draft, so publish again after every edit that should run.",
   "Only ENABLED workflows get trigger instances and can be fired. PUBLISH_WORKFLOW does not enable: to turn a workflow on, dispatch SET_WORKFLOW_STATUS ENABLED after PUBLISH_WORKFLOW (the same batch works). SET_WORKFLOW_STATUS ENABLED is refused until the workflow has been published once.",
 ];
@@ -120,7 +124,7 @@ export const getWorkflowPieceBlocksTool: PhAiToolDescriptor = {
 export const getWorkflowBlockConfigTool: PhAiToolDescriptor = {
   name: "getWorkflowBlockConfig",
   description:
-    "Describes the config of one block (a core block or a piece's action or trigger): prop names, types, whether required, allowed options, the output ports, and whether a connection is needed. Use it before writing a step or trigger config.",
+    "Describes the config of one block (a core block or a piece's action or trigger): prop names, types, whether required, allowed options, the output ports, whether a connection is needed, and requireReactor (read | write) when it needs a reactor connection. Use it before writing a step or trigger config.",
   inputSchema: {
     pieceName: z
       .string()
@@ -155,6 +159,8 @@ export const getWorkflowBlockConfigTool: PhAiToolDescriptor = {
       title: form.title,
       kind: kindOf(block),
       requiresConnection: form.auth === "required",
+      // read | write: the block needs a reactorConnectionId granting this.
+      requireReactor: form.requireReactor ?? null,
       props: form.props.map(describeProp),
       ports: portsFor(form),
     };

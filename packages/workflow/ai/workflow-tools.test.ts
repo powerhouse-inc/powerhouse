@@ -242,12 +242,41 @@ describe("workflow authoring tools", () => {
     } as never)) as {
       props: { name: string; required: boolean; options?: unknown[] }[];
       requiresConnection: boolean;
+      requireReactor: string | null;
       ports: string[];
     };
     expect(result.requiresConnection).toBe(false);
+    expect(result.requireReactor).toBeNull();
     expect(result.ports).toEqual(["next"]);
     expect(result.props.map((p) => p.name)).toEqual(["method", "url"]);
     expect(result.props[0].options).toEqual(["GET"]);
+  });
+
+  it("getWorkflowBlockConfig says when a block needs a reactor connection", async () => {
+    const { fetchMock } = graphqlFetch({
+      Descriptor: () => ({
+        workflowRuntime: {
+          blockDescriptor: {
+            displayName: "Docs",
+            auth: null,
+            action: {
+              displayName: "Archive invoice",
+              requireAuth: false,
+              requireReactor: "write",
+              props: [],
+            },
+          },
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const result = (await tool("getWorkflowBlockConfig").callback({
+      pieceName: "@acme/piece-docs",
+      pieceVersion: "1.0.0",
+      name: "archive_invoice",
+      kind: "action",
+    } as never)) as { requireReactor: string | null };
+    expect(result.requireReactor).toBe("write");
   });
 
   it("getWorkflowBlockConfig reports unknown blocks instead of throwing", async () => {
@@ -326,6 +355,9 @@ describe("workflow authoring tools", () => {
     expect(result.blocks.every((b) => b.pieceName === CORE)).toBe(true);
     expect(result.expressions.join("\n")).toContain("{{steps.<key>.output");
     expect(result.rules.join("\n")).toMatch(/ADD_EDGE/);
+    expect(result.rules.join("\n")).toMatch(
+      /reports requireReactor .* must set reactorConnectionId .* authType REACTOR/,
+    );
     // The reducer only snapshots: enabling is its own action.
     expect(result.rules.join("\n")).toContain(
       "dispatch SET_WORKFLOW_STATUS ENABLED after PUBLISH_WORKFLOW",

@@ -596,6 +596,10 @@ function PropField(props: {
   nested?: boolean;
   // Substituted into MARKDOWN props; absent until the endpoint is minted.
   webhookUrl?: string;
+  // Why options can't load right now; shown instead of loading them.
+  optionsBlocked?: string;
+  // Puts a resolver failure in the step's terms.
+  explainOptionsError?: (message: string) => string;
 }) {
   const { prop, value } = props;
   const fieldId = useId();
@@ -654,7 +658,7 @@ function PropField(props: {
   ) : undefined;
 
   const dynamicLoad =
-    props.loadOptions && prop.hasDynamicResolver
+    props.loadOptions && prop.hasDynamicResolver && !props.optionsBlocked
       ? () => props.loadOptions!(prop.name)
       : undefined;
   const isDropdown =
@@ -712,8 +716,12 @@ function PropField(props: {
       onClick={reload}
     />
   );
+  const blocked = prop.hasDynamicResolver ? props.optionsBlocked : undefined;
   const loadError = (state: LoadState<unknown>) =>
-    state.kind === "error" ? state.message : null;
+    blocked ??
+    (state.kind === "error"
+      ? (props.explainOptionsError?.(state.message) ?? state.message)
+      : null);
 
   const textInput = (extra: {
     type?: string;
@@ -1129,7 +1137,9 @@ function PropField(props: {
             placeholder={
               optionsUnavailable
                 ? "Options for nested fields are available soon"
-                : (result?.placeholder ?? prop.placeholder ?? "Choose…")
+                : dropdown.syncing
+                  ? "Waiting for the Switchboard…"
+                  : (result?.placeholder ?? prop.placeholder ?? "Choose…")
             }
           />
         </FieldShell>
@@ -1534,6 +1544,10 @@ export function PropertyForm(props: {
   scopeStepId?: string;
   // Auth-dependent resolvers re-run when this changes.
   connectionId?: string;
+  // Reactor-reading resolvers too.
+  reactorConnectionId?: string;
+  optionsBlocked?: string;
+  explainOptionsError?: (message: string) => string;
   // Rendered inside another field; nested resolvers are not loadable yet.
   nested?: boolean;
   // This workflow's endpoint URL, for a piece's setup markdown.
@@ -1572,6 +1586,7 @@ export function PropertyForm(props: {
           prop,
           config,
           props.connectionId,
+          props.reactorConnectionId,
         ),
       );
       if (!fields) continue;
@@ -1662,11 +1677,14 @@ export function PropertyForm(props: {
       config={current}
       secrets={props.secrets}
       scopeStepId={props.scopeStepId}
+      optionsBlocked={props.optionsBlocked}
+      explainOptionsError={props.explainOptionsError}
       resolverInput={resolverInputFor(
         props.block ?? NO_BLOCK,
         prop,
         current,
         props.connectionId,
+        props.reactorConnectionId,
       )}
       waitingOn={
         props.props.find(

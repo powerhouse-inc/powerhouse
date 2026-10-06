@@ -1704,6 +1704,12 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../reactor
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -1885,12 +1891,18 @@ importers:
       '@types/bun':
         specifier: 'catalog:'
         version: 1.3.8
+      '@types/cross-spawn':
+        specifier: 'catalog:'
+        version: 6.0.6
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.1(@vitest/browser@4.1.1(bufferutil@4.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(utf-8-validate@5.0.10)(vite@8.3.0(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.1))(vitest@4.1.1)
+      cross-spawn:
+        specifier: 'catalog:'
+        version: 7.0.6
       tinybench:
         specifier: ^2.9.0
         version: 2.9.0

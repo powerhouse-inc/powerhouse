@@ -190,11 +190,13 @@ What's specific to workflows is which operations to dispatch, in this order:
 1. **`SET_WORKFLOW_NAME`** / `SET_WORKFLOW_DESCRIPTION`.
 2. **`SET_TRIGGER`**: `id` (an OID, the source of the entry edge),
    `pieceName`, `pieceVersion`, `triggerName`, `config`, optionally
-   `propertySettings`, and `connectionId` when the trigger's piece needs
-   credentials. One per workflow; `CLEAR_TRIGGER` removes it.
+   `propertySettings`, `connectionId` when the trigger's piece needs
+   credentials, and `reactorConnectionId` when the trigger declares reactor
+   access. One per workflow; `CLEAR_TRIGGER` removes it.
 3. **`ADD_STEP`**: `id`, `key`, `name`, `pieceName`, `pieceVersion`,
-   `actionName`, `config`, optionally `connectionId`, `timeoutSeconds`, `skip`,
-   `propertySettings` and a `position` for the canvas. The `key` is what
+   `actionName`, `config`, optionally `connectionId`, `reactorConnectionId`,
+   `timeoutSeconds`, `skip`, `propertySettings` and a `position` for the
+   canvas. The `key` is what
    expressions refer to, so choose it deliberately. `UPDATE_STEP`,
    `SET_STEP_CONFIG` and `REMOVE_STEP` follow. A step that runs past its
    `timeoutSeconds` fails.
@@ -259,7 +261,7 @@ build one of those the same way — with operations, in order.
 | Field | What goes in it |
 | --- | --- |
 | `connectorId` | The piece id, e.g. `@acme/piece-crm`: the piece, not one of its actions. |
-| `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. |
+| `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. `REACTOR` is a reactor connection, for a step whose block declares `requireReactor`: see [Reactor access from pieces](/academy/Learn/workflows/reactor-access). |
 | `config` | The **non-secret** auth properties, keyed by property name. |
 | `secretRefs` | One entry per secret property: `{ id, name, ref }`. |
 

@@ -40,6 +40,10 @@ export function stepConfigHash(step: WorkflowStepDef): string {
       config: step.config ?? {},
       connectionId: step.connectionId ?? null,
       propertySettings: schemas,
+      // Only when set, so a step without one keeps its hash.
+      ...(step.reactorConnectionId
+        ? { reactorConnectionId: step.reactorConnectionId }
+        : {}),
     }),
   );
 }

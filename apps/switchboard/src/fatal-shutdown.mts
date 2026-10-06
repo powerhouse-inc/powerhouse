@@ -38,13 +38,32 @@ export function installFatalErrorShutdown(
   const realExit = proc.exit.bind(proc);
   let shuttingDown = false;
 
+  /**
+   * Logs without ever throwing. onFatal runs inside the uncaughtException
+   * handler, so a logger whose transport is gone (EPIPE on a closed stdout)
+   * would otherwise throw from the handler that reports throws, killing the
+   * process before the shutdown it is supposed to run. A logging failure is
+   * swallowed: there is nowhere left to report it.
+   */
+  const logFatal = (message: string, err?: unknown): void => {
+    try {
+      if (err === undefined) {
+        logger.error(message);
+      } else {
+        logger.error(message, err);
+      }
+    } catch {
+      // The log transport itself failed; shutdown must keep moving.
+    }
+  };
+
   const onFatal = (kind: string, err: unknown): void => {
-    logger.error(`${kind}: @error`, err);
+    logFatal(`${kind}: @error`, err);
     if (shuttingDown) return;
     shuttingDown = true;
     proc.exitCode = 1;
     setTimeout(() => {
-      logger.error("Shutdown after fatal error timed out; exiting");
+      logFatal("Shutdown after fatal error timed out; exiting");
       realExit(1);
     }, FORCED_EXIT_MS).unref();
     proc.kill(proc.pid, "SIGTERM");

@@ -132,14 +132,18 @@ export class Reactor implements IReactor {
     this.setShutdown = setShutdown;
     this.setCompleted = setCompleted;
 
+    // Logs identifiers only. The whole job runs to tens of kilobytes per
+    // failure, which buries the message and can itself kill the process when
+    // stdout's reader is gone (write EPIPE); the payload stays reachable
+    // through the queue record by job id.
     this.eventBus.subscribe(
       ReactorEventTypes.JOB_FAILED,
       (_type, event: JobFailedEvent) => {
         this.logger.error(
-          "Job @JobId failed with @Message: @Job",
+          "Job @JobId for document @DocumentId failed with @Message",
           event.jobId,
+          event.job?.documentId ?? "unknown",
           event.error.message,
-          event.job,
         );
       },
     );

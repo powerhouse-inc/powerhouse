@@ -1,10 +1,13 @@
 // Presentation for the connection editor: connector picker driven by the
 // piece catalog, auth form driven by the piece's PieceAuth descriptor.
 import { useEffect, useId, useRef, useState } from "react";
-import type {
-  ConnectionAuthType,
-  ConnectionState,
-  ConnectionStatus,
+import {
+  isReactorConnectorId,
+  REACTOR_CONNECTOR_ID,
+  type ConnectionAuthType,
+  type ConnectionState,
+  type ConnectionStatus,
+  type ReactorConnectionConfigValue,
 } from "document-models/connection";
 import type {
   PieceSummary,
@@ -20,6 +23,7 @@ import {
 import { formatWhen } from "../workflow-studio/components/run-format.js";
 import { Icon } from "../shared/icons.js";
 import { AUTH_TYPE_LABEL } from "./status.js";
+import { ReactorConnectionSettings } from "./ReactorConnectionSettings.js";
 import {
   Button,
   FieldError,
@@ -54,6 +58,9 @@ export interface ConnectionCallbacks {
   setSecretRef: (name: string, ref: string) => void;
   removeSecretRef: (name: string) => void;
   setStatus: (status: ConnectionStatus) => void;
+  // Makes this a REACTOR connection, reaching documents rather than a service.
+  pickReactor: () => void;
+  setReactorConfig: (config: ReactorConnectionConfigValue) => void;
 }
 
 const inputClass = textInputClass;
@@ -574,8 +581,11 @@ export function ConnectionForm(props: {
   callbacks: ConnectionCallbacks;
   // Needed to sign an OAuth2 connection in.
   connectionId?: string;
+  // Lists Powerhouse documents beside the services; off for a piece's own.
+  offerReactor?: boolean;
 }) {
   const { state, callbacks } = props;
+  const reactor = isReactorConnectorId(state.connectorId);
   const catalogQuery = usePieceCatalog();
   const catalog = catalogQuery.data ?? (catalogQuery.isError ? [] : null);
 
@@ -621,26 +631,42 @@ export function ConnectionForm(props: {
       <div>
         <LabelRow label="Service" />
         <Select
-          value={packageName}
+          value={reactor ? REACTOR_CONNECTOR_ID : packageName}
           loading={catalog === null}
           placeholder="Choose the service to connect"
-          options={(catalog ?? []).map((entry) => ({
-            value: entry.name,
-            label: entry.displayName,
-            // Its only sign-in method is one this runtime can't store.
-            ...(planFromAuth(entry.auth).authType === UNKNOWN_AUTH
-              ? { disabled: true, description: AUTH_TYPE_LABEL[UNKNOWN_AUTH] }
-              : { description: entry.description }),
-            icon: entry.logoUrl ? (
-              <img
-                src={entry.logoUrl}
-                alt=""
-                loading="lazy"
-                className="h-4 w-4 shrink-0 object-contain"
-              />
-            ) : undefined,
-          }))}
+          options={[
+            ...(props.offerReactor !== false || reactor
+              ? [
+                  {
+                    value: REACTOR_CONNECTOR_ID,
+                    label: "Powerhouse documents",
+                    description:
+                      "Lets a step read or write documents on this Switchboard",
+                  },
+                ]
+              : []),
+            ...(catalog ?? []).map((entry) => ({
+              value: entry.name,
+              label: entry.displayName,
+              // Its only sign-in method is one this runtime can't store.
+              ...(planFromAuth(entry.auth).authType === UNKNOWN_AUTH
+                ? { disabled: true, description: AUTH_TYPE_LABEL[UNKNOWN_AUTH] }
+                : { description: entry.description }),
+              icon: entry.logoUrl ? (
+                <img
+                  src={entry.logoUrl}
+                  alt=""
+                  loading="lazy"
+                  className="h-4 w-4 shrink-0 object-contain"
+                />
+              ) : undefined,
+            })),
+          ]}
           onChange={(name) => {
+            if (name === REACTOR_CONNECTOR_ID) {
+              callbacks.pickReactor();
+              return;
+            }
             const picked = catalog?.find((entry) => entry.name === name);
             if (picked) callbacks.pickPiece(picked);
           }}
@@ -648,7 +674,11 @@ export function ConnectionForm(props: {
         {piece ? <HintText text={piece.description} /> : null}
       </div>
 
-      {plans.length > 1 ? (
+      {reactor ? (
+        <ReactorConnectionSettings state={state} callbacks={callbacks} />
+      ) : null}
+
+      {!reactor && plans.length > 1 ? (
         <div>
           <LabelRow label="Sign in with" />
           <Select
@@ -680,7 +710,7 @@ export function ConnectionForm(props: {
         </div>
       ) : null}
 
-      {plan.supported ? null : (
+      {plan.supported || reactor ? null : (
         <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
           {plan.authType === UNKNOWN_AUTH
             ? `${plan.declaredType ?? "This sign-in method"}: not supported by this runtime.`

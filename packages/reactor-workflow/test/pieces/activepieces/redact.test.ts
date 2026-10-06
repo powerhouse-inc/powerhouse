@@ -123,6 +123,25 @@ describe("key-based redaction", () => {
       tries: [{ password: "[redacted:password]" }, { ok: true }],
     });
   });
+
+  it("keeps a document's per-scope revision, auth scope included", () => {
+    const reference = {
+      documentId: "doc-1",
+      documentType: "acme/invoice",
+      branch: "main",
+      revision: { global: 2, auth: 1 },
+    };
+    expect(redact({ $documentRef: reference })).toEqual({
+      $documentRef: reference,
+    });
+    // Anything else under "revision" is walked as usual.
+    expect(
+      redact({ documentType: "x", revision: { auth: "Bearer abc" } }),
+    ).toEqual({ documentType: "x", revision: { auth: "[redacted:auth]" } });
+    expect(redact({ revision: { auth: 1 } })).toEqual({
+      revision: { auth: "[redacted:auth]" },
+    });
+  });
 });
 
 describe("bounds", () => {
@@ -193,6 +212,115 @@ describe("the value bar", () => {
   });
 });
 
+// The free-text pass was rewritten for linear-time matching (TEXT_FIELD's
+// signature alternative and URL_USERINFO are anchored on their literals
+// now). This table pins every string shape the old patterns redacted, so
+// the rewrite cannot have narrowed what gets caught.
+describe("free-text shapes that stay redacted", () => {
+  const redacted: [string, string][] = [
+    // Fixed header and field names, with their separator variants.
+    [
+      "authorization: Bearer abc12345",
+      "authorization: [redacted:authorization]",
+    ],
+    [
+      "proxy-authorization=abc12345",
+      "proxy-authorization=[redacted:proxy-authorization]",
+    ],
+    ["api-key=abc12345", "api-key=[redacted:api-key]"],
+    ["api_key: abc12345", "api_key: [redacted:api_key]"],
+    ["apikey=abc12345", "apikey=[redacted:apikey]"],
+    ["x-api-key: abc12345", "x-api-key: [redacted:x-api-key]"],
+    ["access_token=abc12345", "access_token=[redacted:access_token]"],
+    ["refresh-token=abc12345", "refresh-token=[redacted:refresh-token]"],
+    ["client_secret=abc12345", "client_secret=[redacted:client_secret]"],
+    ["set-cookie: session=1", "set-cookie: [redacted:set-cookie]"],
+    ["cookie: session=1", "cookie: [redacted:cookie]"],
+    ["password=hunter22", "password=[redacted:password]"],
+    ["secret: abc12345", "secret: [redacted:secret]"],
+    ["token = abc12345", "token = [redacted:token]"],
+    // The name quoted, the value quoted, and both.
+    ['"token": "abc12345"', '"token": "[redacted:token]"'],
+    ["'secret'= 'abc12345'", "'secret'= '[redacted:secret]'"],
+    // A scheme-carrying value is consumed whole.
+    ["token: Bearer abc12345", "token: [redacted:token]"],
+    // Signature with every affix arrangement the old pattern accepted.
+    ["signature=abc12345", "signature=[redacted:signature]"],
+    ["SIGNATURE=abc12345", "SIGNATURE=[redacted:signature]"],
+    [
+      "x-hub-signature-256: sha256=deadbeef",
+      "x-hub-signature-256: [redacted:x-hub-signature-256]",
+    ],
+    [
+      "X-HUB-SIGNATURE-256=deadbeef",
+      "X-HUB-SIGNATURE-256=[redacted:x-hub-signature-256]",
+    ],
+    [
+      "webhook_signature: abc",
+      "webhook_signature: [redacted:webhook_signature]",
+    ],
+    ["signature_v2=abc", "signature_v2=[redacted:signature_v2]"],
+    ["sha256-signature=abc", "sha256-signature=[redacted:sha256-signature]"],
+    ["a9_foo_signature=abc", "a9_foo_signature=[redacted:a9_foo_signature]"],
+    // A prefix chain that cannot reach a word boundary falls back to the
+    // bare word, exactly as the old pattern did.
+    ["\u00dc_b-signature=abc", "\u00dc_b-signature=[redacted:signature]"],
+    // Userinfo passwords, scheme kept, wherever the scheme starts.
+    [
+      "https://alice:s3cret@host/api",
+      "https://alice:[redacted:password]@host/api",
+    ],
+    ["HTTP://User:Pass@Host", "HTTP://User:[redacted:password]@Host"],
+    ["ftp+x.y://u:pass@h", "ftp+x.y://u:[redacted:password]@h"],
+    // The scheme only needs one letter somewhere before "://".
+    ["9http://user:pass@host", "9http://user:[redacted:password]@host"],
+  ];
+
+  it.each(redacted)("redacts %j", (input, expected) => {
+    expect(redactMessage(input)).toBe(expected);
+  });
+
+  const untouched: string[] = [
+    // "signature" embedded in a longer word is not a header.
+    "presignature=abc12345",
+    "signaturepost=abc12345",
+    "pre-signaturepost=abc12345",
+    // An underscore run with no word boundary before it.
+    "__signature=abc12345",
+    // No scheme letter before "://", so there is no userinfo to protect.
+    "1://user:pass@host",
+    "://user:pass@host",
+    // A name without a value separator is prose.
+    "my signature is nice",
+  ];
+
+  it.each(untouched)("leaves %j alone", (input) => {
+    expect(redactMessage(input)).toBe(input);
+  });
+});
+
+// The old TEXT_FIELD prefix ((?:[a-z0-9]+[-_])*signature) and the old
+// URL_USERINFO scheme ([a-z][a-z0-9+.-]*://) both rescanned long runs from
+// every offset: ~60s over a few hundred kilobytes. The bound is generous so
+// CI noise cannot trip it, while the quadratic forms blow far past it.
+describe("redaction performance", () => {
+  const BOUND_MS = 2000;
+
+  it("redacts 300 KiB of unbroken alphanumerics in bounded time", () => {
+    const text = "x".repeat(300 * 1024);
+    const start = performance.now();
+    expect(redact(text)).toBe(text);
+    expect(performance.now() - start).toBeLessThan(BOUND_MS);
+  });
+
+  it("redacts 300 KiB of hyphen-separated runs in bounded time", () => {
+    const text = "a0-".repeat(100 * 1024);
+    const start = performance.now();
+    expect(redactMessage(text)).toBe(text);
+    expect(performance.now() - start).toBeLessThan(BOUND_MS);
+  });
+});
+
 describe("what survives redaction", () => {
   it("keeps the rest of a query string after a redacted parameter", () => {
     expect(
@@ -231,5 +359,19 @@ describe("what survives redaction", () => {
       true,
     );
     expect(containsRedactedMarker({ a: [{ b: "fine" }] })).toBe(false);
+  });
+
+  it("counts a depth-truncation marker as unreplayable, matched whole", () => {
+    // The depth/node caps write "[truncated]" in place of an entire node;
+    // replaying that as data would be as unfaithful as replaying a redaction.
+    const bounded = redactError({
+      items: Array.from({ length: 2000 }, (_, i) => ({ i })),
+    });
+    expect(containsRedactedMarker(bounded)).toBe(true);
+    // Only the whole-value form is the marker: walk() never writes it into
+    // the middle of a string, so prose that mentions the word still replays.
+    expect(
+      containsRedactedMarker({ note: "the log was [truncated] by the shell" }),
+    ).toBe(false);
   });
 });

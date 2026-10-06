@@ -16,6 +16,8 @@ export interface WorkflowTriggerDef {
   pieceVersion: string;
   triggerName: string;
   connectionId?: string | null;
+  // A REACTOR connection, for a trigger that declares requireReactor.
+  reactorConnectionId?: string | null;
   config?: unknown;
   propertySettings?: PropertySettingDef[] | null;
 }
@@ -28,6 +30,8 @@ export interface WorkflowStepDef {
   pieceVersion: string;
   actionName: string;
   connectionId?: string | null;
+  // A REACTOR connection, for an action that declares requireReactor.
+  reactorConnectionId?: string | null;
   config: unknown;
   timeoutSeconds?: number | null;
   propertySettings?: PropertySettingDef[] | null;
@@ -61,6 +65,7 @@ export interface BlockExecution {
   // Step config with expressions already resolved against the run scope.
   config: unknown;
   connectionId?: string | null;
+  reactorConnectionId?: string | null;
   step: WorkflowStepDef;
   // Run-wide secret values (SECRET variables) the executor redacts as well.
   redactValues?: string[];
@@ -101,6 +106,8 @@ export interface StepExecutionRecord {
   output?: unknown;
   port?: string;
   error?: string;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  errorName?: string;
   // ISO times the block ran between; absent for skipped and replayed steps.
   startedAt?: string;
   endedAt?: string;
@@ -116,6 +123,7 @@ export interface WorkflowRunResult {
   status: WorkflowRunStatus;
   steps: StepExecutionRecord[];
   error?: string;
+  errorName?: string;
   // What ran but deserves a look, e.g. an edge on a port nothing emits.
   warnings?: string[];
 }

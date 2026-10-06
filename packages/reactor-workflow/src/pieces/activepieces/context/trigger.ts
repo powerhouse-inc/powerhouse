@@ -8,6 +8,7 @@ import {
   type KeyValueStore,
 } from "./action.js";
 import type { ConnectionsProvider, FlowsProvider } from "./props.js";
+import type { ReactorOption } from "./reactor-option.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
 import type { ApFilesService } from "./files.js";
@@ -82,7 +83,9 @@ export function validateSchedule(request: RecordedSchedule): RecordedSchedule {
   return { cronExpression: request.cronExpression, timezone };
 }
 
-export interface TriggerContextOptions {
+export type TriggerContextOptions = TriggerContextBaseOptions & ReactorOption;
+
+interface TriggerContextBaseOptions {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   store?: KeyValueStore;
@@ -198,6 +201,7 @@ export function buildTriggerContext(
       },
     },
     files: options.files ?? throwingStub("files"),
+    reactor: options.reactor ?? throwingStub("reactor"),
   };
 
   const context = withTouchTracking(base, touched, options.onTouch);

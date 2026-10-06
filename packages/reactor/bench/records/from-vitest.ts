@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { z } from "zod";
 import type {
   BenchmarkTier,
@@ -858,11 +858,18 @@ export function suitesFromVitest(
   return suites;
 }
 
+/**
+ * POSIX-separated, because the result is written to BENCHMARKS.jsonl and
+ * compared across machines: a record stamped on Windows would carry
+ * `bench\auth-scope.bench.ts` and never match one stamped on Linux.
+ */
 export function sourceFilesFromVitest(
   report: VitestBenchReport,
   cwd: string,
 ): string[] {
-  return report.files.map((file) => relative(cwd, file.filepath));
+  return report.files.map((file) =>
+    relative(cwd, file.filepath).split(sep).join("/"),
+  );
 }
 
 /**

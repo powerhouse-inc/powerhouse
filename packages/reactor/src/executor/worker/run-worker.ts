@@ -10,13 +10,14 @@ import {
 } from "../../storage/pool-instrumentation.js";
 import {
   buildWorkerExecutor,
-  defaultLoadFactory,
   type BuildWorkerExecutorOptions,
   type WorkerExecutorStack,
 } from "./build-worker-executor.js";
 import { createForwardingLogger } from "./forwarding-logger.js";
+import { defaultLoadFactory, loadDocumentModelSpec } from "./load-spec.js";
 import type {
   DbConfig,
+  DocumentModelSpec,
   FactorySpec,
   InitMessage,
   LoadModelMessage,
@@ -127,6 +128,10 @@ export function runWorker(
   const activeLoadFactory: NonNullable<
     BuildWorkerExecutorOptions["loadFactory"]
   > = overrides.loadFactory ?? defaultLoadFactory;
+  const loadModelSpec = overrides.loadFactory
+    ? async (spec: DocumentModelSpec) =>
+        (await activeLoadFactory(spec)) as DocumentModelModule
+    : loadDocumentModelSpec;
 
   function post(msg: WorkerMessage): void {
     parentPort.postMessage(msg);
@@ -278,7 +283,7 @@ export function runWorker(
     }
     let module: DocumentModelModule;
     try {
-      module = (await activeLoadFactory(msg.model.spec)) as DocumentModelModule;
+      module = await loadModelSpec(msg.model.spec);
     } catch (error) {
       post({
         type: "model-load-failed",

@@ -5,5 +5,13 @@
     "types": ["node"]
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules", ".tsbuild"]
+  "exclude": ["dist", "node_modules", ".tsbuild"],
+  "references": [
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
 }

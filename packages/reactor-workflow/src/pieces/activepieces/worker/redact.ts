@@ -69,8 +69,16 @@ const SENSITIVE_SUFFIXES = [
 
 // Signature is the one alternative that carries its own affixes, because a
 // webhook MAC header wraps the word: x-hub-signature-256.
+
+// The affixed form is anchored on the literal "signature", with the prefix
+// matched by a lookbehind placed after it. A leading prefix pattern
+// ((?:[a-z0-9]+[-_])*signature) retries from every segment of a long
+// hyphen-separated run that never ends in "signature", which is quadratic:
+// whole seconds over a few hundred kilobytes of journaled text. The
+// lookbehind runs once per occurrence of the literal instead, and captures
+// the prefix so the marker still names the whole header.
 const TEXT_FIELD = new RegExp(
-  String.raw`\b(authorization|proxy-authorization|api[-_]?key|x-api-key|access[-_]?token|refresh[-_]?token|client[-_]?secret|set-cookie|cookie|password|secret|token|(?:[a-z0-9]+[-_])*signature(?:[-_][a-z0-9]+)*)\b(["']?)(\s*[:=]\s*)(["']?)((?:(?:Bearer|Basic|Token)\s+)?[^\s",;&)}]+)\4`,
+  String.raw`(\b(?:authorization|proxy-authorization|api[-_]?key|x-api-key|access[-_]?token|refresh[-_]?token|client[-_]?secret|set-cookie|cookie|password|secret|token)|signature(?<=\b((?:[a-z0-9]+[-_])*)signature)(?:[-_][a-z0-9]+)*)\b(["']?)(\s*[:=]\s*)(["']?)((?:(?:Bearer|Basic|Token)\s+)?[^\s",;&)}]+)\5`,
   "gi",
 );
 
@@ -80,7 +88,14 @@ const QUERY_PARAM = /([?&])([A-Za-z0-9_.%[\]-]+)=([^&\s"'<>]+)/g;
 
 // The password half of a URL's userinfo, which no header or query pattern
 // reaches: https://user:s3cret@host/api.
-const URL_USERINFO = /([a-z][a-z0-9+.-]*:\/\/)([^/\s:@]+):([^/\s@]+)@/gi;
+
+// Anchored on "://" with the scheme checked by the lookbehind behind it: a
+// leading scheme pattern ([a-z][a-z0-9+.-]*) rescans a long unbroken
+// alphanumeric run from every offset, which is quadratic — tens of seconds
+// over a 256 KiB run. The scheme is not consumed, and not rewritten either
+// way; only the password half is replaced.
+const URL_USERINFO =
+  /:\/\/(?<=[a-z][a-z0-9+.-]*:\/\/)([^/\s:@]+):([^/\s@]+)@/gi;
 
 export function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -239,8 +254,7 @@ function redactText(text: string, pass: Pass): string {
   let result = replaceValues(text, pass.values);
   result = result.replace(
     URL_USERINFO,
-    (_match, scheme: string, user: string) =>
-      `${scheme}${user}:${marker("password")}@`,
+    (_match, user: string) => `://${user}:${marker("password")}@`,
   );
   result = result.replace(QUERY_PARAM, (match, sep: string, name: string) =>
     isSensitiveName(safeDecode(name)) ? `${sep}${name}=${marker(name)}` : match,
@@ -252,11 +266,16 @@ function redactText(text: string, pass: Pass): string {
 
   // Skipping a value that is already a marker keeps this pass from re-matching
   // what the query pass just wrote and swallowing the rest of the string.
+
+  // signaturePrefix is the lookbehind's capture: the affixes before
+  // "signature" sit outside the match, so they are stitched back onto the
+  // name only for the marker — the text keeps them where they were.
   return result.replace(
     TEXT_FIELD,
     (
       match,
       name: string,
+      signaturePrefix: string | undefined,
       nameQuote: string,
       sep: string,
       quote: string,
@@ -264,7 +283,26 @@ function redactText(text: string, pass: Pass): string {
     ) =>
       value.startsWith(REDACTED_PREFIX)
         ? match
-        : `${name}${nameQuote}${sep}${quote}${marker(name)}${quote}`,
+        : `${name}${nameQuote}${sep}${quote}${marker(`${signaturePrefix ?? ""}${name}`)}${quote}`,
+  );
+}
+
+// A document header's or reference's operation counts per scope. Scope names
+// such as "auth" are not credentials, and the counts are numbers.
+function isScopeRevision(
+  parent: Record<string, unknown>,
+  key: string,
+  entry: unknown,
+): boolean {
+  return (
+    key === "revision" &&
+    typeof parent.documentType === "string" &&
+    typeof entry === "object" &&
+    entry !== null &&
+    !Array.isArray(entry) &&
+    Object.values(entry).every(
+      (count) => typeof count === "number" && Number.isFinite(count),
+    )
   );
 }
 
@@ -289,10 +327,13 @@ function walk(
       return value.map((entry) => walk(entry, pass, depth + 1, seen));
     }
     const result: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
+    const record = value as Record<string, unknown>;
+    for (const [key, entry] of Object.entries(record)) {
       result[key] = isSensitiveName(key)
         ? marker(key)
-        : walk(entry, pass, depth + 1, seen);
+        : isScopeRevision(record, key, entry)
+          ? { ...(entry as Record<string, number>) }
+          : walk(entry, pass, depth + 1, seen);
     }
     return result;
   } finally {
@@ -321,8 +362,14 @@ export function redactError(value: unknown, options?: RedactOptions): unknown {
 
 // True when a value carries a marker this module wrote. Rerun uses it to
 // refuse a journaled output it cannot faithfully replay.
+
+// TRUNCATED_MARKER is matched whole, not as a substring: walk() only ever
+// writes it in place of an entire capped node, so prose that merely mentions
+// the word keeps replaying.
 export function containsRedactedMarker(value: unknown, depth = 0): boolean {
-  if (typeof value === "string") return value.includes(REDACTED_PREFIX);
+  if (typeof value === "string") {
+    return value.includes(REDACTED_PREFIX) || value === TRUNCATED_MARKER;
+  }
   if (typeof value !== "object" || value === null) return false;
   if (depth >= STACK_GUARD_DEPTH) return false;
   return Object.values(value).some((entry) =>

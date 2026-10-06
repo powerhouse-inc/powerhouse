@@ -1,6 +1,11 @@
 // Persisted run journal in the relational "workflow_runtime" namespace.
 // Dates are ISO text columns: PGlite parses `timestamp` as local time.
 import type { BlockIdentity } from "@powerhousedao/pieces-framework/block-type";
+import {
+  DOCUMENT_REF_KEY,
+  isDocumentRefMarker,
+  referenceDocuments,
+} from "@powerhousedao/pieces-framework/workflow";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   redact,
@@ -23,6 +28,8 @@ export interface RunRow {
   trigger_payload: string | null;
   status: string;
   error: string | null;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  error_name: string | null;
   // When the run was journaled; the listing's stable key, unlike started_at.
   enqueued_at: string;
   // When it began executing; a PENDING run holds its enqueue time here.
@@ -52,6 +59,7 @@ export interface StepExecutionRow {
   output: string | null;
   port: string | null;
   error: string | null;
+  error_name: string | null;
   started_at: string | null;
   ended_at: string | null;
   // The piece version that ran and how it matched the pin; null when unresolved.
@@ -354,6 +362,16 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
       .execute();
   } catch {
     // column already exists
+  }
+  for (const table of ["run", "step_execution"] as const) {
+    try {
+      await db.schema
+        .alterTable(table)
+        .addColumn("error_name", "text")
+        .execute();
+    } catch {
+      // column already exists
+    }
   }
 
   await db.schema
@@ -804,6 +822,93 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
   }
 }
 
+// The journal's ceiling per payload: a step's input and output, and a run's
+// trigger payload, are each capped at serialization time. Over the cap, the
+// row keeps a marker — the original byte count and a prefix of the
+// serialized JSON — rather than refusing the write, because the journal is
+// diagnostic and a refused write loses the evidence. Half the piece-store ceiling: the piece store holds working state
+// a trigger needs back intact, while the journal only needs enough of a
+// payload to diagnose a run (the case that forced the cap was document-get
+// journaling whole multi-megabyte documents, where the first kilobytes carry
+// everything a reader uses).
+//
+// This bounds row width only. Row count is bounded by the retention sweep
+// (run-retention.ts), which is off unless PH_WORKFLOWS_RUN_RETENTION_DAYS is
+// set — change either bound with the other in view.
+export const STEP_PAYLOAD_MAX_BYTES = 256 * 1024;
+
+// What survives of an over-cap payload: the head of its serialized JSON.
+export const STEP_PAYLOAD_PREFIX_CHARS = 32 * 1024;
+
+// The shape journaled in place of an over-cap payload.
+export interface TruncatedStepPayload {
+  truncated: true;
+  // Byte length of the serialized payload the prefix was cut from.
+  bytes: number;
+  prefix: string;
+  // The payload's own top-level ids, carried past the cap: erasure
+  // (journaledPayloadNames) and run serving (triggerDocumentIds) both read
+  // them off the journaled row, and would otherwise lose the row the moment
+  // it is capped. Ids, not bulk.
+  documentId?: string;
+  driveId?: string;
+}
+
+// True for a journaled value this store truncated. Rerun uses it to
+// re-execute a step instead of replaying a marker as the step's output, and
+// to refuse a rerun whose trigger payload survives only as a marker.
+export function isTruncatedStepPayload(
+  value: unknown,
+): value is TruncatedStepPayload {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    record.truncated === true &&
+    typeof record.bytes === "number" &&
+    typeof record.prefix === "string"
+  );
+}
+
+// The two top-level ids a journaled payload is matched by after the fact.
+// Top level only, and strings only: a list sample carries its ids per item,
+// and collecting those would grow with the payload — the one thing the cap
+// exists to prevent (store.erase-runs.test.ts pins that accepted gap).
+function topLevelDocumentIds(
+  value: unknown,
+): Pick<TruncatedStepPayload, "documentId" | "driveId"> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  const { documentId, driveId } = value as Record<string, unknown>;
+  return {
+    ...(typeof documentId === "string" ? { documentId } : {}),
+    ...(typeof driveId === "string" ? { driveId } : {}),
+  };
+}
+
+// Takes the already-redacted payload value, not its JSON: the marker keeps
+// the value's top-level document ids, which a serialized string cannot give
+// back without a second parse.
+function cappedPayload(value: unknown): string | null {
+  const json = jsonOrNull(value);
+  if (json === null) return null;
+  const bytes = Buffer.byteLength(json, "utf8");
+  if (bytes <= STEP_PAYLOAD_MAX_BYTES) return json;
+  let prefix = json.slice(0, STEP_PAYLOAD_PREFIX_CHARS);
+  // Never cut through a surrogate pair; the prefix must stay serializable.
+  const last = prefix.charCodeAt(prefix.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) prefix = prefix.slice(0, -1);
+  const marker: TruncatedStepPayload = {
+    truncated: true,
+    bytes,
+    prefix,
+    ...topLevelDocumentIds(value),
+  };
+  return JSON.stringify(marker);
+}
+
 // Every column of a step_execution row but its surrogate id, shared by the
 // per-step write and the closing sweep so the two cannot drift.
 
@@ -812,6 +917,9 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
 
 // Only the key-based pass runs here; the run's own secret values are the
 // engine's to match, and the store never sees them.
+
+// A document in an output is journaled as a reference marker, before
+// redaction and the cap: whoever needs its state reads the document.
 function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
   return {
     run_id: runId,
@@ -821,10 +929,11 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     piece_name: step.pieceName,
     block_name: step.blockName,
     status: step.status,
-    input: jsonOrNull(redact(step.input)),
-    output: jsonOrNull(redact(step.output)),
+    input: cappedPayload(redact(step.input)),
+    output: cappedPayload(redact(referenceDocuments(step.output))),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
+    error_name: step.errorName ?? null,
     started_at: step.startedAt ?? null,
     ended_at: step.endedAt ?? null,
     piece_version: step.piece?.version ?? null,
@@ -901,9 +1010,15 @@ function journaledPayloadNames(
   return (Array.isArray(value) ? value : [value]).some((item) => {
     if (item === null || typeof item !== "object") return false;
     const record = item as Record<string, unknown>;
-    return [record.documentId, record.driveId, record.parentId].some(
-      (id) => typeof id === "string" && ids.includes(id),
-    );
+    const referenced = isDocumentRefMarker(record)
+      ? record[DOCUMENT_REF_KEY].documentId
+      : undefined;
+    return [
+      record.documentId,
+      record.driveId,
+      record.parentId,
+      referenced,
+    ].some((id) => typeof id === "string" && ids.includes(id));
   });
 }
 
@@ -958,6 +1073,7 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "status",
   "port",
   "error",
+  "error_name",
   "started_at",
   "ended_at",
   "piece_version",
@@ -1147,7 +1263,7 @@ export class WorkflowRunStore {
         workflow_name: "",
         workflow_version: 0,
         trigger_kind: options.triggerKind,
-        trigger_payload: jsonOrNull(redact(options.triggerPayload)),
+        trigger_payload: cappedPayload(redact(options.triggerPayload)),
         status: PENDING_RUN_STATUS,
         error: null,
         enqueued_at: now,
@@ -1191,7 +1307,7 @@ export class WorkflowRunStore {
         workflow_name: options.workflowName,
         workflow_version: options.workflowVersion,
         trigger_kind: options.triggerKind,
-        trigger_payload: jsonOrNull(redact(options.triggerPayload)),
+        trigger_payload: cappedPayload(redact(options.triggerPayload)),
         status: "RUNNING",
         error: null,
         enqueued_at: now,
@@ -1256,6 +1372,7 @@ export class WorkflowRunStore {
       .set({
         status: result.status,
         error: result.error ? redactMessage(result.error) : null,
+        error_name: result.errorName ?? null,
         ended_at: new Date().toISOString(),
         warnings: notes.length,
         warning_notes: notes.length > 0 ? JSON.stringify(notes) : null,
@@ -1316,6 +1433,7 @@ export class WorkflowRunStore {
           output: eb.ref("excluded.output"),
           port: eb.ref("excluded.port"),
           error: eb.ref("excluded.error"),
+          error_name: eb.ref("excluded.error_name"),
           started_at: eb.ref("excluded.started_at"),
           ended_at: eb.ref("excluded.ended_at"),
           piece_version: eb.ref("excluded.piece_version"),
@@ -1328,7 +1446,11 @@ export class WorkflowRunStore {
       .execute();
   }
 
-  async failRun(runId: string, error: string): Promise<void> {
+  async failRun(
+    runId: string,
+    error: string,
+    errorName?: string,
+  ): Promise<void> {
     this.runsInFlight.delete(runId);
     if (erasedRuns.delete(runId)) return;
     await this.db
@@ -1336,6 +1458,7 @@ export class WorkflowRunStore {
       .set({
         status: "FAILED",
         error: redactMessage(error),
+        error_name: errorName ?? null,
         ended_at: new Date().toISOString(),
       })
       .where("id", "=", runId)

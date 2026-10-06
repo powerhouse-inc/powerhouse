@@ -39,8 +39,9 @@ rather than restated here.
   contexts from `Store`, `ServerContext`, `FilesService`, `ConnectionsManager`,
   `FlowsContext`, `RunContext`, `TriggerHookContext` and `SetScheduleRequest`;
   the connection shapes from `AppConnectionType` and `AppConnectionValue`.
-  `PackagePiece`, `ReactorService` and `DEDUPE_KEY_PROPERTY` are the framework's
-  own Powerhouse half.
+  `PackagePiece`, `RequireReactor`, `ReactorClient`, `ReactorReadClient`, the
+  reactor error names and `DEDUPE_KEY_PROPERTY` are the framework's own
+  Powerhouse half.
 - The **enums stay strings here**. A piece bundle inlines its own copy of the
   framework, so a `PropertyType` or `TriggerStrategy` read off one shares no
   identity with ours. Every such value is compared as a string; nothing in
@@ -142,6 +143,17 @@ transport finds that child's code by walking up to this package's own
 `package.json` and reading `dist/worker-entry.js`, so `pnpm build` must have run
 before anything executes a piece — including the suites here.
 
+That entry is `src/worker/entry.ts`: the piece worker from `src/pieces`, plus
+`ctx.reactor` (`src/worker/reactor.ts`), which needs `@powerhousedao/reactor`
+and so lives outside the piece layer. For an action, trigger or option resolver
+that declares `requireReactor`, the host serves one `ReactorHostServer` per
+request over the child's IPC channel, as `{ type: "reactor-rpc", requestId,
+message }`; the worker builds a reactor RPC proxy per request and closes it when
+the request settles. The boot document models reach the child on fork as
+`{ type: "model-manifest", entries }`. A type the host loaded later is looked
+up with a `model-entries` host call the first time a piece asks for it. Either
+way the model is imported on first use.
+
 ## Blocks
 
 A step names its block the way Activepieces does, with three fields:
@@ -195,7 +207,9 @@ step tests. A block whose version is not an exact semver resolves to `missing`.
    note). At most five candidates are described per resolution.
 4. **Host-bound pieces** (`@powerhousedao/piece-core`,
    `@powerhousedao/piece-reactor`) always run the installed copy, with match
-   `installed`.
+   `installed`. Both ship with this runtime's packages and version with it;
+   `piece-reactor` reaches the reactor through `requireReactor` like any
+   other piece.
 5. **Missing** is the only failure: no source has the piece, or none of the
    candidates described has an action or trigger of that name.
 

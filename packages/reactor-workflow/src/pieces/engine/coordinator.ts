@@ -4,10 +4,14 @@ import {
   redactMessage,
   secretsFor,
 } from "../activepieces/worker/redact.js";
+import { PieceWorkerError } from "../activepieces/worker/host.js";
 import { evaluateCondition, type ExpressionScope } from "./expressions.js";
 import { resolveStepInput } from "./step-input.js";
 import { checkDynamicProperties } from "./dynamic-props.js";
-import { undeclaredPortEdges } from "@powerhousedao/pieces-framework/workflow";
+import {
+  referenceDocuments,
+  undeclaredPortEdges,
+} from "@powerhousedao/pieces-framework/workflow";
 import { stepConfigHash } from "./canonical.js";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import { blockLabel, pieceRecord, resolutionOf } from "./resolution.js";
@@ -83,6 +87,12 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
+// A piece's own error crosses the worker inside a PieceWorkerError.
+export function errorNameOf(error: unknown): string | undefined {
+  if (error instanceof PieceWorkerError) return error.serialized.name;
+  return error instanceof Error ? error.name : undefined;
+}
+
 // A record is journal material, read back by the editor and kept in the
 // database, so it never carries the live value a downstream step reads.
 function journaled(value: unknown, values: string[] | undefined): unknown {
@@ -108,6 +118,7 @@ export async function runWorkflow(
   // edgeId -> taken; an edge is decided once its source ran or was skipped.
   const edgeDecisions = new Map<string, boolean>();
   let runFailed: string | undefined;
+  let runFailedName: string | undefined;
   let executedCount = 0;
 
   // A failing journal write must not cost us the step's completed work: the
@@ -232,6 +243,7 @@ export async function runWorkflow(
         block: stepBlock(step),
         config: input,
         connectionId: step.connectionId,
+        reactorConnectionId: step.reactorConnectionId,
         step,
         ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
       });
@@ -244,7 +256,8 @@ export async function runWorkflow(
         blockName: step.actionName,
         status: "SUCCEEDED",
         input: journaled(input, values),
-        output: journaled(result.output, values),
+        // Documents go into the record as references; the scope keeps them whole.
+        output: journaled(referenceDocuments(result.output), values),
         port,
         startedAt,
         endedAt: new Date().toISOString(),
@@ -260,6 +273,7 @@ export async function runWorkflow(
       // redacted with the same secrets the successful path uses.
       const values = [...runSecrets, ...secretsFor(error)];
       const detail = redactMessage(errorMessage(error), { values });
+      const errorName = errorNameOf(error);
       const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
@@ -268,6 +282,7 @@ export async function runWorkflow(
         status: "FAILED",
         input: journaled(input, values),
         error: detail,
+        ...(errorName ? { errorName } : {}),
         startedAt,
         endedAt: new Date().toISOString(),
         ...withPiece(pieceRecord(resolutionOf(error))),
@@ -285,6 +300,7 @@ export async function runWorkflow(
       );
       if (!errorHandled) {
         runFailed = `Step "${step.key}" failed: ${detail}`;
+        runFailedName = errorName;
       }
     }
   };
@@ -330,6 +346,12 @@ export async function runWorkflow(
     : [];
   const noted = warnings.length > 0 ? { warnings } : {};
   return runFailed
-    ? { status: "FAILED", steps, error: runFailed, ...noted }
+    ? {
+        status: "FAILED",
+        steps,
+        error: runFailed,
+        ...(runFailedName ? { errorName: runFailedName } : {}),
+        ...noted,
+      }
     : { status: "SUCCEEDED", steps, ...noted };
 }

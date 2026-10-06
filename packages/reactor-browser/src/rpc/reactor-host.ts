@@ -1,25 +1,27 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { hostResponder, type IHostResponder } from "./host-reply.js";
-import { ReactorHostServer } from "./host-server.js";
-import { SubscriptionStore } from "./subscription.js";
-import type {
-  ClientMessage,
-  CorrelationId,
-  ReactorIdentity,
-  RpcAdmin,
-  RpcDbOp,
-  RpcHello,
-  RpcInspectorOp,
-  RpcLiveSubscribe,
-  RpcRegisterPackages,
-  RpcSyncOp,
-  RpcUnregisterPackages,
-  VersionFingerprint,
-  WorkerInspectorInfo,
-  WorkerMigrationState,
-} from "./protocol.js";
-import { RPC_PROTOCOL_VERSION } from "./protocol.js";
-import { createPortTransport, type IRpcTransport } from "./transport.js";
+import {
+  hostResponder,
+  type IHostResponder,
+  ReactorHostServer,
+  SubscriptionStore,
+  type ClientMessage,
+  type CorrelationId,
+  type ReactorIdentity,
+  type RpcAdmin,
+  type RpcDbOp,
+  type RpcHello,
+  type RpcInspectorOp,
+  type RpcLiveSubscribe,
+  type RpcRegisterPackages,
+  type RpcSyncOp,
+  type RpcUnregisterPackages,
+  type VersionFingerprint,
+  type WorkerInspectorInfo,
+  type WorkerMigrationState,
+  RPC_PROTOCOL_VERSION,
+  createPortTransport,
+  type IRpcTransport,
+} from "@powerhousedao/reactor/rpc";
 
 function isDataMessage(
   msg: ClientMessage,

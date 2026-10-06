@@ -94,6 +94,39 @@ describe("installFatalErrorShutdown", () => {
     expect(proc.exit).not.toHaveBeenCalled();
   });
 
+  it("still reaches exit when the logger itself throws EPIPE inside onFatal", () => {
+    vi.useFakeTimers();
+    const proc = makeProc();
+    const onSigterm = vi.fn();
+    proc.on("SIGTERM", onSigterm);
+    const error = vi.fn(() => {
+      throw Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+    });
+    const throwingLogger = { error } as unknown as Parameters<
+      typeof installFatalErrorShutdown
+    >[0];
+    installFatalErrorShutdown(throwingLogger, proc as never);
+
+    // Without the guard the EPIPE propagates out of the uncaughtException
+    // listener, which in a real process re-enters fatal handling instead of
+    // running the shutdown.
+    expect(() =>
+      proc.emit("uncaughtException", new Error("boom")),
+    ).not.toThrow();
+
+    expect(proc.kill).toHaveBeenCalledOnce();
+    expect(onSigterm).toHaveBeenCalledOnce();
+    expect(proc.exitCode).toBe(1);
+
+    vi.advanceTimersByTime(15_000);
+
+    expect(proc.exit).toHaveBeenCalledTimes(1);
+    expect(proc.exit).toHaveBeenCalledWith(1);
+    // Exactly the two guarded log attempts: the fatal report and the
+    // forced-exit notice. A re-entered handler would log again.
+    expect(error).toHaveBeenCalledTimes(2);
+  });
+
   it("routes a triggered fatal error through SIGTERM with exit code 1", () => {
     const proc = makeProc();
     const onSigterm = vi.fn();

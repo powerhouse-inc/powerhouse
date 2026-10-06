@@ -14,12 +14,15 @@ export interface StepTestResult {
   status: "SUCCEEDED" | "FAILED";
   output?: unknown;
   error?: string;
+  errorName?: string;
   durationMs: number;
 }
 
-// What a single-step test reads a tested block's sample from.
+// What a single-step test reads a tested block's sample from. "truncated"
+// means the journal capped the last test's output to a marker (store.ts,
+// STEP_PAYLOAD_MAX_BYTES): there is a test on record, but no data to serve.
 export type TestSample =
-  | { kind: "untested" | "stale" | "hidden" }
+  | { kind: "untested" | "stale" | "hidden" | "truncated" }
   | { kind: "failed"; runId: string; testedAt: string; error: string }
   | { kind: "succeeded"; runId: string; testedAt: string; output: unknown };
 
@@ -108,6 +111,7 @@ export function draftStepDef(
     pieceVersion: step.pieceVersion,
     actionName: step.actionName,
     connectionId: step.connectionId,
+    reactorConnectionId: step.reactorConnectionId,
     config: step.config,
     timeoutSeconds: step.timeoutSeconds,
     propertySettings: propertySettings(step.propertySettings),
@@ -134,6 +138,8 @@ export function untestedError(label: string, sample: TestSample): string {
       return `Test ${label} first: its last test is not visible to you`;
     case "failed":
       return `Test ${label} first: its last test failed`;
+    case "truncated":
+      return `Test ${label} again: the journal kept only a truncated copy of its last output`;
     default:
       return `Test ${label} first`;
   }

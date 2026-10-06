@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import {
   closeSync,
   existsSync,
@@ -9,7 +8,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import spawn from "cross-spawn";
 import type { CommandResult } from "../records/records-commands.js";
 import { checkPackage, listWorkspacePackages } from "./fix-dist.js";
 import type { WorkspacePackage } from "./fix-dist.js";
@@ -282,9 +282,9 @@ function tailOf(path: string, count: number): string[] {
 export function runStep(step: CiStep, root: string, log: string): StepOutcome {
   const fd = openSync(log, "w");
   const started = Date.now();
-  let result: ReturnType<typeof spawnSync>;
+  let result: ReturnType<typeof spawn.sync>;
   try {
-    result = spawnSync(step.command[0], step.command.slice(1), {
+    result = spawn.sync(step.command[0], step.command.slice(1), {
       cwd: root,
       stdio: ["ignore", fd, fd],
       env: { ...process.env, CI: "true", FORCE_COLOR: "0", ...step.env },
@@ -293,10 +293,11 @@ export function runStep(step: CiStep, root: string, log: string): StepOutcome {
     closeSync(fd);
   }
   const seconds = (Date.now() - started) / 1000;
-  if (result.error !== undefined) {
+  // cross-spawn reports success as `error: null`, not undefined.
+  if (result.error) {
     writeFileSync(log, `${result.error.message}\n`, { flag: "a" });
   }
-  const exit = result.error === undefined ? result.status : FIX_EXIT.error;
+  const exit = result.error ? FIX_EXIT.error : result.status;
   return {
     step,
     exit,
@@ -402,7 +403,10 @@ export async function runCi(options: CiOptions): Promise<CommandResult> {
 
   const changed =
     options.changed.length > 0
-      ? options.changed.map((path) => relative(root, resolve(root, path)))
+      ? options.changed.map((path) =>
+          // POSIX-separated to match collectChanged, which comes from git.
+          relative(root, resolve(root, path)).split(sep).join("/"),
+        )
       : collectChanged(root);
   if (changed.length === 0) {
     const lines = [

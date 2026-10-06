@@ -68,6 +68,8 @@ export type ConnectionAuthType =
   | "NONE"
   | "OAUTH2"
   | "OIDC"
+  /** Reactor access for a piece's ctx.reactor; any piece may bind it. */
+  | "REACTOR"
   | "SECRET_TEXT";
 
 export type ConnectionState = {
@@ -75,7 +77,7 @@ export type ConnectionState = {
   accountLabel: Maybe<Scalars["String"]["output"]>;
   /** Activepieces auth kind, so a piece's PieceAuth maps directly. */
   authType: ConnectionAuthType;
-  /** Non-secret configuration, validated against the connector's auth schema. */
+  /** Non-secret configuration, validated against the connector's auth schema; a ReactorConnectionConfig for REACTOR. */
   config: Scalars["Unknown"]["output"];
   /** Fully-qualified connector id: '@acme/connector-imap#imap'. */
   connectorId: Scalars["String"]["output"];
@@ -88,6 +90,14 @@ export type ConnectionState = {
 };
 
 export type ConnectionStatus = "ERROR" | "OK" | "REVOKED" | "UNCONFIGURED";
+
+/** Config of a REACTOR connection. It holds no secrets. */
+export type ReactorConnectionConfig = {
+  /** 'read' limits the connection to reads; absent allows what the step declares. */
+  access: Maybe<Scalars["String"]["output"]>;
+  /** Which reactor the connection reaches; 'local' is the only value. */
+  endpoint: Scalars["String"]["output"];
+};
 
 export type RecordCheckResultInput = {
   checkedAt: Scalars["DateTime"]["input"];

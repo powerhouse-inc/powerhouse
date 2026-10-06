@@ -1,9 +1,12 @@
 import type { ILogger } from "document-model";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   autoWorkerCount,
   buildWorkerDbConfig,
+  keepImportableSources,
   resolveHostPoolSize,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
@@ -262,5 +265,28 @@ describe("resolveWorkerModelSources", () => {
     );
     expect(sources).toHaveLength(4);
     expect(logger.warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("keepImportableSources", () => {
+  it("keeps sources that export a model and drops one that throws or has none", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ph-model-sources-"));
+    const good = path.join(dir, "good.mjs");
+    const broken = path.join(dir, "broken.mjs");
+    const empty = path.join(dir, "empty.mjs");
+    writeFileSync(
+      good,
+      'export const Model = { reducer: () => ({}), documentModel: { global: { id: "test/model" } } };',
+    );
+    writeFileSync(broken, 'throw new Error("stale dist");');
+    // What `ph init` builds for a project with no models yet.
+    writeFileSync(empty, "export {};");
+
+    const kept = await keepImportableSources(
+      [{ filePath: broken }, { filePath: good }, { filePath: empty }],
+      stubLogger(),
+    );
+
+    expect(kept).toEqual([{ filePath: good }]);
   });
 });

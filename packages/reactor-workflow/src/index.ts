@@ -9,6 +9,7 @@ export { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "./pieces/core/index.js";
 export { setPieceRegistryUrl } from "./pieces/activepieces/registry-source.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
 export type {
+  HostIdentity,
   WorkflowCaller,
   WorkflowRuntimeHostDeps,
 } from "./reactor/host.js";
@@ -25,6 +26,7 @@ export {
   type RunsPageArgs,
 } from "./reactor/service.js";
 export { InvalidRunCursorError } from "./reactor/run-cursor.js";
+export { publishRunUser } from "./reactor/run-user.js";
 export type {
   OAuthAttemptStatus,
   OAuthAttemptView,

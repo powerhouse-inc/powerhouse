@@ -5,6 +5,27 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { resolveEntry } from "../../../src/pieces/activepieces/loader.js";
 
+/**
+ * Windows grants symlink creation only with Developer Mode or elevation;
+ * CI runners have the privilege, a stock dev machine may not. Probe once
+ * so the symlink case skips with a reason instead of failing on EPERM.
+ */
+async function canCreateSymlinks(): Promise<boolean> {
+  const probeDir = await mkdtemp(path.join(tmpdir(), "ap-symlink-probe-"));
+  const target = path.join(probeDir, "target");
+  try {
+    await writeFile(target, "");
+    await symlink(target, path.join(probeDir, "link"));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await rm(probeDir, { recursive: true, force: true });
+  }
+}
+
+const symlinksAvailable = await canCreateSymlinks();
+
 describe("resolveEntry containment", () => {
   let root: string;
   let pieceDir: string;
@@ -50,14 +71,17 @@ describe("resolveEntry containment", () => {
     expect(() => resolveEntry(pieceDir)).toThrow(/No entry file found/);
   });
 
-  it("rejects a symlink inside the bundle that resolves outside it", async () => {
-    await writeFile(path.join(root, "outside.js"), "module.exports = {};");
-    await symlink(
-      path.join(root, "outside.js"),
-      path.join(pieceDir, "link.js"),
-    );
-    await writeManifest({ main: "link.js" });
+  it.skipIf(!symlinksAvailable)(
+    "rejects a symlink inside the bundle that resolves outside it",
+    async () => {
+      await writeFile(path.join(root, "outside.js"), "module.exports = {};");
+      await symlink(
+        path.join(root, "outside.js"),
+        path.join(pieceDir, "link.js"),
+      );
+      await writeManifest({ main: "link.js" });
 
-    expect(() => resolveEntry(pieceDir)).toThrow(/No entry file found/);
-  });
+      expect(() => resolveEntry(pieceDir)).toThrow(/No entry file found/);
+    },
+  );
 });
