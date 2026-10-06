@@ -122,6 +122,15 @@ type DeadLetterWire = {
   operationCount: number;
 };
 
+type CursorType = "inbox" | "outbox";
+
+/** `requested` is the highest ordinal not yet taken by a write; `tail` orders the writes. */
+type CursorWriter = {
+  persisted: number;
+  requested: number;
+  tail: Promise<void>;
+};
+
 /** A single GraphQL request's abort signal and expiry. */
 type RequestDeadline = {
   signal: AbortSignal;
@@ -162,8 +171,10 @@ export class GqlRequestChannel implements IChannel {
   private failureCount: number;
   private lastSuccessUtcMs?: number;
   private lastFailureUtcMs?: number;
-  private lastPersistedInboxOrdinal: number = 0;
-  private lastPersistedOutboxOrdinal: number = 0;
+  private readonly cursorWriters: Record<CursorType, CursorWriter> = {
+    inbox: { persisted: 0, requested: 0, tail: Promise.resolve() },
+    outbox: { persisted: 0, requested: 0, tail: Promise.resolve() },
+  };
   private pushFailureCount: number = 0;
   private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private pushBlocked: boolean = false;
@@ -277,46 +288,57 @@ export class GqlRequestChannel implements IChannel {
         getLatestAppliedOrdinal(syncOps),
         this.unappliedFloor() - 1,
       );
-      if (ordinal > this.lastPersistedOutboxOrdinal) {
-        this.lastPersistedOutboxOrdinal = ordinal;
-        this.cursorStorage
-          .upsert({
-            remoteName: this.remoteName,
-            cursorType: "outbox",
-            cursorOrdinal: ordinal,
-            lastSyncedAtUtcMs: Date.now(),
-          })
-          .catch((error) => {
-            this.logger.error(
-              "Failed to update outbox cursor for @ChannelId! This means that future application runs may resend duplicate operations. This is recoverable (with deduplication protection), but not-optimal: @Error",
-              this.channelId,
-              error,
-            );
-          });
-      }
+      this.persistCursor("outbox", ordinal);
     });
 
     // The inbox ack, which never passes a marker still awaiting its load.
     this.inbox.onRemoved(() => {
-      const maxOrdinal = this.inbox.ackOrdinal;
-      if (maxOrdinal > this.lastPersistedInboxOrdinal) {
-        this.lastPersistedInboxOrdinal = maxOrdinal;
-        this.cursorStorage
-          .upsert({
-            remoteName: this.remoteName,
-            cursorType: "inbox",
-            cursorOrdinal: maxOrdinal,
-            lastSyncedAtUtcMs: Date.now(),
-          })
-          .catch((error) => {
-            this.logger.error(
-              "Failed to update inbox cursor for @ChannelId! This is unlikely to cause a problem, but not-optimal: @Error",
-              this.channelId,
-              error,
-            );
-          });
-      }
+      this.persistCursor("inbox", this.inbox.ackOrdinal);
     });
+  }
+
+  /**
+   * The watermark advances only once the write lands, so a failed write is
+   * retried by the next advance. Writes for one cursor row run one at a time
+   * and coalesce to the highest requested ordinal, since storage does not
+   * promise FIFO between concurrent upserts.
+   */
+  private persistCursor(cursorType: CursorType, ordinal: number): void {
+    const writer = this.cursorWriters[cursorType];
+    if (ordinal <= Math.max(writer.persisted, writer.requested)) {
+      return;
+    }
+    writer.requested = ordinal;
+    writer.tail = writer.tail.then(() => this.writeCursor(cursorType));
+  }
+
+  /** One link of a cursor write chain; never rejects, so the chain survives. */
+  private async writeCursor(cursorType: CursorType): Promise<void> {
+    const writer = this.cursorWriters[cursorType];
+    const ordinal = writer.requested;
+    if (ordinal <= writer.persisted) {
+      return;
+    }
+    writer.requested = 0;
+
+    try {
+      await this.cursorStorage.upsert({
+        remoteName: this.remoteName,
+        cursorType,
+        cursorOrdinal: ordinal,
+        lastSyncedAtUtcMs: Date.now(),
+      });
+    } catch (error) {
+      this.logger.error(
+        "Failed to update @CursorType cursor for @ChannelId at ordinal @Ordinal; the watermark stays put so the next advance retries it: @Error",
+        cursorType,
+        this.channelId,
+        ordinal,
+        error,
+      );
+      return;
+    }
+    writer.persisted = Math.max(writer.persisted, ordinal);
   }
 
   /**
@@ -477,8 +499,8 @@ export class GqlRequestChannel implements IChannel {
       cursors.find((c) => c.cursorType === "outbox")?.cursorOrdinal ?? 0;
     this.inbox.init(inboxOrdinal);
     this.outbox.init(outboxOrdinal);
-    this.lastPersistedInboxOrdinal = inboxOrdinal;
-    this.lastPersistedOutboxOrdinal = outboxOrdinal;
+    this.cursorWriters.inbox.persisted = inboxOrdinal;
+    this.cursorWriters.outbox.persisted = outboxOrdinal;
 
     if (ackOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
