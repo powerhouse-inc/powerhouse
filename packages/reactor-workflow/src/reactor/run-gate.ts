@@ -2,7 +2,7 @@
 // at once, and what happens to a firing that arrives while the limit is full.
 //
 // Process-local, and correctly so: workflow execution is a singleton pinned to
-// one reactor, so this process IS the deployment's
+// one reactor (see singleton-lease.ts), so this process IS the deployment's
 // run set. A gate in the database would be a second claim on the same fact.
 import type { EffectiveRunPolicy } from "./policy.js";
 import { concurrencyLimit } from "./policy.js";

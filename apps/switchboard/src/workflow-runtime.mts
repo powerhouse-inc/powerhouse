@@ -119,6 +119,22 @@ export async function assertWorkflowPackageLoadable(
   }
 }
 
+/**
+ * Whether a composition failure was the workflow singleton refusing this
+ * process, rather than something that should take the boot down.
+ *
+ * Matched by NAME: the engine loads lazily, and importing it here for the
+ * constructor would defeat that. The fields the engine's error carries are
+ * typed optional for the same reason.
+ */
+export function isWorkflowSingletonConflict(
+  error: unknown,
+): error is Error & { owner?: string; expiresAt?: string; wouldBe?: string } {
+  return (
+    error instanceof Error && error.name === "WorkflowSingletonConflictError"
+  );
+}
+
 /** The importable models piece workers load: the boot list, and a type's entries. */
 export interface ModelManifestSource {
   modelManifest(): ModelManifestEntry[];
@@ -163,12 +179,30 @@ export interface ComposeWorkflowRuntimeDeps {
   models?: ModelManifestSource;
   /** Overridden by the tests; production always loads the real engine. */
   load?: () => Promise<WorkflowEngineModule>;
+  /**
+   * Whether to claim the workflow singleton before composing (plan agreed
+   * decision 3). On by default, and the only honest setting for a real host:
+   * two replicas over one run journal fail each other's live runs. A suite
+   * that composes several runtimes over separate databases turns it off.
+   */
+  singletonLease?: boolean;
+  /**
+   * Where this host's read-model database lives — the Postgres URL, or the
+   * absolute PGlite directory. It is the stable half of the default singleton
+   * owner name, so a restart of THIS slot re-claims its own lease at once
+   * instead of waiting out the 60s TTL for a killed process's claim. Hashed
+   * before it is used, so a connection string's credentials go no further.
+   */
+  storageId?: string;
 }
 
 export interface ComposedWorkflowRuntime {
   subgraph: SubgraphClass;
   /** Whether document operations reach the runtime at all. */
   triggers: WorkflowTriggersCapability;
+  /** The owner name this host holds the workflow singleton under; undefined
+   * when the lease was not taken (a suite that opted out). */
+  singletonOwner?: string;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -377,6 +411,20 @@ export async function composeWorkflowRuntime(
     );
   }
 
+  // BEFORE anything else touches the run journal. Opening the journal runs
+  // its orphan/abandoned sweeps, which close out every RUNNING and PENDING
+  // run that is not this process's — i.e. a second replica booting fails the
+  // first replica's live runs. The claim is what makes the plan's singleton
+  // decision structural instead of documented; it refuses by name.
+  const lease =
+    deps.singletonLease === false
+      ? undefined
+      : await engine.acquireWorkflowSingletonLease({
+          relationalDb: deps.relationalDb,
+          logger: deps.logger,
+          ...(deps.storageId ? { storageId: deps.storageId } : {}),
+        });
+
   // The same registry the host installs packages from, so a piece it indexes
   // is reachable without a second setting to keep in step.
   engine.setPieceRegistryUrl(deps.pieceRegistryUrl);
@@ -449,20 +497,27 @@ export async function composeWorkflowRuntime(
       access,
     ),
     triggers,
+    ...(lease ? { singletonOwner: lease.owner } : {}),
 
     async start() {
+      // Renewing only once the runtime is actually running: a host that threw
+      // between composing and starting leaves the lease to expire rather than
+      // holding it forever.
+      lease?.startHeartbeat();
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();
       runtime.startTriggerSupervisor();
     },
 
-    stop() {
-      if (stopped) return Promise.resolve();
+    async stop() {
+      if (stopped) return;
       stopped = true;
       oauthCallback?.dispose();
       runtime.shutdown();
-      return Promise.resolve();
+      // Released, so the next boot owns workflows immediately instead of
+      // waiting out the lease TTL.
+      await lease?.release();
     },
   };
 }

@@ -99,7 +99,8 @@ export interface TriggerStateRow {
   last_poll_at: string | null;
   last_error: string | null;
   consecutive_failures: number;
-  // Written for rolling-deploy overlap; not enforced yet.
+  // Always null and never read: kept so the schema matches main's and a
+  // rollback finds the columns it writes. Placement is singleton-lease.ts.
   lease_owner: string | null;
   lease_expires_at: string | null;
   updated_at: string;
