@@ -7,7 +7,11 @@ import { Icon } from "../../shared/icons.js";
 import { useRunById, useTestStepRunner } from "./design-time.js";
 import type { StepTestOutcome } from "./forms.js";
 import { VARIABLES_VIEW, type StepModel, type WorkflowModel } from "./model.js";
-import { explainTestError, type TestErrorTarget } from "./step-test.js";
+import {
+  explainTestError,
+  testOutcomeView,
+  type TestErrorTarget,
+} from "./step-test.js";
 import { relativeTime, testState } from "./test-state.js";
 
 type Attempt =
@@ -101,6 +105,22 @@ function TestError(props: {
           })}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+// Neither a pass nor a failure: a write the step asked for may have landed.
+function TestIndeterminate(props: { error: string }) {
+  return (
+    <div
+      role="alert"
+      className="flex flex-col gap-1.5 rounded-md bg-wf-warn/10 p-2.5 text-xs text-wf-warn"
+    >
+      <span className="font-medium">
+        Indeterminate: this test may have written something. Check the target
+        before testing again.
+      </span>
+      <span className="whitespace-pre-wrap break-words">{props.error}</span>
     </div>
   );
 }
@@ -199,12 +219,16 @@ export function StepTestSection(props: {
           model={props.model}
           onSelect={props.onSelect}
         />
-      ) : attempt.outcome.status === "FAILED" ? (
+      ) : testOutcomeView(attempt.outcome.status) === "failed" ? (
         <TestError
           error={attempt.outcome.error ?? "The test failed"}
           ran={attempt.outcome.runId !== null}
           model={props.model}
           onSelect={props.onSelect}
+        />
+      ) : testOutcomeView(attempt.outcome.status) === "indeterminate" ? (
+        <TestIndeterminate
+          error={attempt.outcome.error ?? "A host call the step made timed out"}
         />
       ) : (
         <DataViewer
