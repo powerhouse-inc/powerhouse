@@ -4,7 +4,7 @@ import { actions } from "@powerhousedao/workflow/document-models/workflow";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Documents } from "../../test/helpers/documents.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
@@ -186,6 +186,31 @@ describe("rerun", () => {
     // Replayed, not re-run: the side effect does not happen twice.
     expect(rerun.steps[0].status).toBe("REPLAYED");
     expect(rerun.steps[0].output).toBeUndefined();
+    expect(rerun.status).toBe("SUCCEEDED");
+  });
+
+  // A declared reactor read has no side effect to repeat, so it re-runs and
+  // produces its output again rather than leaving it unavailable.
+  it("re-runs a truncated step that only reads", async () => {
+    const failed = await failedRun("wf-truncated-reader");
+    await truncateJournaledOutput(failed.runId!, "a", '{"text":"v1"');
+    documents.apply(
+      "wf-truncated-reader",
+      actions.setStepConfig({ id: "b", config: { open: true } }),
+      actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+    );
+    const rereads = vi
+      .spyOn(
+        service as unknown as { rereads: () => Promise<boolean> },
+        "rereads",
+      )
+      .mockResolvedValue(true);
+
+    const rerun = await service.rerun(failed.runId!, CTX);
+    rereads.mockRestore();
+
+    expect(rerun.steps[0].status).toBe("SUCCEEDED");
+    expect(rerun.steps[0].output).toMatchObject({ text: "v1" });
     expect(rerun.status).toBe("SUCCEEDED");
   });
 

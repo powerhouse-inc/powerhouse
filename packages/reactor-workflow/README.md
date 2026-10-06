@@ -498,7 +498,9 @@ their exact key set.
 A SUCCEEDED step whose output was truncated **replays** on rerun rather than
 re-executing: it had side effects. Its output is explicitly unavailable, so a
 later step that reads it fails the rerun by name (`UnavailableValueError`)
-instead of being handed a marker.
+instead of being handed a marker. A step whose piece declares a reactor
+**read** has no side effect to repeat, so it re-executes and produces its
+output again.
 
 The fact **survives further reruns**. The rerun's own REPLAYED row journals the
 truncation marker again (the record's `journaledOutput`), so a second rerun of

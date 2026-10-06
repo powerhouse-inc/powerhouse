@@ -4424,8 +4424,10 @@ export class WorkflowRuntimeService {
       // succeeded, it had side effects, and re-running it would do them again
       // — which is exactly what dropping it from this map used to mean
       // (backlog item 15). Its output is unavailable instead, and a
-      // downstream step that reads it fails the rerun by name.
+      // downstream step that reads it fails the rerun by name. A declared
+      // read has no side effect to repeat, so it re-runs instead.
       if (isTruncatedStepPayload(output)) {
+        if (await this.rereads(current)) continue;
         completedSteps.set(row.step_id, {
           port: row.port,
           outputTruncated: true,
