@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { WorkerPackageLoader } from "../../src/rpc/worker-package-loader.js";
 
 function fakeModel(id: string, version?: number) {
@@ -7,6 +7,36 @@ function fakeModel(id: string, version?: number) {
     reducer: () => undefined,
     ...(version === undefined ? {} : { version }),
   };
+}
+
+function manifest(documentType: string, to: number) {
+  return { documentType, upgrades: { [`1-${to}`]: () => undefined } };
+}
+
+type Namespace = Record<string, unknown>;
+
+/** A loader whose URL imports come from a table the test controls. */
+function loaderOver(
+  namespaces: Record<string, Namespace | (() => Promise<Namespace>)>,
+  packageNames: string[] = [],
+) {
+  const importPackage = vi.fn((url: string) => {
+    const entry = namespaces[url];
+    if (!entry) return Promise.reject(new Error(`404 ${url}`));
+    return typeof entry === "function" ? entry() : Promise.resolve(entry);
+  });
+  const loader = new WorkerPackageLoader({
+    cdnUrl: "https://cdn.test",
+    importPackage,
+    resolvePackages: () => Promise.resolve(packageNames),
+  });
+  return { loader, importPackage };
+}
+
+function moduleKeys(loader: WorkerPackageLoader): string[] {
+  return loader.models
+    .map((m) => `${m.documentModel.global.id}@${m.version ?? 1}`)
+    .sort();
 }
 
 describe("WorkerPackageLoader", () => {
@@ -154,5 +184,52 @@ describe("WorkerPackageLoader", () => {
     expect(models[0]?.documentModel.global.id).toBe("ok/model");
     expect(loader.loadFailures).toHaveLength(1);
     expect(loader.loadFailures[0]?.name).toBe("broken");
+  });
+
+  it("keeps a source's models and manifests when its reload fails", async () => {
+    const importError = new Error("syntax error");
+    const { loader } = loaderOver({
+      "https://host.test/p.js?t=1": {
+        P: fakeModel("test/p"),
+        upgradeManifests: [manifest("test/p", 2)],
+      },
+      "https://host.test/p.js?t=2": () => Promise.reject(importError),
+    });
+    await loader.loadSources([
+      { name: "p", url: "https://host.test/p.js?t=1" },
+    ]);
+
+    const result = await loader.reloadSources([
+      { name: "p", url: "https://host.test/p.js?t=2" },
+    ]);
+
+    expect(result.types).toEqual([]);
+    expect(result.failures).toEqual([
+      { name: "src:p", url: "https://host.test/p.js?t=2", error: importError },
+    ]);
+    expect(moduleKeys(loader)).toEqual(["test/p@1"]);
+    expect(loader.upgradeManifests.map((m) => m.documentType)).toEqual([
+      "test/p",
+    ]);
+  });
+
+  it("drops and reports a type a reloaded source no longer exports", async () => {
+    const { loader } = loaderOver({
+      "https://host.test/p.js?t=1": {
+        A: fakeModel("test/a"),
+        B: fakeModel("test/b"),
+      },
+      "https://host.test/p.js?t=2": { A: fakeModel("test/a") },
+    });
+    await loader.loadSources([
+      { name: "p", url: "https://host.test/p.js?t=1" },
+    ]);
+
+    const { types } = await loader.reloadSources([
+      { name: "p", url: "https://host.test/p.js?t=2" },
+    ]);
+
+    expect(types.sort()).toEqual(["test/a", "test/b"]);
+    expect(moduleKeys(loader)).toEqual(["test/a@1"]);
   });
 });

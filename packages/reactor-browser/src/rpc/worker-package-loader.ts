@@ -27,6 +27,10 @@ export type PackageLoadFailure = {
   error: unknown;
 };
 
+type SourceReplacement =
+  | { status: "replaced"; types: Set<string> }
+  | { status: "failed"; failure: PackageLoadFailure };
+
 function packageName(spec: string): string {
   const at = spec.lastIndexOf("@");
   return at > 0 ? spec.slice(0, at) : spec;
@@ -131,34 +135,27 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
    * Replaces previously loaded sources with freshly imported ones (a vetra
    * watch rebuild re-sends the same source under a cache-busted URL). Returns
    * every document type touched - removed, re-added, or new - so the caller
-   * can replace the registry's version families, mirroring the tab hook's
-   * duplicate handling.
+   * can replace the registry's version families. A source whose import fails
+   * keeps its previous modules and is reported in `failures`.
    */
   async reloadSources(
     sources: WorkerPackageSource[],
-  ): Promise<{ types: string[] }> {
-    const touched = new Set<string>();
-    for (const source of sources) {
-      const key = sourceKey(source);
-      for (const moduleKeyRemoved of this.keysBySource.get(key) ?? []) {
-        const removed = this.modulesByKey.get(moduleKeyRemoved);
-        if (removed) touched.add(removed.documentModel.global.id);
-        this.modulesByKey.delete(moduleKeyRemoved);
-      }
-      for (const type of this.manifestTypesBySource.get(key) ?? []) {
-        this.manifestsByType.delete(type);
-      }
-      this.keysBySource.delete(key);
-      this.manifestTypesBySource.delete(key);
-      this.loadedSpecs.delete(key);
-
-      await this.loadFromUrl(key, source.url);
-      for (const moduleKeyAdded of this.keysBySource.get(key) ?? []) {
-        const added = this.modulesByKey.get(moduleKeyAdded);
-        if (added) touched.add(added.documentModel.global.id);
+  ): Promise<{ types: string[]; failures: PackageLoadFailure[] }> {
+    const results = await Promise.all(
+      sources.map((source) =>
+        this.replaceSource(sourceKey(source), source.url),
+      ),
+    );
+    const types = new Set<string>();
+    const failures: PackageLoadFailure[] = [];
+    for (const result of results) {
+      if (result.status === "replaced") {
+        for (const type of result.types) types.add(type);
+      } else {
+        failures.push(result.failure);
       }
     }
-    return { types: [...touched] };
+    return { types: [...types], failures };
   }
 
   // On a miss, discover the package(s) for the type and import them on demand.
@@ -242,51 +239,79 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     if (this.loadedSpecs.has(key)) {
       return;
     }
-    try {
-      // Shared-deps hosts fetch the source so shared specifiers can be
-      // rewritten to absolute vendor URLs (import maps don't apply to blob
-      // imports). Packages without shared/relative imports still go through
-      // the plain importPackage path below.
-      const hasSharedImports =
-        this.sharedImports !== undefined &&
-        Object.keys(this.sharedImports).length > 0;
-      const source = hasSharedImports
-        ? await (await fetch(url)).text()
-        : undefined;
-      const rewritten =
-        source !== undefined
-          ? rewritePackageSource(source, url, this.sharedImports!)
-          : source;
-      let namespace: Record<string, unknown>;
-      if (rewritten !== undefined && rewritten !== source) {
-        if (!this.importSource) {
-          throw new Error(
-            "importSource is required to load a package that imports shared deps",
-          );
-        }
-        namespace = await this.importSource(rewritten);
-      } else {
-        namespace = await this.importPackage(url);
-      }
-      this.registerNamespace(key, namespace);
-      this.loadedSpecs.add(key);
-    } catch (error) {
-      this.failures.push({ name: packageName(key), url, error });
-    }
+    await this.replaceSource(key, url);
   }
 
+  // A failed import leaves the key's previous modules, manifests and loaded
+  // state untouched.
+  private async replaceSource(
+    key: string,
+    url: string,
+  ): Promise<SourceReplacement> {
+    let namespace: Record<string, unknown>;
+    try {
+      namespace = await this.importNamespace(url);
+    } catch (error) {
+      const failure = { name: packageName(key), url, error };
+      this.failures.push(failure);
+      return { status: "failed", failure };
+    }
+    const types = new Set<string>();
+    for (const removedKey of this.keysBySource.get(key) ?? []) {
+      const removed = this.modulesByKey.get(removedKey);
+      if (removed) types.add(removed.documentModel.global.id);
+      this.modulesByKey.delete(removedKey);
+    }
+    for (const type of this.manifestTypesBySource.get(key) ?? []) {
+      this.manifestsByType.delete(type);
+    }
+    for (const added of this.registerNamespace(key, namespace)) {
+      types.add(added);
+    }
+    this.loadedSpecs.add(key);
+    return { status: "replaced", types };
+  }
+
+  private async importNamespace(url: string): Promise<Record<string, unknown>> {
+    // Shared-deps hosts fetch the source so shared specifiers can be
+    // rewritten to absolute vendor URLs (import maps don't apply to blob
+    // imports). Packages without shared/relative imports still go through
+    // the plain importPackage path below.
+    const hasSharedImports =
+      this.sharedImports !== undefined &&
+      Object.keys(this.sharedImports).length > 0;
+    const source = hasSharedImports
+      ? await (await fetch(url)).text()
+      : undefined;
+    const rewritten =
+      source !== undefined
+        ? rewritePackageSource(source, url, this.sharedImports!)
+        : source;
+    if (rewritten !== undefined && rewritten !== source) {
+      if (!this.importSource) {
+        throw new Error(
+          "importSource is required to load a package that imports shared deps",
+        );
+      }
+      return this.importSource(rewritten);
+    }
+    return this.importPackage(url);
+  }
+
+  /** Registers a namespace as the key's whole contribution; returns its module types. */
   private registerNamespace(
     key: string,
     namespace: Record<string, unknown>,
-  ): void {
-    const keys = this.keysBySource.get(key) ?? new Set<string>();
-    const manifestTypes =
-      this.manifestTypesBySource.get(key) ?? new Set<string>();
+  ): Set<string> {
+    const keys = new Set<string>();
+    const manifestTypes = new Set<string>();
+    const types = new Set<string>();
     for (const value of Object.values(namespace)) {
       if (isDocumentModelModule(value)) {
         const k = moduleKey(value);
         this.modulesByKey.set(k, value);
         keys.add(k);
+        types.add(value.documentModel.global.id);
       }
     }
     for (const manifest of manifestsOf(namespace)) {
@@ -295,6 +320,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     }
     this.keysBySource.set(key, keys);
     this.manifestTypesBySource.set(key, manifestTypes);
+    return types;
   }
 }
 

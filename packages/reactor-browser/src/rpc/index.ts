@@ -76,5 +76,6 @@ export {
 export {
   WorkerPackageLoader,
   type PackageImporter,
+  type PackageLoadFailure,
   type WorkerPackageLoaderOptions,
 } from "./worker-package-loader.js";
