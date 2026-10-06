@@ -136,6 +136,10 @@ function journaled(value: unknown, values: string[] | undefined): unknown {
   return value === undefined ? undefined : redact(value, { values });
 }
 
+/** What a run that passed `policy.runTimeoutSeconds` ends CANCELLED with. */
+export const RUN_DEADLINE_REASON =
+  "Run exceeded its runTimeoutSeconds and was cancelled";
+
 // Sequential v1 of the RunCoordinator (doc 08 §7.3): walks the steps+edges
 // graph, resolving each step's config against prior outputs before executing.
 export async function runWorkflow(
@@ -172,7 +176,7 @@ export async function runWorkflow(
   const outOfTime = (): string | undefined => {
     if (options.deadline === undefined) return undefined;
     if (Date.now() < options.deadline) return undefined;
-    return "Run exceeded its runTimeoutSeconds and was cancelled";
+    return RUN_DEADLINE_REASON;
   };
 
   // A failing journal write must not cost us the step's completed work: the
@@ -351,16 +355,10 @@ export async function runWorkflow(
         decideOutgoing(step.id, port);
         return;
       } catch (error) {
-        // A failed step is exactly where an input gets inspected, so it is
-        // redacted with the same secrets the successful path uses.
-        const values = [...runSecrets, ...secretsFor(error)];
-        const detail = redactMessage(errorMessage(error), { values });
-        const errorName = errorNameOf(error);
         // A host call that timed out may have committed the write it asked
         // for, so neither the step's failure nor its success is knowable. It
         // is not retried either: a retry would be a second write.
         const indeterminate = isIndeterminateError(error);
-        const expired = outOfTime();
         const retryable =
           retry !== null &&
           attempt < maxAttempts &&
@@ -368,57 +366,129 @@ export async function runWorkflow(
           // A value that is gone stays gone, and an expression that names
           // nothing names nothing on the next attempt either.
           !(error instanceof UnavailableValueError) &&
-          expired === undefined &&
           isRetryableError(retry, error);
         if (retryable) {
-          const waitMs = retryDelayMs(retry, attempt + 1);
-          if (waitMs > 0) await sleep(waitMs);
-          // The wait may have taken the run past its deadline; the next
-          // attempt's own check catches that and stops.
+          const stopped = await waitForRetry(retryDelayMs(retry, attempt + 1));
+          // The deadline fell during the wait (or was already past): the run
+          // is over, so NO further attempt runs. The attempt that failed is
+          // journaled as the record of work done, without taking an error
+          // port — nothing downstream may run after the run has ended — and
+          // the run reads CANCELLED, since the clock stopped it rather than
+          // the workflow failing.
+          if (stopped !== undefined) {
+            await endStep(step, {
+              error,
+              input,
+              startedAt,
+              attempt,
+              cancelled: stopped,
+            });
+            return;
+          }
           continue;
         }
-        const failedAfter = attempt > 1 ? ` after ${attempt} attempts` : "";
-        const record: StepExecutionRecord = {
-          stepId: step.id,
-          key: step.key,
-          pieceName: step.pieceName,
-          blockName: step.actionName,
-          status: indeterminate ? "INDETERMINATE" : "FAILED",
-          input: journaled(input, values),
-          error: detail,
-          ...(errorName ? { errorName } : {}),
-          startedAt,
-          endedAt: new Date().toISOString(),
-          ...withPiece(pieceRecord(resolutionOf(error))),
-          configHash: stepConfigHash(step),
-          ...attempts,
-        };
-        records.set(step.id, record);
-        if (indeterminate) {
-          await journal(record);
-          // No port, so nothing downstream runs and no error branch claims to
-          // have handled something that may have succeeded.
-          runFailed = `Step "${step.key}" is INDETERMINATE: ${detail}`;
-          runFailedName = errorName;
-          return;
-        }
-        await journal(record);
-        // The same redacted text the journal took: an error-port branch
-        // writing the reason somewhere a person will read must not widen what
-        // a failure discloses.
-        scope.steps[step.key] = { error: detail };
-        decideOutgoing(step.id, "error");
-        const errorHandled = definition.edges.some(
-          (edge) => edge.from === step.id && edgeDecisions.get(edge.id),
-        );
-        if (!errorHandled) {
-          runFailed = `Step "${step.key}" failed${failedAfter}: ${detail}`;
-          runFailedName = errorName;
-        }
+        await endStep(step, { error, input, startedAt, attempt });
         return;
       }
     }
   };
+
+  /**
+   * A retry wait, clipped to the run's deadline.
+   *
+   * Undefined when there is room for both the wait and another attempt.
+   * Otherwise the reason the run is over: the wait is served out only as far
+   * as the deadline, never past it, and the caller runs no further attempt.
+   * Sleeping the full backoff and leaving the deadline to "the next attempt's
+   * own check" meant that attempt ran its side effect after the run had
+   * expired, and the run then ended FAILED rather than CANCELLED.
+   */
+  async function waitForRetry(waitMs: number): Promise<string | undefined> {
+    const expired = outOfTime();
+    if (expired !== undefined) return expired;
+    if (options.deadline === undefined) {
+      if (waitMs > 0) await sleep(waitMs);
+      return undefined;
+    }
+    const remaining = options.deadline - Date.now();
+    if (waitMs >= remaining) {
+      if (remaining > 0) await sleep(remaining);
+      return RUN_DEADLINE_REASON;
+    }
+    if (waitMs > 0) await sleep(waitMs);
+    // The wait fitted, but a slow timer can still land on the deadline.
+    return outOfTime();
+  }
+
+  /**
+   * The terminal end of a step that threw: its record, its error port, and
+   * what that means for the run.
+   *
+   * One place for it, because three paths reach it — a deterministic
+   * resolution failure before the first attempt, an exhausted or refused
+   * retry, and a retry the run's deadline cut short.
+   */
+  async function endStep(
+    step: WorkflowStepDef,
+    outcome: {
+      error: unknown;
+      input: unknown;
+      startedAt: string;
+      attempt: number;
+      // Set when the clock is why there is no further attempt; the run is
+      // CANCELLED rather than FAILED, and no error port is taken.
+      cancelled?: string;
+    },
+  ): Promise<void> {
+    const { error, input, startedAt, attempt } = outcome;
+    // A failed step is exactly where an input gets inspected, so it is
+    // redacted with the same secrets the successful path uses.
+    const values = [...runSecrets, ...secretsFor(error)];
+    const detail = redactMessage(errorMessage(error), { values });
+    const indeterminate = isIndeterminateError(error);
+    const errorName = errorNameOf(error);
+    const record: StepExecutionRecord = {
+      stepId: step.id,
+      key: step.key,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
+      status: indeterminate ? "INDETERMINATE" : "FAILED",
+      input: journaled(input, values),
+      error: detail,
+      ...(errorName ? { errorName } : {}),
+      startedAt,
+      endedAt: new Date().toISOString(),
+      ...withPiece(pieceRecord(resolutionOf(error))),
+      configHash: stepConfigHash(step),
+      ...(attempt > 1 ? { attempts: attempt } : {}),
+    };
+    records.set(step.id, record);
+    await journal(record);
+    if (indeterminate) {
+      // No port, so nothing downstream runs and no error branch claims to
+      // have handled something that may have succeeded.
+      runFailed = `Step "${step.key}" is INDETERMINATE: ${detail}`;
+      runFailedName = errorName;
+      return;
+    }
+    if (outcome.cancelled !== undefined) {
+      runCancelled = outcome.cancelled;
+      return;
+    }
+    // The same redacted text the journal took: an error-port branch writing
+    // the reason somewhere a person will read must not widen what a failure
+    // discloses.
+    scope.steps[step.key] = { error: detail };
+    decideOutgoing(step.id, "error");
+    const errorHandled = definition.edges.some(
+      (edge) => edge.from === step.id && edgeDecisions.get(edge.id),
+    );
+    if (!errorHandled) {
+      const failedAfter = attempt > 1 ? ` after ${attempt} attempts` : "";
+      runFailed = `Step "${step.key}" failed${failedAfter}: ${detail}`;
+      runFailedName = errorName;
+    }
+  }
 
   let progressed = true;
   while (progressed && !runFailed && !runCancelled) {
@@ -427,7 +497,10 @@ export async function runWorkflow(
       if (records.has(step.id)) continue;
       // Before the step, never during it: a step is the unit of work and
       // killing one mid-flight would leave a side effect with no record.
-      runCancelled = outOfTime();
+      // `??=`, not `=`: a step whose retry wait ran out the clock has already
+      // set this, and re-reading a timer that fired a hair early would clear
+      // it and let the next step run after the run was over.
+      runCancelled ??= outOfTime();
       if (runCancelled) break;
       const inbound = inboundEdges(step);
       if (isEntryStep(step)) {
@@ -435,7 +508,7 @@ export async function runWorkflow(
         progressed = true;
         // Independent roots are otherwise free to run their side effects
         // before the outer loop notices the run is already over.
-        if (runFailed) break;
+        if (runFailed || runCancelled) break;
         continue;
       }
       if (inbound.length === 0) continue;
@@ -448,7 +521,7 @@ export async function runWorkflow(
         skipStep(step);
       }
       progressed = true;
-      if (runFailed) break;
+      if (runFailed || runCancelled) break;
     }
   }
 

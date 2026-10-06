@@ -330,6 +330,13 @@ schema; what changed is that they are true.
   `["HostCallTimeoutError"]` and `["429"]` work.
 - `maxAttempts` is clamped to 10 and one backoff wait to 5 minutes: each
   attempt re-runs a side effect and holds the run's worker slot.
+- **A retry wait is clipped to the run deadline, and the deadline wins.** A
+  backoff longer than the time left is served out only as far as the deadline,
+  and then the step gets no further attempt: running one would be a side effect
+  after the run was already over. The attempt that failed is still journaled,
+  no error port is taken — nothing downstream may run after the run has ended —
+  and the run reads CANCELLED, since the clock stopped it rather than the
+  workflow failing.
 - A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
   block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
 - An **INDETERMINATE** step is never retried and never replayed: a retry would
