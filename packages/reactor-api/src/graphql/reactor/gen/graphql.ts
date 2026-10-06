@@ -363,9 +363,10 @@ export type Mutation = {
    * transaction, so jobs that already committed stay committed.
    *
    * A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
-   * as its first action naming the job's document. It is authorized like
-   * `createDocument`: write on every document an `ADD_RELATIONSHIP` in the job
-   * links it under, or the right to create when there is none.
+   * as its first action naming the job's document. Its other actions may only be
+   * an `UPGRADE_DOCUMENT` of the new document and `ADD_RELATIONSHIP`s targeting
+   * it. It is authorized like `createDocument`: write on every source of those
+   * relationships, or the right to create when there is none.
    */
   readonly executeBatch: BatchExecutionResult;
   readonly moveRelationship: MoveRelationshipResult;

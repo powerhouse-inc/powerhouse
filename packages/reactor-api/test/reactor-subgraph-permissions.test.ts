@@ -1013,6 +1013,140 @@ describe("ReactorSubgraph Permission Checks", () => {
       expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
     });
 
+    it("refuses a create job that also deletes another document", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [
+            createJob([
+              createAction(),
+              {
+                id: "act-delete",
+                type: "DELETE_DOCUMENT",
+                timestampUtcMs: "2026-01-01T00:00:00.000Z",
+                scope: "document",
+                input: { documentId: "victim" },
+              },
+            ]),
+          ],
+          ctx,
+        ),
+      ).rejects.toThrow(/DELETE_DOCUMENT/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("refuses a create job that removes a relationship from another document", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [
+            createJob([
+              createAction(),
+              {
+                id: "act-unlink",
+                type: "REMOVE_RELATIONSHIP",
+                timestampUtcMs: "2026-01-01T00:00:00.000Z",
+                scope: "document",
+                input: {
+                  sourceId: "victim-drive",
+                  targetId: "victim-child",
+                  relationshipType: "child",
+                },
+              },
+            ]),
+          ],
+          ctx,
+        ),
+      ).rejects.toThrow(/REMOVE_RELATIONSHIP/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("refuses a create job that links another document under the new one", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [
+            createJob([
+              createAction(),
+              {
+                id: "act-link",
+                type: "ADD_RELATIONSHIP",
+                timestampUtcMs: "2026-01-01T00:00:00.000Z",
+                scope: "document",
+                input: {
+                  sourceId: newId,
+                  targetId: "victim",
+                  relationshipType: "child",
+                },
+              },
+            ]),
+          ],
+          ctx,
+        ),
+      ).rejects.toThrow(/ADD_RELATIONSHIP/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("refuses a create job that upgrades another document", async () => {
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await expect(
+        callExecuteBatch(
+          [
+            createJob([
+              createAction(),
+              {
+                id: "act-upgrade",
+                type: "UPGRADE_DOCUMENT",
+                timestampUtcMs: "2026-01-01T00:00:00.000Z",
+                scope: "document",
+                input: {
+                  documentId: "victim",
+                  model: "test/document",
+                  fromVersion: 0,
+                  toVersion: 1,
+                },
+              },
+            ]),
+          ],
+          ctx,
+        ),
+      ).rejects.toThrow(/UPGRADE_DOCUMENT/);
+      expect(mockReactorClient.executeBatch).not.toHaveBeenCalled();
+    });
+
+    it("accepts the create, upgrade and link a drive's addFile sends", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xcreator" });
+
+      await callExecuteBatch(
+        [
+          createJob([
+            createAction(),
+            {
+              id: "act-upgrade",
+              type: "UPGRADE_DOCUMENT",
+              timestampUtcMs: "2026-01-01T00:00:00.000Z",
+              scope: "document",
+              input: {
+                documentId: newId,
+                model: "test/document",
+                fromVersion: 0,
+                toVersion: 1,
+              },
+            },
+            linkAction(driveId),
+          ]),
+        ],
+        ctx,
+      );
+
+      expect(mockReactorClient.executeBatch).toHaveBeenCalledTimes(1);
+    });
+
     it("leaves the new document unprotected when the batch fails", async () => {
       mockReactorClient.executeBatch = vi
         .fn()

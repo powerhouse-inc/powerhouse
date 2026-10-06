@@ -1033,7 +1033,7 @@ export type BatchCreation = {
   linkedFrom: string[];
 };
 
-/** A create stands alone so nothing else rides on its authorization. */
+/** Authorized as a create, so only createDocument's own shape is accepted. */
 export function batchCreationOf(
   jobs: readonly ExecutionJobInput[],
 ): BatchCreation | undefined {
@@ -1051,12 +1051,9 @@ export function batchCreationOf(
 
   const [job] = creating;
   const [first, ...rest] = job.actions;
-  if (
-    first.type !== "CREATE_DOCUMENT" ||
-    rest.some((action) => action.type === "CREATE_DOCUMENT")
-  ) {
+  if (first.type !== "CREATE_DOCUMENT") {
     throw new GraphQLError(
-      "CREATE_DOCUMENT must be the first action of its job, and the only one",
+      "CREATE_DOCUMENT must be the first action of its job",
     );
   }
 
@@ -1066,19 +1063,34 @@ export function batchCreationOf(
       "CREATE_DOCUMENT input needs a documentId and model",
     );
   }
-  if (input.documentId !== job.documentIdOrSlug) {
+  const newId = input.documentId;
+  if (newId !== job.documentIdOrSlug) {
     throw new GraphQLError(
-      `CREATE_DOCUMENT names "${input.documentId}" but its job targets "${job.documentIdOrSlug}"`,
+      `CREATE_DOCUMENT names "${newId}" but its job targets "${job.documentIdOrSlug}"`,
     );
   }
 
   const linkedFrom = new Set<string>();
   for (const action of rest) {
-    if (action.type !== "ADD_RELATIONSHIP") continue;
-    const { sourceId } = action.input as { sourceId?: unknown };
-    if (typeof sourceId === "string" && sourceId !== input.documentId) {
-      linkedFrom.add(sourceId);
+    const actionInput = action.input as Record<string, unknown>;
+    if (
+      action.type === "UPGRADE_DOCUMENT" &&
+      actionInput.documentId === newId
+    ) {
+      continue;
     }
+    if (
+      action.type === "ADD_RELATIONSHIP" &&
+      actionInput.targetId === newId &&
+      typeof actionInput.sourceId === "string" &&
+      actionInput.sourceId !== newId
+    ) {
+      linkedFrom.add(actionInput.sourceId);
+      continue;
+    }
+    throw new GraphQLError(
+      `A create job may only upgrade the new document and link it under parents; ${action.type} is not allowed`,
+    );
   }
 
   return {
