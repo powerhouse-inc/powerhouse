@@ -349,6 +349,32 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
   });
 
+  it("lets a dead letter whose retry failed again be requeued again", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi.fn().mockResolvedValue({
+        id: "job-x",
+        status: JobStatus.FAILED,
+        error: { name: "Error", message: "boom" },
+      }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await vi.waitFor(() =>
+      expect(channels[0].deadLetter.get("d1")).toBeDefined(),
+    );
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(2));
+  });
+
   it("drops only the successful op's row when a requeued op succeeds and another fails", async () => {
     mockReactor = {
       load: vi

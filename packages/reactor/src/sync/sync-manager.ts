@@ -1563,6 +1563,9 @@ export class SyncManager
   /** Keeps the row until the retry succeeds, so a crash cannot lose the op. */
   async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
+    if (this.requeuedDeadLetterIds.has(id) || remote.channel.inbox.get(id)) {
+      return;
+    }
     const source = await this.findDeadLetter(remote, id);
     if (!source) {
       return;
@@ -1745,6 +1748,7 @@ export class SyncManager
       const syncOps = remaining.filter((syncOp) => !purged.includes(syncOp));
 
       for (const syncOp of syncOps) {
+        this.requeuedDeadLetterIds.delete(syncOp.id);
         this.logger.error(
           "Dead letter (@remote, @documentId, @jobId, @error, @dependencies)",
           remote.meta.name,

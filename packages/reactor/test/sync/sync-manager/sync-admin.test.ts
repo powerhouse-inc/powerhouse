@@ -343,6 +343,35 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     ).rejects.toBeInstanceOf(SyncRepairRefusedError);
   });
 
+  it("requeues a dead letter once while its retry is pending", async () => {
+    await addAccounts();
+    channels[0].deadLetter.add(deadLetterOp("d1", "doc-b"));
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [
+        {
+          id: "d1",
+          jobId: "job-d1",
+          jobDependencies: [],
+          remoteName: "accounts",
+          documentId: "doc-b",
+          scopes: ["global"],
+          branch: "main",
+          operations: [],
+          errorSource: ChannelErrorSource.Inbox,
+          errorMessage: "failed",
+          errorType: "UNCLASSIFIED",
+        },
+      ],
+      options: { cursor: "0", limit: 100 },
+    });
+    channels[0].inbox.add.mockClear();
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
+    expect(channels[0].inbox.add).toHaveBeenCalledTimes(1);
+  });
+
   it("treats requeue of an unknown dead letter as a no-op", async () => {
     await addAccounts();
     channels[0].inbox.add.mockClear();
