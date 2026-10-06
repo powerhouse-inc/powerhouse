@@ -270,7 +270,7 @@ type ReactorStorage = {
   poolInstrumentation: PoolInstrumentation | undefined;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
@@ -329,7 +329,10 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      dialect: new ClosablePGliteDialect(pglite, {
+        onDiagnostic: (message, error) =>
+          logger.error(`[pglite-dialect] ${message}: @error`, error),
+      }),
     }),
     poolInstrumentation: undefined,
   };
