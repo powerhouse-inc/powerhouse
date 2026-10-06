@@ -806,7 +806,11 @@ export class WorkflowRuntimeService {
   // The journal is best-effort: a broken store never blocks runs. One that
   // failed to open is opened again once its backoff has passed.
   async store(): Promise<WorkflowRunStore | undefined> {
+    // Never (re)opened after shutdown: opening runs the sweeps, which would
+    // fail the next owner's live runs. One already open stays readable, so
+    // what this process adopted can still be closed out.
     if (
+      !this.closed &&
       this.storeError !== undefined &&
       !this.storeOpening &&
       Date.now() >= this.storeReopenAt
@@ -4011,9 +4015,7 @@ export class WorkflowRuntimeService {
     enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
     if (this.closed) {
-      throw new Error(
-        `Workflow ${workflowId} was not run: this workflow runtime has shut down`,
-      );
+      return this.refuseClosed(await this.store(), workflowId, enqueuedRunId);
     }
     // `policy.runTimeoutSeconds` is measured from HERE, the moment the firing
     // reaches the runtime — not from admission. The queue wait is part of the
@@ -4379,6 +4381,29 @@ export class WorkflowRuntimeService {
    * of bug this work package exists to stamp out. An already-enqueued row is
    * closed out in place, so nothing is left PENDING for a sweep to find.
    */
+  // An adopted row is durable, so a refused firing closes it out: left
+  // PENDING, the next owner reads its dedupe claim as handled and never runs it.
+  private async refuseClosed(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+    enqueuedRunId: string | undefined,
+  ): Promise<never> {
+    const error = new Error(
+      `Workflow ${workflowId} was not run: this workflow runtime has shut down`,
+    );
+    if (enqueuedRunId) {
+      try {
+        await store?.failRun(enqueuedRunId, error.message, errorNameOf(error));
+      } catch (failure) {
+        this.logger.warn(
+          `Could not close out run ${enqueuedRunId} after shutdown: @error`,
+          failure,
+        );
+      }
+    }
+    throw error;
+  }
+
   private async skipFiring(
     store: WorkflowRunStore | undefined,
     workflowId: string,
