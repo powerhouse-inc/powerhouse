@@ -98,3 +98,20 @@ export async function resolveLocalPackageSources(
   }
   return sources;
 }
+
+/** Calls `onChange` only when the local package is replaced (an HMR rebuild), not on every package notification. */
+export function subscribeLocalPackageChanges(
+  manager: {
+    readonly localPackage: unknown;
+    subscribe(handler: () => void): () => void;
+  },
+  onChange: () => void,
+): () => void {
+  let last = manager.localPackage;
+  return manager.subscribe(() => {
+    const current = manager.localPackage;
+    if (current === last) return;
+    last = current;
+    onChange();
+  });
+}

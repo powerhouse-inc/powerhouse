@@ -4,6 +4,7 @@ import {
   PROJECT_PACKAGE_SOURCE_NAME,
   resolveDevProjectSource,
   resolveLocalPackageSources,
+  subscribeLocalPackageChanges,
   WORKER_PACKAGES_MANIFEST,
 } from "../../src/utils/worker-package-sources.js";
 
@@ -161,5 +162,59 @@ describe("resolveLocalPackageSources", () => {
     const sources = await resolveLocalPackageSources("/");
 
     expect(sources.map((s) => s.name)).toEqual(["ok"]);
+  });
+});
+
+describe("subscribeLocalPackageChanges", () => {
+  function fakeManager(localPackage: object | undefined) {
+    const handlers = new Set<() => void>();
+    return {
+      localPackage,
+      subscribe(handler: () => void) {
+        handlers.add(handler);
+        return () => handlers.delete(handler);
+      },
+      notify() {
+        for (const handler of handlers) handler();
+      },
+    };
+  }
+
+  it("ignores notifications that leave the local package unchanged", () => {
+    const manager = fakeManager({ id: 1 });
+    const onChange = vi.fn();
+    subscribeLocalPackageChanges(manager, onChange);
+
+    manager.notify();
+    manager.notify();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("fires once per replacement of the local package", () => {
+    const manager = fakeManager(undefined);
+    const onChange = vi.fn();
+    subscribeLocalPackageChanges(manager, onChange);
+
+    manager.localPackage = { id: 2 };
+    manager.notify();
+    manager.notify();
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    manager.localPackage = { id: 3 };
+    manager.notify();
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops after unsubscribe", () => {
+    const manager = fakeManager({ id: 1 });
+    const onChange = vi.fn();
+    const unsubscribe = subscribeLocalPackageChanges(manager, onChange);
+
+    unsubscribe();
+    manager.localPackage = { id: 2 };
+    manager.notify();
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

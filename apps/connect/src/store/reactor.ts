@@ -27,7 +27,6 @@ import {
   setAttachmentService,
   setDefaultPHGlobalConfig,
   setDocumentCache,
-  onVetraPackageManager,
   setDrives,
   setFeatures,
   setPackageDiscoveryService,
@@ -73,6 +72,7 @@ import {
 import {
   resolveDevProjectSource,
   resolveLocalPackageSources,
+  subscribeLocalPackageChanges,
 } from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
@@ -453,27 +453,22 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
-    // A vetra watch rebuild updates the tab-side registry through the package
-    // manager; in worker mode the reactor lives in the worker, so forward
-    // each update as a replace of the project's models source.
+    // A watch rebuild replaces the local package (updateLocalPackage); in
+    // worker mode the reactor lives in the worker, so forward only that.
     const { registerPackages } = workerClient.reactorClientModule;
-    onVetraPackageManager((vetraPackageManager) => {
-      vetraPackageManager.subscribe(() => {
-        void (async () => {
-          const source = await resolveDevProjectSource(
-            import.meta.env.BASE_URL,
+    subscribeLocalPackageChanges(packageManager, () => {
+      void (async () => {
+        const source = await resolveDevProjectSource(import.meta.env.BASE_URL);
+        if (!source) return;
+        try {
+          await registerPackages([source]);
+        } catch (error) {
+          logger.error(
+            "Failed to re-register project models in the reactor worker: @error",
+            error,
           );
-          if (!source) return;
-          try {
-            await registerPackages([source]);
-          } catch (error) {
-            logger.error(
-              "Failed to re-register project models in the reactor worker: @error",
-              error,
-            );
-          }
-        })();
-      });
+        }
+      })();
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
