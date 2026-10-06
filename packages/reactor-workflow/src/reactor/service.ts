@@ -241,7 +241,6 @@ import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
   CANCELLED_RUN_STATUS,
   effectiveRunPolicy,
-  PARKED_TRIGGER_STATUS,
   type EffectiveRunPolicy,
 } from "./policy.js";
 import { WorkflowRunGate } from "./run-gate.js";
