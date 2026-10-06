@@ -1278,6 +1278,9 @@ export class SyncManager
     if (!remote) {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
+    if (this.resets.has(name)) {
+      throw new Error(`Remote with name '${name}' is being reset`);
+    }
 
     // The channel shuts down and the rows go several awaits before the map
     // entry does, and a batch landing in that gap would otherwise pick this
@@ -1428,6 +1431,13 @@ export class SyncManager
         this.abandonReset(name, error);
         throw error;
       }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) {
+      const error = new Error("SyncManager shut down during the reset");
+      this.abandonReset(name, error);
+      throw error;
     }
 
     let channel: IChannel;

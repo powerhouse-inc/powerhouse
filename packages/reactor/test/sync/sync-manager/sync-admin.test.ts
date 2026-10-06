@@ -476,6 +476,53 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     );
   });
 
+  it("refuses to remove a remote while it is being reset", async () => {
+    await addAccounts();
+    let releaseInit: (() => void) | undefined;
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      const channel = createChannel();
+      channel.init = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseInit = resolve;
+          }),
+      );
+      channels.push(channel);
+      return channel as unknown as IChannel;
+    });
+
+    const reset = syncManager.resetChannel("accounts");
+    await vi.waitFor(() => expect(releaseInit).toBeDefined());
+    await expect(syncManager.remove("accounts")).rejects.toThrow(/being reset/);
+    releaseInit?.();
+    await reset;
+
+    expect(channels[1].shutdown).not.toHaveBeenCalled();
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels[1] as unknown,
+    );
+
+    await syncManager.remove("accounts");
+    expect(channels[1].shutdown).toHaveBeenCalled();
+  });
+
+  it("builds no channel when the manager shuts down during a reset", async () => {
+    await addAccounts();
+    let releaseShutdown: (() => void) | undefined;
+    const shutdownGate = new Promise<void>((resolve) => {
+      releaseShutdown = resolve;
+    });
+    channels[0].shutdown = vi.fn(() => shutdownGate);
+
+    const reset = syncManager.resetChannel("accounts");
+    await vi.waitFor(() => expect(channels[0].shutdown).toHaveBeenCalled());
+    syncManager.shutdown();
+    releaseShutdown?.();
+
+    await expect(reset).rejects.toThrow(/shut down/);
+    expect(channels).toHaveLength(1);
+  });
+
   it("refuses to reset a remote that is being removed", async () => {
     await addAccounts();
     let releaseShutdown: (() => void) | undefined;
