@@ -351,6 +351,14 @@ handled it, and the run fails naming the state. It is not retried, and a rerun
 does not replay it — only SUCCEEDED and REPLAYED steps replay. Workflow Studio
 renders it in its own tone.
 
+**Design-time tests carry it too.** `testStep` reports
+`SUCCEEDED | FAILED | INDETERMINATE`, a trigger test whose hook made an
+unconfirmed host call records INDETERMINATE, and such a test run is journaled
+FAILED rather than green — the same answer a real run gives. An INDETERMINATE
+last test is not a sample either: a draft step reading it is told to test that
+block again, since it has no confirmed output to stand on. Collapsing the three
+states to two is how a write-unconfirmed test came to read as a pass.
+
 ## Expressions
 
 Every string in a step's config is a template, nested strings in objects and

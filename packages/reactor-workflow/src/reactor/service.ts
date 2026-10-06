@@ -46,6 +46,7 @@ import {
   runWorkflow,
   UnsupportedPieceFeatureError,
   authMethodFor,
+  isIndeterminateError,
   type PieceAuthDescriptor,
   type BlockExecutor,
   type BlockResolution,
@@ -216,6 +217,7 @@ import { resolveVariables } from "./variables.js";
 import {
   draftStepDef,
   scopeReferences,
+  testStatusOf,
   triggerSamplePayload,
   untestedError,
   upstreamStepIds,
@@ -3639,9 +3641,11 @@ export class WorkflowRuntimeService {
     try {
       output = await test.sample();
     } catch (error) {
+      // A host call the hook made may have committed the write it asked for,
+      // so the test neither succeeded nor failed. It takes no port either.
       const errorName = errorNameOf(error);
       await recordTest({
-        status: "FAILED",
+        status: isIndeterminateError(error) ? "INDETERMINATE" : "FAILED",
         error: pieceFailureDetail(error, "Trigger test timed out"),
         ...(errorName ? { errorName } : {}),
       });
@@ -3767,10 +3771,17 @@ export class WorkflowRuntimeService {
         triggerKind: TEST_TRIGGER_KIND,
       });
       await store.recordStep(runId, 0, record);
+      // An INDETERMINATE step ends a real run FAILED (coordinator.ts), and a
+      // test run says the same rather than reading green: the step row carries
+      // the INDETERMINATE status, the run row carries that it did not confirm.
+      const indeterminate = record.status === "INDETERMINATE";
+      const error = indeterminate
+        ? `This test is INDETERMINATE: ${record.error ?? "a host call it made timed out"}`
+        : record.error;
       await store.finishRun(runId, {
-        status: record.status === "FAILED" ? "FAILED" : "SUCCEEDED",
+        status: record.status === "SUCCEEDED" ? "SUCCEEDED" : "FAILED",
         steps: [record],
-        ...(record.error ? { error: record.error } : {}),
+        ...(error ? { error } : {}),
         ...(record.errorName ? { errorName: record.errorName } : {}),
       });
     } catch (error) {
@@ -4427,7 +4438,7 @@ export class WorkflowRuntimeService {
     const served = ctx ? await this.servesDocuments(ids, ctx) : false;
     return {
       runId,
-      status: record.status === "FAILED" ? "FAILED" : "SUCCEEDED",
+      status: testStatusOf(record.status),
       ...(served && record.output !== undefined
         ? { output: record.output }
         : {}),
@@ -4625,6 +4636,10 @@ export class WorkflowRuntimeService {
     if (row.status === "FAILED") {
       return { kind: "failed", runId, testedAt, error: row.error ?? "" };
     }
+    // Not a sample either way: the test neither returned an output nor failed,
+    // so a draft step that read it would be standing on a null nobody
+    // confirmed. Its own kind, so the message says which of the two it is.
+    if (row.status === "INDETERMINATE") return { kind: "indeterminate" };
     const output =
       row.output === null ? null : (JSON.parse(row.output) as unknown);
     // The journal capped this output to a marker (store.ts,
