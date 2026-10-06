@@ -330,7 +330,6 @@ async function prebuildLocalWorkerPackages(
   // cannot otherwise get.
   const own = ownProjectPackage(dirname);
   const localPackages = [...new Set([...configured, ...(own ? [own] : [])])];
-  if (localPackages.length === 0) return;
 
   const errorRef: { message?: string } = {};
   const built = await prebuildWorkerPackages({

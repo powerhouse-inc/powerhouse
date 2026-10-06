@@ -134,7 +134,8 @@ export function ownProjectPackage(dirname: string): string | undefined {
  * Build each local package's models entry into `outDir` and write the
  * manifest the tab reads. Returns the manifest entries (empty when no local
  * package ships a models bundle), or null when the build itself failed -
- * `errorRef` then carries the cause.
+ * `errorRef` then carries the cause. Both of those remove `outDir`, so a
+ * previous build's bundles never outlive the packages they came from.
  */
 export async function prebuildWorkerPackages(
   options: WorkerPackagesBuildOptions,
@@ -157,6 +158,7 @@ export async function prebuildWorkerPackages(
     });
   }
   if (resolved.length === 0) {
+    rmSync(options.outDir, { recursive: true, force: true });
     return [];
   }
 
@@ -226,6 +228,7 @@ export async function prebuildWorkerPackages(
     return manifest;
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(options.outDir, { recursive: true, force: true });
     if (options.errorRef) {
       options.errorRef.message =
         err instanceof Error ? err.message : String(err);
