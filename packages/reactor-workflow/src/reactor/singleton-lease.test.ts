@@ -472,3 +472,43 @@ describe("releasing while a renewal is in flight", () => {
     await next.release();
   });
 });
+
+// Two hosts booting on a fresh Postgres both run CREATE … IF NOT EXISTS, and
+// the loser can still hit the catalog's unique index.
+describe("creating the lease table beside another host", () => {
+  it.each(["23505", "42P07"])(
+    "retries once when the DDL races (%s)",
+    async (code) => {
+      const relationalDb = createFreshRelationalDb();
+      let raced = false;
+      const racing = new Proxy(relationalDb, {
+        get(target, prop) {
+          if (prop === "createNamespace") {
+            return (name: string) => {
+              if (!raced) {
+                raced = true;
+                return Promise.reject(
+                  Object.assign(new Error("duplicate key value"), { code }),
+                );
+              }
+              return target.createNamespace(name);
+            };
+          }
+          const value = Reflect.get(target, prop) as unknown;
+          return typeof value === "function"
+            ? (value as (...a: unknown[]) => unknown).bind(target)
+            : value;
+        },
+      });
+
+      const lease = await acquireWorkflowSingletonLease({
+        relationalDb: racing,
+        logger: silent,
+        owner: "alpha",
+      });
+
+      expect(await lease.heartbeat()).toBe(true);
+      await lease.release();
+    },
+  );
+});

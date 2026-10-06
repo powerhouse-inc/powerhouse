@@ -187,6 +187,33 @@ async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
     .execute();
 }
 
+// unique_violation and duplicate_table/schema: two hosts on a fresh database
+// both passed IF NOT EXISTS, and the loser hit the catalog's unique index.
+const CONCURRENT_DDL_CODES = new Set(["23505", "42P06", "42P07"]);
+
+function isConcurrentDdl(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" && CONCURRENT_DDL_CODES.has(code);
+}
+
+async function openLeaseTable(
+  relationalDb: IRelationalDb,
+): Promise<IRelationalDb<SingletonLeaseDB>> {
+  const open = async () => {
+    const db = (await relationalDb.createNamespace(
+      "workflow_runtime",
+    )) as IRelationalDb<SingletonLeaseDB>;
+    await ensureTable(db);
+    return db;
+  };
+  try {
+    return await open();
+  } catch (error) {
+    if (!isConcurrentDdl(error)) throw error;
+    return await open();
+  }
+}
+
 /**
  * Claims the workflow singleton, or refuses.
  *
@@ -213,10 +240,7 @@ export async function acquireWorkflowSingletonLease(
     options.owner ?? singletonOwnerName(options.env, options.storageId);
   const instance = randomUUID();
 
-  const db = (await options.relationalDb.createNamespace(
-    "workflow_runtime",
-  )) as IRelationalDb<SingletonLeaseDB>;
-  await ensureTable(db);
+  const db = await openLeaseTable(options.relationalDb);
 
   const stamps = () => ({
     heartbeat_at: dbNow(),
