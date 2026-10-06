@@ -193,6 +193,43 @@ describe("HardenedPGliteDialect", () => {
     await pg.close();
   });
 
+  it("hands the lease on when session recovery itself throws", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    const client: PGliteSession = {
+      query: (text: string, params?: unknown[]) => pg.query(text, params),
+      exec: (text: string) => pg.exec(text),
+      isInTransaction: () => {
+        throw new TypeError("isInTransaction is not a function");
+      },
+    };
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(client, {
+        onDiagnostic: () => undefined,
+      }),
+    });
+    open.push({ db, pg });
+
+    const settle = (query: Promise<unknown>) =>
+      Promise.race([
+        query.then(
+          () => "resolved",
+          (error: unknown) => error,
+        ),
+        new Promise((resolve) => setTimeout(() => resolve("hung"), 1000)),
+      ]);
+
+    await expect(settle(sql`select 1 / 0`.execute(db))).resolves.not.toBe(
+      "hung",
+    );
+    await expect(
+      settle(sql`select 1 as x`.execute(db)),
+    ).resolves.toBeInstanceOf(PGliteSessionPoisonedError);
+    await expect(
+      settle(sql`select 1 as x`.execute(db)),
+    ).resolves.toBeInstanceOf(PGliteSessionPoisonedError);
+  });
+
   it("never replays a failed statement as its own autocommit statement", async () => {
     const { pg, db } = await freshDb();
 

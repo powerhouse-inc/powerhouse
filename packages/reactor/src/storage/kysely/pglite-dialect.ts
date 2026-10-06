@@ -347,9 +347,15 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
 
     if (this.sessionFault !== undefined) {
       const fault = this.sessionFault;
-      const recovered = await this.recoverSession(false);
+      let recovered = false;
+      try {
+        recovered = await this.tryRecoverSession(false);
+      } finally {
+        if (!recovered) {
+          await this.inner.releaseConnection(innerConnection);
+        }
+      }
       if (!recovered) {
-        await this.inner.releaseConnection(innerConnection);
         throw new PGliteSessionPoisonedError(fault);
       }
       this.sessionFault = undefined;
@@ -374,7 +380,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
       if (!isAbortedTransactionError(error)) {
         throw error;
       }
-      if (!(await this.recoverSession(false))) {
+      if (!(await this.tryRecoverSession(false))) {
         this.sessionFault = errorOf(error);
         throw error;
       }
@@ -433,21 +439,23 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
   async releaseConnection(connection: DatabaseConnection): Promise<void> {
     const wrapper = asWrapper(connection);
 
-    if (wrapper.suspect && this.deadCall === undefined) {
-      const recovered = await this.recoverSession(wrapper.transactionOpen);
-      if (!recovered) {
-        this.sessionFault =
-          wrapper.rollbackFailure ??
-          wrapper.failure ??
-          new Error("session left in a transaction");
-        this.options.onDiagnostic(
-          "the PGlite session could not be reset and is being marked unrecoverable",
-          this.sessionFault,
-        );
+    try {
+      if (wrapper.suspect && this.deadCall === undefined) {
+        const recovered = await this.tryRecoverSession(wrapper.transactionOpen);
+        if (!recovered) {
+          this.sessionFault =
+            wrapper.rollbackFailure ??
+            wrapper.failure ??
+            new Error("session left in a transaction");
+          this.options.onDiagnostic(
+            "the PGlite session could not be reset and is being marked unrecoverable",
+            this.sessionFault,
+          );
+        }
       }
+    } finally {
+      await this.inner.releaseConnection(wrapper.inner);
     }
-
-    await this.inner.releaseConnection(wrapper.inner);
   }
 
   async destroy(): Promise<void> {
@@ -506,6 +514,18 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
       return await Promise.race([pending, expiry]);
     } finally {
       clearTimeout(handle);
+    }
+  }
+
+  /** {@link recoverSession}, with a recovery that throws counted as failed. */
+  private async tryRecoverSession(
+    mustEndTransaction: boolean,
+  ): Promise<boolean> {
+    try {
+      return await this.recoverSession(mustEndTransaction);
+    } catch (error) {
+      this.options.onDiagnostic("session recovery threw", error);
+      return false;
     }
   }
 
