@@ -274,7 +274,8 @@ describe("composeWorkflowRuntime", () => {
       webhooks: webhooks.scope,
     });
 
-    // Intervals only, from here on: the supervisor's tick is the runtime's one.
+    // Intervals only, from here on: the supervisor's tick and the singleton
+    // lease's heartbeat.
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     try {
       await workflows.start();
@@ -284,7 +285,7 @@ describe("composeWorkflowRuntime", () => {
       await expect(
         webhooks.families[0]!.policyFor?.("wf-unknown"),
       ).resolves.toBeUndefined();
-      expect(vi.getTimerCount()).toBe(1);
+      expect(vi.getTimerCount()).toBe(2);
 
       await workflows.stop();
       await workflows.stop();
