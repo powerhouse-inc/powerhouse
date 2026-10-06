@@ -182,7 +182,9 @@ describe("executeBatch", () => {
     expect(result.jobs.map((entry) => entry.key)).toEqual(["drive", "delete"]);
     expect(result.jobs[0].job).toMatchObject({
       id: "job-drive",
+      documentId: "drive-1",
       status: "READ_READY",
+      meta: { batchId: "batch-1", batchJobIds: ["job-drive"] },
     });
     expect(result.jobs[1].job).toMatchObject({
       id: "job-delete",

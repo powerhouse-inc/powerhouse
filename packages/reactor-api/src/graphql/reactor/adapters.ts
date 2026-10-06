@@ -158,11 +158,27 @@ export function toGqlPhDocument(doc: PHDocument): PhDocument {
 export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
   return {
     id: job.id,
+    documentId: job.documentId,
     status: job.status,
     createdAt: job.createdAtUtcIso,
     completedAt: job.completedAtUtcIso ?? null,
     error: job.error?.message ?? null,
+    errorName: job.error?.name ?? null,
     result: job.result ?? null,
+    consistencyToken: {
+      version: job.consistencyToken.version,
+      createdAtUtcIso: job.consistencyToken.createdAtUtcIso,
+      coordinates: job.consistencyToken.coordinates.map((coordinate) => ({
+        documentId: coordinate.documentId,
+        scope: coordinate.scope,
+        branch: coordinate.branch,
+        operationIndex: coordinate.operationIndex,
+      })),
+    },
+    meta: {
+      batchId: job.meta.batchId,
+      batchJobIds: [...job.meta.batchJobIds],
+    },
   };
 }
 

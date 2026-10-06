@@ -159,6 +159,23 @@ export type ChannelMetaInput = {
   readonly id: Scalars["String"]["input"];
 };
 
+export type ConsistencyCoordinate = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly operationIndex: Scalars["Int"]["output"];
+  readonly scope: Scalars["String"]["output"];
+};
+
+/**
+ * The write positions a job reached, for read-after-write. Only meaningful once
+ * the job has completed.
+ */
+export type ConsistencyToken = {
+  readonly coordinates: ReadonlyArray<ConsistencyCoordinate>;
+  readonly createdAtUtcIso: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
+};
+
 export type DeadLetterInfo = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
@@ -262,6 +279,12 @@ export type ExecutionJobInput = {
   readonly scope: Scalars["String"]["input"];
 };
 
+/** The batch a job was submitted in. */
+export type JobBatchMeta = {
+  readonly batchId: Scalars["String"]["output"];
+  readonly batchJobIds: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
@@ -276,9 +299,18 @@ export type JobChangeEvent = {
 
 export type JobInfo = {
   readonly completedAt?: Maybe<Scalars["DateTime"]["output"]>;
+  readonly consistencyToken: ConsistencyToken;
   readonly createdAt: Scalars["DateTime"]["output"];
+  /**
+   * The document the job operates on. Empty for a job this server does not know,
+   * which then comes back FAILED with "Job not found".
+   */
+  readonly documentId: Scalars["String"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
+  /** The error's class name, such as `DocumentAlreadyExistsError`, when it failed. */
+  readonly errorName?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
+  readonly meta: JobBatchMeta;
   /**
    * What the job produced, once it has produced anything. Null until then, which
    * is the state every job is in when it is handed back from a submission.
@@ -1218,6 +1250,31 @@ export type GetDocumentOperationsQuery = {
   };
 };
 
+export type JobInfoFieldsFragment = {
+  readonly id: string;
+  readonly documentId: string;
+  readonly status: string;
+  readonly result?: NonNullable<unknown> | null | undefined;
+  readonly error?: string | null | undefined;
+  readonly errorName?: string | null | undefined;
+  readonly createdAt: string | Date;
+  readonly completedAt?: string | Date | null | undefined;
+  readonly consistencyToken: {
+    readonly version: number;
+    readonly createdAtUtcIso: string;
+    readonly coordinates: ReadonlyArray<{
+      readonly documentId: string;
+      readonly scope: string;
+      readonly branch: string;
+      readonly operationIndex: number;
+    }>;
+  };
+  readonly meta: {
+    readonly batchId: string;
+    readonly batchJobIds: ReadonlyArray<string>;
+  };
+};
+
 export type GetJobStatusQueryVariables = Exact<{
   jobId: Scalars["String"]["input"];
 }>;
@@ -1226,11 +1283,27 @@ export type GetJobStatusQuery = {
   readonly jobStatus?:
     | {
         readonly id: string;
+        readonly documentId: string;
         readonly status: string;
         readonly result?: NonNullable<unknown> | null | undefined;
         readonly error?: string | null | undefined;
+        readonly errorName?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
+        readonly consistencyToken: {
+          readonly version: number;
+          readonly createdAtUtcIso: string;
+          readonly coordinates: ReadonlyArray<{
+            readonly documentId: string;
+            readonly scope: string;
+            readonly branch: string;
+            readonly operationIndex: number;
+          }>;
+        };
+        readonly meta: {
+          readonly batchId: string;
+          readonly batchJobIds: ReadonlyArray<string>;
+        };
       }
     | null
     | undefined;
@@ -1334,11 +1407,63 @@ export type MutateDocumentAsyncMutationVariables = Exact<{
 export type MutateDocumentAsyncMutation = {
   readonly mutateDocumentAsync: {
     readonly id: string;
+    readonly documentId: string;
     readonly status: string;
     readonly result?: NonNullable<unknown> | null | undefined;
     readonly error?: string | null | undefined;
+    readonly errorName?: string | null | undefined;
     readonly createdAt: string | Date;
     readonly completedAt?: string | Date | null | undefined;
+    readonly consistencyToken: {
+      readonly version: number;
+      readonly createdAtUtcIso: string;
+      readonly coordinates: ReadonlyArray<{
+        readonly documentId: string;
+        readonly scope: string;
+        readonly branch: string;
+        readonly operationIndex: number;
+      }>;
+    };
+    readonly meta: {
+      readonly batchId: string;
+      readonly batchJobIds: ReadonlyArray<string>;
+    };
+  };
+};
+
+export type ExecuteBatchMutationVariables = Exact<{
+  jobs: ReadonlyArray<ExecutionJobInput>;
+}>;
+
+export type ExecuteBatchMutation = {
+  readonly executeBatch: {
+    readonly jobs: ReadonlyArray<{
+      readonly key: string;
+      readonly job: {
+        readonly id: string;
+        readonly documentId: string;
+        readonly status: string;
+        readonly result?: NonNullable<unknown> | null | undefined;
+        readonly error?: string | null | undefined;
+        readonly errorName?: string | null | undefined;
+        readonly createdAt: string | Date;
+        readonly completedAt?: string | Date | null | undefined;
+        readonly consistencyToken: {
+          readonly version: number;
+          readonly createdAtUtcIso: string;
+          readonly coordinates: ReadonlyArray<{
+            readonly documentId: string;
+            readonly scope: string;
+            readonly branch: string;
+            readonly operationIndex: number;
+          }>;
+        };
+        readonly meta: {
+          readonly batchId: string;
+          readonly batchJobIds: ReadonlyArray<string>;
+        };
+      };
+    }>;
   };
 };
 
@@ -1810,6 +1935,8 @@ export type ResolversTypes = ResolversObject<{
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
+  ConsistencyCoordinate: ResolverTypeWrapper<ConsistencyCoordinate>;
+  ConsistencyToken: ResolverTypeWrapper<ConsistencyToken>;
   DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
   DeadLetterInfo: ResolverTypeWrapper<DeadLetterInfo>;
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
@@ -1824,6 +1951,7 @@ export type ResolversTypes = ResolversObject<{
   ExecutionJobInput: ExecutionJobInput;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
+  JobBatchMeta: ResolverTypeWrapper<JobBatchMeta>;
   JobChangeEvent: ResolverTypeWrapper<JobChangeEvent>;
   JobInfo: ResolverTypeWrapper<JobInfo>;
   MoveRelationshipResult: ResolverTypeWrapper<MoveRelationshipResult>;
@@ -1883,6 +2011,8 @@ export type ResolversParentTypes = ResolversObject<{
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
   ChannelMetaInput: ChannelMetaInput;
+  ConsistencyCoordinate: ConsistencyCoordinate;
+  ConsistencyToken: ConsistencyToken;
   DateTime: Scalars["DateTime"]["output"];
   DeadLetterInfo: DeadLetterInfo;
   DocumentChangeContext: DocumentChangeContext;
@@ -1896,6 +2026,7 @@ export type ResolversParentTypes = ResolversObject<{
   ExecutionJobInput: ExecutionJobInput;
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
+  JobBatchMeta: JobBatchMeta;
   JobChangeEvent: JobChangeEvent;
   JobInfo: JobInfo;
   MoveRelationshipResult: MoveRelationshipResult;
@@ -2020,6 +2151,31 @@ export type ChannelMetaResolvers<
     ResolversParentTypes["ChannelMeta"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
+export type ConsistencyCoordinateResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["ConsistencyCoordinate"] =
+    ResolversParentTypes["ConsistencyCoordinate"],
+> = ResolversObject<{
+  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  operationIndex?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
+export type ConsistencyTokenResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["ConsistencyToken"] =
+    ResolversParentTypes["ConsistencyToken"],
+> = ResolversObject<{
+  coordinates?: Resolver<
+    ReadonlyArray<ResolversTypes["ConsistencyCoordinate"]>,
+    ParentType,
+    ContextType
+  >;
+  createdAtUtcIso?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  version?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
 }>;
 
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<
@@ -2181,6 +2337,19 @@ export interface JsonObjectScalarConfig extends GraphQLScalarTypeConfig<
   name: "JSONObject";
 }
 
+export type JobBatchMetaResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["JobBatchMeta"] =
+    ResolversParentTypes["JobBatchMeta"],
+> = ResolversObject<{
+  batchId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  batchJobIds?: Resolver<
+    ReadonlyArray<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
 export type JobChangeEventResolvers<
   ContextType = Context,
   ParentType extends ResolversParentTypes["JobChangeEvent"] =
@@ -2206,9 +2375,21 @@ export type JobInfoResolvers<
     ParentType,
     ContextType
   >;
+  consistencyToken?: Resolver<
+    ResolversTypes["ConsistencyToken"],
+    ParentType,
+    ContextType
+  >;
   createdAt?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  errorName?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  meta?: Resolver<ResolversTypes["JobBatchMeta"], ParentType, ContextType>;
   result?: Resolver<
     Maybe<ResolversTypes["JSONObject"]>,
     ParentType,
@@ -2790,6 +2971,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   BatchExecutionResult?: BatchExecutionResultResolvers<ContextType>;
   BatchJobResult?: BatchJobResultResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
+  ConsistencyCoordinate?: ConsistencyCoordinateResolvers<ContextType>;
+  ConsistencyToken?: ConsistencyTokenResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
@@ -2800,6 +2983,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   DocumentRelationshipResultPage?: DocumentRelationshipResultPageResolvers<ContextType>;
   DocumentWithChildren?: DocumentWithChildrenResolvers<ContextType>;
   JSONObject?: GraphQLScalarType;
+  JobBatchMeta?: JobBatchMetaResolvers<ContextType>;
   JobChangeEvent?: JobChangeEventResolvers<ContextType>;
   JobInfo?: JobInfoResolvers<ContextType>;
   MoveRelationshipResult?: MoveRelationshipResultResolvers<ContextType>;
@@ -3106,6 +3290,32 @@ export const DocumentRelationshipFieldsFragmentDoc = gql`
     updatedAt
   }
 `;
+export const JobInfoFieldsFragmentDoc = gql`
+  fragment JobInfoFields on JobInfo {
+    id
+    documentId
+    status
+    result
+    error
+    errorName
+    createdAt
+    completedAt
+    consistencyToken {
+      version
+      createdAtUtcIso
+      coordinates {
+        documentId
+        scope
+        branch
+        operationIndex
+      }
+    }
+    meta {
+      batchId
+      batchJobIds
+    }
+  }
+`;
 export const GetDocumentModelsDocument = gql`
   query GetDocumentModels($namespace: String, $paging: PagingInput) {
     documentModels(namespace: $namespace, paging: $paging) {
@@ -3338,14 +3548,10 @@ export const GetDocumentOperationsDocument = gql`
 export const GetJobStatusDocument = gql`
   query GetJobStatus($jobId: String!) {
     jobStatus(jobId: $jobId) {
-      id
-      status
-      result
-      error
-      createdAt
-      completedAt
+      ...JobInfoFields
     }
   }
+  ${JobInfoFieldsFragmentDoc}
 `;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
@@ -3418,14 +3624,23 @@ export const MutateDocumentAsyncDocument = gql`
       actions: $actions
       branch: $branch
     ) {
-      id
-      status
-      result
-      error
-      createdAt
-      completedAt
+      ...JobInfoFields
     }
   }
+  ${JobInfoFieldsFragmentDoc}
+`;
+export const ExecuteBatchDocument = gql`
+  mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
+    executeBatch(jobs: $jobs) {
+      jobs {
+        key
+        job {
+          ...JobInfoFields
+        }
+      }
+    }
+  }
+  ${JobInfoFieldsFragmentDoc}
 `;
 export const RenameDocumentDocument = gql`
   mutation RenameDocument(
@@ -3861,6 +4076,16 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<MutateDocumentAsyncMutation>;
+    },
+    ExecuteBatch(
+      variables: ExecuteBatchMutationVariables,
+      options?: C,
+    ): Promise<ExecuteBatchMutation> {
+      return requester<ExecuteBatchMutation, ExecuteBatchMutationVariables>(
+        ExecuteBatchDocument,
+        variables,
+        options,
+      ) as Promise<ExecuteBatchMutation>;
     },
     RenameDocument(
       variables: RenameDocumentMutationVariables,

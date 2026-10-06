@@ -86,14 +86,43 @@ export const MoveRelationshipResultDTO = z
   })
   .strip();
 
+export const ConsistencyTokenDTO = z
+  .object({
+    version: z.number().int(),
+    createdAtUtcIso: z.string(),
+    coordinates: z.array(
+      z
+        .object({
+          documentId: z.string(),
+          scope: z.string(),
+          branch: z.string(),
+          operationIndex: z.number().int(),
+        })
+        .strip(),
+    ),
+  })
+  .strip();
+
 export const JobInfoDTO = z
   .object({
     id: z.string(),
+    documentId: z.string(),
     status: z.string(),
     result: JSONObjectDTO.nullable().optional(),
     error: z.string().nullable().optional(),
+    errorName: z.string().nullable().optional(),
     createdAt: DateTimeDTO,
     completedAt: DateTimeDTO.nullable().optional(),
+    consistencyToken: ConsistencyTokenDTO,
+    meta: z
+      .object({ batchId: z.string(), batchJobIds: z.array(z.string()) })
+      .strip(),
+  })
+  .strip();
+
+export const BatchExecutionResultDTO = z
+  .object({
+    jobs: z.array(z.object({ key: z.string(), job: JobInfoDTO }).strip()),
   })
   .strip();
 

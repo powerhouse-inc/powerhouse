@@ -239,14 +239,34 @@ query GetDocumentOperations(
   }
 }
 
+fragment JobInfoFields on JobInfo {
+  id
+  documentId
+  status
+  result
+  error
+  errorName
+  createdAt
+  completedAt
+  consistencyToken {
+    version
+    createdAtUtcIso
+    coordinates {
+      documentId
+      scope
+      branch
+      operationIndex
+    }
+  }
+  meta {
+    batchId
+    batchJobIds
+  }
+}
+
 query GetJobStatus($jobId: String!) {
   jobStatus(jobId: $jobId) {
-    id
-    status
-    result
-    error
-    createdAt
-    completedAt
+    ...JobInfoFields
   }
 }
 
@@ -314,12 +334,18 @@ mutation MutateDocumentAsync(
     actions: $actions
     branch: $branch
   ) {
-    id
-    status
-    result
-    error
-    createdAt
-    completedAt
+    ...JobInfoFields
+  }
+}
+
+mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
+  executeBatch(jobs: $jobs) {
+    jobs {
+      key
+      job {
+        ...JobInfoFields
+      }
+    }
   }
 }
 

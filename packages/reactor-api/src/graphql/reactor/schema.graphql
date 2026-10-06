@@ -199,8 +199,37 @@ type MoveRelationshipResult {
   target: PHDocument!
 }
 
+type ConsistencyCoordinate {
+  documentId: String!
+  scope: String!
+  branch: String!
+  operationIndex: Int!
+}
+
+"""
+The write positions a job reached, for read-after-write. Only meaningful once
+the job has completed.
+"""
+type ConsistencyToken {
+  version: Int!
+  createdAtUtcIso: String!
+  coordinates: [ConsistencyCoordinate!]!
+}
+
+"The batch a job was submitted in."
+type JobBatchMeta {
+  batchId: String!
+  batchJobIds: [String!]!
+}
+
 type JobInfo {
   id: String!
+
+  """
+  The document the job operates on. Empty for a job this server does not know,
+  which then comes back FAILED with "Job not found".
+  """
+  documentId: String!
   status: String!
 
   """
@@ -210,8 +239,13 @@ type JobInfo {
   result: JSONObject
 
   error: String
+
+  "The error's class name, such as `DocumentAlreadyExistsError`, when it failed."
+  errorName: String
   createdAt: DateTime!
   completedAt: DateTime
+  consistencyToken: ConsistencyToken!
+  meta: JobBatchMeta!
 }
 
 """
