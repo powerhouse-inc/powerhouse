@@ -44,6 +44,7 @@ import {
   rememberSecrets,
   resolveStepInput,
   runWorkflow,
+  RUN_DEADLINE_ERROR_NAME,
   UnsupportedPieceFeatureError,
   authMethodFor,
   isIndeterminateError,
@@ -4431,8 +4432,14 @@ export class WorkflowRuntimeService {
         `Run "${runId}" tested a single step or trigger; test it again instead of rerunning it`,
       );
     }
-    if (run.status !== "FAILED") {
-      throw new Error(`Only FAILED runs can be rerun; run is ${run.status}`);
+    // A run its deadline cancelled resumes too; a refused firing never ran.
+    const deadlineCancelled =
+      run.status === CANCELLED_RUN_STATUS &&
+      run.error_name === RUN_DEADLINE_ERROR_NAME;
+    if (run.status !== "FAILED" && !deadlineCancelled) {
+      throw new Error(
+        `Only FAILED runs, and runs their deadline cancelled, can be rerun; run is ${run.status}`,
+      );
     }
     const triggerPayload =
       run.trigger_payload === null

@@ -41,6 +41,15 @@ export const policy = {
         return { marks: [...marks] };
       },
     },
+    crawl: {
+      name: "crawl",
+      displayName: "Crawl",
+      props: {},
+      run: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        return { crawled: true };
+      },
+    },
     boom: {
       name: "boom",
       displayName: "Boom",
@@ -894,4 +903,83 @@ describe("an adopted run whose park check throws", () => {
     expect(run?.status).toBe("FAILED");
     expect(run?.error).toContain("the journal is gone");
   });
+});
+
+// A deadline that cut a run short after side-effecting steps leaves work to
+// resume; re-firing it would repeat those steps. A refused firing never ran.
+describe("rerunning a CANCELLED run", () => {
+  it("resumes a run its deadline cancelled", async () => {
+    const id = "wf-deadline-rerun";
+    documents.apply(
+      id,
+      actions.setTrigger({
+        id: "t1",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      }),
+      actions.addStep({
+        id: "a",
+        key: "first",
+        name: "First",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "crawl",
+        config: {},
+      }),
+      actions.addStep({
+        id: "b",
+        key: "second",
+        name: "Second",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "slow",
+        config: { tag: "second" },
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "a", port: "next" }),
+      actions.addEdge({ id: "e2", from: "a", to: "b", port: "next" }),
+      actions.setPolicy({
+        concurrency: "PARALLEL",
+        onFailure: "IGNORE",
+        runTimeoutSeconds: 1,
+      } as never),
+      actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    );
+    const cancelled = await service.fire(
+      id,
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+    expect(cancelled.status).toBe("CANCELLED");
+    expect(cancelled.steps.map((step) => step.status)).toEqual([
+      "SUCCEEDED",
+      "SKIPPED",
+    ]);
+
+    const rerun = await service.rerun(cancelled.runId!, CTX);
+
+    expect(rerun.steps[0].status).toBe("REPLAYED");
+    expect(rerun.steps[1].status).toBe("SUCCEEDED");
+  }, 60_000);
+
+  it("refuses a firing that was refused rather than run", async () => {
+    const id = "wf-refused-rerun";
+    workflow(id, {
+      action: "slow",
+      policy: { concurrency: "SINGLETON", onFailure: "IGNORE" },
+    });
+    const fired = await Promise.all([
+      service.fire(id, undefined, "manual", undefined, CTX),
+      service.fire(id, undefined, "manual", undefined, CTX),
+    ]);
+    const refused = fired.find((run) => run.status === "CANCELLED")!;
+
+    await expect(service.rerun(refused.runId!, CTX)).rejects.toThrow(
+      "can be rerun",
+    );
+  }, 60_000);
 });

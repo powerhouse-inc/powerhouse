@@ -148,6 +148,10 @@ function journaled(value: unknown, values: string[] | undefined): unknown {
 }
 
 /** What a run that passed `policy.runTimeoutSeconds` ends CANCELLED with. */
+/** The error name a run its deadline cancelled is journaled with; it is what
+ * marks the run as resumable, unlike a firing that was refused. */
+export const RUN_DEADLINE_ERROR_NAME = "RunDeadlineExceeded";
+
 export const RUN_DEADLINE_REASON =
   "Run exceeded its runTimeoutSeconds and was cancelled";
 
@@ -586,7 +590,13 @@ export async function runWorkflow(
   // in time still reads CANCELLED if the loop stopped for the clock, and the
   // steps it did complete are journaled either way.
   if (runCancelled) {
-    return { status: "CANCELLED", steps, error: runCancelled, ...noted };
+    return {
+      status: "CANCELLED",
+      steps,
+      error: runCancelled,
+      errorName: RUN_DEADLINE_ERROR_NAME,
+      ...noted,
+    };
   }
   return { status: "SUCCEEDED", steps, ...noted };
 }

@@ -379,6 +379,11 @@ they are true.
   no error port is taken — nothing downstream may run after the run has ended —
   and the run reads CANCELLED, since the clock stopped it rather than the
   workflow failing.
+- **A run its deadline cancelled can be rerun**, like a FAILED one: it is
+  journaled with the error name `RunDeadlineExceeded`, and the rerun replays
+  the steps that finished. A firing refused before it ran (parked, SINGLETON,
+  stale, queue full, expired in the queue) is CANCELLED without that name and
+  is not rerunnable; fire the workflow again instead.
 - A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
   block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
 - An **INDETERMINATE** step is never retried and never replayed: a retry would
