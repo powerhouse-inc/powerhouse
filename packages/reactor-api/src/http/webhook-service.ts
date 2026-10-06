@@ -256,8 +256,10 @@ export class WebhookService {
         return;
       }
 
+      let recordedKey: string | undefined;
       if (policy.dedupe) {
         const key = dedupeKey(policy.dedupe.field, queryParams, headers, body);
+        recordedKey = key;
         if (
           key !== undefined &&
           (await this.#store.seen(
@@ -283,6 +285,20 @@ export class WebhookService {
         raw,
         body,
       });
+
+      // 503: the handler did not process it (its owner is shutting down), so
+      // the provider's retry must reach a handler that will. Any other status,
+      // a 504 from a run still going included, keeps the key.
+      if (reply.status === 503 && recordedKey !== undefined) {
+        try {
+          await this.#store.forget(token, recordedKey);
+        } catch (error) {
+          logger.warn(
+            "Could not forget an unprocessed webhook delivery: @error",
+            error as Error,
+          );
+        }
+      }
 
       res.statusCode = reply.status;
       if (reply.body !== undefined && method !== "HEAD") {

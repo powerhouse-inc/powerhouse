@@ -578,6 +578,55 @@ describe("WebhookService", () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
+  // 503 is the handler saying it did not process the delivery (a workflow
+  // runtime that has shut down); recording the key would answer the
+  // provider's retry as a duplicate and drop the delivery for good.
+  it("lets a delivery the handler answered 503 be delivered again", async () => {
+    const replies = [503, 202];
+    const handler = vi.fn(() => ({ status: replies.shift()! }));
+    const endpoints = await scope().webhooks.register({
+      name: "trigger",
+      defaults: { dedupe: { field: "delivery_id" } },
+      onRequest: handler,
+    });
+    const { token } = await endpoints.endpointFor("doc-1");
+
+    const send = () =>
+      fetch(`${url}/webhooks/${token}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delivery_id: "abc" }),
+      });
+
+    expect((await send()).status).toBe(503);
+    expect((await send()).status).toBe(202);
+    expect((await send()).status).toBe(200);
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  // A 504 from a sync-mode run that is still going must stay deduped, or the
+  // retry runs it a second time.
+  it("still dedupes the retry of a delivery answered 504", async () => {
+    const handler = vi.fn(() => ({ status: 504 }));
+    const endpoints = await scope().webhooks.register({
+      name: "trigger",
+      defaults: { dedupe: { field: "delivery_id" } },
+      onRequest: handler,
+    });
+    const { token } = await endpoints.endpointFor("doc-1");
+
+    const send = () =>
+      fetch(`${url}/webhooks/${token}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delivery_id: "abc" }),
+      });
+
+    expect((await send()).status).toBe(504);
+    expect((await send()).status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
   it("refuses a method the registration did not allow", async () => {
     const endpoints = await scope().webhooks.register({
       name: "trigger",
@@ -766,6 +815,24 @@ describe("WebhookService", () => {
       // The retry a provider would send after a timeout.
       expect((await send()).status).toBe(200);
       expect(handler).toHaveBeenCalledOnce();
+
+      // A delivery the handler did not process is not recorded as seen.
+      const unprocessed = JSON.stringify({ delivery_id: "def" });
+      const sendUnprocessed = () =>
+        fetch(`${url}/relational/webhooks/${token}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-hub-signature-256": `sha256=${createHmac("sha256", secret)
+              .update(unprocessed)
+              .digest("hex")}`,
+          },
+          body: unprocessed,
+        });
+      handler.mockReturnValueOnce({ status: 503 });
+      expect((await sendUnprocessed()).status).toBe(503);
+      expect((await sendUnprocessed()).status).toBe(202);
+      expect(handler).toHaveBeenCalledTimes(3);
 
       const unsigned = await fetch(`${url}/relational/webhooks/${token}`, {
         method: "POST",
