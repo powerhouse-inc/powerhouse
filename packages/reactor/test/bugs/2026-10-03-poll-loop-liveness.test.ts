@@ -205,6 +205,67 @@ describe("a dead poll loop reports itself as connected", () => {
     await channel.shutdown();
   });
 
+  it("keeps polling after a manifest refresh fails transiently", async () => {
+    let touches = 0;
+    let polls = 0;
+    const fetchFn = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        touches++;
+        if (touches === 2) {
+          return {
+            ok: true,
+            json: () =>
+              Promise.resolve({ errors: [{ message: "server busy" }] }),
+          };
+        }
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      polls++;
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+                manifestRevision: "peer-rev-2",
+                peerManifestRevision: null,
+              },
+            },
+          }),
+      };
+    });
+    const timer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig({ fetchFn: fetchFn as never }),
+      createMockOperationIndex(),
+      timer,
+    );
+    await channel.init();
+    await timer.tick().catch(() => undefined);
+
+    expect(channel.getConnectionState().lastFailureUtcMs).toBeGreaterThan(0);
+    expect(timer.isRunning()).toBe(true);
+
+    await timer.tick();
+    expect(polls).toBe(2);
+    expect(channel.getConnectionState().state).toBe("connected");
+    await channel.shutdown();
+  });
+
   it("keeps ticking when the delegate hangs until it is cancelled", async () => {
     vi.useFakeTimers();
     try {

@@ -429,7 +429,8 @@ export class GqlRequestChannel implements IChannel {
 
   /**
    * Re-touches once when either side's manifest moved; touching is idempotent.
-   * False only when shutting down; a failed refresh raises.
+   * False only when shutting down; a failed refresh raises as a recoverable
+   * poll failure, so the next tick retries it.
    */
   private async refreshManifestsIfStale(
     manifestRevision: string | null | undefined,
@@ -458,7 +459,14 @@ export class GqlRequestChannel implements IChannel {
       .finally(() => {
         this.manifestRefresh = undefined;
       });
-    await this.manifestRefresh;
+    try {
+      await this.manifestRefresh;
+    } catch (error) {
+      throw new Error(
+        `Manifest refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
     return true;
   }
 
