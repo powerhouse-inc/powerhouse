@@ -26,11 +26,50 @@ export type PGliteSession = {
 export type HardenedPGliteDialectOptions = {
   /** Bound on waiting for the single PGlite lease; 0 disables it. */
   acquireTimeoutMs: number;
+  /** Bound on one statement that neither resolves nor rejects (a dead wasm call); 0 disables it. */
+  statementTimeoutMs: number;
+  /** The bound for {@link isLongRunningStatement} statements, whose runtime scales with the data. */
+  longStatementTimeoutMs: number;
+  /** Bound on each session recovery statement, which runs against the session that just failed. */
+  recoveryTimeoutMs: number;
   /** Where unrecoverable session faults and swallowed rollbacks are reported. */
   onDiagnostic: (message: string, error?: unknown) => void;
 };
 
 export const DEFAULT_ACQUIRE_TIMEOUT_MS = 120_000;
+
+export const DEFAULT_STATEMENT_TIMEOUT_MS = 120_000;
+
+export const DEFAULT_LONG_STATEMENT_TIMEOUT_MS = 900_000;
+
+export const DEFAULT_RECOVERY_TIMEOUT_MS = 15_000;
+
+const LONG_STATEMENT_PREFIXES = [
+  "vacuum",
+  "analyze",
+  "reindex",
+  "cluster",
+  "checkpoint",
+  "copy",
+  "alter ",
+  "create ",
+  "drop ",
+  "truncate",
+  "refresh ",
+];
+
+/** Maintenance and DDL, matched on the leading keyword of the compiled SQL. */
+export function isLongRunningStatement(statement: string): boolean {
+  const normalized = statement.trimStart().toLowerCase();
+  return LONG_STATEMENT_PREFIXES.some((prefix) =>
+    normalized.startsWith(prefix),
+  );
+}
+
+function summarize(statement: string): string {
+  const collapsed = statement.replace(/\s+/g, " ").trim();
+  return collapsed.length > 160 ? `${collapsed.slice(0, 160)}...` : collapsed;
+}
 
 /** COMMIT in an aborted transaction silently rolls back; the guard raises first. */
 const COMMIT_WITH_GUARD = "select 1 as __commit_guard; commit";
@@ -60,6 +99,16 @@ export class PGliteAcquireTimeoutError extends PGliteSessionError {
   }
 }
 
+/** The call cannot be aborted, so it is abandoned and the session treated as poisoned. */
+export class PGliteStatementTimeoutError extends PGliteSessionError {
+  constructor(timeoutMs: number, statement: string) {
+    super(
+      `A PGlite statement neither resolved nor rejected within ${timeoutMs}ms, so its wasm call is presumed dead and the session poisoned: ${summarize(statement)}`,
+    );
+    this.name = "PGliteStatementTimeoutError";
+  }
+}
+
 export class PGliteAbortedTransactionError extends PGliteSessionError {
   constructor(cause: unknown) {
     super(
@@ -85,6 +134,36 @@ function errorOf(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
+const TIMED_OUT = Symbol("pglite-deadline-expired");
+
+/** Races a call that cannot be cancelled; on {@link TIMED_OUT} the call may still settle later. */
+async function withDeadline<T>(
+  pending: Promise<T>,
+  timeoutMs: number,
+): Promise<T | typeof TIMED_OUT> {
+  let handle: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
+    handle = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
+  });
+  try {
+    return await Promise.race([pending, expiry]);
+  } finally {
+    clearTimeout(handle);
+  }
+}
+
+/** The part of the driver a connection needs to run and record bounded statements. */
+type StatementGuard = {
+  /** Bumped each time a hung statement is escalated. */
+  readonly generation: number;
+  runStatement<T>(statement: string, execute: () => Promise<T>): Promise<T>;
+  recordFailure(
+    connection: HardenedPGliteConnection,
+    generation: number,
+    error: unknown,
+  ): void;
+};
+
 function isAbortedTransactionError(error: unknown): boolean {
   const code = (error as { code?: unknown } | null)?.code;
   if (code === ABORTED_TRANSACTION_CODE) {
@@ -105,6 +184,12 @@ export class HardenedPGliteDialect implements Dialect {
     this.inner = new PGliteDialect(client as never);
     this.options = {
       acquireTimeoutMs: options.acquireTimeoutMs ?? DEFAULT_ACQUIRE_TIMEOUT_MS,
+      statementTimeoutMs:
+        options.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS,
+      longStatementTimeoutMs:
+        options.longStatementTimeoutMs ?? DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
+      recoveryTimeoutMs:
+        options.recoveryTimeoutMs ?? DEFAULT_RECOVERY_TIMEOUT_MS,
       onDiagnostic:
         options.onDiagnostic ??
         ((message, error) => {
@@ -139,14 +224,20 @@ class HardenedPGliteConnection implements DatabaseConnection {
   rollbackFailure: Error | undefined = undefined;
   transactionOpen = false;
 
-  constructor(readonly inner: DatabaseConnection) {}
+  constructor(
+    readonly inner: DatabaseConnection,
+    private readonly guard: StatementGuard,
+  ) {}
 
   /** Never retried: a replay could commit alone a write meant for another consumer's transaction. */
   async executeQuery<R>(compiledQuery: CompiledQuery): Promise<QueryResult<R>> {
+    const generation = this.guard.generation;
     try {
-      return await this.inner.executeQuery<R>(compiledQuery);
+      return await this.guard.runStatement(compiledQuery.sql, () =>
+        this.inner.executeQuery<R>(compiledQuery),
+      );
     } catch (error) {
-      this.failure = errorOf(error);
+      this.guard.recordFailure(this, generation, error);
       throw error;
     }
   }
@@ -155,7 +246,31 @@ class HardenedPGliteConnection implements DatabaseConnection {
     compiledQuery: CompiledQuery,
     chunkSize?: number,
   ): AsyncIterableIterator<QueryResult<R>> {
-    return this.inner.streamQuery<R>(compiledQuery, chunkSize);
+    const inner = this.inner.streamQuery<R>(compiledQuery, chunkSize);
+    return this.deadlinedStream(compiledQuery, inner);
+  }
+
+  /** Upstream issues the whole query on the first pull, so each pull is bounded like a statement. */
+  private async *deadlinedStream<R>(
+    compiledQuery: CompiledQuery,
+    inner: AsyncIterableIterator<QueryResult<R>>,
+  ): AsyncIterableIterator<QueryResult<R>> {
+    for (;;) {
+      const generation = this.guard.generation;
+      let next: IteratorResult<QueryResult<R>>;
+      try {
+        next = await this.guard.runStatement(compiledQuery.sql, () =>
+          inner.next(),
+        );
+      } catch (error) {
+        this.guard.recordFailure(this, generation, error);
+        throw error;
+      }
+      if (next.done === true) {
+        return;
+      }
+      yield next.value;
+    }
   }
 
   get suspect(): boolean {
@@ -167,15 +282,53 @@ class HardenedPGliteConnection implements DatabaseConnection {
   }
 }
 
-class HardenedPGliteDriver implements Driver {
+class HardenedPGliteDriver implements Driver, StatementGuard {
   /** Set when release could not reset the session; each acquire retries the reset. */
   private sessionFault: Error | undefined = undefined;
+  /** Lets an abandoned call's late settlement be told apart from current failures. */
+  private statementGeneration = 0;
 
   constructor(
     private readonly inner: Driver,
     private readonly client: PGliteSession,
     private readonly options: HardenedPGliteDialectOptions,
   ) {}
+
+  get generation(): number {
+    return this.statementGeneration;
+  }
+
+  /** Bounds one statement; an expiry is escalated as a poisoned session. */
+  async runStatement<T>(
+    statement: string,
+    execute: () => Promise<T>,
+  ): Promise<T> {
+    const timeoutMs = this.timeoutFor(statement);
+    if (timeoutMs <= 0) {
+      return execute();
+    }
+
+    const generation = this.statementGeneration;
+    const outcome = await withDeadline(execute(), timeoutMs);
+    if (outcome !== TIMED_OUT) {
+      return outcome;
+    }
+
+    throw this.escalateHungStatement(
+      new PGliteStatementTimeoutError(timeoutMs, statement),
+      generation,
+    );
+  }
+
+  recordFailure(
+    connection: HardenedPGliteConnection,
+    generation: number,
+    error: unknown,
+  ): void {
+    if (generation === this.statementGeneration) {
+      connection.failure = errorOf(error);
+    }
+  }
 
   async init(): Promise<void> {
     await this.inner.init();
@@ -194,7 +347,7 @@ class HardenedPGliteDriver implements Driver {
       this.sessionFault = undefined;
     }
 
-    return new HardenedPGliteConnection(innerConnection);
+    return new HardenedPGliteConnection(innerConnection, this);
   }
 
   /** Kysely never rolls back after a failed BEGIN, so an aborted session is reset here. */
@@ -203,10 +356,13 @@ class HardenedPGliteDriver implements Driver {
     settings: TransactionSettings,
   ): Promise<void> {
     const wrapper = asWrapper(connection);
+    const generation = this.statementGeneration;
     try {
-      await this.inner.beginTransaction(wrapper.inner, settings);
+      await this.runStatement("begin", () =>
+        this.inner.beginTransaction(wrapper.inner, settings),
+      );
     } catch (error) {
-      wrapper.failure = errorOf(error);
+      this.recordFailure(wrapper, generation, error);
       if (!isAbortedTransactionError(error)) {
         throw error;
       }
@@ -214,7 +370,15 @@ class HardenedPGliteDriver implements Driver {
         this.sessionFault = errorOf(error);
         throw error;
       }
-      await this.inner.beginTransaction(wrapper.inner, settings);
+      const retryGeneration = this.statementGeneration;
+      try {
+        await this.runStatement("begin", () =>
+          this.inner.beginTransaction(wrapper.inner, settings),
+        );
+      } catch (retryError) {
+        this.recordFailure(wrapper, retryGeneration, retryError);
+        throw retryError;
+      }
       wrapper.failure = undefined;
     }
     wrapper.transactionOpen = true;
@@ -222,10 +386,13 @@ class HardenedPGliteDriver implements Driver {
 
   async commitTransaction(connection: DatabaseConnection): Promise<void> {
     const wrapper = asWrapper(connection);
+    const generation = this.statementGeneration;
     try {
-      await this.client.exec(COMMIT_WITH_GUARD);
+      await this.runStatement(COMMIT_WITH_GUARD, () =>
+        this.client.exec(COMMIT_WITH_GUARD),
+      );
     } catch (error) {
-      wrapper.failure = errorOf(error);
+      this.recordFailure(wrapper, generation, error);
       if (isAbortedTransactionError(error)) {
         throw new PGliteAbortedTransactionError(error);
       }
@@ -238,11 +405,16 @@ class HardenedPGliteDriver implements Driver {
   /** Swallowed so the original failure propagates; release resets the session. */
   async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
     const wrapper = asWrapper(connection);
+    const generation = this.statementGeneration;
     try {
-      await this.inner.rollbackTransaction(wrapper.inner);
+      await this.runStatement("rollback", () =>
+        this.inner.rollbackTransaction(wrapper.inner),
+      );
       wrapper.transactionOpen = false;
     } catch (error) {
-      wrapper.rollbackFailure = errorOf(error);
+      if (generation === this.statementGeneration) {
+        wrapper.rollbackFailure = errorOf(error);
+      }
       this.options.onDiagnostic(
         "rollback failed; preserving the original failure and recovering the session on release",
         error,
@@ -272,6 +444,30 @@ class HardenedPGliteDriver implements Driver {
 
   async destroy(): Promise<void> {
     await this.inner.destroy();
+  }
+
+  private timeoutFor(statement: string): number {
+    return isLongRunningStatement(statement)
+      ? this.options.longStatementTimeoutMs
+      : this.options.statementTimeoutMs;
+  }
+
+  /** Marks the session faulted once per generation; a stale expiry reports only itself. */
+  private escalateHungStatement(
+    cause: PGliteStatementTimeoutError,
+    generation: number,
+  ): Error {
+    if (generation !== this.statementGeneration) {
+      return cause;
+    }
+
+    this.statementGeneration += 1;
+    this.sessionFault = cause;
+    this.options.onDiagnostic(
+      "a PGlite statement never settled within its deadline; treating the session as poisoned",
+      cause,
+    );
+    return new PGliteSessionPoisonedError(cause);
   }
 
   /** A waiter that gave up still passes the lease on, so it cannot wedge the queue. */
@@ -315,10 +511,10 @@ class HardenedPGliteDriver implements Driver {
       return true;
     }
 
-    try {
-      await this.client.exec("rollback");
-    } catch (error) {
-      this.options.onDiagnostic("session rollback failed", error);
+    if (!(await this.recoveryExec("rollback"))) {
+      this.options.onDiagnostic(
+        "session rollback did not complete; the session stays suspect",
+      );
     }
 
     if (!(await this.probeSession())) {
@@ -328,12 +524,31 @@ class HardenedPGliteDriver implements Driver {
   }
 
   private async probeSession(): Promise<boolean> {
-    try {
-      await this.client.exec(PROBE);
-      return true;
-    } catch {
+    return this.recoveryExec(PROBE);
+  }
+
+  /** Kysely awaits release, so an unbounded recovery statement would hold the lease forever. */
+  private async recoveryExec(statement: string): Promise<boolean> {
+    const timeoutMs = this.options.recoveryTimeoutMs;
+    const pending = this.client.exec(statement).then(
+      () => true,
+      (error: unknown) => {
+        this.options.onDiagnostic("recovery statement failed", error);
+        return false;
+      },
+    );
+    if (timeoutMs <= 0) {
+      return pending;
+    }
+
+    const outcome = await withDeadline(pending, timeoutMs);
+    if (outcome === TIMED_OUT) {
+      this.options.onDiagnostic(
+        `a PGlite recovery statement did not settle within ${timeoutMs}ms; the session is unrecoverable from SQL`,
+      );
       return false;
     }
+    return outcome;
   }
 }
 
