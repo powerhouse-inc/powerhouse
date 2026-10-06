@@ -1,38 +1,28 @@
+import {
+  INSPECTOR_OPS,
+  type IInspector,
+  type IInspectorAdmin,
+  type IReactorDbQuery,
+} from "@powerhousedao/reactor";
 import type { MessageRouter } from "@powerhousedao/reactor/rpc";
 import { opChannel } from "./op-channel.js";
 
-export interface IInspectorProxy {
-  getQueueState(): Promise<unknown>;
-  pauseQueue(): Promise<void>;
-  resumeQueue(): Promise<void>;
-  getProcessors(): Promise<unknown>;
-  retryProcessor(processorId: string): Promise<void>;
-  getCatchUpStatus(): Promise<unknown>;
-  sweepCatchUp(): Promise<unknown>;
-  validateDocument(documentId: string, branch?: string): Promise<unknown>;
-  rebuildKeyframes(documentId: string, branch?: string): Promise<unknown>;
-  rebuildSnapshots(documentId: string, branch?: string): Promise<unknown>;
-  queryReactorDb(sql: string, params?: unknown[]): Promise<unknown>;
+/** `queryReactorDb` is the published name of `queryDb`. */
+export interface IInspectorProxy
+  extends IInspector, IInspectorAdmin, IReactorDbQuery {
+  queryReactorDb(sql: string, params?: unknown[]): Promise<unknown[]>;
 }
 
+/** Every row of `INSPECTOR_OPS`; the host decides which tiers it serves. */
 export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
   const ops = opChannel(router, "inspector-op");
-
-  return {
-    getQueueState: () => ops.call("queue.getState"),
-    pauseQueue: () => ops.callVoid("queue.pause"),
-    resumeQueue: () => ops.callVoid("queue.resume"),
-    getProcessors: () => ops.call("processors.getAll"),
-    retryProcessor: (processorId) =>
-      ops.callVoid("processors.retry", [processorId]),
-    getCatchUpStatus: () => ops.call("catchUp.status"),
-    sweepCatchUp: () => ops.call("catchUp.sweepNow"),
-    validateDocument: (documentId, branch) =>
-      ops.call("integrity.validate", [documentId, branch]),
-    rebuildKeyframes: (documentId, branch) =>
-      ops.call("integrity.rebuildKeyframes", [documentId, branch]),
-    rebuildSnapshots: (documentId, branch) =>
-      ops.call("integrity.rebuildSnapshots", [documentId, branch]),
-    queryReactorDb: (sql, params) => ops.call("db.query", [sql, params ?? []]),
-  };
+  const proxy: Record<string, (...args: unknown[]) => Promise<unknown>> = {};
+  for (const [key, spec] of Object.entries(INSPECTOR_OPS)) {
+    proxy[key] = (...args) => ops.call(spec.rpc, args);
+  }
+  const queryDb = (sql: unknown, params?: unknown) =>
+    ops.call(INSPECTOR_OPS.queryDb.rpc, [sql, params ?? []]);
+  proxy.queryDb = queryDb;
+  proxy.queryReactorDb = queryDb;
+  return proxy as unknown as IInspectorProxy;
 }

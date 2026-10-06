@@ -43,6 +43,13 @@ export {
   type IInspectorProxy,
 } from "./inspector-proxy.js";
 export {
+  dispatchInspectorOp,
+  dispatchSyncInspectionOp,
+  isSyncInspectionOp,
+  type InspectorOpTargets,
+  type SyncInspectionOpTargets,
+} from "./inspector-ops.js";
+export {
   opChannel,
   toVoid,
   RPC_DEFAULT_TIMEOUT_MS,
