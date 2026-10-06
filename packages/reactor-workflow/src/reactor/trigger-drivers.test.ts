@@ -147,6 +147,25 @@ describe("driver arming", () => {
     });
   });
 
+  it("carries a piece cursor into onEnable only on an unchanged re-register", async () => {
+    const existing = row({ store_state: '{"cursor":"c0"}' });
+    await piecePollDriver.arm(piece(), { existing, isRepublish: true }, ctx);
+    expect(runHook).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "onEnable",
+      { cursor: "c0" },
+      { isRepublish: true },
+    );
+
+    await piecePollDriver.arm(piece(), { existing, isRepublish: false }, ctx);
+    expect(runHook).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "onEnable",
+      {},
+      { isRepublish: false },
+    );
+  });
+
   it("keeps the piece cursor on the ERROR row so a re-enable resumes", () => {
     const existing = row({ store_state: '{"cursor":"c0"}' });
     expect(
