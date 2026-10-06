@@ -11,6 +11,7 @@ import type {
 } from "kysely";
 import { CompiledQuery } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { TIMED_OUT, withDeadline } from "../../shared/utils.js";
 
 /** Structural so importing this module does not pull in the PGlite wasm bundle. */
 export type PGliteSession = {
@@ -132,24 +133,6 @@ export class PGliteSessionPoisonedError extends PGliteSessionError {
 
 function errorOf(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
-}
-
-const TIMED_OUT = Symbol("pglite-deadline-expired");
-
-/** Races a call that cannot be cancelled; on {@link TIMED_OUT} the call may still settle later. */
-async function withDeadline<T>(
-  pending: Promise<T>,
-  timeoutMs: number,
-): Promise<T | typeof TIMED_OUT> {
-  let handle: ReturnType<typeof setTimeout> | undefined;
-  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
-    handle = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
-  });
-  try {
-    return await Promise.race([pending, expiry]);
-  } finally {
-    clearTimeout(handle);
-  }
 }
 
 /** The part of the driver a connection needs to run and record bounded statements. */
