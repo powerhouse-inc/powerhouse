@@ -195,6 +195,33 @@ describe("inspection subgraph: OPEN does not make every caller an operator", () 
   });
 });
 
+describe("inspection subgraph: sync reads", () => {
+  it("serves remote inspection to a listed admin", async () => {
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder().withChannelScheme(ChannelScheme.SWITCHBOARD),
+      )
+      .buildModule();
+    const { schema } = buildSchema(module, openHost());
+    const result = await run(
+      schema,
+      `{ inspection { info { syncChannels } remotes { remoteName } } }`,
+      contextFor(OPERATOR),
+    );
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.inspection).toEqual({
+      info: { syncChannels: ["polling"] },
+      remotes: [],
+    });
+    const unknown = await run(
+      schema,
+      `{ inspection { remote(remoteName: "nope") { remoteName } } }`,
+      contextFor(OPERATOR),
+    );
+    expect(unknown.errors?.[0]?.message).toMatch(/nope/);
+  });
+});
+
 describe("inspection subgraph: document reads go through the read gate", () => {
   async function policedDocument(): Promise<string> {
     module = await buildReadGateReactor();
