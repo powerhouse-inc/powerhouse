@@ -24,6 +24,7 @@ import type {
 import {
   actions,
   actionSigningTarget,
+  isSignaturePolicy,
   normalizeDocumentModelVersion,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
@@ -40,6 +41,7 @@ import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
   type DocumentRelationshipFieldsFragment,
+  type GetCreateDefaultsQuery,
   type JobInfoFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
@@ -648,33 +650,69 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * Not served: the Switchboard has no query for the policy it gives new
-   * documents, and a guessed default would under-sign on a stricter host.
+   * The policy the Switchboard gives a new document, read from its
+   * `createDefaults` query. A Switchboard without that query is refused with
+   * {@link GraphQLOperationNotSupportedError}: a guessed default would
+   * under-sign on a stricter host.
    */
-  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    return Promise.reject(
-      new GraphQLOperationNotSupportedError(
-        "getCreateSignaturePolicy",
-        "the Switchboard exposes no create signature policy",
-      ),
-    );
+  async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    const defaults = await this.createDefaults("getCreateSignaturePolicy");
+    return defaults.signaturePolicy;
   }
 
   /**
-   * Not served: the versions a new document takes come from the host's peer
-   * agreement, which the Switchboard does not expose. A parent's own versions
-   * are not that answer.
+   * The protocol versions the Switchboard selects for a new document under
+   * `parentIdentifier`, read from its `createDefaults` query. A parent the
+   * caller may not read is refused by the server, never answered as if none
+   * was named; a Switchboard without the query is refused with
+   * {@link GraphQLOperationNotSupportedError}.
    */
-  getCreateProtocolVersions(
-    _parentIdentifier?: string,
-    _signal?: AbortSignal,
+  async getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return Promise.reject(
-      new GraphQLOperationNotSupportedError(
-        "getCreateProtocolVersions",
-        "the Switchboard exposes no create protocol versions",
-      ),
+    const defaults = await this.createDefaults(
+      "getCreateProtocolVersions",
+      parentIdentifier,
+      signal,
     );
+    return defaults.protocolVersions;
+  }
+
+  private async createDefaults(
+    operation: string,
+    parentIdOrSlug?: string,
+    signal?: AbortSignal,
+  ): Promise<{
+    signaturePolicy: SignaturePolicy;
+    protocolVersions: ProtocolVersions;
+  }> {
+    let result: GetCreateDefaultsQuery;
+    try {
+      result = await this.sdk.GetCreateDefaults(
+        { parentIdOrSlug },
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (queriesUnknownField(error, "createDefaults")) {
+        throw new GraphQLOperationNotSupportedError(
+          operation,
+          "the Switchboard predates the createDefaults query",
+        );
+      }
+      throw error;
+    }
+    const { signaturePolicy, protocolVersions } = result.createDefaults;
+    if (!isSignaturePolicy(signaturePolicy)) {
+      throw new Error(
+        `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
+      );
+    }
+    return {
+      signaturePolicy,
+      protocolVersions: protocolVersionsFrom(protocolVersions),
+    };
   }
 
   /**
@@ -1501,6 +1539,44 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
     };
   }
   return info;
+}
+
+/**
+ * Whether a request failed because the server's schema has no such root field:
+ * a Switchboard older than the field. graphql-js validation words this the same
+ * under every gateway the Switchboard can run.
+ */
+function queriesUnknownField(error: unknown, field: string): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  const prefix = `Cannot query field "${field}" on type "`;
+  return errors.some(
+    (entry) =>
+      typeof (entry as { message?: unknown } | null)?.message === "string" &&
+      (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
+/** Protocol versions as the server sent them; anything but a version map throws. */
+function protocolVersionsFrom(value: unknown): ProtocolVersions {
+  if (!isPlainObject(value)) {
+    throw new Error(
+      "The Switchboard answered malformed create protocol versions",
+    );
+  }
+  const versions: ProtocolVersions = {};
+  for (const [protocol, version] of Object.entries(value)) {
+    if (typeof version !== "number" || !Number.isInteger(version)) {
+      throw new Error(
+        `The Switchboard answered a malformed version for protocol ${protocol}`,
+      );
+    }
+    versions[protocol] = version;
+  }
+  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {

@@ -185,7 +185,7 @@ interface:
 | `executeBatch(request, signal?)`                        | Signs each job for its resolved id and emits the changes. A FAILED job throws `BatchJobFailedError` with every job's state.                          |
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
-| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Throw `GraphQLOperationNotSupportedError`: the Switchboard exposes neither.                                                                          |
+| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`.                                             |
 
 `drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
 module getters are not implemented here.
