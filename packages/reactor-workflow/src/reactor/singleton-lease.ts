@@ -261,7 +261,9 @@ export async function acquireWorkflowSingletonLease(
     timer = undefined;
   };
 
+  // Idempotent: two renewals in flight can both find the lease gone.
   const markLost = async () => {
+    if (lost) return;
     lost = true;
     stop();
     let heldBy: string | undefined;
@@ -296,7 +298,7 @@ export async function acquireWorkflowSingletonLease(
       .returning("owner")
       .executeTakeFirst();
     if (renewed !== undefined) return true;
-    if (!lost) await markLost();
+    await markLost();
     return false;
   };
 
