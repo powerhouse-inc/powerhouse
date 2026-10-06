@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-06T13:05:31.654Z
+> Generated: 2026-10-06T14:11:19.161Z
 > Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -33236,6 +33236,8 @@ The schema for the JSON object lives at `packages/builder-tools/connect-utils/ru
 
 Switchboard stores the reactor and the read models in one of two backends. When a Postgres URL is set it uses Postgres; otherwise it falls back to its embedded **PGlite** storage (local directories `./.ph/reactor-storage` and `.ph/read-storage` relative to the working directory — persist that directory with a volume, as the repo's `docker-compose.pglite.yml` does).
 
+Each PGlite directory is a plain Postgres data directory (`PGDATA`), and Postgres runs its own crash recovery when the store opens. A store written by an earlier release as a single `snapshot.bin` file is converted once, on the first boot: the snapshot is extracted beside the directory, verified, swapped into place, and the old directory is deleted. The conversion needs free disk for one extra copy of the store while it runs and logs one line per store when it finishes.
+
 | Variable                      | Description                                                                    | Default           |
 | ----------------------------- | ------------------------------------------------------------------------------ | ----------------- |
 | `PH_REACTOR_DATABASE_URL`     | Postgres URL for reactor storage; also triggers the entrypoint's migrations    | _unset_ (PGlite)  |
@@ -33244,12 +33246,13 @@ Switchboard stores the reactor and the read models in one of two backends. When 
 
 For a single-database deployment (the normal case, and what the repo's compose files do), set `PH_REACTOR_DATABASE_URL` and `PH_SWITCHBOARD_DATABASE_URL` to the same URL.
 
-| Variable              | Description                                                                    | Default  |
-| --------------------- | ------------------------------------------------------------------------------ | -------- |
-| `PH_PGLITE_IN_MEMORY` | `1` = run PGlite in memory (no persistence)                                    | _unset_  |
-| `PH_MIGRATE_PGLITE`   | `true` = migrate local PGlite data to the PG version this image ships          | _unset_  |
-| `PH_FORCE_PG_VERSION` | `16` or `17` = wipe the local PGlite data dirs and re-initialize at that major | _unset_  |
-| `SKIP_DB_MIGRATIONS`  | `true` = skip the entrypoint's Postgres migration run                          | _unset_  |
+| Variable              | Description                                                                                                            | Default            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `PH_PGLITE_IN_MEMORY` | `1` = run PGlite in memory (no persistence)                                                                            | _unset_            |
+| `PH_PGLITE_FSYNC`     | `0` = do not fsync each commit; faster, but an OS crash or power loss can corrupt the store. Leave unset in production | _unset_ (fsync on) |
+| `PH_MIGRATE_PGLITE`   | `true` = migrate local PGlite data to the PG version this image ships                                                  | _unset_            |
+| `PH_FORCE_PG_VERSION` | `16` or `17` = wipe the local PGlite data dirs and re-initialize at that major                                         | _unset_            |
+| `SKIP_DB_MIGRATIONS`  | `true` = skip the entrypoint's Postgres migration run                                                                  | _unset_            |
 
 #### Core Configuration
 

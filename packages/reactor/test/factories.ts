@@ -1,5 +1,6 @@
+import type { PGliteOptions } from "@electric-sql/pglite";
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
+import { NodeFS } from "@electric-sql/pglite/nodefs";
 import type {
   Action,
   DocumentModelModule,
@@ -23,7 +24,7 @@ import os from "node:os";
 import path from "node:path";
 import { Pool } from "pg";
 import { v4 as uuidv4 } from "uuid";
-import { vi } from "vitest";
+import { afterAll, vi } from "vitest";
 import type { ICollectionMembershipCache } from "../src/cache/collection-membership-cache.js";
 import type {
   CachedDocumentMeta,
@@ -110,14 +111,12 @@ export function createTestContext(
 }
 
 /**
- * Backend factory used by the test stores. Returning a fresh `MemoryFS` (or
- * `AtomicNodeFs`) instance per call means each test gets its own isolated
- * PGLite filesystem. `cleanup` is invoked from the test's `afterEach` after
- * `db.destroy()` so any host-disk artifacts (snapshot files for AtomicNodeFs)
- * are removed.
+ * Backend factory used by the test stores. Each call returns a fresh PGlite
+ * filesystem, so every test gets its own isolated store. `cleanup` runs from
+ * the test's `afterEach` after `db.destroy()` and removes any host-disk state.
  */
 export type TestFsBackend = () => Promise<{
-  fs: MemoryFS;
+  fs: PGliteOptions["fs"];
   cleanup: () => Promise<void>;
 }>;
 
@@ -130,41 +129,54 @@ export const memoryFsBackend: TestFsBackend = () =>
     cleanup: () => Promise.resolve(),
   });
 
-let migratedAtomicSnapshot: Promise<Buffer> | undefined;
+let migratedNodeFsTemplate: Promise<string> | undefined;
 
-/** Snapshot of a data dir migrated to REACTOR_SCHEMA over AtomicNodeFs, built once per worker. */
-function getMigratedAtomicSnapshot(): Promise<Buffer> {
-  migratedAtomicSnapshot ??= (async () => {
+afterAll(async () => {
+  const template = migratedNodeFsTemplate;
+  migratedNodeFsTemplate = undefined;
+  const dir = await template?.catch(() => undefined);
+  if (dir) {
+    await fsp.rm(dir, { recursive: true, force: true, maxRetries: 5 });
+  }
+});
+
+/** Data dir migrated to REACTOR_SCHEMA over NodeFS, built once per test file. */
+function getMigratedNodeFsTemplate(): Promise<string> {
+  migratedNodeFsTemplate ??= (async () => {
     const dir = await fsp.mkdtemp(
-      path.join(os.tmpdir(), "reactor-atomic-template-"),
+      path.join(os.tmpdir(), "reactor-nodefs-template-"),
     );
-    try {
-      const pg = new PGlite({ fs: new AtomicNodeFs(dir) });
-      const db = new Kysely<DatabaseSchema>({
-        dialect: new PGliteDialect(pg),
-      });
-      const result = await runMigrations(db, REACTOR_SCHEMA);
-      if (!result.success && result.error) {
-        throw new Error(`Template migration failed: ${result.error.message}`);
-      }
-      await pg.close();
-      return await fsp.readFile(path.join(dir, "snapshot.bin"));
-    } finally {
-      await fsp.rm(dir, { recursive: true, force: true });
+    const pg = new PGlite({ fs: new NodeFS(dir) });
+    const db = new Kysely<DatabaseSchema>({
+      dialect: new PGliteDialect(pg),
+    });
+    const result = await runMigrations(db, REACTOR_SCHEMA);
+    if (!result.success && result.error) {
+      throw new Error(`Template migration failed: ${result.error.message}`);
     }
+    await pg.close();
+    // A clean close leaves postmaster.pid and can leave pg_wal/xlogtemp.*; both block the next open.
+    await fsp.rm(path.join(dir, "postmaster.pid"), { force: true });
+    const walDir = path.join(dir, "pg_wal");
+    for (const entry of await fsp.readdir(walDir)) {
+      if (entry.startsWith("xlogtemp.")) {
+        await fsp.rm(path.join(walDir, entry), { force: true });
+      }
+    }
+    return dir;
   })();
-  return migratedAtomicSnapshot;
+  return migratedNodeFsTemplate;
 }
 
-/** AtomicNodeFs in a fresh tempdir per test, restored from the migrated snapshot. */
-export const atomicNodeFsBackend: TestFsBackend = async () => {
-  const snapshot = await getMigratedAtomicSnapshot();
-  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "reactor-atomic-"));
-  await fsp.writeFile(path.join(dir, "snapshot.bin"), snapshot);
+/** NodeFS over a copy of the migrated template in a fresh tempdir per test. */
+export const nodeFsBackend: TestFsBackend = async () => {
+  const template = await getMigratedNodeFsTemplate();
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "reactor-nodefs-"));
+  await fsp.cp(template, dir, { recursive: true });
   return {
-    fs: new AtomicNodeFs(dir),
+    fs: new NodeFS(dir),
     cleanup: async () => {
-      await fsp.rm(dir, { recursive: true, force: true });
+      await fsp.rm(dir, { recursive: true, force: true, maxRetries: 5 });
     },
   };
 };
@@ -172,11 +184,11 @@ export const atomicNodeFsBackend: TestFsBackend = async () => {
 /**
  * All backends to permute over. Use in `describe.each(testFsBackends)` for any
  * storage-layer test that wants to verify behavior is identical regardless of
- * how PGLite's MEMFS is backed.
+ * how PGLite's filesystem is backed.
  */
 export const testFsBackends: Array<{ name: string; backend: TestFsBackend }> = [
   { name: "MemoryFS", backend: memoryFsBackend },
-  { name: "AtomicNodeFs", backend: atomicNodeFsBackend },
+  { name: "NodeFS", backend: nodeFsBackend },
 ];
 
 /**
@@ -1064,8 +1076,8 @@ export const testSyncStorageBackends: Array<{
     create: () => createPGliteSyncStorage(memoryFsBackend),
   },
   {
-    name: "PGLite/AtomicNodeFs",
-    create: () => createPGliteSyncStorage(atomicNodeFsBackend),
+    name: "PGLite/NodeFS",
+    create: () => createPGliteSyncStorage(nodeFsBackend),
   },
   { name: "Postgres", create: () => createTestSyncStoragePostgres() },
 ];

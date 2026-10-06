@@ -16,7 +16,6 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "document-model",
   "@renown/sdk",
   "@powerhousedao/design-system",
-  "@powerhousedao/pglite-fs",
   "@powerhousedao/pieces-framework",
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-attachments",

@@ -198,6 +198,8 @@ overrides:
   # tsdown peers on `unrun: *`; 0.3 shares vite's stable rolldown instead of an rc.
   unrun: "^0.3.1"
 patchedDependencies:
+  # Resolves pg_dump.wasm with fileURLToPath; slicing the file:// URL doubles the drive on Windows.
+  '@electric-sql/pglite-tools@0.2.4': patches/@electric-sql__pglite-tools@0.2.4.patch
   # Backports 14.0.0-next-9.33's sync fstat; the async one's EBADF crashes the registry.
   '@verdaccio/local-storage@14.0.0-next-9.31': patches/@verdaccio__local-storage@14.0.0-next-9.31.patch
   cmd-ts@0.15.0: patches/cmd-ts@0.15.0.patch
