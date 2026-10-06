@@ -92,7 +92,7 @@ const BASE_MANIFEST: ConnectPwaManifest = {
  * (../service-worker/service-worker.ts), because `injectManifest` has no
  * declarative runtimeCaching option.
  */
-const BASE_PRECACHE: ConnectPrecacheOptions = {
+export const BASE_PRECACHE: ConnectPrecacheOptions = {
   // PGlite's wasm + fs bundles are several MB each; Workbox's 2 MiB
   // default would silently skip them and the in-browser Postgres would
   // fail to initialise offline. Raise the ceiling so they precache.
@@ -101,7 +101,12 @@ const BASE_PRECACHE: ConnectPrecacheOptions = {
   // `.wasm`/`.data`, but PGlite's Postgres-in-wasm needs both its `.wasm`
   // and its `.data` filesystem bundles, or the in-browser DB fails to
   // initialise offline ("Failed to fetch").
-  globPatterns: ["**/*.{js,css,html,wasm,data,ico,png,svg,webp,woff,woff2}"],
+  // The reactor worker's metadata and package manifest are fetched at boot;
+  // without them an offline boot cannot find the worker bundle.
+  globPatterns: [
+    "**/*.{js,css,html,wasm,data,ico,png,svg,webp,woff,woff2}",
+    "__reactor_worker__/**/*.json",
+  ],
   // index.html stays OUT of the precache on purpose: the SPA navigation
   // route serves it NetworkFirst (see service-worker.ts). The precache
   // strategy is cache-first with no network revalidation, so a precached
