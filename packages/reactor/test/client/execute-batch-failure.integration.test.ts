@@ -94,3 +94,32 @@ describe("ReactorClient.executeBatch when a job fails", () => {
     expect((error.cause as Error).name).toBe("DocumentAlreadyExistsError");
   });
 });
+
+describe("BatchJobFailedError.isError", () => {
+  it("rejects an error that only carries the name, as one rebuilt over RPC does", () => {
+    const rebuilt = new Error("file-1 already exists");
+    rebuilt.name = "BatchJobFailedError";
+
+    expect(BatchJobFailedError.isError(rebuilt)).toBe(false);
+  });
+
+  it("accepts the error itself", () => {
+    const error = new BatchJobFailedError("only", {
+      only: {
+        id: "job-1",
+        documentId: "doc-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+        error: { name: "Error", message: "failed", stack: "" },
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+          coordinates: [],
+        },
+        meta: { batchId: "job-1", batchJobIds: ["job-1"] },
+      },
+    });
+
+    expect(BatchJobFailedError.isError(error)).toBe(true);
+  });
+});

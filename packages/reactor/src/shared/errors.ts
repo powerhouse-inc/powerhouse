@@ -509,6 +509,11 @@ export class UnsupportedStoredProtocolError extends Error {
 /**
  * A batch job failed. A batch is not atomic, so `jobs` holds every job's final
  * state, keyed by plan key; `cause` carries the failed job's own error name.
+ *
+ * The SharedWorker RPC boundary rebuilds a thrown error from `{ name, message,
+ * stack, cause }` alone (`src/rpc/error-info.ts`), so `key` and
+ * `jobs` do not survive it. `isError` therefore checks for them, not only the
+ * name; across that boundary, classify by the `cause` chain's names instead.
  */
 export class BatchJobFailedError extends Error {
   public readonly key: string;
@@ -527,6 +532,11 @@ export class BatchJobFailedError extends Error {
   }
 
   static isError(error: unknown): error is BatchJobFailedError {
-    return Error.isError(error) && error.name === "BatchJobFailedError";
+    return (
+      Error.isError(error) &&
+      error.name === "BatchJobFailedError" &&
+      typeof (error as Partial<BatchJobFailedError>).key === "string" &&
+      typeof (error as Partial<BatchJobFailedError>).jobs === "object"
+    );
   }
 }
