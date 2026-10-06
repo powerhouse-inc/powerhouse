@@ -34,6 +34,8 @@ export type HardenedPGliteDialectOptions = {
   recoveryTimeoutMs: number;
   /** Where unrecoverable session faults and swallowed rollbacks are reported. */
   onDiagnostic: (message: string, error?: unknown) => void;
+  /** Called once, the first time the session is refused as unrecoverable; the owner should restart. */
+  onPoisoned: (cause: Error) => void;
 };
 
 export const DEFAULT_STATEMENT_TIMEOUT_MS = 120_000;
@@ -193,6 +195,7 @@ export class HardenedPGliteDialect implements Dialect {
         ((message, error) => {
           console.error(`[pglite-dialect] ${message}`, error);
         }),
+      onPoisoned: options.onPoisoned ?? (() => undefined),
     };
   }
 
@@ -287,6 +290,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
   private statementGeneration = 0;
   /** A call abandoned at its deadline; PGlite would queue every later call behind it, so none is issued. */
   private deadCall: Error | undefined = undefined;
+  private poisonReported = false;
 
   constructor(
     private readonly inner: Driver,
@@ -356,6 +360,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
         }
       }
       if (!recovered) {
+        this.reportPoisoned(fault);
         throw new PGliteSessionPoisonedError(fault);
       }
       this.sessionFault = undefined;
@@ -462,6 +467,18 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
     await this.inner.destroy();
   }
 
+  private reportPoisoned(cause: Error): void {
+    if (this.poisonReported) {
+      return;
+    }
+    this.poisonReported = true;
+    try {
+      this.options.onPoisoned(cause);
+    } catch (error) {
+      this.options.onDiagnostic("onPoisoned threw", error);
+    }
+  }
+
   private timeoutFor(statement: string): number {
     return isLongRunningStatement(statement)
       ? this.options.longStatementTimeoutMs
@@ -479,6 +496,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
 
     this.statementGeneration += 1;
     this.deadCall = cause;
+    this.reportPoisoned(cause);
     this.options.onDiagnostic(
       "a PGlite statement never settled within its deadline; treating the session as poisoned",
       cause,
@@ -575,6 +593,7 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
     const outcome = await withDeadline(pending, timeoutMs);
     if (outcome === TIMED_OUT) {
       this.deadCall ??= new PGliteStatementTimeoutError(timeoutMs, statement);
+      this.reportPoisoned(this.deadCall);
       this.options.onDiagnostic(
         `a PGlite recovery statement did not settle within ${timeoutMs}ms; the session is unrecoverable from SQL`,
       );

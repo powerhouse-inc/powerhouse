@@ -230,6 +230,48 @@ describe("HardenedPGliteDialect", () => {
     ).resolves.toBeInstanceOf(PGliteSessionPoisonedError);
   });
 
+  it("reports a session no rollback can clear to onPoisoned", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    await pg.query("create table t (id int primary key)");
+    const blockRollback = { value: false };
+    const refuseRollback = (text: string) =>
+      blockRollback.value && /^\s*rollback/i.test(text);
+    const client: PGliteSession = {
+      query: (text: string, params?: unknown[]) =>
+        refuseRollback(text)
+          ? Promise.reject(new Error('cannot drop active portal ""'))
+          : pg.query(text, params),
+      exec: (text: string) =>
+        refuseRollback(text)
+          ? Promise.reject(new Error('cannot drop active portal ""'))
+          : pg.exec(text),
+      isInTransaction: () => pg.isInTransaction(),
+    };
+    const poisoned: unknown[] = [];
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(client, {
+        onDiagnostic: () => undefined,
+        onPoisoned: (cause) => poisoned.push(cause),
+      }),
+    });
+    open.push({ db, pg });
+
+    blockRollback.value = true;
+    await db
+      .transaction()
+      .execute(async (trx) => {
+        await sql`insert into t (id) values (1)`.execute(trx);
+        throw new Error("JOB-FAILED");
+      })
+      .catch(() => undefined);
+    await expect(sql`select 1 as x`.execute(db)).rejects.toThrow(
+      PGliteSessionPoisonedError,
+    );
+
+    expect(poisoned).toHaveLength(1);
+  });
+
   it("never replays a failed statement as its own autocommit statement", async () => {
     const { pg, db } = await freshDb();
 
@@ -428,6 +470,31 @@ describe("HardenedPGliteDialect statement deadline", () => {
     );
     await expectFastRefusal(db, locked);
     await expectFastRefusal(db, locked);
+  });
+
+  it("reports a dead session to onPoisoned once", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    await pg.query("create table t (id int primary key)");
+    const locked = lockedSession(pg);
+    const poisoned: unknown[] = [];
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(locked.session, {
+        statementTimeoutMs: STATEMENT_TIMEOUT_MS,
+        onDiagnostic: () => undefined,
+        onPoisoned: (cause) => poisoned.push(cause),
+      }),
+    });
+    open.push({ db, pg });
+
+    locked.kill(/^select id from t/i);
+    await expect(sql<Row>`select id from t`.execute(db)).rejects.toThrow(
+      PGliteSessionPoisonedError,
+    );
+    await expectFastRefusal(db, locked);
+
+    expect(poisoned).toHaveLength(1);
+    expect(poisoned[0]).toBeInstanceOf(PGliteStatementTimeoutError);
   });
 
   it("ignores the late settlement of an abandoned statement", async () => {
