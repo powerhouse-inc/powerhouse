@@ -583,10 +583,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const signer = this.signer ?? resolveAmbientSigner();
     const jobInputs = await Promise.all(
       request.jobs.map(async (job) => {
-        const actions = await this.signBatchJobActions(job, signer, signal);
+        const documentId = await this.batchWriteTarget(job, signer, signal);
+        const actions = await this.signBatchJobActions(
+          { ...job, documentId },
+          signer,
+          signal,
+        );
         return {
           key: job.key,
-          documentIdOrSlug: job.documentId,
+          documentIdOrSlug: documentId,
           scope: job.scope,
           branch: job.branch,
           actions: actions.map(toTransportAction),
@@ -682,6 +687,30 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
+  }
+
+  /**
+   * The id a job's actions are signed for: a signature covers the document id,
+   * and the server resolves a slug before verifying. A create names its own id.
+   */
+  private async batchWriteTarget(
+    job: ExecutionJobPlan,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (
+      !signer ||
+      job.actions.every(isActionSigned) ||
+      job.actions.some((action) => action.type === "CREATE_DOCUMENT")
+    ) {
+      return job.documentId;
+    }
+    const document = await this.get(
+      job.documentId,
+      { branch: job.branch },
+      signal,
+    );
+    return document.header.id;
   }
 
   /**

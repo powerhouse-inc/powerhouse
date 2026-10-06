@@ -1,7 +1,4 @@
-import type {
-  BatchExecutionRequest,
-  DocumentChangeEvent,
-} from "@powerhousedao/reactor";
+import type { BatchExecutionRequest } from "@powerhousedao/reactor";
 import type {
   Action,
   ISigner,
@@ -35,7 +32,7 @@ type MockSdk = {
   SetPreferredEditor: ReturnType<typeof vi.fn>;
 };
 
-/** A parent drive the `get` adapter can rebuild, carrying no protocol versions. */
+/** A drive the `get` adapter can rebuild. */
 const parentDriveDocument = {
   id: "parent-1",
   slug: "parent-drive",
@@ -67,6 +64,13 @@ const editorDocument = {
   revisionsList: [{ scope: "global", revision: 1 }],
 };
 
+/** Answers a document read with a document whose id is the identifier asked. */
+function documentNamed({ identifier }: { identifier: string }) {
+  return Promise.resolve({
+    document: { document: { ...parentDriveDocument, id: identifier } },
+  });
+}
+
 function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
   return {
     ExecuteBatch: vi.fn().mockResolvedValue(batchPayload),
@@ -74,9 +78,7 @@ function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
     GetJobStatus: vi.fn().mockResolvedValue({
       jobStatus: serverJob("job-x", "doc-1"),
     }),
-    GetDocument: vi
-      .fn()
-      .mockResolvedValue({ document: { document: parentDriveDocument } }),
+    GetDocument: vi.fn().mockImplementation(documentNamed),
     SetPreferredEditor: vi
       .fn()
       .mockResolvedValue({ setPreferredEditor: editorDocument }),
@@ -350,6 +352,30 @@ describe("GraphQLReactorClient.executeBatch", () => {
     expect(error.jobs.drive.status).toBe("READ_READY");
     expect(error.jobs.delete.error?.name).toBe("DocumentAlreadyExistsError");
     expect((error.cause as Error).name).toBe("DocumentAlreadyExistsError");
+  });
+
+  it("resolves a slug to the document id before signing for it", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue({
+        document: {
+          document: { ...parentDriveDocument, id: "drive-1", slug: "my-drive" },
+        },
+      }),
+    });
+
+    await createClientWith(sdk).executeBatch({
+      jobs: [{ ...removeFileBatch.jobs[0], documentId: "my-drive" }],
+    });
+
+    expect(sdk.GetDocument.mock.calls[0][0]).toMatchObject({
+      identifier: "my-drive",
+    });
+    expect(signAction.mock.calls[0][1]).toEqual({
+      documentId: "drive-1",
+      branch: "main",
+    });
+    expect(batchVariables(sdk).jobs[0].documentIdOrSlug).toBe("drive-1");
   });
 
   it("rejects when the mutation fails", async () => {
