@@ -409,6 +409,106 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(2));
   });
 
+  it("keeps the quarantine while another dead letter for the document remains", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    channels[0].deadLetter.add(nonKeyedOp("d2", "doc-b"));
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).not.toHaveBeenCalled();
+
+    await syncManager.requeueDeadLetter("accounts", "d2");
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps the quarantine while a stored dead letter for the document remains", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    vi.mocked(
+      mockDeadLetterStorage.listQuarantinedDocumentIds,
+    ).mockResolvedValue(["doc-b"]);
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: ["d1", "evicted"].map((id) => ({
+        id,
+        jobId: "",
+        jobDependencies: [],
+        remoteName: "accounts",
+        documentId: "doc-b",
+        scopes: ["global"],
+        branch: "main",
+        operations: [],
+        errorSource: ChannelErrorSource.Inbox,
+        errorMessage: "boom",
+        errorType: "UNCLASSIFIED" as const,
+      })),
+      options: { cursor: "0", limit: 100 },
+    });
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(mockReactor.load).not.toHaveBeenCalled();
+  });
+
+  it("lifts the quarantine when its last dead letter is cleared", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    channels[0].deadLetter.add(nonKeyedOp("d2", "doc-b"));
+    channels[0].inbox.add(
+      new SyncOperation(
+        "i1",
+        "",
+        [],
+        "accounts",
+        "doc-b",
+        ["global"],
+        "main",
+        [] as OperationWithContext[],
+      ),
+    );
+
+    await syncManager.clearDeadLetter("accounts", "d1");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).not.toHaveBeenCalled();
+
+    await syncManager.clearDeadLetter("accounts", "d2");
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
+  });
+
   it("drops only the successful op's row when a requeued op succeeds and another fails", async () => {
     mockReactor = {
       load: vi

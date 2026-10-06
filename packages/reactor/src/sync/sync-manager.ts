@@ -279,7 +279,8 @@ export class SyncManager
   private readonly parkedByQuarantine = new WeakSet<SyncOperation>();
   private readonly purgedDocumentIds = new Set<string>();
   // Requeued dead letters whose row stays until the retry's job succeeds.
-  private readonly requeuedDeadLetterIds = new Set<string>();
+  // dead letter id -> its document id
+  private readonly requeuedDeadLetterIds = new Map<string, string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
@@ -1586,7 +1587,8 @@ export class SyncManager
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
-    this.liftQuarantine(source.documentId);
+    this.requeuedDeadLetterIds.set(source.id, source.documentId);
+    await this.liftQuarantineIfClear(source.documentId);
 
     const requeued = new SyncOperation(
       source.id,
@@ -1598,8 +1600,74 @@ export class SyncManager
       source.branch,
       source.operations,
     );
-    this.requeuedDeadLetterIds.add(source.id);
     remote.channel.inbox.add(requeued);
+  }
+
+  /** Lifts only when the restart rule would: no quarantining dead letter left. */
+  private async liftQuarantineIfClear(documentId: string): Promise<void> {
+    if (!this.quarantinedDocumentIds.has(documentId)) return;
+    if (this.holdsQuarantiningDeadLetter(documentId)) return;
+    let stored: boolean;
+    try {
+      stored = await this.storesQuarantiningDeadLetter(documentId);
+    } catch (error) {
+      this.logger.warn(
+        "Could not read dead letters for @documentId; its quarantine stays: @error",
+        documentId,
+        error instanceof Error ? error.message : String(error),
+      );
+      return;
+    }
+    if (stored) return;
+    this.liftQuarantine(documentId);
+  }
+
+  private holdsQuarantiningDeadLetter(documentId: string): boolean {
+    for (const remote of this.remotes.values()) {
+      for (const item of remote.channel.deadLetter.items) {
+        if (
+          item.documentId === documentId &&
+          !this.requeuedDeadLetterIds.has(item.id) &&
+          quarantinesDocument(syncOperationErrorType(item.error))
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Rows kept only for a pending requeue do not count. */
+  private async storesQuarantiningDeadLetter(
+    documentId: string,
+  ): Promise<boolean> {
+    const quarantined =
+      await this.deadLetterStorage.listQuarantinedDocumentIds();
+    if (!quarantined.includes(documentId)) return false;
+    const pending = new Set<string>();
+    for (const [id, pendingDocumentId] of this.requeuedDeadLetterIds) {
+      if (pendingDocumentId === documentId) pending.add(id);
+    }
+    if (pending.size === 0) return true;
+    for (const name of this.records.keys()) {
+      let cursor = "0";
+      for (;;) {
+        const page = await this.deadLetterStorage.list(name, {
+          cursor,
+          limit: this.config.maxDeadLettersPerRemote,
+        });
+        const blocking = page.results.some(
+          (record) =>
+            record.documentId === documentId &&
+            !pending.has(record.id) &&
+            quarantinesDocument(record.errorType),
+        );
+        if (blocking) return true;
+        if (!page.nextCursor) break;
+        cursor = page.nextCursor;
+      }
+    }
+    return false;
   }
 
   /** Hands the document's parked inbox items to the apply path again. */
@@ -1634,12 +1702,14 @@ export class SyncManager
 
   async clearDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
+    const source = await this.findDeadLetter(remote, id);
     const item = remote.channel.deadLetter.get(id);
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
     this.requeuedDeadLetterIds.delete(id);
     await this.deadLetterStorage.remove(id);
+    if (source) await this.liftQuarantineIfClear(source.documentId);
   }
 
   /** Live item first; else scans storage for one the capped mailbox evicted. */
