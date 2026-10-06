@@ -237,7 +237,7 @@ describe("pending runs in the journal", () => {
     expect(insert).toHaveBeenCalledTimes(FIRE_CRASH_BUDGET);
     insert.mockRestore();
 
-    const runId = await store.journalAbandonedFire({
+    const runId = await store.journalAbandonedFire("op:loop", {
       ...options,
       attempts: FIRE_CRASH_BUDGET + 1,
     });

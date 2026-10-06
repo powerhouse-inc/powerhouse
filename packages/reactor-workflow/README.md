@@ -110,13 +110,16 @@ before anything is journaled (the EPIPE boot loop). So the dedupe row counts
 that leaves nothing behind can be counted at all:
 
 - A delivery whose claim already holds a run id is an ordinary duplicate and is
-  suppressed, as before.
+  suppressed, as before. So is one whose key fired with no run linked — run
+  without a journal row, its run erased, or written before claims existed —
+  which holds the `FIRED_WITHOUT_RUN_ID` marker rather than NULL.
 - A delivery whose claim holds **no** run id is retried: the previous attempt
   died before it journaled anything, and losing a legitimate trigger to a
   transient store failure would be worse than the loop.
 - Past `FIRE_CRASH_BUDGET` (3) such deliveries the fire is **abandoned**, with
   a FAILED run naming the loop — visible, and rerunnable once the cause is
-  fixed, instead of a reactor that crashes on every boot and says nothing.
+  fixed, instead of a reactor that crashes on every boot and says nothing. The
+  FAILED run is linked to the key, so later deliveries are duplicates.
 
 The **count** and the **claim** are deliberately different writes. Counting is
 its own committed transaction, because a delivery that leaves nothing behind
@@ -149,7 +152,8 @@ runs `run_document` ties to it, the runs whose trigger payload names it as
 workflow's own runs (`run.workflow_id`, test runs included), and every rerun
 of those, transitively. Their
 `step_execution` and `run_document` rows go with them; a `trigger_dedupe` row
-they claimed keeps its key and loses its `run_id`. A run erased while it is
+they claimed keeps its key, with `run_id` set to the `FIRED_WITHOUT_RUN_ID`
+marker so a redelivery is still a duplicate. A run erased while it is
 still executing journals nothing more from this process. The read model's
 fence is `"skip"`: the journal lives on the relational handle, not the
 reactor's, so a run the purge races can still be written after the marker was

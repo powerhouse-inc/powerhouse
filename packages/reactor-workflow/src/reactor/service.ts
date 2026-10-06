@@ -1705,7 +1705,7 @@ export class WorkflowRuntimeService {
           "it rather than replaying it on every boot",
       );
       try {
-        await store.journalAbandonedFire({
+        await store.journalAbandonedFire(dedupeKey, {
           ...enqueue,
           attempts: claim.attempts,
         });

@@ -163,6 +163,10 @@ export interface TriggerDedupeRow {
  */
 export const FIRE_CRASH_BUDGET = 3;
 
+// A dedupe row's run_id for a fire with no run linked: run unjournaled, run
+// erased, or written before claims. NULL is reserved for "not yet claimed".
+export const FIRED_WITHOUT_RUN_ID = "fired-without-run";
+
 export function abandonedFireError(attempts: number): string {
   return (
     `This operation was delivered ${attempts} times and never once got as ` +
@@ -359,13 +363,23 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   // Additive migration for the crash-replay budget: how many times one
   // operation has been delivered. Defaulted, so a row written before this
   // counts as its first delivery rather than as none.
+  let dedupeAttemptsAdded = false;
   try {
     await db.schema
       .alterTable("trigger_dedupe")
       .addColumn("attempts", "integer", (col) => col.notNull().defaultTo(1))
       .execute();
+    dedupeAttemptsAdded = true;
   } catch {
     // column already exists
+  }
+  // Before claims, a NULL run_id meant "fired"; it now means "not claimed".
+  if (dedupeAttemptsAdded) {
+    await db
+      .updateTable("trigger_dedupe")
+      .set({ run_id: FIRED_WITHOUT_RUN_ID })
+      .where("run_id", "is", null)
+      .execute();
   }
 
   // Additive migration for enforced step retry: how many times a step ran.
@@ -1157,7 +1171,6 @@ async function claimDedupeIn(
   dedupeKey: string,
   ttlMs: number,
   nowIso: string,
-  runId: string | null,
 ): Promise<boolean> {
   const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
   await db
@@ -1170,7 +1183,7 @@ async function claimDedupeIn(
     .values({
       workflow_id: workflowId,
       dedupe_key: dedupeKey,
-      run_id: runId,
+      run_id: FIRED_WITHOUT_RUN_ID,
       created_at: nowIso,
       attempts: 1,
     })
@@ -1367,7 +1380,8 @@ export class WorkflowRunStore {
    *
    * - **`"claimed"`** with a run id: this fire is ours to run.
    * - **`"duplicate"`**: an earlier delivery of this operation already
-   *   journaled a run. Today's replay suppression, unchanged.
+   *   fired: it journaled a run, or ran without one
+   *   ({@link FIRED_WITHOUT_RUN_ID}).
    * - **`"abandoned"`**: the operation has been delivered
    *   {@link FIRE_CRASH_BUDGET} times and has never once got as far as
    *   journaling a run — i.e. it is taking the process down before the write
@@ -1472,18 +1486,44 @@ export class WorkflowRunStore {
     return { attempts: row.attempts ?? 1, runId: row.run_id };
   }
 
-  /** The abandonment of an over-budget fire, as a visible FAILED run. */
+  /**
+   * The abandonment of an over-budget fire, as a visible FAILED run, linked to
+   * its dedupe key so a later delivery is a duplicate rather than another one.
+   */
   async journalAbandonedFire(
+    dedupeKey: string,
     options: EnqueueRunOptions & { attempts: number },
   ): Promise<string> {
-    const id = await this.startRun({
-      workflowId: options.workflowId,
-      workflowName: "",
-      workflowVersion: 0,
-      triggerKind: options.triggerKind,
-      triggerPayload: options.triggerPayload,
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto("run")
+        .values({
+          id,
+          workflow_id: options.workflowId,
+          workflow_name: "",
+          workflow_version: 0,
+          trigger_kind: options.triggerKind,
+          trigger_payload: cappedPayload(redact(options.triggerPayload)),
+          status: "FAILED",
+          error: redactMessage(abandonedFireError(options.attempts)),
+          enqueued_at: now,
+          started_at: now,
+          ended_at: now,
+          rerun_of: null,
+          warnings: 0,
+          warning_notes: null,
+        })
+        .execute();
+      await trx
+        .updateTable("trigger_dedupe")
+        .set({ run_id: id })
+        .where("workflow_id", "=", options.workflowId)
+        .where("dedupe_key", "=", dedupeKey)
+        .where("run_id", "is", null)
+        .execute();
     });
-    await this.failRun(id, abandonedFireError(options.attempts));
     return id;
   }
 
@@ -2020,7 +2060,7 @@ export class WorkflowRunStore {
     ttlMs: number,
     nowIso: string,
   ): Promise<boolean> {
-    return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso, null);
+    return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso);
   }
 
   // A removed workflow's keys would otherwise wait for a claim that never comes.
@@ -2162,7 +2202,7 @@ export class WorkflowRunStore {
       erased.dedupeKeysUnlinked = (
         await trx
           .updateTable("trigger_dedupe")
-          .set({ run_id: null })
+          .set({ run_id: FIRED_WITHOUT_RUN_ID })
           .where("run_id", "in", all)
           .returning("dedupe_key")
           .execute()
