@@ -3,6 +3,7 @@ import type {
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
+  PHDocumentMeta,
 } from "document-model";
 import type { GetDocumentQuery } from "../graphql/gen/schema.js";
 import type { RemoteOperation } from "../remote-controller/types.js";
@@ -103,6 +104,12 @@ function phDocumentHeaderFromGetDocument(
     branch: branch ?? defaultBranch,
     revision: revisionMapFromRevisionsList(document.revisionsList),
     lastModifiedAtUtcIso: isoStringFromDateTime(document.lastModifiedAtUtcIso),
+    ...(document.meta != null ? { meta: document.meta as PHDocumentMeta } : {}),
+    ...(document.protocolVersions != null
+      ? {
+          protocolVersions: document.protocolVersions as Record<string, number>,
+        }
+      : {}),
   };
 }
 

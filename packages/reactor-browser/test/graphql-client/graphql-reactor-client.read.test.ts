@@ -147,6 +147,55 @@ describe("GraphQLReactorClient.get", () => {
     expect(document.operations).toEqual({ global: [], document: [] });
   });
 
+  it("carries header.meta through when the server provides it", async () => {
+    const withMeta: GetDocumentQuery = {
+      document: {
+        childIds: [],
+        document: {
+          ...documentPayload.document!.document,
+          meta: { preferredEditor: "workflow-studio", theme: "dark" },
+        },
+      },
+    };
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue(withMeta),
+    });
+    const document = await createClientWith(sdk).get("doc-1");
+
+    expect(document.header.meta).toEqual({
+      preferredEditor: "workflow-studio",
+      theme: "dark",
+    });
+  });
+
+  it("carries header.protocolVersions through when the server provides it", async () => {
+    const withVersions: GetDocumentQuery = {
+      document: {
+        childIds: [],
+        document: {
+          ...documentPayload.document!.document,
+          protocolVersions: { "base-reducer": 2 },
+        },
+      },
+    };
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue(withVersions),
+    });
+    const document = await createClientWith(sdk).get("doc-1");
+
+    expect(document.header.protocolVersions).toEqual({ "base-reducer": 2 });
+  });
+
+  it("leaves header.meta and header.protocolVersions unset when the server omits them", async () => {
+    const sdk = createMockSdk();
+    const document = await createClientWith(sdk).get("doc-1");
+
+    expect(document.header.meta).toBeUndefined();
+    expect("meta" in document.header).toBe(false);
+    expect(document.header.protocolVersions).toBeUndefined();
+    expect("protocolVersions" in document.header).toBe(false);
+  });
+
   it("passes a slug identifier through verbatim", async () => {
     const sdk = createMockSdk();
     await createClientWith(sdk).get("my-doc");
