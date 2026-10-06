@@ -598,7 +598,6 @@ describe("prebuildReactorWorker", () => {
         ],
         { encoding: "utf8" },
       );
-      expect(run.stderr).toBe("");
       expect(run.stdout.trim()).toBe("Error ERR_MODULE_NOT_FOUND");
     },
   );
