@@ -244,8 +244,12 @@ export class BrowserAnalyticsStore implements IAnalyticsStore {
     const innerSelects: string[] = [
       `"AS_inner"."id"`,
       `"AS_inner"."source"`,
-      `"AS_inner"."start"`,
-      `"AS_inner"."end"`,
+      // The timestamp columns hold naive UTC wall-clock values, but
+      // PGlite's default parser interprets them in host-local time, which
+      // shifts every instant on a non-UTC host. Select them as text and
+      // parse them as UTC in _formatQueryRecords instead.
+      `"AS_inner"."start"::text as "start"`,
+      `"AS_inner"."end"::text as "end"`,
       `"AS_inner"."metric"`,
       `"AS_inner"."value"`,
       `"AS_inner"."unit"`,
@@ -266,7 +270,10 @@ export class BrowserAnalyticsStore implements IAnalyticsStore {
     }
 
     if (query.end) {
-      params.push(query.end.toISO());
+      // The column holds naive UTC wall-clock values; compare against the
+      // UTC rendering of the bound, not a zoned ISO string whose offset a
+      // timestamp comparison would drop.
+      params.push(query.end.toUTC().toISO());
       innerWheres.push(`"AS_inner"."start" < $${params.length}`);
     }
 
@@ -403,16 +410,30 @@ export class BrowserAnalyticsStore implements IAnalyticsStore {
     records: AnalyticsSeriesRecord[],
     dimensions: string[],
   ): AnalyticsSeries<string | AnalyticsDimension>[] {
-    const formatted = records.map((r) => {
-      const start = r.start instanceof Date ? r.start : new Date(r.start);
-      const end =
-        r.end == null ? null : r.end instanceof Date ? r.end : new Date(r.end);
+    // The timestamp columns hold naive UTC wall-clock values. Strings come
+    // from the ::text casts in getMatchingSeries and are parsed as UTC. A
+    // Date can only come from PGlite's default parser, which interpreted
+    // the naive value in host-local time; rebuild the UTC instant from the
+    // local wall-clock fields it produced.
+    const toUtcDateTime = (value: Date | string): DateTime =>
+      value instanceof Date
+        ? DateTime.utc(
+            value.getFullYear(),
+            value.getMonth() + 1,
+            value.getDate(),
+            value.getHours(),
+            value.getMinutes(),
+            value.getSeconds(),
+            value.getMilliseconds(),
+          )
+        : DateTime.fromSQL(value, { zone: "utc" });
 
+    const formatted = records.map((r) => {
       const result = {
         id: r.id,
         source: AnalyticsPath.fromString(r.source.slice(0, -1)),
-        start: DateTime.fromJSDate(start),
-        end: end ? DateTime.fromJSDate(end) : null,
+        start: toUtcDateTime(r.start),
+        end: r.end == null ? null : toUtcDateTime(r.end),
         metric: r.metric,
         value: r.value,
         unit: r.unit,

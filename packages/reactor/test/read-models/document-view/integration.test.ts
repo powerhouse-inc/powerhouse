@@ -184,18 +184,38 @@ describe("KyselyDocumentView", () => {
         nextCursor: undefined,
       });
 
+      // The view rebuilds resultingState from the write cache on init, so the
+      // cache must return the executor-shaped document; a shape without the
+      // operation's scope is refused rather than indexed as {}.
+      const rebuiltGlobal = { folders: ["Folder 0", "Folder 1", "Folder 2"] };
+      vi.mocked(mockWriteCache.getState).mockResolvedValue({
+        header: {
+          id: documentId,
+          documentType,
+          slug: documentId,
+          name: "Drive",
+        },
+        state: { global: rebuiltGlobal },
+      } as never);
+
       // Initialize the view - it should process all operations
       await view.init();
 
-      // Verify snapshots were created
+      // Verify snapshots were created, and verify their content: an empty
+      // snapshot with the right index is exactly the corruption this path
+      // once wrote in production.
       const snapshots = await db
         .selectFrom("DocumentSnapshot")
         .selectAll()
         .where("documentId", "=", documentId)
         .execute();
 
-      expect(snapshots).toHaveLength(1); // One snapshot per document/scope/branch
-      expect(snapshots[0].lastOperationIndex).toBe(2); // Last operation index
+      expect(snapshots).toHaveLength(2); // One row per scope: header and global
+      const globalRow = snapshots.find(
+        (snapshot) => snapshot.scope === "global",
+      );
+      expect(globalRow?.content).toEqual(rebuiltGlobal);
+      expect(globalRow?.lastOperationIndex).toBe(2); // Last operation index
     });
   });
 

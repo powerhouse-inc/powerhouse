@@ -55,6 +55,14 @@ export const stepTest = {
         throw new Error("the ledger said no");
       },
     },
+    big: {
+      name: "big",
+      displayName: "Big",
+      props: {},
+      // Over the journal's STEP_PAYLOAD_MAX_BYTES (256 KiB), word-broken so
+      // the suite stays independent of redact()'s long-run performance.
+      run: async () => ({ blob: "word ".repeat(60 * 1024) }),
+    },
   },
   triggers: {
     poll: {
@@ -388,6 +396,58 @@ describe("testStep", () => {
     expect((await service.testStep("wf-secret", "s2", CTX)).error).toBe(
       '"call" reads a value redacted from the last test of "auth"',
     );
+  }, 60_000);
+
+  it("refuses a sample the journal truncated, naming the step", async () => {
+    documents.apply(
+      "wf-big",
+      actions.setTrigger({
+        id: "t1",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s1",
+        key: "big",
+        name: "Big",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "big",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s2",
+        key: "after",
+        name: "After",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "echo",
+        config: { text: "{{steps.big.output.blob}}" },
+        propertySettings: expressionFields("text"),
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "s1", port: "next" }),
+      actions.addEdge({ id: "e2", from: "s1", to: "s2", port: "next" }),
+    );
+
+    // The test itself succeeds and serves its live output whole; only the
+    // journaled copy is the {truncated, bytes, prefix} marker (store.ts,
+    // STEP_PAYLOAD_MAX_BYTES).
+    const big = await service.testStep("wf-big", "s1", CTX);
+    expect(big.status).toBe("SUCCEEDED");
+
+    // A draft step reading that sample is refused by name, the way an
+    // untested upstream block is — never fed the marker as prior data.
+    expect((await service.testStep("wf-big", "s2", CTX)).error).toBe(
+      'Test "big" again: the journal kept only a truncated copy of its last output',
+    );
+    // The expression picker falls back to the authored shape (none declared
+    // by the fixture) rather than presenting the marker as the test output.
+    expect(await service.stepOutputTree("wf-big", "s1", CTX)).toEqual({
+      source: "none",
+      nodes: [],
+    });
   }, 60_000);
 
   it("serves the output tree from a block's latest test", async () => {

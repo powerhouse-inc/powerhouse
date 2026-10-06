@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -105,6 +106,43 @@ async function loadDependency<T = unknown>(
       if (result) return result;
     }
     throw e;
+  }
+}
+
+/**
+ * The subgraphs a package's `powerhouse.manifest.json` declares, when the
+ * manifest is reachable — which it is for a package identified by an
+ * absolute path (how every local project reaches the loaders). Lets the
+ * package manager warn when a manifest promises subgraphs and the loaders
+ * deliver none, instead of failing silently. For a bare package name the
+ * manifest would have to be resolved through the module system; until a
+ * caller needs that, a bare name answers [] rather than guessing.
+ */
+export function manifestDeclaredSubgraphs(identifier: string): string[] {
+  if (!path.isAbsolute(identifier)) return [];
+  try {
+    const raw = readFileSync(
+      path.join(identifier, "powerhouse.manifest.json"),
+      "utf-8",
+    );
+    const manifest = JSON.parse(raw) as { subgraphs?: unknown };
+    if (!Array.isArray(manifest.subgraphs)) return [];
+    return manifest.subgraphs
+      .map((subgraph: unknown) => {
+        if (typeof subgraph !== "object" || subgraph === null) {
+          return undefined;
+        }
+        const { id, name } = subgraph as { id?: unknown; name?: unknown };
+        return id ?? name;
+      })
+      .filter(
+        (value): value is string =>
+          typeof value === "string" && value.length > 0,
+      );
+  } catch {
+    // No manifest, or an unreadable one: nothing was promised, so nothing
+    // to warn about.
+    return [];
   }
 }
 

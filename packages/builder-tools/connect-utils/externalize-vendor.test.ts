@@ -84,8 +84,14 @@ describe("prebuildConnectVendor production options", () => {
     // The build and the web server are not always the same user (root builds
     // the image, nginx serves it), and a vendor dir nobody else can traverse
     // makes every vendor URL fall through to index.html.
-    const mode = statSync(vendorDir).mode & 0o777;
-    expect(mode & 0o055).toBe(0o055);
+    // The property only exists on POSIX hosts: on win32 libuv synthesizes
+    // modes (directories never get execute bits, chmod beyond read-only is
+    // inert), so the assertion would be vacuous there either way. Linux CI
+    // keeps asserting the real deployment property.
+    if (process.platform !== "win32") {
+      const mode = statSync(vendorDir).mode & 0o777;
+      expect(mode & 0o055).toBe(0o055);
+    }
   }, 240_000);
 
   it("keeps dev behavior with defaults (no base/nodeEnv)", async () => {

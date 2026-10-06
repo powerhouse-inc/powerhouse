@@ -108,6 +108,10 @@ export interface ActionContextOptions {
   // ctx.reactor. Served only to a piece the host loaded from an installed
   // reactor package; for every other piece the member throws by name.
   reactor?: ReactorService;
+  // ctx.resumePayload, the delivery that woke a RESUME run. This engine never
+  // suspends a run, so no request carries one yet; omitted, the member throws
+  // by name instead of reading as undefined.
+  resumePayload?: unknown;
   executionType?: `${ExecutionType}`;
   identity?: ActionContextIdentity;
   onTouch?: (member: string) => void;
@@ -126,6 +130,10 @@ export interface BuiltApActionContext {
   files: FilesService;
   output: OutputContext;
   reactor: ReactorService;
+  // The RESUME branch of the framework's ActionContext promises this
+  // (ResumePayload there, a type its entry does not export). Always present,
+  // real or throwing, like `reactor`.
+  resumePayload: unknown;
   // Carried by the framework's own test double but absent from its types.
   agent: { tools: unknown[] };
   run: RunContext;
@@ -169,6 +177,7 @@ export function buildActionContext(
     files: options.files ?? throwingStub("files"),
     output: options.output ?? throwingStub("output"),
     reactor: options.reactor ?? throwingStub("reactor"),
+    resumePayload: options.resumePayload ?? throwingStub("resumePayload"),
     agent: throwingStub("agent"),
     run: {
       id: identity.runId ?? "run",
