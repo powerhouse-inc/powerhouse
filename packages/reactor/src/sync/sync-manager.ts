@@ -2154,6 +2154,7 @@ export class SyncManager
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
+        void this.dropRequeuedDeadLetter(syncOp.id);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
         eligible.push(syncOp);
       } else {
@@ -2485,6 +2486,7 @@ export class SyncManager
       this.markerRetries.delete(syncOp.id);
       syncOp.executed();
       remote.channel.inbox.remove(syncOp);
+      await this.dropRequeuedDeadLetter(syncOp.id);
       return;
     }
     await this.applyInboxJob(remote, syncOp);

@@ -154,7 +154,7 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     };
   }
 
-  function makeManager(reactor: IReactor): SyncManager {
+  function makeManager(reactor: IReactor, purged: string[] = []): SyncManager {
     const remoteStorage: ISyncRemoteStorage = {
       list: vi.fn().mockResolvedValue([]),
       get: vi.fn().mockResolvedValue(null),
@@ -238,6 +238,10 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
       settledAtHead(),
+      {},
+      undefined,
+      undefined,
+      { listPurged: () => Promise.resolve(purged) },
     );
   }
 
@@ -507,6 +511,42 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
 
     await syncManager.clearDeadLetter("accounts", "d2");
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
+  });
+
+  it("drops the row of a requeued op whose document was purged meanwhile", async () => {
+    mockReactor = {
+      load: vi.fn(),
+      getJobStatus: vi.fn(),
+      loadBatch: vi.fn(),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor, ["doc-b"]);
+    await syncManager.startup();
+    await addAccounts();
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [
+        {
+          id: "d1",
+          jobId: "",
+          jobDependencies: [],
+          remoteName: "accounts",
+          documentId: "doc-b",
+          scopes: ["global"],
+          branch: "main",
+          operations: [],
+          errorSource: ChannelErrorSource.Inbox,
+          errorMessage: "boom",
+          errorType: "UNCLASSIFIED",
+        },
+      ],
+      options: { cursor: "0", limit: 100 },
+    });
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
+    await vi.waitFor(() =>
+      expect(mockDeadLetterStorage.remove).toHaveBeenCalledWith("d1"),
+    );
+    expect(mockReactor.load).not.toHaveBeenCalled();
   });
 
   it("drops only the successful op's row when a requeued op succeeds and another fails", async () => {
