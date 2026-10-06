@@ -6,10 +6,11 @@ function readHash(): string | undefined {
   return window.location.hash.replace(/^#/, "") || undefined;
 }
 
-export function useHashSelection(): [
-  string | undefined,
-  (id?: string) => void,
-] {
+export type Select = (id?: string, options?: { replace?: boolean }) => void;
+
+// Each selection is a history entry, so back and forward walk the studio;
+// `replace` is for corrections and for riding on an entry Connect just pushed.
+export function useHashSelection(): [string | undefined, Select] {
   const [selected, setSelected] = useState<string | undefined>(readHash);
 
   useEffect(() => {
@@ -23,13 +24,13 @@ export function useHashSelection(): [
     };
   }, []);
 
-  const select = useCallback((id?: string) => {
+  const select = useCallback<Select>((id, options) => {
     setSelected(id);
-    // Replaced, not pushed: Connect pushes a path entry on the same click, and
-    // two history entries per click breaks the back button.
     const url = new URL(window.location.href);
     url.hash = id ?? "";
-    window.history.replaceState(null, "", url);
+    if (url.href === window.location.href) return;
+    if (options?.replace) window.history.replaceState(null, "", url);
+    else window.history.pushState(null, "", url);
   }, []);
 
   return [selected, select];
