@@ -1466,7 +1466,7 @@ export class SyncManager
       throw error;
     }
 
-    await this.activateRemote(fresh, unheard, 0);
+    await this.activateRemote(fresh, unheard, channel.outbox.ackOrdinal);
   }
 
   /** Before a fresh channel is registered: nothing to tear down. */

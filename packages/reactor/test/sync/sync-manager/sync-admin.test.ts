@@ -333,6 +333,39 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     );
   });
 
+  it("backfills a reset channel from its stored outbox cursor, not from zero", async () => {
+    await addAccounts();
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      const channel = createChannel();
+      channel.init = vi.fn(() => {
+        channel.outbox.init(500);
+        return Promise.resolve();
+      });
+      channels.push(channel);
+      return channel as unknown as IChannel;
+    });
+    await vi.waitFor(() => expect(mockOperationIndex.find).toHaveBeenCalled());
+    vi.mocked(mockOperationIndex.find).mockClear();
+
+    await syncManager.resetChannel("accounts");
+
+    await vi.waitFor(() => expect(mockOperationIndex.find).toHaveBeenCalled());
+    expect(mockOperationIndex.find).not.toHaveBeenCalledWith(
+      expect.anything(),
+      0,
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+    expect(mockOperationIndex.find).toHaveBeenCalledWith(
+      expect.anything(),
+      500,
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+  });
+
   it("leaves no torn-down remote registered when the channel factory throws", async () => {
     await addAccounts();
     const first = channels[0];
