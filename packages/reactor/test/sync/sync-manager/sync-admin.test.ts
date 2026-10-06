@@ -372,6 +372,19 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     expect(channels[0].inbox.add).toHaveBeenCalledTimes(1);
   });
 
+  it("requeues a dead letter once when two requeues race", async () => {
+    await addAccounts();
+    channels[0].deadLetter.add(deadLetterOp("d1", "doc-b"));
+    channels[0].inbox.add.mockClear();
+
+    await Promise.all([
+      syncManager.requeueDeadLetter("accounts", "d1"),
+      syncManager.requeueDeadLetter("accounts", "d1"),
+    ]);
+
+    expect(channels[0].inbox.add).toHaveBeenCalledTimes(1);
+  });
+
   it("treats requeue of an unknown dead letter as a no-op", async () => {
     await addAccounts();
     channels[0].inbox.add.mockClear();

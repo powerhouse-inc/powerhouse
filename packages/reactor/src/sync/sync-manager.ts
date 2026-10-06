@@ -281,6 +281,7 @@ export class SyncManager
   // Requeued dead letters whose row stays until the retry's job succeeds.
   // dead letter id -> its document id
   private readonly requeuedDeadLetterIds = new Map<string, string>();
+  private readonly requeuesInFlight = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
@@ -1566,9 +1567,26 @@ export class SyncManager
   /** Keeps the row until the retry succeeds, so a crash cannot lose the op. */
   async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
-    if (this.requeuedDeadLetterIds.has(id) || remote.channel.inbox.get(id)) {
+    if (
+      this.requeuesInFlight.has(id) ||
+      this.requeuedDeadLetterIds.has(id) ||
+      remote.channel.inbox.get(id)
+    ) {
       return;
     }
+    this.requeuesInFlight.add(id);
+    try {
+      await this.requeue(remote, remoteName, id);
+    } finally {
+      this.requeuesInFlight.delete(id);
+    }
+  }
+
+  private async requeue(
+    remote: Remote,
+    remoteName: string,
+    id: string,
+  ): Promise<void> {
     const source = await this.findDeadLetter(remote, id);
     if (!source) {
       return;
