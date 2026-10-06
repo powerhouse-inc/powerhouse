@@ -1,3 +1,24 @@
+## 6.2.3-dev.44 (2026-10-06)
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods and timestamps to UTC ([#3175](https://github.com/powerhouse-inc/powerhouse/pull/3175))
+- **ph-cli:** ship the vetra drive icons instead of fetching them from IPFS ([#3178](https://github.com/powerhouse-inc/powerhouse/pull/3178))
+- **reactor:** let retry() on an owed deletion wait out the failed delivery ([917e7b05ce](https://github.com/powerhouse-inc/powerhouse/commit/917e7b05ce))
+- **reactor:** emit one JOB_FAILED per terminal failure ([#3173](https://github.com/powerhouse-inc/powerhouse/pull/3173))
+- **reactor:** make the reactor suite pass on Windows ([#3171](https://github.com/powerhouse-inc/powerhouse/pull/3171))
+- **reactor-api,codegen:** one acceptance rule for modules and subgraphs ([#3176](https://github.com/powerhouse-inc/powerhouse/pull/3176))
+- **reactor-workflow:** bound the step journal and trigger payloads ([#3177](https://github.com/powerhouse-inc/powerhouse/pull/3177))
+- **switchboard:** keep fatal shutdown exit codes intact ([#3174](https://github.com/powerhouse-inc/powerhouse/pull/3174))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.43 (2026-10-05)
 
 This was a version bump only, there were no code changes.
