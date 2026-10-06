@@ -330,6 +330,11 @@ schema; what changed is that they are true.
   `["HostCallTimeoutError"]` and `["429"]` work.
 - `maxAttempts` is clamped to 10 and one backoff wait to 5 minutes: each
   attempt re-runs a side effect and holds the run's worker slot.
+- **Only the attempt is retried, never the resolution.** A step's input is
+  resolved once, before the first attempt, because resolution reads the scope
+  and nothing an attempt changes: an `UnresolvedReferenceError` names a key
+  that will not exist on attempt five either. A resolution failure fails the
+  step immediately, with no backoff waits spent on it.
 - **A retry wait is clipped to the run deadline, and the deadline wins.** A
   backoff longer than the time left is served out only as far as the deadline,
   and then the step gets no further attempt: running one would be a side effect
