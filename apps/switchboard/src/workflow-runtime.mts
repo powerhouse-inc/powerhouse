@@ -436,6 +436,7 @@ export async function composeWorkflowRuntime(
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
           onLost: (heldBy) => {
             loss.lost = true;
+            loss.heldBy = heldBy;
             loss.tearDown?.();
             deps.onSingletonLost?.(heldBy);
           },
@@ -457,6 +458,7 @@ type SingletonLease = Awaited<
 // Losing the lease shuts the runtime down; tearDown is set once it exists.
 interface SingletonLoss {
   lost: boolean;
+  heldBy?: string;
   tearDown?: () => void;
 }
 
@@ -474,6 +476,15 @@ async function composeClaimed(
   // the supervisor starts, and the catalog is served from the same holder.
   if (deps.pieces) bindPackagePieces(engine.packagePieces, deps.pieces);
 
+  // Creating the runtime opens the journal, whose sweeps fail every run not
+  // in this process: never after the lease has gone.
+  if (loss.lost) {
+    throw new engine.WorkflowSingletonConflictError(
+      loss.heldBy ?? "unknown",
+      "unknown",
+      lease?.owner ?? "unknown",
+    );
+  }
   const access = reactorAccessOf(deps.clientModule);
   const models = deps.models;
   const runtime = engine.createWorkflowRuntime({

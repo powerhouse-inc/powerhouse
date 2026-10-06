@@ -7,6 +7,8 @@ import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import {
   acquireWorkflowSingletonLease,
+  SINGLETON_HEARTBEAT_MS,
+  SINGLETON_STALE_HEARTBEATS,
   singletonOwnerName,
   WORKFLOW_SINGLETON_OWNER_ENV,
   WorkflowSingletonConflictError,
@@ -84,13 +86,30 @@ describe("the workflow singleton lease", () => {
     expect(conflict.message).toContain(WORKFLOW_SINGLETON_OWNER_ENV);
   });
 
-  it("gives the same owner its own lease back, so a restart does not wait", async () => {
-    const { acquire } = fixture();
+  // A rolling deploy under one stable owner name: the new pod must not open
+  // the journal while the old one is still running workflows on it.
+  it("refuses its own owner name while the holder is still renewing", async () => {
+    const { acquire, age } = fixture();
     await acquire("switchboard-0");
+    await age(SINGLETON_HEARTBEAT_MS);
+
+    await expect(acquire("switchboard-0")).rejects.toBeInstanceOf(
+      WorkflowSingletonConflictError,
+    );
+  });
+
+  it("re-claims its own owner name once the holder's heartbeat is stale", async () => {
+    const { acquire, age } = fixture();
+    await acquire("switchboard-0");
+    await age(SINGLETON_HEARTBEAT_MS * SINGLETON_STALE_HEARTBEATS + 1);
 
     const again = await acquire("switchboard-0");
 
-    expect(again.owner).toBe("switchboard-0");
+    expect(await again.heartbeat()).toBe(true);
+    // Stale is ours to take over, not anyone's: the lease has not expired.
+    await expect(acquire("someone-else")).rejects.toBeInstanceOf(
+      WorkflowSingletonConflictError,
+    );
   });
 
   it("lets another process take over once the lease has expired", async () => {
@@ -228,7 +247,7 @@ describe("the workflow singleton lease", () => {
   });
 
   it("re-claims its own unreleased lease without waiting out the TTL", async () => {
-    const { relationalDb } = fixture();
+    const { relationalDb, age } = fixture();
     const storage = "/srv/switchboard/.ph/read-storage";
     const owner = singletonOwnerName({}, storage);
     // A killed process: the lease is still live and was never released.
@@ -239,6 +258,7 @@ describe("the workflow singleton lease", () => {
     });
 
     // The restart, under the same stable name, inside the TTL.
+    await age(SINGLETON_HEARTBEAT_MS * SINGLETON_STALE_HEARTBEATS + 1);
     const rebooted = await acquireWorkflowSingletonLease({
       relationalDb,
       logger: silent,
@@ -255,22 +275,25 @@ describe("the workflow singleton lease", () => {
 // apart.
 describe("two processes under one owner name", () => {
   const takeovers = [
-    ["after the old lease expired", 1_001],
-    ["while the old lease is still live", 0],
+    ["after the old lease expired", 60_001],
+    [
+      "after the old heartbeat went stale",
+      SINGLETON_HEARTBEAT_MS * SINGLETON_STALE_HEARTBEATS + 1,
+    ],
   ] as const;
 
   it.each(takeovers)(
     "keeps the new process's lease when the old one releases %s",
     async (_, wait) => {
       const { acquire, age } = fixture();
-      const oldPod = await acquire("switchboard-0", 1_000);
+      const oldPod = await acquire("switchboard-0");
       await age(wait);
-      const newPod = await acquire("switchboard-0", 1_000);
+      const newPod = await acquire("switchboard-0");
 
       await oldPod.release();
 
       expect(await newPod.heartbeat()).toBe(true);
-      await expect(acquire("someone-else", 1_000)).rejects.toBeInstanceOf(
+      await expect(acquire("someone-else")).rejects.toBeInstanceOf(
         WorkflowSingletonConflictError,
       );
     },
@@ -281,9 +304,9 @@ describe("two processes under one owner name", () => {
     async (_, wait) => {
       const { acquire, age } = fixture();
       const lost = vi.fn();
-      const oldPod = await acquire("switchboard-0", 1_000, lost);
+      const oldPod = await acquire("switchboard-0", 60_000, lost);
       await age(wait);
-      const newPod = await acquire("switchboard-0", 1_000);
+      const newPod = await acquire("switchboard-0");
 
       expect(await oldPod.heartbeat()).toBe(false);
       expect(await oldPod.heartbeat()).toBe(false);

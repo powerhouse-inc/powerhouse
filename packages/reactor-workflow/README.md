@@ -101,7 +101,10 @@ the sweeps and the supervisor are per process.
   claim releases it, and so does `stop()`, so the next boot owns workflows
   immediately instead of waiting out the TTL.
 - An **expired** lease is taken over: a killed process does not lock workflows
-  out until a human intervenes.
+  out until a human intervenes. A claim under the holder's own owner name may
+  take it over earlier, once the holder's heartbeat has been silent for two
+  renewal periods (40s), but never from a holder that is still renewing: the
+  new process opening the journal would fail the old one's live runs.
 - Each claim records a random **instance** token, never configured. Heartbeat
   and release match on owner and instance, so during a rolling deploy under
   one stable owner name the old process can neither renew nor delete the new
@@ -122,12 +125,11 @@ the sweeps and the supervisor are per process.
   workflows against a journal a live process owns; aborting the whole boot over
   it turned "not allowed to run one component" into an outage — and, with a
   random owner name, into a crash loop for the TTL after every unclean kill.
-  Workflows come back on the next boot once the lease is claimable, which under
-  a stable owner is immediately.
+  Workflows come back on the next boot once the lease is claimable.
 - **The default owner is stable**: `<hostname>/<fingerprint of the journal's
   storage location>`. So one deployment slot restarting re-claims its OWN lease
-  at once rather than waiting out the TTL for a killed process's claim — the
-  common case, and it has to be instant. A genuine second replica still differs
+  once the killed process's heartbeat is stale (40s) rather than waiting out
+  the whole TTL. A genuine second replica still differs
   by hostname or by the journal it points at. The storage location is hashed,
   never printed: it can be a Postgres URL with credentials, and the owner name
   goes into a database row and every log line about the lease. The case a stable
@@ -542,7 +544,7 @@ explanation behind it.
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
 | `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer, clipped to the step deadline (`activepieces/context/limits.ts`) |
 | `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
-| `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<journal hash>` | Names this process as the workflow singleton's owner; the default is stable per slot, so a restart re-claims at once (`reactor/singleton-lease.ts`) |
+| `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<journal hash>` | Names this process as the workflow singleton's owner; the default is stable per slot, so a restart re-claims once the old heartbeat is stale (`reactor/singleton-lease.ts`) |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.

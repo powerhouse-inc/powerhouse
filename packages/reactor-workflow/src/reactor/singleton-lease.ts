@@ -30,8 +30,8 @@ const logger = childLogger(["workflow", "runtime", "singleton"]);
  * Set it to a STABLE name per deployment slot (`switchboard-0`, the
  * StatefulSet pod name, the Render service id). The owner name is the
  * operator's contract: a restart under the same name re-claims its own lease
- * immediately instead of waiting out {@link SINGLETON_LEASE_TTL_MS}, which is
- * exactly the rolling-deploy overlap the dead lease columns were written for.
+ * once the old heartbeat is stale instead of waiting out
+ * {@link SINGLETON_LEASE_TTL_MS}.
  *
  * Unset, the owner is derived from a STABLE identity — the hostname and a
  * fingerprint of the journal's own storage location ({@link
@@ -39,7 +39,7 @@ const logger = childLogger(["workflow", "runtime", "singleton"]);
  * A random per-process owner meant every unclean kill locked the next boot out
  * for the whole {@link SINGLETON_LEASE_TTL_MS}: the dead process's lease was
  * nobody's to re-claim, and `release()` never ran. One deployment slot
- * restarting is the common case and it has to be instant; a genuine second
+ * restarting is the common case and it has to be quick; a genuine second
  * replica still differs, by hostname or by the journal it points at.
  */
 export const WORKFLOW_SINGLETON_OWNER_ENV = "PH_WORKFLOWS_SINGLETON_OWNER";
@@ -50,6 +50,14 @@ export const SINGLETON_LEASE_TTL_MS = 60_000;
 /** How often the holder renews it; a third of the TTL, so two renewals may be
  * lost (a GC pause, a slow database) before anyone may take over. */
 export const SINGLETON_HEARTBEAT_MS = SINGLETON_LEASE_TTL_MS / 3;
+
+/**
+ * How long the holder's heartbeat must have been silent before a claim under
+ * the SAME owner name takes the lease over, short of its expiry. Two renewal
+ * periods: a live holder renews well inside it, and its self-fence fires
+ * before it passes.
+ */
+export const SINGLETON_STALE_HEARTBEATS = 2;
 
 /** The one row. The table holds a single lease, named rather than keyed by a
  * magic empty string, so a `SELECT *` reads legibly in an operator's shell. */
@@ -138,8 +146,8 @@ export interface AcquireSingletonOptions {
  * The owner name this process claims under.
  *
  * `<hostname>/<storage fingerprint>`, so it is the same name on every boot of
- * one deployment slot — a restart re-claims its OWN lease at once rather than
- * waiting out the TTL for a dead process's claim to expire — and a different
+ * one deployment slot — a restart re-claims its OWN lease once the dead
+ * process's heartbeat is stale, rather than waiting out the TTL — and a different
  * name on any host or journal that is genuinely somebody else.
  *
  * The storage location is hashed, never printed: it can be a Postgres URL with
@@ -186,10 +194,12 @@ async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
  * prior `SELECT` would be a race:
  *
  * 1. `INSERT … ON CONFLICT DO NOTHING RETURNING` — the first ever boot.
- * 2. `UPDATE … WHERE owner = me OR expires_at <= now RETURNING` — our own
- *    lease back (a restart under a stable owner name), or a dead one taken
- *    over once it has expired. Either way the row gets this claim's instance,
- *    so the previous holder's heartbeat and release no longer match.
+ * 2. `UPDATE … WHERE expires_at <= now OR (owner = me AND heartbeat stale)
+ *    RETURNING` — a dead lease taken over once it has expired, or our own
+ *    slot's lease once its holder stopped renewing (a restart under a stable
+ *    owner name), never a live holder's. Either way the row gets this claim's
+ *    instance, so the previous holder's heartbeat and release no longer
+ *    match.
  * 3. Neither matched: someone live holds it, and we refuse by name.
  */
 export async function acquireWorkflowSingletonLease(
@@ -198,6 +208,7 @@ export async function acquireWorkflowSingletonLease(
   const log = options.logger ?? logger;
   const ttlMs = options.ttlMs ?? SINGLETON_LEASE_TTL_MS;
   const heartbeatMs = options.heartbeatMs ?? SINGLETON_HEARTBEAT_MS;
+  const staleMs = heartbeatMs * SINGLETON_STALE_HEARTBEATS;
   const owner =
     options.owner ?? singletonOwnerName(options.env, options.storageId);
   const instance = randomUUID();
@@ -231,7 +242,15 @@ export async function acquireWorkflowSingletonLease(
       .set({ owner, instance, acquired_at: dbNow(), ...stamps() })
       .where("id", "=", LEASE_ID)
       .where((eb) =>
-        eb.or([eb("owner", "=", owner), eb("expires_at", "<=", dbNow())]),
+        eb.or([
+          eb("expires_at", "<=", dbNow()),
+          // Never from a live holder, even under our own name: the new
+          // process opening the journal would fail the old one's live runs.
+          eb.and([
+            eb("owner", "=", owner),
+            eb("heartbeat_at", "<=", dbNowPlus(-staleMs)),
+          ]),
+        ]),
       )
       .returning("owner")
       .executeTakeFirst();

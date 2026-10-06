@@ -398,6 +398,14 @@ describe("composeWorkflowRuntime", () => {
       await workflows.start();
       expect(workflows.triggers).toEqual({ status: "available" });
 
+      // The older holder went quiet, so its own slot may take over.
+      const leaseDb = await relationalDb.createNamespace<{
+        workflow_singleton: { heartbeat_at: Date };
+      }>("workflow_runtime");
+      await leaseDb
+        .updateTable("workflow_singleton")
+        .set({ heartbeat_at: new Date(Date.now() - 3_600_000) })
+        .execute();
       newer = await engine.acquireWorkflowSingletonLease({
         relationalDb,
         storageId: "/srv/slot-a",
@@ -424,6 +432,33 @@ describe("composeWorkflowRuntime", () => {
       await newer?.release();
       vi.useRealTimers();
     }
+  });
+
+  it("opens no journal when the lease is lost before the runtime exists", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const createWorkflowRuntime = vi.fn(engine.createWorkflowRuntime);
+
+    const composing = compose(clientModule, {
+      relationalDb,
+      load: () =>
+        Promise.resolve({
+          ...engine,
+          createWorkflowRuntime,
+          acquireWorkflowSingletonLease: async (options) => {
+            const lease = await engine.acquireWorkflowSingletonLease(options);
+            options.onLost?.("thief");
+            return lease;
+          },
+        }),
+    });
+
+    await expect(composing).rejects.toMatchObject({
+      name: "WorkflowSingletonConflictError",
+      owner: "thief",
+    });
+    expect(createWorkflowRuntime).not.toHaveBeenCalled();
   });
 
   it("composes without a claim only when the host opts out", async () => {

@@ -105,7 +105,7 @@
     {
       "name": "PH_WORKFLOWS_SINGLETON_OWNER",
       "type": "var",
-      "description": "Names this process as the owner of workflow execution, which is a singleton: exactly one reactor runs workflows. Unset, the owner is <hostname>/<hash of the journal's storage location>, stable per deployment slot, so a restart re-claims its own lease at once; a different owner is refused until the holder's lease expires."
+      "description": "Names this process as the owner of workflow execution, which is a singleton: exactly one reactor runs workflows. Unset, the owner is <hostname>/<hash of the journal's storage location>, stable per deployment slot, so a restart re-claims its own lease once the old process's heartbeat is stale; a different owner is refused until the holder's lease expires."
     },
     {
       "name": "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS",

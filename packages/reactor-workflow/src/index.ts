@@ -30,6 +30,7 @@ export {
   acquireWorkflowSingletonLease,
   singletonOwnerName,
   SINGLETON_HEARTBEAT_MS,
+  SINGLETON_STALE_HEARTBEATS,
   SINGLETON_LEASE_TTL_MS,
   WORKFLOW_SINGLETON_OWNER_ENV,
   WorkflowSingletonConflictError,
