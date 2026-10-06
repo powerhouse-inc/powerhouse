@@ -1,5 +1,9 @@
 import type { BatchExecutionRequest } from "@powerhousedao/reactor";
-import type { ISigner, Signature } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  ISigner,
+  Signature,
+} from "@powerhousedao/shared/document-model";
 import { serializeSignature } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -245,6 +249,36 @@ describe("GraphQLReactorClient.executeBatch", () => {
     // No baseline fetch, no reducer prediction: each action is signed bare.
     expect(signAction).toHaveBeenCalledTimes(2);
     expect(sdk.ExecuteBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves an already-signed action untouched so it is not signed twice", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk();
+
+    const preSigned: Action = {
+      id: "act-remove",
+      type: "DELETE_NODE",
+      timestampUtcMs: "1700000007000",
+      input: { id: "file-1" },
+      scope: "global",
+      context: {
+        signer: {
+          user: { address: "0x1", networkId: "eip155", chainId: 1 },
+          app: { name: "test-app", key: "app-key" },
+          signatures: [signature],
+        },
+      },
+    };
+
+    await createClientWith(sdk).executeBatch({
+      jobs: [{ ...removeFileBatch.jobs[0], actions: [preSigned] }],
+    });
+
+    expect(signAction).not.toHaveBeenCalled();
+    const jobs = batchVariables(sdk).jobs;
+    expect(jobs[0].actions[0].context?.signer?.signatures).toEqual([
+      serializeSignature(signature),
+    ]);
   });
 
   it("pushes actions unsigned when there is no signer", async () => {

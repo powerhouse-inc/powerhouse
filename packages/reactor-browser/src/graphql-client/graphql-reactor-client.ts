@@ -705,8 +705,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * Each action is signed on its own for `(documentId, branch)`, the same
    * per-action signing the reactor's `signActions` does: no state prediction
    * across the job, so a job carrying a `CREATE_DOCUMENT` the push-prediction
-   * path rejects still signs. With no signer the actions pass through unsigned,
-   * matching {@link execute}.
+   * path rejects still signs. An action already signed under a key is left
+   * as it is: the reference `DriveClient` signs its jobs before handing them
+   * here. With no signer the actions pass through unsigned, matching
+   * {@link execute}.
    */
   private async signBatchJobActions(
     job: ExecutionJobPlan,
@@ -718,12 +720,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     }
     return Promise.all(
       job.actions.map((action) =>
-        signStampedAction(
-          action,
-          signer,
-          actionSigningTarget(action, job.documentId, job.branch),
-          signal,
-        ),
+        isActionSigned(action)
+          ? Promise.resolve(action)
+          : signStampedAction(
+              action,
+              signer,
+              actionSigningTarget(action, job.documentId, job.branch),
+              signal,
+            ),
       ),
     );
   }
@@ -1409,6 +1413,12 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
     }, ms);
     signal?.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+/** As the reactor's `signAction` reads it: the last tuple names a key. */
+function isActionSigned(action: Action): boolean {
+  const signer = action.context?.signer;
+  return Boolean(signer?.app?.key && signer.signatures.at(-1)?.[1]);
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */
