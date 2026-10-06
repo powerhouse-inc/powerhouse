@@ -513,9 +513,11 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("createDefaults(@args)", args);
         try {
           const parentIdOrSlug = args.parentIdOrSlug ?? undefined;
+          // Without a parent the answer is host-wide, so nothing is gated.
           let parent: string | undefined;
           if (parentIdOrSlug !== undefined) {
             const handle = await this.assertCanRead(parentIdOrSlug, ctx);
+            // Listing rules, not get's: a parent withheld from listings is refused.
             if (!(await this.servesDocument(handle.fetchIdentifier, ctx))) {
               throw new ForbiddenError("to read this document");
             }
