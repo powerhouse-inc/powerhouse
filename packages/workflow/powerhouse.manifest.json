@@ -20,35 +20,29 @@
     {
       "id": "workflow-studio",
       "name": "Workflow Studio",
-      "documentTypes": [
-        "powerhouse/document-drive"
-      ]
+      "documentTypes": ["powerhouse/document-drive"]
     }
   ],
   "editors": [
     {
       "id": "workflow-editor",
       "name": "Workflow Editor",
-      "documentTypes": [
-        "powerhouse/workflow"
-      ]
+      "documentTypes": ["powerhouse/workflow"]
     },
     {
       "id": "connection-editor",
       "name": "Connection Editor",
-      "documentTypes": [
-        "powerhouse/connection"
-      ]
+      "documentTypes": ["powerhouse/connection"]
     }
   ],
-  "processors": [],
-  "subgraphs": [],
   "pieces": [
     {
       "id": "@powerhousedao/piece-reactor",
       "name": "Powerhouse Reactor"
     }
   ],
+  "processors": [],
+  "subgraphs": [],
   "config": [
     {
       "name": "PH_WORKFLOWS_SECRETS_MASTER_KEY",
