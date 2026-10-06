@@ -871,3 +871,27 @@ describe("a PARKED workflow disabled while the reactor was down", () => {
     rebooted.shutdown();
   }, 60_000);
 });
+
+describe("an adopted run whose park check throws", () => {
+  it("is closed out rather than left PENDING", async () => {
+    const id = "wf-park-check-throws";
+    workflow(id, { action: "slow", policy: { onFailure: "IGNORE" } });
+    const store = (await service.store())!;
+    const runId = await store.enqueueRun({
+      workflowId: id,
+      triggerKind: "schedule",
+    });
+    const read = vi
+      .spyOn(WorkflowRunStore.prototype, "getWorkflowPark")
+      .mockRejectedValueOnce(new Error("the journal is gone"));
+
+    await expect(
+      service.fire(id, undefined, "schedule", undefined, undefined, runId),
+    ).rejects.toThrow("the journal is gone");
+    read.mockRestore();
+
+    const run = await store.getRun(runId);
+    expect(run?.status).toBe("FAILED");
+    expect(run?.error).toContain("the journal is gone");
+  });
+});

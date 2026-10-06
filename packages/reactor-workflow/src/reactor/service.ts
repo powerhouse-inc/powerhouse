@@ -3978,12 +3978,25 @@ export class WorkflowRuntimeService {
         workflowName: runJournalName(state.name, documentName),
         workflowVersion: runnable.version,
       });
-    const parked = await this.parkedFiring(
-      store,
-      workflowId,
-      triggerKind,
-      runnable.version,
-    );
+    let parked: string | undefined;
+    try {
+      parked = await this.parkedFiring(
+        store,
+        workflowId,
+        triggerKind,
+        runnable.version,
+      );
+    } catch (error) {
+      // As a refused read above: an adopted row must not stay PENDING.
+      if (enqueuedRunId) {
+        await store?.failRun(
+          enqueuedRunId,
+          error instanceof Error ? error.message : String(error),
+          errorNameOf(error),
+        );
+      }
+      throw error;
+    }
     if (parked) return skipped(parked);
     const admission = await this.runGate.admit(workflowId, policy);
     if (!admission.admitted) return skipped(admission.reason);
