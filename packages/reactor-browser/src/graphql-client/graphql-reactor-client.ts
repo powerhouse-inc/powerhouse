@@ -46,6 +46,7 @@ import {
   type OperationsFilterInput,
   type PagingInput,
   type PhDocumentFieldsFragment,
+  type SdkFunctionWrapper,
   type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
@@ -98,8 +99,9 @@ export type GraphQLReactorClientOptions = {
    * A pre-built SDK to use instead of the transport derived from `url`.
    * Mainly a test seam.
    *
-   * A client built this way carries no auth middleware: the injected SDK owns
-   * its own transport, and therefore its own headers.
+   * A client built this way carries no auth middleware and no 421 mapping:
+   * the injected SDK owns its own transport, and therefore its own headers
+   * and transport errors.
    */
   graphqlClient?: ReactorGraphQLClient;
 
@@ -217,10 +219,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     // The middleware wraps the generated SDK methods AND `RunDocument`, so the
     // hand-authored mutation is authenticated by the same code path.
-    const middleware = makeAuthMiddleware(this.tokenProvider);
-    this.sdk = withWrongBackendErrors(
-      options.graphqlClient ?? createClient(options.url, middleware),
+    const middleware = withWrongBackendErrors(
+      makeAuthMiddleware(this.tokenProvider),
     );
+    this.sdk = options.graphqlClient ?? createClient(options.url, middleware);
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
@@ -1618,30 +1620,19 @@ function isDrive(document: PHDocument): boolean {
 }
 
 /**
- * Wraps every SDK member so a 421 from the Switchboard's drive middleware,
- * which graphql-request reports as a `ClientError`, surfaces as
- * {@link GraphQLWrongBackendError}.
+ * Surfaces a 421 from the Switchboard's drive middleware, which graphql-request
+ * reports as a `ClientError`, as {@link GraphQLWrongBackendError}.
  */
 function withWrongBackendErrors(
-  sdk: ReactorGraphQLClient,
-): ReactorGraphQLClient {
-  const wrapped: Record<string, unknown> = {};
-  for (const [name, member] of Object.entries(sdk)) {
-    wrapped[name] =
-      typeof member === "function"
-        ? async (...args: unknown[]) => {
-            try {
-              return await (member as (...a: unknown[]) => unknown).apply(
-                sdk,
-                args,
-              );
-            } catch (error) {
-              throw wrongBackendErrorOf(error) ?? error;
-            }
-          }
-        : member;
-  }
-  return wrapped as ReactorGraphQLClient;
+  middleware: SdkFunctionWrapper,
+): SdkFunctionWrapper {
+  return async (action, ...rest) => {
+    try {
+      return await middleware(action, ...rest);
+    } catch (error) {
+      throw wrongBackendErrorOf(error) ?? error;
+    }
+  };
 }
 
 function wrongBackendErrorOf(
