@@ -56,6 +56,7 @@ describe("a redelivered operation", () => {
       .alterTable("trigger_dedupe")
       .dropColumn("attempts")
       .execute();
+    await db.schema.dropTable("migration_mark").execute();
     const now = new Date().toISOString();
     await (
       db as unknown as {
@@ -106,6 +107,36 @@ describe("a redelivered operation", () => {
 
     expect(
       await store.claimAndEnqueueRun("op:1", 60_000, now, OPTIONS),
+    ).toEqual({ outcome: "duplicate" });
+  });
+
+  // The crash window of the upgrade: the column landed, the conversion did not.
+  it("is a duplicate of a legacy key whose conversion was interrupted", async () => {
+    const relational = createFreshRelationalDb();
+    await WorkflowRunStore.create(relational);
+    const db =
+      await relational.createNamespace<WorkflowRuntimeDB>("workflow_runtime");
+    try {
+      await db.deleteFrom("migration_mark" as never).execute();
+    } catch {
+      // no marks before they existed
+    }
+    const now = new Date().toISOString();
+    await db
+      .insertInto("trigger_dedupe")
+      .values({
+        workflow_id: OPTIONS.workflowId,
+        dedupe_key: "op:legacy",
+        run_id: null,
+        created_at: now,
+        attempts: 1,
+      })
+      .execute();
+
+    const store = await WorkflowRunStore.create(relational);
+
+    expect(
+      await store.claimAndEnqueueRun("op:legacy", 60_000, now, OPTIONS),
     ).toEqual({ outcome: "duplicate" });
   });
 

@@ -167,6 +167,8 @@ export const FIRE_CRASH_BUDGET = 3;
 // erased, or written before claims. NULL is reserved for "not yet claimed".
 export const FIRED_WITHOUT_RUN_ID = "fired-without-run";
 
+const DEDUPE_CLAIM_MIGRATION = "trigger_dedupe.run_id-null-is-unclaimed";
+
 export function abandonedFireError(attempts: number): string {
   return (
     `This operation was delivered ${attempts} times and never once got as ` +
@@ -213,6 +215,7 @@ export interface WorkflowRuntimeDB {
   trigger_dedupe: TriggerDedupeRow;
   piece_store: PieceStoreRow;
   workflow_park: WorkflowParkRow;
+  migration_mark: { name: string; applied_at: string };
 }
 
 const logger = childLogger(["workflow", "runtime", "store"]);
@@ -382,24 +385,44 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   // Additive migration for the crash-replay budget: how many times one
   // operation has been delivered. Defaulted, so a row written before this
   // counts as its first delivery rather than as none.
-  let dedupeAttemptsAdded = false;
   try {
     await db.schema
       .alterTable("trigger_dedupe")
       .addColumn("attempts", "integer", (col) => col.notNull().defaultTo(1))
       .execute();
-    dedupeAttemptsAdded = true;
   } catch {
     // column already exists
   }
   // Before claims, a NULL run_id meant "fired"; it now means "not claimed".
-  if (dedupeAttemptsAdded) {
-    await db
+  // Keyed on its own mark, committed with it, so an interrupted upgrade
+  // converts on the next open rather than never.
+  await db.schema
+    .createTable("migration_mark")
+    .addColumn("name", "text", (col) => col.primaryKey())
+    .addColumn("applied_at", "text", (col) => col.notNull())
+    .ifNotExists()
+    .execute();
+  await db.transaction().execute(async (trx) => {
+    const done = await trx
+      .selectFrom("migration_mark")
+      .select("name")
+      .where("name", "=", DEDUPE_CLAIM_MIGRATION)
+      .executeTakeFirst();
+    if (done) return;
+    await trx
       .updateTable("trigger_dedupe")
       .set({ run_id: FIRED_WITHOUT_RUN_ID })
       .where("run_id", "is", null)
       .execute();
-  }
+    await trx
+      .insertInto("migration_mark")
+      .values({
+        name: DEDUPE_CLAIM_MIGRATION,
+        applied_at: new Date().toISOString(),
+      })
+      .onConflict((oc) => oc.column("name").doNothing())
+      .execute();
+  });
 
   // Additive migration for enforced step retry: how many times a step ran.
   try {
