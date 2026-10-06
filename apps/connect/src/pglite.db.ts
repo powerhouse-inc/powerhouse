@@ -1,7 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
+import { HardenedPGliteDialect } from "@powerhousedao/reactor";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import {
   detectReactorPgMajor,
   detectRelationalPgMajor,
@@ -125,7 +125,7 @@ export async function getDb() {
   const pgLite = await getRelationalPGlite();
   const relationalDb = createRelationalDb(
     new Kysely({
-      dialect: new PGliteDialect(pgLite),
+      dialect: new HardenedPGliteDialect(pgLite),
     }),
   );
   return { pgLite, relationalDb };
