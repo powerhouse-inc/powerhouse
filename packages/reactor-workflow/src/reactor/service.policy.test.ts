@@ -1,6 +1,10 @@
 // `policy.concurrency` and `policy.onFailure`, enforced in the service: both
 // were document-model fields nothing read (backlog item 4, W3.3).
-import { actions } from "@powerhousedao/workflow/document-models/workflow";
+import {
+  actions,
+  type WorkflowDocument,
+} from "@powerhousedao/workflow/document-models/workflow";
+import type { OperationWithContext } from "document-model";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +16,7 @@ import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import type { WorkflowRunGate } from "./run-gate.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
-import { CORE_PIECE_VERSION } from "../pieces/index.js";
+import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const PIECE = "@acme/piece-policy";
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
@@ -80,6 +84,28 @@ function workflow(id: string, options: WorkflowOptions) {
     actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
     actions.setWorkflowStatus({ status: "ENABLED" }),
   );
+}
+
+// A workflow edit as the read model delivers it, so a suite can arm a trigger
+// the way the reactor does rather than by writing the row itself.
+let ordinal = 0;
+function workflowOp(id: string, document: WorkflowDocument) {
+  ordinal += 1;
+  return {
+    operation: {
+      index: ordinal,
+      timestampUtcMs: `${ordinal}`,
+      action: { type: "EDIT", input: {} },
+      resultingState: JSON.stringify(document.state.global),
+    },
+    context: {
+      documentId: id,
+      documentType: "powerhouse/workflow",
+      scope: "global",
+      branch: "main",
+      ordinal,
+    },
+  } as unknown as OperationWithContext;
 }
 
 beforeAll(async () => {
@@ -242,6 +268,101 @@ describe("policy.onFailure", () => {
     const due = await store!.listDueTriggerStates(new Date().toISOString());
     expect(due.map((entry) => entry.workflow_id)).not.toContain("wf-park");
   });
+
+  // Park is a runtime override of the document's enabled-ness: the document
+  // still says ENABLED, so re-arming from it — which is what every restart
+  // does — must not resurrect the trigger PARK took out of service.
+  it("keeps a parked trigger parked across a restart", async () => {
+    const schedule = { mode: "cron", cron: "0 * * * *" };
+    const document = documents.apply(
+      "wf-park-restart",
+      actions.setTrigger({
+        id: "t1",
+        pieceName: CORE_PIECE_NAME,
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "schedule",
+        config: schedule,
+      }),
+      actions.addStep({
+        id: "a",
+        key: "only",
+        name: "Only",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "boom",
+        config: {},
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "a", port: "next" }),
+      actions.setPolicy({ onFailure: "PARK" } as never),
+      actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    );
+    await service.onOperations([workflowOp("wf-park-restart", document)]);
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState("wf-park-restart"))?.status).toBe(
+        "ENABLED",
+      ),
+    );
+
+    // A terminal failure under PARK takes it out of the ENABLED set.
+    const run = await service.fire(
+      "wf-park-restart",
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+    expect(run.status).toBe("FAILED");
+    const parked = await store.getTriggerState("wf-park-restart");
+    expect(parked?.status).toBe(PARKED_TRIGGER_STATUS);
+
+    // The restart: a new runtime over the same journal, re-arming the very
+    // same ENABLED document. Nothing in memory remembers the park.
+    const rebooted = testRuntime({
+      reactorClient: documents.client() as never,
+    });
+    const upsert = vi.spyOn(rebooted.supervisor(), "upsert");
+    await rebooted.onOperations([workflowOp("wf-park-restart", document)]);
+    await vi.waitFor(() => expect(upsert).toHaveBeenCalled());
+    // The arming the service does not await, awaited: the park either holds
+    // through a completed re-arm or it does not hold at all.
+    await Promise.all(
+      upsert.mock.results.map((result) => result.value as Promise<void>),
+    );
+
+    const after = await (await rebooted.store())!.getTriggerState(
+      "wf-park-restart",
+    );
+    expect(after?.status).toBe(PARKED_TRIGGER_STATUS);
+    expect(after?.last_error).toContain("onFailure = PARK");
+    // And it is still not due, so the schedule does not fire it.
+    const due = await store.listDueTriggerStates(
+      new Date(Date.now() + 86_400_000).toISOString(),
+    );
+    expect(due.map((entry) => entry.workflow_id)).not.toContain(
+      "wf-park-restart",
+    );
+
+    // The way out: a re-publish that changes the trigger arms it again.
+    const republished = documents.apply(
+      "wf-park-restart",
+      actions.setTrigger({
+        id: "t1",
+        pieceName: CORE_PIECE_NAME,
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "schedule",
+        config: { mode: "cron", cron: "0 0 * * *" },
+      }),
+      actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+    );
+    await rebooted.onOperations([workflowOp("wf-park-restart", republished)]);
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState("wf-park-restart"))?.status).toBe(
+        "ENABLED",
+      ),
+    );
+  }, 60_000);
 
   it("leaves the trigger alone on IGNORE", async () => {
     workflow("wf-ignore", { action: "boom", policy: { onFailure: "IGNORE" } });

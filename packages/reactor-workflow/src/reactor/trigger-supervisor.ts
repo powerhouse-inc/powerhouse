@@ -53,6 +53,7 @@ import {
   schedulePayload,
 } from "./schedule.js";
 import { SCHEDULE_BLOCK } from "./core-blocks.js";
+import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import { pieceTriggerKind } from "./trigger-binding.js";
 import {
   createPieceStorePort,
@@ -445,6 +446,19 @@ export class TriggerSupervisor {
       );
       return;
     }
+    // A PARKED row is left as it stands too: turning it ERROR would clear the
+    // park, and the ERROR row's own retry would arm the parked trigger the
+    // moment the piece resolves again. Parked is already not-firing.
+    if (
+      existing?.status === PARKED_TRIGGER_STATUS &&
+      existing.config_hash === hash
+    ) {
+      logger.warn(
+        `Workflow ${workflowId} is PARKED and could not be resolved; the park stands. @error`,
+        message,
+      );
+      return;
+    }
     await store.upsertTriggerState({
       workflow_id: workflowId,
       ...triggerBlockColumns(block),
@@ -750,6 +764,7 @@ export class TriggerSupervisor {
     const hash = configHash(binding.block, binding.config);
     const existing = await store.getTriggerState(binding.workflowId);
     const now = this.now();
+    if (this.stillParked(binding.workflowId, existing, hash)) return;
     // Only a completed enable is a republish: a retry after a failed one must
     // register again, or a piece that skips registration never delivers.
 
@@ -926,6 +941,44 @@ export class TriggerSupervisor {
       );
     }
     return url;
+  }
+
+  /**
+   * A PARKED row is terminal, and a reboot is not a human.
+   *
+   * `policy.onFailure = PARK` is a **runtime override of the document's
+   * enabled-ness**: the document still says ENABLED — parking does not edit it
+   * — and the row is what says "this trigger failed and must not fire again
+   * until somebody acts". Re-arming from an ENABLED document is exactly what a
+   * restart does for every workflow it finds, so a restart that re-armed a
+   * parked trigger would un-park it and resume firing the broken workflow,
+   * which is the whole thing PARK exists to stop. It stays PARKED instead.
+   *
+   * What clears it, and only these:
+   *
+   * - a **re-publish that changes the trigger**: the `config_hash` differs, so
+   *   this is a different thing to fire and the operator asked for it;
+   * - a **re-enable**: setting the document DISABLED writes DISABLED over the
+   *   park, and enabling it again arms an ordinary disabled row. This works
+   *   across a restart too, since the status lives on the row;
+   * - in-process, any registration whose status or published trigger changed —
+   *   the same two causes, seen live rather than off the row.
+   */
+  private stillParked(
+    workflowId: string,
+    existing: TriggerStateRow | undefined,
+    hash: string,
+  ): boolean {
+    if (existing?.status !== PARKED_TRIGGER_STATUS) return false;
+    if (existing.config_hash !== hash) return false;
+    logger.warn(
+      `Workflow ${workflowId} is PARKED and stays PARKED: a re-arm from the ` +
+        "ENABLED document (a restart, say) does not clear a park. Re-publish " +
+        "the trigger or disable and re-enable the workflow to arm it again. " +
+        "@error",
+      existing.last_error ?? "(no reason recorded)",
+    );
+    return true;
   }
 
   // Backoff that only lives in memory is no backoff at all against a crash

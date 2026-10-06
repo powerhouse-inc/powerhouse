@@ -311,6 +311,17 @@ schema; what changed is that they are true.
   process is the deployment's whole run set. A firing SINGLETON drops is
   journaled as a CANCELLED run rather than discarded — a firing that vanished
   is indistinguishable from a trigger that never fired.
+- **PARKED is terminal, and a restart does not clear it.** The park is a
+  runtime override of the document's enabled-ness: parking writes the trigger
+  row, never the document, so the document still says ENABLED and re-arming
+  from it — which is what a reboot does for every workflow it finds — would
+  un-park the broken workflow and resume firing it. A PARKED row therefore
+  stays PARKED across a restart. Only two things clear it: a **re-publish that
+  changes the trigger** (its `config_hash` differs), and a **disable then
+  re-enable** (disabling writes DISABLED over the park, and the status lives on
+  the row, so this works across a restart too). An unresolvable piece leaves a
+  PARKED row alone as well, rather than turning it ERROR and letting the ERROR
+  row's own retry arm it.
 - **`retryOn` empty means every error is retryable.** The schema reads "error
   classes that are retryable; everything else fails terminally on attempt 1",
   but the shipped default is an empty list, and taking that literally would
