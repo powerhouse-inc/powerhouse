@@ -4248,6 +4248,10 @@ export class WorkflowRuntimeService {
         completedSteps.set(row.step_id, {
           port: row.port,
           outputTruncated: true,
+          // Carried so this rerun's REPLAYED row journals the marker again. A
+          // NULL there would read as an ordinary replay on the NEXT rerun, and
+          // the truncation fact would be gone after one generation.
+          truncatedOutput: output,
         });
         continue;
       }

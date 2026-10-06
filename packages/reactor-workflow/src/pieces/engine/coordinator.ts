@@ -51,6 +51,17 @@ export interface ReplayedStep {
    * that reads `steps.<key>.output…` fails the rerun by name.
    */
   outputTruncated?: boolean;
+  /**
+   * What the journal holds in place of that output — the truncation marker
+   * itself — to be journaled again on this run's REPLAYED row.
+   *
+   * Opaque to the engine: it is never resolved, only written back. Without it
+   * the REPLAYED row's output is NULL, and the NEXT rerun reads a NULL as an
+   * ordinary replay with no output: the truncation fact is gone after one
+   * generation, and a downstream step is handed nothing instead of being told
+   * by name why there is nothing.
+   */
+  truncatedOutput?: unknown;
 }
 
 export interface RunWorkflowOptions {
@@ -293,9 +304,15 @@ export async function runWorkflow(
         pieceName: step.pieceName,
         blockName: step.actionName,
         status: "REPLAYED",
-        // Journaled as the marker it was, not as the wrapper: the wrapper is a
-        // run-scope device and carries its reason on a symbol.
+        // Not the wrapper: that is a run-scope device and carries its reason on
+        // a symbol. The marker goes on `journaledOutput` instead, which is what
+        // carries the truncation fact into the NEXT rerun — a NULL output
+        // column reads as an ordinary replay with nothing to replay, and the
+        // fact would be gone after one generation.
         output: replay.outputTruncated ? undefined : replay.output,
+        ...(replay.outputTruncated && replay.truncatedOutput !== undefined
+          ? { journaledOutput: replay.truncatedOutput }
+          : {}),
         port,
         configHash: stepConfigHash(step),
       };

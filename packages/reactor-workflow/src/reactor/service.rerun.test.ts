@@ -10,6 +10,7 @@ import { testRuntime } from "../../test/helpers/runtime.js";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { packagePieces } from "./piece-registry.js";
 import {
+  isTruncatedStepPayload,
   TRUNCATED_PAYLOAD_KEY,
   TRUNCATED_PAYLOAD_SENTINEL,
   type WorkflowRuntimeDB,
@@ -207,6 +208,51 @@ describe("rerun", () => {
     // Explicit, not an "unresolved reference": the value existed and is gone.
     expect(rerun.steps[1].error).toContain("truncated its output");
     expect(rerun.steps[1].error).toContain("Fire the workflow again");
+  });
+
+  // The REPLAYED row journaled a NULL output, so the SECOND rerun read it as
+  // an ordinary replay with nothing to replay: the truncation fact lasted
+  // exactly one generation, and a downstream step was handed nothing instead
+  // of being told by name why there is nothing.
+  it("keeps the truncation fact across a second rerun", async () => {
+    const failed = await failedRun("wf-truncated-twice");
+    await truncateJournaledOutput(failed.runId!, "a", '{"text":"v1"');
+    // The second step reads the first's lost output, so every generation of
+    // this rerun must fail on the truncation rather than on anything else.
+    documents.apply(
+      "wf-truncated-twice",
+      actions.setStepConfig({
+        id: "b",
+        config: { open: "{{steps.first.output.text}}" },
+      }),
+      actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+    );
+
+    const first = await service.rerun(failed.runId!, CTX);
+    expect(first.status).toBe("FAILED");
+    expect(first.steps[0].status).toBe("REPLAYED");
+    expect(first.steps[1].error).toContain("truncated its output");
+    // The row the caller is NOT handed the marker on still carries it, which
+    // is what the next generation reads.
+    const store = (await service.store())!;
+    const [replayed] = await store.getSteps(first.runId!);
+    expect(replayed).toMatchObject({ step_id: "a", status: "REPLAYED" });
+    expect(replayed.output).not.toBeNull();
+    expect(
+      isTruncatedStepPayload(JSON.parse(replayed.output!) as unknown),
+    ).toBe(true);
+    // And the caller still gets no marker where real data goes.
+    expect(first.steps[0].output).toBeUndefined();
+
+    const second = await service.rerun(first.runId!, CTX);
+
+    expect(second.steps[0].status).toBe("REPLAYED");
+    expect(second.status).toBe("FAILED");
+    // The same named error, not "unresolved reference" and not a fabricated
+    // null: the value existed, it is gone, and nothing re-runs the step.
+    expect(second.steps[1].error).toContain("truncated its output");
+    expect(second.steps[1].error).toContain("Fire the workflow again");
+    expect(second.steps[1].error).not.toContain("Unresolved reference");
   });
 
   it("replays a step whose field modes alone changed", async () => {

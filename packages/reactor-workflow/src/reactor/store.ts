@@ -1035,7 +1035,18 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     block_name: step.blockName,
     status: step.status,
     input: cappedPayload(redact(step.input)),
-    output: cappedPayload(redact(referenceDocuments(step.output))),
+    // `journaledOutput` wins where it is set: the record has no output to give
+    // a caller, but the row still has to carry what the journal holds — the
+    // truncation marker of a REPLAYED step, so a second rerun can read it.
+    output: cappedPayload(
+      redact(
+        referenceDocuments(
+          step.journaledOutput !== undefined
+            ? step.journaledOutput
+            : step.output,
+        ),
+      ),
+    ),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
     error_name: step.errorName ?? null,

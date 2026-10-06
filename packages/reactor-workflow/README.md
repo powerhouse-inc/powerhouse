@@ -461,6 +461,12 @@ re-executing: it had side effects. Its output is explicitly unavailable, so a
 later step that reads it fails the rerun by name (`UnavailableValueError`)
 instead of being handed a marker.
 
+The fact **survives further reruns**. The rerun's own REPLAYED row journals the
+truncation marker again (the record's `journaledOutput`), so a second rerun of
+the rerun still reads a marker rather than a NULL it would take for an ordinary
+replay with no output. The record handed back to a caller keeps `output`
+absent either way: a marker must never sit where real data goes.
+
 The refusal is **deep, and on every route out of resolution**. The unavailable
 wrapper carries its reason on a symbol, which anything that serializes it drops
 — so a path that lands one level ABOVE the wrapper (`{{steps.charge}}`, or a
