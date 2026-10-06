@@ -1,6 +1,7 @@
 // Workflow execution is a singleton (multi-reactor plan, agreed decision 3).
 // The claim is what enforces it: a second live process over one run journal is
 // refused by name rather than left to fail the first one's runs.
+import { sql } from "kysely";
 import { describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
@@ -20,20 +21,43 @@ const silent = {
   child: () => silent,
 } as never;
 
+interface LeaseTable {
+  workflow_singleton: {
+    owner: string;
+    heartbeat_at: Date;
+    expires_at: Date;
+    acquired_at: Date;
+  };
+}
+
+function leaseTable(relationalDb: IRelationalDb) {
+  return relationalDb.createNamespace<LeaseTable>(
+    "workflow_runtime",
+  ) as Promise<IRelationalDb<LeaseTable>>;
+}
+
 function fixture() {
   const relationalDb = createFreshRelationalDb();
-  let clock = Date.parse("2026-10-04T00:00:00.000Z");
   return {
     relationalDb,
-    advance: (ms: number) => (clock += ms),
-    now: () => new Date(clock),
+    // The lease reads the database's clock, so time passes by moving the row.
+    age: async (ms: number) => {
+      const db = await leaseTable(relationalDb);
+      await db
+        .updateTable("workflow_singleton")
+        .set({
+          acquired_at: sql<Date>`acquired_at - ${ms} * interval '1 millisecond'`,
+          heartbeat_at: sql<Date>`heartbeat_at - ${ms} * interval '1 millisecond'`,
+          expires_at: sql<Date>`expires_at - ${ms} * interval '1 millisecond'`,
+        })
+        .execute();
+    },
     acquire: (owner: string, ttlMs = 60_000, onLost?: () => void) =>
       acquireWorkflowSingletonLease({
         relationalDb,
         logger: silent,
         owner,
         ttlMs,
-        now: () => new Date(clock),
         onLost,
       }),
   };
@@ -70,9 +94,9 @@ describe("the workflow singleton lease", () => {
   });
 
   it("lets another process take over once the lease has expired", async () => {
-    const { acquire, advance } = fixture();
+    const { acquire, age } = fixture();
     await acquire("alpha", 1_000);
-    advance(1_001);
+    await age(1_001);
 
     const taken = await acquire("beta", 1_000);
 
@@ -80,28 +104,30 @@ describe("the workflow singleton lease", () => {
   });
 
   it("renews from the moment it is claimed, before any host start", async () => {
-    const { relationalDb, advance, now } = fixture();
+    const { relationalDb, age } = fixture();
     const lease = await acquireWorkflowSingletonLease({
       relationalDb,
       logger: silent,
       owner: "alpha",
       ttlMs: 1_000,
       heartbeatMs: 5,
-      now,
     });
     try {
-      advance(900);
-      const db = (await relationalDb.createNamespace(
-        "workflow_runtime",
-      )) as IRelationalDb<{ singleton_lease: { heartbeat_at: string } }>;
+      const db = await leaseTable(relationalDb);
+      await age(900);
+      const aged = await db
+        .selectFrom("workflow_singleton")
+        .select("expires_at")
+        .executeTakeFirstOrThrow();
       await vi.waitFor(async () => {
         const row = await db
-          .selectFrom("singleton_lease")
-          .select("heartbeat_at")
+          .selectFrom("workflow_singleton")
+          .select("expires_at")
           .executeTakeFirstOrThrow();
-        expect(row.heartbeat_at).toBe(now().toISOString());
+        expect(new Date(row.expires_at).getTime()).toBeGreaterThan(
+          new Date(aged.expires_at).getTime() + 500,
+        );
       });
-      advance(600);
 
       await expect(
         acquireWorkflowSingletonLease({
@@ -109,12 +135,40 @@ describe("the workflow singleton lease", () => {
           logger: silent,
           owner: "beta",
           ttlMs: 1_000,
-          now,
         }),
       ).rejects.toBeInstanceOf(WorkflowSingletonConflictError);
     } finally {
       await lease.release();
     }
+  });
+
+  it("claims beside the table an unreleased branch build left behind", async () => {
+    const { relationalDb, acquire } = fixture();
+    const db = await relationalDb.createNamespace<{
+      singleton_lease: Record<string, string>;
+    }>("workflow_runtime");
+    await db.schema
+      .createTable("singleton_lease")
+      .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("owner", "text", (col) => col.notNull())
+      .addColumn("acquired_at", "text", (col) => col.notNull())
+      .addColumn("heartbeat_at", "text", (col) => col.notNull())
+      .addColumn("expires_at", "text", (col) => col.notNull())
+      .execute();
+    await db
+      .insertInto("singleton_lease")
+      .values({
+        id: "workflow-runtime",
+        owner: "old-build",
+        acquired_at: "2026-10-04T00:00:00.000Z",
+        heartbeat_at: "2026-10-04T00:00:00.000Z",
+        expires_at: "2099-01-01T00:00:00.000Z",
+      })
+      .execute();
+
+    const lease = await acquire("alpha");
+
+    expect(await lease.heartbeat()).toBe(true);
   });
 
   it("frees the claim on release", async () => {
@@ -128,11 +182,11 @@ describe("the workflow singleton lease", () => {
   });
 
   it("reports a heartbeat that finds the lease taken", async () => {
-    const { acquire, advance } = fixture();
+    const { acquire, age } = fixture();
     const first = await acquire("alpha", 1_000);
     expect(await first.heartbeat()).toBe(true);
 
-    advance(1_001);
+    await age(1_001);
     await acquire("beta", 1_000);
 
     // The takeover is what a second writer has to learn from; the heartbeat is
@@ -208,9 +262,9 @@ describe("two processes under one owner name", () => {
   it.each(takeovers)(
     "keeps the new process's lease when the old one releases %s",
     async (_, wait) => {
-      const { acquire, advance } = fixture();
+      const { acquire, age } = fixture();
       const oldPod = await acquire("switchboard-0", 1_000);
-      advance(wait);
+      await age(wait);
       const newPod = await acquire("switchboard-0", 1_000);
 
       await oldPod.release();
@@ -225,10 +279,10 @@ describe("two processes under one owner name", () => {
   it.each(takeovers)(
     "tells the old process it lost the lease %s, without renewing it",
     async (_, wait) => {
-      const { acquire, advance } = fixture();
+      const { acquire, age } = fixture();
       const lost = vi.fn();
       const oldPod = await acquire("switchboard-0", 1_000, lost);
-      advance(wait);
+      await age(wait);
       const newPod = await acquire("switchboard-0", 1_000);
 
       expect(await oldPod.heartbeat()).toBe(false);

@@ -89,7 +89,7 @@ in-flight set — so a second replica booting marks the first one's live runs
 FAILED, and then both arm every trigger and both poll it.
 
 The guard is a durable claim on the journal's own database
-(`reactor/singleton-lease.ts`, one row in `singleton_lease`), taken by the host
+(`reactor/singleton-lease.ts`, one row in `workflow_singleton`), taken by the host
 **before** the runtime is built, and refused by name when another live process
 holds it (`WorkflowSingletonConflictError`). The
 `trigger_state.lease_owner` / `lease_expires_at` columns stay in the schema,

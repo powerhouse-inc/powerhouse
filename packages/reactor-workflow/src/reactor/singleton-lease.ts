@@ -17,6 +17,7 @@
 // not trigger state — it outlives every row in that table. They stay in the
 // schema, always null and unread.
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
+import { sql } from "kysely";
 import { childLogger, type ILogger } from "document-model";
 import { hostname } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
@@ -54,20 +55,29 @@ export const SINGLETON_HEARTBEAT_MS = SINGLETON_LEASE_TTL_MS / 3;
  * magic empty string, so a `SELECT *` reads legibly in an operator's shell. */
 const LEASE_ID = "workflow-runtime";
 
+// Timestamps are the database's own clock: two hosts never compare their
+// process clocks against each other.
 interface SingletonLeaseRow {
   id: string;
   owner: string;
   /** Random per claim, never configured: two processes under one stable
    * owner name still hold different instances. */
   instance: string;
-  acquired_at: string;
-  heartbeat_at: string;
-  expires_at: string;
+  acquired_at: Date;
+  heartbeat_at: Date;
+  expires_at: Date;
 }
 
+// Not `singleton_lease`: an unreleased branch build created that name with
+// text timestamps and no instance column, which CREATE IF NOT EXISTS would
+// keep and every claim would then fail on.
 interface SingletonLeaseDB {
-  singleton_lease: SingletonLeaseRow;
+  workflow_singleton: SingletonLeaseRow;
 }
+
+const dbNow = () => sql<Date>`now()`;
+const dbNowPlus = (ms: number) =>
+  sql<Date>`now() + ${ms} * interval '1 millisecond'`;
 
 /** Another live process holds the singleton. The refusal is the point: a host
  * that cannot own workflow execution must not compose the engine. */
@@ -121,7 +131,6 @@ export interface AcquireSingletonOptions {
    * (another process, or a newer one under the same owner name). Receives
    * the current holder's owner name, if any. */
   onLost?: (heldBy: string | undefined) => void;
-  now?: () => Date;
   env?: Record<string, string | undefined>;
 }
 
@@ -159,13 +168,13 @@ function storageFingerprint(storageId: string | undefined): string {
 
 async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
   await db.schema
-    .createTable("singleton_lease")
+    .createTable("workflow_singleton")
     .addColumn("id", "text", (col) => col.primaryKey())
     .addColumn("owner", "text", (col) => col.notNull())
     .addColumn("instance", "text", (col) => col.notNull())
-    .addColumn("acquired_at", "text", (col) => col.notNull())
-    .addColumn("heartbeat_at", "text", (col) => col.notNull())
-    .addColumn("expires_at", "text", (col) => col.notNull())
+    .addColumn("acquired_at", "timestamptz", (col) => col.notNull())
+    .addColumn("heartbeat_at", "timestamptz", (col) => col.notNull())
+    .addColumn("expires_at", "timestamptz", (col) => col.notNull())
     .ifNotExists()
     .execute();
 }
@@ -187,7 +196,6 @@ export async function acquireWorkflowSingletonLease(
   options: AcquireSingletonOptions,
 ): Promise<WorkflowSingletonLease> {
   const log = options.logger ?? logger;
-  const now = options.now ?? (() => new Date());
   const ttlMs = options.ttlMs ?? SINGLETON_LEASE_TTL_MS;
   const heartbeatMs = options.heartbeatMs ?? SINGLETON_HEARTBEAT_MS;
   const owner =
@@ -199,38 +207,31 @@ export async function acquireWorkflowSingletonLease(
   )) as IRelationalDb<SingletonLeaseDB>;
   await ensureTable(db);
 
-  const stamps = () => {
-    const at = now();
-    return {
-      heartbeat_at: at.toISOString(),
-      expires_at: new Date(at.getTime() + ttlMs).toISOString(),
-    };
-  };
+  const stamps = () => ({
+    heartbeat_at: dbNow(),
+    expires_at: dbNowPlus(ttlMs),
+  });
 
   const claim = async (): Promise<boolean> => {
-    const times = stamps();
     const inserted = await db
-      .insertInto("singleton_lease")
+      .insertInto("workflow_singleton")
       .values({
         id: LEASE_ID,
         owner,
         instance,
-        acquired_at: times.heartbeat_at,
-        ...times,
+        acquired_at: dbNow(),
+        ...stamps(),
       })
       .onConflict((oc) => oc.column("id").doNothing())
       .returning("owner")
       .executeTakeFirst();
     if (inserted !== undefined) return true;
     const taken = await db
-      .updateTable("singleton_lease")
-      .set({ owner, instance, acquired_at: times.heartbeat_at, ...times })
+      .updateTable("workflow_singleton")
+      .set({ owner, instance, acquired_at: dbNow(), ...stamps() })
       .where("id", "=", LEASE_ID)
       .where((eb) =>
-        eb.or([
-          eb("owner", "=", owner),
-          eb("expires_at", "<=", times.heartbeat_at),
-        ]),
+        eb.or([eb("owner", "=", owner), eb("expires_at", "<=", dbNow())]),
       )
       .returning("owner")
       .executeTakeFirst();
@@ -239,13 +240,13 @@ export async function acquireWorkflowSingletonLease(
 
   if (!(await claim())) {
     const held = await db
-      .selectFrom("singleton_lease")
+      .selectFrom("workflow_singleton")
       .selectAll()
       .where("id", "=", LEASE_ID)
       .executeTakeFirst();
     throw new WorkflowSingletonConflictError(
       held?.owner ?? "unknown",
-      held?.expires_at ?? "unknown",
+      held ? new Date(held.expires_at).toISOString() : "unknown",
       owner,
     );
   }
@@ -269,7 +270,7 @@ export async function acquireWorkflowSingletonLease(
     let heldBy: string | undefined;
     try {
       const held = await db
-        .selectFrom("singleton_lease")
+        .selectFrom("workflow_singleton")
         .select("owner")
         .where("id", "=", LEASE_ID)
         .executeTakeFirst();
@@ -290,7 +291,7 @@ export async function acquireWorkflowSingletonLease(
   const heartbeat = async (): Promise<boolean> => {
     if (lost) return false;
     const renewed = await db
-      .updateTable("singleton_lease")
+      .updateTable("workflow_singleton")
       .set(stamps())
       .where("id", "=", LEASE_ID)
       .where("owner", "=", owner)
@@ -322,7 +323,7 @@ export async function acquireWorkflowSingletonLease(
       if (lost) return;
       try {
         await db
-          .deleteFrom("singleton_lease")
+          .deleteFrom("workflow_singleton")
           .where("id", "=", LEASE_ID)
           .where("owner", "=", owner)
           .where("instance", "=", instance)
