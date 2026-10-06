@@ -1,7 +1,12 @@
 import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
   DocumentChangeEvent,
   DocumentChangeType,
   DocumentRelationship,
+  ExecutionJobPlan,
+  JobInfo,
+  JobStatus,
   OperationFilter,
   PagedResults,
   PagingOptions,
@@ -12,8 +17,12 @@ import type {
 import type {
   ISigner,
   PHDocumentState,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  actionSigningTarget,
+  DEFAULT_SIGNATURE_POLICY,
   normalizeDocumentModelVersion,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
@@ -51,11 +60,15 @@ import {
 } from "./auth.js";
 import { GraphQLOperationNotSupportedError } from "./errors.js";
 import {
+  ExecuteBatchDocument,
+  type ExecuteBatchJobInfo,
+  type ExecuteBatchResult,
+  type ExecuteBatchVariables,
   MutateDocumentWithOperationsDocument,
   type MutateDocumentWithOperationsResult,
   type MutateDocumentWithOperationsVariables,
 } from "./operations.js";
-import { prepareSignedActions } from "./signing.js";
+import { prepareSignedActions, signStampedAction } from "./signing.js";
 import { resolveDocumentModelModule } from "./static-package-manager.js";
 import {
   describeGraphQLDocument,
@@ -141,6 +154,14 @@ export type GraphQLReactorClientOptions = {
 
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
+
+/**
+ * The protocol-version baseline a remote create falls back to when the parent
+ * drive reports none, matching the reactor client's own default.
+ */
+const DEFAULT_CREATE_PROTOCOL_VERSIONS: ProtocolVersions = {
+  "base-reducer": 2,
+};
 
 /** A registered `subscribe` call. */
 type ChangeListener = {
@@ -534,6 +555,211 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       documents: [updated],
     });
     return updated;
+  }
+
+  /**
+   * Runs multiple mutation jobs in dependency order over the Switchboard's
+   * `executeBatch` mutation and waits for all to settle, returning the result
+   * shaped like `IReactor.executeBatch`'s so the reference `DriveClient`
+   * consumes it unchanged.
+   *
+   * Ordering only -- NOT atomic: each job commits independently, there is no
+   * batch rollback, and re-submitting after a partial failure re-applies the
+   * jobs that already succeeded.
+   *
+   * Each job's actions are signed independently for the job's own
+   * `(documentId, branch)` target -- the per-action signing the reactor's own
+   * `signActions` does, not the batch state-prediction `execute` uses for a
+   * multi-action push. A drive job such as `addFile`'s is `CREATE_DOCUMENT` +
+   * `UPGRADE_DOCUMENT` + `ADD_RELATIONSHIP`, which the prediction path rejects
+   * outright and which has no fetchable baseline to stamp against. The reactor
+   * records but does not verify the stamped previous-state head, so signing
+   * each action bare is exactly what the in-process `DriveClient` relies on.
+   *
+   * The mutation is synchronous server-side: a job it returns is already
+   * complete, so {@link waitForJob} resolves from it without polling. The
+   * server resolver throws on a job failure, and as a second guard this method
+   * inspects each returned job and throws if any came back `FAILED` or carrying
+   * an error, so every caller is protected rather than only the ones that
+   * check per-job status themselves.
+   */
+  async executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult> {
+    const signer = this.signer ?? resolveAmbientSigner();
+    const jobInputs = await Promise.all(
+      request.jobs.map(async (job) => {
+        const actions = await this.signBatchJobActions(job, signer, signal);
+        return {
+          key: job.key,
+          documentIdOrSlug: job.documentId,
+          scope: job.scope,
+          branch: job.branch,
+          actions: actions.map(toTransportAction),
+          dependsOn: job.dependsOn,
+        };
+      }),
+    );
+
+    const variables: ExecuteBatchVariables = { jobs: jobInputs };
+    const result = await this.sdk.RunDocument<ExecuteBatchResult>({
+      operationName: "ExecuteBatch",
+      operationType: "mutation",
+      document: ExecuteBatchDocument,
+      variables,
+      signal,
+    });
+
+    const documentIdByKey = new Map(
+      request.jobs.map((job) => [job.key, job.documentId]),
+    );
+    const jobs: Record<string, JobInfo> = {};
+    for (const entry of result.executeBatch.jobs) {
+      if (entry.job.status === "FAILED" || entry.job.error != null) {
+        const reason = entry.job.error ?? "unknown error";
+        throw new Error(
+          `Batch job "${entry.key}" failed: ${reason}. The batch is ordering-only, not atomic: jobs ordered before "${entry.key}" may already have committed, and re-submitting re-applies every job that already succeeded.`,
+        );
+      }
+      jobs[entry.key] = jobInfoFromGql(
+        entry.job,
+        documentIdByKey.get(entry.key) ?? "",
+      );
+    }
+    return { jobs };
+  }
+
+  /**
+   * Resolves a job the batch mutation already completed.
+   *
+   * A `JobInfo` is handed straight back: the batch mutation is synchronous, so
+   * the job it returned is terminal already and there is nothing to wait for.
+   * This is the one `DriveClient.runJobs` calls, with the job objects
+   * {@link executeBatch} returned. A bare job id is looked up once over the
+   * `jobStatus` query for callers that hold only an id.
+   */
+  async waitForJob(
+    jobOrId: string | JobInfo,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    if (typeof jobOrId !== "string") {
+      return jobOrId;
+    }
+    const result = await this.sdk.GetJobStatus(
+      { jobId: jobOrId },
+      undefined,
+      signal,
+    );
+    const status = result.jobStatus;
+    if (!status) {
+      throw new Error(`Job not found: ${jobOrId}`);
+    }
+    return jobInfoFromGql(status, "");
+  }
+
+  /**
+   * The signature policy a new document takes when the caller chooses none.
+   *
+   * Known limitation: remote create uses the default signature policy. The
+   * Switchboard exposes no query for the create signature policy, so a
+   * switchboard configured with a non-default (stricter) policy is not
+   * observable over GraphQL today; such a switchboard would see remote creates
+   * under-signed relative to its own policy. This returns the same
+   * `DEFAULT_SIGNATURE_POLICY` the in-process client resolves to when nothing
+   * overrides it.
+   */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return Promise.resolve(DEFAULT_SIGNATURE_POLICY);
+  }
+
+  /**
+   * The protocol versions a new document takes, before the signature policy.
+   *
+   * Reflects the parent drive's own versions rather than a hardcoded baseline:
+   * the drive document carries `header.protocolVersions` over GraphQL, so a
+   * create under a drive on a non-default switchboard matches that drive. Falls
+   * back to {@link DEFAULT_CREATE_PROTOCOL_VERSIONS} only when there is no
+   * parent, the parent cannot be fetched, or the parent reports no versions.
+   */
+  async getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    if (parentIdentifier === undefined) {
+      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    }
+    let parent: PHDocument;
+    try {
+      parent = await this.get<PHDocument>(parentIdentifier, undefined, signal);
+    } catch {
+      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    }
+    const versions = parent.header.protocolVersions;
+    if (versions && Object.keys(versions).length > 0) {
+      return versions;
+    }
+    return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+  }
+
+  /**
+   * Updates the preferred editor recorded in a document's header meta over the
+   * `setPreferredEditor` mutation, and announces the result as an `Updated`
+   * event. Pass `null` to clear it.
+   */
+  async setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const result = await this.sdk.SetPreferredEditor(
+      {
+        documentIdentifier,
+        preferredEditor: preferredEditor ?? undefined,
+        branch,
+      },
+      undefined,
+      signal,
+    );
+    const updated = phDocumentFromGetDocument<PHDocument>(
+      result.setPreferredEditor,
+      branch,
+    );
+    this.emitChange({
+      type: DOCUMENT_CHANGE_TYPE.Updated,
+      documents: [updated],
+    });
+    return updated;
+  }
+
+  /**
+   * Signs one batch job's actions for the job's own log.
+   *
+   * Each action is signed on its own for `(documentId, branch)`, the same
+   * per-action signing the reactor's `signActions` does: no state prediction
+   * across the job, so a job carrying a `CREATE_DOCUMENT` the push-prediction
+   * path rejects still signs. With no signer the actions pass through unsigned,
+   * matching {@link execute}.
+   */
+  private async signBatchJobActions(
+    job: ExecutionJobPlan,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+  ): Promise<Action[]> {
+    if (!signer) {
+      return job.actions;
+    }
+    return Promise.all(
+      job.actions.map((action) =>
+        signStampedAction(
+          action,
+          signer,
+          actionSigningTarget(action, job.documentId, job.branch),
+          signal,
+        ),
+      ),
+    );
   }
 
   /**
@@ -1148,6 +1374,38 @@ async function prepareActionsForPush(
 function documentModelVersion(document: PHDocument): number {
   const documentScope = document.state.document as PHDocumentState | undefined;
   return normalizeDocumentModelVersion(documentScope?.version);
+}
+
+/**
+ * Rebuilds a reactor {@link JobInfo} from the batch mutation's `JobInfo`
+ * selection.
+ *
+ * The consistency token and batch meta are placeholders: the batch is
+ * synchronous, so a completed job needs neither to be waited on, and
+ * `DriveClient` reads only `status` and `error`. The `documentId` is the one the
+ * caller sent for this plan key, which the selection does not echo back.
+ */
+function jobInfoFromGql(job: ExecuteBatchJobInfo, documentId: string): JobInfo {
+  const createdAtUtcIso = isoStringFromDateTime(job.createdAt);
+  const info: JobInfo = {
+    id: job.id,
+    documentId,
+    status: job.status as JobStatus,
+    createdAtUtcIso,
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso,
+      coordinates: [],
+    },
+    meta: { batchId: job.id, batchJobIds: [job.id] },
+  };
+  if (job.completedAt != null) {
+    info.completedAtUtcIso = isoStringFromDateTime(job.completedAt);
+  }
+  if (job.error != null) {
+    info.error = { name: "Error", message: job.error, stack: "" };
+  }
+  return info;
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */
