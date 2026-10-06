@@ -1005,7 +1005,15 @@ export class WorkflowRuntimeService {
     // Disabling clears a park, so re-enabling arms the trigger again; so does
     // a re-publish, which the version that failed no longer matches.
     if (state.status !== "ENABLED") {
-      await store?.clearParkOnDisable(workflowId);
+      const held = this.registry.get(workflowId);
+      if (held && SUPERVISED_KINDS.has(held.kind)) {
+        // The supervisor's disable below releases a PARKED row through
+        // onDisable; flipping it DISABLED first would skip that release.
+        await store?.clearWorkflowPark(workflowId);
+      } else {
+        // No binding in memory (a boot), so nothing here can run onDisable.
+        await store?.clearParkOnDisable(workflowId);
+      }
     } else if (await this.outdatedPark(workflowId, state)) {
       await store?.clearWorkflowPark(workflowId);
       await this.supervisor().unpark(workflowId);
