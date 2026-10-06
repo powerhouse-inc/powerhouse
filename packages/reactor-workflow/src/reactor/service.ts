@@ -4393,7 +4393,8 @@ export class WorkflowRuntimeService {
         });
         continue;
       }
-      // Reads re-read the documents they referenced; writes are never repeated.
+      // Reads re-read the documents they referenced; a succeeded write is never
+      // repeated. An INDETERMINATE step is not in this map, so it runs again.
       if (containsDocumentRef(output) && (await this.rereads(current))) {
         continue;
       }

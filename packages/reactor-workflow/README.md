@@ -377,7 +377,8 @@ they are true.
 - A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
   block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
 - An **INDETERMINATE** step is never retried and never replayed: a retry would
-  be a second write. See **Indeterminate steps** below.
+  be a second write. A rerun does execute it again, so it can write twice. See
+  **Indeterminate steps** below.
 
 ## Indeterminate steps
 
@@ -395,8 +396,10 @@ not sent at all.
 
 An INDETERMINATE step **takes no port**, so no error branch claims to have
 handled it, and the run fails naming the state. It is not retried, and a rerun
-does not replay it — only SUCCEEDED and REPLAYED steps replay. Workflow Studio
-renders it in its own tone.
+does not replay it — only SUCCEEDED and REPLAYED steps replay. A rerun
+**executes it again**, so a write that did land the first time is made a second
+time; check its target before rerunning such a run. Workflow Studio renders it
+in its own tone.
 
 **Design-time tests carry it too.** `testStep` reports
 `SUCCEEDED | FAILED | INDETERMINATE`, a trigger test whose hook made an
