@@ -238,7 +238,7 @@ describe("receiving operations of a purged document [Postgres]", () => {
       "main",
       [marker],
       expect.anything(),
-      { sourceRemote: "remote" },
+      { sourceRemote: "remote", cursorProtected: true },
     );
     expect(quarantined(harness).has(DOC)).toBe(false);
 
