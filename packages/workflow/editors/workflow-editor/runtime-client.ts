@@ -97,6 +97,7 @@ interface BlockEntryDescriptor {
   displayName: string;
   description?: string;
   requireAuth: boolean;
+  requireReactor?: string;
   props: BlockFormProp[];
   ports?: string[];
   // Triggers only; read through checkTriggerStrategy.
@@ -163,6 +164,9 @@ export function getBlockForm(
           ? entry.displayName
           : `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,
+        ...(entry.requireReactor === "read" || entry.requireReactor === "write"
+          ? { requireReactor: entry.requireReactor }
+          : {}),
         auth: !descriptor.auth
           ? ("none" as const)
           : entry.requireAuth
@@ -430,6 +434,40 @@ export function checkConnection(
     .then((data) => data.workflowRuntime.checkConnection);
 }
 
+// What the editor needs to decide on sign-in.
+export interface ReactorAccessInfo {
+  authEnforcement: boolean;
+  // Null for a caller who is not signed in.
+  reactorIdentity: { address: string | null; key: string } | null;
+  authConditions: boolean | null;
+}
+
+export function fetchReactorAccess(t: Transport): Promise<ReactorAccessInfo> {
+  return t
+    .gql<{ workflowRuntime: ReactorAccessInfo }>(
+      `query ReactorAccess {
+        workflowRuntime { authEnforcement reactorIdentity { address key } authConditions }
+      }`,
+      {},
+    )
+    .then((data) => data.workflowRuntime);
+}
+
+// Why the runtime would not arm the workflow's reactor access; null when it would.
+export function fetchReactorAccessDenial(
+  t: Transport,
+  workflowId: string,
+): Promise<string | null> {
+  return t
+    .gql<{ workflowRuntime: { reactorAccessDenial: string | null } }>(
+      `query ReactorAccessDenial($workflowId: String!) {
+        workflowRuntime { reactorAccessDenial(workflowId: $workflowId) }
+      }`,
+      { workflowId },
+    )
+    .then((data) => data.workflowRuntime.reactorAccessDenial);
+}
+
 export interface OAuthStart {
   state: string;
   authorizationUrl: string;
@@ -644,6 +682,8 @@ export interface StepTestResult {
   status: "SUCCEEDED" | "FAILED";
   output: unknown;
   error: string | null;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  errorName: string | null;
   durationMs: number;
 }
 
@@ -658,7 +698,7 @@ export async function testStep(
     `mutation TestStep($workflowId: String!, $stepId: String!, $driveId: String) {
       workflowRuntime {
         testStep(workflowId: $workflowId, stepId: $stepId, driveId: $driveId) {
-          runId status output error durationMs
+          runId status output error errorName durationMs
         }
       }
     }`,
@@ -724,6 +764,7 @@ export interface RunStepRecord {
   output: unknown;
   port: string | null;
   error: string | null;
+  errorName: string | null;
   // Null for skipped and replayed steps, and for runs journaled before timings.
   startedAt: string | null;
   endedAt: string | null;
@@ -738,6 +779,7 @@ export interface RunRecord {
   triggerPayload: unknown;
   status: string;
   error: string | null;
+  errorName: string | null;
   startedAt: string;
   endedAt: string | null;
   rerunOf: string | null;
@@ -747,9 +789,9 @@ export interface RunRecord {
 }
 
 const RUN_ROW_FIELDS = `id workflowId workflowName workflowVersion triggerKind
-  triggerPayload status error startedAt endedAt rerunOf warningNotes`;
+  triggerPayload status error errorName startedAt endedAt rerunOf warningNotes`;
 const STEP_ROW_FIELDS =
-  "stepId stepKey pieceName blockName status port error startedAt endedAt";
+  "stepId stepKey pieceName blockName status port error errorName startedAt endedAt";
 const RUN_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} input output }`;
 // A listing row: the steps without their input and output.
 const RUN_LIST_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} }`;
@@ -868,10 +910,12 @@ export async function loadBlockOptions(
   input: Record<string, unknown>,
   connectionId?: string,
   searchValue?: string,
+  // Narrows a reactor-reading resolver to what the step's connection reaches.
+  reactorConnectionId?: string,
 ): Promise<unknown> {
   const data = await t.gql<BlockOptionsResult>(
-    `query Options($block: BlockInput!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String) {
-      workflowRuntime { blockOptions(block: $block, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue) }
+    `query Options($block: BlockInput!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String, $reactorConnectionId: String) {
+      workflowRuntime { blockOptions(block: $block, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue, reactorConnectionId: $reactorConnectionId) }
     }`,
     {
       block: blockInput(block),
@@ -879,6 +923,7 @@ export async function loadBlockOptions(
       input,
       connectionId: connectionId ?? null,
       searchValue: searchValue ?? null,
+      reactorConnectionId: reactorConnectionId ?? null,
     },
   );
   return data.workflowRuntime.blockOptions;
@@ -894,6 +939,8 @@ const operations = {
   fetchStepOutputTree,
   fetchConnections,
   checkConnection,
+  fetchReactorAccess,
+  fetchReactorAccessDenial,
   fetchOAuthRedirectUri,
   startOAuth,
   fetchOAuthAttempt,

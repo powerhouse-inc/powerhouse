@@ -1,0 +1,343 @@
+---
+title: Reactor access from pieces
+description: Any piece's action or trigger can read and write documents on the reactor it runs on. The piece declares the access, a reactor connection limits it, and the run acts as the user who last published the workflow.
+---
+
+A piece's action or trigger can read and write Powerhouse documents on the reactor running the workflow. Three things decide what it can reach:
+
+- **The piece declares it.** An action or trigger asks for `"read"` or `"write"` access, and gets a `ctx.reactor` to match.
+- **A reactor connection limits it.** The workflow binds the step to a connection, which can narrow access to reads.
+- **The run acts as a user.** The reactor decides each call for the user who last published the workflow: reads pass that user as the subject, and writes are evaluated as that user.
+
+The host makes every reactor call and checks every one. Piece code runs in a worker process and never holds the reactor itself. For now this covers the local reactor only: a step reaches the reactor its workflow runs on.
+
+## Declaring access
+
+Declare `requireReactor` on `createAction` or `createTrigger` from `@powerhousedao/pieces-framework`:
+
+```typescript
+import { createAction, Property } from "@powerhousedao/pieces-framework";
+import { documentReference } from "@powerhousedao/pieces-framework/workflow";
+
+export const archiveInvoice = createAction({
+  name: "archive-invoice",
+  displayName: "Archive invoice",
+  description: "Sets an invoice's status to ARCHIVED",
+  requireAuth: false,
+  requireReactor: "write",
+  props: {
+    invoiceId: Property.ShortText({ displayName: "Invoice", required: true }),
+  },
+  async run(ctx) {
+    const doc = await ctx.reactor.get(ctx.propsValue.invoiceId);
+    const invoice = await ctx.reactor.getDocumentModelModuleForDocument(doc);
+    const updated = await ctx.reactor.execute(doc.header.id, "main", [
+      invoice.actions.setStatus({ status: "ARCHIVED" }),
+    ]);
+    return documentReference(updated.header);
+  },
+});
+```
+
+The invoice model and its `setStatus` operation stand in for your own. The action reads the document, gets its document model module, builds the action with the model's own action creator, and executes it. It outputs a reference to the document: `{ documentId, documentType, branch, revision }`.
+
+The declaration sets the type of `ctx.reactor`:
+
+| `requireReactor`  | `ctx.reactor`                                                    |
+| ----------------- | ---------------------------------------------------------------- |
+| `"read"`          | `ReactorReadClient`, with the read methods only                  |
+| `"write"`         | `ReactorClient`, with the read and write methods                 |
+| `false` or absent | none. Using `ctx.reactor` throws `UnsupportedContextMemberError` |
+
+A write method on a `"read"` action does not compile. The host also refuses it at run time, in case the declaration and the code disagree.
+
+A trigger's hooks get `ctx.reactor` the same way.
+
+A declared block's dropdown `options` functions get a read client too, with three differences. They read as the person using the editor, who must be signed in when auth enforcement is on. They never write, whatever the block declares. And a property is created before the block that uses it, so its `ctx.reactor` is typed `ReactorReadClient | undefined`; it is undefined when the block declares nothing:
+
+```typescript
+import { Property } from "@powerhousedao/pieces-framework";
+
+const invoice = Property.Dropdown<string>({
+  auth: undefined,
+  displayName: "Invoice",
+  required: true,
+  refreshers: [],
+  options: async (_values, ctx) => {
+    if (!ctx.reactor) return { options: [], disabled: true };
+    const page = await ctx.reactor.find({ type: "acme/invoice" });
+    return {
+      options: page.results.map((doc) => ({
+        label: doc.header.name,
+        value: doc.header.id,
+      })),
+    };
+  },
+});
+```
+
+`ph build` copies `requireReactor` into each piece's `descriptor.json`, so a reactor knows what a block asks for before it runs it. `ph generate piece-action` and `ph generate piece-trigger` write `requireReactor: false` into the stub. To scaffold a declaration instead, pass `--require-reactor`:
+
+```bash
+ph generate piece-action archive-invoice --require-reactor write
+```
+
+## What `ctx.reactor` offers
+
+`ctx.reactor` is a subset of [`IReactorClient`](/academy/Reference/Reactor/ReactorClient), with the client's own signatures and types. The reference page covers each method.
+
+| Access | Methods                                                                                                                                                                                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read   | `get`, `resolveIdOrSlug`, `find`, `getOperations`, `getOutgoingRelationships`, `getIncomingRelationships`, `getOutgoingRelationshipEdges`, `getIncomingRelationshipEdges`, `getDocumentModelModules`, `getDocumentModelModule`, `getDocumentModelModuleForDocument` |
+| Write  | `create`, `createEmpty`, `execute`, `deleteDocument`                                                                                                                                                                                                                |
+
+A piece changes a document by building actions with the document model's action creators and passing them to `execute`, as reactor-browser code calls `reactorClient.execute`. The creators come from the model's package, from `@powerhousedao/shared/document-model` (`setName`) and `@powerhousedao/shared/document-drive` (`addFile`, `deleteNode`), or from the module `getDocumentModelModuleForDocument` returns.
+
+A drive file is a document created under the drive plus the drive's node for it:
+
+```typescript
+import { addFile } from "@powerhousedao/shared/document-drive";
+
+const file = await ctx.reactor.create(invoiceDocument, driveId);
+await ctx.reactor.execute(driveId, "main", [
+  addFile({
+    id: file.header.id,
+    name: "Invoice",
+    documentType: file.header.documentType,
+    parentFolder: folderId,
+  }),
+]);
+```
+
+Creating under the drive adds the drive's `child` relationship; `ADD_FILE` adds the node. `ADD_FILE` alone, for a document created elsewhere, leaves the node without the relationship. To read a drive's folders and files, `get` the drive and read `state.global.nodes`.
+
+Not offered to any piece:
+
+| Methods                                                                                                                                                                                         | Why                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `createDocumentInDrive`, `executeBatch`, `rename`, `setPreferredEditor`, `addRelationship`, `updateRelationship`, `removeRelationship`, `moveRelationship`, `upgradeDocument`, `deleteDocuments` | Each would have to be rebuilt on the host to check it as the run user. Build the actions and call `execute`.                |
+| `drives`                                                                                                                                                                                        | Its reads take no subject, and its writes are conveniences. `get` the drive, and `execute` drive actions.                   |
+| `executeAsync`, `createAsync`, `createEmptyAsync`, `getJobStatus`, `waitForJob`                                                                                                                 | A job must finish within its step, with its outcome checked.                                                                |
+| `subscribe`                                                                                                                                                                                     | Triggers cover document events.                                                                                             |
+| `loadBatch`                                                                                                                                                                                     | It loads operations other principals signed, which the host can neither sign nor check as the run user.                     |
+| `evaluateActions`, `isDocumentIdTaken`, `isServed`, `getCreateSignaturePolicy`, `getCreateProtocolVersions`                                                                                     | Host internals. `isDocumentIdTaken` would answer for documents the user cannot read.                                        |
+
+Calling one throws `ReactorAccessDeniedError`, naming the method. The host also refuses:
+
+- **A chosen subject.** A call that passes `view.subject`, or `execute`'s `subject`, is refused. The host sets the run user as the subject.
+- **A signed action.** An action carrying `context.signer` is refused. The host signs every action, and a new document gets the host's create signature policy.
+- **Document lifecycle actions through `execute`**: `CREATE_DOCUMENT`, `DELETE_DOCUMENT`, `UPGRADE_DOCUMENT`, `PURGE_DOCUMENT` and the relationship actions. Create with `create` or `createEmpty`, and delete with `deleteDocument`.
+- **A cascade delete.** `deleteDocument` with `PropagationMode.Cascade` is refused.
+
+## At run time
+
+### Writes block until applied
+
+A write returns once its jobs are applied and readable, as on the client. It waits until the step's deadline, which is the step's `timeoutSeconds` or the runtime's default timeout, and stops a little before it to report why. The host checks each action's outcome, so a reducer error or a denial fails the call instead of passing silently.
+
+### Errors
+
+Errors cross from the host to the worker by `name` and `message`, so test `error.name`, never `instanceof`. `@powerhousedao/pieces-framework` exports each name as a string constant:
+
+| `error.name`                    | Meaning                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `ReactorAccessDeniedError`      | The declaration, the reactor connection or the document's auth refused the call.      |
+| `ReactorJobFailedError`         | A write's job failed.                                                                 |
+| `ReactorActionsFailedError`     | The job finished, but some of its actions failed, for example on a reducer error.     |
+| `ReactorJobPendingError`        | A write's job was still running at the step deadline. Its actions may yet be written. |
+| `ReactorRequestClosedError`     | A `ctx.reactor`, or a page's `next`, was used after its step settled.                 |
+| `DocumentModelUnavailableError` | The worker has no document model for that type. See below.                            |
+
+```typescript
+import { ReactorJobPendingError } from "@powerhousedao/pieces-framework";
+import { setName } from "@powerhousedao/shared/document-model";
+
+try {
+  return await ctx.reactor.execute(ctx.propsValue.id, "main", [
+    setName("Settled"),
+  ]);
+} catch (error) {
+  if (error instanceof Error && error.name === ReactorJobPendingError) {
+    return { pending: true };
+  }
+  throw error;
+}
+```
+
+### Paging
+
+Listings return a page at most 100 long, whatever `paging.limit` asks for. A page's `next()` works within the step that read it:
+
+```typescript
+let page = await ctx.reactor.find({ type: "acme/invoice" });
+for (;;) {
+  ids.push(...page.results.map((doc) => doc.header.id));
+  if (!page.next) break;
+  page = await page.next();
+}
+```
+
+A `ctx.reactor`, and every page it returned, closes when its step settles. A later call throws `ReactorRequestClosedError`. To resume a listing in a later step, return `nextCursor` and pass it back as `paging.cursor`:
+
+```typescript
+const page = await ctx.reactor.find({ type: "acme/invoice" }, undefined, {
+  cursor: ctx.propsValue.cursor ?? "",
+  limit: 50,
+});
+return {
+  results: page.results.map((doc) => ({ header: doc.header })),
+  nextCursor: page.nextCursor,
+};
+```
+
+Listings read as the run user, so the reactor leaves out documents that user cannot read.
+
+### Document models in the worker
+
+The worker holds the reactor's document model modules, so a piece calls their reducers, `utils` and action creators directly. A model is imported the first time a piece asks for its type, through `getDocumentModelModule` or `getDocumentModelModuleForDocument`. `getDocumentModelModules` imports every model the reactor has.
+
+A type the worker has no model for throws `DocumentModelUnavailableError`. Documents of that type can still be read and written: only the module is missing. The worker's modules decide nothing, because the reactor applies every action on the host.
+
+## Reactor connections
+
+A reactor connection is a `powerhouse/connection` document with `authType: REACTOR`. Every step whose block declares `requireReactor` needs one, including the steps of the reactor's own piece, `@powerhousedao/piece-reactor`. A step without one fails with `ReactorAccessDeniedError`.
+
+A reactor connection holds no secrets. Build one with these operations, in order:
+
+1. **`SET_CONNECTION_NAME`**: `{ name: "Invoices" }`.
+2. **`SET_CONNECTOR`**: `{ connectorId: "@powerhousedao/reactor#reactor", authType: "REACTOR" }`. The connector id is reserved for reactor connections, and any piece may bind it. This sets the config to `{ endpoint: "local" }`.
+3. **`SET_CONFIG`**, to limit it to reads:
+
+   ```json
+   { "config": { "endpoint": "local", "access": "read" } }
+   ```
+
+The config fields:
+
+| Field      | Meaning                                                                            |
+| ---------- | ---------------------------------------------------------------------------------- |
+| `endpoint` | `"local"`, the reactor the workflow runs on. It is the only value.                 |
+| `access`   | `"read"` limits the connection to reads. Absent, it allows what the step declares. |
+
+`SET_CONFIG` refuses unknown fields, so a misspelt one fails instead of being ignored. "Check connection" on a reactor connection checks its config; the reactor decides each call.
+
+To bind a connection, set `reactorConnectionId` on the step (`ADD_STEP` or `UPDATE_STEP`) or on the trigger (`SET_TRIGGER`), beside `connectionId`. It must be a connection id, not an expression.
+
+## Who a run acts as
+
+A run acts as the **run user**: the user who signed the workflow's latest publish. Runs execute the published snapshot, so the publisher vouches for what runs. Who or what fired the run makes no difference.
+
+- **Testing a single step** in Workflow Studio acts as you, the tester.
+- **Dropdown options** read as you, and never write.
+- **On publish, on enable, when the Switchboard starts and before each run**, the host checks that the reactor serves every reactor connection the snapshot binds to the run user. While it does not, the workflow's trigger is not armed and a run fails. A later publish or enable that passes the check arms it.
+
+Every call then passes these checks, in order:
+
+1. **The declaration.** A `"read"` block cannot call a write method.
+2. **The connection's `access`.**
+3. **The reactor's document auth**, as the run user. Reads pass the run user as the subject. `execute` and `deleteDocument` are evaluated as the run user (`evaluateActions`) before the host signs them. A create needs only checks 1 and 2; the reactor admits it by the Switchboard's signature.
+
+The run records each document it reads or writes, and a write's documents when it is submitted, so run visibility and erasure cover a write even when reading it back fails. A document the run creates gets an auth grant for the run user.
+
+### Auth enforcement off and on
+
+The reactor's `REACTOR_AUTH_ENFORCEMENT` flag (see [Authorization](/academy/Reference/Reactor/Authorization)) changes two things:
+
+|                               | Enforcement off                      | Enforcement on                                     |
+| ----------------------------- | ------------------------------------ | -------------------------------------------------- |
+| A workflow published unsigned | has reactor access, with no run user | gets no reactor access. Publish it while signed in |
+| Check 3, the document's auth  | skipped. Checks 1 and 2 still apply  | applies, and the Switchboard needs grants as well  |
+
+### Grants for the Switchboard
+
+The reactor admits a write by its signer, and the Switchboard signs every write a run makes. So under enforcement, a write lands only when the run user and the Switchboard may both make it. Every document a step writes needs a grant for the Switchboard as well as one for the run user. Grants are per document: a drive's grants do not cover the documents in it. When `deleteDocument` removes the document's parent relationships, only the Switchboard's grant on each parent is checked.
+
+The workflow-runtime subgraph tells you what to grant:
+
+```graphql
+query {
+  workflowRuntime {
+    authEnforcement
+    reactorIdentity {
+      address
+      key
+    }
+    authConditions
+  }
+}
+```
+
+- `authEnforcement` answers any caller, signed in or not.
+- `reactorIdentity` is who the Switchboard signs as: its `did:key`, and its address when it has a signed-in identity. Signed-in callers only.
+- `authConditions` says which grant form to use. Signed-in callers only.
+
+With `authConditions` true, grant the Switchboard by key. Otherwise grant it by address:
+
+```typescript
+import { setGrant } from "document-model";
+
+// With authConditions true.
+setGrant({
+  grant: {
+    id: "workflow-host",
+    description: "The Switchboard that runs workflows",
+    effect: "allow",
+    principal: { match: { eq: [{ attr: "subject.key" }, { lit: key }] } },
+    capability: { can: "execute" },
+  },
+});
+
+// Otherwise, with principal: { address }.
+```
+
+A grant by address also covers the operator whose `ph login` identity the Switchboard signs with.
+
+Workflow Studio's reactor connection settings are built on these queries. With enforcement on, they ask you to sign in, and grant the Switchboard `execute` on the documents you pick: global scope, plus the document-scope `DELETE_DOCUMENT`, `ADD_RELATIONSHIP` and `REMOVE_RELATIONSHIP` that creates in a drive and deletes need. For a step that calls `deleteDocument`, grant on the document and on the drives that hold it.
+
+## The reactor piece's outputs
+
+The steps of `@powerhousedao/piece-reactor` output:
+
+- **`document-create` and `document-dispatch`**: a reference to the document they wrote, `{ documentId, documentType, branch, revision }`. `revision` is the operation count per scope after the write. A later step reads `{{steps.create.output.documentId}}`; to use the document's state, read it with `document-get`.
+- **`document-get`**: the document as `{ header, state }`, so a later step reads `{{steps.get.output.state.global.<field>}}` or `{{steps.get.output.header.id}}`.
+- **`document-find`**: `{ results, nextCursor }`. Each result is `{ header }`, or `{ header, state }` with **Include state** on. Pass `nextCursor` to the step's **Cursor** option to resume.
+
+With **Parse** set to **Extract**, a step also outputs `extractedFrom`, beside the document or the reference. Outputs leave out `operations` and `clipboard`.
+
+## Documents in the run journal
+
+The run journal does not store document state:
+
+- **Writes output a reference.** The journal stores it as it is.
+- **Reads keep state in the run, but journal a reference.** Within the run, later steps read the state the step returned. When the journal records a step's output, it replaces every value shaped like a reactor document, `{ header, state }` at any depth, with `{ "$documentRef": { documentId, documentType, branch, revision } }`. This applies to every piece's output, before redaction and the size cap.
+- **Reruns re-read.** A rerun runs a step declaring `requireReactor: "read"` again when its journaled output holds a `$documentRef`, so the step reads the document as it is now. Every other succeeded step, including a write whose output holds a document, reuses its journaled output: a rerun never repeats a write.
+
+The editor shows a journaled reference with the document's type, id and revision, and an **Open document** action. It opens the document as it is now: reading a document at a past revision is not supported yet ([#3179](https://github.com/powerhouse-inc/powerhouse/issues/3179)). The expression picker offers a referenced document's `state.global` fields from its model's state schema. Testing a step that reads an earlier step's document reads that document as it is now.
+
+<Quiz
+  question='An action declares requireReactor: "write". Its step is bound to a reactor connection with access: "read". The workflow was published by Alice, and Bob fires it. What happens when the action calls ctx.reactor.execute?'
+  choices={[
+    {
+      label: "It runs as Bob, because Bob fired the run.",
+      explanation:
+        "A run acts as the user who signed the latest publish. Who fired the run makes no difference.",
+    },
+    {
+      label:
+        "It is refused with ReactorAccessDeniedError, because the connection grants reads only.",
+      correct: true,
+      explanation:
+        "Right. The declaration allows writes, but the connection narrows the step to reads, and the host checks both before anything else.",
+    },
+    {
+      label: "It runs as Alice, because the declaration says write.",
+      explanation:
+        "The declaration is what the piece asks for. The connection decides what the step gets, and here it allows reads only.",
+    },
+    {
+      label: "It fails to compile.",
+      explanation:
+        "The piece declares write, so ctx.reactor has execute. The connection is a run-time setting the piece cannot see.",
+    },
+  ]}
+/>

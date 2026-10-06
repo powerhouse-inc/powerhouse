@@ -11,7 +11,7 @@ import type {
   ConnectionsManager,
   FlowsContext,
   PropertyContext,
-  ReactorService,
+  ReactorReadClient,
   ServerContext,
 } from "@powerhousedao/pieces-framework";
 
@@ -35,8 +35,8 @@ export type BuiltApPropertyContext = Omit<
 > & {
   flows: FlowsProvider;
   connections: ConnectionsProvider;
-  // ctx.reactor: the Powerhouse capability the framework has no member for.
-  reactor: ReactorService;
+  // Read-only at design time, whatever the block declares (ADR 0005 §10).
+  reactor: ReactorReadClient;
 };
 
 export interface PropertyContextOptions {
@@ -46,9 +46,9 @@ export interface PropertyContextOptions {
   connections?: ConnectionsProvider;
   server?: ServerContext;
   projectId?: string;
-  // ctx.reactor for a design-time resolver, on the same terms as at run time:
-  // offered to a package piece, a throwing stub to every other.
-  reactor?: ReactorService;
+  // ctx.reactor for a resolver whose block declares requireReactor. Absent,
+  // the member throws by name.
+  reactor?: ReactorReadClient;
   onTouch?: (member: string) => void;
 }
 

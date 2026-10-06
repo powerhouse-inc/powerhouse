@@ -139,6 +139,9 @@ export function detailResult(
           description: action.description ?? "",
           props: action.props,
           requireAuth: action.requireAuth,
+          ...(action.requireReactor
+            ? { requireReactor: action.requireReactor }
+            : {}),
           // What blockOutputTree reads. A published piece's listing carries
           // it; a package piece has only this.
           outputSchema: action.outputSchema,
@@ -156,6 +159,9 @@ export function detailResult(
           type: trigger.strategy,
           props: trigger.props,
           requireAuth: trigger.requireAuth,
+          ...(trigger.requireReactor
+            ? { requireReactor: trigger.requireReactor }
+            : {}),
           outputSchema: trigger.outputSchema,
           sampleData: trigger.sampleData,
           testStrategy: trigger.testStrategy,

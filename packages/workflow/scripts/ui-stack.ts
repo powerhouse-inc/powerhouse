@@ -675,6 +675,11 @@ export interface PhWindow {
             name: string,
             parentFolder?: string,
           ): Promise<{ state: unknown }>;
+          renameNode(
+            drive: string,
+            nodeId: string,
+            name: string,
+          ): Promise<unknown>;
         };
         execute(
           id: string,
@@ -1158,6 +1163,7 @@ export interface WorkflowSpec {
     name: string;
     config: Record<string, unknown>;
     connectionId?: string;
+    reactorConnectionId?: string;
   })[];
   // False leaves it a draft that has never been turned on.
   enabled?: boolean;
@@ -1223,16 +1229,21 @@ export async function createWorkflowInBrowser(
       }
       await client.execute(id, "main", actions);
       await client.rename(id, spec.name);
+      // Pickers that list a drive's files show the node's name.
+      await client.drives.renameNode(drive, id, spec.name);
       return id;
     },
     { drive, spec },
   );
 }
 
+// The connection model's reserved connector for REACTOR connections.
+export const REACTOR_CONNECTOR_ID = "@powerhousedao/reactor#reactor";
+
 export interface ConnectionSpec {
   name: string;
   connectorId: string;
-  authType: "SECRET_TEXT" | "BASIC_AUTH" | "CUSTOM_AUTH";
+  authType: "SECRET_TEXT" | "BASIC_AUTH" | "CUSTOM_AUTH" | "REACTOR";
   config: Record<string, unknown>;
   // Field name to secret:// ref, from createSecret.
   secrets: Record<string, string>;
@@ -1276,6 +1287,8 @@ export function createConnectionInBrowser(
       }
       await client.execute(id, "main", actions);
       await client.rename(id, spec.name);
+      // Pickers that list a drive's files show the node's name.
+      await client.drives.renameNode(drive, id, spec.name);
       return id;
     },
     { drive, spec },

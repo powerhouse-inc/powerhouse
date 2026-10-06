@@ -1,23 +1,22 @@
-import {
-  createAction,
-  Property,
-  reactorOf,
-} from "@powerhousedao/pieces-framework";
+import { createAction, Property } from "@powerhousedao/pieces-framework";
+import { documentReference } from "@powerhousedao/pieces-framework/workflow";
+import type { Action } from "@powerhousedao/shared/document-model";
+import { DEFAULT_BRANCH, plainAction, typedAction } from "../documents.js";
+import { coerceInput } from "../input-props.js";
 import {
   allowedActionTypes,
   ConfigReader,
   parseActionInput,
   parseDispatchPayload,
 } from "../parse.js";
-import { coerceInput } from "../input-props.js";
 import {
   ACTION_GROUP,
   actionInputProp,
-  actionInputSchema,
   actionsProp,
   actionTypeProp,
   documentIdProp,
   documentTypeProp,
+  moduleInputSchema,
   parseProp,
 } from "../reactor.js";
 
@@ -26,8 +25,10 @@ const BLOCK = "document-dispatch";
 export const documentDispatchAction = createAction({
   name: BLOCK,
   displayName: "Dispatch actions",
-  description: "Sends actions to a document.",
+  description:
+    "Sends actions to a document. Outputs a reference to it: id, type, branch and revision.",
   requireAuth: false,
+  requireReactor: "write",
   propertyGroups: [ACTION_GROUP("Sent to the document.")],
   props: {
     documentId: documentIdProp(
@@ -44,7 +45,7 @@ export const documentDispatchAction = createAction({
     input: actionInputProp("Input"),
     actions: actionsProp(
       "Action list (JSON)",
-      'Several actions at once, or a payload from an earlier step: [{ "type": …, "input": … }]',
+      'Several actions at once, or a payload from an earlier step: [{ "type": …, "input": …, "scope"?: "global" }]',
     ),
     allowedActions: Property.ShortText({
       displayName: "Allowed action types",
@@ -54,13 +55,14 @@ export const documentDispatchAction = createAction({
     }),
     branch: Property.ShortText({
       displayName: "Branch",
-      description: 'Defaults to "main"',
       required: false,
+      defaultValue: DEFAULT_BRANCH,
       advanced: true,
     }),
     parse: parseProp(),
   },
   run: async (ctx) => {
+    const reactor = ctx.reactor;
     const config = ctx.propsValue;
     const reader = ConfigReader.of(BLOCK, config.parse);
     const payload = parseDispatchPayload(config.actions, reader);
@@ -71,25 +73,30 @@ export const documentDispatchAction = createAction({
         `${BLOCK}: "documentId" is required, in the config or the actions payload`,
       );
     }
-    // The picked action goes first, its input typed by the model's schema.
+    const actions: Action[] = payload.actions.map((entry) =>
+      plainAction(entry.type, entry.input, entry.scope),
+    );
+    // The picked action goes first, built by the document's own model.
     const actionType =
       typeof config.actionType === "string" ? config.actionType.trim() : "";
     if (actionType) {
-      const schema = await actionInputSchema(reactorOf(ctx), {
-        ...config,
-        documentId,
-      });
+      const module = await reactor.getDocumentModelModuleForDocument(
+        await reactor.get(documentId),
+      );
+      const schema = moduleInputSchema(module, actionType);
       const input = parseActionInput(config.input, reader);
-      payload.actions.unshift({
-        type: actionType,
-        input: schema ? coerceInput(schema, input) : input,
-        scope: undefined,
-      });
+      actions.unshift(
+        typedAction(
+          module,
+          actionType,
+          schema ? coerceInput(schema, input) : input,
+        ),
+      );
     }
     // Enforced, not merely suggested: the payload may come from an LLM.
     const allowed = allowedActionTypes(config.allowedActions);
     const rejected = allowed.length
-      ? payload.actions.filter((entry) => !allowed.includes(entry.type))
+      ? actions.filter((entry) => !allowed.includes(entry.type))
       : [];
     if (rejected.length > 0) {
       throw new Error(
@@ -98,22 +105,15 @@ export const documentDispatchAction = createAction({
         ].join(", ")}`,
       );
     }
-    if (payload.actions.length === 0) {
+    if (actions.length === 0) {
       throw new Error(
         `${BLOCK}: choose an Action, or give a non-empty "Action list (JSON)"`,
       );
     }
-    const document = await reactorOf(ctx).execute({
-      documentId,
-      ...(config.branch ? { branch: config.branch } : {}),
-      actions: payload.actions,
-    });
-    return {
-      documentId: document.documentId,
-      documentType: document.documentType,
-      name: document.name,
-      state: document.state,
-      ...reader.output(),
-    };
+    const branch =
+      (typeof config.branch === "string" && config.branch.trim()) ||
+      DEFAULT_BRANCH;
+    const document = await reactor.execute(documentId, branch, actions);
+    return { ...documentReference(document.header), ...reader.output() };
   },
 });

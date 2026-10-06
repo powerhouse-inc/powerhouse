@@ -14,6 +14,7 @@ export interface StepTestResult {
   status: "SUCCEEDED" | "FAILED";
   output?: unknown;
   error?: string;
+  errorName?: string;
   durationMs: number;
 }
 
@@ -110,6 +111,7 @@ export function draftStepDef(
     pieceVersion: step.pieceVersion,
     actionName: step.actionName,
     connectionId: step.connectionId,
+    reactorConnectionId: step.reactorConnectionId,
     config: step.config,
     timeoutSeconds: step.timeoutSeconds,
     propertySettings: propertySettings(step.propertySettings),

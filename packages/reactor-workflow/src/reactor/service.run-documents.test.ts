@@ -1,8 +1,7 @@
 // A run is served only to a caller who is served every live document its
 // trigger names or its steps were handed, and connections are read as the caller.
 import type { WorkflowRuntimeHostDeps } from "./host.js";
-import { SubgraphReactorPort } from "./reactor-port.js";
-import { currentDocumentRecorder, withRunScope } from "./run-scope.js";
+import { currentDocumentRecorder } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
@@ -174,68 +173,6 @@ describe("connections", () => {
   });
 });
 
-describe("the reactor port", () => {
-  it("journals a document against the run before handing it to a step", async () => {
-    const order: string[] = [];
-    const port = new SubgraphReactorPort({
-      reactorClient: {
-        get: (id: string) => {
-          order.push(`read ${id}`);
-          return Promise.resolve({
-            header: { id, documentType: "t", name: "", slug: "" },
-            state: {},
-          });
-        },
-      },
-    } as never);
-
-    const summary = await withRunScope(
-      {
-        workflowId: WORKFLOW,
-        runId: "run-1",
-        recordDocuments: (ids) => {
-          order.push(`journal ${ids.join(",")}`);
-          return Promise.resolve();
-        },
-      },
-      async () => {
-        const got = await port.get({ documentId: SECRET });
-        order.push("handed over");
-        return got;
-      },
-    );
-
-    expect(summary.documentId).toBe(SECRET);
-    expect(order).toEqual([
-      `read ${SECRET}`,
-      `journal ${SECRET}`,
-      "handed over",
-    ]);
-  });
-
-  it("fails the step when the journal cannot take the document", async () => {
-    const port = new SubgraphReactorPort({
-      reactorClient: {
-        get: (id: string) =>
-          Promise.resolve({
-            header: { id, documentType: "t", name: "", slug: "" },
-            state: {},
-          }),
-      },
-    } as never);
-
-    await expect(
-      withRunScope(
-        {
-          workflowId: WORKFLOW,
-          recordDocuments: () => Promise.reject(new Error("journal down")),
-        },
-        () => port.get({ documentId: SECRET }),
-      ),
-    ).rejects.toThrow("journal down");
-  });
-});
-
 describe("a fired run's result", () => {
   const workflow = {
     header: { id: WORKFLOW, documentType: "powerhouse/workflow" },
@@ -267,7 +204,7 @@ describe("a fired run's result", () => {
     },
   };
 
-  // A step that reads one document through the reactor port.
+  // A step that reads one document through the reactor.
   function firing(read: string) {
     const service = testRuntime({
       reactorClient: {

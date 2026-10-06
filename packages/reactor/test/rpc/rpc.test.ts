@@ -1,8 +1,8 @@
 import type {
   DocumentChangeEvent,
   IReactorClient,
-  SearchFilter,
-} from "@powerhousedao/reactor";
+} from "../../src/client/types.js";
+import type { SearchFilter } from "../../src/shared/types.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { createReactorClientProxy } from "../../src/rpc/client-proxy.js";
 import { ReactorHostServer } from "../../src/rpc/host-server.js";

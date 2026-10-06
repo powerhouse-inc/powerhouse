@@ -25,6 +25,7 @@ export interface PieceTriggerBinding {
   triggerName: string;
   config: Record<string, unknown>;
   connectionId?: string | null;
+  reactorConnectionId?: string | null;
   // Author's poll cadence, from the trigger's pollEverySeconds. Overrides both
   // the piece's own setSchedule and the runtime default; the 60s floor holds.
   pollIntervalMs?: number;

@@ -24,8 +24,11 @@ import {
   type SyncStatus,
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
-import { KeyedListeners, Listeners } from "./listeners.js";
-import type { MessageRouter } from "./message-router.js";
+import {
+  KeyedListeners,
+  Listeners,
+  type MessageRouter,
+} from "@powerhousedao/reactor/rpc";
 import { opChannel, type IOpChannel } from "./op-channel.js";
 
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).

@@ -5,7 +5,7 @@ import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { queryKind } from "./ui/query-keys.js";
 
 // Bump when the cached shapes, or how forms are derived, change.
-export const RUNTIME_CACHE_VERSION = 1;
+export const RUNTIME_CACHE_VERSION = 2;
 export const RUNTIME_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60_000;
 
 export interface PersistedQuery {

@@ -287,6 +287,25 @@ function redactText(text: string, pass: Pass): string {
   );
 }
 
+// A document header's or reference's operation counts per scope. Scope names
+// such as "auth" are not credentials, and the counts are numbers.
+function isScopeRevision(
+  parent: Record<string, unknown>,
+  key: string,
+  entry: unknown,
+): boolean {
+  return (
+    key === "revision" &&
+    typeof parent.documentType === "string" &&
+    typeof entry === "object" &&
+    entry !== null &&
+    !Array.isArray(entry) &&
+    Object.values(entry).every(
+      (count) => typeof count === "number" && Number.isFinite(count),
+    )
+  );
+}
+
 function walk(
   value: unknown,
   pass: Pass,
@@ -308,10 +327,13 @@ function walk(
       return value.map((entry) => walk(entry, pass, depth + 1, seen));
     }
     const result: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
+    const record = value as Record<string, unknown>;
+    for (const [key, entry] of Object.entries(record)) {
       result[key] = isSensitiveName(key)
         ? marker(key)
-        : walk(entry, pass, depth + 1, seen);
+        : isScopeRevision(record, key, entry)
+          ? { ...(entry as Record<string, number>) }
+          : walk(entry, pass, depth + 1, seen);
     }
     return result;
   } finally {
