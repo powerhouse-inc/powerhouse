@@ -16,6 +16,7 @@ import { PollBehavior } from "../types.js";
 import {
   DEFAULT_REQUEST_TIMEOUT_MS,
   GqlRequestChannel,
+  MAX_REQUESTS_PER_POLL,
   type GqlChannelConfig,
 } from "./gql-req-channel.js";
 import {
@@ -158,10 +159,13 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,
       }),
-      // Above the request deadline, so only a stuck tick is ever cancelled.
+      // Room for every request of one tick plus the queue probe, so only a stuck tick is cancelled.
       delegateTimeoutMs:
         requestTimeoutMs > 0
-          ? Math.max(DELEGATE_TIMEOUT_FLOOR_MS, requestTimeoutMs * 2)
+          ? Math.max(
+              DELEGATE_TIMEOUT_FLOOR_MS,
+              requestTimeoutMs * (MAX_REQUESTS_PER_POLL + 1),
+            )
           : 0,
       startPaused: options?.pollBehavior === PollBehavior.Manual,
     });

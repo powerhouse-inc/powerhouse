@@ -72,6 +72,9 @@ export type GqlChannelConfig = {
 
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 
+/** Agreement probe, up to three poll attempts as schema flags clear, manifest refresh. */
+export const MAX_REQUESTS_PER_POLL = 5;
+
 /**
  * Fields the auth projection added to the sync schema. A remote that predates
  * them rejects the whole query for naming one, so they are selected only while
