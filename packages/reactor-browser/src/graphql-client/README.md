@@ -166,9 +166,25 @@ the full reactor client implement:
 | `subscribe(search, callback, view?)`              | Local emissions plus, lazily, the server's.                                       |
 
 The interface is declared as a `Pick` of the reactor's own `IReactorClient`, so
-the signatures cannot drift. Everything outside those six members - `drives`,
-`find`, `resolveIdOrSlug`, relationships, jobs, `rename`, `executeBatch`, the
-document-model module getters - is not on it and not implemented here.
+the signatures cannot drift.
+
+The client also implements these `IReactorClient` members, outside the
+interface:
+
+| Method                                                  | Notes                                                                                                                                                |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `find(search, view?, paging?, signal?)`                 | By `type` and `parentId` at head. `ids`, `slugs` or a point-in-time view throw `GraphQLOperationNotSupportedError`; see `findIsServableOverGraphQL`. |
+| `get{Outgoing,Incoming}Relationships`                   | Paged documents.                                                                                                                                     |
+| `get{Outgoing,Incoming}RelationshipEdges`               | Paged edges.                                                                                                                                         |
+| `executeBatch(request, signal?)`                        | Signs each job for its resolved id and emits the changes. A FAILED job throws `BatchJobFailedError` with every job's state.                          |
+| `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
+| `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
+| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Throw `GraphQLOperationNotSupportedError`: the Switchboard exposes neither.                                                                          |
+
+`drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
+module getters are not implemented here. The members above need a Switchboard
+that serves `executeBatch`, document `meta`/`protocolVersions` and the full
+`JobInfo`.
 
 Plus what only this client has:
 
@@ -437,9 +453,10 @@ Known and deliberate. Nothing here is a bug report.
   `addDocument`, `addFileWithProgress` and `copyNode` helpers throw or no-op for
   the same reason. Render editor components the app imports directly, and build
   actions the app declares itself.
-- **No drives, no `find`, no jobs.** They are not on `IReactorBrowserClient`.
-  There is no drive bootstrapping anywhere: `create(document, parentIdentifier?)`
-  is the only parenting there is.
+- **No drives, and `find` and jobs only on the class.** They are not on
+  `IReactorBrowserClient`, so the hooks never call them. There is no drive
+  bootstrapping anywhere: `create(document, parentIdentifier?)` is the only
+  parenting the hooks use.
 - **Realtime degrades to local-only.** A socket that cannot be opened, or is
   refused because the Switchboard requires auth and the subscriber is anonymous,
   is logged once and ignored. The client keeps emitting its own changes. The
