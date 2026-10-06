@@ -460,20 +460,45 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
   });
 
-  it("runs concurrent resets of one remote as a single rebuild", async () => {
+  it("gives resets requested during a running one a single follow-up rebuild", async () => {
+    await addAccounts();
+    let releaseInit: (() => void) | undefined;
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      const channel = createChannel();
+      channel.init = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseInit = resolve;
+          }),
+      );
+      channels.push(channel);
+      return channel as unknown as IChannel;
+    });
+
+    const running = syncManager.resetChannel("accounts");
+    await vi.waitFor(() => expect(releaseInit).toBeDefined());
+    const second = syncManager.resetChannel("accounts");
+    const third = syncManager.resetChannel("accounts");
+    expect(third).toBe(second);
+    await expect(syncManager.remove("accounts")).rejects.toThrow(/being reset/);
+
+    releaseInit?.();
+    await Promise.all([running, second, third]);
+
+    expect(channels).toHaveLength(3);
+    expect(channels[1].shutdown).toHaveBeenCalledTimes(1);
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels[2] as unknown,
+    );
+  });
+
+  it("starts a reset requested after the last one settled afresh", async () => {
     await addAccounts();
 
-    await Promise.all([
-      syncManager.resetChannel("accounts"),
-      syncManager.resetChannel("accounts"),
-    ]);
+    await syncManager.resetChannel("accounts");
+    await syncManager.resetChannel("accounts");
 
-    expect(channels).toHaveLength(2);
-    expect(channels[0].shutdown).toHaveBeenCalledTimes(1);
-    expect(channels[1].shutdown).not.toHaveBeenCalled();
-    expect(syncManager.getByName("accounts").channel).toBe(
-      channels[1] as unknown,
-    );
+    expect(channels).toHaveLength(3);
   });
 
   it("refuses to remove a remote while it is being reset", async () => {

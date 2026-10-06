@@ -292,6 +292,8 @@ export class SyncManager
   private pruneDrainDeferred = false;
   private readonly removing = new Set<string>();
   private readonly resets = new Map<string, Promise<void>>();
+  // remote name -> the rebuild queued behind its running reset
+  private readonly queuedResets = new Map<string, Promise<void>>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private readonly watermark: ISettledWatermark;
   // remote name -> ordinal its outbox is owed through
@@ -1278,7 +1280,7 @@ export class SyncManager
     if (!remote) {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
-    if (this.resets.has(name)) {
+    if (this.resets.has(name) || this.queuedResets.has(name)) {
       throw new Error(`Remote with name '${name}' is being reset`);
     }
 
@@ -1398,14 +1400,27 @@ export class SyncManager
     await Promise.all(this.markerWritesOf(remoteNames));
   }
 
-  /** Concurrent resets of one remote share a single rebuild. */
+  /** Never joins a running rebuild: it may have read state older than the request. */
   resetChannel(remoteName: string): Promise<void> {
-    const inFlight = this.resets.get(remoteName);
-    if (inFlight) return inFlight;
-    const reset = this.rebuildChannel(remoteName).finally(() => {
-      this.resets.delete(remoteName);
+    const queued = this.queuedResets.get(remoteName);
+    if (queued) return queued;
+    const running = this.resets.get(remoteName);
+    if (!running) return this.startReset(remoteName);
+    const next = running
+      .catch(() => undefined)
+      .then(() => {
+        this.queuedResets.delete(remoteName);
+        return this.startReset(remoteName);
+      });
+    this.queuedResets.set(remoteName, next);
+    return next;
+  }
+
+  private startReset(name: string): Promise<void> {
+    const reset = this.rebuildChannel(name).finally(() => {
+      this.resets.delete(name);
     });
-    this.resets.set(remoteName, reset);
+    this.resets.set(name, reset);
     return reset;
   }
 
