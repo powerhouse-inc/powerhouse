@@ -496,6 +496,25 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      createDefaults: async (_parent, args, ctx: Context) => {
+        this.logger.debug("createDefaults(@args)", args);
+        try {
+          const parentIdOrSlug = args.parentIdOrSlug ?? undefined;
+          let parent: string | undefined;
+          if (parentIdOrSlug !== undefined) {
+            const handle = await this.assertCanRead(parentIdOrSlug, ctx);
+            if (!(await this.servesDocument(handle.fetchIdentifier, ctx))) {
+              throw new ForbiddenError("to read this document");
+            }
+            parent = handle.fetchIdentifier;
+          }
+          return await resolvers.createDefaults(this.reactorClient, parent);
+        } catch (error) {
+          this.logger.error("Error in createDefaults: @Error", error);
+          throw error;
+        }
+      },
+
       documentOperations: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentOperations(@args)", args);
         try {

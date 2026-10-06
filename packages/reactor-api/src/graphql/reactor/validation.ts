@@ -215,6 +215,13 @@ export const DocumentChangeEventDTO = z
   })
   .strip();
 
+export const CreateDefaultsDTO = z
+  .object({
+    signaturePolicy: z.string(),
+    protocolVersions: JSONObjectDTO,
+  })
+  .strip();
+
 export const ActionEvaluationDTO = z
   .object({
     decision: z.enum(["ALLOW", "DENY"]),

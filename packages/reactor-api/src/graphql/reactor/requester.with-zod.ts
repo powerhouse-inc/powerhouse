@@ -12,6 +12,7 @@ import { createFetchRequester } from "./requester.js";
 import {
   ActionEvaluationsDTO,
   BatchExecutionResultDTO,
+  CreateDefaultsDTO,
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
   DocumentRelationshipResultPageDTO,
@@ -93,6 +94,11 @@ const operationValidators: OperationValidators = {
   GetJobStatus: (data) => {
     if (data.jobStatus) {
       JobInfoFieldsDTO.parse(data.jobStatus as JobInfo);
+    }
+  },
+  GetCreateDefaults: (data) => {
+    if (data.createDefaults) {
+      CreateDefaultsDTO.parse(data.createDefaults);
     }
   },
   EvaluateActions: (data) => {

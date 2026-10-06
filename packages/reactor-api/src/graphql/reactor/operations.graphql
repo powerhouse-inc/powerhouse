@@ -270,6 +270,13 @@ query GetJobStatus($jobId: String!) {
   }
 }
 
+query GetCreateDefaults($parentIdOrSlug: String) {
+  createDefaults(parentIdOrSlug: $parentIdOrSlug) {
+    signaturePolicy
+    protocolVersions
+  }
+}
+
 query EvaluateActions(
   $documentIdentifier: String!
   $branch: String

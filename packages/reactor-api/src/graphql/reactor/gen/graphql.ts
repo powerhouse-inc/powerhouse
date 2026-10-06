@@ -176,6 +176,11 @@ export type ConsistencyToken = {
   readonly version: Scalars["Int"]["output"];
 };
 
+export type CreateDefaults = {
+  readonly protocolVersions: Scalars["JSONObject"]["output"];
+  readonly signaturePolicy: Scalars["String"]["output"];
+};
+
 export type DeadLetterInfo = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
@@ -619,6 +624,7 @@ export enum PropagationMode {
 }
 
 export type Query = {
+  readonly createDefaults: CreateDefaults;
   readonly document?: Maybe<DocumentWithChildren>;
   readonly documentIncomingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentIncomingRelationships: PhDocumentResultPage;
@@ -670,6 +676,10 @@ export type Query = {
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
   readonly syncHolds: ReadonlyArray<SyncHold>;
+};
+
+export type QueryCreateDefaultsArgs = {
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryDocumentArgs = {
@@ -1314,6 +1324,17 @@ export type GetJobStatusQuery = {
     | undefined;
 };
 
+export type GetCreateDefaultsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetCreateDefaultsQuery = {
+  readonly createDefaults: {
+    readonly signaturePolicy: string;
+    readonly protocolVersions: NonNullable<unknown>;
+  };
+};
+
 export type EvaluateActionsQueryVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
@@ -1942,6 +1963,7 @@ export type ResolversTypes = ResolversObject<{
   ChannelMetaInput: ChannelMetaInput;
   ConsistencyCoordinate: ResolverTypeWrapper<ConsistencyCoordinate>;
   ConsistencyToken: ResolverTypeWrapper<ConsistencyToken>;
+  CreateDefaults: ResolverTypeWrapper<CreateDefaults>;
   DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
   DeadLetterInfo: ResolverTypeWrapper<DeadLetterInfo>;
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
@@ -2018,6 +2040,7 @@ export type ResolversParentTypes = ResolversObject<{
   ChannelMetaInput: ChannelMetaInput;
   ConsistencyCoordinate: ConsistencyCoordinate;
   ConsistencyToken: ConsistencyToken;
+  CreateDefaults: CreateDefaults;
   DateTime: Scalars["DateTime"]["output"];
   DeadLetterInfo: DeadLetterInfo;
   DocumentChangeContext: DocumentChangeContext;
@@ -2181,6 +2204,19 @@ export type ConsistencyTokenResolvers<
   >;
   createdAtUtcIso?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   version?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+}>;
+
+export type CreateDefaultsResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["CreateDefaults"] =
+    ResolversParentTypes["CreateDefaults"],
+> = ResolversObject<{
+  protocolVersions?: Resolver<
+    ResolversTypes["JSONObject"],
+    ParentType,
+    ContextType
+  >;
+  signaturePolicy?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<
@@ -2693,6 +2729,12 @@ export type QueryResolvers<
   ParentType extends ResolversParentTypes["Query"] =
     ResolversParentTypes["Query"],
 > = ResolversObject<{
+  createDefaults?: Resolver<
+    ResolversTypes["CreateDefaults"],
+    ParentType,
+    ContextType,
+    Partial<QueryCreateDefaultsArgs>
+  >;
   document?: Resolver<
     Maybe<ResolversTypes["DocumentWithChildren"]>,
     ParentType,
@@ -2978,6 +3020,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
   ConsistencyCoordinate?: ConsistencyCoordinateResolvers<ContextType>;
   ConsistencyToken?: ConsistencyTokenResolvers<ContextType>;
+  CreateDefaults?: CreateDefaultsResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
@@ -3558,6 +3601,14 @@ export const GetJobStatusDocument = gql`
   }
   ${JobInfoFieldsFragmentDoc}
 `;
+export const GetCreateDefaultsDocument = gql`
+  query GetCreateDefaults($parentIdOrSlug: String) {
+    createDefaults(parentIdOrSlug: $parentIdOrSlug) {
+      signaturePolicy
+      protocolVersions
+    }
+  }
+`;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
     $documentIdentifier: String!
@@ -4025,6 +4076,16 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetJobStatusQuery>;
+    },
+    GetCreateDefaults(
+      variables?: GetCreateDefaultsQueryVariables,
+      options?: C,
+    ): Promise<GetCreateDefaultsQuery> {
+      return requester<GetCreateDefaultsQuery, GetCreateDefaultsQueryVariables>(
+        GetCreateDefaultsDocument,
+        variables,
+        options,
+      ) as Promise<GetCreateDefaultsQuery>;
     },
     EvaluateActions(
       variables: EvaluateActionsQueryVariables,

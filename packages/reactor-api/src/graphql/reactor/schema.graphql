@@ -194,6 +194,13 @@ type DocumentWithChildren {
   childIds: [String!]!
 }
 
+# What a new document gets when its creator chooses nothing
+type CreateDefaults {
+  # "legacy" or "v2-required"; a client refuses a value it does not know
+  signaturePolicy: String!
+  protocolVersions: JSONObject!
+}
+
 type MoveRelationshipResult {
   source: PHDocument!
   target: PHDocument!
@@ -636,6 +643,10 @@ type Query {
 
   # Get job status
   jobStatus(jobId: String!): JobInfo
+
+  # The signature policy and protocol versions a new document gets, under the
+  # parent when one is named. A parent the caller may not read is refused.
+  createDefaults(parentIdOrSlug: String): CreateDefaults!
 
   # Get operations for a document with filtering and pagination
   documentOperations(

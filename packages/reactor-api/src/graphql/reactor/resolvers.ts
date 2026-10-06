@@ -33,6 +33,7 @@ import type {
   Operation,
   PeerManifest,
   PHDocument,
+  ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import {
   readPeerManifest,
@@ -120,6 +121,18 @@ import type {
   PhDocumentResultPage,
   ReactorOperationResultPage,
 } from "./gen/graphql.js";
+
+/** The defaults `create` gives a new document; the parent must already be gated. */
+export async function createDefaults(
+  reactorClient: IReactorClient,
+  parentIdOrSlug: string | undefined,
+): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
+  const [signaturePolicy, protocolVersions] = await Promise.all([
+    reactorClient.getCreateSignaturePolicy(),
+    reactorClient.getCreateProtocolVersions(parentIdOrSlug),
+  ]);
+  return { signaturePolicy, protocolVersions };
+}
 
 export async function documentModels(
   reactorClient: IReactorClient,
