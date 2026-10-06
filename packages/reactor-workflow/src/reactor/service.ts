@@ -1545,7 +1545,7 @@ export class WorkflowRuntimeService {
       const opKey = operationKey({ operation, context });
       if (this.alreadySeen(opKey)) continue;
       if (context.scope === DOCUMENT_SCOPE) {
-        await this.matchDocumentLifecycle(operation, context, hints, opKey);
+        await this.matchDocumentLifecycle(operation, context, hints);
         await this.forgetDeletedWorkflow(operation, context);
         continue;
       }
@@ -1592,7 +1592,7 @@ export class WorkflowRuntimeService {
           registration.workflowId,
           payload,
           registration.kind,
-          opKey,
+          `op:${opKey}`,
         );
       }
       if (context.documentType === DRIVE_DOCUMENT_TYPE) {
@@ -1601,7 +1601,6 @@ export class WorkflowRuntimeService {
           operation.action.type,
           operation.action.input,
           { index: operation.index, timestampUtcMs: operation.timestampUtcMs },
-          opKey,
         );
       }
     }
@@ -1637,16 +1636,16 @@ export class WorkflowRuntimeService {
     workflowId: string,
     payload: unknown,
     kind: string,
-    opKey: string,
+    dedupeKey: string,
   ): Promise<void> {
-    const fireKey = JSON.stringify([workflowId, opKey]);
+    const fireKey = JSON.stringify([workflowId, dedupeKey]);
     const store = await this.store();
     if (this.unjournaledFires.has(fireKey)) {
       if (!store) return;
       try {
         await store.claimDedupe(
           workflowId,
-          `op:${opKey}`,
+          dedupeKey,
           OPERATION_DEDUPE_TTL_MS,
           new Date().toISOString(),
         );
@@ -1668,7 +1667,7 @@ export class WorkflowRuntimeService {
     let runId: string | null;
     try {
       runId = await store.claimAndEnqueueRun(
-        `op:${opKey}`,
+        dedupeKey,
         OPERATION_DEDUPE_TTL_MS,
         new Date().toISOString(),
         { workflowId, triggerKind: kind, triggerPayload: payload },
@@ -1711,8 +1710,8 @@ export class WorkflowRuntimeService {
     );
   }
 
-  // Fires once per document, from whichever source reports it first. Only a fire that
-  // matched is recorded, so a creation with an unknown drive leaves ADD_FILE its turn.
+  // Skips the second source of a lifecycle fire; the journal's per-document claim
+  // decides. Only a match is recorded, so an unknown drive leaves ADD_FILE its turn.
   private readonly firedLifecycle = new Set<string>();
   private readonly firedLifecycleQueue: string[] = [];
 
@@ -1761,7 +1760,6 @@ export class WorkflowRuntimeService {
       parentId: string | null;
       operation: { index: number; timestampUtcMs: string };
     },
-    opKey: string,
   ): Promise<void> {
     let matched = false;
     for (const target of this.lifecycleTargets(kind)) {
@@ -1775,7 +1773,14 @@ export class WorkflowRuntimeService {
         continue;
       }
       matched = true;
-      await this.enqueueFire(target.workflowId, payload, kind, opKey);
+      // Keyed on the document, not the operation: its CREATE_DOCUMENT and the
+      // drive's ADD_FILE project concurrently, and one claim must win.
+      await this.enqueueFire(
+        target.workflowId,
+        payload,
+        kind,
+        `lifecycle:${kind}:${payload.documentId}`,
+      );
     }
     if (matched) this.recordLifecycleFired(kind, payload.documentId);
   }
@@ -1869,7 +1874,6 @@ export class WorkflowRuntimeService {
     operation: OperationWithContext["operation"],
     context: OperationWithContext["context"],
     hints: Map<string, LifecycleParentHint>,
-    opKey: string,
   ): Promise<void> {
     const kind = lifecycleKindForDocumentAction(operation.action.type);
     if (!kind) return;
@@ -1885,26 +1889,22 @@ export class WorkflowRuntimeService {
     const driveId =
       hint?.driveId ?? (await this.driveIdFromParent(hint?.parentCandidate));
     const created = kind === "document-created";
-    await this.fireLifecycle(
-      kind,
-      {
-        documentId,
-        // CREATE_DOCUMENT names the model it creates; the stored context type
-        // answers for a deletion, where the document can no longer be read.
-        documentType:
-          (created ? stringField(input, "model") : undefined) ??
-          (context.documentType || null),
-        // Only a creation carries a name; a deleted document's name is gone.
-        name: stringField(input, "name") ?? null,
-        driveId: driveId ?? null,
-        parentId: hint?.parentId ?? null,
-        operation: {
-          index: operation.index,
-          timestampUtcMs: operation.timestampUtcMs,
-        },
+    await this.fireLifecycle(kind, {
+      documentId,
+      // CREATE_DOCUMENT names the model it creates; the stored context type
+      // answers for a deletion, where the document can no longer be read.
+      documentType:
+        (created ? stringField(input, "model") : undefined) ??
+        (context.documentType || null),
+      // Only a creation carries a name; a deleted document's name is gone.
+      name: stringField(input, "name") ?? null,
+      driveId: driveId ?? null,
+      parentId: hint?.parentId ?? null,
+      operation: {
+        index: operation.index,
+        timestampUtcMs: operation.timestampUtcMs,
       },
-      opKey,
-    );
+    });
   }
 
   // The drive's fallback view: ADD_FILE always accompanies a CREATE_DOCUMENT, so it fires only
@@ -1914,7 +1914,6 @@ export class WorkflowRuntimeService {
     actionType: string,
     input: unknown,
     operation: { index: number; timestampUtcMs: string },
-    opKey: string,
   ): Promise<void> {
     const kind = lifecycleKindForDriveAction(actionType);
     if (!kind) return;
@@ -1938,18 +1937,14 @@ export class WorkflowRuntimeService {
       }
     }
 
-    await this.fireLifecycle(
-      kind,
-      {
-        documentId,
-        documentType: documentType ?? null,
-        name,
-        driveId,
-        parentId: stringField(record, "parentFolder") ?? null,
-        operation,
-      },
-      opKey,
-    );
+    await this.fireLifecycle(kind, {
+      documentId,
+      documentType: documentType ?? null,
+      name,
+      driveId,
+      parentId: stringField(record, "parentFolder") ?? null,
+      operation,
+    });
   }
 
   private triggerSupervisor?: TriggerSupervisor;

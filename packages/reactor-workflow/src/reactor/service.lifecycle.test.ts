@@ -174,7 +174,11 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
       if (!documentType) return Promise.reject(new Error("not found"));
       return Promise.resolve({ header: { id, documentType, name: id } });
     };
-    service = testRuntime({ reactorClient: { get } } as never);
+    // Lifecycle claims are per document, and every test reuses DOC.
+    service = testRuntime({
+      reactorClient: { get },
+      relationalDb: createFreshRelationalDb(),
+    } as never);
     vi.spyOn(service, "fire").mockImplementation(
       (workflowId: string, payload?: unknown, kind = "manual") => {
         fired.push({ workflowId, payload, kind });
@@ -303,6 +307,27 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
         name: "Groceries",
         documentType: TODO_TYPE,
       }),
+    ]);
+    expect(fired).toHaveLength(1);
+  });
+
+  it("fires once when the document's and the drive's batches arrive together", async () => {
+    await register("wf-created", "document-created", {});
+    // The coordinator projects each document's batch on its own chain.
+    await Promise.all([
+      service.onOperations([
+        documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
+          documentId: DOC,
+          model: TODO_TYPE,
+        }),
+      ]),
+      service.onOperations([
+        globalOp(DRIVE, DRIVE_TYPE, "ADD_FILE", {
+          id: DOC,
+          name: "Groceries",
+          documentType: TODO_TYPE,
+        }),
+      ]),
     ]);
     expect(fired).toHaveLength(1);
   });
@@ -496,19 +521,16 @@ describe("document lifecycle triggers on an in-process reactor", () => {
 
     const added = await addModelDocument();
 
-    // Not an exact count: the document's and the drive's batches can race the
-    // in-memory dedupe, journaling the creation twice.
     const runs = await firstRuns("wf-real-created");
-    for (const run of runs) {
-      expect(run).toMatchObject({
-        kind: "document-created",
-        payload: {
-          documentId: added.header.id,
-          documentType: MODEL_TYPE,
-          driveId,
-        },
-      });
-    }
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({
+      kind: "document-created",
+      payload: {
+        documentId: added.header.id,
+        documentType: MODEL_TYPE,
+        driveId,
+      },
+    });
   });
 
   it("journals one run for a document removed from a drive", async () => {
