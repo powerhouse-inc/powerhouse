@@ -138,6 +138,35 @@ describe("resolveLocalPackageSources", () => {
     expect(names).toEqual(["pkg", PROJECT_PACKAGE_SOURCE_NAME]);
   });
 
+  it("sends the manifest and dev probes before either resolves", async () => {
+    vi.stubGlobal("window", { location: { origin: ORIGIN } });
+    const pending: { url: string; resolve: (res: Response) => void }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (input: URL | string) =>
+          new Promise<Response>((resolve) =>
+            pending.push({ url: String(input), resolve }),
+          ),
+      ),
+    );
+
+    const result = resolveLocalPackageSources("/");
+    await vi.waitFor(() => expect(pending).toHaveLength(2));
+
+    for (const { url, resolve } of pending) {
+      resolve(
+        url.includes(WORKER_PACKAGES_MANIFEST)
+          ? json([{ name: "pkg", file: "pkg.js" }])
+          : js(),
+      );
+    }
+    expect((await result).map((s) => s.name)).toEqual([
+      "pkg",
+      PROJECT_PACKAGE_SOURCE_NAME,
+    ]);
+  });
+
   it("is empty when there is no manifest and no dev models entry", async () => {
     installFetch(() => missing());
 

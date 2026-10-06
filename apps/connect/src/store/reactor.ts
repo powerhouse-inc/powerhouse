@@ -404,13 +404,16 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         return module;
       },
     };
-    // The production vendor's shared-deps table (null in dev / vendor-off
-    // builds): the worker rewrites shared imports in package sources to
-    // these absolute URLs and blob-imports the result.
-    const sharedImports = (await getSharedDeps())?.imports;
+    // sharedDeps is null in dev / vendor-off builds; packageSources are local
+    // models the registry cannot serve (prod prebuilds, or the live dev entry).
+    const [sharedDeps, packagedWorker, packageSources] = await Promise.all([
+      getSharedDeps(),
+      resolvePackagedReactorWorker(import.meta.env.BASE_URL),
+      resolveLocalPackageSources(import.meta.env.BASE_URL),
+    ]);
     const workerSource = selectReactorWorkerSource({
       packaged: isPackagedConnectDist(),
-      bundle: await resolvePackagedReactorWorker(import.meta.env.BASE_URL),
+      bundle: packagedWorker,
     });
     if (workerSource.kind === "unavailable") {
       window.ph.loading = false;
@@ -418,11 +421,6 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
       );
     }
-    // Local project models the registry cannot serve: prebuilt bundles in
-    // production, the dev server's live project models entry in dev.
-    const packageSources = await resolveLocalPackageSources(
-      import.meta.env.BASE_URL,
-    );
     const workerClient = createWorkerReactorClientModule({
       workerUrl: workerSource.kind === "bundle" ? workerSource.url : undefined,
       workerDigest:
@@ -432,7 +430,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
-      sharedImports,
+      sharedImports: sharedDeps?.imports,
       studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,

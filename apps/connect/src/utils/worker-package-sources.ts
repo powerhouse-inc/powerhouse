@@ -80,19 +80,19 @@ export async function resolveDevProjectSource(
 export async function resolveLocalPackageSources(
   baseUrl: string,
 ): Promise<WorkerPackageSource[]> {
-  const sources: WorkerPackageSource[] = [];
-  for (const entry of await fetchManifest(baseUrl)) {
-    sources.push({
-      name: entry.name,
-      version: entry.version,
-      url: joinBase(
-        baseUrl,
-        `${WORKER_PACKAGES_DIR}${entry.file}`,
-        window.location.origin,
-      ).href,
-    });
-  }
-  const devProject = await resolveDevProjectSource(baseUrl);
+  const [manifest, devProject] = await Promise.all([
+    fetchManifest(baseUrl),
+    resolveDevProjectSource(baseUrl),
+  ]);
+  const sources: WorkerPackageSource[] = manifest.map((entry) => ({
+    name: entry.name,
+    version: entry.version,
+    url: joinBase(
+      baseUrl,
+      `${WORKER_PACKAGES_DIR}${entry.file}`,
+      window.location.origin,
+    ).href,
+  }));
   if (devProject) {
     sources.push(devProject);
   }
