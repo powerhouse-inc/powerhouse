@@ -35,6 +35,7 @@ import {
   assertWorkflowPackageLoadable,
   hostPrincipalOf,
   isWorkflowSingletonConflict,
+  retryWorkflowSingleton,
   reactorAccessOf,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
@@ -495,6 +496,63 @@ describe("composeWorkflowRuntime", () => {
       owner: "thief",
     });
     expect(createWorkflowRuntime).not.toHaveBeenCalled();
+  });
+
+  // A rolling deploy whose slots have different owner names: the new pod is
+  // refused while the old one holds the lease, and must pick workflows up
+  // once the old pod releases it rather than leave nobody running them.
+  it("composes a refused host once the holder releases the singleton", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const holder = await compose(clientModule, {
+      relationalDb,
+      storageId: "/srv/slot-a",
+    });
+    const onComposed = vi.fn(() => Promise.resolve());
+    const retry = retryWorkflowSingleton({
+      compose: () => composeSecond(clientModule, relationalDb),
+      onComposed,
+      logger: stubLogger(),
+      intervalMs: 20,
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(onComposed).not.toHaveBeenCalled();
+
+      await holder.stop();
+
+      await vi.waitFor(() => expect(onComposed).toHaveBeenCalledOnce());
+      const [taken] = onComposed.mock.calls[0] as unknown as [
+        ComposedWorkflowRuntime,
+      ];
+      expect(taken.singletonOwner).not.toBe(holder.singletonOwner);
+      await taken.stop();
+    } finally {
+      await retry.stop();
+    }
+  });
+
+  it("stops retrying the claim when the host stops", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const holder = await compose(clientModule, {
+      relationalDb,
+      storageId: "/srv/slot-a",
+    });
+    const onComposed = vi.fn(() => Promise.resolve());
+    const retry = retryWorkflowSingleton({
+      compose: () => composeSecond(clientModule, relationalDb),
+      onComposed,
+      logger: stubLogger(),
+      intervalMs: 20,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    await retry.stop();
+    await holder.stop();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(onComposed).not.toHaveBeenCalled();
   });
 
   it("composes without a claim only when the host opts out", async () => {

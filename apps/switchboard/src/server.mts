@@ -100,6 +100,8 @@ import {
   assertWorkflowPackageLoadable,
   isWorkflowSingletonConflict,
   resolveWorkflowsEnabled,
+  retryWorkflowSingleton,
+  type WorkflowSingletonRetry,
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
 } from "./workflow-runtime.mjs";
@@ -1013,60 +1015,45 @@ async function initServer(
   // The workflow runtime is a switchboard component: composed from what the
   // api handed back, registered like any other late subgraph.
   let workflows: ComposedWorkflowRuntime | undefined;
-  if (workflowsEnabled) {
-    try {
-      workflows = await composeWorkflowRuntime({
-        reactorClient: client,
-        clientModule: options.reactor ?? ownedReactorModule,
-        relationalDb: api.relationalDb,
-        // A Postgres read model outlives the pod; a key file beside it would not.
-        secretsKeyFile: readModelPgliteDir === null ? false : undefined,
-        // The stable half of the default singleton owner name. Absolute, so
-        // two Switchboards in different working directories differ.
-        storageId:
-          readModelPgliteDir === null
-            ? readModelPath
-            : path.resolve(readModelPath),
-        attachments: createAttachmentClient(api.attachments.service),
-        // The workflow package's own HTTP namespace: its webhook endpoints live
-        // under it, not under the reactor's.
-        webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
-        http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
-        authorizationService: api.authorizationService,
-        // The manager that already loads this reactor's packages: the project it
-        // runs in is one of them, so its own pieces arrive with the rest.
-        pieces: api.packageManager,
-        pieceRegistryUrl: registryUrl,
-        models: workerModels,
-        logger: logger.child(["workflow-runtime"]),
-        // No re-claim: re-arming needs a fresh compose, so workflows come
-        // back on the next boot.
-        onSingletonLost: (heldBy) => {
-          logger.error(
-            `Another process ("${heldBy ?? "unknown"}") took the workflow ` +
-              "singleton. This Switchboard has stopped its workflow runtime " +
-              "and runs no workflows until it is restarted; everything else " +
-              "serves normally.",
-          );
-        },
-      });
-    } catch (error) {
-      // Without the claim this host must not run workflows, but everything
-      // else it serves still works, so it boots without the runtime.
-      if (!isWorkflowSingletonConflict(error)) throw error;
-      logger.warn(
-        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
-          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
-          "This Switchboard has booted WITHOUT the workflow runtime: no " +
-          "trigger of any kind fires here, and the workflow GraphQL face is " +
-          "absent. Everything else serves normally. Stop the other owner, or " +
-          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
-          "slot that owns workflows, then restart this one to pick them up.",
-      );
-    }
-  }
-  if (workflows) {
-    const WorkflowRuntimeSubgraph = workflows.subgraph;
+  let workflowsRetry: WorkflowSingletonRetry | undefined;
+  const composeWorkflows = () =>
+    composeWorkflowRuntime({
+      reactorClient: client,
+      clientModule: options.reactor ?? ownedReactorModule,
+      relationalDb: api.relationalDb,
+      // A Postgres read model outlives the pod; a key file beside it would not.
+      secretsKeyFile: readModelPgliteDir === null ? false : undefined,
+      // The stable half of the default singleton owner name. Absolute, so
+      // two Switchboards in different working directories differ.
+      storageId:
+        readModelPgliteDir === null
+          ? readModelPath
+          : path.resolve(readModelPath),
+      attachments: createAttachmentClient(api.attachments.service),
+      // The workflow package's own HTTP namespace: its webhook endpoints live
+      // under it, not under the reactor's.
+      webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
+      http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+      authorizationService: api.authorizationService,
+      // The manager that already loads this reactor's packages: the project it
+      // runs in is one of them, so its own pieces arrive with the rest.
+      pieces: api.packageManager,
+      pieceRegistryUrl: registryUrl,
+      models: workerModels,
+      logger: logger.child(["workflow-runtime"]),
+      // No re-claim: re-arming needs a fresh compose, so workflows come
+      // back on the next boot.
+      onSingletonLost: (heldBy) => {
+        logger.error(
+          `Another process ("${heldBy ?? "unknown"}") took the workflow ` +
+            "singleton. This Switchboard has stopped its workflow runtime " +
+            "and runs no workflows until it is restarted; everything else " +
+            "serves normally.",
+        );
+      },
+    });
+  const registerWorkflowSubgraph = (composed: ComposedWorkflowRuntime) => {
+    const WorkflowRuntimeSubgraph = composed.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
       reactorClient: client,
       http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
@@ -1078,18 +1065,46 @@ async function initServer(
       path: graphqlManager.getBasePath(),
       attachments: api.attachmentClientProvider,
     });
-
-    lateSubgraphs.push(
-      graphqlManager
-        .registerSubgraphInstance(workflowSubgraph, "graphql", false)
-        .catch((error: unknown) => {
-          logger.error(
-            "Failed to register workflow-runtime subgraph: @error",
-            error,
-          );
-        }),
-    );
-
+    return graphqlManager
+      .registerSubgraphInstance(workflowSubgraph, "graphql", false)
+      .catch((error: unknown) => {
+        logger.error(
+          "Failed to register workflow-runtime subgraph: @error",
+          error,
+        );
+      });
+  };
+  if (workflowsEnabled) {
+    try {
+      workflows = await composeWorkflows();
+    } catch (error) {
+      // Without the claim this host must not run workflows, but everything
+      // else it serves still works, so it boots without the runtime.
+      if (!isWorkflowSingletonConflict(error)) throw error;
+      logger.warn(
+        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
+          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
+          "This Switchboard has booted WITHOUT the workflow runtime: no " +
+          "trigger of any kind fires here, and the workflow GraphQL face is " +
+          "absent. Everything else serves normally. Stop the other owner, or " +
+          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
+          "slot that owns workflows. This Switchboard retries the claim and " +
+          "starts workflows once the lease comes free.",
+      );
+      workflowsRetry = retryWorkflowSingleton({
+        compose: composeWorkflows,
+        onComposed: async (composed) => {
+          workflows = composed;
+          await registerWorkflowSubgraph(composed);
+          await composed.start();
+          logger.info("Workflow runtime started");
+        },
+        logger,
+      });
+    }
+  }
+  if (workflows) {
+    lateSubgraphs.push(registerWorkflowSubgraph(workflows));
     await workflows.start();
     logger.info("Workflow runtime started");
   }
@@ -1112,6 +1127,7 @@ async function initServer(
         logger: logger.child(["privacy"]),
       });
     } catch (error) {
+      await workflowsRetry?.stop();
       await workflows?.stop();
       await abortBoot(api);
       throw error;
@@ -1122,6 +1138,7 @@ async function initServer(
   // that dispose closes, and its children outlive the reactor otherwise.
   const shutdown = async () => {
     await privacy?.stop();
+    await workflowsRetry?.stop();
     await workflows?.stop();
     await api.dispose();
   };

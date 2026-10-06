@@ -141,6 +141,83 @@ export function isWorkflowSingletonConflict(
   );
 }
 
+/** How often a host refused the singleton at boot tries the claim again: the
+ * engine's renewal period. */
+export const WORKFLOW_SINGLETON_RETRY_MS = 20_000;
+
+export interface WorkflowSingletonRetry {
+  /** Stops retrying; waits for an attempt in flight, and stops what it
+   * composed if the host is going away. */
+  stop(): Promise<void>;
+}
+
+/**
+ * Retries the singleton claim for a host that booted without it, and hands
+ * the runtime over once a claim succeeds.
+ *
+ * Without it a rolling deploy whose slots have different owner names ends
+ * with nobody running workflows: the new pod is refused while the old one
+ * still holds the lease, and nothing retries once the old pod releases it.
+ * Only for a host that never composed; one that lost the lease after
+ * composing stays without workflows until it restarts.
+ */
+export function retryWorkflowSingleton(options: {
+  compose: () => Promise<ComposedWorkflowRuntime>;
+  onComposed: (workflows: ComposedWorkflowRuntime) => Promise<void>;
+  logger: ILogger;
+  intervalMs?: number;
+}): WorkflowSingletonRetry {
+  const intervalMs = options.intervalMs ?? WORKFLOW_SINGLETON_RETRY_MS;
+  let stopped = false;
+  let timer: NodeJS.Timeout | undefined;
+  let attempt: Promise<void> | undefined;
+
+  const run = async () => {
+    let workflows: ComposedWorkflowRuntime;
+    try {
+      workflows = await options.compose();
+    } catch (error) {
+      if (!isWorkflowSingletonConflict(error)) {
+        options.logger.error(
+          "Composing the workflow runtime after the singleton came free failed: @error",
+          error,
+        );
+      }
+      schedule();
+      return;
+    }
+    if (stopped) {
+      await workflows.stop();
+      return;
+    }
+    options.logger.info(
+      "Claimed the workflow singleton after boot; starting the workflow runtime",
+    );
+    await options.onComposed(workflows);
+  };
+
+  const schedule = () => {
+    if (stopped) return;
+    timer = setTimeout(() => {
+      timer = undefined;
+      attempt = run().finally(() => {
+        attempt = undefined;
+      });
+    }, intervalMs);
+    timer.unref();
+  };
+
+  schedule();
+  return {
+    async stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      timer = undefined;
+      await attempt?.catch(() => undefined);
+    },
+  };
+}
+
 /** The importable models piece workers load: the boot list, and a type's entries. */
 export interface ModelManifestSource {
   modelManifest(): ModelManifestEntry[];

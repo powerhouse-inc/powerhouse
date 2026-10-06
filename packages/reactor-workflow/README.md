@@ -128,7 +128,10 @@ the sweeps and the supervisor are per process.
   workflows against a journal a live process owns; aborting the whole boot over
   it turned "not allowed to run one component" into an outage — and, with a
   random owner name, into a crash loop for the TTL after every unclean kill.
-  Workflows come back on the next boot once the lease is claimable.
+  The host retries the claim every 20s and starts workflows once it succeeds,
+  so a rolling deploy whose slots have different owner names does not end
+  with nobody running them. This is only for a host that never composed: one
+  that lost the lease after composing stays without workflows until restart.
 - **The default owner is stable**: `<hostname>/<fingerprint of the journal's
   storage location>`. So one deployment slot restarting re-claims its OWN lease
   once the killed process's heartbeat is stale (40s) rather than waiting out
