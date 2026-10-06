@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely, sql } from "kysely";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   HardenedPGliteDialect,
   isLongRunningStatement,
@@ -100,6 +100,42 @@ describe("HardenedPGliteDialect", () => {
 
     const after = await sql<{ x: number }>`select 1 as x`.execute(db);
     expect(after.rows).toEqual([{ x: 1 }]);
+  });
+
+  it("lets a waiter wait out a long-held lease by default", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(pg, { onDiagnostic: () => undefined }),
+    });
+    open.push({ db, pg });
+    await sql`create table t (id int primary key)`.execute(db);
+
+    let release = () => undefined as void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const holder = db.transaction().execute(async (trx) => {
+        await sql`insert into t (id) values (1)`.execute(trx);
+        await held;
+        return "held";
+      });
+      await vi.advanceTimersByTimeAsync(10);
+      const waiter = sql<Row>`select id from t`.execute(db).then(
+        (result) => result.rows,
+        (error: unknown) => error,
+      );
+
+      await vi.advanceTimersByTimeAsync(30 * 60_000);
+      release();
+
+      await expect(holder).resolves.toBe("held");
+      await expect(waiter).resolves.toEqual([{ id: 1 }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("refuses a session no rollback can clear, naming the original error", async () => {

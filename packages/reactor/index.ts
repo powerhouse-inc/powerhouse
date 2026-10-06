@@ -322,7 +322,6 @@ export {
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
 export {
-  DEFAULT_ACQUIRE_TIMEOUT_MS,
   DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
   DEFAULT_RECOVERY_TIMEOUT_MS,
   DEFAULT_STATEMENT_TIMEOUT_MS,

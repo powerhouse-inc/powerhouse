@@ -24,7 +24,7 @@ export type PGliteSession = {
 };
 
 export type HardenedPGliteDialectOptions = {
-  /** Bound on waiting for the single PGlite lease; 0 disables it. */
+  /** Opt-in bound on waiting for the single PGlite lease; 0 (the default) waits indefinitely. */
   acquireTimeoutMs: number;
   /** Bound on one statement that neither resolves nor rejects (a dead wasm call); 0 disables it. */
   statementTimeoutMs: number;
@@ -35,8 +35,6 @@ export type HardenedPGliteDialectOptions = {
   /** Where unrecoverable session faults and swallowed rollbacks are reported. */
   onDiagnostic: (message: string, error?: unknown) => void;
 };
-
-export const DEFAULT_ACQUIRE_TIMEOUT_MS = 120_000;
 
 export const DEFAULT_STATEMENT_TIMEOUT_MS = 120_000;
 
@@ -183,7 +181,7 @@ export class HardenedPGliteDialect implements Dialect {
   ) {
     this.inner = new PGliteDialect(client as never);
     this.options = {
-      acquireTimeoutMs: options.acquireTimeoutMs ?? DEFAULT_ACQUIRE_TIMEOUT_MS,
+      acquireTimeoutMs: options.acquireTimeoutMs ?? 0,
       statementTimeoutMs:
         options.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS,
       longStatementTimeoutMs:
