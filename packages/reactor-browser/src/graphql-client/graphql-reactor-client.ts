@@ -610,6 +610,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     for (const entry of result.executeBatch.jobs) {
       jobs[entry.key] = jobInfoFromGql(entry.job);
     }
+    await this.announceBatch(request, jobs, signal);
     const failed = request.jobs.find(
       (job) => (jobs[job.key]?.status as string | undefined) === "FAILED",
     );
@@ -686,6 +687,77 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       branch,
       [actions.setPreferredEditor(preferredEditor)],
       signal,
+    );
+  }
+
+  /**
+   * Emits the changes the batch's settled jobs made, as `create` and `execute`
+   * do, so a cache is invalidated without a realtime socket. The documents a
+   * job wrote to are its own and those its consistency token names.
+   */
+  private async announceBatch(
+    request: BatchExecutionRequest,
+    jobs: Record<string, JobInfo>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const deleted = new Set<string>();
+    const created = new Set<string>();
+    const touched = new Set<string>();
+    for (const job of request.jobs) {
+      const info = jobs[job.key] as JobInfo | undefined;
+      if (!info || (info.status as string) !== "READ_READY") continue;
+      const types = new Set(job.actions.map((action) => action.type));
+      if (types.has("DELETE_DOCUMENT")) {
+        deleted.add(info.documentId);
+        continue;
+      }
+      if (types.has("CREATE_DOCUMENT")) {
+        created.add(info.documentId);
+      }
+      touched.add(info.documentId);
+      for (const coordinate of info.consistencyToken.coordinates) {
+        touched.add(coordinate.documentId);
+      }
+    }
+
+    for (const documentId of deleted) {
+      this.emitChange({
+        type: DOCUMENT_CHANGE_TYPE.Deleted,
+        documents: [],
+        context: { childId: documentId },
+      });
+    }
+
+    const read = async (documentId: string) => {
+      try {
+        return await this.get(documentId, undefined, signal);
+      } catch (error) {
+        logger.warn(
+          "GraphQLReactorClient: could not read @documentId to announce a batch change: @error",
+          documentId,
+          error,
+        );
+        return undefined;
+      }
+    };
+    const announce = async (
+      type: DocumentChangeType,
+      documentIds: string[],
+    ) => {
+      const documents = (await Promise.all(documentIds.map(read))).filter(
+        (document) => document !== undefined,
+      );
+      if (documents.length > 0) {
+        this.emitChange({ type, documents });
+      }
+    };
+    await announce(
+      DOCUMENT_CHANGE_TYPE.Created,
+      [...created].filter((id) => !deleted.has(id)),
+    );
+    await announce(
+      DOCUMENT_CHANGE_TYPE.Updated,
+      [...touched].filter((id) => !deleted.has(id) && !created.has(id)),
     );
   }
 

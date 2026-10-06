@@ -1,4 +1,7 @@
-import type { BatchExecutionRequest } from "@powerhousedao/reactor";
+import type {
+  BatchExecutionRequest,
+  DocumentChangeEvent,
+} from "@powerhousedao/reactor";
 import type {
   Action,
   ISigner,
@@ -376,6 +379,66 @@ describe("GraphQLReactorClient.executeBatch", () => {
       branch: "main",
     });
     expect(batchVariables(sdk).jobs[0].documentIdOrSlug).toBe("drive-1");
+  });
+
+  it("announces the documents a batch changed and deleted", async () => {
+    const sdk = createMockSdk({});
+    const client = createClientWith(sdk, { realtime: false });
+    const events: DocumentChangeEvent[] = [];
+    client.subscribe({}, (event) => events.push(event));
+
+    await client.executeBatch(removeFileBatch);
+
+    expect(
+      events.map((event) => ({
+        type: event.type,
+        ids: event.documents.map((document) => document.header.id),
+        childId: event.context?.childId,
+      })),
+    ).toEqual([
+      { type: "deleted", ids: [], childId: "file-1" },
+      { type: "updated", ids: ["drive-1"], childId: undefined },
+    ]);
+  });
+
+  it("announces a document a batch created", async () => {
+    const sdk = createMockSdk({
+      ExecuteBatch: vi.fn().mockResolvedValue({
+        executeBatch: {
+          jobs: [{ key: "document", job: serverJob("job-doc", "new-doc") }],
+        },
+      }),
+    });
+    const client = createClientWith(sdk, { realtime: false });
+    const events: DocumentChangeEvent[] = [];
+    client.subscribe({}, (event) => events.push(event));
+
+    await client.executeBatch({
+      jobs: [
+        {
+          key: "document",
+          documentId: "new-doc",
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "act-create",
+              type: "CREATE_DOCUMENT",
+              timestampUtcMs: "1700000007000",
+              input: { documentId: "new-doc" },
+              scope: "document",
+            },
+          ],
+          dependsOn: [],
+        },
+      ],
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe("created");
+    expect(events[0].documents.map((document) => document.header.id)).toEqual([
+      "new-doc",
+    ]);
   });
 
   it("rejects when the mutation fails", async () => {
