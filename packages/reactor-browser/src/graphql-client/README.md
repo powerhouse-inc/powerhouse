@@ -12,6 +12,12 @@ editor-module hooks find nothing - see [Limitations](#limitations). An app below
 this provider renders the components it imports itself and builds its own
 actions.
 
+The client needs a Switchboard that serves document `meta` and
+`protocolVersions`, the full `JobInfo` and `executeBatch`. Every document read
+or write (`get`, `find`, `create`, `execute`, relationships, subscriptions)
+selects the document fields, and `waitForJob` and `executeBatch` select the job
+fields, so against an older Switchboard every call fails on the unknown fields.
+
 ## Mounting it
 
 ```tsx
@@ -182,9 +188,7 @@ interface:
 | `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Throw `GraphQLOperationNotSupportedError`: the Switchboard exposes neither.                                                                          |
 
 `drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
-module getters are not implemented here. The members above need a Switchboard
-that serves `executeBatch`, document `meta`/`protocolVersions` and the full
-`JobInfo`.
+module getters are not implemented here.
 
 Plus what only this client has:
 
