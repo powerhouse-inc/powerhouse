@@ -113,11 +113,14 @@ the sweeps and the supervisor are per process.
   naming the holder, stops renewing and calls `onLost`. The host shuts the
   runtime down: no trigger, webhook or manual run starts after that, and the
   host reports its triggers unavailable. It does not re-claim; workflows come
-  back on the next boot, since re-arming needs a fresh compose. A renewal that
-  fails with a database error is not a loss: the lease and the journal share
-  one database, so the next tick retries.
+  back on the next boot, since re-arming needs a fresh compose.
+- A renewal that fails or hangs is retried every 5s. A holder that has gone
+  30s without a renewal it knows landed reports itself lost the same way,
+  before a stale same-owner claim (40s) or expiry (60s) could take the lease:
+  journal writes are best-effort, so it would otherwise keep running
+  workflows beside the next owner.
 - Nothing fences the journal itself: writes do not check the lease, so a
-  process keeps writing until its next heartbeat (up to 20s) notices the loss.
+  process keeps writing until it notices the loss.
 - **A refused claim does not take the API down.** The host boots WITHOUT the
   workflow runtime and warns, naming the current owner: no trigger fires here
   and the workflow GraphQL face is absent, while inspection, GraphQL, sync, MCP

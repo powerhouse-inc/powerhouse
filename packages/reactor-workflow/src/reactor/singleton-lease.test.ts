@@ -124,36 +124,43 @@ describe("the workflow singleton lease", () => {
 
   it("renews from the moment it is claimed, before any host start", async () => {
     const { relationalDb, age } = fixture();
+    // Periods long enough that a busy test machine never trips the
+    // self-fence (heartbeat 500ms puts it at 750ms of silence).
+    const ttlMs = 10_000;
     const lease = await acquireWorkflowSingletonLease({
       relationalDb,
       logger: silent,
       owner: "alpha",
-      ttlMs: 1_000,
-      heartbeatMs: 5,
+      ttlMs,
+      heartbeatMs: 500,
     });
     try {
       const db = await leaseTable(relationalDb);
-      await age(900);
+      // Already expired: only a renewal can make it live again.
+      await age(ttlMs + 1_000);
       const aged = await db
         .selectFrom("workflow_singleton")
         .select("expires_at")
         .executeTakeFirstOrThrow();
-      await vi.waitFor(async () => {
-        const row = await db
-          .selectFrom("workflow_singleton")
-          .select("expires_at")
-          .executeTakeFirstOrThrow();
-        expect(new Date(row.expires_at).getTime()).toBeGreaterThan(
-          new Date(aged.expires_at).getTime() + 500,
-        );
-      });
+      await vi.waitFor(
+        async () => {
+          const row = await db
+            .selectFrom("workflow_singleton")
+            .select("expires_at")
+            .executeTakeFirstOrThrow();
+          expect(new Date(row.expires_at).getTime()).toBeGreaterThan(
+            new Date(aged.expires_at).getTime() + ttlMs / 2,
+          );
+        },
+        { timeout: 3_000 },
+      );
 
       await expect(
         acquireWorkflowSingletonLease({
           relationalDb,
           logger: silent,
           owner: "beta",
-          ttlMs: 1_000,
+          ttlMs,
         }),
       ).rejects.toBeInstanceOf(WorkflowSingletonConflictError);
     } finally {
@@ -314,4 +321,154 @@ describe("two processes under one owner name", () => {
       expect(await newPod.heartbeat()).toBe(true);
     },
   );
+});
+
+type UpdateFault = (run: () => Promise<unknown>) => Promise<unknown>;
+
+// The lease's namespace, with every UPDATE (the renewal) routed through a
+// fault: a database that errors, hangs, or answers late.
+function withUpdateFault(
+  relationalDb: IRelationalDb,
+  fault: () => UpdateFault | undefined,
+): IRelationalDb {
+  const wrapBuilder = (builder: object): object =>
+    new Proxy(builder, {
+      get(target, prop) {
+        const value = Reflect.get(target, prop) as unknown;
+        if (typeof value !== "function") return value;
+        if (prop === "executeTakeFirst" || prop === "execute") {
+          return (...args: unknown[]) => {
+            const run = () =>
+              (value as (...a: unknown[]) => Promise<unknown>).apply(
+                target,
+                args,
+              );
+            const active = fault();
+            return active ? active(run) : run();
+          };
+        }
+        return (...args: unknown[]) => {
+          const result = (value as (...a: unknown[]) => unknown).apply(
+            target,
+            args,
+          );
+          return typeof result === "object" && result !== null
+            ? wrapBuilder(result)
+            : result;
+        };
+      },
+    });
+  return new Proxy(relationalDb, {
+    get(target, prop) {
+      if (prop === "createNamespace") {
+        return async (name: string) => {
+          const db = await target.createNamespace(name);
+          return new Proxy(db, {
+            get(inner, key) {
+              const value = Reflect.get(inner, key) as unknown;
+              if (key === "updateTable" && typeof value === "function") {
+                return (...args: unknown[]) =>
+                  wrapBuilder(
+                    (value as (...a: unknown[]) => object).apply(inner, args),
+                  );
+              }
+              return typeof value === "function"
+                ? (value as (...a: unknown[]) => unknown).bind(inner)
+                : value;
+            },
+          });
+        };
+      }
+      const value = Reflect.get(target, prop) as unknown;
+      return typeof value === "function"
+        ? (value as (...a: unknown[]) => unknown).bind(target)
+        : value;
+    },
+  });
+}
+
+// The journal's writes are best-effort, so a holder that cannot renew keeps
+// running workflows unless it stops itself before anyone may take over.
+describe("a holder that cannot renew", () => {
+  const faults: [string, UpdateFault][] = [
+    [
+      "errors",
+      () => Promise.reject(new Error("connection terminated unexpectedly")),
+    ],
+    ["hangs", () => new Promise(() => undefined)],
+  ];
+
+  it.each(faults)(
+    "reports itself lost before the lease can be taken when the database %s",
+    async (_, failure) => {
+      const relationalDb = createFreshRelationalDb();
+      let broken = false;
+      const lost = vi.fn();
+      // Heartbeat 500ms: the fence at 750ms of silence, stale at 1s.
+      const ttlMs = 5_000;
+      const heartbeatMs = 500;
+      const lease = await acquireWorkflowSingletonLease({
+        relationalDb: withUpdateFault(relationalDb, () =>
+          broken ? failure : undefined,
+        ),
+        logger: silent,
+        owner: "alpha",
+        ttlMs,
+        heartbeatMs,
+        onLost: lost,
+      });
+      try {
+        // Renewing normally, it holds on for several renewal periods.
+        await new Promise((resolve) => setTimeout(resolve, heartbeatMs * 4));
+        expect(lost).not.toHaveBeenCalled();
+
+        broken = true;
+        const brokeAt = Date.now();
+        await vi.waitFor(() => expect(lost).toHaveBeenCalledTimes(1), {
+          timeout: ttlMs,
+        });
+        // Before a stale same-owner claim could take it over.
+        expect(Date.now() - brokeAt).toBeLessThan(
+          heartbeatMs * SINGLETON_STALE_HEARTBEATS,
+        );
+        expect(lost).toHaveBeenCalledWith(undefined);
+      } finally {
+        broken = false;
+        await lease.release();
+      }
+    },
+  );
+});
+
+describe("releasing while a renewal is in flight", () => {
+  it("is not reported as a lost lease", async () => {
+    const relationalDb = createFreshRelationalDb();
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => (open = resolve));
+    let gated = false;
+    const lost = vi.fn();
+    const lease = await acquireWorkflowSingletonLease({
+      relationalDb: withUpdateFault(relationalDb, () =>
+        gated ? (run) => gate.then(run) : undefined,
+      ),
+      logger: silent,
+      owner: "alpha",
+      onLost: lost,
+    });
+    gated = true;
+
+    const renewing = lease.heartbeat();
+    const releasing = lease.release();
+    setTimeout(open, 20);
+    await Promise.all([renewing, releasing]);
+
+    expect(lost).not.toHaveBeenCalled();
+    // And the release went through: the lease is free.
+    const next = await acquireWorkflowSingletonLease({
+      relationalDb,
+      logger: silent,
+      owner: "beta",
+    });
+    await next.release();
+  });
 });

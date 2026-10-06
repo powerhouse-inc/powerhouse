@@ -257,6 +257,7 @@ export async function acquireWorkflowSingletonLease(
     return taken !== undefined;
   };
 
+  const claimSentAt = performance.now();
   if (!(await claim())) {
     const held = await db
       .selectFrom("workflow_singleton")
@@ -273,19 +274,53 @@ export async function acquireWorkflowSingletonLease(
     `Workflow singleton claimed by "${owner}" (lease ${ttlMs}ms, renewed every ${heartbeatMs}ms)`,
   );
 
+  // Local monotonic time, never compared with the database's: only how long
+  // this process has gone without a renewal it knows landed.
+  const localNow = () => performance.now();
+  const tickMs = heartbeatMs / 4;
+  // Before anyone may take the lease: a stale same-owner claim, or expiry.
+  const takeableAfterMs = Math.min(staleMs, ttlMs);
+  const fenceMs = takeableAfterMs - Math.min(heartbeatMs, ttlMs) / 2;
+  let renewedAt = claimSentAt;
+  let renewFailed = false;
+  let inFlight: Promise<boolean> | undefined;
   let timer: NodeJS.Timeout | undefined;
   let lost = false;
+  let releasing = false;
 
   const stop = () => {
     if (timer) clearInterval(timer);
     timer = undefined;
   };
 
-  // Idempotent: two renewals in flight can both find the lease gone.
-  const markLost = async () => {
+  const markLost = (heldBy: string | undefined, why: string) => {
     if (lost) return;
     lost = true;
     stop();
+    log.error(
+      `Workflow singleton lease of "${owner}" ${why}; this process no ` +
+        "longer owns workflow execution and stops running it.",
+    );
+    options.onLost?.(heldBy);
+  };
+
+  // Keyed on the instance as well as the owner: under a stable owner name an
+  // old process must never renew a newer process's claim.
+  const renew = async (): Promise<boolean> => {
+    const sentAt = localNow();
+    const renewed = await db
+      .updateTable("workflow_singleton")
+      .set(stamps())
+      .where("id", "=", LEASE_ID)
+      .where("owner", "=", owner)
+      .where("instance", "=", instance)
+      .returning("owner")
+      .executeTakeFirst();
+    if (renewed !== undefined) {
+      renewedAt = sentAt;
+      return true;
+    }
+    if (releasing || lost) return false;
     let heldBy: string | undefined;
     try {
       const held = await db
@@ -297,40 +332,45 @@ export async function acquireWorkflowSingletonLease(
     } catch {
       heldBy = undefined;
     }
-    log.error(
-      `Workflow singleton lease of "${owner}" is now held by ` +
-        `"${heldBy ?? "nobody"}"; this process no longer owns workflow ` +
-        "execution and stops running it.",
-    );
-    options.onLost?.(heldBy);
+    markLost(heldBy, `is now held by "${heldBy ?? "nobody"}"`);
+    return false;
   };
 
-  // Keyed on the instance as well as the owner: under a stable owner name an
-  // old process must never renew a newer process's claim.
-  const heartbeat = async (): Promise<boolean> => {
-    if (lost) return false;
-    const renewed = await db
-      .updateTable("workflow_singleton")
-      .set(stamps())
-      .where("id", "=", LEASE_ID)
-      .where("owner", "=", owner)
-      .where("instance", "=", instance)
-      .returning("owner")
-      .executeTakeFirst();
-    if (renewed !== undefined) return true;
-    await markLost();
-    return false;
+  const heartbeat = (): Promise<boolean> => {
+    if (lost) return Promise.resolve(false);
+    inFlight ??= renew().finally(() => {
+      inFlight = undefined;
+    });
+    return inFlight;
   };
 
   // From the claim, not from the host's start: composing can outlast the TTL.
   timer = setInterval(() => {
-    // A failed renewal is not a lost lease: the lease and the journal share
-    // one database, so a process that cannot renew cannot write either. The
-    // next tick retries.
-    heartbeat().catch((error: unknown) => {
-      log.warn("Workflow singleton heartbeat failed: @error", error);
-    });
-  }, heartbeatMs);
+    if (lost || releasing) return;
+    const silentMs = localNow() - renewedAt;
+    // Checked even while a renewal hangs: journal writes are best-effort, so
+    // a holder that cannot renew would otherwise keep running workflows.
+    if (silentMs >= fenceMs) {
+      markLost(
+        undefined,
+        `could not be renewed for ${Math.round(silentMs)}ms and may be ` +
+          "taken over",
+      );
+      return;
+    }
+    if (inFlight) return;
+    // A failed renewal retries every tick rather than every period.
+    if (!renewFailed && silentMs < heartbeatMs - tickMs / 2) return;
+    heartbeat().then(
+      () => {
+        renewFailed = false;
+      },
+      (error: unknown) => {
+        renewFailed = true;
+        log.warn("Workflow singleton heartbeat failed: @error", error);
+      },
+    );
+  }, tickMs);
   // The claim must not be what keeps the process alive.
   timer.unref();
 
@@ -338,7 +378,16 @@ export async function acquireWorkflowSingletonLease(
     owner,
     heartbeat,
     async release() {
+      releasing = true;
       stop();
+      if (lost) return;
+      // A renewal answered after the DELETE would read as a lost lease.
+      if (inFlight) {
+        await Promise.race([
+          inFlight.catch(() => false),
+          new Promise((resolve) => setTimeout(resolve, tickMs).unref()),
+        ]);
+      }
       if (lost) return;
       try {
         await db

@@ -388,7 +388,10 @@ describe("composeWorkflowRuntime", () => {
     let newer:
       | Awaited<ReturnType<typeof engine.acquireWorkflowSingletonLease>>
       | undefined;
-    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    // The lease measures its silence on performance.now().
+    vi.useFakeTimers({
+      toFake: ["setInterval", "clearInterval", "performance"],
+    });
     try {
       const workflows = await compose(clientModule, {
         relationalDb,
