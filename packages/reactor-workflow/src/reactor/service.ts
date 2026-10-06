@@ -279,7 +279,18 @@ import {
   type TriggerKind,
 } from "./trigger-filters.js";
 
-export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
+/** Why a firing was journaled CANCELLED without running, when it was. */
+export type FiringRefusal =
+  | "parked"
+  | "singleton"
+  | "stale"
+  | "queue-full"
+  | "expired";
+
+export type PersistedRunResult = WorkflowRunResult & {
+  runId: string | null;
+  refusal?: FiringRefusal;
+};
 
 // The piece a resolved block type loads.
 function targetOf(block: ParsedBlockType): PieceTarget {
@@ -660,6 +671,23 @@ function parseWorkflowState(
 }
 
 // What a registration is decided from, so a draft edit can be told apart.
+// A sync webhook's answer to a firing that did not succeed. A deliberate
+// refusal is a 409 and an overloaded lane a 429, so a provider does not retry
+// either as a server error; anything else is one.
+function refusalStatus(refusal: FiringRefusal | undefined): number {
+  switch (refusal) {
+    case "parked":
+    case "singleton":
+    case "stale":
+      return 409;
+    case "queue-full":
+    case "expired":
+      return 429;
+    default:
+      return 500;
+  }
+}
+
 // Runs an operator started rather than a trigger fired.
 const OPERATOR_RUN_KINDS: ReadonlySet<string> = new Set(["manual", "rerun"]);
 
@@ -2324,7 +2352,10 @@ export class WorkflowRuntimeService {
     }
 
     return {
-      status: run.result.status === "SUCCEEDED" ? config.responseStatus : 500,
+      status:
+        run.result.status === "SUCCEEDED"
+          ? config.responseStatus
+          : refusalStatus(run.result.refusal),
       contentType: JSON_CONTENT_TYPE,
       body: JSON.stringify({
         runId: run.result.runId,
@@ -3970,14 +4001,20 @@ export class WorkflowRuntimeService {
     const deadline = policy.runTimeoutSeconds
       ? firedAt + policy.runTimeoutSeconds * 1000
       : undefined;
-    const skipped = (reason: string) =>
-      this.skipFiring(store, workflowId, enqueuedRunId, {
-        reason,
-        triggerKind,
-        triggerPayload,
-        workflowName: runJournalName(state.name, documentName),
-        workflowVersion: runnable.version,
-      });
+    const skipped = (reason: string, refusal: FiringRefusal) =>
+      this.skipFiring(
+        store,
+        workflowId,
+        enqueuedRunId,
+        {
+          reason,
+          triggerKind,
+          triggerPayload,
+          workflowName: runJournalName(state.name, documentName),
+          workflowVersion: runnable.version,
+        },
+        refusal,
+      );
     let parked: string | undefined;
     try {
       parked = await this.parkedFiring(
@@ -3997,9 +4034,11 @@ export class WorkflowRuntimeService {
       }
       throw error;
     }
-    if (parked) return skipped(parked);
+    if (parked) return skipped(parked, "parked");
     const admission = await this.runGate.admit(workflowId, policy);
-    if (!admission.admitted) return skipped(admission.reason);
+    if (!admission.admitted) {
+      return skipped(admission.reason, admission.refusal);
+    }
     // A firing that queued read the workflow before it waited: disabled,
     // re-published or parked meanwhile, it must not run on that old read.
     if (admission.waited) {
@@ -4018,7 +4057,7 @@ export class WorkflowRuntimeService {
       }
       if (stale) {
         admission.release();
-        return skipped(stale);
+        return skipped(stale, "stale");
       }
     }
     // The wait itself outlived the run's deadline, so there is nothing left to
@@ -4031,6 +4070,7 @@ export class WorkflowRuntimeService {
         `Skipped: this firing waited past its runTimeoutSeconds ` +
           `(${policy.runTimeoutSeconds}s) for a concurrency slot and was ` +
           "cancelled without running",
+        "expired",
       );
     }
 
@@ -4270,6 +4310,7 @@ export class WorkflowRuntimeService {
       workflowName: string;
       workflowVersion: number;
     },
+    refusal: FiringRefusal,
   ): Promise<PersistedRunResult> {
     this.logger.info(`Workflow ${workflowId}: ${details.reason}`);
     let runId = enqueuedRunId ?? null;
@@ -4290,7 +4331,7 @@ export class WorkflowRuntimeService {
         );
       }
     }
-    return { status: CANCELLED_RUN_STATUS, steps: [], runId };
+    return { status: CANCELLED_RUN_STATUS, steps: [], runId, refusal };
   }
 
   /**

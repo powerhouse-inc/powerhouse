@@ -18,7 +18,7 @@ export type GateAdmission =
   | { admitted: true; waited: boolean; release: () => void }
   // SINGLETON, and a run is already going: this firing is dropped, not queued.
   // Or the queue is full: see MAX_QUEUED_FIRINGS.
-  | { admitted: false; reason: string };
+  | { admitted: false; reason: string; refusal: "singleton" | "queue-full" };
 
 export const QUEUE_DEPTH_ENV = "PH_WORKFLOWS_MAX_QUEUED_FIRINGS";
 
@@ -97,6 +97,7 @@ export class WorkflowRunGate {
         this.forgetIfIdle(workflowId, lane);
         return {
           admitted: false,
+          refusal: "singleton",
           reason:
             "Skipped: this workflow's concurrency is SINGLETON and a run was " +
             "already executing",
@@ -105,6 +106,7 @@ export class WorkflowRunGate {
       if (lane.waiting.length >= this.maxQueued) {
         return {
           admitted: false,
+          refusal: "queue-full",
           reason:
             `Skipped: ${lane.waiting.length} firings of this workflow are ` +
             `already waiting for a slot, which is its queue depth ` +

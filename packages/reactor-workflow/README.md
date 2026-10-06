@@ -333,6 +333,11 @@ they are true.
   enqueues faster than the workflow runs, every waiter holds its payload and
   its promise, and the lane grows until the process dies. A firing that
   overflows the depth is journaled CANCELLED exactly as a SINGLETON refusal is.
+- **A sync webhook answers a refused firing without a 500.** A firing refused
+  as parked, by SINGLETON, or as stale after its wait gets 409; one refused by
+  a full queue or that waited past its deadline gets 429. A provider retries a
+  500, and each retry would journal another CANCELLED run; 500 stays for real
+  failures.
 - **A firing that waited reads the workflow again before it runs.** If it is
   no longer ENABLED, was re-published, or was parked while the firing waited,
   the firing is journaled CANCELLED without running a step.
