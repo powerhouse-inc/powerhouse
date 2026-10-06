@@ -1,6 +1,7 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { logger } from "document-model";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   actions,
@@ -11,7 +12,10 @@ import {
   GraphQLOperationNotSupportedError,
   GraphQLWrongBackendError,
 } from "../../src/graphql-client/errors.js";
-import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
+import {
+  GraphQLReactorClient,
+  type DriveIdCall,
+} from "../../src/graphql-client/graphql-reactor-client.js";
 
 // Reply bodies are what reactor-api's Apollo gateway and drive middleware send.
 
@@ -66,8 +70,11 @@ async function serve(reply: (received: Received) => Reply): Promise<Server> {
   return server;
 }
 
-function clientFor(url: string): GraphQLReactorClient {
-  return new GraphQLReactorClient({ url, realtime: false });
+function clientFor(
+  url: string,
+  driveIdFor?: (call: DriveIdCall) => string | undefined,
+): GraphQLReactorClient {
+  return new GraphQLReactorClient({ url, realtime: false, driveIdFor });
 }
 
 /** Apollo's answer to a query naming a root field its schema lacks. */
@@ -172,6 +179,25 @@ const documentTypes: Record<string, string> = {
   "doc-1": MODEL_TYPE,
 };
 
+function settledJob(documentId: string) {
+  return {
+    id: `job-${documentId}`,
+    documentId,
+    status: "READ_READY",
+    result: null,
+    error: null,
+    errorName: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    completedAt: "2026-01-01T00:00:01.000Z",
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+      coordinates: [],
+    },
+    meta: { batchId: "batch-1", batchJobIds: [`job-${documentId}`] },
+  };
+}
+
 /** A Switchboard that owns every document above. */
 function switchboard({ body }: Received): Reply {
   const variables = (body.variables ?? {}) as Record<string, unknown>;
@@ -208,6 +234,19 @@ function switchboard({ body }: Received): Reply {
       }
       case "GetDocumentServed":
         return { documentServed: true };
+      case "DeleteDocument":
+        return { deleteDocument: true };
+      case "ExecuteBatch":
+        return {
+          executeBatch: {
+            jobs: (
+              variables.jobs as { key: string; documentIdOrSlug: string }[]
+            ).map((job) => ({
+              key: job.key,
+              job: settledJob(job.documentIdOrSlug),
+            })),
+          },
+        };
       case "FindDocuments":
         return {
           findDocuments: {
@@ -357,5 +396,121 @@ describe("GraphQLReactorClient on a 421", () => {
       .catch((error: unknown) => error);
 
     expect(GraphQLWrongBackendError.isError(failure)).toBe(false);
+  });
+});
+
+describe("GraphQLReactorClient driveIdFor", () => {
+  const modelDocument = () =>
+    withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id: "doc-new" },
+    );
+
+  async function everyHintedCall(
+    driveIdFor: (call: DriveIdCall) => string | undefined,
+  ) {
+    const { url, received } = await serve(switchboard);
+    const client = clientFor(url, driveIdFor);
+
+    await client.create(modelDocument(), "drive-1");
+    await client.executeBatch({
+      jobs: [
+        {
+          key: "a",
+          documentId: "doc-1",
+          scope: "global",
+          branch: "main",
+          actions: [actions.setName("renamed")],
+          dependsOn: [],
+        },
+      ],
+    });
+    await client.deleteDocument("doc-1");
+    await client.find({ parentId: "drive-1" });
+
+    return received;
+  }
+
+  it("sends the drive the hook names on calls the client cannot prove", async () => {
+    const calls: DriveIdCall[] = [];
+    const received = await everyHintedCall((call) => {
+      calls.push(call);
+      return "drive-1";
+    });
+
+    for (const operation of [
+      "CreateDocument",
+      "ExecuteBatch",
+      "DeleteDocument",
+      "FindDocuments",
+    ]) {
+      expect(driveIdOf(received, operation), operation).toBe("drive-1");
+    }
+    expect(calls).toEqual([
+      { method: "create", documentId: "doc-new", parentId: "drive-1" },
+      { method: "executeBatch", jobs: [{ documentId: "doc-1" }] },
+      { method: "deleteDocument", documentId: "doc-1" },
+      { method: "find", parentId: "drive-1" },
+    ]);
+  });
+
+  it("sends nothing when the hook names no drive", async () => {
+    const received = await everyHintedCall(() => undefined);
+
+    for (const entry of received) {
+      expect(entry.headers["drive-id"], entry.body.operationName).toBe(
+        undefined,
+      );
+    }
+  });
+
+  it("is not asked about a find that names no parent", async () => {
+    const { url } = await serve(switchboard);
+    const driveIdFor = vi.fn(() => "drive-1");
+
+    await clientFor(url, driveIdFor).find({
+      type: "powerhouse/document-drive",
+    });
+
+    expect(driveIdFor).not.toHaveBeenCalled();
+  });
+
+  it("sends the proven drive, quietly, when the hook agrees", async () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const { url, received } = await serve(switchboard);
+
+      await clientFor(url, () => "drive-1").execute("drive-1", "main", [
+        actions.setName("renamed"),
+      ]);
+
+      expect(driveIdOf(received, "MutateDocumentWithOperations")).toBe(
+        "drive-1",
+      );
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("sends the proven drive and logs when the hook disagrees", async () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const { url, received } = await serve(switchboard);
+      const drive = withSignaturePolicy(
+        driveDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { id: "drive-new" },
+      );
+
+      await clientFor(url, () => "drive-other").create(drive);
+
+      expect(driveIdOf(received, "CreateDocument")).toBe("drive-new");
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]).toContain("drive-other");
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

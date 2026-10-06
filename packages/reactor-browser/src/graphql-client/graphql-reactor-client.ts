@@ -91,6 +91,19 @@ import {
   type DocumentChangesEventPayload,
 } from "./subscriptions.js";
 
+/** A call the client asks {@link GraphQLReactorClientOptions.driveIdFor} about. */
+export type DriveIdCall = {
+  readonly method:
+    | "create"
+    | "execute"
+    | "executeBatch"
+    | "deleteDocument"
+    | "find";
+  readonly documentId?: string;
+  readonly parentId?: string;
+  readonly jobs?: readonly { readonly documentId: string }[];
+};
+
 export type GraphQLReactorClientOptions = {
   /** The Switchboard GraphQL endpoint, e.g. `http://localhost:4001/graphql`. */
   url: string;
@@ -157,6 +170,14 @@ export type GraphQLReactorClientOptions = {
    * scripts, and integration suites that must sign deterministically.
    */
   signer?: ISigner;
+
+  /**
+   * Names the drive a call belongs to when the client cannot prove it itself,
+   * for its `Drive-Id` header; `undefined` sends none. Return only a drive id
+   * the caller knows: a Switchboard that does not own it answers 421. Where
+   * the client has proof of its own and the two disagree, the proof is sent.
+   */
+  driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
 
 /** Paging defaults, matching the reactor's own client. */
@@ -198,6 +219,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: readonly DocumentModelModule<any>[];
   private readonly signer: ISigner | undefined;
+  private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private stopRealtime: (() => void) | undefined;
   private realtimeStarted = false;
   private realtimeGeneration = 0;
@@ -211,6 +233,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // reducer a later batch is signed with.
     this.documentModels = [...(options.documentModels ?? [])];
     this.signer = options.signer;
+    this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
       options.realtime === false
         ? undefined
@@ -365,7 +388,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         view: viewInput,
         paging: pagingInputFromPaging(effectivePaging),
       },
-      undefined,
+      search.parentId === undefined
+        ? undefined
+        : this.driveIdHeaders({ method: "find", parentId: search.parentId }),
       signal,
     );
 
@@ -520,7 +545,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // A new drive is pinned to the backend its own id routes to.
     const result = await this.sdk.CreateDocument(
       { document, parentIdentifier },
-      isDrive(document) ? driveIdHeaders(document.header.id) : undefined,
+      this.driveIdHeaders(
+        {
+          method: "create",
+          documentId: document.header.id || undefined,
+          parentId: parentIdentifier,
+        },
+        isDrive(document) ? document.header.id : undefined,
+      ),
       signal,
     );
 
@@ -579,9 +611,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         operationType: "mutation",
         document: MutateDocumentWithOperationsDocument,
         variables,
-        requestHeaders: isDrive(document)
-          ? driveIdHeaders(document.header.id)
-          : undefined,
+        requestHeaders: this.driveIdHeaders(
+          { method: "execute", documentId: documentIdentifier },
+          isDrive(document) ? document.header.id : undefined,
+        ),
         signal,
       });
 
@@ -651,7 +684,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     const result = await this.sdk.ExecuteBatch(
       { jobs: jobInputs },
-      undefined,
+      this.driveIdHeaders({
+        method: "executeBatch",
+        jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
+      }),
       signal,
     );
 
@@ -773,6 +809,26 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
+  }
+
+  /** The `Drive-Id` header for a call: the client's own proof, else the hook's. */
+  private driveIdHeaders(
+    call: DriveIdCall,
+    proven?: string,
+  ): Record<string, string> | undefined {
+    const hinted = this.driveIdFor?.(call);
+    if (proven) {
+      if (hinted && hinted !== proven) {
+        logger.warn(
+          "GraphQLReactorClient: driveIdFor named @hinted for @method, which belongs to drive @proven; sending the proven drive",
+          hinted,
+          call.method,
+          proven,
+        );
+      }
+      return driveIdHeaders(proven);
+    }
+    return hinted ? driveIdHeaders(hinted) : undefined;
   }
 
   /**
@@ -944,7 +1000,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<void> {
     await this.sdk.DeleteDocument(
       { identifier, propagate: propagationModeInput(propagate) },
-      undefined,
+      this.driveIdHeaders({ method: "deleteDocument", documentId: identifier }),
       signal,
     );
 
