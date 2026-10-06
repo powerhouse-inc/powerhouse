@@ -845,17 +845,35 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
 // journaling whole multi-megabyte documents, where the first kilobytes carry
 // everything a reader uses).
 //
-// This bounds row width only. Row count is bounded by the retention sweep
-// (run-retention.ts), which is off unless PH_WORKFLOWS_RUN_RETENTION_DAYS is
-// set — change either bound with the other in view.
+// This bounds row width only. Row COUNT is bounded by the retention sweep
+// (run-retention.ts), which defaults to 30 days — change either bound with the
+// other in view.
 export const STEP_PAYLOAD_MAX_BYTES = 256 * 1024;
 
 // What survives of an over-cap payload: the head of its serialized JSON.
 export const STEP_PAYLOAD_PREFIX_CHARS = 32 * 1024;
 
+/**
+ * The reserved key a truncation marker is recognised by, and its value.
+ *
+ * A marker has to be distinguishable from a legitimate payload that merely
+ * LOOKS like one, because a run whose output is mistaken for a marker is a
+ * step that silently re-executes on rerun. The original predicate duck-typed
+ * `{truncated: true, bytes: number, prefix: string}` (review backlog item 15),
+ * which any piece returning a truncation report of its own would match — and
+ * "did we truncate this?" is exactly the shape such a report takes.
+ *
+ * So the marker is keyed on a namespaced sentinel whose VALUE is a versioned
+ * magic string. A piece would have to emit that exact pair to collide, which
+ * is not something a payload produces by accident.
+ */
+export const TRUNCATED_PAYLOAD_KEY =
+  "@powerhousedao/reactor-workflow:runJournal";
+export const TRUNCATED_PAYLOAD_SENTINEL = "truncated-payload/v1";
+
 // The shape journaled in place of an over-cap payload.
 export interface TruncatedStepPayload {
-  truncated: true;
+  [TRUNCATED_PAYLOAD_KEY]: typeof TRUNCATED_PAYLOAD_SENTINEL;
   // Byte length of the serialized payload the prefix was cut from.
   bytes: number;
   prefix: string;
@@ -867,9 +885,31 @@ export interface TruncatedStepPayload {
   driveId?: string;
 }
 
-// True for a journaled value this store truncated. Rerun uses it to
-// re-execute a step instead of replaying a marker as the step's output, and
-// to refuse a rerun whose trigger payload survives only as a marker.
+// Every key a legacy marker could carry, and no others.
+const LEGACY_MARKER_KEYS: readonly string[] = [
+  "truncated",
+  "bytes",
+  "prefix",
+  "documentId",
+  "driveId",
+];
+
+/**
+ * True for a journaled value this store truncated.
+ *
+ * Two shapes are accepted and only one is written. New rows carry the reserved
+ * key, which a payload cannot produce by accident. Rows journaled before it
+ * carry the old `{truncated: true, bytes, prefix}`, and those still have to be
+ * recognised: reading one as data would re-run the side-effectful step that
+ * produced it, which is the whole bug.
+ *
+ * So the legacy branch is matched by its EXACT key set, not by duck-typing.
+ * `{truncated, bytes, prefix, source}` — a truncation report a piece might
+ * legitimately return, and the collision the review found — is no longer a
+ * marker. A payload whose keys are exactly the legacy marker's is still
+ * ambiguous, and nothing can resolve that for a row already written; the
+ * window is as narrow as the stored data allows.
+ */
 export function isTruncatedStepPayload(
   value: unknown,
 ): value is TruncatedStepPayload {
@@ -877,10 +917,13 @@ export function isTruncatedStepPayload(
     return false;
   }
   const record = value as Record<string, unknown>;
+  if (record[TRUNCATED_PAYLOAD_KEY] === TRUNCATED_PAYLOAD_SENTINEL) return true;
+  // LEGACY, read-only.
   return (
     record.truncated === true &&
     typeof record.bytes === "number" &&
-    typeof record.prefix === "string"
+    typeof record.prefix === "string" &&
+    Object.keys(record).every((key) => LEGACY_MARKER_KEYS.includes(key))
   );
 }
 
@@ -914,7 +957,7 @@ function cappedPayload(value: unknown): string | null {
   const last = prefix.charCodeAt(prefix.length - 1);
   if (last >= 0xd800 && last <= 0xdbff) prefix = prefix.slice(0, -1);
   const marker: TruncatedStepPayload = {
-    truncated: true,
+    [TRUNCATED_PAYLOAD_KEY]: TRUNCATED_PAYLOAD_SENTINEL,
     bytes,
     prefix,
     ...topLevelDocumentIds(value),

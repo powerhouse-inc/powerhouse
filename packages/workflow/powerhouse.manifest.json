@@ -93,7 +93,8 @@
     {
       "name": "PH_WORKFLOWS_RUN_RETENTION_DAYS",
       "type": "var",
-      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. Unset or 0 keeps every run."
+      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. On by default at 30 days; 0, \"off\" or \"never\" keeps every run, which lets the journal grow without bound.",
+      "default": "30"
     },
     {
       "name": "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS",
