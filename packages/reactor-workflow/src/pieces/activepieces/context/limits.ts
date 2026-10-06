@@ -39,8 +39,8 @@ export const HOST_CALL_TIMEOUT_ENV = "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS";
  * step was reported FAILED for a write that had been committed (backlog item
  * 6). So it is configurable, and it is never shorter than the step's OWN
  * timeout: a step the author gave two minutes should not have its host calls
- * cut off after ten seconds, and the step timeout is the real outer bound
- * either way — it kills the worker.
+ * cut off after ten seconds. The child still clips each call to end before
+ * the step's kill deadline (`worker/host-call.ts`).
  */
 export function hostCallTimeoutForStep(
   stepTimeoutMs: number | undefined,

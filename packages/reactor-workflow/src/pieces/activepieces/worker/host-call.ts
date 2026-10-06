@@ -28,9 +28,28 @@ export const MUTATING_HOST_CALLS: readonly string[] = [STORE_PUT, STORE_DELETE];
 
 // Set per request from the wire; requests are serialized per worker.
 let fromWire: number | undefined;
+// The request's kill deadline, less a margin to report a timeout before it.
+let stopAt: number | undefined;
 
-export function setHostCallTimeout(timeoutMs: number | undefined): void {
+const MIN_DEADLINE_MARGIN_MS = 250;
+const MAX_DEADLINE_MARGIN_MS = 2_000;
+
+function deadlineMargin(budgetMs: number): number {
+  return Math.min(
+    Math.max(Math.floor(budgetMs / 10), MIN_DEADLINE_MARGIN_MS),
+    MAX_DEADLINE_MARGIN_MS,
+  );
+}
+
+export function setHostCallTimeout(
+  timeoutMs: number | undefined,
+  deadline?: number,
+): void {
   fromWire = timeoutMs;
+  stopAt =
+    deadline === undefined
+      ? undefined
+      : deadline - deadlineMargin(deadline - Date.now());
 }
 
 export function hostCallTimeoutMs(): number {
@@ -127,13 +146,20 @@ export function callHost<T = unknown>(
       new HostCallError(method, "the worker has no channel to its host"),
     );
   }
+  // Clipped to the step deadline: a call still waiting when the worker is
+  // killed would surface as a retryable worker timeout, even for a write.
+  const budgetMs =
+    stopAt === undefined ? timeoutMs : Math.min(timeoutMs, stopAt - Date.now());
+  if (budgetMs <= 0) {
+    return Promise.reject(new HostCallTimeoutError(method, 0));
+  }
   ensureListening();
   const id = nextId++;
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(timeoutError(method, timeoutMs));
-    }, timeoutMs);
+      reject(timeoutError(method, budgetMs));
+    }, budgetMs);
     pending.set(id, {
       method,
       resolve: resolve as (value: unknown) => void,

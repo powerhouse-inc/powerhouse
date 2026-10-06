@@ -632,7 +632,10 @@ function onMessage(message: unknown): void {
   // rejection the handler below reports, instead of killing the child.
   const handler = Promise.resolve().then(() => {
     setMaxFileBytes(message.request.maxFileBytes);
-    setHostCallTimeout(message.request.hostCallTimeoutMs);
+    setHostCallTimeout(
+      message.request.hostCallTimeoutMs,
+      message.request.deadline,
+    );
     return runWithEgressPolicy(message.request.egress, () => dispatch(message));
   });
   handler

@@ -1,13 +1,16 @@
 // The host-call cap: configurable, never shorter than the step's own timeout,
 // and a timeout on a WRITING call is indeterminate rather than failed
 // (backlog item 6).
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  callHost,
   DEFAULT_HOST_CALL_TIMEOUT_MS,
   HostCallIndeterminateError,
   HostCallTimeoutError,
   INDETERMINATE_ERROR_NAME,
   MUTATING_HOST_CALLS,
+  resetHostCalls,
+  setHostCallTimeout,
 } from "../../../src/pieces/activepieces/worker/host-call.js";
 import {
   HOST_CALL_TIMEOUT_ENV,
@@ -109,5 +112,55 @@ describe("which host calls are indeterminate on timeout", () => {
       },
     });
     expect(isIndeterminateError(crossed)).toBe(true);
+  });
+});
+
+// The step's kill timer must not beat a hung write's own timeout, or the
+// step reads as a retryable worker timeout instead of INDETERMINATE.
+describe("a host call under the step deadline", () => {
+  const original = Object.getOwnPropertyDescriptor(process, "send");
+
+  afterEach(() => {
+    resetHostCalls();
+    setHostCallTimeout(undefined);
+    if (original) Object.defineProperty(process, "send", original);
+    else delete (process as { send?: unknown }).send;
+    vi.useRealTimers();
+  });
+
+  it("gives up on a hung write before the step is killed", async () => {
+    vi.useFakeTimers();
+    const sent: unknown[] = [];
+    process.send = ((message: unknown) => {
+      sent.push(message);
+      return true;
+    }) as typeof process.send;
+    const stepMs = 10_000;
+    setHostCallTimeout(stepMs, Date.now() + stepMs);
+
+    const write = callHost(STORE_PUT, { key: "k", value: 1 });
+    const outcome = write.then(
+      () => "answered",
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(stepMs - 1);
+
+    expect(sent).toHaveLength(1);
+    const error = await Promise.race([outcome, Promise.resolve("pending")]);
+    expect(error).toBeInstanceOf(HostCallIndeterminateError);
+  });
+
+  it("does not send a call with no time left before the deadline", async () => {
+    const sent: unknown[] = [];
+    process.send = ((message: unknown) => {
+      sent.push(message);
+      return true;
+    }) as typeof process.send;
+    setHostCallTimeout(10_000, Date.now() - 1);
+
+    await expect(callHost(STORE_PUT, { key: "k" })).rejects.toBeInstanceOf(
+      HostCallTimeoutError,
+    );
+    expect(sent).toEqual([]);
   });
 });

@@ -365,13 +365,16 @@ schema; what changed is that they are true.
 ## Indeterminate steps
 
 A piece's call of its host is capped (`PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`, 10s,
-raised to the step's own `timeoutSeconds` when that is longer). A **writing**
-call that times out — `store.put`, `store.delete`, `reactor.submit`,
-`reactor.submitCreate`, `reactor.wait` — may well have been committed, so the
-step records `INDETERMINATE` rather than FAILED: reporting a failure for a
-write that landed is a claim nobody can stand behind, and it was happening
-(the 10s cap against a dispatch under load). A read that times out is an
-ordinary failure.
+raised to the step's own `timeoutSeconds` when that is longer), and always
+clipped to end a margin before the step's kill deadline, so the call's own
+timeout is what the step reports. A **writing** call that times out —
+`store.put`, `store.delete` — may well have been committed, so the step records
+`INDETERMINATE` rather than FAILED: reporting a failure for a write that landed
+is a claim nobody can stand behind, and it was happening (the 10s cap against a
+dispatch under load). A reactor write still unfinished at the step deadline
+(`ReactorJobPendingError`) is INDETERMINATE the same way. A read that times out
+is an ordinary failure, and a call with no time left before the deadline is
+not sent at all.
 
 An INDETERMINATE step **takes no port**, so no error branch claims to have
 handled it, and the run fails naming the state. It is not retried, and a rerun
@@ -441,7 +444,7 @@ explanation behind it.
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
 | `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
-| `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer (`activepieces/context/limits.ts`) |
+| `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer, clipped to the step deadline (`activepieces/context/limits.ts`) |
 | `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
