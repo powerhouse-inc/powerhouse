@@ -833,3 +833,41 @@ describe("a failed run that outlived its workflow version", () => {
     expect((await store.getTriggerState(id))?.status).toBe("ENABLED");
   }, 60_000);
 });
+
+// A disable this process never saw live still has to clear what the park left.
+describe("a PARKED workflow disabled while the reactor was down", () => {
+  it("arms again when re-enabled after the restart", async () => {
+    const id = "wf-park-disabled-down";
+    await service.onOperations([workflowOp(id, scheduleWorkflow(id))]);
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    expect((await service.fire(id, undefined, "schedule")).status).toBe(
+      "FAILED",
+    );
+    expect((await store.getTriggerState(id))?.status).toBe(
+      PARKED_TRIGGER_STATUS,
+    );
+
+    const disabled = documents.apply(
+      id,
+      actions.setWorkflowStatus({ status: "DISABLED" }),
+    );
+    const rebooted = testRuntime({
+      reactorClient: documents.client() as never,
+    });
+    await rebooted.onOperations([workflowOp(id, disabled)]);
+    const enabled = documents.apply(
+      id,
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    );
+    await rebooted.onOperations([workflowOp(id, enabled)]);
+
+    const after = (await rebooted.store())!;
+    await vi.waitFor(async () =>
+      expect((await after.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    rebooted.shutdown();
+  }, 60_000);
+});

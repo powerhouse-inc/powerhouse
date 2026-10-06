@@ -978,7 +978,7 @@ export class WorkflowRuntimeService {
     // Disabling clears a park, so re-enabling arms the trigger again; so does
     // a re-publish, which the version that failed no longer matches.
     if (state.status !== "ENABLED") {
-      await store?.clearWorkflowPark(workflowId);
+      await store?.clearParkOnDisable(workflowId);
     } else if (await this.outdatedPark(workflowId, state)) {
       await store?.clearWorkflowPark(workflowId);
       await this.supervisor().unpark(workflowId);

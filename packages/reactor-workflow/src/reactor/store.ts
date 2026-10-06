@@ -1948,6 +1948,23 @@ export class WorkflowRunStore {
     });
   }
 
+  /** A disable clears a park: the park row, and a PARKED trigger row turned
+   * DISABLED, so re-enabling arms it whether or not the supervisor held it. */
+  async clearParkOnDisable(workflowId: string): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("workflow_park")
+        .where("workflow_id", "=", workflowId)
+        .execute();
+      await trx
+        .updateTable("trigger_state")
+        .set({ status: "DISABLED", updated_at: new Date().toISOString() })
+        .where("workflow_id", "=", workflowId)
+        .where("status", "=", PARKED_TRIGGER_STATUS)
+        .execute();
+    });
+  }
+
   /** Undoes {@link parkWorkflow}; `trigger` says whether it parked a row. */
   async liftPark(workflowId: string, trigger: boolean): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
