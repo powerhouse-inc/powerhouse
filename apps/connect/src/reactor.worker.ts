@@ -2,7 +2,9 @@ import {
   ChannelScheme,
   DocumentIntegrityService,
   DriveCollectionId,
+  HardenedPGliteDialect,
   InMemoryQueue,
+  queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
   type ChannelConfig,
@@ -54,7 +56,6 @@ import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
@@ -116,13 +117,16 @@ let syncManager: ISyncManager | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
+  /** The Kysely `db` wraps; RPC SQL goes through its queue, not at the client. */
+  kysely?: Kysely<unknown>;
 };
 const relational: RelationalState = {};
 type OwnedStorage = {
   reactorPg?: {
     close: () => Promise<void>;
-    query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
   };
+  /** The one Kysely over the reactor store; inspector SQL goes through its queue. */
+  reactorDb?: Kysely<Database>;
   reactorIdb?: string;
   relationalIdb?: string;
 };
@@ -196,9 +200,11 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     });
     await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
-    relational.db = createRelationalDb(
-      new Kysely({ dialect: new PGliteDialect(pg) }),
-    );
+    const relationalKysely = new Kysely<unknown>({
+      dialect: new HardenedPGliteDialect(pg),
+    });
+    relational.kysely = relationalKysely;
+    relational.db = createRelationalDb(relationalKysely);
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
     );
@@ -231,7 +237,9 @@ async function releaseStores(): Promise<void> {
   const stores = [relational.pg, owned.reactorPg];
   relational.pg = undefined;
   relational.db = undefined;
+  relational.kysely = undefined;
   owned.reactorPg = undefined;
+  owned.reactorDb = undefined;
   for (const store of stores) {
     try {
       await store?.close();
@@ -331,6 +339,9 @@ const host = new ReactorHost({
       );
       const pg = reactor.pg;
       owned.reactorPg = pg;
+      owned.reactorDb = new Kysely<Database>({
+        dialect: new HardenedPGliteDialect(pg),
+      });
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
       // A store is migratable when coerceMajor kept it (a supported legacy
@@ -362,7 +373,7 @@ const host = new ReactorHost({
         .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+        .withKysely(owned.reactorDb);
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,
@@ -493,14 +504,13 @@ const host = new ReactorHost({
     }
   },
   onDbOp: async (method, args) => {
-    if (!relational.pg) {
+    if (!relational.kysely) {
       throw new Error("Relational store not available");
     }
     switch (method) {
       case "query": {
         const [sql, params] = args as [string, unknown[]];
-        const result = await relational.pg.query(sql, params);
-        return result.rows;
+        return queryThroughDialect(relational.kysely, sql, params);
       }
       default:
         throw new Error(`Unknown db op: ${method}`);
@@ -601,12 +611,11 @@ const host = new ReactorHost({
         return inspectorIntegrity.rebuildSnapshots(documentId, branch);
       }
       case "db.query": {
-        if (!owned.reactorPg) {
+        if (!owned.reactorDb) {
           throw new Error("Reactor store not available");
         }
         const [sql, params] = args as [string, unknown[]];
-        const result = await owned.reactorPg.query(sql, params);
-        return result.rows;
+        return queryThroughDialect(owned.reactorDb, sql, params);
       }
       default:
         throw new Error(`Unknown inspector op: ${method}`);
