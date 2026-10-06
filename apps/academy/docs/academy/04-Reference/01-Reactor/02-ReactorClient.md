@@ -799,7 +799,7 @@ deleteDocuments(
 
 ### `executeBatch`
 
-Apply multiple mutation jobs in dependency order. The client signs each job's actions, dispatches them, and waits for all jobs to complete. If a job fails, `executeBatch` throws with that job's error message; the other jobs may still execute because dispatch is fire-and-await-all.
+Apply multiple mutation jobs in dependency order. The client signs each job's actions, dispatches them, and waits for every job to settle. If a job fails, `executeBatch` throws a `BatchJobFailedError` naming the first failed job's plan key (`key`), carrying every job's final `JobInfo` (`jobs`) and the failed job's own error name (`cause.name`). The batch is not atomic: other jobs, including ones that depend on the failed job, may still have committed. See [Error Handling](/academy/Reference/Reactor/ErrorHandling).
 
 ```typescript
 executeBatch(
