@@ -8,6 +8,7 @@ import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import { DeferredJobs } from "./deferred-jobs.js";
+import { DEFAULT_JOB_TIMEOUT_MS } from "./types.js";
 import {
   JobResultHandler,
   toErrorInfo,
@@ -47,7 +48,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private jobTracker: IJobTracker,
     private logger: ILogger,
     private resolver: IDocumentModelResolver,
-    jobTimeoutMs: number = 30_000,
+    jobTimeoutMs: number = DEFAULT_JOB_TIMEOUT_MS,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;

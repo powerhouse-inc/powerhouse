@@ -166,6 +166,8 @@ export const DEFAULT_MAX_PURGE_OPERATIONS = 200_000;
 /** How long a deferred job waits for its document before it fails. */
 export const DEFAULT_DEFERRED_JOB_TTL_MS = 30_000;
 
+export const DEFAULT_JOB_TIMEOUT_MS = 30_000;
+
 /**
  * Configuration options for the job executor
  */
@@ -224,6 +226,12 @@ export type JobExecutorConfig = {
 
   /** Index rows a purge may remove without allowLarge. */
   maxPurgeOperations?: number;
+
+  /**
+   * How long a committed job waits for its flush before its write-ready is
+   * withheld; 0 waits unbounded. Must stay under the job timeout.
+   */
+  durabilityWaitMs?: number;
 };
 
 /** Cloneable, so a pooled worker refuses exactly what the host refuses. */
