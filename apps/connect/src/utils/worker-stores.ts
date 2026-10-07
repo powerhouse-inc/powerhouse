@@ -54,11 +54,16 @@ export function createWorkerStores({
   };
 
   // Returns the lock release, covering only the stores this call closed.
-  const closeAll = async (closer: StoreCloser): Promise<() => void> => {
+  const closeAll = async (
+    closer: StoreCloser,
+    keepOpening = false,
+  ): Promise<() => void> => {
     const open = [relational(), reactor()];
     forget();
     const closed: string[] = [];
     for (const { namespace, store } of open) {
+      // A build may still be opening it; it closes and releases once it settles.
+      if (keepOpening && namespace && !store) continue;
       const done = await closer(store);
       if (!namespace) continue;
       if (done && !kept.has(namespace)) closed.push(namespace);
@@ -82,7 +87,7 @@ export function createWorkerStores({
     retire: (): Promise<void> =>
       serial(async () => {
         await stopReactor();
-        await releaseAll();
+        (await closeAll(close, true))();
       }),
     /** Stops the worker for good: it retires once `run` settles, either way. */
     runAdmin: ({

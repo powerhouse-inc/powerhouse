@@ -199,13 +199,17 @@ const HELLO = {
 };
 
 // The worker's wiring (reactor.worker.ts), with `clear` standing in for clearFileData.
-async function workerWith(clear: () => Promise<void>) {
-  const { names, stores } = await setup(undefined, {
+async function workerWith(
+  clear: () => Promise<void>,
+  build: () => Promise<IReactorClient> = () =>
+    Promise.resolve({} as IReactorClient),
+) {
+  const { names, refs, stores } = await setup(undefined, {
     isRetired: () => host.retired,
     retireWorker: (reason) => host.retireAndReload(reason, crypto.randomUUID()),
   });
   const host: ReactorHost = new ReactorHost({
-    build: () => Promise.resolve({} as IReactorClient),
+    build,
     onRetire: () => stores.retire(),
     onSyncOp: () => Promise.reject(new Error("SyncManager not available")),
     onAdminRestart: () =>
@@ -220,7 +224,7 @@ async function workerWith(clear: () => Promise<void>) {
         failed: "clearing storage failed",
       }),
   });
-  return { names, host };
+  return { names, refs, host };
 }
 
 function tab(host: ReactorHost) {
@@ -263,6 +267,44 @@ function tab(host: ReactorHost) {
   };
   return { send, reloads };
 }
+
+describe("worker retired during boot", () => {
+  it("keeps the lock of a store still opening until the build settles and closes it", async () => {
+    let finishBuild = () => undefined as void;
+    const built = new Promise<IReactorClient>((resolve) => {
+      finishBuild = () => resolve({} as IReactorClient);
+    });
+    const { names, refs, host } = await workerWith(
+      () => Promise.resolve(),
+      () => built,
+    );
+    // Locked by the build, which has not handed over the store yet.
+    refs.reactor = undefined;
+    void tab(host)
+      .send(HELLO)
+      .catch(() => undefined);
+    await tick();
+    await tab(host).send({
+      ...HELLO,
+      version: { ...HELLO.version, appBuildId: "next-build" },
+    });
+    expect(host.retired).toBe(true);
+    const next = otherWorkerAcquires(names.reactor);
+    await tick();
+    expect(next.granted).toBe(false);
+
+    const grantedAtClose: boolean[] = [];
+    refs.reactor = {
+      close: () => {
+        grantedAtClose.push(next.granted);
+        return Promise.resolve();
+      },
+    };
+    finishBuild();
+    await vi.waitFor(() => expect(next.granted).toBe(true));
+    expect(grantedAtClose).toEqual([false]);
+  });
+});
 
 describe("worker after Clear storage", () => {
   it("retires into a fresh worker when clearing the files fails", async () => {

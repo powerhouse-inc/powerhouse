@@ -385,7 +385,7 @@ export class ReactorHost {
       const pending = build(construct);
       this.clientPromise = pending;
       this.buildFailure = null;
-      // A build outliving the retirement opened what onRetire already closed.
+      // A build outliving the retirement holds stores onRetire left to it.
       void pending.then(
         () => {
           if (this.retirement) this.stopRetired();
