@@ -996,6 +996,7 @@ describe("an enable that bailed on a park that was then undone", () => {
       expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
     );
     const oldHash = (await store.getTriggerState(id))?.config_hash;
+    const upsert = vi.spyOn(service.supervisor(), "upsert");
     const park = vi.spyOn(WorkflowRunStore.prototype, "parkWorkflow");
     park.mockImplementationOnce(async function (
       this: WorkflowRunStore,
@@ -1028,5 +1029,9 @@ describe("an enable that bailed on a park that was then undone", () => {
       expect(row?.status).toBe("ENABLED");
       expect(row?.config_hash).not.toBe(oldHash);
     });
+    // Armed by its own registration only: undoing the stale park registers
+    // nothing again, so no second enable runs as a republish.
+    expect(upsert).toHaveBeenCalledTimes(1);
+    upsert.mockRestore();
   }, 60_000);
 });

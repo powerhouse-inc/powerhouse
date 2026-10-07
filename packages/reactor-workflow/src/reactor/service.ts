@@ -1002,6 +1002,7 @@ export class WorkflowRuntimeService {
         ? runnableDefinition(state).trigger
         : undefined;
     const block = trigger ? triggerBlock(trigger) : undefined;
+    const version = runnableDefinition(state).version;
     const store = await this.store();
     // Disabling clears a park, so re-enabling arms the trigger again; so does
     // a re-publish, which the version that failed no longer matches.
@@ -1015,13 +1016,15 @@ export class WorkflowRuntimeService {
         !(held && SUPERVISED_KINDS.has(held.kind)),
       );
     } else if (await this.outdatedPark(workflowId, state)) {
-      await this.supervisor().unpark(workflowId);
+      await this.supervisor().unpark(workflowId, version);
     }
     // A park the supervisor does not see: matching nothing is what stops it.
+    const park = block ? await store?.getWorkflowPark(workflowId) : undefined;
     if (
       block &&
       (blockKey(block) === WEBHOOK_BLOCK || triggerKindOf(block)) &&
-      (await store?.getWorkflowPark(workflowId))
+      park &&
+      park.published_version >= version
     ) {
       const had = this.registry.get(workflowId);
       this.registry.delete(workflowId);
@@ -1056,13 +1059,13 @@ export class WorkflowRuntimeService {
     if (supervised) {
       if (supervised.kind === "schedule") {
         this.registry.set(workflowId, { workflowId, kind: "schedule" });
-        this.enableSupervised(workflowId, supervised);
+        this.enableSupervised(workflowId, supervised, version);
         return;
       }
       // Registered as a poll binding first, then corrected once the piece's
       // strategy is known: a WEBHOOK trigger must never be handed to the tick.
       this.registry.set(workflowId, { workflowId, kind: "piece" });
-      await this.registerPieceTrigger(workflowId, supervised);
+      await this.registerPieceTrigger(workflowId, supervised, version);
       return;
     }
     const had = this.registry.get(workflowId);
@@ -1076,9 +1079,13 @@ export class WorkflowRuntimeService {
     );
   }
 
-  private enableSupervised(workflowId: string, binding: TriggerBinding): void {
+  private enableSupervised(
+    workflowId: string,
+    binding: TriggerBinding,
+    publishedVersion: number,
+  ): void {
     this.supervisor()
-      .upsert(binding)
+      .upsert(binding, publishedVersion)
       .catch((error: unknown) => {
         this.logger.error(`Trigger enable failed for ${workflowId}`, error);
       });
@@ -1089,6 +1096,7 @@ export class WorkflowRuntimeService {
   private async registerPieceTrigger(
     workflowId: string,
     binding: PieceTriggerBinding,
+    publishedVersion: number,
   ): Promise<void> {
     const delivery = await this.pieceDelivery(binding);
     if (typeof delivery !== "string") {
@@ -1108,7 +1116,7 @@ export class WorkflowRuntimeService {
     }
     // Arming downloads a bundle and calls the provider; that stays off the
     // operation-ingestion path.
-    this.enableSupervised(workflowId, resolved);
+    this.enableSupervised(workflowId, resolved, publishedVersion);
   }
 
   // From the descriptor of the version that will run; never a guess.
@@ -4387,11 +4395,9 @@ export class WorkflowRuntimeService {
       // that landed before this read is undone here, one after it clears the
       // park in its own registration.
       if (!(await this.stillRunsVersion(workflowId, publishedVersion))) {
+        // A registration of the change arms on its own: a park never blocks
+        // a version newer than the one that failed.
         await this.supervisor().liftPark(workflowId, publishedVersion, trigger);
-        // A registration of the change may have run while the park stood, and
-        // its enable bailed on it: register again, so that enable gets a pass.
-        await this.supervisor().unpark(workflowId);
-        await this.refreshRegistration(workflowId);
         return;
       }
       const registered = this.registry.get(workflowId);

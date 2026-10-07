@@ -357,8 +357,12 @@ they are true.
   that still arrives is journaled CANCELLED. Only two things clear a park: a
   **re-publish** (the published version moves past the one that failed, trigger
   changed or not), and a **disable then re-enable**. Both work across a restart.
-  An unresolvable piece leaves a PARKED row alone as well, rather than turning
-  it ERROR and letting the ERROR row's own retry arm it.
+  A park blocks the registrations of the version that failed and older ones
+  only: a newer version always arms, and lifts the park it outlived. Every park
+  write runs on the trigger supervisor's lane, with enable and disable, so a
+  park cannot land between an enable's check and its write. An unresolvable
+  piece leaves a PARKED row alone as well, rather than turning it ERROR and
+  letting the ERROR row's own retry arm it.
 - **`retryOn` empty means every error is retryable.** The schema reads "error
   classes that are retryable; everything else fails terminally on attempt 1",
   but the shipped default is an empty list, and taking that literally would

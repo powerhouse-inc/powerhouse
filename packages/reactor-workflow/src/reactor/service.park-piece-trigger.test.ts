@@ -11,11 +11,16 @@ import { packagePieces } from "./piece-registry.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import type { WorkflowRuntimeService } from "./service.js";
+import { WorkflowRunStore } from "./store.js";
 
 const PIECE = "@acme/piece-parkable";
 const WORKFLOW = "wf-parked-hook";
 
 const FIXTURE = `
+async function append(ctx, key, value) {
+  const list = (await ctx.store.get(key, "PROJECT")) ?? [];
+  await ctx.store.put(key, [...list, value], "PROJECT");
+}
 async function bump(ctx, key) {
   const n = (await ctx.store.get(key, "PROJECT")) ?? 0;
   await ctx.store.put(key, n + 1, "PROJECT");
@@ -38,6 +43,15 @@ export const parkable = {
       props: {},
       onEnable: async (ctx) => bump(ctx, "subscribed"),
       onDisable: async (ctx) => bump(ctx, "released"),
+      run: async (ctx) => (ctx.payload ? [ctx.payload] : []),
+    },
+    keyed: {
+      name: "keyed",
+      displayName: "Keyed",
+      type: "WEBHOOK",
+      props: { key: { displayName: "Key", type: "SHORT_TEXT", required: false } },
+      onEnable: async (ctx) => append(ctx, "keyed:subscribed", ctx.propsValue.key),
+      onDisable: async (ctx) => append(ctx, "keyed:released", ctx.propsValue.key),
       run: async (ctx) => (ctx.payload ? [ctx.payload] : []),
     },
     slow: {
@@ -342,4 +356,126 @@ describe("a park landing while the trigger is enabling", () => {
       parking.shutdown();
     }
   }, 60_000);
+});
+
+// A version published while the failed run's park is being written arms on
+// the supervisor's lane after that park. It must release the old version's
+// subscription with the old binding, not with its own.
+describe("a version published while its predecessor is being parked", () => {
+  let dir = "";
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), "ph-park-newer-version-"));
+    const entryPath = join(dir, "index.mjs");
+    await writeFile(entryPath, FIXTURE);
+    packagePieces.setPieces([{ name: PIECE, version: "1.0.0", entryPath }]);
+  });
+
+  afterAll(async () => {
+    packagePieces.reset();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  function keyedState(version: number, key: string) {
+    return {
+      name: "wf-park-newer",
+      status: "ENABLED",
+      version,
+      trigger: {
+        id: "t1",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        triggerName: "keyed",
+        config: { key },
+      },
+      steps: [
+        {
+          id: "a",
+          key: "only",
+          name: "Only",
+          pieceName: PIECE,
+          pieceVersion: "1.0.0",
+          actionName: "boom",
+          config: {},
+        },
+      ],
+      edges: [{ id: "e1", from: "t1", to: "a", port: "next" }],
+      variables: [],
+      policy: { concurrency: "PARALLEL", onFailure: "PARK" },
+    };
+  }
+
+  function stateOp(state: unknown): OperationWithContext {
+    ordinal += 1;
+    return {
+      operation: {
+        index: ordinal,
+        timestampUtcMs: `${ordinal}`,
+        action: { type: "PUBLISH_WORKFLOW", input: {} },
+        resultingState: JSON.stringify(state),
+      },
+      context: {
+        documentId: "wf-park-newer",
+        documentType: "powerhouse/workflow",
+        scope: "global",
+        branch: "main",
+        ordinal,
+      },
+    } as unknown as OperationWithContext;
+  }
+
+  it("releases the old subscription with the old binding and arms the new one", async () => {
+    const id = "wf-park-newer";
+    let current = keyedState(1, "old");
+    const runtime = testRuntime({
+      webhooks: memoryWebhooks().scope,
+      reactorClient: {
+        get: () =>
+          Promise.resolve({
+            header: { id, documentType: "powerhouse/workflow", name: id },
+            state: { global: current },
+          }),
+      },
+    } as never);
+    try {
+      const store = (await runtime.store())!;
+      const list = async (key: string) =>
+        (await store.getPieceStoreValue("PROJECT", PROJECT_SCOPE_KEY, key)) ??
+        [];
+      await runtime.onOperations([stateOp(current)]);
+      await vi.waitFor(
+        async () =>
+          expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+        { timeout: 30_000 },
+      );
+      expect(await list("keyed:subscribed")).toEqual(["old"]);
+
+      const park = vi.spyOn(WorkflowRunStore.prototype, "parkWorkflow");
+      park.mockImplementationOnce(async function (
+        this: WorkflowRunStore,
+        ...args
+      ) {
+        current = keyedState(2, "new");
+        await runtime.onOperations([stateOp(current)]);
+        park.mockRestore();
+        return this.parkWorkflow(...args);
+      });
+      expect((await runtime.fire(id, undefined, "piece")).status).toBe(
+        "FAILED",
+      );
+      park.mockRestore();
+
+      await vi.waitFor(
+        async () => {
+          expect(await list("keyed:subscribed")).toEqual(["old", "new"]);
+          expect((await store.getTriggerState(id))?.status).toBe("ENABLED");
+        },
+        { timeout: 30_000 },
+      );
+      expect(await list("keyed:released")).toEqual(["old"]);
+      expect(await store.getWorkflowPark(id)).toBeUndefined();
+    } finally {
+      runtime.shutdown();
+    }
+  }, 90_000);
 });
