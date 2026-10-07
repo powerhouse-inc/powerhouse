@@ -60,7 +60,6 @@ import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { closeDeletedSelection } from "../utils/deleted-selection.js";
-import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { closeWithin } from "../utils/close-within.js";
 import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { getRuntimeConfig } from "../runtime-config.js";
@@ -444,11 +443,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       upgradeManifests,
       documentModelLoader,
       renown,
-      onReload: (reason, workerGen) => {
+      onReload: (reason) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
-        if (workerGen) {
-          bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
-        }
         reloadForWorker(reason, () => window.location.reload());
       },
     });
