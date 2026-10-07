@@ -19,10 +19,15 @@ import {
 import { DriveOwnershipCache } from "../src/graphql/gateway/drive-ownership-cache.js";
 import type { FetchHandler } from "../src/graphql/gateway/types.js";
 
-function makeCache(initialDrives: string[] = []): DriveOwnershipCache {
-  const cache = new DriveOwnershipCache(
-    {} as unknown as ConstructorParameters<typeof DriveOwnershipCache>[0],
-  );
+// A reactor that holds no drive beyond the ones seeded into the cache.
+function makeCache(
+  initialDrives: string[] = [],
+  find: () => Promise<unknown> = () =>
+    Promise.resolve({ results: [], options: { cursor: "", limit: 100 } }),
+): DriveOwnershipCache {
+  const cache = new DriveOwnershipCache({
+    find,
+  } as unknown as ConstructorParameters<typeof DriveOwnershipCache>[0]);
   for (const id of initialDrives) {
     cache.add(id);
   }
@@ -231,6 +236,23 @@ describe("createDriveFetchMiddleware", () => {
 
     expect(res.status).toBe(421);
     expect(nextCalls).toHaveLength(0);
+  });
+
+  it("passes through when the reactor cannot say whether it holds the drive", async () => {
+    const cache = makeCache([], () =>
+      Promise.reject(new Error("storage unavailable")),
+    );
+    const handler = createDriveFetchMiddleware(cache)(next);
+
+    const res = await handler(
+      makeRequest({
+        driveId: "drive-x",
+        body: { operationName: "mutateDocument" },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(nextCalls).toHaveLength(1);
   });
 
   it("treats an empty Drive-Id header as missing (passes through)", async () => {

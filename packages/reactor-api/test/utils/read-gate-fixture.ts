@@ -9,6 +9,7 @@ import {
   withSignaturePolicy,
   type DocumentModelModule,
   type Grant,
+  type ISigner,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -51,9 +52,10 @@ export function contextFor(address?: string): Context {
 // Signs as HOST, so a grant can admit the host's writes without letting everyone read.
 export async function buildReadGateReactor(
   modules: DocumentModelModule[] = [],
+  signer?: ISigner,
 ): Promise<InProcessReactorClientModule> {
   return new ReactorClientBuilder()
-    .withSigner(await createTestSigner(HOST))
+    .withSigner(signer ?? (await createTestSigner(HOST)))
     .withReactorBuilder(
       new ReactorBuilder()
         .withDocumentModelSources([

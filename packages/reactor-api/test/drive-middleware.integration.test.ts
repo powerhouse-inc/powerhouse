@@ -1,12 +1,17 @@
 import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
+import {
+  withSignaturePolicy,
+  type ISigner,
+} from "@powerhousedao/shared/document-model";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   buildReadGateReactor,
   createFixture,
+  HOST,
   openAuthorization,
 } from "./utils/read-gate-fixture.js";
+import { createTestSigner } from "./utils/test-signer.js";
 import {
   startReactorHttpServer,
   type ReactorHttpServer,
@@ -20,6 +25,27 @@ const CREATE_DOCUMENT = /* GraphQL */ `
     }
   }
 `;
+
+const MUTATE_DOCUMENT = /* GraphQL */ `
+  mutation MutateDocumentWithOperations(
+    $documentIdentifier: String!
+    $actions: [JSONObject!]!
+  ) {
+    mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
+      id
+    }
+  }
+`;
+
+function renameDrive(name: string) {
+  return {
+    id: crypto.randomUUID(),
+    type: "SET_DRIVE_NAME",
+    timestampUtcMs: new Date().toISOString(),
+    input: { name },
+    scope: "global",
+  };
+}
 
 const GET_DOCUMENT = /* GraphQL */ `
   query GetDocument($identifier: String!) {
@@ -54,8 +80,12 @@ describe("the drive middleware in front of the reactor subgraph", () => {
   let server: ReactorHttpServer;
   let owned: string;
 
+  let signer: ISigner;
+
   beforeAll(async () => {
-    module = await buildReadGateReactor();
+    // Shared with the sync peer, so the host accepts the peer's signatures.
+    signer = await createTestSigner(HOST);
+    module = await buildReadGateReactor([], signer);
     owned = await createFixture(module.client, "dm-owned", {
       source: driveDocumentModelModule,
     });
@@ -65,6 +95,76 @@ describe("the drive middleware in front of the reactor subgraph", () => {
   afterAll(async () => {
     await server.close();
     module.reactor.kill();
+  });
+
+  it("accepts a stamped write to a drive added after the server started", async () => {
+    // As the Switchboard adds its default drive: on the reactor, after init.
+    const late = await createFixture(module.client, "dm-late", {
+      source: driveDocumentModelModule,
+    });
+
+    const response = await post(
+      server,
+      "MutateDocumentWithOperations",
+      MUTATE_DOCUMENT,
+      { documentIdentifier: late, actions: [renameDrive("late")] },
+      late,
+    );
+
+    expect(response).toEqual({
+      status: 200,
+      body: { data: { mutateDocument: { id: late } } },
+    });
+  });
+
+  it("accepts a stamped write to a drive that arrived by sync", async () => {
+    const peer = await buildReadGateReactor([], signer);
+    try {
+      const synced = await createFixture(peer.client, "dm-synced", {
+        source: driveDocumentModelModule,
+      });
+      const operations = await peer.reactor.getOperations(synced, {
+        branch: "main",
+        scopes: ["document"],
+      });
+      const loaded = await module.reactor.load(
+        synced,
+        "main",
+        operations.document.results,
+      );
+      expect((await module.client.waitForJob(loaded)).status).toBe(
+        "READ_READY",
+      );
+
+      const response = await post(
+        server,
+        "MutateDocumentWithOperations",
+        MUTATE_DOCUMENT,
+        { documentIdentifier: synced, actions: [renameDrive("synced")] },
+        synced,
+      );
+
+      expect(response).toEqual({
+        status: 200,
+        body: { data: { mutateDocument: { id: synced } } },
+      });
+    } finally {
+      peer.reactor.kill();
+    }
+  });
+
+  it("refuses a stamped write naming a document that is not a drive", async () => {
+    const plain = await createFixture(module.client, "dm-plain");
+
+    const response = await post(
+      server,
+      "MutateDocumentWithOperations",
+      MUTATE_DOCUMENT,
+      { documentIdentifier: plain, actions: [renameDrive("plain")] },
+      plain,
+    );
+
+    expect(response.status).toBe(421);
   });
 
   it("serves a request naming a drive this server owns", async () => {

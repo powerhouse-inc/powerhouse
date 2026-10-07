@@ -38,6 +38,27 @@ export class DriveOwnershipCache {
     return this.drives.has(driveId);
   }
 
+  /**
+   * Whether this host holds the drive, asking the reactor on a miss: drives
+   * also arrive by sync and by writes that bypass the create resolvers. A
+   * positive answer is cached; a failure to ask throws.
+   */
+  async holds(driveId: string): Promise<boolean> {
+    if (this.drives.has(driveId)) {
+      return true;
+    }
+    const page = await this.reactorClient.find({ ids: [driveId] });
+    const held = page.results.some(
+      (document) =>
+        document.header.id === driveId &&
+        DEFAULT_DRIVE_CONTAINER_TYPES.has(document.header.documentType),
+    );
+    if (held) {
+      this.drives.add(driveId);
+    }
+    return held;
+  }
+
   add(driveId: string): void {
     this.drives.add(driveId);
   }

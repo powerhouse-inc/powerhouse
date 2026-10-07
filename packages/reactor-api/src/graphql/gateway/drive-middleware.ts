@@ -37,8 +37,9 @@ export function getRequestDriveId(
  *
  * - No header → pass through. The LB has already round-robined; nothing
  *   to validate here.
- * - Header present and drive in cache → record on the request map (for
- *   the context factory to read into `context.driveId`) and pass through.
+ * - Header present and the drive held here (the cache, else the reactor) →
+ *   record on the request map (for the context factory to read into
+ *   `context.driveId`) and pass through. A failed lookup passes through.
  * - Header present, drive missing, but the operation is `createDocument`
  *   or `createEmptyDocument` → pass through. The drive may be in the
  *   process of being created.
@@ -55,7 +56,14 @@ export function createDriveFetchMiddleware(
         return next(request);
       }
 
-      if (cache.has(driveId)) {
+      let held: boolean;
+      try {
+        held = await cache.holds(driveId);
+      } catch {
+        // Undecided is not "elsewhere": the request goes on and fails here.
+        return next(request);
+      }
+      if (held) {
         driveIdMap.set(request, driveId);
         return next(request);
       }
