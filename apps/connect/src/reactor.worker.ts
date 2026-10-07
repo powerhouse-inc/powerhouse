@@ -55,6 +55,7 @@ import {
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { closeWithin } from "./utils/close-within.js";
+import { createWorkerStores, type StoreCloser } from "./utils/worker-stores.js";
 import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
 import { createStoreLocks } from "./utils/store-lock.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
@@ -237,7 +238,7 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     relational.pg = undefined;
     relational.db = undefined;
     relational.kysely = undefined;
-    if (await closeWithin(pg)) storeLocks.release(namespace);
+    await stores.releaseFailedOpen(namespace, pg);
     return null;
   }
 }
@@ -257,10 +258,6 @@ const inMemoryBackup: BackupStrategy = {
   commit: () => Promise.resolve(),
 };
 
-type StoreCloser = (
-  store: { close: () => Promise<void> } | undefined,
-) => Promise<boolean>;
-
 async function closeUnbounded(
   store: { close: () => Promise<void> } | undefined,
 ): Promise<boolean> {
@@ -271,31 +268,6 @@ async function closeUnbounded(
     console.error("[reactor.worker] closing a store failed:", error);
     return false;
   }
-}
-
-// Returns the lock release: a store whose close hung keeps its lock until the worker dies.
-async function closeStores(close: StoreCloser): Promise<() => void> {
-  const relationalClosed = await close(relational.pg);
-  const reactorClosed = await close(owned.reactorPg);
-  const { relationalNamespace, reactorNamespace } = owned;
-  return () => {
-    if (relationalClosed && relationalNamespace) {
-      storeLocks.release(relationalNamespace);
-    }
-    if (reactorClosed && reactorNamespace) {
-      storeLocks.release(reactorNamespace);
-    }
-  };
-}
-
-async function releaseStores(): Promise<void> {
-  const release = await closeStores(closeWithin);
-  relational.pg = undefined;
-  relational.db = undefined;
-  relational.kysely = undefined;
-  owned.reactorPg = undefined;
-  owned.reactorDb = undefined;
-  release();
 }
 
 const RETIRE_STOP_MS = 5_000;
@@ -321,61 +293,76 @@ async function stopReactorWithin(timeoutMs: number): Promise<void> {
   clearTimeout(timer);
 }
 
-// A retired worker must stop writing before a fresh one opens the same stores.
-async function retire(): Promise<void> {
-  await stopReactorWithin(RETIRE_STOP_MS);
-  await releaseStores();
-}
+const stores = createWorkerStores({
+  locks: storeLocks,
+  stopReactor: () => stopReactorWithin(RETIRE_STOP_MS),
+  relational: () => ({
+    namespace: owned.relationalNamespace,
+    store: relational.pg,
+  }),
+  reactor: () => ({
+    namespace: owned.reactorNamespace,
+    store: owned.reactorPg,
+  }),
+  forget: () => {
+    relational.pg = undefined;
+    relational.db = undefined;
+    relational.kysely = undefined;
+    owned.reactorPg = undefined;
+    owned.reactorDb = undefined;
+  },
+});
 
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
-  onRetire: retire,
+  onRetire: () => stores.retire(),
   onAdminRestart: () =>
     host.broadcastReload("admin restart", crypto.randomUUID()),
-  onAdminClearStorage: async () => {
-    const release = await closeStores(closeWithin);
-    for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
-      if (idbName) {
-        await clearFileData(idbName);
+  onAdminClearStorage: () =>
+    stores.runAdmin(closeWithin, async (release) => {
+      for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+        if (idbName) {
+          await clearFileData(idbName);
+        }
       }
-    }
-    release();
-    host.broadcastReload("storage cleared", crypto.randomUUID());
-  },
+      release();
+      host.broadcastReload("storage cleared", crypto.randomUUID());
+    }),
   onAdminMigrate: async () => {
     setMigration({
       status: "migrating",
       legacyMajor: migrationState.legacyMajor,
     });
-    const release = await closeStores(closeUnbounded);
-    try {
-      for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
-        if (idbName) {
-          await migrateIdb(
-            idbName,
-            (phase) =>
-              setMigration({
-                status: "migrating",
-                legacyMajor: migrationState.legacyMajor,
-                phase,
-              }),
-            inMemoryBackup,
-          );
+    await stores.runAdmin(closeUnbounded, async (release) => {
+      try {
+        for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+          if (idbName) {
+            await migrateIdb(
+              idbName,
+              (phase) =>
+                setMigration({
+                  status: "migrating",
+                  legacyMajor: migrationState.legacyMajor,
+                  phase,
+                }),
+              inMemoryBackup,
+            );
+          }
         }
+        release();
+        host.broadcastReload("migration complete", crypto.randomUUID());
+      } catch (error) {
+        console.error("[reactor.worker] Migration failed:", error);
+        setMigration({
+          status: "failed",
+          error: error instanceof Error ? error.message : String(error),
+        });
+        release();
+        host.broadcastReload("migration failed", crypto.randomUUID());
       }
-      release();
-      host.broadcastReload("migration complete", crypto.randomUUID());
-    } catch (error) {
-      console.error("[reactor.worker] Migration failed:", error);
-      setMigration({
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      });
-      release();
-      host.broadcastReload("migration failed", crypto.randomUUID());
-    }
+    });
   },
   build: async (raw) => {
     let phase = "init";
@@ -509,7 +496,7 @@ const host = new ReactorHost({
     } catch (error) {
       console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
       // The next hello rebuilds, which reopens both stores.
-      await releaseStores();
+      await stores.releaseAfterBootFailure();
       throw toStoredDocumentsRefused(error);
     }
   },
