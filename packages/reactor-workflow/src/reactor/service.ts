@@ -620,6 +620,9 @@ const DELIVERY_TIMEOUT_MS =
 
 const TIMED_OUT = Symbol("webhook delivery timed out");
 
+const WEBHOOK_REDELIVERED_REASON =
+  "Redelivered: the runtime shut down before this delivery ran, and the sender was told to retry";
+
 /** Resolves to TIMED_OUT, and never keeps the process alive waiting to. */
 function timeout(ms: number): Promise<typeof TIMED_OUT> {
   return new Promise((resolve) => {
@@ -1763,7 +1766,7 @@ export class WorkflowRuntimeService {
         "Too many unjournaled workflow fires held; a redelivery of the oldest fires again",
       );
     }
-    this.fireFromTrigger(workflowId, payload, kind);
+    this.startFiring(workflowId, payload, kind);
   }
 
   // Journals the fire, then lets it run on its own. Awaiting only the write is
@@ -1779,6 +1782,8 @@ export class WorkflowRuntimeService {
   ): Promise<void> {
     const fireKey = JSON.stringify([workflowId, dedupeKey]);
     const store = await this.store();
+    // Shut down meanwhile: unwritten, so the next owner replays the operation.
+    this.throwIfClosed();
     if (this.unjournaledFires.has(fireKey)) {
       if (!store) return;
       try {
@@ -1850,10 +1855,48 @@ export class WorkflowRuntimeService {
       }
       return;
     }
-    this.fireFromTrigger(workflowId, payload, kind, claim.runId);
+    this.startFiring(workflowId, payload, kind, claim.runId);
   }
 
-  private fireFromTrigger(
+  // Journal before fire: a trigger firing is a PENDING run with its payload
+  // before fire() reaches an await the shutdown can land in. Resolves once the
+  // row is durable; the run itself is not awaited.
+  private async fireFromTrigger(
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+  ): Promise<void> {
+    const runId = await this.journalFiring(workflowId, payload, kind);
+    this.startFiring(workflowId, payload, kind, runId);
+  }
+
+  // Refused with nothing written once closed: the firing's source still holds
+  // it. Without a journal the firing runs unrecorded, as every run does then.
+  private async journalFiring(
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+  ): Promise<string | undefined> {
+    const store = await this.store();
+    // No await between this check and the write, so none starts after shutdown.
+    if (this.closed) throw new WorkflowRuntimeClosedError(workflowId);
+    if (!store) return undefined;
+    try {
+      return await store.enqueueRun({
+        workflowId,
+        triggerKind: kind,
+        triggerPayload: payload,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Could not journal the ${kind} fire for workflow ${workflowId}; running it without a durable record`,
+        error,
+      );
+      return undefined;
+    }
+  }
+
+  private startFiring(
     workflowId: string,
     payload: unknown,
     kind: string,
@@ -2161,7 +2204,7 @@ export class WorkflowRuntimeService {
         return rememberSecrets(resolved.auth, resolved.secretValues);
       },
       fire: (workflowId, payload, kind, runId) => {
-        this.fireFromTrigger(workflowId, payload, kind, runId);
+        this.startFiring(workflowId, payload, kind, runId);
       },
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
@@ -2426,19 +2469,55 @@ export class WorkflowRuntimeService {
     const { config } = registration;
     const payload = webhookPayload(request);
 
+    // Answered only once journaled: after the reply the sender never retries.
     if (config.responseMode === "async") {
-      this.fireFromTrigger(workflowId, payload, WEBHOOK_TRIGGER_KIND);
+      try {
+        await this.fireFromTrigger(workflowId, payload, WEBHOOK_TRIGGER_KIND);
+      } catch (error) {
+        if (error instanceof WorkflowRuntimeClosedError) {
+          return { status: 503, unprocessed: true };
+        }
+        throw error;
+      }
       return { status: config.responseStatus };
+    }
+    let runId: string | undefined;
+    try {
+      runId = await this.journalFiring(
+        workflowId,
+        payload,
+        WEBHOOK_TRIGGER_KIND,
+      );
+    } catch (error) {
+      if (error instanceof WorkflowRuntimeClosedError) {
+        return { status: 503, unprocessed: true };
+      }
+      throw error;
     }
     // Sync mode holds the provider's socket, so the wait is bounded. On expiry the run is left
     // going — cancelling would lose announced work — and the 504 retry is what dedupe absorbs.
-    const run = await Promise.race([
-      this.fire(workflowId, payload, WEBHOOK_TRIGGER_KIND).then(
-        (result) => ({ ok: true, result }) as const,
-        (error: unknown) => ({ ok: false, error }) as const,
-      ),
-      timeout(DELIVERY_TIMEOUT_MS),
-    ]);
+    const firing = this.fire(
+      workflowId,
+      payload,
+      WEBHOOK_TRIGGER_KIND,
+      undefined,
+      undefined,
+      runId,
+    ).then(
+      (result) => ({ ok: true, result }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+    let replied = false;
+    const takeReply = () => !replied && (replied = true);
+    if (runId) this.heldReplies.set(runId, takeReply);
+    let run: Awaited<typeof firing> | typeof TIMED_OUT;
+    try {
+      run = await Promise.race([firing, timeout(DELIVERY_TIMEOUT_MS)]);
+      // A shutdown that took the reply first is answered 503, not 504.
+      if (run === TIMED_OUT && !takeReply()) run = await firing;
+    } finally {
+      if (runId) this.heldReplies.delete(runId);
+    }
 
     if (run === TIMED_OUT) {
       this.logger.warn(
@@ -4352,6 +4431,9 @@ export class WorkflowRuntimeService {
 
   // Firings of one workflow at a time; see run-gate.ts.
   private readonly runGate = new WorkflowRunGate();
+  // Sync deliveries still holding the sender's socket, by run. Taking one
+  // commits the delivery to a 503, before a 504 can.
+  private readonly heldReplies = new Map<string, () => boolean>();
 
   /** Why a trigger's firing of a PARKED workflow is refused; undefined when
    * it is not parked, or when an operator started the run. */
@@ -4438,8 +4520,18 @@ export class WorkflowRuntimeService {
   ): Promise<never> {
     const error = new WorkflowRuntimeClosedError(workflowId);
     if (enqueuedRunId) {
+      // Answered 503, the sender's retry is the record: not left to rerun.
+      const redelivered = this.heldReplies.get(enqueuedRunId)?.() ?? false;
       try {
-        await store?.failRun(enqueuedRunId, error.message, errorNameOf(error));
+        if (redelivered) {
+          await store?.cancelRun(enqueuedRunId, WEBHOOK_REDELIVERED_REASON);
+        } else {
+          await store?.failRun(
+            enqueuedRunId,
+            error.message,
+            errorNameOf(error),
+          );
+        }
       } catch (failure) {
         this.logger.warn(
           `Could not close out run ${enqueuedRunId} after shutdown: @error`,

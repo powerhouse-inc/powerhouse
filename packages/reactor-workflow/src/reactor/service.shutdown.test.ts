@@ -6,6 +6,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import { Documents } from "../../test/helpers/documents.js";
 import {
   CORE_PIECE_VERSION,
@@ -14,6 +15,7 @@ import {
 } from "../pieces/index.js";
 import { packagePieces } from "./piece-registry.js";
 import { effectiveRunPolicy } from "./policy.js";
+import { coreTrigger } from "./core-blocks.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
 import type { WorkflowRunGate } from "./run-gate.js";
 import {
@@ -49,7 +51,10 @@ const state = {
 let seq = 0;
 let service: WorkflowRuntimeService | undefined;
 
-function runtime(): { service: WorkflowRuntimeService; workflowId: string } {
+function runtime(global: Record<string, unknown> = state): {
+  service: WorkflowRuntimeService;
+  workflowId: string;
+} {
   seq += 1;
   const workflowId = `wf-shutdown-${seq}`;
   service = testRuntime({
@@ -58,12 +63,65 @@ function runtime(): { service: WorkflowRuntimeService; workflowId: string } {
       get: (id: string) =>
         Promise.resolve({
           header: { id, documentType: WORKFLOW_TYPE, name: id },
-          state: { global: state },
+          state: { global },
         }),
     },
   } as never);
   return { service, workflowId };
 }
+
+const webhookState = (responseMode: "async" | "sync") => ({
+  ...state,
+  trigger: {
+    id: "t1",
+    pieceName: "@powerhousedao/piece-core",
+    pieceVersion: CORE_PIECE_VERSION,
+    triggerName: "webhook",
+    config: { scheme: "none", responseMode },
+  },
+});
+
+// Arms a QUEUE webhook workflow and holds its only slot.
+async function queuedWebhook(responseMode: "async" | "sync") {
+  const global = webhookState(responseMode);
+  const { service, workflowId } = runtime(global);
+  await service.onOperations([
+    {
+      operation: {
+        index: seq,
+        timestampUtcMs: `${seq}`,
+        action: { type: "SET_WORKFLOW_NAME", input: {} },
+        resultingState: JSON.stringify(global),
+      },
+      context: {
+        documentId: workflowId,
+        documentType: WORKFLOW_TYPE,
+        scope: "global",
+        branch: "main",
+        ordinal: seq,
+      },
+    } as never,
+  ]);
+  const store = (await service.store())!;
+  const slot = await gateOf(service).admit(
+    workflowId,
+    effectiveRunPolicy({ policy } as never),
+  );
+  const request = {
+    key: workflowId,
+    method: "POST",
+    path: "/webhooks/0123456789abcdef0123456789abcdef",
+    queryParams: {},
+    headers: { "content-type": "application/json" },
+    raw: Buffer.from('{"id":"evt_1"}', "utf8"),
+    body: { id: "evt_1" },
+  } as unknown as WebhookRequest;
+  return { service, workflowId, store, slot, request };
+}
+
+// The payload a webhook run journals for `request`.
+const deliveredBody = (run: { trigger_payload: string | null } | undefined) =>
+  (JSON.parse(run!.trigger_payload!) as { body: unknown }).body;
 
 const gateOf = (runtimeService: WorkflowRuntimeService) =>
   (runtimeService as unknown as { runGate: WorkflowRunGate }).runGate;
@@ -245,6 +303,129 @@ describe("a runtime that has shut down", () => {
       });
       expect(JSON.parse(runs[0]!.trigger_payload!)).toEqual(item);
     });
+    if (slot.admitted) slot.release();
+  });
+
+  // The slot is consumed with the fire, so the refused run is its only record.
+  it("fails the run a queued schedule slot journaled, with its payload", async () => {
+    const { service, workflowId } = runtime();
+    const store = (await service.store())!;
+    const poller = new TriggerSupervisor({
+      store: () => service.store(),
+      resolveAuth: () => Promise.resolve(undefined),
+      fire: (
+        service.supervisor() as unknown as { options: TriggerSupervisorOptions }
+      ).options.fire,
+      cacheDir: "/nonexistent",
+      resolver: {
+        resolve: () => Promise.reject(new Error("no pieces here")),
+      },
+      worker: { dispose: () => undefined } as unknown as PieceWorker,
+    });
+    await poller.upsert({
+      kind: "schedule",
+      workflowId,
+      block: coreTrigger("schedule"),
+      config: { mode: "interval", every: 1, unit: "minutes" },
+    });
+    const row = await store.getTriggerState(workflowId);
+    await store.upsertTriggerState({
+      ...row!,
+      next_poll_at: "2000-01-01T00:00:00.000Z",
+    });
+    const slot = await gateOf(service).admit(
+      workflowId,
+      effectiveRunPolicy({ policy } as never),
+    );
+
+    await poller.tick();
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+    service.shutdown();
+    poller.stop();
+
+    await vi.waitFor(async () => {
+      const runs = await store.listRuns(workflowId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({
+        status: "FAILED",
+        error_name: "WorkflowRuntimeClosedError",
+        trigger_kind: "schedule",
+      });
+      expect(JSON.parse(runs[0]!.trigger_payload!)).toMatchObject({
+        everyMs: 60_000,
+      });
+    });
+    if (slot.admitted) slot.release();
+  });
+
+  // The sender was answered, so it never retries: the run is the record.
+  it("fails the run of an async webhook delivery queued at shutdown, with its payload", async () => {
+    const { service, workflowId, store, slot, request } =
+      await queuedWebhook("async");
+
+    const reply = await service.deliverWebhook(request);
+    expect(reply.status).toBe(202);
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+    service.shutdown();
+
+    await vi.waitFor(async () => {
+      const runs = await store.listRuns(workflowId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({
+        status: "FAILED",
+        error_name: "WorkflowRuntimeClosedError",
+      });
+      expect(deliveredBody(runs[0])).toEqual({ id: "evt_1" });
+    });
+    if (slot.admitted) slot.release();
+  });
+
+  // After the 504 the sender's retry is absorbed as a duplicate.
+  it("fails the run of a sync webhook delivery that timed out and queued at shutdown", async () => {
+    const { service, workflowId, store, slot, request } =
+      await queuedWebhook("sync");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const pending = service.deliverWebhook(request);
+      await vi.waitFor(() =>
+        expect(gateOf(service).waiting(workflowId)).toBe(1),
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect((await pending).status).toBe(504);
+    } finally {
+      vi.useRealTimers();
+    }
+    service.shutdown();
+
+    await vi.waitFor(async () => {
+      const runs = await store.listRuns(workflowId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({
+        status: "FAILED",
+        error_name: "WorkflowRuntimeClosedError",
+      });
+      expect(deliveredBody(runs[0])).toEqual({ id: "evt_1" });
+    });
+    if (slot.admitted) slot.release();
+  });
+
+  // Answered 503, so the sender's retry is the record and the run is not rerunnable.
+  it("cancels the run of a sync webhook delivery refused before its reply", async () => {
+    const { service, workflowId, store, slot, request } =
+      await queuedWebhook("sync");
+
+    const pending = service.deliverWebhook(request);
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+    service.shutdown();
+
+    expect(await within(pending)).toMatchObject({
+      status: 503,
+      unprocessed: true,
+    });
+    const runs = await store.listRuns(workflowId);
+    expect(runs).toHaveLength(1);
+    expect(runs[0]?.status).toBe("CANCELLED");
+    expect(runs[0]?.error).toContain("Redelivered");
     if (slot.admitted) slot.release();
   });
 

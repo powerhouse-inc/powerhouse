@@ -308,16 +308,18 @@ describe("WorkflowRuntimeService webhooks", () => {
     it("answers 503 when the runtime shuts down under a sync delivery", async () => {
       await arm({ responseMode: "sync" });
       let refuse!: () => void;
-      vi.spyOn(service, "fire").mockReturnValue(
-        new Promise((_, reject) => {
-          refuse = () => {
-            service.shutdown();
-            reject(new WorkflowRuntimeClosedError(WORKFLOW));
-          };
-        }) as never,
+      const fire = vi.spyOn(service, "fire").mockImplementation(
+        () =>
+          new Promise((_, reject) => {
+            refuse = () => {
+              service.shutdown();
+              reject(new WorkflowRuntimeClosedError(WORKFLOW));
+            };
+          }) as never,
       );
 
       const pending = service.deliverWebhook(request());
+      await vi.waitFor(() => expect(fire).toHaveBeenCalled());
       refuse();
       const reply = await pending;
 
