@@ -92,6 +92,7 @@ import {
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
@@ -1300,6 +1301,12 @@ export const startSwitchboard = async (
 ): Promise<SwitchboardReactor> => {
   const requestedPort = options.port ?? DEFAULT_PORT;
   const logger = options.logger ?? defaultLogger;
+  // Here as well as in index.mts, so a host embedding the server is profiled.
+  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+    await initProfilerFromEnv(process.env).catch((error: unknown) =>
+      logger.error("Error starting profiler: @error", error),
+    );
+  }
   const serverPort = await resolveServerPort(
     requestedPort,
     options.strictPort ?? false,
