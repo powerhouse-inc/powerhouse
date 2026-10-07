@@ -416,15 +416,31 @@ export class TriggerSupervisor {
     });
   }
 
+  // Releases queued and not yet run, per workflow.
+  private readonly releasing = new Map<string, number>();
+
   /** A disable clears the park. With no binding in memory to release a PARKED
    * row through onDisable (a boot), the row is turned DISABLED here. */
   releasePark(workflowId: string, flipRow: boolean): Promise<void> {
+    this.releasing.set(workflowId, (this.releasing.get(workflowId) ?? 0) + 1);
     return this.enqueue(async () => {
-      const store = await this.options.store();
-      if (!store) return;
-      if (flipRow) await store.clearParkOnDisable(workflowId);
-      else await store.clearWorkflowPark(workflowId);
+      try {
+        const store = await this.options.store();
+        if (!store) return;
+        if (flipRow) await store.clearParkOnDisable(workflowId);
+        else await store.clearWorkflowPark(workflowId);
+      } finally {
+        const left = (this.releasing.get(workflowId) ?? 1) - 1;
+        if (left > 0) this.releasing.set(workflowId, left);
+        else this.releasing.delete(workflowId);
+      }
     });
+  }
+
+  /** True while a {@link releasePark} is queued: a park row read meanwhile is
+   * one the lane clears before anything enqueued after it runs. */
+  isReleasing(workflowId: string): boolean {
+    return this.releasing.has(workflowId);
   }
 
   /** A re-publish past the parked version: on this lane, a park older than

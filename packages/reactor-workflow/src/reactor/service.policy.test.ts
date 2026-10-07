@@ -1069,3 +1069,142 @@ describe("registrations of one workflow", () => {
     );
   }, 60_000);
 });
+
+// The supervisor's lane can be held for a minute by one onEnable; operation
+// ingestion and boot seeding must not queue behind it to release a park.
+describe("a park released while the trigger lane is busy", () => {
+  function blockLane(runtime: WorkflowRuntimeService): () => void {
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    void (
+      runtime.supervisor() as unknown as {
+        enqueue(task: () => Promise<void>): Promise<void>;
+      }
+    ).enqueue(() => gate);
+    return open;
+  }
+
+  async function settlesWithin(
+    promise: Promise<unknown>,
+    ms: number,
+  ): Promise<boolean> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<false>((resolve) => {
+      timer = setTimeout(() => resolve(false), ms);
+    });
+    try {
+      return await Promise.race([promise.then(() => true), late]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function deleteOp(workflowId: string): OperationWithContext {
+    ordinal += 1;
+    return {
+      operation: {
+        index: ordinal,
+        timestampUtcMs: `${ordinal}`,
+        action: { type: "DELETE_DOCUMENT", input: { documentId: workflowId } },
+      },
+      context: {
+        documentId: workflowId,
+        documentType: "powerhouse/workflow",
+        scope: "document",
+        branch: "main",
+        ordinal,
+      },
+    } as unknown as OperationWithContext;
+  }
+
+  async function parkedEventWorkflow(id: string, note: string) {
+    await service.onOperations([workflowOp(id, documentEventWorkflow(id))]);
+    const store = (await service.store())!;
+    await service.onOperations([noteOp(note)]);
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeDefined(),
+    );
+    return store;
+  }
+
+  it("does not hold up a disable and re-enable, which then fires", async () => {
+    const id = "wf-park-busy-toggle";
+    const store = await parkedEventWorkflow(id, "note-busy-1");
+    const open = blockLane(service);
+    try {
+      const disabled = documents.apply(
+        id,
+        actions.setWorkflowStatus({ status: "DISABLED" }),
+      );
+      expect(
+        await settlesWithin(
+          service.onOperations([workflowOp(id, disabled)]),
+          1000,
+        ),
+      ).toBe(true);
+      const enabled = documents.apply(
+        id,
+        actions.setWorkflowStatus({ status: "ENABLED" }),
+      );
+      expect(
+        await settlesWithin(
+          service.onOperations([workflowOp(id, enabled)]),
+          1000,
+        ),
+      ).toBe(true);
+    } finally {
+      open();
+    }
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeUndefined(),
+    );
+
+    await service.onOperations([noteOp("note-busy-2")]);
+    await vi.waitFor(async () =>
+      expect(await store.listRuns(id)).toHaveLength(2),
+    );
+  }, 60_000);
+
+  it("does not hold up seeding a disabled workflow", async () => {
+    const id = "wf-park-busy-seed";
+    const store = await parkedEventWorkflow(id, "note-busy-seed");
+    const disabled = documents.apply(
+      id,
+      actions.setWorkflowStatus({ status: "DISABLED" }),
+    );
+    const rebooted = testRuntime({
+      reactorClient: {
+        ...documents.client(),
+        find: () => Promise.resolve({ results: [structuredClone(disabled)] }),
+      } as never,
+    });
+    const open = blockLane(rebooted);
+    try {
+      expect(await settlesWithin(rebooted.seedFailure(), 2000)).toBe(true);
+    } finally {
+      open();
+    }
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeUndefined(),
+    );
+    rebooted.shutdown();
+  }, 60_000);
+
+  it("does not hold up the deletion of a parked workflow", async () => {
+    const id = "wf-park-busy-delete";
+    const store = await parkedEventWorkflow(id, "note-busy-delete");
+    const open = blockLane(service);
+    try {
+      expect(
+        await settlesWithin(service.onOperations([deleteOp(id)]), 1000),
+      ).toBe(true);
+    } finally {
+      open();
+    }
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeUndefined(),
+    );
+  }, 60_000);
+});

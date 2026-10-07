@@ -237,6 +237,7 @@ import {
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
+  type WorkflowParkRow,
 } from "./store.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
@@ -1044,15 +1045,21 @@ export class WorkflowRuntimeService {
       // With the binding held, the supervisor's disable below releases a
       // PARKED row through onDisable; flipping it DISABLED first would skip
       // that release. With none (a boot), nothing here can run onDisable.
-      await this.supervisor().releasePark(
-        workflowId,
-        !(held && SUPERVISED_KINDS.has(held.kind)),
-      );
+      // Not awaited: the lane runs it before the remove() enqueued below.
+      this.supervisor()
+        .releasePark(workflowId, !(held && SUPERVISED_KINDS.has(held.kind)))
+        .catch((error: unknown) => {
+          this.logger.error(
+            `Could not clear the park of disabled workflow ${workflowId}`,
+            error,
+          );
+        });
     } else if (await this.outdatedPark(workflowId, state)) {
       await this.supervisor().unpark(workflowId, version);
     }
     // A park the supervisor does not see: matching nothing is what stops it.
-    const park = block ? await store?.getWorkflowPark(workflowId) : undefined;
+    const park =
+      block && store ? await this.standingPark(store, workflowId) : undefined;
     if (
       block &&
       (blockKey(block) === WEBHOOK_BLOCK || triggerKindOf(block)) &&
@@ -1974,7 +1981,6 @@ export class WorkflowRuntimeService {
     try {
       const store = await this.store();
       await store?.deleteDedupe(workflowId);
-      await this.supervisor().releasePark(workflowId, false);
     } catch (error) {
       this.logger.warn(
         `Could not drop the dedupe keys of deleted workflow ${workflowId}`,
@@ -2003,9 +2009,14 @@ export class WorkflowRuntimeService {
     this.cancelTriggerTest(workflowId, "stopped: the workflow was deleted");
   }
 
-  // onDisable, then the trigger row and FLOW store, then the webhook token.
+  // onDisable, then the trigger row and FLOW store, then the park, then the
+  // webhook token.
   private async releaseDeleted(workflowId: string): Promise<void> {
-    await this.supervisor().forget(workflowId);
+    const supervisor = this.supervisor();
+    await Promise.all([
+      supervisor.forget(workflowId),
+      supervisor.releasePark(workflowId, false),
+    ]);
     await (await this.endpoints())?.revoke(workflowId);
   }
 
@@ -2017,7 +2028,6 @@ export class WorkflowRuntimeService {
     this.dropDeleted(workflowId);
     await this.releaseDeleted(workflowId);
     await store.deleteDedupe(workflowId);
-    await this.supervisor().releasePark(workflowId, false);
     for (const scope of ["FLOW", "PROJECT"] as const) {
       await store.deletePieceStore(scope, testPartitionKey(scope, workflowId));
     }
@@ -4277,7 +4287,7 @@ export class WorkflowRuntimeService {
     publishedVersion: number,
   ): Promise<string | undefined> {
     if (!store || OPERATOR_RUN_KINDS.has(triggerKind)) return undefined;
-    const park = await store.getWorkflowPark(workflowId);
+    const park = await this.standingPark(store, workflowId);
     if (!park || park.published_version < publishedVersion) return undefined;
     return `Skipped: this workflow is PARKED (${park.reason})`;
   }
@@ -4325,13 +4335,24 @@ export class WorkflowRuntimeService {
     );
   }
 
+  /** The park row, unless a release queued on the lane is about to clear it;
+   * read off the lane, so a disable need not wait for that release. */
+  private async standingPark(
+    store: WorkflowRunStore,
+    workflowId: string,
+  ): Promise<WorkflowParkRow | undefined> {
+    if (this.triggerSupervisor?.isReleasing(workflowId)) return undefined;
+    return store.getWorkflowPark(workflowId);
+  }
+
   /** A park recorded against an earlier published version than this state's. */
   private async outdatedPark(
     workflowId: string,
     state: WorkflowState,
   ): Promise<boolean> {
     if (state.status !== "ENABLED") return false;
-    const park = await (await this.store())?.getWorkflowPark(workflowId);
+    const store = await this.store();
+    const park = store ? await this.standingPark(store, workflowId) : undefined;
     return (
       park !== undefined &&
       runnableDefinition(state).version > park.published_version
@@ -4436,7 +4457,7 @@ export class WorkflowRuntimeService {
       // In registration order, and only while this park stands: a registration
       // of a newer version that already ran must keep its entry.
       const stands = await this.inRegistrationOrder(workflowId, async () => {
-        const park = await store.getWorkflowPark(workflowId);
+        const park = await this.standingPark(store, workflowId);
         const current = park?.published_version === publishedVersion;
         const registered = this.registry.get(workflowId);
         if (current && registered && !SUPERVISED_KINDS.has(registered.kind)) {
