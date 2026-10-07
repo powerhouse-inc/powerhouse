@@ -54,7 +54,7 @@ export function isCatchUpConsumer(value: unknown): value is ICatchUpConsumer {
 export class CatchUpScheduler implements ICatchUp {
   private readonly fixed: ConsumerEntry[] = [];
   private readonly sources: ConsumerSource[] = [];
-  private readonly sourced = new Map<ICatchUpConsumer, ConsumerEntry>();
+  private readonly sourced = new WeakMap<ICatchUpConsumer, ConsumerEntry>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private running: Promise<SweepResult[]> | undefined;
   private started = false;
