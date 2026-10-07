@@ -26,7 +26,7 @@ import {
 import { jsonSafe } from "./json-safe.js";
 import { formatPieceError } from "@powerhousedao/pieces-framework/host";
 import { redactError, redactMessage } from "./redact.js";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import { DataUriFilesService, StagedFilesService } from "../context/files.js";
 import { setMaxFileBytes } from "../context/limits.js";
@@ -262,24 +262,40 @@ async function resolveOptions(
 // Reads a FILE prop's attachment ref from the copy the host staged on disk.
 // The fork shares the filesystem with its parent, so this is what keeps a
 // 50 MB scan out of the IPC channel in both directions.
-function stagedInputResolver(
+function stagedInputOptions(
   inputs: StagedInput[] | undefined,
-): NormalizeOptions["resolveRef"] {
+): Pick<NormalizeOptions, "resolveRef" | "openRef"> {
   // An empty list is not the same as no list: it means the host has a store
   // and tried, so a FILE prop that still comes up short is told which
   // reference failed rather than that the context has no resolver.
-  if (!inputs) return undefined;
+  if (!inputs) return {};
   const byRef = new Map(inputs.map((input) => [input.ref, input]));
-  return async (ref: string) => {
-    const staged = byRef.get(ref);
-    if (!staged) {
-      throw new Error(`No staged file for reference "${ref}"`);
+  const staged = (ref: string): StagedInput => {
+    const input = byRef.get(ref);
+    if (!input) throw new Error(`No staged file for reference "${ref}"`);
+    if (input.error !== undefined) {
+      throw new Error(`Could not read "${ref}": ${input.error}`);
     }
-    return {
-      data: await readFile(staged.path),
-      filename: staged.fileName,
-      contentType: staged.contentType,
-    };
+    return input;
+  };
+  return {
+    resolveRef: async (ref: string) => {
+      const input = staged(ref);
+      return {
+        data: await readFile(input.path),
+        filename: input.fileName,
+        contentType: input.contentType,
+      };
+    },
+    openRef: async (ref: string) => {
+      const input = staged(ref);
+      return {
+        path: input.path,
+        size: (await stat(input.path)).size,
+        filename: input.fileName,
+        contentType: input.contentType,
+      };
+    },
   };
 }
 
@@ -374,7 +390,7 @@ async function runAction(
       `action "${request.actionName}"`,
       action.props,
       request.propsValue,
-      { resolveRef: stagedInputResolver(request.stagedInputs) },
+      stagedInputOptions(request.stagedInputs),
     ),
     auth: request.auth,
     store:

@@ -40,6 +40,15 @@ export interface ActiveRun {
   // Who the run acts as; resolved only when the snapshot binds a reactor
   // connection, and null for an unsigned publish.
   runUser?: RunUser | null;
+  // Where the run's attachments may come from, for the host's read check.
+  attachments?: RunAttachmentOrigins;
+}
+
+export interface RunAttachmentOrigins {
+  // The trigger's document and every document handed to a step.
+  documentIds: () => string[];
+  // Refs this run's steps wrote.
+  written: Set<string>;
 }
 
 const storage = new AsyncLocalStorage<ActiveRun>();
@@ -75,6 +84,10 @@ export function currentDocumentRecorder():
 // the executor is shared, and the child it should use is not.
 export function currentPieceWorker(): IPieceWorker | undefined {
   return storage.getStore()?.pieceWorker;
+}
+
+export function currentAttachmentOrigins(): RunAttachmentOrigins | undefined {
+  return storage.getStore()?.attachments;
 }
 
 export function currentStepTest(): boolean {

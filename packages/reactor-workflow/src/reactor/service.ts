@@ -176,9 +176,11 @@ import {
   testPartitionKey,
 } from "./piece-store-port.js";
 import {
+  currentAttachmentOrigins,
   currentRunUser,
   currentWorkflowId,
   withRunScope,
+  type RunAttachmentOrigins,
   type RunUser,
 } from "./run-scope.js";
 import {
@@ -729,15 +731,27 @@ export class WorkflowRuntimeService {
     });
     this.logger = host.logger ?? logger;
     this.attachments = host.attachments
-      ? createAttachmentPort(
-          host.attachments,
-          () => currentWorkflowId(),
-          // A host that serves attachments without answering for them reads
-          // nothing: an unanswered read is not a permitted one.
-          (documentId, ref) =>
-            host.canReadAttachmentRef?.(documentId, ref) ??
-            Promise.resolve(false),
-        )
+      ? createAttachmentPort(host.attachments, {
+          documentIdFor: () => currentWorkflowId(),
+          canReadRef: async (ref) => {
+            const workflowId = currentWorkflowId();
+            const origins = currentAttachmentOrigins();
+            if (!workflowId) return false;
+            // What this run wrote, it may read back.
+            if (origins?.written.has(ref)) return true;
+            // A host that serves attachments without answering for them reads
+            // nothing: an unanswered read is not a permitted one.
+            if (!host.canReadAttachmentRef) return false;
+            const runUser = currentRunUser();
+            return host.canReadAttachmentRef({
+              workflowId,
+              ref,
+              documentIds: [...new Set(origins?.documentIds() ?? [])],
+              ...(runUser !== undefined ? { runUser } : {}),
+            });
+          },
+          onWritten: (ref) => currentAttachmentOrigins()?.written.add(ref),
+        })
       : undefined;
     this.storePromise = this.openStore();
     this.seedPromise = this.seedWithRetries();
@@ -4036,6 +4050,11 @@ export class WorkflowRuntimeService {
           connections,
           pieceWorker: session,
           ...(runUser !== undefined ? { runUser } : {}),
+          attachments: attachmentOrigins(
+            triggerPayload,
+            handed,
+            resume?.completedSteps,
+          ),
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (journal && journaledRunId) {
@@ -4317,6 +4336,11 @@ export class WorkflowRuntimeService {
           stepTest: true,
           // A single-step test acts as its caller.
           runUser: this.callerRunUser(ctx),
+          attachments: attachmentOrigins(
+            upstream.triggerPayload,
+            handed,
+            upstream.priorSteps,
+          ),
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (store && journaledRunId) {
@@ -4675,4 +4699,34 @@ export function createWorkflowRuntime(
   deps: WorkflowRuntimeHostDeps,
 ): WorkflowRuntimeService {
   return new WorkflowRuntimeService(deps);
+}
+
+// A run's attachments come from its trigger's document, the documents its
+// steps were handed, and the files its own steps wrote. Journaled outputs a
+// rerun or test replays count as written: an earlier run of this workflow
+// already wrote or was allowed to read every ref in them.
+function attachmentOrigins(
+  triggerPayload: unknown,
+  handed: ReadonlySet<string>,
+  replayed?: unknown,
+): RunAttachmentOrigins {
+  const written = new Set<string>();
+  collectAttachmentRefs(replayed, written);
+  return {
+    documentIds: () => [...triggerDocumentIds(triggerPayload), ...handed],
+    written,
+  };
+}
+
+function collectAttachmentRefs(value: unknown, found: Set<string>): void {
+  if (typeof value === "string") {
+    if (value.startsWith("attachment://")) found.add(value);
+  } else if (Array.isArray(value)) {
+    for (const entry of value) collectAttachmentRefs(entry, found);
+  } else if (value instanceof Map) {
+    for (const entry of value.values()) collectAttachmentRefs(entry, found);
+  } else if (typeof value === "object" && value !== null) {
+    for (const entry of Object.values(value))
+      collectAttachmentRefs(entry, found);
+  }
 }

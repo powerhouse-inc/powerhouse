@@ -18,6 +18,7 @@ import {
   createCanonicalDocumentIdResolver,
   type CanonicalDocumentId,
   type Context,
+  type IAttachmentAccessService,
   type IAuthorizationService,
   type IPackagePieceSource,
   type PackagePieceEntry,
@@ -27,6 +28,7 @@ import { parseRef } from "@powerhousedao/reactor-attachments";
 import type * as WorkflowEngine from "@powerhousedao/reactor-workflow";
 import type {
   AttachmentClientLike,
+  AttachmentReadRequest,
   HostIdentity,
   WorkflowCaller,
   WorkflowRuntimeHostDeps,
@@ -151,6 +153,9 @@ export interface ComposeWorkflowRuntimeDeps {
    * store needs PH_WORKFLOWS_SECRETS_MASTER_KEY rather than a generated key. */
   secretsKeyFile?: false;
   attachments: AttachmentClientLike;
+  /** Decides a step's attachment reads like the attachment routes do;
+   * absent, a step reads none but the files its own run wrote. */
+  attachmentAccess?: IAttachmentAccessService;
   webhooks?: IWebhookScope;
   /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
    * Absent leaves OAuth2 connections unable to sign in. */
@@ -288,17 +293,44 @@ export function hostIdentityOf(
     : { key: identity.key };
 }
 
-/** A step reads any well-formed attachment, as it reads any document: a run
- * carries no caller to check against. */
-export function canReadAttachmentRef(
-  _documentId: string,
-  ref: string,
-): Promise<boolean> {
-  try {
-    return Promise.resolve(parseRef(ref as AttachmentRef).version === 1);
-  } catch {
-    return Promise.resolve(false);
-  }
+const REFERENCE_INDEX_RETRIES = 8;
+const REFERENCE_INDEX_RETRY_MS = 250;
+
+/** A step reads an attachment the way the download route serves one: when the
+ * run's user may read a document that references it. The candidates are the
+ * documents the run was handed; the reference index can trail the operation
+ * that fired the trigger, so a denial is retried briefly. */
+export function attachmentReadPolicy(
+  access: IAttachmentAccessService | undefined,
+  retryMs = REFERENCE_INDEX_RETRY_MS,
+): (request: AttachmentReadRequest) => Promise<boolean> {
+  return async (request) => {
+    try {
+      if (parseRef(request.ref as AttachmentRef).version !== 1) return false;
+    } catch {
+      return false;
+    }
+    if (!access || request.documentIds.length === 0) return false;
+    const subject = request.runUser?.subject;
+    const caller = {
+      ...(subject?.address ? { userAddress: subject.address } : {}),
+      ...(subject?.key ? { appKey: subject.key } : {}),
+    };
+    for (let attempt = 0; attempt <= REFERENCE_INDEX_RETRIES; attempt++) {
+      for (const documentId of request.documentIds) {
+        const result = await access.canReadAttachment({
+          documentId,
+          attachmentRef: request.ref,
+          ...caller,
+        });
+        if (result.kind === "allowed") return true;
+      }
+      if (attempt < REFERENCE_INDEX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, retryMs));
+      }
+    }
+    return false;
+  };
 }
 
 // Live registration is the capability the attachment reference index needs
@@ -415,7 +447,7 @@ export async function composeWorkflowRuntime(
       : {}),
     webhooks: deps.webhooks,
     attachments: deps.attachments,
-    canReadAttachmentRef,
+    canReadAttachmentRef: attachmentReadPolicy(deps.attachmentAccess),
     logger: deps.logger,
     ...(deps.telemetry ? { telemetry: deps.telemetry } : {}),
   });
