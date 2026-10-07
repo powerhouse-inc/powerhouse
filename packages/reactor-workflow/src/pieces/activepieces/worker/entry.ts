@@ -59,6 +59,13 @@ import {
   UnsupportedPieceFeatureError,
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
+import {
+  finishRequestTimings,
+  markWorkerReady,
+  startRequestTimings,
+  timed,
+  withRequestTimings,
+} from "./timings.js";
 import type {
   StagedInput,
   PieceModuleRef,
@@ -100,11 +107,13 @@ function pieceRefKey(ref: PieceModuleRef): string {
 function loadCached(ref: PieceModuleRef): Promise<LoadedPiece> {
   const key = pieceRefKey(ref);
   let loading = loadedPieces.get(key);
+  const cached = loading !== undefined;
   if (!loading) {
     loading = ref.entryPath ? loadPiece(key) : loadPieceFromDir(key);
     loadedPieces.set(key, loading);
   }
-  return loading;
+  const loaded = loading;
+  return timed("piece.load", () => loaded, { "piece.cached": cached });
 }
 
 // The secret values this request carried, if any. Redacting here rather than
@@ -330,9 +339,8 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     ? new RemoteKeyValueStore()
     : undefined;
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
-  const session = await openWorkerReactor(
-    request.reactor,
-    action.requireReactor,
+  const session = await timed("reactor.open", () =>
+    openWorkerReactor(request.reactor, action.requireReactor),
   );
   try {
     return await runAction(message, action, {
@@ -389,7 +397,7 @@ async function runAction(
       request.stepTest && typeof action.test === "function"
         ? action.test
         : action.run;
-    output = await method.call(action, context);
+    output = await timed("action", () => method.call(action, context));
   } finally {
     restoreConsole?.();
     liveOutput?.close();
@@ -624,16 +632,20 @@ export function startPieceWorker(): void {
   // A piece cannot then keep a pristine copy of the socket layer.
   installEgressGuard();
   process.on("message", onMessage);
+  markWorkerReady();
 }
 
 function onMessage(message: unknown): void {
   if (!isWorkerMessage(message)) return;
+  const timings = startRequestTimings();
   // Deferred so a synchronous throw — a malformed egress policy — becomes a
   // rejection the handler below reports, instead of killing the child.
   const handler = Promise.resolve().then(() => {
     setMaxFileBytes(message.request.maxFileBytes);
     setHostCallTimeout(message.request.hostCallTimeoutMs);
-    return runWithEgressPolicy(message.request.egress, () => dispatch(message));
+    return withRequestTimings(timings, () =>
+      runWithEgressPolicy(message.request.egress, () => dispatch(message)),
+    );
   });
   handler
     .catch((error: unknown): WorkerResponse => ({
@@ -642,6 +654,8 @@ function onMessage(message: unknown): void {
       error: serializeError(error, redactValuesOf(message)),
       tlsPoisoned: consumeTlsFlag(),
     }))
-    .then((response) => process.send?.(response))
+    .then((response) =>
+      process.send?.({ ...response, timings: finishRequestTimings(timings) }),
+    )
     .catch(() => process.exit(1));
 }

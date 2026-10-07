@@ -15,6 +15,7 @@ import type {
 import type { ILogger } from "document-model";
 import type { AttachmentClientLike } from "./attachment-port.js";
 import type { SecretStore } from "../pieces/index.js";
+import type { WorkflowTelemetryOptions } from "../telemetry.js";
 
 // The caller behind a request. The engine only hands it back to the host's own
 // access check, so its shape is the host's business.
@@ -61,6 +62,9 @@ export interface WorkflowRuntimeHostDeps {
   // for a database that outlives the working directory.
   secretsKeyFile?: string | false;
   logger?: ILogger;
+  // Where run, step, worker and reactor-call spans and metrics go. Absent, the
+  // global OpenTelemetry API's, which are no-ops until a host registers one.
+  telemetry?: WorkflowTelemetryOptions;
   // How long a design-time call waits for a workflow still syncing here.
   syncWaitMs?: number;
   // How long one source's version listing may take before it counts as absent.

@@ -46,6 +46,7 @@ import type {
   ResolvedConnection,
 } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
+import type { WorkflowTelemetry } from "../../telemetry.js";
 import { builtinPiece, isBuiltinPiece, runBuiltinAction } from "../builtin.js";
 import {
   blockLabel,
@@ -198,6 +199,7 @@ export interface ActivepiecesBlockExecutorOptions {
   identity?: () => Omit<ActionContextIdentity, "stepName"> | undefined;
   // Whether this step runs as a single-step test, asked per step likewise.
   stepTest?: () => boolean;
+  telemetry?: WorkflowTelemetry;
 }
 
 export interface StepReactorRequest {
@@ -316,7 +318,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     } else if (supplied) {
       return supplied;
     }
-    return (this.own ??= new PieceWorker());
+    return (this.own ??= new PieceWorker({
+      telemetry: this.options.telemetry,
+    }));
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
@@ -359,11 +363,15 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     const runSecrets = execution.redactValues ?? [];
     let redactValues: string[] = [...runSecrets];
     try {
-      const piece = await this.resolver.resolve({
+      const ref = {
         name: parsed.packageName,
         version: parsed.version,
         ...(parsed.source ? { source: parsed.source } : {}),
-      });
+      };
+      const telemetry = this.options.telemetry;
+      const piece = await (telemetry
+        ? telemetry.phase("piece.resolve", {}, () => this.resolver.resolve(ref))
+        : this.resolver.resolve(ref));
       const connection = await this.resolveConnection(execution.connectionId, {
         piecePackage: parsed.packageName,
         stepId: execution.step.id,

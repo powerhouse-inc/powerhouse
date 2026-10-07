@@ -40,6 +40,7 @@ import { packagePieces } from "./piece-registry.js";
 import { packageFromConnectorId } from "./connector-id.js";
 import { runnableDefinition, type RunnableDefinition } from "./runnable.js";
 import type { OAuthTokenRefresher } from "./oauth.js";
+import type { WorkflowTelemetry } from "../telemetry.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
 const connectionLogger = childLogger(["workflow", "connection"]);
@@ -245,6 +246,7 @@ export function createBlockExecutor(
   resolveBlock?: (block: BlockRef) => Promise<BlockResolution>,
   oauth?: OAuthTokenRefresher,
   reactorAccess?: ActivepiecesBlockExecutorOptions["reactorAccess"],
+  telemetry?: WorkflowTelemetry,
 ): BlockExecutor {
   // The document blocks are a piece; they reach the reactor through
   // reactorAccess like any other declaring piece.
@@ -268,6 +270,7 @@ export function createBlockExecutor(
       resolver: pieceResolver(),
       ...(resolveBlock ? { resolveBlock } : {}),
       ...(reactorAccess ? { reactorAccess } : {}),
+      ...(telemetry ? { telemetry } : {}),
       connections: boundConnections(
         new DocumentConnectionResolver(host, secrets, oauth),
       ),

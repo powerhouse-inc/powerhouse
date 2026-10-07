@@ -26,6 +26,7 @@ export {
   type RunsPageArgs,
 } from "./reactor/service.js";
 export { InvalidRunCursorError } from "./reactor/run-cursor.js";
+export { TELEMETRY_SCOPE, type WorkflowTelemetryOptions } from "./telemetry.js";
 export { publishRunUser } from "./reactor/run-user.js";
 export type {
   OAuthAttemptStatus,

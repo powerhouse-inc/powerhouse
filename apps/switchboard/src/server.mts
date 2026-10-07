@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import type { PGlite } from "@electric-sql/pglite";
+import { metrics, trace } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
 import {
   createDurableNodeFs,
@@ -95,6 +96,7 @@ import { initFeatureFlags } from "./feature-flags.js";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
+  WORKFLOW_TELEMETRY_SCOPE,
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
@@ -1031,6 +1033,11 @@ async function initServer(
       pieceRegistryUrl: registryUrl,
       models: workerModels,
       logger: logger.child(["workflow-runtime"]),
+      // The providers observability.mts registered before this module loaded.
+      telemetry: {
+        tracer: trace.getTracer(WORKFLOW_TELEMETRY_SCOPE),
+        meter: metrics.getMeter(WORKFLOW_TELEMETRY_SCOPE),
+      },
     });
 
     const WorkflowRuntimeSubgraph = workflows.subgraph;
