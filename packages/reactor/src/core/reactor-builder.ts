@@ -544,7 +544,8 @@ export class ReactorBuilder {
    * syncing the filesystem, and the flush moves to a job's write-ready and
    * every sync cursor write. A poisoned session goes to `onUnrecoverable`,
    * since a fallback would leave in-memory read-model positions ahead of the
-   * store. The builder owns `pg`; the module's `groupCommitStorage` closes it.
+   * store. The caller keeps `pg` if the build fails; once built, the module's
+   * `groupCommitStorage` closes it.
    */
   withGroupCommitPGlite(options: GroupCommitPGliteOptions): this {
     this.groupCommitPGlite = options;
@@ -671,7 +672,7 @@ export class ReactorBuilder {
     try {
       return await this.assembleModule(groupCommit);
     } catch (error) {
-      await groupCommit?.close().catch(() => undefined);
+      groupCommit?.restoreStatementSync();
       throw error;
     }
   }

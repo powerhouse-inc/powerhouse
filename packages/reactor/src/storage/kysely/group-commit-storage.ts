@@ -45,6 +45,8 @@ export interface IGroupCommitStorage {
 export type GroupCommitStorage<DB> = IGroupCommitStorage & {
   readonly db: Kysely<DB>;
   readonly flusher: IStorageFlusher;
+  /** For a failed build: the caller still owns the instance. */
+  restoreStatementSync(): void;
 };
 
 /** One unit, so the deferral never exists without its flusher and poison path. */
@@ -83,5 +85,6 @@ export function createGroupCommitStorage<DB>(
     flusher: client,
     health,
     close: () => client.close(),
+    restoreStatementSync: () => client.restoreStatementSync(),
   };
 }

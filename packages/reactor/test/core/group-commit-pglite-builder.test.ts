@@ -14,6 +14,7 @@ import { createDocModelDocument } from "../factories.js";
 type Controlled = GroupCommitPGliteInstance & {
   pg: PGlite;
   syncs: number;
+  closes: number;
   hangNext: RegExp | undefined;
   delayNext: { pattern: RegExp; ms: number } | undefined;
   /** Every sync waits for this first. */
@@ -25,6 +26,7 @@ function controlled(pg: PGlite): Controlled {
   const instance: Controlled = {
     pg,
     syncs: 0,
+    closes: 0,
     hangNext: undefined,
     delayNext: undefined,
     syncHold: undefined,
@@ -42,7 +44,10 @@ function controlled(pg: PGlite): Controlled {
     },
     exec: (text) => pg.exec(text),
     isInTransaction: () => pg.isInTransaction(),
-    close: () => pg.close(),
+    close: () => {
+      instance.closes += 1;
+      return pg.close();
+    },
     syncToFs: async () => {
       instance.syncs += 1;
       await instance.syncHold;
@@ -241,5 +246,18 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
       builderOver(pg, unrecoverable).buildModule(),
     ).rejects.toThrow();
     expect(unrecoverable).toHaveLength(1);
+    await pg.pg.close();
+  });
+
+  it("leaves a pg it did not open to its owner when the build fails", async () => {
+    const pg = await openFresh();
+    pg.hangNext = /^select/i;
+    await expect(builderOver(pg, []).buildModule()).rejects.toThrow();
+
+    expect(pg.closes).toBe(0);
+    const before = pg.syncs;
+    await pg.syncToFs();
+    expect(pg.syncs).toBe(before + 1);
+    await pg.pg.close();
   });
 });

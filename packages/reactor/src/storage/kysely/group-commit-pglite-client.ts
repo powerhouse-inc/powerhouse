@@ -190,6 +190,11 @@ export class GroupCommitPGliteClient implements PGliteSession, IStorageFlusher {
     }
   }
 
+  /** Hands the instance back to per-statement durability, unclosed. */
+  restoreStatementSync(): void {
+    this.setStatementSync(true);
+  }
+
   /** A statement that died in flight would otherwise hold a close forever. */
   private bounded<T>(pending: Promise<T>): Promise<T | typeof TIMED_OUT> {
     const timeoutMs = this.options.closeTimeoutMs;
