@@ -253,6 +253,7 @@ import {
 } from "./run-retention.js";
 import {
   TriggerSupervisor,
+  TriggerSupervisorStoppedError,
   type PieceTriggerBinding,
   type TriggerBinding,
 } from "./trigger-supervisor.js";
@@ -1063,7 +1064,7 @@ export class WorkflowRuntimeService {
       this.supervisor()
         .releasePark(workflowId, !(held && SUPERVISED_KINDS.has(held.kind)))
         .catch((error: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Could not clear the park of disabled workflow ${workflowId}`,
             error,
           );
@@ -1073,7 +1074,7 @@ export class WorkflowRuntimeService {
       this.supervisor()
         .unpark(workflowId, version)
         .catch((error: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Could not lift the outdated park of workflow ${workflowId}`,
             error,
           );
@@ -1148,7 +1149,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .upsert(binding, publishedVersion)
       .catch((error: unknown) => {
-        this.logger.error(`Trigger enable failed for ${workflowId}`, error);
+        this.laneFailed(`Trigger enable failed for ${workflowId}`, error);
       });
   }
 
@@ -1231,7 +1232,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .reject(workflowId, binding.block, binding.config, reason, retryAt)
       .catch((error: unknown) => {
-        this.logger.error(
+        this.laneFailed(
           `Could not record the refused trigger for workflow ${workflowId}`,
           error,
         );
@@ -1262,7 +1263,7 @@ export class WorkflowRuntimeService {
       this.supervisor()
         .reject(workflowId, block, configRecord(rawConfig), message)
         .catch((recordError: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Could not record the rejected webhook trigger for workflow ${workflowId}`,
             recordError,
           );
@@ -1509,7 +1510,7 @@ export class WorkflowRuntimeService {
         reason,
       )
       .catch((error: unknown) => {
-        this.logger.error(
+        this.laneFailed(
           `Could not record the reactor access denial for workflow ${workflowId}`,
           error,
         );
@@ -1552,7 +1553,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .reject(workflowId, block, configRecord(trigger.config), reason, retryAt)
       .catch((error: unknown) => {
-        this.logger.error(
+        this.laneFailed(
           `Could not record the unresolved trigger for workflow ${workflowId}`,
           error,
         );
@@ -1604,7 +1605,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .remove(workflowId)
       .catch((error: unknown) => {
-        this.logger.error(`Trigger disable failed for ${workflowId}`, error);
+        this.laneFailed(`Trigger disable failed for ${workflowId}`, error);
       });
   }
 
@@ -2184,6 +2185,18 @@ export class WorkflowRuntimeService {
     return this.triggerSupervisor;
   }
 
+  // Lane work refused because this runtime shut down is the designed outcome.
+  private laneFailed(message: string, error: unknown): void {
+    if (
+      error instanceof TriggerSupervisorStoppedError ||
+      error instanceof WorkflowRuntimeClosedError
+    ) {
+      this.logger.debug(message, error);
+      return;
+    }
+    this.logger.error(message, error);
+  }
+
   startTriggerSupervisor(): void {
     this.supervisor().start();
   }
@@ -2549,7 +2562,7 @@ export class WorkflowRuntimeService {
           );
         },
         (error: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Webhook delivery failed for workflow ${binding.workflowId}`,
             error,
           );

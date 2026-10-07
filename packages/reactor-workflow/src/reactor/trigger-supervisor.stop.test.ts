@@ -65,6 +65,13 @@ describe("TriggerSupervisor after stop()", () => {
   // waits here: the poll stop() lands in.
   let held: { workflowId: string; started: () => void; release: Promise<void> };
   let prefix: string;
+  // Runs ahead of the fake's own handling; undefined falls through to it.
+  let intercept:
+    | ((request: {
+        hook: string;
+        identity: { flowId: string };
+      }) => Promise<PieceWorkerResult | undefined>)
+    | undefined;
 
   const worker = {
     describePiece: () =>
@@ -79,6 +86,8 @@ describe("TriggerSupervisor after stop()", () => {
     }) => {
       const workflowId = request.identity.flowId;
       hooks.push({ workflowId, hook: request.hook });
+      const intercepted = await intercept?.(request);
+      if (intercepted) return intercepted;
       if (request.hook === "run" && workflowId === held.workflowId) {
         await store.setPieceStoreValue("FLOW", workflowId, "cursor", "after");
         held.started();
@@ -109,6 +118,7 @@ describe("TriggerSupervisor after stop()", () => {
       started: () => undefined,
       release: Promise.resolve(),
     };
+    intercept = undefined;
     supervisor = build(scoped());
   });
 
@@ -232,6 +242,39 @@ describe("TriggerSupervisor after stop()", () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain("stopped");
     }
+  });
+
+  it("re-arms no enable retry that the stop refused", async () => {
+    const a = `${prefix}-a`;
+    const started = gate();
+    const release = gate();
+    let enables = 0;
+    intercept = async (request) => {
+      if (request.hook !== "onEnable" || request.identity.flowId !== a) {
+        return undefined;
+      }
+      enables += 1;
+      if (enables === 1) throw new Error("provider down");
+      started.open();
+      await release.opened;
+      return undefined;
+    };
+    await supervisor.upsert(piece(a));
+    const retries = (
+      supervisor as unknown as {
+        enableRetries: Map<string, { at: number; failures: number }>;
+      }
+    ).enableRetries;
+    retries.get(a)!.at = 0;
+    const before = { ...retries.get(a)! };
+
+    const tick = supervisor.tick().catch(() => undefined);
+    await started.opened;
+    supervisor.stop();
+    release.open();
+    await tick;
+
+    expect(retries.get(a)).toEqual(before);
   });
 
   // The claim commits, and stop() lands before the item fires: the key goes

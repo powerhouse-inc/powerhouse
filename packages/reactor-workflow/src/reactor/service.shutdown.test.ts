@@ -177,6 +177,33 @@ describe("a runtime that has shut down", () => {
     expect(parked).toBeInstanceOf(Error);
   });
 
+  // Refusing queued lane work is what shutdown is for, not a failure to page on.
+  it("logs lane work the stopped supervisor refused below error level", async () => {
+    const logged = { error: [] as string[], debug: [] as string[] };
+    const logger = {
+      info: () => undefined,
+      warn: () => undefined,
+      verbose: () => undefined,
+      debug: (message: string) => logged.debug.push(message),
+      error: (message: string) => logged.error.push(message),
+      child: () => logger,
+    };
+    service = testRuntime({
+      reactorClient: { find: () => Promise.resolve({ results: [] }) },
+      logger,
+    } as never);
+    service.shutdown();
+
+    (
+      service as unknown as { dropSupervised(workflowId: string): void }
+    ).dropSupervised("wf-refused");
+
+    await vi.waitFor(() =>
+      expect(logged.debug).toContain("Trigger disable failed for wf-refused"),
+    );
+    expect(logged.error).toEqual([]);
+  });
+
   it("does not reopen a journal that failed to open", async () => {
     const create = vi
       .spyOn(WorkflowRunStore, "create")

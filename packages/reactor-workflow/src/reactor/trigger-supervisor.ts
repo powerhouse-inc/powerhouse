@@ -347,6 +347,10 @@ export class TriggerSupervisor {
     if (this.timer || this.stopped) return;
     this.timer = setInterval(() => {
       this.tick().catch((error: unknown) => {
+        if (error instanceof TriggerSupervisorStoppedError) {
+          logger.debug("Trigger tick stopped: @error", error);
+          return;
+        }
         logger.error("Trigger tick failed: @error", error);
       });
     }, this.tickMs);
@@ -1030,6 +1034,8 @@ export class TriggerSupervisor {
         blockLabel(binding.block),
       );
     } catch (error) {
+      // Refused, not failed: nothing to back off or record.
+      if (this.stopped) throw error;
       this.enabledOk.delete(binding.workflowId);
       const message = error instanceof Error ? error.message : String(error);
       const failures = (existing?.consecutive_failures ?? 0) + 1;
@@ -1356,6 +1362,7 @@ export class TriggerSupervisor {
     try {
       await this.enable(binding);
     } catch (error) {
+      if (this.stopped) throw error;
       const failures = retry.failures + 1;
       // The same cadence the attempt itself would have backed off on: a store
       // that just failed is the last thing to poll faster than configured.
@@ -1493,6 +1500,7 @@ export class TriggerSupervisor {
         SCHEDULE_TRIGGER_KIND,
       );
     } catch (error) {
+      if (this.stopped) throw error;
       // Only a config that stopped parsing gets here; stop until it is edited.
       const message = error instanceof Error ? error.message : String(error);
       this.enabledOk.delete(binding.workflowId);
