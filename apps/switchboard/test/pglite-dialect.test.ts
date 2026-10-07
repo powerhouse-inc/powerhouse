@@ -180,17 +180,26 @@ describe("switchboard's reactor storage factory", () => {
         ...opts,
       });
 
+    // Kysely closes only a driver that has run a query; an unopened PGlite
+    // would still be initialising its data dir when afterEach removes it.
+    const openAndDestroy = async (
+      kysely: Awaited<ReturnType<typeof createReactorKysely>>["kysely"],
+    ) => {
+      await sql`select 1`.execute(kysely);
+      await kysely.destroy();
+    };
+
     it("reports in-memory PGlite as not durable", async () => {
       const storage = await open({ inMemory: true });
       expect(storage.storageFacts).toEqual(IN_MEMORY_PGLITE_STORAGE_FACTS);
-      await storage.kysely.destroy();
+      await openAndDestroy(storage.kysely);
     });
 
     it("reports a PGlite data directory as durable on a path", async () => {
       dataDir = await mkdtemp(join(tmpdir(), "sb-facts-"));
       const storage = await open({ reactorPgliteDir: dataDir });
       expect(storage.storageFacts).toEqual(PGLITE_PATH_STORAGE_FACTS);
-      await storage.kysely.destroy();
+      await openAndDestroy(storage.kysely);
     });
 
     it("reports a Postgres url as a durable server", async () => {
