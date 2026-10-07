@@ -15,7 +15,21 @@ type Options = {
   reactor: () => OpenStore;
   /** Clears the worker's refs to both stores. */
   forget: () => void;
+  /** True once the worker told its tabs to leave; its stores may be another's. */
+  isRetired: () => boolean;
+  /** Retires the worker, reloading every tab, now and later, into a fresh one. */
+  retireWorker: (reason: string) => void;
   close?: StoreCloser;
+};
+
+export type AdminFlow = {
+  close: StoreCloser;
+  /** Runs once the flow is let through, before the reactor stops. */
+  begin?: () => void;
+  /** Works on the closed stores' files; resolves to the reload reason. */
+  run: () => Promise<string>;
+  /** The reload reason when `run` throws. */
+  failed: string;
 };
 
 /** Every close and release of the worker's stores, run one flow at a time. */
@@ -25,12 +39,12 @@ export function createWorkerStores({
   relational,
   reactor,
   forget,
+  isRetired,
+  retireWorker,
   close = closeWithin,
 }: Options) {
   // Closed but not yet released by the closing flow; a hung close stays here.
   const kept = new Set<string>();
-  // Once set, an admin flow could touch files another worker now owns.
-  let handedOff = false;
   let tail: Promise<unknown> = Promise.resolve();
 
   const serial = <T>(flow: () => Promise<T>): Promise<T> => {
@@ -65,27 +79,35 @@ export function createWorkerStores({
   return {
     releaseAfterBootFailure: () => serial(releaseAll),
     /** A retired worker must stop writing before a fresh one opens the same stores. */
-    retire: (): Promise<void> => {
-      handedOff = true;
-      return serial(async () => {
+    retire: (): Promise<void> =>
+      serial(async () => {
         await stopReactor();
         await releaseAll();
-      });
-    },
-    /** `flow` gets the closed stores' lock release, to call once done with the files. */
-    runAdmin: (
-      closer: StoreCloser,
-      flow: (release: () => void) => Promise<void>,
-    ): Promise<void> =>
+      }),
+    /** Stops the worker for good: it retires once `run` settles, either way. */
+    runAdmin: ({
+      close: closer,
+      begin,
+      run,
+      failed,
+    }: AdminFlow): Promise<void> =>
       serial(async () => {
-        if (handedOff) {
+        // A retired worker's stores may already be another worker's.
+        if (isRetired()) {
           throw new Error(
             "This worker no longer owns its stores; reload into the current one",
           );
         }
-        handedOff = true;
+        begin?.();
         await stopReactor();
-        await flow(await closeAll(closer));
+        const release = await closeAll(closer);
+        let reason = failed;
+        try {
+          reason = await run();
+        } finally {
+          release();
+          retireWorker(reason);
+        }
       }),
     /** Closes a store whose open failed, keeping its lock if the close hangs. */
     releaseFailedOpen: async (

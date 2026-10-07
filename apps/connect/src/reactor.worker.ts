@@ -311,6 +311,8 @@ const stores = createWorkerStores({
     owned.reactorPg = undefined;
     owned.reactorDb = undefined;
   },
+  isRetired: () => host.retired,
+  retireWorker: (reason) => host.retireAndReload(reason, crypto.randomUUID()),
 });
 
 const workerName = (self as { name?: string }).name ?? "";
@@ -321,49 +323,54 @@ const host = new ReactorHost({
   onAdminRestart: () =>
     host.broadcastReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: () =>
-    stores.runAdmin(closeWithin, async (release) => {
-      for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
-        if (idbName) {
-          await clearFileData(idbName);
-        }
-      }
-      release();
-      host.broadcastReload("storage cleared", crypto.randomUUID());
-    }),
-  onAdminMigrate: async () => {
-    setMigration({
-      status: "migrating",
-      legacyMajor: migrationState.legacyMajor,
-    });
-    await stores.runAdmin(closeUnbounded, async (release) => {
-      try {
+    stores.runAdmin({
+      close: closeWithin,
+      run: async () => {
         for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
           if (idbName) {
-            await migrateIdb(
-              idbName,
-              (phase) =>
-                setMigration({
-                  status: "migrating",
-                  legacyMajor: migrationState.legacyMajor,
-                  phase,
-                }),
-              inMemoryBackup,
-            );
+            await clearFileData(idbName);
           }
         }
-        release();
-        host.broadcastReload("migration complete", crypto.randomUUID());
-      } catch (error) {
-        console.error("[reactor.worker] Migration failed:", error);
+        return "storage cleared";
+      },
+      failed: "clearing storage failed",
+    }),
+  onAdminMigrate: () =>
+    stores.runAdmin({
+      close: closeUnbounded,
+      begin: () =>
         setMigration({
-          status: "failed",
-          error: error instanceof Error ? error.message : String(error),
-        });
-        release();
-        host.broadcastReload("migration failed", crypto.randomUUID());
-      }
-    });
-  },
+          status: "migrating",
+          legacyMajor: migrationState.legacyMajor,
+        }),
+      run: async () => {
+        try {
+          for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+            if (idbName) {
+              await migrateIdb(
+                idbName,
+                (phase) =>
+                  setMigration({
+                    status: "migrating",
+                    legacyMajor: migrationState.legacyMajor,
+                    phase,
+                  }),
+                inMemoryBackup,
+              );
+            }
+          }
+          return "migration complete";
+        } catch (error) {
+          console.error("[reactor.worker] Migration failed:", error);
+          setMigration({
+            status: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return "migration failed";
+        }
+      },
+      failed: "migration failed",
+    }),
   build: async (raw) => {
     let phase = "init";
     try {
