@@ -1667,7 +1667,7 @@ export class SyncManager
   private assertServing(remote: Remote, id: string): void {
     const name = remote.meta.name;
     if (this.remotes.get(name) === remote && !this.removing.has(name)) return;
-    throw new Error(
+    throw new SyncRepairRefusedError(
       `Remote '${name}' was reset or removed while requeueing dead letter '${id}'; requeue it again`,
     );
   }

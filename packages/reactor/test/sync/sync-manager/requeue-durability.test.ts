@@ -25,7 +25,10 @@ import type {
   IChannel,
   IChannelFactory,
 } from "../../../src/sync/interfaces.js";
-import { ChannelError } from "../../../src/sync/errors.js";
+import {
+  ChannelError,
+  SyncRepairRefusedError,
+} from "../../../src/sync/errors.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
@@ -728,7 +731,7 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await syncManager.resetChannel("accounts");
     releaseList?.();
 
-    await expect(requeue).rejects.toThrow(/reset/);
+    await expect(requeue).rejects.toBeInstanceOf(SyncRepairRefusedError);
     expect(mockReactor.load).not.toHaveBeenCalled();
 
     await syncManager.requeueDeadLetter("accounts", "d1");
