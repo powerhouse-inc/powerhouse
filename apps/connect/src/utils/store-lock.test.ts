@@ -52,6 +52,7 @@ describe("store locks", () => {
     const stop = watchStoreLockWait(["ns-e"], () => (waits += 1), {
       locks: navigator.locks,
       intervalMs: 5,
+      graceMs: 0,
     });
     cleanup.push(stop);
     await tick();
@@ -64,5 +65,25 @@ describe("store locks", () => {
     oldWorker.release("ns-e");
     await waiting;
     newWorker.release("ns-e");
+  });
+
+  it("does not report a wait inside the handoff grace", async () => {
+    const oldWorker = createStoreLocks(navigator.locks);
+    const newWorker = createStoreLocks(navigator.locks);
+    await oldWorker.acquire("ns-f");
+    let waits = 0;
+    const stop = watchStoreLockWait(["ns-f"], () => (waits += 1), {
+      locks: navigator.locks,
+      intervalMs: 5,
+      graceMs: 60_000,
+    });
+    cleanup.push(stop);
+    const waiting = newWorker.acquire("ns-f");
+    await tick();
+    expect(waits).toBe(0);
+
+    oldWorker.release("ns-f");
+    await waiting;
+    newWorker.release("ns-f");
   });
 });

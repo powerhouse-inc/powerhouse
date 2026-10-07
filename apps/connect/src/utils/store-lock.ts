@@ -60,16 +60,21 @@ export function createStoreLocks(locks: Locks | undefined = webLocks()) {
   return { acquire, release } satisfies StoreLocks;
 }
 
-/** Calls `onWaiting` while someone waits on a lock for one of `namespaces`. */
+/**
+ * Calls `onWaiting` while someone waits on a lock for one of `namespaces`,
+ * after `graceMs`, so a retiring worker's normal handoff is not reported.
+ */
 export function watchStoreLockWait(
   namespaces: string[],
   onWaiting: () => void,
-  { locks = webLocks(), intervalMs = 1_000 } = {},
+  { locks = webLocks(), intervalMs = 1_000, graceMs = 5_000 } = {},
 ): () => void {
   if (!locks) return () => undefined;
   const names = new Set(namespaces.map(storeLockName));
+  const reportFrom = Date.now() + graceMs;
   let stopped = false;
   const check = async (): Promise<void> => {
+    if (Date.now() < reportFrom) return;
     try {
       const { pending = [] } = await locks.query();
       if (!stopped && pending.some((lock) => names.has(lock.name ?? ""))) {
