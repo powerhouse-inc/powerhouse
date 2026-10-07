@@ -509,7 +509,7 @@ const host = new ReactorHost({
       return module.client;
     } catch (error) {
       console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
-      // The next hello rebuilds, which reopens both stores.
+      // The next hello rebuilds, unless a store did not close and the worker retired.
       await stores.releaseAfterBootFailure();
       throw toStoredDocumentsRefused(error);
     }

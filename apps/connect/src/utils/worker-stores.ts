@@ -77,7 +77,14 @@ export function createWorkerStores({
   };
 
   return {
-    releaseAfterBootFailure: () => serial(releaseAll),
+    /** Retires if a store did not close: a rebuild would open it twice. */
+    releaseAfterBootFailure: () =>
+      serial(async () => {
+        await releaseAll();
+        if (kept.size > 0) {
+          retireWorker("a store did not close after a failed boot");
+        }
+      }),
     /** A retired worker must stop writing before a fresh one opens the same stores. */
     retire: (): Promise<void> =>
       serial(async () => {

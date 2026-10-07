@@ -39,7 +39,11 @@ type Retirement = {
   retireWorker: (reason: string) => void;
 };
 
-async function setup(relationalClose?: Promise<void>, host?: Retirement) {
+async function setup(
+  relationalClose?: Promise<void>,
+  host?: Retirement,
+  reactorClose?: Promise<void>,
+) {
   seq += 1;
   const names = { relational: `rel-${seq}`, reactor: `reactor-${seq}` };
   const locks = createStoreLocks(navigator.locks);
@@ -52,7 +56,10 @@ async function setup(relationalClose?: Promise<void>, host?: Retirement) {
   const refs: {
     relational?: ReturnType<typeof fakeStore>;
     reactor?: ReturnType<typeof fakeStore>;
-  } = { relational: fakeStore(relationalClose), reactor: fakeStore() };
+  } = {
+    relational: fakeStore(relationalClose),
+    reactor: fakeStore(reactorClose),
+  };
   const log: string[] = [];
   // Stands in for ReactorHost.retireAndReload, which calls `stores.retire`.
   let retired = false;
@@ -343,5 +350,43 @@ describe("worker after Clear storage", () => {
     expect(worker).toMatch(
       /begin: \(\) =>\s*setMigration\(\{\s*status: "migrating"/,
     );
+  });
+});
+
+describe("worker after a failed boot", () => {
+  it("retires instead of reopening a store whose close did not settle", async () => {
+    const reactorClose = deferred();
+    let builds = 0;
+    const { names, refs, stores } = await setup(
+      undefined,
+      {
+        isRetired: () => host.retired,
+        retireWorker: (reason) =>
+          host.retireAndReload(reason, crypto.randomUUID()),
+      },
+      reactorClose.promise,
+    );
+    const host: ReactorHost = new ReactorHost({
+      build: async () => {
+        builds += 1;
+        refs.reactor ??= fakeStore();
+        await stores.releaseAfterBootFailure();
+        throw new Error("migration failed");
+      },
+      onRetire: () => stores.retire(),
+    });
+    const open = tab(host);
+    await expect(open.send(HELLO)).rejects.toThrow("migration failed");
+    await expect(open.send(HELLO)).rejects.toThrow(/retired/);
+    expect(builds).toBe(1);
+    expect(open.reloads).toHaveLength(1);
+    expect(open.reloads[0].workerGen).toMatch(/^[0-9a-f-]{36}$/);
+
+    const relationalNext = otherWorkerAcquires(names.relational);
+    const reactorNext = otherWorkerAcquires(names.reactor);
+    await vi.waitFor(() => expect(relationalNext.granted).toBe(true));
+    await tick();
+    expect(reactorNext.granted).toBe(false);
+    reactorClose.resolve();
   });
 });
