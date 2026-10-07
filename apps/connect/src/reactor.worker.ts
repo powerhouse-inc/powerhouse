@@ -53,6 +53,7 @@ import {
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
+import { closeWithin } from "./utils/close-within.js";
 import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
@@ -262,8 +263,8 @@ const host = new ReactorHost({
   onAdminRestart: () =>
     host.broadcastReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: async () => {
-    await relational.pg?.close();
-    await owned.reactorPg?.close();
+    await closeWithin(relational.pg);
+    await closeWithin(owned.reactorPg);
     for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
       if (idbName) {
         await clearFileData(idbName);
