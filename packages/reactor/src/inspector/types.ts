@@ -102,6 +102,7 @@ export type InspectorDriveIntegrity = {
   driveId: string;
   checkedNodeCount: number;
   totalFileNodeCount: number;
+  /** Missing or not served to the reader; the two look the same so nothing leaks. */
   missingDocuments: InspectorDriveIntegrityRef[];
   unsupportedTypes: InspectorDriveIntegrityRef[];
 };

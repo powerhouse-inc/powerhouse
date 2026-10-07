@@ -60,6 +60,10 @@ export const inspectionTypeDefs = gql`
     driveId: String!
     checkedNodeCount: Int!
     totalFileNodeCount: Int!
+    """
+    File nodes whose document is missing or not served to you; the two are
+    reported alike so a withheld document's existence does not leak.
+    """
     missingDocuments: [InspectionDriveIntegrityRef!]!
     unsupportedTypes: [InspectionDriveIntegrityRef!]!
   }
