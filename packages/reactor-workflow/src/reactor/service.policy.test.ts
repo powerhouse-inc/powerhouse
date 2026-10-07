@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Documents } from "../../test/helpers/documents.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { memoryWebhooks } from "../../test/helpers/webhooks.js";
 import { packagePieces } from "./piece-registry.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import type { WorkflowRunGate } from "./run-gate.js";
@@ -1206,5 +1207,52 @@ describe("a park released while the trigger lane is busy", () => {
     await vi.waitFor(async () =>
       expect(await store.getWorkflowPark(id)).toBeUndefined(),
     );
+  }, 60_000);
+});
+
+// The webhook token of a deleted workflow goes whatever became of its park.
+describe("a deleted workflow whose park cannot be cleared", () => {
+  it("still has its webhook token revoked", async () => {
+    const id = "wf-park-delete-revoke";
+    const hooks = memoryWebhooks();
+    const runtime = testRuntime({
+      reactorClient: {
+        ...documents.client(),
+        find: () => Promise.resolve({ results: [] }),
+      } as never,
+      webhooks: hooks.scope,
+    });
+    try {
+      const endpoints = await hooks.scope.register(undefined as never);
+      await endpoints.endpointFor(id);
+      await runtime.supervisor().park(id, 1, "parked for the test");
+      const clear = vi
+        .spyOn(WorkflowRunStore.prototype, "clearWorkflowPark")
+        .mockRejectedValueOnce(new Error("the journal is gone"));
+
+      ordinal += 1;
+      await runtime.onOperations([
+        {
+          operation: {
+            index: ordinal,
+            timestampUtcMs: `${ordinal}`,
+            action: { type: "DELETE_DOCUMENT", input: { documentId: id } },
+          },
+          context: {
+            documentId: id,
+            documentType: "powerhouse/workflow",
+            scope: "document",
+            branch: "main",
+            ordinal,
+          },
+        } as unknown as OperationWithContext,
+      ]);
+
+      await vi.waitFor(() => expect(clear).toHaveBeenCalled());
+      await vi.waitFor(() => expect(hooks.rows.has(id)).toBe(false));
+      clear.mockRestore();
+    } finally {
+      runtime.shutdown();
+    }
   }, 60_000);
 });

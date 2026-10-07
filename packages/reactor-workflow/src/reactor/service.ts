@@ -2009,15 +2009,17 @@ export class WorkflowRuntimeService {
     this.cancelTriggerTest(workflowId, "stopped: the workflow was deleted");
   }
 
-  // onDisable, then the trigger row and FLOW store, then the park, then the
-  // webhook token.
+  // onDisable, the trigger row, FLOW store and park, then the webhook token,
+  // which goes however the rest went.
   private async releaseDeleted(workflowId: string): Promise<void> {
-    const supervisor = this.supervisor();
-    await Promise.all([
-      supervisor.forget(workflowId),
-      supervisor.releasePark(workflowId, false),
-    ]);
+    let failure: { error: unknown } | undefined;
+    try {
+      await this.supervisor().forget(workflowId);
+    } catch (error) {
+      failure = { error };
+    }
     await (await this.endpoints())?.revoke(workflowId);
+    if (failure) throw failure.error;
   }
 
   // As a deletion disarms, but awaited: the cursor must not pass a failure.

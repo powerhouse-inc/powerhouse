@@ -466,8 +466,8 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.disable(workflowId, binding));
   }
 
-  // A deleted workflow: disabled as remove() does, then its row and FLOW
-  // store go too, so nothing is left to poll, renew or re-arm.
+  // A deleted workflow: disabled as remove() does, then its row, FLOW store
+  // and park go too, so nothing is left to poll, renew or re-arm.
   forget(workflowId: string): Promise<void> {
     const binding = this.unbind(workflowId);
     return this.enqueue(async () => {
@@ -475,6 +475,7 @@ export class TriggerSupervisor {
       if (!store) return;
       await this.disable(workflowId, binding);
       await store.deleteTriggerState(workflowId);
+      await store.clearWorkflowPark(workflowId);
     });
   }
 
