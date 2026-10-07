@@ -217,7 +217,9 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
         pg,
         onUnrecoverable: () => undefined,
         onDiagnostic: () => undefined,
-        dialect: { statementTimeoutMs: 10_000, recoveryTimeoutMs: 10_000 },
+        // No statement deadline, so the COMMIT enters the gate inside exec,
+        // where the spy below raises it first.
+        dialect: { statementTimeoutMs: 0, recoveryTimeoutMs: 10_000 },
         client: { closeTimeoutMs: 500 },
       })
       .buildModule();

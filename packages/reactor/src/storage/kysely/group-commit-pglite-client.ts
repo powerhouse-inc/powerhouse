@@ -55,6 +55,7 @@ export class GroupCommitPGliteClient implements PGliteSession, IStorageFlusher {
   /** PGlite returns at once from a sync requested while one is scheduled. */
   private lastSync: Promise<void> = Promise.resolve();
   private inFlight = 0;
+  private admittedRuns = 0;
   private idleWaiters: Array<() => void> = [];
   private gate: Promise<void> | undefined = undefined;
   private releaseGate: () => void = () => undefined;
@@ -99,23 +100,27 @@ export class GroupCommitPGliteClient implements PGliteSession, IStorageFlusher {
     this.setStatementSync(!this.deferred);
   }
 
-  async query(
+  query(
     sql: string,
     params?: unknown[],
   ): Promise<{ rows: unknown[]; affectedRows?: number }> {
-    await this.enterStatement();
-    try {
-      return await this.instance.query(sql, params);
-    } finally {
-      this.endStatement();
-    }
+    const run = () => this.instance.query(sql, params);
+    return this.admittedRuns > 0 ? run() : this.admit(run);
   }
 
-  async exec(sql: string): Promise<unknown> {
+  exec(sql: string): Promise<unknown> {
+    const run = () => this.instance.exec(sql);
+    return this.admittedRuns > 0 ? run() : this.admit(run);
+  }
+
+  /** Runs a statement past the flush gate; the calls it makes are not gated again. */
+  async admit<T>(run: () => Promise<T>): Promise<T> {
     await this.enterStatement();
+    this.admittedRuns += 1;
     try {
-      return await this.instance.exec(sql);
+      return await run();
     } finally {
+      this.admittedRuns -= 1;
       this.endStatement();
     }
   }

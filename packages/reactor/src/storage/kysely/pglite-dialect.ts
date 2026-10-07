@@ -22,6 +22,8 @@ export type PGliteSession = {
   /** Simple-query execution, used for the commit guard and session recovery. */
   exec: (sql: string) => Promise<unknown>;
   isInTransaction: () => boolean;
+  /** Runs one statement once the session admits it; the dialect's deadlines start inside. */
+  admit?: <T>(run: () => Promise<T>) => Promise<T>;
 };
 
 export type HardenedPGliteDialectOptions = {
@@ -298,16 +300,27 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
       return execute();
     }
 
-    const generation = this.statementGeneration;
-    const outcome = await withDeadline(execute(), timeoutMs);
-    if (outcome !== TIMED_OUT) {
-      return outcome;
-    }
+    // Escalated inside the admission, so the session is poisoned before it is released.
+    return this.admitted(async () => {
+      if (this.deadCall !== undefined) {
+        throw new PGliteSessionPoisonedError(this.deadCall);
+      }
+      const generation = this.statementGeneration;
+      const outcome = await withDeadline(execute(), timeoutMs);
+      if (outcome !== TIMED_OUT) {
+        return outcome;
+      }
 
-    throw this.escalateHungStatement(
-      new PGliteStatementTimeoutError(timeoutMs, statement),
-      generation,
-    );
+      throw this.escalateHungStatement(
+        new PGliteStatementTimeoutError(timeoutMs, statement),
+        generation,
+      );
+    });
+  }
+
+  /** Time spent waiting to be admitted is bounded by the session, not the deadline. */
+  private admitted<T>(run: () => Promise<T>): Promise<T> {
+    return this.client.admit ? this.client.admit(run) : run();
   }
 
   recordFailure(
@@ -562,27 +575,33 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
       return false;
     }
     const timeoutMs = this.options.recoveryTimeoutMs;
-    const pending = this.client.exec(statement).then(
-      () => true,
-      (error: unknown) => {
-        this.options.onDiagnostic("recovery statement failed", error);
-        return false;
-      },
-    );
+    const run = () =>
+      this.client.exec(statement).then(
+        () => true,
+        (error: unknown) => {
+          this.options.onDiagnostic("recovery statement failed", error);
+          return false;
+        },
+      );
     if (timeoutMs <= 0) {
-      return pending;
+      return run();
     }
 
-    const outcome = await withDeadline(pending, timeoutMs);
-    if (outcome === TIMED_OUT) {
-      this.deadCall ??= new PGliteStatementTimeoutError(timeoutMs, statement);
-      this.reportPoisoned(this.deadCall);
-      this.options.onDiagnostic(
-        `a PGlite recovery statement did not settle within ${timeoutMs}ms; the session is unrecoverable from SQL`,
-      );
-      return false;
-    }
-    return outcome;
+    return this.admitted(async () => {
+      if (this.deadCall !== undefined) {
+        return false;
+      }
+      const outcome = await withDeadline(run(), timeoutMs);
+      if (outcome === TIMED_OUT) {
+        this.deadCall ??= new PGliteStatementTimeoutError(timeoutMs, statement);
+        this.reportPoisoned(this.deadCall);
+        this.options.onDiagnostic(
+          `a PGlite recovery statement did not settle within ${timeoutMs}ms; the session is unrecoverable from SQL`,
+        );
+        return false;
+      }
+      return outcome;
+    });
   }
 }
 

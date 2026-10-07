@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { sql } from "kysely";
 import { describe, expect, it } from "vitest";
 import {
   GroupCommitPGliteClient,
@@ -6,6 +7,7 @@ import {
   type GroupCommitPGliteClientOptions,
   type GroupCommitPGliteInstance,
 } from "../../../src/storage/kysely/group-commit-pglite-client.js";
+import { createGroupCommitStorage } from "../../../src/storage/kysely/group-commit-storage.js";
 import { StoragePoisonedError } from "../../../src/storage/storage-flush.js";
 
 /**
@@ -304,5 +306,95 @@ describe("GroupCommitPGliteClient over a real PGlite", () => {
     await gc.flush();
     expect(syncs).toBe(1);
     await gc.close();
+  });
+});
+
+describe("the dialect's deadlines behind the group-commit gate", () => {
+  type Schema = { t: { id: number } };
+
+  async function heldSyncStore(dialect: {
+    statementTimeoutMs: number;
+    recoveryTimeoutMs: number;
+  }) {
+    const pg = new PGlite();
+    await pg.waitReady;
+    const control = {
+      syncHold: undefined as Promise<void> | undefined,
+      delayNext: undefined as RegExp | undefined,
+      /** Resolves once the delayed statement is running, past the gate. */
+      delayedStarted: () => undefined as void,
+    };
+    const instance: GroupCommitPGliteInstance = {
+      query: async (text, params) => {
+        if (control.delayNext?.test(text) === true) {
+          control.delayNext = undefined;
+          control.delayedStarted();
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        return pg.query(text, params);
+      },
+      exec: (text) => pg.exec(text),
+      isInTransaction: () => pg.isInTransaction(),
+      close: () => pg.close(),
+      syncToFs: async () => {
+        await control.syncHold;
+        return pg.syncToFs();
+      },
+    };
+    const poisoned: Error[] = [];
+    const storage = createGroupCommitStorage<Schema>({
+      pg: instance,
+      onUnrecoverable: (cause) => void poisoned.push(cause),
+      onDiagnostic: () => undefined,
+      dialect,
+      client: { flushSyncTimeoutMs: 5_000 },
+    });
+    await sql`create table t (id int)`.execute(storage.db);
+    return { storage, control, poisoned };
+  }
+
+  const slowSync = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  it("never declares a statement queued behind a slow but bounded sync dead", async () => {
+    const { storage, control, poisoned } = await heldSyncStore({
+      statementTimeoutMs: 200,
+      recoveryTimeoutMs: 200,
+    });
+    control.syncHold = slowSync(800);
+    const flushing = storage.flusher.flush();
+
+    const result = await sql<{
+      n: number;
+    }>`select count(*)::int as n from t`.execute(storage.db);
+
+    expect(result.rows).toEqual([{ n: 0 }]);
+    await flushing;
+    expect(poisoned).toEqual([]);
+    await storage.close();
+  });
+
+  it("never declares a recovery probe queued behind a slow but bounded sync dead", async () => {
+    const { storage, control, poisoned } = await heldSyncStore({
+      statementTimeoutMs: 10_000,
+      recoveryTimeoutMs: 200,
+    });
+    control.delayNext = /1 \/ 0/;
+    const started = new Promise<void>((resolve) => {
+      control.delayedStarted = resolve;
+    });
+    const failing = sql`select 1 / 0`.execute(storage.db);
+    failing.catch(() => undefined);
+    await started;
+    control.syncHold = slowSync(800);
+    const flushing = storage.flusher.flush();
+
+    await expect(failing).rejects.toThrow(/division by zero/);
+    await flushing;
+    await expect(sql`select 1 as x`.execute(storage.db)).resolves.toEqual(
+      expect.objectContaining({ rows: [{ x: 1 }] }),
+    );
+    expect(poisoned).toEqual([]);
+    await storage.close();
   });
 });
