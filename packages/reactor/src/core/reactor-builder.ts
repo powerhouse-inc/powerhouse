@@ -55,7 +55,10 @@ import {
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
-import type { JobExecutorConfig } from "../executor/types.js";
+import {
+  DEFAULT_JOB_TIMEOUT_MS,
+  type JobExecutorConfig,
+} from "../executor/types.js";
 import type { SignatureTrustPolicy } from "../signer/types.js";
 import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
@@ -106,6 +109,13 @@ import {
   type IndexerDatabase,
 } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import { DEFAULT_FLUSH_SYNC_TIMEOUT_MS } from "../storage/kysely/group-commit-pglite-client.js";
+import {
+  createGroupCommitStorage,
+  type GroupCommitPGliteOptions,
+  type GroupCommitStorage,
+} from "../storage/kysely/group-commit-storage.js";
+import { DEFAULT_STATEMENT_TIMEOUT_MS } from "../storage/kysely/pglite-dialect.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import {
@@ -342,6 +352,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private kyselyInstance?: Kysely<Database>;
+  private groupCommitPGlite?: GroupCommitPGliteOptions;
   private signer?: ISigner;
   private workerSigner?: FactorySpec;
   private trustPolicy?: SignatureTrustPolicy;
@@ -529,6 +540,18 @@ export class ReactorBuilder {
   }
 
   /**
+   * Runs the reactor on an embedded PGlite with group commit: statements stop
+   * syncing the filesystem, and the flush moves to a job's write-ready and
+   * every sync cursor write. A poisoned session goes to `onUnrecoverable`,
+   * since a fallback would leave in-memory read-model positions ahead of the
+   * store. The builder owns `pg`; the module's `groupCommitStorage` closes it.
+   */
+  withGroupCommitPGlite(options: GroupCommitPGliteOptions): this {
+    this.groupCommitPGlite = options;
+    return this;
+  }
+
+  /**
    * Register an externally-constructed pg.Pool's {@link PoolInstrumentation}
    * so it surfaces through {@link ReactorModule.pools}. Use this when the
    * caller built the pool itself (e.g. the in-process bench host wiring) so
@@ -641,6 +664,75 @@ export class ReactorBuilder {
   }
 
   async buildModule(): Promise<InProcessReactorModule> {
+    this.assertStorageConfiguration();
+    const groupCommit = this.groupCommitPGlite
+      ? createGroupCommitStorage<Database>(this.groupCommitPGlite)
+      : undefined;
+    try {
+      return await this.assembleModule(groupCommit);
+    } catch (error) {
+      await groupCommit?.close().catch(() => undefined);
+      throw error;
+    }
+  }
+
+  /** Refuses what would bypass the flush or leave a poison with no owner. */
+  private assertStorageConfiguration(): void {
+    const options = this.groupCommitPGlite;
+    if (options === undefined) {
+      return;
+    }
+    if (
+      typeof (options as Partial<typeof options>).onUnrecoverable !== "function"
+    ) {
+      throw new Error(
+        "withGroupCommitPGlite needs onUnrecoverable: a poisoned session is never reused, so without it the store stays wedged",
+      );
+    }
+    if (this.kyselyInstance !== undefined) {
+      throw new Error(
+        "withGroupCommitPGlite and withKysely are mutually exclusive: both supply the reactor's database",
+      );
+    }
+    if (this.workerPool !== undefined || this.projectionShardConfig) {
+      throw new Error(
+        "withGroupCommitPGlite cannot be combined with withWorkerPool or withProjectionShards: those open their own Postgres connections and never see the embedded store or its flush",
+      );
+    }
+    if (this.executorManager !== undefined) {
+      throw new Error(
+        "withExecutor cannot be combined with withGroupCommitPGlite: only the executor this builder constructs flushes before announcing a job write-ready",
+      );
+    }
+    this.fitJobTimeoutToDurability(options);
+  }
+
+  /**
+   * A committed job waits for its flush inside the job timeout: for the
+   * statement in flight, then one sync. The executor withholds past that wait,
+   * and the timeout outlasts it, or a job whose commit stands is failed.
+   */
+  private fitJobTimeoutToDurability(options: GroupCommitPGliteOptions): void {
+    const durabilityWaitMs =
+      this.executorConfig.durabilityWaitMs ??
+      (options.dialect?.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS) +
+        (options.client?.flushSyncTimeoutMs ?? DEFAULT_FLUSH_SYNC_TIMEOUT_MS);
+    const configured = this.executorConfig.jobTimeoutMs;
+    if (configured !== undefined && configured <= durabilityWaitMs) {
+      throw new Error(
+        `jobTimeoutMs (${configured}) must exceed withGroupCommitPGlite's durability wait (${durabilityWaitMs}ms: statement + flush sync bounds): a job waits for its flush inside the timeout, and timing out would fail a job whose commit stands`,
+      );
+    }
+    this.executorConfig = {
+      ...this.executorConfig,
+      durabilityWaitMs,
+      jobTimeoutMs: configured ?? durabilityWaitMs + DEFAULT_JOB_TIMEOUT_MS,
+    };
+  }
+
+  private async assembleModule(
+    groupCommit: GroupCommitStorage<Database> | undefined,
+  ): Promise<InProcessReactorModule> {
     if (!this.logger) {
       this.logger = new ConsoleLogger(["reactor"]);
     }
@@ -772,6 +864,7 @@ export class ReactorBuilder {
     const reactorDbConfig = this.resolveReactorDbConfig();
     const baseDatabase =
       this.kyselyInstance ??
+      groupCommit?.db ??
       (reactorDbConfig
         ? await this.createPostgresDatabase(reactorDbConfig)
         : await createDefaultDatabase());
@@ -782,6 +875,8 @@ export class ReactorBuilder {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
+    // The schema is no acknowledgment, but nothing would re-pull it.
+    await groupCommit?.flusher.flush();
 
     await checkStoredProtocols(
       baseDatabase,
@@ -946,6 +1041,7 @@ export class ReactorBuilder {
               executionScope,
               this.signer,
               this.trustPolicy,
+              groupCommit?.flusher,
             ),
           eventBus,
           queue,
@@ -1201,6 +1297,7 @@ export class ReactorBuilder {
           : new GqlResponseChannelFactory(this.logger);
 
       const syncBuilder = new SyncBuilder().withChannelFactory(factory);
+      if (groupCommit) syncBuilder.withStorageFlusher(groupCommit.flusher);
       syncModule = syncBuilder.buildModule(
         reactor,
         this.logger,
@@ -1213,6 +1310,7 @@ export class ReactorBuilder {
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
+      if (groupCommit) this.syncBuilder.withStorageFlusher(groupCommit.flusher);
       syncModule = this.syncBuilder.buildModule(
         reactor,
         this.logger,
@@ -1275,6 +1373,10 @@ export class ReactorBuilder {
         jobTracker,
         eventBus,
       ),
+      groupCommitStorage: groupCommit && {
+        health: groupCommit.health,
+        close: () => groupCommit.close(),
+      },
     };
 
     catchUp.start();
