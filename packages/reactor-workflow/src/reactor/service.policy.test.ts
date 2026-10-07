@@ -20,6 +20,7 @@ import type { WorkflowRuntimeService } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
 import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
+import { runnableDefinition } from "./runnable.js";
 
 const PIECE = "@acme/piece-policy";
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
@@ -1195,6 +1196,47 @@ describe("a park released while the trigger lane is busy", () => {
       expect(await store.getWorkflowPark(id)).toBeUndefined(),
     );
     rebooted.shutdown();
+  }, 60_000);
+
+  // Readers off the lane see each park, lift and unpark as it is queued.
+  it("reads a park as queued, before the lane writes it", async () => {
+    const id = "wf-park-busy-queued";
+    workflow(id, { action: "slow", policy: { onFailure: "IGNORE" } });
+    const { version } = runnableDefinition(documents.apply(id).state.global);
+    const store = (await service.store())!;
+    const open = blockLane(service);
+    let parking: Promise<boolean> | undefined;
+    try {
+      parking = service.supervisor().park(id, version, "parked for the test");
+      const refused = await service.fire(id, undefined, "schedule");
+      expect(refused.status).toBe("CANCELLED");
+      expect((await store.getRun(refused.runId!))?.error).toContain("PARKED");
+      expect(await store.getWorkflowPark(id)).toBeUndefined();
+
+      const republished = documents.apply(
+        id,
+        actions.setPolicy({
+          onFailure: "IGNORE",
+          runTimeoutSeconds: 600,
+        } as never),
+        actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+      );
+      expect(
+        await settlesWithin(
+          service.onOperations([workflowOp(id, republished)]),
+          1000,
+        ),
+      ).toBe(true);
+      expect((await service.fire(id, undefined, "schedule")).status).toBe(
+        "SUCCEEDED",
+      );
+    } finally {
+      open();
+    }
+    expect(await parking).toBe(false);
+    await vi.waitFor(async () =>
+      expect(await store.getWorkflowPark(id)).toBeUndefined(),
+    );
   }, 60_000);
 
   it("does not hold up the deletion of a parked workflow", async () => {
