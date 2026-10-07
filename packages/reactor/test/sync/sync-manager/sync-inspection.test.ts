@@ -4,6 +4,7 @@ import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../../src/core/types.js";
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
+import { InvalidDeadLetterCursorError } from "../../../src/sync/errors.js";
 import { SyncBuilder } from "../../../src/sync/sync-builder.js";
 import {
   ChannelErrorSource,
@@ -158,13 +159,20 @@ describe("sync inspection", () => {
     expect(page.nextCursor).toBe("2");
   });
 
-  it.each(["abc", "-1", "1.5", ""])(
+  it("reads an empty dead-letter cursor as the first page", async () => {
+    const inspector = await withDeadLetters(3);
+    const page = await inspector.listDeadLetters("peer", "", 2);
+    expect(page.results).toHaveLength(2);
+    expect(page.nextCursor).toBe("2");
+  });
+
+  it.each(["abc", "-1", "1.5", "100000000000000000000000"])(
     "rejects the dead-letter cursor %j",
     async (cursor) => {
       const inspector = await withDeadLetters(1);
       await expect(
         inspector.listDeadLetters("peer", cursor, 10),
-      ).rejects.toThrow(/Invalid dead-letter cursor/);
+      ).rejects.toThrow(InvalidDeadLetterCursorError);
     },
   );
 });

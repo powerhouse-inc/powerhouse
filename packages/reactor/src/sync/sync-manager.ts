@@ -63,6 +63,7 @@ import {
 import {
   ChannelError,
   GraphQLRequestError,
+  InvalidDeadLetterCursorError,
   isDriveAuthError,
   SyncRepairRefusedError,
 } from "./errors.js";
@@ -1444,12 +1445,15 @@ export class SyncManager
     limit?: number,
   ): Promise<DeadLetterPage> {
     this.getByName(remoteName);
-    if (cursor !== undefined && !/^\d+$/.test(cursor)) {
-      throw new Error(`Invalid dead-letter cursor: ${JSON.stringify(cursor)}`);
+    if (
+      cursor &&
+      !(/^\d+$/.test(cursor) && Number.isSafeInteger(Number(cursor)))
+    ) {
+      throw new InvalidDeadLetterCursorError(cursor);
     }
     const max = this.config.maxDeadLettersPerRemote;
     const page = await this.deadLetterStorage.list(remoteName, {
-      cursor: cursor ?? "0",
+      cursor: cursor || "0",
       limit:
         limit === undefined || !Number.isFinite(limit)
           ? max

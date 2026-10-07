@@ -1,6 +1,8 @@
 import {
   DriveInspection,
+  InvalidDeadLetterCursorError,
   toWireDeadLetter,
+  type DeadLetterPage,
   toWireQueueState,
   type INSPECTOR_OPS,
   type InspectorDocumentReader,
@@ -285,11 +287,21 @@ export function createInspectionResolvers(
         cursor?: string | null;
         limit?: number | null;
       }): Promise<WireDeadLetterPage> => {
-        const page = await syncInspector().listDeadLetters(
-          args.remoteName,
-          args.cursor ?? undefined,
-          args.limit ?? undefined,
-        );
+        let page: DeadLetterPage;
+        try {
+          page = await syncInspector().listDeadLetters(
+            args.remoteName,
+            args.cursor ?? undefined,
+            args.limit ?? undefined,
+          );
+        } catch (error) {
+          if (error instanceof InvalidDeadLetterCursorError) {
+            throw new GraphQLError(error.message, {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+          throw error;
+        }
         return {
           remoteName: page.remoteName,
           results: page.results.map(toWireDeadLetter),

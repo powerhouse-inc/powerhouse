@@ -2,7 +2,9 @@ import type { InMemoryQueue } from "@powerhousedao/reactor";
 import {
   ChannelScheme,
   ChannelErrorSource,
+  DriveCollectionId,
   EventBus,
+  GqlResponseChannelFactory,
   INSPECTION_ORDINAL_FIELDS,
   INSPECTION_ROOT_FIELDS,
   INSPECTION_WIRE_FIELDS,
@@ -10,6 +12,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   SYNC_INSPECTION_OPS,
+  SyncBuilder,
   type DeadLetterPage,
   type InProcessReactorClientModule,
   type ValidationResult,
@@ -18,6 +21,7 @@ import {
   driveDocumentModelModule,
   setDriveName,
 } from "@powerhousedao/shared/document-drive";
+import { ConsoleLogger } from "document-model";
 import type * as GraphQL from "graphql";
 import type { GraphQLSchema } from "graphql";
 import { createRequire } from "node:module";
@@ -151,6 +155,67 @@ describe("inspection subgraph: facts", () => {
     expect(result.data?.inspection).toEqual({
       storageHealth: { tracked: false, healthy: false },
     });
+  });
+});
+
+describe("inspection subgraph: dead-letter cursor", () => {
+  async function withRemote(): Promise<GraphQLSchema> {
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder()
+          .withDocumentModelSources([driveDocumentModelModule])
+          .withSync(
+            new SyncBuilder().withChannelFactory(
+              new GqlResponseChannelFactory(new ConsoleLogger(["inspection"])),
+            ),
+          ),
+      )
+      .buildModule();
+    const sync = module.reactorModule!.syncModule!;
+    await sync.syncManager.add("r", DriveCollectionId.forDrive("d"), {
+      type: "gql",
+      parameters: {},
+    });
+    for (let i = 0; i < 3; i++) {
+      await sync.deadLetterStorage.add({
+        id: `dl-${i}`,
+        jobId: `job-${i}`,
+        jobDependencies: [],
+        remoteName: "r",
+        documentId: "d",
+        scopes: ["global"],
+        branch: "main",
+        operations: [],
+        errorSource: ChannelErrorSource.Inbox,
+        errorMessage: "failed",
+        errorType: "LIBRARY_ERROR",
+      });
+    }
+    return buildSchema(module, openHost()).schema;
+  }
+
+  const query = `query ($cursor: String) { inspection {
+    deadLetters(remoteName: "r", cursor: $cursor, limit: 2) {
+      results { id } nextCursor } } }`;
+
+  it("reads an empty cursor as the first page", async () => {
+    const schema = await withRemote();
+    const result = await run(schema, query, contextFor(OPERATOR), {
+      cursor: "",
+    });
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.inspection).toMatchObject({
+      deadLetters: { nextCursor: "2" },
+    });
+  });
+
+  it("refuses a cursor past the safe integer range as bad input", async () => {
+    const schema = await withRemote();
+    const result = await run(schema, query, contextFor(OPERATOR), {
+      cursor: "100000000000000000000000",
+    });
+    expect(codeOf(result)).toBe("BAD_USER_INPUT");
+    expect(result.errors?.[0]?.message).toMatch(/Invalid dead-letter cursor/);
   });
 });
 

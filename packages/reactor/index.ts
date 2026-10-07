@@ -450,6 +450,7 @@ export {
   PollBehavior,
   PollingChannelError,
   SyncBuilder,
+  InvalidDeadLetterCursorError,
   SyncRepairRefusedError,
   SyncEventTypes,
   SyncOperation,

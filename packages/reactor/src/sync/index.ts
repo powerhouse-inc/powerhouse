@@ -72,6 +72,7 @@ export {
   ChannelError,
   DriveRequestError,
   PollingChannelError,
+  InvalidDeadLetterCursorError,
   SyncRepairRefusedError,
   isDriveAuthError,
   isRecoverableGraphQLError,
