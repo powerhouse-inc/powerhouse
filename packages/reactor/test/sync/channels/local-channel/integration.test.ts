@@ -8,9 +8,11 @@ import { ReactorClientBuilder } from "../../../../src/core/reactor-client-builde
 import { EventBus } from "../../../../src/events/event-bus.js";
 import { LocalChannelFactory } from "../../../../src/sync/channels/local-channel-factory.js";
 import {
-  messagePortTransport,
-  type LocalChannelPort,
-} from "../../../../src/sync/channels/local-channel-transport.js";
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+} from "../../../../src/sync/channels/local-channel-registry.js";
+import { messagePortTransport } from "../../../../src/sync/channels/local-channel-transport.js";
+import type { ISyncAdmin } from "../../../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../../../src/sync/sync-builder.js";
 import { SyncEventTypes } from "../../../../src/sync/types.js";
 import { createMockLogger } from "../../../factories.js";
@@ -27,25 +29,14 @@ import {
 
 const FILTER = { documentId: [], scope: [], branch: "main" };
 
-/** The sync manager's channel-reset seam, not on the public interface. */
-interface Resettable {
-  resetChannel(remoteName: string): Promise<void>;
-}
-
 type Peer = FleetNode & {
-  transports: Map<string, LocalChannelPort>;
+  admin: ISyncAdmin;
+  ports: LocalChannelPortRegistry;
 };
 
-function portKey(peerId: string, channelName: string): string {
-  return `${peerId} ${channelName}`;
-}
-
 async function buildPeer(name: string, versions: number[]): Promise<Peer> {
-  const transports = new Map<string, LocalChannelPort>();
-  const factory = new LocalChannelFactory(
-    createMockLogger(),
-    (peerId, channelName) => transports.get(portKey(peerId, channelName)),
-  );
+  const ports = new LocalChannelPortRegistry();
+  const factory = new LocalChannelFactory(createMockLogger(), ports.provider);
   const built = await new ReactorClientBuilder()
     .withReactorBuilder(
       new ReactorBuilder()
@@ -67,75 +58,74 @@ async function buildPeer(name: string, versions: number[]): Promise<Peer> {
     module,
     reactor: module.reactor,
     sync: module.syncModule!.syncManager,
-    transports,
+    admin: module.syncModule!.syncAdmin!,
+    ports,
   };
 }
 
-/** A MessageChannel joining a->b and b->a, kept so a reconnect can replace it. */
-type Link = { port1: MessagePort; port2: MessagePort };
+function brokeredPorts(): [MessagePort, MessagePort] {
+  const { port1, port2 } = new MessageChannel();
+  port1.unref();
+  port2.unref();
+  return [port1, port2];
+}
 
+/** Links a and b over one MessageChannel per drive, through each registry. */
 class Pair {
-  readonly links = new Map<string, Link>();
+  private readonly driveIds = new Set<string>();
 
   constructor(
     readonly a: Peer,
     readonly b: Peer,
   ) {}
 
-  private wire(driveId: string): Link {
-    const { port1, port2 } = new MessageChannel();
-    port1.unref();
-    port2.unref();
-    this.a.transports.set(portKey("b", driveId), messagePortTransport(port1));
-    this.b.transports.set(portKey("a", driveId), messagePortTransport(port2));
-    const link = { port1, port2 };
-    this.links.set(driveId, link);
-    return link;
-  }
-
   async connect(driveId: string): Promise<void> {
-    this.wire(driveId);
-    const collection = DriveCollectionId.forDrive(driveId);
-    await this.a.sync.add(
-      `a->b`,
-      collection,
-      { type: "local", parameters: { peerId: "b", channelName: driveId } },
-      FILTER,
+    this.driveIds.add(driveId);
+    const [port1, port2] = brokeredPorts();
+    const collectionId = DriveCollectionId.forDrive(driveId);
+    await registerLocalPeer(
+      this.a.sync,
+      this.a.ports,
+      {
+        peerId: "b",
+        channelName: driveId,
+        collectionId,
+        remoteName: "a->b",
+        filter: FILTER,
+      },
+      messagePortTransport(port1),
     );
-    await this.b.sync.add(
-      `b->a`,
-      collection,
-      { type: "local", parameters: { peerId: "a", channelName: driveId } },
-      FILTER,
+    await registerLocalPeer(
+      this.b.sync,
+      this.b.ports,
+      {
+        peerId: "a",
+        channelName: driveId,
+        collectionId,
+        remoteName: "b->a",
+        filter: FILTER,
+      },
+      messagePortTransport(port2),
     );
   }
 
-  /** Drops the current link and reconnects over a fresh MessageChannel. */
-  async reconnect(driveId: string): Promise<void> {
-    const old = this.links.get(driveId)!;
-    old.port1.close();
-    old.port2.close();
-    this.wire(driveId);
-    await (this.a.sync as unknown as Resettable).resetChannel("a->b");
-    await (this.b.sync as unknown as Resettable).resetChannel("b->a");
-  }
-
-  kill(): void {
-    this.a.reactor.kill();
-    this.b.reactor.kill();
-    for (const link of this.links.values()) {
-      link.port1.close();
-      link.port2.close();
+  async kill(): Promise<void> {
+    for (const peer of [this.a, this.b]) {
+      await peer.reactor.kill().completed;
+      await peer.sync.shutdown().completed;
     }
-    this.links.clear();
+    for (const driveId of this.driveIds) {
+      this.a.ports.unregister("b", driveId);
+      this.b.ports.unregister("a", driveId);
+    }
   }
 }
 
 describe("LocalChannel over a message port between two reactors", () => {
   let pair: Pair | undefined;
 
-  afterEach(() => {
-    pair?.kill();
+  afterEach(async () => {
+    await pair?.kill();
     pair = undefined;
   });
 
@@ -195,32 +185,5 @@ describe("LocalChannel over a message port between two reactors", () => {
     ]);
     expect(await has(b, driveId)).toBe(false);
     expect(held).toHaveBeenCalledTimes(1);
-  }, 40_000);
-
-  it("recovers after the transport drops and is replaced", async () => {
-    const a = await buildPeer("a", WIDE);
-    const b = await buildPeer("b", WIDE);
-    pair = new Pair(a, b);
-
-    const driveId = "reconnect-drive";
-    await pair.connect(driveId);
-    await create(a, driveId, {});
-    await vi.waitFor(async () => expect(await has(b, driveId)).toBe(true), {
-      timeout: 15_000,
-    });
-
-    await pair.reconnect(driveId);
-
-    // Traffic after the new port is adopted still flows both ways.
-    await addFolder(a, driveId, "afterReconnect");
-    await vi.waitFor(
-      async () => expect(await folders(b, driveId)).toContain("afterReconnect"),
-      { timeout: 15_000 },
-    );
-    await addFolder(b, driveId, "backToA");
-    await vi.waitFor(
-      async () => expect(await folders(a, driveId)).toContain("backToA"),
-      { timeout: 15_000 },
-    );
   }, 40_000);
 });

@@ -5894,8 +5894,8 @@ describe("SyncManager - Unit Tests", () => {
       persistence: RemotePersistence.Session,
     };
 
-    it("should never write a session-scoped remote to storage", async () => {
-      const remote = await syncManager.add(
+    it("should write a session-scoped remote so its rows have a parent", async () => {
+      await syncManager.add(
         "local:peer-b:drive-1",
         DriveCollectionId.forDrive("drive-1"),
         { type: "local", parameters: { peerId: "peer-b" } },
@@ -5903,22 +5903,29 @@ describe("SyncManager - Unit Tests", () => {
         sessionOptions,
       );
 
-      expect(remote.meta.name).toBe("local:peer-b:drive-1");
-      expect(syncManager.list()).toHaveLength(1);
-      expect(mockRemoteStorage.upsert).not.toHaveBeenCalled();
+      expect(mockRemoteStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "local:peer-b:drive-1",
+          options: expect.objectContaining({
+            persistence: RemotePersistence.Session,
+          }),
+        }),
+      );
     });
 
-    it("should keep a session-scoped remote out of a later startup", async () => {
-      // The storage double answers list() with exactly what was upserted, so a
-      // fresh manager over the same storage is the restart this proves.
-      const stored: RemoteRecord[] = [];
+    it("should remove a session-scoped remote at the next startup instead of rehydrating it", async () => {
+      const stored = new Map<string, RemoteRecord>();
       vi.mocked(mockRemoteStorage.upsert).mockImplementation((record) => {
-        stored.push(record);
+        stored.set(record.name, record);
         return Promise.resolve();
       });
       vi.mocked(mockRemoteStorage.list).mockImplementation(() =>
-        Promise.resolve(stored),
+        Promise.resolve([...stored.values()]),
       );
+      vi.mocked(mockRemoteStorage.remove).mockImplementation((name) => {
+        stored.delete(name);
+        return Promise.resolve();
+      });
 
       await syncManager.add(
         "local:peer-b:drive-1",
@@ -5933,23 +5940,13 @@ describe("SyncManager - Unit Tests", () => {
         { type: "internal", parameters: {} },
       );
 
-      expect(stored.map((record) => record.name)).toEqual(["durable-remote"]);
-
-      // A reactor restarting: a brand-new manager, the same storage, and a
-      // local channel factory that can no longer resolve the dead port.
+      const instance = vi.fn<IChannelFactory["instance"]>(() => mockChannel);
       const restarted = new SyncManager(
         new ConsoleLogger(["SyncManager"]),
         mockRemoteStorage,
         mockCursorStorage,
         mockDeadLetterStorage,
-        {
-          instance: vi.fn((_id, name) => {
-            if (name.startsWith("local:")) {
-              throw new Error("no transport for peer");
-            }
-            return mockChannel;
-          }),
-        },
+        { instance },
         mockOperationIndex,
         mockReactor,
         mockEventBus,
@@ -5961,6 +5958,13 @@ describe("SyncManager - Unit Tests", () => {
       expect(restarted.list().map((r) => r.meta.name)).toEqual([
         "durable-remote",
       ]);
+      expect(instance.mock.calls.map((call) => call[1])).toEqual([
+        "durable-remote",
+      ]);
+      expect([...stored.keys()]).toEqual(["durable-remote"]);
+      expect(mockCursorStorage.remove).toHaveBeenCalledWith(
+        "local:peer-b:drive-1",
+      );
       restarted.shutdown();
     });
 

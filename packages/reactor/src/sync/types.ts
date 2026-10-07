@@ -31,20 +31,12 @@ export enum PollBehavior {
 }
 
 /**
- * How long a remote's configuration is meant to outlive the process that added
- * it.
+ * Whether a remote outlives the process that added it.
  *
- * - `Durable` (default): the remote is written to `ISyncRemoteStorage` and
- *   rehydrated by the next `startup()`. Every channel whose config is enough to
- *   rebuild the transport (a URL, a token source) is durable.
- * - `Session`: the remote is never persisted, so it is never rehydrated. This is
- *   for a channel whose transport is a live object owned by the current session
- *   -- a `LocalChannel` over a brokered `MessagePort` dies with the page or
- *   worker that holds it, and its stored config would only name a port that no
- *   longer exists. Such a record is not merely useless on the next boot, it is
- *   poison: nothing can rebuild its transport, so rehydrating it can only fail.
- *   The session-scoped remote is re-added by whoever brokers the transport
- *   again.
+ * A `Session` remote's transport is a live object of this session, such as a
+ * brokered `MessagePort`. Its record is written like any other, so its cursors,
+ * holds and dead letters have a parent row, and the next `startup()` removes
+ * it instead of rehydrating it.
  */
 export enum RemotePersistence {
   Durable = "durable",
@@ -58,11 +50,7 @@ export type RemoteOptions = {
    * the filter, syncing from the beginning of history.
    */
   sinceTimestampUtcMs?: string;
-  /**
-   * Whether this remote survives a restart. Defaults to
-   * {@link RemotePersistence.Durable} when omitted, so every existing caller and
-   * every stored record keeps its meaning.
-   */
+  /** Defaults to {@link RemotePersistence.Durable}. */
   persistence?: RemotePersistence;
   /**
    * Polling cadence for this remote. Defaults to `PollBehavior.Auto` when omitted.

@@ -187,11 +187,6 @@ function isCredentialOrNetworkError(error: unknown): boolean {
   );
 }
 
-/**
- * Whether a remote is session-scoped, so its record must never reach
- * `ISyncRemoteStorage`. See {@link RemotePersistence}: a durable record of a
- * transport that dies with the session cannot be rehydrated by any later boot.
- */
 function isSessionScoped(options: RemoteOptions): boolean {
   return options.persistence === RemotePersistence.Session;
 }
@@ -488,6 +483,10 @@ export class SyncManager
     this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
+      if (isSessionScoped(record.options)) {
+        await this.purgeSessionRemote(record.name);
+        continue;
+      }
       // Building the channel and wiring it up is guarded as a whole: a factory
       // that rejects this record's config (or a wiring step that throws) must
       // degrade THIS remote, never the boot. A reactor whose sync module cannot
@@ -646,7 +645,7 @@ export class SyncManager
 
     remote.meta.options = { ...remote.meta.options, boundAddress };
 
-    await this.persistRemote(remote.meta);
+    await this.remoteStorage.upsert(this.recordOf(remote.meta));
   }
 
   localManifest(): PeerManifest {
@@ -705,7 +704,7 @@ export class SyncManager
       return;
     }
     remote.meta.peer = { manifest, receivedAtUtcMs: Date.now() };
-    await this.persistRemote(remote.meta);
+    await this.remoteStorage.upsert(this.recordOf(remote.meta));
     await this.holdUnsupported(remote, undelivered);
     await this.releaseSupported(remote);
   }
@@ -1193,20 +1192,19 @@ export class SyncManager
     return kept;
   }
 
-  /**
-   * Writes a remote's record to storage, unless the remote is session-scoped.
-   *
-   * The single gate every remote write goes through, so a
-   * {@link RemotePersistence.Session} remote cannot become durable by a side
-   * door -- not through add(), not through a later bind, not through a peer
-   * manifest arriving on it. Such a remote therefore never appears in
-   * `remoteStorage.list()` and is never rehydrated by startup().
-   */
-  private async persistRemote(meta: RemoteMeta): Promise<void> {
-    if (isSessionScoped(meta.options)) {
-      return;
+  /** A previous session's transport is gone, so its remote and rows go too. */
+  private async purgeSessionRemote(name: string): Promise<void> {
+    try {
+      await this.remoteStorage.remove(name);
+      await this.cursorStorage.remove(name);
+      await this.forgetRemote(name);
+    } catch (error) {
+      this.logger.error(
+        "Error removing a previous session's remote at startup (@name, @error)",
+        name,
+        error instanceof Error ? error.message : String(error),
+      );
     }
-    await this.remoteStorage.upsert(this.recordOf(meta));
   }
 
   private recordOf(meta: RemoteMeta): RemoteRecord {
@@ -1282,7 +1280,7 @@ export class SyncManager
       options,
     );
 
-    await this.persistRemote(meta);
+    await this.remoteStorage.upsert(this.recordOf(meta));
 
     const remote: Remote = { meta, channel };
 
