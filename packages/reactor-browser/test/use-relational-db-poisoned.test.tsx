@@ -54,4 +54,23 @@ describe("useRelationalDb onPoisoned", () => {
     expect(second).toHaveLength(1);
     expect(gone).toEqual([]);
   });
+
+  it("calls an inline callback once across re-renders after the poison", async () => {
+    const dead = deadSession();
+    const db = relationalKysely(dead, {
+      statementTimeoutMs: 50,
+      onDiagnostic: () => undefined,
+    });
+    setPGliteDB({ db: dead as never, isLoading: false, error: null });
+
+    const calls: Error[] = [];
+    const hook = renderHook(() =>
+      useRelationalDb({ onPoisoned: (cause) => calls.push(cause) }),
+    );
+
+    await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
+    hook.rerender();
+    hook.rerender();
+    expect(calls).toHaveLength(1);
+  });
 });

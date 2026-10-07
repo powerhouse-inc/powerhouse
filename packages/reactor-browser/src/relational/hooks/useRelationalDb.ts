@@ -1,7 +1,7 @@
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
 import { createRelationalDb } from "@powerhousedao/reactor";
 import type { IRelationalDb as IRelationalDbCore } from "@powerhousedao/shared/processors";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { usePGliteDB } from "../../pglite/usePGlite.js";
 import {
   relationalKysely,
@@ -46,7 +46,9 @@ export const useRelationalDb = <Schema>(
   options: RelationalDbOptions = {},
 ): IRelationalDbState<Schema> => {
   const pglite = usePGliteDB();
-  const { onPoisoned } = options;
+  const onPoisoned = useRef(options.onPoisoned);
+  onPoisoned.current = options.onPoisoned;
+  const wantsPoisoned = options.onPoisoned !== undefined;
 
   const relationalDb = useMemo<IRelationalDbState<Schema>>(() => {
     if (!pglite.db || pglite.isLoading || pglite.error) {
@@ -67,9 +69,11 @@ export const useRelationalDb = <Schema>(
   }, [pglite]);
 
   useEffect(() => {
-    if (!pglite.db || !onPoisoned) return;
-    return subscribeRelationalPoisoned(pglite.db, onPoisoned);
-  }, [pglite.db, onPoisoned]);
+    if (!pglite.db || !wantsPoisoned) return;
+    return subscribeRelationalPoisoned(pglite.db, (cause) =>
+      onPoisoned.current?.(cause),
+    );
+  }, [pglite.db, wantsPoisoned]);
 
   return relationalDb;
 };
