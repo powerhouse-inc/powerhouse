@@ -298,11 +298,20 @@ export class ReactorHost {
       this.sendReload(reason, workerGen);
       return;
     }
-    void drain()
-      .catch((error: unknown) => {
-        console.error("ReactorHost drain before reload failed", error);
-      })
-      .then(() => this.sendReload(reason, workerGen));
+    void this.drainThenReload(drain, reason, workerGen);
+  }
+
+  private async drainThenReload(
+    drain: () => Promise<void>,
+    reason: string,
+    workerGen: string,
+  ): Promise<void> {
+    try {
+      await drain();
+    } catch (error) {
+      console.error("ReactorHost drain before reload failed", error);
+    }
+    this.sendReload(reason, workerGen);
   }
 
   private sendReload(reason: string, workerGen: string): void {

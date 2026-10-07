@@ -303,17 +303,28 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     expect(retired).toEqual(["reactor version mismatch"]);
   });
 
-  it("sends a deploy's reload when the drain before it fails", async () => {
-    const host = new ReactorHost({
-      build: () => Promise.resolve(fakeClient([])),
-      drainBeforeReload: () => Promise.reject(new Error("drain failed")),
-    });
-    const tab1 = openTab(host);
-    await tab1.send({ k: "hello", version: V1 });
-    await openTab(host).send({ k: "hello", version: V2 });
-    await deliver();
-    expect(tab1.reloads).toEqual(["reactor version mismatch"]);
-  });
+  it.each([
+    ["rejects", () => Promise.reject(new Error("drain failed"))],
+    [
+      "throws",
+      (): Promise<void> => {
+        throw new Error("drain failed");
+      },
+    ],
+  ])(
+    "sends a deploy's reload when the drain before it %s",
+    async (_, drainBeforeReload) => {
+      const host = new ReactorHost({
+        build: () => Promise.resolve(fakeClient([])),
+        drainBeforeReload,
+      });
+      const tab1 = openTab(host);
+      await tab1.send({ k: "hello", version: V1 });
+      await openTab(host).send({ k: "hello", version: V2 });
+      await deliver();
+      expect(tab1.reloads).toEqual(["reactor version mismatch"]);
+    },
+  );
 
   it("does not stop a reactor whose build finishes during the drain until the reload", async () => {
     let finishBuild: (client: IReactorClient) => void = () => undefined;
