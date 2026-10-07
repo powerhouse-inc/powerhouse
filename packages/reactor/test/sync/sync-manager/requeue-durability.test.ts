@@ -885,6 +885,54 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
   });
 
+  it("drops a cleared dead letter that a reset reloaded during the clear", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    let releaseRemove: (() => void) | undefined;
+    vi.mocked(mockDeadLetterStorage.remove).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseRemove = resolve;
+        }),
+    );
+
+    const clear = syncManager.clearDeadLetter("accounts", "d1");
+    await vi.waitFor(() => expect(releaseRemove).toBeDefined());
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [storedD1],
+      options: { cursor: "0", limit: 100 },
+    });
+    await syncManager.resetChannel("accounts");
+    expect(channels[1].deadLetter.get("d1")).toBeDefined();
+    releaseRemove?.();
+    await clear;
+
+    expect(channels[1].deadLetter.get("d1")).toBeUndefined();
+    channels[1].inbox.add(
+      new SyncOperation(
+        "i1",
+        "",
+        [],
+        "accounts",
+        "doc-b",
+        ["global"],
+        "main",
+        [] as OperationWithContext[],
+      ),
+    );
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
+  });
+
   it("drops the row of a requeued op whose document was purged meanwhile", async () => {
     mockReactor = {
       load: vi.fn(),
