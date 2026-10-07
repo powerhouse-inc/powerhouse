@@ -440,6 +440,54 @@ describe("a holder that cannot renew", () => {
   );
 });
 
+// A self-fence saw nobody take the lease, so the row is still this
+// instance's: releasing it lets the next boot, under any owner, claim at once.
+describe("releasing after fencing itself", () => {
+  it("drops its own row", async () => {
+    const relationalDb = createFreshRelationalDb();
+    let broken = false;
+    const lost = vi.fn();
+    const lease = await acquireWorkflowSingletonLease({
+      relationalDb: withUpdateFault(relationalDb, () =>
+        broken
+          ? () => Promise.reject(new Error("connection terminated"))
+          : undefined,
+      ),
+      logger: silent,
+      owner: "alpha",
+      heartbeatMs: 500,
+      onLost: lost,
+    });
+    broken = true;
+    await vi.waitFor(() => expect(lost).toHaveBeenCalledOnce(), {
+      timeout: 5_000,
+    });
+    broken = false;
+
+    await lease.release();
+
+    const next = await acquireWorkflowSingletonLease({
+      relationalDb,
+      logger: silent,
+      owner: "beta",
+    });
+    await next.release();
+  });
+
+  it("leaves the row alone when another claim took it", async () => {
+    const { acquire, age } = fixture();
+    const oldPod = await acquire("alpha");
+    await age(60_001);
+    const newPod = await acquire("beta");
+    expect(await oldPod.heartbeat()).toBe(false);
+
+    await oldPod.release();
+
+    expect(await newPod.heartbeat()).toBe(true);
+    await newPod.release();
+  });
+});
+
 describe("releasing while a renewal is in flight", () => {
   it("is not reported as a lost lease", async () => {
     const relationalDb = createFreshRelationalDb();

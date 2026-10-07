@@ -313,6 +313,8 @@ export async function acquireWorkflowSingletonLease(
   let inFlight: Promise<boolean> | undefined;
   let timer: NodeJS.Timeout | undefined;
   let lost = false;
+  // Only a renewal that matched no row proves another claim holds it.
+  let takenOver = false;
   let releasing = false;
 
   const stop = () => {
@@ -359,6 +361,7 @@ export async function acquireWorkflowSingletonLease(
     } catch {
       heldBy = undefined;
     }
+    takenOver = true;
     markLost(heldBy, `is now held by "${heldBy ?? "nobody"}"`);
     return false;
   };
@@ -407,7 +410,7 @@ export async function acquireWorkflowSingletonLease(
     async release() {
       releasing = true;
       stop();
-      if (lost) return;
+      if (takenOver) return;
       // A renewal answered after the DELETE would read as a lost lease.
       if (inFlight) {
         await Promise.race([
@@ -415,7 +418,9 @@ export async function acquireWorkflowSingletonLease(
           new Promise((resolve) => setTimeout(resolve, tickMs).unref()),
         ]);
       }
-      if (lost) return;
+      if (takenOver) return;
+      // After a self-fence too: the DELETE matches only this instance's row,
+      // and leaving it costs the next boot under another owner the TTL.
       try {
         await db
           .deleteFrom("workflow_singleton")
