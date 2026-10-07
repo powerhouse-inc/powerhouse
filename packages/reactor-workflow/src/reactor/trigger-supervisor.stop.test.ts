@@ -374,15 +374,15 @@ describe("TriggerSupervisor after stop()", () => {
     });
   });
 
-  // The claim commits, and stop() lands before the item fires: the key goes
-  // back, or the next owner's re-poll inside the TTL drops the item for good.
+  // The claim and its PENDING run commit, and stop() lands before the item
+  // fires: the run is failed with the payload, for an operator to rerun.
   describe("an item whose dedupe key is claimed as it stops", () => {
     function holdClaim() {
       const claimed = gate();
       const release = gate();
       const handle = scoped();
-      handle.claimDedupe = async (...args) => {
-        const result = await store.claimDedupe(...args);
+      handle.claimDedupeAndEnqueueRun = async (...args) => {
+        const result = await store.claimDedupeAndEnqueueRun(...args);
         claimed.open();
         await release.opened;
         return result;
@@ -391,21 +391,31 @@ describe("TriggerSupervisor after stop()", () => {
       return { claimed: claimed.opened, release: release.open };
     }
 
-    async function nextOwnerFires(workflowId: string) {
+    async function leftToRerun(workflowId: string) {
+      const runs = await store.listRuns(workflowId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({
+        status: "FAILED",
+        error_name: "TriggerSupervisorStoppedError",
+      });
+      expect(JSON.parse(runs[0]!.trigger_payload!)).toEqual({
+        from: workflowId,
+        _dedupe_key: `item-${workflowId}`,
+      });
+    }
+
+    // Inside the TTL the claim stands for the failed run, so nothing doubles it.
+    async function nextOwnerSkips(workflowId: string) {
       const next = build(scoped());
       await next.upsert(piece(workflowId));
       await due(workflowId);
       await next.tick();
       next.stop();
-      expect(fired).toEqual([
-        {
-          workflowId,
-          payload: { from: workflowId, _dedupe_key: `item-${workflowId}` },
-        },
-      ]);
+      expect(fired).toEqual([]);
+      expect(await store.listRuns(workflowId)).toHaveLength(1);
     }
 
-    it("fires on the next owner's poll after a refused poll fire", async () => {
+    it("leaves a refused poll fire as a failed run to rerun", async () => {
       const a = `${prefix}-a`;
       const { claimed, release } = holdClaim();
       await supervisor.upsert(piece(a));
@@ -418,10 +428,11 @@ describe("TriggerSupervisor after stop()", () => {
       await tick;
 
       expect(fired).toEqual([]);
-      await nextOwnerFires(a);
+      await leftToRerun(a);
+      await nextOwnerSkips(a);
     });
 
-    it("fires on the next owner's poll after a refused webhook delivery", async () => {
+    it("leaves a refused webhook delivery as a failed run to rerun", async () => {
       const a = `${prefix}-a`;
       const { claimed, release } = holdClaim();
       await supervisor.upsert(piece(a));
@@ -435,7 +446,8 @@ describe("TriggerSupervisor after stop()", () => {
 
       expect(await delivered).toBeInstanceOf(TriggerSupervisorStoppedError);
       expect(fired).toEqual([]);
-      await nextOwnerFires(a);
+      await leftToRerun(a);
+      await nextOwnerSkips(a);
     });
   });
 });

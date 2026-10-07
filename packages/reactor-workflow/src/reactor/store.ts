@@ -1228,6 +1228,7 @@ async function claimDedupeIn(
   dedupeKey: string,
   ttlMs: number,
   nowIso: string,
+  runId = FIRED_WITHOUT_RUN_ID,
 ): Promise<boolean> {
   const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
   await db
@@ -1240,7 +1241,7 @@ async function claimDedupeIn(
     .values({
       workflow_id: workflowId,
       dedupe_key: dedupeKey,
-      run_id: FIRED_WITHOUT_RUN_ID,
+      run_id: runId,
       created_at: nowIso,
       attempts: 1,
     })
@@ -1248,7 +1249,7 @@ async function claimDedupeIn(
     .onConflict((oc) =>
       oc
         .columns(["workflow_id", "dedupe_key"])
-        .doUpdateSet({ run_id: FIRED_WITHOUT_RUN_ID })
+        .doUpdateSet({ run_id: runId })
         .where("trigger_dedupe.run_id", "is", null),
     )
     .returning("dedupe_key")
@@ -1507,6 +1508,33 @@ export class WorkflowRunStore {
     if (!claimed) return { outcome: "duplicate" };
     this.runsInFlight.add(id);
     return { outcome: "claimed", runId: id };
+  }
+
+  // A piece item's claim and its PENDING run, in one write: a firing the
+  // shutdown refuses then fails a row that keeps the payload. Undefined when
+  // the key was already claimed.
+  async claimDedupeAndEnqueueRun(
+    dedupeKey: string,
+    ttlMs: number,
+    nowIso: string,
+    options: EnqueueRunOptions,
+  ): Promise<string | undefined> {
+    const id = randomUUID();
+    const claimed = await this.db.transaction().execute(async (trx) => {
+      const won = await claimDedupeIn(
+        trx,
+        options.workflowId,
+        dedupeKey,
+        ttlMs,
+        nowIso,
+        id,
+      );
+      if (won) await this.insertPendingRun(trx, id, options);
+      return won;
+    });
+    if (!claimed) return undefined;
+    this.runsInFlight.add(id);
+    return id;
   }
 
   /**
@@ -2224,15 +2252,6 @@ export class WorkflowRunStore {
     nowIso: string,
   ): Promise<boolean> {
     return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso);
-  }
-
-  // Gives back a claim whose fire was refused, so a re-poll can take it.
-  async releaseDedupe(workflowId: string, dedupeKey: string): Promise<void> {
-    await this.db
-      .deleteFrom("trigger_dedupe")
-      .where("workflow_id", "=", workflowId)
-      .where("dedupe_key", "=", dedupeKey)
-      .execute();
   }
 
   // A removed workflow's keys would otherwise wait for a claim that never comes.

@@ -141,7 +141,13 @@ export interface TriggerSupervisorOptions {
     connectionId: string | null | undefined,
     request?: ConnectionRequest,
   ) => Promise<unknown>;
-  fire: (workflowId: string, payload: unknown, kind: string) => void;
+  // `runId` is the PENDING run journaled for a piece item, for the host to adopt.
+  fire: (
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+    runId?: string,
+  ) => void;
   cacheDir: string;
   // Where a trigger's piece comes from. Defaults to fetching into cacheDir,
   // so a host that ships pieces in a package passes its own.
@@ -396,9 +402,14 @@ export class TriggerSupervisor {
     });
   }
 
-  private fire(workflowId: string, payload: unknown, kind: string): void {
+  private fire(
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+    runId?: string,
+  ): void {
     this.throwIfStopped();
-    this.options.fire(workflowId, payload, kind);
+    this.options.fire(workflowId, payload, kind, runId);
   }
 
   // Successfully enabled workflows; identical re-registrations are no-ops.
@@ -1559,46 +1570,50 @@ export class TriggerSupervisor {
   }
 
   // One workflow run per output item; _dedupe_key suppresses 30s repeats.
+  // Journaled before it fires: the cursor has already moved past the item, so
+  // a firing the shutdown refuses must leave a run to rerun.
   private async fireItem(
     store: WorkflowRunStore,
     binding: PieceTriggerBinding,
     item: unknown,
     now: Date,
   ): Promise<void> {
+    const kind = pieceTriggerKind(binding.block);
+    const enqueue = {
+      workflowId: binding.workflowId,
+      triggerKind: kind,
+      triggerPayload: item,
+    };
     const dedupeKey = extractDedupeKey(item);
-    if (dedupeKey) {
-      const claimed = await store.claimDedupe(
-        binding.workflowId,
-        dedupeKey,
-        DEDUPE_TTL_MS,
-        now.toISOString(),
-      );
-      if (!claimed) return;
-    }
+    const runId = dedupeKey
+      ? await store.claimDedupeAndEnqueueRun(
+          dedupeKey,
+          DEDUPE_TTL_MS,
+          now.toISOString(),
+          enqueue,
+        )
+      : await store.enqueueRun(enqueue);
+    if (!runId) return;
     try {
-      this.fire(binding.workflowId, item, pieceTriggerKind(binding.block));
+      this.fire(binding.workflowId, item, kind, runId);
     } catch (error) {
-      if (dedupeKey && error instanceof TriggerSupervisorStoppedError) {
-        await this.releaseDedupe(binding.workflowId, dedupeKey);
-      }
+      await this.failRefused(runId, error);
       throw error;
     }
   }
 
-  // Past stop(), as the cursor rewind is: a claim that committed as the lane
-  // stopped would otherwise make the next owner's re-poll skip the item.
-  private async releaseDedupe(
-    workflowId: string,
-    dedupeKey: string,
-  ): Promise<void> {
+  // Past stop(), as the cursor rewind is. A row left PENDING is failed by the
+  // next owner's journal open instead.
+  private async failRefused(runId: string, error: unknown): Promise<void> {
     try {
       const raw = await this.options.store();
-      await raw?.releaseDedupe(workflowId, dedupeKey);
-    } catch (error) {
-      logger.warn(
-        `Could not release dedupe key ${dedupeKey} of ${workflowId}`,
-        error,
+      await raw?.failRun(
+        runId,
+        error instanceof Error ? error.message : String(error),
+        error instanceof Error ? error.name : undefined,
       );
+    } catch (failure) {
+      logger.warn(`Could not fail the refused run ${runId}`, failure);
     }
   }
 }

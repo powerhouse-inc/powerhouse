@@ -1871,6 +1871,13 @@ export class WorkflowRuntimeService {
         this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
       (error: unknown) => {
+        // Not lost: the journaled row is FAILED, for an operator to rerun.
+        if (enqueuedRunId && isShutdownRefusal(error)) {
+          this.logger.warn(
+            `${kind} fire of workflow ${workflowId} was refused by the shutdown; run ${enqueuedRunId} is left to rerun`,
+          );
+          return;
+        }
         // The message, truncated, rather than the error object: a piece error
         // carries the HTTP response the framework's formatter lifted out of
         // it, which can be a whole HTML error page. An unbounded write on the
@@ -2153,8 +2160,8 @@ export class WorkflowRuntimeService {
         // trigger hook throws; nothing else travels with it.
         return rememberSecrets(resolved.auth, resolved.secretValues);
       },
-      fire: (workflowId, payload, kind) => {
-        this.fireFromTrigger(workflowId, payload, kind);
+      fire: (workflowId, payload, kind, runId) => {
+        this.fireFromTrigger(workflowId, payload, kind, runId);
       },
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,

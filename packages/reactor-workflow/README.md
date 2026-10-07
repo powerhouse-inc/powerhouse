@@ -114,6 +114,10 @@ the sweeps and the supervisor are per process.
   runtime down: no trigger, webhook or manual run starts after that, and the
   host reports its triggers unavailable. It does not re-claim; workflows come
   back on the next boot, since re-arming needs a fresh compose.
+- A firing the shutdown refuses, whether queued for its concurrency slot or
+  still on its way in, is not dropped silently. An operation fire and a piece
+  trigger's item are journaled as a PENDING run before they fire, and the
+  refusal fails that run with its payload, so it can be rerun.
 - A renewal that fails or hangs is retried every 5s. A holder that has gone
   30s without a renewal it knows landed reports itself lost
   (`reason: "unrenewable"`), before a stale same-owner claim (40s) or expiry

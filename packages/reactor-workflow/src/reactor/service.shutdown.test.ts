@@ -7,7 +7,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Documents } from "../../test/helpers/documents.js";
-import { CORE_PIECE_VERSION } from "../pieces/index.js";
+import {
+  CORE_PIECE_VERSION,
+  type PieceWorker,
+  type PieceWorkerResult,
+} from "../pieces/index.js";
 import { packagePieces } from "./piece-registry.js";
 import { effectiveRunPolicy } from "./policy.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
@@ -17,6 +21,10 @@ import {
   type WorkflowRuntimeService,
 } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
+import {
+  TriggerSupervisor,
+  type TriggerSupervisorOptions,
+} from "./trigger-supervisor.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
@@ -163,6 +171,84 @@ describe("a runtime that has shut down", () => {
   // live runs.
   // Built lazily, so the first caller after shutdown would otherwise get a
   // fresh, running lane over the journal the next owner holds.
+  // The poll's cursor has moved past the item, so the refused firing must
+  // leave a run that carries it.
+  it("fails the run a queued piece item journaled, with its payload", async () => {
+    const { service, workflowId } = runtime();
+    const store = (await service.store())!;
+    const item = { id: "item-1", _dedupe_key: "item-1" };
+    const output = (hook: string): PieceWorkerResult => ({
+      output:
+        hook === "run"
+          ? [item]
+          : { triggers: [{ name: "new_thing", strategy: "POLLING" }] },
+      touched: [],
+      tlsPoisoned: false,
+    });
+    const poller = new TriggerSupervisor({
+      store: () => service.store(),
+      resolveAuth: () => Promise.resolve(undefined),
+      fire: (
+        service.supervisor() as unknown as { options: TriggerSupervisorOptions }
+      ).options.fire,
+      cacheDir: "/nonexistent",
+      resolver: {
+        resolve: (target) =>
+          Promise.resolve({
+            ...target,
+            bundleDir: "/nonexistent",
+            local: false,
+          }),
+      },
+      worker: {
+        describePiece: () => Promise.resolve(output("describe")),
+        runTriggerHook: (request: { hook: string }) =>
+          Promise.resolve(output(request.hook)),
+        dispose: () => undefined,
+      } as unknown as PieceWorker,
+    });
+    const block = {
+      pieceName: "@acme/piece-x",
+      pieceVersion: "1.0.0",
+      kind: "trigger" as const,
+      name: "new_thing",
+    };
+    await poller.upsert({
+      workflowId,
+      block,
+      packageName: block.pieceName,
+      version: "1.0.0",
+      triggerName: "new_thing",
+      config: {},
+      connectionId: null,
+    });
+    const row = await store.getTriggerState(workflowId);
+    await store.upsertTriggerState({
+      ...row!,
+      next_poll_at: "2000-01-01T00:00:00.000Z",
+    });
+    const slot = await gateOf(service).admit(
+      workflowId,
+      effectiveRunPolicy({ policy } as never),
+    );
+
+    await poller.tick();
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+    service.shutdown();
+    poller.stop();
+
+    await vi.waitFor(async () => {
+      const runs = await store.listRuns(workflowId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({
+        status: "FAILED",
+        error_name: "WorkflowRuntimeClosedError",
+      });
+      expect(JSON.parse(runs[0]!.trigger_payload!)).toEqual(item);
+    });
+    if (slot.admitted) slot.release();
+  });
+
   it("hands out only a stopped trigger supervisor", async () => {
     const { service, workflowId } = runtime();
     const store = (await service.store())!;
