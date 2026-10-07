@@ -49,11 +49,17 @@ export function graphLayout(args: {
   ]);
   const taken = new Set<string>();
   const inbound = new Map<string, OutlineEdge[]>();
+  const outbound = new Map<string, number>();
   for (const edge of args.edges) {
     const list = inbound.get(edge.to) ?? [];
     list.push(edge);
     inbound.set(edge.to, list);
+    outbound.set(edge.from, (outbound.get(edge.from) ?? 0) + 1);
   }
+  // A side port drops a lane only to clear the way for its source's other
+  // path; a step's only way out stays on its lane.
+  const drops = (edge: OutlineEdge) =>
+    SIDE_PORTS.has(edge.port) && (outbound.get(edge.from) ?? 0) > 1;
 
   const nodes: GraphNode[] = [];
   for (const { step } of rows) {
@@ -67,9 +73,7 @@ export function graphLayout(args: {
     // A join stays on the highest lane any of its sources leads to.
     let lane = Math.min(
       ...from.map(
-        (edge) =>
-          placed.get(nodeId(edge.from))!.lane +
-          (SIDE_PORTS.has(edge.port) ? 1 : 0),
+        (edge) => placed.get(nodeId(edge.from))!.lane + (drops(edge) ? 1 : 0),
       ),
       from.length === 0 ? 0 : Infinity,
     );
