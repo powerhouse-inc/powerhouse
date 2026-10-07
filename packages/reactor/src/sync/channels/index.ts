@@ -8,6 +8,19 @@ export {
   LOCAL_CHANNEL_TYPE,
 } from "./local-channel-factory.js";
 export {
+  assertCollectionIdParts,
+  collectionIdFromKey,
+  DEFAULT_LOCAL_FILTER,
+  LOCAL_REMOTE_OPTIONS,
+  localChannelConfig,
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+  removeLocalPeer,
+  type LocalPeerSyncManager,
+  type LocalRemoteSpec,
+  type LocalRemoveSpec,
+} from "./local-channel-registry.js";
+export {
   messagePortTransport,
   type LocalChannelPort,
   type LocalChannelTransportProvider,
