@@ -984,9 +984,9 @@ describe("rerunning a CANCELLED run", () => {
   }, 60_000);
 });
 
-// A registration for the next version can land between the park's write
-// and its undo: its enable bails on the park, and the undo alone would leave
-// the old trigger armed and the new one never enabled.
+// A registration for the next version can land while the park is being
+// written; its enable must arm the new version, and the undo of the stale
+// park must not leave the old trigger armed.
 describe("an enable that bailed on a park that was then undone", () => {
   it("arms the version published meanwhile", async () => {
     const id = "wf-park-bailed-enable";
@@ -996,17 +996,6 @@ describe("an enable that bailed on a park that was then undone", () => {
       expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
     );
     const oldHash = (await store.getTriggerState(id))?.config_hash;
-    const supervisor = service.supervisor();
-    const realUpsert = supervisor.upsert.bind(supervisor);
-    let parkWritten!: () => void;
-    const written = new Promise<void>((resolve) => (parkWritten = resolve));
-    let bailed: Promise<void> | undefined;
-    const upsert = vi
-      .spyOn(supervisor, "upsert")
-      .mockImplementationOnce((binding) => {
-        bailed = written.then(() => realUpsert(binding));
-        return bailed;
-      });
     const park = vi.spyOn(WorkflowRunStore.prototype, "parkWorkflow");
     park.mockImplementationOnce(async function (
       this: WorkflowRunStore,
@@ -1025,17 +1014,13 @@ describe("an enable that bailed on a park that was then undone", () => {
       );
       await service.onOperations([workflowOp(id, republished)]);
       park.mockRestore();
-      const parked = await this.parkWorkflow(...args);
-      parkWritten();
-      await bailed;
-      return parked;
+      return this.parkWorkflow(...args);
     });
 
     expect((await service.fire(id, undefined, "schedule")).status).toBe(
       "FAILED",
     );
     park.mockRestore();
-    upsert.mockRestore();
 
     expect(await store.getWorkflowPark(id)).toBeUndefined();
     await vi.waitFor(async () => {

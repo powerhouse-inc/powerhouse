@@ -377,18 +377,63 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.enable(binding, previous));
   }
 
-  /** A lifted park: a PARKED row is ENABLED again, as it was before the park
-   * (only an ENABLED row is ever parked), a retry held back by the park is due
-   * now, and the next upsert of the same binding arms it rather than skipping. */
+  // Park writes ride this lane, the one enable, disable and upsert use, so a
+  // park can never land between an enable's park check and its ENABLED write.
+
+  /** Parks a workflow; true when a trigger row was parked with it. */
+  park(
+    workflowId: string,
+    publishedVersion: number,
+    reason: string,
+  ): Promise<boolean> {
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      if (!store) return false;
+      return store.parkWorkflow(workflowId, publishedVersion, reason);
+    });
+  }
+
+  /** Undoes {@link park} for that version only: a later park stands. */
+  liftPark(
+    workflowId: string,
+    publishedVersion: number,
+    trigger: boolean,
+  ): Promise<void> {
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      if (!store) return;
+      const park = await store.getWorkflowPark(workflowId);
+      if (park?.published_version !== publishedVersion) return;
+      await store.liftPark(workflowId, trigger);
+    });
+  }
+
+  /** A disable clears the park. With no binding in memory to release a PARKED
+   * row through onDisable (a boot), the row is turned DISABLED here. */
+  releasePark(workflowId: string, flipRow: boolean): Promise<void> {
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      if (!store) return;
+      if (flipRow) await store.clearParkOnDisable(workflowId);
+      else await store.clearWorkflowPark(workflowId);
+    });
+  }
+
+  /** A lifted park: the park row goes, a PARKED row is ENABLED again, as it
+   * was before the park (only an ENABLED row is ever parked), a retry held
+   * back by the park is due now, and the next upsert of the same binding arms
+   * it rather than skipping. */
   unpark(workflowId: string): Promise<void> {
     this.enabledOk.delete(workflowId);
     const retry = this.enableRetries.get(workflowId);
     if (retry) retry.at = 0;
     return this.enqueue(async () => {
       const store = await this.options.store();
-      const row = await store?.getTriggerState(workflowId);
+      if (!store) return;
+      await store.clearWorkflowPark(workflowId);
+      const row = await store.getTriggerState(workflowId);
       if (row?.status !== PARKED_TRIGGER_STATUS) return;
-      await store!.setTriggerStatus(workflowId, "ENABLED");
+      await store.setTriggerStatus(workflowId, "ENABLED");
     });
   }
 
@@ -854,7 +899,7 @@ export class TriggerSupervisor {
         workflow_id: binding.workflowId,
         ...triggerBlockColumns(binding.block),
         config_hash: hash,
-        status: "ENABLED",
+        status: await this.armedStatus(store, binding.workflowId),
         store_state: VESTIGIAL_STORE_STATE,
         interval_ms: intervalMs,
         next_poll_at: new Date(now.getTime() + intervalMs).toISOString(),
@@ -1023,6 +1068,17 @@ export class TriggerSupervisor {
     return true;
   }
 
+  /** The status an enable that succeeded writes: never ENABLED while a park
+   * stands, whatever ran meanwhile. The registration stays recorded. */
+  private async armedStatus(
+    store: WorkflowRunStore,
+    workflowId: string,
+  ): Promise<string> {
+    return (await store.getWorkflowPark(workflowId))
+      ? PARKED_TRIGGER_STATUS
+      : "ENABLED";
+  }
+
   // Backoff that only lives in memory is no backoff at all against a crash
   // loop, so a restart picks the retry time back up off the row.
 
@@ -1104,7 +1160,7 @@ export class TriggerSupervisor {
       const nextAt = carried ? new Date(carried) : nextFireAt(schedule, now);
       await store.upsertTriggerState({
         ...base,
-        status: "ENABLED",
+        status: await this.armedStatus(store, binding.workflowId),
         interval_ms:
           schedule.mode === "interval"
             ? schedule.everyMs

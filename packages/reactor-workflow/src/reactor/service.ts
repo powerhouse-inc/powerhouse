@@ -1007,16 +1007,14 @@ export class WorkflowRuntimeService {
     // a re-publish, which the version that failed no longer matches.
     if (state.status !== "ENABLED") {
       const held = this.registry.get(workflowId);
-      if (held && SUPERVISED_KINDS.has(held.kind)) {
-        // The supervisor's disable below releases a PARKED row through
-        // onDisable; flipping it DISABLED first would skip that release.
-        await store?.clearWorkflowPark(workflowId);
-      } else {
-        // No binding in memory (a boot), so nothing here can run onDisable.
-        await store?.clearParkOnDisable(workflowId);
-      }
+      // With the binding held, the supervisor's disable below releases a
+      // PARKED row through onDisable; flipping it DISABLED first would skip
+      // that release. With none (a boot), nothing here can run onDisable.
+      await this.supervisor().releasePark(
+        workflowId,
+        !(held && SUPERVISED_KINDS.has(held.kind)),
+      );
     } else if (await this.outdatedPark(workflowId, state)) {
-      await store?.clearWorkflowPark(workflowId);
       await this.supervisor().unpark(workflowId);
     }
     // A park the supervisor does not see: matching nothing is what stops it.
@@ -4380,7 +4378,7 @@ export class WorkflowRuntimeService {
       if (!(await this.stillRunsVersion(workflowId, publishedVersion))) return;
       // The park row covers every trigger kind; the trigger_state row is what
       // stops the supervisor polling a schedule or piece trigger.
-      const trigger = await store.parkWorkflow(
+      const trigger = await this.supervisor().park(
         workflowId,
         publishedVersion,
         reason,
@@ -4389,7 +4387,7 @@ export class WorkflowRuntimeService {
       // that landed before this read is undone here, one after it clears the
       // park in its own registration.
       if (!(await this.stillRunsVersion(workflowId, publishedVersion))) {
-        await store.liftPark(workflowId, trigger);
+        await this.supervisor().liftPark(workflowId, publishedVersion, trigger);
         // A registration of the change may have run while the park stood, and
         // its enable bailed on it: register again, so that enable gets a pass.
         await this.supervisor().unpark(workflowId);

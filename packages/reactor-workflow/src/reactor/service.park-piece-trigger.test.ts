@@ -22,7 +22,14 @@ async function bump(ctx, key) {
 }
 export const parkable = {
   displayName: "Parkable",
-  actions: {},
+  actions: {
+    boom: {
+      name: "boom",
+      displayName: "Boom",
+      props: {},
+      run: async () => { throw new Error("always fails"); },
+    },
+  },
   triggers: {
     hook: {
       name: "hook",
@@ -32,6 +39,16 @@ export const parkable = {
       onEnable: async (ctx) => bump(ctx, "subscribed"),
       onDisable: async (ctx) => bump(ctx, "released"),
       run: async (ctx) => (ctx.payload ? [ctx.payload] : []),
+    },
+    slow: {
+      name: "slow",
+      displayName: "Slow",
+      type: "POLLING",
+      props: {},
+      onEnable: async () => { await new Promise((r) => setTimeout(r, 3000)); },
+      onDisable: async () => undefined,
+      run: async () => [],
+      test: async () => [],
     },
     flaky: {
       name: "flaky",
@@ -229,4 +246,100 @@ describe("an enable retry of a PARKED piece trigger", () => {
       await store.getPieceStoreValue("FLOW", id, "first-attempt"),
     ).toBeNull();
   }, 90_000);
+});
+
+// A park that lands while onEnable is still running must not be overwritten
+// by the ENABLED row that enable writes when the hook returns.
+describe("a park landing while the trigger is enabling", () => {
+  let dir = "";
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), "ph-park-mid-enable-"));
+    const entryPath = join(dir, "index.mjs");
+    await writeFile(entryPath, FIXTURE);
+    packagePieces.setPieces([{ name: PIECE, version: "1.0.0", entryPath }]);
+  });
+
+  afterAll(async () => {
+    packagePieces.reset();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("leaves the trigger PARKED", async () => {
+    const id = "wf-park-mid-enable";
+    ordinal += 1;
+    const state = {
+      name: id,
+      status: "ENABLED",
+      version: 1,
+      trigger: {
+        id: "t1",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        triggerName: "slow",
+        config: {},
+      },
+      steps: [
+        {
+          id: "a",
+          key: "only",
+          name: "Only",
+          pieceName: PIECE,
+          pieceVersion: "1.0.0",
+          actionName: "boom",
+          config: {},
+        },
+      ],
+      edges: [{ id: "e1", from: "t1", to: "a", port: "next" }],
+      variables: [],
+      policy: { concurrency: "PARALLEL", onFailure: "PARK" },
+    };
+    const documents = {
+      get: () =>
+        Promise.resolve({
+          header: { id, documentType: "powerhouse/workflow", name: id },
+          state: { global: state },
+        }),
+    };
+    const parking = testRuntime({
+      webhooks: memoryWebhooks().scope,
+      reactorClient: documents,
+    } as never);
+    try {
+      const store = (await parking.store())!;
+      await parking.onOperations([
+        {
+          operation: {
+            index: ordinal,
+            timestampUtcMs: `${ordinal}`,
+            action: { type: "SET_WORKFLOW_STATUS", input: {} },
+            resultingState: JSON.stringify(state),
+          },
+          context: {
+            documentId: id,
+            documentType: "powerhouse/workflow",
+            scope: "global",
+            branch: "main",
+            ordinal,
+          },
+        } as unknown as OperationWithContext,
+      ]);
+
+      // Fails, and parks, while the slow onEnable is still in flight.
+      expect((await parking.fire(id, undefined, "piece")).status).toBe(
+        "FAILED",
+      );
+
+      await vi.waitFor(
+        async () =>
+          expect((await store.getTriggerState(id))?.status).toBe(
+            PARKED_TRIGGER_STATUS,
+          ),
+        { timeout: 15_000 },
+      );
+      expect(await store.getWorkflowPark(id)).toBeDefined();
+    } finally {
+      parking.shutdown();
+    }
+  }, 60_000);
 });
