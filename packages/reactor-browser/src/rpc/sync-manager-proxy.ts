@@ -2,13 +2,7 @@ import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import {
   createPeerAgreement,
   DriveCollectionId,
-  SYNC_INSPECTION_OPS,
   SyncEventTypes,
-  type DeadLetterPage,
-  type ISyncAdmin,
-  type ISyncInspector,
-  type RemoteSyncInspection,
-  type SyncInspectionOpKey,
   type ChannelConfig,
   type ConnectionStateChangeCallback,
   type ConnectionStateChangedEvent,
@@ -126,9 +120,9 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 }
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
-export class SyncManagerProxy
-  implements ISyncManager, ISyncInspector, ISyncAdmin
-{
+// SYNC_INSPECTION_OPS join once a worker host dispatches through
+// dispatchSyncInspectionOp.
+export class SyncManagerProxy implements ISyncManager {
   private readonly ops: IOpChannel;
   private readonly connectionStates = new Map<
     string,
@@ -287,44 +281,6 @@ export class SyncManagerProxy
 
   onSyncStatusChange(callback: SyncStatusChangeCallback): () => void {
     return this.syncStatusListeners.add(callback);
-  }
-
-  async inspectRemote(remoteName: string): Promise<RemoteSyncInspection> {
-    return (await this.tableOp("inspectRemote", [
-      remoteName,
-    ])) as RemoteSyncInspection;
-  }
-
-  async inspectRemotes(): Promise<RemoteSyncInspection[]> {
-    return (await this.tableOp("inspectRemotes", [])) as RemoteSyncInspection[];
-  }
-
-  async listDeadLetters(
-    remoteName: string,
-    cursor?: string,
-    limit?: number,
-  ): Promise<DeadLetterPage> {
-    return (await this.tableOp("listDeadLetters", [
-      remoteName,
-      cursor,
-      limit,
-    ])) as DeadLetterPage;
-  }
-
-  async resetChannel(remoteName: string): Promise<void> {
-    await this.tableOp("resetChannel", [remoteName]);
-  }
-
-  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
-    await this.tableOp("requeueDeadLetter", [remoteName, id]);
-  }
-
-  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
-    await this.tableOp("clearDeadLetter", [remoteName, id]);
-  }
-
-  private tableOp(key: SyncInspectionOpKey, args: unknown[]): Promise<unknown> {
-    return this.ops.call(SYNC_INSPECTION_OPS[key].rpc, args);
   }
 
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
