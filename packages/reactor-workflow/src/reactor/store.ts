@@ -1221,6 +1221,27 @@ export interface ErasedRuns {
   dedupeKeysUnlinked: number;
 }
 
+async function pollSucceededIn(
+  db: Kysely<WorkflowRuntimeDB>,
+  workflowId: string,
+  storeState: string,
+  nowIso: string,
+  nextPollAtIso: string | null,
+): Promise<void> {
+  await db
+    .updateTable("trigger_state")
+    .set({
+      store_state: storeState,
+      last_poll_at: nowIso,
+      next_poll_at: nextPollAtIso,
+      last_error: null,
+      consecutive_failures: 0,
+      updated_at: nowIso,
+    })
+    .where("workflow_id", "=", workflowId)
+    .execute();
+}
+
 // The insert's own conflict outcome is the claim; a prior select can't be trusted.
 async function claimDedupeIn(
   db: Kysely<WorkflowRuntimeDB>,
@@ -1510,29 +1531,80 @@ export class WorkflowRunStore {
     return { outcome: "claimed", runId: id };
   }
 
-  // A piece item's claim and PENDING run, in one write; undefined if claimed.
-  async claimDedupeAndEnqueueRun(
-    dedupeKey: string,
+  // A trigger batch's claims and PENDING runs, in one write; undefined where already claimed.
+  async journalTriggerItems(
+    items: { dedupeKey?: string; options: EnqueueRunOptions }[],
     ttlMs: number,
     nowIso: string,
+  ): Promise<(string | undefined)[]> {
+    const ids = await this.db.transaction().execute(async (trx) => {
+      const journaled: (string | undefined)[] = [];
+      for (const { dedupeKey, options } of items) {
+        const id = randomUUID();
+        const won =
+          dedupeKey === undefined ||
+          (await claimDedupeIn(
+            trx,
+            options.workflowId,
+            dedupeKey,
+            ttlMs,
+            nowIso,
+            id,
+          ));
+        if (won) await this.insertPendingRun(trx, id, options);
+        journaled.push(won ? id : undefined);
+      }
+      return journaled;
+    });
+    for (const id of ids) if (id) this.runsInFlight.add(id);
+    return ids;
+  }
+
+  // A schedule slot is consumed and its firing journaled together, or neither.
+  async recordScheduleFire(
+    nowIso: string,
+    nextPollAtIso: string,
     options: EnqueueRunOptions,
-  ): Promise<string | undefined> {
+  ): Promise<string> {
     const id = randomUUID();
-    const claimed = await this.db.transaction().execute(async (trx) => {
-      const won = await claimDedupeIn(
+    await this.db.transaction().execute(async (trx) => {
+      await pollSucceededIn(
         trx,
         options.workflowId,
-        dedupeKey,
-        ttlMs,
+        "{}",
         nowIso,
-        id,
+        nextPollAtIso,
       );
-      if (won) await this.insertPendingRun(trx, id, options);
-      return won;
+      await this.insertPendingRun(trx, id, options);
     });
-    if (!claimed) return undefined;
     this.runsInFlight.add(id);
     return id;
+  }
+
+  // Runs whose source delivers them again: not rerunnable, and their claims are
+  // released so the redelivery is not absorbed as a duplicate.
+  async cancelRedelivered(runIds: string[], reason: string): Promise<void> {
+    const live: string[] = [];
+    for (const runId of runIds) {
+      this.runsInFlight.delete(runId);
+      if (!erasedRuns.delete(runId)) live.push(runId);
+    }
+    if (live.length === 0) return;
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .updateTable("run")
+        .set({
+          status: "CANCELLED",
+          error: redactMessage(reason),
+          ended_at: new Date().toISOString(),
+        })
+        .where("id", "in", live)
+        .execute();
+      await trx
+        .deleteFrom("trigger_dedupe")
+        .where("run_id", "in", live)
+        .execute();
+    });
   }
 
   /**
@@ -2208,18 +2280,13 @@ export class WorkflowRunStore {
     nowIso: string,
     nextPollAtIso: string | null,
   ): Promise<void> {
-    await this.db
-      .updateTable("trigger_state")
-      .set({
-        store_state: storeState,
-        last_poll_at: nowIso,
-        next_poll_at: nextPollAtIso,
-        last_error: null,
-        consecutive_failures: 0,
-        updated_at: nowIso,
-      })
-      .where("workflow_id", "=", workflowId)
-      .execute();
+    await pollSucceededIn(
+      this.db,
+      workflowId,
+      storeState,
+      nowIso,
+      nextPollAtIso,
+    );
   }
 
   async recordPollFailure(

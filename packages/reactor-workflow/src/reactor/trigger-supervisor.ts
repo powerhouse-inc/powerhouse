@@ -141,12 +141,12 @@ export interface TriggerSupervisorOptions {
     connectionId: string | null | undefined,
     request?: ConnectionRequest,
   ) => Promise<unknown>;
-  // `runId` is the PENDING run journaled for a piece item, for the host to adopt.
+  // Every lane firing is journaled first; `runId` is its PENDING run, to adopt.
   fire: (
     workflowId: string,
     payload: unknown,
     kind: string,
-    runId?: string,
+    runId: string,
   ) => void;
   cacheDir: string;
   // Where a trigger's piece comes from. Defaults to fetching into cacheDir,
@@ -185,6 +185,8 @@ const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
 export const DEFAULT_POLL_INTERVAL_MS = 60_000;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
+const REDELIVERED_REASON =
+  "Redelivered: the trigger stopped before firing this item and put its cursor back, so the next poll delivers it again";
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
 // What a failed onRenew backs off from; the next cron slot caps the wait.
 const RENEW_RETRY_BASE_MS = 60_000;
@@ -405,7 +407,7 @@ export class TriggerSupervisor {
     workflowId: string,
     payload: unknown,
     kind: string,
-    runId?: string,
+    runId: string,
   ): void {
     this.throwIfStopped();
     this.options.fire(workflowId, payload, kind, runId);
@@ -742,9 +744,7 @@ export class TriggerSupervisor {
             new Date(now.getTime() + row.interval_ms).toISOString(),
           );
         }
-        for (const item of result.output) {
-          await this.fireItem(store, binding, item, now);
-        }
+        await this.fireItems(store, binding, result.output, now, rewind);
       } catch (error) {
         if (!refused) await rewind();
         throw error;
@@ -763,24 +763,28 @@ export class TriggerSupervisor {
   private async cursorRewind(
     store: WorkflowRunStore,
     workflowId: string,
-  ): Promise<() => Promise<void>> {
+  ): Promise<() => Promise<boolean>> {
     const before = await store.listPieceStore("FLOW", workflowId);
+    let rewound: Promise<boolean> | undefined;
     // Past stop() too: a hook that ran may have checkpointed past items it
     // never delivered, and putting the cursor back keeps them deliverable.
-    return async () => {
+    const rewind = async () => {
       try {
         const raw = await this.options.store();
-        if (!raw) return;
+        if (!raw) return false;
         await raw.deletePieceStore("FLOW", workflowId);
         for (const [key, value] of Object.entries(before)) {
           await raw.setPieceStoreValue("FLOW", workflowId, key, value);
         }
+        return true;
       } catch (error) {
         // The poll already failed; losing the rewind too costs at-most-once
         // for this cursor, which still beats failing the supervisor's lane.
         logger.warn(`Could not rewind the cursor for ${workflowId}`, error);
+        return false;
       }
     };
+    return () => (rewound ??= rewind());
   }
 
   // The hook's `ctx.store` is the journal's piece_store, served call by call,
@@ -1496,17 +1500,23 @@ export class TriggerSupervisor {
       const schedule = parseScheduleConfig(binding.config);
       const scheduledFor = row.next_poll_at ? new Date(row.next_poll_at) : now;
       const nextAt = rescheduleAfterFire(schedule, scheduledFor, now);
-      await store.recordPollSuccess(
-        row.workflow_id,
-        "{}",
+      const payload = schedulePayload(schedule, scheduledFor, now);
+      const runId = await store.recordScheduleFire(
         now.toISOString(),
         nextAt.toISOString(),
+        {
+          workflowId: binding.workflowId,
+          triggerKind: SCHEDULE_TRIGGER_KIND,
+          triggerPayload: payload,
+        },
       );
-      this.fire(
-        binding.workflowId,
-        schedulePayload(schedule, scheduledFor, now),
-        SCHEDULE_TRIGGER_KIND,
-      );
+      try {
+        this.fire(binding.workflowId, payload, SCHEDULE_TRIGGER_KIND, runId);
+      } catch (error) {
+        // The slot is consumed, so the run is the firing's only record.
+        await this.failRefused([runId], error);
+        throw error;
+      }
     } catch (error) {
       if (this.stopped) throw error;
       // Only a config that stopped parsing gets here; stop until it is edited.
@@ -1544,9 +1554,7 @@ export class TriggerSupervisor {
         now.toISOString(),
         new Date(now.getTime() + row.interval_ms).toISOString(),
       );
-      for (const item of result.output) {
-        await this.fireItem(store, binding, item, now);
-      }
+      await this.fireItems(store, binding, result.output, now, rewind);
     } catch (error) {
       if (!refused) await rewind();
       // Not a failure of the trigger's: nothing is recorded against it.
@@ -1569,48 +1577,84 @@ export class TriggerSupervisor {
   }
 
   // One workflow run per output item; _dedupe_key suppresses 30s repeats.
-  // Journaled first: the cursor is past the item, so a refusal needs a run.
-  private async fireItem(
+  // The batch is journaled in one write, then fired with no await, so a stop
+  // lands before the write (rewound) or after the firing (the service's).
+  private async fireItems(
     store: WorkflowRunStore,
     binding: PieceTriggerBinding,
-    item: unknown,
+    items: unknown[],
     now: Date,
+    rewind: () => Promise<boolean>,
   ): Promise<void> {
+    if (items.length === 0) return;
     const kind = pieceTriggerKind(binding.block);
-    const enqueue = {
-      workflowId: binding.workflowId,
-      triggerKind: kind,
-      triggerPayload: item,
-    };
-    const dedupeKey = extractDedupeKey(item);
-    const runId = dedupeKey
-      ? await store.claimDedupeAndEnqueueRun(
-          dedupeKey,
-          DEDUPE_TTL_MS,
-          now.toISOString(),
-          enqueue,
-        )
-      : await store.enqueueRun(enqueue);
-    if (!runId) return;
-    try {
-      this.fire(binding.workflowId, item, kind, runId);
-    } catch (error) {
-      await this.failRefused(runId, error);
+    const runIds = await store.journalTriggerItems(
+      items.map((item) => ({
+        dedupeKey: extractDedupeKey(item),
+        options: {
+          workflowId: binding.workflowId,
+          triggerKind: kind,
+          triggerPayload: item,
+        },
+      })),
+      DEDUPE_TTL_MS,
+      now.toISOString(),
+    );
+    const journaled = runIds.flatMap((runId, index) =>
+      runId ? [{ runId, item: items[index] }] : [],
+    );
+    if (this.stopped) {
+      const error = new TriggerSupervisorStoppedError();
+      await this.redeliver(
+        journaled.map(({ runId }) => runId),
+        rewind,
+        error,
+      );
       throw error;
+    }
+    for (const { runId, item } of journaled) {
+      this.fire(binding.workflowId, item, kind, runId);
+    }
+  }
+
+  // Each refused item is recorded once: the rewound cursor delivers it again,
+  // so its run is CANCELLED rather than left to rerun beside the redelivery.
+  private async redeliver(
+    runIds: string[],
+    rewind: () => Promise<boolean>,
+    error: Error,
+  ): Promise<void> {
+    if (!(await rewind())) {
+      await this.failRefused(runIds, error);
+      return;
+    }
+    try {
+      const raw = await this.options.store();
+      await raw?.cancelRedelivered(runIds, REDELIVERED_REASON);
+    } catch (failure) {
+      logger.warn(
+        `Could not cancel the redelivered runs ${runIds.join(", ")}`,
+        failure,
+      );
     }
   }
 
   // Past stop(); a row left PENDING is failed by the next owner's journal open.
-  private async failRefused(runId: string, error: unknown): Promise<void> {
+  private async failRefused(runIds: string[], error: unknown): Promise<void> {
     try {
       const raw = await this.options.store();
-      await raw?.failRun(
-        runId,
-        error instanceof Error ? error.message : String(error),
-        error instanceof Error ? error.name : undefined,
-      );
+      for (const runId of runIds) {
+        await raw?.failRun(
+          runId,
+          error instanceof Error ? error.message : String(error),
+          error instanceof Error ? error.name : undefined,
+        );
+      }
     } catch (failure) {
-      logger.warn(`Could not fail the refused run ${runId}`, failure);
+      logger.warn(
+        `Could not fail the refused runs ${runIds.join(", ")}`,
+        failure,
+      );
     }
   }
 }

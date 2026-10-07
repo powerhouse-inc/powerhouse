@@ -397,79 +397,157 @@ describe("TriggerSupervisor after stop()", () => {
     expect(JSON.parse(run!.trigger_payload!)).toEqual({ from: a });
   });
 
-  // stop() lands between the claim's write and the fire.
-  describe("an item whose dedupe key is claimed as it stops", () => {
-    function holdClaim() {
-      const claimed = gate();
+  // stop() lands while the batch's journal write is in flight.
+  describe("a batch journaled as it stops", () => {
+    function holdJournal(handle = scoped()) {
+      const journaled = gate();
       const release = gate();
-      const handle = scoped();
-      handle.claimDedupeAndEnqueueRun = async (...args) => {
-        const result = await store.claimDedupeAndEnqueueRun(...args);
-        claimed.open();
+      handle.journalTriggerItems = async (...args) => {
+        const runIds = await store.journalTriggerItems(...args);
+        journaled.open();
         await release.opened;
-        return result;
+        return runIds;
       };
       supervisor = build(handle);
-      return { claimed: claimed.opened, release: release.open };
+      return { journaled: journaled.opened, release: release.open };
     }
 
-    async function leftToRerun(workflowId: string) {
+    const items = (workflowId: string) => [
+      { from: workflowId, n: 1 },
+      { from: workflowId, _dedupe_key: `item-${workflowId}` },
+    ];
+
+    // The hook checkpoints past both items, a keyless one and a keyed one.
+    async function armBatch(workflowId: string) {
+      intercept = async (request) => {
+        if (request.hook !== "run") return undefined;
+        await store.setPieceStoreValue("FLOW", workflowId, "cursor", "after");
+        return result({ output: items(workflowId) });
+      };
+      await supervisor.upsert(piece(workflowId));
+      await store.setPieceStoreValue("FLOW", workflowId, "cursor", "before");
+    }
+
+    // Recorded once: CANCELLED, never left FAILED to rerun beside the redelivery.
+    async function redelivered(workflowId: string) {
       const runs = await store.listRuns(workflowId);
-      expect(runs).toHaveLength(1);
-      expect(runs[0]).toMatchObject({
-        status: "FAILED",
-        error_name: "TriggerSupervisorStoppedError",
-      });
-      expect(JSON.parse(runs[0]!.trigger_payload!)).toEqual({
-        from: workflowId,
-        _dedupe_key: `item-${workflowId}`,
-      });
+      expect(runs).toHaveLength(2);
+      for (const run of runs) {
+        expect(run.status).toBe("CANCELLED");
+        expect(run.error).toContain("Redelivered");
+      }
+      expect(
+        runs.map((run) => JSON.parse(run.trigger_payload!) as unknown),
+      ).toEqual(expect.arrayContaining(items(workflowId)));
+      expect(await store.getPieceStoreValue("FLOW", workflowId, "cursor")).toBe(
+        "before",
+      );
     }
 
-    // Inside the TTL the claim stands for the failed run, so nothing doubles it.
-    async function nextOwnerSkips(workflowId: string) {
+    // Inside the TTL too: the claim went with the cancelled run.
+    async function nextOwnerFires(workflowId: string) {
       const next = build(scoped());
       await next.upsert(piece(workflowId));
       await due(workflowId);
       await next.tick();
       next.stop();
-      expect(fired).toEqual([]);
-      expect(await store.listRuns(workflowId)).toHaveLength(1);
+      expect(fired.map(({ payload }) => payload)).toEqual(items(workflowId));
     }
 
-    it("leaves a refused poll fire as a failed run to rerun", async () => {
+    it("cancels a refused poll batch as redelivered, and the next poll fires it", async () => {
       const a = `${prefix}-a`;
-      const { claimed, release } = holdClaim();
-      await supervisor.upsert(piece(a));
+      const { journaled, release } = holdJournal();
+      await armBatch(a);
       await due(a);
       const tick = supervisor.tick().catch(() => undefined);
-      await claimed;
+      await journaled;
 
       supervisor.stop();
       release();
       await tick;
 
       expect(fired).toEqual([]);
-      await leftToRerun(a);
-      await nextOwnerSkips(a);
+      await redelivered(a);
+      await nextOwnerFires(a);
     });
 
-    it("leaves a refused webhook delivery as a failed run to rerun", async () => {
+    it("cancels a refused webhook batch as redelivered, and the next poll fires it", async () => {
       const a = `${prefix}-a`;
-      const { claimed, release } = holdClaim();
-      await supervisor.upsert(piece(a));
+      const { journaled, release } = holdJournal();
+      await armBatch(a);
       const delivered = supervisor
         .deliverWebhook(a, { body: "x" })
         .catch((error: unknown) => error);
-      await claimed;
+      await journaled;
 
       supervisor.stop();
       release();
 
       expect(await delivered).toBeInstanceOf(TriggerSupervisorStoppedError);
       expect(fired).toEqual([]);
-      await leftToRerun(a);
-      await nextOwnerSkips(a);
+      await redelivered(a);
+      await nextOwnerFires(a);
     });
+
+    // The cursor is past the items, so the runs are their only record.
+    it("fails the refused batch to rerun when the cursor cannot be put back", async () => {
+      const a = `${prefix}-a`;
+      const handle = scoped();
+      const { journaled, release } = holdJournal(handle);
+      await armBatch(a);
+      handle.deletePieceStore = () => Promise.reject(new Error("db gone"));
+      await due(a);
+      const tick = supervisor.tick().catch(() => undefined);
+      await journaled;
+
+      supervisor.stop();
+      release();
+      await tick;
+
+      const runs = await store.listRuns(a);
+      expect(runs).toHaveLength(2);
+      for (const run of runs) {
+        expect(run).toMatchObject({
+          status: "FAILED",
+          error_name: "TriggerSupervisorStoppedError",
+        });
+      }
+    });
+  });
+
+  // The slot and its run are one write, so a stop leaves both or neither.
+  it("fails the run of a schedule slot whose fire the stop refused", async () => {
+    const c = `${prefix}-c`;
+    const journaled = gate();
+    const release = gate();
+    const handle = scoped();
+    handle.recordScheduleFire = async (...args) => {
+      const runId = await store.recordScheduleFire(...args);
+      journaled.open();
+      await release.opened;
+      return runId;
+    };
+    supervisor = build(handle);
+    await supervisor.upsert(schedule(c));
+    await due(c);
+    const tick = supervisor.tick().catch(() => undefined);
+    await journaled.opened;
+
+    supervisor.stop();
+    release.open();
+    await tick;
+
+    expect(fired).toEqual([]);
+    const runs = await store.listRuns(c);
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({
+      status: "FAILED",
+      error_name: "TriggerSupervisorStoppedError",
+      trigger_kind: "schedule",
+    });
+    expect(JSON.parse(runs[0]!.trigger_payload!)).toMatchObject({
+      everyMs: 60_000,
+    });
+    expect((await store.getTriggerState(c))?.next_poll_at).not.toBe(PAST);
   });
 });
