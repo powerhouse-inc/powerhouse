@@ -24,7 +24,7 @@ const BANNER_TEXT: Record<
   "storage-unusable": {
     title: "Local storage is unusable",
     detail:
-      "The local database stopped responding and reloading did not recover it. Clear storage to start over, or reload to retry.",
+      "The local database stopped responding. Clear storage to start over, or reload to retry.",
   },
 };
 
