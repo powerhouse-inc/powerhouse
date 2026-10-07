@@ -241,8 +241,10 @@ describe("an enable retry of a PARKED piece trigger", () => {
     await vi.waitFor(async () => expect(await status()).toBe("ERROR"), {
       timeout: 30_000,
     });
-    await store.parkWorkflow(id, 1, "parked while the enable was failing");
     const supervisor = service.supervisor();
+    // Through the supervisor, as a failed run parks: the runtime reads parks
+    // as queued there, and this one is what the re-publish must outlive.
+    await supervisor.park(id, 1, "parked while the enable was failing");
     const retries = (
       supervisor as unknown as { enableRetries: Map<string, { at: number }> }
     ).enableRetries;

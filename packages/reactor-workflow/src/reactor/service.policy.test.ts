@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Documents } from "../../test/helpers/documents.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { memoryWebhooks } from "../../test/helpers/webhooks.js";
+import { ParkState } from "./park-state.js";
 import { packagePieces } from "./piece-registry.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import type { WorkflowRunGate } from "./run-gate.js";
@@ -886,23 +887,29 @@ describe("an adopted run whose park check throws", () => {
   it("is closed out rather than left PENDING", async () => {
     const id = "wf-park-check-throws";
     workflow(id, { action: "slow", policy: { onFailure: "IGNORE" } });
-    const store = (await service.store())!;
-    const runId = await store.enqueueRun({
-      workflowId: id,
-      triggerKind: "schedule",
-    });
-    const read = vi
-      .spyOn(WorkflowRunStore.prototype, "getWorkflowPark")
-      .mockRejectedValueOnce(new Error("the journal is gone"));
+    // Fresh, so its first park read loads the parks from the store.
+    const runtime = testRuntime({ reactorClient: documents.client() as never });
+    try {
+      const store = (await runtime.store())!;
+      const runId = await store.enqueueRun({
+        workflowId: id,
+        triggerKind: "schedule",
+      });
+      const read = vi
+        .spyOn(WorkflowRunStore.prototype, "listWorkflowParks")
+        .mockRejectedValueOnce(new Error("the journal is gone"));
 
-    await expect(
-      service.fire(id, undefined, "schedule", undefined, undefined, runId),
-    ).rejects.toThrow("the journal is gone");
-    read.mockRestore();
+      await expect(
+        runtime.fire(id, undefined, "schedule", undefined, undefined, runId),
+      ).rejects.toThrow("the journal is gone");
+      read.mockRestore();
 
-    const run = await store.getRun(runId);
-    expect(run?.status).toBe("FAILED");
-    expect(run?.error).toContain("the journal is gone");
+      const run = await store.getRun(runId);
+      expect(run?.status).toBe("FAILED");
+      expect(run?.error).toContain("the journal is gone");
+    } finally {
+      runtime.shutdown();
+    }
   });
 });
 
@@ -1048,14 +1055,11 @@ describe("registrations of one workflow", () => {
       id,
       actions.setWorkflowStatus({ status: "DISABLED" }),
     );
-    const read = vi.spyOn(WorkflowRunStore.prototype, "getWorkflowPark");
-    read.mockImplementationOnce(async function (
-      this: WorkflowRunStore,
-      ...args
-    ) {
+    const read = vi.spyOn(ParkState.prototype, "get");
+    read.mockImplementationOnce(async function (this: ParkState, ...args) {
       await new Promise((resolve) => setTimeout(resolve, 300));
       read.mockRestore();
-      return this.getWorkflowPark(...args);
+      return this.get(...args);
     });
 
     await Promise.all([
@@ -1216,10 +1220,7 @@ describe("a deleted workflow whose park cannot be cleared", () => {
     const id = "wf-park-delete-revoke";
     const hooks = memoryWebhooks();
     const runtime = testRuntime({
-      reactorClient: {
-        ...documents.client(),
-        find: () => Promise.resolve({ results: [] }),
-      } as never,
+      reactorClient: documents.client() as never,
       webhooks: hooks.scope,
     });
     try {

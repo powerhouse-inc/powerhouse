@@ -237,8 +237,8 @@ import {
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
-  type WorkflowParkRow,
 } from "./store.js";
+import { ParkState } from "./park-state.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
   CANCELLED_RUN_STATUS,
@@ -1037,7 +1037,6 @@ export class WorkflowRuntimeService {
         : undefined;
     const block = trigger ? triggerBlock(trigger) : undefined;
     const version = runnableDefinition(state).version;
-    const store = await this.store();
     // Disabling clears a park, so re-enabling arms the trigger again; so does
     // a re-publish, which the version that failed no longer matches.
     if (state.status !== "ENABLED") {
@@ -1055,11 +1054,18 @@ export class WorkflowRuntimeService {
           );
         });
     } else if (await this.outdatedPark(workflowId, state)) {
-      await this.supervisor().unpark(workflowId, version);
+      // Not awaited either: queued ahead of the upsert below.
+      this.supervisor()
+        .unpark(workflowId, version)
+        .catch((error: unknown) => {
+          this.logger.error(
+            `Could not lift the outdated park of workflow ${workflowId}`,
+            error,
+          );
+        });
     }
     // A park the supervisor does not see: matching nothing is what stops it.
-    const park =
-      block && store ? await this.standingPark(store, workflowId) : undefined;
+    const park = block ? await this.parks.get(workflowId) : undefined;
     if (
       block &&
       (blockKey(block) === WEBHOOK_BLOCK || triggerKindOf(block)) &&
@@ -2116,10 +2122,16 @@ export class WorkflowRuntimeService {
 
   private triggerSupervisor?: TriggerSupervisor;
 
+  // Parks as queued on the supervisor's lane, read off it.
+  private readonly parks = new ParkState(async () =>
+    (await this.store())?.listWorkflowParks(),
+  );
+
   // Lazily built; started/stopped by the trigger processor's lifecycle.
   supervisor(): TriggerSupervisor {
     this.triggerSupervisor ??= new TriggerSupervisor({
       store: () => this.store(),
+      parks: this.parks,
       resolveAuth: async (connectionId, request) => {
         if (!connectionId) return undefined;
         const resolved = await new DocumentConnectionResolver(
@@ -4077,7 +4089,6 @@ export class WorkflowRuntimeService {
     let parked: string | undefined;
     try {
       parked = await this.parkedFiring(
-        store,
         workflowId,
         triggerKind,
         runnable.version,
@@ -4104,7 +4115,6 @@ export class WorkflowRuntimeService {
       let stale: string | undefined;
       try {
         stale = await this.staleAfterWait(
-          store,
           workflowId,
           triggerKind,
           runnable.version,
@@ -4283,20 +4293,18 @@ export class WorkflowRuntimeService {
   /** Why a trigger's firing of a PARKED workflow is refused; undefined when
    * it is not parked, or when an operator started the run. */
   private async parkedFiring(
-    store: WorkflowRunStore | undefined,
     workflowId: string,
     triggerKind: string,
     publishedVersion: number,
   ): Promise<string | undefined> {
-    if (!store || OPERATOR_RUN_KINDS.has(triggerKind)) return undefined;
-    const park = await this.standingPark(store, workflowId);
+    if (OPERATOR_RUN_KINDS.has(triggerKind)) return undefined;
+    const park = await this.parks.get(workflowId);
     if (!park || park.published_version < publishedVersion) return undefined;
     return `Skipped: this workflow is PARKED (${park.reason})`;
   }
 
   /** Why a firing that waited for its slot may no longer run, if it may not. */
   private async staleAfterWait(
-    store: WorkflowRunStore | undefined,
     workflowId: string,
     triggerKind: string,
     publishedVersion: number,
@@ -4310,7 +4318,7 @@ export class WorkflowRuntimeService {
     if (runnableDefinition(state).version !== publishedVersion) {
       return "Skipped: the workflow was re-published while this firing waited for its slot";
     }
-    return this.parkedFiring(store, workflowId, triggerKind, publishedVersion);
+    return this.parkedFiring(workflowId, triggerKind, publishedVersion);
   }
 
   /** Whether the workflow is still ENABLED at this published version. An
@@ -4337,24 +4345,13 @@ export class WorkflowRuntimeService {
     );
   }
 
-  /** The park row, unless a release queued on the lane is about to clear it;
-   * read off the lane, so a disable need not wait for that release. */
-  private async standingPark(
-    store: WorkflowRunStore,
-    workflowId: string,
-  ): Promise<WorkflowParkRow | undefined> {
-    if (this.triggerSupervisor?.isReleasing(workflowId)) return undefined;
-    return store.getWorkflowPark(workflowId);
-  }
-
   /** A park recorded against an earlier published version than this state's. */
   private async outdatedPark(
     workflowId: string,
     state: WorkflowState,
   ): Promise<boolean> {
     if (state.status !== "ENABLED") return false;
-    const store = await this.store();
-    const park = store ? await this.standingPark(store, workflowId) : undefined;
+    const park = await this.parks.get(workflowId);
     return (
       park !== undefined &&
       runnableDefinition(state).version > park.published_version
@@ -4459,7 +4456,7 @@ export class WorkflowRuntimeService {
       // In registration order, and only while this park stands: a registration
       // of a newer version that already ran must keep its entry.
       const stands = await this.inRegistrationOrder(workflowId, async () => {
-        const park = await this.standingPark(store, workflowId);
+        const park = await this.parks.get(workflowId);
         const current = park?.published_version === publishedVersion;
         const registered = this.registry.get(workflowId);
         if (current && registered && !SUPERVISED_KINDS.has(registered.kind)) {

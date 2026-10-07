@@ -53,6 +53,7 @@ import {
   schedulePayload,
 } from "./schedule.js";
 import { SCHEDULE_BLOCK } from "./core-blocks.js";
+import { ParkState } from "./park-state.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import { pieceTriggerKind } from "./trigger-binding.js";
 import {
@@ -64,6 +65,7 @@ import {
   triggerBlockColumns,
   triggerRowBlock,
   type TriggerStateRow,
+  workflowParkRow,
   type WorkflowParkRow,
   type WorkflowRunStore,
 } from "./store.js";
@@ -129,6 +131,8 @@ export const SCHEDULE_TRIGGER_KIND = "schedule";
 
 export interface TriggerSupervisorOptions {
   store: () => Promise<WorkflowRunStore | undefined>;
+  // Shared with the host, which reads parks off the lane.
+  parks?: ParkState;
   resolveAuth: (
     connectionId: string | null | undefined,
     request?: ConnectionRequest,
@@ -297,6 +301,7 @@ export class TriggerSupervisor {
   private readonly hookTimeoutMs: number;
   private readonly now: () => Date;
   private readonly egress: EgressPolicy | undefined;
+  private readonly parks: ParkState;
   private timer?: NodeJS.Timeout;
   // Lifecycle ops serialize so enable/disable/poll never interleave per store.
   private ops: Promise<unknown> = Promise.resolve();
@@ -314,6 +319,9 @@ export class TriggerSupervisor {
       options.egress === undefined
         ? DEFAULT_EGRESS_POLICY
         : (options.egress ?? undefined);
+    this.parks =
+      options.parks ??
+      new ParkState(async () => (await options.store())?.listWorkflowParks());
   }
 
   start(): void {
@@ -380,6 +388,15 @@ export class TriggerSupervisor {
       return Promise.resolve();
     }
     this.bindings.set(binding.workflowId, binding);
+    // The enable lifts a park this version outlived.
+    const park = this.parks.known(binding.workflowId)?.park;
+    if (
+      park &&
+      publishedVersion !== undefined &&
+      publishedVersion > park.published_version
+    ) {
+      this.parks.delete(binding.workflowId);
+    }
     // The binding it replaces is the only thing that can still name the old
     // registration: the row holds neither the config nor the connection.
     return this.enqueue(() => this.enable(binding, previous));
@@ -387,6 +404,7 @@ export class TriggerSupervisor {
 
   // Park writes ride this lane, the one enable, disable and upsert use, so a
   // park can never land between an enable's park check and its ENABLED write.
+  // Each also updates `parks` as it is queued, for readers off the lane.
 
   /** Parks a workflow; true when a trigger row was parked with it. */
   park(
@@ -394,6 +412,7 @@ export class TriggerSupervisor {
     publishedVersion: number,
     reason: string,
   ): Promise<boolean> {
+    this.parks.set(workflowParkRow(workflowId, publishedVersion, reason));
     return this.enqueue(async () => {
       const store = await this.options.store();
       if (!store) return false;
@@ -407,6 +426,11 @@ export class TriggerSupervisor {
     publishedVersion: number,
     trigger: boolean,
   ): Promise<void> {
+    if (
+      this.parks.known(workflowId)?.park?.published_version === publishedVersion
+    ) {
+      this.parks.delete(workflowId);
+    }
     return this.enqueue(async () => {
       const store = await this.options.store();
       if (!store) return;
@@ -416,31 +440,16 @@ export class TriggerSupervisor {
     });
   }
 
-  // Releases queued and not yet run, per workflow.
-  private readonly releasing = new Map<string, number>();
-
   /** A disable clears the park. With no binding in memory to release a PARKED
    * row through onDisable (a boot), the row is turned DISABLED here. */
   releasePark(workflowId: string, flipRow: boolean): Promise<void> {
-    this.releasing.set(workflowId, (this.releasing.get(workflowId) ?? 0) + 1);
+    this.parks.delete(workflowId);
     return this.enqueue(async () => {
-      try {
-        const store = await this.options.store();
-        if (!store) return;
-        if (flipRow) await store.clearParkOnDisable(workflowId);
-        else await store.clearWorkflowPark(workflowId);
-      } finally {
-        const left = (this.releasing.get(workflowId) ?? 1) - 1;
-        if (left > 0) this.releasing.set(workflowId, left);
-        else this.releasing.delete(workflowId);
-      }
+      const store = await this.options.store();
+      if (!store) return;
+      if (flipRow) await store.clearParkOnDisable(workflowId);
+      else await store.clearWorkflowPark(workflowId);
     });
-  }
-
-  /** True while a {@link releasePark} is queued: a park row read meanwhile is
-   * one the lane clears before anything enqueued after it runs. */
-  isReleasing(workflowId: string): boolean {
-    return this.releasing.has(workflowId);
   }
 
   /** A re-publish past the parked version: on this lane, a park older than
@@ -452,6 +461,10 @@ export class TriggerSupervisor {
     this.enabledOk.delete(workflowId);
     const retry = this.enableRetries.get(workflowId);
     if (retry) retry.at = 0;
+    const park = this.parks.known(workflowId)?.park;
+    if (park && park.published_version < publishedVersion) {
+      this.parks.delete(workflowId);
+    }
     return this.enqueue(async () => {
       const store = await this.options.store();
       if (!store) return;
@@ -470,6 +483,7 @@ export class TriggerSupervisor {
   // and park go too, so nothing is left to poll, renew or re-arm.
   forget(workflowId: string): Promise<void> {
     const binding = this.unbind(workflowId);
+    this.parks.delete(workflowId);
     return this.enqueue(async () => {
       const store = await this.options.store();
       if (!store) return;
