@@ -10,8 +10,10 @@ import {
 } from "../events/types.js";
 import {
   indexReserved,
+  indexStage,
   releaseBatch,
   reserveBatch,
+  spliceReadModel,
   type BatchReservations,
 } from "../read-models/coordinator.js";
 import type {
@@ -113,6 +115,15 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     this.readModels.push(readModel);
   }
 
+  removeReadModel(readModel: IReadModel): boolean {
+    return spliceReadModel(
+      readModel,
+      this.preReady,
+      this.postReady,
+      this.readModels,
+    );
+  }
+
   getChainDepth(): number {
     return this.manager.getChainDepth() + this.chains.size;
   }
@@ -167,19 +178,17 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     const chainWaitDurationMs = performance.now() - enqueuedAt;
     const preReadyStart = performance.now();
     // A failing host read model must not withhold JOB_READ_READY from awaiters.
-    try {
-      await Promise.all(
-        this.preReady.map((readModel) =>
-          this.indexWithTiming(readModel, "pre_ready", event, reservations),
+    await indexStage(
+      [...this.preReady],
+      (readModel) =>
+        this.indexWithTiming(readModel, "pre_ready", event, reservations),
+      (error) =>
+        this.logger.error(
+          "Host pre-ready read model indexing failed for job @jobId: @Error",
+          { jobId: event.jobId },
+          error,
         ),
-      );
-    } catch (error) {
-      this.logger.error(
-        "Host pre-ready read model indexing failed for job @jobId: @Error",
-        { jobId: event.jobId },
-        error,
-      );
-    }
+    );
 
     const preReadyDurationMs = performance.now() - preReadyStart;
 
@@ -197,19 +206,17 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     const emitDurationMs = performance.now() - emitStart;
 
     const postReadyStart = performance.now();
-    try {
-      await Promise.all(
-        this.postReady.map((readModel) =>
-          this.indexWithTiming(readModel, "post_ready", event, reservations),
+    await indexStage(
+      [...this.postReady],
+      (readModel) =>
+        this.indexWithTiming(readModel, "post_ready", event, reservations),
+      (error) =>
+        this.logger.error(
+          "Host post-ready read model indexing failed for job @jobId: @Error",
+          { jobId: event.jobId },
+          error,
         ),
-      );
-    } catch (error) {
-      this.logger.error(
-        "Host post-ready read model indexing failed for job @jobId: @Error",
-        { jobId: event.jobId },
-        error,
-      );
-    }
+    );
     const postReadyDurationMs = performance.now() - postReadyStart;
 
     // The worker reports its own batch for this job, covering the built-in
