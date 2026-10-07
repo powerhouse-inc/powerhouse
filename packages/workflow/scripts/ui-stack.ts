@@ -1025,11 +1025,12 @@ export async function openConnect(
   browser: Browser,
   options: {
     colorScheme?: "light" | "dark";
-    viewport?: { width: number; height: number };
+    // null follows the window, for a window a person resizes.
+    viewport?: { width: number; height: number } | null;
   } = {},
 ): Promise<ConnectPage> {
   const context = await browser.newContext({
-    viewport: options.viewport ?? VIEWPORT,
+    viewport: options.viewport === undefined ? VIEWPORT : options.viewport,
     colorScheme: options.colorScheme ?? "light",
     // The build's service worker precaches the whole app.
     serviceWorkers: "block",
@@ -1210,7 +1211,7 @@ export async function openSeededPage(
   browser: Browser,
   options: {
     colorScheme?: "light" | "dark";
-    viewport?: { width: number; height: number };
+    viewport?: { width: number; height: number } | null;
     seed?: boolean;
   } = {},
 ): Promise<SeededPage> {
