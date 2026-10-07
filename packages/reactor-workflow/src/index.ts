@@ -9,6 +9,7 @@ export { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "./pieces/core/index.js";
 export { setPieceRegistryUrl } from "./pieces/activepieces/registry-source.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
 export type {
+  AttachmentReadRequest,
   HostIdentity,
   WorkflowCaller,
   WorkflowRuntimeHostDeps,

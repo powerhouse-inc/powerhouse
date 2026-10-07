@@ -14,6 +14,8 @@ export interface StagedInput {
   path: string;
   fileName?: string;
   contentType?: string;
+  // Why the host could not stage it; a FILE prop that needs it fails with this.
+  error?: string;
 }
 
 // Where a piece may connect to while this request runs. Enforced in the child
