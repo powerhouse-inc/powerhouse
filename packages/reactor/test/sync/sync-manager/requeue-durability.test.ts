@@ -603,6 +603,98 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     expect(channels[1].deadLetter.get("d1")).toBeUndefined();
   });
 
+  it("lets a requeue parked by its quarantine be requeued again after a reset", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("x", "doc-b"));
+    channels[0].deadLetter.add(nonKeyedOp("y", "doc-b"));
+
+    await syncManager.requeueDeadLetter("accounts", "x");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).not.toHaveBeenCalled();
+
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [
+        { ...storedD1, id: "x" },
+        { ...storedD1, id: "y" },
+      ],
+      options: { cursor: "0", limit: 100 },
+    });
+    await syncManager.resetChannel("accounts");
+    expect(channels[1].deadLetter.get("x")).toBeDefined();
+
+    await syncManager.requeueDeadLetter("accounts", "x");
+    expect(channels[1].inbox.get("x")).toBeDefined();
+  });
+
+  it("re-dead-letters a requeued op whose retry fails after a reset", async () => {
+    let failJob: (() => void) | undefined;
+    const jobDone = new Promise<void>((resolve) => {
+      failJob = resolve;
+    });
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi.fn(() =>
+        jobDone.then(() => ({
+          id: "job-x",
+          status: JobStatus.FAILED,
+          error: { name: "Error", message: "again" },
+        })),
+      ),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
+
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [storedD1],
+      options: { cursor: "0", limit: 100 },
+    });
+    await syncManager.resetChannel("accounts");
+    vi.mocked(mockDeadLetterStorage.add).mockClear();
+    failJob?.();
+
+    await vi.waitFor(() =>
+      expect(mockDeadLetterStorage.add).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "d1", errorSource: "inbox" }),
+      ),
+    );
+    expect(channels[1].deadLetter.get("d1")).toBeDefined();
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalledWith("d1");
+
+    channels[1].inbox.add(
+      new SyncOperation(
+        "later",
+        "",
+        [],
+        "accounts",
+        "doc-b",
+        ["global"],
+        "main",
+        [] as OperationWithContext[],
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).toHaveBeenCalledTimes(1);
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(3));
+  });
+
   it("refuses a requeue whose channel is reset while it reads storage", async () => {
     mockReactor = {
       load: vi

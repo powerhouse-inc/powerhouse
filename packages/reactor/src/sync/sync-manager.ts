@@ -1375,6 +1375,14 @@ export class SyncManager
       backfillController.abort();
       this.backfillAbortControllers.delete(name);
     }
+    // A parked requeue has no job to outlive the channel; its row reloads.
+    for (const [id, pending] of [...this.requeuedDeadLetterIds]) {
+      if (pending.remoteName !== name) continue;
+      const item = remote.channel.inbox.get(id);
+      if (item && this.parkedByQuarantine.has(item)) {
+        this.requeuedDeadLetterIds.delete(id);
+      }
+    }
 
     try {
       await remote.channel.shutdown();
