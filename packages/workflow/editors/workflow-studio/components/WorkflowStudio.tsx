@@ -197,7 +197,9 @@ function Studio(props: { children?: ReactNode }) {
           create(CONNECTION_TYPE, "Connection", connections.length)
         }
       />
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      {/* Positioned, so absolute descendants (sr-only labels) overflow here,
+          not into Connect's scroller around the studio. */}
+      <main className="relative min-w-0 flex-1 overflow-y-auto">
         {editorOpen ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex min-h-0 flex-1 flex-col [&>#document-editor-container]:min-h-0">
