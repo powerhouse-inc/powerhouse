@@ -294,6 +294,10 @@ export class ReactorHost {
     }
   }
 
+  get retired(): boolean {
+    return this.retirement !== null;
+  }
+
   get connectionCount(): number {
     return this.disposers.size;
   }
@@ -355,7 +359,8 @@ export class ReactorHost {
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {
-    if (!this.clientPromise && this.retirement) {
+    // A retired worker's client may sit on stopped stores.
+    if (this.retirement) {
       return Promise.reject(retiredError());
     }
     if (!this.clientPromise) {

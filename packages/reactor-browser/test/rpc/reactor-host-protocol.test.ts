@@ -620,4 +620,24 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     );
     expect(builds).toBe(0);
   });
+
+  it("refuses a hello once retired, even after it has built", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onRetire: () => Promise.resolve(),
+    });
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    await rawTab(ch1.port2).send({ k: "hello", version: V1 });
+    host.retireAndReload("storage cleared", "gen-2");
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const late = rawTab(ch2.port2);
+    await expect(late.send({ k: "hello", version: V1 })).rejects.toThrow(
+      /retired/,
+    );
+    expect(late.workerGens).toEqual(["gen-2"]);
+    expect(host.retired).toBe(true);
+  });
 });
