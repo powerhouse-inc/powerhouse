@@ -1,7 +1,14 @@
 // A runtime shut down after losing the workflow singleton sits on a reactor
 // that keeps serving. Nothing may run after it, and nothing it adopted may be
 // left PENDING for the next owner to mistake for a fire already handled.
+import { actions } from "@powerhousedao/workflow/document-models/workflow";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Documents } from "../../test/helpers/documents.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
+import { packagePieces } from "./piece-registry.js";
 import { effectiveRunPolicy } from "./policy.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
 import type { WorkflowRunGate } from "./run-gate.js";
@@ -167,4 +174,80 @@ describe("a runtime that has shut down", () => {
     expect(await service.store()).toBeUndefined();
     expect(create).toHaveBeenCalledTimes(1);
   });
+});
+
+const HANG_PIECE = "@acme/piece-shutdown";
+const HANG_FIXTURE = `
+export const shutdown = {
+  displayName: "Shutdown",
+  actions: {
+    hang: {
+      name: "hang",
+      displayName: "Hang",
+      props: {},
+      run: () => new Promise(() => {}),
+    },
+  },
+  triggers: {},
+};
+`;
+
+// Losing the singleton kills the runs in flight. A park written then lands in
+// a journal the next owner holds, behind its seeded park state.
+describe("a run the shutdown killed", () => {
+  it("does not park its workflow", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "rw-shutdown-"));
+    try {
+      const entryPath = join(dir, "index.mjs");
+      await writeFile(entryPath, HANG_FIXTURE);
+      packagePieces.setPieces([
+        { name: HANG_PIECE, version: "1.0.0", entryPath },
+      ]);
+      const documents = new Documents();
+      const workflowId = "wf-shutdown-killed";
+      documents.apply(
+        workflowId,
+        actions.setTrigger({
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "manual",
+          config: {},
+        }),
+        actions.addStep({
+          id: "a",
+          key: "only",
+          name: "Only",
+          pieceName: HANG_PIECE,
+          pieceVersion: "1.0.0",
+          actionName: "hang",
+          config: {},
+        }),
+        actions.addEdge({ id: "e1", from: "t1", to: "a", port: "next" }),
+        actions.setPolicy({ onFailure: "PARK" } as never),
+        actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+        actions.setWorkflowStatus({ status: "ENABLED" }),
+      );
+      service = testRuntime({ reactorClient: documents.client() as never });
+      const running = service;
+      const store = (await running.store())!;
+
+      const firing = running.fire(workflowId, undefined, "schedule");
+      await vi.waitFor(
+        async () =>
+          expect((await store.listRuns(workflowId))[0]?.status).toBe("RUNNING"),
+        { timeout: 15_000 },
+      );
+      running.shutdown();
+      await within(
+        firing.catch(() => undefined),
+        15_000,
+      );
+
+      expect(await store.getWorkflowPark(workflowId)).toBeUndefined();
+    } finally {
+      packagePieces.reset();
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

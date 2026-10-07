@@ -4482,7 +4482,9 @@ export class WorkflowRuntimeService {
     runId: string | null,
     error: string | undefined,
   ): Promise<void> {
-    if (policy.onFailure === "IGNORE") return;
+    // A run that failed as the runtime shut down says nothing about the
+    // workflow, and a park now would land in the next owner's journal.
+    if (policy.onFailure === "IGNORE" || this.closed) return;
     const detail = error ?? "the run failed";
     if (policy.onFailure === "NOTIFY") {
       this.logger.error(
@@ -4499,6 +4501,7 @@ export class WorkflowRuntimeService {
       // The run may have outlived its version: a disable or re-publish that
       // landed meanwhile is not the state that failed.
       if (!(await this.stillRunsVersion(workflowId, publishedVersion))) return;
+      if (this.closed) return;
       // The park row covers every trigger kind; the trigger_state row is what
       // stops the supervisor polling a schedule or piece trigger.
       const trigger = await this.supervisor().park(
