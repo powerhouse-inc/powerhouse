@@ -514,3 +514,34 @@ describe("GraphQLReactorClient driveIdFor", () => {
     }
   });
 });
+
+describe("GraphQLReactorClient Drive-Id for a drive created under a parent", () => {
+  const nestedDrive = () =>
+    withSignaturePolicy(
+      driveDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id: "drive-nested" },
+    );
+
+  it("does not take the new drive's own id as proof", async () => {
+    const { url, received } = await serve(switchboard);
+
+    await clientFor(url).create(nestedDrive(), "drive-1");
+
+    expect(driveIdOf(received, "CreateDocument")).toBeUndefined();
+  });
+
+  it("sends the drive the hook names, without a conflict", async () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const { url, received } = await serve(switchboard);
+
+      await clientFor(url, () => "drive-1").create(nestedDrive(), "drive-1");
+
+      expect(driveIdOf(received, "CreateDocument")).toBe("drive-1");
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});

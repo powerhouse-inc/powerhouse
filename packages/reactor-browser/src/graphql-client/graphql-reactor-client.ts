@@ -542,7 +542,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    // A new drive is pinned to the backend its own id routes to.
+    // A new top-level drive is pinned to the backend its own id routes to;
+    // under a parent it goes where the parent is, which only the hook knows.
     const result = await this.sdk.CreateDocument(
       { document, parentIdentifier },
       this.driveIdHeaders(
@@ -551,7 +552,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
           documentId: document.header.id || undefined,
           parentId: parentIdentifier,
         },
-        isDrive(document) ? document.header.id : undefined,
+        isDrive(document) && parentIdentifier === undefined
+          ? document.header.id
+          : undefined,
       ),
       signal,
     );

@@ -278,7 +278,7 @@ silently downgrading to anonymous.
 
 A request that is known to belong to one drive carries that drive's id in a
 `Drive-Id` header, which a Switchboard load balancer pins on: `create` of a
-drive (its own id) and `execute` on a drive. The client cannot tell from an
+drive with no parent (its own id) and `execute` on a drive. The client cannot tell from an
 identifier alone whether it names a drive, so for `create` under a parent,
 `executeBatch`, `deleteDocument` and `find({ parentId })` it asks the
 `driveIdFor` option, and sends nothing when that is absent or names no drive.
