@@ -860,6 +860,10 @@ export class SyncManager
   private async forgetRemote(name: string): Promise<void> {
     this.records.delete(name);
     this.heldKeys.delete(name);
+    // A reset keeps them: the retry's job outlives the channel it came from.
+    for (const [id, pending] of [...this.requeuedDeadLetterIds]) {
+      if (pending.remoteName === name) this.requeuedDeadLetterIds.delete(id);
+    }
     await this.holds.removeRemote(name);
     await Promise.allSettled(this.markerWritesOf([name]));
     await this.markerStorage.removeRemote(name);
@@ -1384,9 +1388,6 @@ export class SyncManager
       this.evictedOutboxFloors.delete(name);
       this.derivedThrough.delete(name);
       this.prunePending.delete(name);
-      for (const [id, pending] of [...this.requeuedDeadLetterIds]) {
-        if (pending.remoteName === name) this.requeuedDeadLetterIds.delete(id);
-      }
       this.receivedMarkers.delete(name);
       for (const [id, retry] of [...this.markerRetries]) {
         if (retry.remoteName !== name) continue;
@@ -1612,6 +1613,7 @@ export class SyncManager
     if (!source) {
       return;
     }
+    this.assertServing(remote, id);
     const errorSource =
       source instanceof SyncOperation
         ? source.error?.source
@@ -1631,6 +1633,12 @@ export class SyncManager
       documentId: source.documentId,
     });
     const lift = await this.mayLiftQuarantine(source.documentId);
+    try {
+      this.assertServing(remote, id);
+    } catch (error) {
+      this.requeuedDeadLetterIds.delete(source.id);
+      throw error;
+    }
 
     const requeued = new SyncOperation(
       source.id,
@@ -1645,6 +1653,15 @@ export class SyncManager
     // Parked while still quarantined, so the lift loads it ahead of later ops.
     remote.channel.inbox.add(requeued);
     if (lift) this.liftQuarantine(source.documentId);
+  }
+
+  /** A requeue into a channel torn down meanwhile would never load. */
+  private assertServing(remote: Remote, id: string): void {
+    const name = remote.meta.name;
+    if (this.remotes.get(name) === remote && !this.removing.has(name)) return;
+    throw new Error(
+      `Remote '${name}' was reset or removed while requeueing dead letter '${id}'; requeue it again`,
+    );
   }
 
   private async liftQuarantineIfClear(documentId: string): Promise<void> {
@@ -1719,10 +1736,18 @@ export class SyncManager
   }
 
   /** A failed remove leaves a row for a later clear; the op itself is durable. */
-  private async dropRequeuedDeadLetter(id: string): Promise<void> {
-    if (!this.requeuedDeadLetterIds.delete(id)) {
+  private async dropRequeuedDeadLetter(
+    id: string,
+    remoteName: string,
+  ): Promise<void> {
+    if (this.requeuedDeadLetterIds.get(id)?.remoteName !== remoteName) {
       return;
     }
+    this.requeuedDeadLetterIds.delete(id);
+    // A reset since the requeue reloaded the row into the fresh mailbox.
+    const current = this.remotes.get(remoteName);
+    const reloaded = current?.channel.deadLetter.get(id);
+    if (current && reloaded) current.channel.deadLetter.remove(reloaded);
     try {
       await this.deadLetterStorage.remove(id);
     } catch (error) {
@@ -2191,7 +2216,7 @@ export class SyncManager
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
-        void this.dropRequeuedDeadLetter(syncOp.id);
+        void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
         eligible.push(syncOp);
       } else {
@@ -2468,8 +2493,8 @@ export class SyncManager
     this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
 
-    if (resolved && this.remotes.get(remote.meta.name) === remote) {
-      await this.dropRequeuedDeadLetter(syncOp.id);
+    if (resolved) {
+      await this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
     }
   }
 
@@ -2531,7 +2556,7 @@ export class SyncManager
       this.markerRetries.delete(syncOp.id);
       syncOp.executed();
       remote.channel.inbox.remove(syncOp);
-      await this.dropRequeuedDeadLetter(syncOp.id);
+      await this.dropRequeuedDeadLetter(syncOp.id, name);
       return;
     }
     await this.applyInboxJob(remote, syncOp);
@@ -2680,8 +2705,8 @@ export class SyncManager
 
       remote.channel.inbox.remove(syncOp);
 
-      if (resolved && this.remotes.get(remote.meta.name) === remote) {
-        await this.dropRequeuedDeadLetter(syncOp.id);
+      if (resolved) {
+        await this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       }
     }
   }
