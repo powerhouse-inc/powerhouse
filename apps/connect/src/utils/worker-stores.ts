@@ -18,7 +18,7 @@ type Options = {
   close?: StoreCloser;
 };
 
-/** Closes and releases the worker's stores for retirement, a failed boot and the admin flows. */
+/** Every close and release of the worker's stores, run one flow at a time. */
 export function createWorkerStores({
   locks,
   stopReactor,
@@ -27,48 +27,76 @@ export function createWorkerStores({
   forget,
   close = closeWithin,
 }: Options) {
-  // Returns the lock release: a store whose close hung keeps its lock until the worker dies.
+  // Closed but not yet released by the closing flow; a hung close stays here.
+  const kept = new Set<string>();
+  // Once set, an admin flow could touch files another worker now owns.
+  let handedOff = false;
+  let tail: Promise<unknown> = Promise.resolve();
+
+  const serial = <T>(flow: () => Promise<T>): Promise<T> => {
+    const run = tail.then(flow);
+    tail = run.catch(() => undefined);
+    return run;
+  };
+
+  // Returns the lock release, covering only the stores this call closed.
   const closeAll = async (closer: StoreCloser): Promise<() => void> => {
-    const relationalClosed = await closer(relational().store);
-    const reactorClosed = await closer(reactor().store);
-    const relationalNamespace = relational().namespace;
-    const reactorNamespace = reactor().namespace;
+    const open = [relational(), reactor()];
+    forget();
+    const closed: string[] = [];
+    for (const { namespace, store } of open) {
+      const done = await closer(store);
+      if (!namespace) continue;
+      if (done && !kept.has(namespace)) closed.push(namespace);
+      kept.add(namespace);
+    }
     return () => {
-      if (relationalClosed && relationalNamespace) {
-        locks.release(relationalNamespace);
-      }
-      if (reactorClosed && reactorNamespace) {
-        locks.release(reactorNamespace);
+      for (const namespace of closed) {
+        kept.delete(namespace);
+        locks.release(namespace);
       }
     };
   };
 
   const releaseAll = async (): Promise<void> => {
-    const release = await closeAll(close);
-    forget();
-    release();
+    (await closeAll(close))();
   };
 
   return {
-    releaseAfterBootFailure: releaseAll,
+    releaseAfterBootFailure: () => serial(releaseAll),
     /** A retired worker must stop writing before a fresh one opens the same stores. */
-    retire: async (): Promise<void> => {
-      await stopReactor();
-      await releaseAll();
+    retire: (): Promise<void> => {
+      handedOff = true;
+      return serial(async () => {
+        await stopReactor();
+        await releaseAll();
+      });
     },
-    /** Closes the stores, then runs `flow`, which releases their locks once done with the files. */
-    runAdmin: async (
+    /** `flow` gets the closed stores' lock release, to call once done with the files. */
+    runAdmin: (
       closer: StoreCloser,
       flow: (release: () => void) => Promise<void>,
-    ): Promise<void> => {
-      await flow(await closeAll(closer));
-    },
+    ): Promise<void> =>
+      serial(async () => {
+        if (handedOff) {
+          throw new Error(
+            "This worker no longer owns its stores; reload into the current one",
+          );
+        }
+        handedOff = true;
+        await stopReactor();
+        await flow(await closeAll(closer));
+      }),
     /** Closes a store whose open failed, keeping its lock if the close hangs. */
     releaseFailedOpen: async (
       namespace: string,
       store: Closable | undefined,
     ): Promise<void> => {
-      if (await close(store)) locks.release(namespace);
+      if ((await close(store)) && !kept.has(namespace)) {
+        locks.release(namespace);
+      } else {
+        kept.add(namespace);
+      }
     },
   };
 }

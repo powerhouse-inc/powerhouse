@@ -55,7 +55,7 @@ import {
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { closeWithin } from "./utils/close-within.js";
-import { createWorkerStores, type StoreCloser } from "./utils/worker-stores.js";
+import { createWorkerStores } from "./utils/worker-stores.js";
 import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
 import { createStoreLocks } from "./utils/store-lock.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
