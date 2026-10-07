@@ -11,6 +11,7 @@ import type { FetchLike } from "./requester.js";
 import { createFetchRequester } from "./requester.js";
 import {
   ActionEvaluationsDTO,
+  BatchExecutionResultDTO,
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
   DocumentRelationshipResultPageDTO,
@@ -113,6 +114,11 @@ const operationValidators: OperationValidators = {
   MutateDocument: (data) => {
     if (data.mutateDocument) {
       PHDocumentDTO.parse(data.mutateDocument);
+    }
+  },
+  ExecuteBatch: (data) => {
+    if (data.executeBatch) {
+      BatchExecutionResultDTO.parse(data.executeBatch);
     }
   },
   MutateDocumentAsync: (data) => {

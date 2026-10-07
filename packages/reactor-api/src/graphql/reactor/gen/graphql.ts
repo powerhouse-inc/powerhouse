@@ -129,12 +129,51 @@ export enum AuthDecision {
   Deny = "DENY",
 }
 
+/**
+ * The outcome of a batch mutation, one entry per job the request named. The wire
+ * shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+ * key rather than by position so the client can rebuild the record. The batch is
+ * not atomic: each job commits on its own and a failed job releases its
+ * dependents, so each entry's status says what happened to that job, and
+ * re-submitting re-applies the jobs that succeeded.
+ */
+export type BatchExecutionResult = {
+  readonly jobs: ReadonlyArray<BatchJobResult>;
+};
+
+/**
+ * One job's outcome within a batch, pairing the plan key the caller gave with the
+ * job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+ * `IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+ */
+export type BatchJobResult = {
+  readonly job: JobInfo;
+  readonly key: Scalars["String"]["output"];
+};
+
 export type ChannelMeta = {
   readonly id: Scalars["String"]["output"];
 };
 
 export type ChannelMetaInput = {
   readonly id: Scalars["String"]["input"];
+};
+
+export type ConsistencyCoordinate = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly operationIndex: Scalars["Int"]["output"];
+  readonly scope: Scalars["String"]["output"];
+};
+
+/**
+ * The write positions a job reached, for read-after-write. Only meaningful once
+ * the job has completed.
+ */
+export type ConsistencyToken = {
+  readonly coordinates: ReadonlyArray<ConsistencyCoordinate>;
+  readonly createdAtUtcIso: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
 };
 
 export type DeadLetterInfo = {
@@ -218,6 +257,34 @@ export type DocumentWithChildren = {
   readonly document: PhDocument;
 };
 
+/**
+ * One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+ * (packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+ * order only, not atomically: each job commits on its own with no batch rollback,
+ * and a failed job still releases its dependents.
+ *
+ * `documentIdOrSlug` is the document the job's actions apply to -- an id that does
+ * not yet exist when the job's actions create it. `actions` are coerced against
+ * `ActionInput` and passed through exactly as `execute` does, so a client-signed
+ * action keeps its signature. `scope` is the single scope every action in the job
+ * shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+ * defaults to `main`.
+ */
+export type ExecutionJobInput = {
+  readonly actions: ReadonlyArray<ActionInput>;
+  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
+  readonly dependsOn: ReadonlyArray<Scalars["String"]["input"]>;
+  readonly documentIdOrSlug: Scalars["String"]["input"];
+  readonly key: Scalars["String"]["input"];
+  readonly scope: Scalars["String"]["input"];
+};
+
+/** The batch a job was submitted in. */
+export type JobBatchMeta = {
+  readonly batchId: Scalars["String"]["output"];
+  readonly batchJobIds: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
@@ -232,9 +299,18 @@ export type JobChangeEvent = {
 
 export type JobInfo = {
   readonly completedAt?: Maybe<Scalars["DateTime"]["output"]>;
+  readonly consistencyToken: ConsistencyToken;
   readonly createdAt: Scalars["DateTime"]["output"];
+  /**
+   * The document the job operates on. Empty for a job this server does not know,
+   * which then comes back FAILED with "Job not found".
+   */
+  readonly documentId: Scalars["String"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
+  /** The error's class name, such as `DocumentAlreadyExistsError`, when it failed. */
+  readonly errorName?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
+  readonly meta: JobBatchMeta;
   /**
    * What the job produced, once it has produced anything. Null until then, which
    * is the state every job is in when it is handed back from a submission.
@@ -276,6 +352,27 @@ export type Mutation = {
    * ask for; `result` is null until the job produces one.
    */
   readonly executeAsync: JobInfo;
+  /**
+   * Applies multiple mutation jobs in dependency order and waits for all of them,
+   * the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+   * against `ActionInput` exactly as `execute` is, so client-signed actions pass
+   * through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+   * are applied and awaited before the result returns, so every returned `JobInfo`
+   * is a completed one rather than the pending receipt the in-process reactor hands
+   * back. A batch is ordering, not a transaction: each job commits on its own, and
+   * a failed job still releases the jobs that depend on it, so any job, before or
+   * after a failure, may have committed. A failed job is therefore returned as a
+   * FAILED entry with its `error` and `errorName`, beside the final state of every
+   * other job, rather than failing the mutation. The mutation itself fails only
+   * when no job state can be reported.
+   *
+   * A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
+   * as its first action naming the job's document. Its other actions may only be
+   * an `UPGRADE_DOCUMENT` of the new document and `ADD_RELATIONSHIP`s targeting
+   * it. It is authorized like `createDocument`: write on every source of those
+   * relationships, or the right to create when there is none.
+   */
+  readonly executeBatch: BatchExecutionResult;
   readonly moveRelationship: MoveRelationshipResult;
   /** @deprecated Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored. */
   readonly mutateDocument: PhDocument;
@@ -335,6 +432,10 @@ export type MutationExecuteAsyncArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type MutationExecuteBatchArgs = {
+  jobs: ReadonlyArray<ExecutionJobInput>;
 };
 
 export type MutationMoveRelationshipArgs = {
@@ -456,9 +557,11 @@ export type PhDocument = {
   readonly documentType: Scalars["String"]["output"];
   readonly id: Scalars["String"]["output"];
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
+  readonly meta?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
   readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
+  readonly protocolVersions?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -1140,6 +1243,31 @@ export type GetDocumentOperationsQuery = {
   };
 };
 
+export type JobInfoFieldsFragment = {
+  readonly id: string;
+  readonly documentId: string;
+  readonly status: string;
+  readonly result?: NonNullable<unknown> | null | undefined;
+  readonly error?: string | null | undefined;
+  readonly errorName?: string | null | undefined;
+  readonly createdAt: string | Date;
+  readonly completedAt?: string | Date | null | undefined;
+  readonly consistencyToken: {
+    readonly version: number;
+    readonly createdAtUtcIso: string;
+    readonly coordinates: ReadonlyArray<{
+      readonly documentId: string;
+      readonly scope: string;
+      readonly branch: string;
+      readonly operationIndex: number;
+    }>;
+  };
+  readonly meta: {
+    readonly batchId: string;
+    readonly batchJobIds: ReadonlyArray<string>;
+  };
+};
+
 export type GetJobStatusQueryVariables = Exact<{
   jobId: Scalars["String"]["input"];
 }>;
@@ -1255,6 +1383,42 @@ export type MutateDocumentAsyncMutation = {
     readonly error?: string | null | undefined;
     readonly createdAt: string | Date;
     readonly completedAt?: string | Date | null | undefined;
+  };
+};
+
+export type ExecuteBatchMutationVariables = Exact<{
+  jobs: ReadonlyArray<ExecutionJobInput>;
+}>;
+
+export type ExecuteBatchMutation = {
+  readonly executeBatch: {
+    readonly jobs: ReadonlyArray<{
+      readonly key: string;
+      readonly job: {
+        readonly id: string;
+        readonly documentId: string;
+        readonly status: string;
+        readonly result?: NonNullable<unknown> | null | undefined;
+        readonly error?: string | null | undefined;
+        readonly errorName?: string | null | undefined;
+        readonly createdAt: string | Date;
+        readonly completedAt?: string | Date | null | undefined;
+        readonly consistencyToken: {
+          readonly version: number;
+          readonly createdAtUtcIso: string;
+          readonly coordinates: ReadonlyArray<{
+            readonly documentId: string;
+            readonly scope: string;
+            readonly branch: string;
+            readonly operationIndex: number;
+          }>;
+        };
+        readonly meta: {
+          readonly batchId: string;
+          readonly batchJobIds: ReadonlyArray<string>;
+        };
+      };
+    }>;
   };
 };
 
@@ -1705,9 +1869,13 @@ export type ResolversTypes = ResolversObject<{
   ActionEvaluations: ResolverTypeWrapper<ActionEvaluations>;
   ActionInput: ActionInput;
   AuthDecision: AuthDecision;
+  BatchExecutionResult: ResolverTypeWrapper<BatchExecutionResult>;
+  BatchJobResult: ResolverTypeWrapper<BatchJobResult>;
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
+  ConsistencyCoordinate: ResolverTypeWrapper<ConsistencyCoordinate>;
+  ConsistencyToken: ResolverTypeWrapper<ConsistencyToken>;
   DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
   DeadLetterInfo: ResolverTypeWrapper<DeadLetterInfo>;
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
@@ -1719,8 +1887,10 @@ export type ResolversTypes = ResolversObject<{
   DocumentRelationship: ResolverTypeWrapper<DocumentRelationship>;
   DocumentRelationshipResultPage: ResolverTypeWrapper<DocumentRelationshipResultPage>;
   DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
+  ExecutionJobInput: ExecutionJobInput;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
+  JobBatchMeta: ResolverTypeWrapper<JobBatchMeta>;
   JobChangeEvent: ResolverTypeWrapper<JobChangeEvent>;
   JobInfo: ResolverTypeWrapper<JobInfo>;
   MoveRelationshipResult: ResolverTypeWrapper<MoveRelationshipResult>;
@@ -1775,9 +1945,13 @@ export type ResolversParentTypes = ResolversObject<{
   ActionEvaluation: ActionEvaluation;
   ActionEvaluations: ActionEvaluations;
   ActionInput: ActionInput;
+  BatchExecutionResult: BatchExecutionResult;
+  BatchJobResult: BatchJobResult;
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
   ChannelMetaInput: ChannelMetaInput;
+  ConsistencyCoordinate: ConsistencyCoordinate;
+  ConsistencyToken: ConsistencyToken;
   DateTime: Scalars["DateTime"]["output"];
   DeadLetterInfo: DeadLetterInfo;
   DocumentChangeContext: DocumentChangeContext;
@@ -1788,8 +1962,10 @@ export type ResolversParentTypes = ResolversObject<{
   DocumentRelationship: DocumentRelationship;
   DocumentRelationshipResultPage: DocumentRelationshipResultPage;
   DocumentWithChildren: DocumentWithChildren;
+  ExecutionJobInput: ExecutionJobInput;
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
+  JobBatchMeta: JobBatchMeta;
   JobChangeEvent: JobChangeEvent;
   JobInfo: JobInfo;
   MoveRelationshipResult: MoveRelationshipResult;
@@ -1887,12 +2063,58 @@ export type ActionEvaluationsResolvers<
   >;
 }>;
 
+export type BatchExecutionResultResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["BatchExecutionResult"] =
+    ResolversParentTypes["BatchExecutionResult"],
+> = ResolversObject<{
+  jobs?: Resolver<
+    ReadonlyArray<ResolversTypes["BatchJobResult"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
+export type BatchJobResultResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["BatchJobResult"] =
+    ResolversParentTypes["BatchJobResult"],
+> = ResolversObject<{
+  job?: Resolver<ResolversTypes["JobInfo"], ParentType, ContextType>;
+  key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
 export type ChannelMetaResolvers<
   ContextType = Context,
   ParentType extends ResolversParentTypes["ChannelMeta"] =
     ResolversParentTypes["ChannelMeta"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
+export type ConsistencyCoordinateResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["ConsistencyCoordinate"] =
+    ResolversParentTypes["ConsistencyCoordinate"],
+> = ResolversObject<{
+  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  operationIndex?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
+export type ConsistencyTokenResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["ConsistencyToken"] =
+    ResolversParentTypes["ConsistencyToken"],
+> = ResolversObject<{
+  coordinates?: Resolver<
+    ReadonlyArray<ResolversTypes["ConsistencyCoordinate"]>,
+    ParentType,
+    ContextType
+  >;
+  createdAtUtcIso?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  version?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
 }>;
 
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<
@@ -2054,6 +2276,19 @@ export interface JsonObjectScalarConfig extends GraphQLScalarTypeConfig<
   name: "JSONObject";
 }
 
+export type JobBatchMetaResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["JobBatchMeta"] =
+    ResolversParentTypes["JobBatchMeta"],
+> = ResolversObject<{
+  batchId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  batchJobIds?: Resolver<
+    ReadonlyArray<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
 export type JobChangeEventResolvers<
   ContextType = Context,
   ParentType extends ResolversParentTypes["JobChangeEvent"] =
@@ -2079,9 +2314,21 @@ export type JobInfoResolvers<
     ParentType,
     ContextType
   >;
+  consistencyToken?: Resolver<
+    ResolversTypes["ConsistencyToken"],
+    ParentType,
+    ContextType
+  >;
   createdAt?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  errorName?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  meta?: Resolver<ResolversTypes["JobBatchMeta"], ParentType, ContextType>;
   result?: Resolver<
     Maybe<ResolversTypes["JSONObject"]>,
     ParentType,
@@ -2145,6 +2392,12 @@ export type MutationResolvers<
     ParentType,
     ContextType,
     RequireFields<MutationExecuteAsyncArgs, "actions">
+  >;
+  executeBatch?: Resolver<
+    ResolversTypes["BatchExecutionResult"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationExecuteBatchArgs, "jobs">
   >;
   moveRelationship?: Resolver<
     ResolversTypes["MoveRelationshipResult"],
@@ -2251,6 +2504,7 @@ export type PhDocumentResolvers<
     ParentType,
     ContextType
   >;
+  meta?: Resolver<Maybe<ResolversTypes["JSONObject"]>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   operations?: Resolver<
     Maybe<ResolversTypes["ReactorOperationResultPage"]>,
@@ -2260,6 +2514,11 @@ export type PhDocumentResolvers<
   >;
   preferredEditor?: Resolver<
     Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  protocolVersions?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
     ParentType,
     ContextType
   >;
@@ -2648,7 +2907,11 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   ActionContext?: ActionContextResolvers<ContextType>;
   ActionEvaluation?: ActionEvaluationResolvers<ContextType>;
   ActionEvaluations?: ActionEvaluationsResolvers<ContextType>;
+  BatchExecutionResult?: BatchExecutionResultResolvers<ContextType>;
+  BatchJobResult?: BatchJobResultResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
+  ConsistencyCoordinate?: ConsistencyCoordinateResolvers<ContextType>;
+  ConsistencyToken?: ConsistencyTokenResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
@@ -2659,6 +2922,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   DocumentRelationshipResultPage?: DocumentRelationshipResultPageResolvers<ContextType>;
   DocumentWithChildren?: DocumentWithChildrenResolvers<ContextType>;
   JSONObject?: GraphQLScalarType;
+  JobBatchMeta?: JobBatchMetaResolvers<ContextType>;
   JobChangeEvent?: JobChangeEventResolvers<ContextType>;
   JobInfo?: JobInfoResolvers<ContextType>;
   MoveRelationshipResult?: MoveRelationshipResultResolvers<ContextType>;
@@ -2757,6 +3021,19 @@ export function DocumentOperationsFilterInputSchema(): z.ZodObject<
     sinceRevision: z.number().nullish(),
     timestampFrom: z.string().nullish(),
     timestampTo: z.string().nullish(),
+  });
+}
+
+export function ExecutionJobInputSchema(): z.ZodObject<
+  Properties<ExecutionJobInput>
+> {
+  return z.object({
+    actions: z.array(z.lazy(() => ActionInputSchema())),
+    branch: z.string().nullish(),
+    dependsOn: z.array(z.string()),
+    documentIdOrSlug: z.string(),
+    key: z.string(),
+    scope: z.string(),
   });
 }
 
@@ -2948,6 +3225,32 @@ export const DocumentRelationshipFieldsFragmentDoc = gql`
     metadata
     createdAt
     updatedAt
+  }
+`;
+export const JobInfoFieldsFragmentDoc = gql`
+  fragment JobInfoFields on JobInfo {
+    id
+    documentId
+    status
+    result
+    error
+    errorName
+    createdAt
+    completedAt
+    consistencyToken {
+      version
+      createdAtUtcIso
+      coordinates {
+        documentId
+        scope
+        branch
+        operationIndex
+      }
+    }
+    meta {
+      batchId
+      batchJobIds
+    }
   }
 `;
 export const GetDocumentModelsDocument = gql`
@@ -3270,6 +3573,19 @@ export const MutateDocumentAsyncDocument = gql`
       completedAt
     }
   }
+`;
+export const ExecuteBatchDocument = gql`
+  mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
+    executeBatch(jobs: $jobs) {
+      jobs {
+        key
+        job {
+          ...JobInfoFields
+        }
+      }
+    }
+  }
+  ${JobInfoFieldsFragmentDoc}
 `;
 export const RenameDocumentDocument = gql`
   mutation RenameDocument(
@@ -3705,6 +4021,16 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<MutateDocumentAsyncMutation>;
+    },
+    ExecuteBatch(
+      variables: ExecuteBatchMutationVariables,
+      options?: C,
+    ): Promise<ExecuteBatchMutation> {
+      return requester<ExecuteBatchMutation, ExecuteBatchMutationVariables>(
+        ExecuteBatchDocument,
+        variables,
+        options,
+      ) as Promise<ExecuteBatchMutation>;
     },
     RenameDocument(
       variables: RenameDocumentMutationVariables,
