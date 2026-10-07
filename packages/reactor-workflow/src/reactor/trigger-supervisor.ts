@@ -368,8 +368,7 @@ export class TriggerSupervisor {
       try {
         return await task();
       } catch (error) {
-        // Keyed on the state, not the error: a hook the stop killed throws
-        // whatever the worker's exit raised.
+        // Keyed on state: a killed hook throws the worker's exit error.
         if (this.stopped && !(error instanceof TriggerSupervisorStoppedError)) {
           throw new TriggerSupervisorStoppedError({ cause: error });
         }
@@ -1570,8 +1569,7 @@ export class TriggerSupervisor {
   }
 
   // One workflow run per output item; _dedupe_key suppresses 30s repeats.
-  // Journaled before it fires: the cursor has already moved past the item, so
-  // a firing the shutdown refuses must leave a run to rerun.
+  // Journaled first: the cursor is past the item, so a refusal needs a run.
   private async fireItem(
     store: WorkflowRunStore,
     binding: PieceTriggerBinding,
@@ -1602,8 +1600,7 @@ export class TriggerSupervisor {
     }
   }
 
-  // Past stop(), as the cursor rewind is. A row left PENDING is failed by the
-  // next owner's journal open instead.
+  // Past stop(); a row left PENDING is failed by the next owner's journal open.
   private async failRefused(runId: string, error: unknown): Promise<void> {
     try {
       const raw = await this.options.store();

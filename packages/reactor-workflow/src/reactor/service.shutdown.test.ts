@@ -171,8 +171,7 @@ describe("a runtime that has shut down", () => {
   // live runs.
   // Built lazily, so the first caller after shutdown would otherwise get a
   // fresh, running lane over the journal the next owner holds.
-  // The poll's cursor has moved past the item, so the refused firing must
-  // leave a run that carries it.
+  // The cursor is past the item, so the refused firing must leave its run.
   it("fails the run a queued piece item journaled, with its payload", async () => {
     const { service, workflowId } = runtime();
     const store = (await service.store())!;

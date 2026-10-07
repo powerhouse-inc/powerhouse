@@ -1510,9 +1510,7 @@ export class WorkflowRunStore {
     return { outcome: "claimed", runId: id };
   }
 
-  // A piece item's claim and its PENDING run, in one write: a firing the
-  // shutdown refuses then fails a row that keeps the payload. Undefined when
-  // the key was already claimed.
+  // A piece item's claim and PENDING run, in one write; undefined if claimed.
   async claimDedupeAndEnqueueRun(
     dedupeKey: string,
     ttlMs: number,

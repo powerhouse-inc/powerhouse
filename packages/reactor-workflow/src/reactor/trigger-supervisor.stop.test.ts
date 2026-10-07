@@ -374,8 +374,7 @@ describe("TriggerSupervisor after stop()", () => {
     });
   });
 
-  // The claim and its PENDING run commit, and stop() lands before the item
-  // fires: the run is failed with the payload, for an operator to rerun.
+  // stop() lands between the claim's write and the fire.
   describe("an item whose dedupe key is claimed as it stops", () => {
     function holdClaim() {
       const claimed = gate();
