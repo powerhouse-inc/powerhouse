@@ -1,3 +1,22 @@
+## 6.2.3-dev.47 (2026-10-07)
+
+### 🚀 Features
+
+- **workflow:** drag-and-drop workflow order in the studio sidebar and overview ([763f001f9c](https://github.com/powerhouse-inc/powerhouse/commit/763f001f9c))
+- **workflow:** horizontal workflow graph on the studio overview and workflow page ([98784e4d17](https://github.com/powerhouse-inc/powerhouse/commit/98784e4d17))
+- **workflow:** back and forward walk the workflows visited in the studio ([f6bda90d6c](https://github.com/powerhouse-inc/powerhouse/commit/f6bda90d6c))
+- **workflow:** edit a workflow's description in the editor and show it on the overview ([77f6e625f9](https://github.com/powerhouse-inc/powerhouse/commit/77f6e625f9))
+
+### 🩹 Fixes
+
+- **reactor-browser:** back and forward no longer deselect the drive in view ([166d79759e](https://github.com/powerhouse-inc/powerhouse/commit/166d79759e))
+- **workflow:** connection fields show names and flag documents that are not connections ([54f6c5b9df](https://github.com/powerhouse-inc/powerhouse/commit/54f6c5b9df))
+- **workflow:** scrolling past the studio's end no longer shifts it inside Connect ([074603d4f0](https://github.com/powerhouse-inc/powerhouse/commit/074603d4f0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.46 (2026-10-07)
 
 ### 🚀 Features

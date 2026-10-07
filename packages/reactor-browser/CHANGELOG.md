@@ -1,3 +1,13 @@
+## 6.2.3-dev.47 (2026-10-07)
+
+### 🩹 Fixes
+
+- **reactor-browser:** back and forward no longer deselect the drive in view ([166d79759e](https://github.com/powerhouse-inc/powerhouse/commit/166d79759e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.46 (2026-10-07)
 
 ### 🚀 Features
