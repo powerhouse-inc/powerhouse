@@ -11,6 +11,7 @@ import type { WebSocketServer } from "ws";
 import { ApolloGatewayAdapter } from "../../src/graphql/gateway/adapter-gateway-apollo.js";
 import { ExpressHttpAdapter } from "../../src/graphql/gateway/adapter-http-express.js";
 import { createAuthFetchMiddleware } from "../../src/graphql/gateway/auth-middleware.js";
+import type { DriveStore } from "../../src/graphql/gateway/drive-ownership-cache.js";
 import { GraphQLManager } from "../../src/graphql/graphql-manager.js";
 import { ReactorSubgraph } from "../../src/graphql/reactor/subgraph.js";
 import type { AuthService } from "../../src/services/auth.service.js";
@@ -55,6 +56,7 @@ export type ReactorHttpServer = {
 export async function startReactorHttpServer(
   reactorClient: IReactorClient,
   authorizationService: IAuthorizationService,
+  driveStore?: DriveStore,
 ): Promise<ReactorHttpServer> {
   const httpAdapter = new ExpressHttpAdapter();
   const server = (await httpAdapter.listen(
@@ -83,6 +85,7 @@ export async function startReactorHttpServer(
     featureFlags: { enableDocumentModelSubgraphs: false },
     port,
     authorizationService,
+    driveStore,
   });
   await manager.init(
     [ReactorSubgraph],

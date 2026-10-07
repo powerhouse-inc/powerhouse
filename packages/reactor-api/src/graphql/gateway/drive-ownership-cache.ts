@@ -1,7 +1,18 @@
 import {
   DEFAULT_DRIVE_CONTAINER_TYPES,
-  type IReactorClient,
+  type PagedResults,
+  type SearchFilter,
 } from "@powerhousedao/reactor";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+
+/**
+ * Where drives are looked up: the raw reactor, past the read gate. Ownership
+ * is a storage fact that serves no content, so a policy that withholds a drive
+ * from the host's key must not make the host deny holding it.
+ */
+export type DriveStore = {
+  find(search: SearchFilter): Promise<PagedResults<PHDocument>>;
+};
 
 /**
  * In-memory record of which drives this switchboard instance owns.
@@ -16,12 +27,12 @@ import {
 export class DriveOwnershipCache {
   private readonly drives = new Set<string>();
 
-  constructor(private readonly reactorClient: IReactorClient) {}
+  constructor(private readonly store: DriveStore) {}
 
   async init(): Promise<void> {
     this.drives.clear();
     for (const driveType of DEFAULT_DRIVE_CONTAINER_TYPES) {
-      let page = await this.reactorClient.find({ type: driveType });
+      let page = await this.store.find({ type: driveType });
       while (true) {
         for (const drive of page.results) {
           this.drives.add(drive.header.id);
@@ -47,7 +58,7 @@ export class DriveOwnershipCache {
     if (this.drives.has(driveId)) {
       return true;
     }
-    const page = await this.reactorClient.find({ ids: [driveId] });
+    const page = await this.store.find({ ids: [driveId] });
     const held = page.results.some(
       (document) =>
         document.header.id === driveId &&

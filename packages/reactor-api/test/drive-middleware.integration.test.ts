@@ -1,6 +1,7 @@
 import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  initializeAuth,
   withSignaturePolicy,
   type ISigner,
 } from "@powerhousedao/shared/document-model";
@@ -11,6 +12,8 @@ import {
   createFixture,
   HOST,
   openAuthorization,
+  READER,
+  type ReadGateClient,
 } from "./utils/read-gate-fixture.js";
 import { createTestSigner } from "./utils/test-signer.js";
 import {
@@ -37,6 +40,42 @@ const MUTATE_DOCUMENT = /* GraphQL */ `
     }
   }
 `;
+
+/** Grants READER alone, so the host's own key may neither read nor write it. */
+async function lockOutHost(client: ReadGateClient, id: string): Promise<void> {
+  await client.execute(id, "main", [
+    initializeAuth({
+      version: 1,
+      grants: [
+        {
+          id: "reader-reads",
+          description: "only the reader reads",
+          effect: "allow",
+          principal: { address: READER },
+          capability: { can: "read", scope: "global" },
+        },
+        {
+          id: "reader-manages",
+          description: "only the reader manages the policy",
+          effect: "allow",
+          principal: { address: READER },
+          capability: { can: "execute", scope: "auth" },
+        },
+      ],
+    }),
+  ]);
+  if ((await client.find({ ids: [id] })).results.length !== 0) {
+    throw new Error(`${id} is still served to the host`);
+  }
+}
+
+/** Whether the request got past the drive middleware to the resolvers. */
+function reachedResolvers(response: { status: number; body: unknown }) {
+  return (
+    response.status === 200 &&
+    (response.body as { error?: unknown }).error === undefined
+  );
+}
 
 function renameDrive(name: string) {
   return {
@@ -80,6 +119,7 @@ describe("the drive middleware in front of the reactor subgraph", () => {
   let module: InProcessReactorClientModule;
   let server: ReactorHttpServer;
   let owned: string;
+  let protectedAtBoot: string;
 
   let signer: ISigner;
 
@@ -90,7 +130,15 @@ describe("the drive middleware in front of the reactor subgraph", () => {
     owned = await createFixture(module.client, "dm-owned", {
       source: driveDocumentModelModule,
     });
-    server = await startReactorHttpServer(module.client, openAuthorization);
+    protectedAtBoot = await createFixture(module.client, "dm-protected-boot", {
+      source: driveDocumentModelModule,
+    });
+    await lockOutHost(module.client, protectedAtBoot);
+    server = await startReactorHttpServer(
+      module.client,
+      openAuthorization,
+      module.reactor,
+    );
   });
 
   afterAll(async () => {
@@ -116,6 +164,35 @@ describe("the drive middleware in front of the reactor subgraph", () => {
       status: 200,
       body: { data: { mutateDocument: { id: late } } },
     });
+  });
+
+  it("routes a stamped write to a protected drive it held at boot here", async () => {
+    const response = await post(
+      server,
+      "MutateDocumentWithOperations",
+      MUTATE_DOCUMENT,
+      { documentIdentifier: protectedAtBoot, actions: [renameDrive("boot")] },
+      protectedAtBoot,
+    );
+
+    expect(reachedResolvers(response), JSON.stringify(response)).toBe(true);
+  });
+
+  it("routes a stamped write to a protected drive added after start here", async () => {
+    const late = await createFixture(module.client, "dm-protected-late", {
+      source: driveDocumentModelModule,
+    });
+    await lockOutHost(module.client, late);
+
+    const response = await post(
+      server,
+      "MutateDocumentWithOperations",
+      MUTATE_DOCUMENT,
+      { documentIdentifier: late, actions: [renameDrive("late")] },
+      late,
+    );
+
+    expect(reachedResolvers(response), JSON.stringify(response)).toBe(true);
   });
 
   it("accepts a stamped write to a drive that arrived by sync", async () => {
