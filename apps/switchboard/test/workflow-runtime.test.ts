@@ -14,7 +14,10 @@ import {
   type GraphQLManager,
   type PackagePieceEntry,
 } from "@powerhousedao/reactor-api";
-import { PieceRegistry } from "@powerhousedao/reactor-workflow";
+import {
+  PieceRegistry,
+  type WorkflowRuntimeService,
+} from "@powerhousedao/reactor-workflow";
 import {
   createRelationalDb,
   type IRelationalDb,
@@ -563,6 +566,62 @@ describe("composeWorkflowRuntime", () => {
       await taken.stop();
     } finally {
       await retry.stop();
+    }
+  });
+
+  // Each claim builds its own runtime, so park state seeded under an earlier
+  // claim never outlives the gap in which another holder wrote.
+  it("reads the parks another holder wrote when it claims again", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const runtimes: WorkflowRuntimeService[] = [];
+    const claim = (storageId: string) =>
+      composeWorkflowRuntime({
+        reactorClient: clientModule.client,
+        clientModule: {} as InProcessReactorClientModule,
+        relationalDb,
+        attachments: {} as never,
+        authorizationService: {} as never,
+        logger: stubLogger(),
+        storageId,
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            createWorkflowRuntime: (host) => {
+              const runtime = engine.createWorkflowRuntime(host);
+              runtimes.push(runtime);
+              return runtime;
+            },
+          }),
+      });
+    const parkOf = (runtime: WorkflowRuntimeService) =>
+      (
+        runtime as unknown as {
+          parks: { get(id: string): Promise<unknown> };
+        }
+      ).parks.get("wf-gap");
+
+    const first = await claim("/srv/slot-a");
+    expect(await parkOf(runtimes[0]!)).toBeUndefined();
+    await first.stop();
+
+    const other = await claim("/srv/slot-b");
+    await (await runtimes[1]!.store())!.parkWorkflow(
+      "wf-gap",
+      1,
+      "parked by the other holder",
+    );
+    await other.stop();
+
+    const again = await claim("/srv/slot-a");
+    try {
+      expect(runtimes[2]).not.toBe(runtimes[0]);
+      expect(await parkOf(runtimes[2]!)).toMatchObject({
+        reason: "parked by the other holder",
+      });
+    } finally {
+      await again.stop();
     }
   });
 
