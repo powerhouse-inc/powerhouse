@@ -1937,7 +1937,7 @@ export class WorkflowRunStore {
         .set({
           status: PARKED_TRIGGER_STATUS,
           last_error: row.reason,
-          ...RENEW_CLEARED,
+          // Kept for a lift: renewal selects only ENABLED rows.
           updated_at: now,
         })
         .where("workflow_id", "=", workflowId)
@@ -1958,7 +1958,11 @@ export class WorkflowRunStore {
         .execute();
       await trx
         .updateTable("trigger_state")
-        .set({ status: "DISABLED", updated_at: new Date().toISOString() })
+        .set({
+          status: "DISABLED",
+          ...RENEW_CLEARED,
+          updated_at: new Date().toISOString(),
+        })
         .where("workflow_id", "=", workflowId)
         .where("status", "=", PARKED_TRIGGER_STATUS)
         .execute();
