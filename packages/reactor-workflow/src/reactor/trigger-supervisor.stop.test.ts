@@ -8,6 +8,7 @@ import { coreTrigger } from "./core-blocks.js";
 import { WorkflowRunStore } from "./store.js";
 import {
   TriggerSupervisor,
+  TriggerSupervisorStoppedError,
   type PieceTriggerBinding,
   type ScheduleTriggerBinding,
 } from "./trigger-supervisor.js";
@@ -84,7 +85,10 @@ describe("TriggerSupervisor after stop()", () => {
         await held.release;
       }
       return result({
-        output: request.hook === "run" ? [{ from: workflowId }] : undefined,
+        output:
+          request.hook === "run"
+            ? [{ from: workflowId, _dedupe_key: `item-${workflowId}` }]
+            : undefined,
       });
     },
     dispose: () => undefined,
@@ -100,13 +104,26 @@ describe("TriggerSupervisor after stop()", () => {
     prefix = `wf-stop-${seq}`;
     fired = [];
     hooks = [];
-    // Due rows in a known order, so the held poll is the first one.
+    held = {
+      workflowId: "",
+      started: () => undefined,
+      release: Promise.resolve(),
+    };
+    supervisor = build(scoped());
+  });
+
+  // Due rows in a known order, so the held poll is the first one.
+  function scoped(): WorkflowRunStore {
     const handle = Object.create(store) as WorkflowRunStore;
     handle.listDueTriggerStates = async (now: string) =>
       (await store.listDueTriggerStates(now))
         .filter((row) => row.workflow_id.startsWith(prefix))
         .sort((a, b) => a.workflow_id.localeCompare(b.workflow_id));
-    supervisor = new TriggerSupervisor({
+    return handle;
+  }
+
+  function build(handle: WorkflowRunStore): TriggerSupervisor {
+    return new TriggerSupervisor({
       store: () => Promise.resolve(handle),
       resolveAuth: () => Promise.resolve(undefined),
       fire: (workflowId, payload) => {
@@ -123,7 +140,7 @@ describe("TriggerSupervisor after stop()", () => {
       },
       worker,
     });
-  });
+  }
 
   const due = async (workflowId: string) => {
     const row = await store.getTriggerState(workflowId);
@@ -215,5 +232,70 @@ describe("TriggerSupervisor after stop()", () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain("stopped");
     }
+  });
+
+  // The claim commits, and stop() lands before the item fires: the key goes
+  // back, or the next owner's re-poll inside the TTL drops the item for good.
+  describe("an item whose dedupe key is claimed as it stops", () => {
+    function holdClaim() {
+      const claimed = gate();
+      const release = gate();
+      const handle = scoped();
+      handle.claimDedupe = async (...args) => {
+        const result = await store.claimDedupe(...args);
+        claimed.open();
+        await release.opened;
+        return result;
+      };
+      supervisor = build(handle);
+      return { claimed: claimed.opened, release: release.open };
+    }
+
+    async function nextOwnerFires(workflowId: string) {
+      const next = build(scoped());
+      await next.upsert(piece(workflowId));
+      await due(workflowId);
+      await next.tick();
+      next.stop();
+      expect(fired).toEqual([
+        {
+          workflowId,
+          payload: { from: workflowId, _dedupe_key: `item-${workflowId}` },
+        },
+      ]);
+    }
+
+    it("fires on the next owner's poll after a refused poll fire", async () => {
+      const a = `${prefix}-a`;
+      const { claimed, release } = holdClaim();
+      await supervisor.upsert(piece(a));
+      await due(a);
+      const tick = supervisor.tick().catch(() => undefined);
+      await claimed;
+
+      supervisor.stop();
+      release();
+      await tick;
+
+      expect(fired).toEqual([]);
+      await nextOwnerFires(a);
+    });
+
+    it("fires on the next owner's poll after a refused webhook delivery", async () => {
+      const a = `${prefix}-a`;
+      const { claimed, release } = holdClaim();
+      await supervisor.upsert(piece(a));
+      const delivered = supervisor
+        .deliverWebhook(a, { body: "x" })
+        .catch((error: unknown) => error);
+      await claimed;
+
+      supervisor.stop();
+      release();
+
+      expect(await delivered).toBeInstanceOf(TriggerSupervisorStoppedError);
+      expect(fired).toEqual([]);
+      await nextOwnerFires(a);
+    });
   });
 });

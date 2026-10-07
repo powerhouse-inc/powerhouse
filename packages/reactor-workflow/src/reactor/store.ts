@@ -2226,6 +2226,15 @@ export class WorkflowRunStore {
     return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso);
   }
 
+  // Gives back a claim whose fire was refused, so a re-poll can take it.
+  async releaseDedupe(workflowId: string, dedupeKey: string): Promise<void> {
+    await this.db
+      .deleteFrom("trigger_dedupe")
+      .where("workflow_id", "=", workflowId)
+      .where("dedupe_key", "=", dedupeKey)
+      .execute();
+  }
+
   // A removed workflow's keys would otherwise wait for a claim that never comes.
   async deleteDedupe(workflowId: string): Promise<void> {
     await this.db

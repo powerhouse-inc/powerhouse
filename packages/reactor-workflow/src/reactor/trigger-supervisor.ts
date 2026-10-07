@@ -1569,6 +1569,30 @@ export class TriggerSupervisor {
       );
       if (!claimed) return;
     }
-    this.fire(binding.workflowId, item, pieceTriggerKind(binding.block));
+    try {
+      this.fire(binding.workflowId, item, pieceTriggerKind(binding.block));
+    } catch (error) {
+      if (dedupeKey && error instanceof TriggerSupervisorStoppedError) {
+        await this.releaseDedupe(binding.workflowId, dedupeKey);
+      }
+      throw error;
+    }
+  }
+
+  // Past stop(), as the cursor rewind is: a claim that committed as the lane
+  // stopped would otherwise make the next owner's re-poll skip the item.
+  private async releaseDedupe(
+    workflowId: string,
+    dedupeKey: string,
+  ): Promise<void> {
+    try {
+      const raw = await this.options.store();
+      await raw?.releaseDedupe(workflowId, dedupeKey);
+    } catch (error) {
+      logger.warn(
+        `Could not release dedupe key ${dedupeKey} of ${workflowId}`,
+        error,
+      );
+    }
   }
 }
