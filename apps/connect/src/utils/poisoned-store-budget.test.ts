@@ -182,6 +182,21 @@ describe("poisoned-store reload budget", () => {
     expect(reload).toHaveBeenCalledTimes(5);
   });
 
+  it("still reloads a mismatch right after two poisoned-store reloads", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    for (let i = 0; i < 2; i++) {
+      await loadPage();
+      budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, i);
+    }
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+
+    expect(reload).toHaveBeenCalledTimes(3);
+    expect(connectionState.getWorkerConnectionStatus()).toBe("connected");
+  });
+
   it("reloads for every deploy that lands minutes after the last", async () => {
     const storage = memoryStorage();
     const reload = vi.fn();

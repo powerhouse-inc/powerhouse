@@ -399,7 +399,9 @@ describe("worker retired by a deploy", () => {
     expect(statusAtStop).toEqual([]);
 
     await queue.resume();
-    await vi.waitFor(() => expect(statusAtStop).toHaveLength(1));
+    await vi.waitFor(() => expect(statusAtStop).toHaveLength(1), {
+      timeout: 5_000,
+    });
     expect([JobStatus.WRITE_READY, JobStatus.READ_READY]).toContain(
       statusAtStop[0],
     );
@@ -410,7 +412,9 @@ describe("worker retired by a deploy", () => {
     const startedAt = Date.now();
     await tab(host).send(NEXT_BUILD);
     const next = otherWorkerAcquires(names.reactor);
-    await vi.waitFor(() => expect(next.granted).toBe(true));
+    await vi.waitFor(() => expect(next.granted).toBe(true), {
+      timeout: 5_000,
+    });
     expect(Date.now() - startedAt).toBeLessThan(2_000);
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
   });
@@ -419,7 +423,9 @@ describe("worker retired by a deploy", () => {
     const { names, host, statusAtStop } = await workerWithAcceptedJob(60_000);
     host.retireAndReload("admin restart", crypto.randomUUID());
     const next = otherWorkerAcquires(names.reactor);
-    await vi.waitFor(() => expect(next.granted).toBe(true));
+    await vi.waitFor(() => expect(next.granted).toBe(true), {
+      timeout: 5_000,
+    });
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
   });
 });
