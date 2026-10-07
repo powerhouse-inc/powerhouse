@@ -19,7 +19,9 @@ describe("sync inspection", () => {
     module = undefined;
   });
 
-  async function build(): Promise<InProcessReactorModule> {
+  async function build(
+    maxDeadLetters?: number,
+  ): Promise<InProcessReactorModule> {
     const channelFactory: IChannelFactory = {
       instance: (
         remoteId: string,
@@ -29,7 +31,13 @@ describe("sync inspection", () => {
       ) => new TestChannel(remoteId, remoteName, cursorStorage, () => {}),
     };
     module = await new ReactorBuilder()
-      .withSync(new SyncBuilder().withChannelFactory(channelFactory))
+      .withSync(
+        maxDeadLetters === undefined
+          ? new SyncBuilder().withChannelFactory(channelFactory)
+          : new SyncBuilder()
+              .withChannelFactory(channelFactory)
+              .withMaxDeadLettersPerRemote(maxDeadLetters),
+      )
       .buildModule();
     return module;
   }
@@ -107,4 +115,56 @@ describe("sync inspection", () => {
     expect(rest.results).toHaveLength(1);
     expect(rest.nextCursor).toBeUndefined();
   });
+
+  async function withDeadLetters(count: number, maxDeadLetters?: number) {
+    const built = await build(maxDeadLetters);
+    const sync = built.syncModule!;
+    await sync.syncManager.add("peer", DriveCollectionId.forDrive("drive-1"), {
+      type: "test",
+      parameters: {},
+    });
+    for (let i = 0; i < count; i++) {
+      await sync.deadLetterStorage.add({
+        id: `dl-${i}`,
+        jobId: `job-${i}`,
+        jobDependencies: [],
+        remoteName: "peer",
+        documentId: "doc",
+        scopes: ["global"],
+        branch: "main",
+        operations: [],
+        errorSource: ChannelErrorSource.Inbox,
+        errorMessage: "failed",
+        errorType: "LIBRARY_ERROR",
+      });
+    }
+    return sync.syncInspector!;
+  }
+
+  it.each([0, -5])(
+    "clamps a dead-letter limit of %i to one row, still pageable",
+    async (limit) => {
+      const inspector = await withDeadLetters(3);
+      const page = await inspector.listDeadLetters("peer", undefined, limit);
+      expect(page.results).toHaveLength(1);
+      expect(page.nextCursor).toBe("1");
+    },
+  );
+
+  it("clamps a dead-letter limit above the per-remote maximum", async () => {
+    const inspector = await withDeadLetters(3, 2);
+    const page = await inspector.listDeadLetters("peer", undefined, 1e9);
+    expect(page.results).toHaveLength(2);
+    expect(page.nextCursor).toBe("2");
+  });
+
+  it.each(["abc", "-1", "1.5", ""])(
+    "rejects the dead-letter cursor %j",
+    async (cursor) => {
+      const inspector = await withDeadLetters(1);
+      await expect(
+        inspector.listDeadLetters("peer", cursor, 10),
+      ).rejects.toThrow(/Invalid dead-letter cursor/);
+    },
+  );
 });

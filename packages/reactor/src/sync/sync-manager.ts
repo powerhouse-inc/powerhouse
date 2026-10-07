@@ -1444,9 +1444,16 @@ export class SyncManager
     limit?: number,
   ): Promise<DeadLetterPage> {
     this.getByName(remoteName);
+    if (cursor !== undefined && !/^\d+$/.test(cursor)) {
+      throw new Error(`Invalid dead-letter cursor: ${JSON.stringify(cursor)}`);
+    }
+    const max = this.config.maxDeadLettersPerRemote;
     const page = await this.deadLetterStorage.list(remoteName, {
       cursor: cursor ?? "0",
-      limit: limit ?? this.config.maxDeadLettersPerRemote,
+      limit:
+        limit === undefined || !Number.isFinite(limit)
+          ? max
+          : Math.min(Math.max(Math.trunc(limit), 1), max),
     });
     return { remoteName, results: page.results, nextCursor: page.nextCursor };
   }

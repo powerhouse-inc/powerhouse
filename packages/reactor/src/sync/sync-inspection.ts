@@ -44,7 +44,7 @@ export type DeadLetterPage = {
 export interface ISyncInspector {
   inspectRemote(remoteName: string): Promise<RemoteSyncInspection>;
   inspectRemotes(): Promise<RemoteSyncInspection[]>;
-  /** Newest first. */
+  /** Newest first; limit clamps to [1, max per remote]; cursor is a row offset. */
   listDeadLetters(
     remoteName: string,
     cursor?: string,
