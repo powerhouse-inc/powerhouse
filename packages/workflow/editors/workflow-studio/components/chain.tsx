@@ -4,8 +4,10 @@ import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { BlockLogo } from "../../workflow-editor/ui/BlockSelector.js";
 import {
   CORE_PIECE,
+  stepBlock,
   type BlockIdentity,
 } from "../../workflow-editor/ui/blocks.js";
+import { stepOutline } from "./step-outline.js";
 import {
   formatAbsolute,
   RUN_TONE,
@@ -126,6 +128,22 @@ export function triggerOfKind(kind: string): BlockIdentity {
     }
   }
   return { pieceName: CORE_PIECE, kind: "trigger", name: kind };
+}
+
+/** A workflow's steps in the order a run reaches them, coloured by a run. */
+export function workflowLinks(
+  workflow: Parameters<typeof stepOutline>[0],
+  latest?: RunRecord,
+): ChainLink[] {
+  const status = new Map(
+    (latest?.steps ?? []).map((step) => [step.stepKey, step.status]),
+  );
+  return stepOutline(workflow).rows.map(({ step }) => ({
+    id: step.id,
+    block: stepBlock(step),
+    label: step.name || step.key,
+    status: status.get(step.key),
+  }));
 }
 
 /** A run's own chain: the trigger, then every step it recorded. */

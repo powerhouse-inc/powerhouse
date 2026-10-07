@@ -13,6 +13,7 @@ import {
 } from "../../workflow-editor/ui/blocks.js";
 import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
 import { STEP_TONE, toneOf, type Tone } from "./run-format.js";
+import { ScrollFade } from "./ScrollFade.js";
 import { stepOutline, type OutlineStep } from "./step-outline.js";
 import { WorkflowGraph } from "./WorkflowGraph.js";
 
@@ -158,15 +159,16 @@ export function WorkflowSteps(props: {
           No trigger set, so this workflow never starts on its own.
         </p>
       ) : null}
-      <div className="-mx-1 overflow-x-auto px-1 py-1.5">
+      <ScrollFade className="-mx-1 px-1 py-1.5">
         <WorkflowGraph
           state={state}
           triggerText={describeTrigger(state.trigger)}
           latest={props.latestRun}
           onOpen={props.onOpenEditor}
           size="md"
+          fit
         />
-      </div>
+      </ScrollFade>
       {outline.orphans.length > 0 ? (
         <div className="mt-5">
           <p className="mb-3 text-xs text-muted-foreground">
