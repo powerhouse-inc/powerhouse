@@ -37,14 +37,17 @@ export const parkable = {
       name: "flaky",
       displayName: "Flaky",
       type: "WEBHOOK",
-      props: {},
+      props: { key: { displayName: "Key", type: "SHORT_TEXT", required: false } },
       onEnable: async (ctx) => {
-        await bump(ctx, "flaky-enables");
-        if ((await ctx.store.get("flaky-enables", "PROJECT")) === 1) {
+        const key = ctx.propsValue.key ?? "flaky";
+        await bump(ctx, key + ":enables");
+        if ((await ctx.store.get(key + ":enables", "PROJECT")) === 1) {
+          await ctx.store.put("first-attempt", true);
           throw new Error("provider briefly down");
         }
       },
-      onDisable: async () => undefined,
+      onDisable: async (ctx) =>
+        bump(ctx, (ctx.propsValue.key ?? "flaky") + ":releases"),
       run: async (ctx) => (ctx.payload ? [ctx.payload] : []),
     },
   },
@@ -57,18 +60,19 @@ function workflowOp(
   status: string,
   workflowId = WORKFLOW,
   triggerName = "hook",
+  version = 1,
 ): OperationWithContext {
   ordinal += 1;
   const state = {
     name: workflowId,
     status,
-    version: 1,
+    version,
     trigger: {
       id: "t1",
       pieceName: PIECE,
       pieceVersion: "1.0.0",
       triggerName,
-      config: {},
+      config: triggerName === "flaky" ? { key: workflowId } : {},
     },
     steps: [],
     edges: [],
@@ -181,13 +185,48 @@ describe("an enable retry of a PARKED piece trigger", () => {
     retries.get(id)!.at = 0;
     await supervisor.tick();
 
-    expect(await status()).toBe(PARKED_TRIGGER_STATUS);
+    // Left as it stands: the park row is what blocks arming, and the row's
+    // own state is what a later enable reads to release the failed attempt.
+    expect(await status()).toBe("ERROR");
     expect(
       await store.getPieceStoreValue(
         "PROJECT",
         PROJECT_SCOPE_KEY,
-        "flaky-enables",
+        `${id}:enables`,
       ),
     ).toBe(1);
+  }, 90_000);
+
+  // The failed attempt may have subscribed at the provider. Lifting the park
+  // must arm it as the fresh enable it is: release that attempt once, drop
+  // its FLOW store, subscribe once — not a republish over a dead registration.
+  it("arms a fresh enable when a re-publish lifts the park", async () => {
+    const id = "wf-parked-retry-republish";
+    const store = (await service.store())!;
+    const status = async () => (await store.getTriggerState(id))?.status;
+    const counted = async (suffix: string) =>
+      store.getPieceStoreValue("PROJECT", PROJECT_SCOPE_KEY, `${id}:${suffix}`);
+    await service.onOperations([workflowOp("ENABLED", id, "flaky")]);
+    await vi.waitFor(async () => expect(await status()).toBe("ERROR"), {
+      timeout: 30_000,
+    });
+    await store.parkWorkflow(id, 1, "parked while the enable was failing");
+    const supervisor = service.supervisor();
+    const retries = (
+      supervisor as unknown as { enableRetries: Map<string, { at: number }> }
+    ).enableRetries;
+    retries.get(id)!.at = 0;
+    await supervisor.tick();
+
+    await service.onOperations([workflowOp("ENABLED", id, "flaky", 2)]);
+
+    await vi.waitFor(async () => expect(await status()).toBe("ENABLED"), {
+      timeout: 30_000,
+    });
+    expect(await counted("releases")).toBe(1);
+    expect(await counted("enables")).toBe(2);
+    expect(
+      await store.getPieceStoreValue("FLOW", id, "first-attempt"),
+    ).toBeNull();
   }, 90_000);
 });

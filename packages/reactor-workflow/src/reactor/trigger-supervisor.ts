@@ -377,10 +377,13 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.enable(binding, previous));
   }
 
-  /** A lifted park: the row is ENABLED again, as it was before the park,
-   * and the next upsert of the same binding arms it rather than skipping. */
+  /** A lifted park: a PARKED row is ENABLED again, as it was before the park
+   * (only an ENABLED row is ever parked), a retry held back by the park is due
+   * now, and the next upsert of the same binding arms it rather than skipping. */
   unpark(workflowId: string): Promise<void> {
     this.enabledOk.delete(workflowId);
+    const retry = this.enableRetries.get(workflowId);
+    if (retry) retry.at = 0;
     return this.enqueue(async () => {
       const store = await this.options.store();
       const row = await store?.getTriggerState(workflowId);
@@ -777,7 +780,7 @@ export class TriggerSupervisor {
     const existing = await store.getTriggerState(binding.workflowId);
     const now = this.now();
     if (this.stillParked(binding.workflowId, existing, hash)) return;
-    if (await this.parkedWorkflow(store, binding.workflowId, existing)) return;
+    if (await this.parkedWorkflow(store, binding.workflowId)) return;
     // Only a completed enable is a republish: a retry after a failed one must
     // register again, or a piece that skips registration never delivers.
 
@@ -999,25 +1002,21 @@ export class TriggerSupervisor {
   /**
    * A workflow parked while its row was not ENABLED (an ERROR row with an
    * enable retry pending, say): the park row is the authority, so no retry or
-   * re-arm may enable it. The row is turned PARKED, and the retry dropped.
+   * re-arm may enable it. The row is left as it stands, and a pending retry
+   * keeps its release flag, so the enable that follows the park's lifting
+   * releases the failed attempt and arms afresh rather than as a republish.
+   * The retry is only pushed back, so it does not take every tick's slot.
    * The service clears a park row a re-publish or disable lifted before it
    * arms, so one that is still here is current.
    */
   private async parkedWorkflow(
     store: WorkflowRunStore,
     workflowId: string,
-    existing: TriggerStateRow | undefined,
   ): Promise<boolean> {
     const park = await store.getWorkflowPark(workflowId);
     if (!park) return false;
-    this.enableRetries.delete(workflowId);
-    if (existing && existing.status !== PARKED_TRIGGER_STATUS) {
-      await store.setTriggerStatus(
-        workflowId,
-        PARKED_TRIGGER_STATUS,
-        park.reason,
-      );
-    }
+    const retry = this.enableRetries.get(workflowId);
+    if (retry) retry.at = this.now().getTime() + this.defaultIntervalMs;
     logger.warn(
       `Workflow ${workflowId} is PARKED; its trigger is not armed until the workflow is re-published or re-enabled`,
     );
