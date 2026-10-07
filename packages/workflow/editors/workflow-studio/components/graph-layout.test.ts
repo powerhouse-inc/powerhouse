@@ -43,19 +43,42 @@ describe("graphLayout", () => {
 
   it("drops the false and error paths to lower lanes", () => {
     const { layout, at } = place(
-      ["branch", "yes", "no", "fix"],
+      ["branch", "yes", "no", "work", "done", "fix"],
       [
         edge("t", "branch"),
         edge("branch", "yes", "true"),
         edge("branch", "no", "false"),
-        edge("yes", "fix", "error"),
+        edge("yes", "work"),
+        edge("work", "done"),
+        edge("work", "fix", "error"),
       ],
     );
     expect(at).toEqual({
       branch: [1, 0, null],
       yes: [2, 0, "true"],
       no: [2, 1, "false"],
-      fix: [3, 1, "error"],
+      work: [3, 0, null],
+      done: [4, 0, null],
+      fix: [4, 1, "error"],
+    });
+    expect(layout.lanes).toBe(2);
+  });
+
+  it("keeps a step's only way out on its lane, whatever its port", () => {
+    const { layout, at } = place(
+      ["bound", "runnable", "order", "missing"],
+      [
+        edge("t", "bound"),
+        edge("bound", "runnable", "false"),
+        edge("runnable", "order"),
+        edge("runnable", "missing", "error"),
+      ],
+    );
+    expect(at).toEqual({
+      bound: [1, 0, null],
+      runnable: [2, 0, "false"],
+      order: [3, 0, null],
+      missing: [3, 1, "error"],
     });
     expect(layout.lanes).toBe(2);
   });
@@ -91,7 +114,7 @@ describe("graphLayout", () => {
       check: [1, 0, null],
       approve: [2, 0, "true"],
       record: [3, 0, null],
-      alert: [4, 1, "error"],
+      alert: [4, 0, "error"],
     });
     const under = layout.edges.filter((e) => e.track.under);
     expect(under.map((e) => `${e.from}>${e.to}`)).toEqual(["check>record"]);
