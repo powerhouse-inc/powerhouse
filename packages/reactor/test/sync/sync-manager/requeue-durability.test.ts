@@ -738,6 +738,49 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
   });
 
+  it("leaves a parked requeue of a channel being reset to the fresh channel when the quarantine lifts", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("x", "doc-b"));
+    channels[0].deadLetter.add(nonKeyedOp("y", "doc-b"));
+    await syncManager.requeueDeadLetter("accounts", "x");
+    expect(channels[0].inbox.get("x")).toBeDefined();
+
+    let releaseShutdown: (() => void) | undefined;
+    channels[0].shutdown.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseShutdown = resolve;
+        }),
+    );
+    const reset = syncManager.resetChannel("accounts");
+    await vi.waitFor(() => expect(releaseShutdown).toBeDefined());
+
+    await syncManager.clearDeadLetter("accounts", "y");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).not.toHaveBeenCalled();
+
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [{ ...storedD1, id: "x" }],
+      options: { cursor: "0", limit: 100 },
+    });
+    releaseShutdown?.();
+    await reset;
+    expect(channels[1].deadLetter.get("x")).toBeDefined();
+
+    await syncManager.requeueDeadLetter("accounts", "x");
+    await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
+  });
+
   it("keeps the quarantine when a dead letter lands while the lift reads storage", async () => {
     mockReactor = {
       load: vi

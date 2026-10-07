@@ -1731,6 +1731,8 @@ export class SyncManager
   private liftQuarantine(documentId: string): void {
     if (!this.quarantinedDocumentIds.delete(documentId)) return;
     for (const remote of this.remotes.values()) {
+      // Its parked items come back through the fresh channel.
+      if (this.removing.has(remote.meta.name)) continue;
       const parked = remote.channel.inbox.items
         .filter(
           (item) =>
