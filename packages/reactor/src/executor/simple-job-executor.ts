@@ -474,8 +474,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    * out; false withholds the announcement. A failed flush is never a failed
    * job, since the commit stands: it is retried, and the announcement is
    * withheld once the store is poisoned (the host restarts), the attempts run
-   * out, the wait outlives `durabilityWaitMs`, or the job's signal aborts. A
-   * job the manager already timed out must not announce afterwards.
+   * out, the wait outlives `durabilityWaitMs`, or the job's signal aborts.
    */
   private async awaitDurable(
     job: Job,

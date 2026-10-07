@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
+import { JobExecutorEventTypes } from "../../src/executor/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { GroupCommitPGliteInstance } from "../../src/storage/kysely/group-commit-pglite-client.js";
 import { createDocModelDocument } from "../factories.js";
@@ -173,9 +174,12 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
 
     const started = Date.now();
     pg.delayNext = { pattern: /insert into \S*"Operation"/i, ms: 1_000 };
-    pg.syncHold = new Promise((resolve) =>
-      setTimeout(resolve, jobTimeoutMs + 300),
-    );
+    // Released after the job's own timer has fired, so the flush outlasts it.
+    pg.syncHold = new Promise((resolve) => {
+      module.eventBus.subscribe(JobExecutorEventTypes.JOB_STARTED, () => {
+        setTimeout(resolve, jobTimeoutMs + 300);
+      });
+    });
     const job = await module.reactor.create(createDocModelDocument());
 
     const seen = new Set<JobStatus>();

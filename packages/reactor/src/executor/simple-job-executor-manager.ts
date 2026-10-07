@@ -194,6 +194,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         ),
       );
     }, this.jobTimeoutMs);
+    (timer as { unref?: () => void }).unref?.();
     const signal = timeout.signal;
     const toError = (reason: unknown): Error =>
       reason instanceof Error ? reason : new Error(String(reason));
