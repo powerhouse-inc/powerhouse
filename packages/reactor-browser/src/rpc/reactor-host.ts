@@ -65,6 +65,8 @@ export type ReactorHostOptions = {
   onAdminMigrate?: () => Promise<void>;
   /** Stops the reactor and releases its stores once the worker is retired. */
   onRetire?: (reason: string) => Promise<void>;
+  /** Bounded; a deploy's reload waits on it while data is already refused. */
+  drainBeforeReload?: () => Promise<void>;
 };
 
 function versionsCompatible(
@@ -135,6 +137,7 @@ export class ReactorHost {
   private readonly bootedAtMs: number;
   private migrationState: WorkerMigrationState | null = null;
   private retirement: { reason: string; workerGen: string } | null = null;
+  private reloadSent = false;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
@@ -242,7 +245,8 @@ export class ReactorHost {
     if (this.migrationState) {
       transport.post({ k: "migration", state: this.migrationState });
     }
-    if (this.retirement) {
+    // Mid-drain it waits for the broadcast, which reaches it too.
+    if (this.retirement && this.reloadSent) {
       transport.post({ k: "reload", ...this.retirement });
     }
     if (this.options.client) {
@@ -283,11 +287,26 @@ export class ReactorHost {
   }
 
   // A reload this worker never recovers from; tabs that connect later get it too.
+  // A deploy's reload waits for the drain: the tabs keep the worker alive.
   retireAndReload(reason: string, workerGen: string): void {
     if (this.retirement) {
       return;
     }
     this.retirement = { reason, workerGen };
+    const drain = this.options.drainBeforeReload;
+    if (!drain || !isFingerprintMismatchReload(reason)) {
+      this.sendReload(reason, workerGen);
+      return;
+    }
+    void drain()
+      .catch((error: unknown) => {
+        console.error("ReactorHost drain before reload failed", error);
+      })
+      .then(() => this.sendReload(reason, workerGen));
+  }
+
+  private sendReload(reason: string, workerGen: string): void {
+    this.reloadSent = true;
     this.broadcastReload(reason, workerGen);
     this.stopRetired(reason);
   }
@@ -321,11 +340,13 @@ export class ReactorHost {
   ): void {
     // A retired worker no longer owns the store: send the tab to the one that does.
     if (this.retirement && message.method !== "info") {
-      transport.post({
-        k: "reload",
-        reason: RETIRED_WORKER_RELOAD_REASON,
-        workerGen: this.retirement.workerGen,
-      });
+      if (this.reloadSent) {
+        transport.post({
+          k: "reload",
+          reason: RETIRED_WORKER_RELOAD_REASON,
+          workerGen: this.retirement.workerGen,
+        });
+      }
       reply.err(message.id, retiredError());
       return;
     }
@@ -388,7 +409,10 @@ export class ReactorHost {
       // A build outliving the retirement holds stores onRetire left to it.
       void pending.then(
         () => {
-          if (this.retirement) this.stopRetired(this.retirement.reason);
+          // Mid-drain, the reload's own stop comes after.
+          if (this.retirement && this.reloadSent) {
+            this.stopRetired(this.retirement.reason);
+          }
         },
         () => undefined,
       );
