@@ -27,6 +27,7 @@ export const PGLITE_USE_WORKER: boolean = false;
 async function createMainThreadPGlite(
   major: SupportedPgMajor,
   dbName: string,
+  relaxedDurability: boolean,
 ): Promise<PGlite> {
   const { PGlite } = await loadPGliteModule(major);
   const { live } =
@@ -34,7 +35,7 @@ async function createMainThreadPGlite(
       ? await import("pglite-legacy-02/live")
       : await import("@electric-sql/pglite/live");
   return new PGlite(`idb://${dbName}`, {
-    relaxedDurability: true,
+    relaxedDurability,
     extensions: { live },
   }) as unknown as PGlite;
 }
@@ -86,6 +87,7 @@ function pgliteSingleton(opts: {
   dbName: string;
   detectMajor: () => Promise<DetectedMajor>;
   label: string;
+  relaxedDurability: boolean;
 }): () => Promise<PGlite> {
   let cached: Promise<PGlite> | undefined;
   return function getPGlite(): Promise<PGlite> {
@@ -99,7 +101,7 @@ function pgliteSingleton(opts: {
       }
       return PGLITE_USE_WORKER
         ? createWorkerPGlite(major, opts.dbName)
-        : createMainThreadPGlite(major, opts.dbName);
+        : createMainThreadPGlite(major, opts.dbName, opts.relaxedDurability);
     });
     // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
     cached = pending;
@@ -110,16 +112,20 @@ function pgliteSingleton(opts: {
   };
 }
 
+// Not relaxed: group commit flushes through syncToFs, which a relaxed
+// instance resolves before the sync has run.
 export const getReactorPGlite = pgliteSingleton({
   dbName: REACTOR_PGLITE_NAME,
   detectMajor: detectReactorPgMajor,
   label: "reactor",
+  relaxedDurability: false,
 });
 
 const getRelationalPGlite = pgliteSingleton({
   dbName: RELATIONAL_PGLITE_NAME,
   detectMajor: detectRelationalPgMajor,
   label: "relational",
+  relaxedDurability: true,
 });
 
 export async function getDb() {

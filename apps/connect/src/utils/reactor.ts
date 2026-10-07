@@ -8,14 +8,13 @@ import {
   setDriveMetadata,
   waitForDocumentReady,
   type BrowserReactorClientModule,
-  type Database,
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
 } from "@powerhousedao/reactor-browser";
-import {
-  HardenedPGliteDialect,
-  type UnsupportedStoredDocuments,
+import type {
+  GroupCommitPGliteInstance,
+  UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type {
   PHConnectDefaultDrive,
@@ -30,7 +29,6 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
-import { Kysely } from "kysely";
 import { getReactorPGlite } from "../pglite.db.js";
 import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
@@ -76,13 +74,14 @@ export async function createBrowserReactor(
     .withChannelScheme(ChannelScheme.CONNECT)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
-    .withKysely(
-      new Kysely<Database>({
-        dialect: new HardenedPGliteDialect(pg, {
-          onPoisoned: reloadPageForPoisonedStore,
-        }),
-      }),
-    );
+    .withGroupCommitPGlite({
+      pg: pg as unknown as GroupCommitPGliteInstance,
+      // A poisoned session's unflushed writes, and every position built on
+      // them, are void: only a reload restarts them from the store.
+      onUnrecoverable: reloadPageForPoisonedStore,
+      onDiagnostic: (message, error) =>
+        console.error(`[reactor] pglite: ${message}`, error),
+    });
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)
