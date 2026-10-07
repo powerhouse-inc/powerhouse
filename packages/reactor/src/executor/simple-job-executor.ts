@@ -398,7 +398,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   async executeJob(
     job: Job,
     signal?: AbortSignal,
-    onCommitted?: () => void,
+    onCommitting?: () => void,
   ): Promise<JobResult> {
     const startTime = Date.now();
 
@@ -428,6 +428,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           throw new JobRollbackSignal(scoped.result);
         }
 
+        // The point of no return: one tick, so a timeout and the COMMIT are exclusive.
+        signal?.throwIfAborted();
+        onCommitting?.();
         return scoped;
       }, signal);
     } catch (error) {
@@ -439,7 +442,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       throw error;
     }
-    onCommitted?.();
 
     for (const entry of postCommitInvalidations) {
       this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);

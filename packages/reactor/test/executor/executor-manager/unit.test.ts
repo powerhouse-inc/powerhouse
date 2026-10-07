@@ -237,9 +237,9 @@ describe("SimpleJobExecutorManager", () => {
         expect(await runOne(timed, "job-uncommitted")).toBe(JobStatus.FAILED);
       });
 
-      it("never fails a job whose commit landed before the timeout", async () => {
-        const timed = timedManager((job, _signal, onCommitted) => {
-          onCommitted?.();
+      it("never fails a job past its point of no return", async () => {
+        const timed = timedManager((job, _signal, onCommitting) => {
+          onCommitting?.();
           return new Promise((resolve) =>
             setTimeout(
               () => resolve({ job, success: true, duration: 150 }),

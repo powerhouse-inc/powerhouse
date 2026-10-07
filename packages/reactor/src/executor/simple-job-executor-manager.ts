@@ -184,7 +184,8 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
 
     // execute the job with a timeout signal; race ensures the timeout fires
     // even if the executor hangs on a call that does not check the signal.
-    // A committed job is never timed out: failing it would invite a resubmit.
+    // The timer is disarmed just before COMMIT is issued: a committed job is
+    // never timed out, since failing it would invite a resubmit.
     const timeout = new AbortController();
     const timer = setTimeout(() => {
       timeout.abort(

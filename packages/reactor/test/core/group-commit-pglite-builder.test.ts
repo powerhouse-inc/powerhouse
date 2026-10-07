@@ -7,9 +7,16 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
-import { JobExecutorEventTypes } from "../../src/executor/types.js";
+import { ReactorEventTypes } from "../../src/events/types.js";
+import {
+  JobExecutorEventTypes,
+  type JobStartedEvent,
+} from "../../src/executor/types.js";
 import { JobStatus } from "../../src/shared/types.js";
-import type { GroupCommitPGliteInstance } from "../../src/storage/kysely/group-commit-pglite-client.js";
+import {
+  GroupCommitPGliteClient,
+  type GroupCommitPGliteInstance,
+} from "../../src/storage/kysely/group-commit-pglite-client.js";
 import { createDocModelDocument } from "../factories.js";
 
 type Controlled = GroupCommitPGliteInstance & {
@@ -67,6 +74,7 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
   const modules: InProcessReactorModule[] = [];
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     for (const module of modules.splice(0)) {
       module.reactor.kill();
       await module.groupCommitStorage?.close().catch(() => undefined);
@@ -193,6 +201,89 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
     );
     expect(Date.now() - started).toBeGreaterThan(jobTimeoutMs);
     expect(seen).not.toContain(JobStatus.FAILED);
+  });
+
+  it("never fails a job whose commit queues behind a flush while its timer fires", async () => {
+    const pg = await openFresh();
+    const jobTimeoutMs = 2_100;
+    const module = await new ReactorBuilder()
+      .withDocumentModelSources(MODELS)
+      .withExecutorConfig({
+        signatureVerification: "log",
+        durabilityWaitMs: 2_000,
+        jobTimeoutMs,
+      })
+      .withGroupCommitPGlite({
+        pg,
+        onUnrecoverable: () => undefined,
+        onDiagnostic: () => undefined,
+        dialect: { statementTimeoutMs: 10_000, recoveryTimeoutMs: 10_000 },
+        client: { closeTimeoutMs: 500 },
+      })
+      .buildModule();
+    modules.push(module);
+
+    let jobStartedAt = 0;
+    let commitQueuedAt = 0;
+    let syncReleasedAt = 0;
+    let releaseSync: () => void = () => undefined;
+    let armed = false;
+    let startedJobId = "";
+    module.eventBus.subscribe(
+      JobExecutorEventTypes.JOB_STARTED,
+      (_type, event: JobStartedEvent) => {
+        jobStartedAt = Date.now();
+        startedJobId = event.job.id;
+        armed = true;
+      },
+    );
+    const exec = GroupCommitPGliteClient.prototype.exec;
+    vi.spyOn(GroupCommitPGliteClient.prototype, "exec").mockImplementation(
+      function (this: GroupCommitPGliteClient, sql: string) {
+        if (armed && sql.includes("__commit_guard")) {
+          armed = false;
+          commitQueuedAt = Date.now();
+          pg.syncHold = new Promise((resolve) => {
+            releaseSync = () => {
+              syncReleasedAt = Date.now();
+              resolve();
+            };
+          });
+          setTimeout(
+            () => releaseSync(),
+            jobStartedAt + jobTimeoutMs + 300 - Date.now(),
+          );
+          // Takes the gate in this tick, so the COMMIT below queues behind it.
+          this.flush().catch(() => undefined);
+        }
+        return exec.call(this, sql);
+      },
+    );
+    const writeReadyAt: number[] = [];
+    module.eventBus.subscribe(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event: { jobId: string }) => {
+        if (event.jobId === startedJobId) writeReadyAt.push(Date.now());
+      },
+    );
+    const job = await module.reactor.create(createDocModelDocument());
+
+    const seen = new Set<JobStatus>();
+    await vi.waitFor(
+      async () => {
+        const info = await module.reactor.getJobStatus(job.id);
+        seen.add(info.status);
+        expect([JobStatus.READ_READY, JobStatus.FAILED]).toContain(info.status);
+      },
+      { timeout: 8_000, interval: 20 },
+    );
+    expect(startedJobId).toBe(job.id);
+    expect(commitQueuedAt).toBeGreaterThan(0);
+    expect(commitQueuedAt - jobStartedAt).toBeLessThan(jobTimeoutMs);
+    expect(seen).not.toContain(JobStatus.FAILED);
+    expect(syncReleasedAt - jobStartedAt).toBeGreaterThan(jobTimeoutMs);
+    expect(writeReadyAt).toHaveLength(1);
+    expect(writeReadyAt[0]).toBeGreaterThanOrEqual(syncReleasedAt);
   });
 
   it("refuses an unbounded durability wait", async () => {
