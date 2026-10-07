@@ -1649,6 +1649,7 @@ export class WorkflowRuntimeService {
   async onDocumentsPurged(
     markers: OperationWithContext[],
   ): Promise<ErasedRuns> {
+    this.throwIfClosed();
     const documentIds = [
       ...new Set(markers.map((marker) => marker.context.documentId)),
     ];
@@ -1681,9 +1682,10 @@ export class WorkflowRuntimeService {
   // journal write for every matched fire are awaited; execution is not, so
   // runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
-    if (this.closed) return;
+    this.throwIfClosed();
     const hints = collectLifecycleParentHints(operations);
     for (const { operation, context } of operations) {
+      this.throwIfClosed();
       if (context.scope !== DOCUMENT_SCOPE && context.scope !== "global") {
         continue;
       }
@@ -2191,6 +2193,16 @@ export class WorkflowRuntimeService {
   // Set by shutdown. A runtime that lost the workflow singleton is shut down
   // while its reactor keeps serving, so nothing may start a run after it.
   private closed = false;
+
+  // For the read model: a delivery refused here stays below its cursor, so
+  // the next owner replays it rather than this runtime acknowledging it.
+  private throwIfClosed(): void {
+    if (this.closed) {
+      throw new Error(
+        "This workflow runtime has shut down; the operations are left for the next owner",
+      );
+    }
+  }
 
   // Teardown for the whole runtime, driven by the host. The run children
   // outlive the reactor otherwise — they are forked, not

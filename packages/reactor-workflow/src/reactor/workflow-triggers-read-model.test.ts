@@ -12,6 +12,7 @@ import type { OperationWithContext } from "document-model";
 import { sql, type Kysely } from "kysely";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import {
   WORKFLOW_TRIGGERS_READ_MODEL,
@@ -93,7 +94,11 @@ function settledAt(settledThrough: number): ISettledWatermark {
   };
 }
 
-function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
+function readModel(
+  pages: OperationWithContext[][] = [],
+  settledThrough = 0,
+  real?: WorkflowRuntimeService,
+) {
   const batches: OperationWithContext[][] = [];
   const onOperations = vi.fn((operations: OperationWithContext[]) => {
     batches.push(operations);
@@ -102,10 +107,12 @@ function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
   const onDocumentsPurged = vi.fn((_markers: OperationWithContext[]) =>
     Promise.resolve(null),
   );
-  const runtime = {
-    onOperations,
-    onDocumentsPurged,
-  } as unknown as WorkflowRuntimeService;
+  const runtime =
+    real ??
+    ({
+      onOperations,
+      onDocumentsPurged,
+    } as unknown as WorkflowRuntimeService);
   const getSinceOrdinal = pagedIndex(pages);
   const stored = pages.flat();
   const getByOrdinals = vi.fn((wanted: readonly number[]) =>
@@ -197,6 +204,20 @@ describe("WorkflowTriggersReadModel", () => {
 
     await model.sweep(99, [11, 99]);
     expect(await cursor()).toBe(99);
+  });
+
+  // Shut down for losing the singleton: what it is handed is the next owner's
+  // to fire, so it must stay below the cursor rather than be acknowledged.
+  it("leaves the cursor below operations a shut-down runtime is handed", async () => {
+    const runtime = testRuntime();
+    runtime.shutdown();
+    const { model } = readModel([[op(11), op(12)]], 10, runtime);
+    await model.init();
+
+    await expect(model.indexOperations([op(11)])).rejects.toThrow("shut down");
+    await model.sweep(12, [11, 12]);
+
+    expect(await cursor()).toBe(10);
   });
 
   it("catches up from the stored cursor on a later start", async () => {

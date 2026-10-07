@@ -403,17 +403,20 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
     expect(fired).toHaveLength(0);
   });
 
+  // Thrown, not swallowed: the read model must not count them as applied.
   it("fires nothing once the runtime has shut down", async () => {
     await register("wf-created", "document-created", {});
     service.shutdown();
-    await service.onOperations([
-      documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
-        documentId: DOC,
-        model: TODO_TYPE,
-        name: "Groceries",
-        version: 0,
-      }),
-    ]);
+    await expect(
+      service.onOperations([
+        documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
+          documentId: DOC,
+          model: TODO_TYPE,
+          name: "Groceries",
+          version: 0,
+        }),
+      ]),
+    ).rejects.toThrow("shut down");
     expect(fired).toHaveLength(0);
   });
 });
