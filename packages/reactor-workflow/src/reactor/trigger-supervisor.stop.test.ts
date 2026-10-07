@@ -374,6 +374,29 @@ describe("TriggerSupervisor after stop()", () => {
     });
   });
 
+  it("journals an item with no dedupe key before firing it", async () => {
+    const a = `${prefix}-a`;
+    const runIds: (string | undefined)[] = [];
+    supervisor = build(scoped(), {
+      fire: (_workflowId, _payload, _kind, runId) => {
+        runIds.push(runId);
+      },
+    });
+    intercept = (request) =>
+      Promise.resolve(
+        request.hook === "run" ? result({ output: [{ from: a }] }) : undefined,
+      );
+    await supervisor.upsert(piece(a));
+    await due(a);
+
+    await supervisor.tick();
+
+    expect(runIds).toHaveLength(1);
+    const run = await store.getRun(runIds[0]!);
+    expect(run?.status).toBe("PENDING");
+    expect(JSON.parse(run!.trigger_payload!)).toEqual({ from: a });
+  });
+
   // stop() lands between the claim's write and the fire.
   describe("an item whose dedupe key is claimed as it stops", () => {
     function holdClaim() {
