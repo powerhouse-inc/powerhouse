@@ -43,6 +43,7 @@ interface BoardRow {
   document: WorkflowDocument;
   id: string;
   name: string;
+  description?: string | null;
   status: string;
   trigger: string;
   runs: RunRecord[];
@@ -81,6 +82,7 @@ export function WorkflowBoard(props: {
         document,
         id: document.header.id,
         name: state.name || document.header.name || "Untitled workflow",
+        description: state.description,
         status: state.status,
         trigger: describeTrigger(state.trigger),
         runs: workflowRuns,
@@ -148,12 +150,20 @@ export function WorkflowBoard(props: {
                       <span title={health.label} className="flex">
                         <StatusDot tone={health.tone} hollow={health.hollow} />
                       </span>
-                      <span className="truncate text-[15px] font-semibold text-foreground">
+                      <span className="max-w-[60%] shrink-0 truncate text-[15px] font-semibold text-foreground">
                         {row.name}
                       </span>
                       {row.status !== "ENABLED" ? (
                         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                           {statusLabel(row.status)}
+                        </span>
+                      ) : null}
+                      {row.description ? (
+                        <span
+                          title={row.description}
+                          className="ml-1 min-w-0 truncate text-[13px] text-muted-foreground"
+                        >
+                          {row.description}
                         </span>
                       ) : null}
                     </span>
