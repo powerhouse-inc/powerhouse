@@ -4,7 +4,6 @@ import {
   DriveCollectionId,
   HardenedPGliteDialect,
   InMemoryQueue,
-  type IQueue,
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -121,7 +120,9 @@ let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
 let reactorInstance: IReactor | undefined;
-let reactorQueue: IQueue | undefined;
+// The concrete queue: a deploy's drain reads `paused`, which IQueue lacks.
+let reactorQueue: InMemoryQueue | undefined;
+let syncStopped: Promise<void> | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
@@ -274,13 +275,25 @@ async function closeUnbounded(
 
 const RETIRE_STOP_MS = 5_000;
 
+// Once only; the reactor's stop awaits the channels it closes.
+function stopSync(): void {
+  const manager = syncManager;
+  syncManager = undefined;
+  try {
+    syncStopped = manager?.shutdown().completed ?? syncStopped;
+  } catch (error) {
+    console.error("[reactor.worker] stopping sync failed:", error);
+  }
+}
+
 // A poisoned statement can hold up the reactor's stop, so it is bounded.
 async function stopReactorWithin(timeoutMs: number): Promise<void> {
+  stopSync();
   const stopping = Promise.allSettled([
-    syncManager?.shutdown().completed,
+    syncStopped,
     reactorInstance?.kill().completed,
   ]);
-  syncManager = undefined;
+  syncStopped = undefined;
   reactorInstance = undefined;
   reactorQueue = undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -299,6 +312,7 @@ async function stopReactorWithin(timeoutMs: number): Promise<void> {
 const stores = createWorkerStores({
   locks: storeLocks,
   stopReactor: () => stopReactorWithin(RETIRE_STOP_MS),
+  stopSync,
   queue: () => reactorQueue,
   relational: () => ({
     namespace: owned.relationalNamespace,
@@ -323,7 +337,8 @@ const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
-  onRetire: (reason) => stores.retire(reason),
+  onRetire: () => stores.retire(),
+  drainBeforeReload: () => stores.drain(),
   onAdminRestart: () =>
     host.retireAndReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: () =>
@@ -473,7 +488,8 @@ const host = new ReactorHost({
         : undefined;
       syncManager = module.reactorModule?.syncModule?.syncManager;
       reactorInstance = module.reactorModule?.reactor;
-      reactorQueue = module.reactorModule?.queue;
+      const queue = module.reactorModule?.queue;
+      reactorQueue = queue instanceof InMemoryQueue ? queue : undefined;
       const rm = module.reactorModule;
       if (rm) {
         inspectorQueue =

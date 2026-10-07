@@ -1,4 +1,3 @@
-import { isFingerprintMismatchReload } from "@powerhousedao/reactor-browser/rpc";
 import { closeWithin } from "./close-within.js";
 import type { StoreLocks } from "./store-lock.js";
 
@@ -8,17 +7,20 @@ export type StoreCloser = (store: Closable | undefined) => Promise<boolean>;
 
 export type OpenStore = { namespace?: string; store?: Closable };
 
-type Queue = { isDrained: boolean };
+type Queue = { readonly isDrained: boolean; readonly paused?: boolean };
 
 const DEPLOY_DRAIN_MS = 10_000;
 
-// Polls: blocking the queue would fail inbound sync enqueues.
+// Polls, so a pause mid-drain ends it too. A paused queue is not waited on:
+// its jobs are held by the operator, not in flight.
 async function drainWithin(
   queue: () => Queue | undefined,
   ms: number,
 ): Promise<void> {
   const deadline = Date.now() + ms;
-  while (queue()?.isDrained === false) {
+  for (;;) {
+    const current = queue();
+    if (!current || current.isDrained || current.paused) return;
     if (Date.now() >= deadline) {
       console.warn(`[connect] reactor queue did not drain within ${ms}ms`);
       return;
@@ -31,6 +33,8 @@ type Options = {
   locks: StoreLocks;
   /** Stops the reactor and sync manager, bounded. */
   stopReactor: () => Promise<void>;
+  /** Stops sync enqueueing inbound jobs. */
+  stopSync: () => void;
   /** The running reactor's job queue; undefined once it is stopped. */
   queue: () => Queue | undefined;
   /** How long a deploy's retirement waits for accepted jobs. */
@@ -60,6 +64,7 @@ export type AdminFlow = {
 export function createWorkerStores({
   locks,
   stopReactor,
+  stopSync,
   queue,
   drainMs = DEPLOY_DRAIN_MS,
   relational,
@@ -109,15 +114,14 @@ export function createWorkerStores({
 
   return {
     releaseAfterBootFailure: () => serial(releaseAll),
-    /**
-     * A retired worker must stop writing before a fresh one opens the same
-     * stores; a deploy's retirement first lets accepted jobs run, bounded.
-     */
-    retire: (reason?: string): Promise<void> =>
+    /** Lets the jobs the tabs had accepted run before a deploy's reload, bounded. */
+    drain: async (): Promise<void> => {
+      stopSync();
+      await drainWithin(queue, drainMs);
+    },
+    /** A retired worker must stop writing before a fresh one opens the same stores. */
+    retire: (): Promise<void> =>
       serial(async () => {
-        if (reason !== undefined && isFingerprintMismatchReload(reason)) {
-          await drainWithin(queue, drainMs);
-        }
         await stopReactor();
         (await closeAll(close, true))();
       }),
