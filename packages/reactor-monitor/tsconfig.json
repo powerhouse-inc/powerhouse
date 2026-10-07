@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "outDir": "./.tsbuild",
+    "types": ["vitest/globals"]
+  },
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-attachments"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    },
+    {
+      "path": "../workflow"
+    }
+  ],
+  "exclude": ["dist", "node_modules"]
+}

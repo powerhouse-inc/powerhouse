@@ -13,6 +13,7 @@ import type {
   IRelationalDb,
   ProcessorFactory,
 } from "@powerhousedao/shared/processors";
+import type { IReactorInspectionSource } from "./graphql/inspection/source.js";
 import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
@@ -76,6 +77,17 @@ export type API = {
   /** The read-model relational store, for the same host-composed component:
    * its tables belong in this database and nothing else hands one over. */
   relationalDb: IRelationalDb;
+  /**
+   * The inspection surface this host serves, when it serves one (it needs the
+   * in-process reactor module).
+   *
+   * Handed back for the same reason `authorizationService` and `relationalDb`
+   * are: a component the host composes AFTER boot has facts the inspection
+   * report is wrong without. The workflow runtime is the one — it calls
+   * `setWorkflowsComposed(true)` once it exists, so a client reads the
+   * composed-runtime fact rather than a default.
+   */
+  inspection?: IReactorInspectionSource;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,
    * closes WebSocket and HTTP servers, destroys knex pools, and closes any

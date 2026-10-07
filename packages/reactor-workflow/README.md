@@ -78,6 +78,58 @@ rather than restated here.
   the text of an HTML error page reach the run journal. Redaction runs last,
   over the formatter's output as well.
 
+## Placement: one reactor runs workflows
+
+**Workflow execution is a singleton pinned to one reactor.** The engine forks
+child processes, so no browser reactor can compose it; the hazard a guard is
+needed for is two Node replicas over one run journal. It is not theoretical:
+opening the journal runs `recoverOrphanedRuns` and `recoverAbandonedRuns`,
+which close out every RUNNING and PENDING run that is not in **this** process's
+in-flight set — so a second replica booting marks the first one's live runs
+FAILED, and then both arm every trigger and both poll it.
+
+The guard is a durable claim on the journal's own database
+(`reactor/singleton-lease.ts`, one row in `singleton_lease`), taken by the host
+**before** the runtime is built, and refused by name when another live process
+holds it (`WorkflowSingletonConflictError`). It replaces the
+`trigger_state.lease_owner` / `lease_expires_at` columns, which were never
+written with a value and were per trigger — the wrong granularity, since the
+sweeps and the supervisor are per process.
+
+- The lease is valid for 60s and renewed every 20s, from `start()`, so a host
+  that threw between composing and starting leaves it to expire rather than
+  holding it forever. `stop()` releases it, so the next boot owns workflows
+  immediately instead of waiting out the TTL.
+- An **expired** lease is taken over: a killed process does not lock workflows
+  out until a human intervenes.
+- A heartbeat that finds the lease taken logs an **error** naming the owner and
+  stops renewing. It does not kill the process: a database hiccup must not
+  become an outage, and what the operator needs is to be told that this reactor
+  is now a second writer.
+- **A refused claim does not take the API down.** The host boots WITHOUT the
+  workflow runtime and warns, naming the current owner: no trigger fires here
+  and the workflow GraphQL face is absent, while inspection, GraphQL, sync, MCP
+  and every drive serve normally. The one thing this process must not do is run
+  workflows against a journal a live process owns; aborting the whole boot over
+  it turned "not allowed to run one component" into an outage — and, with a
+  random owner name, into a crash loop for the TTL after every unclean kill.
+  Workflows come back on the next boot once the lease is claimable, which under
+  a stable owner is immediately.
+- **The default owner is stable**: `<hostname>/<fingerprint of the journal's
+  storage location>`. So one deployment slot restarting re-claims its OWN lease
+  at once rather than waiting out the TTL for a killed process's claim — the
+  common case, and it has to be instant. A genuine second replica still differs
+  by hostname or by the journal it points at. The storage location is hashed,
+  never printed: it can be a Postgres URL with credentials, and the owner name
+  goes into a database row and every log line about the lease. The case a stable
+  name cannot separate is two processes on ONE host over ONE journal, which is a
+  misconfiguration those two already share — and it is not silent: the loser's
+  heartbeat finds the lease taken and says so by name.
+- `PH_WORKFLOWS_SINGLETON_OWNER` is still the operator's contract and overrides
+  the derived name. Set it per deployment slot when the hostname is not stable
+  (a fresh container id each deploy) or when two slots share a journal on
+  purpose.
+
 ## How the host composes it
 
 The engine names no host type. `WorkflowRuntimeHostDeps` (`src/reactor/host.ts`)
@@ -101,6 +153,38 @@ gives it means an operation written while the runtime is down catches up on the
 next boot instead of vanishing; a fresh registration starts at head, so history
 is never replayed. `onOperations` journals a matched fire before it returns, so
 the cursor never passes an event that is not yet durable.
+
+**A fire that crashes the reactor is bounded.** The durable cursor is what
+makes an operation written while the runtime was down catch up — and it is also
+what re-delivers, on every boot, an operation whose fire takes the process down
+before anything is journaled (the EPIPE boot loop). So the dedupe row counts
+**deliveries**, committed before the risky work, which is the only way a crash
+that leaves nothing behind can be counted at all:
+
+- A delivery whose claim already holds a run id is an ordinary duplicate and is
+  suppressed, as before.
+- A delivery whose claim holds **no** run id is retried: the previous attempt
+  died before it journaled anything, and losing a legitimate trigger to a
+  transient store failure would be worse than the loop.
+- Past `FIRE_CRASH_BUDGET` (3) such deliveries the fire is **abandoned**, with
+  a FAILED run naming the loop — visible, and rerunnable once the cause is
+  fixed, instead of a reactor that crashes on every boot and says nothing.
+
+The **count** and the **claim** are deliberately different writes. Counting is
+its own committed transaction, because a delivery that leaves nothing behind
+has to be countable. Claiming is `run_id`, set under a `WHERE run_id IS NULL`
+guard in the SAME transaction as the run row: the guard takes the row's lock,
+so of two concurrent deliveries of one operation the second blocks until the
+first commits and then matches no row — exactly one delivery fires, and a crash
+in between rolls the claim back with the run it failed to journal. Were the
+bump to ride along inside the claim transaction, a run insert that takes the
+process down would roll the count back too and the budget could never reach its
+limit.
+
+Log writes on the piece-log and run-failure paths are truncated before the
+write (`MAX_LOG_LINE_CHARS`): a piece error carrying an HTML error page is a
+multi-megabyte write to a pipe that may be blocked, and bounding the write is
+cheaper than handling the throw.
 
 A workflow document's `DELETE_DOCUMENT` disarms it as disabling does: its
 deliveries stop once the operation is indexed, a piece trigger's `onDisable`
@@ -244,6 +328,112 @@ Which port a step takes changes which steps run, never the order steps are
 reached in. The studio's step outline (`stepOutline` in the workflow editor)
 lists steps in this order.
 
+## The workflow policy
+
+A workflow document carries a `policy` block, and every field in it was schema
+and editor only until W3.3: nothing read `concurrency`, `runTimeoutSeconds`,
+`defaultRetry` or `onFailure`, so an author who set them got no behaviour and
+no warning. They are enforced now, and the fields that are **not** are marked
+`NOT YET ENFORCED` in the document model's own SDL rather than left to look
+live. `reactor/policy.ts` resolves the block; a definition with **no** policy
+at all enforces nothing, which is what every legacy and hand-built definition
+has.
+
+| Field                      | Where                     | Behaviour                                                                                             |
+| -------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `concurrency`              | `reactor/run-gate.ts`     | SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently          |
+| `maxParallelRuns`          | `reactor/run-gate.ts`     | Bounds PARALLEL; null is unbounded. SINGLETON and QUEUE are 1 by definition                           |
+| `runTimeoutSeconds`        | `pieces/engine/coordinator.ts` | A run deadline from FIRING time, checked between steps and bounding every retry wait; expiry ends the run CANCELLED |
+| `defaultRetry`, step `retry` | `pieces/engine/retry.ts` | Attempts, backoff, delays and `retryOn`; attempts land on the step's journal row                      |
+| `onFailure`                | `reactor/service.ts`      | PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing                               |
+| `maxSuspensionDays`        | —                         | **Not enforced**: nothing suspends. Waitpoints, `run.pause` and `generateResumeUrl` all throw         |
+| `retainRunsDays`           | —                         | **Not enforced** per workflow; `PH_WORKFLOWS_RUN_RETENTION_DAYS` is the journal-wide control           |
+| `journalAsDocument`        | —                         | **Not enforced**: the journal is relational, and there is no run document model                       |
+| step `idempotencyKeyExpression` | —                    | **Not enforced**: a fire dedupes on its trigger operation or a trigger item's `_dedupe_key`           |
+
+**The document factory's defaults are `concurrency: QUEUE` and
+`onFailure: PARK`**, so enforcing them is a behaviour change for every workflow
+created from it: runs of one workflow now serialise, and a terminal failure
+takes the trigger out of the supervisor's ENABLED set until the workflow is
+re-published or re-enabled. That is what the fields have said since the first
+schema; what changed is that they are true.
+
+- **Concurrency is process-local**, which is exactly right: workflow execution
+  is a singleton pinned to one reactor (see **Placement** above), so this
+  process is the deployment's whole run set. A firing SINGLETON drops is
+  journaled as a CANCELLED run rather than discarded — a firing that vanished
+  is indistinguishable from a trigger that never fired.
+- **The QUEUE is bounded**, at `PH_WORKFLOWS_MAX_QUEUED_FIRINGS` waiting
+  firings per workflow (100). QUEUE means latency, not failure — but an
+  unbounded queue means neither: a document-event trigger on a busy type
+  enqueues faster than the workflow runs, every waiter holds its payload and
+  its promise, and the lane grows until the process dies. A firing that
+  overflows the depth is journaled CANCELLED exactly as a SINGLETON refusal is.
+- **The run deadline starts at FIRING time, not at admission.** Queue time is
+  part of the time the run took: a firing that waits past its
+  `runTimeoutSeconds` for a slot is CANCELLED without executing a single step,
+  rather than running its side effect long after the timeout that was supposed
+  to bound it. The document read counts too.
+- **PARKED is terminal, and a restart does not clear it.** The park is a
+  runtime override of the document's enabled-ness: parking writes the trigger
+  row, never the document, so the document still says ENABLED and re-arming
+  from it — which is what a reboot does for every workflow it finds — would
+  un-park the broken workflow and resume firing it. A PARKED row therefore
+  stays PARKED across a restart. Only two things clear it: a **re-publish that
+  changes the trigger** (its `config_hash` differs), and a **disable then
+  re-enable** (disabling writes DISABLED over the park, and the status lives on
+  the row, so this works across a restart too). An unresolvable piece leaves a
+  PARKED row alone as well, rather than turning it ERROR and letting the ERROR
+  row's own retry arm it.
+- **`retryOn` empty means every error is retryable.** The schema reads "error
+  classes that are retryable; everything else fails terminally on attempt 1",
+  but the shipped default is an empty list, and taking that literally would
+  make every `maxAttempts` a lie. A non-empty entry matches the error's class
+  name exactly or appears anywhere in its message, case-insensitively, so both
+  `["HostCallTimeoutError"]` and `["429"]` work.
+- `maxAttempts` is clamped to 10 and one backoff wait to 5 minutes: each
+  attempt re-runs a side effect and holds the run's worker slot.
+- **Only the attempt is retried, never the resolution.** A step's input is
+  resolved once, before the first attempt, because resolution reads the scope
+  and nothing an attempt changes: an `UnresolvedReferenceError` names a key
+  that will not exist on attempt five either. A resolution failure fails the
+  step immediately, with no backoff waits spent on it.
+- **A retry wait is clipped to the run deadline, and the deadline wins.** A
+  backoff longer than the time left is served out only as far as the deadline,
+  and then the step gets no further attempt: running one would be a side effect
+  after the run was already over. The attempt that failed is still journaled,
+  no error port is taken — nothing downstream may run after the run has ended —
+  and the run reads CANCELLED, since the clock stopped it rather than the
+  workflow failing.
+- A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
+  block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
+- An **INDETERMINATE** step is never retried and never replayed: a retry would
+  be a second write. See **Indeterminate steps** below.
+
+## Indeterminate steps
+
+A piece's call of its host is capped (`PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`, 10s,
+raised to the step's own `timeoutSeconds` when that is longer). A **writing**
+call that times out — `store.put`, `store.delete`, `reactor.submit`,
+`reactor.submitCreate`, `reactor.wait` — may well have been committed, so the
+step records `INDETERMINATE` rather than FAILED: reporting a failure for a
+write that landed is a claim nobody can stand behind, and it was happening
+(the 10s cap against a dispatch under load). A read that times out is an
+ordinary failure.
+
+An INDETERMINATE step **takes no port**, so no error branch claims to have
+handled it, and the run fails naming the state. It is not retried, and a rerun
+does not replay it — only SUCCEEDED and REPLAYED steps replay. Workflow Studio
+renders it in its own tone.
+
+**Design-time tests carry it too.** `testStep` reports
+`SUCCEEDED | FAILED | INDETERMINATE`, a trigger test whose hook made an
+unconfirmed host call records INDETERMINATE, and such a test run is journaled
+FAILED rather than green — the same answer a real run gives. An INDETERMINATE
+last test is not a sample either: a draft step reading it is told to test that
+block again, since it has no confirmed output to stand on. Collapsing the three
+states to two is how a write-unconfirmed test came to read as a pass.
+
 ## Expressions
 
 Every string in a step's config is a template, nested strings in objects and
@@ -294,21 +484,62 @@ explanation behind it.
 | `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` | unset              | Addresses or CIDRs a piece may reach, widening the default policy (`reactor/lib.ts`)      |
 | `PH_WORKFLOWS_RUN_CONCURRENCY`        | `4`                | Runs executing at once; one forked node child each (`worker/pool.ts`)                     |
 | `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                | Runs that may wait for a slot before new ones are refused; `0` waits without limit        |
+| `PH_WORKFLOWS_MAX_QUEUED_FIRINGS`     | `100`              | Firings of ONE workflow that may wait for its concurrency slot; past it a firing is journaled CANCELLED (`reactor/run-gate.ts`) |
 | `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`            | Cadence for a polling trigger that names none of its own                                  |
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
 | `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
-| `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | unset (off)        | Deletes finished runs older than this many days (`reactor/run-retention.ts`)              |
+| `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer (`activepieces/context/limits.ts`) |
+| `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
+| `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<journal hash>` | Names this process as the workflow singleton's owner; the default is stable per slot, so a restart re-claims at once (`reactor/singleton-lease.ts`) |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.
 
-**Run retention is off by default**: the run journal keeps every run. With
-`PH_WORKFLOWS_RUN_RETENTION_DAYS` set, a sweep runs when the journal opens and
-hourly after, deleting runs that finished before the window together with their
-step executions and run documents, 500 runs per transaction. Unfinished runs
-are never pruned. The same sweep drops trigger dedupe keys older than the
-longest dedupe TTL (24h); a deleted workflow's keys go when it is deleted.
+**Run retention is ON by default, at 30 days.** It used to be opt-in, which
+meant unbounded growth on every host that did not know to set the variable —
+measured at 743MB in three days. A journal is diagnostic, so a default window
+is the honest setting and "keep everything" is a deliberate choice:
+`PH_WORKFLOWS_RUN_RETENTION_DAYS=0` (or `off`, `never`, `false`, `none`) turns
+it off. A value that is not a positive number falls back to the **default**
+rather than to off — a typo must not remove the bound the variable exists to
+set.
+
+A sweep runs when the journal opens and hourly after, deleting runs that
+finished before the window together with their step executions and run
+documents, 500 runs per transaction. Unfinished runs are never pruned. The same
+sweep drops trigger dedupe keys older than the longest dedupe TTL (24h); a
+deleted workflow's keys go when it is deleted.
+
+**Row width is capped too**: a step's input and output, and a run's trigger
+payload, are each truncated past `STEP_PAYLOAD_MAX_BYTES` (256KB) to a marker
+holding the original byte count and the head of the serialized JSON. The marker
+is keyed on a **reserved** key whose value is a versioned sentinel, so a
+payload cannot be mistaken for one — the predicate used to duck-type
+`{truncated, bytes, prefix}`, which is exactly the shape of a truncation report
+a piece might legitimately return, and being mistaken for a marker makes a
+side-effectful step re-run. Rows written before the sentinel are still read, by
+their exact key set.
+
+A SUCCEEDED step whose output was truncated **replays** on rerun rather than
+re-executing: it had side effects. Its output is explicitly unavailable, so a
+later step that reads it fails the rerun by name (`UnavailableValueError`)
+instead of being handed a marker.
+
+The fact **survives further reruns**. The rerun's own REPLAYED row journals the
+truncation marker again (the record's `journaledOutput`), so a second rerun of
+the rerun still reads a marker rather than a NULL it would take for an ordinary
+replay with no output. The record handed back to a caller keeps `output`
+absent either way: a marker must never sit where real data goes.
+
+The refusal is **deep, and on every route out of resolution**. The unavailable
+wrapper carries its reason on a symbol, which anything that serializes it drops
+— so a path that lands one level ABOVE the wrapper (`{{steps.charge}}`, or a
+bare `{{steps}}`) would have handed the piece an ordinary-looking object whose
+`output` became `{}` across the worker boundary, reason and all. Resolution
+therefore checks the value it is about to return at any depth, and
+`resolveStepInput` checks the whole resolved input again before it crosses to
+the piece.
 
 **The secrets key is not optional in production.** Unset, `loadKey` generates
 `./.ph/secrets.key` — relative to the working directory, like the bundle cache

@@ -69,6 +69,10 @@ export interface StepExecutionRow {
   version_note: string | null;
   // Hash of the step definition it ran from; rerun replays only on a match.
   config_hash: string | null;
+  // How many times the block ran, when its retry policy let it run more than
+  // once. Null for a single attempt, which is what every row written before
+  // retry was enforced holds.
+  attempts: number | null;
 }
 
 // A document a run's steps were handed through the reactor port.
@@ -82,7 +86,10 @@ export interface TriggerStateRow {
   piece_name: string;
   trigger_name: string;
   config_hash: string;
-  status: string; // ENABLED | DISABLED | ERROR
+  // ENABLED | DISABLED | ERROR | PARKED. PARKED is terminal: it is a runtime
+  // override of the document's enabled-ness, and only a re-publish that
+  // changes the trigger or a disable/re-enable clears it — never a restart.
+  status: string;
   // Vestigial: hook state lives in piece_store now, and this is written "{}"
   // and never read. Rolling back past the migration re-delivers; see up().
   store_state: string;
@@ -91,9 +98,6 @@ export interface TriggerStateRow {
   last_poll_at: string | null;
   last_error: string | null;
   consecutive_failures: number;
-  // Written for rolling-deploy overlap; not enforced yet.
-  lease_owner: string | null;
-  lease_expires_at: string | null;
   updated_at: string;
   // The piece version the trigger armed with; null for a host-fed trigger.
   piece_version: string | null;
@@ -136,7 +140,41 @@ export interface TriggerDedupeRow {
   dedupe_key: string;
   run_id: string | null;
   created_at: string;
+  // How many times this operation has been DELIVERED. Counted before the run
+  // is journaled, so a fire that takes the process down before the write
+  // lands is still countable on the next boot — which is what bounds the
+  // crash-replay loop (see claimAndEnqueueRun). Null on rows written before
+  // the budget existed.
+  attempts: number | null;
 }
+
+/**
+ * How many times one operation may be re-delivered without ever having
+ * journaled a run before it is abandoned.
+ *
+ * Three, not one: a delivery can fail to journal for reasons that are nothing
+ * to do with the fire — a store mid-recreate, a transient database error — and
+ * losing a legitimate trigger to the first hiccup would be worse than the loop
+ * this bounds. Three deliveries of the same operation that never once reach a
+ * run row is not a hiccup.
+ */
+export const FIRE_CRASH_BUDGET = 3;
+
+export function abandonedFireError(attempts: number): string {
+  return (
+    `This operation was delivered ${attempts} times and never once got as ` +
+    "far as journaling a run, so the reactor was taken down before the " +
+    "write landed each time. It is abandoned rather than replayed on every " +
+    "boot. Fix the cause, then rerun this run to fire the workflow with the " +
+    "same payload."
+  );
+}
+
+/** What a fire claim resolved to; see {@link WorkflowRunStore.claimAndEnqueueRun}. */
+export type FireClaim =
+  | { outcome: "claimed"; runId: string }
+  | { outcome: "duplicate" }
+  | { outcome: "abandoned"; attempts: number };
 
 // One key a piece wrote through `ctx.store`, from an action or a trigger hook
 // alike — the same table for both, as Activepieces has.
@@ -232,8 +270,9 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("last_poll_at", "text")
     .addColumn("last_error", "text")
     .addColumn("consecutive_failures", "integer", (col) => col.notNull())
-    .addColumn("lease_owner", "text")
-    .addColumn("lease_expires_at", "text")
+    // No lease columns: placement is a PROCESS-level claim, not per trigger.
+    // See reactor/singleton-lease.ts; an existing table keeps its (always
+    // null) lease_owner/lease_expires_at, which nothing reads or writes.
     .addColumn("updated_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();
@@ -314,6 +353,27 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
         // column already exists
       }
     }
+  }
+  // Additive migration for the crash-replay budget: how many times one
+  // operation has been delivered. Defaulted, so a row written before this
+  // counts as its first delivery rather than as none.
+  try {
+    await db.schema
+      .alterTable("trigger_dedupe")
+      .addColumn("attempts", "integer", (col) => col.notNull().defaultTo(1))
+      .execute();
+  } catch {
+    // column already exists
+  }
+
+  // Additive migration for enforced step retry: how many times a step ran.
+  try {
+    await db.schema
+      .alterTable("step_execution")
+      .addColumn("attempts", "integer")
+      .execute();
+  } catch {
+    // column already exists
   }
   try {
     await db.schema
@@ -832,17 +892,35 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
 // journaling whole multi-megabyte documents, where the first kilobytes carry
 // everything a reader uses).
 //
-// This bounds row width only. Row count is bounded by the retention sweep
-// (run-retention.ts), which is off unless PH_WORKFLOWS_RUN_RETENTION_DAYS is
-// set — change either bound with the other in view.
+// This bounds row width only. Row COUNT is bounded by the retention sweep
+// (run-retention.ts), which defaults to 30 days — change either bound with the
+// other in view.
 export const STEP_PAYLOAD_MAX_BYTES = 256 * 1024;
 
 // What survives of an over-cap payload: the head of its serialized JSON.
 export const STEP_PAYLOAD_PREFIX_CHARS = 32 * 1024;
 
+/**
+ * The reserved key a truncation marker is recognised by, and its value.
+ *
+ * A marker has to be distinguishable from a legitimate payload that merely
+ * LOOKS like one, because a run whose output is mistaken for a marker is a
+ * step that silently re-executes on rerun. The original predicate duck-typed
+ * `{truncated: true, bytes: number, prefix: string}` (review backlog item 15),
+ * which any piece returning a truncation report of its own would match — and
+ * "did we truncate this?" is exactly the shape such a report takes.
+ *
+ * So the marker is keyed on a namespaced sentinel whose VALUE is a versioned
+ * magic string. A piece would have to emit that exact pair to collide, which
+ * is not something a payload produces by accident.
+ */
+export const TRUNCATED_PAYLOAD_KEY =
+  "@powerhousedao/reactor-workflow:runJournal";
+export const TRUNCATED_PAYLOAD_SENTINEL = "truncated-payload/v1";
+
 // The shape journaled in place of an over-cap payload.
 export interface TruncatedStepPayload {
-  truncated: true;
+  [TRUNCATED_PAYLOAD_KEY]: typeof TRUNCATED_PAYLOAD_SENTINEL;
   // Byte length of the serialized payload the prefix was cut from.
   bytes: number;
   prefix: string;
@@ -854,9 +932,31 @@ export interface TruncatedStepPayload {
   driveId?: string;
 }
 
-// True for a journaled value this store truncated. Rerun uses it to
-// re-execute a step instead of replaying a marker as the step's output, and
-// to refuse a rerun whose trigger payload survives only as a marker.
+// Every key a legacy marker could carry, and no others.
+const LEGACY_MARKER_KEYS: readonly string[] = [
+  "truncated",
+  "bytes",
+  "prefix",
+  "documentId",
+  "driveId",
+];
+
+/**
+ * True for a journaled value this store truncated.
+ *
+ * Two shapes are accepted and only one is written. New rows carry the reserved
+ * key, which a payload cannot produce by accident. Rows journaled before it
+ * carry the old `{truncated: true, bytes, prefix}`, and those still have to be
+ * recognised: reading one as data would re-run the side-effectful step that
+ * produced it, which is the whole bug.
+ *
+ * So the legacy branch is matched by its EXACT key set, not by duck-typing.
+ * `{truncated, bytes, prefix, source}` — a truncation report a piece might
+ * legitimately return, and the collision the review found — is no longer a
+ * marker. A payload whose keys are exactly the legacy marker's is still
+ * ambiguous, and nothing can resolve that for a row already written; the
+ * window is as narrow as the stored data allows.
+ */
 export function isTruncatedStepPayload(
   value: unknown,
 ): value is TruncatedStepPayload {
@@ -864,10 +964,13 @@ export function isTruncatedStepPayload(
     return false;
   }
   const record = value as Record<string, unknown>;
+  if (record[TRUNCATED_PAYLOAD_KEY] === TRUNCATED_PAYLOAD_SENTINEL) return true;
+  // LEGACY, read-only.
   return (
     record.truncated === true &&
     typeof record.bytes === "number" &&
-    typeof record.prefix === "string"
+    typeof record.prefix === "string" &&
+    Object.keys(record).every((key) => LEGACY_MARKER_KEYS.includes(key))
   );
 }
 
@@ -901,7 +1004,7 @@ function cappedPayload(value: unknown): string | null {
   const last = prefix.charCodeAt(prefix.length - 1);
   if (last >= 0xd800 && last <= 0xdbff) prefix = prefix.slice(0, -1);
   const marker: TruncatedStepPayload = {
-    truncated: true,
+    [TRUNCATED_PAYLOAD_KEY]: TRUNCATED_PAYLOAD_SENTINEL,
     bytes,
     prefix,
     ...topLevelDocumentIds(value),
@@ -930,7 +1033,18 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     block_name: step.blockName,
     status: step.status,
     input: cappedPayload(redact(step.input)),
-    output: cappedPayload(redact(referenceDocuments(step.output))),
+    // `journaledOutput` wins where it is set: the record has no output to give
+    // a caller, but the row still has to carry what the journal holds — the
+    // truncation marker of a REPLAYED step, so a second rerun can read it.
+    output: cappedPayload(
+      redact(
+        referenceDocuments(
+          step.journaledOutput !== undefined
+            ? step.journaledOutput
+            : step.output,
+        ),
+      ),
+    ),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
     error_name: step.errorName ?? null,
@@ -941,6 +1055,7 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     version_match: step.piece?.match ?? null,
     version_note: step.piece?.note ?? null,
     config_hash: step.configHash ?? null,
+    attempts: step.attempts ?? null,
   };
 }
 
@@ -1055,6 +1170,7 @@ async function claimDedupeIn(
       dedupe_key: dedupeKey,
       run_id: runId,
       created_at: nowIso,
+      attempts: 1,
     })
     .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
     .returning("dedupe_key")
@@ -1081,6 +1197,7 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "version_match",
   "version_note",
   "config_hash",
+  "attempts",
 ] as const satisfies readonly Exclude<
   keyof StepExecutionRow,
   "input" | "output"
@@ -1207,6 +1324,28 @@ export class WorkflowRunStore {
     return recovered;
   }
 
+  /**
+   * Closes a run out as CANCELLED, with the reason as its error.
+   *
+   * Two callers, one meaning — "this run did not finish, and the workflow is
+   * not at fault": a firing SINGLETON concurrency refused, and a run that
+   * passed its `runTimeoutSeconds`. Separate from `failRun` because a
+   * CANCELLED run is not rerunnable and must not read as a workflow defect.
+   */
+  async cancelRun(runId: string, reason: string): Promise<void> {
+    this.runsInFlight.delete(runId);
+    if (erasedRuns.delete(runId)) return;
+    await this.db
+      .updateTable("run")
+      .set({
+        status: "CANCELLED",
+        error: redactMessage(reason),
+        ended_at: new Date().toISOString(),
+      })
+      .where("id", "=", runId)
+      .execute();
+  }
+
   // The durable record of a matched trigger, written before the operation
   // batch that matched it is acknowledged. The workflow's name and version are
   // only known once fire() reads the document, so beginRun fills them in.
@@ -1219,33 +1358,130 @@ export class WorkflowRunStore {
     return id;
   }
 
-  // Claims the dedupe key and journals the PENDING run in one transaction, so
-  // a crash cannot keep the claim without the run. Null when already claimed.
+  /**
+   * Claims the dedupe key and journals the PENDING run, bounding crash replays.
+   *
+   * Three outcomes, as {@link FireClaim}:
+   *
+   * - **`"claimed"`** with a run id: this fire is ours to run.
+   * - **`"duplicate"`**: an earlier delivery of this operation already
+   *   journaled a run. Today's replay suppression, unchanged.
+   * - **`"abandoned"`**: the operation has been delivered
+   *   {@link FIRE_CRASH_BUDGET} times and has never once got as far as
+   *   journaling a run — i.e. it is taking the process down before the write
+   *   lands, and the read-model cursor replays it on every boot. That is the
+   *   EPIPE boot loop (backlog item 5), and a budget is what turns it from an
+   *   unbootable reactor into one FAILED run naming the loop.
+   *
+   * Two writes, and which one is which matters:
+   *
+   * - The **attempt count** is bumped in its own committed transaction,
+   *   BEFORE the risky work. That is the only way a delivery that leaves no
+   *   run behind can be counted at all, which is what the budget needs. The
+   *   counter is never a claim signal — it only decides the budget.
+   * - The **claim** is `run_id`, and it is set in the SAME transaction as the
+   *   run row, under a `WHERE run_id IS NULL` guard. The guard takes the
+   *   row's lock, so of two concurrent deliveries of one operation the second
+   *   blocks until the first commits and then matches no row: exactly one
+   *   delivery wins, and the run it journaled is committed with the claim. A
+   *   crash in between rolls BOTH back, so a claim that holds a run id always
+   *   holds a run — and a claim without one is retried, up to the budget.
+   *
+   * Counting and claiming are deliberately not the same write: if the bump
+   * rode along inside the claim transaction, a run insert that takes the
+   * process down would roll the count back with it and the budget could never
+   * reach its limit — the boot loop it exists to bound.
+   */
   async claimAndEnqueueRun(
     dedupeKey: string,
     ttlMs: number,
     nowIso: string,
     options: EnqueueRunOptions,
-  ): Promise<string | null> {
+  ): Promise<FireClaim> {
+    const attempt = await this.recordFireAttempt(
+      options.workflowId,
+      dedupeKey,
+      ttlMs,
+      nowIso,
+    );
+    if (attempt.runId !== null) return { outcome: "duplicate" };
+    if (attempt.attempts > FIRE_CRASH_BUDGET) {
+      return { outcome: "abandoned", attempts: attempt.attempts };
+    }
+
     const id = randomUUID();
     const claimed = await this.db.transaction().execute(async (trx) => {
-      if (
-        !(await claimDedupeIn(
-          trx,
-          options.workflowId,
-          dedupeKey,
-          ttlMs,
-          nowIso,
-          id,
-        ))
-      ) {
-        return false;
-      }
+      // RETURNING, not a row count: the knex-backed dialect reports none.
+      const won = await trx
+        .updateTable("trigger_dedupe")
+        .set({ run_id: id })
+        .where("workflow_id", "=", options.workflowId)
+        .where("dedupe_key", "=", dedupeKey)
+        .where("run_id", "is", null)
+        .returning("dedupe_key")
+        .executeTakeFirst();
+      if (won === undefined) return false;
       await this.insertPendingRun(trx, id, options);
       return true;
     });
-    if (!claimed) return null;
+    // The read this lost to is committed, so it holds the winner's run.
+    if (!claimed) return { outcome: "duplicate" };
     this.runsInFlight.add(id);
+    return { outcome: "claimed", runId: id };
+  }
+
+  /**
+   * Counts one delivery of an operation, and reports whether a run was ever
+   * journaled for it.
+   *
+   * Committed on its own: the point is to leave a trace even when whatever
+   * comes next takes the process down. It is NOT a claim — the row it writes
+   * holds no run id, and {@link claimAndEnqueueRun} is what decides, under a
+   * lock, which delivery gets to fill it in.
+   */
+  async recordFireAttempt(
+    workflowId: string,
+    dedupeKey: string,
+    ttlMs: number,
+    nowIso: string,
+  ): Promise<{ attempts: number; runId: string | null }> {
+    const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
+    await this.db
+      .deleteFrom("trigger_dedupe")
+      .where("workflow_id", "=", workflowId)
+      .where("created_at", "<", cutoff)
+      .execute();
+    const row = await this.db
+      .insertInto("trigger_dedupe")
+      .values({
+        workflow_id: workflowId,
+        dedupe_key: dedupeKey,
+        run_id: null,
+        created_at: nowIso,
+        attempts: 1,
+      })
+      .onConflict((oc) =>
+        oc.columns(["workflow_id", "dedupe_key"]).doUpdateSet({
+          attempts: sql`${sql.table("trigger_dedupe")}.attempts + 1`,
+        }),
+      )
+      .returning(["attempts", "run_id"])
+      .executeTakeFirstOrThrow();
+    return { attempts: row.attempts ?? 1, runId: row.run_id };
+  }
+
+  /** The abandonment of an over-budget fire, as a visible FAILED run. */
+  async journalAbandonedFire(
+    options: EnqueueRunOptions & { attempts: number },
+  ): Promise<string> {
+    const id = await this.startRun({
+      workflowId: options.workflowId,
+      workflowName: "",
+      workflowVersion: 0,
+      triggerKind: options.triggerKind,
+      triggerPayload: options.triggerPayload,
+    });
+    await this.failRun(id, abandonedFireError(options.attempts));
     return id;
   }
 

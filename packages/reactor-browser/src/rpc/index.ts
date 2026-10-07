@@ -22,11 +22,13 @@ export {
   type OpKind,
   type OwnerMessage,
   type ReactorIdentity,
+  type RpcAdoptSyncPeer,
   type RpcDbOp,
   type RpcLiveEvent,
   type RpcLiveSubscribe,
   type RpcLiveUnsub,
   type RpcMessage,
+  type RpcRemoveSyncPeer,
   type RpcPoster,
   type RpcRequestOptions,
   type VersionFingerprint,
@@ -42,6 +44,19 @@ export {
   createInspectorProxy,
   type IInspectorProxy,
 } from "./inspector-proxy.js";
+export {
+  dispatchInspectorOp,
+  INSPECTOR_OPS,
+  type InspectorOp,
+} from "./inspector-ops.js";
+export {
+  dispatchSyncOp,
+  SYNC_OPS,
+  toWireRemote,
+  type InspectableSyncManager,
+  type SyncOp,
+  type WireRemote,
+} from "./sync-ops.js";
 export {
   opChannel,
   toVoid,
@@ -69,6 +84,8 @@ export {
 export { ReactorHost } from "./reactor-host.js";
 export {
   createSyncManagerProxy,
+  DEFAULT_CONNECTION_SNAPSHOT,
+  NOOP_MAILBOX,
   SyncManagerProxy,
   SYNC_STATUS_CHANGED_EVENT,
   type SyncStatusChangedBusEvent,
@@ -79,3 +96,9 @@ export {
   type PackageLoadFailure,
   type WorkerPackageLoaderOptions,
 } from "./worker-package-loader.js";
+export {
+  sendAdoptSyncPeer,
+  sendRemoveSyncPeer,
+  type AdoptSyncPeerParams,
+  type RemoveSyncPeerParams,
+} from "./adopt-sync-peer.js";

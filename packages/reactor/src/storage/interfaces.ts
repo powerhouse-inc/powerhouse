@@ -982,6 +982,43 @@ export interface ISyncCursorStorage {
 }
 
 /**
+ * A cursor storage whose writes are FENCED from the moment the storage session
+ * is replaced until the sync layer says its channels have been rebuilt.
+ *
+ * The flush-plus-epoch bracket around a single write cannot cover this window.
+ * A write that starts AFTER a recreate has completed brackets entirely within
+ * the FRESH epoch: the flush trivially succeeds over an empty epoch and the
+ * pre/post epoch reads match, so the write stands - and what it durably stores
+ * is the channel's stale-HIGH in-memory ordinal, taken from a mailbox that
+ * remembers acking operations the fallback erased. The reset that follows then
+ * seeds the rebuilt channel from that poisoned row and the lost tail is never
+ * re-pulled, which is the permanent gap the whole boundary exists to prevent.
+ *
+ * So the storage refuses cursor writes for the whole recovery, and whoever owns
+ * the recovery acknowledges the new epoch once it is over. Reads are never
+ * fenced: re-initialising a channel is exactly what has to happen inside the
+ * window.
+ */
+export interface ISyncCursorEpochFence extends ISyncCursorStorage {
+  /**
+   * Lets cursor writes resume against `epoch`, which the caller must only do
+   * once every channel has been re-initialised from the durable rows. An epoch
+   * that is no longer the live one is ignored, so a recovery overtaken by a
+   * second recreate cannot open the fence on the first one's behalf.
+   */
+  acknowledgeEpoch(epoch: number): void;
+}
+
+/** Whether `storage` fences its writes on the storage epoch. */
+export function fencesOnStorageEpoch(
+  storage: ISyncCursorStorage,
+): storage is ISyncCursorEpochFence {
+  return (
+    typeof (storage as ISyncCursorEpochFence).acknowledgeEpoch === "function"
+  );
+}
+
+/**
  * Serializable snapshot of a permanently failed SyncOperation.
  */
 export type DeadLetterRecord = {

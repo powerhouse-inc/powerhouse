@@ -13,8 +13,23 @@ import type {
   RemoteOptions,
 } from "../types.js";
 import { PollBehavior } from "../types.js";
-import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
-import { IntervalPollTimer } from "./interval-poll-timer.js";
+import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  GqlRequestChannel,
+  type GqlChannelConfig,
+} from "./gql-req-channel.js";
+import {
+  DELEGATE_TIMEOUT_FLOOR_MS,
+  IntervalPollTimer,
+} from "./interval-poll-timer.js";
+
+/**
+ * The {@link ChannelConfig.type} a GqlRequestChannel is created from.
+ *
+ * Named so {@link CompositeChannelFactory} registration and the callers that
+ * build a `{ type: "gql" }` config agree on one spelling.
+ */
+export const GQL_CHANNEL_TYPE = "gql";
 
 /**
  * Factory for creating GqlRequestChannel instances.
@@ -115,6 +130,15 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       gqlConfig.retryMaxDelayMs = retryMaxDelayMs;
     }
 
+    let requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
+    if (config.parameters.requestTimeoutMs !== undefined) {
+      if (typeof config.parameters.requestTimeoutMs !== "number") {
+        throw new Error('"requestTimeoutMs" parameter must be a number');
+      }
+      requestTimeoutMs = config.parameters.requestTimeoutMs;
+    }
+    gqlConfig.requestTimeoutMs = requestTimeoutMs;
+
     let maxQueueDepth: number | undefined;
     if (config.parameters.maxQueueDepth !== undefined) {
       if (typeof config.parameters.maxQueueDepth !== "number") {
@@ -142,6 +166,17 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,
       }),
+      // Comfortably above the channel's own request deadline, so the watchdog
+      // only ever cancels a delegate that is genuinely stuck rather than one
+      // whose request is merely slow. `requestTimeoutMs: 0` asks for an
+      // unbounded request, so the tick is left unbounded too: a 30s watchdog
+      // over a deliberately unbounded request would cancel exactly the slow
+      // polls the operator asked to allow. The loop then has no supervisor, by
+      // that operator's choice.
+      delegateTimeoutMs:
+        requestTimeoutMs > 0
+          ? Math.max(DELEGATE_TIMEOUT_FLOOR_MS, requestTimeoutMs * 2)
+          : 0,
       startPaused: options?.pollBehavior === PollBehavior.Manual,
     });
 

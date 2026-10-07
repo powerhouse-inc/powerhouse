@@ -1,10 +1,12 @@
 import {
   addDrive,
   addRemoteDrive,
-  ChannelScheme,
+  HardenedPGliteDialect,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorEventTypes,
+  SelfHealingPGliteClient,
   setDriveMetadata,
   waitForDocumentReady,
   type BrowserReactorClientModule,
@@ -12,8 +14,15 @@ import {
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
+  type RecreatablePGliteInstance,
 } from "@powerhousedao/reactor-browser";
-import type { UnsupportedStoredDocuments } from "@powerhousedao/reactor";
+import {
+  LocalChannelFactory,
+  type UnsupportedStoredDocuments,
+} from "@powerhousedao/reactor";
+import { LocalChannelPortRegistry } from "../reactor-worker-sync.js";
+import { isMultiReactorEnabled } from "./multi-reactor-flag.js";
+import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import type {
   PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
@@ -28,8 +37,7 @@ import type {
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
-import { getReactorPGlite } from "../pglite.db.js";
+import { getReactorPGlite, recreateReactorPGlite } from "../pglite.db.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -67,17 +75,45 @@ export async function createBrowserReactor(
 
   const pg = await getReactorPGlite();
   const logger = new ConsoleLogger(["reactor-client"]);
+  // Self-heal: on an unrecoverable session, recreate the PGlite instance
+  // against the same idb store. The one Kysely is shared by every reactor
+  // component, so swapping the instance under this client rewires all of them.
+  // See docs/bugs/2026-10-03-*, W0.7.
+  const selfHeal = new SelfHealingPGliteClient(
+    pg as RecreatablePGliteInstance,
+    {
+      openInstance: async () =>
+        (await recreateReactorPGlite()) as RecreatablePGliteInstance,
+      onDiagnostic: (message, error) =>
+        console.error(`[reactor] self-heal: ${message}`, error),
+    },
+  );
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(documentModelModules)
     .withUpgradeManifests(upgradeManifests)
-    .withChannelScheme(ChannelScheme.CONNECT)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
     .withKysely(
       new Kysely<Database>({
-        dialect: new PGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(selfHeal, {
+          onPoisoned: (cause) =>
+            selfHeal.recreate(
+              cause instanceof Error ? cause.message : String(cause),
+            ),
+        }),
       }),
     );
+  // Flag OFF (the default) builds the bare CONNECT gql scheme exactly as before
+  // multi-reactor: no local factory, no CompositeChannelFactory, channel factory
+  // types = [gql]. Flag ON composes a LocalChannelFactory onto the scheme so the
+  // main-thread reactor also declares `{type:"local"}` routing. There is no
+  // brokered-port adopt seam on the main thread (no ReactorHost), so even flag-on
+  // the registry stays empty and the factory is never asked to build a channel.
+  configureConnectChannelScheme(reactorBuilder, {
+    multiReactor: isMultiReactorEnabled(),
+    createLocalChannelFactory: () =>
+      new LocalChannelFactory(logger, new LocalChannelPortRegistry().provider),
+  });
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)
@@ -99,6 +135,15 @@ export async function createBrowserReactor(
   } catch (error) {
     throw toStoredDocumentsRefused(error);
   }
+  // The event bus exists only now; emit the recovery event on it so observers
+  // of this reactor can see a session recreate rather than a silent recovery.
+  selfHeal.setRecreatedListener((event) => {
+    void module.eventBus
+      .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
+      .catch((error) =>
+        console.error("[reactor] emitting recovery event failed", error),
+      );
+  });
   return {
     ...module,
     kind: "browser",

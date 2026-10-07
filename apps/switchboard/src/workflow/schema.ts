@@ -392,7 +392,11 @@ export const schema: DocumentNode = gql`
   type WorkflowStepTestResult {
     "Null when the test never started, e.g. an upstream block is untested."
     runId: String
-    "SUCCEEDED | FAILED"
+    """
+    SUCCEEDED | FAILED | INDETERMINATE. INDETERMINATE is neither: a host call
+    the block made timed out, so a write it asked for may well have landed.
+    Show it distinctly - it is not a confirmed pass.
+    """
     status: String!
     output: Unknown
     error: String

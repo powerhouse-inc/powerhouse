@@ -24,6 +24,8 @@ import { KyselyKeyframeStore } from "../../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../storage/kysely/types.js";
 import { REACTOR_SCHEMA } from "../../storage/migrations/migrator.js";
+import type { IStorageFlusher } from "../../storage/storage-flush.js";
+import { NoopStorageFlusher } from "../../storage/storage-flush.js";
 import { KyselyExecutionScope } from "../execution-scope.js";
 import { SimpleJobExecutor } from "../simple-job-executor.js";
 import type { SignatureTrustPolicy } from "../../signer/types.js";
@@ -72,6 +74,18 @@ export type BuildWorkerExecutorOptions = {
    * Node module loader.
    */
   loadFactory?: (spec: FactorySpec) => Promise<unknown>;
+  /**
+   * Durability boundary 2 for this worker's executor: it flushes before it
+   * announces a job write-ready. Defaults to the no-op barrier, which is
+   * correct for the only worker transport that exists today - each pooled
+   * worker opens its own Postgres connection, and a server Postgres is durable
+   * per statement. A live barrier cannot be passed across a worker boundary, so
+   * `ReactorBuilder` refuses `withWorkerPool` together with a deferring
+   * flusher instead of losing the boundary silently; this parameter is how a
+   * worker that opens a deferring store of its OWN supplies the matching
+   * barrier.
+   */
+  flusher?: IStorageFlusher;
 };
 
 async function loadModelManifest(
@@ -233,6 +247,7 @@ export async function buildWorkerExecutor(
     executionScope,
     signer,
     trustPolicy,
+    options.flusher ?? new NoopStorageFlusher(),
   );
 
   return {

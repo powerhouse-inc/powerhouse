@@ -1,3 +1,5 @@
+import type { RemoteFilter } from "@powerhousedao/reactor";
+
 export type CorrelationId = string;
 
 export type ErrorInfo = {
@@ -61,6 +63,12 @@ export type WorkerPackageSource = {
   url: string;
 };
 
+/**
+ * What a tab tells the worker about the build it is running, so the worker can
+ * tell whether it may serve that tab (see `ReactorHost.handleHello`).
+ *
+ * `appBuildId` is opaque: the host only ever compares it for equality.
+ */
 export type VersionFingerprint = {
   appBuildId: string;
   rpcProtocolVersion: number;
@@ -68,6 +76,16 @@ export type VersionFingerprint = {
   // Enabled enforcement flags, sorted and joined. In the fingerprint so a
   // worker cannot keep enforcing the set it booted with after a config change.
   featureFlags?: string;
+  /**
+   * Content token of the worker bundle this tab resolved, where the deployment
+   * serves one and the tab could read it (dev; see
+   * `apps/connect/src/utils/reactor-worker-url.ts`). Separate from
+   * `appBuildId` because it can be ABSENT for a tab of the very same build --
+   * the metadata fetch is per-tab and can fail transiently -- and an absent
+   * token has to read as "unknown", not as "a different build". Additive: a
+   * tab that never sends it is treated leniently, so no protocol bump.
+   */
+  buildDigest?: string;
 };
 
 export type RpcHello = {
@@ -100,7 +118,7 @@ export type RpcReload = { k: "reload"; reason: string; workerGen?: string };
 export type RpcAdmin = {
   k: "admin";
   id: CorrelationId;
-  method: "info" | "restart" | "clearStorage" | "migrate";
+  method: "info" | "restart" | "clearStorage" | "migrate" | "builtConfig";
 };
 
 export type WorkerMigrationState = {
@@ -156,6 +174,56 @@ export type RpcDbOp = MethodCallMessage<"db-op">;
 
 export type RpcInspectorOp = MethodCallMessage<"inspector-op">;
 
+/**
+ * Delivers one end of a monitor-brokered `MessageChannel` into a worker
+ * reactor and asks it to adopt the peer as a {@link LOCAL_CHANNEL_TYPE} remote
+ * (multi-reactor W1.2 -- see docs/plans/2026-10-03-multi-reactor.md).
+ *
+ * `port` is a live {@link MessagePort}, so this message MUST be posted with
+ * `port` in the transfer list -- it is moved into the worker, never cloned. The
+ * worker registers it under {@link peerId}/{@link channelName} with its
+ * `LocalChannelTransportProvider` and adds a local remote for
+ * {@link collectionIdKey}/{@link filter}, so `LocalChannelFactory` resolves the
+ * brokered port the handshake then runs over.
+ *
+ * Additive to the wire protocol: a worker that predates it never handles the
+ * kind, so no {@link RPC_PROTOCOL_VERSION} bump -- the monitor provisions both
+ * ends from one build.
+ */
+export type RpcAdoptSyncPeer = {
+  k: "adopt-sync-peer";
+  id: CorrelationId;
+  peerId: string;
+  channelName: string;
+  collectionIdKey: string;
+  remoteName: string;
+  filter: RemoteFilter;
+  port: MessagePort;
+};
+
+/**
+ * Releases a monitor-brokered local-sync peer in a worker reactor: removes the
+ * remote AND unregisters its port from the worker's
+ * `LocalChannelTransportProvider`, which is the in-process twin's behaviour.
+ *
+ * Removing the remote alone left the worker's registry holding a key for a port
+ * the channel's shutdown had already closed, so the next lookup -- a channel
+ * reset, or a re-link under the same key -- found a dead port and reported a
+ * healthy transport. The unregister has to happen in the worker realm, which
+ * owns that registry, so it is an op rather than something the tab can do.
+ *
+ * Additive like {@link RpcAdoptSyncPeer}, and for the same reason: a worker that
+ * predates it never handles the kind, and the monitor provisions both ends from
+ * one build, so no {@link RPC_PROTOCOL_VERSION} bump.
+ */
+export type RpcRemoveSyncPeer = {
+  k: "remove-sync-peer";
+  id: CorrelationId;
+  peerId: string;
+  channelName: string;
+  remoteName: string;
+};
+
 export type RpcLiveSubscribe = {
   k: "sub-live";
   id: CorrelationId;
@@ -197,6 +265,8 @@ export type ClientMessage =
   | RpcSyncOp
   | RpcDbOp
   | RpcInspectorOp
+  | RpcAdoptSyncPeer
+  | RpcRemoveSyncPeer
   | RpcLiveSubscribe
   | RpcLiveUnsub
   | RpcPing;

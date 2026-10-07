@@ -77,6 +77,7 @@
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
+    "@powerhousedao/reactor-router": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",

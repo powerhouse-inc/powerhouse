@@ -1,5 +1,6 @@
 import {
   DriveCollectionId,
+  POLLING_CHANNEL_TYPE,
   type IReactorClient,
   type ISyncManager,
   type PagedResults,
@@ -975,6 +976,15 @@ describe("ReactorSubgraph Permission Checks", () => {
       // authorized in pushSyncEnvelopes, not here.
       expect(mockAuthorizationService.canWrite).not.toHaveBeenCalled();
       expect(syncManager.add).toHaveBeenCalledOnce();
+      // The channel it registers must be the type this reactor actually
+      // routes: a SWITCHBOARD-scheme reactor's GqlResponseChannelFactory
+      // serves "polling", and the resolver takes that spelling from the
+      // reactor's own constant rather than writing a literal that nothing
+      // would catch drifting.
+      expect(syncManager.add.mock.calls[0][2]).toEqual({
+        type: POLLING_CHANNEL_TYPE,
+        parameters: {},
+      });
     });
 
     it("should allow supreme admins without a drive check", async () => {

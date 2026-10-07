@@ -1,6 +1,12 @@
 import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
   DocumentChangeEvent,
   DocumentChangeType,
+  DocumentRelationship,
+  ExecutionJobPlan,
+  JobInfo,
+  JobStatus,
   OperationFilter,
   PagedResults,
   PagingOptions,
@@ -11,8 +17,12 @@ import type {
 import type {
   ISigner,
   PHDocumentState,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  actionSigningTarget,
+  DEFAULT_SIGNATURE_POLICY,
   normalizeDocumentModelVersion,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
@@ -28,8 +38,10 @@ import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
+  type DocumentRelationshipFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
+  type PhDocumentFieldsFragment,
   type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
@@ -37,6 +49,7 @@ import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
 import {
+  isoStringFromDateTime,
   phDocumentFromGetDocument,
   phDocumentFromMutation,
 } from "./adapter.js";
@@ -46,11 +59,15 @@ import {
   type BearerTokenProvider,
 } from "./auth.js";
 import {
+  ExecuteBatchDocument,
+  type ExecuteBatchJobInfo,
+  type ExecuteBatchResult,
+  type ExecuteBatchVariables,
   MutateDocumentWithOperationsDocument,
   type MutateDocumentWithOperationsResult,
   type MutateDocumentWithOperationsVariables,
 } from "./operations.js";
-import { prepareSignedActions } from "./signing.js";
+import { prepareSignedActions, signStampedAction } from "./signing.js";
 import { resolveDocumentModelModule } from "./static-package-manager.js";
 import {
   describeGraphQLDocument,
@@ -136,6 +153,14 @@ export type GraphQLReactorClientOptions = {
 
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
+
+/**
+ * The protocol-version baseline a remote create falls back to when the parent
+ * drive reports none, matching the reactor client's own default.
+ */
+const DEFAULT_CREATE_PROTOCOL_VERSIONS: ProtocolVersions = {
+  "base-reducer": 2,
+};
 
 /** A registered `subscribe` call. */
 type ChangeListener = {
@@ -223,6 +248,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  async isServed(identifier: string): Promise<boolean> {
+    const result = await this.sdk.GetDocument(
+      { identifier },
+      undefined,
+      undefined,
+    );
+    return result.document !== null && result.document !== undefined;
+  }
+
   async getOperations(
     documentIdentifier: string,
     view?: ViewFilter,
@@ -267,6 +301,187 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
             )
         : undefined,
     };
+  }
+
+  /**
+   * Filters documents by criteria over the Switchboard's `findDocuments` query.
+   *
+   * The query filters by `type` and `parentId` only, at head. A search naming
+   * `ids` or `slugs` (present, whatever its length) and a point-in-time view are
+   * each by-contract limitations the query cannot express -- running it anyway
+   * would return every document instead of the named ones, or head instead of
+   * the asked-for revision, a silently wrong answer. {@link findIsServableOverGraphQL}
+   * is the single predicate that decides this; the router's remote backend
+   * consults the same predicate and turns an unservable `find` into its typed
+   * not-supported signal so the collection-spanning read excludes this backend
+   * instead of merging the wrong page. Drive enumeration itself filters by
+   * `type` at head, which is served.
+   */
+  async find<TDocument extends PHDocument = PHDocument>(
+    search: SearchFilter,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<TDocument>> {
+    if (searchNamesIdentifiers(search)) {
+      throw new Error(
+        "GraphQLReactorClient.find cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId",
+      );
+    }
+
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const effectivePaging = paging ?? defaultPaging;
+    const result = await this.sdk.FindDocuments(
+      {
+        search: { type: search.type, parentId: search.parentId },
+        view: viewInput,
+        paging: pagingInputFromPaging(effectivePaging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults<TDocument>(
+      result.findDocuments,
+      effectivePaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.find<TDocument>(search, view, { cursor, limit }, signal),
+    );
+  }
+
+  async getOutgoingRelationships(
+    sourceIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentOutgoingRelationships(
+      {
+        sourceIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults(
+      result.documentOutgoingRelationships,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.getOutgoingRelationships(
+          sourceIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getIncomingRelationships(
+    targetIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentIncomingRelationships(
+      {
+        targetIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults(
+      result.documentIncomingRelationships,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.getIncomingRelationships(
+          targetIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getOutgoingRelationshipEdges(
+    sourceIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentOutgoingRelationshipEdges(
+      {
+        sourceIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toRelationshipResults(
+      result.documentOutgoingRelationshipEdges,
+      paging ?? defaultPaging,
+      (cursor, limit) =>
+        this.getOutgoingRelationshipEdges(
+          sourceIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getIncomingRelationshipEdges(
+    targetIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentIncomingRelationshipEdges(
+      {
+        targetIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toRelationshipResults(
+      result.documentIncomingRelationshipEdges,
+      paging ?? defaultPaging,
+      (cursor, limit) =>
+        this.getIncomingRelationshipEdges(
+          targetIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
   }
 
   async create<TDocument extends PHDocument = PHDocument>(
@@ -349,6 +564,216 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       documents: [updated],
     });
     return updated;
+  }
+
+  /**
+   * Runs multiple mutation jobs in dependency order over the Switchboard's
+   * `executeBatch` mutation and waits for all to settle, returning the result
+   * shaped like `IReactor.executeBatch`'s so the reference `DriveClient`
+   * consumes it unchanged.
+   *
+   * Ordering only -- NOT atomic: each job commits independently, there is no
+   * batch rollback, and re-submitting after a partial failure re-applies the
+   * jobs that already succeeded.
+   *
+   * Each job's actions are signed independently for the job's own
+   * `(documentId, branch)` target -- the per-action signing the reactor's own
+   * `signActions` does, not the batch state-prediction `execute` uses for a
+   * multi-action push. A drive job such as `addFile`'s is `CREATE_DOCUMENT` +
+   * `UPGRADE_DOCUMENT` + `ADD_RELATIONSHIP`, which the prediction path rejects
+   * outright and which has no fetchable baseline to stamp against. The reactor
+   * records but does not verify the stamped previous-state head, so signing
+   * each action bare is exactly what the in-process `DriveClient` relies on.
+   *
+   * The mutation is synchronous server-side: a job it returns is already
+   * complete, so {@link waitForJob} resolves from it without polling. The
+   * server resolver throws on a job failure, and as a second guard this method
+   * inspects each returned job and throws if any came back `FAILED` or carrying
+   * an error, so every caller is protected rather than only the ones that
+   * check per-job status themselves.
+   */
+  async executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult> {
+    const signer = this.signer ?? resolveAmbientSigner();
+    const jobInputs = await Promise.all(
+      request.jobs.map(async (job) => {
+        const actions = await this.signBatchJobActions(job, signer, signal);
+        return {
+          key: job.key,
+          documentIdOrSlug: job.documentId,
+          scope: job.scope,
+          branch: job.branch,
+          actions: actions.map(toTransportAction),
+          dependsOn: job.dependsOn,
+        };
+      }),
+    );
+
+    const variables: ExecuteBatchVariables = { jobs: jobInputs };
+    const result = await this.sdk.RunDocument<ExecuteBatchResult>({
+      operationName: "ExecuteBatch",
+      operationType: "mutation",
+      document: ExecuteBatchDocument,
+      variables,
+      signal,
+    });
+
+    const documentIdByKey = new Map(
+      request.jobs.map((job) => [job.key, job.documentId]),
+    );
+    const jobs: Record<string, JobInfo> = {};
+    for (const entry of result.executeBatch.jobs) {
+      if (entry.job.status === "FAILED" || entry.job.error != null) {
+        const reason = entry.job.error ?? "unknown error";
+        throw new Error(
+          `Batch job "${entry.key}" failed: ${reason}. The batch is ordering-only, not atomic: jobs ordered before "${entry.key}" may already have committed, and re-submitting re-applies every job that already succeeded.`,
+        );
+      }
+      jobs[entry.key] = jobInfoFromGql(
+        entry.job,
+        documentIdByKey.get(entry.key) ?? "",
+      );
+    }
+    return { jobs };
+  }
+
+  /**
+   * Resolves a job the batch mutation already completed.
+   *
+   * A `JobInfo` is handed straight back: the batch mutation is synchronous, so
+   * the job it returned is terminal already and there is nothing to wait for.
+   * This is the one `DriveClient.runJobs` calls, with the job objects
+   * {@link executeBatch} returned. A bare job id is looked up once over the
+   * `jobStatus` query for callers that hold only an id.
+   */
+  async waitForJob(
+    jobOrId: string | JobInfo,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    if (typeof jobOrId !== "string") {
+      return jobOrId;
+    }
+    const result = await this.sdk.GetJobStatus(
+      { jobId: jobOrId },
+      undefined,
+      signal,
+    );
+    const status = result.jobStatus;
+    if (!status) {
+      throw new Error(`Job not found: ${jobOrId}`);
+    }
+    return jobInfoFromGql(status, "");
+  }
+
+  /**
+   * The signature policy a new document takes when the caller chooses none.
+   *
+   * Known limitation: remote create uses the default signature policy. The
+   * Switchboard exposes no query for the create signature policy, so a
+   * switchboard configured with a non-default (stricter) policy is not
+   * observable over GraphQL today; such a switchboard would see remote creates
+   * under-signed relative to its own policy. This returns the same
+   * `DEFAULT_SIGNATURE_POLICY` the in-process client resolves to when nothing
+   * overrides it.
+   */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return Promise.resolve(DEFAULT_SIGNATURE_POLICY);
+  }
+
+  /**
+   * The protocol versions a new document takes, before the signature policy.
+   *
+   * Reflects the parent drive's own versions rather than a hardcoded baseline:
+   * the drive document carries `header.protocolVersions` over GraphQL, so a
+   * create under a drive on a non-default switchboard matches that drive. Falls
+   * back to {@link DEFAULT_CREATE_PROTOCOL_VERSIONS} only when there is no
+   * parent, the parent cannot be fetched, or the parent reports no versions.
+   */
+  async getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    if (parentIdentifier === undefined) {
+      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    }
+    let parent: PHDocument;
+    try {
+      parent = await this.get<PHDocument>(parentIdentifier, undefined, signal);
+    } catch {
+      return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+    }
+    const versions = parent.header.protocolVersions;
+    if (versions && Object.keys(versions).length > 0) {
+      return versions;
+    }
+    return DEFAULT_CREATE_PROTOCOL_VERSIONS;
+  }
+
+  /**
+   * Updates the preferred editor recorded in a document's header meta over the
+   * `setPreferredEditor` mutation, and announces the result as an `Updated`
+   * event. Pass `null` to clear it.
+   */
+  async setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const result = await this.sdk.SetPreferredEditor(
+      {
+        documentIdentifier,
+        preferredEditor: preferredEditor ?? undefined,
+        branch,
+      },
+      undefined,
+      signal,
+    );
+    const updated = phDocumentFromGetDocument<PHDocument>(
+      result.setPreferredEditor,
+      branch,
+    );
+    this.emitChange({
+      type: DOCUMENT_CHANGE_TYPE.Updated,
+      documents: [updated],
+    });
+    return updated;
+  }
+
+  /**
+   * Signs one batch job's actions for the job's own log.
+   *
+   * Each action is signed on its own for `(documentId, branch)`, the same
+   * per-action signing the reactor's `signActions` does: no state prediction
+   * across the job, so a job carrying a `CREATE_DOCUMENT` the push-prediction
+   * path rejects still signs. An action already signed under a key is left
+   * untouched -- the reference `DriveClient` signs its jobs with its own signer
+   * before handing them here, so re-signing would append a second signature.
+   * With no signer the actions pass through unsigned, matching {@link execute}.
+   */
+  private async signBatchJobActions(
+    job: ExecutionJobPlan,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+  ): Promise<Action[]> {
+    if (!signer) {
+      return job.actions;
+    }
+    return Promise.all(
+      job.actions.map(async (action) => {
+        if (isActionSigned(action)) {
+          return action;
+        }
+        return signStampedAction(
+          action,
+          signer,
+          actionSigningTarget(action, job.documentId, job.branch),
+          signal,
+        );
+      }),
+    );
   }
 
   /**
@@ -476,6 +901,67 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       variables,
       signal: options?.signal,
     });
+  }
+
+  /**
+   * Shapes a document result page into the reactor's {@link PagedResults}.
+   *
+   * The items carry the same `PHDocumentFields` fragment as `get`, so the same
+   * adapter rebuilds each one. `hasNextPage` gates the cursor exactly as
+   * `getOperations` does: no cursor means no `next`.
+   */
+  private toDocumentResults<TDocument extends PHDocument = PHDocument>(
+    page: {
+      items: ReadonlyArray<PhDocumentFieldsFragment>;
+      hasNextPage: boolean;
+      cursor?: string | null;
+    },
+    effectivePaging: PagingOptions,
+    branch: string | undefined,
+    next: (cursor: string, limit: number) => Promise<PagedResults<TDocument>>,
+  ): PagedResults<TDocument> {
+    const nextCursor = page.hasNextPage
+      ? (page.cursor ?? undefined)
+      : undefined;
+    return {
+      results: page.items.map((item) =>
+        phDocumentFromGetDocument<TDocument>(item, branch),
+      ),
+      options: effectivePaging,
+      nextCursor,
+      next: nextCursor
+        ? () => next(nextCursor, effectivePaging.limit)
+        : undefined,
+    };
+  }
+
+  /**
+   * Shapes a relationship-edge result page into the reactor's
+   * {@link PagedResults}, restoring each edge's `Date` fields.
+   */
+  private toRelationshipResults(
+    page: {
+      items: ReadonlyArray<DocumentRelationshipFieldsFragment>;
+      hasNextPage: boolean;
+      cursor?: string | null;
+    },
+    effectivePaging: PagingOptions,
+    next: (
+      cursor: string,
+      limit: number,
+    ) => Promise<PagedResults<DocumentRelationship>>,
+  ): PagedResults<DocumentRelationship> {
+    const nextCursor = page.hasNextPage
+      ? (page.cursor ?? undefined)
+      : undefined;
+    return {
+      results: page.items.map((edge) => documentRelationshipFromEdge(edge)),
+      options: effectivePaging,
+      nextCursor,
+      next: nextCursor
+        ? () => next(nextCursor, effectivePaging.limit)
+        : undefined,
+    };
   }
 
   /**
@@ -724,7 +1210,7 @@ export function viewFilterInputFromViewFilter(
     return undefined;
   }
 
-  if (view.revision !== undefined) {
+  if (viewIsPointInTime(view)) {
     throw new Error(
       "point-in-time views are not supported by GraphQLReactorClient",
     );
@@ -744,6 +1230,94 @@ function pagingInputFromPaging(
     return undefined;
   }
   return { cursor: paging.cursor, limit: paging.limit };
+}
+
+/**
+ * Whether a search names `ids` or `slugs`, which the Switchboard `findDocuments`
+ * query cannot honour (it filters by `type` and `parentId`).
+ *
+ * The test is PRESENCE, not length: the reactor `find` contract
+ * (`packages/reactor/src/core/reactor.ts`) dispatches on `search.ids` /
+ * `search.slugs` being present, so `find({ ids: [] })` is an identifier search
+ * that must yield the empty set -- not a plain type query over every document.
+ * The GraphQL surface cannot express an identifier search at all, so a present
+ * (even empty) `ids`/`slugs` is refused rather than served as the wrong query.
+ */
+function searchNamesIdentifiers(search: SearchFilter): boolean {
+  return search.ids !== undefined || search.slugs !== undefined;
+}
+
+/** Whether a view asks for a point-in-time read the GraphQL surface cannot express. */
+function viewIsPointInTime(view?: ViewFilter): boolean {
+  return view?.revision !== undefined;
+}
+
+/**
+ * The single source of truth for whether the Switchboard `findDocuments` query
+ * can serve a `find`. It is servable iff the search names neither `ids` nor
+ * `slugs` (present, regardless of length) AND the view is not point-in-time:
+ * each is a by-contract limitation of a surface that filters only by
+ * `type`/`parentId` at head. Both the client's own `find` and the connect
+ * router adapter consult this one predicate so the rule cannot drift between
+ * them; the adapter turns an unservable search into its typed not-supported
+ * signal so the router excludes the backend rather than failing the read.
+ */
+export function findIsServableOverGraphQL(
+  search: SearchFilter,
+  view?: ViewFilter,
+): boolean {
+  return !searchNamesIdentifiers(search) && !viewIsPointInTime(view);
+}
+
+/** Rebuilds a relationship edge from its GraphQL fields. */
+function documentRelationshipFromEdge(
+  edge: DocumentRelationshipFieldsFragment,
+): DocumentRelationship {
+  const relationship: DocumentRelationship = {
+    sourceId: edge.sourceId,
+    targetId: edge.targetId,
+    relationshipType: edge.relationshipType,
+    createdAt: dateFromDateTime(edge.createdAt),
+    updatedAt: dateFromDateTime(edge.updatedAt),
+  };
+  const metadata = edge.metadata;
+  if (isPlainObject(metadata)) {
+    relationship.metadata = metadata;
+  }
+  return relationship;
+}
+
+/**
+ * Restores a `Date` from the `DateTime` scalar, which deserializes as either an
+ * ISO string or a `Date`, reusing the get-path's {@link isoStringFromDateTime}.
+ *
+ * A null, absent or unparseable value is a malformed timestamp from the server,
+ * not something to coerce to the epoch or an `Invalid Date`: it throws, so the
+ * malformed edge surfaces as a genuine failure rather than a silently-wrong
+ * `DocumentRelationship`.
+ */
+function dateFromDateTime(value: string | Date | null | undefined): Date {
+  if (value === null || value === undefined) {
+    throw new Error(
+      "relationship edge is missing a required DateTime timestamp",
+    );
+  }
+  const date = new Date(isoStringFromDateTime(value));
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(
+      `relationship edge carries an unparseable DateTime timestamp: ${String(value)}`,
+    );
+  }
+  return date;
+}
+
+/**
+ * Whether a JSON value is a plain object, so relationship `metadata` is assigned
+ * only when it is one. A non-object JSON scalar (string, number, array, null)
+ * is dropped exactly as a null is, rather than cast to `Record` and trusted.
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -813,6 +1387,49 @@ async function prepareActionsForPush(
 function documentModelVersion(document: PHDocument): number {
   const documentScope = document.state.document as PHDocumentState | undefined;
   return normalizeDocumentModelVersion(documentScope?.version);
+}
+
+/**
+ * Rebuilds a reactor {@link JobInfo} from the batch mutation's `JobInfo`
+ * selection.
+ *
+ * The consistency token and batch meta are placeholders: the batch is
+ * synchronous, so a completed job needs neither to be waited on, and
+ * `DriveClient` reads only `status` and `error`. The `documentId` is the one the
+ * caller sent for this plan key, which the selection does not echo back.
+ */
+function jobInfoFromGql(job: ExecuteBatchJobInfo, documentId: string): JobInfo {
+  const createdAtUtcIso = isoStringFromDateTime(job.createdAt);
+  const info: JobInfo = {
+    id: job.id,
+    documentId,
+    status: job.status as JobStatus,
+    createdAtUtcIso,
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso,
+      coordinates: [],
+    },
+    meta: { batchId: job.id, batchJobIds: [job.id] },
+  };
+  if (job.completedAt != null) {
+    info.completedAtUtcIso = isoStringFromDateTime(job.completedAt);
+  }
+  if (job.error != null) {
+    info.error = { name: "Error", message: job.error, stack: "" };
+  }
+  return info;
+}
+
+/**
+ * Whether an action already carries a signature under a key, mirroring the
+ * reactor's own `signAction`: a last tuple whose app-key element is set. The
+ * batch path re-signs only what is unsigned, so a job the reference
+ * `DriveClient` already signed is not signed a second time.
+ */
+function isActionSigned(action: Action): boolean {
+  const signer = action.context?.signer;
+  return Boolean(signer?.app?.key && signer.signatures.at(-1)?.[1]);
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */

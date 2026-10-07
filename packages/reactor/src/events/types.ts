@@ -65,6 +65,7 @@ export const ReactorEventTypes = {
   MODEL_LOADED: 10008,
   SIGNATURE_REFUSED: 10009,
   CATCHUP_SWEPT: 10010,
+  STORAGE_SESSION_RECREATED: 10011,
 } as const;
 
 /**
@@ -201,3 +202,17 @@ export type SignatureRefusedEvent = {
 
 /** A catch-up sweep that moved a cursor, replayed operations, or failed. */
 export type CatchUpSweptEvent = SweepResult & { thread: CatchUpThread };
+
+/**
+ * Emitted when a poisoned PGlite session (a stuck `PORTAL_ACTIVE` the dialect
+ * surfaced as `PGliteSessionPoisonedError`) was cleared by recreating the
+ * underlying PGlite instance against the same storage, so every holder of the
+ * shared Kysely is now talking to a healthy session without an operator
+ * restart. Forwarded to the inspector so a recovery is observable rather than
+ * silent. `attempt` counts recreations over the life of the session owner.
+ */
+export type StorageSessionRecreatedEvent = {
+  reason: string;
+  timestampUtcMs: number;
+  attempt: number;
+};

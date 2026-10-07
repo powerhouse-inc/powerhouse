@@ -93,7 +93,19 @@
     {
       "name": "PH_WORKFLOWS_RUN_RETENTION_DAYS",
       "type": "var",
-      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. Unset or 0 keeps every run."
+      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. On by default at 30 days; 0, \"off\" or \"never\" keeps every run, which lets the journal grow without bound.",
+      "default": "30"
+    },
+    {
+      "name": "PH_WORKFLOWS_SINGLETON_OWNER",
+      "type": "var",
+      "description": "Names this process as the owner of workflow execution, which is a singleton: exactly one reactor runs workflows. Set a stable name per deployment slot so a restart re-claims its own lease at once; unset, the owner is <hostname>/<pid>/<random> and a second process is refused until the first one's lease expires."
+    },
+    {
+      "name": "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS",
+      "type": "var",
+      "description": "How long one call a piece makes of its host (ctx.store, ctx.reactor) may take before the step gives up on it. Raised to the step's own timeoutSeconds when that is longer. A WRITING call that times out records the step INDETERMINATE rather than FAILED, since the write may have been committed.",
+      "default": "10000"
     }
   ]
 }

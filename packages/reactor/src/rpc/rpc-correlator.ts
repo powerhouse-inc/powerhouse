@@ -16,10 +16,17 @@ export type RpcRequestOptions = {
   transform?: (value: unknown) => unknown;
   /** Runs after the post; may return a cleanup invoked when the request settles. */
   setup?: (id: CorrelationId) => (() => void) | void;
+  /**
+   * Objects transferred (moved, not cloned) with the request message -- a
+   * MessagePort for the adopt-sync-peer op. Omit for an ordinary request.
+   */
+  transfer?: Transferable[];
 };
 
 /** Anything that can send a client message (the router). */
-export type RpcPoster = { post(message: ClientMessage): void };
+export type RpcPoster = {
+  post(message: ClientMessage, transfer?: Transferable[]): void;
+};
 
 /**
  * Request/response correlation shared by every RPC proxy: one pending map,
@@ -95,7 +102,7 @@ export class RpcCorrelator {
         transform: options.transform,
       });
     });
-    this.poster.post(message);
+    this.poster.post(message, options.transfer);
     const cleanup = options.setup?.(id);
     if (cleanup) {
       const entry = this.pending.get(id);

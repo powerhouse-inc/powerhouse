@@ -103,8 +103,6 @@ describe("WorkflowRunStore redaction", () => {
       last_error:
         "onEnable failed: POST https://api.example.com/subscribe?api_key=abcd1234efgh returned 401",
       consecutive_failures: 1,
-      lease_owner: null,
-      lease_expires_at: null,
       updated_at: new Date().toISOString(),
     });
 

@@ -35,10 +35,12 @@ import {
   ReactorEventTypes,
   type JobFailedEvent,
   type JobWriteReadyEvent,
+  type StorageSessionRecreatedEvent,
 } from "../events/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import { DocumentPurgedError } from "../shared/errors.js";
 import {
+  cursorProtectedLoadMeta,
   JobStatus,
   type ErrorInfo,
   type ShutdownStatus,
@@ -53,6 +55,7 @@ import type {
   ISyncRemoteStorage,
   SyncHoldRecord,
 } from "../storage/interfaces.js";
+import { fencesOnStorageEpoch } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import {
   pendingDelivery,
@@ -71,6 +74,14 @@ import type {
   Remote,
   RemoteMeta,
 } from "./interfaces.js";
+import {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
 import { calculateBackoffDelay } from "./channels/interval-poll-timer.js";
 import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
 import { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
@@ -92,8 +103,10 @@ import type {
   ChannelConfig,
   ConnectionStateChangedEvent,
   DeadLetterAddedEvent,
+  DegradedRemote,
   LocalPeer,
   PurgeLookup,
+  RemoteCursor,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
@@ -106,6 +119,7 @@ import type {
 } from "./types.js";
 import {
   ChannelErrorSource,
+  RemotePersistence,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
@@ -150,6 +164,26 @@ export type SyncManagerConfig = {
   /** Backoff for reloading a received marker whose load failed transiently. */
   markerRetryBaseDelayMs: number;
   markerRetryMaxDelayMs: number;
+  /**
+   * How many inbox chunks may be inside their ENQUEUE at once.
+   *
+   * Chunks that share no lane key run concurrently, so without a bound one
+   * poll's worth of a wide drive would hand the queue every document's chunk in
+   * the same turn. The bound is on chunks rather than operations because a chunk
+   * is already capped at {@link SyncManagerConfig.maxInboxBatchSize}.
+   *
+   * Deliberately not a bound on chunks awaiting their jobs: a chunk deferred for
+   * a missing ancestor would then hold a slot for the deferral's whole
+   * time-to-live, and enough of them would stop the very arrival that resolves
+   * them from reaching the queue (see {@link SyncManager.runInboxChunk}).
+   */
+  maxConcurrentInboxChunks: number;
+};
+
+/** One inbox chunk's loads, enqueued and awaiting their jobs. */
+type InboxBatchEnqueued = {
+  items: Array<{ remote: Remote; syncOp: SyncOperation }>;
+  result: BatchLoadResult;
 };
 
 enum OutboxMode {
@@ -164,6 +198,7 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   staleRemotePollWindowMs: 5 * 60_000,
   markerRetryBaseDelayMs: 1_000,
   markerRetryMaxDelayMs: 60_000,
+  maxConcurrentInboxChunks: 8,
 };
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
@@ -177,8 +212,30 @@ function isCredentialOrNetworkError(error: unknown): boolean {
   if (isDriveAuthError(error)) {
     return true;
   }
-  return error instanceof GraphQLRequestError && error.category === "network";
+  return (
+    error instanceof GraphQLRequestError &&
+    (error.category === "network" || error.category === "timeout")
+  );
 }
+
+/**
+ * Whether a remote is session-scoped, so its record must never reach
+ * `ISyncRemoteStorage`. See {@link RemotePersistence}: a durable record of a
+ * transport that dies with the session cannot be rehydrated by any later boot.
+ */
+function isSessionScoped(options: RemoteOptions): boolean {
+  return options.persistence === RemotePersistence.Session;
+}
+
+/**
+ * A stored remote brought back up by startup(), with the inbox items that were
+ * already there before its callbacks were wired -- restored from storage, or
+ * pushed while the remote was reachable but unwired.
+ */
+type RehydratedRemote = {
+  remote: Remote;
+  unheard: SyncOperation[];
+};
 
 const holdKey = (documentId: string, branch: string): string =>
   `${documentId}\u0000${branch}`;
@@ -246,7 +303,11 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
 }
 
 export class SyncManager
-  implements ISyncManager, IDeliveryTracking, IPurgeRefusalRecorder
+  implements
+    ISyncManager,
+    ISyncInspector,
+    IDeliveryTracking,
+    IPurgeRefusalRecorder
 {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -263,6 +324,9 @@ export class SyncManager
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
+  private storageRecreatedUnsubscribe?: () => void;
+  /** Serialises the channel resets a storage recreate triggers. */
+  private storageRecreatedChain: Promise<void> = Promise.resolve();
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
   private readonly config: SyncManagerConfig;
@@ -270,6 +334,12 @@ export class SyncManager
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
   private readonly purgedDocumentIds = new Set<string>();
+  /** Stored remotes startup() could not rebuild a channel for, by name. */
+  private readonly rehydrationFailures = new Map<string, DegradedRemote>();
+  // Dead letters re-enqueued by requeueDeadLetter whose durable row is kept
+  // until the retry is durably written; the apply path removes it only once the
+  // retry's load job reaches terminal success, not when the load is enqueued.
+  private readonly requeuedDeadLetterIds = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
@@ -293,7 +363,10 @@ export class SyncManager
   // settled ordinals at or below this have owed their collections' remotes
   private sweptThrough = 0;
   private settledUnsubscribe?: () => void;
-  private inboxChunkChain: Promise<void> = Promise.resolve();
+  // lane key -> the tail of the chunks queued on it
+  private readonly inboxLanes = new Map<string, Promise<void>>();
+  private inboxChunksInFlight = 0;
+  private readonly inboxSlotWaiters: Array<() => void> = [];
   private readonly capabilities: readonly PeerCapability[];
   private readonly manifest: PeerManifest;
   private readonly localSupport: Supports;
@@ -451,38 +524,20 @@ export class SyncManager
     this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
-      const channel = this.channelFactory.instance(
-        record.id,
-        record.name,
-        record.channelConfig,
-        this.cursorStorage,
-        record.collectionId,
-        record.filter,
-        this.operationIndex,
-        record.options,
-      );
-
-      const remote: Remote = {
-        meta: {
-          id: record.id,
-          name: record.name,
-          collectionId: record.collectionId,
-          channelConfig: record.channelConfig,
-          filter: record.filter,
-          options: record.options,
-          peer: record.peer,
-        },
-        channel,
-      };
-
-      this.remotes.set(record.name, remote);
-      this.owe(record.name, head);
-      this.records.set(record.name, remote.meta);
-      await this.loadDeadLetters(remote);
-      await this.restoreReceivedMarkers(remote);
-      // Restored, or pushed while the remote was reachable but unwired.
-      const unheard = [...remote.channel.inbox.items];
-      this.wireChannelCallbacks(remote);
+      // Building the channel and wiring it up is guarded as a whole: a factory
+      // that rejects this record's config (or a wiring step that throws) must
+      // degrade THIS remote, never the boot. A reactor whose sync module cannot
+      // start is a reactor that cannot be repaired from.
+      let rehydrated: RehydratedRemote;
+      try {
+        rehydrated = await this.rehydrateRemote(record, head);
+      } catch (error) {
+        await this.degradeRemoteAfterFailedRehydration(record, error);
+        continue;
+      }
+      const remote = rehydrated.remote;
+      const channel = remote.channel;
+      const unheard = rehydrated.unheard;
 
       try {
         await channel.init();
@@ -537,8 +592,20 @@ export class SyncManager
       ReactorEventTypes.JOB_FAILED,
       async (_type, event) => this.batchAggregator.handleJobFailed(event),
     );
+
+    this.storageRecreatedUnsubscribe =
+      this.eventBus.subscribe<StorageSessionRecreatedEvent>(
+        ReactorEventTypes.STORAGE_SESSION_RECREATED,
+        (_type, event) => this.handleStorageSessionRecreated(event),
+      );
   }
 
+  /**
+   * Stops the manager and frees everything holding a continuation.
+   *
+   * Inbox slot waiters are released rather than abandoned: a waiter never
+   * resolved leaves its lane promise pending for the life of the process.
+   */
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
     this.abortController.abort();
@@ -548,6 +615,13 @@ export class SyncManager
     this.backfillAbortControllers.clear();
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
+    this.inboxLanes.clear();
+    for (const waiter of this.inboxSlotWaiters.splice(
+      0,
+      this.inboxSlotWaiters.length,
+    )) {
+      waiter();
+    }
     this.prunePending.clear();
     this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
@@ -565,6 +639,11 @@ export class SyncManager
     if (this.failedEventUnsubscribe) {
       this.failedEventUnsubscribe();
       this.failedEventUnsubscribe = undefined;
+    }
+
+    if (this.storageRecreatedUnsubscribe) {
+      this.storageRecreatedUnsubscribe();
+      this.storageRecreatedUnsubscribe = undefined;
     }
 
     this.awaiter.shutdown();
@@ -627,7 +706,7 @@ export class SyncManager
 
     remote.meta.options = { ...remote.meta.options, boundAddress };
 
-    await this.remoteStorage.upsert(this.recordOf(remote.meta));
+    await this.persistRemote(remote.meta);
   }
 
   localManifest(): PeerManifest {
@@ -686,7 +765,7 @@ export class SyncManager
       return;
     }
     remote.meta.peer = { manifest, receivedAtUtcMs: Date.now() };
-    await this.remoteStorage.upsert(this.recordOf(remote.meta));
+    await this.persistRemote(remote.meta);
     await this.holdUnsupported(remote, undelivered);
     await this.releaseSupported(remote);
   }
@@ -1160,6 +1239,22 @@ export class SyncManager
     return kept;
   }
 
+  /**
+   * Writes a remote's record to storage, unless the remote is session-scoped.
+   *
+   * The single gate every remote write goes through, so a
+   * {@link RemotePersistence.Session} remote cannot become durable by a side
+   * door -- not through add(), not through a later bind, not through a peer
+   * manifest arriving on it. Such a remote therefore never appears in
+   * `remoteStorage.list()` and is never rehydrated by startup().
+   */
+  private async persistRemote(meta: RemoteMeta): Promise<void> {
+    if (isSessionScoped(meta.options)) {
+      return;
+    }
+    await this.remoteStorage.upsert(this.recordOf(meta));
+  }
+
   private recordOf(meta: RemoteMeta): RemoteRecord {
     return {
       id: meta.id,
@@ -1219,8 +1314,9 @@ export class SyncManager
           : { manifest: peer, receivedAtUtcMs: Date.now() },
     };
 
-    await this.remoteStorage.upsert(this.recordOf(meta));
-
+    // The factory validates the config, so it runs BEFORE the record is
+    // persisted: a config the factory rejects must not leave a durable remote
+    // behind that every later startup would then try (and fail) to rehydrate.
     const channel = this.channelFactory.instance(
       remoteId,
       name,
@@ -1231,6 +1327,10 @@ export class SyncManager
       this.operationIndex,
       options,
     );
+
+    await this.persistRemote(meta);
+    // Re-adding a remote that startup() had to degrade clears that verdict.
+    this.rehydrationFailures.delete(name);
 
     const remote: Remote = { meta, channel };
 
@@ -1323,6 +1423,116 @@ export class SyncManager
   }
 
   /**
+   * Rebuilds one stored remote's channel and wires it up, short of init().
+   *
+   * Everything here can throw -- the factory rejects an unusable config, the
+   * dead-letter and marker reads touch storage -- so startup() calls it inside
+   * a guard and degrades just this remote when it does. Nothing is left half
+   * registered on the throwing path that {@link degradeRemoteAfterFailedRehydration}
+   * does not then clear.
+   */
+  private async rehydrateRemote(
+    record: RemoteRecord,
+    head: number,
+  ): Promise<RehydratedRemote> {
+    const channel = this.channelFactory.instance(
+      record.id,
+      record.name,
+      record.channelConfig,
+      this.cursorStorage,
+      record.collectionId,
+      record.filter,
+      this.operationIndex,
+      record.options,
+    );
+
+    const remote: Remote = {
+      meta: {
+        id: record.id,
+        name: record.name,
+        collectionId: record.collectionId,
+        channelConfig: record.channelConfig,
+        filter: record.filter,
+        options: record.options,
+        peer: record.peer,
+      },
+      channel,
+    };
+
+    this.remotes.set(record.name, remote);
+    this.owe(record.name, head);
+    this.records.set(record.name, remote.meta);
+    await this.loadDeadLetters(remote);
+    await this.restoreReceivedMarkers(remote);
+    const unheard = [...remote.channel.inbox.items];
+    this.wireChannelCallbacks(remote);
+    return { remote, unheard };
+  }
+
+  /**
+   * Records a stored remote startup() could not bring up and moves on.
+   *
+   * Classified exactly as a failed init is: a credential or network failure
+   * says nothing about the configuration, so the row stays and a retry after
+   * sign-in can re-add it; anything else -- a factory with no scheme for this
+   * config, a transport this session cannot resolve -- says the record itself
+   * is unusable, so it is dropped rather than left to fail every boot. Either
+   * way the remote becomes a {@link DegradedRemote} rather than a boot failure.
+   */
+  private async degradeRemoteAfterFailedRehydration(
+    record: RemoteRecord,
+    error: unknown,
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(
+      "Error rehydrating stored remote at startup (@name, @error)",
+      record.name,
+      message,
+    );
+
+    const recordKept = isCredentialOrNetworkError(error);
+    this.rehydrationFailures.set(record.name, {
+      name: record.name,
+      error: message,
+      recordKept,
+    });
+
+    this.remotes.delete(record.name);
+    this.owed.delete(record.name);
+    this.derivedThrough.delete(record.name);
+    this.connectionStateUnsubscribes.get(record.name)?.();
+    this.connectionStateUnsubscribes.delete(record.name);
+
+    if (recordKept) {
+      return;
+    }
+
+    try {
+      await this.remoteStorage.remove(record.name);
+    } catch (removeError) {
+      this.logger.error(
+        "Error removing unusable remote record at startup (@name, @error)",
+        record.name,
+        removeError instanceof Error
+          ? removeError.message
+          : String(removeError),
+      );
+    }
+
+    try {
+      await this.forgetRemote(record.name);
+    } catch (forgetError) {
+      this.logger.error(
+        "Error forgetting unusable remote at startup (@name, @error)",
+        record.name,
+        forgetError instanceof Error
+          ? forgetError.message
+          : String(forgetError),
+      );
+    }
+  }
+
+  /**
    * Drops a remote whose channel.init() rejected, optionally removing its
    * stored record. Ordered like remove(): the registry slot is released last,
    * so a concurrent add of the same name cannot slip in and have its record
@@ -1399,6 +1609,18 @@ export class SyncManager
     return Array.from(this.remotes.values());
   }
 
+  /**
+   * Stored remotes this startup() could not bring up, and why.
+   *
+   * Deliberately NOT on `ISyncManager`: it reports on one process's boot, so a
+   * proxy to another realm's sync manager has nothing truthful to answer with.
+   * A host that wants to surface it reads it from the concrete SyncManager it
+   * built. Empty when every stored remote came up.
+   */
+  listDegradedRemotes(): DegradedRemote[] {
+    return Array.from(this.rehydrationFailures.values());
+  }
+
   waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
     return this.syncAwaiter.waitForSync(jobId, signal);
   }
@@ -1414,6 +1636,403 @@ export class SyncManager
   /** Settles once the remotes' received markers are stored; rejects if one failed. */
   async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
     await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  async inspectRemote(remoteName: string): Promise<RemoteSyncInspection> {
+    const remote = this.getByName(remoteName);
+    const cursors = await this.cursorStorage.list(remoteName);
+    return this.inspectionOf(remote, cursors);
+  }
+
+  async inspectRemotes(): Promise<RemoteSyncInspection[]> {
+    const out: RemoteSyncInspection[] = [];
+    for (const remote of this.remotes.values()) {
+      const cursors = await this.cursorStorage.list(remote.meta.name);
+      out.push(this.inspectionOf(remote, cursors));
+    }
+    return out;
+  }
+
+  async listDeadLetters(
+    remoteName: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<DeadLetterPage> {
+    this.getByName(remoteName);
+    const page = await this.deadLetterStorage.list(remoteName, {
+      cursor: cursor ?? "0",
+      limit: limit ?? this.config.maxDeadLettersPerRemote,
+    });
+    return {
+      remoteName,
+      results: page.results,
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  /**
+   * Lowers the inbox cursor so the next poll re-pulls from `toOrdinal`.
+   *
+   * A target above the current cursor is REFUSED, not clamped: a lever named
+   * "rewind" must never move the cursor forward, and silently advancing it would
+   * permanently skip every unpulled inbox op between the old cursor and the
+   * target. Refusing with the current cursor in the message (rather than
+   * clamping to a no-op) tells the operator their value was out of range so they
+   * can pick a correct lower one, consistent with surfacing repair failures
+   * instead of swallowing them.
+   */
+  async rewindInboxCursor(
+    remoteName: string,
+    toOrdinal: number,
+  ): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const target = Math.max(0, Math.floor(toOrdinal));
+    const current = await this.currentInboxCursor(remote);
+    if (target > current) {
+      throw new Error(
+        `Cannot rewind inbox cursor for '${remoteName}' to ${target}: it is above the current cursor ${current}. Rewind only moves the cursor backward.`,
+      );
+    }
+    if (remote.channel.rewindInboxCursor) {
+      await remote.channel.rewindInboxCursor(target);
+      return;
+    }
+    await this.cursorStorage.upsert({
+      remoteName,
+      cursorType: "inbox",
+      cursorOrdinal: target,
+      lastSyncedAtUtcMs: Date.now(),
+    });
+    await this.resetChannel(remoteName);
+  }
+
+  /** The highest inbox position a rewind may target: the persisted cursor or
+   * the live in-memory watermark, whichever is further ahead. */
+  private async currentInboxCursor(remote: Remote): Promise<number> {
+    const cursors = await this.cursorStorage.list(remote.meta.name);
+    const stored =
+      cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0;
+    return Math.max(stored, remote.channel.inbox.ackOrdinal);
+  }
+
+  /**
+   * Rebuilds a remote's channel in place, re-adding the same remote with a fresh
+   * channel. Its init-failure handling mirrors add() deliberately: an operator
+   * resetting a channel expects the same registry state add() would leave.
+   * A credential or network failure keeps the stored record (so a retry after
+   * sign-in re-adds it) but drops the broken channel from the registry; any
+   * other failure drops the record too. Leaving a half-wired remote registered
+   * would hand inspectRemote/triggerPull/listDeadLetters a channel whose init
+   * never ran, which none of them is written to tolerate.
+   */
+  async resetChannel(remoteName: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const meta = remote.meta;
+
+    let fresh: Remote;
+    let unheard: SyncOperation[];
+    this.removing.add(meta.name);
+    try {
+      await this.teardownRemoteResources(remote);
+
+      const channel = this.channelFactory.instance(
+        meta.id,
+        meta.name,
+        meta.channelConfig,
+        this.cursorStorage,
+        meta.collectionId,
+        meta.filter,
+        this.operationIndex,
+        meta.options,
+      );
+      fresh = { meta, channel };
+      this.remotes.set(meta.name, fresh);
+      this.records.set(meta.name, meta);
+
+      await this.loadDeadLetters(fresh);
+      await this.restoreReceivedMarkers(fresh);
+      unheard = [...fresh.channel.inbox.items];
+      this.wireChannelCallbacks(fresh);
+    } finally {
+      this.removing.delete(meta.name);
+    }
+
+    try {
+      await fresh.channel.init();
+    } catch (error) {
+      await this.dropRemoteAfterFailedInit(
+        fresh,
+        !isCredentialOrNetworkError(error),
+      );
+
+      throw error;
+    }
+
+    if (unheard.length > 0) this.handleInboxAdded(fresh, unheard);
+    await this.peerUpdates.get(meta.name);
+
+    this.owe(meta.name, await this.watermarkHead());
+    const backfillController = new AbortController();
+    this.backfillAbortControllers.set(meta.name, backfillController);
+    void this.updateOutbox(
+      fresh,
+      0,
+      OutboxMode.Backfill,
+      backfillController.signal,
+    )
+      .catch((error) => {
+        if (backfillController.signal.aborted) return;
+        this.logger.error(
+          "Backfill failed for remote @RemoteName after reset: @Error",
+          meta.name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      })
+      .finally(() => {
+        this.backfillAbortControllers.delete(meta.name);
+        void this.drainPrunes();
+      });
+  }
+
+  /**
+   * Re-initialises every channel after the storage session was recreated.
+   *
+   * A recreate falls the store back to its last FLUSHED snapshot, which makes
+   * every in-memory channel cursor stale-HIGH: the channel remembers acking
+   * operations that have just ceased to exist, so its next poll asks for the
+   * tail after them, the remote answers "caught up", and the gap is permanent -
+   * with every later operation on those documents dead-lettering on a missing
+   * ancestor. That is the live incident's mechanism, and nothing used to rewind
+   * sync state when the storage healed.
+   *
+   * The persisted cursors are the safe ones: durability boundary 1 means no
+   * cursor row was ever written before a flush covering its operations, so what
+   * survives the fallback is at or behind durable data. {@link resetChannel}
+   * rebuilds each channel, which re-initialises it from exactly those rows, and
+   * the re-pull closes the gap on its own - the same repair that previously
+   * needed a SQL rewind plus an operator restart.
+   *
+   * It subscribes to the event rather than being wired by each host because the
+   * channels are the sync manager's own state: every host that emits
+   * STORAGE_SESSION_RECREATED - Connect's two reactors and the monitor's - gets
+   * the rewind with no wiring of its own, and cannot forget it.
+   *
+   * Resets run serially and per remote: one remote whose channel cannot
+   * re-initialise (expired credentials, a server that is down) must not stop
+   * the others from recovering, and {@link resetChannel} already leaves the
+   * registry in the state `add` would.
+   *
+   * The round runs even with no remote registered, because its other half is
+   * acknowledging the new storage epoch - see
+   * {@link acknowledgeStorageEpoch} - and a fence nobody opens refuses every
+   * cursor write a later `add` would make.
+   */
+  private handleStorageSessionRecreated(
+    event: StorageSessionRecreatedEvent,
+  ): Promise<void> {
+    if (this.isShutdown) {
+      return Promise.resolve();
+    }
+    const names = [...this.remotes.keys()];
+    this.logger.warn(
+      "Storage session was recreated (@Reason, attempt @Attempt); resetting @Count channel(s) so their cursors come back from durable storage",
+      event.reason,
+      event.attempt,
+      names.length,
+    );
+    this.storageRecreatedChain = this.storageRecreatedChain.then(() =>
+      this.resetChannelsAfterRecovery(names, event.attempt),
+    );
+    return this.storageRecreatedChain;
+  }
+
+  private async resetChannelsAfterRecovery(
+    names: string[],
+    epoch: number,
+  ): Promise<void> {
+    for (const name of names) {
+      if (this.isShutdown) {
+        return;
+      }
+      if (!this.remotes.has(name)) {
+        continue;
+      }
+      try {
+        await this.resetChannel(name);
+      } catch (error) {
+        this.logger.error(
+          "Resetting channel @RemoteName after a storage recreate failed: @Error",
+          name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    }
+    this.acknowledgeStorageEpoch(epoch);
+  }
+
+  /**
+   * Lets cursor writes resume, now that every channel has been rebuilt from the
+   * durable rows.
+   *
+   * The sync manager owns this because it owns the recovery: the cursor storage
+   * can see that its session was replaced but not when the in-memory cursors
+   * that feed it have been re-initialised, and only
+   * {@link resetChannelsAfterRecovery} knows that. Until this runs, a write
+   * carrying a pre-fallback ordinal is refused rather than durably stored and
+   * then read back by the very reset meant to repair it.
+   *
+   * The epoch is the recreate's own attempt number, not whatever is current:
+   * acknowledging a round that a second recreate has already overtaken would
+   * open the fence before that recreate's resets had run, so the storage
+   * discards an acknowledgment for a superseded epoch.
+   *
+   * A cursor storage without the fence - a caller-supplied one, or the no-op
+   * barrier of a per-statement-durable store, which has no fallback and so no
+   * window - needs nothing.
+   */
+  private acknowledgeStorageEpoch(epoch: number): void {
+    if (!fencesOnStorageEpoch(this.cursorStorage)) {
+      return;
+    }
+    this.cursorStorage.acknowledgeEpoch(epoch);
+  }
+
+  /**
+   * Re-enqueues a dead letter for another apply attempt.
+   *
+   * The durable dead-letter row is deliberately NOT removed here. The inbox is
+   * in-memory and its cursor has already advanced past this op's ordinal (that
+   * is why it dead-lettered), so the op will never be re-pulled. Removing the
+   * row before the retry is durable would lose the op outright on a crash
+   * before its operations are written. Instead the op is re-added to the inbox,
+   * which drives it back through handleInboxAdded -> reactor.load, and the row
+   * is removed only once the retry's load job reaches terminal success, its
+   * operations durably written ({@link dropRequeuedDeadLetter}). The enqueued
+   * job is PENDING on an in-memory queue, so a crash between the enqueue and
+   * that terminal success leaves the row for loadDeadLetters to restore on
+   * restart; a later duplicate apply is idempotent, a lost op is not.
+   */
+  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const source = await this.findDeadLetter(remote, id);
+    if (!source) {
+      return;
+    }
+
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    this.quarantinedDocumentIds.delete(source.documentId);
+
+    const requeued = new SyncOperation(
+      source.id,
+      source.jobId,
+      source.jobDependencies,
+      source.remoteName,
+      source.documentId,
+      source.scopes,
+      source.branch,
+      source.operations,
+    );
+    this.requeuedDeadLetterIds.add(source.id);
+    remote.channel.inbox.add(requeued);
+  }
+
+  /**
+   * Removes a requeued dead letter's durable row, called only once the retry's
+   * load job has reached terminal success and its operations are durably
+   * written. A failed remove keeps the row, which is safe: the op is already
+   * durable, and a lingering row only costs a later manual clear, never a lost
+   * op.
+   */
+  private async dropRequeuedDeadLetter(id: string): Promise<void> {
+    if (!this.requeuedDeadLetterIds.delete(id)) {
+      return;
+    }
+    try {
+      await this.deadLetterStorage.remove(id);
+    } catch (error) {
+      this.logger.error(
+        "Failed to remove a requeued dead letter after durable enqueue (@id, @error)",
+        id,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    await this.deadLetterStorage.remove(id);
+  }
+
+  private inspectionOf(
+    remote: Remote,
+    cursors: RemoteCursor[],
+  ): RemoteSyncInspection {
+    const inboxStored = cursors.find((c) => c.cursorType === "inbox");
+    const outboxStored = cursors.find((c) => c.cursorType === "outbox");
+    const inboxCursor: RemoteCursorInfo = {
+      cursorType: "inbox",
+      cursorOrdinal: inboxStored?.cursorOrdinal ?? 0,
+      lastSyncedAtUtcMs: inboxStored?.lastSyncedAtUtcMs,
+      liveAckOrdinal: remote.channel.inbox.ackOrdinal,
+      liveLatestOrdinal: remote.channel.inbox.latestOrdinal,
+    };
+    const outboxCursor: RemoteCursorInfo = {
+      cursorType: "outbox",
+      cursorOrdinal: outboxStored?.cursorOrdinal ?? 0,
+      lastSyncedAtUtcMs: outboxStored?.lastSyncedAtUtcMs,
+      liveAckOrdinal: remote.channel.outbox.ackOrdinal,
+      liveLatestOrdinal: remote.channel.outbox.latestOrdinal,
+    };
+    const mailboxDepths: MailboxDepths = {
+      inbox: remote.channel.inbox.items.length,
+      outbox: remote.channel.outbox.items.length,
+      deadLetter: remote.channel.deadLetter.items.length,
+    };
+    return {
+      remoteName: remote.meta.name,
+      remoteId: remote.meta.id,
+      inboxCursor,
+      outboxCursor,
+      mailboxDepths,
+      connection: deriveConnectionHealth(remote.channel.getConnectionState()),
+    };
+  }
+
+  /**
+   * The dead letter under `id`, preferring the live mailbox item (which carries
+   * the operations) and falling back to a storage scan for one evicted from the
+   * capped mailbox.
+   */
+  private async findDeadLetter(
+    remote: Remote,
+    id: string,
+  ): Promise<SyncOperation | DeadLetterRecord | undefined> {
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      return item;
+    }
+    let cursor = "0";
+    for (;;) {
+      const page = await this.deadLetterStorage.list(remote.meta.name, {
+        cursor,
+        limit: this.config.maxDeadLettersPerRemote,
+      });
+      const match = page.results.find((record) => record.id === id);
+      if (match) {
+        return match;
+      }
+      if (!page.nextCursor) {
+        return undefined;
+      }
+      cursor = page.nextCursor;
+    }
   }
 
   private recordPlanKeyMapping(planKey: string, jobId: string): void {
@@ -1806,6 +2425,7 @@ export class SyncManager
 
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
+    const quarantined: SyncOperation[] = [];
     const received = this.receivedMarkersOf(remote.meta.name);
     // A resent marker whose first copy is still loading or awaiting a retry.
     const loading = (id: string, syncOp: SyncOperation): boolean => {
@@ -1831,7 +2451,9 @@ export class SyncManager
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
-      } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
+      } else if (this.quarantinedDocumentIds.has(syncOp.documentId)) {
+        quarantined.push(syncOp);
+      } else {
         eligible.push(syncOp);
       }
     }
@@ -1845,6 +2467,7 @@ export class SyncManager
       syncOp.executed();
     }
     if (dropped.length > 0) remote.channel.inbox.remove(...dropped);
+    for (const syncOp of quarantined) this.parkQuarantineGap(remote, syncOp);
     if (eligible.length === 0) return;
 
     const keyed: SyncOperation[] = [];
@@ -1870,6 +2493,45 @@ export class SyncManager
       );
       void this.processInboxChunks(chunks);
     }
+  }
+
+  /**
+   * Dead-letters an operation that arrived while its document was quarantined.
+   *
+   * It cannot be applied -- that is what the quarantine means -- and it cannot
+   * stay in the inbox either: an unapplied item holds the channel's ack below
+   * itself, which would freeze the cursor of every other document sharing the
+   * channel for as long as the quarantine lasts. Acknowledging it and dropping
+   * it was the third option and the wrong one: the cursor advances past an
+   * operation with no durable record anywhere, so requeuing the dead letter
+   * that caused the quarantine restores that one operation and every operation
+   * of the quarantine window is gone, leaving the document dead-lettering
+   * MISSING_OPERATIONS forever.
+   *
+   * A dead letter keeps the PR's invariant -- the cursor never passes an
+   * operation that is neither applied nor dead-lettered -- and puts the window
+   * on the same W0.5 requeue lever as the operation that opened it: requeued
+   * oldest-first after that one, the document is whole again. The classification
+   * is deliberately its own, so the row does not itself quarantine the document
+   * and survive the requeue that clears the quarantine.
+   */
+  private parkQuarantineGap(remote: Remote, syncOp: SyncOperation): void {
+    this.logger.warn(
+      "Dead-lettering operations received for a quarantined document (@remote, @documentId)",
+      remote.meta.name,
+      syncOp.documentId,
+    );
+    syncOp.failed(
+      new ChannelError(
+        ChannelErrorSource.Inbox,
+        new Error(
+          `Document ${syncOp.documentId} was quarantined when these operations arrived; requeue them after the dead letter that quarantined it`,
+        ),
+        "QUARANTINED_GAP",
+      ),
+    );
+    remote.channel.deadLetter.add(syncOp);
+    remote.channel.inbox.remove(syncOp);
   }
 
   /** Forgets a marker once the item loading it leaves the inbox. */
@@ -1985,19 +2647,145 @@ export class SyncManager
   private processInboxChunks(
     chunks: Array<Array<{ remote: Remote; syncOp: SyncOperation }>>,
   ): Promise<void> {
-    const next = this.inboxChunkChain.then(async () => {
-      for (const chunk of chunks) {
-        if (this.isShutdown) return;
-        await this.applyInboxBatch(chunk);
+    const queued = chunks.map((chunk) => this.queueInboxChunk(chunk));
+    return Promise.all(queued).then(() => undefined);
+  }
+
+  /**
+   * Queues one chunk behind every chunk it shares a lane key with, and beside
+   * every chunk it does not.
+   *
+   * One chain for the whole inbox made a document's failures the channel's: a
+   * load that dead-letters is bad enough, and a load deferred for a missing
+   * ancestor holds the chain for the deferral's whole time-to-live, during
+   * which no other document applies anything. The lane keys are the two orders
+   * the apply path owes: the documents a chunk writes, because the queue
+   * serialises a document's jobs and the FIFO dependency the plan injects
+   * assumes they were enqueued in order, and the plan keys its dependency edges
+   * name, because a cross-chunk edge only resolves once the chunk providing it
+   * has been enqueued. Chunks sharing neither are independent, and the executor
+   * does not order them anyway.
+   */
+  private queueInboxChunk(
+    chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): Promise<void> {
+    const keys = this.inboxLaneKeys(chunk);
+    const predecessors: Array<Promise<void>> = [];
+    for (const key of keys) {
+      const tail = this.inboxLanes.get(key);
+      if (tail !== undefined) predecessors.push(tail);
+    }
+
+    const lane = Promise.all(predecessors)
+      .then(() => this.runInboxChunk(chunk))
+      .catch((err: unknown) => {
+        this.logger.error(
+          "Inbox chunk processing failed (@error)",
+          err instanceof Error ? err.message : String(err),
+        );
+      });
+
+    for (const key of keys) {
+      this.inboxLanes.set(key, lane);
+    }
+    void lane.then(() => {
+      for (const key of keys) {
+        if (this.inboxLanes.get(key) === lane) this.inboxLanes.delete(key);
       }
     });
-    this.inboxChunkChain = next.catch((err) => {
+
+    return lane;
+  }
+
+  /**
+   * The documents a chunk writes and the plan keys its dependency edges name.
+   *
+   * A document key is not per scope or branch: the queue serialises a
+   * document's jobs across both, so a per-scope lane would claim an
+   * independence it does not have.
+   */
+  private inboxLaneKeys(
+    chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): string[] {
+    const keys = new Set<string>();
+    for (const { syncOp } of chunk) {
+      keys.add(`doc ${syncOp.documentId}`);
+      keys.add(`plan ${syncOp.jobId}`);
+      for (const dep of syncOp.jobDependencies) {
+        if (dep) keys.add(`plan ${dep}`);
+      }
+    }
+    return [...keys];
+  }
+
+  /**
+   * Enqueues a chunk under a slot and resolves once it is enqueued, leaving the
+   * resolution running outside the slot.
+   *
+   * The returned promise is what the lane waits on, so it has to settle at the
+   * enqueue and not at the apply: holding the lane through the apply would put
+   * every later chunk of every document in a mixed chunk behind the slowest
+   * document in it.
+   *
+   * The slot settles there too, because the slot bounds ENQUEUE work and
+   * nothing else. Holding it through the resolution made the bound a stall
+   * class of its own: a chunk deferred for a missing ancestor waits out the
+   * deferral's whole time-to-live, so eight of them held every slot and no
+   * chunk of any document could even reach the queue -- the missing CREATE
+   * among them, which is the one arrival that would have resolved them all.
+   * A resolution holds a job id and a reference to an item the inbox already
+   * holds, and every await in it is a passive waitForJob subscription, so the
+   * set of unresolved chunks is left unbounded on purpose: bounding it would
+   * reintroduce that deadlock to cap memory the inbox's own depth already caps.
+   */
+  private async runInboxChunk(
+    chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): Promise<void> {
+    if (this.isShutdown) return;
+    await this.acquireInboxSlot();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) {
+      this.releaseInboxSlot();
+      return;
+    }
+
+    let enqueued: InboxBatchEnqueued | undefined;
+    try {
+      enqueued = await this.enqueueInboxBatch(chunk);
+    } catch (error) {
+      this.releaseInboxSlot();
+      throw error;
+    }
+    this.releaseInboxSlot();
+
+    if (enqueued === undefined) return;
+
+    void this.resolveInboxBatch(enqueued).catch((err: unknown) => {
       this.logger.error(
-        "Inbox chunk processing failed (@error)",
+        "Inbox chunk resolution failed (@error)",
         err instanceof Error ? err.message : String(err),
       );
     });
-    return next;
+  }
+
+  private acquireInboxSlot(): Promise<void> {
+    if (this.inboxChunksInFlight < this.config.maxConcurrentInboxChunks) {
+      this.inboxChunksInFlight++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      this.inboxSlotWaiters.push(resolve);
+    });
+  }
+
+  /** Hands the slot to whoever is waiting rather than freeing and re-taking it. */
+  private releaseInboxSlot(): void {
+    const waiter = this.inboxSlotWaiters.shift();
+    if (waiter !== undefined) {
+      waiter();
+      return;
+    }
+    this.inboxChunksInFlight--;
   }
 
   private async applyInboxJob(
@@ -2018,7 +2806,7 @@ export class SyncManager
         syncOp.branch,
         operations,
         this.abortController.signal,
-        { sourceRemote: remote.meta.name },
+        cursorProtectedLoadMeta(remote.meta.name),
       );
     } catch (error) {
       if (this.isShutdown) return;
@@ -2070,12 +2858,15 @@ export class SyncManager
 
     if (this.isShutdown) return;
 
+    let syncOpResolved = false;
     if (completedJobInfo.status !== JobStatus.FAILED) {
       syncOp.executed();
       if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      syncOpResolved = true;
     } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
       this.tombstone(syncOp.documentId);
       syncOp.executed();
+      syncOpResolved = true;
     } else {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
@@ -2095,6 +2886,10 @@ export class SyncManager
 
     this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
+
+    if (syncOpResolved && this.requeuedDeadLetterIds.has(syncOp.id)) {
+      await this.dropRequeuedDeadLetter(syncOp.id);
+    }
   }
 
   /** Reloads a marker with backoff; it stays in the inbox, not dead-lettered. */
@@ -2160,9 +2955,19 @@ export class SyncManager
     await this.applyInboxJob(remote, syncOp);
   }
 
-  private async applyInboxBatch(
+  /**
+   * Enqueues one chunk's loads and reports what has to be resolved.
+   *
+   * Split from the resolution because the two have different obligations. The
+   * enqueue carries the ordering: the FIFO dependency and the cross-chunk plan
+   * key both read what the chunk before them enqueued, so chunks sharing a lane
+   * have to reach the queue in order. Nothing downstream needs them to finish
+   * in order -- the queue holds the dependency edges and serialises a document
+   * itself -- so the resolution runs outside the lane.
+   */
+  private async enqueueInboxBatch(
     received: Array<{ remote: Remote; syncOp: SyncOperation }>,
-  ): Promise<void> {
+  ): Promise<InboxBatchEnqueued | undefined> {
     const refused = new Set<SyncOperation>();
     for (const { remote, syncOp } of received) {
       const refusals = await this.refuseOnReceipt(remote, [syncOp]);
@@ -2171,7 +2976,7 @@ export class SyncManager
       }
     }
     const items = received.filter(({ syncOp }) => !refused.has(syncOp));
-    if (items.length === 0) return;
+    if (items.length === 0) return undefined;
     const sourceRemote = items[0].remote.meta.name;
 
     const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
@@ -2208,10 +3013,10 @@ export class SyncManager
       result = await this.reactor.loadBatch(
         request,
         this.abortController.signal,
-        { sourceRemote },
+        cursorProtectedLoadMeta(sourceRemote),
       );
     } catch (error) {
-      if (this.isShutdown) return;
+      if (this.isShutdown) return undefined;
       for (const { remote, syncOp } of items) {
         const err = error instanceof Error ? error : new Error(String(error));
         if (carriesMarker(syncOp)) {
@@ -2222,10 +3027,10 @@ export class SyncManager
         remote.channel.deadLetter.add(syncOp);
         remote.channel.inbox.remove(syncOp);
       }
-      return;
+      return undefined;
     }
 
-    if (this.isShutdown) return;
+    if (this.isShutdown) return undefined;
 
     for (const plan of jobs) {
       if (!(plan.key in result.jobs)) continue;
@@ -2235,70 +3040,99 @@ export class SyncManager
       this.lastEnqueuedJobIdByKey.set(fifoKey, info.id);
     }
 
-    for (const { remote, syncOp } of items) {
-      if (!(syncOp.jobId in result.jobs)) {
-        this.logger.error(
-          "Job key missing from batch load result (@remote, @documentId, @jobId)",
-          remote.meta.name,
-          syncOp.documentId,
-          syncOp.jobId,
-        );
-        const error = new ChannelError(
-          ChannelErrorSource.Inbox,
-          new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
-        );
-        syncOp.failed(error);
-        remote.channel.deadLetter.add(syncOp);
-        remote.channel.inbox.remove(syncOp);
-        continue;
-      }
-      const jobInfo = result.jobs[syncOp.jobId];
+    return { items, result };
+  }
 
-      let completedJobInfo;
-      try {
-        completedJobInfo = await this.awaiter.waitForJob(
-          jobInfo.id,
-          this.abortController.signal,
-        );
-      } catch (error) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
-        if (this.isShutdown) continue;
-        const err = error instanceof Error ? error : new Error(String(error));
-        if (carriesMarker(syncOp)) {
-          this.retryMarker(remote, syncOp, err.message);
-          continue;
-        }
-        syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
-        remote.channel.deadLetter.add(syncOp);
-        remote.channel.inbox.remove(syncOp);
-        continue;
-      }
+  /**
+   * Resolves every item of one enqueued chunk beside the others.
+   *
+   * Awaiting them in turn made one document's load the batch's: a load deferred
+   * for a missing ancestor holds its await for the deferral's whole
+   * time-to-live, and an item behind it in the same batch waited that out
+   * however unrelated its document was.
+   */
+  private async resolveInboxBatch(enqueued: InboxBatchEnqueued): Promise<void> {
+    await Promise.all(
+      enqueued.items.map(({ remote, syncOp }) =>
+        this.resolveInboxItem(remote, syncOp, enqueued.result),
+      ),
+    );
+  }
 
+  private async resolveInboxItem(
+    remote: Remote,
+    syncOp: SyncOperation,
+    result: BatchLoadResult,
+  ): Promise<void> {
+    if (!(syncOp.jobId in result.jobs)) {
+      this.logger.error(
+        "Job key missing from batch load result (@remote, @documentId, @jobId)",
+        remote.meta.name,
+        syncOp.documentId,
+        syncOp.jobId,
+      );
+      const error = new ChannelError(
+        ChannelErrorSource.Inbox,
+        new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
+      );
+      syncOp.failed(error);
+      remote.channel.deadLetter.add(syncOp);
+      remote.channel.inbox.remove(syncOp);
+      return;
+    }
+    const jobInfo = result.jobs[syncOp.jobId];
+
+    let completedJobInfo;
+    try {
+      completedJobInfo = await this.awaiter.waitForJob(
+        jobInfo.id,
+        this.abortController.signal,
+      );
+    } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
-
-      if (completedJobInfo.status !== JobStatus.FAILED) {
-        syncOp.executed();
-        if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-      } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
-        this.tombstone(syncOp.documentId);
-        syncOp.executed();
-      } else if (
-        carriesMarker(syncOp) &&
-        !isRefusedMarker(completedJobInfo.error)
-      ) {
-        this.retryMarker(
-          remote,
-          syncOp,
-          completedJobInfo.error?.message || "Unknown error",
-        );
-        continue;
-      } else {
-        syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
-        remote.channel.deadLetter.add(syncOp);
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (carriesMarker(syncOp)) {
+        this.retryMarker(remote, syncOp, err.message);
+        return;
       }
-
+      syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
+      remote.channel.deadLetter.add(syncOp);
       remote.channel.inbox.remove(syncOp);
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) return;
+
+    let syncOpResolved = false;
+    if (completedJobInfo.status !== JobStatus.FAILED) {
+      syncOp.executed();
+      if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      syncOpResolved = true;
+    } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
+      this.tombstone(syncOp.documentId);
+      syncOp.executed();
+      syncOpResolved = true;
+    } else if (
+      carriesMarker(syncOp) &&
+      !isRefusedMarker(completedJobInfo.error)
+    ) {
+      this.retryMarker(
+        remote,
+        syncOp,
+        completedJobInfo.error?.message || "Unknown error",
+      );
+      return;
+    } else {
+      syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
+      remote.channel.deadLetter.add(syncOp);
+    }
+
+    remote.channel.inbox.remove(syncOp);
+
+    if (syncOpResolved && this.requeuedDeadLetterIds.has(syncOp.id)) {
+      await this.dropRequeuedDeadLetter(syncOp.id);
     }
   }
 
@@ -2317,9 +3151,16 @@ export class SyncManager
     error: ErrorInfo | undefined,
   ): ChannelError {
     const message = error?.message || "Unknown error";
+    const wrapper = new Error(`Failed to apply operations: ${message}`);
+    // The document the failure named, kept across the rewrap so a repair path
+    // knows which ancestor to backfill. Nothing reads it yet; the repair is
+    // its own work package.
+    if (error?.documentId !== undefined) {
+      Object.assign(wrapper, { documentId: error.documentId });
+    }
     return new ChannelError(
       ChannelErrorSource.Inbox,
-      new Error(`Failed to apply operations: ${message}`),
+      wrapper,
       carriesMarker(syncOp)
         ? "MARKER_REFUSED"
         : classifyJobFailure(error?.name ?? "Error"),

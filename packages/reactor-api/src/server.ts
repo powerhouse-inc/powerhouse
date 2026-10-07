@@ -5,6 +5,8 @@ import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
+  IInspectableAttachmentStore,
+  InspectorAttachmentInfo,
   IReadModel,
   IReactorClient,
   InProcessReactorModule,
@@ -17,6 +19,7 @@ import type { SyncScopeGate } from "@powerhousedao/reactor";
 import {
   AttachmentBuilder,
   AttachmentReferenceIndexBuilder,
+  KyselyAttachmentStore,
 } from "@powerhousedao/reactor-attachments";
 import type {
   AttachmentBuildResult,
@@ -84,6 +87,12 @@ import {
   decodeExplorerUrlState,
   renderGraphqlPlayground,
 } from "./graphql/playground.js";
+import {
+  createReactorInspectionSource,
+  InspectionSubgraph,
+  type IReactorInspectionSource,
+  type ReactorInspectionOptions,
+} from "./graphql/inspection/index.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
@@ -207,6 +216,15 @@ type Options = {
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
+  /**
+   * Which tiers of the reactor inspection surface this host serves
+   * (multi-reactor W3.2). Both default to the matching environment variable
+   * and to OFF; see `IReactorInspectionSource` for the posture. `workflows`
+   * is a fact the host reports about itself, and a host that composes the
+   * engine after the API boots — which is all of them — reports it through
+   * `api.inspection.setWorkflowsComposed()` rather than here.
+   */
+  inspection?: ReactorInspectionOptions;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
@@ -360,6 +378,48 @@ export function getExplorerPrefix(basePath: string): string {
   return path.posix.join(basePath, "explorer");
 }
 
+/**
+ * Adapts the host's attachment byte store to the reactor inspection surface
+ * (multi-reactor §4b). A Switchboard serves attachment bytes directly and runs
+ * no fetch-on-reference replicator, so it reports `hasReplicator: false` with
+ * the bytes it holds; the replicator counters stay at their empty default,
+ * which the inspection shape documents as not-meaningful in that case.
+ *
+ * The store kind is derived from the built store rather than asserted, so a
+ * host that one day serves attachments from a different store reports what it
+ * actually has instead of a stale "kysely".
+ */
+function attachmentStoreKind(store: unknown): string {
+  return store instanceof KyselyAttachmentStore ? "kysely" : "unknown";
+}
+
+function buildAttachmentInspectionStore(
+  attachments: AttachmentBuildResult,
+): IInspectableAttachmentStore {
+  return {
+    getAttachmentInfo: async (): Promise<InspectorAttachmentInfo> => {
+      const bytesHeld = await attachments.store.storageUsed();
+      return {
+        present: true,
+        storeKind: attachmentStoreKind(attachments.store),
+        hasReplicator: false,
+        replicatorRunning: false,
+        backlogScanned: false,
+        refsSeen: 0,
+        held: 0,
+        bytesHeld,
+        queued: 0,
+        fetching: 0,
+        pendingFetches: 0,
+        waiting: 0,
+        notFound: 0,
+        failed: 0,
+        lastError: undefined,
+      };
+    },
+  };
+}
+
 function resolveAttachmentStoragePath(options: Options): string {
   if (options.attachmentStoragePath) return options.attachmentStoragePath;
   if (options.dbPath && !options.dbPath.startsWith("postgres")) {
@@ -481,6 +541,7 @@ type SetupGraphQLManagerOptions = {
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
+  inspection?: IReactorInspectionSource;
 };
 
 /**
@@ -507,6 +568,7 @@ async function setupGraphQLManager({
   syncServingGate,
   httpRoutes,
   attachments,
+  inspection,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -533,6 +595,7 @@ async function setupGraphQLManager({
     syncServingGate,
     httpRoutes,
     attachments,
+    inspection,
   });
 
   await graphqlManager.init(
@@ -1205,6 +1268,7 @@ async function _setupAPI(
   syncServingGate?: SyncScopeGate,
   httpRoutes?: HttpRouteService,
   attachmentReadsFollowDocumentPolicy = false,
+  inspection?: IReactorInspectionSource,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1355,6 +1419,20 @@ async function _setupAPI(
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
 
+  // Only with a source to serve: the subgraph needs the in-process reactor
+  // MODULE (queue, processor manager, catch-up, integrity stores), which a
+  // host that composed its client differently may not have. Absent rather
+  // than present-and-refusing, so a client discovers "no remote inspection
+  // here" from the schema instead of from an error on every field.
+  if (inspection) {
+    coreSubgraphs.push(InspectionSubgraph);
+    logger.info(
+      `Inspection subgraph registered (admin ops ${
+        inspection.adminEnabled ? "ENABLED" : "disabled"
+      }, raw SQL ${inspection.sqlEnabled ? "ENABLED" : "disabled"})`,
+    );
+  }
+
   // Register Auth subgraph when document permission service is available
   if (documentPermissionService) {
     coreSubgraphs.push(AuthSubgraph);
@@ -1385,6 +1463,7 @@ async function _setupAPI(
     syncServingGate,
     httpRoutes,
     attachments: attachmentClientProvider,
+    inspection,
   });
 
   // Set up event listeners
@@ -1441,6 +1520,9 @@ async function _setupAPI(
     // stores in this database.
     authorizationService,
     relationalDb,
+    // Likewise handed back: the workflow runtime, composed after this boots,
+    // is the only thing that knows whether it is composed.
+    inspection,
     dispose,
   };
 }
@@ -1636,6 +1718,11 @@ export async function initializeAndStartAPI(
     reactorClientModule.reactorModule?.readModelCoordinator;
   const readModels = readModelCoordinator?.readModels ?? [];
 
+  // The full in-process graph, when this host composed one. The inspection
+  // surface reads components (`queue`, `catchUp`, the integrity stores) that
+  // only the in-process module carries.
+  const inProcessModule = reactorClientModule.reactorModule;
+
   const api = await _setupAPI(
     reactorClient,
     syncManager,
@@ -1669,6 +1756,16 @@ export async function initializeAndStartAPI(
     ),
     httpRoutes,
     attachmentReadsFollowDocumentPolicy,
+    // Needs the in-process module, which only this boot path holds; a host
+    // whose initializer returned no module serves no inspection subgraph.
+    inProcessModule
+      ? createReactorInspectionSource(
+          inProcessModule,
+          syncManager,
+          options.inspection,
+          buildAttachmentInspectionStore(attachments),
+        )
+      : undefined,
   );
 
   return {

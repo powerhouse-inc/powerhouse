@@ -5,7 +5,9 @@ export type GraphQLRequestErrorCategory =
   | "http"
   | "parse"
   | "graphql"
-  | "missing-data";
+  | "missing-data"
+  /** The request or its body read exceeded the channel's request deadline. */
+  | "timeout";
 
 export class GraphQLRequestError extends Error {
   readonly statusCode: number | undefined;

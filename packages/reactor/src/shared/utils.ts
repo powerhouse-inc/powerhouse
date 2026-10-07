@@ -30,6 +30,39 @@ export function throwIfAborted(
   }
 }
 
+/** Resolved by {@link withDeadline} when the bound won the race. */
+export const TIMED_OUT = Symbol("deadline-expired");
+
+/**
+ * Races a promise that cannot be cancelled against a bound.
+ *
+ * The loser is abandoned rather than cancelled - a wasm call, a filesystem
+ * sync and an instance teardown offer no abort - so a {@link TIMED_OUT} answer
+ * means the caller will never hear about that call again and must assume it may
+ * still settle later, possibly against state that has since been replaced.
+ * Every caller therefore needs a generation or epoch guard on top of this, not
+ * just the bound.
+ */
+export async function withDeadline<T>(
+  pending: Promise<T>,
+  timeoutMs: number,
+): Promise<T | typeof TIMED_OUT> {
+  let handle: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
+    handle = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
+  });
+  try {
+    return await Promise.race([pending, expiry]);
+  } finally {
+    clearTimeout(handle);
+  }
+}
+
+/** Resolves after `ms`, for bounded backoff between retries. */
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export type ParsedPaging = {
   offset: number;
   limit: number;

@@ -4,6 +4,8 @@ fragment PHDocumentFields on PHDocument {
   slug
   name
   documentType
+  meta
+  protocolVersions
   state
   revisionsList {
     scope

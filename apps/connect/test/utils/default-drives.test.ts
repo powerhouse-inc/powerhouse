@@ -17,16 +17,26 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   addDrive: vi.fn(),
   addRemoteDrive: vi.fn(),
   ChannelScheme: class {},
+  HardenedPGliteDialect: class {},
   isDriveAuthError: vi.fn(() => false),
   ReactorBuilder: class {},
   ReactorClientBuilder: class {},
   setDriveMetadata: vi.fn(),
   waitForDocumentReady: vi.fn(),
 }));
+// The module under test now also composes an inert LocalChannelFactory, which
+// pulls value symbols from @powerhousedao/reactor; stub them so the real
+// reactor runtime (kysely sql.raw at module eval) is not loaded here.
+vi.mock("@powerhousedao/reactor", () => ({
+  LOCAL_CHANNEL_TYPE: "local",
+  LocalChannelFactory: class {},
+  DriveCollectionId: class {},
+  RemotePersistence: { Session: "session" },
+  messagePortTransport: vi.fn(),
+}));
 vi.mock("@renown/sdk", () => ({ createSignatureVerifier: vi.fn() }));
 vi.mock("document-model", () => ({ ConsoleLogger: class {} }));
 vi.mock("kysely", () => ({ Kysely: class {} }));
-vi.mock("kysely-pglite-dialect", () => ({ PGliteDialect: class {} }));
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: vi.fn(),
 }));

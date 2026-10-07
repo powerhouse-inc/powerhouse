@@ -122,6 +122,107 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     expect(tab2.reloads).toContain("reactor version mismatch");
   });
 
+  /**
+   * The stale tab is the one holding the old worker alive. Reloading only the
+   * new tab left it attached while the new tab bumped its generation and
+   * spawned a second worker over the same idb namespace.
+   */
+  it("reloads every connected tab onto one generation on a mismatch", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    await tab1.send({ k: "hello", version: V1 });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    await tab2.send({ k: "hello", version: V2 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(tab1.reloads).toContain("reactor version mismatch");
+    expect(tab2.reloads).toContain("reactor version mismatch");
+    // Both land on the newest hello's generation, so one worker serves both.
+    expect(tab1.workerGens[0]).toBe(`v${V2.rpcProtocolVersion}-build-2`);
+    expect(tab2.workerGens[0]).toBe(tab1.workerGens[0]);
+  });
+
+  /**
+   * The newest hello wins the baseline, so a third tab arriving on the same new
+   * build is served rather than sent away again.
+   */
+  it("adopts the mismatching build as the new baseline", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    await tab1.send({ k: "hello", version: V1 });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    await tab2.send({ k: "hello", version: V2 });
+
+    const ch3 = new MessageChannel();
+    host.connect(createPortTransport(ch3.port1));
+    const tab3 = rawTab(ch3.port2);
+    expect(await tab3.send({ k: "hello", version: V2 })).toEqual({ ok: true });
+    expect(tab3.reloads).toEqual([]);
+  });
+
+  /**
+   * The worker bundle's content token is fetched per tab and can fail
+   * transiently, so an absent token means "unknown" rather than "a different
+   * build" — otherwise two tabs of one identical build bump the generation
+   * against each other and split-brain the namespace.
+   */
+  it("serves a tab whose build digest never resolved", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    await tab1.send({ k: "hello", version: { ...V1, buildDigest: "d1" } });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    expect(await tab2.send({ k: "hello", version: V1 })).toEqual({ ok: true });
+    expect(tab2.reloads).toEqual([]);
+    expect(tab1.reloads).toEqual([]);
+  });
+
+  it("reloads a tab whose build digest differs from the worker's", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    await tab1.send({ k: "hello", version: { ...V1, buildDigest: "d1" } });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    expect(
+      await tab2.send({ k: "hello", version: { ...V1, buildDigest: "d2" } }),
+    ).toMatchObject({ ok: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // A rebuilt bundle under an unchanged version still names a fresh worker.
+    expect(tab2.workerGens[0]).toBe(`v${V1.rpcProtocolVersion}-build-1-d2`);
+    expect(tab1.workerGens[0]).toBe(tab2.workerGens[0]);
+  });
+
   it("reloads a tab whose enforcement flags differ from the running worker's", async () => {
     // A flag flip is a config change, not a rebuild: same build id, and serving
     // the tab from the running worker would enforce the flags it booted with.

@@ -89,6 +89,35 @@ export type JobMeta = BatchMeta & Record<string, unknown>;
 import type { Job } from "../queue/types.js";
 
 /**
+ * Meta key marking a load whose durability is established by its sync cursor
+ * rather than by the job's own write-ready announcement.
+ */
+export const CURSOR_PROTECTED_META_KEY = "cursorProtected";
+
+/**
+ * Meta for a sync-originated load: the operations came from a remote, and the
+ * inbox cursor does not advance past them until a flush covers them, so the
+ * job's announcement does not have to carry the durability itself.
+ *
+ * Only the sync manager's own inbox application may set this. `load` and
+ * `loadBatch` are PUBLIC reactor APIs, so the job kind alone says nothing about
+ * whether a cursor is protecting the operations: a direct caller gets no
+ * cursor, and exempting it by kind handed it durable success over unflushed
+ * data. The flag is set at the call site that owns the cursor, which is the only
+ * place that knows.
+ */
+export function cursorProtectedLoadMeta(
+  sourceRemote: string,
+): Record<string, unknown> {
+  return { sourceRemote, [CURSOR_PROTECTED_META_KEY]: true };
+}
+
+/** Whether a sync cursor is keeping this job's operations re-pullable. */
+export function isCursorProtectedLoad(job: Job): boolean {
+  return job.kind === "load" && job.meta[CURSOR_PROTECTED_META_KEY] === true;
+}
+
+/**
  * What became of one action the caller submitted, at the position the
  * operation carrying it was written to.
  */

@@ -46,6 +46,7 @@ import {
   runWorkflow,
   UnsupportedPieceFeatureError,
   authMethodFor,
+  isIndeterminateError,
   type PieceAuthDescriptor,
   type BlockExecutor,
   type BlockResolution,
@@ -58,6 +59,7 @@ import {
   type EgressPolicy,
   type ExpressionScope,
   type PieceWorkerSession,
+  type ReplayedStep,
   type ModelManifestSource,
   type ReactorTap,
   type StepReactorRequest,
@@ -159,6 +161,7 @@ import {
   resolveConnectionAuth,
   stepDefinition,
   toWorkflowDefinition,
+  truncateForLog,
 } from "./lib.js";
 import { packageFromConnectorId } from "./connector-id.js";
 import { parseScheduleConfig, schedulePayload } from "./schedule.js";
@@ -214,6 +217,7 @@ import { resolveVariables } from "./variables.js";
 import {
   draftStepDef,
   scopeReferences,
+  testStatusOf,
   triggerSamplePayload,
   untestedError,
   upstreamStepIds,
@@ -228,11 +232,19 @@ import {
   journaledTriggerDocumentIds,
   triggerDocumentIds,
   type ErasedRuns,
+  type FireClaim,
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
 } from "./store.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
+import {
+  CANCELLED_RUN_STATUS,
+  effectiveRunPolicy,
+  PARKED_TRIGGER_STATUS,
+  type EffectiveRunPolicy,
+} from "./policy.js";
+import { WorkflowRunGate } from "./run-gate.js";
 import {
   RETENTION_SWEEP_INTERVAL_MS,
   runRetentionMs,
@@ -1663,14 +1675,17 @@ export class WorkflowRuntimeService {
       return;
     }
     // The durable half of the dedupe: a crash can leave the cursor behind the
-    // run it already wrote, so the replay delivers this operation a second time.
-    let runId: string | null;
+    // run it already wrote, so the replay delivers this operation a second
+    // time. The claim counts deliveries, so a fire that takes the process down
+    // BEFORE it journals anything is bounded instead of replayed every boot.
+    const enqueue = { workflowId, triggerKind: kind, triggerPayload: payload };
+    let claim: FireClaim;
     try {
-      runId = await store.claimAndEnqueueRun(
+      claim = await store.claimAndEnqueueRun(
         dedupeKey,
         OPERATION_DEDUPE_TTL_MS,
         new Date().toISOString(),
-        { workflowId, triggerKind: kind, triggerPayload: payload },
+        enqueue,
       );
     } catch (error) {
       this.logger.error(
@@ -1680,8 +1695,29 @@ export class WorkflowRuntimeService {
       this.fireUnjournaled(fireKey, workflowId, payload, kind);
       return;
     }
-    if (runId === null) return;
-    this.fireFromTrigger(workflowId, payload, kind, runId);
+    if (claim.outcome === "duplicate") return;
+    if (claim.outcome === "abandoned") {
+      // Loudly, and with a run to point at: the alternative is a reactor that
+      // crashes on every boot and says nothing about why.
+      this.logger.error(
+        `Workflow ${workflowId}: a ${kind} fire has been delivered ` +
+          `${claim.attempts} times without ever journaling a run; abandoning ` +
+          "it rather than replaying it on every boot",
+      );
+      try {
+        await store.journalAbandonedFire({
+          ...enqueue,
+          attempts: claim.attempts,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Could not journal the abandoned ${kind} fire for workflow ${workflowId}: @error`,
+          error,
+        );
+      }
+      return;
+    }
+    this.fireFromTrigger(workflowId, payload, kind, claim.runId);
   }
 
   private fireFromTrigger(
@@ -1702,9 +1738,15 @@ export class WorkflowRuntimeService {
         this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
       (error: unknown) => {
+        // The message, truncated, rather than the error object: a piece error
+        // carries the HTTP response the framework's formatter lifted out of
+        // it, which can be a whole HTML error page. An unbounded write on the
+        // failure path is how the EPIPE boot loop started (backlog item 5).
         this.logger.error(
-          `${kind} run failed for workflow ${workflowId}`,
-          error,
+          `${kind} run failed for workflow ${workflowId}: @error`,
+          truncateForLog(
+            error instanceof Error ? error.message : String(error),
+          ),
         );
       },
     );
@@ -3599,9 +3641,11 @@ export class WorkflowRuntimeService {
     try {
       output = await test.sample();
     } catch (error) {
+      // A host call the hook made may have committed the write it asked for,
+      // so the test neither succeeded nor failed. It takes no port either.
       const errorName = errorNameOf(error);
       await recordTest({
-        status: "FAILED",
+        status: isIndeterminateError(error) ? "INDETERMINATE" : "FAILED",
         error: pieceFailureDetail(error, "Trigger test timed out"),
         ...(errorName ? { errorName } : {}),
       });
@@ -3727,10 +3771,17 @@ export class WorkflowRuntimeService {
         triggerKind: TEST_TRIGGER_KIND,
       });
       await store.recordStep(runId, 0, record);
+      // An INDETERMINATE step ends a real run FAILED (coordinator.ts), and a
+      // test run says the same rather than reading green: the step row carries
+      // the INDETERMINATE status, the run row carries that it did not confirm.
+      const indeterminate = record.status === "INDETERMINATE";
+      const error = indeterminate
+        ? `This test is INDETERMINATE: ${record.error ?? "a host call it made timed out"}`
+        : record.error;
       await store.finishRun(runId, {
-        status: record.status === "FAILED" ? "FAILED" : "SUCCEEDED",
+        status: record.status === "SUCCEEDED" ? "SUCCEEDED" : "FAILED",
         steps: [record],
-        ...(record.error ? { error: record.error } : {}),
+        ...(error ? { error } : {}),
         ...(record.errorName ? { errorName: record.errorName } : {}),
       });
     } catch (error) {
@@ -3802,7 +3853,7 @@ export class WorkflowRuntimeService {
     triggerPayload?: unknown,
     triggerKind = "manual",
     resume?: {
-      completedSteps: Map<string, { output?: unknown; port?: string | null }>;
+      completedSteps: Map<string, ReplayedStep>;
       rerunOf: string;
     },
     ctx?: WorkflowCaller,
@@ -3811,6 +3862,13 @@ export class WorkflowRuntimeService {
     // row the run finishes in.
     enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
+    // `policy.runTimeoutSeconds` is measured from HERE, the moment the firing
+    // reaches the runtime — not from admission. The queue wait is part of the
+    // time the run took: computing the deadline after admit() meant a firing
+    // could sit in a QUEUE lane for an hour under a 30-second timeout and then
+    // run anyway, with its whole budget intact. The point of a run timeout is
+    // that a trigger's work is either done inside it or not done at all.
+    const firedAt = Date.now();
     const store = await this.store();
     let state: WorkflowState;
     // Carried out of the try so the run journal can fall back to it: a
@@ -3867,23 +3925,37 @@ export class WorkflowRuntimeService {
     const executor = this.blockExecutor(store);
 
     const runnable = runnableDefinition(state);
-    let runId: string | null = enqueuedRunId ?? null;
-    if (enqueuedRunId) {
-      await store?.beginRun(enqueuedRunId, {
+    // `policy.concurrency`, enforced. SINGLETON refuses here, before the run
+    // row is adopted, so a dropped firing is journaled as the CANCELLED run it
+    // is rather than disappearing; QUEUE and a bounded PARALLEL wait.
+    const policy = effectiveRunPolicy(runnable);
+    const deadline = policy.runTimeoutSeconds
+      ? firedAt + policy.runTimeoutSeconds * 1000
+      : undefined;
+    const admission = await this.runGate.admit(workflowId, policy);
+    const skipped = (reason: string) =>
+      this.skipFiring(store, workflowId, enqueuedRunId, {
+        reason,
+        triggerKind,
+        triggerPayload,
         workflowName: runJournalName(state.name, documentName),
         workflowVersion: runnable.version,
       });
-    } else {
-      runId =
-        (await store?.startRun({
-          workflowId,
-          workflowName: runJournalName(state.name, documentName),
-          workflowVersion: runnable.version,
-          triggerKind,
-          triggerPayload,
-          rerunOf: resume?.rerunOf,
-        })) ?? null;
+    if (!admission.admitted) return skipped(admission.reason);
+    // The wait itself outlived the run's deadline, so there is nothing left to
+    // run it in: CANCELLED without executing a single step, rather than a side
+    // effect fired long after the timeout that was supposed to bound it. The
+    // slot goes back first — this firing is not going to use it.
+    if (deadline !== undefined && Date.now() >= deadline) {
+      admission.release();
+      return skipped(
+        `Skipped: this firing waited past its runTimeoutSeconds ` +
+          `(${policy.runTimeoutSeconds}s) for a concurrency slot and was ` +
+          "cancelled without running",
+      );
     }
+
+    let runId: string | null = enqueuedRunId ?? null;
     let journalFailed = false;
     // Recorded whether or not the write lands: it is what lets finishRun put a
     // lost row back where the step ran.
@@ -3891,8 +3963,29 @@ export class WorkflowRuntimeService {
     // This run's child, forked at its first piece step and killed below. Free
     // until then, so a run of document blocks never takes a slot.
     let session: PieceWorkerSession | undefined;
+    // EVERYTHING after admit() belongs inside this try, the journal writes
+    // below included: a throw between the admission and the finally would
+    // never release the slot, and a leaked slot wedges the workflow for the
+    // life of the process — SINGLETON refuses every later firing, QUEUE waits
+    // for a run that is already over.
     try {
-      // Inside the try: a pool disposed while this run was starting up refuses
+      if (enqueuedRunId) {
+        await store?.beginRun(enqueuedRunId, {
+          workflowName: runJournalName(state.name, documentName),
+          workflowVersion: runnable.version,
+        });
+      } else {
+        runId =
+          (await store?.startRun({
+            workflowId,
+            workflowName: runJournalName(state.name, documentName),
+            workflowVersion: runnable.version,
+            triggerKind,
+            triggerPayload,
+            rerunOf: resume?.rerunOf,
+          })) ?? null;
+      }
+      // Also in here: a pool disposed while this run was starting up refuses
       // here, and the journal records the run as failed rather than leaving it
       // to be swept up as an orphan.
       session = this.workers().session();
@@ -3926,21 +4019,28 @@ export class WorkflowRuntimeService {
             ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload,
             completedSteps: resume?.completedSteps,
+            // `policy.defaultRetry` and `policy.runTimeoutSeconds`, enforced.
+            ...(policy.defaultRetry
+              ? { defaultRetry: policy.defaultRetry }
+              : {}),
+            // From firedAt, so the queue wait and the document read count
+            // against the timeout rather than being free.
+            ...(deadline !== undefined ? { deadline } : {}),
             // Journal each step as it lands, so a reactor that dies mid-run
             // still leaves a rerunnable record of the work it finished.
             onStep:
-              store && runId
+              store && journaledRunId
                 ? async (record, ordinal) => {
                     executionOrder.set(record.stepId, ordinal);
                     try {
-                      await store.recordStep(runId, ordinal, record);
+                      await store.recordStep(journaledRunId, ordinal, record);
                     } catch (error) {
                       // Swallowed on purpose, but logged once per run: a dead
                       // journal must not look exactly like a healthy one.
                       if (journalFailed) return;
                       journalFailed = true;
                       this.logger.warn(
-                        `Run ${runId}: journaling step "@step" failed; the run continues without per-step durability: @error`,
+                        `Run ${journaledRunId}: journaling step "@step" failed; the run continues without per-step durability: @error`,
                         record.key,
                         error,
                       );
@@ -3960,6 +4060,11 @@ export class WorkflowRuntimeService {
             error,
           );
         }
+      }
+      // `policy.onFailure`, enforced: PARK stops the trigger refiring, NOTIFY
+      // says so where an operator will see it, IGNORE is the old behaviour.
+      if (result.status === "FAILED") {
+        await this.applyFailureMode(policy, workflowId, runId, result.error);
       }
       const finished = { ...result, runId };
       if (!ctx) return finished;
@@ -3982,6 +4087,102 @@ export class WorkflowRuntimeService {
       // The run owns the child, however it ended: closing kills it and hands
       // the slot to whichever run is waiting.
       session?.close();
+      // And the concurrency slot, so the next QUEUE'd firing starts.
+      admission.release();
+    }
+  }
+
+  // Firings of one workflow at a time; see run-gate.ts.
+  private readonly runGate = new WorkflowRunGate();
+
+  /**
+   * A firing SINGLETON refused.
+   *
+   * Journaled as a CANCELLED run rather than dropped: a firing that vanished
+   * is indistinguishable from a trigger that never fired, which is the class
+   * of bug this work package exists to stamp out. An already-enqueued row is
+   * closed out in place, so nothing is left PENDING for a sweep to find.
+   */
+  private async skipFiring(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+    enqueuedRunId: string | undefined,
+    details: {
+      reason: string;
+      triggerKind: string;
+      triggerPayload?: unknown;
+      workflowName: string;
+      workflowVersion: number;
+    },
+  ): Promise<PersistedRunResult> {
+    this.logger.info(`Workflow ${workflowId}: ${details.reason}`);
+    let runId = enqueuedRunId ?? null;
+    if (store) {
+      try {
+        if (runId) {
+          // The row is already durable, with its trigger payload; adopt and
+          // close it rather than leaving a PENDING run for a sweep to find.
+          await store.beginRun(runId, details);
+        } else {
+          runId = await store.startRun({ workflowId, ...details });
+        }
+        await store.cancelRun(runId, details.reason);
+      } catch (error) {
+        this.logger.warn(
+          `Could not journal the skipped firing of workflow ${workflowId}: @error`,
+          error,
+        );
+      }
+    }
+    return { status: CANCELLED_RUN_STATUS, steps: [], runId };
+  }
+
+  /**
+   * `policy.onFailure` for a run that failed terminally.
+   *
+   * PARK is the document model's own default, so this is where enforcing the
+   * knob becomes visible: a terminal failure takes the trigger out of the
+   * supervisor's ENABLED set, and the schedule stops refiring until the
+   * workflow is re-published or re-enabled. That is what PARK means, and
+   * leaving a broken workflow firing every minute is what it meant before.
+   *
+   * NOTIFY logs at error level, which is the only notification channel this
+   * engine has; it is marked as such rather than pretending to page anyone.
+   */
+  private async applyFailureMode(
+    policy: EffectiveRunPolicy,
+    workflowId: string,
+    runId: string | null,
+    error: string | undefined,
+  ): Promise<void> {
+    if (policy.onFailure === "IGNORE") return;
+    const detail = error ?? "the run failed";
+    if (policy.onFailure === "NOTIFY") {
+      this.logger.error(
+        `Workflow ${workflowId} run ${runId ?? "(unjournaled)"} failed and ` +
+          `its policy is NOTIFY: @error`,
+        detail,
+      );
+      return;
+    }
+    const store = await this.store();
+    if (!store) return;
+    try {
+      await store.setTriggerStatus(
+        workflowId,
+        PARKED_TRIGGER_STATUS,
+        `Parked after a failed run (policy.onFailure = PARK): ${detail}`,
+      );
+      this.logger.error(
+        `Workflow ${workflowId} is PARKED after run ${runId ?? "(unjournaled)"} ` +
+          "failed; its trigger will not fire again until the workflow is " +
+          "re-published or re-enabled",
+      );
+    } catch (parkError) {
+      this.logger.warn(
+        `Could not park workflow ${workflowId} after a failed run: @error`,
+        parkError,
+      );
     }
   }
 
@@ -4043,10 +4244,7 @@ export class WorkflowRuntimeService {
     );
     // Reuse an output only while the step is the step that produced it: same
     // key, and the same definition hash (block type, config, connection, schemas).
-    const completedSteps = new Map<
-      string,
-      { output?: unknown; port?: string | null }
-    >();
+    const completedSteps = new Map<string, ReplayedStep>();
     for (const row of await store.getSteps(runId)) {
       if (row.status !== "SUCCEEDED" && row.status !== "REPLAYED") continue;
       const current = currentSteps.get(row.step_id);
@@ -4061,8 +4259,22 @@ export class WorkflowRuntimeService {
       const output =
         row.output === null ? undefined : (JSON.parse(row.output) as unknown);
       // The journal capped this output to a marker (store.ts,
-      // STEP_PAYLOAD_MAX_BYTES); re-executing the step reproduces it.
-      if (isTruncatedStepPayload(output)) continue;
+      // STEP_PAYLOAD_MAX_BYTES). The step still counts as COMPLETED: it
+      // succeeded, it had side effects, and re-running it would do them again
+      // — which is exactly what dropping it from this map used to mean
+      // (backlog item 15). Its output is unavailable instead, and a
+      // downstream step that reads it fails the rerun by name.
+      if (isTruncatedStepPayload(output)) {
+        completedSteps.set(row.step_id, {
+          port: row.port,
+          outputTruncated: true,
+          // Carried so this rerun's REPLAYED row journals the marker again. A
+          // NULL there would read as an ordinary replay on the NEXT rerun, and
+          // the truncation fact would be gone after one generation.
+          truncatedOutput: output,
+        });
+        continue;
+      }
       // Reads re-read the documents they referenced; writes are never repeated.
       if (containsDocumentRef(output) && (await this.rereads(current))) {
         continue;
@@ -4250,7 +4462,7 @@ export class WorkflowRuntimeService {
     const served = ctx ? await this.servesDocuments(ids, ctx) : false;
     return {
       runId,
-      status: record.status === "FAILED" ? "FAILED" : "SUCCEEDED",
+      status: testStatusOf(record.status),
       ...(served && record.output !== undefined
         ? { output: record.output }
         : {}),
@@ -4448,6 +4660,10 @@ export class WorkflowRuntimeService {
     if (row.status === "FAILED") {
       return { kind: "failed", runId, testedAt, error: row.error ?? "" };
     }
+    // Not a sample either way: the test neither returned an output nor failed,
+    // so a draft step that read it would be standing on a null nobody
+    // confirmed. Its own kind, so the message says which of the two it is.
+    if (row.status === "INDETERMINATE") return { kind: "indeterminate" };
     const output =
       row.output === null ? null : (JSON.parse(row.output) as unknown);
     // The journal capped this output to a marker (store.ts,

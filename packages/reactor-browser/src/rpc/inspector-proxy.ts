@@ -1,38 +1,86 @@
+import type {
+  CatchUpStatus,
+  IInspector,
+  InspectorAttachmentInfo,
+  InspectorDocumentModelInfo,
+  InspectorDriveIntegrity,
+  InspectorDrivePage,
+  InspectorProcessorInfo,
+  QueueStateSnapshot,
+  RebuildResult,
+  StorageHealth,
+  SweepResult,
+  ValidationResult,
+} from "@powerhousedao/reactor";
+import { INSPECTOR_OPS } from "./inspector-ops.js";
 import type { MessageRouter } from "@powerhousedao/reactor/rpc";
 import { opChannel } from "./op-channel.js";
 
-export interface IInspectorProxy {
-  getQueueState(): Promise<unknown>;
-  pauseQueue(): Promise<void>;
-  resumeQueue(): Promise<void>;
-  getProcessors(): Promise<unknown>;
-  retryProcessor(processorId: string): Promise<void>;
-  getCatchUpStatus(): Promise<unknown>;
-  sweepCatchUp(): Promise<unknown>;
-  validateDocument(documentId: string, branch?: string): Promise<unknown>;
-  rebuildKeyframes(documentId: string, branch?: string): Promise<unknown>;
-  rebuildSnapshots(documentId: string, branch?: string): Promise<unknown>;
-  queryReactorDb(sql: string, params?: unknown[]): Promise<unknown>;
+/**
+ * The reactor's inspection surface over RPC. `IInspector` plus the raw-SQL
+ * capability, which keeps its historical `queryReactorDb` name here because
+ * the method is part of the proxy's published API.
+ */
+export interface IInspectorProxy extends IInspector {
+  queryReactorDb(sql: string, params?: unknown[]): Promise<unknown[]>;
 }
 
 export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
   const ops = opChannel(router, "inspector-op");
 
   return {
-    getQueueState: () => ops.call("queue.getState"),
-    pauseQueue: () => ops.callVoid("queue.pause"),
-    resumeQueue: () => ops.callVoid("queue.resume"),
-    getProcessors: () => ops.call("processors.getAll"),
+    listDocumentModels: () =>
+      ops.call(INSPECTOR_OPS.listDocumentModels) as Promise<
+        InspectorDocumentModelInfo[]
+      >,
+    listDrives: (cursor, limit) =>
+      ops.call(INSPECTOR_OPS.listDrives, [
+        cursor,
+        limit,
+      ]) as Promise<InspectorDrivePage>,
+    checkDriveIntegrity: (driveId, branch) =>
+      ops.call(INSPECTOR_OPS.checkDriveIntegrity, [
+        driveId,
+        branch,
+      ]) as Promise<InspectorDriveIntegrity>,
+    getAttachmentInfo: () =>
+      ops.call(
+        INSPECTOR_OPS.getAttachmentInfo,
+      ) as Promise<InspectorAttachmentInfo>,
+    getQueueState: () =>
+      ops.call(INSPECTOR_OPS.getQueueState) as Promise<QueueStateSnapshot>,
+    pauseQueue: () => ops.callVoid(INSPECTOR_OPS.pauseQueue),
+    resumeQueue: () => ops.callVoid(INSPECTOR_OPS.resumeQueue),
+    getProcessors: () =>
+      ops.call(INSPECTOR_OPS.getProcessors) as Promise<
+        InspectorProcessorInfo[]
+      >,
     retryProcessor: (processorId) =>
-      ops.callVoid("processors.retry", [processorId]),
-    getCatchUpStatus: () => ops.call("catchUp.status"),
-    sweepCatchUp: () => ops.call("catchUp.sweepNow"),
+      ops.callVoid(INSPECTOR_OPS.retryProcessor, [processorId]),
+    getCatchUpStatus: () =>
+      ops.call(INSPECTOR_OPS.getCatchUpStatus) as Promise<CatchUpStatus>,
+    sweepCatchUp: () =>
+      ops.call(INSPECTOR_OPS.sweepCatchUp) as Promise<SweepResult[]>,
     validateDocument: (documentId, branch) =>
-      ops.call("integrity.validate", [documentId, branch]),
+      ops.call(INSPECTOR_OPS.validateDocument, [
+        documentId,
+        branch,
+      ]) as Promise<ValidationResult>,
     rebuildKeyframes: (documentId, branch) =>
-      ops.call("integrity.rebuildKeyframes", [documentId, branch]),
+      ops.call(INSPECTOR_OPS.rebuildKeyframes, [
+        documentId,
+        branch,
+      ]) as Promise<RebuildResult>,
     rebuildSnapshots: (documentId, branch) =>
-      ops.call("integrity.rebuildSnapshots", [documentId, branch]),
-    queryReactorDb: (sql, params) => ops.call("db.query", [sql, params ?? []]),
+      ops.call(INSPECTOR_OPS.rebuildSnapshots, [
+        documentId,
+        branch,
+      ]) as Promise<RebuildResult>,
+    getStorageHealth: () =>
+      ops.call(INSPECTOR_OPS.getStorageHealth) as Promise<StorageHealth>,
+    queryReactorDb: (sql, params) =>
+      ops.call(INSPECTOR_OPS.queryReactorDb, [sql, params ?? []]) as Promise<
+        unknown[]
+      >,
   };
 }

@@ -50,7 +50,9 @@ export class GqlResponseChannel implements IChannel {
     this.isShutdown = false;
 
     this.inbox = new Mailbox({ holdAckBelowMarkers: true });
-    this.outbox = new Mailbox();
+    // The outbox cursor is persisted from the applied ordinal of what it
+    // removes, not from its ack, and a withheld entry must not pin it.
+    this.outbox = new Mailbox({ holdAckBelowUnapplied: false });
     this.deadLetter = new Mailbox();
 
     // Instead of listening to syncops directly for cursor updates, we listen

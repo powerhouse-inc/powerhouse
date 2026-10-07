@@ -73,8 +73,6 @@ const row = (overrides: Partial<TriggerStateRow> = {}): TriggerStateRow => ({
   last_poll_at: null,
   last_error: null,
   consecutive_failures: 0,
-  lease_owner: null,
-  lease_expires_at: null,
   updated_at: NOW.toISOString(),
   piece_version: null,
   piece_source: null,

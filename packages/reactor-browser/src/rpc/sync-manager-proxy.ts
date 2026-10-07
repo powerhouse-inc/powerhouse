@@ -7,10 +7,12 @@ import {
   type ConnectionStateChangeCallback,
   type ConnectionStateChangedEvent,
   type ConnectionStateSnapshot,
+  type DeadLetterPage,
   type IChannel,
   type IEventBus,
   type IMailbox,
   type IPeerAgreement,
+  type ISyncInspector,
   type PeerAgreementBasis,
   type ISyncManager,
   type Remote,
@@ -18,6 +20,7 @@ import {
   type RemoteMeta,
   type RemoteOptions,
   type RemotePeer,
+  type RemoteSyncInspection,
   type ShutdownStatus,
   type SyncHold,
   type SyncOperation,
@@ -30,6 +33,7 @@ import {
   type MessageRouter,
 } from "@powerhousedao/reactor/rpc";
 import { opChannel, type IOpChannel } from "./op-channel.js";
+import { SYNC_OPS } from "./sync-ops.js";
 
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
 export const SYNC_STATUS_CHANGED_EVENT = 90001;
@@ -58,7 +62,17 @@ type WireRemote = {
   connectionState: ConnectionStateSnapshot;
 };
 
-const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
+/**
+ * What a channel's connection state reads as before anything has been heard
+ * about it: connecting, never succeeded, never failed.
+ *
+ * Exported because it is not specific to this transport. Any proxy of a remote
+ * reactor's sync manager owes `IChannel.getConnectionState()` an answer before
+ * its first inspection lands, and two of them inventing the same record
+ * separately is how the two drift (multi-reactor W3.2: reactor-monitor's
+ * remote sync client reads it from here).
+ */
+export const DEFAULT_CONNECTION_SNAPSHOT: ConnectionStateSnapshot = {
   state: "connecting",
   failureCount: 0,
   lastSuccessUtcMs: 0,
@@ -97,7 +111,16 @@ class NoopMailbox implements IMailbox {
   }
 }
 
-const NOOP_MAILBOX = new NoopMailbox();
+/**
+ * The one inert mailbox every proxied remote's channel shares.
+ *
+ * Exported for the same reason as {@link DEFAULT_CONNECTION_SNAPSHOT}:
+ * `Remote.channel` is part of the `ISyncManager` contract, a transport that
+ * cannot carry live sync operations still has to produce a channel, and what a
+ * holder can actually see of those operations is the mailbox DEPTHS on
+ * `RemoteSyncInspection`. Stateless, so one instance serves every remote.
+ */
+export const NOOP_MAILBOX = new NoopMailbox();
 
 function rehydrateMeta(wire: WireRemoteMeta): RemoteMeta {
   return {
@@ -120,7 +143,7 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 }
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
-export class SyncManagerProxy implements ISyncManager {
+export class SyncManagerProxy implements ISyncManager, ISyncInspector {
   private readonly ops: IOpChannel;
   private readonly connectionStates = new Map<
     string,
@@ -280,6 +303,56 @@ export class SyncManagerProxy implements ISyncManager {
     return this.syncStatusListeners.add(callback);
   }
 
+  /**
+   * Real cursors, mailbox depths and connection health for one remote, read
+   * from the worker's live sync manager. This is the state the tab-side
+   * `NoopMailbox` used to zero out: the stub channels still carry no live sync
+   * operations, so the inspection surface crosses the boundary over RPC instead.
+   */
+  inspectRemote(remoteName: string): Promise<RemoteSyncInspection> {
+    return this.callSyncOp(SYNC_OPS.inspectRemote, [
+      remoteName,
+    ]) as Promise<RemoteSyncInspection>;
+  }
+
+  inspectRemotes(): Promise<RemoteSyncInspection[]> {
+    return this.callSyncOp(SYNC_OPS.inspectRemotes, []) as Promise<
+      RemoteSyncInspection[]
+    >;
+  }
+
+  listDeadLetters(
+    remoteName: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<DeadLetterPage> {
+    return this.callSyncOp(SYNC_OPS.listDeadLetters, [
+      remoteName,
+      cursor,
+      limit,
+    ]) as Promise<DeadLetterPage>;
+  }
+
+  async rewindInboxCursor(
+    remoteName: string,
+    toOrdinal: number,
+  ): Promise<void> {
+    await this.callSyncOp(SYNC_OPS.rewindInboxCursor, [remoteName, toOrdinal]);
+  }
+
+  async resetChannel(remoteName: string): Promise<void> {
+    await this.callSyncOp(SYNC_OPS.resetChannel, [remoteName]);
+    await this.refreshRemotes();
+  }
+
+  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
+    await this.callSyncOp(SYNC_OPS.requeueDeadLetter, [remoteName, id]);
+  }
+
+  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
+    await this.callSyncOp(SYNC_OPS.clearDeadLetter, [remoteName, id]);
+  }
+
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
     return this.ops.call(method, args);
   }
@@ -300,10 +373,13 @@ export class SyncManagerProxy implements ISyncManager {
       init: () => Promise.resolve(),
       shutdown: () => Promise.resolve(),
       getConnectionState: () =>
-        this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT,
+        this.connectionStates.get(remoteName) ?? DEFAULT_CONNECTION_SNAPSHOT,
       onConnectionStateChange: (callback: ConnectionStateChangeCallback) => {
         const listener = () =>
-          callback(this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT);
+          callback(
+            this.connectionStates.get(remoteName) ??
+              DEFAULT_CONNECTION_SNAPSHOT,
+          );
         return this.connectionListeners.add(remoteName, listener);
       },
 
@@ -369,6 +445,6 @@ export class SyncManagerProxy implements ISyncManager {
 export function createSyncManagerProxy(
   router: MessageRouter,
   busProxy: IEventBus,
-): ISyncManager {
+): ISyncManager & ISyncInspector {
   return new SyncManagerProxy(router, busProxy);
 }

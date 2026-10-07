@@ -114,6 +114,8 @@ import {
   type ForwardingPoolInstrumentation,
   type PoolInstrumentation,
 } from "../storage/pool-instrumentation.js";
+import type { IStorageFlusher } from "../storage/storage-flush.js";
+import { NoopStorageFlusher } from "../storage/storage-flush.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -123,8 +125,16 @@ import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.j
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
-import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
-import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
+import { CompositeChannelFactory } from "../sync/channels/composite-channel-factory.js";
+import {
+  GqlRequestChannelFactory,
+  GQL_CHANNEL_TYPE,
+} from "../sync/channels/gql-request-channel-factory.js";
+import {
+  GqlResponseChannelFactory,
+  POLLING_CHANNEL_TYPE,
+} from "../sync/channels/gql-response-channel-factory.js";
+import type { IChannelFactory } from "../sync/interfaces.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
@@ -322,6 +332,59 @@ function validateBuiltInKindCoverage(
   );
 }
 
+/**
+ * Everything one {@link ChannelScheme} contributes to a reactor's sync
+ * routing: the `ChannelConfig.type` its factory serves, and how to construct
+ * that factory.
+ *
+ * One row per scheme, so the type and the factory cannot be chosen by
+ * independent conditionals that disagree -- a scheme answering with one
+ * factory while being registered under another scheme's channel type routes
+ * every remote to the wrong place, and nothing would say so.
+ */
+type SchemeChannelDescriptor = {
+  readonly type: string;
+  /**
+   * Builds the scheme's factory. Takes the reactor's internal job queue
+   * because the CONNECT poll timer drives its backpressure from it, which is
+   * why only the builder can construct these.
+   */
+  readonly create: (
+    logger: ILogger,
+    jwtHandler: JwtHandler | undefined,
+    queue: IQueue,
+  ) => IChannelFactory;
+};
+
+/**
+ * The per-scheme row. Exhaustive with a never-check, so adding a
+ * {@link ChannelScheme} is a compile error here rather than a reactor that
+ * silently inherits CONNECT's channel type and misroutes every remote.
+ */
+function schemeChannelDescriptor(
+  scheme: ChannelScheme,
+): SchemeChannelDescriptor {
+  switch (scheme) {
+    case ChannelScheme.CONNECT:
+      return {
+        type: GQL_CHANNEL_TYPE,
+        create: (logger, jwtHandler, queue) =>
+          new GqlRequestChannelFactory(logger, jwtHandler, queue),
+      };
+    case ChannelScheme.SWITCHBOARD:
+      return {
+        type: POLLING_CHANNEL_TYPE,
+        create: (logger) => new GqlResponseChannelFactory(logger),
+      };
+    default: {
+      const unsupported: never = scheme;
+      throw new Error(
+        `Unsupported channel scheme: ${JSON.stringify(unsupported)}`,
+      );
+    }
+  }
+}
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModelSources: DocumentModelSource[] = [];
@@ -342,6 +405,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private kyselyInstance?: Kysely<Database>;
+  private storageFlusher: IStorageFlusher = new NoopStorageFlusher();
   private signer?: ISigner;
   private workerSigner?: FactorySpec;
   private trustPolicy?: SignatureTrustPolicy;
@@ -349,6 +413,10 @@ export class ReactorBuilder {
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
+  private readonly additionalChannelFactories = new Map<
+    string,
+    IChannelFactory
+  >();
   private jwtHandler?: JwtHandler;
   private documentModelLoader?: IDocumentModelLoader;
   private shutdownHooks: Array<() => Promise<void>> = [];
@@ -472,6 +540,18 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Builds the sync module from a caller-supplied SyncBuilder, which owns its
+   * own channel factory and storages.
+   *
+   * Mutually exclusive with {@link withChannelScheme}: setting both is refused
+   * at build time. It used to build the scheme and silently drop this builder.
+   * To hold gql and non-gql remotes on one reactor, use
+   * {@link withChannelScheme} plus {@link withAdditionalChannelFactory}; a
+   * SyncBuilder that wants the same can be handed a `CompositeChannelFactory`
+   * directly, but it cannot build the CONNECT gql factory, which needs this
+   * reactor's internal job queue.
+   */
   withSync(syncBuilder: SyncBuilder): this {
     this.syncBuilder = syncBuilder;
     return this;
@@ -529,6 +609,26 @@ export class ReactorBuilder {
   }
 
   /**
+   * The durability barrier for a store whose statements no longer flush
+   * themselves, and the only sanctioned way to run one.
+   *
+   * An embedded store opened so that every statement flushes makes committed
+   * mean flushed at a cost that measured ~2 operations per second during bulk
+   * sync catch-up. A holder may instead take the per-statement flush away -
+   * `SelfHealingPGliteClient.setDeferredFlush` - and register the same object
+   * here, which puts the flush back at the two places the reactor makes a
+   * promise it cannot take back: a sync cursor write, and a non-load job's
+   * write-ready announcement. See {@link IStorageFlusher} for the full
+   * argument. Without this the default barrier is a no-op, which is correct for
+   * any store that is already durable per statement - server Postgres, or
+   * PGlite without `relaxedDurability` and without deferral.
+   */
+  withStorageFlusher(flusher: IStorageFlusher): this {
+    this.storageFlusher = flusher;
+    return this;
+  }
+
+  /**
    * Register an externally-constructed pg.Pool's {@link PoolInstrumentation}
    * so it surfaces through {@link ReactorModule.pools}. Use this when the
    * caller built the pool itself (e.g. the in-process bench host wiring) so
@@ -545,8 +645,56 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Selects the gql channel scheme this reactor's sync module is built on.
+   *
+   * CONNECT builds a {@link GqlRequestChannelFactory} (it polls a Switchboard);
+   * SWITCHBOARD builds a {@link GqlResponseChannelFactory} (it serves peers
+   * that poll it). The builder owns the factory because only the builder has
+   * the reactor's internal job queue, which the request factory's poll timer
+   * needs.
+   *
+   * Compose further transports onto the scheme with
+   * {@link withAdditionalChannelFactory}. Mutually exclusive with
+   * {@link withSync}: a caller-supplied SyncBuilder brings its own factory, so
+   * setting both is refused rather than resolved by precedence.
+   */
   withChannelScheme(scheme: ChannelScheme): this {
     this.channelScheme = scheme;
+    return this;
+  }
+
+  /**
+   * Registers one more channel factory alongside the {@link withChannelScheme}
+   * scheme's, so this reactor can hold remotes of several transports at once.
+   *
+   * This is the multi-reactor W3.0 seam: `withAdditionalChannelFactory(
+   * LOCAL_CHANNEL_TYPE, new LocalChannelFactory(logger, provider))` on a
+   * CONNECT-scheme reactor yields a reactor that serves BOTH gql remotes to a
+   * Switchboard and brokered `LocalChannel` peers. The builder wraps the
+   * scheme's factory and every registered one in a
+   * {@link CompositeChannelFactory}, which routes each remote's
+   * `ChannelConfig.type` to the factory that claims it.
+   *
+   * Generic in the type rather than a `withLocalChannelFactory(factory)`
+   * shortcut: the composite already keys on the config type, so a type-specific
+   * method would only hide which key a factory is registered under, and a third
+   * transport would need a third method.
+   *
+   * @param type - The {@link ChannelConfig.type} this factory claims (e.g.
+   *   {@link LOCAL_CHANNEL_TYPE}). It must differ from the scheme's own type
+   *   and from every other registration; a collision is refused at build time.
+   * @param factory - The factory to route that type to
+   * @throws Error at build time if no {@link withChannelScheme} was set, or if
+   *   `type` collides with the scheme's
+   */
+  withAdditionalChannelFactory(type: string, factory: IChannelFactory): this {
+    if (this.additionalChannelFactories.has(type)) {
+      throw new Error(
+        `A channel factory for the type "${type}" is already registered on this ReactorBuilder`,
+      );
+    }
+    this.additionalChannelFactories.set(type, factory);
     return this;
   }
 
@@ -661,6 +809,31 @@ export class ReactorBuilder {
       throw new Error(
         "withReadModelCoordinator and withReadModelCoordinatorFactory are mutually exclusive; register one coordinator source",
       );
+    }
+
+    this.assertSyncConfiguration();
+
+    // A deferring barrier is only safe because the builder puts the flush at
+    // durability boundary 2 - the executor it constructs flushes before it
+    // announces a job write-ready. An executor the builder does not construct
+    // never gets the barrier: a pooled worker is a separate thread that cannot
+    // be handed a live flusher object at all (each worker opens its own
+    // connection, and a Postgres one is durable per statement anyway), and a
+    // caller-supplied manager builds its executors itself. Either way the
+    // boundary would be SILENTLY absent, with every job reporting durable
+    // success over unflushed data - so the combination is refused here rather
+    // than discovered after a crash.
+    if (this.storageFlusher.deferringStatementFlush) {
+      if (this.workerPool !== undefined) {
+        throw new Error(
+          "withWorkerPool cannot be combined with a deferring withStorageFlusher: durability boundary 2 (the executor flushes before announcing a job write-ready) cannot be enforced in a pooled worker, because the live flusher object does not cross the worker boundary. Give the pooled workers a store that is durable per statement, or run the in-process executor.",
+        );
+      }
+      if (this.executorManager !== undefined) {
+        throw new Error(
+          "withExecutor cannot be combined with a deferring withStorageFlusher: durability boundary 2 is enforced by the SimpleJobExecutor this builder constructs, and a caller-supplied executor manager builds its own executors. Pass the flusher to those executors and register a non-deferring barrier here, or drop the custom manager.",
+        );
+      }
     }
 
     if (
@@ -781,6 +954,11 @@ export class ReactorBuilder {
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
+      // Schema is not an acknowledgment, but it is the one thing that is both
+      // expensive to re-apply and not re-pullable, so it gets a flush of its
+      // own rather than waiting for the first job or cursor boundary. A no-op
+      // on a store that is already durable per statement.
+      await this.storageFlusher.flush();
     }
 
     await checkStoredProtocols(
@@ -946,6 +1124,7 @@ export class ReactorBuilder {
               executionScope,
               this.signer,
               this.trustPolicy,
+              this.storageFlusher,
             ),
           eventBus,
           queue,
@@ -1195,12 +1374,9 @@ export class ReactorBuilder {
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
-      const factory =
-        this.channelScheme === ChannelScheme.CONNECT
-          ? new GqlRequestChannelFactory(this.logger, this.jwtHandler, queue)
-          : new GqlResponseChannelFactory(this.logger);
-
-      const syncBuilder = new SyncBuilder().withChannelFactory(factory);
+      const syncBuilder = new SyncBuilder()
+        .withChannelFactory(this.buildSchemeChannelFactory(queue))
+        .withStorageFlusher(this.storageFlusher);
       syncModule = syncBuilder.buildModule(
         reactor,
         this.logger,
@@ -1213,16 +1389,18 @@ export class ReactorBuilder {
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
-      syncModule = this.syncBuilder.buildModule(
-        reactor,
-        this.logger,
-        operationIndex,
-        eventBus,
-        database as unknown as Kysely<StorageDatabase>,
-        this.driveContainerTypes,
-        settledWatermark,
-        localPeer,
-      );
+      syncModule = this.syncBuilder
+        .withDefaultStorageFlusher(this.storageFlusher)
+        .buildModule(
+          reactor,
+          this.logger,
+          operationIndex,
+          eventBus,
+          database as unknown as Kysely<StorageDatabase>,
+          this.driveContainerTypes,
+          settledWatermark,
+          localPeer,
+        );
       await syncModule.syncManager.startup();
     }
 
@@ -1293,6 +1471,76 @@ export class ReactorBuilder {
     }
 
     return module;
+  }
+
+  /**
+   * Refuses sync configurations that have no single correct reading.
+   *
+   * BREAKING, deliberately: `withChannelScheme` plus `withSync` used to build
+   * the scheme and SILENTLY DROP the custom SyncBuilder -- its channel factory,
+   * its storages, its limits -- so a caller who asked for a local factory and a
+   * gql scheme got a gql-only reactor and no word about it. Only configurations
+   * that were already silently broken now fail, and they fail at build time
+   * with the two methods named. The way to combine transports is
+   * {@link withAdditionalChannelFactory}, which composes instead of dropping.
+   */
+  private assertSyncConfiguration(): void {
+    if (this.channelScheme && this.syncBuilder) {
+      throw new Error(
+        "withChannelScheme and withSync are mutually exclusive: the scheme makes this builder own the channel factory (it holds the job queue the gql poll timer needs), while a SyncBuilder brings its own. Combine transports with withAdditionalChannelFactory(type, factory) on the scheme, or drop withChannelScheme and compose a CompositeChannelFactory into your own SyncBuilder.",
+      );
+    }
+    if (this.additionalChannelFactories.size === 0) {
+      return;
+    }
+    if (!this.channelScheme) {
+      const types = [...this.additionalChannelFactories.keys()].join(", ");
+      throw new Error(
+        `withAdditionalChannelFactory([${types}]) needs a withChannelScheme to compose with: without a scheme there is no factory to compose, and a withSync SyncBuilder owns its own. Pass a CompositeChannelFactory to that SyncBuilder instead.`,
+      );
+    }
+    const { type } = schemeChannelDescriptor(this.channelScheme);
+    if (this.additionalChannelFactories.has(type)) {
+      throw new Error(
+        `withAdditionalChannelFactory("${type}", ...) collides with the "${this.channelScheme}" channel scheme, which already serves that channel type`,
+      );
+    }
+  }
+
+  /**
+   * The channel factory a {@link withChannelScheme} reactor syncs on: the
+   * scheme's own, or a {@link CompositeChannelFactory} over it and every
+   * {@link withAdditionalChannelFactory} registration.
+   *
+   * The scheme factory is constructed here rather than by the caller because
+   * only the builder holds the reactor's internal job queue, which the CONNECT
+   * poll timer drives its backpressure from -- the reason a true gql+local
+   * composite could not be assembled from outside (multi-reactor W1.2 note).
+   *
+   * With no additional factory the scheme's factory is used bare, so an
+   * existing reactor's routing is byte-for-byte what it was: the composite is
+   * strict about `ChannelConfig.type` and the gql factories are not, and
+   * tightening that for every reactor is not this seam's business.
+   *
+   * {@link assertSyncConfiguration} has already refused every combination this
+   * cannot express, so there is nothing left to validate here.
+   */
+  private buildSchemeChannelFactory(queue: IQueue): IChannelFactory {
+    if (!this.channelScheme) {
+      throw new Error(
+        "unreachable: buildSchemeChannelFactory called without a channel scheme",
+      );
+    }
+    const { type, create } = schemeChannelDescriptor(this.channelScheme);
+    const schemeFactory = create(this.logger!, this.jwtHandler, queue);
+
+    if (this.additionalChannelFactories.size === 0) {
+      return schemeFactory;
+    }
+    return new CompositeChannelFactory([
+      [type, schemeFactory],
+      ...this.additionalChannelFactories,
+    ]);
   }
 
   /**

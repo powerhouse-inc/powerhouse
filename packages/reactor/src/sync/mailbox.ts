@@ -16,7 +16,8 @@ export interface IMailbox {
   /**
    * The latest ordinal that has been acknowledged. Because acknowledged items
    * are removed from the mailbox, this is the last ordinal that has been removed.
-   * With holdAckBelowMarkers, never at or past an unapplied marker entry.
+   * Never at or past a held item that is neither applied nor failed, and with
+   * holdAckBelowMarkers never at or past an unapplied marker entry either.
    */
   get ackOrdinal(): number;
 
@@ -61,13 +62,48 @@ export class MailboxAggregateError extends Error {
 export type MailboxOptions = {
   /** An unapplied item carrying a purge marker keeps ackOrdinal below it. */
   holdAckBelowMarkers?: boolean;
+  /**
+   * Any item still held and neither applied nor failed keeps ackOrdinal below
+   * it. Defaults to TRUE.
+   *
+   * The ack is the maximum applied ordinal, and items for different documents
+   * resolve out of order, so without a floor the ack passes an item still
+   * inside its load and a restart never asks for it again. An item that failed
+   * does not hold the ack: it has a dead letter standing for it, and holding
+   * for it would re-pull the same failure forever.
+   *
+   * On by default because SyncManager applies every inbox concurrently and a
+   * mailbox whose ackOrdinal feeds a persisted cursor is unsound without the
+   * floor -- a channel that forgot to ask for it would lose operations rather
+   * than run slowly. Pass false only for a mailbox whose ackOrdinal no cursor
+   * reads (an outbox persists the applied ordinal of what it removes instead).
+   */
+  holdAckBelowUnapplied?: boolean;
 };
 
 export class Mailbox implements IMailbox {
   private readonly holdAckBelowMarkers: boolean;
+  private readonly holdAckBelowUnapplied: boolean;
   private itemsMap: Map<string, SyncOperation> = new Map();
   /** Unapplied items carrying a marker, so the held ack reads only these. */
   private readonly heldMarkers = new Set<SyncOperation>();
+  /**
+   * Item id -> its lowest ordinal, for items neither applied nor failed.
+   *
+   * The ordinal is taken once, when the item is added, because the floor is
+   * read on every removal and re-reading each held item's operations there
+   * would make a drain quadratic.
+   */
+  private readonly unappliedOrdinals = new Map<string, number>();
+  /**
+   * The memoized floor, or null when it is stale and has to be recomputed.
+   *
+   * Null is a distinct state from "no unapplied item", which is a VALID cache
+   * of positive infinity. Collapsing the two let an add() after the floor's own
+   * item resolved compare against infinity and win, putting the floor above an
+   * item that was still unapplied.
+   */
+  private unappliedFloorCache: number | null = Number.POSITIVE_INFINITY;
   private addedCallbacks: MailboxCallback[] = [];
   private removedCallbacks: MailboxCallback[] = [];
   private paused: boolean = false;
@@ -79,6 +115,7 @@ export class Mailbox implements IMailbox {
 
   constructor(options: MailboxOptions = {}) {
     this.holdAckBelowMarkers = options.holdAckBelowMarkers ?? false;
+    this.holdAckBelowUnapplied = options.holdAckBelowUnapplied ?? true;
   }
 
   init(ackOrdinal: number) {
@@ -94,14 +131,19 @@ export class Mailbox implements IMailbox {
   }
 
   get ackOrdinal(): number {
-    if (!this.holdAckBelowMarkers) return this._ack;
     let floor = Number.POSITIVE_INFINITY;
-    for (const item of this.heldMarkers) {
-      for (const op of item.operations) {
-        const ordinal = op.context.ordinal;
-        if (ordinal > 0 && ordinal < floor) floor = ordinal;
+    if (this.holdAckBelowMarkers) {
+      for (const item of this.heldMarkers) {
+        for (const op of item.operations) {
+          const ordinal = op.context.ordinal;
+          if (ordinal > 0 && ordinal < floor) floor = ordinal;
+        }
       }
     }
+    if (this.holdAckBelowUnapplied) {
+      floor = Math.min(floor, this.unappliedFloor());
+    }
+    if (floor === Number.POSITIVE_INFINITY) return this._ack;
     return Math.min(this._ack, floor - 1);
   }
 
@@ -117,12 +159,31 @@ export class Mailbox implements IMailbox {
     for (const item of items) {
       const replaced = this.itemsMap.get(item.id);
       if (replaced !== undefined) this.heldMarkers.delete(replaced);
+      this.forgetUnapplied(item.id);
       this.itemsMap.set(item.id, item);
 
       let marker = false;
+      let lowest = Number.POSITIVE_INFINITY;
       for (const op of item.operations) {
         this._latestOrdinal = Math.max(this._latestOrdinal, op.context.ordinal);
+        if (op.context.ordinal > 0 && op.context.ordinal < lowest) {
+          lowest = op.context.ordinal;
+        }
         if (isPurgeMarker(op)) marker = true;
+      }
+      if (
+        this.holdAckBelowUnapplied &&
+        lowest !== Number.POSITIVE_INFINITY &&
+        item.status !== SyncOperationStatus.Applied &&
+        item.status !== SyncOperationStatus.Error
+      ) {
+        this.unappliedOrdinals.set(item.id, lowest);
+        if (
+          this.unappliedFloorCache !== null &&
+          lowest < this.unappliedFloorCache
+        ) {
+          this.unappliedFloorCache = lowest;
+        }
       }
       if (
         this.holdAckBelowMarkers &&
@@ -134,6 +195,12 @@ export class Mailbox implements IMailbox {
 
       // listen for updates to the syncop status
       item.on((syncOp, _, next) => {
+        if (
+          next === SyncOperationStatus.Applied ||
+          next === SyncOperationStatus.Error
+        ) {
+          this.forgetUnapplied(syncOp.id);
+        }
         if (next === SyncOperationStatus.Applied) {
           this.heldMarkers.delete(syncOp);
           for (const op of syncOp.operations) {
@@ -166,6 +233,7 @@ export class Mailbox implements IMailbox {
     for (const item of items) {
       this.itemsMap.delete(item.id);
       this.heldMarkers.delete(item);
+      this.forgetUnapplied(item.id);
     }
 
     if (this.paused) {
@@ -244,5 +312,39 @@ export class Mailbox implements IMailbox {
 
   isPaused(): boolean {
     return this.paused;
+  }
+
+  /**
+   * The lowest ordinal of a held item that is neither applied nor failed.
+   *
+   * Memoized, and recomputed only once the item that set it has resolved: the
+   * floor is read on every removal, and a drain resolves the floor's own item
+   * most of the time, so the scan that follows walks numbers rather than
+   * re-reading operations. The scan is over the unapplied map, which the inbox
+   * bound keeps small, so a stale cache costs a walk and never a wrong answer.
+   */
+  private unappliedFloor(): number {
+    const cached = this.unappliedFloorCache;
+    if (cached !== null) return cached;
+    let floor = Number.POSITIVE_INFINITY;
+    for (const ordinal of this.unappliedOrdinals.values()) {
+      if (ordinal < floor) floor = ordinal;
+    }
+    this.unappliedFloorCache = floor;
+    return floor;
+  }
+
+  /**
+   * Drops an item from the unapplied set, marking the floor stale when that
+   * item was the floor: a lower-ordinal item may still be held, so the next
+   * read has to scan rather than take an add()'s word for the new floor.
+   */
+  private forgetUnapplied(id: string): void {
+    const ordinal = this.unappliedOrdinals.get(id);
+    if (ordinal === undefined) return;
+    this.unappliedOrdinals.delete(id);
+    if (ordinal === this.unappliedFloorCache) {
+      this.unappliedFloorCache = null;
+    }
   }
 }

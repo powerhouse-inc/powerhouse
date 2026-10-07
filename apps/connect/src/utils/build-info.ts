@@ -28,6 +28,28 @@ export function getGitSha(): string {
 }
 
 /**
+ * The build identity sent as `appBuildId` in the worker hello handshake (see
+ * `reactor-worker-client.ts`): the baked-in git sha in production, the static
+ * package version otherwise.
+ *
+ * Deliberately NOT a function of the worker bundle's content token. The token
+ * travels as its own `buildDigest` field on the fingerprint, because it is
+ * fetched per tab and can be absent for a tab of the identical build; folding
+ * it in here made "token unavailable" indistinguishable from "different
+ * build", and two tabs of one build then bumped the worker generation against
+ * each other. `ReactorHost.versionsCompatible` compares the token only when
+ * both tabs have one, and `workerGenForVersion` still folds it into the worker
+ * name, so the W0.6 behaviour is intact: a dev rebuild changes the token and
+ * lands every tab on a fresh worker (see
+ * docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md).
+ */
+export function getAppBuildId(): string {
+  const gitSha = getGitSha();
+  if (gitSha !== "unknown") return gitSha;
+  return getVersion();
+}
+
+/**
  * Build identity baked in at build time (define PH_CONNECT_BUILD_HASH —
  * see builder-tools' connectBuildHashPlugin). Identical builds of the same
  * inputs produce the same hash; any change to the deployed content (Connect

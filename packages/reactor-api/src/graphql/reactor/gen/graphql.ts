@@ -129,6 +129,25 @@ export enum AuthDecision {
   Deny = "DENY",
 }
 
+/**
+ * The outcome of an atomic batch mutation, one entry per job the request named.
+ * The wire shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by
+ * the plan key rather than by position so the client can rebuild the record.
+ */
+export type BatchExecutionResult = {
+  readonly jobs: ReadonlyArray<BatchJobResult>;
+};
+
+/**
+ * One job's outcome within a batch, pairing the plan key the caller gave with the
+ * job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+ * `IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+ */
+export type BatchJobResult = {
+  readonly job: JobInfo;
+  readonly key: Scalars["String"]["output"];
+};
+
 export type ChannelMeta = {
   readonly id: Scalars["String"]["output"];
 };
@@ -218,6 +237,26 @@ export type DocumentWithChildren = {
   readonly document: PhDocument;
 };
 
+/**
+ * One mutation job of an atomic batch, mirroring the reactor's `ExecutionJobPlan`
+ * (packages/reactor/src/core/types.ts).
+ *
+ * `documentIdOrSlug` is the document the job's actions apply to -- an id that does
+ * not yet exist when the job's actions create it. `actions` are coerced against
+ * `ActionInput` and passed through exactly as `execute` does, so a client-signed
+ * action keeps its signature. `scope` is the single scope every action in the job
+ * shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+ * defaults to `main`.
+ */
+export type ExecutionJobInput = {
+  readonly actions: ReadonlyArray<ActionInput>;
+  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
+  readonly dependsOn: ReadonlyArray<Scalars["String"]["input"]>;
+  readonly documentIdOrSlug: Scalars["String"]["input"];
+  readonly key: Scalars["String"]["input"];
+  readonly scope: Scalars["String"]["input"];
+};
+
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
@@ -276,6 +315,17 @@ export type Mutation = {
    * ask for; `result` is null until the job produces one.
    */
   readonly executeAsync: JobInfo;
+  /**
+   * Applies multiple mutation jobs in dependency order and waits for all of them,
+   * the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+   * against `ActionInput` exactly as `execute` is, so client-signed actions pass
+   * through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+   * are applied and awaited before the result returns, so every returned `JobInfo`
+   * is a completed one rather than the pending receipt the in-process reactor hands
+   * back. The first failed job fails the whole mutation; a batch is ordering, not a
+   * transaction, so jobs that already committed stay committed.
+   */
+  readonly executeBatch: BatchExecutionResult;
   readonly moveRelationship: MoveRelationshipResult;
   /** @deprecated Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored. */
   readonly mutateDocument: PhDocument;
@@ -335,6 +385,10 @@ export type MutationExecuteAsyncArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type MutationExecuteBatchArgs = {
+  jobs: ReadonlyArray<ExecutionJobInput>;
 };
 
 export type MutationMoveRelationshipArgs = {
@@ -456,9 +510,11 @@ export type PhDocument = {
   readonly documentType: Scalars["String"]["output"];
   readonly id: Scalars["String"]["output"];
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
+  readonly meta?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
   readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
+  readonly protocolVersions?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -815,6 +871,8 @@ export type PhDocumentFieldsFragment = {
   readonly slug?: string | null | undefined;
   readonly name: string;
   readonly documentType: string;
+  readonly meta?: NonNullable<unknown> | null | undefined;
+  readonly protocolVersions?: NonNullable<unknown> | null | undefined;
   readonly state: NonNullable<unknown>;
   readonly createdAtUtcIso: string | Date;
   readonly lastModifiedAtUtcIso: string | Date;
@@ -867,6 +925,8 @@ export type GetDocumentQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
+          readonly meta?: NonNullable<unknown> | null | undefined;
+          readonly protocolVersions?: NonNullable<unknown> | null | undefined;
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
@@ -896,6 +956,8 @@ export type GetDocumentWithOperationsQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
+          readonly meta?: NonNullable<unknown> | null | undefined;
+          readonly protocolVersions?: NonNullable<unknown> | null | undefined;
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
@@ -976,6 +1038,8 @@ export type GetDocumentOutgoingRelationshipsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1004,6 +1068,8 @@ export type GetDocumentIncomingRelationshipsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1077,6 +1143,8 @@ export type FindDocumentsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1188,6 +1256,8 @@ export type CreateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1209,6 +1279,8 @@ export type CreateEmptyDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1231,6 +1303,8 @@ export type MutateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1270,6 +1344,8 @@ export type RenameDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1292,6 +1368,8 @@ export type SetPreferredEditorMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1316,6 +1394,8 @@ export type AddRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1340,6 +1420,8 @@ export type UpdateRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1363,6 +1445,8 @@ export type RemoveRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1388,6 +1472,8 @@ export type MoveRelationshipMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1401,6 +1487,8 @@ export type MoveRelationshipMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1439,6 +1527,8 @@ export type DocumentChangesSubscription = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1705,6 +1795,8 @@ export type ResolversTypes = ResolversObject<{
   ActionEvaluations: ResolverTypeWrapper<ActionEvaluations>;
   ActionInput: ActionInput;
   AuthDecision: AuthDecision;
+  BatchExecutionResult: ResolverTypeWrapper<BatchExecutionResult>;
+  BatchJobResult: ResolverTypeWrapper<BatchJobResult>;
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
@@ -1719,6 +1811,7 @@ export type ResolversTypes = ResolversObject<{
   DocumentRelationship: ResolverTypeWrapper<DocumentRelationship>;
   DocumentRelationshipResultPage: ResolverTypeWrapper<DocumentRelationshipResultPage>;
   DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
+  ExecutionJobInput: ExecutionJobInput;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
   JobChangeEvent: ResolverTypeWrapper<JobChangeEvent>;
@@ -1775,6 +1868,8 @@ export type ResolversParentTypes = ResolversObject<{
   ActionEvaluation: ActionEvaluation;
   ActionEvaluations: ActionEvaluations;
   ActionInput: ActionInput;
+  BatchExecutionResult: BatchExecutionResult;
+  BatchJobResult: BatchJobResult;
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
   ChannelMetaInput: ChannelMetaInput;
@@ -1788,6 +1883,7 @@ export type ResolversParentTypes = ResolversObject<{
   DocumentRelationship: DocumentRelationship;
   DocumentRelationshipResultPage: DocumentRelationshipResultPage;
   DocumentWithChildren: DocumentWithChildren;
+  ExecutionJobInput: ExecutionJobInput;
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
   JobChangeEvent: JobChangeEvent;
@@ -1885,6 +1981,27 @@ export type ActionEvaluationsResolvers<
     ParentType,
     ContextType
   >;
+}>;
+
+export type BatchExecutionResultResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["BatchExecutionResult"] =
+    ResolversParentTypes["BatchExecutionResult"],
+> = ResolversObject<{
+  jobs?: Resolver<
+    ReadonlyArray<ResolversTypes["BatchJobResult"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
+export type BatchJobResultResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["BatchJobResult"] =
+    ResolversParentTypes["BatchJobResult"],
+> = ResolversObject<{
+  job?: Resolver<ResolversTypes["JobInfo"], ParentType, ContextType>;
+  key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
 export type ChannelMetaResolvers<
@@ -2146,6 +2263,12 @@ export type MutationResolvers<
     ContextType,
     RequireFields<MutationExecuteAsyncArgs, "actions">
   >;
+  executeBatch?: Resolver<
+    ResolversTypes["BatchExecutionResult"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationExecuteBatchArgs, "jobs">
+  >;
   moveRelationship?: Resolver<
     ResolversTypes["MoveRelationshipResult"],
     ParentType,
@@ -2251,6 +2374,7 @@ export type PhDocumentResolvers<
     ParentType,
     ContextType
   >;
+  meta?: Resolver<Maybe<ResolversTypes["JSONObject"]>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   operations?: Resolver<
     Maybe<ResolversTypes["ReactorOperationResultPage"]>,
@@ -2260,6 +2384,11 @@ export type PhDocumentResolvers<
   >;
   preferredEditor?: Resolver<
     Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  protocolVersions?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
     ParentType,
     ContextType
   >;
@@ -2648,6 +2777,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   ActionContext?: ActionContextResolvers<ContextType>;
   ActionEvaluation?: ActionEvaluationResolvers<ContextType>;
   ActionEvaluations?: ActionEvaluationsResolvers<ContextType>;
+  BatchExecutionResult?: BatchExecutionResultResolvers<ContextType>;
+  BatchJobResult?: BatchJobResultResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
@@ -2757,6 +2888,19 @@ export function DocumentOperationsFilterInputSchema(): z.ZodObject<
     sinceRevision: z.number().nullish(),
     timestampFrom: z.string().nullish(),
     timestampTo: z.string().nullish(),
+  });
+}
+
+export function ExecutionJobInputSchema(): z.ZodObject<
+  Properties<ExecutionJobInput>
+> {
+  return z.object({
+    actions: z.array(z.lazy(() => ActionInputSchema())),
+    branch: z.string().nullish(),
+    dependsOn: z.array(z.string()),
+    documentIdOrSlug: z.string(),
+    key: z.string(),
+    scope: z.string(),
   });
 }
 
@@ -2931,6 +3075,8 @@ export const PhDocumentFieldsFragmentDoc = gql`
     slug
     name
     documentType
+    meta
+    protocolVersions
     state
     revisionsList {
       scope

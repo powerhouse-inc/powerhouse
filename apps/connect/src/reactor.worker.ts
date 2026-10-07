@@ -1,23 +1,29 @@
 import {
-  ChannelScheme,
   DocumentIntegrityService,
-  DriveCollectionId,
+  HardenedPGliteDialect,
   InMemoryQueue,
+  LocalChannelFactory,
+  messagePortTransport,
+  queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
-  type ChannelConfig,
+  ReactorEventTypes,
+  ReactorInspector,
+  SelfHealingPGliteClient,
+  StorageHealthTracker,
   type Database,
-  type ICatchUp,
+  type IReactorDbQuery,
+  type ISyncInspector,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
-  type Remote,
-  type RemoteFilter,
-  type RemoteOptions,
+  type RecreatablePGliteInstance,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
+  dispatchInspectorOp,
+  dispatchSyncOp,
   FORWARDED_EVENT_TYPES,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
@@ -26,15 +32,18 @@ import {
   type WorkerMigrationState,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
-import type {
-  PeerManifest,
-  SignaturePolicy,
-} from "@powerhousedao/shared/document-model";
+import type { SignaturePolicy } from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
-  type IProcessorManager,
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
+import { childLogger } from "document-model";
+import {
+  collectionIdFromKey,
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+  removeLocalPeer,
+} from "./reactor-worker-sync.js";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import {
   loadFlaggedDocumentModels,
@@ -50,11 +59,11 @@ import {
   type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
+import { configureConnectChannelScheme } from "./utils/reactor-channel-scheme.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
@@ -99,6 +108,11 @@ type WorkerConstruct = {
   // Same reason: enforcement flags arrive from the tab. Absent means all off,
   // which is what a tab on an older build sends.
   featureFlags?: Partial<ReactorFeatureFlags>;
+  // The resolved multiReactor flag, threaded from the tab the same way the
+  // other flags are. OFF (or absent, i.e. a tab on an older build) builds the
+  // bare gql scheme; ON composes the local-channel factory and wires the
+  // adopt/remove-sync-peer handlers.
+  multiReactor?: boolean;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
   // Absent means the reactor's default, refuse.
@@ -112,10 +126,25 @@ type WorkerConstruct = {
 let loader: WorkerPackageLoader | undefined;
 let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
-let syncManager: ISyncManager | undefined;
+let syncManager: (ISyncManager & ISyncInspector) | undefined;
+// The brokered-local-sync port registry for the live build. A LocalChannel
+// factory composed onto the gql scheme resolves its ports from here; it is
+// empty (and so inert) until the adopt-sync-peer op registers a transferred
+// MessagePort (multi-reactor stage 4, WP-B/C).
+let localChannelPorts: LocalChannelPortRegistry | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
+  /**
+   * The one Kysely over the relational PGlite, the same handle `db` wraps.
+   * Inspector SQL from the DB explorer goes through it rather than at the
+   * client, so it enters the hardened dialect's serialising queue instead of
+   * landing inside whatever transaction a relational processor has open on the
+   * shared session - reading its uncommitted rows, or aborting it outright. See
+   * docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3, which fixed
+   * the same bypass on the reactor store.
+   */
+  kysely?: Kysely<unknown>;
 };
 const relational: RelationalState = {};
 type OwnedStorage = {
@@ -123,23 +152,32 @@ type OwnedStorage = {
     close: () => Promise<void>;
     query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
   };
+  /**
+   * The one Kysely over the reactor's PGlite. Inspector SQL goes through it
+   * rather than at the client, so it enters the dialect's serialising queue
+   * instead of landing inside whatever job transaction is open on the shared
+   * session - which is how a statement typed into the DB explorer could read
+   * uncommitted rows, or abort a job's transaction outright. See
+   * docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3.
+   */
+  reactorDb?: Kysely<Database>;
   reactorIdb?: string;
   relationalIdb?: string;
 };
 const owned: OwnedStorage = {};
-let inspectorQueue: InMemoryQueue | undefined;
-let inspectorProcessors: IProcessorManager | undefined;
-let inspectorIntegrity: DocumentIntegrityService | undefined;
-let inspectorCatchUp: ICatchUp | undefined;
+// Replaced on every boot with one over the live reactor module. Until then
+// every component is absent, which is what the inspector degrades to.
+let inspector = new ReactorInspector({});
+// Resolved per call: the store is reopened across boots and migrations.
+const inspectorDb: IReactorDbQuery = {
+  queryDb: async (sql, params) => {
+    if (!owned.reactorDb) {
+      throw new Error("Reactor store not available");
+    }
+    return queryThroughDialect(owned.reactorDb, sql, params);
+  },
+};
 let currentIdentity: ReactorIdentity | null = null;
-
-// Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
-function toWireRemote(remote: Remote) {
-  return {
-    meta: remote.meta,
-    connectionState: remote.channel.getConnectionState(),
-  };
-}
 
 // Rebuild renown crypto from the shared renownKeyDB keypair (origin-scoped IndexedDB).
 async function buildWorkerCrypto(chainId: number | undefined) {
@@ -152,6 +190,16 @@ async function buildWorkerCrypto(chainId: number | undefined) {
 }
 
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
+//
+// This is the reactor's authoritative operation store, so it opens WITHOUT
+// relaxedDurability: a COMMIT must be flushed to IndexedDB before it is reported
+// durable. relaxedDurability lets COMMIT resolve before the idb flush, so a
+// self-heal recreate - which reads back only the last flushed snapshot - would
+// permanently lose operations that were acknowledged but not yet flushed and not
+// yet synced to a remote. The latency cost is accepted here so that "committed"
+// means "flushed" and the W0.7 self-heal never drops acknowledged writes. The
+// relational/read-model store keeps relaxedDurability (see openRelational): its
+// rows are derived and can be re-processed from the durable operation log.
 async function openReactorPglite(namespace: string) {
   const detected = coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
   const major = resolvePgMajorForRuntime(detected);
@@ -161,7 +209,7 @@ async function openReactorPglite(namespace: string) {
     );
   }
   const { PGlite } = await loadPGliteModule(major);
-  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: false });
   await pg.waitReady;
   return { pg, detected };
 }
@@ -196,9 +244,31 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     });
     await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
-    relational.db = createRelationalDb(
-      new Kysely({ dialect: new PGliteDialect(pg) }),
-    );
+    // Self-heal the relational session by host reload rather than in-place
+    // recreate. The relational store hands out `live` query subscriptions
+    // (onLiveQuery, bound to this exact pg.live instance) that an instance swap
+    // cannot transparently rewire the way the reactor store's Kysely holders
+    // are, so a clean worker reload is the recovery here. Without this hook a
+    // poisoned relational session - now that relational-processor and inspector
+    // SQL both route through this dialect's queue - would brick forever with the
+    // dialect's loud refusal and no path back. See docs/bugs/2026-10-03-*, W0.7.
+    const relationalKysely = new Kysely<unknown>({
+      dialect: new HardenedPGliteDialect(pg, {
+        onPoisoned: (cause) => {
+          console.error(
+            "[reactor.worker] relational PGlite session unrecoverable; requesting reload",
+            cause,
+          );
+          host.broadcastReload(
+            "relational pglite session unrecoverable",
+            globalThis.crypto.randomUUID(),
+          );
+          return Promise.resolve(false);
+        },
+      }),
+    });
+    relational.kysely = relationalKysely;
+    relational.db = createRelationalDb(relationalKysely);
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
     );
@@ -231,7 +301,9 @@ async function releaseStores(): Promise<void> {
   const stores = [relational.pg, owned.reactorPg];
   relational.pg = undefined;
   relational.db = undefined;
+  relational.kysely = undefined;
   owned.reactorPg = undefined;
+  owned.reactorDb = undefined;
   for (const store of stores) {
     try {
       await store?.close();
@@ -330,7 +402,68 @@ const host = new ReactorHost({
         construct.relationalNamespace,
       );
       const pg = reactor.pg;
-      owned.reactorPg = pg;
+      // Self-heal: on an unrecoverable session (a stuck PORTAL_ACTIVE the
+      // dialect refuses), recreate the PGlite instance against the same idb
+      // store. Every reactor component reaches the database through this one
+      // Kysely, so swapping the instance under the client rewires all of them
+      // without rebuilding the reactor. Durably committed data survives; the
+      // rolled-back tail is re-pulled by sync. If a replacement cannot be
+      // opened, fall back to a worker reload. See docs/bugs/2026-10-03-*, W0.7.
+      // Declared before the client so both poison paths - the dialect's hung
+      // statement and the client's own hung filesystem sync - escalate
+      // identically: recreate in place, and request a worker reload when no
+      // replacement opens.
+      let poisonSession: (reason: string) => Promise<boolean> = () =>
+        Promise.resolve(false);
+      const reactorSelfHeal = new SelfHealingPGliteClient(
+        pg as RecreatablePGliteInstance,
+        {
+          openInstance: async () =>
+            (await openReactorPglite(construct.namespace))
+              .pg as RecreatablePGliteInstance,
+          onDiagnostic: (message, error) =>
+            console.error(`[reactor.worker] self-heal: ${message}`, error),
+          onSyncStuck: (reason) => poisonSession(reason),
+        },
+      );
+      owned.reactorPg = reactorSelfHeal;
+      // Group commit (W0.8, regression run 3 finding A): the store still opens
+      // without relaxedDurability, so its syncToFs is a real awaitable flush -
+      // but statements stop doing one each. Flushing per statement measured ~2
+      // ops/sec during bulk sync catch-up, which made the ~16,600-op Accounts
+      // collection a two-hour grind that froze the tab. Durability moves to the
+      // two acknowledgment boundaries the flusher owns: a sync cursor write and
+      // a non-load job's write-ready announcement. Deferring without registering
+      // the flusher below would be a data-safety regression, so the two lines
+      // belong together.
+      reactorSelfHeal.setDeferredFlush(true);
+      // Storage-health dimension for the inspector: a poisoned session flips it
+      // unhealthy, a successful recreate flips it back. See W0.5 / W0.7.
+      const storageHealth = new StorageHealthTracker(
+        () => reactorSelfHeal.recreateCount,
+      );
+      poisonSession = async (reason: string) => {
+        storageHealth.markPoisoned();
+        const healed = await reactorSelfHeal.recreate(reason);
+        if (!healed) {
+          console.error(
+            "[reactor.worker] PGlite session unrecoverable and no replacement opened; requesting reload",
+          );
+          host.broadcastReload(
+            "pglite session unrecoverable",
+            globalThis.crypto.randomUUID(),
+          );
+        }
+        return healed;
+      };
+      owned.reactorDb = new Kysely<Database>({
+        dialect: new HardenedPGliteDialect(reactorSelfHeal, {
+          onPoisoned: (cause) =>
+            poisonSession(
+              cause instanceof Error ? cause.message : String(cause),
+            ),
+        }),
+      });
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
       // A store is migratable when coerceMajor kept it (a supported legacy
@@ -359,10 +492,28 @@ const host = new ReactorHost({
       console.info(`[reactor.worker] boot: ${phase}`);
       const reactorBuilder = new ReactorBuilder()
         .withDocumentModelSources(models)
-        .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+        .withKysely(owned.reactorDb)
+        .withStorageFlusher(reactorSelfHeal);
+      // Flag OFF (the default, and what a tab on an older build sends) builds the
+      // bare CONNECT gql scheme exactly as before multi-reactor: no local factory,
+      // no CompositeChannelFactory, channel factory types = [gql]. Flag ON composes
+      // a LocalChannelFactory onto the gql scheme (multi-reactor W3.0, Connect stage
+      // 4 WP-B) so this reactor also routes `{type:"local"}` brokered MessagePort
+      // peers. The registry is created only on the ON path and stays empty until the
+      // adopt-sync-peer op registers a transferred port, so the composed factory is
+      // inert until then.
+      configureConnectChannelScheme(reactorBuilder, {
+        multiReactor: construct.multiReactor ?? false,
+        createLocalChannelFactory: () => {
+          localChannelPorts = new LocalChannelPortRegistry();
+          return new LocalChannelFactory(
+            childLogger(["reactor.worker", "local-channel"]),
+            localChannelPorts.provider,
+          );
+        },
+      });
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,
@@ -383,17 +534,19 @@ const host = new ReactorHost({
       syncManager = module.reactorModule?.syncModule?.syncManager;
       const rm = module.reactorModule;
       if (rm) {
-        inspectorQueue =
-          rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
-        inspectorProcessors = rm.processorManager;
-        inspectorCatchUp = rm.catchUp;
-        inspectorIntegrity = new DocumentIntegrityService(
-          rm.keyframeStore,
-          rm.operationStore,
-          rm.writeCache,
-          rm.documentView,
-          rm.documentModelRegistry,
-        );
+        inspector = new ReactorInspector({
+          queue: rm.queue instanceof InMemoryQueue ? rm.queue : undefined,
+          processorManager: rm.processorManager,
+          catchUp: rm.catchUp,
+          integrity: new DocumentIntegrityService(
+            rm.keyframeStore,
+            rm.operationStore,
+            rm.writeCache,
+            rm.documentView,
+            rm.documentModelRegistry,
+          ),
+          storageHealth,
+        });
       }
       registrar?.markRegistered(models);
       // Manifests ride along in the models entries the loader imported; the
@@ -404,6 +557,19 @@ const host = new ReactorHost({
           host.broadcastBusEvent(forwardedType, event),
         );
       }
+      // The event bus exists only now; emit the recovery event on it so the
+      // forwarding subscription above relays it to the tab/inspector.
+      reactorSelfHeal.setRecreatedListener((event) => {
+        storageHealth.recordRecreated(event);
+        void module.eventBus
+          .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
+          .catch((error) =>
+            console.error(
+              "[reactor.worker] emitting recovery event failed",
+              error,
+            ),
+          );
+      });
       syncManager?.onSyncStatusChange((documentId, status) =>
         host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, {
           documentId,
@@ -442,65 +608,22 @@ const host = new ReactorHost({
       signer.user = user ?? undefined;
     }
   },
-  onSyncOp: async (method, args) => {
+  onSyncOp: (method, args) => {
     if (!syncManager) {
       throw new Error("SyncManager not available");
     }
-    switch (method) {
-      case "list":
-        return syncManager.list().map(toWireRemote);
-      case "add": {
-        const [name, collectionIdKey, channelConfig, filter, options] =
-          args as [
-            string,
-            string,
-            ChannelConfig,
-            RemoteFilter | undefined,
-            RemoteOptions | undefined,
-          ];
-        const remote = await syncManager.add(
-          name,
-          DriveCollectionId.fromKey(collectionIdKey),
-          channelConfig,
-          filter,
-          options,
-        );
-        return toWireRemote(remote);
-      }
-      case "bindRemote":
-        await syncManager.bindRemote(args[0] as string, args[1] as string);
-        return undefined;
-      case "setPeerManifest":
-        await syncManager.setPeerManifest(
-          args[0] as string,
-          args[1] as PeerManifest | null,
-        );
-        return undefined;
-      case "peerAgreementBasis":
-        return syncManager.agreement().basis();
-      case "listHolds":
-        return syncManager.listHolds(
-          args[0] as { remoteName?: string; documentId?: string } | undefined,
-        );
-      case "remove":
-        await syncManager.remove(args[0] as string);
-        return undefined;
-      case "triggerPull":
-        syncManager.triggerPull(args[0] as string);
-        return undefined;
-      default:
-        throw new Error(`Unknown sync op: ${method}`);
-    }
+    return dispatchSyncOp(syncManager, method, args);
   },
   onDbOp: async (method, args) => {
-    if (!relational.pg) {
+    if (!relational.kysely) {
       throw new Error("Relational store not available");
     }
     switch (method) {
       case "query": {
         const [sql, params] = args as [string, unknown[]];
-        const result = await relational.pg.query(sql, params);
-        return result.rows;
+        // Through the dialect queue, never at the shared PGlite session: the
+        // relational store's processors hold transactions on it.
+        return queryThroughDialect(relational.kysely, sql, params);
       }
       default:
         throw new Error(`Unknown db op: ${method}`);
@@ -517,100 +640,50 @@ const host = new ReactorHost({
       void live.unsubscribe();
     };
   },
-  onInspectorOp: async (method, args) => {
-    switch (method) {
-      case "queue.getState": {
-        if (!inspectorQueue) {
-          return {
-            isPaused: false,
-            pendingJobs: [],
-            executingJobs: [],
-            totalPending: 0,
-            totalExecuting: 0,
-          };
-        }
-        const pendingJobs = inspectorQueue.getPendingJobs();
-        const executingJobs = [];
-        for (const jobIds of inspectorQueue.getExecutingJobIds().values()) {
-          for (const jobId of jobIds) {
-            const job = inspectorQueue.getJob(jobId);
-            if (job) {
-              executingJobs.push(job);
-            }
-          }
-        }
-        return {
-          isPaused: inspectorQueue.paused,
-          pendingJobs,
-          executingJobs,
-          totalPending: pendingJobs.length,
-          totalExecuting: executingJobs.length,
-        };
-      }
-      case "queue.pause":
-        inspectorQueue?.pause();
-        return undefined;
-      case "queue.resume":
-        await inspectorQueue?.resume();
-        return undefined;
-      case "processors.getAll":
-        return (inspectorProcessors?.getAll() ?? []).map((tracked) => ({
-          processorId: tracked.processorId,
-          factoryId: tracked.factoryId,
-          driveId: tracked.driveId,
-          processorIndex: tracked.processorIndex,
-          lastOrdinal: tracked.lastOrdinal,
-          status: tracked.status,
-          lastError: tracked.lastError,
-          lastErrorTimestamp: tracked.lastErrorTimestamp,
-        }));
-      case "processors.retry": {
-        const [processorId] = args as [string];
-        await inspectorProcessors?.get(processorId)?.retry();
-        return undefined;
-      }
-      case "catchUp.status":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.status();
-      case "catchUp.sweepNow":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.sweepNow();
-      case "integrity.validate": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.validateDocument(documentId, branch);
-      }
-      case "integrity.rebuildKeyframes": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildKeyframes(documentId, branch);
-      }
-      case "integrity.rebuildSnapshots": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildSnapshots(documentId, branch);
-      }
-      case "db.query": {
-        if (!owned.reactorPg) {
-          throw new Error("Reactor store not available");
-        }
-        const [sql, params] = args as [string, unknown[]];
-        const result = await owned.reactorPg.query(sql, params);
-        return result.rows;
-      }
-      default:
-        throw new Error(`Unknown inspector op: ${method}`);
+  onInspectorOp: (method, args) =>
+    dispatchInspectorOp(inspector, inspectorDb, method, args),
+  // Adopt a brokered local-sync peer (multi-reactor stage 4, WP-C), mirroring
+  // reactor-monitor/src/worker/host.ts. The transferred MessagePort is this
+  // realm's own now; wrap it as a LocalChannelPort and register it so the
+  // composed LocalChannelFactory resolves it, then add the local remote so the
+  // handshake runs over it. ReactorHost closes the transferred port on any
+  // failure here, so a throw never leaks it.
+  onAdoptSyncPeer: async (params, port) => {
+    if (!syncManager || !localChannelPorts) {
+      throw new Error(
+        "Worker reactor has no sync module to adopt a local peer into",
+      );
     }
+    // Round-tripped through the parse check: a dotted drive id would rehydrate
+    // as a different collection, and this side would sync the wrong one while
+    // reporting a healthy link.
+    const collectionId = collectionIdFromKey(params.collectionIdKey);
+    await registerLocalPeer(
+      syncManager,
+      localChannelPorts,
+      {
+        peerId: params.peerId,
+        channelName: params.channelName,
+        collectionId,
+        remoteName: params.remoteName,
+        filter: params.filter,
+      },
+      messagePortTransport(port),
+    );
+  },
+  // The twin of onAdoptSyncPeer: both halves (remove the remote, forget the
+  // port) must happen in the realm that owns the registry.
+  onRemoveSyncPeer: async (params) => {
+    if (!syncManager || !localChannelPorts) {
+      throw new Error(
+        "Worker reactor has no sync module to remove a local peer from",
+      );
+    }
+    await removeLocalPeer(syncManager, localChannelPorts, {
+      remoteName: params.remoteName,
+      peerId: params.peerId,
+      channelName: params.channelName,
+    });
   },
 });
 

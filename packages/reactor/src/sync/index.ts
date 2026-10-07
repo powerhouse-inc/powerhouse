@@ -18,6 +18,7 @@ export type {
   ConnectionStateChangedEvent,
   ConnectionStateSnapshot,
   DeadLetterAddedEvent,
+  DegradedRemote,
   JwtHandler,
   LocalPeer,
   PurgeLookup,
@@ -46,6 +47,7 @@ export {
   ChannelErrorSource,
   ChannelScheme,
   PollBehavior,
+  RemotePersistence,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
@@ -68,14 +70,33 @@ export {
 } from "./errors.js";
 
 export {
+  channelFactoryTypes,
+  CompositeChannelFactory,
   envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
+  GQL_CHANNEL_TYPE,
   IntervalPollTimer,
+  LocalChannel,
+  LocalChannelFactory,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+  messagePortTransport,
+  isLocalWireMessage,
   type GqlChannelConfig,
   type IPollTimer,
+  type LocalAckMessage,
+  type LocalChannelPort,
+  type LocalChannelTransportProvider,
+  type LocalHelloMessage,
+  type LocalPushMessage,
+  type LocalResendMessage,
+  type LocalWireKind,
+  type LocalWireMessage,
+  type MessagePortLike,
+  type PollDelegate,
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";
@@ -102,6 +123,16 @@ export {
   type PeerAgreementBasis,
 } from "./peer-agreement.js";
 export { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
+export {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type InspectableSyncManager,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
 export { SyncStatus, SyncStatusTracker } from "./sync-status-tracker.js";
 export type {
   ISyncStatusTracker,

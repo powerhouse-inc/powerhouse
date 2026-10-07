@@ -397,7 +397,7 @@ export const phConnectRuntimeConfigSchema = {
     instance: {
       type: "object",
       additionalProperties: false,
-      required: ["namespace", "reactorWorker"],
+      required: ["namespace", "reactorWorker", "multiReactor"],
       description:
         "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace.",
       properties: {
@@ -411,6 +411,12 @@ export const phConnectRuntimeConfigSchema = {
           type: "boolean",
           description:
             "Host the reactor in a shared worker instead of on the main thread. Off by default; the main-thread reactor stays the proven path until cutover is verified. Packaged deployments load the worker from the prebuilt bundle `ph connect build` emits under __reactor_worker__/ (the dev server builds it lazily at the same path); when that bundle is absent the feature reports itself unavailable instead of starting a worker that cannot load.",
+          default: false,
+        },
+        multiReactor: {
+          type: "boolean",
+          description:
+            "Opt-in multi-reactor routing. When on, Connect routes through a RoutingReactorClient over the in-browser reactor plus a remote Switchboard backend instead of the single in-browser reactor. Off by default; the single-reactor path is unchanged for existing users.",
           default: false,
         },
       },

@@ -13,6 +13,12 @@ export interface IWorkerAdminClient {
   migrate(): Promise<void>;
   getMigrationState(): WorkerMigrationState;
   subscribeMigration(callback: () => void): () => void;
+  /**
+   * The capability-relevant facts of the construct that actually won the
+   * build, reported by `ReactorHost`'s `onAdminGetBuiltConfig` hook. Opaque
+   * here -- the caller knows its own shape and validates it.
+   */
+  getBuiltConfig(): Promise<unknown>;
 }
 
 /** Worker lifecycle channel (info/restart/clearStorage/migrate) over the shared router. */
@@ -28,7 +34,7 @@ export function createWorkerAdminClient(
   });
 
   const send = (
-    method: "info" | "restart" | "clearStorage" | "migrate",
+    method: "info" | "restart" | "clearStorage" | "migrate" | "builtConfig",
   ): Promise<unknown> =>
     router.request((id) => ({ k: "admin", id, method }), {
       timeoutMs: RPC_DEFAULT_TIMEOUT_MS,
@@ -41,5 +47,6 @@ export function createWorkerAdminClient(
     migrate: () => toVoid(send("migrate")),
     getMigrationState: () => migrationState,
     subscribeMigration: (callback) => migrationListeners.add(callback),
+    getBuiltConfig: () => send("builtConfig"),
   };
 }

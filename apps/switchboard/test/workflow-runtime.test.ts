@@ -34,6 +34,7 @@ import {
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
   hostPrincipalOf,
+  isWorkflowSingletonConflict,
   reactorAccessOf,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
@@ -273,7 +274,8 @@ describe("composeWorkflowRuntime", () => {
       webhooks: webhooks.scope,
     });
 
-    // Intervals only, from here on: the supervisor's tick is the runtime's one.
+    // Intervals only, from here on: the supervisor's tick and the singleton
+    // lease's heartbeat.
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     try {
       await workflows.start();
@@ -283,7 +285,7 @@ describe("composeWorkflowRuntime", () => {
       await expect(
         webhooks.families[0]!.policyFor?.("wf-unknown"),
       ).resolves.toBeUndefined();
-      expect(vi.getTimerCount()).toBe(1);
+      expect(vi.getTimerCount()).toBe(2);
 
       await workflows.stop();
       await workflows.stop();
@@ -302,6 +304,67 @@ describe("composeWorkflowRuntime", () => {
 
     await expect(failing).rejects.toThrow("@powerhousedao/reactor-workflow");
     await expect(failing).rejects.toMatchObject({ cause });
+  });
+
+  // Placement (plan agreed decision 3): the claim is taken before the runtime
+  // exists and released on the way out. Distinct storage ids give the two
+  // composes distinct owner names, as two hosts would have.
+  function composeSecond(
+    clientModule: InProcessReactorClientModule,
+    relationalDb: IRelationalDb,
+  ): Promise<ComposedWorkflowRuntime> {
+    return composeWorkflowRuntime({
+      reactorClient: clientModule.client,
+      clientModule: {} as InProcessReactorClientModule,
+      relationalDb,
+      attachments: {} as never,
+      authorizationService: {} as never,
+      logger: stubLogger(),
+      storageId: "/srv/slot-b",
+    });
+  }
+
+  it("claims the workflow singleton and refuses a second owner until it is released", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const first = await compose(clientModule, {
+      relationalDb,
+      storageId: "/srv/slot-a",
+    });
+    expect(first.singletonOwner).toBeDefined();
+
+    const refused = await composeSecond(clientModule, relationalDb).catch(
+      (error: unknown) => error,
+    );
+    expect(isWorkflowSingletonConflict(refused)).toBe(true);
+
+    await first.stop();
+    const second = await composeSecond(clientModule, relationalDb);
+    try {
+      expect(second.singletonOwner).toBeDefined();
+      expect(second.singletonOwner).not.toBe(first.singletonOwner);
+    } finally {
+      await second.stop();
+    }
+  });
+
+  it("composes without a claim only when the host opts out", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+
+    const unclaimed = await compose(clientModule, {
+      relationalDb,
+      singletonLease: false,
+    });
+    expect(unclaimed.singletonOwner).toBeUndefined();
+
+    // Nothing was claimed, so a host that does claim takes it at once.
+    const claimed = await composeSecond(clientModule, relationalDb);
+    try {
+      expect(claimed.singletonOwner).toBeDefined();
+    } finally {
+      await claimed.stop();
+    }
   });
 });
 
@@ -365,6 +428,18 @@ async function pollWorkflowSubgraph(
   return undefined;
 }
 
+// Also off the public boot type: the inspection source the API hands back,
+// which the workflow runtime flips once it is composed.
+function inspectionInfo(
+  switchboard: Awaited<ReturnType<typeof startSwitchboard>>,
+) {
+  return (
+    switchboard as unknown as {
+      api: { inspection?: { info: () => { workflows: boolean } } };
+    }
+  ).api.inspection?.info();
+}
+
 describe("booting Switchboard with workflows on", () => {
   it("arms the intake and registers the workflow document models", async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), "switchboard-workflows-"));
@@ -402,6 +477,9 @@ describe("booting Switchboard with workflows on", () => {
       await expect(pollWorkflowSubgraph(switchboard)).resolves.toMatchObject({
         name: "workflow-runtime",
       });
+      // W3.2 live finding: the inspection report said workflows: false on a
+      // host whose runtime had booted. It is the composed-runtime fact now.
+      expect(inspectionInfo(switchboard)?.workflows).toBe(true);
 
       await switchboard.shutdown();
       switchboard = undefined;

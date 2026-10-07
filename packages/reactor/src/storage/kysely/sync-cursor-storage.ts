@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { throwIfAborted } from "../../shared/utils.js";
 import type { RemoteCursor } from "../../sync/types.js";
 import type { ISyncCursorStorage } from "../interfaces.js";
 import type { Database, InsertableSyncCursor, SyncCursorRow } from "./types.js";
@@ -26,6 +27,15 @@ function remoteCursorToRow(cursor: RemoteCursor): InsertableSyncCursor {
   };
 }
 
+/**
+ * Cursor rows in the reactor's own store.
+ *
+ * It persists cursors and nothing else. Durability boundary 1 - no cursor row
+ * durable ahead of the operations it covers - is enforced one seam out by
+ * {@link FlushGuardedSyncCursorStorage}, which wraps whatever cursor storage
+ * the sync module ends up with. Putting the barrier in the decorator rather
+ * than here is what makes it hold for a caller-supplied storage too.
+ */
 export class KyselySyncCursorStorage implements ISyncCursorStorage {
   constructor(private readonly db: Kysely<Database>) {}
 
@@ -33,9 +43,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     remoteName: string,
     signal?: AbortSignal,
   ): Promise<RemoteCursor[]> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     const rows = await this.db
       .selectFrom("sync_cursors")
@@ -43,9 +51,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
       .where("remote_name", "=", remoteName)
       .execute();
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     return rows.map(rowToRemoteCursor);
   }
@@ -55,9 +61,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     cursorType: "inbox" | "outbox",
     signal?: AbortSignal,
   ): Promise<RemoteCursor> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     const row = await this.db
       .selectFrom("sync_cursors")
@@ -66,9 +70,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
       .where("cursor_type", "=", cursorType)
       .executeTakeFirst();
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     if (!row) {
       return {
@@ -82,9 +84,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
   }
 
   async upsert(cursor: RemoteCursor, signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     await this.db.transaction().execute(async (trx) => {
       const insertable = remoteCursorToRow(cursor);
@@ -101,15 +101,11 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
         .execute();
     });
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
   }
 
   async remove(remoteName: string, signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     await this.db.transaction().execute(async (trx) => {
       await trx
@@ -118,8 +114,6 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
         .execute();
     });
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
   }
 }

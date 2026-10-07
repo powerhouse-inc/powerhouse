@@ -22,10 +22,12 @@ export {
   DocumentChangeType,
   type ActionCandidate,
   type ActionEvaluations,
+  type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,
+  type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
@@ -155,6 +157,7 @@ export {
   type ReadModelStage,
   type ReadModelIndexingStage,
   type SignatureRefusedEvent,
+  type StorageSessionRecreatedEvent,
   type Unsubscribe,
 } from "./src/events/types.js";
 
@@ -198,6 +201,11 @@ export {
   type JobStartedEvent,
   type ReactorFeatureFlags,
 } from "./src/executor/types.js";
+
+export {
+  bucketFor,
+  hashDocumentId,
+} from "./src/executor/worker-pool-router.js";
 
 // Executor Worker Utilities
 export {
@@ -321,6 +329,39 @@ export {
 } from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export {
+  DEFAULT_ACQUIRE_TIMEOUT_MS,
+  DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
+  DEFAULT_RECOVERY_TIMEOUT_MS,
+  DEFAULT_STATEMENT_TIMEOUT_MS,
+  HardenedPGliteDialect,
+  isLongRunningStatement,
+  PGliteAbortedTransactionError,
+  PGliteAcquireTimeoutError,
+  PGliteSessionError,
+  PGliteSessionPoisonedError,
+  PGliteStatementTimeoutError,
+  queryThroughDialect,
+  type HardenedPGliteDialectOptions,
+  type PGliteSession,
+} from "./src/storage/kysely/pglite-dialect.js";
+export {
+  DEFAULT_CLOSE_TIMEOUT_MS,
+  DEFAULT_FLUSH_QUIESCE_TIMEOUT_MS,
+  DEFAULT_FLUSH_SYNC_TIMEOUT_MS,
+  PGliteEpochSupersededError,
+  PGliteFlushQuiesceTimeoutError,
+  PGliteFlushSyncTimeoutError,
+  SelfHealingPGliteClient,
+  type RecreatablePGliteInstance,
+  type SelfHealingPGliteClientOptions,
+} from "./src/storage/kysely/self-healing-pglite-client.js";
+export {
+  NoopStorageFlusher,
+  StorageEpochSupersededError,
+  type IStorageFlusher,
+} from "./src/storage/storage-flush.js";
+export { FlushGuardedSyncCursorStorage } from "./src/storage/flush-guarded-sync-cursor-storage.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,
@@ -390,12 +431,16 @@ export {
 
 // Synchronization
 export {
+  fencesOnStorageEpoch,
   KyselySyncCursorStorage,
   KyselySyncHoldStorage,
   KyselySyncPurgeRefusalStorage,
   KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
+  type DeadLetterRecord,
+  type ISyncCursorEpochFence,
   type ISyncCursorStorage,
+  type ISyncDeadLetterStorage,
   type ISyncHoldStorage,
   type ISyncPurgeRefusalStorage,
   type ISyncReceivedMarkerStorage,
@@ -406,16 +451,35 @@ export {
 } from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
+  channelFactoryTypes,
   ChannelError,
   ChannelErrorSource,
   ChannelScheme,
+  CompositeChannelFactory,
   consolidateSyncOperations,
+  deriveConnectionHealth,
   envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
+  GQL_CHANNEL_TYPE,
   IntervalPollTimer,
+  LocalChannel,
+  LocalChannelFactory,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+  messagePortTransport,
+  isLocalWireMessage,
+  type LocalAckMessage,
+  type LocalChannelPort,
+  type LocalChannelTransportProvider,
+  type LocalHelloMessage,
+  type LocalPushMessage,
+  type LocalResendMessage,
+  type LocalWireKind,
+  type LocalWireMessage,
+  type MessagePortLike,
   DRIVE_AUTH_ERROR_MESSAGES,
   DriveRequestError,
   isDriveAuthError,
@@ -424,6 +488,7 @@ export {
   Mailbox,
   PollBehavior,
   PollingChannelError,
+  RemotePersistence,
   SyncBuilder,
   SyncEventTypes,
   SyncOperation,
@@ -440,6 +505,7 @@ export {
   type ConnectionStateChangedEvent,
   type ConnectionStateSnapshot,
   type DeadLetterAddedEvent,
+  type DegradedRemote,
   type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,
@@ -449,6 +515,7 @@ export {
   type ISyncStatusTracker,
   type JwtHandler,
   type OperationBatch,
+  type PollDelegate,
   type Remote,
   type RemoteCursor,
   type RemoteMeta,
@@ -489,6 +556,13 @@ export {
   type SyncPendingEvent,
   type SyncStatusChangeCallback,
   type SyncSucceededEvent,
+  type DeadLetterPage,
+  type InspectableSyncManager,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
 } from "./src/sync/index.js";
 
 // Processors
@@ -525,6 +599,48 @@ export type {
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
+
+// Inspection
+export {
+  createReactorInspector,
+  INSPECTION_ORDINAL_FIELDS,
+  INSPECTION_WIRE_FIELDS,
+  reactorInspectorComponents,
+  ReactorInspector,
+  StorageHealthTracker,
+  type IInspectableAttachmentStore,
+  type IInspectableQueue,
+  type IInspector,
+  type InspectorAttachmentInfo,
+  type InspectorDocumentModelInfo,
+  type InspectorDriveInfo,
+  type InspectorDriveIntegrity,
+  type InspectorDriveIntegrityRef,
+  type InspectorDrivePage,
+  type InspectorProcessorInfo,
+  type IReactorDbQuery,
+  type IStorageHealthProvider,
+  type QueueStateSnapshot,
+  type ReactorInspectorComponents,
+  type StorageHealth,
+  type WireChannelConfig,
+  type WireDeadLetterPage,
+  type WireInspectorAttachmentInfo,
+  type WireInspectorDocumentModel,
+  type WireInspectorDrive,
+  type WireInspectorDriveIntegrity,
+  type WireInspectorDriveIntegrityRef,
+  type WireInspectorDrivePage,
+  type WireInspectorProcessor,
+  type WireMailboxDepths,
+  type WireQueueState,
+  type WireReactorInspectionInfo,
+  type WireRemoteConnectionHealth,
+  type WireRemoteCursor,
+  type WireRemoteMeta,
+  type WireRemoteSyncInspection,
+  type WireStorageHealth,
+} from "./src/inspector/index.js";
 
 // Document erasure
 export {

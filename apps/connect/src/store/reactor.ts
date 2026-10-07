@@ -63,7 +63,14 @@ import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
+import { isMultiReactorEnabled } from "../utils/multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
+import {
+  buildMultiReactorClient,
+  deriveSwitchboardGraphqlUrl,
+  selectAppReactorClient,
+} from "./multi-reactor.js";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
   resolvePackagedReactorWorker,
@@ -423,8 +430,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     }
     const workerClient = createWorkerReactorClientModule({
       workerUrl: workerSource.kind === "bundle" ? workerSource.url : undefined,
-      workerDigest:
-        workerSource.kind === "bundle" ? workerSource.digest : undefined,
+      // Sent as the fingerprint's own buildDigest, compared leniently by the
+      // host, so a rebuilt bundle lands every tab on a fresh worker.
+      workerBuildDigest:
+        workerSource.kind === "bundle" ? workerSource.digest : null,
       packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
@@ -435,6 +444,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      // Threaded into the worker's construct so its reactor build gates the
+      // local-channel factory on the same flag the main thread resolves.
+      multiReactor: isMultiReactorEnabled(),
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,
@@ -490,12 +502,55 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     );
   }
 
-  const drives = await getDrives(reactorClientModule.client);
+  // Opt-in multi-reactor routing (stage 4 WP-E). The DEFAULT path is unchanged
+  // and provably so: with the flag off, selectAppReactorClient returns the
+  // single in-browser client verbatim and no router is ever constructed. Only
+  // with the flag on is a RoutingReactorClient built over the in-browser
+  // reactor plus a remote Switchboard backend derived from the configured
+  // default drive URL. The router IS an IReactorClient, so window.ph's client
+  // shape is unchanged and every reactor-browser hook is unaffected.
+  const appReactorClient: IReactorClient = selectAppReactorClient({
+    enabled: isMultiReactorEnabled(),
+    localClient: reactorClientModule.client,
+    buildRouter: () => {
+      const remoteDrive = getDefaultDrives(runtimeConfig).find(
+        (drive) => "url" in drive,
+      );
+      const remoteDriveUrl =
+        (remoteDrive && "url" in remoteDrive ? remoteDrive.url : undefined) ??
+        phGlobalConfig.defaultDrivesUrl;
+      if (!remoteDriveUrl) {
+        logger.warn(
+          "multiReactor is enabled but no remote drive URL is configured; using the single in-browser reactor",
+        );
+        return undefined;
+      }
+      const remoteGraphqlUrl = deriveSwitchboardGraphqlUrl(remoteDriveUrl);
+      if (!remoteGraphqlUrl) {
+        logger.warn(
+          "multiReactor is enabled but the configured remote drive URL could not be parsed; using the single in-browser reactor",
+        );
+        return undefined;
+      }
+      logger.info(
+        "Multi-reactor routing enabled; remote Switchboard backend at @url",
+        remoteGraphqlUrl,
+      );
+      return buildMultiReactorClient({
+        localClient: reactorClientModule.client,
+        localKind: reactorClientModule.kind === "worker" ? "worker" : "browser",
+        remoteGraphqlUrl,
+        signer: renown.signer,
+        documentModels: documentModelModules,
+      });
+    },
+  });
+  const drives = await getDrives(appReactorClient);
 
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
 
-  const documentCache = new DocumentCache(reactorClientModule.client);
+  const documentCache = new DocumentCache(appReactorClient);
 
   const basePath = phGlobalConfig.basePath ?? "/";
   const routerBasename = phGlobalConfig.routerBasename ?? "/";
@@ -511,8 +566,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const path = window.location.pathname;
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
+  // The module keeps exposing the local reactor (its reactorModule, inspector
+  // and admin surface are the in-browser reactor's, which the router has none
+  // of); only the flat app client becomes the router when routing is on. The
+  // router IS an IReactorClient, so window.ph.reactorClient keeps its shape.
   setReactorClientModule(reactorClientModule);
-  setReactorClient(reactorClientModule.client);
+  setReactorClient(appReactorClient);
 
   const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
   if (_defaultDrivesUrl) {
@@ -565,11 +624,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // Refresh the drive list on any drive-type change so async-added
   // default/remote drives surface on first load without a manual reload.
-  const reactorClient = reactorClientModule.client;
+  const reactorClient = appReactorClient;
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
     reactorClient.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+      refreshReactorDataClient(appReactorClient).catch((e) =>
         logger.error("@error", e),
       );
     });
@@ -586,7 +645,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
   });
 
-  await refreshReactorDataClient(reactorClientModule.client);
+  await refreshReactorDataClient(appReactorClient);
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,

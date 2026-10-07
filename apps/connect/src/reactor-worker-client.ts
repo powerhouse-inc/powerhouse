@@ -36,7 +36,7 @@ import {
   setWorkerConnectionStatus,
 } from "./connection-state.js";
 import { reactorWorkerName } from "./reactor-worker-name.js";
-import { getGitSha, getVersion } from "./utils/build-info.js";
+import { getAppBuildId } from "./utils/build-info.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 
 const PING_INTERVAL_MS = 2000;
@@ -58,6 +58,8 @@ export type WorkerReactorClientArgs = {
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
   featureFlags: Partial<ReactorFeatureFlags>;
+  /** The resolved multiReactor flag; the worker has no runtime config to read it from. */
+  multiReactor: boolean;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
   /** Whether the worker boots over stored documents this build does not run. */
@@ -71,13 +73,19 @@ export type WorkerReactorClientArgs = {
   onReload: (reason: string, workerGen?: string) => void;
   /** Prebuilt bundle URL; absent only for the monorepo app, where Vite bundles the worker from source. */
   workerUrl?: string;
-  /** The bundle's `sourceDigest`; a rebuilt bundle at the same URL then forces a fresh worker. */
-  workerDigest?: string;
   /**
    * URL-addressed packages the worker loads at boot: local project models
    * the registry cannot serve. See resolveLocalPackageSources.
    */
   packageSources?: WorkerPackageSource[];
+  /**
+   * The bundle's `sourceDigest` (see `resolvePackagedReactorWorker` in
+   * `./utils/reactor-worker-url.js`), sent as the fingerprint's own
+   * `buildDigest` field so a rebuilt bundle at the same URL lands tabs on a
+   * fresh worker. Null where the deployment serves no bundle — the host reads
+   * an absent token as unknown, not as a different build.
+   */
+  workerBuildDigest?: string | null;
 };
 
 export type WorkerReactorClient = {
@@ -93,6 +101,31 @@ function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
     .map(([name]) => name)
     .sort()
     .join(",");
+}
+
+/**
+ * The construct message the worker's `build` reads. Flags the worker has no
+ * runtime config to resolve for itself -- featureFlags, multiReactor, ... -- are
+ * threaded here from the tab. Extracted so the flag threading is unit-testable
+ * without constructing a real SharedWorker.
+ */
+export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
+  return {
+    namespace: args.namespace,
+    relationalNamespace: args.relationalNamespace,
+    cdnUrl: args.cdnUrl,
+    packageSpecs: args.packageSpecs,
+    sharedImports: args.sharedImports,
+    studioMode: args.studioMode,
+    workflowsEnabled: args.workflowsEnabled,
+    renownChainId: args.renownChainId,
+    featureFlags: args.featureFlags,
+    multiReactor: args.multiReactor,
+    createSignaturePolicy: args.createSignaturePolicy,
+    unsupportedStoredDocuments: args.unsupportedStoredDocuments,
+    renownEndpoints: args.renownEndpoints,
+    packageSources: args.packageSources,
+  };
 }
 
 function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
@@ -144,15 +177,12 @@ export function createWorkerReactorClientModule(
   documentModelRegistry.registerModules(...args.documentModelModules);
   documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
-  const gitSha = getGitSha();
-  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
   const clientProxy = connectReactorClient(
     router,
     {
       version: {
-        appBuildId: args.workerDigest
-          ? `${buildId}+w.${args.workerDigest}`
-          : buildId,
+        appBuildId: getAppBuildId(),
+        buildDigest: args.workerBuildDigest ?? undefined,
         rpcProtocolVersion: RPC_PROTOCOL_VERSION,
         models: args.documentModelModules.map((m) => ({
           id: m.documentModel.global.id,
@@ -160,21 +190,7 @@ export function createWorkerReactorClientModule(
         })),
         featureFlags: enabledFlagList(args.featureFlags),
       },
-      construct: {
-        namespace: args.namespace,
-        relationalNamespace: args.relationalNamespace,
-        cdnUrl: args.cdnUrl,
-        packageSpecs: args.packageSpecs,
-        sharedImports: args.sharedImports,
-        studioMode: args.studioMode,
-        workflowsEnabled: args.workflowsEnabled,
-        renownChainId: args.renownChainId,
-        featureFlags: args.featureFlags,
-        createSignaturePolicy: args.createSignaturePolicy,
-        unsupportedStoredDocuments: args.unsupportedStoredDocuments,
-        renownEndpoints: args.renownEndpoints,
-        packageSources: args.packageSources,
-      },
+      construct: buildWorkerConstruct(args),
       packages: args.packageSpecs,
     },
     args.onReload,

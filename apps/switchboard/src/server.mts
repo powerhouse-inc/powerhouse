@@ -98,6 +98,7 @@ import {
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
+  isWorkflowSingletonConflict,
   resolveWorkflowsEnabled,
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
@@ -270,7 +271,7 @@ type ReactorStorage = {
   poolInstrumentation: PoolInstrumentation | undefined;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
@@ -329,7 +330,13 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      // Hardened as well as closable: a COMMIT that would be answered with a
+      // ROLLBACK tag must reject rather than resolve, or a job reports success
+      // for a transaction that wrote nothing.
+      dialect: new ClosablePGliteDialect(pglite, {
+        onDiagnostic: (message, error) =>
+          logger.error(`[pglite-dialect] ${message}`, error),
+      }),
     }),
     poolInstrumentation: undefined,
   };
@@ -1013,26 +1020,54 @@ async function initServer(
   // api handed back, registered like any other late subgraph.
   let workflows: ComposedWorkflowRuntime | undefined;
   if (workflowsEnabled) {
-    workflows = await composeWorkflowRuntime({
-      reactorClient: client,
-      clientModule: options.reactor ?? ownedReactorModule,
-      relationalDb: api.relationalDb,
-      // A Postgres read model outlives the pod; a key file beside it would not.
-      secretsKeyFile: readModelPgliteDir === null ? false : undefined,
-      attachments: createAttachmentClient(api.attachments.service),
-      // The workflow package's own HTTP namespace: its webhook endpoints live
-      // under it, not under the reactor's.
-      webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
-      http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
-      authorizationService: api.authorizationService,
-      // The manager that already loads this reactor's packages: the project it
-      // runs in is one of them, so its own pieces arrive with the rest.
-      pieces: api.packageManager,
-      pieceRegistryUrl: registryUrl,
-      models: workerModels,
-      logger: logger.child(["workflow-runtime"]),
-    });
-
+    try {
+      workflows = await composeWorkflowRuntime({
+        reactorClient: client,
+        clientModule: options.reactor ?? ownedReactorModule,
+        relationalDb: api.relationalDb,
+        // A Postgres read model outlives the pod; a key file beside it would not.
+        secretsKeyFile: readModelPgliteDir === null ? false : undefined,
+        // The stable half of the workflow singleton's default owner name, so
+        // a restart of THIS slot re-claims its own lease instead of waiting
+        // out the TTL. Absolute, so two Switchboards in different working
+        // directories are not mistaken for one another.
+        storageId:
+          readModelPgliteDir === null
+            ? readModelPath
+            : path.resolve(readModelPath),
+        attachments: createAttachmentClient(api.attachments.service),
+        // The workflow package's own HTTP namespace: its webhook endpoints live
+        // under it, not under the reactor's.
+        webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
+        http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+        authorizationService: api.authorizationService,
+        // The manager that already loads this reactor's packages: the project it
+        // runs in is one of them, so its own pieces arrive with the rest.
+        pieces: api.packageManager,
+        pieceRegistryUrl: registryUrl,
+        models: workerModels,
+        logger: logger.child(["workflow-runtime"]),
+      });
+    } catch (error) {
+      // Losing the singleton claim is not a reason to take the API down. This
+      // host still serves inspection, GraphQL, sync, MCP and every drive it
+      // holds; the one thing it must not do is run workflows against a journal
+      // another live process owns. So it boots WITHOUT the runtime and says
+      // so by name, rather than crash-looping the whole Switchboard — which is
+      // what an unclean kill used to cost, every restart, for the lease TTL.
+      if (!isWorkflowSingletonConflict(error)) throw error;
+      logger.warn(
+        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
+          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
+          "This Switchboard has booted WITHOUT the workflow runtime: no " +
+          "trigger of any kind fires here, and the workflow GraphQL face is " +
+          "absent. Everything else serves normally. Stop the other owner, or " +
+          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
+          "slot that owns workflows, then restart this one to pick them up.",
+      );
+    }
+  }
+  if (workflows) {
     const WorkflowRuntimeSubgraph = workflows.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
       reactorClient: client,
@@ -1059,6 +1094,11 @@ async function initServer(
 
     await workflows.start();
     logger.info("Workflow runtime started");
+    // The inspection report's `workflows` is a fact about this host that only
+    // becomes true here: the engine is composed after startAPI returns, so the
+    // API cannot observe it (W3.2 live finding — a vetra Switchboard whose
+    // runtime had booted still reported workflows: false).
+    api.inspection?.setWorkflowsComposed(true);
   }
 
   let privacy: RunningPrivacy | undefined;

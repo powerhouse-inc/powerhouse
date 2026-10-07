@@ -18,6 +18,13 @@ vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: () => Promise.resolve({}),
 }));
 
+// createBrowserReactor now resolves the multiReactor flag (off by default),
+// which reads the runtime config; this suite never warms it, so pin the flag
+// off rather than let getRuntimeConfig throw "cache empty".
+vi.mock("../../src/utils/multi-reactor-flag.js", () => ({
+  isMultiReactorEnabled: () => false,
+}));
+
 const REFUSAL = new UnsupportedStoredProtocolError(
   [{ protocol: "base-reducer", version: 7 }],
   3,

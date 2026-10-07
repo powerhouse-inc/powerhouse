@@ -158,6 +158,9 @@ describe("the workflow runtime's access checks", () => {
       attachments: {} as never,
       authorizationService: authorizationService as never,
       logger,
+      // This suite is about the read gate, not placement; the lease has its
+      // own suite in reactor-workflow.
+      singletonLease: false,
       load: () =>
         Promise.resolve({
           ...engine,

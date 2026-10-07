@@ -89,6 +89,20 @@ export {
   type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
+export {
+  collectStream,
+  DEFAULT_IDB_DATABASE,
+  IDB_BLOB_STORE,
+  IDB_RECORD_STORE,
+  IDB_STATUS_INDEX,
+  IdbAttachmentBackend,
+  LocalAttachmentStore,
+  MemoryAttachmentBackend,
+  streamFromBytes,
+  type IdbAttachmentBackendOptions,
+  type ILocalAttachmentBackend,
+  type LocalAttachmentRecord,
+} from "./storage/local/index.js";
 export { AttachmentBuilder } from "./attachment-builder.js";
 export type { AttachmentBuildResult } from "./attachment-builder.js";
 export {
@@ -96,6 +110,44 @@ export {
   type CompiledAttachmentExtractor,
   type IAttachmentSchemaCompiler,
 } from "./reference-index/index.js";
+// Peer-to-peer byte transport over a brokered LocalChannelPort (W3.4).
+export {
+  attachmentReferenceAuthorizer,
+  DEFAULT_LOCAL_CHUNK_BYTES,
+  DEFAULT_LOCAL_REQUEST_TIMEOUT_MS,
+  isLocalAttachmentRequest,
+  isLocalAttachmentResponse,
+  LOCAL_ATTACHMENT_PROTOCOL,
+  LocalAttachmentServer,
+  LocalAttachmentTransport,
+  type LocalAttachmentAuthorizer,
+  type LocalAttachmentMessage,
+  type LocalAttachmentRequest,
+  type LocalAttachmentResponse,
+  type LocalAttachmentServerOptions,
+  type LocalAttachmentTransportOptions,
+} from "./local/index.js";
+// Lazy fetch-on-reference byte replication (multi-reactor W3.4).
+export {
+  AttachmentReplicator,
+  DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE,
+  DEFAULT_ATTACHMENT_REPLICATION_CONCURRENCY,
+  DEFAULT_ATTACHMENT_RETRY_POLICY,
+  SchemaCompiledOperationRefs,
+  sha256Hex,
+  staticAttachmentBacklog,
+  SYSTEM_REPLICATION_TIMERS,
+  type AttachmentReferencePage,
+  type AttachmentReplicationEntry,
+  type AttachmentReplicationState,
+  type AttachmentReplicatorOptions,
+  type AttachmentReplicatorStatus,
+  type AttachmentRetryPolicy,
+  type IAttachmentReferenceBacklog,
+  type IOperationAttachmentRefs,
+  type PersistedAttachmentReference,
+  type ReplicationTimers,
+} from "./replication/index.js";
 export {
   ATTACHMENT_REFERENCE_MIGRATION_LOCK_TABLE,
   ATTACHMENT_REFERENCE_MIGRATION_TABLE,
@@ -110,7 +162,10 @@ export {
   type AttachmentReferenceIndexBuildResult,
   type AttachmentReferenceInput,
   type AttachmentReferenceMigrationResult,
+  type AttachmentReferencePageResult,
+  type AttachmentReferenceRow,
   type IAttachmentReferenceReader,
+  type IAttachmentReferenceScanner,
   type IAttachmentReferenceWriter,
 } from "./read-models/attachment-reference/index.js";
 export {

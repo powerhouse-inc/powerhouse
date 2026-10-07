@@ -39,6 +39,7 @@ import {
   createSchema,
 } from "../utils/create-schema.js";
 import { callerSubject } from "./base-subgraph.js";
+import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import {
   getAuthContext,
@@ -145,6 +146,12 @@ export type GraphQLManagerOptions = {
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
+  /**
+   * The reactor's inspection surface (multi-reactor W3.2). Passed to every
+   * subgraph; only `InspectionSubgraph` reads it, and the host registers that
+   * subgraph only when this is set.
+   */
+  inspection?: IReactorInspectionSource;
 };
 
 /**
@@ -304,6 +311,7 @@ export class GraphQLManager {
   private readonly syncServingGate?: SyncScopeGate;
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
+  private readonly inspection?: IReactorInspectionSource;
 
   constructor(options: GraphQLManagerOptions) {
     this.path = options.path;
@@ -325,6 +333,7 @@ export class GraphQLManager {
     this.syncServingGate = options.syncServingGate;
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
+    this.inspection = options.inspection;
 
     this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
 
@@ -571,6 +580,7 @@ export class GraphQLManager {
           authorizationService: this.authorizationService,
           syncServingGate: this.syncServingGate,
           attachments: this.attachments,
+          inspection: this.inspection,
         });
 
         await this.#addSubgraphInstance(
@@ -814,6 +824,7 @@ export class GraphQLManager {
       authorizationService: this.authorizationService,
       syncServingGate: this.syncServingGate,
       attachments: this.attachments,
+      inspection: this.inspection,
     });
 
     return this.#addSubgraphInstance(
