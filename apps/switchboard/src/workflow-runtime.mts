@@ -53,6 +53,7 @@ type WorkflowEngineModule = typeof WorkflowEngine;
 
 /** The npm name the workflow package owns: its HTTP namespace and its models. */
 export const WORKFLOW_PACKAGE_NAME = "@powerhousedao/workflow";
+export const WORKFLOW_TELEMETRY_SCOPE = "@powerhousedao/reactor-workflow";
 
 /** The env var and OpenFeature flag key that turns workflows on. */
 export const PH_WORKFLOWS_ENABLED = "PH_WORKFLOWS_ENABLED";
@@ -161,6 +162,8 @@ export interface ComposeWorkflowRuntimeDeps {
   logger: ILogger;
   /** Absent leaves pieces with no document models in their worker. */
   models?: ModelManifestSource;
+  /** Where run, step, worker and reactor-call spans and metrics go. */
+  telemetry?: WorkflowEngine.WorkflowRuntimeHostDeps["telemetry"];
   /** Overridden by the tests; production always loads the real engine. */
   load?: () => Promise<WorkflowEngineModule>;
 }
@@ -414,6 +417,7 @@ export async function composeWorkflowRuntime(
     attachments: deps.attachments,
     canReadAttachmentRef,
     logger: deps.logger,
+    ...(deps.telemetry ? { telemetry: deps.telemetry } : {}),
   });
 
   const triggers = await registerWorkflowTriggersReadModel(
