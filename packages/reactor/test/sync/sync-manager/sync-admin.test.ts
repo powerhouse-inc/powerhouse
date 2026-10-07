@@ -21,6 +21,7 @@ import {
   GraphQLRequestError,
   SyncRepairRefusedError,
 } from "../../../src/sync/errors.js";
+import { InMemorySyncReceivedMarkerStorage } from "../../../src/sync/memory-received-marker-storage.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
@@ -699,5 +700,59 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
 
     expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
     expect(channels[1].deadLetter.get("theirs")).toBe(theirs);
+  });
+
+  it("fails a reset whose dead-letter read fails, and a later reset recovers", async () => {
+    await addAccounts();
+    vi.mocked(mockDeadLetterStorage.list).mockRejectedValueOnce(
+      new Error("storage down"),
+    );
+
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow(
+      "storage down",
+    );
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
+    expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValueOnce({
+      results: [
+        {
+          id: "d1",
+          jobId: "job-d1",
+          jobDependencies: [],
+          remoteName: "accounts",
+          documentId: "doc-b",
+          scopes: ["global"],
+          branch: "main",
+          operations: [],
+          errorSource: ChannelErrorSource.Inbox,
+          errorMessage: "failed",
+          errorType: "UNCLASSIFIED",
+        },
+      ],
+      options: { cursor: "0", limit: 100 },
+    });
+    await syncManager.resetChannel("accounts");
+
+    const remote = syncManager.getByName("accounts");
+    expect(remote.channel.deadLetter.get("d1")).toBeDefined();
+  });
+
+  it("fails a reset whose received-marker read fails", async () => {
+    await addAccounts();
+    const list = vi
+      .spyOn(InMemorySyncReceivedMarkerStorage.prototype, "list")
+      .mockRejectedValueOnce(new Error("markers down"));
+
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow(
+      "markers down",
+    );
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
+
+    await syncManager.resetChannel("accounts");
+    expect(syncManager.getByName("accounts").channel).toBe(
+      channels.at(-1) as unknown,
+    );
+    list.mockRestore();
   });
 });

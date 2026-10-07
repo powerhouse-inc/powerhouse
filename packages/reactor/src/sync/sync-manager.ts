@@ -1496,7 +1496,7 @@ export class SyncManager
 
     let unheard: SyncOperation[];
     try {
-      unheard = await this.wireRemote(fresh);
+      unheard = await this.wireRemote(fresh, true);
     } catch (error) {
       this.removing.delete(name);
       await this.failReset(fresh, error);
@@ -1534,10 +1534,16 @@ export class SyncManager
     );
   }
 
-  /** Restores and wires the mailboxes; returns the inbox items not yet heard. */
-  private async wireRemote(remote: Remote): Promise<SyncOperation[]> {
-    await this.loadDeadLetters(remote);
-    await this.restoreReceivedMarkers(remote);
+  /**
+   * Restores and wires the mailboxes; returns the inbox items not yet heard.
+   * `strict` fails on a storage read rather than wiring a partial channel.
+   */
+  private async wireRemote(
+    remote: Remote,
+    strict = false,
+  ): Promise<SyncOperation[]> {
+    await this.loadDeadLetters(remote, strict);
+    await this.restoreReceivedMarkers(remote, strict);
     // Restored, or pushed while the remote was reachable but unwired.
     const unheard = [...remote.channel.inbox.items];
     this.wireChannelCallbacks(remote);
@@ -1919,7 +1925,7 @@ export class SyncManager
     });
   }
 
-  private async loadDeadLetters(remote: Remote): Promise<void> {
+  private async loadDeadLetters(remote: Remote, strict = false): Promise<void> {
     let records: DeadLetterRecord[];
     try {
       const page = await this.deadLetterStorage.list(remote.meta.name, {
@@ -1928,6 +1934,7 @@ export class SyncManager
       });
       records = page.results;
     } catch (error) {
+      if (strict) throw error;
       this.logger.error(
         "Failed to load dead letters for remote (@name, @error)",
         remote.meta.name,
@@ -2284,12 +2291,16 @@ export class SyncManager
   }
 
   /** Queued before init resets latestOrdinal, so a puller is re-served above it. */
-  private async restoreReceivedMarkers(remote: Remote): Promise<void> {
+  private async restoreReceivedMarkers(
+    remote: Remote,
+    strict = false,
+  ): Promise<void> {
     const name = remote.meta.name;
     let records;
     try {
       records = await this.markerStorage.list(name);
     } catch (error) {
+      if (strict) throw error;
       this.logger.error(
         "Failed to load received markers for remote (@name, @error)",
         name,
