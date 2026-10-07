@@ -1,4 +1,8 @@
-import { setWorkerConnectionStatus } from "../connection-state.js";
+import { isFingerprintMismatchReload } from "@powerhousedao/reactor-browser/rpc";
+import {
+  setWorkerConnectionStatus,
+  type WorkerConnectionStatus,
+} from "../connection-state.js";
 import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 
 const BUDGET_KEY = "ph-connect:poisoned-store-reloads";
@@ -25,7 +29,8 @@ function readRecord(raw: string | null): BudgetRecord {
 }
 
 /**
- * Spends one poisoned-store reload. Reloads are counted in a row, and the
+ * Spends one slot of the tab's reload budget, which poisoned stores and build
+ * fingerprint mismatches share. Reloads are counted in a row, and the
  * count resets only after ten minutes without a poison, so a slow boot loop
  * is caught too; false past the budget, or when reloads cannot be counted.
  */
@@ -49,12 +54,12 @@ export function claimPoisonedStoreReload(
   }
 }
 
-/** One page reload answers every store that reports the same poisoning. */
+/** One page reload answers every budgeted reload the page hears. */
 let reloadRequested = false;
 
-/** Past the budget a poisoned store stops reloading and shows storage-unusable, so clear storage stays reachable. */
-export function reloadForPoisonedStore(
+function reloadWithinBudget(
   reload: () => void,
+  pastBudget: WorkerConnectionStatus,
   storage?: BudgetStorage,
   now?: number,
 ): void {
@@ -64,7 +69,16 @@ export function reloadForPoisonedStore(
     reload();
     return;
   }
-  setWorkerConnectionStatus("storage-unusable");
+  setWorkerConnectionStatus(pastBudget);
+}
+
+/** Past the budget a poisoned store stops reloading and shows storage-unusable, so clear storage stays reachable. */
+export function reloadForPoisonedStore(
+  reload: () => void,
+  storage?: BudgetStorage,
+  now?: number,
+): void {
+  reloadWithinBudget(reload, "storage-unusable", storage, now);
 }
 
 /** onPoisoned for an in-tab store: the page reload reopens it, within the same budget. */
@@ -84,6 +98,11 @@ export function reloadForWorker(
 ): void {
   if (reason === POISONED_STORE_RELOAD_REASON) {
     reloadForPoisonedStore(reload, storage, now);
+    return;
+  }
+  // Two builds served at once retire each other's worker; tabs would bounce forever.
+  if (isFingerprintMismatchReload(reason)) {
+    reloadWithinBudget(reload, "version-conflict", storage, now);
     return;
   }
   reload();

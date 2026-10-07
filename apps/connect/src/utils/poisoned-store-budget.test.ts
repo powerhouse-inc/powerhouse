@@ -4,6 +4,10 @@ import type * as BudgetModule from "./poisoned-store-budget.js";
 import { RETIRED_WORKER_RELOAD_REASON } from "@powerhousedao/reactor-browser/rpc";
 import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 
+const MISMATCH = "reactor version mismatch";
+const FLAGS_CHANGED =
+  "reactor enforcement flags changed (worker: none, tab: authEnforcement)";
+
 let connectionState: typeof ConnectionStateModule;
 let budget: typeof BudgetModule;
 
@@ -137,5 +141,49 @@ describe("poisoned-store reload budget", () => {
 
     expect(reload).toHaveBeenCalledOnce();
     expect(budget.claimPoisonedStoreReload(storage, Date.now())).toBe(true);
+  });
+  // Two builds served at once retire each other's worker; tabs would bounce forever.
+  it("stops reloading on repeated build mismatches and shows the version conflict", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    budget.reloadForWorker(MISMATCH, reload, storage, 0);
+    await loadPage();
+    budget.reloadForWorker(FLAGS_CHANGED, reload, storage, 1);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+
+    expect(reload).toHaveBeenCalledTimes(2);
+    expect(connectionState.getWorkerConnectionStatus()).toBe(
+      "version-conflict",
+    );
+    connectionState.setWorkerConnectionStatus("connected");
+    expect(connectionState.getWorkerConnectionStatus()).toBe(
+      "version-conflict",
+    );
+  });
+
+  it("counts mismatch and poisoned-store reloads against one budget", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    budget.reloadForWorker(MISMATCH, reload, storage, 0);
+    await loadPage();
+    budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 1);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+
+    expect(reload).toHaveBeenCalledTimes(2);
+  });
+
+  it("spends one slot when a page hears the same mismatch twice", () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    budget.reloadForWorker(MISMATCH, reload, storage, 0);
+    budget.reloadForWorker(MISMATCH, reload, storage, 1);
+
+    expect(reload).toHaveBeenCalledOnce();
+    expect(budget.claimPoisonedStoreReload(storage, 2)).toBe(true);
   });
 });
