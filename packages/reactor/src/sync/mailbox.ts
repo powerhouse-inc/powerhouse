@@ -125,7 +125,10 @@ export class Mailbox implements IMailbox {
   add(...items: SyncOperation[]): void {
     for (const item of items) {
       const replaced = this.itemsMap.get(item.id);
-      if (replaced !== undefined) this.heldMarkers.delete(replaced);
+      if (replaced !== undefined && replaced !== item) {
+        this.heldMarkers.delete(replaced);
+        this.held.delete(replaced);
+      }
       this.itemsMap.set(item.id, item);
 
       let marker = false;

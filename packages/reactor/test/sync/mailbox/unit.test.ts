@@ -653,5 +653,33 @@ describe("Mailbox", () => {
       mailbox.remove(parked);
       expect(mailbox.ackOrdinal).toBe(20);
     });
+
+    it("releases a held item replaced under its id", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+      mailbox.hold(parked);
+
+      const replacement = withOrdinal("parked", 10);
+      mailbox.add(replacement);
+      replacement.executed();
+      later.executed();
+      mailbox.remove(replacement, later);
+      expect(mailbox.ackOrdinal).toBe(20);
+    });
+
+    it("keeps the hold of an item added again", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+      mailbox.hold(parked);
+
+      mailbox.add(parked);
+      later.executed();
+      mailbox.remove(later);
+      expect(mailbox.ackOrdinal).toBe(9);
+    });
   });
 });
