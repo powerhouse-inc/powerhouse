@@ -155,8 +155,11 @@ export type SyncManagerConfig = {
   markerRetryBaseDelayMs: number;
   markerRetryMaxDelayMs: number;
   /**
-   * How many inbox chunks may be inside their load at once. Chunks on different
-   * lanes run side by side; this bounds how many a wide poll puts in the queue.
+   * How many inbox chunks may be inside their enqueue at once. Chunks on
+   * different lanes run side by side; this bounds how many a wide poll hands
+   * the queue in one turn. Not a bound on chunks awaiting their jobs: a chunk
+   * deferred on a missing ancestor would hold its slot for the deferral's
+   * whole time-to-live, and enough of them would keep that ancestor out.
    */
   maxConcurrentInboxChunks: number;
 };
@@ -2536,7 +2539,9 @@ export class SyncManager
 
   /**
    * Settles once the chunk is enqueued, which is all its lane waits for; the
-   * queue orders the writes. Its items then resolve beside one another.
+   * queue orders the writes. The slot is released there too, and the items
+   * then resolve beside one another, unbounded: each is a passive wait on a
+   * job for an item the inbox already holds.
    */
   private async runInboxChunk(chunk: InboxItem[]): Promise<void> {
     if (this.isShutdown) return;
@@ -2550,23 +2555,17 @@ export class SyncManager
     let enqueued: InboxBatchEnqueued | undefined;
     try {
       enqueued = await this.enqueueInboxBatch(chunk);
-    } catch (error) {
+    } finally {
       this.releaseInboxSlot();
-      throw error;
     }
-    if (enqueued === undefined) {
-      this.releaseInboxSlot();
-      return;
-    }
+    if (enqueued === undefined) return;
 
-    void this.resolveInboxBatch(enqueued)
-      .catch((err: unknown) => {
-        this.logger.error(
-          "Inbox chunk resolution failed (@error)",
-          err instanceof Error ? err.message : String(err),
-        );
-      })
-      .finally(() => this.releaseInboxSlot());
+    void this.resolveInboxBatch(enqueued).catch((err: unknown) => {
+      this.logger.error(
+        "Inbox chunk resolution failed (@error)",
+        err instanceof Error ? err.message : String(err),
+      );
+    });
   }
 
   private acquireInboxSlot(): Promise<void> {
