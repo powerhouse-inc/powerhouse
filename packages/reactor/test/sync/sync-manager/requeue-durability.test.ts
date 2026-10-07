@@ -885,6 +885,36 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
   });
 
+  it("never applies a parked requeue whose dead letter was cleared", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("x", "doc-b"));
+    channels[0].deadLetter.add(nonKeyedOp("y", "doc-b"));
+    await syncManager.requeueDeadLetter("accounts", "x");
+    expect(channels[0].inbox.get("x")).toBeDefined();
+
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+      results: [{ ...storedD1, id: "x" }],
+      options: { cursor: "0", limit: 100 },
+    });
+    await syncManager.clearDeadLetter("accounts", "x");
+    expect(mockDeadLetterStorage.remove).toHaveBeenCalledWith("x");
+    expect(channels[0].inbox.get("x")).toBeUndefined();
+
+    await syncManager.clearDeadLetter("accounts", "y");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.load).not.toHaveBeenCalled();
+  });
+
   it("drops a cleared dead letter that a reset reloaded during the clear", async () => {
     mockReactor = {
       load: vi

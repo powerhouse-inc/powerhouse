@@ -1807,8 +1807,16 @@ export class SyncManager
     await this.deadLetterStorage.remove(id);
     // A reset during the remove can have reloaded the row into a fresh mailbox.
     for (const holder of new Set([remote, this.remotes.get(remoteName)])) {
-      const item = holder?.channel.deadLetter.get(id);
-      if (holder && item) holder.channel.deadLetter.remove(item);
+      if (!holder) continue;
+      const item = holder.channel.deadLetter.get(id);
+      if (item) holder.channel.deadLetter.remove(item);
+      // A requeue parked by the quarantine would otherwise load at the lift.
+      const parked = holder.channel.inbox.get(id);
+      if (parked && this.parkedByQuarantine.has(parked)) {
+        this.parkedByQuarantine.delete(parked);
+        parked.executed();
+        holder.channel.inbox.remove(parked);
+      }
     }
     this.requeuedDeadLetterIds.delete(id);
     await this.liftQuarantineIfClear(source.documentId);
