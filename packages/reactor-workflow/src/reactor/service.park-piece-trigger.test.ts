@@ -358,6 +358,57 @@ describe("a park landing while the trigger is enabling", () => {
   }, 60_000);
 });
 
+// Belt and braces: even a park written off the supervisor's lane must not be
+// overwritten by the ENABLED row an in-flight enable writes when it returns.
+describe("a park written off the lane while the trigger is enabling", () => {
+  let dir = "";
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), "ph-park-off-lane-"));
+    const entryPath = join(dir, "index.mjs");
+    await writeFile(entryPath, FIXTURE);
+    packagePieces.setPieces([{ name: PIECE, version: "1.0.0", entryPath }]);
+  });
+
+  afterAll(async () => {
+    packagePieces.reset();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("is recorded PARKED by the enable's own write", async () => {
+    const id = "wf-park-off-lane";
+    const runtime = testRuntime({ webhooks: memoryWebhooks().scope });
+    try {
+      const store = (await runtime.store())!;
+      const supervisor = runtime.supervisor() as unknown as {
+        hook: (...args: unknown[]) => Promise<unknown>;
+      };
+      const realHook = supervisor.hook.bind(supervisor);
+      let enabling!: () => void;
+      const inFlight = new Promise<void>((resolve) => (enabling = resolve));
+      supervisor.hook = (...args: unknown[]) => {
+        if (args[1] === "onEnable") enabling();
+        return realHook(...args);
+      };
+      await runtime.onOperations([workflowOp("ENABLED", id, "slow")]);
+      await inFlight;
+      // The slow onEnable is still in flight: no row yet.
+      await store.parkWorkflow(id, 1, "parked off the lane");
+      expect(await store.getTriggerState(id)).toBeUndefined();
+
+      await vi.waitFor(
+        async () =>
+          expect((await store.getTriggerState(id))?.status).toBe(
+            PARKED_TRIGGER_STATUS,
+          ),
+        { timeout: 15_000 },
+      );
+    } finally {
+      runtime.shutdown();
+    }
+  }, 60_000);
+});
+
 // A version published while the failed run's park is being written arms on
 // the supervisor's lane after that park. It must release the old version's
 // subscription with the old binding, not with its own.
