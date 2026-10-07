@@ -135,6 +135,9 @@ export type PeerManifestListener = (
  * their own factories that implement this interface.
  */
 export interface IChannelFactory {
+  /** The `ChannelConfig.type`s this factory builds; absent when it does not say. */
+  readonly channelTypes?: readonly string[];
+
   /**
    * Creates a new channel instance with the given configuration.
    *

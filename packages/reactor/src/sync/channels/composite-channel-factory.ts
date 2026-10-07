@@ -45,6 +45,11 @@ export class CompositeChannelFactory implements IChannelFactory {
           `CompositeChannelFactory was given two factories for the channel type "${type}"`,
         );
       }
+      if (factory.channelTypes && !factory.channelTypes.includes(type)) {
+        throw new Error(
+          `CompositeChannelFactory was given a factory for "${type}" that builds only [${factory.channelTypes.join(", ")}]`,
+        );
+      }
       this.factories.set(type, factory);
     }
     if (this.factories.size === 0) {
@@ -72,7 +77,7 @@ export class CompositeChannelFactory implements IChannelFactory {
     const factory = this.factories.get(config.type);
     if (!factory) {
       throw new Error(
-        `This reactor has no "${config.type}" channel factory: it composes factories for [${this.registeredTypes().join(", ")}]`,
+        `This reactor has no "${config.type}" channel factory: it composes factories for [${this.channelTypes.join(", ")}]`,
       );
     }
     return factory.instance(
@@ -87,12 +92,8 @@ export class CompositeChannelFactory implements IChannelFactory {
     );
   }
 
-  /**
-   * The channel-config types this composite routes, in registration order.
-   * Read by the error path above, and by a host that wants to report what its
-   * reactor can actually form a remote on.
-   */
-  registeredTypes(): readonly string[] {
+  /** The types it routes, in registration order. */
+  get channelTypes(): readonly string[] {
     return [...this.factories.keys()];
   }
 }

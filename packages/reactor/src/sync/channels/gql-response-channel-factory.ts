@@ -19,6 +19,7 @@ export const POLLING_CHANNEL_TYPE = "polling";
  * Factory for creating GqlResponseChannel instances.
  */
 export class GqlResponseChannelFactory implements IChannelFactory {
+  readonly channelTypes = [POLLING_CHANNEL_TYPE];
   private readonly logger: ILogger;
 
   constructor(logger: ILogger) {

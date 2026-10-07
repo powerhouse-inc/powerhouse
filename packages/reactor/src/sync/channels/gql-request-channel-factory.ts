@@ -42,6 +42,7 @@ export const GQL_CHANNEL_TYPE = "gql";
  * which is useful for short-lived tokens with audience-specific claims.
  */
 export class GqlRequestChannelFactory implements IChannelFactory {
+  readonly channelTypes = [GQL_CHANNEL_TYPE];
   private readonly logger: ILogger;
   private readonly jwtHandler?: JwtHandler;
   private readonly queue: IQueue;

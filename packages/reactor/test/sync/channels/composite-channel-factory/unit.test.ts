@@ -3,8 +3,19 @@ import { DriveCollectionId } from "../../../../src/cache/operation-index-types.j
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { CompositeChannelFactory } from "../../../../src/sync/channels/composite-channel-factory.js";
-import { GQL_CHANNEL_TYPE } from "../../../../src/sync/channels/gql-request-channel-factory.js";
-import { LOCAL_CHANNEL_TYPE } from "../../../../src/sync/channels/local-channel-factory.js";
+import {
+  GQL_CHANNEL_TYPE,
+  GqlRequestChannelFactory,
+} from "../../../../src/sync/channels/gql-request-channel-factory.js";
+import {
+  GqlResponseChannelFactory,
+  POLLING_CHANNEL_TYPE,
+} from "../../../../src/sync/channels/gql-response-channel-factory.js";
+import {
+  LOCAL_CHANNEL_TYPE,
+  LocalChannelFactory,
+} from "../../../../src/sync/channels/local-channel-factory.js";
+import { createMockLogger, createTestQueue } from "../../../factories.js";
 import type {
   IChannel,
   IChannelFactory,
@@ -135,7 +146,7 @@ describe("CompositeChannelFactory", () => {
       [GQL_CHANNEL_TYPE, new RecordingFactory("gql")],
     ]);
 
-    expect(composite.registeredTypes()).toEqual([
+    expect(composite.channelTypes).toEqual([
       LOCAL_CHANNEL_TYPE,
       GQL_CHANNEL_TYPE,
     ]);
@@ -151,6 +162,30 @@ describe("CompositeChannelFactory", () => {
     ).toThrow(
       'CompositeChannelFactory was given two factories for the channel type "gql"',
     );
+  });
+
+  it("refuses a factory registered under a type it says it does not build", () => {
+    const local = new LocalChannelFactory(createMockLogger(), () => undefined);
+
+    expect(
+      () => new CompositeChannelFactory([[GQL_CHANNEL_TYPE, local]]),
+    ).toThrow(
+      'CompositeChannelFactory was given a factory for "gql" that builds only [local]',
+    );
+  });
+
+  it("reads the shipped factories' declared types", () => {
+    const logger = createMockLogger();
+    expect(
+      new GqlRequestChannelFactory(logger, undefined, createTestQueue())
+        .channelTypes,
+    ).toEqual([GQL_CHANNEL_TYPE]);
+    expect(new GqlResponseChannelFactory(logger).channelTypes).toEqual([
+      POLLING_CHANNEL_TYPE,
+    ]);
+    expect(
+      new LocalChannelFactory(logger, () => undefined).channelTypes,
+    ).toEqual([LOCAL_CHANNEL_TYPE]);
   });
 
   it("refuses an empty registration", () => {

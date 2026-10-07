@@ -25,6 +25,7 @@ export const LOCAL_CHANNEL_TYPE = "local";
  * no change to the channel or this factory.
  */
 export class LocalChannelFactory implements IChannelFactory {
+  readonly channelTypes = [LOCAL_CHANNEL_TYPE];
   private readonly logger: ILogger;
   private readonly transportProvider: LocalChannelTransportProvider;
 
