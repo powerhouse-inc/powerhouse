@@ -29,7 +29,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
-import { getReactorPGlite } from "../pglite.db.js";
+import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
 import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
@@ -101,6 +101,8 @@ export async function createBrowserReactor(
   try {
     module = await builder.buildModule();
   } catch (error) {
+    // The build leaves pg open; a retry must not reuse it.
+    await discardReactorPGlite();
     throw toStoredDocumentsRefused(error);
   }
   return {
