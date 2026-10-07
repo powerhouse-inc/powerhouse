@@ -229,8 +229,8 @@ export type JobExecutorConfig = {
 
   /**
    * How long a committed job waits for its flush before its write-ready is
-   * withheld; 0 waits unbounded, which withGroupCommitPGlite refuses. Must
-   * stay under the job timeout.
+   * withheld; 0 or less waits unbounded. withGroupCommitPGlite refuses that and
+   * any non-finite value. Must stay under the job timeout.
    */
   durabilityWaitMs?: number;
 };

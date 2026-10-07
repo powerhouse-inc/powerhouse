@@ -286,11 +286,33 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
     expect(writeReadyAt[0]).toBeGreaterThanOrEqual(syncReleasedAt);
   });
 
-  it("refuses an unbounded durability wait", async () => {
+  it.each([0, -1, Infinity, Number.NaN])(
+    "refuses an unbounded durability wait (%s)",
+    async (durabilityWaitMs) => {
+      const pg = controlled(new PGlite());
+      const builder = new ReactorBuilder()
+        .withExecutorConfig({ durabilityWaitMs })
+        .withGroupCommitPGlite({ pg, onUnrecoverable: () => undefined });
+      const outcome = await builder.buildModule().then(
+        (module) => {
+          modules.push(module);
+          return "built";
+        },
+        (error: Error) => error.message,
+      );
+      expect(outcome).toMatch(/durabilityWaitMs/);
+      await pg.pg.close().catch(() => undefined);
+    },
+  );
+
+  it("refuses an unbounded durability wait derived from unbounded statement and sync bounds", async () => {
     const pg = controlled(new PGlite());
-    const builder = new ReactorBuilder()
-      .withExecutorConfig({ durabilityWaitMs: 0 })
-      .withGroupCommitPGlite({ pg, onUnrecoverable: () => undefined });
+    const builder = new ReactorBuilder().withGroupCommitPGlite({
+      pg,
+      onUnrecoverable: () => undefined,
+      dialect: { statementTimeoutMs: 0 },
+      client: { flushSyncTimeoutMs: 0 },
+    });
     const outcome = await builder.buildModule().then(
       (module) => {
         modules.push(module);

@@ -714,15 +714,18 @@ export class ReactorBuilder {
    * behind the same flush, so the job timeout outlasts the wait too.
    */
   private fitJobTimeoutToDurability(options: GroupCommitPGliteOptions): void {
-    if (this.executorConfig.durabilityWaitMs === 0) {
-      throw new Error(
-        "withGroupCommitPGlite needs a bounded durabilityWaitMs: with 0 a committed job whose flush never lands waits forever",
-      );
-    }
+    const requested = this.executorConfig.durabilityWaitMs;
     const durabilityWaitMs =
-      this.executorConfig.durabilityWaitMs ??
+      requested ??
       (options.dialect?.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS) +
         (options.client?.flushSyncTimeoutMs ?? DEFAULT_FLUSH_SYNC_TIMEOUT_MS);
+    if (!(Number.isFinite(durabilityWaitMs) && durabilityWaitMs > 0)) {
+      throw new Error(
+        requested === undefined
+          ? `withGroupCommitPGlite needs a positive, finite durabilityWaitMs when its statement and flush sync bounds add up to ${durabilityWaitMs}: otherwise a committed job whose flush never lands waits forever`
+          : `withGroupCommitPGlite needs a positive, finite durabilityWaitMs (got ${requested}): otherwise a committed job whose flush never lands waits forever`,
+      );
+    }
     const configured = this.executorConfig.jobTimeoutMs;
     if (configured !== undefined && configured <= durabilityWaitMs) {
       throw new Error(
