@@ -101,7 +101,7 @@ const AS_CALLER_PATTERN = /\bviewSubject\b|\bservesDocument\b/;
  * document-model readableItems helpers.
  */
 const GUARD_PATTERN =
-  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b/;
+  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\breadableByHost\b/;
 
 function resolverSource(value: unknown): string {
   if (typeof value === "function") return value.toString();
