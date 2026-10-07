@@ -1,3 +1,4 @@
+import { isFingerprintMismatchReload } from "@powerhousedao/reactor-browser/rpc";
 import { closeWithin } from "./close-within.js";
 import type { StoreLocks } from "./store-lock.js";
 
@@ -7,10 +8,33 @@ export type StoreCloser = (store: Closable | undefined) => Promise<boolean>;
 
 export type OpenStore = { namespace?: string; store?: Closable };
 
+type Queue = { isDrained: boolean };
+
+const DEPLOY_DRAIN_MS = 10_000;
+
+// Polls: blocking the queue would fail inbound sync enqueues.
+async function drainWithin(
+  queue: () => Queue | undefined,
+  ms: number,
+): Promise<void> {
+  const deadline = Date.now() + ms;
+  while (queue()?.isDrained === false) {
+    if (Date.now() >= deadline) {
+      console.warn(`[connect] reactor queue did not drain within ${ms}ms`);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 type Options = {
   locks: StoreLocks;
   /** Stops the reactor and sync manager, bounded. */
   stopReactor: () => Promise<void>;
+  /** The running reactor's job queue; undefined once it is stopped. */
+  queue: () => Queue | undefined;
+  /** How long a deploy's retirement waits for accepted jobs. */
+  drainMs?: number;
   relational: () => OpenStore;
   reactor: () => OpenStore;
   /** Clears the worker's refs to both stores. */
@@ -36,6 +60,8 @@ export type AdminFlow = {
 export function createWorkerStores({
   locks,
   stopReactor,
+  queue,
+  drainMs = DEPLOY_DRAIN_MS,
   relational,
   reactor,
   forget,
@@ -83,9 +109,15 @@ export function createWorkerStores({
 
   return {
     releaseAfterBootFailure: () => serial(releaseAll),
-    /** A retired worker must stop writing before a fresh one opens the same stores. */
-    retire: (): Promise<void> =>
+    /**
+     * A retired worker must stop writing before a fresh one opens the same
+     * stores; a deploy's retirement first lets accepted jobs run, bounded.
+     */
+    retire: (reason?: string): Promise<void> =>
       serial(async () => {
+        if (reason !== undefined && isFingerprintMismatchReload(reason)) {
+          await drainWithin(queue, drainMs);
+        }
         await stopReactor();
         (await closeAll(close, true))();
       }),

@@ -1,7 +1,22 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import { PGlite } from "@electric-sql/pglite";
+import type { InMemoryQueue } from "@powerhousedao/reactor";
+import {
+  type Database,
+  type InProcessReactorModule,
+  type IReactorClient,
+  JobStatus,
+  ReactorBuilder,
+} from "@powerhousedao/reactor";
 import { ReactorHost } from "@powerhousedao/reactor-browser/rpc";
+import {
+  type DocumentModelModule,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { closeWithin } from "./close-within.js";
 import { createStoreLocks } from "./store-lock.js";
@@ -39,7 +54,17 @@ type Retirement = {
   retireWorker: (reason: string) => void;
 };
 
-async function setup(relationalClose?: Promise<void>, host?: Retirement) {
+type Reactor = {
+  stopReactor?: () => Promise<void>;
+  queue?: () => { isDrained: boolean } | undefined;
+  drainMs?: number;
+};
+
+async function setup(
+  relationalClose?: Promise<void>,
+  host?: Retirement,
+  reactor: Reactor = {},
+) {
   seq += 1;
   const names = { relational: `rel-${seq}`, reactor: `reactor-${seq}` };
   const locks = createStoreLocks(navigator.locks);
@@ -64,10 +89,12 @@ async function setup(relationalClose?: Promise<void>, host?: Retirement) {
   };
   const stores = createWorkerStores({
     locks,
-    stopReactor: () => {
+    stopReactor: async () => {
       log.push("stop");
-      return Promise.resolve();
+      await reactor.stopReactor?.();
     },
+    queue: reactor.queue ?? (() => undefined),
+    drainMs: reactor.drainMs,
     relational: () => ({ namespace: names.relational, store: refs.relational }),
     reactor: () => ({ namespace: names.reactor, store: refs.reactor }),
     forget: () => {
@@ -203,14 +230,20 @@ async function workerWith(
   clear: () => Promise<void>,
   build: () => Promise<IReactorClient> = () =>
     Promise.resolve({} as IReactorClient),
+  reactor?: Reactor,
 ) {
-  const { names, refs, stores } = await setup(undefined, {
-    isRetired: () => host.retired,
-    retireWorker: (reason) => host.retireAndReload(reason, crypto.randomUUID()),
-  });
+  const { names, refs, stores } = await setup(
+    undefined,
+    {
+      isRetired: () => host.retired,
+      retireWorker: (reason) =>
+        host.retireAndReload(reason, crypto.randomUUID()),
+    },
+    reactor,
+  );
   const host: ReactorHost = new ReactorHost({
     build,
-    onRetire: () => stores.retire(),
+    onRetire: (reason) => stores.retire(reason),
     onSyncOp: () => Promise.reject(new Error("SyncManager not available")),
     onAdminRestart: () =>
       host.retireAndReload("admin restart", crypto.randomUUID()),
@@ -306,6 +339,91 @@ describe("worker retired during boot", () => {
   });
 });
 
+describe("worker retired by a deploy", () => {
+  const NEXT_BUILD = {
+    ...HELLO,
+    version: { ...HELLO.version, appBuildId: "next-build" },
+  };
+  let module: InProcessReactorModule | undefined;
+  let database: Kysely<Database> | undefined;
+
+  afterEach(async () => {
+    await module?.reactor.kill().completed;
+    await database?.destroy();
+    module = undefined;
+    database = undefined;
+  });
+
+  // A tab's job sits accepted but not started, as behind a busy queue.
+  async function workerWithAcceptedJob(drainMs?: number) {
+    database = new Kysely<Database>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+    const built = await new ReactorBuilder()
+      .withKysely(database)
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as unknown as DocumentModelModule,
+      ])
+      .buildModule();
+    module = built;
+    const queue = built.queue as InMemoryQueue;
+    queue.pause();
+    const { id: jobId } = await built.reactor.create(
+      withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+      ),
+    );
+    const statusAtStop: string[] = [];
+    const { names, host } = await workerWith(
+      () => Promise.resolve(),
+      undefined,
+      {
+        queue: () => queue,
+        drainMs,
+        stopReactor: async () => {
+          statusAtStop.push((await built.reactor.getJobStatus(jobId)).status);
+          await built.reactor.kill().completed;
+        },
+      },
+    );
+    await tab(host).send(HELLO);
+    return { names, host, queue, statusAtStop };
+  }
+
+  it("lets a job accepted before the mismatch finish before stopping the reactor", async () => {
+    const { host, queue, statusAtStop } = await workerWithAcceptedJob();
+    await tab(host).send(NEXT_BUILD);
+    expect(host.retired).toBe(true);
+    await tick();
+    expect(statusAtStop).toEqual([]);
+
+    await queue.resume();
+    await vi.waitFor(() => expect(statusAtStop).toHaveLength(1));
+    expect([JobStatus.WRITE_READY, JobStatus.READ_READY]).toContain(
+      statusAtStop[0],
+    );
+  });
+
+  it("stops the reactor and releases its stores once the bound passes", async () => {
+    const { names, host, statusAtStop } = await workerWithAcceptedJob(100);
+    const startedAt = Date.now();
+    await tab(host).send(NEXT_BUILD);
+    const next = otherWorkerAcquires(names.reactor);
+    await vi.waitFor(() => expect(next.granted).toBe(true));
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(statusAtStop).toEqual([JobStatus.PENDING]);
+  });
+
+  it("does not wait on the queue for a retirement that is not a deploy", async () => {
+    const { names, host, statusAtStop } = await workerWithAcceptedJob(60_000);
+    host.retireAndReload("admin restart", crypto.randomUUID());
+    const next = otherWorkerAcquires(names.reactor);
+    await vi.waitFor(() => expect(next.granted).toBe(true));
+    expect(statusAtStop).toEqual([JobStatus.PENDING]);
+  });
+});
+
 describe("worker after Clear storage", () => {
   it("retires into a fresh worker when clearing the files fails", async () => {
     const clear = vi.fn(() => Promise.reject(new Error("idb aborted")));
@@ -375,6 +493,12 @@ describe("worker after Clear storage", () => {
       "utf8",
     );
     expect(worker).toMatch(/isRetired: \(\) => host\.retired,/);
+    expect(worker).toMatch(/onRetire: \(reason\) => stores\.retire\(reason\),/);
+    // A stopped reactor's queue keeps its unstarted jobs; a re-stop must not wait on them.
+    expect(worker).toMatch(/queue: \(\) => reactorQueue,/);
+    expect(worker).toMatch(
+      /reactorInstance = undefined;\s*reactorQueue = undefined;/,
+    );
     expect(worker).toMatch(
       /retireWorker: \(reason\) =>\s*host\.retireAndReload\(reason, crypto\.randomUUID\(\)\)/,
     );

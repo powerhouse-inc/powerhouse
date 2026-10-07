@@ -4,6 +4,7 @@ import {
   DriveCollectionId,
   HardenedPGliteDialect,
   InMemoryQueue,
+  type IQueue,
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -120,6 +121,7 @@ let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
 let reactorInstance: IReactor | undefined;
+let reactorQueue: IQueue | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
@@ -280,6 +282,7 @@ async function stopReactorWithin(timeoutMs: number): Promise<void> {
   ]);
   syncManager = undefined;
   reactorInstance = undefined;
+  reactorQueue = undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const expired = new Promise<void>((resolve) => {
     timer = setTimeout(() => {
@@ -296,6 +299,7 @@ async function stopReactorWithin(timeoutMs: number): Promise<void> {
 const stores = createWorkerStores({
   locks: storeLocks,
   stopReactor: () => stopReactorWithin(RETIRE_STOP_MS),
+  queue: () => reactorQueue,
   relational: () => ({
     namespace: owned.relationalNamespace,
     store: relational.pg,
@@ -319,7 +323,7 @@ const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
-  onRetire: () => stores.retire(),
+  onRetire: (reason) => stores.retire(reason),
   onAdminRestart: () =>
     host.retireAndReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: () =>
@@ -469,6 +473,7 @@ const host = new ReactorHost({
         : undefined;
       syncManager = module.reactorModule?.syncModule?.syncManager;
       reactorInstance = module.reactorModule?.reactor;
+      reactorQueue = module.reactorModule?.queue;
       const rm = module.reactorModule;
       if (rm) {
         inspectorQueue =

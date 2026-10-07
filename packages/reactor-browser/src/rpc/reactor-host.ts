@@ -64,7 +64,7 @@ export type ReactorHostOptions = {
   onAdminClearStorage?: () => Promise<void>;
   onAdminMigrate?: () => Promise<void>;
   /** Stops the reactor and releases its stores once the worker is retired. */
-  onRetire?: () => Promise<void>;
+  onRetire?: (reason: string) => Promise<void>;
 };
 
 function versionsCompatible(
@@ -289,11 +289,11 @@ export class ReactorHost {
     }
     this.retirement = { reason, workerGen };
     this.broadcastReload(reason, workerGen);
-    this.stopRetired();
+    this.stopRetired(reason);
   }
 
-  private stopRetired(): void {
-    this.options.onRetire?.().catch((error: unknown) => {
+  private stopRetired(reason: string): void {
+    this.options.onRetire?.(reason).catch((error: unknown) => {
       console.error("ReactorHost retirement cleanup failed", error);
     });
   }
@@ -388,7 +388,7 @@ export class ReactorHost {
       // A build outliving the retirement holds stores onRetire left to it.
       void pending.then(
         () => {
-          if (this.retirement) this.stopRetired();
+          if (this.retirement) this.stopRetired(this.retirement.reason);
         },
         () => undefined,
       );

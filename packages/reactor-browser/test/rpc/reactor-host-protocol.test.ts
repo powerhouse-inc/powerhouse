@@ -155,18 +155,18 @@ describe("ReactorHost protocol (hello / version / register)", () => {
   });
 
   it("stops the reactor and stores of a worker a mismatch retires", async () => {
-    let retired = 0;
+    const retired: string[] = [];
     const host = new ReactorHost({
       build: () => Promise.resolve(fakeClient([])),
-      onRetire: () => {
-        retired += 1;
+      onRetire: (reason) => {
+        retired.push(reason);
         return Promise.resolve();
       },
     });
     await openTab(host).send({ k: "hello", version: V1 });
     await openTab(host).send({ k: "hello", version: V2 });
     await settle();
-    expect(retired).toBe(1);
+    expect(retired).toEqual(["reactor version mismatch"]);
   });
 
   // A tab that named its worker before any sibling bumped the gen lands here late.
