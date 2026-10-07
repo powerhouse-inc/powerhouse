@@ -1550,7 +1550,6 @@ export class SyncManager
         item.operations,
       );
       fresh.channel.inbox.add(copy);
-      fresh.channel.inbox.hold?.(copy);
     }
   }
 
@@ -2285,10 +2284,10 @@ export class SyncManager
         // Its ordinals are held by the parked copy; two would share a plan key.
         dropped.push(syncOp);
       } else {
+        // Left in the inbox unapplied, which holds the cursor below it. Memory
+        // only: a push-fed channel loses it on restart unless the client
+        // re-pushes, as on main, until rewind/replay.
         this.parkedByQuarantine.add(syncOp);
-        // Holds the cursor across a reset. Memory only: a push-fed channel loses
-        // it on restart unless the client re-pushes, as on main, until rewind/replay.
-        remote.channel.inbox.hold?.(syncOp);
       }
     }
     // A purged id's history is gone here; a job or a dead letter would restore it.
