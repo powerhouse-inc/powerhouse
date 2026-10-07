@@ -63,7 +63,7 @@ export interface Geometry {
 }
 
 // Room between a stacked trigger pill and the steps' first lane.
-const STACK_GAP = 10;
+const STACK_GAP = 16;
 
 export interface Room {
   // The width the graph may take, and its trigger pill's.
@@ -122,7 +122,8 @@ export const GEOMETRY: Record<"sm" | "md", Geometry> = {
     col: 144,
     // A circle, its two-line name, and a gutter a track can run in.
     lane: 80,
-    lead: 20,
+    // The rail between the trigger pill and the first step.
+    lead: 40,
     top: 14,
     dip: 60,
     label: 34,
@@ -140,7 +141,7 @@ export const GEOMETRY: Record<"sm" | "md", Geometry> = {
     col: 168,
     // Two lines of name and one of the action under each circle.
     lane: 112,
-    lead: 28,
+    lead: 48,
     top: 18,
     dip: 86,
     label: 54,
