@@ -6,7 +6,9 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { describe, expect, it, vi } from "vitest";
+import { PGlite } from "@electric-sql/pglite";
+import { Kysely, sql } from "kysely";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -14,7 +16,15 @@ import { ReactorEventTypes } from "../../src/events/types.js";
 import type { Job } from "../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { cursorProtectedLoadMeta } from "../../src/shared/types.js";
+import { FlushGuardedSyncCursorStorage } from "../../src/storage/flush-guarded-sync-cursor-storage.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
+import {
+  GroupCommitPGliteClient,
+  type GroupCommitPGliteInstance,
+} from "../../src/storage/kysely/group-commit-pglite-client.js";
+import { HardenedPGliteDialect } from "../../src/storage/kysely/pglite-dialect.js";
+import { KyselySyncCursorStorage } from "../../src/storage/kysely/sync-cursor-storage.js";
+import type { Database } from "../../src/storage/kysely/types.js";
 import type { IStorageFlusher } from "../../src/storage/storage-flush.js";
 import {
   NoopStorageFlusher,
@@ -29,6 +39,87 @@ import {
   createTestOperation,
 } from "../factories.js";
 
+/**
+ * A PGlite stand-in that models the thing that actually matters here: writes
+ * land in the wasm filesystem, and only a `syncToFs` copies them to durable
+ * storage. Like PGlite it calls its own `syncToFs` after every statement, so
+ * suppressing that method is what the deferral has to achieve. It can also
+ * model the two wasm deaths that raise no error: a statement that never settles
+ * and a filesystem sync that never settles.
+ */
+class FakeFilesystemInstance implements GroupCommitPGliteInstance {
+  /** Writes held only in the wasm filesystem. */
+  readonly memory: string[] = [];
+  /** Writes copied out by a sync; what a crash or a reopen reads back. */
+  durable: string[] = [];
+  syncCount = 0;
+  closed = false;
+  syncDelayMs = 0;
+  statementDelayMs = 0;
+  syncFailure: Error | undefined = undefined;
+  /** A statement matching this never settles: a dead wasm call. */
+  hangOn: RegExp | undefined = undefined;
+  /** The filesystem sync never settles. */
+  hangSync = false;
+  /** Order of significant events, for ordering assertions. */
+  readonly trace: string[] = [];
+
+  private readonly base: string[];
+
+  constructor(durable: string[] = []) {
+    this.base = [...durable];
+    this.durable = [...durable];
+  }
+
+  async syncToFs(): Promise<void> {
+    this.syncCount += 1;
+    this.trace.push(`sync:${this.syncCount}`);
+    if (this.hangSync) {
+      await new Promise<void>(() => undefined);
+    }
+    const snapshot = [...this.memory];
+    if (this.syncDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, this.syncDelayMs));
+    }
+    if (this.syncFailure !== undefined) {
+      throw this.syncFailure;
+    }
+    this.durable = [...this.base, ...snapshot];
+  }
+
+  async query(
+    statement: string,
+    _params?: unknown[],
+  ): Promise<{ rows: unknown[]; affectedRows?: number }> {
+    if (this.hangOn?.test(statement) === true) {
+      await new Promise<void>(() => undefined);
+    }
+    if (this.statementDelayMs > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.statementDelayMs),
+      );
+    }
+    this.memory.push(statement);
+    this.trace.push(`write:${statement}`);
+    await this.syncToFs();
+    return { rows: [] };
+  }
+
+  async exec(statement: string): Promise<unknown> {
+    await this.query(statement);
+    return undefined;
+  }
+
+  isInTransaction(): boolean {
+    return false;
+  }
+
+  close(): Promise<void> {
+    this.closed = true;
+    return Promise.resolve();
+  }
+}
+
 /** A barrier the boundary tests control. */
 class TestFlusher implements IStorageFlusher {
   readonly trace: string[] = [];
@@ -42,6 +133,125 @@ class TestFlusher implements IStorageFlusher {
     await Promise.resolve();
   }
 }
+
+describe("durability boundary 1: a sync cursor never outruns its data", () => {
+  let open: PGlite[] = [];
+
+  afterEach(async () => {
+    const toClose = open;
+    open = [];
+    for (const pg of toClose) {
+      await pg.close().catch(() => undefined);
+    }
+  });
+
+  async function cursorDb(): Promise<Kysely<Database>> {
+    const pg = new PGlite();
+    await pg.waitReady;
+    open.push(pg);
+
+    const db = new Kysely<Database>({
+      dialect: new HardenedPGliteDialect(pg, {
+        onDiagnostic: () => undefined,
+      }),
+    });
+    await sql`create schema if not exists reactor`.execute(db);
+    await sql`
+      create table reactor.sync_cursors (
+        remote_name text not null,
+        cursor_type text not null,
+        cursor_ordinal bigint not null,
+        last_synced_at_utc_ms timestamptz,
+        updated_at timestamptz default now(),
+        primary key (remote_name, cursor_type)
+      )
+    `.execute(db);
+    await sql`set search_path to reactor, public`.execute(db);
+    return db;
+  }
+
+  it("flushes before it writes the cursor row, and not after", async () => {
+    const db = await cursorDb();
+    const flusher = new TestFlusher();
+    const storage = new FlushGuardedSyncCursorStorage(
+      new KyselySyncCursorStorage(db),
+      flusher,
+    );
+
+    await storage.upsert({
+      remoteName: "remote-1",
+      cursorType: "inbox",
+      cursorOrdinal: 42,
+      lastSyncedAtUtcMs: Date.now(),
+    });
+
+    expect(flusher.trace).toEqual(["flush"]);
+    const stored = await storage.get("remote-1", "inbox");
+    expect(stored.cursorOrdinal).toBe(42);
+  });
+
+  it("does not write the cursor when the covering flush fails", async () => {
+    const db = await cursorDb();
+    const flusher = new TestFlusher();
+    flusher.failure = new Error("idb unavailable");
+    const storage = new FlushGuardedSyncCursorStorage(
+      new KyselySyncCursorStorage(db),
+      flusher,
+    );
+
+    await expect(
+      storage.upsert({
+        remoteName: "remote-1",
+        cursorType: "inbox",
+        cursorOrdinal: 9770,
+        lastSyncedAtUtcMs: Date.now(),
+      }),
+    ).rejects.toThrow("idb unavailable");
+
+    const stored = await storage.get("remote-1", "inbox");
+    expect(stored.cursorOrdinal).toBe(0);
+  });
+
+  it("does not flush to remove a cursor", async () => {
+    const db = await cursorDb();
+    const flusher = new TestFlusher();
+    const storage = new FlushGuardedSyncCursorStorage(
+      new KyselySyncCursorStorage(db),
+      flusher,
+    );
+
+    await storage.remove("remote-1");
+    expect(flusher.trace).toEqual([]);
+  });
+
+  it("loses the batch but not the cursor when the crash comes before the flush", async () => {
+    const instance = new FakeFilesystemInstance();
+    const client = new GroupCommitPGliteClient(instance, {
+      onDiagnostic: () => undefined,
+    });
+
+    const persistedCursor = { ordinal: 100 };
+    const applyBatch = async (ordinals: number[]): Promise<void> => {
+      for (const ordinal of ordinals) {
+        await client.query(`op-${ordinal}`);
+      }
+      await client.flush();
+      persistedCursor.ordinal = ordinals[ordinals.length - 1];
+    };
+
+    await applyBatch([101, 102, 103]);
+    expect(instance.durable).toEqual(["op-101", "op-102", "op-103"]);
+    expect(persistedCursor.ordinal).toBe(103);
+
+    // The next batch applies but the process dies before the flush.
+    await client.query("op-104");
+    await client.query("op-105");
+    const afterCrash = [...instance.durable];
+
+    expect(afterCrash).toEqual(["op-101", "op-102", "op-103"]);
+    expect(persistedCursor.ordinal).toBe(103);
+  });
+});
 
 describe("durability boundary 2: a job's durable success waits for the flush", () => {
   function buildExecutor(
