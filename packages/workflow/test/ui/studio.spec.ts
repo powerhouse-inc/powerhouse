@@ -25,7 +25,7 @@ test.describe("Workflow Studio", () => {
       /Ping host: failed.*Alert #ops/,
     );
     await expect(
-      app.getByText("3 workflows, 3 enabled, 1 failed on the last run"),
+      app.getByText("4 workflows, 4 enabled, 1 failed on the last run"),
     ).toBeVisible();
 
     await ping.getByRole("button").first().click();
@@ -99,10 +99,12 @@ test.describe("Workflow Studio", () => {
       app.getByRole("button", { name: "Summarise: not run" }),
     ).toBeVisible();
     // Actions read by the piece's own names, not their ids.
-    await expect(app.getByText("Ask ChatGPT", { exact: true })).toBeVisible();
-    await expect(
-      app.getByText("Send Message To A Channel", { exact: true }),
-    ).toBeVisible();
+    await app.getByRole("button", { name: "Summarise: not run" }).hover();
+    await expect(app.getByRole("tooltip")).toContainText("Ask ChatGPT");
+    await app.getByRole("button", { name: "Post to #ops: not run" }).hover();
+    await expect(app.getByRole("tooltip")).toContainText(
+      "Send Message To A Channel",
+    );
   });
 
   test("picking a connection opens its editor", async ({ app }) => {
@@ -116,6 +118,7 @@ test.describe("Workflow Studio", () => {
     });
     await expect(usedBy.getByRole("button")).toHaveText([
       /Daily digest.*Post to #ops/,
+      /Order router.*Ask for approval.*Alert #ops/,
       /Uptime ping.*Alert #ops/,
     ]);
     await app.getByRole("button", { name: "Back" }).click();
@@ -124,7 +127,7 @@ test.describe("Workflow Studio", () => {
     ).toBeVisible();
   });
 
-  test("a long workflow's chain ends in +N instead of spilling over", async ({
+  test("a long workflow's graph shows every step on its own row", async ({
     stack,
   }) => {
     const parse = await pieceAction("@activepieces/piece-http", "parse_url");
@@ -141,16 +144,32 @@ test.describe("Workflow Studio", () => {
     await openDrive(stack.page);
     const row = stack.page
       .getByRole("list", { name: "Workflows" })
-      .getByRole("listitem")
+      .locator(":scope > li")
       .filter({ hasText: "Long chain" });
-    // Trigger + 8 steps = 9 stops: 5 drawn, then "+4".
-    await expect(row.getByText("+4", { exact: true })).toBeVisible();
-    await expect(row.getByRole("list").first()).toHaveAccessibleName(
-      /Trigger.*Step 8/,
-    );
-    // The chain stays inside its column, clear of the last-run text.
-    const chain = await row.getByRole("list").first().boundingBox();
-    const lastRun = await row.getByText("Not run yet").boundingBox();
-    expect(chain!.x + chain!.width).toBeLessThan(lastRun!.x);
+    const graph = row.getByRole("list").first();
+    await expect(graph).toHaveAccessibleName(/^Step 1.*Step 8$/);
+    await expect(graph.getByRole("listitem")).toHaveCount(8);
+    // The trigger pill reads as the trigger, and the graph sits below the name.
+    await expect(row.getByText("Manual", { exact: true })).toBeVisible();
+    const name = await row.getByText("Long chain").boundingBox();
+    const box = await graph.boundingBox();
+    expect(box!.y).toBeGreaterThan(name!.y + name!.height);
+  });
+
+  test("a description set in the editor shows on the overview", async ({
+    app,
+  }) => {
+    await openDrive(app);
+    await selectInSidebar(app, "Link checker");
+    await app.getByRole("button", { name: "Edit workflow" }).click();
+    const input = app.getByRole("textbox", { name: "Workflow description" });
+    await input.fill("Checks every link on the site");
+    await input.press("Enter");
+
+    await app.getByRole("button", { name: "Overview" }).click();
+    const row = app
+      .getByRole("list", { name: "Workflows" })
+      .locator(":scope > li", { hasText: "Link checker" });
+    await expect(row.getByText("Checks every link on the site")).toBeVisible();
   });
 });

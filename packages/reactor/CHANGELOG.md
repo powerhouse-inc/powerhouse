@@ -1,3 +1,31 @@
+## 6.2.3-dev.47 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **reactor:** one JOB_FAILED per terminal failure, carrying the typed error ([155017155b](https://github.com/powerhouse-inc/powerhouse/commit/155017155b))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **reactor:** emit one JOB_FAILED, with the job, when a deferral expires ([405912ac74](https://github.com/powerhouse-inc/powerhouse/commit/405912ac74))
+- **reactor:** emit JOB_FAILED once and log failed jobs by id ([1c38379dbf](https://github.com/powerhouse-inc/powerhouse/commit/1c38379dbf))
+- **reactor:** refuse to index a scope state resultingState does not carry ([8508e74ad6](https://github.com/powerhouse-inc/powerhouse/commit/8508e74ad6))
+- **reactor:** records-guard resolves Git Bash and fails closed without its tools ([0580ac1262](https://github.com/powerhouse-inc/powerhouse/commit/0580ac1262))
+- **reactor:** spawn pnpm by the entry point pnpm exports ([e04832e189](https://github.com/powerhouse-inc/powerhouse/commit/e04832e189))
+- **reactor:** separate bench record paths with "/" on every platform ([3c558a5a11](https://github.com/powerhouse-inc/powerhouse/commit/3c558a5a11))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features
