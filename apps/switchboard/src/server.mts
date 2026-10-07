@@ -1089,6 +1089,16 @@ async function initServer(
         onComposed: async (composed) => {
           workflows = composed;
           await registerWorkflowSubgraph(composed);
+          // Past boot nothing else rebuilds the router, so a subgraph
+          // registered now is not served until this runs.
+          try {
+            await graphqlManager.updateRouter();
+          } catch (error) {
+            logger.error(
+              "Mounting the late workflow-runtime subgraph failed: @error",
+              error,
+            );
+          }
           await composed.start();
           logger.info("Workflow runtime started");
         },
