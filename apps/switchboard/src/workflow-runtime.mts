@@ -465,12 +465,20 @@ export function canReadAttachmentRef(
   }
 }
 
+// The trigger read model lives exactly as long as its runtime: tearDown takes
+// it off the coordinator, so a later compose in this process can register.
+interface TriggersRegistration {
+  tornDown: boolean;
+  detach?: () => void;
+}
+
 // Live registration is the capability the attachment reference index needs
 // too, so a coordinator without it reads unavailable for the same reason.
 async function registerWorkflowTriggersReadModel(
   engine: WorkflowEngineModule,
   runtime: WorkflowEngine.WorkflowRuntimeService,
   clientModule: InProcessReactorClientModule | undefined,
+  registration: TriggersRegistration,
 ): Promise<WorkflowTriggersCapability> {
   const reactorModule = clientModule?.reactorModule;
   if (!reactorModule) {
@@ -499,10 +507,13 @@ async function registerWorkflowTriggersReadModel(
     runtime,
   );
   await readModel.init();
+  // Torn down while it replayed: registered now, it would outlive the runtime.
+  if (registration.tornDown) return SINGLETON_LOST;
   coordinator.addReadModel(
     readModel,
     engine.WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
   );
+  registration.detach = () => coordinator.removeReadModel(readModel);
 
   return { status: "available" };
 }
@@ -570,13 +581,7 @@ export async function composeWorkflowRuntime(
 
   try {
     const composed = await composeClaimed(engine, deps, lease, loss);
-    if (loss.lost) {
-      throw new engine.WorkflowSingletonConflictError(
-        loss.heldBy ?? "unknown",
-        "unknown",
-        lease?.owner ?? "unknown",
-      );
-    }
+    if (loss.lost) throw singletonLostError(engine, loss, lease);
     loss.composed = true;
     return composed;
   } catch (error) {
@@ -600,6 +605,18 @@ interface SingletonLoss {
   tearDown?: () => void;
 }
 
+function singletonLostError(
+  engine: WorkflowEngineModule,
+  loss: SingletonLoss,
+  lease: SingletonLease | undefined,
+): Error {
+  return new engine.WorkflowSingletonConflictError(
+    loss.heldBy ?? "unknown",
+    "unknown",
+    lease?.owner ?? "unknown",
+  );
+}
+
 async function composeClaimed(
   engine: WorkflowEngineModule,
   deps: ComposeWorkflowRuntimeDeps,
@@ -616,13 +633,7 @@ async function composeClaimed(
 
   // Creating the runtime opens the journal, whose sweeps fail every run not
   // in this process: never after the lease has gone.
-  if (loss.lost) {
-    throw new engine.WorkflowSingletonConflictError(
-      loss.heldBy ?? "unknown",
-      "unknown",
-      lease?.owner ?? "unknown",
-    );
-  }
+  if (loss.lost) throw singletonLostError(engine, loss, lease);
   const access = reactorAccessOf(deps.clientModule);
   const models = deps.models;
   const runtime = engine.createWorkflowRuntime({
@@ -656,12 +667,15 @@ async function composeClaimed(
 
   // Set before anything below can throw, so a failed compose stops it.
   const routes: { oauthCallback?: ScopedRouteHandle } = {};
-  let tornDown = false;
+  const registration: TriggersRegistration = { tornDown: false };
   const tearDown = () => {
-    if (tornDown) return;
-    tornDown = true;
+    if (registration.tornDown) return;
+    registration.tornDown = true;
     routes.oauthCallback?.dispose();
     runtime.shutdown();
+    // After the shutdown, so a batch already queued for it is refused and
+    // replays on the next owner instead of being acknowledged here.
+    registration.detach?.();
   };
   loss.tearDown = tearDown;
 
@@ -669,7 +683,10 @@ async function composeClaimed(
     engine,
     runtime,
     deps.clientModule,
+    registration,
   );
+  // Lost while registering: mount nothing a torn-down runtime would leave.
+  if (registration.tornDown) throw singletonLostError(engine, loss, lease);
   if (triggers.status === "available") {
     deps.logger.info(
       `Workflow trigger read model registered (${engine.WORKFLOW_TRIGGERS_READ_MODEL}, ${engine.WORKFLOW_TRIGGERS_READ_MODEL_STAGE})`,
@@ -703,7 +720,7 @@ async function composeClaimed(
     ...(lease ? { singletonOwner: lease.owner } : {}),
 
     async start() {
-      if (tornDown) return;
+      if (registration.tornDown) return;
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();

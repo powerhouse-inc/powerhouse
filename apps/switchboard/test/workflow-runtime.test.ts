@@ -480,6 +480,71 @@ describe("composeWorkflowRuntime", () => {
     await next.stop();
   });
 
+  const triggerModels = (clientModule: InProcessReactorClientModule) =>
+    clientModule.reactorModule!.readModelCoordinator.readModels.filter(
+      ({ name }) => name === "workflow-triggers",
+    );
+
+  // The retry path composes again in the same process, against the same
+  // coordinator: a registration the failed attempt left behind blocks it.
+  it("composes again after a compose that failed past registering the trigger read model", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        http: {
+          baseUrl: "https://host.test/workflow",
+          get: () => {
+            throw new Error("the callback route could not be mounted");
+          },
+        } as never,
+      }),
+    ).rejects.toThrow("the callback route could not be mounted");
+    expect(triggerModels(clientModule)).toHaveLength(0);
+
+    const again = await compose(clientModule, { relationalDb });
+    expect(again.triggers).toEqual({ status: "available" });
+    expect(triggerModels(clientModule)).toHaveLength(1);
+  });
+
+  it("registers no trigger read model when the lease is lost while it initialises", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    let onLost:
+      | ((loss: { reason: "unrenewable"; silentMs: number }) => void)
+      | undefined;
+    class LosingReadModel extends engine.WorkflowTriggersReadModel {
+      override async init(): Promise<void> {
+        onLost?.({ reason: "unrenewable", silentMs: 30_000 });
+        await super.init();
+      }
+    }
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            WorkflowTriggersReadModel: LosingReadModel,
+            acquireWorkflowSingletonLease: (options) => {
+              onLost = options.onLost as typeof onLost;
+              return engine.acquireWorkflowSingletonLease(options);
+            },
+          }),
+      }),
+    ).rejects.toMatchObject({ name: "WorkflowSingletonConflictError" });
+    expect(triggerModels(clientModule)).toHaveLength(0);
+
+    const again = await compose(clientModule, { relationalDb });
+    expect(triggerModels(clientModule)).toHaveLength(1);
+    await again.stop();
+    expect(triggerModels(clientModule)).toHaveLength(0);
+  });
+
   // Embedded PGlite: no other process can open the journal, so the lease must
   // not turn workflows off over a stalled renewal.
   it("lets the lease fence itself only over a journal others can open", async () => {
