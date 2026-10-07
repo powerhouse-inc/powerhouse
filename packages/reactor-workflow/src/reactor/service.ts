@@ -958,13 +958,16 @@ export class WorkflowRuntimeService {
   // slow one for an older snapshot cannot finish after a newer one.
   private readonly registrationChains = new Map<string, Promise<void>>();
 
-  private inRegistrationOrder(
+  private inRegistrationOrder<T>(
     workflowId: string,
-    task: () => Promise<void>,
-  ): Promise<void> {
+    task: () => Promise<T>,
+  ): Promise<T> {
     const prior = this.registrationChains.get(workflowId) ?? Promise.resolve();
     const run = prior.then(task);
-    const tail = run.catch(() => undefined);
+    const tail: Promise<void> = run.then(
+      () => undefined,
+      () => undefined,
+    );
     this.registrationChains.set(workflowId, tail);
     void tail.then(() => {
       if (this.registrationChains.get(workflowId) === tail) {
@@ -4432,14 +4435,14 @@ export class WorkflowRuntimeService {
       }
       // In registration order, and only while this park stands: a registration
       // of a newer version that already ran must keep its entry.
-      let stands = false;
-      await this.inRegistrationOrder(workflowId, async () => {
+      const stands = await this.inRegistrationOrder(workflowId, async () => {
         const park = await store.getWorkflowPark(workflowId);
-        stands = park?.published_version === publishedVersion;
+        const current = park?.published_version === publishedVersion;
         const registered = this.registry.get(workflowId);
-        if (stands && registered && !SUPERVISED_KINDS.has(registered.kind)) {
+        if (current && registered && !SUPERVISED_KINDS.has(registered.kind)) {
           this.registry.delete(workflowId);
         }
+        return current;
       });
       if (!stands) return;
       this.logger.error(
