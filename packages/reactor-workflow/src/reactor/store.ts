@@ -208,6 +208,19 @@ export interface WorkflowParkRow {
   parked_at: string;
 }
 
+export function workflowParkRow(
+  workflowId: string,
+  publishedVersion: number,
+  reason: string,
+): WorkflowParkRow {
+  return {
+    workflow_id: workflowId,
+    published_version: publishedVersion,
+    reason: redactMessage(reason),
+    parked_at: new Date().toISOString(),
+  };
+}
+
 export interface WorkflowRuntimeDB {
   run: RunRow;
   step_execution: StepExecutionRow;
@@ -1920,12 +1933,12 @@ export class WorkflowRunStore {
     publishedVersion: number,
     reason: string,
   ): Promise<boolean> {
-    const now = new Date().toISOString();
-    const row = {
-      published_version: publishedVersion,
-      reason: redactMessage(reason),
-      parked_at: now,
-    };
+    const { workflow_id: _, ...row } = workflowParkRow(
+      workflowId,
+      publishedVersion,
+      reason,
+    );
+    const now = row.parked_at;
     return this.db.transaction().execute(async (trx) => {
       await trx
         .insertInto("workflow_park")
@@ -1998,6 +2011,10 @@ export class WorkflowRunStore {
       .selectAll()
       .where("workflow_id", "=", workflowId)
       .executeTakeFirst();
+  }
+
+  async listWorkflowParks(): Promise<WorkflowParkRow[]> {
+    return this.db.selectFrom("workflow_park").selectAll().execute();
   }
 
   async clearWorkflowPark(workflowId: string): Promise<void> {
