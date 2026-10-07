@@ -87,7 +87,10 @@ const CLOSE_TIMEOUT_MS = 30_000;
 
 type PGliteSingleton = {
   get: () => Promise<PGlite>;
-  /** Closes and forgets the instance; the next get reopens after the close. */
+  /**
+   * Closes and forgets the instance; the next get reopens after the close. A
+   * close that does not settle leaves the store unusable until a reload.
+   */
   discard: () => Promise<void>;
 };
 
@@ -98,10 +101,13 @@ function pgliteSingleton(opts: {
   relaxedDurability: boolean;
 }): PGliteSingleton {
   let cached: Promise<PGlite> | undefined;
+  // A second idb:// instance beside one still closing would overwrite its pages.
+  let unusable: Error | undefined;
   return {
     get(): Promise<PGlite> {
       if (cached) return cached;
       const pending = chainedCreate(async () => {
+        if (unusable) throw unusable;
         const major = resolvePgMajorForRuntime(await opts.detectMajor());
         if (major !== 17) {
           console.warn(
@@ -131,7 +137,10 @@ function pgliteSingleton(opts: {
             pg.close(),
             new Promise<void>((resolve) => {
               timer = setTimeout(() => {
-                console.warn(`[${opts.label}] closing PGlite did not settle`);
+                unusable = new Error(
+                  `[${opts.label}] PGlite did not close within ${CLOSE_TIMEOUT_MS}ms; reload the page to reopen its store`,
+                );
+                console.warn(unusable.message);
                 resolve();
               }, CLOSE_TIMEOUT_MS);
             }),
