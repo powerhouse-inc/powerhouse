@@ -2282,7 +2282,8 @@ export class SyncManager
         void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else {
         this.parkedByQuarantine.add(syncOp);
-        // Its cursor must not pass it, or a reset or restart loses it.
+        // Holds the cursor across a reset. Memory only: a push-fed channel loses
+        // it on restart unless the client re-pushes, as on main, until rewind/replay.
         remote.channel.inbox.hold?.(syncOp);
       }
     }
