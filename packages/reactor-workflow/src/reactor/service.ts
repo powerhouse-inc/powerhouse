@@ -2385,7 +2385,7 @@ export class WorkflowRuntimeService {
    * answered any challenge for; all that is left is deciding what it means. */
   async deliverWebhook(request: WebhookRequest): Promise<WebhookReply> {
     // Retryable: the sender tries again, and reaches the owner that runs it.
-    if (this.closed) return { status: 503 };
+    if (this.closed) return { status: 503, unprocessed: true };
     const workflowId = request.key;
     const registration = this.liveWebhook(workflowId);
     // A waiting test samples the delivery; an armed workflow still runs it.
@@ -2436,7 +2436,7 @@ export class WorkflowRuntimeService {
       // Not run, and not this runtime's to run: the sender retries and
       // reaches the owner. A 500 would keep the dedupe key and lose it.
       if (run.error instanceof WorkflowRuntimeClosedError) {
-        return { status: 503 };
+        return { status: 503, unprocessed: true };
       }
       const message =
         run.error instanceof Error ? run.error.message : String(run.error);

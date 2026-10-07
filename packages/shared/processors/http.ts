@@ -212,6 +212,10 @@ export interface WebhookReply {
   status: number;
   body?: string;
   contentType?: string;
+  /** The handler did not process this delivery (its owner is shutting down),
+   * so its dedupe key is dropped and the sender's retry is delivered again.
+   * Unset, a delivery counts as seen whatever the status. */
+  unprocessed?: boolean;
 }
 
 // What core enforces for one endpoint before the handler sees a delivery.

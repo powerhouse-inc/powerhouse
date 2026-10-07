@@ -578,12 +578,12 @@ describe("WebhookService", () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
-  // 503 is the handler saying it did not process the delivery (a workflow
-  // runtime that has shut down); recording the key would answer the
-  // provider's retry as a duplicate and drop the delivery for good.
-  it("lets a delivery the handler answered 503 be delivered again", async () => {
-    const replies = [503, 202];
-    const handler = vi.fn(() => ({ status: replies.shift()! }));
+  // The handler saying it did not process the delivery (a workflow runtime
+  // that has shut down): recording the key would answer the provider's retry
+  // as a duplicate and drop the delivery for good.
+  it("lets a delivery the handler did not process be delivered again", async () => {
+    const replies = [{ status: 503, unprocessed: true }, { status: 202 }];
+    const handler = vi.fn(() => replies.shift()!);
     const endpoints = await scope().webhooks.register({
       name: "trigger",
       defaults: { dedupe: { field: "delivery_id" } },
@@ -602,6 +602,29 @@ describe("WebhookService", () => {
     expect((await send()).status).toBe(202);
     expect((await send()).status).toBe(200);
     expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  // A 503 an endpoint is configured to answer is still a processed delivery:
+  // forgetting its key would fire it again on the retry.
+  it("still dedupes a delivery the handler processed and answered 503", async () => {
+    const handler = vi.fn(() => ({ status: 503 }));
+    const endpoints = await scope().webhooks.register({
+      name: "trigger",
+      defaults: { dedupe: { field: "delivery_id" } },
+      onRequest: handler,
+    });
+    const { token } = await endpoints.endpointFor("doc-1");
+
+    const send = () =>
+      fetch(`${url}/webhooks/${token}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delivery_id: "abc" }),
+      });
+
+    expect((await send()).status).toBe(503);
+    expect((await send()).status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
   });
 
   // A 504 from a sync-mode run that is still going must stay deduped, or the
@@ -785,7 +808,9 @@ describe("WebhookService", () => {
       );
 
       const secret = "s3cret";
-      const handler = vi.fn(() => ({ status: 202 }));
+      const handler = vi.fn((): { status: number; unprocessed?: boolean } => ({
+        status: 202,
+      }));
       const endpoints = await relationalRoutes
         .scopeFor("@acme/relational")
         .webhooks.register({
@@ -829,7 +854,7 @@ describe("WebhookService", () => {
           },
           body: unprocessed,
         });
-      handler.mockReturnValueOnce({ status: 503 });
+      handler.mockReturnValueOnce({ status: 503, unprocessed: true });
       expect((await sendUnprocessed()).status).toBe(503);
       expect((await sendUnprocessed()).status).toBe(202);
       expect(handler).toHaveBeenCalledTimes(3);

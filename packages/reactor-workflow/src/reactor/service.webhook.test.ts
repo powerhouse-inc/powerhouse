@@ -298,7 +298,7 @@ describe("WorkflowRuntimeService webhooks", () => {
 
       const reply = await service.deliverWebhook(request());
 
-      expect(reply.status).toBe(503);
+      expect(reply).toMatchObject({ status: 503, unprocessed: true });
       expect(fire).not.toHaveBeenCalled();
     });
 
@@ -321,7 +321,7 @@ describe("WorkflowRuntimeService webhooks", () => {
       refuse();
       const reply = await pending;
 
-      expect(reply.status).toBe(503);
+      expect(reply).toMatchObject({ status: 503, unprocessed: true });
     });
 
     it("answers 500 when the run throws", async () => {

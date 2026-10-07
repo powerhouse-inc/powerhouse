@@ -286,10 +286,9 @@ export class WebhookService {
         body,
       });
 
-      // 503: the handler did not process it (its owner is shutting down), so
-      // the provider's retry must reach a handler that will. Any other status,
-      // a 504 from a run still going included, keeps the key.
-      if (reply.status === 503 && recordedKey !== undefined) {
+      // Only on the handler's word: a status alone cannot say it, since an
+      // endpoint may be configured to answer 503 to a delivery it ran.
+      if (reply.unprocessed === true && recordedKey !== undefined) {
         try {
           await this.#store.forget(token, recordedKey);
         } catch (error) {
