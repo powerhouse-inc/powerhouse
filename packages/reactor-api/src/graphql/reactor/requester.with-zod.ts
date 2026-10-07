@@ -18,7 +18,7 @@ import {
   DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
   JobChangeEventDTO,
-  JobInfoDTO,
+  JobInfoFieldsDTO,
   MoveRelationshipResultDTO,
   OperationResultPageDTO,
   PHDocumentDTO,
@@ -92,7 +92,7 @@ const operationValidators: OperationValidators = {
   },
   GetJobStatus: (data) => {
     if (data.jobStatus) {
-      JobInfoDTO.parse(data.jobStatus as JobInfo);
+      JobInfoFieldsDTO.parse(data.jobStatus as JobInfo);
     }
   },
   EvaluateActions: (data) => {

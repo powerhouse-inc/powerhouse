@@ -4,6 +4,8 @@ fragment PHDocumentFields on PHDocument {
   slug
   name
   documentType
+  meta
+  protocolVersions
   state
   revisionsList {
     scope
@@ -264,12 +266,7 @@ fragment JobInfoFields on JobInfo {
 
 query GetJobStatus($jobId: String!) {
   jobStatus(jobId: $jobId) {
-    id
-    status
-    result
-    error
-    createdAt
-    completedAt
+    ...JobInfoFields
   }
 }
 
@@ -337,12 +334,7 @@ mutation MutateDocumentAsync(
     actions: $actions
     branch: $branch
   ) {
-    id
-    status
-    result
-    error
-    createdAt
-    completedAt
+    ...JobInfoFields
   }
 }
 
