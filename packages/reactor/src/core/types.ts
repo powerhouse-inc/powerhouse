@@ -52,7 +52,11 @@ import type {
 } from "../storage/kysely/types.js";
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
-import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
+import type {
+  IChannelFactory,
+  ISyncAdmin,
+  ISyncManager,
+} from "../sync/interfaces.js";
 
 export class AbortError extends Error {
   constructor(message?: string) {
@@ -511,6 +515,8 @@ export type Database = StorageDatabase &
  */
 export interface SyncModule {
   syncManager: ISyncManager;
+  /** Absent where the host cannot reach the sync manager's repair levers. */
+  syncAdmin?: ISyncAdmin;
 }
 
 /**

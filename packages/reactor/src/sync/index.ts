@@ -2,6 +2,7 @@ export type {
   ConnectionStateChangeCallback,
   IChannel,
   IChannelFactory,
+  ISyncAdmin,
   ISyncManager,
   PeerManifestListener,
   Remote,

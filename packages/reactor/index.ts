@@ -460,6 +460,7 @@ export {
   type IChannelFactory,
   type IMailbox,
   type IPollTimer,
+  type ISyncAdmin,
   type ISyncManager,
   type ISyncStatusTracker,
   type JwtHandler,

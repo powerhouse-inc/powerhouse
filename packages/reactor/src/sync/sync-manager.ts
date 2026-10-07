@@ -67,6 +67,7 @@ import {
 } from "./errors.js";
 import type {
   IChannelFactory,
+  ISyncAdmin,
   ISyncManager,
   Remote,
   RemoteMeta,
@@ -249,7 +250,7 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
 }
 
 export class SyncManager
-  implements ISyncManager, IDeliveryTracking, IPurgeRefusalRecorder
+  implements ISyncManager, ISyncAdmin, IDeliveryTracking, IPurgeRefusalRecorder
 {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -1417,6 +1418,84 @@ export class SyncManager
   /** Settles once the remotes' received markers are stored; rejects if one failed. */
   async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
     await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  async resetChannel(remoteName: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const meta = remote.meta;
+
+    let fresh: Remote;
+    let unheard: SyncOperation[];
+    this.removing.add(meta.name);
+    try {
+      await this.teardownRemoteResources(remote);
+
+      const channel = this.channelFactory.instance(
+        meta.id,
+        meta.name,
+        meta.channelConfig,
+        this.cursorStorage,
+        meta.collectionId,
+        meta.filter,
+        this.operationIndex,
+        meta.options,
+      );
+      fresh = { meta, channel };
+      this.remotes.set(meta.name, fresh);
+      this.records.set(meta.name, meta);
+
+      await this.loadDeadLetters(fresh);
+      await this.restoreReceivedMarkers(fresh);
+      unheard = [...fresh.channel.inbox.items];
+      this.wireChannelCallbacks(fresh);
+    } finally {
+      this.removing.delete(meta.name);
+    }
+
+    try {
+      await fresh.channel.init();
+    } catch (error) {
+      await this.dropRemoteAfterFailedInit(
+        fresh,
+        !isCredentialOrNetworkError(error),
+      );
+
+      throw error;
+    }
+
+    if (unheard.length > 0) this.handleInboxAdded(fresh, unheard);
+    await this.peerUpdates.get(meta.name);
+
+    this.owe(meta.name, await this.watermarkHead());
+    const backfillController = new AbortController();
+    this.backfillAbortControllers.set(meta.name, backfillController);
+    void this.updateOutbox(
+      fresh,
+      0,
+      OutboxMode.Backfill,
+      backfillController.signal,
+    )
+      .catch((error) => {
+        if (backfillController.signal.aborted) return;
+        this.logger.error(
+          "Backfill failed for remote @RemoteName after reset: @Error",
+          meta.name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      })
+      .finally(() => {
+        this.backfillAbortControllers.delete(meta.name);
+        void this.drainPrunes();
+      });
+  }
+
+  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    await this.deadLetterStorage.remove(id);
   }
 
   private recordPlanKeyMapping(planKey: string, jobId: string): void {

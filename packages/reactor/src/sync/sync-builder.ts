@@ -164,6 +164,7 @@ export class SyncBuilder {
       holdStorage,
       channelFactory: this.channelFactory,
       syncManager,
+      syncAdmin: syncManager,
     };
   }
 }
