@@ -50,7 +50,10 @@ function rawTab(port: MessagePort) {
     };
     if (msg.k === "res" && msg.id) {
       pending.get(msg.id)?.resolve(msg.value);
-    } else if (msg.k === "err" && msg.id) {
+    } else if (
+      (msg.k === "err" || msg.k === "sub-err" || msg.k === "live-err") &&
+      msg.id
+    ) {
       pending.get(msg.id)?.reject(new Error(msg.error?.message));
     } else if (msg.k === "reload") {
       reloads.push(msg.reason ?? "");
@@ -544,4 +547,77 @@ describe("ReactorHost protocol (hello / version / register)", () => {
       expect(tab.workerGens.at(-1)).toBe("gen-2");
     },
   );
+
+  it.each([
+    { k: "req", method: "get", args: ["abc"] },
+    { k: "sub", search: {} },
+    { k: "page", token: "t" },
+    { k: "sync-op", method: "list", args: [] },
+    { k: "db-op", method: "query", args: ["select 1", []] },
+    { k: "inspector-op", method: "db.query", args: ["select 1", []] },
+    { k: "sub-live", sql: "select 1", params: [] },
+  ])("refuses a $k once retired without reaching the reactor", async (msg) => {
+    const ran: string[] = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient(ran)),
+      onSyncOp: (method) => {
+        ran.push(`sync:${method}`);
+        return Promise.resolve([]);
+      },
+      onDbOp: (method) => {
+        ran.push(`db:${method}`);
+        return Promise.resolve([]);
+      },
+      onInspectorOp: (method) => {
+        ran.push(`inspector:${method}`);
+        return Promise.resolve([]);
+      },
+      onLiveQuery: () => {
+        ran.push("live");
+        return Promise.resolve(() => undefined);
+      },
+      onRetire: () => Promise.resolve(),
+    });
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await tab.send({ k: "hello", version: V1 });
+    host.retireAndReload("storage session poisoned", "gen-2");
+
+    await expect(tab.send(msg)).rejects.toThrow(/retired/);
+    expect(ran).toEqual([]);
+  });
+
+  it("stops the retired worker's reactor and stores once", async () => {
+    let retired = 0;
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onRetire: () => {
+        retired += 1;
+        return Promise.resolve();
+      },
+    });
+    host.retireAndReload("storage session poisoned", "gen-2");
+    host.retireAndReload("storage session poisoned", "gen-3");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(retired).toBe(1);
+  });
+
+  it("does not rebuild the reactor on a hello once retired", async () => {
+    let builds = 0;
+    const host = new ReactorHost({
+      build: () => {
+        builds += 1;
+        return Promise.resolve(fakeClient([]));
+      },
+    });
+    host.retireAndReload("storage session poisoned", "gen-2");
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await expect(tab.send({ k: "hello", version: V1 })).rejects.toThrow(
+      /retired/,
+    );
+    expect(builds).toBe(0);
+  });
 });

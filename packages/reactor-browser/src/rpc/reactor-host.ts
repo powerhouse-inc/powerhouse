@@ -63,6 +63,8 @@ export type ReactorHostOptions = {
   onAdminRestart?: () => void;
   onAdminClearStorage?: () => Promise<void>;
   onAdminMigrate?: () => Promise<void>;
+  /** Stops the reactor and releases its stores once the worker is retired. */
+  onRetire?: () => Promise<void>;
 };
 
 function versionsCompatible(
@@ -108,6 +110,10 @@ function hashFlags(flags: string): string {
 }
 
 export const RETIRED_WORKER_RELOAD_REASON = "worker retired";
+
+function retiredError(): Error {
+  return new Error("This worker was retired; reloading into the current one");
+}
 
 export class ReactorHost {
   private readonly options: ReactorHostOptions;
@@ -170,6 +176,11 @@ export class ReactorHost {
       if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
         // Route the rejection to the kind's owner (sub -> sub-err, etc.).
         reply.errForKind(msg, new Error("migration in progress"));
+        return;
+      }
+      // No reload here: a tab past its poisoned-store budget stays put on purpose.
+      if (this.retirement && isDataMessage(msg)) {
+        reply.errForKind(msg, retiredError());
         return;
       }
       if (msg.k === "hello") {
@@ -265,8 +276,14 @@ export class ReactorHost {
 
   // A reload this worker never recovers from; tabs that connect later get it too.
   retireAndReload(reason: string, workerGen: string): void {
+    if (this.retirement) {
+      return;
+    }
     this.retirement = { reason, workerGen };
     this.broadcastReload(reason, workerGen);
+    this.options.onRetire?.().catch((error: unknown) => {
+      console.error("ReactorHost retirement cleanup failed", error);
+    });
   }
 
   // Cache + fan out the worker's migration state so tabs drive the banner from it.
@@ -293,10 +310,7 @@ export class ReactorHost {
         reason: RETIRED_WORKER_RELOAD_REASON,
         workerGen: this.retirement.workerGen,
       });
-      reply.err(
-        message.id,
-        new Error("This worker was retired; reloading into the current one"),
-      );
+      reply.err(message.id, retiredError());
       return;
     }
     if (message.method === "restart") {
@@ -341,6 +355,9 @@ export class ReactorHost {
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {
+    if (!this.clientPromise && this.retirement) {
+      return Promise.reject(retiredError());
+    }
     if (!this.clientPromise) {
       const build = this.options.build;
       if (!build) {

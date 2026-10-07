@@ -10,6 +10,7 @@ import {
   type ChannelConfig,
   type Database,
   type ICatchUp,
+  type IReactor,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
@@ -116,6 +117,7 @@ let loader: WorkerPackageLoader | undefined;
 let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
+let reactorInstance: IReactor | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
@@ -256,10 +258,48 @@ async function releaseStores(): Promise<void> {
   }
 }
 
+const RETIRE_STOP_MS = 5_000;
+
+// A poisoned statement can hold up the reactor's stop, so it is bounded.
+async function stopReactorWithin(timeoutMs: number): Promise<void> {
+  const stopping = Promise.allSettled([
+    syncManager?.shutdown().completed,
+    reactorInstance?.kill().completed,
+  ]);
+  syncManager = undefined;
+  reactorInstance = undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `[reactor.worker] reactor stop did not finish within ${timeoutMs}ms`,
+      );
+      resolve();
+    }, timeoutMs);
+  });
+  await Promise.race([stopping, expired]);
+  clearTimeout(timer);
+}
+
+// A retired worker must stop writing before a fresh one opens the same stores.
+async function retire(): Promise<void> {
+  await stopReactorWithin(RETIRE_STOP_MS);
+  const stores = [relational.pg, owned.reactorPg];
+  relational.pg = undefined;
+  relational.db = undefined;
+  relational.kysely = undefined;
+  owned.reactorPg = undefined;
+  owned.reactorDb = undefined;
+  for (const store of stores) {
+    await closeWithin(store);
+  }
+}
+
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
+  onRetire: retire,
   onAdminRestart: () =>
     host.broadcastReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: async () => {
@@ -399,6 +439,7 @@ const host = new ReactorHost({
         ? createWorkerModelRegistrar(registry, staticModels)
         : undefined;
       syncManager = module.reactorModule?.syncModule?.syncManager;
+      reactorInstance = module.reactorModule?.reactor;
       const rm = module.reactorModule;
       if (rm) {
         inspectorQueue =
