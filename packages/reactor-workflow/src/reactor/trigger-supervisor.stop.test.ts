@@ -2,15 +2,29 @@
 // moved, or the host is stopping): the journal may already be the next
 // owner's, so nothing queued on its lane may still poll, write or fire.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type { PieceWorker, PieceWorkerResult } from "../pieces/index.js";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  PieceWorkerExitError,
+  type PieceWorker,
+  type PieceWorkerResult,
+} from "../pieces/index.js";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { coreTrigger } from "./core-blocks.js";
 import { WorkflowRunStore } from "./store.js";
 import {
+  isShutdownRefusal,
   TriggerSupervisor,
   TriggerSupervisorStoppedError,
   type PieceTriggerBinding,
   type ScheduleTriggerBinding,
+  type TriggerSupervisorOptions,
 } from "./trigger-supervisor.js";
 
 const PAST = "2000-01-01T00:00:00.000Z";
@@ -122,6 +136,10 @@ describe("TriggerSupervisor after stop()", () => {
     supervisor = build(scoped());
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   // Due rows in a known order, so the held poll is the first one.
   function scoped(): WorkflowRunStore {
     const handle = Object.create(store) as WorkflowRunStore;
@@ -132,7 +150,10 @@ describe("TriggerSupervisor after stop()", () => {
     return handle;
   }
 
-  function build(handle: WorkflowRunStore): TriggerSupervisor {
+  function build(
+    handle: WorkflowRunStore,
+    over: Partial<TriggerSupervisorOptions> = {},
+  ): TriggerSupervisor {
     return new TriggerSupervisor({
       store: () => Promise.resolve(handle),
       resolveAuth: () => Promise.resolve(undefined),
@@ -149,6 +170,7 @@ describe("TriggerSupervisor after stop()", () => {
           }),
       },
       worker,
+      ...over,
     });
   }
 
@@ -275,6 +297,81 @@ describe("TriggerSupervisor after stop()", () => {
     await tick;
 
     expect(retries.get(a)).toEqual(before);
+  });
+
+  // stop() disposes the worker it built, which kills a hook in flight.
+  describe("a hook the stop killed in flight", () => {
+    function killable(workflowId: string) {
+      const started = gate();
+      let kill: (error: Error) => void = () => undefined;
+      const owned = build(scoped(), { worker: undefined, tickMs: 5 });
+      (owned as unknown as { worker: PieceWorker }).worker = {
+        ...worker,
+        runTriggerHook: async (request: {
+          hook: string;
+          identity: { flowId: string };
+        }) => {
+          if (
+            request.hook !== "run" ||
+            request.identity.flowId !== workflowId
+          ) {
+            return worker.runTriggerHook(request as never);
+          }
+          await store.setPieceStoreValue("FLOW", workflowId, "cursor", "after");
+          started.open();
+          return new Promise<PieceWorkerResult>((_, reject) => {
+            kill = reject;
+          });
+        },
+        dispose: () => kill(new PieceWorkerExitError(null, "SIGTERM")),
+      } as unknown as PieceWorker;
+      return { owned, started: started.opened };
+    }
+
+    it("logs the tick it cut short below error level, and still rewinds the cursor", async () => {
+      const a = `${prefix}-a`;
+      const errors = vi.spyOn(console, "error");
+      const { owned, started } = killable(a);
+      await owned.upsert(piece(a));
+      await due(a);
+      await store.setPieceStoreValue("FLOW", a, "cursor", "before");
+
+      owned.start();
+      await started;
+      owned.stop();
+      await vi.waitFor(() =>
+        expect((owned as unknown as { ticking: boolean }).ticking).toBe(false),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(await store.getPieceStoreValue("FLOW", a, "cursor")).toBe(
+        "before",
+      );
+      const logged = errors.mock.calls.map((call) => String(call[0]));
+      expect(logged.filter((line) => line.includes("Trigger tick"))).toEqual(
+        [],
+      );
+    });
+
+    it("rejects a webhook delivery it cut short as its refusal, cursor rewound", async () => {
+      const a = `${prefix}-a`;
+      const { owned, started } = killable(a);
+      await owned.upsert(piece(a));
+      await store.setPieceStoreValue("FLOW", a, "cursor", "before");
+
+      const delivered = owned
+        .deliverWebhook(a, { body: "x" })
+        .catch((error: unknown) => error);
+      await started;
+      owned.stop();
+
+      const error = await delivered;
+      expect(isShutdownRefusal(error)).toBe(true);
+      expect((error as Error).cause).toBeInstanceOf(PieceWorkerExitError);
+      expect(await store.getPieceStoreValue("FLOW", a, "cursor")).toBe(
+        "before",
+      );
+    });
   });
 
   // The claim commits, and stop() lands before the item fires: the key goes

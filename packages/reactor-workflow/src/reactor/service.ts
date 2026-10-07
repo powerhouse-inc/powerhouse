@@ -251,9 +251,9 @@ import {
   runRetentionMs,
   sweepRetention,
 } from "./run-retention.js";
+import { isShutdownRefusal, WorkflowRuntimeClosedError } from "./shutdown.js";
 import {
   TriggerSupervisor,
-  TriggerSupervisorStoppedError,
   type PieceTriggerBinding,
   type TriggerBinding,
 } from "./trigger-supervisor.js";
@@ -289,16 +289,7 @@ export type FiringRefusal =
   | "queue-full"
   | "expired";
 
-/** A firing refused because this runtime has shut down (the workflow
- * singleton moved, or the host is stopping): retryable elsewhere. */
-export class WorkflowRuntimeClosedError extends Error {
-  constructor(readonly workflowId: string) {
-    super(
-      `Workflow ${workflowId} was not run: this workflow runtime has shut down`,
-    );
-    this.name = "WorkflowRuntimeClosedError";
-  }
-}
+export { WorkflowRuntimeClosedError };
 
 export type PersistedRunResult = WorkflowRunResult & {
   runId: string | null;
@@ -2187,10 +2178,7 @@ export class WorkflowRuntimeService {
 
   // Lane work refused because this runtime shut down is the designed outcome.
   private laneFailed(message: string, error: unknown): void {
-    if (
-      error instanceof TriggerSupervisorStoppedError ||
-      error instanceof WorkflowRuntimeClosedError
-    ) {
+    if (isShutdownRefusal(error)) {
       this.logger.debug(message, error);
       return;
     }
@@ -2509,7 +2497,7 @@ export class WorkflowRuntimeService {
     } catch (error) {
       // A failed probe is the sender's answer, so it must not look like a
       // delivery: 500 tells it to retry rather than that the endpoint is gone.
-      this.logger.error(
+      this.logger[isShutdownRefusal(error) ? "debug" : "error"](
         "Handshake failed for @block on workflow @workflow",
         blockLabel(binding.block),
         binding.workflowId,

@@ -23,7 +23,6 @@ import {
   extractDedupeKey,
   pieceModuleRef,
   PieceWorker,
-  PieceWorkerDisposedError,
   PieceWorkerError,
   secretsFor,
   storeHandlers,
@@ -55,6 +54,10 @@ import {
 } from "./schedule.js";
 import { SCHEDULE_BLOCK } from "./core-blocks.js";
 import { ParkState } from "./park-state.js";
+import {
+  isShutdownRefusal,
+  TriggerSupervisorStoppedError,
+} from "./shutdown.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import { pieceTriggerKind } from "./trigger-binding.js";
 import {
@@ -250,22 +253,7 @@ export class TriggerConfigError extends Error {
   }
 }
 
-// Lane work refused because the supervisor stopped: its runtime shut down, and
-// the journal may already be the next owner's.
-export class TriggerSupervisorStoppedError extends Error {
-  constructor() {
-    super("The trigger supervisor has stopped");
-    this.name = "TriggerSupervisorStoppedError";
-  }
-}
-
-// Refused before the piece ran, so nothing it would checkpoint has moved.
-function refusedBeforeHook(error: unknown): boolean {
-  return (
-    error instanceof TriggerSupervisorStoppedError ||
-    error instanceof PieceWorkerDisposedError
-  );
-}
+export { isShutdownRefusal, TriggerSupervisorStoppedError };
 
 // Everything a piece throws looks alike once it crosses the worker boundary —
 // an expired token and a timeout are both name/message.
@@ -347,7 +335,7 @@ export class TriggerSupervisor {
     if (this.timer || this.stopped) return;
     this.timer = setInterval(() => {
       this.tick().catch((error: unknown) => {
-        if (error instanceof TriggerSupervisorStoppedError) {
+        if (isShutdownRefusal(error)) {
           logger.debug("Trigger tick stopped: @error", error);
           return;
         }
@@ -369,9 +357,18 @@ export class TriggerSupervisor {
 
   // Serialized: registration churn and ticks share one lane.
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
-    const run = this.ops.then(() => {
+    const run = this.ops.then(async () => {
       this.throwIfStopped();
-      return task();
+      try {
+        return await task();
+      } catch (error) {
+        // Keyed on the state, not the error: a hook the stop killed throws
+        // whatever the worker's exit raised.
+        if (this.stopped && !(error instanceof TriggerSupervisorStoppedError)) {
+          throw new TriggerSupervisorStoppedError({ cause: error });
+        }
+        throw error;
+      }
     });
     this.ops = run.catch(() => undefined);
     return run;
@@ -712,7 +709,8 @@ export class TriggerSupervisor {
       try {
         const result = await this.hook(binding, "run", { payload }).catch(
           (error: unknown) => {
-            refused = refusedBeforeHook(error);
+            // Refused before the piece ran, so nothing it would checkpoint moved.
+            refused = isShutdownRefusal(error);
             throw error;
           },
         );
@@ -1522,7 +1520,7 @@ export class TriggerSupervisor {
     let refused = false;
     try {
       const result = await this.hook(binding, "run").catch((error: unknown) => {
-        refused = refusedBeforeHook(error);
+        refused = isShutdownRefusal(error);
         throw error;
       });
       if (!Array.isArray(result.output)) {
