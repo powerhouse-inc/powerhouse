@@ -100,7 +100,7 @@ function mismatchReason(
 }
 
 // Worker names end up in devtools and IndexedDB keys, so the flag set is
-// folded to a short stable token rather than spelled out.
+// reduced to a short stable token rather than spelled out.
 function hashFlags(flags: string): string {
   let hash = 0;
   for (let i = 0; i < flags.length; i++) {
