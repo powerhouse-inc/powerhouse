@@ -49,13 +49,18 @@ export function claimPoisonedStoreReload(
   }
 }
 
+/** One page reload answers every store that reports the same poisoning. */
+let reloadRequested = false;
+
 /** Past the budget a poisoned store stops reloading and shows storage-unusable, so clear storage stays reachable. */
 export function reloadForPoisonedStore(
   reload: () => void,
   storage?: BudgetStorage,
   now?: number,
 ): void {
+  if (reloadRequested) return;
   if (claimPoisonedStoreReload(storage, now)) {
+    reloadRequested = true;
     reload();
     return;
   }

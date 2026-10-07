@@ -7,11 +7,14 @@ import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 let connectionState: typeof ConnectionStateModule;
 let budget: typeof BudgetModule;
 
-beforeEach(async () => {
+/** A reload starts a fresh page: module state goes, sessionStorage stays. */
+async function loadPage(): Promise<void> {
   vi.resetModules();
   connectionState = await import("../connection-state.js");
   budget = await import("./poisoned-store-budget.js");
-});
+}
+
+beforeEach(loadPage);
 
 function memoryStorage() {
   const items = new Map<string, string>();
@@ -54,15 +57,17 @@ describe("poisoned-store reload budget", () => {
     expect(budget.claimPoisonedStoreReload(broken, 0)).toBe(false);
   });
 
-  it("stops reloading past the budget and shows the storage-unusable state", () => {
+  it("stops reloading past the budget and shows the storage-unusable state", async () => {
     const storage = memoryStorage();
     const reload = vi.fn();
 
     budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 0);
+    await loadPage();
     budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 1);
     expect(reload).toHaveBeenCalledTimes(2);
     expect(connectionState.getWorkerConnectionStatus()).toBe("connected");
 
+    await loadPage();
     budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 2);
     expect(reload).toHaveBeenCalledTimes(2);
     expect(connectionState.getWorkerConnectionStatus()).toBe(
@@ -86,13 +91,15 @@ describe("poisoned-store reload budget", () => {
     expect(budget.claimPoisonedStoreReload(storage, 10)).toBe(true);
   });
 
-  it("reloads the page for a poisoned in-tab store within the same budget", () => {
+  it("reloads the page for a poisoned in-tab store within the same budget", async () => {
     const reload = vi.fn();
     vi.stubGlobal("sessionStorage", memoryStorage());
     try {
       const cause = new Error("dead call");
       budget.reloadPageForPoisonedStore(cause, reload);
+      await loadPage();
       budget.reloadPageForPoisonedStore(cause, reload);
+      await loadPage();
       budget.reloadPageForPoisonedStore(cause, reload);
     } finally {
       vi.unstubAllGlobals();
@@ -104,15 +111,31 @@ describe("poisoned-store reload budget", () => {
     );
   });
 
-  it("still reloads a tab a retired worker sends to the current one, past the budget", () => {
+  it("still reloads a tab a retired worker sends to the current one, past the budget", async () => {
     const storage = memoryStorage();
     const reload = vi.fn();
     for (let i = 0; i < 3; i++) {
+      await loadPage();
       budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, i);
     }
     expect(reload).toHaveBeenCalledTimes(2);
 
     budget.reloadForWorker(RETIRED_WORKER_RELOAD_REASON, reload, storage, 3);
     expect(reload).toHaveBeenCalledTimes(3);
+  });
+
+  it("spends one slot when both in-tab stores report the same poisoning", () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      budget.reloadPageForPoisonedStore(new Error("reactor store"), reload);
+      budget.reloadPageForPoisonedStore(new Error("relational store"), reload);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(reload).toHaveBeenCalledOnce();
+    expect(budget.claimPoisonedStoreReload(storage, Date.now())).toBe(true);
   });
 });
