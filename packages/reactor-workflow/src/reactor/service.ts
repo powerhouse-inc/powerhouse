@@ -1971,7 +1971,7 @@ export class WorkflowRuntimeService {
     try {
       const store = await this.store();
       await store?.deleteDedupe(workflowId);
-      await store?.clearWorkflowPark(workflowId);
+      await this.supervisor().releasePark(workflowId, false);
     } catch (error) {
       this.logger.warn(
         `Could not drop the dedupe keys of deleted workflow ${workflowId}`,
@@ -2014,7 +2014,7 @@ export class WorkflowRuntimeService {
     this.dropDeleted(workflowId);
     await this.releaseDeleted(workflowId);
     await store.deleteDedupe(workflowId);
-    await store.clearWorkflowPark(workflowId);
+    await this.supervisor().releasePark(workflowId, false);
     for (const scope of ["FLOW", "PROJECT"] as const) {
       await store.deletePieceStore(scope, testPartitionKey(scope, workflowId));
     }
