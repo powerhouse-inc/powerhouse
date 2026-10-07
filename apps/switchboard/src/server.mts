@@ -1065,6 +1065,7 @@ async function initServer(
 
     await workflows.start();
     logger.info("Workflow runtime started");
+    api.inspection?.facts.setWorkflows(true);
   }
 
   let privacy: RunningPrivacy | undefined;

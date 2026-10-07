@@ -402,6 +402,13 @@ describe("booting Switchboard with workflows on", () => {
       await expect(pollWorkflowSubgraph(switchboard)).resolves.toMatchObject({
         name: "workflow-runtime",
       });
+      // The boot type does not publish `api`; the facts sink lives on it.
+      const { api } = switchboard as unknown as {
+        api: { inspection?: { inspector: { info(): Promise<unknown> } } };
+      };
+      await expect(api.inspection?.inspector.info()).resolves.toMatchObject({
+        workflows: true,
+      });
 
       await switchboard.shutdown();
       switchboard = undefined;
