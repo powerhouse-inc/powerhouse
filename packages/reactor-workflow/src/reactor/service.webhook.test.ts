@@ -3,7 +3,10 @@
 import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WorkflowRuntimeService } from "./service.js";
+import {
+  WorkflowRuntimeClosedError,
+  type WorkflowRuntimeService,
+} from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
 import { memoryWebhooks } from "../../test/helpers/webhooks.js";
@@ -297,6 +300,28 @@ describe("WorkflowRuntimeService webhooks", () => {
 
       expect(reply.status).toBe(503);
       expect(fire).not.toHaveBeenCalled();
+    });
+
+    // Shut down while a sync delivery waited for its slot: 500 would keep the
+    // dedupe key, so the provider's retry to the new owner reads as a
+    // duplicate and the delivery is lost.
+    it("answers 503 when the runtime shuts down under a sync delivery", async () => {
+      await arm({ responseMode: "sync" });
+      let refuse!: () => void;
+      vi.spyOn(service, "fire").mockReturnValue(
+        new Promise((_, reject) => {
+          refuse = () => {
+            service.shutdown();
+            reject(new WorkflowRuntimeClosedError(WORKFLOW));
+          };
+        }) as never,
+      );
+
+      const pending = service.deliverWebhook(request());
+      refuse();
+      const reply = await pending;
+
+      expect(reply.status).toBe(503);
     });
 
     it("answers 500 when the run throws", async () => {

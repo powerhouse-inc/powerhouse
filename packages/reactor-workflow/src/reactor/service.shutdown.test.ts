@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectiveRunPolicy } from "./policy.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
 import type { WorkflowRunGate } from "./run-gate.js";
-import type { WorkflowRuntimeService } from "./service.js";
+import {
+  WorkflowRuntimeClosedError,
+  type WorkflowRuntimeService,
+} from "./service.js";
 import { WorkflowRunStore } from "./store.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
@@ -112,7 +115,9 @@ describe("a runtime that has shut down", () => {
 
     service.shutdown();
 
-    await expect(within(firing)).rejects.toThrow("shut down");
+    await expect(within(firing)).rejects.toBeInstanceOf(
+      WorkflowRuntimeClosedError,
+    );
     expect((await store.getRun(runId))?.status).toBe("FAILED");
     if (slot.admitted) slot.release();
   });
@@ -141,7 +146,9 @@ describe("a runtime that has shut down", () => {
     if (slot.admitted) slot.release();
     service.shutdown();
 
-    await expect(within(firing)).rejects.toThrow("shut down");
+    await expect(within(firing)).rejects.toBeInstanceOf(
+      WorkflowRuntimeClosedError,
+    );
     expect((await store.getRun(runId))?.status).toBe("FAILED");
   });
 

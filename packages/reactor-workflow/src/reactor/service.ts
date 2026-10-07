@@ -288,6 +288,17 @@ export type FiringRefusal =
   | "queue-full"
   | "expired";
 
+/** A firing refused because this runtime has shut down (the workflow
+ * singleton moved, or the host is stopping): retryable elsewhere. */
+export class WorkflowRuntimeClosedError extends Error {
+  constructor(readonly workflowId: string) {
+    super(
+      `Workflow ${workflowId} was not run: this workflow runtime has shut down`,
+    );
+    this.name = "WorkflowRuntimeClosedError";
+  }
+}
+
 export type PersistedRunResult = WorkflowRunResult & {
   runId: string | null;
   refusal?: FiringRefusal;
@@ -2422,6 +2433,11 @@ export class WorkflowRuntimeService {
     }
 
     if (!run.ok) {
+      // Not run, and not this runtime's to run: the sender retries and
+      // reaches the owner. A 500 would keep the dedupe key and lose it.
+      if (run.error instanceof WorkflowRuntimeClosedError) {
+        return { status: 503 };
+      }
       const message =
         run.error instanceof Error ? run.error.message : String(run.error);
       this.logger.error(
@@ -4398,9 +4414,7 @@ export class WorkflowRuntimeService {
     workflowId: string,
     enqueuedRunId: string | undefined,
   ): Promise<never> {
-    const error = new Error(
-      `Workflow ${workflowId} was not run: this workflow runtime has shut down`,
-    );
+    const error = new WorkflowRuntimeClosedError(workflowId);
     if (enqueuedRunId) {
       try {
         await store?.failRun(enqueuedRunId, error.message, errorNameOf(error));
