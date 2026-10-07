@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
-import type { IReactor } from "../../../src/core/types.js";
+import type { BatchLoadRequest, IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
+import { validateBatchLoadRequest } from "../../../src/core/utils.js";
 import { JobStatus } from "../../../src/shared/types.js";
 import type {
   DeadLetterRecord,
@@ -41,10 +42,10 @@ const CONNECTED: ConnectionStateSnapshot = {
   requiresAuth: false,
 };
 
-function served(id: string, documentId: string, ordinal: number) {
+function served(id: string, documentId: string, ordinal: number, jobId = "") {
   const syncOp = new SyncOperation(
     id,
-    "",
+    jobId,
     [],
     "remote",
     documentId,
@@ -55,12 +56,12 @@ function served(id: string, documentId: string, ordinal: number) {
         operation: {
           index: 0,
           skip: 0,
-          id: `op-${id}`,
+          id: `op-${documentId}-${ordinal}`,
           timestampUtcMs: new Date().toISOString(),
           hash: "h",
           action: {
             type: "TEST_OP",
-            id: `a-${id}`,
+            id: `a-${documentId}-${ordinal}`,
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
             input: {},
@@ -79,6 +80,8 @@ function served(id: string, documentId: string, ordinal: number) {
   syncOp.transported();
   return syncOp;
 }
+
+let pulls = 0;
 
 /** Pulls everything above its stored inbox cursor on init, as a poller would. */
 class PullingChannel {
@@ -101,9 +104,11 @@ class PullingChannel {
   init(): Promise<void> {
     const from = this.cursors.get(this.name) ?? 0;
     this.inbox.init(from);
-    const pulled = [served("p", "doc-b", 10), served("q", "doc-c", 20)].filter(
-      (syncOp) => syncOp.operations[0].context.ordinal > from,
-    );
+    pulls++;
+    const pulled = [
+      served(`p${pulls}`, "doc-b", 10, "J-b"),
+      served(`q${pulls}`, "doc-c", 20, "J-c"),
+    ].filter((syncOp) => syncOp.operations[0].context.ordinal > from);
     if (pulled.length > 0) this.inbox.add(...pulled);
     return Promise.resolve();
   }
@@ -228,12 +233,21 @@ describe("an inbox item parked by a quarantine", () => {
   }
 
   function loadedDocuments(): string[] {
-    return vi
+    const single = vi
       .mocked(reactor.load)
       .mock.calls.map(([documentId]) => documentId as string);
+    const batched = vi
+      .mocked(reactor.loadBatch)
+      .mock.calls.filter(
+        (_, i) =>
+          vi.mocked(reactor.loadBatch).mock.results[i].type === "return",
+      )
+      .flatMap(([request]) => request.jobs.map((job) => job.documentId));
+    return [...single, ...batched];
   }
 
   beforeEach(() => {
+    let batchJobs = 0;
     cursors.clear();
     storedCursors.clear();
     records = [];
@@ -260,7 +274,20 @@ describe("an inbox item parked by a quarantine", () => {
       getJobStatus: vi.fn((id: string) =>
         Promise.resolve({ id, status: JobStatus.READ_READY }),
       ),
-      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+      loadBatch: vi.fn((request: BatchLoadRequest) => {
+        validateBatchLoadRequest(request.jobs);
+        return Promise.resolve({
+          jobs: Object.fromEntries(
+            request.jobs.map((job) => [
+              job.key,
+              {
+                id: `job-${job.key}-${++batchJobs}`,
+                status: JobStatus.PENDING,
+              },
+            ]),
+          ),
+        });
+      }),
     } as unknown as IReactor;
   });
 
@@ -291,6 +318,76 @@ describe("an inbox item parked by a quarantine", () => {
 
     await vi.waitFor(() => expect(loadedDocuments()).toContain("doc-b"));
     await vi.waitFor(() => expect(cursors.get("remote")).toBe(20));
+  });
+
+  it("keeps one parked copy when a reset carries an item the remote serves again", async () => {
+    const manager = makeManager();
+    await pullAndApplyLaterOps(manager);
+
+    await manager.resetChannel("remote");
+    const fresh = manager.getByName("remote").channel;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      fresh.inbox.items.filter((item) => item.documentId === "doc-b"),
+    ).toHaveLength(1);
+    expect(fresh.inbox.ackOrdinal).toBe(9);
+    expect(cursors.get("remote")).toBe(9);
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(cursors.get("remote")).toBe(20));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+    expect(fresh.deadLetter.items).toHaveLength(0);
+  });
+
+  it("keeps one parked copy when a pusher sends the item again", async () => {
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const inboxCursor = () => storedCursors.get("remote:inbox")?.cursorOrdinal;
+    const channel = manager.getByName("remote").channel;
+    channel.inbox.add(served("p1", "doc-b", 10, "J-b"));
+    channel.inbox.add(served("q", "doc-c", 20, "J-c"));
+    channel.inbox.add(served("p2", "doc-b", 10, "J-b"));
+    await vi.waitFor(() => expect(inboxCursor()).toBe(9));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      channel.inbox.items.filter((item) => item.documentId === "doc-b"),
+    ).toHaveLength(1);
+    expect(channel.inbox.ackOrdinal).toBe(9);
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(inboxCursor()).toBe(20));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+    expect(channel.deadLetter.items).toHaveLength(0);
+  });
+
+  it("lifts parked items sharing a plan key in separate batches", async () => {
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const inboxCursor = () => storedCursors.get("remote:inbox")?.cursorOrdinal;
+    const channel = manager.getByName("remote").channel;
+    channel.inbox.add(served("p1", "doc-b", 10, "J-b"));
+    channel.inbox.add(served("p2", "doc-b", 11, "J-b"));
+    channel.inbox.add(served("q", "doc-c", 20, "J-c"));
+    await vi.waitFor(() => expect(inboxCursor()).toBe(9));
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(inboxCursor()).toBe(20));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(2);
+    expect(channel.deadLetter.items).toHaveLength(0);
   });
 
   it("survives a reset of a push-fed channel and is applied once the quarantine lifts", async () => {

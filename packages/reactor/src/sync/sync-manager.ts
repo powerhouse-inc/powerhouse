@@ -1771,7 +1771,15 @@ export class SyncManager
         .sort((a, b) => firstOrdinalOf(a) - firstOrdinalOf(b));
       if (parked.length === 0) continue;
       for (const item of parked) this.parkedByQuarantine.delete(item);
-      this.handleInboxAdded(remote, parked);
+      // One batch rejects a repeated plan key.
+      const rounds: SyncOperation[][] = [];
+      const seen = new Map<string, number>();
+      for (const item of parked) {
+        const round = item.jobId ? (seen.get(item.jobId) ?? 0) : 0;
+        if (item.jobId) seen.set(item.jobId, round + 1);
+        (rounds[round] ??= []).push(item);
+      }
+      for (const round of rounds) this.handleInboxAdded(remote, round);
     }
   }
 
@@ -2268,6 +2276,10 @@ export class SyncManager
         void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
         eligible.push(syncOp);
+      } else if (this.parkedCopyOf(remote, syncOp)) {
+        // Its ordinals are held by the parked copy; two would share a plan key.
+        dropped.push(syncOp);
+        void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else {
         this.parkedByQuarantine.add(syncOp);
         // Its cursor must not pass it, or a reset or restart loses it.
@@ -2277,7 +2289,7 @@ export class SyncManager
     // A purged id's history is gone here; a job or a dead letter would restore it.
     for (const syncOp of dropped) {
       this.logger.debug(
-        "Dropping received operations of a purged or already-loading document (@remote, @documentId)",
+        "Dropping received operations of a purged, already-loading or already-parked document (@remote, @documentId)",
         remote.meta.name,
         syncOp.documentId,
       );
@@ -2309,6 +2321,25 @@ export class SyncManager
       );
       void this.processInboxChunks(chunks);
     }
+  }
+
+  private parkedCopyOf(remote: Remote, syncOp: SyncOperation): boolean {
+    const ops = syncOp.operations.map((op) => op.operation);
+    if (ops.length === 0) return false;
+    return remote.channel.inbox.items.some(
+      (item) =>
+        item !== syncOp &&
+        this.parkedByQuarantine.has(item) &&
+        item.documentId === syncOp.documentId &&
+        item.branch === syncOp.branch &&
+        item.jobId === syncOp.jobId &&
+        ops.every((op) =>
+          item.operations.some(
+            ({ operation }) =>
+              operation.id === op.id && operation.index === op.index,
+          ),
+        ),
+    );
   }
 
   /** Forgets a marker once the item loading it leaves the inbox. */
