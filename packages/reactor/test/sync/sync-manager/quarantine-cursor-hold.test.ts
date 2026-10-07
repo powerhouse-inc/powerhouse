@@ -367,6 +367,75 @@ describe("an inbox item parked by a quarantine", () => {
     expect(channel.deadLetter.items).toHaveLength(0);
   });
 
+  async function parkRepushedCopyThenRequeue(): Promise<SyncManager> {
+    rows.push({
+      id: "x",
+      jobId: "J-b",
+      jobDependencies: [],
+      remoteName: "remote",
+      documentId: "doc-b",
+      scopes: ["global"],
+      branch: "main",
+      operations: served("x", "doc-b", 10, "J-b").operations,
+      errorSource: ChannelErrorSource.Inbox,
+      errorMessage: "transient",
+      errorType: "UNCLASSIFIED",
+    });
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const channel = manager.getByName("remote").channel;
+    channel.inbox.add(served("p2", "doc-b", 10, "J-b"));
+    channel.inbox.add(served("q", "doc-c", 20, "J-c"));
+    await vi.waitFor(() =>
+      expect(storedCursors.get("remote:inbox")?.cursorOrdinal).toBe(9),
+    );
+
+    await manager.requeueDeadLetter("remote", "x");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rows.map((row) => row.id)).toEqual(["d1", "x"]);
+    expect(loadedDocuments()).not.toContain("doc-b");
+    return manager;
+  }
+
+  it("keeps a requeue's row when a re-pushed copy of it is already parked", async () => {
+    const manager = await parkRepushedCopyThenRequeue();
+    const channel = manager.getByName("remote").channel;
+    expect(
+      channel.inbox.items
+        .filter((item) => item.documentId === "doc-b")
+        .map((item) => item.id),
+    ).toEqual(["p2", "x"]);
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(rows).toHaveLength(0));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(2);
+    expect(channel.inbox.items).toHaveLength(0);
+    expect(channel.deadLetter.items).toHaveLength(0);
+  });
+
+  it("keeps a requeue's row across a restart when a re-pushed copy was parked", async () => {
+    const first = await parkRepushedCopyThenRequeue();
+    first.shutdown();
+
+    const second = makeManager(true);
+    await second.startup();
+    expect(rows.map((row) => row.id)).toEqual(["d1", "x"]);
+    await second.clearDeadLetter("remote", "d1");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(loadedDocuments()).not.toContain("doc-b");
+
+    await second.requeueDeadLetter("remote", "x");
+    await vi.waitFor(() => expect(rows).toHaveLength(0));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+  });
+
   it("lifts parked items sharing a plan key in separate batches", async () => {
     const manager = makeManager(true);
     await manager.startup();

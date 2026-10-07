@@ -2276,10 +2276,13 @@ export class SyncManager
         void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
         eligible.push(syncOp);
-      } else if (this.parkedCopyOf(remote, syncOp)) {
+      } else if (
+        // A requeue parks as its own copy; its row goes only once it loads.
+        !this.requeuedDeadLetterIds.has(syncOp.id) &&
+        this.parkedCopyOf(remote, syncOp)
+      ) {
         // Its ordinals are held by the parked copy; two would share a plan key.
         dropped.push(syncOp);
-        void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else {
         this.parkedByQuarantine.add(syncOp);
         // Holds the cursor across a reset. Memory only: a push-fed channel loses
