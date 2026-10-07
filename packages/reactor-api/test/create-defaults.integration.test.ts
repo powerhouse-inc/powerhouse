@@ -1,4 +1,7 @@
-import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
+import type {
+  InProcessReactorClientModule,
+  IReactorClient,
+} from "@powerhousedao/reactor";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   AuthorizationPolicy,
@@ -113,6 +116,38 @@ describe("Query.createDefaults", () => {
 
     expect(response.data).toBeNull();
     expect(codeOf(response)).toBe("FORBIDDEN");
+  });
+});
+
+describe("Query.createDefaults when the reactor cannot decide", () => {
+  let module: InProcessReactorClientModule;
+  let server: ReactorHttpServer;
+
+  beforeAll(async () => {
+    module = await buildReadGateReactor();
+    const failing = new Proxy(module.client, {
+      get(target, property, receiver) {
+        if (property === "isServed") {
+          return () => Promise.reject(new Error("storage unavailable"));
+        }
+        const value: unknown = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    }) as IReactorClient;
+    server = await startReactorHttpServer(failing, openAuthorization);
+  });
+
+  afterAll(async () => {
+    await server.close();
+    module.reactor.kill();
+  });
+
+  it("answers with the failure, not as if the parent were refused", async () => {
+    const response = await createDefaults(server, "any-parent", READER);
+
+    expect(response.data).toBeNull();
+    expect(codeOf(response)).not.toBe("FORBIDDEN");
+    expect(response.errors?.[0]?.message).toContain("storage unavailable");
   });
 });
 
