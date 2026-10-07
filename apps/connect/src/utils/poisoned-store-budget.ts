@@ -3,9 +3,10 @@ import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 
 const BUDGET_KEY = "ph-connect:poisoned-store-reloads";
 const BUDGET_LIMIT = 2;
-const BUDGET_WINDOW_MS = 5 * 60_000;
+const HEALTHY_RESET_MS = 10 * 60_000;
 
 type BudgetStorage = Pick<Storage, "getItem" | "setItem">;
+type BudgetRecord = { count: number; lastAt: number };
 
 function sessionStore(): BudgetStorage | undefined {
   try {
@@ -15,22 +16,33 @@ function sessionStore(): BudgetStorage | undefined {
   }
 }
 
-/** Spends one poisoned-store reload; false past the budget, or when reloads cannot be counted. */
+function readRecord(raw: string | null): BudgetRecord {
+  const parsed: unknown = raw ? JSON.parse(raw) : null;
+  const record = parsed as Partial<BudgetRecord> | null;
+  return typeof record?.count === "number" && typeof record.lastAt === "number"
+    ? { count: record.count, lastAt: record.lastAt }
+    : { count: 0, lastAt: 0 };
+}
+
+/**
+ * Spends one poisoned-store reload. Reloads are counted in a row, and the
+ * count resets only after ten minutes without a poison, so a slow boot loop
+ * is caught too; false past the budget, or when reloads cannot be counted.
+ */
 export function claimPoisonedStoreReload(
   storage: BudgetStorage | undefined = sessionStore(),
   now: number = Date.now(),
 ): boolean {
   if (storage === undefined) return false;
   try {
-    const raw = storage.getItem(BUDGET_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    const recent = (Array.isArray(parsed) ? parsed : []).filter(
-      (at): at is number =>
-        typeof at === "number" && now - at < BUDGET_WINDOW_MS,
+    const previous = readRecord(storage.getItem(BUDGET_KEY));
+    const count =
+      now - previous.lastAt >= HEALTHY_RESET_MS ? 0 : previous.count;
+    const allowed = count < BUDGET_LIMIT;
+    storage.setItem(
+      BUDGET_KEY,
+      JSON.stringify({ count: allowed ? count + 1 : count, lastAt: now }),
     );
-    const allowed = recent.length < BUDGET_LIMIT;
-    if (allowed) recent.push(now);
-    storage.setItem(BUDGET_KEY, JSON.stringify(recent));
     return allowed;
   } catch {
     return false;

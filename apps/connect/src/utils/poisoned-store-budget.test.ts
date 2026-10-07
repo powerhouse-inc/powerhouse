@@ -24,18 +24,24 @@ function memoryStorage() {
 }
 
 describe("poisoned-store reload budget", () => {
-  it("allows two reloads within five minutes, then refuses", () => {
+  it("refuses a third poisoned reload in a row however slowly they come", () => {
     const storage = memoryStorage();
-    const start = 1_000_000;
+    const cycle = 150_000;
 
-    expect(budget.claimPoisonedStoreReload(storage, start)).toBe(true);
-    expect(budget.claimPoisonedStoreReload(storage, start + 60_000)).toBe(true);
-    expect(budget.claimPoisonedStoreReload(storage, start + 120_000)).toBe(
-      false,
+    expect(budget.claimPoisonedStoreReload(storage, 0)).toBe(true);
+    expect(budget.claimPoisonedStoreReload(storage, cycle)).toBe(true);
+    expect(budget.claimPoisonedStoreReload(storage, 2 * cycle)).toBe(false);
+    expect(budget.claimPoisonedStoreReload(storage, 3 * cycle)).toBe(false);
+  });
+
+  it("starts counting again after ten minutes without a poison", () => {
+    const storage = memoryStorage();
+
+    expect(budget.claimPoisonedStoreReload(storage, 0)).toBe(true);
+    expect(budget.claimPoisonedStoreReload(storage, 60_000)).toBe(true);
+    expect(budget.claimPoisonedStoreReload(storage, 60_000 + 10 * 60_000)).toBe(
+      true,
     );
-    expect(
-      budget.claimPoisonedStoreReload(storage, start + 5 * 60_000 + 1),
-    ).toBe(true);
   });
 
   it("refuses when it cannot count", () => {
