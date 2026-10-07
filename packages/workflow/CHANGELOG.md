@@ -1,3 +1,19 @@
+## 6.2.3-dev.48 (2026-10-07)
+
+### 🚀 Features
+
+- **workflow:** more room between a workflow's trigger and its first step ([73cd872a34](https://github.com/powerhouse-inc/powerhouse/commit/73cd872a34))
+- **workflow:** collapsible overview rows, and workflow graphs that wrap ([6c70cc8082](https://github.com/powerhouse-inc/powerhouse/commit/6c70cc8082))
+- **workflow:** name a reactor trigger by the document and action it waits for ([d286a108e4](https://github.com/powerhouse-inc/powerhouse/commit/d286a108e4))
+
+### 🩹 Fixes
+
+- **workflow:** a step's only way out stays on its lane ([9151bf6b95](https://github.com/powerhouse-inc/powerhouse/commit/9151bf6b95))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.47 (2026-10-07)
 
 ### 🚀 Features
