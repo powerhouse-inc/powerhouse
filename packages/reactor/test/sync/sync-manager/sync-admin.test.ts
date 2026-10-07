@@ -660,4 +660,44 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     expect(channels).toHaveLength(1);
     expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
   });
+  it("leaves another remote's dead letter alone when clearing by its id", async () => {
+    await addAccounts();
+    await syncManager.add(
+      "ledger",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "gql", parameters: { url: "https://y/graphql" } },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const theirs = deadLetterOp("theirs", "doc-l");
+    channels[1].deadLetter.add(theirs);
+    vi.mocked(mockDeadLetterStorage.list).mockImplementation((remoteName) =>
+      Promise.resolve({
+        results:
+          remoteName === "ledger"
+            ? [
+                {
+                  id: "theirs",
+                  jobId: "job-theirs",
+                  jobDependencies: [],
+                  remoteName: "ledger",
+                  documentId: "doc-l",
+                  scopes: ["global"],
+                  branch: "main",
+                  operations: [],
+                  errorSource: ChannelErrorSource.Inbox,
+                  errorMessage: "failed",
+                  errorType: "UNCLASSIFIED",
+                },
+              ]
+            : [],
+        options: { cursor: "0", limit: 100 },
+      }),
+    );
+
+    await syncManager.clearDeadLetter("accounts", "theirs");
+
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+    expect(channels[1].deadLetter.get("theirs")).toBe(theirs);
+  });
 });

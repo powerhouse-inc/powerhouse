@@ -1717,13 +1717,15 @@ export class SyncManager
   async clearDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
     const source = await this.findDeadLetter(remote, id);
+    // Storage removes by id alone, so another remote's row must not get here.
+    if (!source) return;
+    await this.deadLetterStorage.remove(id);
     const item = remote.channel.deadLetter.get(id);
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
     this.requeuedDeadLetterIds.delete(id);
-    await this.deadLetterStorage.remove(id);
-    if (source) await this.liftQuarantineIfClear(source.documentId);
+    await this.liftQuarantineIfClear(source.documentId);
   }
 
   /** Live item first; else scans storage for one the capped mailbox evicted. */
