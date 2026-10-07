@@ -557,6 +557,39 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(2));
   });
 
+  it("keeps the quarantine when a dead letter lands while the lift reads storage", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    let releaseQuery: (() => void) | undefined;
+    vi.mocked(
+      mockDeadLetterStorage.listQuarantinedDocumentIds,
+    ).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseQuery = () => resolve([]);
+        }),
+    );
+
+    const requeue = syncManager.requeueDeadLetter("accounts", "d1");
+    await vi.waitFor(() => expect(releaseQuery).toBeDefined());
+    channels[0].deadLetter.add(nonKeyedOp("d2", "doc-b"));
+    releaseQuery?.();
+    await requeue;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(mockReactor.load).not.toHaveBeenCalled();
+  });
+
   it("lifts the quarantine when its last dead letter is cleared", async () => {
     mockReactor = {
       load: vi

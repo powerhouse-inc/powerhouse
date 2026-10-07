@@ -1645,10 +1645,16 @@ export class SyncManager
     remote.channel.inbox.add(requeued);
   }
 
-  /** Lifts only when the restart rule would: no quarantining dead letter left. */
   private async liftQuarantineIfClear(documentId: string): Promise<void> {
-    if (!this.quarantinedDocumentIds.has(documentId)) return;
-    if (this.holdsQuarantiningDeadLetter(documentId)) return;
+    if (await this.mayLiftQuarantine(documentId)) {
+      this.liftQuarantine(documentId);
+    }
+  }
+
+  /** Whether the restart rule would lift it: no quarantining dead letter left. */
+  private async mayLiftQuarantine(documentId: string): Promise<boolean> {
+    if (!this.quarantinedDocumentIds.has(documentId)) return false;
+    if (this.holdsQuarantiningDeadLetter(documentId)) return false;
     let stored: boolean;
     try {
       stored = await this.storesQuarantiningDeadLetter(documentId);
@@ -1658,10 +1664,14 @@ export class SyncManager
         documentId,
         error instanceof Error ? error.message : String(error),
       );
-      return;
+      return false;
     }
-    if (stored) return;
-    this.liftQuarantine(documentId);
+    // A dead letter can land during the read, before its row does.
+    return (
+      !stored &&
+      this.quarantinedDocumentIds.has(documentId) &&
+      !this.holdsQuarantiningDeadLetter(documentId)
+    );
   }
 
   private holdsQuarantiningDeadLetter(documentId: string): boolean {
