@@ -61,24 +61,31 @@ export function createStoreLocks(locks: Locks | undefined = webLocks()) {
 }
 
 /**
- * Calls `onWaiting` while someone waits on a lock for one of `namespaces`,
- * after `graceMs`, so a retiring worker's normal handoff is not reported.
+ * Calls `onChange(true)` while someone waits on a lock for one of `namespaces`,
+ * after `graceMs` so a retiring worker's normal handoff is not reported, and
+ * `onChange(false)` once a reported wait ends.
  */
 export function watchStoreLockWait(
   namespaces: string[],
-  onWaiting: () => void,
+  onChange: (waiting: boolean) => void,
   { locks = webLocks(), intervalMs = 1_000, graceMs = 5_000 } = {},
 ): () => void {
   if (!locks) return () => undefined;
   const names = new Set(namespaces.map(storeLockName));
   const reportFrom = Date.now() + graceMs;
   let stopped = false;
+  let reported = false;
   const check = async (): Promise<void> => {
     if (Date.now() < reportFrom) return;
     try {
       const { pending = [] } = await locks.query();
-      if (!stopped && pending.some((lock) => names.has(lock.name ?? ""))) {
-        onWaiting();
+      if (stopped) return;
+      if (pending.some((lock) => names.has(lock.name ?? ""))) {
+        reported = true;
+        onChange(true);
+      } else if (reported) {
+        reported = false;
+        onChange(false);
       }
     } catch (error) {
       console.warn("[connect] could not query store locks:", error);

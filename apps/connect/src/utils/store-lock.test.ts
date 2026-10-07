@@ -49,7 +49,7 @@ describe("store locks", () => {
     const newWorker = createStoreLocks(navigator.locks);
     await oldWorker.acquire("ns-e");
     let waits = 0;
-    const stop = watchStoreLockWait(["ns-e"], () => (waits += 1), {
+    const stop = watchStoreLockWait(["ns-e"], (w) => (waits += w ? 1 : 0), {
       locks: navigator.locks,
       intervalMs: 5,
       graceMs: 0,
@@ -67,12 +67,38 @@ describe("store locks", () => {
     newWorker.release("ns-e");
   });
 
+  it("reports the end of a wait it reported", async () => {
+    const oldWorker = createStoreLocks(navigator.locks);
+    const newWorker = createStoreLocks(navigator.locks);
+    await oldWorker.acquire("ns-g");
+    const reports: boolean[] = [];
+    const stop = watchStoreLockWait(["ns-g"], (w) => reports.push(w), {
+      locks: navigator.locks,
+      intervalMs: 5,
+      graceMs: 0,
+    });
+    cleanup.push(stop);
+    await tick();
+    expect(reports).toEqual([]);
+
+    const waiting = newWorker.acquire("ns-g");
+    await tick();
+    expect(reports.at(-1)).toBe(true);
+
+    oldWorker.release("ns-g");
+    await waiting;
+    await tick();
+    expect(reports.at(-1)).toBe(false);
+    expect(reports.filter((w) => !w)).toHaveLength(1);
+    newWorker.release("ns-g");
+  });
+
   it("does not report a wait inside the handoff grace", async () => {
     const oldWorker = createStoreLocks(navigator.locks);
     const newWorker = createStoreLocks(navigator.locks);
     await oldWorker.acquire("ns-f");
     let waits = 0;
-    const stop = watchStoreLockWait(["ns-f"], () => (waits += 1), {
+    const stop = watchStoreLockWait(["ns-f"], (w) => (waits += w ? 1 : 0), {
       locks: navigator.locks,
       intervalMs: 5,
       graceMs: 60_000,
