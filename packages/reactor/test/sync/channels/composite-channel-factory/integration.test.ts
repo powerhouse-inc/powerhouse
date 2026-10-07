@@ -12,9 +12,10 @@ import {
   LocalChannelFactory,
 } from "../../../../src/sync/channels/local-channel-factory.js";
 import {
-  messagePortTransport,
-  type LocalChannelPort,
-} from "../../../../src/sync/channels/local-channel-transport.js";
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+} from "../../../../src/sync/channels/local-channel-registry.js";
+import { messagePortTransport } from "../../../../src/sync/channels/local-channel-transport.js";
 import { SyncBuilder } from "../../../../src/sync/sync-builder.js";
 import { ChannelScheme } from "../../../../src/sync/types.js";
 import { createMockLogger } from "../../../factories.js";
@@ -31,7 +32,7 @@ const HUB_URL = "https://switchboard.test/graphql";
 
 /** Every reactor in this file is a fleet node plus its local-port registry. */
 type Peer = FleetNode & {
-  transports: Map<string, LocalChannelPort>;
+  ports: LocalChannelPortRegistry;
 };
 
 type GraphQLRequest = {
@@ -49,10 +50,6 @@ type WireEnvelope = {
 /** The GraphQL body of one request, as the double reads it back off `init`. */
 function requestBody(init: RequestInit | undefined): GraphQLRequest {
   return JSON.parse(String(init?.body ?? "")) as GraphQLRequest;
-}
-
-function portKey(peerId: string, channelName: string): string {
-  return `${peerId} ${channelName}`;
 }
 
 /**
@@ -186,10 +183,10 @@ type PeerOptions = {
  * all a local-only reactor could ever have had.
  */
 async function buildPeer(name: string, options: PeerOptions): Promise<Peer> {
-  const transports = new Map<string, LocalChannelPort>();
+  const ports = new LocalChannelPortRegistry();
   const localFactory = new LocalChannelFactory(
     createMockLogger(),
-    (peerId, channelName) => transports.get(portKey(peerId, channelName)),
+    ports.provider,
   );
   const reactorBuilder = new ReactorBuilder()
     .withLogger(createMockLogger())
@@ -222,7 +219,7 @@ async function buildPeer(name: string, options: PeerOptions): Promise<Peer> {
     module,
     reactor: module.reactor,
     sync: module.syncModule!.syncManager,
-    transports,
+    ports,
   };
 }
 
@@ -235,27 +232,30 @@ async function linkLocal(
   const { port1, port2 } = new MessageChannel();
   port1.unref();
   port2.unref();
-  a.transports.set(portKey(b.name, driveId), messagePortTransport(port1));
-  b.transports.set(portKey(a.name, driveId), messagePortTransport(port2));
-
-  const collection = DriveCollectionId.forDrive(driveId);
-  await a.sync.add(
-    `local:${b.name}`,
-    collection,
+  const collectionId = DriveCollectionId.forDrive(driveId);
+  await registerLocalPeer(
+    a.sync,
+    a.ports,
     {
-      type: LOCAL_CHANNEL_TYPE,
-      parameters: { peerId: b.name, channelName: driveId },
+      peerId: b.name,
+      channelName: driveId,
+      collectionId,
+      remoteName: `local:${b.name}`,
+      filter: FILTER,
     },
-    FILTER,
+    messagePortTransport(port1),
   );
-  await b.sync.add(
-    `local:${a.name}`,
-    collection,
+  await registerLocalPeer(
+    b.sync,
+    b.ports,
     {
-      type: LOCAL_CHANNEL_TYPE,
-      parameters: { peerId: a.name, channelName: driveId },
+      peerId: a.name,
+      channelName: driveId,
+      collectionId,
+      remoteName: `local:${a.name}`,
+      filter: FILTER,
     },
-    FILTER,
+    messagePortTransport(port2),
   );
   return [port1, port2];
 }
