@@ -163,27 +163,50 @@ describe("poisoned-store reload budget", () => {
     );
   });
 
-  it("counts mismatch and poisoned-store reloads against one budget", async () => {
+  it("keeps mismatch and poisoned-store reloads on separate budgets", async () => {
     const storage = memoryStorage();
     const reload = vi.fn();
 
-    budget.reloadForWorker(MISMATCH, reload, storage, 0);
+    for (let i = 0; i < 2; i++) {
+      await loadPage();
+      budget.reloadForWorker(MISMATCH, reload, storage, i);
+    }
     await loadPage();
-    budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 1);
-    await loadPage();
-    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+    budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 2);
+    expect(reload).toHaveBeenCalledTimes(3);
 
-    expect(reload).toHaveBeenCalledTimes(2);
+    await loadPage();
+    budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 3);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 70_000);
+    expect(reload).toHaveBeenCalledTimes(5);
   });
 
-  it("spends one slot when a page hears the same mismatch twice", () => {
+  it("reloads for every deploy that lands minutes after the last", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    for (const minute of [0, 8, 16, 24]) {
+      await loadPage();
+      budget.reloadForWorker(MISMATCH, reload, storage, minute * 60_000);
+    }
+
+    expect(reload).toHaveBeenCalledTimes(4);
+    expect(connectionState.getWorkerConnectionStatus()).toBe("connected");
+  });
+
+  it("spends one slot when a page hears the same mismatch twice", async () => {
     const storage = memoryStorage();
     const reload = vi.fn();
 
     budget.reloadForWorker(MISMATCH, reload, storage, 0);
     budget.reloadForWorker(MISMATCH, reload, storage, 1);
-
     expect(reload).toHaveBeenCalledOnce();
-    expect(budget.claimPoisonedStoreReload(storage, 2)).toBe(true);
+
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 3);
+    expect(reload).toHaveBeenCalledTimes(2);
   });
 });

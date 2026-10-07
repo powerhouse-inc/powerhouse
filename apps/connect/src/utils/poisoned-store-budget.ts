@@ -5,9 +5,20 @@ import {
 } from "../connection-state.js";
 import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 
-const BUDGET_KEY = "ph-connect:poisoned-store-reloads";
 const BUDGET_LIMIT = 2;
-const HEALTHY_RESET_MS = 10 * 60_000;
+
+type Budget = { key: string; quietMs: number };
+
+// Counted in a row; ten quiet minutes reset it, so a slow boot loop is caught too.
+const POISONED_STORE: Budget = {
+  key: "ph-connect:poisoned-store-reloads",
+  quietMs: 10 * 60_000,
+};
+// Two builds served at once bounce tabs seconds apart; deploys land minutes apart.
+const MISMATCH: Budget = {
+  key: "ph-connect:mismatch-reloads",
+  quietMs: 60_000,
+};
 
 type BudgetStorage = Pick<Storage, "getItem" | "setItem">;
 type BudgetRecord = { count: number; lastAt: number };
@@ -28,24 +39,18 @@ function readRecord(raw: string | null): BudgetRecord {
     : { count: 0, lastAt: 0 };
 }
 
-/**
- * Spends one slot of the tab's reload budget, which poisoned stores and build
- * fingerprint mismatches share. Reloads are counted in a row, and the
- * count resets only after ten minutes without a poison, so a slow boot loop
- * is caught too; false past the budget, or when reloads cannot be counted.
- */
-export function claimPoisonedStoreReload(
-  storage: BudgetStorage | undefined = sessionStore(),
-  now: number = Date.now(),
+function claimReload(
+  budget: Budget,
+  storage: BudgetStorage | undefined,
+  now: number,
 ): boolean {
   if (storage === undefined) return false;
   try {
-    const previous = readRecord(storage.getItem(BUDGET_KEY));
-    const count =
-      now - previous.lastAt >= HEALTHY_RESET_MS ? 0 : previous.count;
+    const previous = readRecord(storage.getItem(budget.key));
+    const count = now - previous.lastAt >= budget.quietMs ? 0 : previous.count;
     const allowed = count < BUDGET_LIMIT;
     storage.setItem(
-      BUDGET_KEY,
+      budget.key,
       JSON.stringify({ count: allowed ? count + 1 : count, lastAt: now }),
     );
     return allowed;
@@ -54,17 +59,29 @@ export function claimPoisonedStoreReload(
   }
 }
 
-/** One page reload answers every budgeted reload the page hears. */
+/**
+ * Spends one slot of the tab's poisoned-store reload budget; false past the
+ * budget, or when reloads cannot be counted.
+ */
+export function claimPoisonedStoreReload(
+  storage: BudgetStorage | undefined = sessionStore(),
+  now: number = Date.now(),
+): boolean {
+  return claimReload(POISONED_STORE, storage, now);
+}
+
+/** One page reload answers every budgeted reload the page hears, of either budget. */
 let reloadRequested = false;
 
 function reloadWithinBudget(
+  budget: Budget,
   reload: () => void,
   pastBudget: WorkerConnectionStatus,
-  storage?: BudgetStorage,
-  now?: number,
+  storage: BudgetStorage | undefined = sessionStore(),
+  now: number = Date.now(),
 ): void {
   if (reloadRequested) return;
-  if (claimPoisonedStoreReload(storage, now)) {
+  if (claimReload(budget, storage, now)) {
     reloadRequested = true;
     reload();
     return;
@@ -78,10 +95,10 @@ export function reloadForPoisonedStore(
   storage?: BudgetStorage,
   now?: number,
 ): void {
-  reloadWithinBudget(reload, "storage-unusable", storage, now);
+  reloadWithinBudget(POISONED_STORE, reload, "storage-unusable", storage, now);
 }
 
-/** onPoisoned for an in-tab store: the page reload reopens it, within the same budget. */
+/** onPoisoned for an in-tab store: the page reload reopens it, within the poisoned-store budget. */
 export function reloadPageForPoisonedStore(
   cause: Error,
   reload: () => void = () => window.location.reload(),
@@ -102,7 +119,7 @@ export function reloadForWorker(
   }
   // Two builds served at once retire each other's worker; tabs would bounce forever.
   if (isFingerprintMismatchReload(reason)) {
-    reloadWithinBudget(reload, "version-conflict", storage, now);
+    reloadWithinBudget(MISMATCH, reload, "version-conflict", storage, now);
     return;
   }
   reload();
