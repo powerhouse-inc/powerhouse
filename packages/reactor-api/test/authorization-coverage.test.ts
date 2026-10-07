@@ -5,6 +5,7 @@ import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
 import { AuthSubgraph } from "../src/graphql/auth/subgraph.js";
 import type { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { InspectionSubgraph } from "../src/graphql/inspection/subgraph.js";
 import { PackagesSubgraph } from "../src/graphql/packages/subgraph.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "../src/graphql/system/subgraph.js";
@@ -66,6 +67,11 @@ const EXEMPT: Record<string, Record<string, string>> = {
     "AnalyticsQuery.currencies":
       "Reached only through Query.analytics, which is gated.",
   },
+  inspection: {
+    "Query.inspection": "Namespace stub resolver; returns an empty object.",
+    "ReactorInspection.documentModels":
+      "Document model metadata, as reactor's Query.documentModels.",
+  },
   "document-model": {
     "Query.DocumentModel": "Namespace stub resolver; returns an empty object.",
     "Mutation.DocumentModel":
@@ -101,7 +107,7 @@ const AS_CALLER_PATTERN = /\bviewSubject\b|\bservesDocument\b/;
  * document-model readableItems helpers.
  */
 const GUARD_PATTERN =
-  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\breadableByHost\b/;
+  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\breadableByHost\b|\bisOperator\b|\bservedDocument\b|\breadableIds\b/;
 
 function resolverSource(value: unknown): string {
   if (typeof value === "function") return value.toString();
@@ -160,6 +166,16 @@ const SUBGRAPHS: Record<string, () => BaseSubgraph> = {
       mockArgs as ConstructorParameters<typeof PackagesSubgraph>[0],
     ),
   system: () => new SystemSubgraph(mockArgs),
+  inspection: () =>
+    new InspectionSubgraph({
+      ...mockArgs,
+      inspection: {
+        inspector: {},
+        syncInspector: undefined,
+        documentModelRegistry: {},
+        facts: {},
+      },
+    } as unknown as SubgraphArgs),
   analytics: () => new AnalyticsSubgraph(mockArgs),
   "document-model": () =>
     new DocumentModelSubgraph(
