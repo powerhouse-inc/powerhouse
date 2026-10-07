@@ -1468,6 +1468,12 @@ export class SyncManager
     }
 
     this.removing.add(name);
+    // Parked requeues reload as dead letters rather than carry over.
+    const requeued = new Set(
+      [...this.requeuedDeadLetterIds]
+        .filter(([, pending]) => pending.remoteName === name)
+        .map(([id]) => id),
+    );
     if (live) {
       try {
         await this.teardownRemoteResources(live);
@@ -1502,6 +1508,7 @@ export class SyncManager
     }
     const fresh: Remote = { meta, channel };
     this.remotes.set(name, fresh);
+    if (live) this.carryParked(live, fresh, requeued);
 
     let unheard: SyncOperation[];
     try {
@@ -1521,6 +1528,29 @@ export class SyncManager
     }
 
     await this.activateRemote(fresh, unheard, channel.outbox.ackOrdinal);
+  }
+
+  /** A pushing remote never resends them, so the fresh inbox parks them again. */
+  private carryParked(
+    live: Remote,
+    fresh: Remote,
+    requeued: ReadonlySet<string>,
+  ): void {
+    for (const item of live.channel.inbox.items) {
+      if (!this.parkedByQuarantine.has(item) || requeued.has(item.id)) continue;
+      const copy = new SyncOperation(
+        item.id,
+        item.jobId,
+        item.jobDependencies,
+        item.remoteName,
+        item.documentId,
+        item.scopes,
+        item.branch,
+        item.operations,
+      );
+      fresh.channel.inbox.add(copy);
+      fresh.channel.inbox.hold?.(copy);
+    }
   }
 
   /** Before a fresh channel is registered: nothing to tear down. */

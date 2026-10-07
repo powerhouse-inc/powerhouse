@@ -13,6 +13,7 @@ import type {
   ISyncDeadLetterStorage,
   ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
+import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
 import type {
   ConnectionStateChangeCallback,
   IChannel,
@@ -24,6 +25,7 @@ import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
   type ConnectionStateSnapshot,
+  type RemoteCursor,
   type RemoteRecord,
 } from "../../../src/sync/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
@@ -129,6 +131,7 @@ class PullingChannel {
 
 describe("an inbox item parked by a quarantine", () => {
   const cursors = new Map<string, number>();
+  const storedCursors = new Map<string, RemoteCursor>();
   let records: RemoteRecord[];
   let rows: DeadLetterRecord[];
   let reactor: IReactor;
@@ -145,9 +148,18 @@ describe("an inbox item parked by a quarantine", () => {
       remove: vi.fn(() => Promise.resolve()),
     } as unknown as ISyncRemoteStorage;
     const cursorStorage: ISyncCursorStorage = {
-      list: vi.fn(() => Promise.resolve([])),
+      list: vi.fn((remoteName: string) =>
+        Promise.resolve(
+          [...storedCursors.values()].filter(
+            (cursor) => cursor.remoteName === remoteName,
+          ),
+        ),
+      ),
       get: vi.fn(),
-      upsert: vi.fn(() => Promise.resolve()),
+      upsert: vi.fn((cursor: RemoteCursor) => {
+        storedCursors.set(`${cursor.remoteName}:${cursor.cursorType}`, cursor);
+        return Promise.resolve();
+      }),
       remove: vi.fn(() => Promise.resolve()),
     } as unknown as ISyncCursorStorage;
     const deadLetterStorage: ISyncDeadLetterStorage = {
@@ -175,11 +187,18 @@ describe("an inbox item parked by a quarantine", () => {
     return { remoteStorage, cursorStorage, deadLetterStorage };
   }
 
-  function makeManager(): SyncManager {
+  function makeManager(pushed = false): SyncManager {
     const { remoteStorage, cursorStorage, deadLetterStorage } = storages();
     const channelFactory: IChannelFactory = {
-      instance: (_id, name) =>
-        new PullingChannel(name, cursors) as unknown as IChannel,
+      instance: (id, name) =>
+        pushed
+          ? new GqlResponseChannel(
+              new ConsoleLogger(["GqlResponseChannel"]),
+              id,
+              name,
+              cursorStorage,
+            )
+          : (new PullingChannel(name, cursors) as unknown as IChannel),
     };
     const operationIndex = {
       find: vi.fn().mockResolvedValue({
@@ -216,6 +235,7 @@ describe("an inbox item parked by a quarantine", () => {
 
   beforeEach(() => {
     cursors.clear();
+    storedCursors.clear();
     records = [];
     rows = [
       {
@@ -270,6 +290,40 @@ describe("an inbox item parked by a quarantine", () => {
     await manager.clearDeadLetter("remote", "d1");
 
     await vi.waitFor(() => expect(loadedDocuments()).toContain("doc-b"));
+    await vi.waitFor(() => expect(cursors.get("remote")).toBe(20));
+  });
+
+  it("survives a reset of a push-fed channel and is applied once the quarantine lifts", async () => {
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const inboxCursor = () => storedCursors.get("remote:inbox")?.cursorOrdinal;
+    const first = manager.getByName("remote").channel;
+    first.inbox.add(served("p", "doc-b", 10));
+    first.inbox.add(served("q", "doc-c", 20));
+    await vi.waitFor(() => expect(inboxCursor()).toBe(9));
+
+    await manager.resetChannel("remote");
+    const fresh = manager.getByName("remote").channel;
+    expect(fresh).not.toBe(first);
+    fresh.inbox.add(served("e", "doc-c", 30));
+    await vi.waitFor(() =>
+      expect(loadedDocuments().filter((id) => id === "doc-c")).toHaveLength(2),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fresh.inbox.ackOrdinal).toBe(9);
+    expect(inboxCursor()).toBe(9);
+    expect(loadedDocuments()).not.toContain("doc-b");
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(inboxCursor()).toBe(30));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
   });
 
   it("is pulled again after a restart and applied once the quarantine lifts", async () => {
