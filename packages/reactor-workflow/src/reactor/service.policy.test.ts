@@ -1035,3 +1035,37 @@ describe("an enable that bailed on a park that was then undone", () => {
     upsert.mockRestore();
   }, 60_000);
 });
+
+// Registrations of one workflow apply in the order their operations arrive:
+// a slow registration of an ENABLED snapshot must not re-arm a workflow a
+// later operation has already disabled.
+describe("registrations of one workflow", () => {
+  it("apply in order, so a stale snapshot cannot re-arm", async () => {
+    const id = "wf-registration-order";
+    const enabled = scheduleWorkflow(id);
+    const disabled = documents.apply(
+      id,
+      actions.setWorkflowStatus({ status: "DISABLED" }),
+    );
+    const read = vi.spyOn(WorkflowRunStore.prototype, "getWorkflowPark");
+    read.mockImplementationOnce(async function (
+      this: WorkflowRunStore,
+      ...args
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      read.mockRestore();
+      return this.getWorkflowPark(...args);
+    });
+
+    await Promise.all([
+      service.onOperations([workflowOp(id, enabled)]),
+      service.onOperations([workflowOp(id, disabled)]),
+    ]);
+    read.mockRestore();
+
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("DISABLED"),
+    );
+  }, 60_000);
+});

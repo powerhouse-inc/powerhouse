@@ -954,11 +954,41 @@ export class WorkflowRuntimeService {
   // Awaited by callers: the registry must be current before the next request
   // can arrive. Only arming, which does I/O, is left to run on its own.
 
+  // One chain per workflow, so its registrations apply in arrival order: a
+  // slow one for an older snapshot cannot finish after a newer one.
+  private readonly registrationChains = new Map<string, Promise<void>>();
+
+  private inRegistrationOrder(
+    workflowId: string,
+    task: () => Promise<void>,
+  ): Promise<void> {
+    const prior = this.registrationChains.get(workflowId) ?? Promise.resolve();
+    const run = prior.then(task);
+    const tail = run.catch(() => undefined);
+    this.registrationChains.set(workflowId, tail);
+    void tail.then(() => {
+      if (this.registrationChains.get(workflowId) === tail) {
+        this.registrationChains.delete(workflowId);
+      }
+    });
+    return run;
+  }
+
   // Registers the runnable trigger; `onlyIfChanged` passes over draft edits.
-  private async updateRegistration(
+  private updateRegistration(
     workflowId: string,
     state: WorkflowState,
     onlyIfChanged = false,
+  ): Promise<void> {
+    return this.inRegistrationOrder(workflowId, () =>
+      this.registerNow(workflowId, state, onlyIfChanged),
+    );
+  }
+
+  private async registerNow(
+    workflowId: string,
+    state: WorkflowState,
+    onlyIfChanged: boolean,
   ): Promise<void> {
     const key = registrationKey(state);
     if (
@@ -4400,10 +4430,18 @@ export class WorkflowRuntimeService {
         await this.supervisor().liftPark(workflowId, publishedVersion, trigger);
         return;
       }
-      const registered = this.registry.get(workflowId);
-      if (registered && !SUPERVISED_KINDS.has(registered.kind)) {
-        this.registry.delete(workflowId);
-      }
+      // In registration order, and only while this park stands: a registration
+      // of a newer version that already ran must keep its entry.
+      let stands = false;
+      await this.inRegistrationOrder(workflowId, async () => {
+        const park = await store.getWorkflowPark(workflowId);
+        stands = park?.published_version === publishedVersion;
+        const registered = this.registry.get(workflowId);
+        if (stands && registered && !SUPERVISED_KINDS.has(registered.kind)) {
+          this.registry.delete(workflowId);
+        }
+      });
+      if (!stands) return;
       this.logger.error(
         `Workflow ${workflowId} is PARKED after run ${runId ?? "(unjournaled)"} ` +
           "failed; its trigger will not fire again until the workflow is " +
@@ -4411,7 +4449,7 @@ export class WorkflowRuntimeService {
       );
     } catch (parkError) {
       this.logger.warn(
-        `Could not park workflow ${workflowId} after a failed run: @error`,
+        `Applying onFailure = PARK to workflow ${workflowId} after a failed run failed; whether it is parked is unknown: @error`,
         parkError,
       );
     }
