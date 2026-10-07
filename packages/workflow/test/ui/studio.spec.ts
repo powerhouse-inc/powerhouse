@@ -155,4 +155,21 @@ test.describe("Workflow Studio", () => {
     const box = await graph.boundingBox();
     expect(box!.y).toBeGreaterThan(name!.y + name!.height);
   });
+
+  test("a description set in the editor shows on the overview", async ({
+    app,
+  }) => {
+    await openDrive(app);
+    await selectInSidebar(app, "Link checker");
+    await app.getByRole("button", { name: "Edit workflow" }).click();
+    const input = app.getByRole("textbox", { name: "Workflow description" });
+    await input.fill("Checks every link on the site");
+    await input.press("Enter");
+
+    await app.getByRole("button", { name: "Overview" }).click();
+    const row = app
+      .getByRole("list", { name: "Workflows" })
+      .locator(":scope > li", { hasText: "Link checker" });
+    await expect(row.getByText("Checks every link on the site")).toBeVisible();
+  });
 });
