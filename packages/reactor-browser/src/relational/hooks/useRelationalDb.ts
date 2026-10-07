@@ -1,9 +1,12 @@
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
 import { createRelationalDb } from "@powerhousedao/reactor";
 import type { IRelationalDb as IRelationalDbCore } from "@powerhousedao/shared/processors";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { usePGliteDB } from "../../pglite/usePGlite.js";
-import { relationalKysely } from "../utils/relational-dialect.js";
+import {
+  relationalKysely,
+  subscribeRelationalPoisoned,
+} from "../utils/relational-dialect.js";
 
 // Type for Relational DB instance enhanced with live capabilities
 export type RelationalDbWithLive<Schema> = IRelationalDbCore<Schema> & {
@@ -19,9 +22,8 @@ interface IRelationalDbState<Schema> {
 // Custom initializer that creates enhanced Kysely instance with live capabilities
 function createRelationalDbWithLive<Schema>(
   pgliteInstance: PGliteWithLive,
-  options: RelationalDbOptions,
 ): RelationalDbWithLive<Schema> {
-  const baseDb = relationalKysely<Schema>(pgliteInstance, options);
+  const baseDb = relationalKysely<Schema>(pgliteInstance);
   const relationalDb = createRelationalDb(baseDb);
 
   // Inject the live namespace with proper typing
@@ -33,7 +35,10 @@ function createRelationalDbWithLive<Schema>(
 }
 
 export type RelationalDbOptions = {
-  /** Called once if the PGlite session becomes unusable; the caller decides how to recover. */
+  /**
+   * Called once if the shared PGlite session becomes unusable; every hook that
+   * passes one is told, and it unsubscribes on unmount. Recovery is the caller's.
+   */
   onPoisoned?: (cause: Error) => void;
 };
 
@@ -52,14 +57,19 @@ export const useRelationalDb = <Schema>(
       };
     }
 
-    const db = createRelationalDbWithLive<Schema>(pglite.db, { onPoisoned });
+    const db = createRelationalDbWithLive<Schema>(pglite.db);
 
     return {
       db,
       isLoading: false,
       error: null,
     };
-  }, [pglite, onPoisoned]);
+  }, [pglite]);
+
+  useEffect(() => {
+    if (!pglite.db || !onPoisoned) return;
+    return subscribeRelationalPoisoned(pglite.db, onPoisoned);
+  }, [pglite.db, onPoisoned]);
 
   return relationalDb;
 };

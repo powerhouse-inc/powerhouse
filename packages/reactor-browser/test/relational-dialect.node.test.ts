@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   relationalDialect,
   relationalKysely,
+  subscribeRelationalPoisoned,
 } from "../src/relational/utils/relational-dialect.js";
 
 type Schema = { t: { id: number } };
@@ -70,10 +71,10 @@ describe("relationalDialect", () => {
     expect(rows.rows).toEqual([{ id: 1 }]);
   });
 
-  it("passes an onPoisoned option to the hardened dialect", async () => {
+  function deadSession() {
     const pg = new PGlite();
     opened.push(pg);
-    const dead = {
+    return {
       query: (text: string, params?: unknown[]) =>
         /dead_call/.test(text)
           ? new Promise<never>(() => undefined)
@@ -81,14 +82,41 @@ describe("relationalDialect", () => {
       exec: (text: string) => pg.exec(text),
       isInTransaction: () => pg.isInTransaction(),
     };
-    const poisoned: Error[] = [];
+  }
+
+  it("tells every subscriber of a PGlite that its session is poisoned, whoever opened it first", async () => {
+    const dead = deadSession();
     const db = relationalKysely<Schema>(dead, {
       statementTimeoutMs: 50,
       onDiagnostic: () => undefined,
-      onPoisoned: (cause) => poisoned.push(cause),
     });
+    const first: Error[] = [];
+    const second: Error[] = [];
+    subscribeRelationalPoisoned(dead, (cause) => first.push(cause));
+    subscribeRelationalPoisoned(dead, (cause) => second.push(cause));
 
     await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
-    expect(poisoned).toHaveLength(1);
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
+  });
+
+  it("stops telling a subscriber that unsubscribed, and tells a late one at once", async () => {
+    const dead = deadSession();
+    const db = relationalKysely<Schema>(dead, {
+      statementTimeoutMs: 50,
+      onDiagnostic: () => undefined,
+    });
+    const gone: Error[] = [];
+    const unsubscribe = subscribeRelationalPoisoned(dead, (cause) =>
+      gone.push(cause),
+    );
+    unsubscribe();
+
+    await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
+    expect(gone).toEqual([]);
+
+    const late: Error[] = [];
+    subscribeRelationalPoisoned(dead, (cause) => late.push(cause));
+    expect(late).toHaveLength(1);
   });
 });

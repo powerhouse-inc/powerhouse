@@ -22,19 +22,71 @@ export function relationalDialect(
   return new PGliteDialect(instance as PGlite);
 }
 
-const kyselyByInstance = new WeakMap<object, Kysely<unknown>>();
+type PoisonListener = (cause: Error) => void;
+
+type SharedRelationalDb = {
+  kysely: Kysely<unknown>;
+  listeners: Set<PoisonListener>;
+  poisoned?: Error;
+};
+
+const sharedByInstance = new WeakMap<object, SharedRelationalDb>();
+
+function sharedFor(
+  instance: object,
+  options: Partial<Omit<HardenedPGliteDialectOptions, "onPoisoned">> = {},
+): SharedRelationalDb {
+  let shared = sharedByInstance.get(instance);
+  if (shared === undefined) {
+    const listeners = new Set<PoisonListener>();
+    const created: SharedRelationalDb = {
+      listeners,
+      kysely: new Kysely<unknown>({
+        dialect: relationalDialect(instance, {
+          ...options,
+          onPoisoned: (cause) => {
+            created.poisoned = cause;
+            for (const listener of [...listeners]) {
+              try {
+                listener(cause);
+              } catch (error) {
+                console.error("relational onPoisoned listener threw", error);
+              }
+            }
+          },
+        }),
+      }),
+    };
+    shared = created;
+    sharedByInstance.set(instance, shared);
+  }
+  return shared;
+}
 
 /** One Kysely, so one queue, per PGlite; `options` apply from the first caller, which creates it. */
 export function relationalKysely<Schema>(
   instance: object,
-  options: Partial<HardenedPGliteDialectOptions> = {},
+  options: Partial<Omit<HardenedPGliteDialectOptions, "onPoisoned">> = {},
 ): Kysely<Schema> {
-  let kysely = kyselyByInstance.get(instance);
-  if (kysely === undefined) {
-    kysely = new Kysely<unknown>({
-      dialect: relationalDialect(instance, options),
-    });
-    kyselyByInstance.set(instance, kysely);
+  return sharedFor(instance, options).kysely as Kysely<Schema>;
+}
+
+/**
+ * Tells `listener` once the shared session of `instance` is poisoned, however
+ * many consumers share it and whichever opened it first; a late subscriber is
+ * told at once. Returns the unsubscribe.
+ */
+export function subscribeRelationalPoisoned(
+  instance: object,
+  listener: PoisonListener,
+): () => void {
+  const shared = sharedFor(instance);
+  if (shared.poisoned !== undefined) {
+    listener(shared.poisoned);
+    return () => undefined;
   }
-  return kysely as Kysely<Schema>;
+  shared.listeners.add(listener);
+  return () => {
+    shared.listeners.delete(listener);
+  };
 }
