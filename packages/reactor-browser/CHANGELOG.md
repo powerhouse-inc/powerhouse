@@ -1,3 +1,24 @@
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **reactor-browser:** name scoped package sources correctly in load failures ([c1930e8e89](https://github.com/powerhouse-inc/powerhouse/commit/c1930e8e89))
+- **reactor-browser:** let only the newest reload of a source win ([a9954186e7](https://github.com/powerhouse-inc/powerhouse/commit/a9954186e7))
+- **reactor-browser:** keep a source's models when its reload fails ([f2c21617cc](https://github.com/powerhouse-inc/powerhouse/commit/f2c21617cc))
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features

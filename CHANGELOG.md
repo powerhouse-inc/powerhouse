@@ -1,3 +1,64 @@
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **builder-tools:** prebuild a loadable reactor shared-worker bundle ([91cfb72bc5](https://github.com/powerhouse-inc/powerhouse/commit/91cfb72bc5))
+- **connect:** load the reactor shared worker from the prebuilt bundle ([f0bcdfa43e](https://github.com/powerhouse-inc/powerhouse/commit/f0bcdfa43e))
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+- **ph-cli:** emit the reactor worker bundle in ph connect build ([06cbedb13b](https://github.com/powerhouse-inc/powerhouse/commit/06cbedb13b))
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods to the calendar and parse filters as UTC ([1b141b94f5](https://github.com/powerhouse-inc/powerhouse/commit/1b141b94f5))
+- **analytics:** store knex timestamps as UTC, matching the pglite store ([2b6d5cd43a](https://github.com/powerhouse-inc/powerhouse/commit/2b6d5cd43a))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **builder-tools:** fold builder-tools version + upstream dist state into worker bundle cache key ([401e474089](https://github.com/powerhouse-inc/powerhouse/commit/401e474089))
+- **builder-tools:** derive the worker cache key's package list from connect's deps ([4e779446f9](https://github.com/powerhouse-inc/powerhouse/commit/4e779446f9))
+- **builder-tools:** drop stale worker package bundles when none are rebuilt ([e291bf250e](https://github.com/powerhouse-inc/powerhouse/commit/e291bf250e))
+- **builder-tools:** keep page-only vendor chunks out of the reactor worker ([72ccda02a8](https://github.com/powerhouse-inc/powerhouse/commit/72ccda02a8))
+- **builder-tools:** precache the reactor worker metadata for offline boots ([b2f964167d](https://github.com/powerhouse-inc/powerhouse/commit/b2f964167d))
+- **builder-tools:** let worker import errors surface instead of a window ReferenceError ([4a73df4816](https://github.com/powerhouse-inc/powerhouse/commit/4a73df4816))
+- **codegen:** seed module aggregates without clobbering populated ones ([ab787ff6e5](https://github.com/powerhouse-inc/powerhouse/commit/ab787ff6e5))
+- **codegen:** never rewrite an AI config file that exists ([876f0bcf45](https://github.com/powerhouse-inc/powerhouse/commit/876f0bcf45))
+- **connect:** fold the worker bundle digest into the version fingerprint ([76e7b4fd83](https://github.com/powerhouse-inc/powerhouse/commit/76e7b4fd83))
+- **connect:** report the reactor worker unavailable instead of loading the library artifact ([9835d681b0](https://github.com/powerhouse-inc/powerhouse/commit/9835d681b0))
+- **connect:** forward only local-package rebuilds to the reactor worker ([0240f4d0ee](https://github.com/powerhouse-inc/powerhouse/commit/0240f4d0ee))
+- **connect:** keep bundled models and drop vanished manifests on worker reloads ([b3c9df52f9](https://github.com/powerhouse-inc/powerhouse/commit/b3c9df52f9))
+- **ph-cli:** ship the vetra drive icons instead of fetching them from IPFS ([659bb86fed](https://github.com/powerhouse-inc/powerhouse/commit/659bb86fed))
+- **ph-cli:** draw the drive icons as the powerhouse mark in two greys ([5f2b476607](https://github.com/powerhouse-inc/powerhouse/commit/5f2b476607))
+- **reactor:** separate bench record paths with "/" on every platform ([3c558a5a11](https://github.com/powerhouse-inc/powerhouse/commit/3c558a5a11))
+- **reactor:** spawn pnpm by the entry point pnpm exports ([e04832e189](https://github.com/powerhouse-inc/powerhouse/commit/e04832e189))
+- **reactor:** records-guard resolves Git Bash and fails closed without its tools ([0580ac1262](https://github.com/powerhouse-inc/powerhouse/commit/0580ac1262))
+- **reactor:** refuse to index a scope state resultingState does not carry ([8508e74ad6](https://github.com/powerhouse-inc/powerhouse/commit/8508e74ad6))
+- **reactor:** emit JOB_FAILED once and log failed jobs by id ([1c38379dbf](https://github.com/powerhouse-inc/powerhouse/commit/1c38379dbf))
+- **reactor:** emit one JOB_FAILED, with the job, when a deferral expires ([405912ac74](https://github.com/powerhouse-inc/powerhouse/commit/405912ac74))
+- **reactor:** one JOB_FAILED per terminal failure, carrying the typed error ([155017155b](https://github.com/powerhouse-inc/powerhouse/commit/155017155b))
+- **reactor-api:** accept subgraphs by class through one predicate ([b0146ab55a](https://github.com/powerhouse-inc/powerhouse/commit/b0146ab55a))
+- **reactor-api:** one acceptance rule for document-model modules ([367ea4af15](https://github.com/powerhouse-inc/powerhouse/commit/367ea4af15))
+- **reactor-browser:** keep a source's models when its reload fails ([f2c21617cc](https://github.com/powerhouse-inc/powerhouse/commit/f2c21617cc))
+- **reactor-browser:** let only the newest reload of a source win ([a9954186e7](https://github.com/powerhouse-inc/powerhouse/commit/a9954186e7))
+- **reactor-browser:** name scoped package sources correctly in load failures ([c1930e8e89](https://github.com/powerhouse-inc/powerhouse/commit/c1930e8e89))
+- **reactor-workflow:** bound the step journal and arm trigger contexts ([878dabd2ee](https://github.com/powerhouse-inc/powerhouse/commit/878dabd2ee))
+- **reactor-workflow:** cap trigger payloads and tame the redact regexes ([25917fe58c](https://github.com/powerhouse-inc/powerhouse/commit/25917fe58c))
+- **reactor-workflow:** close the journal-cap residuals ([0119f56f59](https://github.com/powerhouse-inc/powerhouse/commit/0119f56f59))
+- **reactor-workflow:** journal one document-created run when the document and its drive both report it ([f9b734b06b](https://github.com/powerhouse-inc/powerhouse/commit/f9b734b06b))
+- **switchboard:** survive a logger that fails during fatal shutdown ([ecc8975282](https://github.com/powerhouse-inc/powerhouse/commit/ecc8975282))
+- **switchboard:** never let observability lower a fatal exit code ([0498342d22](https://github.com/powerhouse-inc/powerhouse/commit/0498342d22))
+
+### 🔥 Performance
+
+- **connect:** resolve the worker bundle and package sources in parallel ([12aca05a93](https://github.com/powerhouse-inc/powerhouse/commit/12aca05a93))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features

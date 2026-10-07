@@ -1,3 +1,33 @@
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+- **connect:** load the reactor shared worker from the prebuilt bundle ([f0bcdfa43e](https://github.com/powerhouse-inc/powerhouse/commit/f0bcdfa43e))
+
+### 🩹 Fixes
+
+- **reactor-browser:** name scoped package sources correctly in load failures ([c1930e8e89](https://github.com/powerhouse-inc/powerhouse/commit/c1930e8e89))
+- **connect:** keep bundled models and drop vanished manifests on worker reloads ([b3c9df52f9](https://github.com/powerhouse-inc/powerhouse/commit/b3c9df52f9))
+- **connect:** forward only local-package rebuilds to the reactor worker ([0240f4d0ee](https://github.com/powerhouse-inc/powerhouse/commit/0240f4d0ee))
+- **connect:** report the reactor worker unavailable instead of loading the library artifact ([9835d681b0](https://github.com/powerhouse-inc/powerhouse/commit/9835d681b0))
+- **connect:** fold the worker bundle digest into the version fingerprint ([76e7b4fd83](https://github.com/powerhouse-inc/powerhouse/commit/76e7b4fd83))
+- **ph-cli:** draw the drive icons as the powerhouse mark in two greys ([5f2b476607](https://github.com/powerhouse-inc/powerhouse/commit/5f2b476607))
+- **ph-cli:** ship the vetra drive icons instead of fetching them from IPFS ([659bb86fed](https://github.com/powerhouse-inc/powerhouse/commit/659bb86fed))
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+
+### 🔥 Performance
+
+- **connect:** resolve the worker bundle and package sources in parallel ([12aca05a93](https://github.com/powerhouse-inc/powerhouse/commit/12aca05a93))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features
