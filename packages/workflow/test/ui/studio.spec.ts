@@ -28,10 +28,39 @@ test.describe("Workflow Studio", () => {
       app.getByText("4 workflows, 4 enabled, 1 failed on the last run"),
     ).toBeVisible();
 
-    await ping.getByRole("button").first().click();
+    // The header folds the row; its content opens the workflow.
+    await ping.getByRole("button", { name: "Open Uptime ping" }).click();
     await expect(
       app.getByRole("heading", { name: "Uptime ping" }),
     ).toBeVisible();
+  });
+
+  test("a workflow folds to its title line, and stays folded", async ({
+    app,
+  }) => {
+    await openDrive(app);
+    const row = () =>
+      app
+        .getByRole("list", { name: "Workflows" })
+        .locator(":scope > li", { hasText: "Uptime ping" });
+    // Expanded, the graph names each step under its circle.
+    const stepName = () => row().getByText("Ping host", { exact: true });
+    await expect(stepName()).toBeVisible();
+
+    // Folded, the title line carries the trigger and a chain of step logos.
+    await row().getByRole("button", { name: "Collapse Uptime ping" }).click();
+    await expect(stepName()).toHaveCount(0);
+    await expect(row().getByText("Manual", { exact: true })).toBeVisible();
+    await expect(row().getByRole("list")).toHaveAccessibleName(
+      /Ping host: failed/,
+    );
+
+    await app.reload();
+    await expect(
+      row().getByRole("button", { name: "Expand Uptime ping" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    await row().getByRole("button", { name: "Expand Uptime ping" }).click();
+    await expect(stepName()).toBeVisible();
   });
 
   test("lists every run in the drive with its outcome", async ({ app }) => {
