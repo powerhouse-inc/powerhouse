@@ -36,6 +36,7 @@ export {
   WorkflowSingletonConflictError,
   type AcquireSingletonOptions,
   type WorkflowSingletonLease,
+  type WorkflowSingletonLoss,
 } from "./reactor/singleton-lease.js";
 export { publishRunUser } from "./reactor/run-user.js";
 export type {

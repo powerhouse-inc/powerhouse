@@ -431,13 +431,115 @@ describe("a holder that cannot renew", () => {
         expect(Date.now() - brokeAt).toBeLessThan(
           heartbeatMs * SINGLETON_STALE_HEARTBEATS,
         );
-        expect(lost).toHaveBeenCalledWith(undefined);
+        expect(lost).toHaveBeenCalledWith(
+          expect.objectContaining({ reason: "unrenewable" }),
+        );
       } finally {
         broken = false;
         await lease.release();
       }
     },
   );
+});
+
+// Embedded PGlite: no other process can open the journal, so nothing can take
+// the lease and a stalled renewal must not turn workflows off.
+describe("a holder whose journal no other process can open", () => {
+  it("never fences itself when it cannot renew", async () => {
+    const relationalDb = createFreshRelationalDb();
+    const lost = vi.fn();
+    const warned = vi.fn();
+    const lease = await acquireWorkflowSingletonLease({
+      relationalDb: withUpdateFault(
+        relationalDb,
+        () => () => Promise.reject(new Error("connection terminated")),
+      ),
+      logger: { ...(silent as object), warn: warned } as never,
+      owner: "alpha",
+      heartbeatMs: 100,
+      selfFence: false,
+      onLost: lost,
+    });
+    try {
+      // Well past the fence (150ms of silence) and the stale mark (200ms).
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      expect(lost).not.toHaveBeenCalled();
+      expect(warned).toHaveBeenCalled();
+    } finally {
+      await lease.release();
+    }
+  });
+});
+
+// The operator has to tell "someone else runs workflows now" from "this
+// process lost touch with its database".
+describe("the loss report", () => {
+  function recordingLogger() {
+    const errors: string[] = [];
+    return {
+      errors,
+      logger: {
+        ...(silent as object),
+        error: (message: string) => errors.push(message),
+      } as never,
+    };
+  }
+
+  it("names the claim that took the lease over", async () => {
+    const { relationalDb, age } = fixture();
+    const { errors, logger } = recordingLogger();
+    const lost = vi.fn();
+    const oldPod = await acquireWorkflowSingletonLease({
+      relationalDb,
+      logger,
+      owner: "alpha",
+      onLost: lost,
+    });
+    await age(60_001);
+    const newPod = await acquireWorkflowSingletonLease({
+      relationalDb,
+      logger: silent,
+      owner: "beta",
+    });
+
+    await oldPod.heartbeat();
+
+    expect(lost).toHaveBeenCalledWith({ reason: "taken", heldBy: "beta" });
+    expect(errors.join("\n")).toContain('taken over by "beta"');
+    await newPod.release();
+  });
+
+  it("says no takeover was seen when it fenced itself", async () => {
+    const relationalDb = createFreshRelationalDb();
+    const { errors, logger } = recordingLogger();
+    const lost = vi.fn();
+    const lease = await acquireWorkflowSingletonLease({
+      relationalDb: withUpdateFault(
+        relationalDb,
+        () => () => Promise.reject(new Error("connection terminated")),
+      ),
+      logger,
+      owner: "alpha",
+      heartbeatMs: 500,
+      onLost: lost,
+    });
+    try {
+      await vi.waitFor(() => expect(lost).toHaveBeenCalledOnce(), {
+        timeout: 5_000,
+      });
+
+      expect(lost).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "unrenewable" }),
+      );
+      const report = errors.join("\n");
+      expect(report).toContain("could not be renewed");
+      expect(report).toContain("none was seen to");
+      expect(report).not.toContain("taken over by");
+    } finally {
+      await lease.release();
+    }
+  });
 });
 
 // A self-fence saw nobody take the lease, so the row is still this

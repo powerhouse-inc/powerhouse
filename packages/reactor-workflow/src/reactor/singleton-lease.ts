@@ -108,6 +108,18 @@ export class WorkflowSingletonConflictError extends Error {
   }
 }
 
+/**
+ * Why a holder stopped owning workflow execution.
+ *
+ * - `taken`: a renewal matched no row, so another claim holds the lease
+ *   (`heldBy` names it when the row still exists).
+ * - `unrenewable`: no renewal landed for long enough that another claim could
+ *   take it over; none was seen to.
+ */
+export type WorkflowSingletonLoss =
+  | { reason: "taken"; heldBy: string | undefined }
+  | { reason: "unrenewable"; silentMs: number };
+
 /** A held claim, renewed from the moment it is taken. The host releases it on
  * shutdown, so the next boot does not wait out the TTL. */
 export interface WorkflowSingletonLease {
@@ -135,10 +147,15 @@ export interface AcquireSingletonOptions {
   storageId?: string;
   ttlMs?: number;
   heartbeatMs?: number;
-  /** Called once, when a heartbeat finds the lease held by another claim
-   * (another process, or a newer one under the same owner name). Receives
-   * the current holder's owner name, if any. */
-  onLost?: (heldBy: string | undefined) => void;
+  /** Called once, when this process stops owning workflow execution. */
+  onLost?: (loss: WorkflowSingletonLoss) => void;
+  /**
+   * Whether a holder that cannot renew reports itself lost before anyone
+   * could take over. On by default. Off for a journal no other process can
+   * open (embedded PGlite): nothing can take the lease, so a stalled renewal
+   * is only logged.
+   */
+  selfFence?: boolean;
   env?: Record<string, string | undefined>;
 }
 
@@ -308,6 +325,7 @@ export async function acquireWorkflowSingletonLease(
   // Before anyone may take the lease: a stale same-owner claim, or expiry.
   const takeableAfterMs = Math.min(staleMs, ttlMs);
   const fenceMs = takeableAfterMs - Math.min(heartbeatMs, ttlMs) / 2;
+  const selfFence = options.selfFence ?? true;
   let renewedAt = claimSentAt;
   let renewFailed = false;
   let inFlight: Promise<boolean> | undefined;
@@ -322,15 +340,21 @@ export async function acquireWorkflowSingletonLease(
     timer = undefined;
   };
 
-  const markLost = (heldBy: string | undefined, why: string) => {
+  const markLost = (loss: WorkflowSingletonLoss) => {
     if (lost) return;
     lost = true;
     stop();
     log.error(
-      `Workflow singleton lease of "${owner}" ${why}; this process no ` +
-        "longer owns workflow execution and stops running it.",
+      loss.reason === "taken"
+        ? `Workflow singleton lease of "${owner}" was taken over by ` +
+            `"${loss.heldBy ?? "nobody"}"; this process no longer owns ` +
+            "workflow execution and stops running it."
+        : `Workflow singleton lease of "${owner}" could not be renewed for ` +
+            `${Math.round(loss.silentMs)}ms, long enough that another process ` +
+            "could take it over (none was seen to); this process stops " +
+            "running workflows.",
     );
-    options.onLost?.(heldBy);
+    options.onLost?.(loss);
   };
 
   // Keyed on the instance as well as the owner: under a stable owner name an
@@ -362,7 +386,7 @@ export async function acquireWorkflowSingletonLease(
       heldBy = undefined;
     }
     takenOver = true;
-    markLost(heldBy, `is now held by "${heldBy ?? "nobody"}"`);
+    markLost({ reason: "taken", heldBy });
     return false;
   };
 
@@ -380,12 +404,8 @@ export async function acquireWorkflowSingletonLease(
     const silentMs = localNow() - renewedAt;
     // Checked even while a renewal hangs: journal writes are best-effort, so
     // a holder that cannot renew would otherwise keep running workflows.
-    if (silentMs >= fenceMs) {
-      markLost(
-        undefined,
-        `could not be renewed for ${Math.round(silentMs)}ms and may be ` +
-          "taken over",
-      );
+    if (selfFence && silentMs >= fenceMs) {
+      markLost({ reason: "unrenewable", silentMs });
       return;
     }
     if (inFlight) return;
@@ -418,7 +438,6 @@ export async function acquireWorkflowSingletonLease(
           new Promise((resolve) => setTimeout(resolve, tickMs).unref()),
         ]);
       }
-      if (takenOver) return;
       // After a self-fence too: the DELETE matches only this instance's row,
       // and leaving it costs the next boot under another owner the TTL.
       try {

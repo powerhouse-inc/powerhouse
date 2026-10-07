@@ -115,10 +115,15 @@ the sweeps and the supervisor are per process.
   host reports its triggers unavailable. It does not re-claim; workflows come
   back on the next boot, since re-arming needs a fresh compose.
 - A renewal that fails or hangs is retried every 5s. A holder that has gone
-  30s without a renewal it knows landed reports itself lost the same way,
-  before a stale same-owner claim (40s) or expiry (60s) could take the lease:
-  journal writes are best-effort, so it would otherwise keep running
-  workflows beside the next owner.
+  30s without a renewal it knows landed reports itself lost
+  (`reason: "unrenewable"`), before a stale same-owner claim (40s) or expiry
+  (60s) could take the lease: journal writes are best-effort, so it would
+  otherwise keep running workflows beside the next owner. Switchboard then
+  goes down through its fatal shutdown, since nobody else runs workflows,
+  and the restarted process re-claims; an embedded host without one stays
+  without workflows and logs that a restart is needed.
+- Over a journal no other process can open (embedded PGlite) nothing can take
+  the lease, so the holder never fences itself; a stalled renewal is logged.
 - Nothing fences the journal itself: writes do not check the lease, so a
   process keeps writing until it notices the loss.
 - **A refused claim does not take the API down.** The host boots WITHOUT the

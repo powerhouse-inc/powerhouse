@@ -101,6 +101,7 @@ import {
   isWorkflowSingletonConflict,
   resolveWorkflowsEnabled,
   retryWorkflowSingleton,
+  workflowSingletonLossHandler,
   type WorkflowSingletonRetry,
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
@@ -1041,16 +1042,8 @@ async function initServer(
       pieceRegistryUrl: registryUrl,
       models: workerModels,
       logger: logger.child(["workflow-runtime"]),
-      // No re-claim: re-arming needs a fresh compose, so workflows come
-      // back on the next boot.
-      onSingletonLost: (heldBy) => {
-        logger.error(
-          `Another process ("${heldBy ?? "unknown"}") took the workflow ` +
-            "singleton. This Switchboard has stopped its workflow runtime " +
-            "and runs no workflows until it is restarted; everything else " +
-            "serves normally.",
-        );
-      },
+      exclusiveJournal: readModelPgliteDir !== null,
+      onSingletonLost: workflowSingletonLossHandler(logger),
     });
   const registerWorkflowSubgraph = (composed: ComposedWorkflowRuntime) => {
     const WorkflowRuntimeSubgraph = composed.subgraph;

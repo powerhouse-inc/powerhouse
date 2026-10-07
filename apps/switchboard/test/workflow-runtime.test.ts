@@ -36,6 +36,7 @@ import {
   hostPrincipalOf,
   isWorkflowSingletonConflict,
   retryWorkflowSingleton,
+  workflowSingletonLossHandler,
   reactorAccessOf,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
@@ -418,7 +419,12 @@ describe("composeWorkflowRuntime", () => {
       expect(newer.owner).toBe(workflows.singletonOwner);
 
       await vi.advanceTimersByTimeAsync(engine.SINGLETON_HEARTBEAT_MS);
-      await vi.waitFor(() => expect(lost).toHaveBeenCalledWith(newer!.owner));
+      await vi.waitFor(() =>
+        expect(lost).toHaveBeenCalledWith({
+          reason: "taken",
+          heldBy: newer!.owner,
+        }),
+      );
       expect(lost).toHaveBeenCalledTimes(1);
       expect(workflows.triggers).toEqual({
         status: "unavailable",
@@ -471,6 +477,34 @@ describe("composeWorkflowRuntime", () => {
     await next.stop();
   });
 
+  // Embedded PGlite: no other process can open the journal, so the lease must
+  // not turn workflows off over a stalled renewal.
+  it("lets the lease fence itself only over a journal others can open", async () => {
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const selfFence: (boolean | undefined)[] = [];
+    const load = () =>
+      Promise.resolve({
+        ...engine,
+        acquireWorkflowSingletonLease: (
+          options: Parameters<typeof engine.acquireWorkflowSingletonLease>[0],
+        ) => {
+          selfFence.push(options.selfFence);
+          return engine.acquireWorkflowSingletonLease(options);
+        },
+      });
+
+    for (const exclusiveJournal of [true, false]) {
+      const composed = await compose(await buildReactorModule(), {
+        relationalDb: createRelationalDb(pglite()) as IRelationalDb,
+        exclusiveJournal,
+        load,
+      });
+      await composed.stop();
+    }
+
+    expect(selfFence).toEqual([false, true]);
+  });
+
   it("opens no journal when the lease is lost before the runtime exists", async () => {
     const clientModule = await buildReactorModule();
     const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
@@ -485,7 +519,7 @@ describe("composeWorkflowRuntime", () => {
           createWorkflowRuntime,
           acquireWorkflowSingletonLease: async (options) => {
             const lease = await engine.acquireWorkflowSingletonLease(options);
-            options.onLost?.("thief");
+            options.onLost?.({ reason: "taken", heldBy: "thief" });
             return lease;
           },
         }),
@@ -572,6 +606,65 @@ describe("composeWorkflowRuntime", () => {
     } finally {
       await claimed.stop();
     }
+  });
+});
+
+describe("the host's answer to losing the workflow singleton", () => {
+  it("stays without workflows, naming the holder, when another claim took it", () => {
+    const logger = stubLogger();
+    const fatal = vi.fn(() => true);
+
+    workflowSingletonLossHandler(
+      logger,
+      fatal,
+    )({
+      reason: "taken",
+      heldBy: "switchboard-1",
+    });
+
+    expect(fatal).not.toHaveBeenCalled();
+    const logged = vi
+      .mocked(logger.error)
+      .mock.calls.map(([line]) => String(line));
+    expect(logged.join("\n")).toContain('Another process ("switchboard-1")');
+  });
+
+  // Nobody else runs workflows after a database blip: going down lets the
+  // supervisor restart the process, which re-claims at boot.
+  it("goes through the fatal shutdown when no takeover was seen", () => {
+    const logger = stubLogger();
+    const fatal = vi.fn(() => true);
+
+    workflowSingletonLossHandler(
+      logger,
+      fatal,
+    )({
+      reason: "unrenewable",
+      silentMs: 30_000,
+    });
+
+    expect(fatal).toHaveBeenCalledOnce();
+    const [, error] = fatal.mock.calls[0] as unknown as [string, Error];
+    expect(error.message).toContain("no other process was seen");
+    expect(error.message).not.toContain("Another process");
+  });
+
+  it("says a restart is needed when no fatal shutdown is installed", () => {
+    const logger = stubLogger();
+
+    workflowSingletonLossHandler(
+      logger,
+      () => false,
+    )({
+      reason: "unrenewable",
+      silentMs: 30_000,
+    });
+
+    const logged = vi
+      .mocked(logger.error)
+      .mock.calls.map(([line]) => String(line));
+    expect(logged.join("\n")).toContain("until it is restarted");
+    expect(logged.join("\n")).not.toContain("Another process");
   });
 });
 

@@ -47,6 +47,7 @@ import type {
   ReactorAccessInfo,
   ReactorIdentity,
 } from "./workflow/resolvers.js";
+import { triggerFatalShutdown } from "./fatal-shutdown.mjs";
 import { createWorkflowRuntimeSubgraph } from "./workflow/subgraph.js";
 
 type WorkflowEngineModule = typeof WorkflowEngine;
@@ -218,6 +219,44 @@ export function retryWorkflowSingleton(options: {
   };
 }
 
+/**
+ * What a host does once its composed runtime has shut down for losing the
+ * workflow singleton.
+ *
+ * Taken over by another claim: that process runs workflows now, so this one
+ * stays without them until it restarts. Unrenewable with no takeover seen (a
+ * database blip): nothing else runs them, so the process goes down through
+ * the fatal shutdown and its supervisor restarts it, which re-claims at boot.
+ * A host with no fatal shutdown installed (embedded) stays without workflows
+ * and says a restart is needed.
+ */
+export function workflowSingletonLossHandler(
+  logger: ILogger,
+  fatal: (kind: string, error: unknown) => boolean = triggerFatalShutdown,
+): (loss: WorkflowEngine.WorkflowSingletonLoss) => void {
+  return (loss) => {
+    if (loss.reason === "taken") {
+      logger.error(
+        `Another process ("${loss.heldBy ?? "unknown"}") took the workflow ` +
+          "singleton. This Switchboard has stopped its workflow runtime " +
+          "and runs no workflows until it is restarted; everything else " +
+          "serves normally.",
+      );
+      return;
+    }
+    const error = new Error(
+      "The workflow singleton lease could not be renewed for " +
+        `${Math.round(loss.silentMs)}ms; no other process was seen taking it ` +
+        "over",
+    );
+    if (fatal("Workflow singleton lease unrenewable", error)) return;
+    logger.error(
+      `${error.message}. This Switchboard has stopped its workflow runtime ` +
+        "and runs no workflows until it is restarted.",
+    );
+  };
+}
+
 /** The importable models piece workers load: the boot list, and a type's entries. */
 export interface ModelManifestSource {
   modelManifest(): ModelManifestEntry[];
@@ -277,9 +316,16 @@ export interface ComposeWorkflowRuntimeDeps {
    * before it is used, so a connection string's credentials go no further.
    */
   storageId?: string;
-  /** Called once when another claim takes the singleton. The runtime has
-   * already shut down; it stays down until the host restarts. */
-  onSingletonLost?: (heldBy: string | undefined) => void;
+  /**
+   * True when the journal's database is an embedded one no other process can
+   * open (PGlite). Nothing can then take the lease, so a renewal that stalls
+   * (a busy queue, a blocked event loop) is logged rather than turning
+   * workflows off.
+   */
+  exclusiveJournal?: boolean;
+  /** Called once when the composed runtime has shut down for losing the
+   * singleton; see {@link workflowSingletonLossHandler}. */
+  onSingletonLost?: (loss: WorkflowEngine.WorkflowSingletonLoss) => void;
 }
 
 export interface ComposedWorkflowRuntime {
@@ -511,16 +557,28 @@ export async function composeWorkflowRuntime(
           relationalDb: deps.relationalDb,
           logger: deps.logger,
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
-          onLost: (heldBy) => {
+          selfFence: deps.exclusiveJournal !== true,
+          onLost: (lost) => {
             loss.lost = true;
-            loss.heldBy = heldBy;
+            if (lost.reason === "taken") loss.heldBy = lost.heldBy;
             loss.tearDown?.();
-            deps.onSingletonLost?.(heldBy);
+            // While composing, the compose itself fails with a conflict and
+            // the host retries the claim.
+            if (loss.composed) deps.onSingletonLost?.(lost);
           },
         });
 
   try {
-    return await composeClaimed(engine, deps, lease, loss);
+    const composed = await composeClaimed(engine, deps, lease, loss);
+    if (loss.lost) {
+      throw new engine.WorkflowSingletonConflictError(
+        loss.heldBy ?? "unknown",
+        "unknown",
+        lease?.owner ?? "unknown",
+      );
+    }
+    loss.composed = true;
+    return composed;
   } catch (error) {
     // Renewing since the claim, so a compose that fails hands it back, after
     // stopping whatever runtime it had already built.
@@ -537,6 +595,7 @@ type SingletonLease = Awaited<
 // Losing the lease shuts the runtime down; tearDown is set once it exists.
 interface SingletonLoss {
   lost: boolean;
+  composed?: boolean;
   heldBy?: string;
   tearDown?: () => void;
 }
