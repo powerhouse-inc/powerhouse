@@ -6,6 +6,7 @@ import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import type { IReactor } from "../../src/core/types.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
+import { ExcessiveReshuffleError } from "../../src/shared/errors.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type {
   ISyncCursorStorage,
@@ -250,6 +251,85 @@ describe("the inbox ack across documents applying out of order", () => {
 
     expect(rename.status).toBe(SyncOperationStatus.Applied);
     expect(inbox.get(stalled.id)).toBe(stalled);
+    expect(inbox.ackOrdinal).toBe(9);
+  });
+
+  /**
+   * One batch, two documents, the stalled one first: the inbox apply ran as a
+   * single chain and awaited each item's job in turn, so the rename queued
+   * behind the stuck document never applied.
+   */
+  it("applies an unrelated document's rename from behind a stalled load", async () => {
+    const stalled = inboxItem("osq", "osq-doc", 10, "ADD_ENTRY");
+    const rename = inboxItem("kbc", "kbc-ledger", 11, "SET_NAME");
+    statuses.set("job-key-kbc", jobInfo("job-key-kbc", JobStatus.READ_READY));
+
+    inbox.add(stalled, rename);
+    await settle();
+
+    expect(rename.status).toBe(SyncOperationStatus.Applied);
+    expect(inbox.get(rename.id)).toBeUndefined();
+    expect(stalled.status).not.toBe(SyncOperationStatus.Applied);
+    expect(stalled.status).not.toBe(SyncOperationStatus.Error);
+    expect(inbox.get(stalled.id)).toBe(stalled);
+    expect(inbox.ackOrdinal).toBe(9);
+  });
+
+  it("applies a later batch for a document the stalled one does not touch", async () => {
+    const stalled = inboxItem("osq", "osq-doc", 10, "ADD_ENTRY");
+    inbox.add(stalled);
+    await settle();
+
+    const rename = inboxItem("kbc", "kbc-ledger", 11, "SET_NAME");
+    statuses.set("job-key-kbc", jobInfo("job-key-kbc", JobStatus.READ_READY));
+    inbox.add(rename);
+    await settle();
+
+    expect(rename.status).toBe(SyncOperationStatus.Applied);
+    expect(inbox.get(stalled.id)).toBe(stalled);
+    expect(inbox.ackOrdinal).toBe(9);
+  });
+
+  /** A dead letter stands for its operation, so the ack passes it. */
+  it("advances the ack past a dead-lettered operation", async () => {
+    const failing = inboxItem("osc", "osc-doc", 10, "ADD_SOURCE");
+    const rename = inboxItem("kbc", "kbc-ledger", 11, "SET_NAME");
+    statuses.set(
+      "job-key-osc",
+      jobInfo(
+        "job-key-osc",
+        JobStatus.FAILED,
+        new ExcessiveReshuffleError("osc-doc", "global", 1612, 1000),
+      ),
+    );
+    statuses.set("job-key-kbc", jobInfo("job-key-kbc", JobStatus.READ_READY));
+
+    inbox.add(failing, rename);
+    await settle();
+
+    expect(deadLetter.items.map((item) => item.id)).toEqual(["osc"]);
+    expect(rename.status).toBe(SyncOperationStatus.Applied);
+    expect(inbox.ackOrdinal).toBe(11);
+  });
+
+  /** Only the enqueue is ordered per document; the queue orders the writes. */
+  it("keeps one document's loads in enqueue order behind a stalled load", async () => {
+    const stalled = inboxItem("osq-1", "osq-doc", 10, "ADD_ENTRY");
+    inbox.add(stalled);
+    await settle();
+
+    const later = inboxItem("osq-2", "osq-doc", 11, "ADD_ENTRY");
+    statuses.set(
+      "job-key-osq-2",
+      jobInfo("job-key-osq-2", JobStatus.READ_READY),
+    );
+    inbox.add(later);
+    await settle();
+
+    const loadBatch = vi.mocked(reactor.loadBatch);
+    expect(loadBatch.mock.calls[1][0].jobs[0].externalDeps).toEqual([
+      "job-key-osq-1",
+    ]);
     expect(inbox.ackOrdinal).toBe(9);
   });
 });

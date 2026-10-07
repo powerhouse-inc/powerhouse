@@ -90,6 +90,11 @@ export class SyncBuilder {
     return this;
   }
 
+  withMaxConcurrentInboxChunks(limit: number): this {
+    this.config.maxConcurrentInboxChunks = limit;
+    return this;
+  }
+
   withMaxHeldOperationsPerRemote(limit: number): this {
     this.config.maxHeldOperationsPerRemote = limit;
     return this;
