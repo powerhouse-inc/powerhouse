@@ -32,6 +32,7 @@ import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { getReactorPGlite } from "../pglite.db.js";
+import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -77,7 +78,9 @@ export async function createBrowserReactor(
     .withJwtHandler(jwtHandler)
     .withKysely(
       new Kysely<Database>({
-        dialect: new HardenedPGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(pg, {
+          onPoisoned: reloadPageForPoisonedStore,
+        }),
       }),
     );
   const builder = new ReactorClientBuilder()

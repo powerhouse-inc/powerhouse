@@ -69,4 +69,26 @@ describe("relationalDialect", () => {
     const rows = await sql`select id from t`.execute(first);
     expect(rows.rows).toEqual([{ id: 1 }]);
   });
+
+  it("passes an onPoisoned option to the hardened dialect", async () => {
+    const pg = new PGlite();
+    opened.push(pg);
+    const dead = {
+      query: (text: string, params?: unknown[]) =>
+        /dead_call/.test(text)
+          ? new Promise<never>(() => undefined)
+          : pg.query(text, params),
+      exec: (text: string) => pg.exec(text),
+      isInTransaction: () => pg.isInTransaction(),
+    };
+    const poisoned: Error[] = [];
+    const db = relationalKysely<Schema>(dead, {
+      statementTimeoutMs: 50,
+      onDiagnostic: () => undefined,
+      onPoisoned: (cause) => poisoned.push(cause),
+    });
+
+    await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
+    expect(poisoned).toHaveLength(1);
+  });
 });

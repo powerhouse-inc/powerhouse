@@ -9,7 +9,7 @@ type BudgetStorage = Pick<Storage, "getItem" | "setItem">;
 
 function sessionStore(): BudgetStorage | undefined {
   try {
-    return window.sessionStorage;
+    return globalThis.sessionStorage as BudgetStorage | undefined;
   } catch {
     return undefined;
   }
@@ -48,6 +48,15 @@ export function reloadForPoisonedStore(
     return;
   }
   setWorkerConnectionStatus("storage-unusable");
+}
+
+/** onPoisoned for an in-tab store: the page reload reopens it, within the same budget. */
+export function reloadPageForPoisonedStore(
+  cause: Error,
+  reload: () => void = () => window.location.reload(),
+): void {
+  console.error("[connect] PGlite session poisoned:", cause);
+  reloadForPoisonedStore(reload);
 }
 
 export function reloadForWorker(

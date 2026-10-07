@@ -78,4 +78,22 @@ describe("poisoned-store reload budget", () => {
     expect(reload).toHaveBeenCalledTimes(5);
     expect(budget.claimPoisonedStoreReload(storage, 10)).toBe(true);
   });
+
+  it("reloads the page for a poisoned in-tab store within the same budget", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("sessionStorage", memoryStorage());
+    try {
+      const cause = new Error("dead call");
+      budget.reloadPageForPoisonedStore(cause, reload);
+      budget.reloadPageForPoisonedStore(cause, reload);
+      budget.reloadPageForPoisonedStore(cause, reload);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(reload).toHaveBeenCalledTimes(2);
+    expect(connectionState.getWorkerConnectionStatus()).toBe(
+      "storage-unusable",
+    );
+  });
 });

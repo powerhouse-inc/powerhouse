@@ -11,4 +11,16 @@ describe("connect's own pglite stores", () => {
     expect(db).not.toMatch(/new PGliteDialect\(/);
     expect(db).toMatch(/new HardenedPGliteDialect\(/);
   });
+
+  it("hand both in-tab dialects the bounded page reload for a poisoned session", () => {
+    for (const file of ["./pglite.db.ts", "./utils/reactor.ts"]) {
+      const calls = [
+        ...source(file).matchAll(/new HardenedPGliteDialect\(([\s\S]*?)\)/g),
+      ];
+      expect(calls.length, file).toBeGreaterThan(0);
+      for (const [call] of calls) {
+        expect(call, file).toMatch(/onPoisoned: reloadPageForPoisonedStore/);
+      }
+    }
+  });
 });

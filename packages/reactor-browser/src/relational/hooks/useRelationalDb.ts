@@ -19,8 +19,9 @@ interface IRelationalDbState<Schema> {
 // Custom initializer that creates enhanced Kysely instance with live capabilities
 function createRelationalDbWithLive<Schema>(
   pgliteInstance: PGliteWithLive,
+  options: RelationalDbOptions,
 ): RelationalDbWithLive<Schema> {
-  const baseDb = relationalKysely<Schema>(pgliteInstance);
+  const baseDb = relationalKysely<Schema>(pgliteInstance, options);
   const relationalDb = createRelationalDb(baseDb);
 
   // Inject the live namespace with proper typing
@@ -31,8 +32,16 @@ function createRelationalDbWithLive<Schema>(
   return relationalDBWithLive;
 }
 
-export const useRelationalDb = <Schema>(): IRelationalDbState<Schema> => {
+export type RelationalDbOptions = {
+  /** Called once if the PGlite session becomes unusable; the caller decides how to recover. */
+  onPoisoned?: (cause: Error) => void;
+};
+
+export const useRelationalDb = <Schema>(
+  options: RelationalDbOptions = {},
+): IRelationalDbState<Schema> => {
   const pglite = usePGliteDB();
+  const { onPoisoned } = options;
 
   const relationalDb = useMemo<IRelationalDbState<Schema>>(() => {
     if (!pglite.db || pglite.isLoading || pglite.error) {
@@ -43,14 +52,14 @@ export const useRelationalDb = <Schema>(): IRelationalDbState<Schema> => {
       };
     }
 
-    const db = createRelationalDbWithLive<Schema>(pglite.db);
+    const db = createRelationalDbWithLive<Schema>(pglite.db, { onPoisoned });
 
     return {
       db,
       isLoading: false,
       error: null,
     };
-  }, [pglite]);
+  }, [pglite, onPoisoned]);
 
   return relationalDb;
 };
