@@ -353,7 +353,7 @@ export interface ISyncAdmin {
   /** Rebuilds the channel from cursor storage; never drops the remote's record. */
   resetChannel(remoteName: string): Promise<void>;
 
-  /** Retries a dead letter and lifts its quarantine; an unknown id is a no-op. */
+  /** Retries a dead letter; its document's quarantine lifts once none remain. */
   requeueDeadLetter(remoteName: string, id: string): Promise<void>;
 
   /** Drops a dead-lettered operation from the mailbox and from storage. */
