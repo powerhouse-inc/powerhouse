@@ -279,8 +279,10 @@ export class SyncManager
   private readonly parkedByQuarantine = new WeakSet<SyncOperation>();
   private readonly purgedDocumentIds = new Set<string>();
   // Requeued dead letters whose row stays until the retry's job succeeds.
-  // dead letter id -> its document id
-  private readonly requeuedDeadLetterIds = new Map<string, string>();
+  private readonly requeuedDeadLetterIds = new Map<
+    string,
+    { remoteName: string; documentId: string }
+  >();
   private readonly requeuesInFlight = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
@@ -1372,6 +1374,9 @@ export class SyncManager
       this.evictedOutboxFloors.delete(name);
       this.derivedThrough.delete(name);
       this.prunePending.delete(name);
+      for (const [id, pending] of [...this.requeuedDeadLetterIds]) {
+        if (pending.remoteName === name) this.requeuedDeadLetterIds.delete(id);
+      }
       this.receivedMarkers.delete(name);
       for (const [id, retry] of [...this.markerRetries]) {
         if (retry.remoteName !== name) continue;
@@ -1605,7 +1610,10 @@ export class SyncManager
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
-    this.requeuedDeadLetterIds.set(source.id, source.documentId);
+    this.requeuedDeadLetterIds.set(source.id, {
+      remoteName: remote.meta.name,
+      documentId: source.documentId,
+    });
     await this.liftQuarantineIfClear(source.documentId);
 
     const requeued = new SyncOperation(
@@ -2421,7 +2429,9 @@ export class SyncManager
     this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
 
-    if (resolved) await this.dropRequeuedDeadLetter(syncOp.id);
+    if (resolved && this.remotes.get(remote.meta.name) === remote) {
+      await this.dropRequeuedDeadLetter(syncOp.id);
+    }
   }
 
   /** Reloads a marker with backoff; it stays in the inbox, not dead-lettered. */
@@ -2631,7 +2641,9 @@ export class SyncManager
 
       remote.channel.inbox.remove(syncOp);
 
-      if (resolved) await this.dropRequeuedDeadLetter(syncOp.id);
+      if (resolved && this.remotes.get(remote.meta.name) === remote) {
+        await this.dropRequeuedDeadLetter(syncOp.id);
+      }
     }
   }
 
