@@ -23,6 +23,7 @@ import {
   extractDedupeKey,
   pieceModuleRef,
   PieceWorker,
+  PieceWorkerDisposedError,
   PieceWorkerError,
   secretsFor,
   storeHandlers,
@@ -249,6 +250,23 @@ export class TriggerConfigError extends Error {
   }
 }
 
+// Lane work refused because the supervisor stopped: its runtime shut down, and
+// the journal may already be the next owner's.
+export class TriggerSupervisorStoppedError extends Error {
+  constructor() {
+    super("The trigger supervisor has stopped");
+    this.name = "TriggerSupervisorStoppedError";
+  }
+}
+
+// Refused before the piece ran, so nothing it would checkpoint has moved.
+function refusedBeforeHook(error: unknown): boolean {
+  return (
+    error instanceof TriggerSupervisorStoppedError ||
+    error instanceof PieceWorkerDisposedError
+  );
+}
+
 // Everything a piece throws looks alike once it crosses the worker boundary —
 // an expired token and a timeout are both name/message.
 
@@ -307,6 +325,7 @@ export class TriggerSupervisor {
   private ops: Promise<unknown> = Promise.resolve();
   private ticking = false;
   private warnedMissingJournal = false;
+  private stopped = false;
 
   constructor(private readonly options: TriggerSupervisorOptions) {
     this.worker = options.worker ?? new PieceWorker({ models: options.models });
@@ -325,7 +344,7 @@ export class TriggerSupervisor {
   }
 
   start(): void {
-    if (this.timer) return;
+    if (this.timer || this.stopped) return;
     this.timer = setInterval(() => {
       this.tick().catch((error: unknown) => {
         logger.error("Trigger tick failed: @error", error);
@@ -336,6 +355,8 @@ export class TriggerSupervisor {
   }
 
   stop(): void {
+    if (this.stopped) return;
+    this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
     if (!this.options.worker) this.worker.dispose();
@@ -344,9 +365,39 @@ export class TriggerSupervisor {
 
   // Serialized: registration churn and ticks share one lane.
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
-    const run = this.ops.then(task);
+    const run = this.ops.then(() => {
+      this.throwIfStopped();
+      return task();
+    });
     this.ops = run.catch(() => undefined);
     return run;
+  }
+
+  private throwIfStopped(): void {
+    if (this.stopped) throw new TriggerSupervisorStoppedError();
+  }
+
+  // The lane's only way into the journal: once stopped, every call refuses,
+  // so work still in flight writes nothing the next owner holds.
+  private async store(): Promise<WorkflowRunStore | undefined> {
+    this.throwIfStopped();
+    const store = await this.options.store();
+    if (!store) return undefined;
+    return new Proxy(store, {
+      get: (target, property) => {
+        const value: unknown = Reflect.get(target, property, target);
+        if (typeof value !== "function") return value;
+        return (...args: unknown[]) => {
+          this.throwIfStopped();
+          return (value as (...a: unknown[]) => unknown).apply(target, args);
+        };
+      },
+    });
+  }
+
+  private fire(workflowId: string, payload: unknown, kind: string): void {
+    this.throwIfStopped();
+    this.options.fire(workflowId, payload, kind);
   }
 
   // Successfully enabled workflows; identical re-registrations are no-ops.
@@ -414,7 +465,7 @@ export class TriggerSupervisor {
   ): Promise<boolean> {
     this.parks.set(workflowParkRow(workflowId, publishedVersion, reason));
     return this.enqueue(async () => {
-      const store = await this.options.store();
+      const store = await this.store();
       if (!store) return false;
       return store.parkWorkflow(workflowId, publishedVersion, reason);
     });
@@ -432,7 +483,7 @@ export class TriggerSupervisor {
       this.parks.delete(workflowId);
     }
     return this.enqueue(async () => {
-      const store = await this.options.store();
+      const store = await this.store();
       if (!store) return;
       const park = await store.getWorkflowPark(workflowId);
       if (park?.published_version !== publishedVersion) return;
@@ -445,7 +496,7 @@ export class TriggerSupervisor {
   releasePark(workflowId: string, flipRow: boolean): Promise<void> {
     this.parks.delete(workflowId);
     return this.enqueue(async () => {
-      const store = await this.options.store();
+      const store = await this.store();
       if (!store) return;
       if (flipRow) await store.clearParkOnDisable(workflowId);
       else await store.clearWorkflowPark(workflowId);
@@ -466,7 +517,7 @@ export class TriggerSupervisor {
       this.parks.delete(workflowId);
     }
     return this.enqueue(async () => {
-      const store = await this.options.store();
+      const store = await this.store();
       if (!store) return;
       const park = await store.getWorkflowPark(workflowId);
       if (!park || park.published_version >= publishedVersion) return;
@@ -485,7 +536,7 @@ export class TriggerSupervisor {
     const binding = this.unbind(workflowId);
     this.parks.delete(workflowId);
     return this.enqueue(async () => {
-      const store = await this.options.store();
+      const store = await this.store();
       if (!store) return;
       await this.disable(workflowId, binding);
       await store.deleteTriggerState(workflowId);
@@ -527,7 +578,7 @@ export class TriggerSupervisor {
     message: string,
     retryAt?: Date,
   ): Promise<void> {
-    const store = await this.options.store();
+    const store = await this.store();
     if (!store) return;
     const hash = configHash(block, config);
     const existing = await store.getTriggerState(workflowId);
@@ -587,7 +638,7 @@ export class TriggerSupervisor {
     options: { runUser?: RunUser | null } = {},
   ): Promise<unknown> {
     return this.enqueue(async () => {
-      const store = await this.options.store();
+      const store = await this.store();
       try {
         const result = await this.hook(binding, "test", {
           ...(options.runUser !== undefined
@@ -644,7 +695,7 @@ export class TriggerSupervisor {
         logger.warn(`Webhook delivery for unknown workflow ${workflowId}`);
         return;
       }
-      const store = await this.options.store();
+      const store = await this.store();
       // Rejecting is what stops the resolver logging "Webhook delivered" for a
       // delivery that was dropped on the floor.
       if (!store) throw new MissingJournalError("Webhook delivery");
@@ -653,8 +704,14 @@ export class TriggerSupervisor {
       // A dropped delivery is the provider's to retry, and paperless never
       // does — but a rewound cursor lets the reconcile poll find it again.
       const rewind = await this.cursorRewind(store, workflowId);
+      let refused = false;
       try {
-        const result = await this.hook(binding, "run", { payload });
+        const result = await this.hook(binding, "run", { payload }).catch(
+          (error: unknown) => {
+            refused = refusedBeforeHook(error);
+            throw error;
+          },
+        );
         // Checked before the checkpoint, as a poll does: coercing a scalar to
         // no items leaves nothing to rewind, and the delivery is lost for good.
         if (!Array.isArray(result.output)) {
@@ -677,7 +734,7 @@ export class TriggerSupervisor {
           await this.fireItem(store, binding, item, now);
         }
       } catch (error) {
-        await rewind();
+        if (!refused) await rewind();
         throw error;
       }
     });
@@ -696,11 +753,15 @@ export class TriggerSupervisor {
     workflowId: string,
   ): Promise<() => Promise<void>> {
     const before = await store.listPieceStore("FLOW", workflowId);
+    // Past stop() too: a hook that ran may have checkpointed past items it
+    // never delivered, and putting the cursor back keeps them deliverable.
     return async () => {
       try {
-        await store.deletePieceStore("FLOW", workflowId);
+        const raw = await this.options.store();
+        if (!raw) return;
+        await raw.deletePieceStore("FLOW", workflowId);
         for (const [key, value] of Object.entries(before)) {
-          await store.setPieceStoreValue("FLOW", workflowId, key, value);
+          await raw.setPieceStoreValue("FLOW", workflowId, key, value);
         }
       } catch (error) {
         // The poll already failed; losing the rewind too costs at-most-once
@@ -726,7 +787,7 @@ export class TriggerSupervisor {
     if (hook !== "onDisable") {
       checkDynamicProperties(binding.config, binding.propertySettings);
     }
-    const store = await this.options.store();
+    const store = await this.store();
     // A cursor on the heap resets on restart and re-delivers everything the
     // trigger ever saw, so only a design-time sample may run without a journal.
     if (!store && hook !== "test") {
@@ -745,6 +806,7 @@ export class TriggerSupervisor {
     // credential the connection resolved to.
     const redactValues = secretsFor(auth);
     const reactor = await this.reactorFor(binding, hook, options.runUser);
+    this.throwIfStopped();
     return this.worker.runTriggerHook(
       {
         ...pieceModuleRef(piece),
@@ -857,7 +919,7 @@ export class TriggerSupervisor {
     binding: TriggerBinding,
     superseded?: TriggerBinding,
   ): Promise<void> {
-    const store = await this.options.store();
+    const store = await this.store();
     // enableSupervised logs this; returning quietly would leave a workflow
     // that looks registered and never fires.
     if (!store) throw new MissingJournalError("Enabling a trigger");
@@ -1226,7 +1288,7 @@ export class TriggerSupervisor {
     workflowId: string,
     binding?: TriggerBinding,
   ): Promise<void> {
-    const store = await this.options.store();
+    const store = await this.store();
     if (!store) throw new MissingJournalError("Disabling a trigger");
     const row = await store.getTriggerState(workflowId);
     if (!row || row.status === "DISABLED") return;
@@ -1240,7 +1302,7 @@ export class TriggerSupervisor {
     row: TriggerStateRow,
     binding?: TriggerBinding,
   ): Promise<void> {
-    const store = await this.options.store();
+    const store = await this.store();
     if (!store) return;
     const target = binding ?? this.bindingFromRow(row);
     if (
@@ -1262,7 +1324,7 @@ export class TriggerSupervisor {
   }
 
   async tick(): Promise<void> {
-    if (this.ticking) return;
+    if (this.ticking || this.stopped) return;
     this.ticking = true;
     try {
       await this.enqueue(() => this.pollDue());
@@ -1310,7 +1372,7 @@ export class TriggerSupervisor {
   }
 
   private async pollDue(): Promise<void> {
-    const store = await this.options.store();
+    const store = await this.store();
     // Once, not on every tick: the tick repeats forever and the condition
     // never changes without a restart.
     if (!store) {
@@ -1325,6 +1387,7 @@ export class TriggerSupervisor {
     }
     const due = await store.listDueTriggerStates(this.now().toISOString());
     for (const row of due) {
+      this.throwIfStopped();
       const binding = this.bindings.get(row.workflow_id);
       if (!binding) {
         // Zombie row: the registry no longer knows this workflow.
@@ -1337,13 +1400,16 @@ export class TriggerSupervisor {
         await this.poll(store, row, binding);
       }
     }
+    this.throwIfStopped();
     await this.renewDue(store);
+    this.throwIfStopped();
     await this.retryOneEnable();
   }
 
   private async renewDue(store: WorkflowRunStore): Promise<void> {
     const due = await store.listDueTriggerRenewals(this.now().toISOString());
     for (const row of due) {
+      this.throwIfStopped();
       const binding = this.bindings.get(row.workflow_id);
       if (!binding) {
         await store.setTriggerStatus(row.workflow_id, "DISABLED");
@@ -1421,7 +1487,7 @@ export class TriggerSupervisor {
         now.toISOString(),
         nextAt.toISOString(),
       );
-      this.options.fire(
+      this.fire(
         binding.workflowId,
         schedulePayload(schedule, scheduledFor, now),
         SCHEDULE_TRIGGER_KIND,
@@ -1445,8 +1511,12 @@ export class TriggerSupervisor {
   ): Promise<void> {
     const now = this.now();
     const rewind = await this.cursorRewind(store, row.workflow_id);
+    let refused = false;
     try {
-      const result = await this.hook(binding, "run");
+      const result = await this.hook(binding, "run").catch((error: unknown) => {
+        refused = refusedBeforeHook(error);
+        throw error;
+      });
       if (!Array.isArray(result.output)) {
         throw new Error(
           `Trigger run returned ${typeof result.output}, expected an array`,
@@ -1462,7 +1532,9 @@ export class TriggerSupervisor {
         await this.fireItem(store, binding, item, now);
       }
     } catch (error) {
-      await rewind();
+      if (!refused) await rewind();
+      // Not a failure of the trigger's: nothing is recorded against it.
+      if (this.stopped) throw error;
       const message = error instanceof Error ? error.message : String(error);
       const failures = row.consecutive_failures + 1;
       const backoff = backoffMs(row.interval_ms, failures);
@@ -1497,10 +1569,6 @@ export class TriggerSupervisor {
       );
       if (!claimed) return;
     }
-    this.options.fire(
-      binding.workflowId,
-      item,
-      pieceTriggerKind(binding.block),
-    );
+    this.fire(binding.workflowId, item, pieceTriggerKind(binding.block));
   }
 }

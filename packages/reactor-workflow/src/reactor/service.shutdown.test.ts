@@ -161,6 +161,22 @@ describe("a runtime that has shut down", () => {
 
   // Opening the journal runs its sweeps, which would fail the next owner's
   // live runs.
+  // Built lazily, so the first caller after shutdown would otherwise get a
+  // fresh, running lane over the journal the next owner holds.
+  it("hands out only a stopped trigger supervisor", async () => {
+    const { service, workflowId } = runtime();
+    const store = (await service.store())!;
+    service.shutdown();
+
+    const parked = await service
+      .supervisor()
+      .park(workflowId, 1, "after shutdown")
+      .catch((error: unknown) => error);
+
+    expect(await store.getWorkflowPark(workflowId)).toBeUndefined();
+    expect(parked).toBeInstanceOf(Error);
+  });
+
   it("does not reopen a journal that failed to open", async () => {
     const create = vi
       .spyOn(WorkflowRunStore, "create")

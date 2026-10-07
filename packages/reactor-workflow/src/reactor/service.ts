@@ -2179,6 +2179,8 @@ export class WorkflowRuntimeService {
       reconcileIntervalMs:
         Number(process.env.PH_WORKFLOWS_WEBHOOK_RECONCILE_MS) || undefined,
     });
+    // Built after shutdown: stopped before anything can queue on it.
+    if (this.closed) this.triggerSupervisor.stop();
     return this.triggerSupervisor;
   }
 

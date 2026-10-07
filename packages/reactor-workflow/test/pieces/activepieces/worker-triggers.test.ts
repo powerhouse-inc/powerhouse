@@ -97,8 +97,9 @@ describe.skipIf(!rssBundle)("PieceWorker trigger hooks", () => {
     persisted = second.storeState!;
     expect(persisted[CURSOR_KEY]).toBe("g2");
 
-    // Kill the worker between polls; the next hook spawns a fresh child.
+    // Kill the worker between polls; the next hook runs in a fresh child.
     worker.dispose();
+    worker = new PieceWorker();
     const afterCrash = await hook("run", persisted);
     expect(afterCrash.output).toEqual([]);
 

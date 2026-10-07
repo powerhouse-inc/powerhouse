@@ -148,9 +148,10 @@ describe("durable trigger store", () => {
     // Nothing comes back to persist: the write already landed.
     expect(first.storeState).toBeUndefined();
 
-    // Kill the worker between polls; the next hook spawns a fresh child that
+    // Kill the worker between polls; the next hook runs in a fresh child that
     // has never seen this cursor except through the host.
     worker.dispose();
+    worker = new PieceWorker();
     const second = await hook(store, "run");
     expect((second.output as { at: number }[])[0].at).toBe(1);
     expect(store.rows.get("FLOW/wf-1/cursor")).toBe(2);
