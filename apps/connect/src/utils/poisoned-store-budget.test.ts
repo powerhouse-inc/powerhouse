@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as ConnectionStateModule from "../connection-state.js";
 import type * as BudgetModule from "./poisoned-store-budget.js";
+import { RETIRED_WORKER_RELOAD_REASON } from "@powerhousedao/reactor-browser/rpc";
 import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 
 let connectionState: typeof ConnectionStateModule;
@@ -95,5 +96,17 @@ describe("poisoned-store reload budget", () => {
     expect(connectionState.getWorkerConnectionStatus()).toBe(
       "storage-unusable",
     );
+  });
+
+  it("still reloads a tab a retired worker sends to the current one, past the budget", () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+    for (let i = 0; i < 3; i++) {
+      budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, i);
+    }
+    expect(reload).toHaveBeenCalledTimes(2);
+
+    budget.reloadForWorker(RETIRED_WORKER_RELOAD_REASON, reload, storage, 3);
+    expect(reload).toHaveBeenCalledTimes(3);
   });
 });

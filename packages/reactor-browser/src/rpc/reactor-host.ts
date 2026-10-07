@@ -107,6 +107,8 @@ function hashFlags(flags: string): string {
   return (hash >>> 0).toString(36);
 }
 
+export const RETIRED_WORKER_RELOAD_REASON = "worker retired";
+
 export class ReactorHost {
   private readonly options: ReactorHostOptions;
   private readonly disposers = new Set<() => void>();
@@ -207,7 +209,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "admin") {
-        this.handleAdmin(msg, reply);
+        this.handleAdmin(msg, reply, transport);
         return;
       }
       if (ready && server) {
@@ -262,7 +264,7 @@ export class ReactorHost {
   }
 
   // A reload this worker never recovers from; tabs that connect later get it too.
-  retire(reason: string, workerGen: string): void {
+  retireAndReload(reason: string, workerGen: string): void {
     this.retirement = { reason, workerGen };
     this.broadcastReload(reason, workerGen);
   }
@@ -279,7 +281,24 @@ export class ReactorHost {
     return this.disposers.size;
   }
 
-  private handleAdmin(message: RpcAdmin, reply: IHostResponder): void {
+  private handleAdmin(
+    message: RpcAdmin,
+    reply: IHostResponder,
+    transport: IRpcTransport,
+  ): void {
+    // A retired worker no longer owns the store: send the tab to the one that does.
+    if (this.retirement && message.method !== "info") {
+      transport.post({
+        k: "reload",
+        reason: RETIRED_WORKER_RELOAD_REASON,
+        workerGen: this.retirement.workerGen,
+      });
+      reply.err(
+        message.id,
+        new Error("This worker was retired; reloading into the current one"),
+      );
+      return;
+    }
     if (message.method === "restart") {
       this.options.onAdminRestart?.();
       reply.ok(message.id);

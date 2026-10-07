@@ -7,7 +7,10 @@ import {
   type VersionFingerprint,
   createPortTransport,
 } from "@powerhousedao/reactor/rpc";
-import { ReactorHost } from "../../src/rpc/reactor-host.js";
+import {
+  ReactorHost,
+  RETIRED_WORKER_RELOAD_REASON,
+} from "../../src/rpc/reactor-host.js";
 
 function tabRouter(port: MessagePort): MessageRouter {
   const router = new MessageRouter();
@@ -499,7 +502,7 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     host.connect(createPortTransport(ch1.port1));
     const tab1 = rawTab(ch1.port2);
 
-    host.retire("storage session poisoned", "gen-2");
+    host.retireAndReload("storage session poisoned", "gen-2");
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(tab1.reloads).toEqual(["storage session poisoned"]);
     expect(tab1.workerGens).toEqual(["gen-2"]);
@@ -511,4 +514,34 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     expect(tab2.reloads).toEqual(["storage session poisoned"]);
     expect(tab2.workerGens).toEqual(["gen-2"]);
   });
+
+  it.each(["restart", "clearStorage", "migrate"])(
+    "refuses admin %s once retired and sends the tab to the current worker",
+    async (method) => {
+      const ran: string[] = [];
+      const host = new ReactorHost({
+        build: () => Promise.resolve(fakeClient([])),
+        onAdminRestart: () => ran.push("restart"),
+        onAdminClearStorage: () => {
+          ran.push("clearStorage");
+          return Promise.resolve();
+        },
+        onAdminMigrate: () => {
+          ran.push("migrate");
+          return Promise.resolve();
+        },
+      });
+      host.retireAndReload("storage session poisoned", "gen-2");
+
+      const ch = new MessageChannel();
+      host.connect(createPortTransport(ch.port1));
+      const tab = rawTab(ch.port2);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      await expect(tab.send({ k: "admin", method })).rejects.toThrow(/retired/);
+      expect(ran).toEqual([]);
+      expect(tab.reloads.at(-1)).toBe(RETIRED_WORKER_RELOAD_REASON);
+      expect(tab.workerGens.at(-1)).toBe("gen-2");
+    },
+  );
 });
