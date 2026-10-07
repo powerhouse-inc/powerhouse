@@ -183,8 +183,18 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       .catch(() => {});
 
     // execute the job with a timeout signal; race ensures the timeout fires
-    // even if the executor hangs on a call that does not check the signal
-    const signal = AbortSignal.timeout(this.jobTimeoutMs);
+    // even if the executor hangs on a call that does not check the signal.
+    // A committed job is never timed out: failing it would invite a resubmit.
+    const timeout = new AbortController();
+    const timer = setTimeout(() => {
+      timeout.abort(
+        new DOMException(
+          "The operation was aborted due to timeout",
+          "TimeoutError",
+        ),
+      );
+    }, this.jobTimeoutMs);
+    const signal = timeout.signal;
     const toError = (reason: unknown): Error =>
       reason instanceof Error ? reason : new Error(String(reason));
     const abortPromise = new Promise<never>((_, reject) => {
@@ -199,10 +209,11 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     let result: JobResult;
     try {
       result = await Promise.race([
-        executor.executeJob(handle.job, signal),
+        executor.executeJob(handle.job, signal, () => clearTimeout(timer)),
         abortPromise,
       ]);
     } catch (error) {
+      clearTimeout(timer);
       const errorInfo = toErrorInfo(
         error instanceof Error ? error : String(error),
       );
@@ -228,6 +239,8 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       await this.checkForMoreJobs();
       return;
     }
+
+    clearTimeout(timer);
 
     // handle the result
     if (result.success) {

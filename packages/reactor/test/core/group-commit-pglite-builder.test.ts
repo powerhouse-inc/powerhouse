@@ -15,26 +15,37 @@ type Controlled = GroupCommitPGliteInstance & {
   pg: PGlite;
   syncs: number;
   hangNext: RegExp | undefined;
+  delayNext: { pattern: RegExp; ms: number } | undefined;
+  /** Every sync waits for this first. */
+  syncHold: Promise<void> | undefined;
 };
 
-/** A real PGlite whose next matching statement can be made to never settle. */
+/** A real PGlite whose next matching statement can be delayed or made to never settle. */
 function controlled(pg: PGlite): Controlled {
   const instance: Controlled = {
     pg,
     syncs: 0,
     hangNext: undefined,
-    query: (text, params) => {
+    delayNext: undefined,
+    syncHold: undefined,
+    query: async (text, params) => {
       if (instance.hangNext?.test(text) === true) {
         instance.hangNext = undefined;
         return new Promise(() => undefined);
+      }
+      const delayed = instance.delayNext;
+      if (delayed?.pattern.test(text) === true) {
+        instance.delayNext = undefined;
+        await new Promise((resolve) => setTimeout(resolve, delayed.ms));
       }
       return pg.query(text, params);
     },
     exec: (text) => pg.exec(text),
     isInTransaction: () => pg.isInTransaction(),
     close: () => pg.close(),
-    syncToFs: () => {
+    syncToFs: async () => {
       instance.syncs += 1;
+      await instance.syncHold;
       return pg.syncToFs();
     },
   };
@@ -133,6 +144,46 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
       .withGroupCommitPGlite({ pg, onUnrecoverable: () => undefined });
     await expect(builder.buildModule()).rejects.toThrow(/jobTimeoutMs/);
     await pg.pg.close();
+  });
+
+  it("never fails a committed job whose flush outlasts the job timeout but not the durability wait", async () => {
+    const pg = await openFresh();
+    const jobTimeoutMs = 2_100;
+    const module = await new ReactorBuilder()
+      .withDocumentModelSources(MODELS)
+      .withExecutorConfig({
+        signatureVerification: "log",
+        durabilityWaitMs: 2_000,
+        jobTimeoutMs,
+      })
+      .withGroupCommitPGlite({
+        pg,
+        onUnrecoverable: () => undefined,
+        onDiagnostic: () => undefined,
+        dialect: { statementTimeoutMs: 10_000, recoveryTimeoutMs: 10_000 },
+        client: { closeTimeoutMs: 500 },
+      })
+      .buildModule();
+    modules.push(module);
+
+    const started = Date.now();
+    pg.delayNext = { pattern: /insert into \S*"Operation"/i, ms: 1_000 };
+    pg.syncHold = new Promise((resolve) =>
+      setTimeout(resolve, jobTimeoutMs + 300),
+    );
+    const job = await module.reactor.create(createDocModelDocument());
+
+    const seen = new Set<JobStatus>();
+    await vi.waitFor(
+      async () => {
+        const info = await module.reactor.getJobStatus(job.id);
+        seen.add(info.status);
+        expect([JobStatus.READ_READY, JobStatus.FAILED]).toContain(info.status);
+      },
+      { timeout: 8_000, interval: 20 },
+    );
+    expect(Date.now() - started).toBeGreaterThan(jobTimeoutMs);
+    expect(seen).not.toContain(JobStatus.FAILED);
   });
 
   it("flushes before a job is announced", async () => {

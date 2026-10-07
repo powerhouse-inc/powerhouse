@@ -99,9 +99,14 @@ export interface IJobExecutor {
   /**
    * Execute a single job.
    * @param job - The job to execute
+   * @param onCommitted - Called once the job's transaction has committed
    * @returns Promise that resolves to the job result
    */
-  executeJob(job: Job, signal?: AbortSignal): Promise<JobResult>;
+  executeJob(
+    job: Job,
+    signal?: AbortSignal,
+    onCommitted?: () => void,
+  ): Promise<JobResult>;
 }
 
 /**

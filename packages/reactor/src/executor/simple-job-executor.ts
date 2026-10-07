@@ -395,7 +395,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    * but nothing here closes it, and a caller that needs to know a write is
    * real has the job status to ask.
    */
-  async executeJob(job: Job, signal?: AbortSignal): Promise<JobResult> {
+  async executeJob(
+    job: Job,
+    signal?: AbortSignal,
+    onCommitted?: () => void,
+  ): Promise<JobResult> {
     const startTime = Date.now();
 
     // Streams the job wrote, to evict when its transaction does not commit
@@ -435,6 +439,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       throw error;
     }
+    onCommitted?.();
 
     for (const entry of postCommitInvalidations) {
       this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
