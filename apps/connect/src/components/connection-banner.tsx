@@ -21,6 +21,11 @@ const BANNER_TEXT: Record<
     title: "Lost connection to the reactor",
     detail: "The background worker stopped responding. Reload to reconnect.",
   },
+  "storage-held": {
+    title: "Waiting for another Connect tab",
+    detail:
+      "Another Connect tab still holds local storage. Close or reload the other Connect tabs to continue.",
+  },
   "storage-unusable": {
     title: "Local storage is unusable",
     detail:

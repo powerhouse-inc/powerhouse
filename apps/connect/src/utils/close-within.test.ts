@@ -5,16 +5,12 @@ describe("closeWithin", () => {
   it("gives up on a close that never settles", async () => {
     vi.useFakeTimers();
     try {
-      let settled = false;
       const closing = closeWithin(
         { close: () => new Promise<void>(() => undefined) },
         1_000,
-      ).then(() => {
-        settled = true;
-      });
+      );
       await vi.advanceTimersByTimeAsync(1_000);
-      await closing;
-      expect(settled).toBe(true);
+      expect(await closing).toBe(false);
     } finally {
       vi.useRealTimers();
     }
@@ -23,6 +19,13 @@ describe("closeWithin", () => {
   it("swallows a close that fails", async () => {
     await expect(
       closeWithin({ close: () => Promise.reject(new Error("aborted")) }, 1_000),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
+  });
+
+  it("reports a store that closed", async () => {
+    await expect(closeWithin({ close: () => Promise.resolve() })).resolves.toBe(
+      true,
+    );
+    await expect(closeWithin(undefined)).resolves.toBe(true);
   });
 });

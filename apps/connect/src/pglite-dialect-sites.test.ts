@@ -24,3 +24,16 @@ describe("connect's own pglite stores", () => {
     }
   });
 });
+
+describe("the reactor worker's idb stores", () => {
+  it("open only under the store's exclusive lock", () => {
+    const worker = source("./reactor.worker.ts");
+    const opens = [...worker.matchAll(/new PGlite\(`idb:\/\//g)];
+    expect(opens.length).toBeGreaterThan(0);
+    for (const open of opens) {
+      const before = worker.slice(0, open.index);
+      const opener = before.slice(before.lastIndexOf("async function "));
+      expect(opener).toMatch(/await storeLocks\.acquire\(/);
+    }
+  });
+});

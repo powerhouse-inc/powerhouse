@@ -2,7 +2,8 @@ export type WorkerConnectionStatus =
   | "connected"
   | "lost"
   | "failed"
-  | "storage-unusable";
+  | "storage-unusable"
+  | "storage-held";
 
 let status: WorkerConnectionStatus = "connected";
 const listeners = new Set<() => void>();
@@ -11,14 +12,30 @@ export function getWorkerConnectionStatus(): WorkerConnectionStatus {
   return status;
 }
 
-/** "storage-unusable" holds until the page reloads; a live worker's pong does not clear it. */
+function publish(next: WorkerConnectionStatus): void {
+  status = next;
+  for (const listener of [...listeners]) {
+    listener();
+  }
+}
+
+/**
+ * "storage-unusable" holds until the page reloads, and "storage-held" until
+ * {@link clearStorageHeld}; a live worker's pong clears neither.
+ */
 export function setWorkerConnectionStatus(next: WorkerConnectionStatus): void {
   if (status === next || status === "storage-unusable") {
     return;
   }
-  status = next;
-  for (const listener of [...listeners]) {
-    listener();
+  if (status === "storage-held" && next === "connected") {
+    return;
+  }
+  publish(next);
+}
+
+export function clearStorageHeld(): void {
+  if (status === "storage-held") {
+    publish("connected");
   }
 }
 

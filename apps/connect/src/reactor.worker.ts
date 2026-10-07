@@ -56,6 +56,7 @@ import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { closeWithin } from "./utils/close-within.js";
 import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
+import { createStoreLocks } from "./utils/store-lock.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
@@ -133,8 +134,12 @@ type OwnedStorage = {
   reactorDb?: Kysely<Database>;
   reactorIdb?: string;
   relationalIdb?: string;
+  reactorNamespace?: string;
+  relationalNamespace?: string;
 };
 const owned: OwnedStorage = {};
+// Another worker (a retired one, or a second gen) may still have these stores open.
+const storeLocks = createStoreLocks();
 let inspectorQueue: InMemoryQueue | undefined;
 let inspectorProcessors: IProcessorManager | undefined;
 let inspectorIntegrity: DocumentIntegrityService | undefined;
@@ -161,6 +166,7 @@ async function buildWorkerCrypto(chainId: number | undefined) {
 
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
 async function openReactorPglite(namespace: string) {
+  await storeLocks.acquire(namespace);
   const detected = coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
   const major = resolvePgMajorForRuntime(detected);
   if (major !== 17) {
@@ -189,7 +195,9 @@ const onStorePoisoned = reloadOnPoisonedStore((reason, gen) =>
 );
 
 async function openRelational(namespace: string): Promise<DetectedMajor> {
+  let pg: { close: () => Promise<void> } | undefined;
   try {
+    await storeLocks.acquire(namespace);
     const detected = coerceMajor(
       await readPgVersionFile(`/pglite/${namespace}`),
     );
@@ -203,14 +211,17 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
       loadPGliteModule(major),
       loadPgLive(major),
     ]);
-    const pg = new PGlite(`idb://${namespace}`, {
+    const opened = new PGlite(`idb://${namespace}`, {
       relaxedDurability: true,
       extensions: { live },
     });
-    await pg.waitReady;
-    relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
+    pg = opened;
+    await opened.waitReady;
+    relational.pg = opened as unknown as PgLiveModuleNs.PGliteWithLive;
     const relationalKysely = new Kysely<unknown>({
-      dialect: new HardenedPGliteDialect(pg, { onPoisoned: onStorePoisoned }),
+      dialect: new HardenedPGliteDialect(opened, {
+        onPoisoned: onStorePoisoned,
+      }),
     });
     relational.kysely = relationalKysely;
     relational.db = createRelationalDb(relationalKysely);
@@ -223,6 +234,10 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
       "[reactor.worker] Failed to open the relational store:",
       error,
     );
+    relational.pg = undefined;
+    relational.db = undefined;
+    relational.kysely = undefined;
+    if (await closeWithin(pg)) storeLocks.release(namespace);
     return null;
   }
 }
@@ -242,20 +257,45 @@ const inMemoryBackup: BackupStrategy = {
   commit: () => Promise.resolve(),
 };
 
+type StoreCloser = (
+  store: { close: () => Promise<void> } | undefined,
+) => Promise<boolean>;
+
+async function closeUnbounded(
+  store: { close: () => Promise<void> } | undefined,
+): Promise<boolean> {
+  try {
+    await store?.close();
+    return true;
+  } catch (error) {
+    console.error("[reactor.worker] closing a store failed:", error);
+    return false;
+  }
+}
+
+// Returns the lock release: a store whose close hung keeps its lock until the worker dies.
+async function closeStores(close: StoreCloser): Promise<() => void> {
+  const relationalClosed = await close(relational.pg);
+  const reactorClosed = await close(owned.reactorPg);
+  const { relationalNamespace, reactorNamespace } = owned;
+  return () => {
+    if (relationalClosed && relationalNamespace) {
+      storeLocks.release(relationalNamespace);
+    }
+    if (reactorClosed && reactorNamespace) {
+      storeLocks.release(reactorNamespace);
+    }
+  };
+}
+
 async function releaseStores(): Promise<void> {
-  const stores = [relational.pg, owned.reactorPg];
+  const release = await closeStores(closeWithin);
   relational.pg = undefined;
   relational.db = undefined;
   relational.kysely = undefined;
   owned.reactorPg = undefined;
   owned.reactorDb = undefined;
-  for (const store of stores) {
-    try {
-      await store?.close();
-    } catch (error) {
-      console.error("[reactor.worker] closing a store failed:", error);
-    }
-  }
+  release();
 }
 
 const RETIRE_STOP_MS = 5_000;
@@ -284,15 +324,7 @@ async function stopReactorWithin(timeoutMs: number): Promise<void> {
 // A retired worker must stop writing before a fresh one opens the same stores.
 async function retire(): Promise<void> {
   await stopReactorWithin(RETIRE_STOP_MS);
-  const stores = [relational.pg, owned.reactorPg];
-  relational.pg = undefined;
-  relational.db = undefined;
-  relational.kysely = undefined;
-  owned.reactorPg = undefined;
-  owned.reactorDb = undefined;
-  for (const store of stores) {
-    await closeWithin(store);
-  }
+  await releaseStores();
 }
 
 const workerName = (self as { name?: string }).name ?? "";
@@ -303,13 +335,13 @@ const host = new ReactorHost({
   onAdminRestart: () =>
     host.broadcastReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: async () => {
-    await closeWithin(relational.pg);
-    await closeWithin(owned.reactorPg);
+    const release = await closeStores(closeWithin);
     for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
       if (idbName) {
         await clearFileData(idbName);
       }
     }
+    release();
     host.broadcastReload("storage cleared", crypto.randomUUID());
   },
   onAdminMigrate: async () => {
@@ -317,8 +349,7 @@ const host = new ReactorHost({
       status: "migrating",
       legacyMajor: migrationState.legacyMajor,
     });
-    if (relational.pg) await relational.pg.close().catch(() => undefined);
-    if (owned.reactorPg) await owned.reactorPg.close().catch(() => undefined);
+    const release = await closeStores(closeUnbounded);
     try {
       for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
         if (idbName) {
@@ -334,6 +365,7 @@ const host = new ReactorHost({
           );
         }
       }
+      release();
       host.broadcastReload("migration complete", crypto.randomUUID());
     } catch (error) {
       console.error("[reactor.worker] Migration failed:", error);
@@ -341,6 +373,7 @@ const host = new ReactorHost({
         status: "failed",
         error: error instanceof Error ? error.message : String(error),
       });
+      release();
       host.broadcastReload("migration failed", crypto.randomUUID());
     }
   },
@@ -378,6 +411,8 @@ const host = new ReactorHost({
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
 
+      owned.reactorNamespace = construct.namespace;
+      owned.relationalNamespace = construct.relationalNamespace;
       //this has to be serial: concurrent PGlite constructors consume the same
       // cached one-shot wasm "Response" object
       const reactor = await openReactorPglite(construct.namespace);

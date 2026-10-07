@@ -62,6 +62,11 @@ import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { closeWithin } from "../utils/close-within.js";
 import { reloadForWorker } from "../utils/poisoned-store-budget.js";
+import { watchStoreLockWait } from "../utils/store-lock.js";
+import {
+  clearStorageHeld,
+  setWorkerConnectionStatus,
+} from "../connection-state.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
@@ -468,12 +473,20 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
+    // The worker boots only once it owns both stores.
+    const stopWatchingStores = watchStoreLockWait(
+      [REACTOR_INSTANCE_NAMESPACE, RELATIONAL_PGLITE_NAME],
+      () => setWorkerConnectionStatus("storage-held"),
+    );
     try {
       await workerClient.syncManagerProxy.startup();
     } catch (error) {
       window.ph.loading = false;
       logger.error("Reactor worker failed to start: @error", error);
       throw error;
+    } finally {
+      stopWatchingStores();
+      clearStorageHeld();
     }
   } else {
     reactorClientModule = await createBrowserReactor(
