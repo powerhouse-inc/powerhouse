@@ -477,6 +477,36 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     expect(mockReactor.load).not.toHaveBeenCalled();
   });
 
+  it("keeps the quarantine for a stored row of a remote no longer registered", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+    const rows = ["d1", "orphan"];
+    vi.mocked(
+      mockDeadLetterStorage.listQuarantinedDocumentIds,
+    ).mockImplementation(
+      (_signal?: AbortSignal, exceptIds: readonly string[] = []) =>
+        Promise.resolve(
+          rows.some((id) => !exceptIds.includes(id)) ? ["doc-b"] : [],
+        ),
+    );
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(mockReactor.load).not.toHaveBeenCalled();
+  });
+
   it("lifts the quarantine when its last dead letter is cleared", async () => {
     mockReactor = {
       load: vi

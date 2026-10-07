@@ -167,16 +167,22 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
     }
   }
 
-  async listQuarantinedDocumentIds(signal?: AbortSignal): Promise<string[]> {
+  async listQuarantinedDocumentIds(
+    signal?: AbortSignal,
+    exceptIds: readonly string[] = [],
+  ): Promise<string[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    const rows = await this.db
+    let query = this.db
       .selectFrom("sync_dead_letters")
       .select(["document_id", "error_type"])
-      .distinct()
-      .execute();
+      .distinct();
+    if (exceptIds.length > 0) {
+      query = query.where("id", "not in", [...exceptIds]);
+    }
+    const rows = await query.execute();
 
     if (signal?.aborted) {
       throw new Error("Operation aborted");

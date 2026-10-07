@@ -1655,37 +1655,15 @@ export class SyncManager
     return false;
   }
 
-  /** Rows kept only for a pending requeue do not count. */
+  /** The restart rule, less the rows kept only for a pending requeue. */
   private async storesQuarantiningDeadLetter(
     documentId: string,
   ): Promise<boolean> {
-    const quarantined =
-      await this.deadLetterStorage.listQuarantinedDocumentIds();
-    if (!quarantined.includes(documentId)) return false;
-    const pending = new Set<string>();
-    for (const [id, pendingDocumentId] of this.requeuedDeadLetterIds) {
-      if (pendingDocumentId === documentId) pending.add(id);
-    }
-    if (pending.size === 0) return true;
-    for (const name of this.records.keys()) {
-      let cursor = "0";
-      for (;;) {
-        const page = await this.deadLetterStorage.list(name, {
-          cursor,
-          limit: this.config.maxDeadLettersPerRemote,
-        });
-        const blocking = page.results.some(
-          (record) =>
-            record.documentId === documentId &&
-            !pending.has(record.id) &&
-            quarantinesDocument(record.errorType),
-        );
-        if (blocking) return true;
-        if (!page.nextCursor) break;
-        cursor = page.nextCursor;
-      }
-    }
-    return false;
+    const quarantined = await this.deadLetterStorage.listQuarantinedDocumentIds(
+      undefined,
+      [...this.requeuedDeadLetterIds.keys()],
+    );
+    return quarantined.includes(documentId);
   }
 
   /** Hands the document's parked inbox items to the apply path again. */

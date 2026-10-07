@@ -385,6 +385,18 @@ describe("KyselySyncDeadLetterStorage", () => {
       expect(quarantined).not.toContain("held-doc");
     });
 
+    it("leaves out the excepted rows when judging quarantine", async () => {
+      await storage.add(createDeadLetter({ id: "dl-a", documentId: "doc-q" }));
+      await storage.add(createDeadLetter({ id: "dl-b", documentId: "doc-q" }));
+
+      await expect(
+        storage.listQuarantinedDocumentIds(undefined, ["dl-a"]),
+      ).resolves.toContain("doc-q");
+      await expect(
+        storage.listQuarantinedDocumentIds(undefined, ["dl-a", "dl-b"]),
+      ).resolves.not.toContain("doc-q");
+    });
+
     // One bad dead letter is enough to quarantine, even beside an exempt one.
     it("quarantines a document that also has a non-exempt dead letter", async () => {
       await storage.add(

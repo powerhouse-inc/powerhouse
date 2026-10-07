@@ -1048,6 +1048,10 @@ export interface ISyncDeadLetterStorage {
    * Used to populate the quarantine set on startup.
    *
    * @param signal - Optional abort signal to cancel the request
+   * @param exceptIds - Dead letter ids to leave out of the judgement
    */
-  listQuarantinedDocumentIds(signal?: AbortSignal): Promise<string[]>;
+  listQuarantinedDocumentIds(
+    signal?: AbortSignal,
+    exceptIds?: readonly string[],
+  ): Promise<string[]>;
 }
