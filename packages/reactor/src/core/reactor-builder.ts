@@ -708,11 +708,16 @@ export class ReactorBuilder {
   }
 
   /**
-   * A committed job waits for its flush inside the job timeout: for the
-   * statement in flight, then one sync. The executor withholds past that wait,
-   * and the timeout outlasts it, or a job whose commit stands is failed.
+   * A committed job waits for its flush, the statement in flight then one
+   * sync, and withholds past that wait. Statements before the commit queue
+   * behind the same flush, so the job timeout outlasts the wait too.
    */
   private fitJobTimeoutToDurability(options: GroupCommitPGliteOptions): void {
+    if (this.executorConfig.durabilityWaitMs === 0) {
+      throw new Error(
+        "withGroupCommitPGlite needs a bounded durabilityWaitMs: with 0 a committed job whose flush never lands waits forever",
+      );
+    }
     const durabilityWaitMs =
       this.executorConfig.durabilityWaitMs ??
       (options.dialect?.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS) +
@@ -720,7 +725,7 @@ export class ReactorBuilder {
     const configured = this.executorConfig.jobTimeoutMs;
     if (configured !== undefined && configured <= durabilityWaitMs) {
       throw new Error(
-        `jobTimeoutMs (${configured}) must exceed withGroupCommitPGlite's durability wait (${durabilityWaitMs}ms: statement + flush sync bounds): a job waits for its flush inside the timeout, and timing out would fail a job whose commit stands`,
+        `jobTimeoutMs (${configured}) must exceed withGroupCommitPGlite's durability wait (${durabilityWaitMs}ms: statement + flush sync bounds): statements before a job's commit queue behind the same flush`,
       );
     }
     this.executorConfig = {

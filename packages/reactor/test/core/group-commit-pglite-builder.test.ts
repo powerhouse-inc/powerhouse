@@ -186,6 +186,22 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
     expect(seen).not.toContain(JobStatus.FAILED);
   });
 
+  it("refuses an unbounded durability wait", async () => {
+    const pg = controlled(new PGlite());
+    const builder = new ReactorBuilder()
+      .withExecutorConfig({ durabilityWaitMs: 0 })
+      .withGroupCommitPGlite({ pg, onUnrecoverable: () => undefined });
+    const outcome = await builder.buildModule().then(
+      (module) => {
+        modules.push(module);
+        return "built";
+      },
+      (error: Error) => error.message,
+    );
+    expect(outcome).toMatch(/durabilityWaitMs/);
+    await pg.pg.close().catch(() => undefined);
+  });
+
   it("flushes before a job is announced", async () => {
     const pg = await openFresh();
     const module = await builderOver(pg, []).buildModule();
