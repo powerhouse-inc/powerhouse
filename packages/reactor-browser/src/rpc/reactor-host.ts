@@ -289,6 +289,10 @@ export class ReactorHost {
     }
     this.retirement = { reason, workerGen };
     this.broadcastReload(reason, workerGen);
+    this.stopRetired();
+  }
+
+  private stopRetired(): void {
     this.options.onRetire?.().catch((error: unknown) => {
       console.error("ReactorHost retirement cleanup failed", error);
     });
@@ -381,6 +385,13 @@ export class ReactorHost {
       const pending = build(construct);
       this.clientPromise = pending;
       this.buildFailure = null;
+      // A build outliving the retirement opened what onRetire already closed.
+      void pending.then(
+        () => {
+          if (this.retirement) this.stopRetired();
+        },
+        () => undefined,
+      );
       pending.catch((error: unknown) => {
         if (this.clientPromise === pending) {
           this.clientPromise = null;

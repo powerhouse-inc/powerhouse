@@ -217,6 +217,33 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     });
   });
 
+  // A slow package load can outlast the retirement and open the stores after it.
+  it("stops the reactor and stores again when a build finishes after retirement", async () => {
+    let finishBuild: (client: IReactorClient) => void = () => undefined;
+    const built = new Promise<IReactorClient>((resolve) => {
+      finishBuild = resolve;
+    });
+    let retired = 0;
+    const host = new ReactorHost({
+      build: () => built,
+      onRetire: () => {
+        retired += 1;
+        return Promise.resolve();
+      },
+    });
+    void openTab(host)
+      .send({ k: "hello", version: V1 })
+      .catch(() => undefined);
+    await settle();
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+    expect(retired).toBe(1);
+
+    finishBuild(fakeClient([]));
+    await settle();
+    expect(retired).toBe(2);
+  });
+
   // Stored gen v1-A, a switch to build B and back to A would land on this worker again.
   it("never names its own worker as the generation to reload onto", async () => {
     const host = new ReactorHost({
