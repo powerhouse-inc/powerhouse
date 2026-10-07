@@ -1208,7 +1208,9 @@ export class GqlRequestChannel implements IChannel {
             this.pushFailureCount,
             err,
           );
-          this.transitionConnectionState("reconnecting");
+          if (this.polling) {
+            this.transitionConnectionState("reconnecting");
+          }
           this.schedulePushRetry();
         } else {
           const channelError = new ChannelError(ChannelErrorSource.Outbox, err);

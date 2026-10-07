@@ -301,6 +301,65 @@ describe("GqlRequestChannel Connection State", () => {
     await channel.shutdown();
   });
 
+  it("keeps a stopped poll loop's error through a recoverable push failure", async () => {
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pushSyncEnvelopes")) {
+        return {
+          ok: false,
+          status: 503,
+          statusText: "Service Unavailable",
+          json: () => Promise.resolve({}),
+        };
+      }
+      return {
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        json: () => Promise.resolve({}),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(true);
+
+    channel.outbox.add(createMockSyncOperation("op-1", "remote-1", 1));
+    await vi.waitFor(() => {
+      expect(
+        mockFetch.mock.calls.some(([, init]) =>
+          String((init as RequestInit).body).includes("pushSyncEnvelopes"),
+        ),
+      ).toBe(true);
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(true);
+    await channel.shutdown();
+  });
+
   it("transitions to connected after successful poll", async () => {
     global.fetch = successFetch() as unknown as typeof global.fetch;
     const manualTimer = new ManualPollTimer();
