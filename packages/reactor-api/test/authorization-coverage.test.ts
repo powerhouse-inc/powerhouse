@@ -69,6 +69,8 @@ const EXEMPT: Record<string, Record<string, string>> = {
   },
   inspection: {
     "Query.inspection": "Namespace stub resolver; returns an empty object.",
+    "ReactorInspection.info":
+      "Serves every caller (gate-4 D4.2); storage facts, not document content. access is redacted for non-admins.",
     "ReactorInspection.documentModels":
       "Document model metadata, as reactor's Query.documentModels.",
   },
@@ -93,11 +95,34 @@ const NOT_A_READ: Record<string, Record<string, string>> = {
   },
 };
 
-/** A resolver that reaches the reactor client, itself or by handing it on. */
-const READS_PATTERN = /\breactorClient\b/;
+/** Each way a resolver reaches document content, and its proof of reading as the caller. */
+const READ_RULES: { reads: RegExp; asCaller: RegExp }[] = [
+  // The reactor client, itself or handed on.
+  {
+    reads: /\breactorClient\b/,
+    asCaller: /\bviewSubject\b|\bservesDocument\b/,
+  },
+  // Inspection drive reads; the host's own inspector reads as the host.
+  {
+    reads: /\.(listDrives|checkDriveIntegrity)\(/,
+    asCaller: /\bgate\.readerFor\(ctx\)/,
+  },
+];
 
-/** Reads as the caller's subject. */
-const AS_CALLER_PATTERN = /\bviewSubject\b|\bservesDocument\b/;
+function readsDocuments(source: string): boolean {
+  return READ_RULES.some(({ reads }) => reads.test(source));
+}
+
+function readsAsHost(source: string): boolean {
+  return READ_RULES.some(
+    ({ reads, asCaller }) => reads.test(source) && !asCaller.test(source),
+  );
+}
+
+/** Reads the backstop must see, so a pattern drift cannot pass vacuously. */
+const EXPECTED_READS: Record<string, string[]> = {
+  inspection: ["ReactorInspection.drives", "ReactorInspection.driveIntegrity"],
+};
 
 /**
  * A resolver counts as guarded when its source references the authorization
@@ -208,31 +233,34 @@ describe("resolver authorization coverage (default-deny backstop)", () => {
         ).toEqual([]);
       });
 
+      it("sees every document read the subgraph is known to make", () => {
+        const reads = fields
+          .filter(({ source }) => readsDocuments(source))
+          .map(({ field }) => field);
+        expect(reads).toEqual(
+          expect.arrayContaining(EXPECTED_READS[name] ?? []),
+        );
+      });
+
       it("every resolver that reaches the reactor reads as the caller", () => {
         const exempt = NOT_A_READ[name] ?? {};
         const asHost = fields
-          .filter(
-            ({ source }) =>
-              READS_PATTERN.test(source) && !AS_CALLER_PATTERN.test(source),
-          )
+          .filter(({ source }) => readsAsHost(source))
           .map(({ field }) => field)
           .filter((field) => !(field in exempt));
 
         expect(
           asHost,
           `Resolvers in ${name} reading the reactor with no subject: ` +
-            `${asHost.join(", ")}. Read as viewSubject(ctx), or add an entry ` +
-            "to NOT_A_READ if the resolver returns no document content.",
+            `${asHost.join(", ")}. Read as viewSubject(ctx) or gate.readerFor(ctx), ` +
+            "or add an entry to NOT_A_READ if the resolver returns no document content.",
         ).toEqual([]);
       });
 
       it("every read exemption still matches a resolver reading as the host", () => {
         const asHost = new Set(
           fields
-            .filter(
-              ({ source }) =>
-                READS_PATTERN.test(source) && !AS_CALLER_PATTERN.test(source),
-            )
+            .filter(({ source }) => readsAsHost(source))
             .map(({ field }) => field),
         );
         const stale = Object.keys(NOT_A_READ[name] ?? {}).filter(

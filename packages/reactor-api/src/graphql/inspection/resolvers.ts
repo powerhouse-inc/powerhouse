@@ -4,6 +4,7 @@ import {
   toWireQueueState,
   type INSPECTOR_OPS,
   type InspectorDocumentReader,
+  type InspectorAccess,
   type InspectorDriveInfo,
   type InspectorProcessorInfo,
   type InspectorReadOpKey,
@@ -178,8 +179,8 @@ export function createInspectionResolvers(
     return source.syncInspector;
   };
 
-  const drivesFor = (ctx: Context) =>
-    new DriveInspection(gate.readerFor(ctx), source.documentModelRegistry);
+  const accessFor = (ctx: Context, access: InspectorAccess) =>
+    gate.isOperator(ctx) ? access : null;
 
   const fields: Record<InspectionReadField, FieldResolver> = {
     info: async (
@@ -188,7 +189,7 @@ export function createInspectionResolvers(
       ctx: Context,
     ): Promise<WireReactorInfo> => {
       const info = await inspector.info();
-      return { ...info, access: gate.isOperator(ctx) ? info.access : null };
+      return { ...info, access: accessFor(ctx, info.access) };
     },
 
     documentModels: (): Promise<WireInspectorDocumentModel[]> =>
@@ -199,10 +200,10 @@ export function createInspectionResolvers(
       args: { cursor?: string | null; limit?: number | null },
       ctx: Context,
     ): Promise<WireInspectorDrivePage> => {
-      const page = await drivesFor(ctx).listDrives(
-        args.cursor ?? undefined,
-        args.limit ?? undefined,
-      );
+      const page = await new DriveInspection(
+        gate.readerFor(ctx),
+        source.documentModelRegistry,
+      ).listDrives(args.cursor ?? undefined, args.limit ?? undefined);
       const readable = await gate.readableIds(
         page.results.map((drive) => drive.driveId),
         ctx,
@@ -225,7 +226,10 @@ export function createInspectionResolvers(
       if (!served) {
         throw new ForbiddenError("to read this document");
       }
-      return drivesFor(ctx).checkDriveIntegrity(served.id, args.branch);
+      return new DriveInspection(
+        gate.readerFor(ctx),
+        source.documentModelRegistry,
+      ).checkDriveIntegrity(served.id, args.branch);
     },
 
     attachmentInfo: operator(async (): Promise<WireInspectorAttachmentInfo> => {
