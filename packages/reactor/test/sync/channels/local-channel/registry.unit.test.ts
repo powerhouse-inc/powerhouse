@@ -70,6 +70,16 @@ describe("LocalChannelPortRegistry", () => {
     );
   });
 
+  it("closes the port it unregisters", () => {
+    const registry = new LocalChannelPortRegistry();
+    const port = fakePort();
+    registry.register("peer", "chan", port);
+
+    registry.unregister("peer", "chan");
+
+    expect(port.close).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses an unregistered key loudly, and takes a re-link under it", () => {
     const registry = new LocalChannelPortRegistry();
     registry.register("peer", "chan", fakePort());
@@ -99,7 +109,7 @@ describe("registerLocalPeer", () => {
       registerLocalPeer(failingSyncManager("add"), registry, spec, port),
     ).rejects.toThrow(/add failed/);
 
-    expect(port.close).toHaveBeenCalled();
+    expect(port.close).toHaveBeenCalledTimes(1);
     expect(registry.has(spec.peerId, spec.channelName)).toBe(false);
   });
 

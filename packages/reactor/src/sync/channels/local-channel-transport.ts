@@ -15,7 +15,7 @@ export interface LocalChannelPort {
    * removes it; a port may have at most the listeners its callers register.
    */
   onMessage(callback: (data: unknown) => void): () => void;
-  /** Releases the underlying transport. Idempotent. */
+  /** Releases the transport. Idempotent; the registrant calls it, not a channel. */
   close(): void;
 }
 

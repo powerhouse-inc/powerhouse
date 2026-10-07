@@ -124,7 +124,11 @@ export class FakeTransport implements LocalChannelPort {
     };
   }
 
-  close(): void {}
+  closed = false;
+
+  close(): void {
+    this.closed = true;
+  }
 
   /** Queues an inbound frame to deliver when (and if) a listener subscribes. */
   enqueue(message: unknown): void {
@@ -268,6 +272,8 @@ export function makePair(options: PairOptions = {}): ChannelPair {
     async close(): Promise<void> {
       await a.shutdown();
       await b.shutdown();
+      port1.close();
+      port2.close();
     },
   };
 }

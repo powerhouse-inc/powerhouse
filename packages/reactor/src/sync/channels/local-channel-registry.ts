@@ -8,7 +8,7 @@ import type {
   LocalChannelTransportProvider,
 } from "./local-channel-transport.js";
 
-/** Brokered local-sync ports by (peerId, channelName); closing one forgets it. */
+/** Brokered local-sync ports by (peerId, channelName); owns closing them. */
 export class LocalChannelPortRegistry {
   private readonly ports = new Map<string, LocalChannelPort>();
   private readonly closedKeys = new Set<string>();
@@ -37,7 +37,7 @@ export class LocalChannelPortRegistry {
       );
     }
     this.closedKeys.delete(key);
-    this.ports.set(key, this.selfForgetting(key, port));
+    this.ports.set(key, port);
   }
 
   has(peerId: string, channelName: string): boolean {
@@ -48,32 +48,17 @@ export class LocalChannelPortRegistry {
     return this.closedKeys.has(this.key(peerId, channelName));
   }
 
+  /** Closes the port; a channel only unsubscribes, so a reset reuses it. */
   unregister(peerId: string, channelName: string): void {
-    this.forget(this.key(peerId, channelName));
+    const key = this.key(peerId, channelName);
+    const port = this.ports.get(key);
+    this.ports.delete(key);
+    this.closedKeys.add(key);
+    port?.close();
   }
 
   private key(peerId: string, channelName: string): string {
     return JSON.stringify([peerId, channelName]);
-  }
-
-  private forget(key: string): void {
-    this.ports.delete(key);
-    this.closedKeys.add(key);
-  }
-
-  private selfForgetting(
-    key: string,
-    port: LocalChannelPort,
-  ): LocalChannelPort {
-    return {
-      postMessage: (data: unknown) => port.postMessage(data),
-      onMessage: (callback: (data: unknown) => void) =>
-        port.onMessage(callback),
-      close: () => {
-        this.forget(key);
-        port.close();
-      },
-    };
   }
 }
 
@@ -169,7 +154,6 @@ export async function registerLocalPeer(
     );
   } catch (error) {
     registry.unregister(spec.peerId, spec.channelName);
-    port.close();
     throw error;
   }
 }

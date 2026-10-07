@@ -109,6 +109,17 @@ class Pair {
     );
   }
 
+  /** Re-brokers the link over a fresh MessageChannel and resets both remotes onto it. */
+  async relink(driveId: string): Promise<void> {
+    const [port1, port2] = brokeredPorts();
+    this.a.ports.unregister("b", driveId);
+    this.b.ports.unregister("a", driveId);
+    this.a.ports.register("b", driveId, messagePortTransport(port1));
+    this.b.ports.register("a", driveId, messagePortTransport(port2));
+    await this.a.admin.resetChannel("a->b");
+    await this.b.admin.resetChannel("b->a");
+  }
+
   async kill(): Promise<void> {
     for (const peer of [this.a, this.b]) {
       await peer.reactor.kill().completed;
@@ -119,6 +130,20 @@ class Pair {
       this.b.ports.unregister("a", driveId);
     }
   }
+}
+
+/** Proves traffic still flows both ways over the link. */
+async function expectBothWays(pair: Pair, driveId: string, tag: string) {
+  await addFolder(pair.a, driveId, `${tag}FromA`);
+  await vi.waitFor(
+    async () => expect(await folders(pair.b, driveId)).toContain(`${tag}FromA`),
+    { timeout: 15_000 },
+  );
+  await addFolder(pair.b, driveId, `${tag}FromB`);
+  await vi.waitFor(
+    async () => expect(await folders(pair.a, driveId)).toContain(`${tag}FromB`),
+    { timeout: 15_000 },
+  );
 }
 
 describe("LocalChannel over a message port between two reactors", () => {
@@ -185,5 +210,57 @@ describe("LocalChannel over a message port between two reactors", () => {
     ]);
     expect(await has(b, driveId)).toBe(false);
     expect(held).toHaveBeenCalledTimes(1);
+  }, 40_000);
+
+  it("keeps syncing after one side resets its local remote", async () => {
+    const a = await buildPeer("a", WIDE);
+    const b = await buildPeer("b", WIDE);
+    pair = new Pair(a, b);
+
+    const driveId = "reset-one-drive";
+    await pair.connect(driveId);
+    await create(a, driveId, {});
+    await vi.waitFor(async () => expect(await has(b, driveId)).toBe(true), {
+      timeout: 15_000,
+    });
+
+    await a.admin.resetChannel("a->b");
+
+    await expectBothWays(pair, driveId, "afterReset");
+  }, 40_000);
+
+  it("keeps syncing after both sides reset their local remotes", async () => {
+    const a = await buildPeer("a", WIDE);
+    const b = await buildPeer("b", WIDE);
+    pair = new Pair(a, b);
+
+    const driveId = "reset-both-drive";
+    await pair.connect(driveId);
+    await create(a, driveId, {});
+    await vi.waitFor(async () => expect(await has(b, driveId)).toBe(true), {
+      timeout: 15_000,
+    });
+
+    await a.admin.resetChannel("a->b");
+    await b.admin.resetChannel("b->a");
+
+    await expectBothWays(pair, driveId, "afterReset");
+  }, 40_000);
+
+  it("recovers after the link is re-brokered over a fresh port", async () => {
+    const a = await buildPeer("a", WIDE);
+    const b = await buildPeer("b", WIDE);
+    pair = new Pair(a, b);
+
+    const driveId = "relink-drive";
+    await pair.connect(driveId);
+    await create(a, driveId, {});
+    await vi.waitFor(async () => expect(await has(b, driveId)).toBe(true), {
+      timeout: 15_000,
+    });
+
+    await pair.relink(driveId);
+
+    await expectBothWays(pair, driveId, "afterRelink");
   }, 40_000);
 });

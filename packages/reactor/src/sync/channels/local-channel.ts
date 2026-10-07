@@ -166,20 +166,12 @@ export class LocalChannel implements IChannel {
     this.sendHello();
   }
 
+  /** Leaves the port open: whoever registered it closes it. */
   async shutdown(): Promise<void> {
     this.isShutdown = true;
     this.clearPushRetry();
     this.unsubscribeTransport?.();
     this.unsubscribeTransport = undefined;
-    try {
-      this.port.close();
-    } catch (error) {
-      this.logger.warn(
-        "LocalChannel @ChannelId failed to close its port: @Error",
-        this.channelId,
-        error,
-      );
-    }
     this.transitionConnectionState("disconnected");
     return Promise.resolve();
   }

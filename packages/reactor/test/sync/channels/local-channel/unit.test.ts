@@ -89,6 +89,16 @@ describe("LocalChannel", () => {
       await pair.a.shutdown();
       expect(pair.a.getConnectionState().state).toBe("disconnected");
     });
+
+    it("leaves its port open on shutdown, for its registrant to close", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      await channel.init();
+
+      await channel.shutdown();
+
+      expect(transport.closed).toBe(false);
+    });
   });
 
   describe("symmetric push and ack", () => {
