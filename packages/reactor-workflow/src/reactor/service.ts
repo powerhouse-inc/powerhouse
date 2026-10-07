@@ -4390,6 +4390,10 @@ export class WorkflowRuntimeService {
       // park in its own registration.
       if (!(await this.stillRunsVersion(workflowId, publishedVersion))) {
         await store.liftPark(workflowId, trigger);
+        // A registration of the change may have run while the park stood, and
+        // its enable bailed on it: register again, so that enable gets a pass.
+        await this.supervisor().unpark(workflowId);
+        await this.refreshRegistration(workflowId);
         return;
       }
       const registered = this.registry.get(workflowId);

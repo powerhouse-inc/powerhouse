@@ -983,3 +983,65 @@ describe("rerunning a CANCELLED run", () => {
     );
   }, 60_000);
 });
+
+// A registration for the next version can land between the park's write
+// and its undo: its enable bails on the park, and the undo alone would leave
+// the old trigger armed and the new one never enabled.
+describe("an enable that bailed on a park that was then undone", () => {
+  it("arms the version published meanwhile", async () => {
+    const id = "wf-park-bailed-enable";
+    await service.onOperations([workflowOp(id, scheduleWorkflow(id))]);
+    const store = (await service.store())!;
+    await vi.waitFor(async () =>
+      expect((await store.getTriggerState(id))?.status).toBe("ENABLED"),
+    );
+    const oldHash = (await store.getTriggerState(id))?.config_hash;
+    const supervisor = service.supervisor();
+    const realUpsert = supervisor.upsert.bind(supervisor);
+    let parkWritten!: () => void;
+    const written = new Promise<void>((resolve) => (parkWritten = resolve));
+    let bailed: Promise<void> | undefined;
+    const upsert = vi
+      .spyOn(supervisor, "upsert")
+      .mockImplementationOnce((binding) => {
+        bailed = written.then(() => realUpsert(binding));
+        return bailed;
+      });
+    const park = vi.spyOn(WorkflowRunStore.prototype, "parkWorkflow");
+    park.mockImplementationOnce(async function (
+      this: WorkflowRunStore,
+      ...args
+    ) {
+      const republished = documents.apply(
+        id,
+        actions.setTrigger({
+          id: "t1",
+          pieceName: CORE_PIECE_NAME,
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "schedule",
+          config: { mode: "cron", cron: "0 0 * * *" },
+        }),
+        actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
+      );
+      await service.onOperations([workflowOp(id, republished)]);
+      park.mockRestore();
+      const parked = await this.parkWorkflow(...args);
+      parkWritten();
+      await bailed;
+      return parked;
+    });
+
+    expect((await service.fire(id, undefined, "schedule")).status).toBe(
+      "FAILED",
+    );
+    park.mockRestore();
+    upsert.mockRestore();
+
+    expect(await store.getWorkflowPark(id)).toBeUndefined();
+    await vi.waitFor(async () => {
+      const row = await store.getTriggerState(id);
+      expect(row?.status).toBe("ENABLED");
+      expect(row?.config_hash).not.toBe(oldHash);
+    });
+  }, 60_000);
+});
