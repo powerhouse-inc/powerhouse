@@ -3,11 +3,13 @@ import {
   READ_ONLY_ACCESS,
   ReactorInspector,
   SYNC_INSPECTION_OPS,
+  SyncRepairRefusedError,
   type InspectorAccess,
   type ISyncAdmin,
   type ISyncInspector,
 } from "@powerhousedao/reactor";
 import {
+  fromErrorInfo,
   MessageRouter,
   toErrorInfo,
   type IRpcTransport,
@@ -166,7 +168,12 @@ describe("sync inspection RPC", () => {
     remoteName: "r",
     remoteId: "id",
   };
-  function syncHost(access: InspectorAccess) {
+  function syncHost(
+    access: InspectorAccess,
+    requeueDeadLetter: ISyncAdmin["requeueDeadLetter"] = vi.fn(() =>
+      Promise.resolve(),
+    ),
+  ) {
     const listDeadLetters = vi.fn((remoteName: string) =>
       Promise.resolve({ remoteName, results: [] }),
     );
@@ -178,7 +185,7 @@ describe("sync inspection RPC", () => {
     };
     const admin: ISyncAdmin = {
       resetChannel,
-      requeueDeadLetter: vi.fn(() => Promise.resolve()),
+      requeueDeadLetter,
       clearDeadLetter: vi.fn(() => Promise.resolve()),
     };
     const handler: Handler = (method, args) => {
@@ -227,6 +234,22 @@ describe("sync inspection RPC", () => {
     const admin = syncHost({ admin: true, sql: false });
     await admin.handler(SYNC_INSPECTION_OPS.resetChannel.rpc, ["r"]);
     expect(admin.resetChannel).toHaveBeenCalledWith("r");
+  });
+
+  it("carries a refused requeue to the caller under its own name", async () => {
+    const host = syncHost({ admin: true, sql: false }, () =>
+      Promise.reject(new SyncRepairRefusedError("not an inbox failure")),
+    );
+    const error = await host
+      .handler(SYNC_INSPECTION_OPS.requeueDeadLetter.rpc, ["r", "dl-1"])
+      .then(
+        () => undefined,
+        (e: unknown) => fromErrorInfo(toErrorInfo(e)),
+      );
+    expect(error).toMatchObject({
+      name: "SyncRepairRefusedError",
+      message: "not an inbox failure",
+    });
   });
 
   it("leaves the orchestration ops to the host's own dispatch", () => {
