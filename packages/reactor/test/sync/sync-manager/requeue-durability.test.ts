@@ -86,6 +86,48 @@ function keyedOp(
   );
 }
 
+/** A keyed sync op carrying one operation at `ordinal`. */
+function keyedAt(
+  id: string,
+  documentId: string,
+  ordinal: number,
+): SyncOperation {
+  return new SyncOperation(
+    id,
+    `key-${id}`,
+    [],
+    "accounts",
+    documentId,
+    ["global"],
+    "main",
+    [
+      {
+        operation: {
+          index: ordinal,
+          skip: 0,
+          id: `op-${id}`,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "h",
+          action: {
+            type: "TEST_OP",
+            id: `a-${id}`,
+            scope: "global",
+            timestampUtcMs: new Date().toISOString(),
+            input: {},
+          },
+        },
+        context: {
+          documentId,
+          documentType: "test/doc",
+          scope: "global",
+          branch: "main",
+          ordinal,
+        },
+      },
+    ] as unknown as OperationWithContext[],
+  );
+}
+
 /** A mailbox that actually fires its onAdded/onRemoved listeners. */
 function firingMailbox() {
   const map = new Map<string, SyncOperation>();
@@ -588,6 +630,41 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(mockReactor.load).not.toHaveBeenCalled();
+  });
+
+  it("loads a requeued op before the ops parked behind it, in ordinal order", async () => {
+    mockReactor = {
+      load: vi.fn(),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job", status: JobStatus.PENDING }),
+      loadBatch: vi.fn((request: BatchLoadRequest) =>
+        Promise.resolve({
+          jobs: Object.fromEntries(
+            request.jobs.map((job) => [
+              job.key,
+              { id: `job-${job.key}`, status: JobStatus.PENDING },
+            ]),
+          ),
+        }),
+      ),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+    await addAccounts();
+    channels[0].deadLetter.add(failedHere(keyedAt("x", "doc-b", 10)));
+    channels[0].inbox.add(keyedAt("z", "doc-b", 30));
+    channels[0].inbox.add(keyedAt("y", "doc-b", 20));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockReactor.loadBatch).not.toHaveBeenCalled();
+
+    await syncManager.requeueDeadLetter("accounts", "x");
+
+    const loadedKeys = () =>
+      vi
+        .mocked(mockReactor.loadBatch)
+        .mock.calls.flatMap(([request]) => request.jobs.map((job) => job.key));
+    await vi.waitFor(() => expect(loadedKeys()).toHaveLength(3));
+    expect(loadedKeys()).toEqual(["key-x", "key-y", "key-z"]);
   });
 
   it("lifts the quarantine when its last dead letter is cleared", async () => {

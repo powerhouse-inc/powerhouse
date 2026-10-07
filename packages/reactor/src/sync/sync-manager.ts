@@ -1630,7 +1630,7 @@ export class SyncManager
       remoteName: remote.meta.name,
       documentId: source.documentId,
     });
-    await this.liftQuarantineIfClear(source.documentId);
+    const lift = await this.mayLiftQuarantine(source.documentId);
 
     const requeued = new SyncOperation(
       source.id,
@@ -1642,7 +1642,9 @@ export class SyncManager
       source.branch,
       source.operations,
     );
+    // Parked while still quarantined, so the lift loads it ahead of later ops.
     remote.channel.inbox.add(requeued);
+    if (lift) this.liftQuarantine(source.documentId);
   }
 
   private async liftQuarantineIfClear(documentId: string): Promise<void> {
@@ -1704,10 +1706,12 @@ export class SyncManager
   private liftQuarantine(documentId: string): void {
     if (!this.quarantinedDocumentIds.delete(documentId)) return;
     for (const remote of this.remotes.values()) {
-      const parked = remote.channel.inbox.items.filter(
-        (item) =>
-          item.documentId === documentId && this.parkedByQuarantine.has(item),
-      );
+      const parked = remote.channel.inbox.items
+        .filter(
+          (item) =>
+            item.documentId === documentId && this.parkedByQuarantine.has(item),
+        )
+        .sort((a, b) => firstOrdinalOf(a) - firstOrdinalOf(b));
       if (parked.length === 0) continue;
       for (const item of parked) this.parkedByQuarantine.delete(item);
       this.handleInboxAdded(remote, parked);
