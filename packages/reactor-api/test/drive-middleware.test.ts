@@ -137,23 +137,65 @@ describe("createDriveFetchMiddleware", () => {
     expect(nextCalls).toHaveLength(1);
   });
 
-  it("passes through a cache-miss mutation that only creates, whatever its name", async () => {
-    const cache = makeCache([]);
-    const handler = createDriveFetchMiddleware(cache)(next);
+  const CREATE_DOCUMENT =
+    "mutation CreateDocument($d: JSONObject!, $p: String) { createDocument(document: $d, parentIdentifier: $p) { id } }";
+
+  const createRequest = (
+    driveId: string,
+    header: { id: string; documentType: string },
+    parent?: string,
+  ) =>
+    makeRequest({
+      driveId,
+      body: {
+        operationName: "CreateDocument",
+        query: CREATE_DOCUMENT,
+        variables: { d: { header }, p: parent },
+      },
+    });
+
+  it("passes through a cache-miss create of the drive the Drive-Id names, whatever its name", async () => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
 
     const res = await handler(
-      makeRequest({
-        driveId: "new-drive",
-        body: {
-          operationName: "CreateDocument",
-          query:
-            "mutation CreateDocument($d: JSONObject!) { createDocument(document: $d) { id } }",
-        },
+      createRequest("new-drive", {
+        id: "new-drive",
+        documentType: "powerhouse/document-drive",
       }),
     );
 
     expect(res.status).toBe(200);
     expect(nextCalls).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      "a different drive",
+      { id: "other-drive", documentType: "powerhouse/document-drive" },
+      undefined,
+    ],
+    [
+      "a document that is not a drive",
+      { id: "new-drive", documentType: "powerhouse/document-model" },
+      undefined,
+    ],
+    [
+      "a child under the named drive",
+      { id: "child", documentType: "powerhouse/document-model" },
+      "new-drive",
+    ],
+    [
+      "the drive under a parent",
+      { id: "new-drive", documentType: "powerhouse/document-drive" },
+      "some-parent",
+    ],
+  ])("returns 421 for a cache-miss create of %s", async (_, header, parent) => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
+
+    const res = await handler(createRequest("new-drive", header, parent));
+
+    expect(res.status).toBe(421);
+    expect(nextCalls).toHaveLength(0);
   });
 
   it("returns 421 for a cache-miss mutation that does more than create", async () => {

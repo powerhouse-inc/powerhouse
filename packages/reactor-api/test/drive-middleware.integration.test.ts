@@ -4,6 +4,7 @@ import {
   withSignaturePolicy,
   type ISigner,
 } from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   buildReadGateReactor,
@@ -165,6 +166,27 @@ describe("the drive middleware in front of the reactor subgraph", () => {
     );
 
     expect(response.status).toBe(421);
+  });
+
+  it("refuses a hinted child create under a drive this server does not hold", async () => {
+    const child = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id: "dm-child" },
+    );
+
+    const response = await post(
+      server,
+      "CreateDocument",
+      CREATE_DOCUMENT,
+      { document: child, parentIdentifier: "dm-elsewhere" },
+      "dm-elsewhere",
+    );
+
+    expect(response).toEqual({
+      status: 421,
+      body: { error: "wrong-shard", driveId: "dm-elsewhere" },
+    });
   });
 
   it("serves a request naming a drive this server owns", async () => {
