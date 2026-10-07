@@ -315,5 +315,8 @@ describe("worker after Clear storage", () => {
       /retireWorker: \(reason\) =>\s*host\.retireAndReload\(reason, crypto\.randomUUID\(\)\)/,
     );
     expect(worker).not.toMatch(/broadcastReload\("(storage cleared|migration)/);
+    expect(worker).toMatch(
+      /begin: \(\) =>\s*setMigration\(\{\s*status: "migrating"/,
+    );
   });
 });
