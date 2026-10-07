@@ -118,6 +118,7 @@ export class ReactorHost {
   private readonly ownerId: string;
   private readonly bootedAtMs: number;
   private migrationState: WorkerMigrationState | null = null;
+  private retirement: { reason: string; workerGen: string } | null = null;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
@@ -220,6 +221,9 @@ export class ReactorHost {
     if (this.migrationState) {
       transport.post({ k: "migration", state: this.migrationState });
     }
+    if (this.retirement) {
+      transport.post({ k: "reload", ...this.retirement });
+    }
     if (this.options.client) {
       void ensureServer()
         .then(drainBuffer)
@@ -255,6 +259,12 @@ export class ReactorHost {
     for (const transport of this.clients) {
       transport.post({ k: "reload", reason, workerGen });
     }
+  }
+
+  // A reload this worker never recovers from; tabs that connect later get it too.
+  retire(reason: string, workerGen: string): void {
+    this.retirement = { reason, workerGen };
+    this.broadcastReload(reason, workerGen);
   }
 
   // Cache + fan out the worker's migration state so tabs drive the banner from it.

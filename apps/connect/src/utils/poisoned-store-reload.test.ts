@@ -30,7 +30,7 @@ describe("reloadOnPoisonedStore", () => {
       expect(call).toMatch(/onPoisoned: onStorePoisoned/);
     }
     expect(worker).toMatch(
-      /const onStorePoisoned = reloadOnPoisonedStore\(\s*\(reason, gen\) =>\s*host\.broadcastReload\(reason, gen\)/,
+      /const onStorePoisoned = reloadOnPoisonedStore\(\s*\(reason, gen\) =>\s*host\.retire\(reason, gen\)/,
     );
   });
 });

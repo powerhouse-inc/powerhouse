@@ -182,7 +182,7 @@ async function loadPgLive(major: SupportedPgMajor): Promise<PgLiveModule> {
 
 // Called only after boot, by which point `host` exists.
 const onStorePoisoned = reloadOnPoisonedStore((reason, gen) =>
-  host.broadcastReload(reason, gen),
+  host.retire(reason, gen),
 );
 
 async function openRelational(namespace: string): Promise<DetectedMajor> {

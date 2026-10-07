@@ -490,4 +490,25 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(tab2.migrations).toEqual([{ status: "needed", legacyMajor: 16 }]);
   });
+
+  it("replays a retiring reload to a tab that connects to the old worker later", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+
+    host.retire("storage session poisoned", "gen-2");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(tab1.reloads).toEqual(["storage session poisoned"]);
+    expect(tab1.workerGens).toEqual(["gen-2"]);
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(tab2.reloads).toEqual(["storage session poisoned"]);
+    expect(tab2.workerGens).toEqual(["gen-2"]);
+  });
 });
