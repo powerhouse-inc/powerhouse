@@ -62,6 +62,7 @@ export {
   ChannelError,
   DriveRequestError,
   PollingChannelError,
+  SyncRepairRefusedError,
   isDriveAuthError,
   isRecoverableGraphQLError,
   DRIVE_AUTH_ERROR_MESSAGES,

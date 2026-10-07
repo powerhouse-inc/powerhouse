@@ -25,9 +25,13 @@ import type {
   IChannel,
   IChannelFactory,
 } from "../../../src/sync/interfaces.js";
+import { ChannelError } from "../../../src/sync/errors.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
-import type { ConnectionStateSnapshot } from "../../../src/sync/types.js";
+import {
+  ChannelErrorSource,
+  type ConnectionStateSnapshot,
+} from "../../../src/sync/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
 
 const CONNECTED: ConnectionStateSnapshot = {
@@ -43,16 +47,23 @@ const CONNECTED: ConnectionStateSnapshot = {
 
 /** A nonkeyed sync op, so handleInboxAdded drives it through reactor.load. */
 function nonKeyedOp(id: string, documentId: string): SyncOperation {
-  return new SyncOperation(
-    id,
-    "",
-    [],
-    "accounts",
-    documentId,
-    ["global"],
-    "main",
-    [] as OperationWithContext[],
+  return failedHere(
+    new SyncOperation(
+      id,
+      "",
+      [],
+      "accounts",
+      documentId,
+      ["global"],
+      "main",
+      [] as OperationWithContext[],
+    ),
   );
+}
+
+function failedHere(syncOp: SyncOperation): SyncOperation {
+  syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, new Error("boom")));
+  return syncOp;
 }
 
 /** A keyed sync op, so handleInboxAdded drives it through reactor.loadBatch. */
@@ -61,15 +72,17 @@ function keyedOp(
   jobKey: string,
   documentId: string,
 ): SyncOperation {
-  return new SyncOperation(
-    id,
-    jobKey,
-    [],
-    "accounts",
-    documentId,
-    ["global"],
-    "main",
-    [] as OperationWithContext[],
+  return failedHere(
+    new SyncOperation(
+      id,
+      jobKey,
+      [],
+      "accounts",
+      documentId,
+      ["global"],
+      "main",
+      [] as OperationWithContext[],
+    ),
   );
 }
 

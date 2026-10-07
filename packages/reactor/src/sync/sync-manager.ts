@@ -64,6 +64,7 @@ import {
   ChannelError,
   GraphQLRequestError,
   isDriveAuthError,
+  SyncRepairRefusedError,
 } from "./errors.js";
 import type {
   IChannel,
@@ -1565,6 +1566,15 @@ export class SyncManager
     const source = await this.findDeadLetter(remote, id);
     if (!source) {
       return;
+    }
+    const errorSource =
+      source instanceof SyncOperation
+        ? source.error?.source
+        : source.errorSource;
+    if (errorSource !== ChannelErrorSource.Inbox) {
+      throw new SyncRepairRefusedError(
+        `Cannot requeue dead letter '${id}' of '${remoteName}': it failed on the ${errorSource ?? "unknown"} side, not while applying here.`,
+      );
     }
 
     const item = remote.channel.deadLetter.get(id);

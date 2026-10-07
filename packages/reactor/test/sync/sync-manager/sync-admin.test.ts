@@ -16,7 +16,11 @@ import type {
   IChannel,
   IChannelFactory,
 } from "../../../src/sync/interfaces.js";
-import { GraphQLRequestError } from "../../../src/sync/errors.js";
+import {
+  ChannelError,
+  GraphQLRequestError,
+  SyncRepairRefusedError,
+} from "../../../src/sync/errors.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
@@ -36,7 +40,11 @@ const CONNECTED: ConnectionStateSnapshot = {
   requiresAuth: false,
 };
 
-function deadLetterOp(id: string, documentId: string): SyncOperation {
+function deadLetterOp(
+  id: string,
+  documentId: string,
+  source: ChannelErrorSource = ChannelErrorSource.Inbox,
+): SyncOperation {
   const op = new SyncOperation(
     id,
     `job-${id}`,
@@ -47,6 +55,7 @@ function deadLetterOp(id: string, documentId: string): SyncOperation {
     "main",
     [] as OperationWithContext[],
   );
+  op.failed(new ChannelError(source, new Error("failed")));
   return op;
 }
 
@@ -291,6 +300,47 @@ describe("SyncManager - repair levers (ISyncAdmin)", () => {
     expect(added.id).toBe("d9");
     expect(added.documentId).toBe("doc-z");
     expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it("refuses to requeue a dead letter that did not fail while applying here", async () => {
+    await addAccounts();
+    channels[0].deadLetter.add(
+      deadLetterOp("peer", "doc-p", ChannelErrorSource.Outbox),
+    );
+    channels[0].inbox.add.mockClear();
+
+    await expect(
+      syncManager.requeueDeadLetter("accounts", "peer"),
+    ).rejects.toBeInstanceOf(SyncRepairRefusedError);
+
+    expect(channels[0].inbox.add).not.toHaveBeenCalled();
+    expect(channels[0].deadLetter.get("peer")).toBeDefined();
+  });
+
+  it("refuses to requeue a stored dead letter from the outbox side", async () => {
+    await addAccounts();
+    vi.mocked(mockDeadLetterStorage.list).mockResolvedValueOnce({
+      results: [
+        {
+          id: "stored",
+          jobId: "job-stored",
+          jobDependencies: [],
+          remoteName: "accounts",
+          documentId: "doc-s",
+          scopes: ["global"],
+          branch: "main",
+          operations: [],
+          errorSource: ChannelErrorSource.Outbox,
+          errorMessage: "remote refused",
+          errorType: "UNCLASSIFIED",
+        },
+      ],
+      options: { cursor: "0", limit: 100 },
+    });
+
+    await expect(
+      syncManager.requeueDeadLetter("accounts", "stored"),
+    ).rejects.toBeInstanceOf(SyncRepairRefusedError);
   });
 
   it("treats requeue of an unknown dead letter as a no-op", async () => {
