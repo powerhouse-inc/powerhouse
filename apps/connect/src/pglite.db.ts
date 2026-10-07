@@ -130,7 +130,10 @@ function pgliteSingleton(opts: {
           await Promise.race([
             pg.close(),
             new Promise<void>((resolve) => {
-              timer = setTimeout(resolve, CLOSE_TIMEOUT_MS);
+              timer = setTimeout(() => {
+                console.warn(`[${opts.label}] closing PGlite did not settle`);
+                resolve();
+              }, CLOSE_TIMEOUT_MS);
             }),
           ]);
         } finally {
