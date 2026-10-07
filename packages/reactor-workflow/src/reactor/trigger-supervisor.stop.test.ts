@@ -17,7 +17,7 @@ import {
   vi,
 } from "vitest";
 import { coreTrigger } from "./core-blocks.js";
-import { WorkflowRunStore } from "./store.js";
+import { WorkflowRunStore, type WorkflowRuntimeDB } from "./store.js";
 import {
   isShutdownRefusal,
   TriggerSupervisor,
@@ -489,13 +489,66 @@ describe("TriggerSupervisor after stop()", () => {
       await nextOwnerFires(a);
     });
 
+    // A next owner's poll seeing this state absorbs the keyed item.
+    it("never shows the rewound cursor with the batch's claim still held", async () => {
+      const a = `${prefix}-a`;
+      const db =
+        await createTestRelationalDb().createNamespace<WorkflowRuntimeDB>(
+          "workflow_runtime",
+        );
+      const seen: { cursor: unknown; claims: number }[] = [];
+      const observe = async () => {
+        const claims = await db
+          .selectFrom("trigger_dedupe")
+          .select("run_id")
+          .where("workflow_id", "=", a)
+          .where("run_id", "is not", null)
+          .execute();
+        seen.push({
+          cursor: await store.getPieceStoreValue("FLOW", a, "cursor"),
+          claims: claims.length,
+        });
+      };
+      const handle = scoped();
+      const { journaled, release } = holdJournal(handle);
+      const observed = new Proxy(handle, {
+        get(target, key) {
+          const value: unknown = Reflect.get(target, key);
+          if (typeof value !== "function") return value;
+          return async (...args: unknown[]) => {
+            const out: unknown = await (
+              value as (...a: unknown[]) => unknown
+            ).apply(target, args);
+            await observe();
+            return out;
+          };
+        },
+      });
+      supervisor = build(observed);
+      await armBatch(a);
+      await due(a);
+      const tick = supervisor.tick().catch(() => undefined);
+      await journaled;
+
+      supervisor.stop();
+      release();
+      await tick;
+
+      expect(seen.some(({ cursor }) => cursor === "before")).toBe(true);
+      expect(
+        seen.filter(({ cursor, claims }) => claims > 0 && cursor !== "after"),
+      ).toEqual([]);
+      await redelivered(a);
+      await nextOwnerFires(a);
+    });
+
     // The cursor is past the items, so the runs are their only record.
     it("fails the refused batch to rerun when the cursor cannot be put back", async () => {
       const a = `${prefix}-a`;
       const handle = scoped();
       const { journaled, release } = holdJournal(handle);
       await armBatch(a);
-      handle.deletePieceStore = () => Promise.reject(new Error("db gone"));
+      handle.rewindPieceStore = () => Promise.reject(new Error("db gone"));
       await due(a);
       const tick = supervisor.tick().catch(() => undefined);
       await journaled;

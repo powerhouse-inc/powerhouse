@@ -187,6 +187,8 @@ const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
 const REDELIVERED_REASON =
   "Redelivered: the trigger stopped before firing this item and put its cursor back, so the next poll delivers it again";
+// Memoized: the first call's runs are cancelled in the cursor's own write.
+type Rewind = (redelivered?: string[]) => Promise<boolean>;
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
 // What a failed onRenew backs off from; the next cron slot caps the wait.
 const RENEW_RETRY_BASE_MS = 60_000;
@@ -763,19 +765,19 @@ export class TriggerSupervisor {
   private async cursorRewind(
     store: WorkflowRunStore,
     workflowId: string,
-  ): Promise<() => Promise<boolean>> {
+  ): Promise<Rewind> {
     const before = await store.listPieceStore("FLOW", workflowId);
     let rewound: Promise<boolean> | undefined;
     // Past stop() too: a hook that ran may have checkpointed past items it
     // never delivered, and putting the cursor back keeps them deliverable.
-    const rewind = async () => {
+    const rewind = async (redelivered: string[]) => {
       try {
         const raw = await this.options.store();
         if (!raw) return false;
-        await raw.deletePieceStore("FLOW", workflowId);
-        for (const [key, value] of Object.entries(before)) {
-          await raw.setPieceStoreValue("FLOW", workflowId, key, value);
-        }
+        await raw.rewindPieceStore("FLOW", workflowId, before, {
+          runIds: redelivered,
+          reason: REDELIVERED_REASON,
+        });
         return true;
       } catch (error) {
         // The poll already failed; losing the rewind too costs at-most-once
@@ -784,7 +786,7 @@ export class TriggerSupervisor {
         return false;
       }
     };
-    return () => (rewound ??= rewind());
+    return (redelivered = []) => (rewound ??= rewind(redelivered));
   }
 
   // The hook's `ctx.store` is the journal's piece_store, served call by call,
@@ -1584,7 +1586,7 @@ export class TriggerSupervisor {
     binding: PieceTriggerBinding,
     items: unknown[],
     now: Date,
-    rewind: () => Promise<boolean>,
+    rewind: Rewind,
   ): Promise<void> {
     if (items.length === 0) return;
     const kind = pieceTriggerKind(binding.block);
@@ -1621,22 +1623,10 @@ export class TriggerSupervisor {
   // so its run is CANCELLED rather than left to rerun beside the redelivery.
   private async redeliver(
     runIds: string[],
-    rewind: () => Promise<boolean>,
+    rewind: Rewind,
     error: Error,
   ): Promise<void> {
-    if (!(await rewind())) {
-      await this.failRefused(runIds, error);
-      return;
-    }
-    try {
-      const raw = await this.options.store();
-      await raw?.cancelRedelivered(runIds, REDELIVERED_REASON);
-    } catch (failure) {
-      logger.warn(
-        `Could not cancel the redelivered runs ${runIds.join(", ")}`,
-        failure,
-      );
-    }
+    if (!(await rewind(runIds))) await this.failRefused(runIds, error);
   }
 
   // Past stop(); a row left PENDING is failed by the next owner's journal open.

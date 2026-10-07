@@ -1581,22 +1581,48 @@ export class WorkflowRunStore {
     return id;
   }
 
-  // Runs whose source delivers them again: not rerunnable, and their claims are
-  // released so the redelivery is not absorbed as a duplicate.
-  async cancelRedelivered(runIds: string[], reason: string): Promise<void> {
-    const live: string[] = [];
-    for (const runId of runIds) {
-      this.runsInFlight.delete(runId);
-      if (!erasedRuns.delete(runId)) live.push(runId);
-    }
-    if (live.length === 0) return;
+  /**
+   * Puts a piece_store partition back to `entries` and, in the same write,
+   * cancels the runs the restored cursor delivers again and releases their
+   * claims, so no reader sees the old cursor while the claims still hold.
+   */
+  async rewindPieceStore(
+    scope: string,
+    scopeKey: string,
+    entries: Record<string, unknown>,
+    redelivered: { runIds: string[]; reason: string } = {
+      runIds: [],
+      reason: "",
+    },
+  ): Promise<void> {
+    const live = redelivered.runIds.filter((runId) => !erasedRuns.has(runId));
+    const nowIso = new Date().toISOString();
     await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("piece_store")
+        .where("scope", "=", scope)
+        .where("scope_key", "=", scopeKey)
+        .execute();
+      for (const [key, value] of Object.entries(entries)) {
+        assertPieceStoreEntry(key, value);
+        await trx
+          .insertInto("piece_store")
+          .values({
+            scope,
+            scope_key: scopeKey,
+            key,
+            value: JSON.stringify(value),
+            updated_at: nowIso,
+          })
+          .execute();
+      }
+      if (live.length === 0) return;
       await trx
         .updateTable("run")
         .set({
           status: "CANCELLED",
-          error: redactMessage(reason),
-          ended_at: new Date().toISOString(),
+          error: redactMessage(redelivered.reason),
+          ended_at: nowIso,
         })
         .where("id", "in", live)
         .execute();
@@ -1605,6 +1631,10 @@ export class WorkflowRunStore {
         .where("run_id", "in", live)
         .execute();
     });
+    for (const runId of redelivered.runIds) {
+      this.runsInFlight.delete(runId);
+      erasedRuns.delete(runId);
+    }
   }
 
   /**
