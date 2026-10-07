@@ -120,7 +120,8 @@ let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
 let reactorInstance: IReactor | undefined;
-// The concrete queue: a deploy's drain reads `paused`, which IQueue lacks.
+// The concrete queue: a deploy's drain reads `paused` and the executing jobs,
+// which IQueue lacks.
 let reactorQueue: InMemoryQueue | undefined;
 let syncStopped: Promise<void> | undefined;
 type RelationalState = {

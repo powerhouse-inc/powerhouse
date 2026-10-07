@@ -7,12 +7,19 @@ export type StoreCloser = (store: Closable | undefined) => Promise<boolean>;
 
 export type OpenStore = { namespace?: string; store?: Closable };
 
-type Queue = { readonly isDrained: boolean; readonly paused?: boolean };
+type Queue = {
+  readonly isDrained: boolean;
+  readonly paused?: boolean;
+  getExecutingJobIds?: () => ReadonlyMap<string, ReadonlySet<string>>;
+};
 
 const DEPLOY_DRAIN_MS = 10_000;
 
-// Polls, so a pause mid-drain ends it too. A paused queue is not waited on:
-// its jobs are held by the operator, not in flight.
+const isExecuting = (queue: Queue): boolean =>
+  [...(queue.getExecutingJobIds?.().values() ?? [])].some((ids) => ids.size);
+
+// Polls, so a pause mid-drain ends it too. A paused queue's pending jobs are
+// held by the operator and not waited on; a job it is already running is.
 async function drainWithin(
   queue: () => Queue | undefined,
   ms: number,
@@ -20,7 +27,8 @@ async function drainWithin(
   const deadline = Date.now() + ms;
   for (;;) {
     const current = queue();
-    if (!current || current.isDrained || current.paused) return;
+    if (!current || current.isDrained) return;
+    if (current.paused && !isExecuting(current)) return;
     if (Date.now() >= deadline) {
       console.warn(`[connect] reactor queue did not drain within ${ms}ms`);
       return;

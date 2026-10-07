@@ -57,7 +57,7 @@ type Retirement = {
 type Reactor = {
   stopReactor?: () => Promise<void>;
   stopSync?: () => void;
-  queue?: () => { isDrained: boolean; paused?: boolean } | undefined;
+  queue?: Parameters<typeof createWorkerStores>[0]["queue"];
   drainMs?: number;
 };
 
@@ -360,10 +360,12 @@ describe("worker retired by a deploy", () => {
 
   // A tab's job sits accepted but not started. Unless `paused`, the drain sees
   // the paused queue only as busy.
-  async function workerWithAcceptedJob(drainMs?: number, paused = false) {
-    database = new Kysely<Database>({
-      dialect: new PGliteDialect(new PGlite()),
-    });
+  async function workerWithAcceptedJob(
+    drainMs?: number,
+    paused = false,
+    pg = new PGlite(),
+  ) {
+    database = new Kysely<Database>({ dialect: new PGliteDialect(pg) });
     const built = await new ReactorBuilder()
       .withKysely(database)
       .withDocumentModelSources([
@@ -449,6 +451,38 @@ describe("worker retired by a deploy", () => {
     });
     expect(open.reloads).toHaveLength(1);
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
+  });
+
+  it("waits on a paused queue's executing job, not its pending ones", async () => {
+    const pg = new PGlite();
+    const query = pg.query.bind(pg);
+    const writing = deferred();
+    const release = deferred();
+    pg.query = (async (sql: string, ...rest: unknown[]) => {
+      if (/^insert into "reactor"\."Operation"/.test(sql)) {
+        writing.resolve();
+        await release.promise;
+      }
+      return query(sql, ...(rest as []));
+    }) as typeof pg.query;
+    const { host, queue, open, statusAtStop, statusAtReload } =
+      await workerWithAcceptedJob(60_000, true, pg);
+    // Its JOB_AVAILABLE subscriber runs the job, so resume settles after it.
+    const resumed = queue.resume();
+    await writing.promise;
+    queue.pause();
+    await tab(host).send(NEXT_BUILD);
+    await tick();
+    const reloadsWhileWriting = open.reloads.length;
+    release.resolve();
+    await resumed;
+    expect(reloadsWhileWriting).toBe(0);
+    await vi.waitFor(() => expect(statusAtStop).toHaveLength(1), {
+      timeout: 5_000,
+    });
+    expect(open.reloads).toHaveLength(1);
+    const done = [JobStatus.WRITE_READY, JobStatus.READ_READY];
+    expect(done).toContain(await statusAtReload[0]);
   });
 
   it("does not wait on the queue for a retirement that is not a deploy", async () => {
