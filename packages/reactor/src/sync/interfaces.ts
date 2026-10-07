@@ -356,6 +356,9 @@ export interface ISyncAdmin {
   /** Retries a dead letter; its document's quarantine lifts once none remain. */
   requeueDeadLetter(remoteName: string, id: string): Promise<void>;
 
-  /** Drops a dead-lettered operation from the mailbox and from storage. */
+  /**
+   * Drops a dead-lettered operation from the mailbox and from storage; a no-op
+   * for an id that is not this remote's.
+   */
   clearDeadLetter(remoteName: string, id: string): Promise<void>;
 }
