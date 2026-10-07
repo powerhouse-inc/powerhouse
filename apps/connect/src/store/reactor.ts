@@ -61,6 +61,7 @@ import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
+import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
@@ -447,7 +448,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         if (workerGen) {
           bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
         }
-        window.location.reload();
+        reloadForWorker(reason, () => window.location.reload());
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
