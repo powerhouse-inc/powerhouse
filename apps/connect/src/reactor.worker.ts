@@ -321,7 +321,7 @@ const host = new ReactorHost({
   namespace: workerName,
   onRetire: () => stores.retire(),
   onAdminRestart: () =>
-    host.broadcastReload("admin restart", crypto.randomUUID()),
+    host.retireAndReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: () =>
     stores.runAdmin({
       close: closeWithin,

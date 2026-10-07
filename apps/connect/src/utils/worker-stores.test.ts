@@ -208,6 +208,8 @@ async function workerWith(clear: () => Promise<void>) {
     build: () => Promise.resolve({} as IReactorClient),
     onRetire: () => stores.retire(),
     onSyncOp: () => Promise.reject(new Error("SyncManager not available")),
+    onAdminRestart: () =>
+      host.retireAndReload("admin restart", crypto.randomUUID()),
     onAdminClearStorage: () =>
       stores.runAdmin({
         close: closeWithin,
@@ -305,6 +307,26 @@ describe("worker after Clear storage", () => {
     ).rejects.toThrow(/retired/);
   });
 
+  it("retires on an admin restart, replaying it to a late tab and releasing the stores", async () => {
+    const { names, host } = await workerWith(() => Promise.resolve());
+    const open = tab(host);
+    await open.send(HELLO);
+    await open.send({ k: "admin", method: "restart" });
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
+    expect(open.reloads[0].reason).toBe("admin restart");
+
+    const late = tab(host);
+    await expect(late.send(HELLO)).rejects.toThrow(/retired/);
+    expect(late.reloads).toEqual([open.reloads[0]]);
+
+    const relationalNext = otherWorkerAcquires(names.relational);
+    const reactorNext = otherWorkerAcquires(names.reactor);
+    await vi.waitFor(() => {
+      expect(relationalNext.granted).toBe(true);
+      expect(reactorNext.granted).toBe(true);
+    });
+  });
+
   it("is how the worker wires its stores to the host's retirement", () => {
     const worker = readFileSync(
       fileURLToPath(new URL("../reactor.worker.ts", import.meta.url)),
@@ -314,7 +336,10 @@ describe("worker after Clear storage", () => {
     expect(worker).toMatch(
       /retireWorker: \(reason\) =>\s*host\.retireAndReload\(reason, crypto\.randomUUID\(\)\)/,
     );
-    expect(worker).not.toMatch(/broadcastReload\("(storage cleared|migration)/);
+    expect(worker).not.toMatch(/broadcastReload\(/);
+    expect(worker).toMatch(
+      /onAdminRestart: \(\) =>\s*host\.retireAndReload\("admin restart", crypto\.randomUUID\(\)\)/,
+    );
     expect(worker).toMatch(
       /begin: \(\) =>\s*setMigration\(\{\s*status: "migrating"/,
     );
