@@ -5,6 +5,7 @@ import {
   HardenedPGliteDialect,
   InMemoryQueue,
   queryThroughDialect,
+  PGLITE_IDB_STORAGE_FACTS,
   ReactorBuilder,
   ReactorClientBuilder,
   type ChannelConfig,
@@ -449,7 +450,8 @@ const host = new ReactorHost({
         .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(owned.reactorDb);
+        .withKysely(owned.reactorDb)
+        .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,

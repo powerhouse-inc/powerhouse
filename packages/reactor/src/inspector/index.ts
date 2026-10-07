@@ -32,6 +32,8 @@ export {
 } from "./reactor-inspector.js";
 export {
   IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_IDB_STORAGE_FACTS,
+  PGLITE_PATH_STORAGE_FACTS,
   POSTGRES_STORAGE_FACTS,
   UNKNOWN_STORAGE_FACTS,
 } from "./storage-facts.js";

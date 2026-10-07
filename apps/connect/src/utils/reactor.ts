@@ -15,6 +15,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import {
   HardenedPGliteDialect,
+  PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type {
@@ -82,7 +83,8 @@ export async function createBrowserReactor(
           onPoisoned: reloadPageForPoisonedStore,
         }),
       }),
-    );
+    )
+    .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)

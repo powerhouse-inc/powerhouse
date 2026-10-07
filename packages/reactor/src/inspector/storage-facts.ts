@@ -21,3 +21,17 @@ export const IN_MEMORY_PGLITE_STORAGE_FACTS: ReactorStorageFacts =
     durable: false,
     selfHeal: false,
   });
+
+export const PGLITE_PATH_STORAGE_FACTS: ReactorStorageFacts = Object.freeze({
+  engine: "pglite",
+  persistence: "path",
+  durable: true,
+  selfHeal: false,
+});
+
+export const PGLITE_IDB_STORAGE_FACTS: ReactorStorageFacts = Object.freeze({
+  engine: "pglite",
+  persistence: "idb",
+  durable: true,
+  selfHeal: false,
+});
