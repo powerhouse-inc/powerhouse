@@ -115,9 +115,18 @@ the sweeps and the supervisor are per process.
   host reports its triggers unavailable. It does not re-claim; workflows come
   back on the next boot, since re-arming needs a fresh compose.
 - A firing the shutdown refuses, whether queued for its concurrency slot or
-  still on its way in, is not dropped silently. An operation fire and a piece
-  trigger's item are journaled as a PENDING run before they fire, and the
-  refusal fails that run with its payload, so it can be rerun.
+  still on its way in, is recorded once. Every trigger firing (an operation, a
+  piece trigger's items, a schedule slot, a webhook delivery) is journaled as a
+  PENDING run with its payload before it fires. If its source will not deliver
+  it again, the refusal fails that run, so it can be rerun. If it will (a sync
+  webhook answered 503 for the sender to retry, or piece items whose cursor the
+  stopped trigger put back), the run is cancelled as redelivered. A firing
+  refused before its run was written is left to its source: the operation is
+  replayed, the sender retries, the schedule slot stays due, the trigger's
+  cursor is put back or never moved. A close-out write that fails leaves the
+  run PENDING, and the next owner fails it when it opens the journal. Without a
+  working journal a firing that still runs is unrecorded, and its refusal is
+  logged as an error.
 - A renewal that fails or hangs is retried every 5s. A holder that has gone
   30s without a renewal it knows landed reports itself lost
   (`reason: "unrenewable"`), before a stale same-owner claim (40s) or expiry
