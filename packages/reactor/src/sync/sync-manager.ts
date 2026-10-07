@@ -844,6 +844,16 @@ export class SyncManager
         (item) => item.documentId === documentId,
       );
       if (dead.length > 0) remote.channel.deadLetter.remove(...dead);
+      // Parked items would otherwise hold the inbox cursor for good.
+      const parked = remote.channel.inbox.items.filter(
+        (item) =>
+          item.documentId === documentId && this.parkedByQuarantine.has(item),
+      );
+      for (const item of parked) {
+        this.parkedByQuarantine.delete(item);
+        item.executed();
+      }
+      if (parked.length > 0) remote.channel.inbox.remove(...parked);
     }
   }
 
@@ -2163,6 +2173,8 @@ export class SyncManager
         eligible.push(syncOp);
       } else {
         this.parkedByQuarantine.add(syncOp);
+        // Its cursor must not pass it, or a reset or restart loses it.
+        remote.channel.inbox.hold?.(syncOp);
       }
     }
     // A purged id's history is gone here; a job or a dead letter would restore it.

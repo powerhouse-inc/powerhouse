@@ -602,4 +602,56 @@ describe("Mailbox", () => {
       expect(removedCallback).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("hold", () => {
+    const withOrdinal = (id: string, ordinal: number) =>
+      new SyncOperation(
+        id,
+        generateId(),
+        [],
+        "remote1",
+        "doc-1",
+        ["public"],
+        "main",
+        [
+          {
+            operation: {} as never,
+            context: {
+              documentId: "doc-1",
+              documentType: "test",
+              scope: "public",
+              branch: "main",
+              ordinal,
+            },
+          },
+        ],
+      );
+
+    it("keeps the ack below a held item until it is applied", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+      mailbox.hold(parked);
+
+      later.executed();
+      mailbox.remove(later);
+      expect(mailbox.ackOrdinal).toBe(9);
+
+      parked.executed();
+      expect(mailbox.ackOrdinal).toBe(20);
+    });
+
+    it("releases a held item that leaves the mailbox", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+      mailbox.hold(parked);
+      later.executed();
+
+      mailbox.remove(parked);
+      expect(mailbox.ackOrdinal).toBe(20);
+    });
+  });
 });

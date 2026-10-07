@@ -33,6 +33,8 @@ export interface IMailbox {
   get(id: string): SyncOperation | undefined;
   add(...items: SyncOperation[]): void;
   remove(...items: SyncOperation[]): void;
+  /** Keeps ackOrdinal below an unapplied item until it is applied or removed. */
+  hold?(item: SyncOperation): void;
 
   // listeners
   onAdded(callback: MailboxCallback): void;
@@ -68,6 +70,7 @@ export class Mailbox implements IMailbox {
   private itemsMap: Map<string, SyncOperation> = new Map();
   /** Unapplied items carrying a marker, so the held ack reads only these. */
   private readonly heldMarkers = new Set<SyncOperation>();
+  private readonly held = new Set<SyncOperation>();
   private addedCallbacks: MailboxCallback[] = [];
   private removedCallbacks: MailboxCallback[] = [];
   private paused: boolean = false;
@@ -94,9 +97,9 @@ export class Mailbox implements IMailbox {
   }
 
   get ackOrdinal(): number {
-    if (!this.holdAckBelowMarkers) return this._ack;
+    if (!this.holdAckBelowMarkers && this.held.size === 0) return this._ack;
     let floor = Number.POSITIVE_INFINITY;
-    for (const item of this.heldMarkers) {
+    for (const item of [...this.heldMarkers, ...this.held]) {
       for (const op of item.operations) {
         const ordinal = op.context.ordinal;
         if (ordinal > 0 && ordinal < floor) floor = ordinal;
@@ -107,6 +110,12 @@ export class Mailbox implements IMailbox {
 
   get latestOrdinal(): number {
     return this._latestOrdinal;
+  }
+
+  hold(item: SyncOperation): void {
+    if (item.status === SyncOperationStatus.Applied) return;
+    if (this.itemsMap.get(item.id) !== item) return;
+    this.held.add(item);
   }
 
   get(id: string): SyncOperation | undefined {
@@ -136,6 +145,7 @@ export class Mailbox implements IMailbox {
       item.on((syncOp, _, next) => {
         if (next === SyncOperationStatus.Applied) {
           this.heldMarkers.delete(syncOp);
+          this.held.delete(syncOp);
           for (const op of syncOp.operations) {
             this._ack = Math.max(this._ack, op.context.ordinal);
           }
@@ -166,6 +176,7 @@ export class Mailbox implements IMailbox {
     for (const item of items) {
       this.itemsMap.delete(item.id);
       this.heldMarkers.delete(item);
+      this.held.delete(item);
     }
 
     if (this.paused) {
