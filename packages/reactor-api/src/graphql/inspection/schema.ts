@@ -86,12 +86,27 @@ export const inspectionTypeDefs = gql`
     lastError: String
   }
 
+  """
+  A queued job without its actions or operations.
+  """
+  type InspectionQueueJob {
+    id: String!
+    kind: String!
+    documentId: String!
+    scope: String!
+    branch: String!
+    status: String!
+    actionCount: Int!
+    operationCount: Int!
+    retryCount: Int!
+  }
+
   type InspectionQueueState {
     isPaused: Boolean!
     totalPending: Int!
     totalExecuting: Int!
-    pendingJobs: [JSONObject!]!
-    executingJobs: [JSONObject!]!
+    pendingJobs: [InspectionQueueJob!]!
+    executingJobs: [InspectionQueueJob!]!
   }
 
   type InspectionProcessor {
@@ -156,9 +171,23 @@ export const inspectionTypeDefs = gql`
     meta: JSONObject!
   }
 
+  """
+  A dead letter without its operations.
+  """
+  type InspectionDeadLetter {
+    id: String!
+    jobId: String!
+    documentId: String!
+    branch: String!
+    scopes: [String!]!
+    errorType: String!
+    errorMessage: String!
+    operationCount: Int!
+  }
+
   type InspectionDeadLetterPage {
     remoteName: String!
-    results: [JSONObject!]!
+    results: [InspectionDeadLetter!]!
     nextCursor: String
   }
 

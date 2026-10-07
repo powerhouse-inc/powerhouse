@@ -1,5 +1,7 @@
 import {
   DriveInspection,
+  toWireDeadLetter,
+  toWireQueueState,
   type INSPECTOR_OPS,
   type InspectorDocumentReader,
   type InspectorDriveInfo,
@@ -231,8 +233,8 @@ export function createInspectionResolvers(
       return { ...info, lastError: info.lastError ?? null };
     }),
 
-    queueState: operator((): Promise<WireQueueState> =>
-      inspector.getQueueState(),
+    queueState: operator(async (): Promise<WireQueueState> =>
+      toWireQueueState(await inspector.getQueueState()),
     ),
 
     processors: operator(async (): Promise<WireInspectorProcessor[]> =>
@@ -286,7 +288,7 @@ export function createInspectionResolvers(
         );
         return {
           remoteName: page.remoteName,
-          results: page.results,
+          results: page.results.map(toWireDeadLetter),
           nextCursor: page.nextCursor ?? null,
         };
       },

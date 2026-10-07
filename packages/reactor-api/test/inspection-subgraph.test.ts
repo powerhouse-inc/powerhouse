@@ -1,5 +1,7 @@
+import type { InMemoryQueue } from "@powerhousedao/reactor";
 import {
   ChannelScheme,
+  ChannelErrorSource,
   EventBus,
   INSPECTION_ORDINAL_FIELDS,
   INSPECTION_ROOT_FIELDS,
@@ -8,6 +10,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   SYNC_INSPECTION_OPS,
+  type DeadLetterPage,
   type InProcessReactorClientModule,
   type ValidationResult,
 } from "@powerhousedao/reactor";
@@ -192,6 +195,149 @@ describe("inspection subgraph: OPEN does not make every caller an operator", () 
       contextFor(),
     );
     expect(codeOf(result)).toBe("FORBIDDEN");
+  });
+});
+
+describe("inspection subgraph: operational reads carry no document content", () => {
+  const SECRET = "classified-payload-7f3a";
+
+  type Field = (parent: unknown, args: unknown, ctx: Context) => unknown;
+
+  function fieldsOf(
+    client: InProcessReactorClientModule,
+    source: IReactorInspectionSource,
+  ): Record<string, Field> {
+    const subgraph = new InspectionSubgraph({
+      reactorClient: client.client,
+      syncManager: client.reactorModule?.syncModule?.syncManager ?? {
+        list: () => [],
+      },
+      authorizationService: openHost(),
+      inspection: source,
+    } as unknown as SubgraphArgs);
+    return (subgraph.resolvers as { ReactorInspection: Record<string, Field> })
+      .ReactorInspection;
+  }
+
+  // The operator is a listed admin, but the policy grants it nothing.
+  async function queuedWriteToPolicedDrive(): Promise<string> {
+    module = await buildReadGateReactor();
+    const id = await createFixture(module.client, "ins-queued", {
+      source: driveDocumentModelModule,
+    });
+    await police(module.client, id);
+    const reactorModule = module.reactorModule!;
+    (reactorModule.queue as InMemoryQueue).pause();
+    await reactorModule.reactor.execute(id, "main", [
+      setDriveName({ name: SECRET }),
+    ]);
+    return id;
+  }
+
+  function deadLetterSource(id: string): IReactorInspectionSource {
+    const real = createReactorInspectionSource(module!.reactorModule!);
+    const record = {
+      id: "dl-1",
+      jobId: "job-1",
+      jobDependencies: [],
+      remoteName: "r",
+      documentId: id,
+      scopes: ["global"],
+      branch: "main",
+      operations: [
+        {
+          operation: {
+            id: "op-1",
+            index: 0,
+            skip: 0,
+            hash: "h",
+            timestampUtcMs: "0",
+            action: setDriveName({ name: SECRET }),
+          },
+          context: {
+            documentId: id,
+            documentType: "powerhouse/document-drive",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+      errorSource: ChannelErrorSource.Inbox,
+      errorMessage: "failed",
+      errorType: "LIBRARY_ERROR",
+    } as unknown as DeadLetterPage["results"][number];
+    return {
+      ...real,
+      syncInspector: {
+        inspectRemote: () => Promise.reject(new Error("unused")),
+        inspectRemotes: () => Promise.resolve([]),
+        listDeadLetters: (remoteName) =>
+          Promise.resolve({ remoteName, results: [record] }),
+      },
+    };
+  }
+
+  it("serves a queued job with no action input", async () => {
+    const id = await queuedWriteToPolicedDrive();
+    const reactorModule = module!.reactorModule!;
+    const fields = fieldsOf(
+      module!,
+      createReactorInspectionSource(reactorModule),
+    );
+
+    const state = (await fields.queueState(
+      undefined,
+      {},
+      contextFor(OPERATOR),
+    )) as { totalPending: number; pendingJobs: unknown[] };
+
+    expect(state.totalPending).toBe(1);
+    expect(JSON.stringify(state)).not.toContain(SECRET);
+    expect(state.pendingJobs).toEqual([
+      expect.objectContaining({ documentId: id, actionCount: 1 }),
+    ]);
+  });
+
+  it("serves a dead letter with no operations", async () => {
+    module = await buildReadGateReactor();
+    const fields = fieldsOf(module, deadLetterSource("ins-dead"));
+
+    const page = (await fields.deadLetters(
+      undefined,
+      { remoteName: "r" },
+      contextFor(OPERATOR),
+    )) as { results: unknown[] };
+
+    expect(JSON.stringify(page)).not.toContain(SECRET);
+    expect(page.results).toEqual([
+      expect.objectContaining({ documentId: "ins-dead", operationCount: 1 }),
+    ]);
+  });
+
+  it("has no field that reaches a job's actions or a dead letter's operations", async () => {
+    const id = await queuedWriteToPolicedDrive();
+    const { schema } = buildSchema(module!, openHost(), deadLetterSource(id));
+
+    const projected = await run(
+      schema,
+      `{ inspection {
+        queueState { pendingJobs {
+          id kind documentId scope branch status actionCount operationCount retryCount } }
+        deadLetters(remoteName: "r") { results {
+          id jobId documentId branch scopes errorType errorMessage operationCount } } } }`,
+      contextFor(OPERATOR),
+    );
+    expect(projected.errors).toBeUndefined();
+    expect(JSON.stringify(projected.data)).not.toContain(SECRET);
+
+    for (const query of [
+      `{ inspection { queueState { pendingJobs { actions } } } }`,
+      `{ inspection { deadLetters(remoteName: "r") { results { operations } } } }`,
+    ]) {
+      const result = await run(schema, query, contextFor(OPERATOR));
+      expect(result.errors?.[0]?.message).toMatch(/Cannot query field/);
+    }
   });
 });
 

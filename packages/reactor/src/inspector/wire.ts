@@ -6,6 +6,7 @@ import type {
   RemoteOptions,
   RemotePeer,
 } from "../sync/types.js";
+import type { QueueStateSnapshot } from "./types.js";
 import {
   INSPECTOR_OPS,
   readOpFields,
@@ -54,12 +55,25 @@ export type WireReactorInfo = {
   readonly access: WireInspectorAccess | null;
 };
 
+/** A queued job without its actions or operations. */
+export type WireQueueJob = {
+  readonly id: string;
+  readonly kind: string;
+  readonly documentId: string;
+  readonly scope: string;
+  readonly branch: string;
+  readonly status: "pending" | "executing";
+  readonly actionCount: number;
+  readonly operationCount: number;
+  readonly retryCount: number;
+};
+
 export type WireQueueState = {
   readonly isPaused: boolean;
   readonly totalPending: number;
   readonly totalExecuting: number;
-  readonly pendingJobs: Job[];
-  readonly executingJobs: Job[];
+  readonly pendingJobs: WireQueueJob[];
+  readonly executingJobs: WireQueueJob[];
 };
 
 export type WireInspectorDocumentModel = {
@@ -177,11 +191,69 @@ export type WireRemoteSyncInspection = {
   readonly meta: WireRemoteMeta;
 };
 
+/** A dead letter without its operations. */
+export type WireDeadLetter = {
+  readonly id: string;
+  readonly jobId: string;
+  readonly documentId: string;
+  readonly branch: string;
+  readonly scopes: string[];
+  readonly errorType: string;
+  readonly errorMessage: string;
+  readonly operationCount: number;
+};
+
 export type WireDeadLetterPage = {
   readonly remoteName: string;
-  readonly results: DeadLetterRecord[];
+  readonly results: WireDeadLetter[];
   readonly nextCursor: string | null;
 };
+
+function toWireQueueJob(
+  job: Job,
+  status: WireQueueJob["status"],
+): WireQueueJob {
+  return {
+    id: job.id,
+    kind: job.kind,
+    documentId: job.documentId,
+    scope: job.scope,
+    branch: job.branch,
+    status,
+    actionCount: job.actions.length,
+    operationCount: job.operations.length,
+    retryCount: job.retryCount ?? 0,
+  };
+}
+
+/** The queue as the inspection surface serves it: no document content. */
+export function toWireQueueState(snapshot: QueueStateSnapshot): WireQueueState {
+  return {
+    isPaused: snapshot.isPaused,
+    totalPending: snapshot.totalPending,
+    totalExecuting: snapshot.totalExecuting,
+    pendingJobs: snapshot.pendingJobs.map((job) =>
+      toWireQueueJob(job, "pending"),
+    ),
+    executingJobs: snapshot.executingJobs.map((job) =>
+      toWireQueueJob(job, "executing"),
+    ),
+  };
+}
+
+/** A dead letter as the inspection surface serves it: no document content. */
+export function toWireDeadLetter(record: DeadLetterRecord): WireDeadLetter {
+  return {
+    id: record.id,
+    jobId: record.jobId,
+    documentId: record.documentId,
+    branch: record.branch,
+    scopes: [...record.scopes],
+    errorType: record.errorType,
+    errorMessage: record.errorMessage,
+    operationCount: record.operations.length,
+  };
+}
 
 type MissingKeys<T, A extends readonly PropertyKey[]> = Exclude<
   keyof T,
@@ -261,6 +333,17 @@ export const INSPECTION_WIRE_FIELDS = {
     "failed",
     "lastError",
   ]),
+  InspectionQueueJob: fieldsOf<WireQueueJob>()([
+    "id",
+    "kind",
+    "documentId",
+    "scope",
+    "branch",
+    "status",
+    "actionCount",
+    "operationCount",
+    "retryCount",
+  ]),
   InspectionQueueState: fieldsOf<WireQueueState>()([
     "isPaused",
     "totalPending",
@@ -316,6 +399,16 @@ export const INSPECTION_WIRE_FIELDS = {
     "mailboxDepths",
     "connection",
     "meta",
+  ]),
+  InspectionDeadLetter: fieldsOf<WireDeadLetter>()([
+    "id",
+    "jobId",
+    "documentId",
+    "branch",
+    "scopes",
+    "errorType",
+    "errorMessage",
+    "operationCount",
   ]),
   InspectionDeadLetterPage: fieldsOf<WireDeadLetterPage>()([
     "remoteName",
