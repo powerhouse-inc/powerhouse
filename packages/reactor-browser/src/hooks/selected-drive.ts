@@ -5,9 +5,9 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import {
   createUrlWithPreservedParams,
-  extractDriveIdFromPath,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
+  makeDriveUrlComponent,
   resolveUrlPathname,
 } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
@@ -194,11 +194,22 @@ function deferDriveSelection(driveSlug: string) {
 
 export function addSetSelectedDriveOnPopStateEventHandler() {
   window.addEventListener("popstate", () => {
-    const pathname = window.location.pathname;
-    const driveId = extractDriveIdFromPath(pathname);
-    const selectedDriveId = window.ph?.selectedDriveId;
-    if (driveId !== selectedDriveId) {
-      setSelectedDrive(driveId);
+    // Compare slugs as the URL spells them: setSelectedDrive takes a slug,
+    // and most slugs don't embed the drive id.
+    const driveSlug = extractDriveSlugFromPath(window.location.pathname);
+    const drives = window.ph?.drives ?? [];
+    const selectedId = window.ph?.selectedDriveId;
+    const selected = drives.find((drive) => drive.header.id === selectedId);
+    // A drive selected before it is listed stays, unless the URL names another.
+    if (selectedId && !selected) {
+      const named = drives.some(
+        (drive) => makeDriveUrlComponent(drive) === `/d/${driveSlug}`,
+      );
+      if (driveSlug && !named) return;
+    }
+    const selectedUrl = makeDriveUrlComponent(selected);
+    if (`/d/${driveSlug}` !== selectedUrl && (driveSlug || selectedId)) {
+      setSelectedDrive(driveSlug || undefined);
     }
   });
 }

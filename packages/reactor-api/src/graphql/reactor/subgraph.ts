@@ -465,8 +465,30 @@ export class ReactorSubgraph extends BaseSubgraph {
       jobStatus: async (_parent, args, ctx: Context) => {
         this.logger.debug("jobStatus(@args)", args);
         try {
-          return await resolvers.jobStatus(this.reactorClient, args, (id) =>
-            this.servesDocument(id, ctx),
+          // jobChanges' gate, applied to the job and to every coordinate.
+          const admin = this.authorizationService.isSupremeAdmin(
+            ctx.user?.address,
+          );
+          const decisions = new Map<string, Promise<boolean>>();
+          const readable = (id: string): Promise<boolean> => {
+            let decision = decisions.get(id);
+            if (!decision) {
+              decision = (async () =>
+                (await this.servesDocument(id, ctx)) &&
+                (admin ||
+                  (await this.canReadDocument(
+                    id as CanonicalDocumentId,
+                    ctx,
+                  ))))();
+              decisions.set(id, decision);
+            }
+            return decision;
+          };
+          return await resolvers.jobStatus(
+            this.reactorClient,
+            args,
+            readable,
+            readable,
           );
         } catch (error) {
           this.logger.error("Error in jobStatus: @Error", error);
@@ -863,6 +885,63 @@ export class ReactorSubgraph extends BaseSubgraph {
         } catch (error) {
           this.logger.error(
             "Error in executeAsync(@args): @Error",
+            args,
+            error,
+          );
+          throw error;
+        }
+      },
+
+      executeBatch: async (_parent, args, ctx: Context) => {
+        this.logger.debug("executeBatch(@args)", args);
+        try {
+          const creation = resolvers.batchCreationOf(args.jobs);
+          if (creation) {
+            // The same rule as createDocument: write on a parent, or create.
+            if (creation.linkedFrom.length > 0) {
+              for (const parent of creation.linkedFrom) {
+                await this.assertCanWrite(parent, ctx);
+              }
+            } else {
+              this.assertCanCreate(ctx);
+            }
+
+            const result = await resolvers.executeBatch(this.reactorClient, {
+              jobs: args.jobs,
+            });
+            if (
+              result.jobs.some((entry) => entry.job.status !== "READ_READY")
+            ) {
+              return result;
+            }
+
+            if (isDriveContainerType(creation.documentType)) {
+              this.graphqlManager.driveOwnershipCache.add(creation.documentId);
+            }
+            if (ctx.user?.address) {
+              await this.documentPermissionService?.initializeDocumentProtection(
+                creation.documentId,
+                ctx.user.address,
+                this.authorizationService.config.defaultProtection,
+              );
+            }
+            return result;
+          }
+
+          const jobs = [];
+          for (const job of args.jobs) {
+            const handle = await this.assertCanExecuteOperations(
+              job.documentIdOrSlug,
+              job.actions,
+              ctx,
+            );
+            jobs.push({ ...job, documentIdOrSlug: handle.fetchIdentifier });
+          }
+
+          return await resolvers.executeBatch(this.reactorClient, { jobs });
+        } catch (error) {
+          this.logger.error(
+            "Error in executeBatch(@args): @Error",
             args,
             error,
           );

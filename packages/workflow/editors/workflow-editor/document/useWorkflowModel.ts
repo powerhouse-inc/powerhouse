@@ -54,6 +54,7 @@ function settingsInput(settings: PropertySettingModel[]) {
 function toModel(state: WorkflowState): WorkflowModel {
   return {
     name: state.name,
+    description: state.description ?? null,
     status: state.status,
     version: state.version,
     published: state.published
@@ -163,6 +164,8 @@ export function useWorkflowModel(): {
         // Base action keeps the document header name in sync for drive views.
         dispatch(actions.setName(name));
       },
+      setDescription: (description) =>
+        dispatch(actions.setWorkflowDescription({ description })),
       setStatus: (status) => dispatch(actions.setWorkflowStatus({ status })),
       setTrigger: (input) => {
         // Keep the trigger id stable so edges from it survive edits.

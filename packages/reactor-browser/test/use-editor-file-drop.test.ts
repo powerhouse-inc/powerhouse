@@ -27,16 +27,16 @@ function fakeEvent(opts: { types?: string[]; files?: File[] }): FakeEvent {
 }
 
 describe("useEditorFileDrop", () => {
-  it("includes the opt-out attribute in dragProps", () => {
-    const { result } = renderHook(() =>
+  it("includes the opt-out attribute in dragProps", async () => {
+    const { result } = await renderHook(() =>
       useEditorFileDrop({ onFiles: () => undefined }),
     );
     expect(result.current.dragProps["data-accepts-files"]).toBe("");
   });
 
-  it("preventDefaults dragover for file drags only", () => {
+  it("preventDefaults dragover for file drags only", async () => {
     const onFiles = vi.fn();
-    const { result } = renderHook(() => useEditorFileDrop({ onFiles }));
+    const { result } = await renderHook(() => useEditorFileDrop({ onFiles }));
 
     const dragOver = fakeEvent({});
     result.current.dragProps.onDragOver(dragOver.event);
@@ -47,9 +47,9 @@ describe("useEditorFileDrop", () => {
     expect(ui.preventDefault).not.toHaveBeenCalled();
   });
 
-  it("filters dropped files by extension and skips when none match", () => {
+  it("filters dropped files by extension and skips when none match", async () => {
     const onFiles = vi.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useEditorFileDrop({ accept: [".png", ".pdf"], onFiles }),
     );
 
@@ -68,9 +68,9 @@ describe("useEditorFileDrop", () => {
     expect(onFiles).not.toHaveBeenCalled();
   });
 
-  it("treats accept entries case-insensitively", () => {
+  it("treats accept entries case-insensitively", async () => {
     const onFiles = vi.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useEditorFileDrop({ accept: [".PNG", ".PDF"], onFiles }),
     );
 
@@ -81,8 +81,8 @@ describe("useEditorFileDrop", () => {
     expect(onFiles).toHaveBeenCalledWith([pic, doc]);
   });
 
-  it("tracks drag depth so the overlay does not flicker on child crossings", () => {
-    const { result } = renderHook(() =>
+  it("tracks drag depth so the overlay does not flicker on child crossings", async () => {
+    const { result } = await renderHook(() =>
       useEditorFileDrop({ onFiles: () => undefined }),
     );
 
@@ -101,8 +101,8 @@ describe("useEditorFileDrop", () => {
     expect(result.current.isDragOver).toBe(false);
   });
 
-  it("resets depth on drop", () => {
-    const { result } = renderHook(() =>
+  it("resets depth on drop", async () => {
+    const { result } = await renderHook(() =>
       useEditorFileDrop({ onFiles: () => undefined }),
     );
 
