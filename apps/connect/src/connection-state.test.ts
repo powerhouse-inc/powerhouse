@@ -28,3 +28,12 @@ describe("storage-held connection status", () => {
     expect(state.getWorkerConnectionStatus()).toBe("lost");
   });
 });
+
+describe("version-conflict connection status", () => {
+  it("holds until the page reloads, not a pong from the retired worker", () => {
+    state.setWorkerConnectionStatus("version-conflict");
+    state.setWorkerConnectionStatus("connected");
+    state.setWorkerConnectionStatus("lost");
+    expect(state.getWorkerConnectionStatus()).toBe("version-conflict");
+  });
+});
