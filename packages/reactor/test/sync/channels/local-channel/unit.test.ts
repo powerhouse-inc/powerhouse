@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { ChannelError } from "../../../../src/sync/errors.js";
 import type { SyncOperation } from "../../../../src/sync/sync-operation.js";
-import {
-  ChannelErrorSource,
-  SyncOperationStatus,
-} from "../../../../src/sync/types.js";
+import { SyncOperationStatus } from "../../../../src/sync/types.js";
 import {
   applyInbox,
   FakeTransport,
