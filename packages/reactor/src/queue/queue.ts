@@ -157,7 +157,15 @@ export class InMemoryQueue implements IQueue {
     const queueKey = this.createQueueKey(job.documentId, job.scope, job.branch);
     const queue = this.getQueue(queueKey);
 
-    queue.push(job);
+    // A retried or flushed job at the tail would sit behind a head waiting on it.
+    const firstDependent = queue.findIndex((queued) =>
+      queued.queueHint.includes(job.id),
+    );
+    if (firstDependent === -1) {
+      queue.push(job);
+    } else {
+      queue.splice(firstDependent, 0, job);
+    }
 
     // Track job location for removal and dependency resolution
     this.jobIdToQueueKey.set(job.id, queueKey);

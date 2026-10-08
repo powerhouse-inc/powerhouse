@@ -8,6 +8,7 @@ import { ReactorEventTypes } from "../../src/events/types.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import type {
+  IJobExecutionHandle,
   Job,
   JobAvailableEvent,
   JobRoutingMeta,
@@ -1555,6 +1556,74 @@ describe("InMemoryQueue", () => {
       const retriedHandle = await queue.dequeueNext();
       expect(retriedHandle).not.toBeNull();
       expect(retriedHandle!.job.retryCount).toBe(1);
+    });
+  });
+
+  describe("re-enqueue ahead of a dependent", () => {
+    const transient = { name: "Error", message: "transient", stack: "" };
+
+    async function startJ1ThenQueueJ2(): Promise<IJobExecutionHandle> {
+      await queue.enqueue(createTestJob({ id: "J1", kind: "load" }));
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("J1");
+      handle!.start();
+      await queue.enqueue(
+        createTestJob({ id: "J2", kind: "load", queueHint: ["J1"] }),
+      );
+      return handle!;
+    }
+
+    it("runs a retried job before the dependent queued while it ran", async () => {
+      await startJ1ThenQueueJ2();
+
+      await queue.retryJob("J1", transient);
+
+      const retried = await queue.dequeueNext();
+      expect(retried?.job.id).toBe("J1");
+      await queue.completeJob("J1");
+      expect((await queue.dequeueNext())?.job.id).toBe("J2");
+    });
+
+    it("runs a flushed deferred job before the dependent queued while it ran", async () => {
+      const handle = await startJ1ThenQueueJ2();
+
+      handle.defer();
+      await queue.enqueue(handle.job);
+
+      const flushed = await queue.dequeueNext();
+      expect(flushed?.job.id).toBe("J1");
+      await queue.completeJob("J1");
+      expect((await queue.dequeueNext())?.job.id).toBe("J2");
+    });
+
+    it("keeps a job queued before the dependent ahead of the re-enqueued one", async () => {
+      await queue.enqueue(createTestJob({ id: "J1" }));
+      await queue.dequeueNext();
+      await queue.enqueue(createTestJob({ id: "X" }));
+      await queue.enqueue(createTestJob({ id: "J2", queueHint: ["J1"] }));
+
+      await queue.retryJob("J1", transient);
+
+      const order: string[] = [];
+      let next = await queue.dequeueNext();
+      while (next) {
+        order.push(next.job.id);
+        await queue.completeJob(next.job.id);
+        next = await queue.dequeueNext();
+      }
+      expect(order).toEqual(["X", "J1", "J2"]);
+    });
+
+    it("still re-enqueues at the tail when nothing queued depends on the job", async () => {
+      await queue.enqueue(createTestJob({ id: "J1" }));
+      await queue.dequeueNext();
+      await queue.enqueue(createTestJob({ id: "X" }));
+
+      await queue.retryJob("J1", transient);
+
+      expect((await queue.dequeueNext())?.job.id).toBe("X");
+      await queue.completeJob("X");
+      expect((await queue.dequeueNext())?.job.id).toBe("J1");
     });
   });
 
