@@ -31,7 +31,8 @@ export type SwitchboardReactorDefaultsOptions = {
   /**
    * Channel scheme. Defaults to `ChannelScheme.SWITCHBOARD`, which populates
    * `reactorModule.syncModule.syncManager` — required by reactor-api. Set
-   * to `false` only if the caller will configure a scheme themselves.
+   * to `false` if the caller configures sync itself (`withChannelScheme` or
+   * `withSync`); the builder refuses both together.
    */
   channelScheme?: ChannelScheme | false;
   /** Defaults to true. Set false when the caller owns SIGINT handling. */
