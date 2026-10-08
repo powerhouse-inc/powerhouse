@@ -105,7 +105,10 @@ import {
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
 } from "./workflow-runtime.mjs";
-import { ClosablePGliteDialect } from "./pglite-dialect.js";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "./pglite-dialect.js";
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   CURRENT_PG_MAJOR,
@@ -273,7 +276,7 @@ type ReactorStorage = {
   poolInstrumentation: PoolInstrumentation | undefined;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
@@ -332,7 +335,10 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      dialect: new ClosablePGliteDialect(
+        pglite,
+        reactorPgliteDialectOptions(logger),
+      ),
     }),
     poolInstrumentation: undefined,
   };

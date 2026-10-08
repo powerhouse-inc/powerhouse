@@ -154,22 +154,23 @@ export class SyncManagerProxy implements ISyncManager {
     void this.ensureSeeded();
   }
 
-  async startup(): Promise<void> {
-    let lastError: unknown;
-    for (let attempt = 0; attempt < SEED_MAX_ATTEMPTS; attempt++) {
+  /** Attempts that fail while `isWaiting()` (the worker waits on a store lock) are not counted. */
+  async startup({
+    isWaiting = () => false,
+  }: { isWaiting?: () => boolean } = {}): Promise<void> {
+    let failures = 0;
+    for (;;) {
       try {
         await this.ensureSeeded();
         return;
       } catch (error) {
-        lastError = error;
-        if (attempt < SEED_MAX_ATTEMPTS - 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, SEED_RETRY_DELAY_MS),
-          );
-        }
+        if (!isWaiting()) failures++;
+        if (failures >= SEED_MAX_ATTEMPTS) throw error;
+        await new Promise((resolve) =>
+          setTimeout(resolve, SEED_RETRY_DELAY_MS),
+        );
       }
     }
-    throw lastError;
   }
 
   shutdown(): ShutdownStatus {

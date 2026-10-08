@@ -5,7 +5,8 @@ export type GraphQLRequestErrorCategory =
   | "http"
   | "parse"
   | "graphql"
-  | "missing-data";
+  | "missing-data"
+  | "timeout";
 
 export class GraphQLRequestError extends Error {
   readonly statusCode: number | undefined;

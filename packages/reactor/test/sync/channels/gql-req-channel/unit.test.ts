@@ -224,8 +224,9 @@ describe("GqlRequestChannel", () => {
       await vi.advanceTimersByTimeAsync(20000);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      // Channel still reports as connected
+      // A timer that polls only on demand is connected by the touch.
       expect(channel.getConnectionState().state).toBe("connected");
+      expect(channel.getConnectionState().lastSuccessUtcMs).toBe(0);
 
       await channel.shutdown();
     });
@@ -1634,9 +1635,12 @@ describe("GqlRequestChannel", () => {
         manualTimer,
       );
 
-      // init calls touchRemoteChannel which returns ackOrdinal
+      // init calls touchRemoteChannel which returns ackOrdinal. The autofiring
+      // timer's first poll is what earns "connected"; init alone does not.
       await channel.init();
-      expect(channel.getConnectionState().state).toBe("connected");
+      await vi.waitFor(() =>
+        expect(channel.getConnectionState().state).toBe("connected"),
+      );
 
       // Verify the touchChannel mutation requests the new fields
       const touchCall = mockFetch.mock.calls.find(
@@ -1914,10 +1918,10 @@ describe("GqlRequestChannel", () => {
       );
       await channel.init();
 
-      // Initial state after init: idle
-      expect(channel.getConnectionState().state).toBe("connected");
+      // Initial state after init: never succeeded, so still connecting
+      expect(channel.getConnectionState().state).toBe("connecting");
 
-      // After success: idle
+      // After the first completed poll: connected
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getConnectionState().state).toBe("connected");
 
@@ -2023,7 +2027,7 @@ describe("GqlRequestChannel", () => {
       );
     });
 
-    it("should persist inbox cursor when applied operations are removed", () => {
+    it("should persist inbox cursor when applied operations are removed", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch as unknown as typeof global.fetch;
@@ -2042,6 +2046,10 @@ describe("GqlRequestChannel", () => {
       channel.inbox.add(syncOp);
       syncOp.executed();
       channel.inbox.remove(syncOp);
+
+      // Cursor writes are serialised per cursor row, so the upsert is issued
+      // from the write chain rather than inline with the removal.
+      await vi.advanceTimersByTimeAsync(0);
 
       expect(cursorStorage.upsert).toHaveBeenCalledWith(
         expect.objectContaining({

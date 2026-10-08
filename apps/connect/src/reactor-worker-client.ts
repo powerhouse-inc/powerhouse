@@ -35,7 +35,11 @@ import {
   getWorkerConnectionStatus,
   setWorkerConnectionStatus,
 } from "./connection-state.js";
-import { reactorWorkerName } from "./reactor-worker-name.js";
+import {
+  adoptWorkerGen,
+  readWorkerGen,
+  workerNameForGen,
+} from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 
@@ -68,7 +72,8 @@ export type WorkerReactorClientArgs = {
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
-  onReload: (reason: string, workerGen?: string) => void;
+  /** The worker gen in localStorage is already updated when this runs. */
+  onReload: (reason: string) => void;
   /** Prebuilt bundle URL; absent only for the monorepo app, where Vite bundles the worker from source. */
   workerUrl?: string;
   /** The bundle's `sourceDigest`; a rebuilt bundle at the same URL then forces a fresh worker. */
@@ -112,13 +117,13 @@ export function createWorkerReactorClientModule(
   const workerUrl = args.workerUrl
     ? new URL(args.workerUrl)
     : new URL("./reactor.worker.js", import.meta.url);
+  const workerGen = readWorkerGen(args.namespace);
+  const workerName = workerNameForGen(args.namespace, workerGen);
   console.info(
-    `[reactor-worker] constructing SharedWorker ${reactorWorkerName(
-      args.namespace,
-    )} from ${workerUrl.href}`,
+    `[reactor-worker] constructing SharedWorker ${workerName} from ${workerUrl.href}`,
   );
   const worker = new SharedWorker(workerUrl, {
-    name: reactorWorkerName(args.namespace),
+    name: workerName,
     type: "module",
   });
   worker.addEventListener("error", (event) => {
@@ -177,7 +182,12 @@ export function createWorkerReactorClientModule(
       },
       packages: args.packageSpecs,
     },
-    args.onReload,
+    (reason, nextGen) => {
+      if (nextGen) {
+        adoptWorkerGen(args.namespace, workerGen, nextGen);
+      }
+      args.onReload(reason);
+    },
     documentModelRegistry,
   );
 

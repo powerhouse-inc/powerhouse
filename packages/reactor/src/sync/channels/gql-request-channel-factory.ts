@@ -13,8 +13,16 @@ import type {
   RemoteOptions,
 } from "../types.js";
 import { PollBehavior } from "../types.js";
-import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
-import { IntervalPollTimer } from "./interval-poll-timer.js";
+import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  GqlRequestChannel,
+  MAX_REQUESTS_PER_POLL,
+  type GqlChannelConfig,
+} from "./gql-req-channel.js";
+import {
+  DELEGATE_TIMEOUT_FLOOR_MS,
+  IntervalPollTimer,
+} from "./interval-poll-timer.js";
 
 /**
  * Factory for creating GqlRequestChannel instances.
@@ -115,6 +123,15 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       gqlConfig.retryMaxDelayMs = retryMaxDelayMs;
     }
 
+    let requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
+    if (config.parameters.requestTimeoutMs !== undefined) {
+      if (typeof config.parameters.requestTimeoutMs !== "number") {
+        throw new Error('"requestTimeoutMs" parameter must be a number');
+      }
+      requestTimeoutMs = config.parameters.requestTimeoutMs;
+    }
+    gqlConfig.requestTimeoutMs = requestTimeoutMs;
+
     let maxQueueDepth: number | undefined;
     if (config.parameters.maxQueueDepth !== undefined) {
       if (typeof config.parameters.maxQueueDepth !== "number") {
@@ -142,6 +159,14 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,
       }),
+      // Room for every request of one tick plus the queue probe, so only a stuck tick is cancelled.
+      delegateTimeoutMs:
+        requestTimeoutMs > 0
+          ? Math.max(
+              DELEGATE_TIMEOUT_FLOOR_MS,
+              requestTimeoutMs * (MAX_REQUESTS_PER_POLL + 1),
+            )
+          : 0,
       startPaused: options?.pollBehavior === PollBehavior.Manual,
     });
 
