@@ -45,3 +45,10 @@ export {
   type RouterTableSnapshot,
   type RoutingOptions,
 } from "./types.js";
+export {
+  eligibleBackends,
+  ineligibleReason,
+  placeCollection,
+  placeStandalone,
+} from "./placement.js";
+export { RouterTable } from "./table.js";
