@@ -45,6 +45,80 @@ export class UnresolvedReferenceError extends Error {
   }
 }
 
+/**
+ * A value that exists but cannot be read, with the reason attached.
+ *
+ * The case it was written for: a rerun replaying a SUCCEEDED step whose
+ * journaled output the payload cap truncated. The step must NOT run again — it
+ * had side effects — but its output is genuinely gone, so a downstream step
+ * that reads it has to be told, by name, rather than handed a truncation
+ * marker or quietly made to re-run the step that produced it.
+ *
+ * The reason hangs off a SYMBOL key, so `JSON.stringify` drops it and nothing
+ * can leak the wrapper into a payload as data.
+ */
+const UNAVAILABLE = Symbol("unavailable");
+
+export class UnavailableValueError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "UnavailableValueError";
+  }
+}
+
+export function unavailableValue(reason: string): unknown {
+  return { [UNAVAILABLE]: reason };
+}
+
+function unavailableReason(value: unknown): string | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const reason = (value as Record<symbol, unknown>)[UNAVAILABLE];
+  return typeof reason === "string" ? reason : undefined;
+}
+
+/**
+ * The reason of the first {@link unavailableValue} anywhere inside a value,
+ * however deep, or undefined when there is none.
+ *
+ * A shallow check is not enough, and that was the hole: `{{steps.charge}}`
+ * lands on the step's whole entry rather than on the wrapper, so the wrapper
+ * sits one level down as `{ output: <wrapper> }`. The path check saw an
+ * ordinary object, handed it over as data, and `JSON.stringify` then dropped
+ * the symbol on the way to the piece — the downstream step received `{}` and
+ * the reason was gone. Refusing by name is the whole point of the wrapper.
+ */
+export function unavailableValueReason(value: unknown): string | undefined {
+  const own = unavailableReason(value);
+  if (own !== undefined) return own;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = unavailableValueReason(item);
+      if (nested !== undefined) return nested;
+    }
+    return undefined;
+  }
+  if (typeof value === "object" && value !== null) {
+    for (const entry of Object.values(value)) {
+      const nested = unavailableValueReason(entry);
+      if (nested !== undefined) return nested;
+    }
+  }
+  return undefined;
+}
+
+/** True for anything {@link unavailableValue} produced, at any depth of a
+ * resolved value. Lets a caller refuse before a piece is handed it. */
+export function containsUnavailableValue(value: unknown): boolean {
+  return unavailableValueReason(value) !== undefined;
+}
+
+/** Throws {@link UnavailableValueError} when a resolved value holds an
+ * unavailable wrapper at any depth; the gate every resolved input passes. */
+export function assertNoUnavailableValue(value: unknown): void {
+  const reason = unavailableValueReason(value);
+  if (reason !== undefined) throw new UnavailableValueError(reason);
+}
+
 const IDENT = /[A-Za-z0-9_$-]/;
 
 // A hand-rolled tokenizer: dot and bracket paths, quoted literals, `||`, `?`.
@@ -198,10 +272,20 @@ export function lookupPath(
   let current: unknown = scope;
   for (const segment of segments) {
     if (current === null || typeof current !== "object") return MISSING;
+    // Not missing and not readable: say which, before the path walks into it.
+    // Shallow on purpose — a container holding one unavailable entry is still
+    // readable for every other path through it.
+    const blocked = unavailableReason(current);
+    if (blocked !== undefined) throw new UnavailableValueError(blocked);
     const record = current as Record<string | number, unknown>;
     if (!Object.prototype.hasOwnProperty.call(record, segment)) return MISSING;
     current = record[segment];
   }
+  // What the path landed on is what leaves resolution, so the check here is
+  // DEEP: `steps.x.output` lands on the wrapper itself, but `steps.x` lands on
+  // the entry holding it, and handing that over would drop the reason on the
+  // symbol and give the piece a bare `{}`.
+  assertNoUnavailableValue(current);
   return current === undefined ? MISSING : current;
 }
 

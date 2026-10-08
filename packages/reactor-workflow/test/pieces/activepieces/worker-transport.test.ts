@@ -171,3 +171,56 @@ describe("PieceWorker over a transport", () => {
     expect(built).toHaveLength(2);
   });
 });
+
+// The operator's host-call cap reaches every request that can serve a piece,
+// not only action steps: a trigger hook or a design-time call made with no
+// cap of its own used to fall back to the child's hard 10s default.
+describe("the host-call cap on every request", () => {
+  const ENV = "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS";
+  const previous = process.env[ENV];
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env[ENV];
+    else process.env[ENV] = previous;
+  });
+
+  function answering() {
+    return fakeTransport((message, reply) => {
+      reply({
+        id: message.id,
+        type: "result",
+        output: null,
+        touched: [],
+        tlsPoisoned: false,
+      });
+    });
+  }
+
+  const capOf = (message: Record<string, unknown>) =>
+    (message.request as { hostCallTimeoutMs?: number }).hostCallTimeoutMs;
+
+  it("carries the configured cap on a trigger hook", async () => {
+    process.env[ENV] = "45000";
+    const transport = answering();
+    const worker = new PieceWorker({ transport: () => transport });
+
+    await worker.runTriggerHook(
+      { bundleDir: "/nowhere", triggerName: "t", hook: "onEnable" } as never,
+      { timeoutMs: 5_000 },
+    );
+
+    expect(capOf(transport.sent[0])).toBe(45_000);
+  });
+
+  it("raises it to the request's own timeout on a design-time call", async () => {
+    process.env[ENV] = "1000";
+    const transport = answering();
+    const worker = new PieceWorker({ transport: () => transport });
+
+    await worker.resolveOptions({ bundleDir: "/nowhere" } as never, {
+      timeoutMs: 20_000,
+    });
+
+    expect(capOf(transport.sent[0])).toBe(20_000);
+  });
+});
