@@ -7,6 +7,7 @@ import {
 import type {
   Action,
   DocumentModelModule,
+  Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
@@ -731,6 +732,53 @@ describe("a stale document entry under a batch-shaped write", () => {
     expect(one.called("executeBatch") || two.called("executeBatch")).toBe(
       false,
     );
+  });
+});
+
+describe("a batch-shaped write beside other backends", () => {
+  const createJob = (id: string) => ({
+    ...job("c", id),
+    actions: [{ type: "CREATE_DOCUMENT" }] as unknown as Action[],
+  });
+
+  function blip() {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    two.failing.add("isServed");
+    const client = router([one.config(), two.config()], {
+      collections: { "fresh-1": "one" },
+    });
+    return { one, client };
+  }
+
+  it("creates a document in executeBatch while another backend cannot answer a probe", async () => {
+    const { one, client } = blip();
+
+    await client.executeBatch({ jobs: [createJob("fresh-1")] });
+
+    expect(one.count("executeBatch")).toBe(1);
+  });
+
+  it("loads a created document in loadBatch while another backend cannot answer a probe", async () => {
+    const { one, client } = blip();
+
+    await client.loadBatch({
+      jobs: [
+        {
+          key: "l",
+          documentId: "fresh-1",
+          scope: "document",
+          branch: "main",
+          operations: [
+            { action: { type: "CREATE_DOCUMENT" } },
+          ] as unknown as Operation[],
+          dependsOn: [],
+          externalDeps: [],
+        },
+      ],
+    });
+
+    expect(one.count("loadBatch")).toBe(1);
   });
 });
 

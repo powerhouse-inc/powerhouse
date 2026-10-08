@@ -160,6 +160,27 @@ async function submitAndWait(
   return { jobs: Object.fromEntries(settled) };
 }
 
+const CREATE_DOCUMENT = "CREATE_DOCUMENT";
+
+/** Ids a job of the batch creates; nothing holds them yet to guard. */
+function createdByExecution(request: BatchExecutionRequest): Set<string> {
+  return new Set(
+    request.jobs
+      .filter((job) =>
+        job.actions.some((action) => action.type === CREATE_DOCUMENT),
+      )
+      .map((job) => job.documentId),
+  );
+}
+
+function createdByLoad(request: BatchLoadRequest): Set<string> {
+  return new Set(
+    request.jobs
+      .filter((job) => job.operations[0]?.action.type === CREATE_DOCUMENT)
+      .map((job) => job.documentId),
+  );
+}
+
 const documentIdentity = (document: PHDocument): string => document.header.id;
 
 /** The reactor's answer for a job no backend knows. */
@@ -809,6 +830,7 @@ export class RoutingReactorClient implements IReactorClient {
       identifiers,
       () => this.singleBackendFor("executeBatch", identifiers),
       (target) => target.api.executeBatch(request, signal),
+      createdByExecution(request),
     );
     this.recordBatchJobs(result.jobs, backend.name);
     return result;
@@ -828,6 +850,7 @@ export class RoutingReactorClient implements IReactorClient {
         return target;
       },
       (target) => declared(target, "loadBatch")(request, signal),
+      createdByLoad(request),
     );
     this.recordBatchJobs(result.jobs, backend.name);
     return result;

@@ -156,8 +156,8 @@ export class RouteDispatcher {
   }
 
   /**
-   * A batch-shaped write on the one backend `resolve` names. Each identifier is
-   * guarded before anything is sent. A misroute, or a not-found raised by a
+   * A batch-shaped write on the one backend `resolve` names. Each identifier
+   * not in `created` is guarded before anything is sent. A misroute, or a not-found raised by a
    * step wrapped in `beforeSubmit`, forgets the identifiers' entries and
    * re-resolves once; any other failure is the caller's, since a job may have
    * landed.
@@ -167,8 +167,10 @@ export class RouteDispatcher {
     identifiers: readonly string[],
     resolve: () => Promise<RouterBackend>,
     run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
+    created: ReadonlySet<string> = new Set(),
   ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
     const distinct = [...new Set(identifiers.filter((id) => id !== ""))];
+    const guarded = distinct.filter((id) => !created.has(id));
     const notFoundBeforeSubmit = new WeakSet<object>();
     const beforeSubmit: BeforeSubmit = async (step) => {
       try {
@@ -189,9 +191,11 @@ export class RouteDispatcher {
         break;
       }
       try {
-        for (const identifier of distinct) {
-          await this.guard.assertOwned(backend, identifier, label);
-        }
+        await Promise.all(
+          guarded.map((identifier) =>
+            this.guard.assertOwned(backend, identifier, label),
+          ),
+        );
         return { value: await run(backend, beforeSubmit), backend };
       } catch (error) {
         info = misrouteOf(error);
