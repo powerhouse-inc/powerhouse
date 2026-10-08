@@ -107,12 +107,12 @@ export class WorkflowTelemetry {
       this.recordPhase(`worker.${name}`, end - start);
       return span;
     };
-    const ready = epoch(timings.ready);
+    const ready = finite(timings.ready);
     if (ready !== undefined && forkedAt > 0) {
       child("boot", forkedAt, Math.max(forkedAt, ready));
     }
-    const received = epoch(timings.received);
-    const sent = epoch(timings.sent);
+    const received = finite(timings.received);
+    const sent = finite(timings.sent);
     // A request queued behind boot only starts travelling once the child is up.
     const delivered = Math.max(ipc.sent, ready ?? 0);
     if (received !== undefined) {
@@ -139,6 +139,7 @@ export class WorkflowTelemetry {
     if (sent !== undefined) {
       child("ipc.out", sent, Math.max(sent, ipc.received));
     }
+    request.setAttributes(workerMemory(timings.memory));
   }
 
   recordPhase(name: string, ms: number): void {
@@ -226,7 +227,7 @@ const WORKER_ATTRIBUTES: Record<string, "boolean" | "string"> = {
 };
 const MAX_ATTRIBUTE_LENGTH = 256;
 
-function epoch(value: unknown): number | undefined {
+function finite(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
@@ -239,8 +240,8 @@ function knownPhase(phase: unknown): phase is WorkerPhaseTiming {
     typeof name === "string" &&
     WORKER_PHASES.has(name) &&
     (parent === undefined || WORKER_PHASES.has(parent)) &&
-    epoch(start) !== undefined &&
-    epoch(end) !== undefined &&
+    finite(start) !== undefined &&
+    finite(end) !== undefined &&
     end! >= start!
   );
 }
@@ -257,6 +258,24 @@ function phaseAttributes(attributes: unknown): Attributes | undefined {
         : (value as boolean);
   }
   return Object.keys(kept).length > 0 ? kept : undefined;
+}
+
+const MB = 2 ** 20;
+
+// The child's memory as it answered, in MB, on the request span.
+function workerMemory(memory: unknown): Attributes {
+  if (typeof memory !== "object" || memory === null) return {};
+  const attributes: Attributes = {};
+  for (const [key, name] of [
+    ["rss", "worker.memory.rss_mb"],
+    ["heapUsed", "worker.memory.heap_used_mb"],
+    ["heapTotal", "worker.memory.heap_total_mb"],
+    ["external", "worker.memory.external_mb"],
+  ] as const) {
+    const bytes = finite((memory as Record<string, unknown>)[key]);
+    if (bytes !== undefined) attributes[name] = bytes / MB;
+  }
+  return attributes;
 }
 
 // Piece trigger kinds embed author-typed names; metrics keep only "piece".

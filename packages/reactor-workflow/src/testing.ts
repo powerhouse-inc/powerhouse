@@ -25,6 +25,7 @@ export {
   type IPieceWorker,
 } from "./pieces/activepieces/worker/host.js";
 export { PieceWorkerPool } from "./pieces/activepieces/worker/pool.js";
+export { WorkflowTelemetry } from "./telemetry.js";
 export {
   ActivepiecesBlockExecutor,
   CompositeBlockExecutor,

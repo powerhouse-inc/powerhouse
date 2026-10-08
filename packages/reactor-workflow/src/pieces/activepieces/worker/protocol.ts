@@ -294,6 +294,15 @@ export interface WorkerTimings {
   phases: WorkerPhaseTiming[];
   // When the child's entry finished loading; on its first response only.
   ready?: number;
+  // The child's process.memoryUsage() as it answered, in bytes.
+  memory?: WorkerMemory;
+}
+
+export interface WorkerMemory {
+  rss: number;
+  heapUsed: number;
+  heapTotal: number;
+  external: number;
 }
 
 export type WorkerResponse = ResultResponse | ErrorResponse;
