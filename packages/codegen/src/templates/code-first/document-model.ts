@@ -126,9 +126,11 @@ export const ${v.definitionV1Name} = ${v.contextName}.version({
 
 export const codeFirstVersionsTemplate = () =>
   ts`
+import { latestVersionOf } from "document-model";
+
 export const supportedVersions = [1] as const;
 
-export const latestVersion = supportedVersions[0];
+export const latestVersion = latestVersionOf(supportedVersions);
 `.raw;
 
 export const codeFirstUpgradeManifestTemplate = (

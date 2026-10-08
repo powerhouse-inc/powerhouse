@@ -71,13 +71,14 @@ Each version is a directory. To add version 2:
 2. In `v2/definition.ts`, set `version: 2` and change the state.
 3. In `v2/index.ts`, rename the export to `todoV2Definition`.
 4. Create `upgrades/v2.ts`. Export `v2` from it: the `UpgradeTransition` that changes a version 1 document into a version 2 document.
-5. In `upgrades/versions.ts`, set `supportedVersions = [1, 2] as const` and `latestVersion = supportedVersions[1]`.
+5. In `upgrades/versions.ts`, set `supportedVersions = [1, 2] as const`. The scaffold sets `latestVersion` to `latestVersionOf(supportedVersions)`, so it becomes `2` without an edit.
 6. In `upgrades/upgrade-manifest.ts`, import `v2` and set `upgrades: { v2 }`. The manifest type requires the `v2` key as soon as `versions.ts` lists version 2.
 7. In `index.ts`, add `todoV2Definition` to `versions`, export `todoV2 = todoFamily.at(2)`, and add `todoV2` to `documentModels`.
 
-A schema-first model keeps the same files in `upgrades/`, in the same form. The difference is that you write them yourself. `ph model check` compares the manifest with the versions and reports an error in two cases:
+A schema-first model has the same files in `upgrades/`, but codegen writes them, and its `versions.ts` names the latest version by index. In a code-first model, you write them yourself. `ph model check` compares the manifest with the versions and reports an error in three cases:
 
 - The manifest lists different versions from `versions.ts`.
+- `latestVersion` is not the last entry of `supportedVersions`.
 - The manifest has no transition for a version after version 1.
 
 :::note

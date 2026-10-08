@@ -1,4 +1,5 @@
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -290,6 +291,124 @@ describe("a scaffolded code-first model", () => {
     ).rejects.toThrow("Refusing to overwrite");
     expect(readFileSync(edited, "utf8")).toBe(before);
   });
+});
+
+describe("adding version 2 to a scaffolded code-first model", () => {
+  let versionedDir: string;
+  const model = (...segments: string[]) =>
+    join(versionedDir, "document-models", "todo", ...segments);
+  const replaceIn = (file: string, from: string, to: string) => {
+    const text = readFileSync(model(file), "utf8");
+    expect(text).toContain(from);
+    writeFileSync(model(file), text.replaceAll(from, to));
+  };
+
+  beforeAll(async () => {
+    versionedDir = materializeProject();
+    await printed(() =>
+      startGenerateDocumentModel(
+        {
+          document: undefined,
+          dir: undefined,
+          all: false,
+          extract: false,
+          codeFirst: "todo",
+          debug: undefined,
+        },
+        versionedDir,
+      ),
+    );
+    cpSync(model("v1"), model("v2"), { recursive: true });
+    replaceIn("v2/definition.ts", "version: 1,", "version: 2,");
+    replaceIn("v2/index.ts", "todoV1Definition", "todoV2Definition");
+    writeFileSync(
+      model("upgrades", "v2.ts"),
+      [
+        'import type { UpgradeTransition } from "document-model";',
+        "",
+        "export const v2: UpgradeTransition = {",
+        "  toVersion: 2,",
+        "  upgradeReducer: (document) => document,",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    replaceIn("upgrades/versions.ts", "[1] as const", "[1, 2] as const");
+    replaceIn(
+      "upgrades/upgrade-manifest.ts",
+      'from "./versions.js";',
+      'from "./versions.js";\nimport { v2 } from "./v2.js";',
+    );
+    replaceIn(
+      "upgrades/upgrade-manifest.ts",
+      "upgrades: {},",
+      "upgrades: { v2 },",
+    );
+    replaceIn(
+      "index.ts",
+      'import { todoV1Definition } from "./v1/index.js";',
+      'import { todoV1Definition } from "./v1/index.js";\nimport { todoV2Definition } from "./v2/index.js";',
+    );
+    replaceIn(
+      "index.ts",
+      "versions: [todoV1Definition]",
+      "versions: [todoV1Definition, todoV2Definition]",
+    );
+    replaceIn(
+      "index.ts",
+      "export const todoV1 = todoFamily.at(1);",
+      "export const todoV1 = todoFamily.at(1);\nexport const todoV2 = todoFamily.at(2);",
+    );
+    replaceIn("index.ts", "[todoV1];", "[todoV1, todoV2];");
+  });
+
+  afterAll(() => {
+    rmSync(versionedDir, { recursive: true, force: true });
+  });
+
+  it("makes version 2 the latest once supportedVersions lists it", async () => {
+    const upgrades = (await import(
+      /* @vite-ignore */
+      model("upgrades", "index.ts")
+    )) as { latestVersion: unknown };
+    expect(upgrades.latestVersion).toBe(2);
+
+    const typechecked = spawnSync(
+      process.execPath,
+      ["./node_modules/typescript/bin/tsc", "-p", "tsconfig.json"],
+      { cwd: versionedDir, encoding: "utf8" },
+    );
+    expect(`${typechecked.stdout}${typechecked.stderr}`.trim()).toBe("");
+    expect(typechecked.status).toBe(0);
+
+    const recorded = recordStreams();
+    const code = await runModelCheck(
+      {
+        configFile: join(versionedDir, "powerhouse.config.json"),
+        source: [],
+        outDir: "dist",
+        json: true,
+        jsonLines: false,
+        release: false,
+        watch: false,
+        warningsAsErrors: false,
+        debug: undefined,
+      },
+      recorded,
+    );
+    const report = JSON.parse(recorded.stdout) as {
+      diagnostics: readonly unknown[];
+      definitions: readonly { key: string; version: number }[];
+    };
+    expect(report.diagnostics).toEqual([]);
+    expect(
+      report.definitions.map(({ key, version }) => ({ key, version })),
+    ).toEqual([
+      { key: "acme-things/todo", version: 1 },
+      { key: "acme-things/todo", version: 2 },
+    ]);
+    expect(code).toBe(0);
+  }, 120_000);
 });
 
 describe("a scaffolded code-first subgraph", () => {
