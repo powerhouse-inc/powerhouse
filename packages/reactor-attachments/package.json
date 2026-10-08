@@ -52,6 +52,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@types/pg": "catalog:",
+    "fake-indexeddb": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "pg": "catalog:",
     "tsdown": "catalog:",

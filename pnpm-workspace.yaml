@@ -156,6 +156,7 @@ catalog:
   "rolldown": 1.2.9
   "remeda": 2.33.7
   "type-fest": 5.6.0
+  "fake-indexeddb": 6.2.5
 
 allowBuilds:
   vite: true

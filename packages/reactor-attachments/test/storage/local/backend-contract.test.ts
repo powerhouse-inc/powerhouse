@@ -1,3 +1,4 @@
+import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it } from "vitest";
 import {
   IdbAttachmentBackend,
@@ -6,16 +7,7 @@ import {
   type LocalAttachmentRecord,
 } from "../../../src/storage/local/index.js";
 
-/**
- * The {@link ILocalAttachmentBackend} contract, run against every backend.
- *
- * The memory twin runs in Node unconditionally. The IndexedDB backend runs in
- * the SAME suite whenever the realm has an `indexedDB` -- a browser pass, or a
- * Node run with a shim registered -- so the two can never answer differently
- * without a test failing. The repo has no `fake-indexeddb`, so in a plain Node
- * run the IndexedDB rows are skipped and reported as skipped rather than
- * silently absent; that is the browser-pass item for W3.4.
- */
+/** The {@link ILocalAttachmentBackend} contract; IndexedDB runs over fake-indexeddb. */
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 
@@ -47,10 +39,11 @@ const backends: Array<{
   { name: "memory", skip: false, create: () => new MemoryAttachmentBackend() },
   {
     name: "indexeddb",
-    skip: !hasIndexedDb,
+    skip: false,
     create: () =>
       new IdbAttachmentBackend({
-        databaseName: `ph-attachments-contract-${Math.random().toString(36).slice(2)}`,
+        indexedDB: new IDBFactory(),
+        databaseName: "ph-attachments-contract",
       }),
   },
 ];
