@@ -16,3 +16,32 @@ export {
   type MisrouteInfo,
   type WrongBackendDetails,
 } from "./errors.js";
+export {
+  fromReactorClient,
+  RouterBackend,
+  UnsupportedByBackendError,
+  type BackendSupports,
+  type BatchSubmitter,
+  type FindSupport,
+  type IRoutableBackend,
+  type RoutableBackendConfig,
+} from "./backend.js";
+export {
+  collectionRequirements,
+  DEFAULT_BRANCH,
+  DEFAULT_DOCUMENT_CACHE_SIZE,
+  DEFAULT_JOB_CACHE_SIZE,
+  DEFAULT_MISROUTE_ATTEMPTS,
+  DEFAULT_SUBSCRIPTION_DEDUP_SIZE,
+  NO_REQUIREMENTS,
+  UNKNOWN_REACTOR_INFO,
+  type BackendFacts,
+  type CollectionRequirements,
+  type CollectionRequirementsInput,
+  type ReactorReach,
+  type RouteSource,
+  type RouterDiagnostic,
+  type RouterTableEntry,
+  type RouterTableSnapshot,
+  type RoutingOptions,
+} from "./types.js";
