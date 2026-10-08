@@ -626,7 +626,7 @@ describe("releasing while a renewal is in flight", () => {
 // Two hosts booting on a fresh Postgres both run CREATE … IF NOT EXISTS, and
 // the loser can still hit the catalog's unique index.
 describe("creating the lease table beside another host", () => {
-  it.each(["23505", "42P07"])(
+  it.each(["23505", "42P07", "42710"])(
     "retries once when the DDL races (%s)",
     async (code) => {
       const relationalDb = createFreshRelationalDb();

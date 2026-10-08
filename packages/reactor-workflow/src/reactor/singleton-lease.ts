@@ -204,11 +204,12 @@ async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
     .execute();
 }
 
-// unique_violation and duplicate_table/schema: two hosts on a fresh database
-// both passed IF NOT EXISTS, and the loser hit the catalog's unique index.
-// The schema and the table can each race once, so three attempts suffice.
+// unique_violation, duplicate_object (the table's row type) and
+// duplicate_table/schema: two hosts on a fresh database both passed IF NOT
+// EXISTS, and the loser hit the catalog. The schema and the table can each
+// race once, so three attempts suffice.
 const DDL_ATTEMPTS = 3;
-const CONCURRENT_DDL_CODES = new Set(["23505", "42P06", "42P07"]);
+const CONCURRENT_DDL_CODES = new Set(["23505", "42710", "42P06", "42P07"]);
 
 function isConcurrentDdl(error: unknown): boolean {
   const code = (error as { code?: unknown } | null)?.code;
