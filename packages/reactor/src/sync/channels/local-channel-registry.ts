@@ -11,15 +11,26 @@ import type {
 
 const DEFAULT_MAX_QUEUED_FRAMES = 1024;
 
+function frameKind(data: unknown): unknown {
+  return typeof data === "object" && data !== null
+    ? (data as { kind?: unknown }).kind
+    : undefined;
+}
+
 /**
  * The port a channel sees. It holds the registry's one listener on the raw port
  * for the whole registration, so a frame that arrives between two channels
  * (a reset) is queued and replayed to the next one instead of lost.
+ *
+ * Past the bound, every queued push is discarded, and so is every later one
+ * until a channel attaches: the inbox ack is the highest applied ordinal, so
+ * replaying pushes after a gap would ack past the missing ones. The peer still
+ * holds them unacked and re-pushes them on the fresh channel's hello.
  */
 class RegisteredPort implements LocalChannelPort {
   private subscriber: ((data: unknown) => void) | undefined;
-  private readonly queued: unknown[] = [];
-  private droppedSinceAttach = 0;
+  private queued: unknown[] = [];
+  private discardingPushes = false;
   private readonly detachRaw: () => void;
 
   constructor(
@@ -38,7 +49,7 @@ class RegisteredPort implements LocalChannelPort {
   /** One channel at a time; a newer attach supersedes an older one. */
   onMessage(callback: (data: unknown) => void): () => void {
     this.subscriber = callback;
-    this.droppedSinceAttach = 0;
+    this.discardingPushes = false;
     while (this.queued.length > 0 && this.subscriber === callback) {
       callback(this.queued.shift());
     }
@@ -62,22 +73,36 @@ class RegisteredPort implements LocalChannelPort {
       this.subscriber(data);
       return;
     }
+    if (this.discardingPushes && frameKind(data) === "push") return;
     this.queued.push(data);
     if (this.queued.length <= this.maxQueuedFrames) return;
-    this.queued.shift();
-    if (this.droppedSinceAttach++ === 0) {
+    if (!this.discardingPushes) {
       this.logger.warn(
-        "Local sync port @Label queued more than @Max frames with no channel attached; dropping the oldest",
+        "Local sync port @Label queued more than @Max frames with no channel attached; discarding queued pushes for the peer to re-push",
         this.label,
         this.maxQueuedFrames,
       );
     }
+    this.discardingPushes = true;
+    this.compact();
+  }
+
+  /** Keeps only the latest hello or resend and the latest ack, in order. */
+  private compact(): void {
+    const handshake = this.queued.findLast((frame) => {
+      const kind = frameKind(frame);
+      return kind === "hello" || kind === "resend";
+    });
+    const ack = this.queued.findLast((frame) => frameKind(frame) === "ack");
+    this.queued = this.queued.filter(
+      (frame) => frame === handshake || frame === ack,
+    );
   }
 }
 
 export type LocalChannelPortRegistryOptions = {
   logger?: ILogger;
-  /** Frames held for a detached port before the oldest is dropped. */
+  /** Frames held for a detached port before its queued pushes are discarded. */
   maxQueuedFrames?: number;
 };
 

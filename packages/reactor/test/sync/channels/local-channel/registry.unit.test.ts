@@ -1,5 +1,7 @@
+import { MessageChannel } from "node:worker_threads";
 import { describe, expect, it, vi, type Mock } from "vitest";
 import { DriveCollectionId } from "../../../../src/cache/operation-index-types.js";
+import { LocalChannel } from "../../../../src/sync/channels/local-channel.js";
 import {
   assertCollectionIdParts,
   collectionIdFromKey,
@@ -16,6 +18,13 @@ import {
 } from "../../../../src/sync/channels/local-channel-transport.js";
 import type { Remote } from "../../../../src/sync/interfaces.js";
 import { createMockLogger } from "../../../factories.js";
+import {
+  applyInbox,
+  FILTER,
+  MemoryCursorStorage,
+  syncOp,
+  waitFor,
+} from "./harness.js";
 
 type FakePort = LocalChannelPort & { close: Mock<() => void> };
 
@@ -158,23 +167,29 @@ describe("LocalChannelPortRegistry", () => {
     expect(second).toEqual(["two", "three"]);
   });
 
-  it("drops the oldest queued frame past its bound, with a warning", () => {
+  it("past its bound, drops every queued push and keeps the latest control frames", () => {
     const warn = vi.fn();
     const logger = { ...createMockLogger(), warn };
     const registry = new LocalChannelPortRegistry({
       logger,
-      maxQueuedFrames: 2,
+      maxQueuedFrames: 3,
     });
     const raw = new BrowserPortLike();
     registry.register("peer", "chan", messagePortTransport(raw));
+    const push = (n: number) => ({ kind: "push", channelId: "p", n });
+    const ack = (n: number) => ({ kind: "ack", channelId: "p", ackOrdinal: n });
+    const resend = { kind: "resend", channelId: "p", sinceOrdinal: 0 };
 
-    raw.receive("one");
-    raw.receive("two");
-    raw.receive("three");
+    raw.receive(push(1));
+    raw.receive(ack(1));
+    raw.receive(resend);
+    raw.receive(push(2));
+    raw.receive(ack(2));
+    raw.receive(push(3));
 
     const received: unknown[] = [];
     registry.provider("peer", "chan")!.onMessage((data) => received.push(data));
-    expect(received).toEqual(["two", "three"]);
+    expect(received).toEqual([ack(1), resend, ack(2)]);
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
@@ -315,5 +330,87 @@ describe("collection id guards", () => {
     expect(() => assertCollectionIdParts("drive.one", "main")).toThrow(/"\."/);
     expect(() => assertCollectionIdParts("one", "main.draft")).toThrow(/"\."/);
     expect(() => collectionIdFromKey("drive.main.drive.one")).toThrow(/"\."/);
+  });
+});
+
+describe("LocalChannel over a registered port", () => {
+  const collectionId = DriveCollectionId.forDrive("drive-1");
+
+  function link(maxQueuedFrames?: number) {
+    const { port1, port2 } = new MessageChannel();
+    port1.unref();
+    port2.unref();
+    const registry = new LocalChannelPortRegistry({
+      logger: createMockLogger(),
+      maxQueuedFrames,
+    });
+    registry.register("a", "drive-1", messagePortTransport(port2));
+    const a = new LocalChannel(
+      createMockLogger(),
+      "channel-a",
+      "a->b",
+      new MemoryCursorStorage(),
+      messagePortTransport(port1),
+      collectionId,
+      FILTER,
+    );
+    const cursorsB = new MemoryCursorStorage();
+    const makeB = (cursors = cursorsB): LocalChannel =>
+      new LocalChannel(
+        createMockLogger(),
+        "channel-b",
+        "b->a",
+        cursors,
+        registry.provider("a", "drive-1")!,
+        collectionId,
+        FILTER,
+      );
+    return {
+      registry,
+      a,
+      makeB,
+      close: () => {
+        registry.unregister("a", "drive-1");
+        port1.close();
+      },
+    };
+  }
+
+  it("loses no push when the attach queue overflows while detached", async () => {
+    const { a, makeB, close } = link(2);
+    try {
+      const b1 = makeB();
+      await a.init();
+      await b1.init();
+      await waitFor(
+        () =>
+          a.getConnectionState().state === "connected" &&
+          b1.getConnectionState().state === "connected",
+      );
+      await b1.shutdown();
+
+      a.outbox.add(syncOp("a->b", 1, "doc-x"));
+      a.outbox.add(syncOp("a->b", 2, "doc-y"));
+      a.outbox.add(syncOp("a->b", 3, "doc-z"));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const b2 = makeB();
+      const seen = new Set<number>();
+      b2.inbox.onAdded((items) => {
+        for (const item of items) {
+          for (const op of item.operations) seen.add(op.context.ordinal);
+        }
+        queueMicrotask(() => applyInbox(b2));
+      });
+      await b2.init();
+      await waitFor(() => a.outbox.items.length === 0);
+
+      expect([...seen].sort((x, y) => x - y)).toEqual([1, 2, 3]);
+      expect(b2.inbox.ackOrdinal).toBe(3);
+      await b2.shutdown();
+    } finally {
+      await a.shutdown();
+      close();
+    }
   });
 });
