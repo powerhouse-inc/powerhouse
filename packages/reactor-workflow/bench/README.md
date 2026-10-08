@@ -35,7 +35,7 @@ fire `core` runs only during the warm-up.
 | `--warmup`            | 5                              | Unmeasured runs fired first                                    |
 | `--steps`             | 1                              | Steps per workflow, chained                                    |
 | `--concurrency`       | 1                              | Operations in flight                                           |
-| `--pool`              | `--concurrency`                | Worker slots (`PH_WORKFLOWS_RUN_CONCURRENCY`)                  |
+| `--pool`              | `--concurrency`                | Most piece children (`PH_WORKFLOWS_RUN_CONCURRENCY`)           |
 | `--mix`               | the workload                   | Step kinds repeated across `--steps`, e.g. `piece,core`        |
 | `--batch`             | 25                             | Operations per printed row                                     |
 | `--seed-runs`         | 0                              | Runs inserted into the journal by SQL before measuring         |
@@ -64,6 +64,8 @@ Columns:
 - The `host` line gives the main thread's event-loop utilization and the CPU
   the bench process used across all its threads, in cores. Children are not
   counted.
+- `PH_WORKFLOWS_WORKER_MAX_REQUESTS=1` retires every child after one request,
+  for a cold baseline to compare the warm pool against.
 
 ## Spans and metrics
 
@@ -78,7 +80,7 @@ passes the providers it registers. Spans, all children of `workflow.run`:
 | `workflow.step`                                | one block, with `piece.name`, `action.name`, `piece.version`                            |
 | `workflow.piece.resolve`                       | finding the piece's bundle                                                              |
 | `workflow.reactor.scope`                       | checking a step's reactor connection                                                    |
-| `workflow.worker.acquire`                      | waiting for a pool slot                                                                 |
+| `workflow.worker.acquire`                      | waiting for a child; only when every child is busy                                      |
 | `workflow.worker.<request>[.cold]`             | one request to a worker; `.cold` when it forked the child                               |
 | `workflow.worker.boot`                         | fork until the child's entry has loaded; first request only                             |
 | `workflow.worker.piece.load`                   | importing the piece in the child; `piece.cached` if reused                              |
@@ -92,7 +94,7 @@ passes the providers it registers. Spans, all children of `workflow.run`:
 Metrics: `workflow.runs` (`run.status`, `trigger.kind`), `workflow.run.duration`,
 `workflow.step.duration` (`piece.name`, `step.status`), `workflow.phase.duration`
 (`phase`: every span above without the `workflow.` prefix) and
-`workflow.worker.pool.{size,active,waiting}`.
+`workflow.worker.pool.{size,active,idle,waiting}`.
 
 - `run.status` is `REFUSED` for a fire stopped before its run began (no access,
   not enabled, connection unreadable); those are not failed runs.

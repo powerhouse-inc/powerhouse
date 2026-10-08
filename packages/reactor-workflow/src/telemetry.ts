@@ -35,6 +35,7 @@ export interface WorkflowTelemetryOptions {
 export interface WorkerPoolStats {
   size: number;
   active: number;
+  idle: number;
   waiting: number;
 }
 
@@ -45,7 +46,10 @@ export class WorkflowTelemetry {
   private readonly runDuration: Histogram;
   private readonly stepDuration: Histogram;
   private readonly phaseDuration: Histogram;
-  private poolGauges?: Record<"size" | "active" | "waiting", ObservableGauge>;
+  private poolGauges?: Record<
+    "size" | "active" | "idle" | "waiting",
+    ObservableGauge
+  >;
 
   constructor(options: WorkflowTelemetryOptions = {}) {
     this.tracer = options.tracer ?? trace.getTracer(TELEMETRY_SCOPE);
@@ -189,12 +193,13 @@ export class WorkflowTelemetry {
   // so a replaced runtime's pool stops reporting and can be collected.
   observeWorkerPool(stats: () => WorkerPoolStats): () => void {
     this.poolGauges ??= this.createPoolGauges();
-    const { size, active, waiting } = this.poolGauges;
-    const observables = [size, active, waiting];
+    const { size, active, idle, waiting } = this.poolGauges;
+    const observables = [size, active, idle, waiting];
     const callback: BatchObservableCallback = (result) => {
       const current = stats();
       result.observe(size, current.size);
       result.observe(active, current.active);
+      result.observe(idle, current.idle);
       result.observe(waiting, current.waiting);
     };
     this.meter.addBatchObservableCallback(callback, observables);
@@ -206,9 +211,16 @@ export class WorkflowTelemetry {
     const gauge = (name: string, description: string) =>
       this.meter.createObservableGauge(name, { description, unit: "{worker}" });
     return {
-      size: gauge("workflow.worker.pool.size", "Worker slots"),
-      active: gauge("workflow.worker.pool.active", "Slots held by runs"),
-      waiting: gauge("workflow.worker.pool.waiting", "Runs waiting for a slot"),
+      size: gauge("workflow.worker.pool.size", "Most run children"),
+      active: gauge(
+        "workflow.worker.pool.active",
+        "Children serving a request",
+      ),
+      idle: gauge("workflow.worker.pool.idle", "Warm children waiting"),
+      waiting: gauge(
+        "workflow.worker.pool.waiting",
+        "Requests waiting for a child",
+      ),
     };
   }
 }

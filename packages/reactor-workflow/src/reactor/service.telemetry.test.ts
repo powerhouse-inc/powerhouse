@@ -145,11 +145,11 @@ describe("a fired run's telemetry", () => {
       "piece.name": PIECE,
       "action.name": "echo",
     });
-    // Each run forks its own child, so its first request is cold.
+    // Describing the piece forked the editor's child; the run forks its own.
     const request = only("workflow.worker.run.cold");
     expect(parentOf(request)).toBe(step.spanContext().spanId);
+    only("workflow.worker.describe.cold");
     // The child's own marks, drawn under the request that carried them back.
-    // The first run also describes its piece, so the design worker boots too.
     const underRequest = (name: string) => {
       const found = named(name).filter(
         (span) => parentOf(span) === request.spanContext().spanId,
@@ -217,7 +217,7 @@ describe("a fired run's telemetry", () => {
         "journal.start",
         "journal.step",
         "journal.finish",
-        "worker.acquire",
+        "worker.describe.cold",
         "worker.run.cold",
         "worker.boot",
         "worker.action",

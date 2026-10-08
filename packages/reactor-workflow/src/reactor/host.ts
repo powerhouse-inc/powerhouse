@@ -77,6 +77,8 @@ export interface WorkflowRuntimeHostDeps {
   // Where run, step, worker and reactor-call spans and metrics go. Absent, the
   // global OpenTelemetry API's, which are no-ops until a host registers one.
   telemetry?: WorkflowTelemetryOptions;
+  // The reactor's own worker threads; the piece pool leaves them cores.
+  reactorThreads?: number;
   // How long a design-time call waits for a workflow still syncing here.
   syncWaitMs?: number;
   // How long one source's version listing may take before it counts as absent.

@@ -313,6 +313,8 @@ export interface ComposeWorkflowRuntimeDeps {
   logger: ILogger;
   /** Absent leaves pieces with no document models in their worker. */
   models?: ModelManifestSource;
+  /** The reactor's executor and projection threads, for sizing the piece pool. */
+  reactorThreads?: number;
   /** Where run, step, worker and reactor-call spans and metrics go. */
   telemetry?: WorkflowEngine.WorkflowRuntimeHostDeps["telemetry"];
   /** Overridden by the tests; production always loads the real engine. */
@@ -706,6 +708,7 @@ async function composeClaimed(
     attachments: deps.attachments,
     canReadAttachmentRef: attachmentReadPolicy(deps.attachmentAccess),
     logger: deps.logger,
+    ...(deps.reactorThreads ? { reactorThreads: deps.reactorThreads } : {}),
     ...(deps.telemetry ? { telemetry: deps.telemetry } : {}),
   });
 
