@@ -341,12 +341,42 @@ describe("fan-in reads through the client", () => {
     ).rejects.toThrow(FanInPartialFailureError);
   });
 
-  it("answers isDocumentIdTaken where the id is held, else from the primary", async () => {
+  it("answers isDocumentIdTaken true where the id is held, false when every backend says no", async () => {
     const { backends } = topology();
     const client = router(backends);
 
     await expect(client.isDocumentIdTaken("drive-b")).resolves.toBe(true);
     await expect(client.isDocumentIdTaken("brand-new")).resolves.toBe(false);
+  });
+
+  it("answers isDocumentIdTaken true when any backend holds the id, even a non-primary", async () => {
+    const { two, backends } = topology();
+    two.documents.delete("drive-b");
+    const api = two.api();
+    const client = router([
+      backends[0],
+      two.config({
+        backend: {
+          ...api,
+          isServed: () => Promise.resolve(false),
+          isDocumentIdTaken: () => Promise.resolve(true),
+        },
+      }),
+    ]);
+
+    await expect(client.isDocumentIdTaken("deleted-on-two")).resolves.toBe(
+      true,
+    );
+  });
+
+  it("refuses an isDocumentIdTaken false it cannot vouch for", async () => {
+    const { two, backends } = topology();
+    two.failing.add("isServed");
+    const client = router(backends);
+
+    await expect(client.isDocumentIdTaken("brand-new")).rejects.toThrow(
+      FanInPartialFailureError,
+    );
   });
 
   it("de-duplicates a replicated document's change events", () => {

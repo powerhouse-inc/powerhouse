@@ -363,18 +363,27 @@ export class RoutingReactorClient implements IReactorClient {
     );
   }
 
-  /** Taken where it is held; otherwise asked of the primary. */
-  async isDocumentIdTaken(
+  /**
+   * True when any backend serves or has taken the id; false only when every
+   * backend answered. A backend without isDocumentIdTaken answers by isServed.
+   */
+  isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    const serving = await this.dispatcher.servingBackends(documentId);
-    if (serving.length > 0) {
-      return true;
-    }
-    return declared(this.dispatcher.primary, "isDocumentIdTaken")(
-      documentId,
-      signal,
+    return fanInExistence(
+      "isDocumentIdTaken",
+      this.dispatcher.backends,
+      async (backend) => {
+        if (await backend.api.isServed(documentId, undefined, signal)) {
+          return true;
+        }
+        const api = backend.api;
+        return api.isDocumentIdTaken === undefined
+          ? false
+          : api.isDocumentIdTaken(documentId, signal);
+      },
+      this.dispatcher.onDiagnostic,
     );
   }
 
