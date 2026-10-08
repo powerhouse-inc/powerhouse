@@ -180,9 +180,11 @@ import {
   testPartitionKey,
 } from "./piece-store-port.js";
 import {
+  currentAttachmentOrigins,
   currentRunUser,
   currentWorkflowId,
   withRunScope,
+  type RunAttachmentOrigins,
   type RunUser,
 } from "./run-scope.js";
 import {
@@ -279,6 +281,8 @@ import {
   type LifecycleFilter,
   type TriggerKind,
 } from "./trigger-filters.js";
+import { SpanStatusCode, type Span } from "@opentelemetry/api";
+import { tracedSteps, WorkflowTelemetry } from "../telemetry.js";
 
 /** Why a firing was journaled CANCELLED without running, when it was. */
 export type FiringRefusal =
@@ -291,6 +295,18 @@ export type FiringRefusal =
 export type PersistedRunResult = WorkflowRunResult & {
   runId: string | null;
   refusal?: FiringRefusal;
+};
+
+// A fired run's span, and whether a check refused it before it began.
+interface RunTrace {
+  span: Span;
+  refused: boolean;
+}
+
+// A rerun's journaled outputs, replayed instead of executed.
+type RunResume = {
+  completedSteps: Map<string, ReplayedStep>;
+  rerunOf: string;
 };
 
 // The piece a resolved block type loads.
@@ -723,11 +739,13 @@ function runJournalName(
 export class WorkflowRuntimeService {
   private readonly host: WorkflowRuntimeHostDeps;
   private readonly logger: ILogger;
+  private readonly telemetry: WorkflowTelemetry;
   // The only host surface that carries an attachment client; without one
   // ctx.files stays an inline data URI instead of an attachment reference.
   private readonly attachments?: AttachmentPort;
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
+  private unobservePool?: () => void;
   private storePromise: Promise<WorkflowRunStore>;
   private storeError?: unknown;
   private storeOpening = false;
@@ -748,6 +766,7 @@ export class WorkflowRuntimeService {
   // instance's lifetime, so a replaced host means a replaced runtime.
   constructor(host: WorkflowRuntimeHostDeps) {
     this.host = host;
+    this.telemetry = new WorkflowTelemetry(host.telemetry);
     this.blockResolver = new BlockResolver({
       local: installedPiece,
       timeoutMs: host.pieceVersionLookupMs ?? PIECE_VERSION_LOOKUP_TIMEOUT_MS,
@@ -756,15 +775,27 @@ export class WorkflowRuntimeService {
     });
     this.logger = host.logger ?? logger;
     this.attachments = host.attachments
-      ? createAttachmentPort(
-          host.attachments,
-          () => currentWorkflowId(),
-          // A host that serves attachments without answering for them reads
-          // nothing: an unanswered read is not a permitted one.
-          (documentId, ref) =>
-            host.canReadAttachmentRef?.(documentId, ref) ??
-            Promise.resolve(false),
-        )
+      ? createAttachmentPort(host.attachments, {
+          documentIdFor: () => currentWorkflowId(),
+          canReadRef: async (ref) => {
+            const workflowId = currentWorkflowId();
+            const origins = currentAttachmentOrigins();
+            if (!workflowId) return false;
+            // What this run wrote, it may read back.
+            if (origins?.written.has(ref)) return true;
+            // A host that serves attachments without answering for them reads
+            // nothing: an unanswered read is not a permitted one.
+            if (!host.canReadAttachmentRef) return false;
+            const runUser = currentRunUser();
+            return host.canReadAttachmentRef({
+              workflowId,
+              ref,
+              documentIds: [...new Set(origins?.documentIds() ?? [])],
+              ...(runUser !== undefined ? { runUser } : {}),
+            });
+          },
+          onWritten: (ref) => currentAttachmentOrigins()?.written.add(ref),
+        })
       : undefined;
     this.storePromise = this.openStore();
     this.seedPromise = this.seedWithRetries();
@@ -1651,7 +1682,11 @@ export class WorkflowRuntimeService {
     for (const workflowId of purgedWorkflowIds(markers)) {
       await this.erasePurgedWorkflow(store, workflowId);
     }
-    const erased = await store.eraseRunsForDocuments(documentIds);
+    const erased = await this.telemetry.phase(
+      "journal.purge",
+      { "documents.count": documentIds.length },
+      () => store.eraseRunsForDocuments(documentIds),
+    );
     if (erased.runs > 0) {
       this.logger.info(
         "Erased @runs workflow run(s) of purged documents @ids",
@@ -2151,6 +2186,7 @@ export class WorkflowRuntimeService {
       reactorAccess: (binding, requireReactor, runUser) =>
         this.triggerReactorAccess(binding, requireReactor, runUser),
       models: this.models,
+      telemetry: this.telemetry,
       cacheDir: bundleCacheDir(),
       resolver: pieceResolver(),
       // Trigger hooks reach the same services steps do.
@@ -2187,6 +2223,8 @@ export class WorkflowRuntimeService {
     // Left in place, disposed: clearing it here would let a run that is still
     // between awaits build a replacement and fork into it after teardown.
     this.pieceWorkers?.dispose();
+    this.unobservePool?.();
+    this.unobservePool = undefined;
     // Forked on the editor's first request and never replaced, so it outlives
     // a hot reload unless it goes with everything else.
     this.designWorker?.dispose();
@@ -2601,12 +2639,14 @@ export class WorkflowRuntimeService {
   ): Promise<ReactorTap | undefined> {
     const declared = await this.declaredReactor(request.block);
     if (!declared) return undefined;
-    const base = await this.reactorScope(
-      request.reactorConnectionId,
-      declared,
-      currentRunUser() ?? null,
+    const base = await this.telemetry.phase("reactor.scope", {}, () =>
+      this.reactorScope(
+        request.reactorConnectionId,
+        declared,
+        currentRunUser() ?? null,
+      ),
     );
-    return reactorTap(this.host, base, runJournal());
+    return reactorTap(this.host, base, runJournal(), {}, this.telemetry);
   }
 
   // A live hook acts as the publisher; a design-time test passes the caller.
@@ -2625,7 +2665,7 @@ export class WorkflowRuntimeService {
             new Set(bound ? [bound] : []),
           )) ?? null);
     const base = await this.reactorScope(bound, requireReactor, user);
-    return reactorTap(this.host, base, NO_JOURNAL);
+    return reactorTap(this.host, base, NO_JOURNAL, {}, this.telemetry);
   }
 
   // Option resolvers read as the GraphQL caller, within a bound connection.
@@ -2649,6 +2689,11 @@ export class WorkflowRuntimeService {
 
   private readonly descriptors = new Map<string, PieceDescriptor>();
   private designWorker?: PieceWorker;
+
+  // Describe, options and connection checks: traced like a run's requests.
+  private createDesignWorker(): PieceWorker {
+    return new PieceWorker({ models: this.models, telemetry: this.telemetry });
+  }
 
   // Design-time piece code runs under the policy a run would get, so nothing
   // the editor does reaches somewhere a step could not.
@@ -2690,7 +2735,7 @@ export class WorkflowRuntimeService {
       const piece = await pieceResolver().resolve(target);
       // Loading the bundle runs the piece module's top-level code, so the
       // descriptor is built in the worker, never in the reactor process.
-      this.designWorker ??= new PieceWorker({ models: this.models });
+      this.designWorker ??= this.createDesignWorker();
       let output: unknown;
       try {
         const result = await this.designWorker.describePiece(
@@ -2754,7 +2799,28 @@ export class WorkflowRuntimeService {
 
   // One page, newest first. Access is the host's per-document call, so it
   // can't go into SQL: batches are read and filtered until the page is full.
-  async runsPage(args: RunsPageArgs, ctx?: WorkflowCaller): Promise<RunPage> {
+  runsPage(args: RunsPageArgs, ctx?: WorkflowCaller): Promise<RunPage> {
+    return this.telemetry.phase(
+      "runs.page",
+      {
+        "runs.scope": args.workflowId
+          ? "workflow"
+          : args.driveId
+            ? "drive"
+            : "all",
+      },
+      async (span) => {
+        const page = await this.listRunsPage(args, ctx);
+        span.setAttribute("runs.returned", page.records.length);
+        return page;
+      },
+    );
+  }
+
+  private async listRunsPage(
+    args: RunsPageArgs,
+    ctx?: WorkflowCaller,
+  ): Promise<RunPage> {
     const empty: RunPage = { records: [], hasNextPage: false, cursor: null };
     const after = args.cursor ? decodeRunCursor(args.cursor) : undefined;
     const store = await this.store();
@@ -2993,7 +3059,7 @@ export class WorkflowRuntimeService {
     // untrusted piece code and must not run in the reactor process.
     let outcome: CheckConnectionOutcome;
     try {
-      this.designWorker ??= new PieceWorker({ models: this.models });
+      this.designWorker ??= this.createDesignWorker();
       const result = await this.designWorker.checkConnection(
         // A check that reaches somewhere a run could not would call a
         // connection healthy that every step using it will fail on.
@@ -3589,7 +3655,7 @@ export class WorkflowRuntimeService {
       ctx,
       reactorConnectionId,
     );
-    this.designWorker ??= new PieceWorker({ models: this.models });
+    this.designWorker ??= this.createDesignWorker();
     const result = await this.designWorker.resolveOptions(
       {
         ...pieceModuleRef(piece),
@@ -3962,16 +4028,20 @@ export class WorkflowRuntimeService {
   // Without a journal there is nowhere durable to keep ctx.store, so the
   // executor falls back to the worker's heap.
   private blockExecutor(store: WorkflowRunStore | undefined): BlockExecutor {
-    return (this.executor ??= createBlockExecutor(
-      this.host,
-      this.secretProvider(),
-      this.attachments,
-      store ? createPieceStorePort(store, currentWorkflowId) : undefined,
-      // A step resolves its block the way every other caller does, so a
-      // trigger that arms cannot be followed by a step that cannot start.
-      (block) => this.resolveBlock(block),
-      this.oauthRefresher(),
-      (request) => this.stepReactorAccess(request),
+    return (this.executor ??= tracedSteps(
+      createBlockExecutor(
+        this.host,
+        this.secretProvider(),
+        this.attachments,
+        store ? createPieceStorePort(store, currentWorkflowId) : undefined,
+        // A step resolves its block the way every other caller does, so a
+        // trigger that arms cannot be followed by a step that cannot start.
+        (block) => this.resolveBlock(block),
+        this.oauthRefresher(),
+        (request) => this.stepReactorAccess(request),
+        this.telemetry,
+      ),
+      this.telemetry,
     ));
   }
 
@@ -3980,27 +4050,72 @@ export class WorkflowRuntimeService {
   private workers(): PieceWorkerPool {
     // A queue depth of 0 waits without limit, which is what one shared worker
     // did — a cap turns a saturated pool into failures instead of latency.
-    return (this.pieceWorkers ??= new PieceWorkerPool({
+    if (this.pieceWorkers) return this.pieceWorkers;
+    const pool = new PieceWorkerPool({
       models: this.models,
       size: Number(process.env.PH_WORKFLOWS_RUN_CONCURRENCY) || undefined,
       maxQueueDepth:
         Number(process.env.PH_WORKFLOWS_RUN_QUEUE_DEPTH) || undefined,
-    }));
+      telemetry: this.telemetry,
+    });
+    this.unobservePool = this.telemetry.observeWorkerPool(() => pool.stats());
+    return (this.pieceWorkers = pool);
   }
 
   async fire(
     workflowId: string,
     triggerPayload?: unknown,
     triggerKind = "manual",
-    resume?: {
-      completedSteps: Map<string, ReplayedStep>;
-      rerunOf: string;
-    },
+    resume?: RunResume,
     ctx?: WorkflowCaller,
-    // A run this workflow's trigger already journaled as PENDING. Adopted
-    // rather than created, so the row a matched operation left behind is the
-    // row the run finishes in.
+    // A PENDING run this workflow's trigger journaled, adopted rather than created.
     enqueuedRunId?: string,
+  ): Promise<PersistedRunResult> {
+    const started = performance.now();
+    const attributes = {
+      "workflow.id": workflowId,
+      "trigger.kind": triggerKind,
+      ...(resume ? { "run.rerun_of": resume.rerunOf } : {}),
+    };
+    return this.telemetry.span("workflow.run", attributes, async (span) => {
+      const run: RunTrace = { span, refused: false };
+      let status = "FAILED";
+      try {
+        const result = await this.runFired(
+          run,
+          workflowId,
+          triggerPayload,
+          triggerKind,
+          resume,
+          ctx,
+          enqueuedRunId,
+        );
+        status = result.status;
+        if (status === "FAILED") {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: status });
+        }
+        return result;
+      } finally {
+        // Refused by access, type or status: not a failed run.
+        if (run.refused) status = "REFUSED";
+        span.setAttribute("run.status", status);
+        this.telemetry.recordRun(
+          performance.now() - started,
+          status,
+          triggerKind,
+        );
+      }
+    });
+  }
+
+  private async runFired(
+    run: RunTrace,
+    workflowId: string,
+    triggerPayload: unknown,
+    triggerKind: string,
+    resume: RunResume | undefined,
+    ctx: WorkflowCaller | undefined,
+    enqueuedRunId: string | undefined,
   ): Promise<PersistedRunResult> {
     // `policy.runTimeoutSeconds` is measured from HERE, the moment the firing
     // reaches the runtime — not from admission. The queue wait is part of the
@@ -4024,11 +4139,16 @@ export class WorkflowRuntimeService {
       // "manual" is the only kind a caller can ask for; every other one is
       // system-initiated and already authorized by whatever armed the trigger.
       if (triggerKind === "manual") {
-        await this.assertCanReadDocument(workflowId, ctx);
+        await this.assertCanReadDocument(workflowId, ctx).catch((error) => {
+          run.refused = true;
+          throw error;
+        });
       }
-      const document =
-        await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+      const document = await this.telemetry.phase("load", {}, () =>
+        this.host.reactorClient.get<WorkflowDocument>(workflowId),
+      );
       if (document.header.documentType !== "powerhouse/workflow") {
+        run.refused = true;
         throw new Error(
           `Document "${workflowId}" is not a powerhouse/workflow`,
         );
@@ -4036,17 +4156,29 @@ export class WorkflowRuntimeService {
       state = document.state.global;
       documentName = document.header.name;
       if (state.status !== "ENABLED") {
+        run.refused = true;
         throw new Error(
           `Workflow is ${state.status}; only ENABLED workflows can fire`,
         );
       }
       definition = toWorkflowDefinition(state);
+      const reactorConnections = declaredReactorConnectionIds(definition);
       // Before each run: grants can change after the publish was checked.
-      runUser = await assertReactorConnectionsReadable(
-        this.host,
-        workflowId,
-        declaredReactorConnectionIds(definition),
-      );
+      runUser =
+        reactorConnections.size === 0
+          ? undefined
+          : await this.telemetry
+              .phase("run_user", {}, () =>
+                assertReactorConnectionsReadable(
+                  this.host,
+                  workflowId,
+                  reactorConnections,
+                ),
+              )
+              .catch((error: unknown) => {
+                run.refused = isReactorError(error, ReactorAccessDeniedError);
+                throw error;
+              });
     } catch (error) {
       // An adopted row is already durable: closing it out here is what keeps
       // a refused fire from leaving a PENDING run nothing will ever start.
@@ -4157,22 +4289,30 @@ export class WorkflowRuntimeService {
     // life of the process — SINGLETON refuses every later firing, QUEUE waits
     // for a run that is already over.
     try {
-      if (enqueuedRunId) {
-        await store?.beginRun(enqueuedRunId, {
-          workflowName: runJournalName(state.name, documentName),
-          workflowVersion: runnable.version,
-        });
-      } else {
-        runId =
-          (await store?.startRun({
-            workflowId,
-            workflowName: runJournalName(state.name, documentName),
-            workflowVersion: runnable.version,
-            triggerKind,
-            triggerPayload,
-            rerunOf: resume?.rerunOf,
-          })) ?? null;
-      }
+      runId = await this.telemetry.phase(
+        "journal.start",
+        {},
+        async (): Promise<string | null> => {
+          if (enqueuedRunId) {
+            await store?.beginRun(enqueuedRunId, {
+              workflowName: runJournalName(state.name, documentName),
+              workflowVersion: runnable.version,
+            });
+            return enqueuedRunId;
+          }
+          return (
+            (await store?.startRun({
+              workflowId,
+              workflowName: runJournalName(state.name, documentName),
+              workflowVersion: runnable.version,
+              triggerKind,
+              triggerPayload,
+              rerunOf: resume?.rerunOf,
+            })) ?? null
+          );
+        },
+      );
+      if (runId) run.span.setAttribute("run.id", runId);
       // Also in here: a pool disposed while this run was starting up refuses
       // here, and the journal records the run as failed rather than leaving it
       // to be swept up as an orphan.
@@ -4192,6 +4332,11 @@ export class WorkflowRuntimeService {
           connections,
           pieceWorker: session,
           ...(runUser !== undefined ? { runUser } : {}),
+          attachments: attachmentOrigins(
+            triggerPayload,
+            handed,
+            resume?.completedSteps,
+          ),
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (journal && journaledRunId) {
@@ -4221,7 +4366,9 @@ export class WorkflowRuntimeService {
                 ? async (record, ordinal) => {
                     executionOrder.set(record.stepId, ordinal);
                     try {
-                      await store.recordStep(journaledRunId, ordinal, record);
+                      await this.telemetry.phase("journal.step", {}, () =>
+                        store.recordStep(journaledRunId, ordinal, record),
+                      );
                     } catch (error) {
                       // Swallowed on purpose, but logged once per run: a dead
                       // journal must not look exactly like a healthy one.
@@ -4237,9 +4384,11 @@ export class WorkflowRuntimeService {
                 : undefined,
           }),
       );
-      if (store && runId) {
+      if (store && journaledRunId) {
         try {
-          await store.finishRun(runId, result, executionOrder);
+          await this.telemetry.phase("journal.finish", {}, () =>
+            store.finishRun(journaledRunId, result, executionOrder),
+          );
         } catch (error) {
           // The run is over and its result is the caller's; a journal that
           // cannot say so must not turn a finished run into a failed one.
@@ -4701,6 +4850,11 @@ export class WorkflowRuntimeService {
           stepTest: true,
           // A single-step test acts as its caller.
           runUser: this.callerRunUser(ctx),
+          attachments: attachmentOrigins(
+            upstream.triggerPayload,
+            handed,
+            upstream.priorSteps,
+          ),
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (store && journaledRunId) {
@@ -5063,4 +5217,34 @@ export function createWorkflowRuntime(
   deps: WorkflowRuntimeHostDeps,
 ): WorkflowRuntimeService {
   return new WorkflowRuntimeService(deps);
+}
+
+// A run's attachments come from its trigger's document, the documents its
+// steps were handed, and the files its own steps wrote. Journaled outputs a
+// rerun or test replays count as written: an earlier run of this workflow
+// already wrote or was allowed to read every ref in them.
+function attachmentOrigins(
+  triggerPayload: unknown,
+  handed: ReadonlySet<string>,
+  replayed?: unknown,
+): RunAttachmentOrigins {
+  const written = new Set<string>();
+  collectAttachmentRefs(replayed, written);
+  return {
+    documentIds: () => [...triggerDocumentIds(triggerPayload), ...handed],
+    written,
+  };
+}
+
+function collectAttachmentRefs(value: unknown, found: Set<string>): void {
+  if (typeof value === "string") {
+    if (value.startsWith("attachment://")) found.add(value);
+  } else if (Array.isArray(value)) {
+    for (const entry of value) collectAttachmentRefs(entry, found);
+  } else if (value instanceof Map) {
+    for (const entry of value.values()) collectAttachmentRefs(entry, found);
+  } else if (typeof value === "object" && value !== null) {
+    for (const entry of Object.values(value))
+      collectAttachmentRefs(entry, found);
+  }
 }

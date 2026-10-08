@@ -41,6 +41,7 @@ import {
   type TriggerHookRequest,
   type TriggerRenew,
 } from "../pieces/index.js";
+import type { WorkflowTelemetry } from "../telemetry.js";
 import type { RunUser } from "./run-scope.js";
 import { childLogger } from "document-model";
 import {
@@ -145,6 +146,8 @@ export interface TriggerSupervisorOptions {
   worker?: PieceWorker;
   // Sent to the supervisor's own worker; a supplied worker brings its own.
   models?: ModelManifestSource;
+  // Traces the supervisor's own worker, as models above.
+  telemetry?: WorkflowTelemetry;
   // ctx.reactor for a trigger that declares requireReactor. `runUser` is set
   // for a design-time test, which acts as the caller.
   reactorAccess?: (
@@ -309,7 +312,9 @@ export class TriggerSupervisor {
   private warnedMissingJournal = false;
 
   constructor(private readonly options: TriggerSupervisorOptions) {
-    this.worker = options.worker ?? new PieceWorker({ models: options.models });
+    this.worker =
+      options.worker ??
+      new PieceWorker({ models: options.models, telemetry: options.telemetry });
     this.tickMs = options.tickMs ?? 15_000;
     this.defaultIntervalMs =
       options.defaultIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;

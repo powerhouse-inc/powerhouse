@@ -95,7 +95,7 @@ test.describe("Connection editor", () => {
     const revoke = app.getByRole("button", { name: "Revoke", exact: true });
     await expect(revoke).toHaveAttribute(
       "title",
-      "2 enabled workflows stop working while it's revoked",
+      "3 enabled workflows stop working while it's revoked",
     );
     await revoke.click();
     await expect(app.getByText("Revoked", { exact: true })).toBeVisible();
@@ -104,7 +104,7 @@ test.describe("Connection editor", () => {
     await app.getByRole("button", { name: "Reactivate" }).click();
     await expect(app.getByText("Connected", { exact: true })).toBeVisible();
     await expect(testButton).toBeEnabled();
-    await expect(revoke).toHaveAttribute("title", /2 enabled workflows/);
+    await expect(revoke).toHaveAttribute("title", /3 enabled workflows/);
   });
 
   test("Test connection runs the check and says how it went", async ({

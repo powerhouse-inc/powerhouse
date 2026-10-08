@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-workflow",
-  "version": "6.2.3-dev.45",
+  "version": "6.2.3-dev.49",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -33,9 +33,12 @@
     "lint": "cd ../.. && oxlint packages/reactor-workflow",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "build": "tsdown"
+    "build": "tsdown",
+    "bench": "node bench/run.ts",
+    "bench:profile": "node bench/profile-summary.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "@powerhousedao/pieces-framework": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
@@ -46,6 +49,11 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
+    "@opentelemetry/context-async-hooks": "^2.7.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
+    "@opentelemetry/resources": "^2.7.1",
+    "@opentelemetry/sdk-metrics": "^2.7.1",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "knex": "catalog:",
