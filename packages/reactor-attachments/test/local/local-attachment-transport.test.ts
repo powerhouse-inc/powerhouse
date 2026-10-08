@@ -592,6 +592,10 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     const retryAfterMs = fake.sent[0].retryAfterMs as number;
     expect(retryAfterMs).toBeGreaterThan(0);
     expect(retryAfterMs).toBeLessThanOrEqual(1_000);
+    // The requester reads an expired pending as not-found, so the expiry must
+    // outlast a slow delivery from a busy server by a wide margin.
+    const expiresAtMs = Date.parse(fake.sent[0].expiresAtUtc as string);
+    expect(expiresAtMs - Date.now()).toBeGreaterThan(30_000);
     expect(state(server).inFlight.size).toBe(2);
     server.close();
   });
