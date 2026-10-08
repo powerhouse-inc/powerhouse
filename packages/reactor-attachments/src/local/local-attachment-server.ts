@@ -28,10 +28,8 @@ export type LocalAttachmentServerOptions = {
   /** The store bytes are served FROM. Only locally held bytes are served. */
   store: IAttachmentStore;
   /**
-   * Authorization check. Defaults to serving any hash this store holds, which
-   * is the right posture for a monitor lab bench where every reactor is the
-   * same operator's; a deployment with real document authorization passes
-   * {@link attachmentReferenceAuthorizer} over its own reference index.
+   * Defaults to refusing every read. Pass {@link attachmentReferenceAuthorizer}
+   * over this reactor's reference index.
    */
   authorize?: LocalAttachmentAuthorizer;
   /** Bytes per `chunk` message; defaults to {@link DEFAULT_LOCAL_CHUNK_BYTES}. */
@@ -90,7 +88,7 @@ export class LocalAttachmentServer {
     this.port = options.port;
     this.store = options.store;
     this.authorize =
-      options.authorize ?? ((): Promise<boolean> => Promise.resolve(true));
+      options.authorize ?? ((): Promise<boolean> => Promise.resolve(false));
     this.chunkSizeBytes = options.chunkSizeBytes ?? DEFAULT_LOCAL_CHUNK_BYTES;
     this.onDiagnostic = options.onDiagnostic ?? ((): void => undefined);
     this.detachPort = this.port.onMessage((data) => this.onMessage(data));

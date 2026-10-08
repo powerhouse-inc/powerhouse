@@ -10,9 +10,11 @@ import {
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  attachmentReferenceAuthorizer,
   LocalAttachmentServer,
   LocalAttachmentTransport,
 } from "../../src/local/index.js";
+import type { IAttachmentReferenceReader } from "../../src/read-models/attachment-reference/types.js";
 import { NullAttachmentTransport } from "../../src/null-attachment-transport.js";
 import {
   AttachmentReplicator,
@@ -26,6 +28,15 @@ import {
 } from "../../src/storage/local/index.js";
 
 const DOC = "document-1";
+
+/** A's reference index: it has recorded `ref` on {@link DOC}. */
+function indexing(ref: AttachmentRef): IAttachmentReferenceReader {
+  return {
+    hasReference: (documentId, candidate) =>
+      Promise.resolve(documentId === DOC && candidate === ref),
+    referencingScopes: () => Promise.resolve(["global"]),
+  };
+}
 
 /** Pulls every `attachment://` string out of the action input. */
 const anyRefInInput: IOperationAttachmentRefs = {
@@ -136,7 +147,11 @@ describe("replicating bytes over a brokered local link", () => {
       channel.port2 as unknown as MessagePortLike,
     );
 
-    const server = new LocalAttachmentServer({ port: portA, store: storeA });
+    const server = new LocalAttachmentServer({
+      port: portA,
+      store: storeA,
+      authorize: attachmentReferenceAuthorizer(indexing(ref)),
+    });
     const transportB = new LocalAttachmentTransport({ port: portB });
 
     // B: holds nothing, and replicates on reference.
@@ -199,6 +214,7 @@ describe("replicating bytes over a brokered local link", () => {
         new MemoryAttachmentBackend(),
         new NullAttachmentTransport(),
       ),
+      authorize: attachmentReferenceAuthorizer(indexing(ref)),
     });
     const transportB = new LocalAttachmentTransport({ port: portB });
     const storeB = new LocalAttachmentStore(

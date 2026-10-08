@@ -4,7 +4,7 @@ import {
   type LocalChannelPort,
   type MessagePortLike,
 } from "@powerhousedao/reactor";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   attachmentReferenceAuthorizer,
   LocalAttachmentServer,
@@ -22,6 +22,12 @@ import type { AttachmentMetadata } from "../../src/types.js";
 import type { IAttachmentReferenceReader } from "../../src/read-models/attachment-reference/types.js";
 
 const DOC = "document-1";
+
+const indexesEverything: IAttachmentReferenceReader = {
+  hasReference: () => Promise.resolve(true),
+  referencingScopes: () => Promise.resolve(["global"]),
+};
+const allowAll = attachmentReferenceAuthorizer(indexesEverything);
 
 function metadata(sizeBytes: number): AttachmentMetadata {
   return {
@@ -120,9 +126,9 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     const server = new LocalAttachmentServer({
       port: channel.portA,
       store: holder,
-      ...(options.authorizeFor
-        ? { authorize: attachmentReferenceAuthorizer(options.authorizeFor) }
-        : {}),
+      authorize: attachmentReferenceAuthorizer(
+        options.authorizeFor ?? indexesEverything,
+      ),
       ...(options.chunkSizeBytes !== undefined
         ? { chunkSizeBytes: options.chunkSizeBytes }
         : {}),
@@ -176,6 +182,38 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     });
   });
 
+  it("refuses a read when no authorizer is configured", async () => {
+    const bytes = new TextEncoder().encode("held but never authorized");
+    const hash = await sha256Hex(bytes);
+    const holder = new LocalAttachmentStore(
+      new MemoryAttachmentBackend(),
+      new NullAttachmentTransport(),
+    );
+    await holder.putLocal(
+      hash,
+      metadata(bytes.byteLength),
+      streamFromBytes(bytes),
+    );
+    const has = vi.spyOn(holder, "has");
+    const channel = link();
+    const server = new LocalAttachmentServer({
+      port: channel.portA,
+      store: holder,
+    });
+    const puller = new LocalAttachmentTransport({ port: channel.portB });
+    cleanups.push(() => {
+      server.close();
+      puller.close();
+      channel.dispose();
+    });
+
+    await expect(puller.fetch(hash, DOC)).resolves.toEqual({
+      kind: "not-found",
+    });
+    expect(server.stats()).toEqual({ served: 0, bytesServed: 0, refused: 1 });
+    expect(has).not.toHaveBeenCalled();
+  });
+
   it("answers not-found when the peer's reference index does not authorize the document", async () => {
     const bytes = new TextEncoder().encode("authorized payload");
     const indexed = new Set<string>();
@@ -222,6 +260,7 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     const server = new LocalAttachmentServer({
       port: channel.portA,
       store: holder,
+      authorize: allowAll,
       chunkSizeBytes: 4,
     });
     const puller = new LocalAttachmentTransport({ port: channel.portB });
@@ -279,11 +318,13 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     const serverA = new LocalAttachmentServer({
       port: channel.portA,
       store: storeA,
+      authorize: allowAll,
     });
     const transportA = new LocalAttachmentTransport({ port: channel.portA });
     const serverB = new LocalAttachmentServer({
       port: channel.portB,
       store: storeB,
+      authorize: allowAll,
     });
     const transportB = new LocalAttachmentTransport({ port: channel.portB });
     cleanups.push(() => {
