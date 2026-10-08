@@ -83,26 +83,47 @@ export type LocalResendMessage = {
 /**
  * Whether a received value is a well-formed wire message.
  *
- * A push is validated past its `kind`: its `envelopes` must be an array of
- * non-null objects. receivePush iterates that array and reads each entry, so a
- * `{ kind: "push" }` with a missing or non-array `envelopes` would otherwise
- * throw a TypeError out of the transport's message callback, escaping the
- * try/catch that wraps only the inbox write. Rejecting it here routes it
- * through the same failure path as any other malformed frame.
+ * A push is validated down to what `envelopesToSyncOperations` dereferences:
+ * each envelope's `channelMeta.id` and, per operation, the `operation.action`
+ * and the `context` fields it batches on.
  */
 export function isLocalWireMessage(data: unknown): data is LocalWireMessage {
-  if (typeof data !== "object" || data === null) {
+  if (!isObject(data)) {
     return false;
   }
-  const kind = (data as { kind?: unknown }).kind;
+  const kind = data.kind;
   if (kind === "push") {
-    const envelopes = (data as { envelopes?: unknown }).envelopes;
-    return (
-      Array.isArray(envelopes) &&
-      envelopes.every(
-        (envelope) => typeof envelope === "object" && envelope !== null,
-      )
-    );
+    return Array.isArray(data.envelopes) && data.envelopes.every(isEnvelope);
   }
   return kind === "hello" || kind === "ack" || kind === "resend";
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isEnvelope(envelope: unknown): boolean {
+  if (!isObject(envelope)) return false;
+  if (!isObject(envelope.channelMeta)) return false;
+  if (typeof envelope.channelMeta.id !== "string") return false;
+  const operations = envelope.operations;
+  return (
+    operations === undefined ||
+    operations === null ||
+    (Array.isArray(operations) && operations.every(isWireOperation))
+  );
+}
+
+function isWireOperation(entry: unknown): boolean {
+  if (!isObject(entry)) return false;
+  const { operation, context } = entry;
+  return (
+    isObject(operation) &&
+    isObject(operation.action) &&
+    isObject(context) &&
+    typeof context.documentId === "string" &&
+    typeof context.scope === "string" &&
+    typeof context.branch === "string" &&
+    typeof context.ordinal === "number"
+  );
 }

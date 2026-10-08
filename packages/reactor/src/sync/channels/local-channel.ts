@@ -319,26 +319,31 @@ export class LocalChannel implements IChannel {
    * side's ack; adding one back as a fresh sync job would transiently drag the
    * ack floor below the persisted cursor, so a batch entirely at or below the
    * ack is skipped, and the ack is posted again so the peer can trim them. A
-   * frame whose envelopes are malformed never reaches here --
-   * {@link isLocalWireMessage} rejects it and {@link receive} records a failure.
+   * frame {@link isLocalWireMessage} rejects never reaches here; one that still
+   * fails conversion is recorded as a failure.
    */
   private receivePush(message: LocalPushMessage): void {
     const ackFloor = this.inbox.ackOrdinal;
     const syncOps: SyncOperation[] = [];
     let dropped = false;
-    for (const envelope of message.envelopes) {
-      const converted = envelopesToSyncOperations(
-        envelope as SyncEnvelope,
-        this.remoteName,
+    let converted: SyncOperation[];
+    try {
+      converted = message.envelopes.flatMap((envelope) =>
+        envelopesToSyncOperations(envelope as SyncEnvelope, this.remoteName),
       );
-      for (const syncOp of converted) {
-        if (this.highestOrdinal(syncOp) <= ackFloor) {
-          dropped = true;
-          continue;
-        }
-        syncOp.transported();
-        syncOps.push(syncOp);
+    } catch (error) {
+      this.recordFailure(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return;
+    }
+    for (const syncOp of converted) {
+      if (this.highestOrdinal(syncOp) <= ackFloor) {
+        dropped = true;
+        continue;
       }
+      syncOp.transported();
+      syncOps.push(syncOp);
     }
     if (dropped) this.postAck();
     if (syncOps.length === 0) return;

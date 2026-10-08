@@ -321,6 +321,53 @@ describe("LocalChannel", () => {
     });
   });
 
+  describe("malformed envelopes", () => {
+    const wireOps = (): unknown[] => {
+      const frame = pushFrame("channel-peer", [syncOp("b->a", 1)]);
+      return (frame.envelopes[0] as { operations: unknown[] }).operations;
+    };
+
+    it.each([
+      ["no channelMeta", () => ({ operations: wireOps() })],
+      [
+        "an operation without context",
+        () => ({
+          channelMeta: { id: "peer" },
+          operations: [{ operation: {} }],
+        }),
+      ],
+      [
+        "a signer whose signatures cannot be read",
+        () => {
+          const [op] = wireOps() as Array<{
+            operation: { action: Record<string, unknown> };
+          }>;
+          op.operation.action.context = { signer: { signatures: "x" } };
+          return { channelMeta: { id: "peer" }, operations: [op] };
+        },
+      ],
+    ])("records a push with %s as a failure", async (_label, envelope) => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+
+        expect(() =>
+          transport.deliver({
+            kind: "push",
+            channelId: "peer",
+            envelopes: [envelope()],
+          }),
+        ).not.toThrow();
+
+        expect(channel.inbox.items).toHaveLength(0);
+        expect(channel.getConnectionState().state).toBe("error");
+      } finally {
+        await channel.shutdown();
+      }
+    });
+  });
+
   describe("push failure classification", () => {
     it("keeps an op in the outbox on a transient post failure and re-pushes on recovery", async () => {
       const transport = new FakeTransport();
