@@ -9,6 +9,7 @@ import type {
   AttachmentMetadata,
   AttachmentResponse,
 } from "../../types.js";
+import { sha256Hex } from "../../replication/hash.js";
 import { collectStream, streamFromBytes } from "./bytes.js";
 import type {
   ILocalAttachmentBackend,
@@ -191,6 +192,13 @@ export class LocalAttachmentStore implements IAttachmentStore {
    * through the same write path `put` uses (so provenance follows one rule)
    * and serves the result from the store rather than from the transport's
    * stream, which has already been consumed.
+   *
+   * The fetched bytes are hashed and refused when they are not what was asked
+   * for, mirroring {@link AttachmentReplicator}: a transport peer is another
+   * reactor rather than a trusted server, and a content-addressed store that
+   * accepts bytes it never verified is no longer content-addressed. A mismatch
+   * is surfaced as an error and nothing is written, so a lying peer cannot
+   * poison the store.
    */
   private async fetchRemote(
     hash: AttachmentHash,
@@ -211,10 +219,18 @@ export class LocalAttachmentStore implements IAttachmentStore {
       throw new AttachmentNotFound(hash);
     }
 
+    const fetchedBytes = await collectStream(remote.response.body);
+    const actual = await sha256Hex(fetchedBytes);
+    if (actual !== hash) {
+      throw new Error(
+        `Attachment bytes for ${hash} hashed to ${actual}; the transport served content that is not what was asked for`,
+      );
+    }
+
     await this.store(
       hash,
       remote.response.metadata,
-      remote.response.body,
+      streamFromBytes(fetchedBytes),
       "sync",
       true,
     );

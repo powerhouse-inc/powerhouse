@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { AttachmentNotFound, AttachmentPending } from "../../../src/errors.js";
 import type { IAttachmentTransport } from "../../../src/interfaces.js";
+import { sha256Hex } from "../../../src/replication/hash.js";
 import {
   LocalAttachmentStore,
   MemoryAttachmentBackend,
@@ -203,39 +204,71 @@ describe("LocalAttachmentStore", () => {
   });
 
   it("get of an unknown hash with a documentId restores it through the transport", async () => {
+    // The store verifies fetched bytes against the requested hash, so the
+    // transport must answer with bytes that actually hash to it.
+    const bytes = new Uint8Array([7, 7, 7]);
+    const hash = await sha256Hex(bytes);
     const { store: s, transport: t } = store({
       kind: "data",
       response: {
-        hash: HASH,
+        hash,
         metadata: metadata({ createdAtUtc: "2025-05-05T00:00:00.000Z" }),
-        body: streamFromBytes(new Uint8Array([7, 7, 7])),
+        body: streamFromBytes(bytes),
       },
     });
 
-    const response = await s.get(HASH, undefined, DOC);
+    const response = await s.get(hash, undefined, DOC);
     expect(await readAll(response.body)).toEqual([7, 7, 7]);
-    expect(t.calls).toEqual([[HASH, DOC]]);
+    expect(t.calls).toEqual([[hash, DOC]]);
     // Persisted, so the next read is local and keeps the origin's create time.
-    expect(await s.has(HASH)).toBe(true);
-    expect((await s.stat(HASH)).createdAtUtc).toBe("2025-05-05T00:00:00.000Z");
+    expect(await s.has(hash)).toBe(true);
+    expect((await s.stat(hash)).createdAtUtc).toBe("2025-05-05T00:00:00.000Z");
   });
 
   it("get of an evicted hash re-fetches and restores it", async () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    const hash = await sha256Hex(bytes);
     const { store: s, transport: t } = store({
       kind: "data",
       response: {
-        hash: HASH,
+        hash,
         metadata: metadata(),
-        body: streamFromBytes(new Uint8Array([1, 2, 3])),
+        body: streamFromBytes(bytes),
       },
     });
-    await s.put(HASH, metadata(), streamFromBytes(new Uint8Array([1, 2, 3])));
-    await s.evict(HASH);
+    await s.put(hash, metadata(), streamFromBytes(new Uint8Array([1, 2, 3])));
+    await s.evict(hash);
 
-    const response = await s.get(HASH, undefined, DOC);
+    const response = await s.get(hash, undefined, DOC);
     expect(await readAll(response.body)).toEqual([1, 2, 3]);
-    expect(t.calls).toEqual([[HASH, DOC]]);
-    expect(await s.has(HASH)).toBe(true);
+    expect(t.calls).toEqual([[hash, DOC]]);
+    expect(await s.has(hash)).toBe(true);
+  });
+
+  it("refuses peer bytes whose hash is not what was asked for, leaving the store empty", async () => {
+    // The security invariant (W3.4 review finding 1): a transport peer is
+    // another reactor, not a trusted server, so bytes that do not hash to the
+    // requested content address are refused rather than written. Otherwise a
+    // lying peer could poison a content-addressed store.
+    const wanted = await sha256Hex(new Uint8Array([1, 2, 3]));
+    const { store: s, transport: t } = store({
+      kind: "data",
+      response: {
+        hash: wanted,
+        metadata: metadata(),
+        // Different bytes than the ones `wanted` addresses.
+        body: streamFromBytes(new Uint8Array([9, 9, 9])),
+      },
+    });
+
+    await expect(s.get(wanted, undefined, DOC)).rejects.toThrow(
+      /not what was asked for/,
+    );
+    // Attempted exactly once, and nothing was written.
+    expect(t.calls).toEqual([[wanted, DOC]]);
+    expect(await s.has(wanted)).toBe(false);
+    await expect(s.stat(wanted)).rejects.toBeInstanceOf(AttachmentNotFound);
+    expect(await s.storageUsed()).toBe(0);
   });
 
   it("raises AttachmentPending for a transport pending answer", async () => {
@@ -260,20 +293,22 @@ describe("LocalAttachmentStore", () => {
   });
 
   it("treats an available record over missing bytes as absent and restores it", async () => {
+    const restored = new Uint8Array([4, 5, 6]);
+    const hash = await sha256Hex(restored);
     const backend = new MemoryAttachmentBackend();
     const t = transport({
       kind: "data",
       response: {
-        hash: HASH,
+        hash,
         metadata: metadata(),
-        body: streamFromBytes(new Uint8Array([4, 5, 6])),
+        body: streamFromBytes(restored),
       },
     });
     const s = new LocalAttachmentStore(backend, t);
     // A torn write: the record says available, the blob is gone.
     await backend.write(
       {
-        hash: HASH,
+        hash,
         mimeType: "text/plain",
         fileName: "note.txt",
         sizeBytes: 3,
@@ -286,7 +321,7 @@ describe("LocalAttachmentStore", () => {
       new Uint8Array([1, 2, 3]),
     );
     await backend.evict({
-      hash: HASH,
+      hash,
       mimeType: "text/plain",
       fileName: "note.txt",
       sizeBytes: 3,
@@ -297,8 +332,8 @@ describe("LocalAttachmentStore", () => {
       lastAccessedAtUtc: "2026-01-01T00:00:00.000Z",
     });
 
-    const response = await s.get(HASH, undefined, DOC);
+    const response = await s.get(hash, undefined, DOC);
     expect(await readAll(response.body)).toEqual([4, 5, 6]);
-    expect(t.calls).toEqual([[HASH, DOC]]);
+    expect(t.calls).toEqual([[hash, DOC]]);
   });
 });
