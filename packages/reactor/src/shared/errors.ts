@@ -3,6 +3,9 @@ import type { SignatureRefusalCode } from "../signer/types.js";
 /**
  * Error thrown when attempting to access a deleted document.
  */
+/** The error name on a job the reactor does not know. */
+export const JOB_NOT_FOUND_ERROR_NAME = "JobNotFoundError";
+
 export class DocumentDeletedError extends Error {
   public readonly documentId: string;
   public readonly deletedAtUtcIso: string | null;

@@ -1,20 +1,22 @@
-import type {
-  ActionCandidate,
-  ActionEvaluations,
-  BatchSubmitter,
-  BatchLoadRequest,
-  BatchLoadResult,
-  DocumentChangeEvent,
-  DocumentRelationship,
-  IReactorClient,
-  JobInfo,
-  OperationFilter,
-  PagedResults,
-  PagingOptions,
-  PropagationMode,
-  ReactorInfo,
-  SearchFilter,
-  ViewFilter,
+import {
+  JOB_NOT_FOUND_ERROR_NAME,
+  JobStatus,
+  type ActionCandidate,
+  type ActionEvaluations,
+  type BatchSubmitter,
+  type BatchLoadRequest,
+  type BatchLoadResult,
+  type DocumentChangeEvent,
+  type DocumentRelationship,
+  type IReactorClient,
+  type JobInfo,
+  type OperationFilter,
+  type PagedResults,
+  type PagingOptions,
+  type PropagationMode,
+  type ReactorInfo,
+  type SearchFilter,
+  type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
   Action,
@@ -259,7 +261,13 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
       client.deleteDocument(identifier, propagate, signal),
     setPreferredEditor: (identifier, editor, branch, signal) =>
       client.setPreferredEditor(identifier, editor, branch, signal),
-    getJob: (jobId, signal) => client.getJobStatus(jobId, signal),
+    getJob: async (jobId, signal) => {
+      const job = await client.getJobStatus(jobId, signal);
+      return job.status === JobStatus.FAILED &&
+        job.error?.name === JOB_NOT_FOUND_ERROR_NAME
+        ? undefined
+        : job;
+    },
     waitForJob: (job, signal) => client.waitForJob(job, signal),
     isDocumentIdTaken: (documentId, signal) =>
       client.isDocumentIdTaken(documentId, signal),

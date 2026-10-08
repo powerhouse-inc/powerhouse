@@ -102,6 +102,7 @@ export {
 export {
   AuthEnforcementDisabledError,
   InvalidSignatureError,
+  JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
   UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";

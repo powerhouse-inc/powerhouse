@@ -31,6 +31,7 @@ import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { JOB_NOT_FOUND_ERROR_NAME } from "../shared/errors.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   ConsistencyToken,
@@ -1084,7 +1085,10 @@ export class Reactor implements IReactor {
         status: JobStatus.FAILED,
         createdAtUtcIso: now,
         completedAtUtcIso: now,
-        error: toErrorInfo("Job not found"),
+        error: {
+          ...toErrorInfo("Job not found"),
+          name: JOB_NOT_FOUND_ERROR_NAME,
+        },
         consistencyToken: {
           version: 1,
           createdAtUtcIso: now,
