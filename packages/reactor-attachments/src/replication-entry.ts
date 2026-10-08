@@ -24,8 +24,11 @@ export {
   type LocalAttachmentTransportOptions,
 } from "./local/index.js";
 export {
+  AttachmentPeerLinks,
   attachmentOriginOf,
   PeeredAttachmentTransport,
+  type AttachmentPeerLinksOptions,
+  type AttachmentServedStats,
   type PeeredAttachmentTransportOptions,
 } from "./peers/index.js";
 export type {

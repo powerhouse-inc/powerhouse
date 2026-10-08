@@ -8,7 +8,7 @@ import {
   type Unsubscribe,
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   attachmentReferenceAuthorizer,
   LocalAttachmentServer,
@@ -16,6 +16,10 @@ import {
 } from "../../src/local/index.js";
 import type { IAttachmentReferenceReader } from "../../src/read-models/attachment-reference/types.js";
 import { NullAttachmentTransport } from "../../src/null-attachment-transport.js";
+import {
+  AttachmentPeerLinks,
+  PeeredAttachmentTransport,
+} from "../../src/peers/index.js";
 import {
   AttachmentReplicator,
   sha256Hex,
@@ -245,5 +249,81 @@ describe("replicating bytes over a brokered local link", () => {
     expect(status.notFound).toBe(1);
     expect(status.held).toBe(0);
     expect(server.stats().refused).toBe(1);
+  });
+
+  it("re-chases a terminal hash when a peer holding it is linked later", async () => {
+    const bytes = new TextEncoder().encode("bytes that reach A later");
+    const hash = await sha256Hex(bytes);
+    const ref = `attachment://v1:${hash}` as AttachmentRef;
+
+    const storeA = new LocalAttachmentStore(
+      new MemoryAttachmentBackend(),
+      new NullAttachmentTransport(),
+    );
+    const linksA = new AttachmentPeerLinks({
+      store: storeA,
+      transport: new PeeredAttachmentTransport(),
+      authorize: attachmentReferenceAuthorizer(indexing(ref)),
+    });
+
+    const peeredB = new PeeredAttachmentTransport();
+    const storeB = new LocalAttachmentStore(
+      new MemoryAttachmentBackend(),
+      peeredB,
+    );
+    const busB = bus();
+    const replicatorB = new AttachmentReplicator({
+      store: storeB,
+      transport: peeredB,
+      refs: anyRefInInput,
+      eventBus: busB,
+      retry: { notFoundAttempts: 1 },
+    });
+    const linksB = new AttachmentPeerLinks({
+      store: storeB,
+      transport: peeredB,
+      onPeerAdded: () => replicatorB.retry(),
+    });
+    cleanups.push(async () => {
+      await replicatorB.stop();
+      linksA.close();
+      linksB.close();
+    });
+
+    replicatorB.start();
+    await busB.fire({ jobId: "job-1", operations: [operation(ref)] });
+    await replicatorB.idle();
+    expect((await replicatorB.status()).notFound).toBe(1);
+
+    await storeA.putLocal(
+      hash,
+      {
+        mimeType: "text/plain",
+        fileName: "late.txt",
+        sizeBytes: bytes.byteLength,
+        extension: ".txt",
+        createdAtUtc: "2026-01-01T00:00:00.000Z",
+      },
+      streamFromBytes(bytes),
+    );
+    const channel = new MessageChannel();
+    channel.port1.unref();
+    channel.port2.unref();
+    linksA.addPeer(
+      "b",
+      "bytes",
+      messagePortTransport(channel.port1 as unknown as MessagePortLike),
+    );
+    linksB.addPeer(
+      "a",
+      "bytes",
+      messagePortTransport(channel.port2 as unknown as MessagePortLike),
+    );
+
+    await vi.waitFor(async () => {
+      expect(await storeB.has(hash)).toBe(true);
+    });
+    expect((await replicatorB.status()).held).toBe(1);
+    expect(linksA.servedStats().served).toBe(1);
   });
 });
