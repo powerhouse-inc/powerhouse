@@ -2,12 +2,15 @@ import {
   type ActionCandidate,
   type ActionEvaluations,
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
+  type BatchExecutionResult,
   ChannelError,
   ChannelErrorSource,
   consolidateSyncOperations,
   type DocumentRelationship,
   DriveCollectionId,
   envelopesToSyncOperations,
+  type ExecutionJobPlan,
   type IDriveClient,
   type IReactorClient,
   type ISyncManager,
@@ -108,8 +111,10 @@ import {
 import type {
   ActionEvaluations as GqlActionEvaluations,
   ActionInput,
+  BatchExecutionResult as GqlBatchExecutionResult,
   DocumentModelResultPage,
   DocumentRelationshipResultPage,
+  ExecutionJobInput,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
   PhDocumentResultPage,
@@ -548,6 +553,7 @@ export async function jobStatus(
     jobId: string;
   },
   serves: (documentId: string) => Promise<boolean>,
+  readable: (documentId: string) => Promise<boolean> = serves,
 ): Promise<GqlJobInfo> {
   let result: JobInfo;
   try {
@@ -560,6 +566,18 @@ export async function jobStatus(
   if (!(await serves(result.documentId))) {
     result = unknownJob(args.jobId);
   }
+
+  // A coordinate names a document the job wrote to, such as a parent it linked.
+  const coordinates = [];
+  for (const coordinate of result.consistencyToken.coordinates) {
+    if (await readable(coordinate.documentId)) {
+      coordinates.push(coordinate);
+    }
+  }
+  result = {
+    ...result,
+    consistencyToken: { ...result.consistencyToken, coordinates },
+  };
 
   try {
     return toGqlJobInfo(result);
@@ -1020,6 +1038,164 @@ export async function executeAsync(
   }
 
   return toGqlJobInfo(job);
+}
+
+/** The document a batch creates, and the documents it links the new one under. */
+export type BatchCreation = {
+  documentId: string;
+  documentType: string;
+  linkedFrom: string[];
+};
+
+/** Authorized as a create, so only createDocument's own shape is accepted. */
+export function batchCreationOf(
+  jobs: readonly ExecutionJobInput[],
+): BatchCreation | undefined {
+  const creating = jobs.filter((job) =>
+    job.actions.some((action) => action.type === "CREATE_DOCUMENT"),
+  );
+  if (creating.length === 0) {
+    return undefined;
+  }
+  if (jobs.length > 1) {
+    throw new GraphQLError(
+      "A job that creates a document must be the only job in its batch",
+    );
+  }
+
+  const [job] = creating;
+  const [first, ...rest] = job.actions;
+  if (first.type !== "CREATE_DOCUMENT") {
+    throw new GraphQLError(
+      "CREATE_DOCUMENT must be the first action of its job",
+    );
+  }
+
+  const input = first.input as { documentId?: unknown; model?: unknown };
+  if (typeof input.documentId !== "string" || typeof input.model !== "string") {
+    throw new GraphQLError(
+      "CREATE_DOCUMENT input needs a documentId and model",
+    );
+  }
+  const newId = input.documentId;
+  if (newId !== job.documentIdOrSlug) {
+    throw new GraphQLError(
+      `CREATE_DOCUMENT names "${newId}" but its job targets "${job.documentIdOrSlug}"`,
+    );
+  }
+
+  const linkedFrom = new Set<string>();
+  for (const action of rest) {
+    const actionInput = action.input as Record<string, unknown>;
+    if (
+      action.type === "UPGRADE_DOCUMENT" &&
+      actionInput.documentId === newId
+    ) {
+      continue;
+    }
+    if (
+      action.type === "ADD_RELATIONSHIP" &&
+      actionInput.targetId === newId &&
+      typeof actionInput.sourceId === "string" &&
+      actionInput.sourceId !== newId
+    ) {
+      linkedFrom.add(actionInput.sourceId);
+      continue;
+    }
+    throw new GraphQLError(
+      `A create job may only upgrade the new document and link it under parents; ${action.type} is not allowed`,
+    );
+  }
+
+  return {
+    documentId: input.documentId,
+    documentType: input.model,
+    linkedFrom: [...linkedFrom],
+  };
+}
+
+/**
+ * Runs multiple mutation jobs in dependency order, waits for every one to
+ * settle, and returns each job's final state keyed by plan key.
+ *
+ * Not atomic: each job commits on its own and a failed job still releases its
+ * dependents, so a failure is reported per job as a FAILED entry rather than a
+ * thrown error, which would lose what did commit.
+ */
+export async function executeBatch(
+  reactorClient: IReactorClient,
+  args: {
+    jobs: readonly ExecutionJobInput[];
+  },
+): Promise<GqlBatchExecutionResult> {
+  const jobs: ExecutionJobPlan[] = args.jobs.map((job) => ({
+    key: job.key,
+    documentId: job.documentIdOrSlug,
+    scope: job.scope,
+    branch: fromInputMaybe(job.branch) ?? DEFAULT_BRANCH,
+    actions: toSubmittableActions(job.actions),
+    dependsOn: [...job.dependsOn],
+  }));
+
+  let outcome: BatchExecutionResult | BatchJobFailedError;
+  try {
+    outcome = await reactorClient.executeBatch({ jobs });
+  } catch (error) {
+    if (!BatchJobFailedError.isError(error)) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new GraphQLError(
+        `Failed to execute batch: ${message}. Jobs dispatched before the failure may have committed.`,
+      );
+    }
+    outcome = error;
+  }
+  const settled = BatchJobFailedError.isError(outcome)
+    ? outcome.jobs
+    : await readBackJobs(reactorClient, jobs, outcome);
+
+  try {
+    return {
+      jobs: jobs.map((job) => {
+        if (!Object.hasOwn(settled, job.key)) {
+          throw new Error(`no job came back for plan key "${job.key}"`);
+        }
+        return { key: job.key, job: toGqlJobInfo(settled[job.key]) };
+      }),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new GraphQLError(
+      `Failed to convert batch result to GraphQL: ${message}`,
+    );
+  }
+}
+
+/** The client hands back submission receipts; read each job's final state. */
+async function readBackJobs(
+  reactorClient: IReactorClient,
+  jobs: readonly ExecutionJobPlan[],
+  result: BatchExecutionResult,
+): Promise<Record<string, JobInfo>> {
+  const entries = await Promise.all(
+    jobs.map(async (job) => {
+      if (!Object.hasOwn(result.jobs, job.key)) {
+        throw new GraphQLError(
+          `Batch result is missing plan key "${job.key}"; the reactor returned jobs for [${Object.keys(result.jobs).join(", ")}]`,
+        );
+      }
+      try {
+        return [
+          job.key,
+          await reactorClient.getJobStatus(result.jobs[job.key].id),
+        ] as const;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        throw new GraphQLError(`Failed to read batch job status: ${message}`);
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function mutateDocument(

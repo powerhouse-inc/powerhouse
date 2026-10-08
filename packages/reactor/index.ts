@@ -88,6 +88,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   InvalidSignatureError,
   RelationshipNotFoundError,
   UnsupportedStoredProtocolError,
@@ -203,6 +204,7 @@ export {
 export {
   createForwardingLogger,
   errorToInfo,
+  loadDocumentModelSpec,
   sanitizeArg,
   workerEntryPath,
 } from "./src/executor/worker/index.js";

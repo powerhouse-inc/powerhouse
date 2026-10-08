@@ -6,7 +6,7 @@ import {
 } from "@powerhousedao/pieces-framework/block-type";
 import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { lstat, mkdir, realpath, rm } from "node:fs/promises";
 import path from "node:path";
 import {
   bundleResolver,
@@ -14,31 +14,21 @@ import {
   type PieceResolver,
 } from "../activepieces/resolver.js";
 import type { ActionContextIdentity } from "../activepieces/context/action.js";
-import type {
-  ReactorCreateInput,
-  ReactorCreateSubmission,
-  ReactorExecuteInput,
-  ReactorJobState,
-  ReactorService,
-  ReactorSubmission,
-  ReactorWaitInput,
-} from "../activepieces/context/reactor.js";
 import {
   rewriteFileRefs,
   type StagedFile,
 } from "../activepieces/context/files.js";
+import {
+  FileTooLargeError,
+  maxFileBytes,
+} from "../activepieces/context/limits.js";
+import { AttachmentCache } from "./attachment-cache.js";
 import { PieceWorker, type IPieceWorker } from "../activepieces/worker/host.js";
+import type { ReactorTap } from "../activepieces/worker/reactor-rpc.js";
 import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   LOG_WRITE,
   OUTPUT_UPDATE,
-  REACTOR_FIND,
-  REACTOR_GET,
-  REACTOR_MODEL,
-  REACTOR_MODELS,
-  REACTOR_SUBMIT,
-  REACTOR_SUBMIT_CREATE,
-  REACTOR_WAIT,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
@@ -61,6 +51,7 @@ import type {
   ResolvedConnection,
 } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
+import type { WorkflowTelemetry } from "../../telemetry.js";
 import { builtinPiece, isBuiltinPiece, runBuiltinAction } from "../builtin.js";
 import {
   blockLabel,
@@ -90,13 +81,20 @@ export interface AttachmentPort {
   read(
     ref: string,
     destPath: string,
+    signal?: AbortSignal,
   ): Promise<{ fileName?: string; contentType?: string }>;
-  write(file: {
-    path: string;
-    fileName: string;
-    size: number;
-    contentType?: string;
-  }): Promise<string>;
+  // Whether the running workflow may read the ref, without fetching it: a
+  // cached copy is only handed over after the same check a download makes.
+  authorize?(ref: string): Promise<void>;
+  write(
+    file: {
+      path: string;
+      fileName: string;
+      size: number;
+      contentType?: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<string>;
 }
 
 const ATTACHMENT_REF = /^attachment:\/\//i;
@@ -152,166 +150,6 @@ function storeKeyOf(payload: unknown): string {
   return key;
 }
 
-// The host's half of `ctx.reactor`: the same operations the piece calls, run
-// against the reactor this host serves. See activepieces/context/reactor.ts.
-
-// Registered per step and only for a piece the host resolved locally, so a
-// fetched bundle forging these calls finds no handler and is refused.
-export type ReactorPort = Omit<ReactorService, "execute" | "create"> & {
-  // Enqueues the write and answers at once.
-  submit(input: ReactorExecuteInput): Promise<ReactorSubmission>;
-  // Enqueues the create and answers at once, with what completes it.
-  submitCreate(input: ReactorCreateInput): Promise<ReactorCreateSubmission>;
-  // Holds for at most `maxWaitMs`, then answers the job's state as it stands.
-  wait(input: ReactorWaitInput): Promise<ReactorJobState>;
-};
-
-// Held well under the worker's host-call cap, whatever the child asks for.
-export const MAX_REACTOR_WAIT_MS = 5_000;
-
-function waitMs(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
-  return Math.min(Math.max(Math.floor(value), 0), MAX_REACTOR_WAIT_MS);
-}
-
-// Payloads arrive from the child, which runs piece code: a call is checked
-// here rather than trusted to have come from our own proxy.
-function reactorInput(payload: unknown): Record<string, unknown> {
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    Array.isArray(payload)
-  ) {
-    throw new Error("Reactor call carried no input object");
-  }
-  return payload as Record<string, unknown>;
-}
-
-function requiredString(
-  payload: Record<string, unknown>,
-  field: string,
-): string {
-  const value = payload[field];
-  if (typeof value !== "string" || value === "") {
-    throw new Error(`Reactor call carried no "${field}"`);
-  }
-  return value;
-}
-
-function optionalString(
-  payload: Record<string, unknown>,
-  field: string,
-): string | undefined {
-  const value = payload[field];
-  return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-function reactorActions(payload: Record<string, unknown>) {
-  const actions = payload.actions;
-  if (!Array.isArray(actions) || actions.length === 0) {
-    throw new Error("Reactor call carried no actions");
-  }
-  return actions.map((entry, index) => {
-    const action = entry as Record<string, unknown> | null;
-    if (!action || typeof action.type !== "string") {
-      throw new Error(`Reactor call: actions[${index}] needs a string "type"`);
-    }
-    return {
-      type: action.type,
-      input: action.input,
-      ...(typeof action.scope === "string" ? { scope: action.scope } : {}),
-    };
-  });
-}
-
-// A page size the host will serve. The value arrives from piece code, so it
-// is clamped here rather than trusted; a host may cap it further.
-const MAX_FIND_LIMIT = 100;
-
-function findLimit(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  return Math.min(Math.max(Math.floor(value), 1), MAX_FIND_LIMIT);
-}
-
-// The state match, as the host will accept it. Both halves must be strings and
-// the path must name something: a match with an empty path would silently pass
-// every document, which is the opposite of what a step asking to match wants.
-function findMatch(
-  value: unknown,
-): { path: string; value: string } | undefined {
-  if (typeof value !== "object" || value === null) return undefined;
-  const record = value as Record<string, unknown>;
-  const path = record.path;
-  const wanted = record.value;
-  if (typeof path !== "string" || path.trim() === "") return undefined;
-  if (typeof wanted !== "string") return undefined;
-  return { path: path.trim(), value: wanted };
-}
-
-function executeInput(payload: unknown): ReactorExecuteInput {
-  const input = reactorInput(payload);
-  return {
-    documentId: requiredString(input, "documentId"),
-    ...(optionalString(input, "branch")
-      ? { branch: optionalString(input, "branch") }
-      : {}),
-    actions: reactorActions(input),
-  };
-}
-
-export function reactorHandlers(port: ReactorPort): HostCallHandlers {
-  return {
-    [REACTOR_MODELS]: () => port.models(),
-    [REACTOR_MODEL]: (payload) =>
-      port.model(requiredString(reactorInput(payload), "documentType")),
-    [REACTOR_GET]: (payload) => {
-      const input = reactorInput(payload);
-      return port.get({
-        documentId: requiredString(input, "documentId"),
-        ...(optionalString(input, "branch")
-          ? { branch: optionalString(input, "branch") }
-          : {}),
-      });
-    },
-    [REACTOR_FIND]: (payload) => {
-      const input = reactorInput(payload);
-      return port.find({
-        ...(optionalString(input, "documentType")
-          ? { documentType: optionalString(input, "documentType") }
-          : {}),
-        ...(optionalString(input, "parentId")
-          ? { parentId: optionalString(input, "parentId") }
-          : {}),
-        ...(findLimit(input.limit) !== undefined
-          ? { limit: findLimit(input.limit) }
-          : {}),
-        ...(findMatch(input.match) ? { match: findMatch(input.match) } : {}),
-        ...(input.withState === true ? { withState: true } : {}),
-      });
-    },
-    [REACTOR_SUBMIT_CREATE]: (payload) => {
-      const input = reactorInput(payload);
-      return port.submitCreate({
-        documentType: requiredString(input, "documentType"),
-        ...(optionalString(input, "name")
-          ? { name: optionalString(input, "name") }
-          : {}),
-        ...(optionalString(input, "parentId")
-          ? { parentId: optionalString(input, "parentId") }
-          : {}),
-      });
-    },
-    [REACTOR_SUBMIT]: (payload) => port.submit(executeInput(payload)),
-    [REACTOR_WAIT]: (payload) => {
-      const input = reactorInput(payload);
-      return port.wait({
-        jobId: requiredString(input, "jobId"),
-        maxWaitMs: waitMs(input.maxWaitMs),
-      });
-    },
-  };
-}
-
 // The handlers served to a running step or trigger hook. A rejection becomes
 // the error the piece sees, which is what an over-limit write should do.
 export function storeHandlers(port: PieceStorePort): HostCallHandlers {
@@ -350,15 +188,20 @@ export interface ActivepiecesBlockExecutorOptions {
   // piece calling ctx.files falls back to inline data URIs.
   stagingRoot?: string;
   attachments?: AttachmentPort;
+  // Keeps downloaded attachments by content so later steps and runs skip the
+  // download. Needs `attachments.authorize`.
+  attachmentCache?: AttachmentCache;
   // Without it `ctx.store` falls back to the worker's heap, which a step
   // timeout discards.
   pieceStore?: PieceStorePort;
   // Where a block's piece comes from. Defaults to fetching the pinned
   // version into `cacheDir`, which is what a published piece needs.
   resolver?: PieceResolver;
-  // Serves `ctx.reactor`, and only to a piece the resolver answered locally.
-  // Without it even a package piece finds the member throwing.
-  reactor?: ReactorPort;
+  // ctx.reactor over the reactor RPC, for an action that declares requireReactor;
+  // undefined when it declares none. Asked per step.
+  reactorAccess?: (
+    request: StepReactorRequest,
+  ) => Promise<ReactorTap | undefined>;
   // Where a step's piece may connect to. Left unset it is the default policy,
   // which refuses private address space; `null` runs the piece unrestricted.
   egress?: EgressPolicy | null;
@@ -371,6 +214,12 @@ export interface ActivepiecesBlockExecutorOptions {
   identity?: () => Omit<ActionContextIdentity, "stepName"> | undefined;
   // Whether this step runs as a single-step test, asked per step likewise.
   stepTest?: () => boolean;
+  telemetry?: WorkflowTelemetry;
+}
+
+export interface StepReactorRequest {
+  block: ParsedBlockType;
+  reactorConnectionId?: string | null;
 }
 
 // The notify handlers served to one step. Unlike a store call, nothing here
@@ -415,20 +264,12 @@ function redactThrown(error: unknown, values: string[]): unknown {
   return rememberSecrets(redactError(error, { values }), values);
 }
 
-// The one piece served `ctx.reactor`. Its actions are the reactor surface --
-// find, get, create, dispatch, schemas -- so the port is what it is for.
-
-// Identity, not provenance: a piece is not handed the reactor for having been
-// installed locally, shipped first-party, or registered in the host's registry.
-export const REACTOR_PORT_PIECE = "@powerhousedao/piece-reactor";
-
-export function servesReactorPort(packageName: string): boolean {
-  return packageName === REACTOR_PORT_PIECE;
-}
+// Shipped by the workflow package, which versions it with the host.
+const HOST_SHIPPED_PIECE = "@powerhousedao/piece-reactor";
 
 // The host's own code, so it always runs the installed copy.
 export function isHostBound(packageName: string): boolean {
-  return servesReactorPort(packageName) || isBuiltinPiece(packageName);
+  return packageName === HOST_SHIPPED_PIECE || isBuiltinPiece(packageName);
 }
 
 export type { BlockKind };
@@ -492,7 +333,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     } else if (supplied) {
       return supplied;
     }
-    return (this.own ??= new PieceWorker());
+    return (this.own ??= new PieceWorker({
+      telemetry: this.options.telemetry,
+    }));
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
@@ -535,11 +378,15 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     const runSecrets = execution.redactValues ?? [];
     let redactValues: string[] = [...runSecrets];
     try {
-      const piece = await this.resolver.resolve({
+      const ref = {
         name: parsed.packageName,
         version: parsed.version,
         ...(parsed.source ? { source: parsed.source } : {}),
-      });
+      };
+      const telemetry = this.options.telemetry;
+      const piece = await (telemetry
+        ? telemetry.phase("piece.resolve", {}, () => this.resolver.resolve(ref))
+        : this.resolver.resolve(ref));
       const connection = await this.resolveConnection(execution.connectionId, {
         piecePackage: parsed.packageName,
         stepId: execution.step.id,
@@ -551,18 +398,28 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       const timeoutMs = execution.step.timeoutSeconds
         ? execution.step.timeoutSeconds * 1000
         : this.options.defaultTimeoutMs;
-      const stagedInputs = await this.stageInputs(execution.config, stagingDir);
+      // Staging and ingest count against the step's timeout, not only the
+      // piece's own run.
+      const deadline = timeoutMs ? Date.now() + timeoutMs : undefined;
+      const signal = deadline ? AbortSignal.timeout(timeoutMs!) : undefined;
+      const stagedInputs = await this.stageInputs(
+        execution.config,
+        stagingDir,
+        signal,
+      );
+      const remainingMs = deadline
+        ? Math.max(1, deadline - Date.now())
+        : undefined;
       const pieceStore = this.options.pieceStore;
       const notifications = stepTaps(this.options, execution, redactValues);
       const egress =
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
           : this.options.egress;
-      // One piece reaches the reactor: the one whose whole job is reaching it.
-      // Not a question of where the bundle came from -- see REACTOR_PORT_PIECE.
-      const reactor = servesReactorPort(parsed.packageName)
-        ? this.options.reactor
-        : undefined;
+      const reactorTap = await this.options.reactorAccess?.({
+        block: parsed,
+        reactorConnectionId: execution.reactorConnectionId,
+      });
       const result = await this.worker().runAction(
         {
           ...pieceModuleRef(piece),
@@ -578,26 +435,24 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
           ...(pieceStore ? { durableStore: true } : {}),
-          ...(reactor ? { reactorAccess: true } : {}),
           ...(this.options.onPieceLog ? { captureLogs: true } : {}),
           ...(this.options.onPartialOutput ? { liveOutput: true } : {}),
           ...(egress ? { egress } : {}),
         },
         {
-          ...(timeoutMs ? { timeoutMs } : {}),
-          ...(pieceStore || reactor
-            ? {
-                hostCalls: {
-                  ...(pieceStore ? storeHandlers(pieceStore) : {}),
-                  ...(reactor ? reactorHandlers(reactor) : {}),
-                },
-              }
-            : {}),
+          ...(remainingMs ? { timeoutMs: remainingMs } : {}),
+          ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
           ...(notifications ? { notifications } : {}),
+          ...(reactorTap ? { reactor: reactorTap } : {}),
         },
       );
       return {
-        output: await this.ingestFiles(result.output, result.files),
+        output: await this.ingestFiles(
+          result.output,
+          result.files,
+          stagingDir,
+          signal,
+        ),
         redactValues,
       };
     } catch (error) {
@@ -627,6 +482,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   private async stageInputs(
     config: unknown,
     stagingDir: string | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<StagedInput[] | undefined> {
     const port = this.options.attachments;
     if (!stagingDir || !port) return undefined;
@@ -639,9 +495,15 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     for (const ref of refs) {
       const destPath = path.join(stagingDir, `in-${index++}`);
       try {
-        const meta = await port.read(ref, destPath);
+        const meta = await this.readAttachment(port, ref, destPath, signal);
         staged.push({ ref, path: destPath, ...meta });
       } catch (error) {
+        if (signal?.aborted) throw error;
+        staged.push({
+          ref,
+          path: "",
+          error: error instanceof Error ? error.message : String(error),
+        });
         // Staging is opportunistic: refs are collected from the whole config
         // without knowing which props are FILE, because the prop schema lives
         // in the worker. So a ref this step was never going to open must not
@@ -658,6 +520,68 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     return staged;
   }
 
+  // The cache answers only after the port's own read check.
+  private async readAttachment(
+    port: AttachmentPort,
+    ref: string,
+    destPath: string,
+    signal: AbortSignal | undefined,
+  ): Promise<{ fileName?: string; contentType?: string }> {
+    const cache = this.options.attachmentCache;
+    if (!cache || !port.authorize || !AttachmentCache.cacheable(ref)) {
+      return port.read(ref, destPath, signal);
+    }
+    await port.authorize(ref);
+    const hit = await cache.get(ref, destPath).catch(() => undefined);
+    if (hit) {
+      return {
+        ...(hit.fileName !== undefined ? { fileName: hit.fileName } : {}),
+        ...(hit.contentType !== undefined
+          ? { contentType: hit.contentType }
+          : {}),
+      };
+    }
+    const meta = await port.read(ref, destPath, signal);
+    await cache.put(ref, destPath, meta).catch((error: unknown) => {
+      logger.debug(
+        "Could not cache @ref: @error",
+        ref,
+        error instanceof Error ? error.message : String(error),
+      );
+    });
+    return meta;
+  }
+
+  // A file the worker reports must be one it wrote into this step's staging
+  // directory: the host reads the path, and piece code runs in the worker.
+  private async checkStagedFile(
+    file: StagedFile,
+    stagingDir: string | undefined,
+  ): Promise<number> {
+    if (!stagingDir) {
+      throw new Error(
+        `Refusing to ingest "${file.fileName}": no staging directory`,
+      );
+    }
+    const root = await realpath(stagingDir);
+    const resolved = path.resolve(file.path);
+    const info = await lstat(resolved).catch(() => undefined);
+    // A hard link (nlink > 1) could point at any file the host user owns.
+    if (
+      !info?.isFile() ||
+      info.nlink !== 1 ||
+      path.dirname(await realpath(resolved)) !== root ||
+      path.dirname(resolved) !== path.resolve(stagingDir)
+    ) {
+      throw new Error(
+        `Refusing to ingest "${file.fileName}": it is not a file the step wrote`,
+      );
+    }
+    const limit = maxFileBytes();
+    if (info.size > limit) throw new FileTooLargeError(info.size, limit);
+    return info.size;
+  }
+
   // A provisional apfile:// token only becomes a real reference once the step
   // has returned, so a piece that writes a file and then reads it back by URL
   // within the same run would not work. No action needs that today; the fix is
@@ -665,6 +589,8 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   private async ingestFiles(
     output: unknown,
     files: StagedFile[] | undefined,
+    stagingDir: string | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<unknown> {
     if (!files || files.length === 0) return output;
     const port = this.options.attachments;
@@ -675,14 +601,18 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     }
     const refs = new Map<string, string>();
     for (const file of files) {
+      const size = await this.checkStagedFile(file, stagingDir);
       refs.set(
         file.token,
-        await port.write({
-          path: file.path,
-          fileName: file.fileName,
-          size: file.size,
-          contentType: file.contentType,
-        }),
+        await port.write(
+          {
+            path: path.resolve(file.path),
+            fileName: file.fileName,
+            size,
+            contentType: file.contentType,
+          },
+          signal,
+        ),
       );
     }
     return rewriteFileRefs(output, refs);

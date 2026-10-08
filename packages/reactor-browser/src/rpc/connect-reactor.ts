@@ -2,9 +2,12 @@ import type {
   IDocumentModelRegistry,
   IReactorClient,
 } from "@powerhousedao/reactor";
-import { createReactorClientProxy } from "./client-proxy.js";
-import type { MessageRouter } from "./message-router.js";
-import type { ReactorIdentity, VersionFingerprint } from "./protocol.js";
+import {
+  createReactorClientProxy,
+  type MessageRouter,
+  type ReactorIdentity,
+  type VersionFingerprint,
+} from "@powerhousedao/reactor/rpc";
 
 export type ReactorHello = {
   version: VersionFingerprint;

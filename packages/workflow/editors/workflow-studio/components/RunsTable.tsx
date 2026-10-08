@@ -38,6 +38,7 @@ import { triggerBlock } from "../../workflow-editor/ui/blocks.js";
 import { Select } from "../../shared/controls.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { Button, Icon, StatusText } from "./ui.js";
+import { StepError } from "../../workflow-editor/ui/StepError.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
 type SortKey = "startedAt" | "duration";
@@ -143,11 +144,7 @@ function StepRow(props: {
       </button>
       {open ? (
         <div className="space-y-2 pb-3 pl-10 pr-3">
-          {step.error ? (
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-wf-fail/10 p-2 text-xs text-wf-fail">
-              {step.error}
-            </pre>
-          ) : null}
+          {step.error ? <StepError error={step.error} /> : null}
           {step.status === "SKIPPED" ? (
             <p className="text-xs text-muted-foreground">
               The run never reached this step.

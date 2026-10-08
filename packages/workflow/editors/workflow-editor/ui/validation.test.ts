@@ -8,6 +8,7 @@ import { withPropDefaults } from "./prop-defaults.js";
 import {
   blockMissing,
   isEmptyValue,
+  REACTOR_CONNECTION_LABEL,
   missingRequired,
   resolverInputFor,
   stripOptions,
@@ -168,6 +169,22 @@ describe("blockMissing", () => {
     expect(blockMissing({ ...input, config })).toEqual(["Mode"]);
     expect(
       blockMissing({ ...input, config: withPropDefaults(form.props, config) }),
+    ).toEqual([]);
+  });
+
+  it("asks for a reactor connection when the block declares reactor access", () => {
+    const reading: BlockForm = { ...form, props: [], requireReactor: "read" };
+    const input = { ...base, form: reading, connectionId: "conn", config: {} };
+    expect(blockMissing(input)).toEqual([REACTOR_CONNECTION_LABEL]);
+    expect(
+      blockMissing({ ...input, reactorConnectionId: "reactor-1" }),
+    ).toEqual([]);
+    // A block that declares none never asks.
+    expect(
+      blockMissing({
+        ...input,
+        form: { ...reading, requireReactor: undefined },
+      }),
     ).toEqual([]);
   });
 

@@ -64,6 +64,16 @@ import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
+import { isPackagedConnectDist } from "../utils/build-info.js";
+import {
+  resolvePackagedReactorWorker,
+  selectReactorWorkerSource,
+} from "../utils/reactor-worker-url.js";
+import {
+  resolveDevProjectSource,
+  resolveLocalPackageSources,
+  subscribeLocalPackageChanges,
+} from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
@@ -394,16 +404,33 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         return module;
       },
     };
-    // The production vendor's shared-deps table (null in dev / vendor-off
-    // builds): the worker rewrites shared imports in package sources to
-    // these absolute URLs and blob-imports the result.
-    const sharedImports = (await getSharedDeps())?.imports;
+    // sharedDeps is null in dev / vendor-off builds; packageSources are local
+    // models the registry cannot serve (prod prebuilds, or the live dev entry).
+    const [sharedDeps, packagedWorker, packageSources] = await Promise.all([
+      getSharedDeps(),
+      resolvePackagedReactorWorker(import.meta.env.BASE_URL),
+      resolveLocalPackageSources(import.meta.env.BASE_URL),
+    ]);
+    const workerSource = selectReactorWorkerSource({
+      packaged: isPackagedConnectDist(),
+      bundle: packagedWorker,
+    });
+    if (workerSource.kind === "unavailable") {
+      window.ph.loading = false;
+      throw new Error(
+        "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
+      );
+    }
     const workerClient = createWorkerReactorClientModule({
+      workerUrl: workerSource.kind === "bundle" ? workerSource.url : undefined,
+      workerDigest:
+        workerSource.kind === "bundle" ? workerSource.digest : undefined,
+      packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
-      sharedImports,
+      sharedImports: sharedDeps?.imports,
       studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
@@ -424,6 +451,23 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
+    // A watch rebuild replaces the local package (updateLocalPackage); in
+    // worker mode the reactor lives in the worker, so forward only that.
+    const { registerPackages } = workerClient.reactorClientModule;
+    subscribeLocalPackageChanges(packageManager, () => {
+      void (async () => {
+        const source = await resolveDevProjectSource(import.meta.env.BASE_URL);
+        if (!source) return;
+        try {
+          await registerPackages([source]);
+        } catch (error) {
+          logger.error(
+            "Failed to re-register project models in the reactor worker: @error",
+            error,
+          );
+        }
+      })();
+    });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
     try {

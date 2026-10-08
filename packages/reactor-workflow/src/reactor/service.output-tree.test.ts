@@ -62,9 +62,10 @@ describe("document block output trees", () => {
       },
     );
     const state = tree.nodes.find((node) => node.name === "state");
+    const global = state?.children?.find((node) => node.name === "global");
 
     expect(tree.source).toBe("schema");
-    expect(state?.children?.map((node) => node.name)).toEqual([
+    expect(global?.children?.map((node) => node.name)).toEqual([
       "total",
       "billTo",
     ]);

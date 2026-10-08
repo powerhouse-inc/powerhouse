@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseForcePgVersion } from "../src/pglite-version.js";
+import { openForVerify, parseForcePgVersion } from "../src/pglite-version.js";
 
 describe("parseForcePgVersion", () => {
   it("returns null for undefined", () => {
@@ -33,5 +33,13 @@ describe("parseForcePgVersion", () => {
 
   it("throws for non-integer numeric", () => {
     expect(() => parseForcePgVersion("16.5")).toThrow(/PH_FORCE_PG_VERSION/);
+  });
+});
+
+describe("openForVerify", () => {
+  it("throws on an unsupported major before touching disk", async () => {
+    await expect(openForVerify(15, "/nonexistent/pglite-dir")).rejects.toThrow(
+      /PG_VERSION=15 is not supported/,
+    );
   });
 });

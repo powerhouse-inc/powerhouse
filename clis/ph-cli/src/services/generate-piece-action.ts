@@ -11,7 +11,13 @@ export async function startGeneratePieceAction(
   args: GeneratePieceActionArgs,
   projectDir: string,
 ) {
-  const { namePositional, name: nameOption, piece, debug } = args;
+  const {
+    namePositional,
+    name: nameOption,
+    piece,
+    requireReactor,
+    debug,
+  } = args;
   if (debug) {
     console.log({ args });
   }
@@ -21,7 +27,10 @@ export async function startGeneratePieceAction(
     return;
   }
   const project = buildTsMorphProject(projectDir);
-  await generatePieceAction({ pieceDir: piece, actionName }, project);
+  await generatePieceAction(
+    { pieceDir: piece, actionName, requireReactor },
+    project,
+  );
   await project.save();
   const added = await syncFeatureDependencies(
     detectFeatures(projectDir),

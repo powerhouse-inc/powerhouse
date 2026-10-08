@@ -17,9 +17,11 @@ const fatalHandlers = new WeakMap<
 /**
  * Sends an uncaught exception or unhandled rejection through the SIGTERM
  * shutdown that `withSignalHandlers()` installs, so the reactor and read-model
- * PGlite stores write their snapshots before the process exits with code 1.
- * Node's default is to exit at once, which drops every write AtomicNodeFs has
- * not flushed yet. A shutdown that hangs is cut off after FORCED_EXIT_MS.
+ * PGlite stores close with a shutdown checkpoint before the process exits
+ * with code 1. Node's default is to exit at once, which leaves both stores
+ * to WAL recovery on the next open. A store whose wasm runtime aborted
+ * (ENOSPC) rejects its close; the builder logs that and still exits. A
+ * shutdown that hangs is cut off after FORCED_EXIT_MS.
  *
  * A rejection is fatal only when this is its sole listener: Node exits on an
  * unhandled rejection only when nothing listens for it, and Sentry's

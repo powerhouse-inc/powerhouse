@@ -173,7 +173,6 @@
     "test/executor/worker/fake-worker.ts|graph.dead-export|FakeWorkerOptions": 1,
     "test/factories.ts|graph.dead-export|TestFsBackend": 1,
     "test/factories.ts|graph.dead-export|TestSyncStorage": 1,
-    "test/factories.ts|graph.dead-export|atomicNodeFsBackend": 1,
     "test/factories.ts|graph.dead-export|createDocumentModelAction": 1,
     "test/factories.ts|graph.dead-export|createMinimalAction": 1,
     "test/factories.ts|graph.dead-export|createMinimalJob": 1,
@@ -188,6 +187,7 @@
     "test/factories.ts|graph.dead-export|createTestQueue": 1,
     "test/factories.ts|graph.dead-export|createTestSyncStoragePostgres": 1,
     "test/factories.ts|graph.dead-export|memoryFsBackend": 1,
+    "test/factories.ts|graph.dead-export|nodeFsBackend": 1,
     "test/sync/sync-manager/event-helpers.ts|graph.dead-file|test/sync/sync-manager/event-helpers.ts": 1
   }
 }

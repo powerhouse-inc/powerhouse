@@ -23,6 +23,7 @@ import type { IPackageManager } from "./vetra.js";
 import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
 import type { IWorkerAdminClient } from "../rpc/admin-client.js";
 import type { IInspectorProxy } from "../rpc/inspector-proxy.js";
+import type { WorkerPackageSource } from "@powerhousedao/reactor/rpc";
 
 // Browser in-process module: the full reactor graph plus the PGlite handle.
 export interface BrowserReactorModule extends InProcessReactorModule {
@@ -41,6 +42,12 @@ export interface WorkerReactorClientModule extends ReactorClientModule {
   reactorModule: WorkerReactorModule;
   adminClient: IWorkerAdminClient;
   inspector: IInspectorProxy;
+  /**
+   * Loads (or, for a source already loaded, REPLACES) URL-addressed packages
+   * in the worker's registry. A vetra watch rebuild re-sends the project's
+   * models through this with a cache-busted URL.
+   */
+  registerPackages: (sources: WorkerPackageSource[]) => Promise<void>;
 }
 
 export type LOADING = null;

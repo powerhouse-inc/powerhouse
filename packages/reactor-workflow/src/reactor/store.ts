@@ -1,6 +1,11 @@
 // Persisted run journal in the relational "workflow_runtime" namespace.
 // Dates are ISO text columns: PGlite parses `timestamp` as local time.
 import type { BlockIdentity } from "@powerhousedao/pieces-framework/block-type";
+import {
+  DOCUMENT_REF_KEY,
+  isDocumentRefMarker,
+  referenceDocuments,
+} from "@powerhousedao/pieces-framework/workflow";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   redact,
@@ -23,6 +28,8 @@ export interface RunRow {
   trigger_payload: string | null;
   status: string;
   error: string | null;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  error_name: string | null;
   // When the run was journaled; the listing's stable key, unlike started_at.
   enqueued_at: string;
   // When it began executing; a PENDING run holds its enqueue time here.
@@ -52,6 +59,7 @@ export interface StepExecutionRow {
   output: string | null;
   port: string | null;
   error: string | null;
+  error_name: string | null;
   started_at: string | null;
   ended_at: string | null;
   // The piece version that ran and how it matched the pin; null when unresolved.
@@ -354,6 +362,16 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
       .execute();
   } catch {
     // column already exists
+  }
+  for (const table of ["run", "step_execution"] as const) {
+    try {
+      await db.schema
+        .alterTable(table)
+        .addColumn("error_name", "text")
+        .execute();
+    } catch {
+      // column already exists
+    }
   }
 
   await db.schema
@@ -899,6 +917,9 @@ function cappedPayload(value: unknown): string | null {
 
 // Only the key-based pass runs here; the run's own secret values are the
 // engine's to match, and the store never sees them.
+
+// A document in an output is journaled as a reference marker, before
+// redaction and the cap: whoever needs its state reads the document.
 function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
   return {
     run_id: runId,
@@ -909,9 +930,10 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     block_name: step.blockName,
     status: step.status,
     input: cappedPayload(redact(step.input)),
-    output: cappedPayload(redact(step.output)),
+    output: cappedPayload(redact(referenceDocuments(step.output))),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
+    error_name: step.errorName ?? null,
     started_at: step.startedAt ?? null,
     ended_at: step.endedAt ?? null,
     piece_version: step.piece?.version ?? null,
@@ -988,9 +1010,15 @@ function journaledPayloadNames(
   return (Array.isArray(value) ? value : [value]).some((item) => {
     if (item === null || typeof item !== "object") return false;
     const record = item as Record<string, unknown>;
-    return [record.documentId, record.driveId, record.parentId].some(
-      (id) => typeof id === "string" && ids.includes(id),
-    );
+    const referenced = isDocumentRefMarker(record)
+      ? record[DOCUMENT_REF_KEY].documentId
+      : undefined;
+    return [
+      record.documentId,
+      record.driveId,
+      record.parentId,
+      referenced,
+    ].some((id) => typeof id === "string" && ids.includes(id));
   });
 }
 
@@ -1045,6 +1073,7 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "status",
   "port",
   "error",
+  "error_name",
   "started_at",
   "ended_at",
   "piece_version",
@@ -1343,6 +1372,7 @@ export class WorkflowRunStore {
       .set({
         status: result.status,
         error: result.error ? redactMessage(result.error) : null,
+        error_name: result.errorName ?? null,
         ended_at: new Date().toISOString(),
         warnings: notes.length,
         warning_notes: notes.length > 0 ? JSON.stringify(notes) : null,
@@ -1403,6 +1433,7 @@ export class WorkflowRunStore {
           output: eb.ref("excluded.output"),
           port: eb.ref("excluded.port"),
           error: eb.ref("excluded.error"),
+          error_name: eb.ref("excluded.error_name"),
           started_at: eb.ref("excluded.started_at"),
           ended_at: eb.ref("excluded.ended_at"),
           piece_version: eb.ref("excluded.piece_version"),
@@ -1415,7 +1446,11 @@ export class WorkflowRunStore {
       .execute();
   }
 
-  async failRun(runId: string, error: string): Promise<void> {
+  async failRun(
+    runId: string,
+    error: string,
+    errorName?: string,
+  ): Promise<void> {
     this.runsInFlight.delete(runId);
     if (erasedRuns.delete(runId)) return;
     await this.db
@@ -1423,6 +1458,7 @@ export class WorkflowRunStore {
       .set({
         status: "FAILED",
         error: redactMessage(error),
+        error_name: errorName ?? null,
         ended_at: new Date().toISOString(),
       })
       .where("id", "=", runId)

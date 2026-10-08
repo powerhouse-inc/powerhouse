@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 import type { PGlite } from "@electric-sql/pglite";
+import { metrics, trace } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
+import {
+  createDurableNodeFs,
+  resolvePgliteFsync,
+  type DurableNodeFs,
+} from "@powerhousedao/reactor-api/pglite-node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import {
   DriveCollectionId,
   EventBus,
@@ -56,7 +61,6 @@ import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
-import { promises as fs } from "node:fs";
 import { register } from "node:module";
 import net from "node:net";
 import path from "path";
@@ -84,25 +88,30 @@ import {
 import {
   buildWorkerDbConfig,
   resolveHostPoolSize,
+  keepImportableSources,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
+  WORKFLOW_TELEMETRY_SCOPE,
   composeWorkflowRuntime,
+  modelManifestSource,
   assertWorkflowPackageLoadable,
   resolveWorkflowsEnabled,
   type ComposedWorkflowRuntime,
+  type ModelManifestSource,
 } from "./workflow-runtime.mjs";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
-import { migratePgliteDir } from "./pglite-migration.js";
+import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   CURRENT_PG_MAJOR,
   isSupportedMajor,
+  loadNodeFsClass,
   loadPGliteModule,
-  readPgVersionFile,
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
@@ -140,17 +149,54 @@ const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 // How many ports forward from the requested one we will try before giving up.
 const PORT_FALLBACK_ATTEMPTS = 20;
 
-// AtomicNodeFs needs a flush interval to coalesce writes into a single disk write (only used locally)
-const PGLITE_FLUSH_INTERVAL_MS = (() => {
-  const raw = process.env.PGLITE_FLUSH_INTERVAL_MS;
-  if (raw === undefined) return 100;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 100;
-})();
+// Retired with the snapshot store; PGlite writes through NodeFS now.
+let flushIntervalWarned = false;
+function warnIgnoredFlushInterval(logger: ILogger): void {
+  if (flushIntervalWarned) return;
+  if (process.env.PGLITE_FLUSH_INTERVAL_MS === undefined) return;
+  flushIntervalWarned = true;
+  logger.warn(
+    "PGLITE_FLUSH_INTERVAL_MS is set but ignored: PGlite stores no longer snapshot on a timer.",
+  );
+}
 
-// A store that cannot persist must not keep accepting writes.
-function onPgliteFlushError(err: unknown): void {
-  triggerFatalShutdown("PGlite snapshot flush failed", err);
+// A Postgres PANIC (ENOSPC on WAL, a failed fdatasync) aborts the wasm
+// runtime; the store is dead and the process must not keep accepting writes.
+function onPgliteAbort(logger: ILogger, what: unknown): void {
+  if (!triggerFatalShutdown("PGlite aborted", what)) {
+    logger.error("PGlite aborted: @error", what);
+  }
+}
+
+// 0.2.17 syncs WAL through open_datasync, which NODEFS cannot honour, so on
+// PG16 only checkpoints reach the host disk; commits are durable against an
+// app crash, not a power loss, until --migrate-pglite upgrades the dir.
+function pgliteFsyncFor(
+  major: SupportedPgMajor,
+  dir: string,
+  logger: ILogger,
+): boolean {
+  const wanted = resolvePgliteFsync(process.env);
+  if (wanted && major === 16) {
+    logger.warn(
+      `PGlite data dir ${dir} is PG16 on pglite-legacy-02, which does not sync commits to disk; only checkpoints are synced until --migrate-pglite upgrades it.`,
+    );
+  }
+  return wanted;
+}
+
+/** Preloads the module's NodeFS so the returned factory can be synchronous. */
+async function loadDurableFsFactory(
+  major: SupportedPgMajor,
+  logger: ILogger,
+): Promise<(dir: string) => DurableNodeFs> {
+  const NodeFS = await loadNodeFsClass(major);
+  return (dir) =>
+    createDurableNodeFs(NodeFS, dir, {
+      fsync: pgliteFsyncFor(major, dir, logger),
+      logger,
+      onAbort: (what) => onPgliteAbort(logger, what),
+    });
 }
 
 // When set, runs both reactor and read-model PGLite instances purely in-memory.
@@ -232,7 +278,6 @@ async function createReactorKysely(opts: {
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
   inMemory: boolean;
-  flushIntervalMs: number;
   /**
    * Resolved lazily: only the Postgres branch has a host pool, and
    * {@link resolveHostPoolSize} throws on a bad REACTOR_DB_POOL_SIZE_HOST.
@@ -247,7 +292,6 @@ async function createReactorKysely(opts: {
     reactorPgliteDir,
     reactorPgliteMajor,
     inMemory,
-    flushIntervalMs,
     hostPoolSize,
     logger,
   } = opts;
@@ -277,11 +321,9 @@ async function createReactorKysely(opts: {
   const pglite = inMemory
     ? new PGlite()
     : new PGlite({
-        fs: new AtomicNodeFs(reactorPgliteDir, {
-          logger,
-          flushIntervalMs,
-          onFlushError: onPgliteFlushError,
-        }),
+        fs: (await loadDurableFsFactory(reactorPgliteMajor, logger))(
+          reactorPgliteDir,
+        ),
       });
   logger.info(
     inMemory
@@ -353,62 +395,20 @@ async function initServer(
   const readModelPgliteDir =
     !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
 
-  // PGLite version pre-flight: when PH_FORCE_PG_VERSION is set, wipe local
-  // data dirs and re-initdb at the chosen version. Otherwise detect on-disk
-  // PG_VERSION and either migrate (when --migrate-pglite is set) or warn and
-  // fall through to the matching legacy PGLite at runtime.
+  // PGLite pre-flight: convert legacy single-file snapshot stores, clear
+  // stale lock and WAL temp files, then detect PG_VERSION and migrate or
+  // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
   const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
     (d): d is string => d !== null,
   );
-  const detectedMajors = new Map<string, number>();
-
-  // delete PGLite's lockfile to recover, in case it didn't have time to close
-  for (const dir of pgliteDirs) {
-    const lockPath = path.join(dir, "postmaster.pid");
-    try {
-      await fs.unlink(lockPath);
-      logger.warn(`Removed stale PGLite lockfile ${lockPath}`);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
-  }
-
-  if (options.forcePgVersion !== undefined && pgliteDirs.length > 0) {
-    if (options.migratePglite) {
-      logger.warn(
-        "PH_FORCE_PG_VERSION is set; ignoring --migrate-pglite/PH_MIGRATE_PGLITE because the data dirs will be wiped.",
-      );
-    }
-    logger.warn(
-      `PH_FORCE_PG_VERSION=${options.forcePgVersion} set; wiping PGLite data dirs and re-initializing at PG${options.forcePgVersion}.`,
-    );
-    for (const dir of pgliteDirs) {
-      await fs.rm(dir, { recursive: true, force: true });
-      logger.info(`Wiped PGLite data dir ${dir}`);
-    }
-  } else if (options.forcePgVersion === undefined) {
-    for (const dir of pgliteDirs) {
-      const major = await readPgVersionFile(dir);
-      if (major !== null) detectedMajors.set(dir, major);
-    }
-
-    if (options.migratePglite) {
-      for (const [dir, major] of detectedMajors) {
-        if (major === CURRENT_PG_MAJOR) continue;
-        await migratePgliteDir(dir, logger);
-        // refresh detected major after a successful migration
-        const after = await readPgVersionFile(dir);
-        if (after !== null) detectedMajors.set(dir, after);
-      }
-    } else {
-      for (const [dir, major] of detectedMajors) {
-        if (major === CURRENT_PG_MAJOR) continue;
-        logger.warn(
-          `PGLite data dir at ${dir} was created with PG${major} but Switchboard ships PG${CURRENT_PG_MAJOR}. Running on legacy PGLite. Re-start with --migrate-pglite (or PH_MIGRATE_PGLITE=true) to upgrade.`,
-        );
-      }
-    }
-  }
+  warnIgnoredFlushInterval(logger);
+  const detectedMajors = await runPglitePreflight({
+    dirs: pgliteDirs,
+    forcePgVersion: options.forcePgVersion,
+    migratePglite: options.migratePglite,
+    inMemory: PGLITE_IN_MEMORY,
+    logger,
+  });
 
   function resolvePgliteMajorForDir(dir: string): SupportedPgMajor {
     if (options.forcePgVersion !== undefined) return options.forcePgVersion;
@@ -557,6 +557,8 @@ async function initServer(
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // The models workers and workflow pieces import; only on a reactor built here.
+  let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
   let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
@@ -597,7 +599,6 @@ async function initServer(
         reactorPgliteDir,
         reactorPgliteMajor,
         inMemory: PGLITE_IN_MEMORY,
-        flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
         hostPoolSize: () => resolveHostPoolSize(process.env),
         logger,
       });
@@ -703,21 +704,29 @@ async function initServer(
         : undefined,
     });
 
+    // File sources give workers and workflow pieces importable paths for the
+    // models registered above; the builder dedupes them.
+    if (workerPool || projectionWorker || workflowsEnabled) {
+      const sources = await resolveWorkerModelSources(packages, reactorLogger, {
+        resolveRemote: resolveRegistryModels,
+      });
+      // Workers need every model; workflow pieces can do without a broken one.
+      reactorBuilder.withDocumentModelSources(
+        workerPool || projectionWorker
+          ? sources
+          : await keepImportableSources(sources, reactorLogger),
+      );
+    }
+    workerModels = modelManifestSource(reactorBuilder);
+
     if (workerPool) {
       if (!reactorDbUrl) {
         throw new Error(
           "unreachable: worker pool enabled without a reactor database URL",
         );
       }
-      // File sources give workers importable paths for the same models the
-      // live modules above registered; the builder dedupes and fails the
-      // boot if any model lacks an importable source.
-      const workerSources = await resolveWorkerModelSources(
-        packages,
-        reactorLogger,
-        { resolveRemote: resolveRegistryModels },
-      );
-      reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
+      // The builder fails the boot if a model lacks an importable source.
+      reactorBuilder.withWorkerPool({
         numWorkers: workerPool.numWorkers,
         db: buildWorkerDbConfig(reactorDbUrl, workerPool),
       });
@@ -756,15 +765,6 @@ async function initServer(
         throw new Error(
           "unreachable: projection worker enabled without a reactor database URL",
         );
-      }
-      // The projection worker rebuilds its registry from the same manifest.
-      if (!workerPool) {
-        const workerSources = await resolveWorkerModelSources(
-          packages,
-          reactorLogger,
-          { resolveRemote: resolveRegistryModels },
-        );
-        reactorBuilder.withDocumentModelSources(workerSources);
       }
       const db = {
         ...buildWorkerDbConfig(reactorDbUrl, {
@@ -931,18 +931,12 @@ async function initServer(
   if (readModelPgliteDir && readModelPgliteMajor !== null) {
     const { PGlite: ReadModelPGlite } =
       await loadPGliteModule(readModelPgliteMajor);
+    const durableFs = await loadDurableFsFactory(readModelPgliteMajor, logger);
     pgliteFactory = PGLITE_IN_MEMORY
       ? () => new ReadModelPGlite({ parsers: PGLITE_UTC_PARSERS })
       : (connectionString) =>
           new ReadModelPGlite({
-            fs: new AtomicNodeFs(
-              connectionString ?? (readModelPgliteDir as string),
-              {
-                logger,
-                flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
-                onFlushError: onPgliteFlushError,
-              },
-            ),
+            fs: durableFs(connectionString ?? readModelPgliteDir),
             parsers: PGLITE_UTC_PARSERS,
           });
   }
@@ -1029,6 +1023,7 @@ async function initServer(
       // A Postgres read model outlives the pod; a key file beside it would not.
       secretsKeyFile: readModelPgliteDir === null ? false : undefined,
       attachments: createAttachmentClient(api.attachments.service),
+      attachmentAccess: api.attachmentAccess,
       // The workflow package's own HTTP namespace: its webhook endpoints live
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
@@ -1038,7 +1033,13 @@ async function initServer(
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
       pieceRegistryUrl: registryUrl,
+      models: workerModels,
       logger: logger.child(["workflow-runtime"]),
+      // The providers observability.mts registered before this module loaded.
+      telemetry: {
+        tracer: trace.getTracer(WORKFLOW_TELEMETRY_SCOPE),
+        meter: metrics.getMeter(WORKFLOW_TELEMETRY_SCOPE),
+      },
     });
 
     const WorkflowRuntimeSubgraph = workflows.subgraph;
@@ -1269,6 +1270,7 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     workflowTriggers: workflows?.triggers,
     workflowsEnabled,
+    modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: privacy ? { erasure: privacy.erasure } : undefined,
     mcpEnabled: options.mcp !== false,
     renown,
@@ -1299,6 +1301,12 @@ export const startSwitchboard = async (
 ): Promise<SwitchboardReactor> => {
   const requestedPort = options.port ?? DEFAULT_PORT;
   const logger = options.logger ?? defaultLogger;
+  // Here as well as in index.mts, so a host embedding the server is profiled.
+  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+    await initProfilerFromEnv(process.env).catch((error: unknown) =>
+      logger.error("Error starting profiler: @error", error),
+    );
+  }
   const serverPort = await resolveServerPort(
     requestedPort,
     options.strictPort ?? false,

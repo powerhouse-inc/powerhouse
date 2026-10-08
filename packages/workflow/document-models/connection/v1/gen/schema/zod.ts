@@ -5,6 +5,7 @@ import type {
   ConnectionAuthType,
   ConnectionState,
   ConnectionStatus,
+  ReactorConnectionConfig,
   RecordCheckResultInput,
   RemoveSecretRefInput,
   SecretRef,
@@ -34,6 +35,7 @@ export const ConnectionAuthTypeSchema = z.enum([
   "NONE",
   "OAUTH2",
   "OIDC",
+  "REACTOR",
   "SECRET_TEXT",
 ]);
 
@@ -58,6 +60,16 @@ export function ConnectionStateSchema(): z.ZodObject<
     name: z.string(),
     secretRefs: z.array(z.lazy(() => SecretRefSchema())),
     status: ConnectionStatusSchema,
+  });
+}
+
+export function ReactorConnectionConfigSchema(): z.ZodObject<
+  Properties<ReactorConnectionConfig>
+> {
+  return z.object({
+    __typename: z.literal("ReactorConnectionConfig").optional(),
+    access: z.string().nullish(),
+    endpoint: z.string(),
   });
 }
 

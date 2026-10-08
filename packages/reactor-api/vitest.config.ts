@@ -18,9 +18,9 @@ export default defineConfig({
   },
   test: {
     exclude: baseExclude,
-    // PGLite WASM cold boot plus AtomicNodeFs snapshot I/O can exceed the
-    // default 5s testTimeout / 10s hookTimeout on CI runners under coverage
-    // instrumentation. Same rationale as packages/reactor and packages/pglite-fs.
+    // PGLite WASM cold boot plus initdb's fsync pass can exceed the default
+    // 5s testTimeout / 10s hookTimeout on CI runners under coverage
+    // instrumentation. Same rationale as packages/reactor.
     testTimeout: 30_000,
     hookTimeout: 30_000,
     deps: {

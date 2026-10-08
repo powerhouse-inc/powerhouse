@@ -27,7 +27,9 @@ export type RuntimeQueryKind =
   | "runs"
   | "run"
   | "secret"
-  | "blockResolutions";
+  | "blockResolutions"
+  | "reactorAccess"
+  | "reactorDenial";
 
 export interface ResolverKeyInput {
   block: BlockRef;
@@ -36,6 +38,7 @@ export interface ResolverKeyInput {
   refreshers: unknown[];
   connectionId?: string | null;
   searchValue?: string | null;
+  reactorConnectionId?: string | null;
 }
 
 function resolverKey(
@@ -51,6 +54,7 @@ function resolverKey(
     input.refreshers,
     input.connectionId ?? null,
     input.searchValue ?? null,
+    input.reactorConnectionId ?? null,
   ] as const;
 }
 
@@ -118,6 +122,11 @@ export const runtimeKeys = {
       },
     ] as const,
   run: (scope: string, runId: string) => [scope, "run", runId] as const,
+  // Per viewer: the identity is only served to a signed-in caller.
+  reactorAccess: (scope: string, viewer: string | null) =>
+    [scope, "reactorAccess", viewer] as const,
+  reactorDenial: (scope: string, workflowId: string) =>
+    [scope, "reactorDenial", workflowId] as const,
   secret: (scope: string, ref: string) => [scope, "secret", ref] as const,
   allBlockResolutions: (scope: string, workflowId: string) =>
     [scope, "blockResolutions", workflowId] as const,

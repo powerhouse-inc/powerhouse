@@ -11,7 +11,14 @@ export async function startGeneratePieceTrigger(
   args: GeneratePieceTriggerArgs,
   projectDir: string,
 ) {
-  const { namePositional, name: nameOption, piece, strategy, debug } = args;
+  const {
+    namePositional,
+    name: nameOption,
+    piece,
+    strategy,
+    requireReactor,
+    debug,
+  } = args;
   if (debug) {
     console.log({ args });
   }
@@ -22,7 +29,7 @@ export async function startGeneratePieceTrigger(
   }
   const project = buildTsMorphProject(projectDir);
   await generatePieceTrigger(
-    { pieceDir: piece, triggerName, strategy },
+    { pieceDir: piece, triggerName, strategy, requireReactor },
     project,
   );
   await project.save();

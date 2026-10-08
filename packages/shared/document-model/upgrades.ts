@@ -57,19 +57,7 @@ export function latestVersionOf<
   ] as TupleLast<TVersions>;
 }
 
-/**
- * Canonical document-model version normalization: documents stamped with 0
- * or nothing at all predate versioning and are treated as version 1, the
- * same version the registry assigns unversioned modules. Every consumer
- * that resolves a module or compares versions must use this rule; resolving
- * 0 to "latest" instead re-pins a legacy document's history to whichever
- * module happens to be newest.
- */
-export function normalizeDocumentModelVersion(
-  version: number | undefined | null,
-): number {
-  return version && version > 0 ? version : 1;
-}
+export { normalizeDocumentModelVersion } from "./version.js";
 
 function applyInitialState(
   document: PHDocument,

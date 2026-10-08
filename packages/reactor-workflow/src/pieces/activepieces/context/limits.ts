@@ -2,6 +2,8 @@
 // that arrives as a URL, a data URI or an attachment ref) and outbound
 // ctx.files.write share it, because a piece that can emit a file the next step
 // cannot ingest is worse than a piece that refuses both.
+import { Transform, type TransformCallback } from "node:stream";
+
 export const DEFAULT_MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 // What the environment asks for, or undefined when it asks for nothing usable.
@@ -43,4 +45,17 @@ export class FileTooLargeError extends Error {
 export function assertWithinLimit(size: number): void {
   const limit = maxFileBytes();
   if (size > limit) throw new FileTooLargeError(size, limit);
+}
+
+// Counts bytes as they pass and fails the stream past the cap, so an
+// undeclared or understated body never lands whole in memory or on disk.
+export function byteCap(limit: number = maxFileBytes()): Transform {
+  let seen = 0;
+  return new Transform({
+    transform(chunk: Buffer, _encoding, done: TransformCallback) {
+      seen += chunk.byteLength;
+      if (seen > limit) done(new FileTooLargeError(seen, limit));
+      else done(null, chunk);
+    },
+  });
 }

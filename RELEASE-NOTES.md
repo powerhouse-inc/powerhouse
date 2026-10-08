@@ -24,6 +24,58 @@ These apply to every package, including packages that never adopt code-first doc
 
 ---
 
+## 🚀 **Unreleased** — PGlite storage on NodeFS
+
+### ✨ Highlights
+
+1. **Embedded PGlite stores are plain Postgres data directories** — Switchboard and `ph vetra` open `.ph/reactor-storage` and `.ph/read-storage` through PGlite's NodeFS; the single-file `snapshot.bin` layout is gone
+2. **Every commit is fsynced before it is acknowledged** — on by default; `PH_PGLITE_FSYNC=0` turns power-loss durability off
+3. **Existing stores convert themselves once** — the first boot extracts the snapshot, verifies the result and deletes the old directory
+
+---
+
+### NEW FEATURES
+
+#### 💾 PGlite on NodeFS
+
+Each embedded PGlite store is now a plain PGDATA directory on disk, and Postgres runs its own crash recovery on open. Writes no longer serialize the whole database into one file: at a 10 MB store a 10-row transaction commits in about 2 ms with fsync on where it took 50 ms, at 1 GB the old layout took 1.6 s per transaction, and a cold open takes about 0.1 s for stores up to 1 GB. Connect's IndexedDB storage is unchanged.
+
+`PH_PGLITE_FSYNC` controls durability. On (the default), every commit reaches the device before the write is acknowledged. `PH_PGLITE_FSYNC=0` keeps commits in the OS page cache: a process crash loses nothing, but an OS crash or power loss can corrupt the store. Use it on test runners, not in production.
+
+#### 🔄 One-time conversion of snapshot stores
+
+On first boot, each store that still holds a `snapshot.bin` is extracted next to itself, opened, checked (`pg_control` system identifier plus a full read of every user table), swapped into place, and the old directory is deleted. Stale loose files beside the snapshot are ignored; the snapshot is authoritative. The conversion is idempotent across interruptions and needs free disk for one extra copy of the store while it runs. It runs before the PG major detection, so a PG16 snapshot store now migrates under `PH_MIGRATE_PGLITE=true` instead of logging "No PG_VERSION; skipping".
+
+### BREAKING CHANGES
+
+#### `PGLITE_FLUSH_INTERVAL_MS` removed
+
+There is no flush to schedule. Switchboard warns once when the variable is set and ignores it.
+
+#### A full disk aborts the store
+
+A failed WAL write or fdatasync is a Postgres PANIC. Switchboard exits through its fatal-shutdown path, as it did on a flush error, but the signal is the PGlite abort rather than a flush callback.
+
+#### `@powerhousedao/pglite-fs` is no longer part of this repository
+
+The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-api`. Published `@powerhousedao/pglite-fs` versions stay on npm; a maintainer may run `npm deprecate @powerhousedao/pglite-fs`. Downstream repos that carry a `patches/@powerhousedao__pglite-fs@*.patch` drop it with the dependency.
+
+### MIGRATION GUIDE
+
+1. Make sure the volume holding `.ph/` has free space for one extra copy of its largest store before the first boot on this release.
+2. Start Switchboard or `ph vetra`. Each store converts once; one info line per store reports the snapshot size, the converted size and the duration.
+3. Remove `PGLITE_FLUSH_INTERVAL_MS` from deployments.
+4. To downgrade, run the previous release on the same directory: its AtomicNodeFs imports the converted directory through its legacy path on first open and writes `snapshot.bin` beside it. Running this release again converts once more.
+
+### BUG FIXES AND IMPROVEMENTS
+
+- PG16 snapshot stores migrate to PG17 under `PH_MIGRATE_PGLITE=true`; the snapshot layout used to hide `PG_VERSION` from the migration.
+- The "Removed stale PGLite lockfile" warning no longer fires on every boot; `postmaster.pid` and `pg_wal/xlogtemp.*` left by a clean close are removed before open.
+- A periodic VACUUM and CHECKPOINT still runs inside the store; the CHECKPOINT bounds how much WAL a reopen after a crash replays.
+- First boot of a new store and the one-time conversion sync the written tree once instead of after every file: a fresh store is ready in under a second instead of 8 s, and a 45 MB snapshot converts in 0.3 s instead of 5 s, with the same bytes on disk before the first write is acknowledged.
+
+---
+
 ## 🚀 **Unreleased** — action signature integrity (#2894)
 
 ### ✨ Highlights

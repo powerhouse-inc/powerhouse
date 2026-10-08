@@ -2,7 +2,6 @@
   "@powerhousedao/codegen": 10,
   "@powerhousedao/connect": 29,
   "@powerhousedao/load-test-connect": 1,
-  "@powerhousedao/pglite-fs": 29,
   "@powerhousedao/ph-cli": 6,
   "@powerhousedao/reactor-api": 130,
   "@powerhousedao/reactor-mcp": 21,

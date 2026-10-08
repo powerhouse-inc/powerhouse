@@ -24,9 +24,9 @@ import {
   WorkerPackageLoader,
   type ReactorIdentity,
   type WorkerMigrationState,
+  type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
-  DocumentModelModule,
   PeerManifest,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
@@ -40,6 +40,10 @@ import {
   loadFlaggedDocumentModels,
   toDocumentModelModules,
 } from "./reactor-worker-models.js";
+import {
+  createWorkerModelRegistrar,
+  type WorkerModelRegistrar,
+} from "./reactor-worker-registry.js";
 import {
   BrowserKeyStorage,
   RenownCryptoBuilder,
@@ -101,14 +105,12 @@ type WorkerConstruct = {
   unsupportedStoredDocuments?: UnsupportedStoredDocuments;
   // Where the trust policy verifies signers under authEnforcement.
   renownEndpoints?: RenownTrustEndpoints;
-};
-
-type ModelRegistry = {
-  registerModules: (...modules: DocumentModelModule[]) => void;
+  // URL-addressed packages (local project models the registry cannot serve).
+  packageSources?: WorkerPackageSource[];
 };
 
 let loader: WorkerPackageLoader | undefined;
-let registry: ModelRegistry | undefined;
+let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
 type RelationalState = {
@@ -130,11 +132,6 @@ let inspectorProcessors: IProcessorManager | undefined;
 let inspectorIntegrity: DocumentIntegrityService | undefined;
 let inspectorCatchUp: ICatchUp | undefined;
 let currentIdentity: ReactorIdentity | null = null;
-const registeredKeys = new Set<string>();
-
-function modelKey(module: DocumentModelModule): string {
-  return `${module.documentModel.global.id}@${module.version ?? 1}`;
-}
 
 // Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
 function toWireRemote(remote: Remote) {
@@ -142,21 +139,6 @@ function toWireRemote(remote: Remote) {
     meta: remote.meta,
     connectionState: remote.channel.getConnectionState(),
   };
-}
-
-// Register only the delta; the registry rejects duplicate (type, version) pairs.
-function registerNewModules(): void {
-  if (!loader || !registry) {
-    return;
-  }
-  const fresh = loader.models.filter((m) => !registeredKeys.has(modelKey(m)));
-  if (fresh.length === 0) {
-    return;
-  }
-  registry.registerModules(...fresh);
-  for (const m of fresh) {
-    registeredKeys.add(modelKey(m));
-  }
 }
 
 // Rebuild renown crypto from the shared renownKeyDB keypair (origin-scoped IndexedDB).
@@ -325,16 +307,19 @@ const host = new ReactorHost({
             )
           ) as Promise<Record<string, unknown>>,
       });
-      const loaded = await loader.loadPackages(construct.packageSpecs);
+      await loader.loadPackages(construct.packageSpecs);
+      // URL-addressed packages: the project's own models in dev, prebuilt
+      // bundles under __reactor_worker__/packages/ in production.
+      await loader.loadSources(construct.packageSources ?? []);
       const flaggedModels = await loadFlaggedDocumentModels({
         studioMode: construct.studioMode,
         workflowsEnabled: construct.workflowsEnabled,
       });
-      const models = baseDocumentModels.concat(
+      const staticModels = baseDocumentModels.concat(
         commonBundledModels,
         flaggedModels,
-        loaded,
       );
+      const models = staticModels.concat(loader.models);
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
 
@@ -391,7 +376,10 @@ const host = new ReactorHost({
         builder.withCreateSignaturePolicy(construct.createSignaturePolicy);
       }
       const module = await builder.buildModule();
-      registry = module.reactorModule?.documentModelRegistry;
+      const registry = module.reactorModule?.documentModelRegistry;
+      registrar = registry
+        ? createWorkerModelRegistrar(registry, staticModels)
+        : undefined;
       syncManager = module.reactorModule?.syncModule?.syncManager;
       const rm = module.reactorModule;
       if (rm) {
@@ -407,9 +395,10 @@ const host = new ReactorHost({
           rm.documentModelRegistry,
         );
       }
-      for (const m of models) {
-        registeredKeys.add(modelKey(m));
-      }
+      registrar?.markRegistered(models);
+      // Manifests ride along in the models entries the loader imported; the
+      // builder only saw the modules.
+      registrar?.syncManifests(loader.upgradeManifests);
       for (const type of FORWARDED_EVENT_TYPES) {
         module.eventBus.subscribe(type, (forwardedType, event) =>
           host.broadcastBusEvent(forwardedType, event),
@@ -430,12 +419,22 @@ const host = new ReactorHost({
       throw toStoredDocumentsRefused(error);
     }
   },
-  registerPackages: async (specs) => {
+  registerPackages: async (specs, sources) => {
     if (!loader) {
       return;
     }
     await loader.loadPackages(specs);
-    registerNewModules();
+    const { types, failures } = await loader.reloadSources(sources ?? []);
+    if (registrar) {
+      registrar.replaceFamilies(types, loader.models);
+      registrar.syncManifests(loader.upgradeManifests);
+    }
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map((failure) => failure.error),
+        `Failed to reload package source(s): ${failures.map((failure) => failure.name).join(", ")}`,
+      );
+    }
   },
   onIdentity: (user) => {
     currentIdentity = user;

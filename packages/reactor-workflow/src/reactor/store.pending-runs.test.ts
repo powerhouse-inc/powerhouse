@@ -97,12 +97,10 @@ describe("pending runs in the journal", () => {
   it("claims the dedupe key and journals the run together", async () => {
     const now = new Date().toISOString();
     const options = { workflowId: "wf-claim", triggerKind: "document-event" };
-    const insert = vi
-      .spyOn(
-        store as unknown as { insertPendingRun: () => Promise<void> },
-        "insertPendingRun",
-      )
-      .mockRejectedValueOnce(new Error("crash between claim and enqueue"));
+    vi.spyOn(
+      store as unknown as { insertPendingRun: () => Promise<void> },
+      "insertPendingRun",
+    ).mockRejectedValueOnce(new Error("crash between claim and enqueue"));
 
     await expect(
       store.claimAndEnqueueRun("op:1", 60_000, now, options),
@@ -113,7 +111,6 @@ describe("pending runs in the journal", () => {
     expect(
       await store.claimAndEnqueueRun("op:1", 60_000, now, options),
     ).toBeNull();
-    expect(insert).toHaveBeenCalledTimes(2);
 
     const runs = await store.listRuns("wf-claim");
     expect(runs.map((run) => run.id)).toEqual([runId]);

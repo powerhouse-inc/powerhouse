@@ -1,31 +1,20 @@
-/**
- * Pins the `getDbClient` sharing contract: repeated calls for the same
- * connection string must return the same client. This applies to every
- * backend (Postgres URLs are cached too, for connection-pool dedup), but
- * the test exercises the PGlite + AtomicNodeFs path because that's where
- * the absence of caching is a correctness bug — two PGlite instances on
- * the same data dir race each other's `snapshot.bin` writes, so the loser's
- * writes are silently dropped.
- *
- * The test pins two invariants:
- *   1. Two `getDbClient(dir, factory)` calls return the same knex/pglite.
- *   2. Writes from both consumers survive a close/reopen on the same dir.
- */
+// Two PGlite instances on one PGDATA are two postmasters writing one data dir.
 
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import { PGlite } from "@electric-sql/pglite";
+import { NodeFS } from "@electric-sql/pglite/nodefs";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { getDbClient } from "../src/utils/db.js";
+import { createDurableNodeFs } from "../src/pglite/pglite-node.js";
+import { getDbClient, type DbClient } from "../src/utils/db.js";
 
 describe("getDbClient sharing", () => {
   const tempDirs: string[] = [];
 
   afterEach(async () => {
     for (const dir of tempDirs.splice(0)) {
-      await fs.rm(dir, { recursive: true, force: true });
+      await fs.rm(dir, { recursive: true, force: true, maxRetries: 5 });
     }
   });
 
@@ -35,20 +24,27 @@ describe("getDbClient sharing", () => {
     return dir;
   }
 
-  /**
-   * Matches the switchboard wiring: one factory closure that, when called,
-   * hands the caller a PGlite backed by an AtomicNodeFs pointed at the
-   * shared data-dir. `getDbClient` invokes this factory; the bug under
-   * test is that it invokes it once per call instead of memoizing.
-   */
-  function makeAtomicFactory(dir: string) {
+  // knex only closes a PGlite it connected to; the server's closers do the same.
+  async function destroy(client: DbClient): Promise<void> {
+    await client.knex.destroy();
+    if (client.pglite && !client.pglite.closed) await client.pglite.close();
+  }
+
+  /** Switchboard's wiring: one factory, which the cache must call once per dir. */
+  function makeNodeFsFactory(dir: string) {
     return (connectionString: string | undefined) =>
-      new PGlite({ fs: new AtomicNodeFs(connectionString ?? dir) });
+      new PGlite({
+        // fsync is not under test; initdb with it on takes ~45 s on macOS.
+        fs: createDurableNodeFs(NodeFS, connectionString ?? dir, {
+          maintenanceIntervalMs: 0,
+          fsync: false,
+        }),
+      });
   }
 
   it("returns the same knex/pglite for repeated calls with the same path", async () => {
     const dir = await mktemp();
-    const factory = makeAtomicFactory(dir);
+    const factory = makeNodeFsFactory(dir);
 
     const a = getDbClient(dir, factory);
     const b = getDbClient(dir, factory);
@@ -56,24 +52,17 @@ describe("getDbClient sharing", () => {
     expect(a.knex).toBe(b.knex);
     expect(a.pglite).toBe(b.pglite);
 
-    await a.knex.destroy();
+    await destroy(a);
   });
 
   it("preserves writes from every consumer across a restart", async () => {
     const dir = await mktemp();
-    const factory = makeAtomicFactory(dir);
+    const factory = makeNodeFsFactory(dir);
 
-    // Two consumers, the way reactor-api wires them today:
-    //   - analytics calls getDbClient(dir, factory) once
-    //   - attachments calls getDbClient(dir, factory) again with the same path
-    // Without sharing, each ends up with its own PGlite/MemoryFS pair and
-    // they overwrite each other's snapshot at close.
     const analytics = getDbClient(dir, factory);
     const attachments = getDbClient(dir, factory);
 
-    // Same reason as the `fresh` client below: let this cold boot finish
-    // before the first query, so a slow Windows runner cannot spend Knex's
-    // 30s pool-acquire budget waiting on PGlite to come up.
+    // Slow Windows runners can spend Knex's 30s pool-acquire budget on the cold boot.
     await analytics.pglite?.ready;
 
     await analytics.knex.raw('create schema if not exists "analytics"');
@@ -88,17 +77,10 @@ describe("getDbClient sharing", () => {
       `insert into "attachments"."t" values ('attachments-row')`,
     );
 
-    // Close in the order analytics → attachments. With independent
-    // instances, attachments' close overwrites the snapshot analytics
-    // wrote, and the analytics row is gone from disk.
-    await analytics.knex.destroy();
-    await attachments.knex.destroy();
+    await destroy(analytics);
+    await destroy(attachments);
 
-    // Fresh client reads from the snapshot on disk.
     const fresh = getDbClient(dir, factory);
-    // Let the cold boot finish up front: on a loaded Windows CI runner it
-    // can exceed Knex's 30s pool-acquire timeout, which would surface as
-    // "Timeout acquiring a connection" on the first query below.
     await fresh.pglite?.ready;
     const aRows = await fresh.knex.raw(
       `select v from "analytics"."t" order by v`,
@@ -110,26 +92,21 @@ describe("getDbClient sharing", () => {
     expect(aRows.rows).toEqual([{ v: "analytics-row" }]);
     expect(bRows.rows).toEqual([{ v: "attachments-row" }]);
 
-    await fresh.knex.destroy();
-    // Three PGLite cold boots plus two full-tree snapshot writes. On the
-    // Windows CI runner that measured 52s, past the 30s file default.
+    await destroy(fresh);
+    // Two PGLite cold boots, one of them an initdb with a real fsync pass.
   }, 120_000);
 
   it("evicts the cache entry on knex.destroy() so a re-init gets a fresh client", async () => {
     const dir = await mktemp();
-    const factory = makeAtomicFactory(dir);
+    const factory = makeNodeFsFactory(dir);
 
     const first = getDbClient(dir, factory);
-    await first.knex.destroy();
+    await destroy(first);
 
-    // After destroy, the cache must not hand back the destroyed client;
-    // a second call has to construct a new pair. This covers the
-    // Postgres-style path (where `pglite` is undefined and the previous
-    // `closed`-flag eviction never fired) as well as PGlite.
     const second = getDbClient(dir, factory);
     expect(second.knex).not.toBe(first.knex);
     expect(second.pglite).not.toBe(first.pglite);
 
-    await second.knex.destroy();
+    await destroy(second);
   });
 });

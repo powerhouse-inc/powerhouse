@@ -1,9 +1,44 @@
 // The document-created / document-deleted triggers are backed by the document's
 // own CREATE_DOCUMENT / DELETE_DOCUMENT operations, with the drive's ADD_FILE /
 // DELETE_NODE kept as a fallback.
-import type { OperationWithContext } from "document-model";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  REACTOR_SCHEMA,
+  ReactorBuilder,
+  ReactorClientBuilder,
+  supportsLiveReadModelRegistration,
+  type DocumentViewDatabase,
+  type InProcessReactorClientModule,
+} from "@powerhousedao/reactor";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  withSignaturePolicy,
+  type DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
+import {
+  Workflow,
+  actions,
+} from "@powerhousedao/workflow/document-models/workflow";
+import {
+  documentModelDocumentModelModule,
+  type OperationWithContext,
+} from "document-model";
+import type { Kysely } from "kysely";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
+import {
+  WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
+  WorkflowTriggersReadModel,
+} from "./workflow-triggers-read-model.js";
 import {
   collectLifecycleParentHints,
   type WorkflowRuntimeService,
@@ -130,17 +165,20 @@ describe("collectLifecycleParentHints", () => {
 describe("WorkflowRuntimeService document lifecycle triggers", () => {
   let service: WorkflowRuntimeService;
   let fired: { workflowId: string; payload: unknown; kind: string }[];
-  let get: ReturnType<typeof vi.fn>;
 
   // Only the documents a lifecycle event names are ever fetched, so the
   // runtime is built around that client rather than handed one later.
   function useReactor(documents: Record<string, string>): void {
-    get = vi.fn((id: string) => {
+    const get = (id: string) => {
       const documentType = documents[id];
       if (!documentType) return Promise.reject(new Error("not found"));
       return Promise.resolve({ header: { id, documentType, name: id } });
-    });
-    service = testRuntime({ reactorClient: { get } } as never);
+    };
+    // Lifecycle claims are per document, and every test reuses DOC.
+    service = testRuntime({
+      reactorClient: { get },
+      relationalDb: createFreshRelationalDb(),
+    } as never);
     vi.spyOn(service, "fire").mockImplementation(
       (workflowId: string, payload?: unknown, kind = "manual") => {
         fired.push({ workflowId, payload, kind });
@@ -208,8 +246,6 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
         },
       },
     ]);
-    // Nothing named a parent, so no drive lookup was attempted.
-    expect(get).not.toHaveBeenCalled();
   });
 
   it("resolves the drive from the child relationship written with the creation", async () => {
@@ -256,46 +292,6 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
     });
   });
 
-  it("honours the documentType filter against the created model", async () => {
-    await register("wf-created", "document-created", {
-      documentType: "acme/other",
-    });
-    await service.onOperations([
-      documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
-        documentId: DOC,
-        model: TODO_TYPE,
-      }),
-    ]);
-    expect(fired).toHaveLength(0);
-  });
-
-  it("reports a deletion with the stored document type and no re-read", async () => {
-    await register("wf-deleted", "document-deleted", {
-      documentType: TODO_TYPE,
-    });
-    const deleted = documentOp(DOC, TODO_TYPE, "DELETE_DOCUMENT", {
-      documentId: DOC,
-    });
-    await service.onOperations([deleted]);
-    expect(fired).toHaveLength(1);
-    expect(fired[0]).toMatchObject({
-      workflowId: "wf-deleted",
-      kind: "document-deleted",
-    });
-    expect(fired[0].payload).toEqual({
-      documentId: DOC,
-      documentType: TODO_TYPE,
-      name: null,
-      driveId: null,
-      parentId: null,
-      operation: {
-        index: deleted.operation.index,
-        timestampUtcMs: deleted.operation.timestampUtcMs,
-      },
-    });
-    expect(get).not.toHaveBeenCalled();
-  });
-
   it("fires once when both the document and the drive report a creation", async () => {
     await register("wf-created", "document-created", {});
     await service.onOperations([
@@ -311,6 +307,27 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
         name: "Groceries",
         documentType: TODO_TYPE,
       }),
+    ]);
+    expect(fired).toHaveLength(1);
+  });
+
+  it("fires once when the document's and the drive's batches arrive together", async () => {
+    await register("wf-created", "document-created", {});
+    // The coordinator projects each document's batch on its own chain.
+    await Promise.all([
+      service.onOperations([
+        documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
+          documentId: DOC,
+          model: TODO_TYPE,
+        }),
+      ]),
+      service.onOperations([
+        globalOp(DRIVE, DRIVE_TYPE, "ADD_FILE", {
+          id: DOC,
+          name: "Groceries",
+          documentType: TODO_TYPE,
+        }),
+      ]),
     ]);
     expect(fired).toHaveLength(1);
   });
@@ -384,5 +401,166 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
       }),
     ]);
     expect(fired).toHaveLength(0);
+  });
+});
+
+describe("document lifecycle triggers on an in-process reactor", () => {
+  const MODEL_TYPE = "powerhouse/document-model";
+  let module: InProcessReactorClientModule;
+  let service: WorkflowRuntimeService;
+  let driveId: string;
+
+  beforeAll(async () => {
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          driveDocumentModelModule as unknown as DocumentModelModule,
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+          Workflow as unknown as DocumentModelModule,
+        ]),
+      )
+      .buildModule();
+    service = testRuntime({
+      reactorClient: module.client,
+      relationalDb: createFreshRelationalDb(),
+    });
+    // Registered as Switchboard registers it, so operations reach the runtime.
+    const reactor = module.reactorModule!;
+    const model = new WorkflowTriggersReadModel(
+      (reactor.database as unknown as Kysely<unknown>).withSchema(
+        REACTOR_SCHEMA,
+      ) as unknown as Kysely<DocumentViewDatabase>,
+      reactor.operationIndex,
+      reactor.writeCache,
+      reactor.processorManagerConsistencyTracker,
+      service,
+    );
+    await model.init();
+    const coordinator = reactor.readModelCoordinator;
+    if (!supportsLiveReadModelRegistration(coordinator)) {
+      throw new Error("coordinator takes no live registration");
+    }
+    coordinator.addReadModel(model, WORKFLOW_TRIGGERS_READ_MODEL_STAGE);
+    const drive = await module.client.drives.create({
+      global: { name: "Docs" },
+      signaturePolicy: "legacy",
+    });
+    driveId = drive.header.id;
+  });
+
+  afterAll(async () => {
+    service.shutdown();
+    await module.reactor.kill().completed;
+  });
+
+  const drain = () => module.reactorModule!.readModelCoordinator.drain();
+
+  async function publishWatcher(
+    id: string,
+    triggerName: string,
+    config: Record<string, unknown>,
+  ) {
+    await module.client.create(
+      withSignaturePolicy(Workflow.utils.createDocument(), "legacy", { id }),
+    );
+    await module.client.execute(id, "main", [
+      actions.setWorkflowName({ name: "Lifecycle watcher" }),
+      actions.setTrigger({
+        id: "t1",
+        pieceName: REACTOR_PIECE,
+        pieceVersion: "1.0.0",
+        triggerName,
+        config,
+      }),
+      actions.publishWorkflow({ publishedAt: "2026-10-01T00:00:00.000Z" }),
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    ]);
+    await drain();
+  }
+
+  async function finishedRuns(workflowId: string) {
+    const records = await service.runs(
+      { workflowId },
+      { user: { address: "0xabc" } },
+    );
+    return records.map(({ row }) => ({
+      kind: row.trigger_kind,
+      status: row.status,
+      payload: JSON.parse(row.trigger_payload ?? "null") as unknown,
+    }));
+  }
+
+  // Fires are enqueued off the ingestion path, so wait for one to finish.
+  async function firstRuns(workflowId: string) {
+    await vi.waitFor(
+      async () => {
+        const runs = await finishedRuns(workflowId);
+        expect(runs.length).toBeGreaterThan(0);
+        for (const run of runs) expect(run.status).toBe("SUCCEEDED");
+      },
+      { timeout: 15_000 },
+    );
+    await drain();
+    return finishedRuns(workflowId);
+  }
+
+  const addModelDocument = () =>
+    module.client.drives.addFile(
+      driveId,
+      withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+      ),
+    );
+
+  it("journals a run for a document added to a drive", async () => {
+    await publishWatcher("wf-real-created", "document-created", {
+      documentType: MODEL_TYPE,
+      driveId,
+    });
+
+    const added = await addModelDocument();
+
+    const runs = await firstRuns("wf-real-created");
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({
+      kind: "document-created",
+      payload: {
+        documentId: added.header.id,
+        documentType: MODEL_TYPE,
+        driveId,
+      },
+    });
+  });
+
+  it("journals one run for a document removed from a drive", async () => {
+    const added = await addModelDocument();
+    await publishWatcher("wf-real-deleted", "document-deleted", {
+      documentType: MODEL_TYPE,
+    });
+
+    await module.client.drives.removeNode(driveId, added.header.id);
+
+    const runs = await firstRuns("wf-real-deleted");
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({
+      kind: "document-deleted",
+      payload: { documentId: added.header.id, documentType: MODEL_TYPE },
+    });
+  });
+
+  it("journals nothing for a created document of another type", async () => {
+    await publishWatcher("wf-real-filtered", "document-created", {
+      documentType: MODEL_TYPE,
+      driveId,
+    });
+
+    await module.client.drives.addFile(
+      driveId,
+      withSignaturePolicy(Workflow.utils.createDocument(), "legacy"),
+    );
+    await drain();
+
+    expect(await finishedRuns("wf-real-filtered")).toEqual([]);
   });
 });

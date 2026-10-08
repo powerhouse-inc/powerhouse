@@ -1,5 +1,8 @@
-import type { MessageRouter } from "./message-router.js";
-import type { ClientMessage, OpKind } from "./protocol.js";
+import type {
+  MessageRouter,
+  ClientMessage,
+  OpKind,
+} from "@powerhousedao/reactor/rpc";
 
 export const RPC_DEFAULT_TIMEOUT_MS = 30_000;
 

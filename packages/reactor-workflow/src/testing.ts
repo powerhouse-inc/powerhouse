@@ -29,7 +29,6 @@ export {
   ActivepiecesBlockExecutor,
   CompositeBlockExecutor,
   type AttachmentPort,
-  type ReactorPort,
 } from "./pieces/engine/blocks.js";
 export { StaticConnectionResolver } from "./pieces/engine/connections.js";
 export { runWorkflow } from "./pieces/engine/coordinator.js";

@@ -38,6 +38,8 @@ export interface TriggerModel extends BlockStateModel {
   triggerName: string;
   config: unknown;
   connectionId: string | null;
+  // A REACTOR connection, for a trigger that declares requireReactor.
+  reactorConnectionId?: string | null;
 }
 
 export type BackoffKindValue = "FIXED" | "EXPONENTIAL";
@@ -58,6 +60,8 @@ export interface StepModel extends BlockStateModel {
   pieceVersion: string;
   actionName: string;
   connectionId: string | null;
+  // A REACTOR connection, for an action that declares requireReactor.
+  reactorConnectionId?: string | null;
   config: unknown;
   retry: RetryPolicyModel | null;
   timeoutSeconds: number | null;
@@ -90,13 +94,27 @@ export interface VariableModel {
   type?: VariableTypeValue | null;
 }
 
+export interface PublishedBlockModel {
+  id: string;
+  // The step's name, or "Trigger".
+  label: string;
+  pieceName: string;
+  pieceVersion: string;
+  kind: "action" | "trigger";
+  name: string;
+  reactorConnectionId: string | null;
+}
+
 export interface PublishedModel {
   version: number;
   publishedAt: string;
+  // The snapshot's blocks, trigger first; what actually runs.
+  blocks?: PublishedBlockModel[];
 }
 
 export interface WorkflowModel {
   name: string;
+  description?: string | null;
   status: WorkflowStatusValue;
   version: number;
   trigger: TriggerModel | null;
@@ -138,6 +156,7 @@ export interface UpdateStepInputModel {
   actionName?: string;
   // null clears the step's connection.
   connectionId?: string | null;
+  reactorConnectionId?: string | null;
   config?: unknown;
   // null clears each of these; undefined leaves them unchanged.
   retry?: RetryPolicyModel | null;
@@ -155,6 +174,7 @@ export interface ConfigExtras {
 
 export interface WorkflowEditorCallbacks {
   setName: (name: string) => void;
+  setDescription: (description: string) => void;
   setStatus: (status: WorkflowStatusValue) => void;
   setTrigger: (
     input: {
@@ -163,6 +183,7 @@ export interface WorkflowEditorCallbacks {
       triggerName: string;
       config: unknown;
       connectionId?: string | null;
+      reactorConnectionId?: string | null;
     } & ConfigExtras,
   ) => AddedBlock;
   clearTrigger: () => void;

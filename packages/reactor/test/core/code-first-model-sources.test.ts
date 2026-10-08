@@ -5,7 +5,7 @@ import {
   type MaterializedPackage,
 } from "../../../document-model/test/fixtures/loaders/materialize.js";
 import { resolveModelSources } from "../../src/core/model-sources.js";
-import { defaultLoadFactory } from "../../src/executor/worker/build-worker-executor.js";
+import { defaultLoadFactory } from "../../src/executor/worker/load-spec.js";
 
 /**
  * A worker thread re-imports each model by file path and export name, because

@@ -1,25 +1,28 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { hostResponder, type IHostResponder } from "./host-reply.js";
-import { ReactorHostServer } from "./host-server.js";
-import { SubscriptionStore } from "./subscription.js";
-import type {
-  ClientMessage,
-  CorrelationId,
-  ReactorIdentity,
-  RpcAdmin,
-  RpcDbOp,
-  RpcHello,
-  RpcInspectorOp,
-  RpcLiveSubscribe,
-  RpcRegisterPackages,
-  RpcSyncOp,
-  RpcUnregisterPackages,
-  VersionFingerprint,
-  WorkerInspectorInfo,
-  WorkerMigrationState,
-} from "./protocol.js";
-import { RPC_PROTOCOL_VERSION } from "./protocol.js";
-import { createPortTransport, type IRpcTransport } from "./transport.js";
+import {
+  hostResponder,
+  type IHostResponder,
+  ReactorHostServer,
+  SubscriptionStore,
+  type ClientMessage,
+  type CorrelationId,
+  type ReactorIdentity,
+  type RpcAdmin,
+  type RpcDbOp,
+  type RpcHello,
+  type RpcInspectorOp,
+  type RpcLiveSubscribe,
+  type RpcRegisterPackages,
+  type RpcSyncOp,
+  type RpcUnregisterPackages,
+  type VersionFingerprint,
+  type WorkerInspectorInfo,
+  type WorkerMigrationState,
+  type WorkerPackageSource,
+  RPC_PROTOCOL_VERSION,
+  createPortTransport,
+  type IRpcTransport,
+} from "@powerhousedao/reactor/rpc";
 
 function isDataMessage(
   msg: ClientMessage,
@@ -38,7 +41,10 @@ function isDataMessage(
 export type ReactorHostOptions = {
   client?: IReactorClient;
   build?: (construct: unknown) => Promise<IReactorClient>;
-  registerPackages?: (specs: string[]) => Promise<void>;
+  registerPackages?: (
+    specs: string[],
+    sources?: WorkerPackageSource[],
+  ) => Promise<void>;
   unregisterPackages?: (names: string[]) => Promise<void>;
   onIdentity?: (user: ReactorIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
@@ -384,7 +390,7 @@ export class ReactorHost {
     reply: IHostResponder,
   ): Promise<void> {
     await reply.run(message.id, async () => {
-      await this.options.registerPackages?.(message.specs);
+      await this.options.registerPackages?.(message.specs, message.sources);
     });
   }
 

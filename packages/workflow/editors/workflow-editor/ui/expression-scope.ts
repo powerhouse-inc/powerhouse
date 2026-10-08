@@ -1,6 +1,12 @@
 // Builds the {} picker scope for a step: upstream step outputs and the trigger
 // payload from their last test, else the latest run, else the authored shape.
+import {
+  documentRefsIn,
+  expandDocumentRefs,
+  type DocumentReference,
+} from "@powerhousedao/pieces-framework/workflow";
 import { stepBlock, triggerBlock, type BlockRef } from "./blocks.js";
+import { documentShape } from "./document-shape.js";
 import type { WorkflowModel } from "./model.js";
 import { VARIABLE_TYPE_LABEL } from "./variable-types.js";
 
@@ -35,6 +41,10 @@ export interface BuildScopeOptions {
   authoredOutput: (block: BlockRef, config: unknown) => Promise<unknown>;
   // A block's last test sample, by step or trigger id; undefined when none.
   testOutput?: (blockId: string) => Promise<TestSample | undefined>;
+  // A journaled document reference as a document: header and state fields.
+  documentOutput?: (
+    reference: DocumentReference,
+  ) => Promise<Record<string, unknown>>;
   now?: Date;
 }
 
@@ -102,10 +112,41 @@ const hasOutput = (step: ScopeRunStep) =>
   step.output !== undefined &&
   step.output !== null;
 
+// Each journaled document reference in a value, as the document it names.
+async function withDocuments(
+  value: unknown,
+  documentOutput: BuildScopeOptions["documentOutput"],
+): Promise<unknown> {
+  const references = documentRefsIn(value);
+  if (references.length === 0) return value;
+  const key = (reference: DocumentReference) =>
+    `${reference.branch}:${reference.documentId}`;
+  // Header fields at least, when the model is unknown here.
+  const shapeOf = async (reference: DocumentReference) => {
+    try {
+      if (documentOutput) return await documentOutput(reference);
+    } catch {
+      // Falls through to the header-only shape.
+    }
+    return documentShape(reference, {});
+  };
+  const shapes = new Map(
+    await Promise.all(
+      references.map(
+        async (reference) =>
+          [key(reference), await shapeOf(reference)] as const,
+      ),
+    ),
+  );
+  return expandDocumentRefs(value, (reference) => shapes.get(key(reference))!);
+}
+
 export async function buildExpressionScope(
   options: BuildScopeOptions,
 ): Promise<ExpressionScope> {
   const { model, latestRun } = options;
+  const documents = (value: unknown) =>
+    withDocuments(value, options.documentOutput);
   const runCaption = latestRun
     ? `from run ${formatRunTime(latestRun.startedAt, options.now)}`
     : undefined;
@@ -127,14 +168,16 @@ export async function buildExpressionScope(
   if (model.trigger) {
     const sample = await tested(model.trigger);
     if (sample) {
-      value.trigger = { payload: capValue(sample.value) };
+      value.trigger = { payload: capValue(await documents(sample.value)) };
       captions["trigger.payload"] = testCaption(sample);
     } else if (
       runCaption &&
       latestRun?.triggerPayload !== undefined &&
       latestRun.triggerPayload !== null
     ) {
-      value.trigger = { payload: capValue(latestRun.triggerPayload) };
+      value.trigger = {
+        payload: capValue(await documents(latestRun.triggerPayload)),
+      };
       captions["trigger.payload"] = runCaption;
     } else {
       value.trigger = {
@@ -155,7 +198,7 @@ export async function buildExpressionScope(
       .map(async (step) => {
         const sample = await tested(step);
         if (sample) {
-          steps[step.key] = { output: capValue(sample.value) };
+          steps[step.key] = { output: capValue(await documents(sample.value)) };
           captions[`steps.${step.key}.output`] = testCaption(sample);
           return;
         }
@@ -167,7 +210,9 @@ export async function buildExpressionScope(
           journaled.pieceName === step.pieceName &&
           journaled.blockName === step.actionName
         ) {
-          steps[step.key] = { output: capValue(journaled.output) };
+          steps[step.key] = {
+            output: capValue(await documents(journaled.output)),
+          };
           captions[`steps.${step.key}.output`] = runCaption;
           return;
         }

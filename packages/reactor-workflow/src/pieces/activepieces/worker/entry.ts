@@ -7,14 +7,26 @@ import {
   UnsupportedContextMemberError,
 } from "../context/action.js";
 import { RemoteKeyValueStore } from "../context/remote-store.js";
-import { RemoteReactorService } from "../context/reactor.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
 import { setHostCallTimeout } from "./host-call.js";
+import {
+  openWorkerReactor,
+  type WorkerReactorSession,
+} from "./reactor-provider.js";
+import type { ReactorOption } from "../context/reactor-option.js";
+import {
+  DocumentModelUnavailableError,
+  ReactorAccessDeniedError,
+  ReactorActionsFailedError,
+  ReactorJobFailedError,
+  ReactorJobPendingError,
+  ReactorRequestClosedError,
+} from "@powerhousedao/pieces-framework";
 import { jsonSafe } from "./json-safe.js";
 import { formatPieceError } from "@powerhousedao/pieces-framework/host";
 import { redactError, redactMessage } from "./redact.js";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import { DataUriFilesService, StagedFilesService } from "../context/files.js";
 import { setMaxFileBytes } from "../context/limits.js";
@@ -47,6 +59,13 @@ import {
   UnsupportedPieceFeatureError,
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
+import {
+  finishRequestTimings,
+  markWorkerReady,
+  startRequestTimings,
+  timed,
+  withRequestTimings,
+} from "./timings.js";
 import type {
   StagedInput,
   PieceModuleRef,
@@ -60,10 +79,6 @@ import type {
   WorkerRequestMessage,
   WorkerResponse,
 } from "./protocol.js";
-
-// Before any piece module is loaded, so a piece cannot keep a pristine copy of
-// the socket layer from a request that carried no policy.
-installEgressGuard();
 
 const loadedPieces = new Map<string, Promise<LoadedPiece>>();
 // One store per scope, alive for the worker's lifetime (in-memory phase:
@@ -92,11 +107,13 @@ function pieceRefKey(ref: PieceModuleRef): string {
 function loadCached(ref: PieceModuleRef): Promise<LoadedPiece> {
   const key = pieceRefKey(ref);
   let loading = loadedPieces.get(key);
+  const cached = loading !== undefined;
   if (!loading) {
     loading = ref.entryPath ? loadPiece(key) : loadPieceFromDir(key);
     loadedPieces.set(key, loading);
   }
-  return loading;
+  const loaded = loading;
+  return timed("piece.load", () => loaded, { "piece.cached": cached });
 }
 
 // The secret values this request carried, if any. Redacting here rather than
@@ -104,6 +121,23 @@ function loadCached(ref: PieceModuleRef): Promise<LoadedPiece> {
 function redactValuesOf(message: WorkerRequestMessage): string[] {
   const request = message.request as { redactValues?: string[] };
   return request.redactValues ?? [];
+}
+
+// Reactor errors cross the RPC as plain Errors told apart by `name`.
+const REACTOR_ERROR_NAMES = new Set<string>([
+  DocumentModelUnavailableError,
+  ReactorAccessDeniedError,
+  ReactorActionsFailedError,
+  ReactorJobFailedError,
+  ReactorJobPendingError,
+  ReactorRequestClosedError,
+]);
+
+function errorName(error: unknown, fallback: string | undefined): string {
+  if (typeof error !== "object" || error === null) return fallback || "Error";
+  const named = (error as { name?: unknown }).name;
+  if (typeof named === "string" && REACTOR_ERROR_NAMES.has(named)) return named;
+  return error.constructor.name || fallback || "Error";
 }
 
 function serializeError(
@@ -118,13 +152,14 @@ function serializeError(
   }
   // The framework's own formatter first: it lifts an HTTP status, the request
   // and response, and a message out of an HTML error page. Redaction stays last.
-  const { __apErrorVersion, message, errorName, ...http } =
-    formatPieceError(error);
+  const {
+    __apErrorVersion,
+    message,
+    errorName: formattedName,
+    ...http
+  } = formatPieceError(error);
   return {
-    name:
-      (typeof error === "object" && error !== null && error.constructor.name) ||
-      errorName ||
-      "Error",
+    name: errorName(error, formattedName),
     message: redactMessage(message, { values }),
     properties: redactError(
       { ...properties, ...(jsonSafe(http) as Record<string, unknown>) },
@@ -148,19 +183,48 @@ function consumeTlsFlag(): boolean {
   return poisoned;
 }
 
+// The session's client under its declaration, for a run-time context.
+function reactorOption(
+  session: WorkerReactorSession | undefined,
+): ReactorOption {
+  if (!session) return {};
+  return session.requireReactor === "write"
+    ? { requireReactor: "write", reactor: session.client }
+    : { requireReactor: "read", reactor: session.client };
+}
+
 async function handleResolveOptions(
   message: ResolveOptionsMessage,
 ): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request);
+  const block =
+    request.kind === "trigger"
+      ? getTriggers(piece)[request.actionName]
+      : getActions(piece)[request.actionName];
+  const session = await openWorkerReactor(
+    request.reactor,
+    (block as { requireReactor?: unknown } | undefined)?.requireReactor,
+  );
+  try {
+    return await resolveOptions(message, piece, session);
+  } finally {
+    session?.close();
+  }
+}
+
+async function resolveOptions(
+  message: ResolveOptionsMessage,
+  piece: ApPiece,
+  session: WorkerReactorSession | undefined,
+): Promise<WorkerResponse> {
+  const { request } = message;
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
     projectId: request.projectId,
     // Design-time default: an empty flows listing instead of a throwing stub.
     flows: { list: () => Promise.resolve({ data: [] }) },
-    ...(request.reactorAccess
-      ? { reactor: new RemoteReactorService({ deadline: request.deadline }) }
-      : {}),
+    ...(session ? { reactor: session.client } : {}),
   });
   const refresherValues = {
     ...(request.auth !== undefined ? { auth: request.auth } : {}),
@@ -198,24 +262,40 @@ async function handleResolveOptions(
 // Reads a FILE prop's attachment ref from the copy the host staged on disk.
 // The fork shares the filesystem with its parent, so this is what keeps a
 // 50 MB scan out of the IPC channel in both directions.
-function stagedInputResolver(
+function stagedInputOptions(
   inputs: StagedInput[] | undefined,
-): NormalizeOptions["resolveRef"] {
+): Pick<NormalizeOptions, "resolveRef" | "openRef"> {
   // An empty list is not the same as no list: it means the host has a store
   // and tried, so a FILE prop that still comes up short is told which
   // reference failed rather than that the context has no resolver.
-  if (!inputs) return undefined;
+  if (!inputs) return {};
   const byRef = new Map(inputs.map((input) => [input.ref, input]));
-  return async (ref: string) => {
-    const staged = byRef.get(ref);
-    if (!staged) {
-      throw new Error(`No staged file for reference "${ref}"`);
+  const staged = (ref: string): StagedInput => {
+    const input = byRef.get(ref);
+    if (!input) throw new Error(`No staged file for reference "${ref}"`);
+    if (input.error !== undefined) {
+      throw new Error(`Could not read "${ref}": ${input.error}`);
     }
-    return {
-      data: await readFile(staged.path),
-      filename: staged.fileName,
-      contentType: staged.contentType,
-    };
+    return input;
+  };
+  return {
+    resolveRef: async (ref: string) => {
+      const input = staged(ref);
+      return {
+        data: await readFile(input.path),
+        filename: input.fileName,
+        contentType: input.contentType,
+      };
+    },
+    openRef: async (ref: string) => {
+      const input = staged(ref);
+      return {
+        path: input.path,
+        size: (await stat(input.path)).size,
+        filename: input.fileName,
+        contentType: input.contentType,
+      };
+    },
   };
 }
 
@@ -275,14 +355,33 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     ? new RemoteKeyValueStore()
     : undefined;
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
-  // Host-served reactor access, for a piece that ships inside a reactor package.
-  const reactor = request.reactorAccess
-    ? new RemoteReactorService({
-        deadline: request.deadline,
-        store: durableStore,
-        stepName: request.identity?.stepName,
-      })
-    : undefined;
+  const session = await timed("reactor.open", () =>
+    openWorkerReactor(request.reactor, action.requireReactor),
+  );
+  try {
+    return await runAction(message, action, {
+      files,
+      durableStore,
+      liveOutput,
+      reactor: reactorOption(session),
+    });
+  } finally {
+    session?.close();
+  }
+}
+
+async function runAction(
+  message: RunMessage,
+  action: ReturnType<typeof getActions>[string],
+  services: {
+    files: StagedFilesService | DataUriFilesService;
+    durableStore: RemoteKeyValueStore | undefined;
+    liveOutput: RemoteOutput | undefined;
+    reactor: ReactorOption;
+  },
+): Promise<WorkerResponse> {
+  const { request } = message;
+  const { files, durableStore, liveOutput, reactor } = services;
   // Before the props are normalised, not after: a processor that cannot coerce
   // says so on console.error, and the worker's stdio goes nowhere.
   const restoreConsole = request.captureLogs ? captureConsole() : undefined;
@@ -291,7 +390,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       `action "${request.actionName}"`,
       action.props,
       request.propsValue,
-      { resolveRef: stagedInputResolver(request.stagedInputs) },
+      stagedInputOptions(request.stagedInputs),
     ),
     auth: request.auth,
     store:
@@ -302,7 +401,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       ? new InMemoryConnectionsProvider(request.connections)
       : undefined,
     output: liveOutput,
-    reactor,
+    ...reactor,
     resumePayload: request.resumePayload,
     executionType: request.executionType,
     identity: request.identity,
@@ -314,7 +413,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       request.stepTest && typeof action.test === "function"
         ? action.test
         : action.run;
-    output = await method.call(action, context);
+    output = await timed("action", () => method.call(action, context));
   } finally {
     restoreConsole?.();
     liveOutput?.close();
@@ -356,16 +455,6 @@ async function handleTriggerHook(
   const snapshot = request.durableStore
     ? undefined
     : new InMemoryKeyValueStore(request.storeState);
-  const durableStore = snapshot ? undefined : new RemoteKeyValueStore();
-  // Host-served reactor access, on the same terms as handleRun: the gate is
-  // the host's, and absence leaves the context's throwing stub in place.
-  const reactor = request.reactorAccess
-    ? new RemoteReactorService({
-        deadline: request.deadline,
-        store: durableStore,
-        stepName: request.identity?.stepName,
-      })
-    : undefined;
   const runsPiece = request.hook === "run" || request.hook === "test";
   // Teardown is never refused: a config that no longer validates must still
   // release what onEnable registered.
@@ -377,10 +466,14 @@ async function handleTriggerHook(
           trigger.props,
           request.propsValue,
         );
+  const session = await openWorkerReactor(
+    request.reactor,
+    trigger.requireReactor,
+  );
   const handle = buildTriggerContext({
     propsValue,
     auth: request.auth,
-    store: snapshot ?? durableStore,
+    store: snapshot ?? new RemoteKeyValueStore(),
     hostPartitionedStore: request.durableStore,
     // Test hooks write under a separate prefix, never the live cursor.
     storePrefix: request.hook === "test" ? "test" : "",
@@ -390,9 +483,14 @@ async function handleTriggerHook(
     webhookUrl: request.webhookUrl,
     server: request.server,
     files: runsPiece ? new DataUriFilesService() : undefined,
-    reactor,
+    ...reactorOption(session),
   });
-  const output = await runTriggerHook(trigger, request.hook, handle);
+  let output: unknown;
+  try {
+    output = await runTriggerHook(trigger, request.hook, handle);
+  } finally {
+    session?.close();
+  }
   return {
     id: message.id,
     type: "result",
@@ -545,14 +643,25 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
   }
 }
 
-process.on("message", (message: unknown) => {
+// Called once by the child's entry, before any piece module is loaded.
+export function startPieceWorker(): void {
+  // A piece cannot then keep a pristine copy of the socket layer.
+  installEgressGuard();
+  process.on("message", onMessage);
+  markWorkerReady();
+}
+
+function onMessage(message: unknown): void {
   if (!isWorkerMessage(message)) return;
+  const timings = startRequestTimings();
   // Deferred so a synchronous throw — a malformed egress policy — becomes a
   // rejection the handler below reports, instead of killing the child.
   const handler = Promise.resolve().then(() => {
     setMaxFileBytes(message.request.maxFileBytes);
     setHostCallTimeout(message.request.hostCallTimeoutMs);
-    return runWithEgressPolicy(message.request.egress, () => dispatch(message));
+    return withRequestTimings(timings, () =>
+      runWithEgressPolicy(message.request.egress, () => dispatch(message)),
+    );
   });
   handler
     .catch((error: unknown): WorkerResponse => ({
@@ -561,6 +670,8 @@ process.on("message", (message: unknown) => {
       error: serializeError(error, redactValuesOf(message)),
       tlsPoisoned: consumeTlsFlag(),
     }))
-    .then((response) => process.send?.(response))
+    .then((response) =>
+      process.send?.({ ...response, timings: finishRequestTimings(timings) }),
+    )
     .catch(() => process.exit(1));
-});
+}

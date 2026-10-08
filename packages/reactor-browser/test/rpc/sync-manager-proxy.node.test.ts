@@ -7,13 +7,16 @@ import {
 } from "@powerhousedao/reactor";
 import { describe, expect, it, vi } from "vitest";
 import { createReactorEventBusProxy } from "../../src/rpc/event-bus-proxy.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
-import type { OwnerMessage, RpcMessage } from "../../src/rpc/protocol.js";
+import {
+  MessageRouter,
+  type OwnerMessage,
+  type RpcMessage,
+  type IRpcTransport,
+} from "@powerhousedao/reactor/rpc";
 import {
   createSyncManagerProxy,
   SYNC_STATUS_CHANGED_EVENT,
 } from "../../src/rpc/sync-manager-proxy.js";
-import type { IRpcTransport } from "../../src/rpc/transport.js";
 
 function createFakeTransport() {
   const listeners = new Set<(m: RpcMessage) => void>();

@@ -1,7 +1,12 @@
 // Connection identity and state, in the same shape as the workflow editor's
 // toolbar: name, connector, status, and the one destructive action.
 import { useState } from "react";
-import type { ConnectionState } from "document-models/connection";
+import {
+  isReactorConnectorId,
+  type ConnectionState,
+} from "document-models/connection";
+import { useSignInGate } from "../workflow-editor/reactor-hooks.js";
+import { SignInPrompt } from "../workflow-editor/ui/SignInPrompt.js";
 import type { ConnectionCheckResult } from "../workflow-editor/runtime-client.js";
 import {
   usePieceCatalog,
@@ -52,6 +57,9 @@ export function ConnectionToolbar(props: {
   const piece = catalog?.find((entry) => entry.name === packageName);
   const revoked = state.status === "REVOKED";
   const { testing, result, test } = useConnectionTest(props.connectionId);
+  const reactor = isReactorConnectorId(state.connectorId);
+  const gate = useSignInGate();
+  const signInFirst = reactor && gate.required;
 
   return (
     <header className="mb-8 flex flex-wrap items-start gap-4">
@@ -82,10 +90,14 @@ export function ConnectionToolbar(props: {
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONNECTION_STATUS_STYLES[state.status]}`}
           >
-            {CONNECTION_STATUS_LABEL[state.status]}
+            {reactor && state.status === "OK"
+              ? "Checked"
+              : CONNECTION_STATUS_LABEL[state.status]}
           </span>
           <span>
-            {piece?.displayName ?? (packageName || "No service picked")}
+            {reactor
+              ? "Powerhouse documents"
+              : (piece?.displayName ?? (packageName || "No service picked"))}
             {state.accountLabel ? (
               <>
                 {" "}
@@ -128,13 +140,27 @@ export function ConnectionToolbar(props: {
         <Button
           size="sm"
           variant="primary"
-          disabled={testing || revoked || !packageName}
+          disabled={testing || revoked || !packageName || signInFirst}
           onClick={test}
         >
           <Icon name="check" className="h-3.5 w-3.5" />
-          {testing ? "Testing…" : "Test connection"}
+          {reactor
+            ? testing
+              ? "Checking…"
+              : "Check connection"
+            : testing
+              ? "Testing…"
+              : "Test connection"}
         </Button>
       </div>
+      {signInFirst ? (
+        <div className="w-full">
+          <SignInPrompt
+            gate={gate}
+            reason="Sign in to check this connection."
+          />
+        </div>
+      ) : null}
       {result ? (
         <p
           role="status"
@@ -148,7 +174,9 @@ export function ConnectionToolbar(props: {
           />
           <span className="min-w-0 break-words">
             {result.ok
-              ? `It works${result.accountLabel ? `, signed in as ${result.accountLabel}` : ""}.`
+              ? reactor
+                ? result.detail
+                : `It works${result.accountLabel ? `, signed in as ${result.accountLabel}` : ""}.`
               : result.detail}
           </span>
         </p>

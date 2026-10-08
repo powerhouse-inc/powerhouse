@@ -237,9 +237,8 @@ async function main(): Promise<void> {
   console.log(blue("Starting switchboard...") + " ");
 
   // This suite exercises the sync protocol, not on-disk durability. Forcing
-  // switchboard to use in-memory PGLite keeps AtomicNodeFs's per-query
-  // full-tree snapshot serialization out of the hot path so the test isn't
-  // gated on filesystem throughput.
+  // switchboard to use in-memory PGLite keeps disk I/O and per-commit fsync
+  // out of the hot path so the test isn't gated on filesystem throughput.
   const switchboardProc = spawn("tsx", [SWITCHBOARD_SERVER_PATH], {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: switchboardDataDir,

@@ -39,8 +39,9 @@ rather than restated here.
   contexts from `Store`, `ServerContext`, `FilesService`, `ConnectionsManager`,
   `FlowsContext`, `RunContext`, `TriggerHookContext` and `SetScheduleRequest`;
   the connection shapes from `AppConnectionType` and `AppConnectionValue`.
-  `PackagePiece`, `ReactorService` and `DEDUPE_KEY_PROPERTY` are the framework's
-  own Powerhouse half.
+  `PackagePiece`, `RequireReactor`, `ReactorClient`, `ReactorReadClient`, the
+  reactor error names and `DEDUPE_KEY_PROPERTY` are the framework's own
+  Powerhouse half.
 - The **enums stay strings here**. A piece bundle inlines its own copy of the
   framework, so a `PropertyType` or `TriggerStrategy` read off one shares no
   identity with ours. Every such value is compared as a string; nothing in
@@ -51,6 +52,10 @@ rather than restated here.
   `apfile://` refs, the size ceiling and a host-injected fetcher have no
   upstream equivalent. An `ApFile` a processor builds is flattened to a plain
   object at that boundary: a class instance does not survive the worker IPC.
+  Its `base64` is computed on first read, as upstream's getter is, so a piece
+  that only reads `data` holds one copy of the file. A `streaming: true` FILE
+  prop gets upstream's `ApStreamingFile` instead: `{ filename, extension,
+  size, body }`, with `body` read from the staged file or the network.
 - **Prop validation**, from the same place. Before an action's `run()` or any
   trigger hook but `onDisable`, a prop left unset takes its `defaultValue` and
   the coerced values go through the engine's `validateProperty`. A failure is
@@ -142,6 +147,17 @@ transport finds that child's code by walking up to this package's own
 `package.json` and reading `dist/worker-entry.js`, so `pnpm build` must have run
 before anything executes a piece — including the suites here.
 
+That entry is `src/worker/entry.ts`: the piece worker from `src/pieces`, plus
+`ctx.reactor` (`src/worker/reactor.ts`), which needs `@powerhousedao/reactor`
+and so lives outside the piece layer. For an action, trigger or option resolver
+that declares `requireReactor`, the host serves one `ReactorHostServer` per
+request over the child's IPC channel, as `{ type: "reactor-rpc", requestId,
+message }`; the worker builds a reactor RPC proxy per request and closes it when
+the request settles. The boot document models reach the child on fork as
+`{ type: "model-manifest", entries }`. A type the host loaded later is looked
+up with a `model-entries` host call the first time a piece asks for it. Either
+way the model is imported on first use.
+
 ## Blocks
 
 A step names its block the way Activepieces does, with three fields:
@@ -195,7 +211,9 @@ step tests. A block whose version is not an exact semver resolves to `missing`.
    note). At most five candidates are described per resolution.
 4. **Host-bound pieces** (`@powerhousedao/piece-core`,
    `@powerhousedao/piece-reactor`) always run the installed copy, with match
-   `installed`.
+   `installed`. Both ship with this runtime's packages and version with it;
+   `piece-reactor` reaches the reactor through `requireReactor` like any
+   other piece.
 5. **Missing** is the only failure: no source has the piece, or none of the
    candidates described has an action or trigger of that name.
 
@@ -284,6 +302,7 @@ explanation behind it.
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
 | `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
+| `PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES` | `1073741824`       | Downloaded attachments kept on disk by content (`engine/attachment-cache.ts`); `0` is off |
 | `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | unset (off)        | Deletes finished runs older than this many days (`reactor/run-retention.ts`)              |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
@@ -357,6 +376,32 @@ expires and rotates that secret in place.
 Token requests leave from the reactor process, so they are held to the egress
 policy pieces run under: `https` to a public address, or an address named in
 `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES`, over `http` too.
+
+## Files and attachments
+
+Bytes never cross the worker's IPC channel; host and worker share
+`.ph/ap-attachment-staging/<uuid>`, one directory per step, removed when the
+step returns. Directories a crashed host left behind are swept at startup.
+
+- **In.** The host downloads every `attachment://` ref in a step's config into
+  the step's directory, counting bytes against
+  `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES` as they arrive. Downloads land in a
+  content-addressed cache first (`.ph/ap-attachment-cache`), so a later step
+  or run reuses them; a step gets a copy (a clone where the filesystem has
+  them), never the cache file. A URL is fetched by the worker, and its body is
+  counted as it arrives too.
+- **Out.** `ctx.files.write` takes a Buffer or a Readable and writes it into
+  the step's directory under the ceiling. After the step the host ingests each
+  file, hashing and uploading it from disk, and refuses any path the step did
+  not write: outside its directory, a symlink or a hard link.
+- **Who may read.** A run reads the refs its own steps wrote, and the refs its
+  journaled steps already held on a rerun or a step test. Anything else is the
+  host's call (`canReadAttachmentRef`), made against the documents the run was
+  handed: the trigger's and those its steps read. Switchboard allows a ref
+  when the run's user may read one of those documents and that document
+  references it, as its download route does; a cached copy is served only
+  after the same check.
+- **Time.** Staging and ingest count against the step's timeout.
 
 ## Known missing features
 
@@ -453,6 +498,19 @@ releases what an earlier enable registered. The reason reads
 - `flows.current.version.id` is a constant. `project.id` is `reactor` on
   every reactor: the reactor is the project, as it is for `ctx.store`'s
   PROJECT scope.
+
+**Files**
+
+- Trigger hooks cannot read `attachment://` refs, and a trigger's
+  `ctx.files.write` returns an inline data URI rather than a ref.
+- A webhook body that is not JSON or form data is decoded as UTF-8 text, so
+  binary and multipart deliveries are corrupted.
+- A step cannot read back a file it wrote: its `apfile://` token only becomes
+  a ref once the step returns.
+- A Buffer or `ApFile` returned in an output is serialized as a JSON number
+  array, not ingested as a file.
+- A written file's content type is inferred from ten extensions; others are
+  `application/octet-stream`.
 
 **Piece**
 

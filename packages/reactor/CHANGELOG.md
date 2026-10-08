@@ -1,3 +1,93 @@
+## 6.2.3-dev.49 (2026-10-08)
+
+### 🚀 Features
+
+- **reactor:** throw BatchJobFailedError carrying every batch job's state ([b5a3c0eeb8](https://github.com/powerhouse-inc/powerhouse/commit/b5a3c0eeb8))
+
+### 🩹 Fixes
+
+- **reactor:** narrow BatchJobFailedError.isError on its fields, not the name alone ([ff9a4adb3c](https://github.com/powerhouse-inc/powerhouse/commit/ff9a4adb3c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.48 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.47 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **reactor:** one JOB_FAILED per terminal failure, carrying the typed error ([155017155b](https://github.com/powerhouse-inc/powerhouse/commit/155017155b))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **reactor:** emit one JOB_FAILED, with the job, when a deferral expires ([405912ac74](https://github.com/powerhouse-inc/powerhouse/commit/405912ac74))
+- **reactor:** emit JOB_FAILED once and log failed jobs by id ([1c38379dbf](https://github.com/powerhouse-inc/powerhouse/commit/1c38379dbf))
+- **reactor:** refuse to index a scope state resultingState does not carry ([8508e74ad6](https://github.com/powerhouse-inc/powerhouse/commit/8508e74ad6))
+- **reactor:** records-guard resolves Git Bash and fails closed without its tools ([0580ac1262](https://github.com/powerhouse-inc/powerhouse/commit/0580ac1262))
+- **reactor:** spawn pnpm by the entry point pnpm exports ([e04832e189](https://github.com/powerhouse-inc/powerhouse/commit/e04832e189))
+- **reactor:** separate bench record paths with "/" on every platform ([3c558a5a11](https://github.com/powerhouse-inc/powerhouse/commit/3c558a5a11))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
+## 6.2.3-dev.45 (2026-10-06)
+
+### 🚀 Features
+
+- ⚠️  **reactor-workflow:** let any workflow piece read and write documents through the reactor ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### 🩹 Fixes
+
+- **pglite:** bound the old-dir removal after conversion ([0aef46f0ca](https://github.com/powerhouse-inc/powerhouse/commit/0aef46f0ca))
+- **pglite:** open files read-write for the tree sync ([ce0fa23af5](https://github.com/powerhouse-inc/powerhouse/commit/ce0fa23af5))
+- **switchboard:** resolve the legacy pg_dump wasm path on Windows ([c35148183a](https://github.com/powerhouse-inc/powerhouse/commit/c35148183a))
+
+### 🔥 Performance
+
+- **pglite:** sync the tree once after initdb, conversion and migration ([9ec8caf970](https://github.com/powerhouse-inc/powerhouse/commit/9ec8caf970))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** let any workflow piece read and write documents through the reactor  ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.44 (2026-10-06)
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods and timestamps to UTC ([#3175](https://github.com/powerhouse-inc/powerhouse/pull/3175))
+- **reactor:** make the reactor suite pass on Windows ([#3171](https://github.com/powerhouse-inc/powerhouse/pull/3171))
+- **reactor:** emit one JOB_FAILED per terminal failure ([#3173](https://github.com/powerhouse-inc/powerhouse/pull/3173))
+- **reactor:** let retry() on an owed deletion wait out the failed delivery ([917e7b05ce](https://github.com/powerhouse-inc/powerhouse/commit/917e7b05ce))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.43 (2026-10-05)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

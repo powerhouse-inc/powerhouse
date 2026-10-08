@@ -3,6 +3,7 @@ import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   ActivepiecesBlockExecutor,
+  AttachmentCache,
   BoundConnectionResolver,
   CompositeBlockExecutor,
   sourcedResolver,
@@ -17,6 +18,7 @@ import {
   type PieceStorePort,
   type ResolvedConnection,
   type EgressPolicy,
+  type ActivepiecesBlockExecutorOptions,
   type SecretProvider,
   type WorkflowDefinition,
 } from "../pieces/index.js";
@@ -26,6 +28,7 @@ import type {
 } from "@powerhousedao/workflow/document-models/connection";
 import type { WorkflowState } from "@powerhousedao/workflow/document-models/workflow";
 import { childLogger } from "document-model";
+import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
   currentBoundConnections,
@@ -36,10 +39,10 @@ import {
 } from "./run-scope.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { packagePieces } from "./piece-registry.js";
-import { SubgraphReactorPort } from "./reactor-port.js";
 import { packageFromConnectorId } from "./connector-id.js";
 import { runnableDefinition, type RunnableDefinition } from "./runnable.js";
 import type { OAuthTokenRefresher } from "./oauth.js";
+import type { WorkflowTelemetry } from "../telemetry.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
 const connectionLogger = childLogger(["workflow", "connection"]);
@@ -206,6 +209,44 @@ export const ATTACHMENT_STAGING_DIR = join(
   "ap-attachment-staging",
 );
 
+// Downloaded attachments kept by content, so later steps and runs reuse them.
+export const ATTACHMENT_CACHE_DIR = join(
+  process.cwd(),
+  ".ph",
+  "ap-attachment-cache",
+);
+
+const DEFAULT_ATTACHMENT_CACHE_BYTES = 1024 * 1024 * 1024;
+
+// PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES; 0 turns the cache off.
+export function attachmentCacheBytes(): number {
+  const raw = process.env.PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES;
+  const parsed = raw === undefined ? NaN : Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0
+    ? Math.floor(parsed)
+    : DEFAULT_ATTACHMENT_CACHE_BYTES;
+}
+
+// A step removes its own directory; this clears what a crashed host left.
+// Only entries older than a step could run, so a live step is never swept.
+export async function sweepAttachmentStaging(
+  root: string = ATTACHMENT_STAGING_DIR,
+  olderThanMs = 60 * 60 * 1000,
+): Promise<number> {
+  const names = await readdir(root).catch(() => [] as string[]);
+  let swept = 0;
+  for (const name of names) {
+    const entry = join(root, name);
+    const info = await stat(entry).catch(() => undefined);
+    if (!info || Date.now() - info.mtimeMs < olderThanMs) continue;
+    await rm(entry, { recursive: true, force: true });
+    swept += 1;
+  }
+  return swept;
+}
+
+let stagingSwept = false;
+
 // Fetches a piece from the source its resolution chose. One instance: a run
 // and the editor must load the same bytes for the same resolution.
 let resolver: PieceResolver | undefined;
@@ -244,9 +285,25 @@ export function createBlockExecutor(
   // The runtime's resolution policy, shared with triggers and design time.
   resolveBlock?: (block: BlockRef) => Promise<BlockResolution>,
   oauth?: OAuthTokenRefresher,
+  reactorAccess?: ActivepiecesBlockExecutorOptions["reactorAccess"],
+  telemetry?: WorkflowTelemetry,
 ): BlockExecutor {
-  // No handler map: the document blocks are a piece now, and they reach the
-  // reactor through the port below like any other package piece would.
+  if (attachments && !stagingSwept) {
+    stagingSwept = true;
+    void sweepAttachmentStaging().then(
+      (swept) => {
+        if (swept > 0) {
+          pieceLogger.info(
+            `Removed ${swept} leftover attachment staging dir(s)`,
+          );
+        }
+      },
+      () => undefined,
+    );
+  }
+  const cacheBytes = attachmentCacheBytes();
+  // The document blocks are a piece; they reach the reactor through
+  // reactorAccess like any other declaring piece.
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: bundleCacheDir(),
@@ -266,9 +323,8 @@ export function createBlockExecutor(
       }),
       resolver: pieceResolver(),
       ...(resolveBlock ? { resolveBlock } : {}),
-      // Served only to a piece this reactor's packages ship; the executor
-      // withholds it from everything the resolver fetched.
-      reactor: new SubgraphReactorPort(host),
+      ...(reactorAccess ? { reactorAccess } : {}),
+      ...(telemetry ? { telemetry } : {}),
       connections: boundConnections(
         new DocumentConnectionResolver(host, secrets, oauth),
       ),
@@ -287,7 +343,18 @@ export function createBlockExecutor(
       // inline as a data URI; with one, bytes go to the store and the output
       // carries a reference.
       ...(attachments
-        ? { attachments, stagingRoot: ATTACHMENT_STAGING_DIR }
+        ? {
+            attachments,
+            stagingRoot: ATTACHMENT_STAGING_DIR,
+            ...(cacheBytes > 0
+              ? {
+                  attachmentCache: new AttachmentCache({
+                    dir: ATTACHMENT_CACHE_DIR,
+                    maxBytes: cacheBytes,
+                  }),
+                }
+              : {}),
+          }
         : {}),
     }),
   );
@@ -318,6 +385,7 @@ export function stepDefinition(
     pieceVersion: step.pieceVersion,
     actionName: step.actionName,
     connectionId: step.connectionId,
+    reactorConnectionId: step.reactorConnectionId,
     config: step.config,
     timeoutSeconds: step.timeoutSeconds,
     propertySettings: propertySettings(step.propertySettings),
@@ -339,6 +407,7 @@ export function toWorkflowDefinition(state: WorkflowState): WorkflowDefinition {
       pieceVersion: runnable.trigger.pieceVersion,
       triggerName: runnable.trigger.triggerName,
       connectionId: runnable.trigger.connectionId,
+      reactorConnectionId: runnable.trigger.reactorConnectionId,
       config: runnable.trigger.config,
       propertySettings: propertySettings(runnable.trigger.propertySettings),
     },

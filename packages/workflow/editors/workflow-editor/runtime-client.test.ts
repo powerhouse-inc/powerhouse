@@ -9,6 +9,7 @@ import {
   testStepMutation,
 } from "./runtime-queries.js";
 import { runtimeKeys } from "./ui/query-keys.js";
+import { schemaFetch } from "../../test/runtime-schema.js";
 
 const ambientRenownTokenProvider = vi.fn();
 
@@ -167,13 +168,17 @@ describe("blockResolutions", () => {
       note: "Pinned 1.1.0 is not available; runs 1.2.0 from registry",
       latestVersion: "2.0.0",
     };
-    const { bodies, client } = answering({ blockResolutions: [resolution] });
+    // Executed against the real schema: a field left unselected drops out.
+    const server = schemaFetch({
+      blockResolutions: ({ workflowId }: { workflowId: string }) =>
+        workflowId === "wf-1" ? [resolution] : [],
+    });
+    const client = runtimeClient.createRuntimeClient("http://a/rt", {
+      fetch: server.fetch,
+      token: () => Promise.resolve(null),
+    });
 
     expect(await client.blockResolutions("wf-1")).toEqual([resolution]);
-    expect(bodies[0].variables).toEqual({ workflowId: "wf-1" });
-    for (const field of Object.keys(resolution)) {
-      expect(bodies[0].query).toContain(field);
-    }
   });
 });
 
@@ -353,5 +358,112 @@ describe("the paged runs listing", () => {
       "r2",
       "r1",
     ]);
+  });
+});
+
+describe("reactor access in block forms", () => {
+  it("carries a block's requireReactor declaration into its form", async () => {
+    const descriptor = (requireReactor?: string) => ({
+      workflowRuntime: {
+        blockDescriptor: {
+          displayName: "Docs",
+          action: {
+            displayName: "Archive",
+            requireAuth: false,
+            ...(requireReactor ? { requireReactor } : {}),
+            props: [],
+          },
+        },
+      },
+    });
+    const answers = [descriptor("write"), descriptor(), descriptor("admin")];
+    const client = runtimeClient.createRuntimeClient("http://a/graphql", {
+      fetch: () => Promise.resolve(jsonResponse(answers.shift())),
+      token: () => Promise.resolve(null),
+    });
+    const block = {
+      pieceName: "@acme/piece-docs",
+      pieceVersion: "1.0.0",
+      kind: "action" as const,
+      name: "archive",
+    };
+
+    expect((await client.getBlockForm(block))?.requireReactor).toBe("write");
+    expect(await client.getBlockForm(block)).not.toHaveProperty(
+      "requireReactor",
+    );
+    // Only the two declarations the runtime honours.
+    expect(await client.getBlockForm(block)).not.toHaveProperty(
+      "requireReactor",
+    );
+  });
+
+  it("resolves options within the step's reactor connection", async () => {
+    const sent: Record<string, unknown>[] = [];
+    const client = runtimeClient.createRuntimeClient("http://a/graphql", {
+      fetch: (_url, init) => {
+        sent.push(
+          (
+            JSON.parse(init?.body as string) as {
+              variables: Record<string, unknown>;
+            }
+          ).variables,
+        );
+        return Promise.resolve(
+          jsonResponse({ workflowRuntime: { blockOptions: { options: [] } } }),
+        );
+      },
+      token: () => Promise.resolve(null),
+    });
+    const block = {
+      pieceName: "@acme/piece-docs",
+      pieceVersion: "1.0.0",
+      kind: "action" as const,
+      name: "archive",
+    };
+    await client.loadBlockOptions(
+      block,
+      "doc",
+      {},
+      undefined,
+      undefined,
+      "rc-1",
+    );
+    await client.loadBlockOptions(block, "doc", {});
+    expect(sent.map((variables) => variables.reactorConnectionId)).toEqual([
+      "rc-1",
+      null,
+    ]);
+  });
+
+  it("drops an unknown declaration", async () => {
+    const client = runtimeClient.createRuntimeClient("http://a/graphql", {
+      fetch: () =>
+        Promise.resolve(
+          jsonResponse({
+            workflowRuntime: {
+              blockDescriptor: {
+                displayName: "Docs",
+                action: {
+                  displayName: "Archive",
+                  requireAuth: false,
+                  requireReactor: "admin",
+                  props: [],
+                },
+              },
+            },
+          }),
+        ),
+      token: () => Promise.resolve(null),
+    });
+    const block = {
+      pieceName: "@acme/piece-docs",
+      pieceVersion: "1.0.0",
+      kind: "action" as const,
+      name: "archive",
+    };
+    expect(await client.getBlockForm(block)).not.toHaveProperty(
+      "requireReactor",
+    );
   });
 });

@@ -366,6 +366,8 @@ interface SelectProps {
   onQueryChange?: (query: string) => void;
   // Extra actions at the foot of the list; each closes it when chosen.
   actions?: SelectAction[];
+  // Shown for a value the options don't list yet, instead of the raw value.
+  valueLabel?: ReactNode;
 }
 
 export interface SelectAction {
@@ -591,11 +593,15 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
         <span
           className={`min-w-0 flex-1 truncate ${shown.length ? "" : "text-muted-foreground/70"}`}
         >
-          {shown.length > 0
-            ? shown.join(", ")
-            : props.loading
-              ? "Loading…"
-              : (props.placeholder ?? "Choose…")}
+          {labels.length === 0 &&
+          unknown.length > 0 &&
+          props.valueLabel !== undefined
+            ? props.valueLabel
+            : shown.length > 0
+              ? shown.join(", ")
+              : props.loading
+                ? "Loading…"
+                : (props.placeholder ?? "Choose…")}
         </span>
         {props.multiple && shown.length > 1 ? (
           <span className="shrink-0 rounded bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">

@@ -8,13 +8,13 @@ import {
   type KeyValueStore,
 } from "./action.js";
 import type { ConnectionsProvider, FlowsProvider } from "./props.js";
+import type { ReactorOption } from "./reactor-option.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
 import type { ApFilesService } from "./files.js";
 import type {
   TriggerStrategy,
   InputPropertyMap,
-  ReactorService,
   ServerContext,
   SetScheduleRequest,
   TestOrRunHookContext,
@@ -83,7 +83,9 @@ export function validateSchedule(request: RecordedSchedule): RecordedSchedule {
   return { cronExpression: request.cronExpression, timezone };
 }
 
-export interface TriggerContextOptions {
+export type TriggerContextOptions = TriggerContextBaseOptions & ReactorOption;
+
+interface TriggerContextBaseOptions {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   store?: KeyValueStore;
@@ -104,20 +106,14 @@ export interface TriggerContextOptions {
   server?: ServerContext;
   // run/test hooks only per the AP contract; omitted members throw, named.
   files?: ApFilesService;
-  // ctx.reactor. Served only to a piece the host loaded from an installed
-  // reactor package; for every other piece the member throws by name, the
-  // same typed refusal an action gets.
-  reactor?: ReactorService;
   onTouch?: (member: string) => void;
 }
 
 // One shape for every strategy: the framework splits TriggerHookContext by
 // TriggerStrategy, but a bundle's declared strategy is not known at build time.
-// `reactor` is the Powerhouse member PowerhouseTriggerHookContext promises;
-// it is always present, real or throwing.
 export type BuiltApTriggerContext = HookContextFor<TriggerStrategy.POLLING> &
   HookContextFor<TriggerStrategy.WEBHOOK> &
-  HookContextFor<TriggerStrategy.APP_WEBHOOK> & { reactor: ReactorService };
+  HookContextFor<TriggerStrategy.APP_WEBHOOK>;
 
 export interface TriggerContextHandle {
   context: BuiltApTriggerContext;

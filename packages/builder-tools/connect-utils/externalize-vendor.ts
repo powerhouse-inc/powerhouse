@@ -340,10 +340,10 @@ function sameSet(a: string[] | undefined, b: string[]): boolean {
 
 // Exclusive lock via mkdir (atomic on POSIX). The holder heartbeats an owner
 // file so a live (slow) build keeps it fresh; a crashed builder lets it go stale.
-const LOCK_STALE_MS = 5 * 60_000;
+export const LOCK_STALE_MS = 5 * 60_000;
 const LOCK_HEARTBEAT_MS = 60_000;
 
-interface VendorLock {
+export interface VendorLock {
   dir: string;
   token: string;
   timer: ReturnType<typeof setInterval>;
@@ -361,7 +361,7 @@ function lockIsStale(lockDir: string): boolean {
   }
 }
 
-function acquireLock(lockDir: string): VendorLock | null {
+export function acquireLock(lockDir: string): VendorLock | null {
   let made = false;
   try {
     mkdirSync(lockDir);
@@ -398,7 +398,7 @@ function acquireLock(lockDir: string): VendorLock | null {
 
 // Remove only if we still own it — a stale-reclaim may have handed the lock to
 // another builder, whose dir we must not delete.
-function releaseLock(lock: VendorLock): void {
+export function releaseLock(lock: VendorLock): void {
   clearInterval(lock.timer);
   try {
     if (readFileSync(ownerFile(lock.dir), "utf8") === lock.token) {

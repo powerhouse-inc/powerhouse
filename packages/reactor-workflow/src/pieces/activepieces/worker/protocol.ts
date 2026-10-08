@@ -14,6 +14,8 @@ export interface StagedInput {
   path: string;
   fileName?: string;
   contentType?: string;
+  // Why the host could not stage it; a FILE prop that needs it fails with this.
+  error?: string;
 }
 
 // Where a piece may connect to while this request runs. Enforced in the child
@@ -46,6 +48,41 @@ export interface HostScopedRequest {
   hostCallTimeoutMs?: number;
 }
 
+// `ctx.reactor` for one request: its RPC messages carry `requestId`, and the
+// host serves them only while the request is in flight.
+export interface ReactorRequestBinding {
+  requestId: string;
+  requireReactor: "read" | "write";
+}
+
+export interface ReactorScopedRequest {
+  // Stamped by PieceWorker when the caller serves the reactor.
+  reactor?: ReactorRequestBinding;
+}
+
+export const REACTOR_RPC = "reactor-rpc";
+export const MODEL_MANIFEST = "model-manifest";
+// Host call: a type's entries, or every entry the host knows without one.
+export const MODEL_ENTRIES = "model-entries";
+
+// One reactor RPC message (`@powerhousedao/reactor/rpc`), either direction.
+export interface ReactorRpcEnvelope {
+  type: typeof REACTOR_RPC;
+  requestId: string;
+  message: unknown;
+}
+
+// Importable document models (the reactor's ModelManifestEntry), host to child
+// on fork. A type loaded later is looked up through MODEL_ENTRIES.
+export interface ModelEntriesPayload {
+  documentType?: string;
+}
+
+export interface ModelManifestMessage {
+  type: typeof MODEL_MANIFEST;
+  entries: unknown[];
+}
+
 // Where the worker finds the piece module: a bundle directory in npm shape, as
 // a registry fetch extracts it, or the module file of an installed package.
 
@@ -55,7 +92,8 @@ export interface PieceModuleRef {
   entryPath?: string;
 }
 
-export interface RunActionRequest extends HostScopedRequest, PieceModuleRef {
+export interface RunActionRequest
+  extends HostScopedRequest, PieceModuleRef, ReactorScopedRequest {
   actionName: string;
   propsValue: Record<string, unknown>;
   auth?: unknown;
@@ -88,9 +126,6 @@ export interface RunActionRequest extends HostScopedRequest, PieceModuleRef {
   // Concrete secret values resolved for this step, so the child can strip them
   // from an error before it crosses back; they already travel inside `auth`.
   redactValues?: string[];
-  // Serve `ctx.reactor` over the call channel. Set only for a piece the host
-  // loaded from an installed reactor package; a fetched bundle never gets it.
-  reactorAccess?: boolean;
 }
 
 export interface RunMessage {
@@ -101,7 +136,7 @@ export interface RunMessage {
 
 // Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
 export interface ResolveOptionsRequest
-  extends HostScopedRequest, PieceModuleRef {
+  extends HostScopedRequest, PieceModuleRef, ReactorScopedRequest {
   // Action or trigger name, per kind (default "action").
   actionName: string;
   kind?: "action" | "trigger";
@@ -111,9 +146,6 @@ export interface ResolveOptionsRequest
   searchValue?: string;
   // ctx.project.id, the same one a run of the piece is handed.
   projectId?: string;
-  // As on a run: an options() resolver of a package piece may read the reactor
-  // it is offering choices from.
-  reactorAccess?: boolean;
 }
 
 export interface ResolveOptionsMessage {
@@ -127,7 +159,8 @@ export interface ResolveOptionsMessage {
 
 // Without one it runs statelessly: `storeState` seeds an in-memory store and
 // the whole snapshot comes back in the response for the caller to persist.
-export interface TriggerHookRequest extends HostScopedRequest, PieceModuleRef {
+export interface TriggerHookRequest
+  extends HostScopedRequest, PieceModuleRef, ReactorScopedRequest {
   triggerName: string;
   hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake" | "onRenew";
   propsValue: Record<string, unknown>;
@@ -145,10 +178,6 @@ export interface TriggerHookRequest extends HostScopedRequest, PieceModuleRef {
   server?: ServerContext;
   // As on a run request: secrets stripped from errors before they cross back.
   redactValues?: string[];
-  // Serve `ctx.reactor` over the call channel, exactly as RunActionRequest
-  // does: set only for a piece the host loaded from an installed reactor
-  // package, so a trigger can read documents on the same terms as a step.
-  reactorAccess?: boolean;
 }
 
 export interface TriggerHookMessage {
@@ -236,6 +265,7 @@ export interface ResultResponse {
   storeState?: Record<string, unknown>;
   schedules?: RecordedSchedule[];
   listeners?: RecordedListener[];
+  timings?: WorkerTimings;
 }
 
 export interface ErrorResponse {
@@ -243,6 +273,27 @@ export interface ErrorResponse {
   type: "error";
   error: SerializedPieceError;
   tlsPoisoned: boolean;
+  timings?: WorkerTimings;
+}
+
+// One part of serving a request, in epoch ms: piece.load, reactor.open,
+// models, action.
+export interface WorkerPhaseTiming {
+  name: string;
+  start: number;
+  end: number;
+  // The phase this one ran inside, e.g. "action" for a model loaded mid-action.
+  parent?: string;
+  attributes?: Record<string, string | boolean>;
+}
+
+// Where a request's time went inside the child, in epoch ms.
+export interface WorkerTimings {
+  received: number;
+  sent: number;
+  phases: WorkerPhaseTiming[];
+  // When the child's entry finished loading; on its first response only.
+  ready?: number;
 }
 
 export type WorkerResponse = ResultResponse | ErrorResponse;
@@ -305,14 +356,3 @@ export const OUTPUT_UPDATE = "output.update";
 export const STORE_GET = "store.get";
 export const STORE_PUT = "store.put";
 export const STORE_DELETE = "store.delete";
-
-// A reactor call carries the operation's own input object; the host answers
-// with documents already projected to summaries (see context/reactor.ts).
-export const REACTOR_MODELS = "reactor.models";
-export const REACTOR_MODEL = "reactor.model";
-export const REACTOR_GET = "reactor.get";
-export const REACTOR_FIND = "reactor.find";
-// A write is submitted, then waited on in slices under the host-call cap.
-export const REACTOR_SUBMIT = "reactor.submit";
-export const REACTOR_WAIT = "reactor.wait";
-export const REACTOR_SUBMIT_CREATE = "reactor.submitCreate";
