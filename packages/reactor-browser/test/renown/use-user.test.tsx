@@ -74,7 +74,7 @@ function Probe({ log }: { log: (u: User | undefined) => void }) {
   return <span data-testid="did">{current?.did ?? "none"}</span>;
 }
 
-function renderProbe(
+async function renderProbe(
   initialAuth: RenownInitialAuth,
   log: (u: User | undefined) => void,
 ) {
@@ -104,7 +104,7 @@ describe("useUser", () => {
   it("keeps the seed (and its identity) when the SDK restores the same user", async () => {
     const seed = user();
     const seen: (User | undefined)[] = [];
-    const screen = renderProbe(authenticated(seed), (u) => seen.push(u));
+    const screen = await renderProbe(authenticated(seed), (u) => seen.push(u));
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
 
     setRenown(null); // SDK building
@@ -121,7 +121,7 @@ describe("useUser", () => {
   it("keeps the seed while the SDK is still checking, then takes the emitted user", async () => {
     const seed = user();
     const seen: (User | undefined)[] = [];
-    const screen = renderProbe(authenticated(seed), (u) => seen.push(u));
+    const screen = await renderProbe(authenticated(seed), (u) => seen.push(u));
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
 
     const instance = fakeInstance(undefined, "checking");
@@ -140,7 +140,7 @@ describe("useUser", () => {
   it("takes a changed user even when only a nested field differs", async () => {
     const seed = user();
     const seen: (User | undefined)[] = [];
-    const screen = renderProbe(authenticated(seed), (u) => seen.push(u));
+    const screen = await renderProbe(authenticated(seed), (u) => seen.push(u));
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
 
     const resigned = reorderedUser();
@@ -154,7 +154,7 @@ describe("useUser", () => {
   });
 
   it("drops a stale seed when the SDK restored nothing", async () => {
-    const screen = renderProbe(authenticated(user()), () => undefined);
+    const screen = await renderProbe(authenticated(user()), () => undefined);
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
 
     setRenown(fakeInstance(undefined, "initial"));
@@ -164,7 +164,7 @@ describe("useUser", () => {
   it("clears on sign-out", async () => {
     const instance = fakeInstance(user(), "authorized");
     setRenown(instance);
-    const screen = renderProbe(authenticated(user()), () => undefined);
+    const screen = await renderProbe(authenticated(user()), () => undefined);
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
 
     instance.emitUser(undefined);
@@ -177,14 +177,14 @@ describe("useUser", () => {
     const seen: (User | undefined)[] = [];
     const seed = user();
     const log = (u: User | undefined) => seen.push(u);
-    const screen = render(
+    const screen = await render(
       <RenownInitialUserProvider initialAuth={RENOWN_INITIAL_UNKNOWN}>
         <Probe log={log} />
       </RenownInitialUserProvider>,
     );
     await expect.element(screen.getByTestId("did")).toHaveTextContent("none");
 
-    screen.rerender(
+    await screen.rerender(
       <RenownInitialUserProvider initialAuth={authenticated(seed)}>
         <Probe log={log} />
       </RenownInitialUserProvider>,
