@@ -278,13 +278,12 @@ describe("AttachmentReplicator", () => {
       jobId: "job-1",
       operations: [operation(REF), operation(REF, OTHER_DOC)],
     });
+    expect(h.replicator.report()[0].documentIds).toEqual([DOC, OTHER_DOC]);
     await h.replicator.idle();
     await h.bus.fire({ jobId: "job-2", operations: [operation(REF)] });
     await h.replicator.idle();
 
     expect(h.fetches).toHaveLength(1);
-    const entry = h.replicator.report()[0];
-    expect(entry.documentIds).toEqual([DOC, OTHER_DOC]);
     await h.replicator.stop();
   });
 
@@ -616,5 +615,59 @@ describe("AttachmentReplicator", () => {
 
     expect((await h.replicator.status()).backlogScanned).toBe(false);
     await h.replicator.stop();
+  });
+
+  it("drops a held hash's entry and remembers held hashes only up to the limit", async () => {
+    const payloads = ["one", "two", "three"].map((text) =>
+      new TextEncoder().encode(text),
+    );
+    const transport: IAttachmentTransport = {
+      fetch: () => Promise.reject(new Error("nothing should be fetched")),
+      announce: () => Promise.resolve(),
+      push: () => Promise.resolve(),
+    };
+    const store = new LocalAttachmentStore(
+      new MemoryAttachmentBackend(),
+      transport,
+    );
+    const refs: AttachmentRef[] = [];
+    for (const bytes of payloads) {
+      const hash = await sha256Hex(bytes);
+      await store.putLocal(
+        hash,
+        { ...metadata(), sizeBytes: bytes.byteLength },
+        streamFromBytes(bytes),
+      );
+      refs.push(`attachment://v1:${hash}` as AttachmentRef);
+    }
+    const bus = testBus();
+    const replicator = new AttachmentReplicator({
+      store,
+      transport,
+      refs: anyRefInInput,
+      eventBus: bus,
+      timers: manualTimers(),
+      heldHashLimit: 2,
+    });
+    replicator.start();
+
+    await bus.fire({
+      jobId: "job-1",
+      operations: refs.map((ref) => operation(ref)),
+    });
+    await replicator.idle();
+
+    expect(replicator.report()).toEqual([]);
+    const status = await replicator.status();
+    expect(status.held).toBe(2);
+    expect(status.refsSeen).toBe(2);
+
+    // The evicted hash comes back as an entry and is confirmed from the store.
+    await bus.fire({ jobId: "job-2", operations: [operation(refs[0])] });
+    await replicator.idle();
+    expect(replicator.report()).toEqual([]);
+    expect((await replicator.status()).held).toBe(2);
+    expect((await replicator.status()).failed).toBe(0);
+    await replicator.stop();
   });
 });

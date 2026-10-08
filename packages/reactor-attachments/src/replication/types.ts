@@ -21,7 +21,8 @@ export interface IOperationAttachmentRefs {
  *
  * - `queued`: known missing locally, waiting for a concurrency slot.
  * - `fetching`: a transport fetch is in flight.
- * - `held`: the bytes are in the local store. Terminal and the goal.
+ * - `held`: the bytes are in the local store. Terminal and the goal; a held
+ *   hash leaves the report.
  * - `waiting`: the last answer was `pending`, a bounded `not-found` (see
  *   {@link AttachmentRetryPolicy.notFoundAttempts}), or a transport error; a
  *   retry is scheduled.
@@ -75,6 +76,9 @@ export const DEFAULT_ATTACHMENT_RETRY_POLICY: AttachmentRetryPolicy = {
 /** Default bounded concurrency for in-flight attachment fetches. */
 export const DEFAULT_ATTACHMENT_REPLICATION_CONCURRENCY = 3;
 
+/** Default number of held hashes a replicator remembers after dropping their entries. */
+export const DEFAULT_ATTACHMENT_HELD_HASH_LIMIT = 10_000;
+
 /** Default page size for the boot re-scan over the reference backlog. */
 export const DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE = 200;
 
@@ -91,9 +95,9 @@ export const DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE = 200;
 export type AttachmentReplicatorStatus = {
   /** Whether the replicator is subscribed and scheduling. */
   running: boolean;
-  /** Distinct hashes this replicator has ever been told about. */
+  /** Distinct hashes tracked: every entry plus the remembered held hashes. */
   refsSeen: number;
-  /** Hashes whose bytes are in the local store. */
+  /** Remembered held hashes, at most `heldHashLimit`. */
   held: number;
   /** `storageUsed()` of the local store, in bytes. */
   bytesHeld: number;

@@ -17,6 +17,7 @@ import { collectStream, streamFromBytes } from "../storage/local/bytes.js";
 import { sha256Hex } from "./hash.js";
 import {
   DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE,
+  DEFAULT_ATTACHMENT_HELD_HASH_LIMIT,
   DEFAULT_ATTACHMENT_REPLICATION_CONCURRENCY,
   DEFAULT_ATTACHMENT_RETRY_POLICY,
   type AttachmentReplicationEntry,
@@ -63,6 +64,11 @@ export type AttachmentReplicatorOptions = {
   retry?: Partial<AttachmentRetryPolicy>;
   backlogPageSize?: number;
   /**
+   * Held hashes remembered after their entry is dropped, oldest evicted first.
+   * An evicted hash referenced again costs one `store.has()`, never a fetch.
+   */
+  heldHashLimit?: number;
+  /**
    * Whether fetched bytes are hashed and checked against the hash they were
    * requested under. Defaults to true: a local peer transport means the bytes
    * come from another reactor rather than from a trusted server, and a
@@ -105,9 +111,10 @@ type Entry = {
  * second truth that is wrong in the one direction that loses data.
  *
  * Loop-safety is structural: one entry per hash, created once, and a terminal
- * entry (`held`, `not-found`, `failed`) is never re-queued by a further
- * reference to the same hash. Only {@link AttachmentReplicator.retry} moves a
- * terminal entry back, and only when something asks.
+ * entry (`not-found`, `failed`) is never re-queued by a further reference to
+ * the same hash. Only {@link AttachmentReplicator.retry} moves a terminal entry
+ * back, and only when something asks. A held hash drops its entry and is
+ * remembered in a bounded set, so the map holds only unfinished work.
  */
 export class AttachmentReplicator {
   private readonly store: IAttachmentStore;
@@ -118,11 +125,13 @@ export class AttachmentReplicator {
   private readonly concurrency: number;
   private readonly policy: AttachmentRetryPolicy;
   private readonly backlogPageSize: number;
+  private readonly heldHashLimit: number;
   private readonly verifyHash: boolean;
   private readonly timers: ReplicationTimers;
   private readonly onDiagnostic: (message: string, error?: unknown) => void;
 
   private readonly entries = new Map<AttachmentHash, Entry>();
+  private readonly heldHashes = new Set<AttachmentHash>();
   private readonly queue: AttachmentHash[] = [];
   private readonly idleWaiters: Array<() => void> = [];
   private readonly aborts = new Set<AbortController>();
@@ -147,6 +156,8 @@ export class AttachmentReplicator {
     this.policy = { ...DEFAULT_ATTACHMENT_RETRY_POLICY, ...options.retry };
     this.backlogPageSize =
       options.backlogPageSize ?? DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE;
+    this.heldHashLimit =
+      options.heldHashLimit ?? DEFAULT_ATTACHMENT_HELD_HASH_LIMIT;
     this.verifyHash = options.verifyHash ?? true;
     this.timers = options.timers ?? SYSTEM_REPLICATION_TIMERS;
     this.onDiagnostic = options.onDiagnostic ?? ((): void => undefined);
@@ -225,6 +236,9 @@ export class AttachmentReplicator {
       return;
     }
 
+    if (this.heldHashes.has(hash)) {
+      return;
+    }
     const existing = this.entries.get(hash);
     if (existing) {
       if (!existing.documentIds.includes(documentId)) {
@@ -262,8 +276,8 @@ export class AttachmentReplicator {
     const bytesHeld = await this.store.storageUsed();
     return {
       running: this.running,
-      refsSeen: this.entries.size,
-      held: counts.held,
+      refsSeen: this.entries.size + this.heldHashes.size,
+      held: this.heldHashes.size,
       bytesHeld,
       queued: counts.queued,
       fetching: counts.fetching,
@@ -275,7 +289,7 @@ export class AttachmentReplicator {
     };
   }
 
-  /** Every tracked hash and what is happening to it. */
+  /** Every hash not yet held and what is happening to it. */
   report(): AttachmentReplicationEntry[] {
     return [...this.entries.values()].map((entry) => ({
       hash: entry.hash,
@@ -435,7 +449,7 @@ export class AttachmentReplicator {
     // may have landed the bytes meanwhile, and asking a peer for bytes already
     // held is the one wasted round trip worth a cheap local read to avoid.
     if (await this.store.has(entry.hash)) {
-      entry.state = "held";
+      this.markHeld(entry);
       return;
     }
 
@@ -486,8 +500,21 @@ export class AttachmentReplicator {
       result.response.metadata,
       streamFromBytes(bytes),
     );
+    this.markHeld(entry);
+  }
+
+  private markHeld(entry: Entry): void {
     entry.state = "held";
     entry.nextAttemptAtMs = undefined;
+    this.entries.delete(entry.hash);
+    this.heldHashes.delete(entry.hash);
+    this.heldHashes.add(entry.hash);
+    for (const oldest of this.heldHashes) {
+      if (this.heldHashes.size <= this.heldHashLimit) {
+        break;
+      }
+      this.heldHashes.delete(oldest);
+    }
   }
 
   private recordError(entry: Entry, error: unknown): void {

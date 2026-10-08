@@ -9,6 +9,7 @@ export { sha256Hex } from "./hash.js";
 export { SchemaCompiledOperationRefs } from "./operation-attachment-refs.js";
 export {
   DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE,
+  DEFAULT_ATTACHMENT_HELD_HASH_LIMIT,
   DEFAULT_ATTACHMENT_REPLICATION_CONCURRENCY,
   DEFAULT_ATTACHMENT_RETRY_POLICY,
   type AttachmentReplicationEntry,
