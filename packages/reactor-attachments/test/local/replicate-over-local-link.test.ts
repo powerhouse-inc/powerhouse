@@ -10,10 +10,10 @@ import {
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  attachmentReferenceAuthorizer,
   LocalAttachmentServer,
   LocalAttachmentTransport,
 } from "../../src/local/index.js";
+import { byReference, TEST_LINK } from "./authorizers.js";
 import type { IAttachmentReferenceReader } from "../../src/read-models/attachment-reference/types.js";
 import { NullAttachmentTransport } from "../../src/null-attachment-transport.js";
 import {
@@ -148,8 +148,9 @@ describe("replicating bytes over a brokered local link", () => {
 
     const server = new LocalAttachmentServer({
       port: portA,
+      link: TEST_LINK,
       store: storeA,
-      authorize: attachmentReferenceAuthorizer(indexing(ref)),
+      authorize: byReference(indexing(ref)),
     });
     const transportB = new LocalAttachmentTransport({ port: portB });
 
@@ -209,11 +210,12 @@ describe("replicating bytes over a brokered local link", () => {
 
     const server = new LocalAttachmentServer({
       port: portA,
+      link: TEST_LINK,
       store: new LocalAttachmentStore(
         new MemoryAttachmentBackend(),
         new NullAttachmentTransport(),
       ),
-      authorize: attachmentReferenceAuthorizer(indexing(ref)),
+      authorize: byReference(indexing(ref)),
     });
     const transportB = new LocalAttachmentTransport({ port: portB });
     const storeB = new LocalAttachmentStore(
@@ -258,7 +260,7 @@ describe("replicating bytes over a brokered local link", () => {
     const linksA = new AttachmentPeerLinks({
       store: storeA,
       transport: new PeeredAttachmentTransport(),
-      authorize: attachmentReferenceAuthorizer(indexing(ref)),
+      authorize: byReference(indexing(ref)),
     });
 
     const peeredB = new PeeredAttachmentTransport();

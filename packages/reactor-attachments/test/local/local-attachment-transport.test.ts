@@ -6,10 +6,10 @@ import {
 } from "@powerhousedao/reactor";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  attachmentReferenceAuthorizer,
   LocalAttachmentServer,
   LocalAttachmentTransport,
 } from "../../src/local/index.js";
+import { byReference, TEST_LINK } from "./authorizers.js";
 import { LOCAL_ATTACHMENT_PROTOCOL } from "../../src/local/protocol.js";
 import { sha256Hex } from "../../src/replication/hash.js";
 import {
@@ -27,7 +27,7 @@ const indexesEverything: IAttachmentReferenceReader = {
   hasReference: () => Promise.resolve(true),
   referencingScopes: () => Promise.resolve(["global"]),
 };
-const allowAll = attachmentReferenceAuthorizer(indexesEverything);
+const allowAll = byReference(indexesEverything);
 
 function metadata(sizeBytes: number): AttachmentMetadata {
   return {
@@ -125,10 +125,9 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
 
     const server = new LocalAttachmentServer({
       port: channel.portA,
+      link: TEST_LINK,
       store: holder,
-      authorize: attachmentReferenceAuthorizer(
-        options.authorizeFor ?? indexesEverything,
-      ),
+      authorize: byReference(options.authorizeFor ?? indexesEverything),
       ...(options.chunkSizeBytes !== undefined
         ? { chunkSizeBytes: options.chunkSizeBytes }
         : {}),
@@ -198,6 +197,7 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     const channel = link();
     const server = new LocalAttachmentServer({
       port: channel.portA,
+      link: TEST_LINK,
       store: holder,
     });
     const puller = new LocalAttachmentTransport({ port: channel.portB });
@@ -259,6 +259,7 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     cleanups.push(channel.dispose);
     const server = new LocalAttachmentServer({
       port: channel.portA,
+      link: TEST_LINK,
       store: holder,
       authorize: allowAll,
       chunkSizeBytes: 4,
@@ -317,12 +318,14 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     cleanups.push(channel.dispose);
     const serverA = new LocalAttachmentServer({
       port: channel.portA,
+      link: TEST_LINK,
       store: storeA,
       authorize: allowAll,
     });
     const transportA = new LocalAttachmentTransport({ port: channel.portA });
     const serverB = new LocalAttachmentServer({
       port: channel.portB,
+      link: TEST_LINK,
       store: storeB,
       authorize: allowAll,
     });
@@ -441,6 +444,7 @@ function fakePort(): {
   port: LocalChannelPort;
   deliver: (message: unknown) => void;
   takeFetch: () => { id: string };
+  sent: Array<Record<string, unknown>>;
 } {
   let handler: ((data: unknown) => void) | undefined;
   const sent: Array<Record<string, unknown>> = [];
@@ -460,6 +464,7 @@ function fakePort(): {
       },
     },
     deliver: (message: unknown) => handler?.(message),
+    sent,
     takeFetch: () => {
       const message = sent.find((entry) => entry.kind === "fetch");
       if (!message) {
@@ -483,6 +488,7 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     const fake = fakePort();
     const server = new LocalAttachmentServer({
       port: fake.port,
+      link: TEST_LINK,
       store: new LocalAttachmentStore(
         new MemoryAttachmentBackend(),
         new NullAttachmentTransport(),
@@ -505,6 +511,47 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     expect(state(server).inFlight.size).toBe(0);
   });
 
+  it("refuses a malformed hash or document id before the authorizer or the store sees it", async () => {
+    const fake = fakePort();
+    const store = new LocalAttachmentStore(
+      new MemoryAttachmentBackend(),
+      new NullAttachmentTransport(),
+    );
+    const has = vi.spyOn(store, "has");
+    const authorize = vi.fn(() => Promise.resolve(true));
+    const server = new LocalAttachmentServer({
+      port: fake.port,
+      link: TEST_LINK,
+      store,
+      authorize,
+    });
+
+    const probes = [
+      { hash: "abc", documentId: DOC },
+      { hash: "A".repeat(64), documentId: DOC },
+      { hash: 42, documentId: DOC },
+      { hash: "a".repeat(64), documentId: 7 },
+      { hash: "a".repeat(64), documentId: "" },
+    ];
+    for (const [index, probe] of probes.entries()) {
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "fetch",
+        id: `bad-${index}`,
+        ...probe,
+      });
+    }
+    await settle();
+
+    expect(authorize).not.toHaveBeenCalled();
+    expect(has).not.toHaveBeenCalled();
+    expect(fake.sent.map((message) => message.kind)).toEqual(
+      probes.map(() => "not-found"),
+    );
+    expect(server.stats().refused).toBe(probes.length);
+    server.close();
+  });
+
   it("tracks a cancel only while its request is in flight and drops it when the serve ends", async () => {
     const fake = fakePort();
     let releaseAuthorize: () => void = () => undefined;
@@ -513,6 +560,7 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     });
     const server = new LocalAttachmentServer({
       port: fake.port,
+      link: TEST_LINK,
       store: new LocalAttachmentStore(
         new MemoryAttachmentBackend(),
         new NullAttachmentTransport(),

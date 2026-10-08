@@ -1,4 +1,12 @@
 import type { AttachmentHash, LocalChannelPort } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
+import {
+  isAttachmentHash,
+  readGateAllowsAttachmentRead,
+  scopeGateAllowsAttachmentRead,
+  type AttachmentReadGate,
+  type IDocumentScopeGate,
+} from "../access/attachment-read-gate.js";
 import { AttachmentPending } from "../errors.js";
 import type { IAttachmentStore } from "../interfaces.js";
 import type { IAttachmentReferenceReader } from "../read-models/attachment-reference/types.js";
@@ -10,14 +18,15 @@ import {
   type LocalAttachmentFetchRequest,
 } from "./protocol.js";
 
+/** The peer a server answers: which reactor, over which channel. */
+export type AttachmentPeerLink = { peerId: string; channelName: string };
+
 /**
- * Decides whether `documentId` authorizes reading `hash` from this reactor.
- *
- * Returning false is answered as `not-found` on the wire, deliberately
- * indistinguishable from absent bytes; see
- * `LocalAttachmentNotFoundResponse`.
+ * Decides whether the linked peer may read `hash` through `documentId`. False
+ * is answered as `not-found`, indistinguishable from absent bytes.
  */
 export type LocalAttachmentAuthorizer = (
+  link: AttachmentPeerLink,
   hash: AttachmentHash,
   documentId: string,
 ) => Promise<boolean>;
@@ -25,36 +34,55 @@ export type LocalAttachmentAuthorizer = (
 export type LocalAttachmentServerOptions = {
   /** The brokered port to the peer; the same one the transport half uses. */
   port: LocalChannelPort;
+  /** Who is asking; handed to {@link authorize}. */
+  link: AttachmentPeerLink;
   /** The store bytes are served FROM. Only locally held bytes are served. */
   store: IAttachmentStore;
-  /**
-   * Defaults to refusing every read. Pass {@link attachmentReferenceAuthorizer}
-   * over this reactor's reference index.
-   */
+  /** Defaults to refusing every read; see {@link readGateAttachmentAuthorizer}. */
   authorize?: LocalAttachmentAuthorizer;
   /** Bytes per `chunk` message; defaults to {@link DEFAULT_LOCAL_CHUNK_BYTES}. */
   chunkSizeBytes?: number;
   onDiagnostic?: (message: string, error?: unknown) => void;
 };
 
+export type ReadGateAttachmentAuthorizerOptions = {
+  readGate: AttachmentReadGate;
+  /** `SyncScopeGate`; a reactor without a policy model passes one over `BareReadGate`. */
+  scopeGate: IDocumentScopeGate;
+  references: Pick<IAttachmentReferenceReader, "referencingScopes">;
+  /** The subject a link reads as; undefined refuses every read on it. */
+  subjectOf: (link: AttachmentPeerLink) => AuthSubject | undefined;
+};
+
 /**
- * Authorizes a byte read through this reactor's own attachment reference
- * index: the document must actually reference the attachment.
- *
- * This is the component whose lag the requester's bounded `not-found` retries
- * exist for -- a reference index is a read model and trails its own reactor's
- * sync, so a document that genuinely references a hash can be refused here for
- * a while after the operation arrives. That is reported as `not-found` and
- * retried, never papered over.
- *
- * Version 1 is the only defined ref version (SHA-256 hex), so the hash is
- * checked as a `v1` ref. A future version would need the reader to answer by
- * hash rather than by ref.
+ * Authorizes a peer read the way the Switchboard's attachment route does: the
+ * link's subject may read the document's `global` scope, the reactor serves
+ * the document to it, and a scope it may read references the hash.
  */
-export function attachmentReferenceAuthorizer(
-  reader: IAttachmentReferenceReader,
+export function readGateAttachmentAuthorizer(
+  options: ReadGateAttachmentAuthorizerOptions,
 ): LocalAttachmentAuthorizer {
-  return (hash, documentId) => reader.hasReference(documentId, createRef(hash));
+  return async (link, hash, documentId) => {
+    const subject = options.subjectOf(link);
+    if (!subject) {
+      return false;
+    }
+    const readable = await scopeGateAllowsAttachmentRead(
+      options.scopeGate,
+      documentId,
+      subject,
+    );
+    if (!readable) {
+      return false;
+    }
+    return readGateAllowsAttachmentRead(
+      options.readGate,
+      options.references,
+      documentId,
+      createRef(hash),
+      subject,
+    );
+  };
 }
 
 /**
@@ -72,6 +100,7 @@ export function attachmentReferenceAuthorizer(
  */
 export class LocalAttachmentServer {
   private readonly port: LocalChannelPort;
+  private readonly link: AttachmentPeerLink;
   private readonly store: IAttachmentStore;
   private readonly authorize: LocalAttachmentAuthorizer;
   private readonly chunkSizeBytes: number;
@@ -86,6 +115,7 @@ export class LocalAttachmentServer {
 
   constructor(options: LocalAttachmentServerOptions) {
     this.port = options.port;
+    this.link = { ...options.link };
     this.store = options.store;
     this.authorize =
       options.authorize ?? ((): Promise<boolean> => Promise.resolve(false));
@@ -145,15 +175,22 @@ export class LocalAttachmentServer {
   private async serveInner(
     request: LocalAttachmentFetchRequest,
   ): Promise<void> {
+    if (
+      !isAttachmentHash(request.hash) ||
+      typeof request.documentId !== "string" ||
+      request.documentId === ""
+    ) {
+      this.refuse(request);
+      return;
+    }
     try {
-      const authorized = await this.authorize(request.hash, request.documentId);
+      const authorized = await this.authorize(
+        { ...this.link },
+        request.hash,
+        request.documentId,
+      );
       if (!authorized) {
-        this.refused += 1;
-        this.post({
-          protocol: LOCAL_ATTACHMENT_PROTOCOL,
-          kind: "not-found",
-          id: request.id,
-        });
+        this.refuse(request);
         return;
       }
     } catch (error) {
@@ -182,12 +219,7 @@ export class LocalAttachmentServer {
       return;
     }
     if (!held) {
-      this.refused += 1;
-      this.post({
-        protocol: LOCAL_ATTACHMENT_PROTOCOL,
-        kind: "not-found",
-        id: request.id,
-      });
+      this.refuse(request);
       return;
     }
 
@@ -215,13 +247,8 @@ export class LocalAttachmentServer {
       // Anything else -- including a hash that went away between has() and
       // get() -- is reported as absent rather than as a server fault, which is
       // what it is from the requester's point of view.
-      this.refused += 1;
       this.onDiagnostic(`serving attachment ${request.hash} failed`, error);
-      this.post({
-        protocol: LOCAL_ATTACHMENT_PROTOCOL,
-        kind: "not-found",
-        id: request.id,
-      });
+      this.refuse(request);
       return;
     }
 
@@ -291,6 +318,16 @@ export class LocalAttachmentServer {
     this.post({
       protocol: LOCAL_ATTACHMENT_PROTOCOL,
       kind: "end",
+      id: request.id,
+    });
+  }
+
+  /** Refused and absent are one answer, so a peer learns nothing from it. */
+  private refuse(request: LocalAttachmentFetchRequest): void {
+    this.refused += 1;
+    this.post({
+      protocol: LOCAL_ATTACHMENT_PROTOCOL,
+      kind: "not-found",
       id: request.id,
     });
   }

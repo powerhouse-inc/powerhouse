@@ -1,5 +1,6 @@
 export {
   AttachmentPeerLinks,
+  type AttachmentPeerLinkOptions,
   type AttachmentPeerLinksOptions,
   type AttachmentServedStats,
 } from "./attachment-peer-links.js";

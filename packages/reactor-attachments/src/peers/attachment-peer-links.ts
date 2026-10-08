@@ -18,13 +18,18 @@ export type AttachmentPeerLinksOptions = {
   store: IAttachmentStore;
   /** Where each link's pulling half is registered. */
   transport: PeeredAttachmentTransport;
-  /** Absent, every read is refused. */
+  /** Absent, and absent on the link, every read is refused. */
   authorize?: LocalAttachmentAuthorizer;
   chunkSizeBytes?: number;
   requestTimeoutMs?: number;
   /** Called after a link is added; a host re-chases terminal hashes here. */
   onPeerAdded?: (peerId: string, channelName: string) => void;
   onDiagnostic?: (message: string, error?: unknown) => void;
+};
+
+export type AttachmentPeerLinkOptions = {
+  /** Replaces the links-wide authorizer for this link. */
+  authorize?: LocalAttachmentAuthorizer;
 };
 
 /** Holds one raw listener for the link's life and fans it out to both halves. */
@@ -100,7 +105,12 @@ export class AttachmentPeerLinks {
   }
 
   /** Takes ownership of `port` on success; on failure the port is untouched. */
-  addPeer(peerId: string, channelName: string, port: LocalChannelPort): void {
+  addPeer(
+    peerId: string,
+    channelName: string,
+    port: LocalChannelPort,
+    linkOptions: AttachmentPeerLinkOptions = {},
+  ): void {
     const key = linkKey(peerId, channelName);
     if (this.links.has(key)) {
       throw new Error(
@@ -109,10 +119,12 @@ export class AttachmentPeerLinks {
     }
 
     const linkPort = new LinkPort(port, this.onDiagnostic);
+    const authorize = linkOptions.authorize ?? this.options.authorize;
     const server = new LocalAttachmentServer({
       port: linkPort.view(),
+      link: { peerId, channelName },
       store: this.options.store,
-      ...(this.options.authorize ? { authorize: this.options.authorize } : {}),
+      ...(authorize ? { authorize } : {}),
       ...(this.options.chunkSizeBytes !== undefined
         ? { chunkSizeBytes: this.options.chunkSizeBytes }
         : {}),

@@ -6,7 +6,7 @@ import {
 } from "@powerhousedao/reactor";
 import { afterEach, describe, expect, it } from "vitest";
 import type { IAttachmentTransport } from "../../src/interfaces.js";
-import { attachmentReferenceAuthorizer } from "../../src/local/index.js";
+import { byReference } from "../local/authorizers.js";
 import { LOCAL_ATTACHMENT_PROTOCOL } from "../../src/local/protocol.js";
 import { NullAttachmentTransport } from "../../src/null-attachment-transport.js";
 import {
@@ -107,7 +107,7 @@ describe("AttachmentPeerLinks", () => {
     const links = new AttachmentPeerLinks({
       store: emptyStore(),
       transport: peered,
-      authorize: attachmentReferenceAuthorizer(indexesEverything),
+      authorize: byReference(indexesEverything),
     });
 
     expect(() => links.addPeer("peer", "bytes", fake.port)).toThrow(
@@ -134,7 +134,7 @@ describe("AttachmentPeerLinks", () => {
     const links = new AttachmentPeerLinks({
       store: emptyStore(),
       transport: peered,
-      authorize: attachmentReferenceAuthorizer(indexesEverything),
+      authorize: byReference(indexesEverything),
     });
     links.addPeer("peer", "bytes", fake.port);
 
@@ -186,6 +186,47 @@ describe("AttachmentPeerLinks", () => {
     expect(second.closed()).toBe(true);
   });
 
+  it("hands the authorizer the link identity and honours a per-link authorizer", async () => {
+    const calls: unknown[][] = [];
+    const shared = (...args: unknown[]): Promise<boolean> => {
+      calls.push(["shared", ...args]);
+      return Promise.resolve(false);
+    };
+    const perLink = (...args: unknown[]): Promise<boolean> => {
+      calls.push(["per-link", ...args]);
+      return Promise.resolve(false);
+    };
+    const links = new AttachmentPeerLinks({
+      store: emptyStore(),
+      transport: new PeeredAttachmentTransport(),
+      authorize: shared as never,
+    });
+    cleanups.push(() => links.close());
+    const first = fakePort();
+    const second = fakePort();
+    links.addPeer("peer-a", "chan-1", first.port);
+    links.addPeer("peer-b", "chan-2", second.port, {
+      authorize: perLink as never,
+    });
+
+    const hash = "c".repeat(64);
+    for (const [index, fake] of [first, second].entries()) {
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "fetch",
+        id: `r${index}`,
+        hash,
+        documentId: DOC,
+      });
+    }
+    await settle();
+
+    expect(calls).toEqual([
+      ["shared", { peerId: "peer-a", channelName: "chan-1" }, hash, DOC],
+      ["per-link", { peerId: "peer-b", channelName: "chan-2" }, hash, DOC],
+    ]);
+  });
+
   it("serves and pulls bytes between two linked reactors", async () => {
     const bytes = new TextEncoder().encode("bytes only A holds");
     const hash = await sha256Hex(bytes);
@@ -208,12 +249,12 @@ describe("AttachmentPeerLinks", () => {
     const linksA = new AttachmentPeerLinks({
       store: storeA,
       transport: peeredA,
-      authorize: attachmentReferenceAuthorizer(indexesEverything),
+      authorize: byReference(indexesEverything),
     });
     const linksB = new AttachmentPeerLinks({
       store: emptyStore(),
       transport: peeredB,
-      authorize: attachmentReferenceAuthorizer(indexesEverything),
+      authorize: byReference(indexesEverything),
       onPeerAdded: (peerId) => added.push(peerId),
     });
 

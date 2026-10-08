@@ -9,7 +9,6 @@ export {
   type IDocumentScopeGate,
 } from "./access/attachment-read-gate.js";
 export {
-  attachmentReferenceAuthorizer,
   DEFAULT_LOCAL_CHUNK_BYTES,
   DEFAULT_LOCAL_REQUEST_TIMEOUT_MS,
   isLocalAttachmentRequest,
@@ -17,6 +16,8 @@ export {
   LOCAL_ATTACHMENT_PROTOCOL,
   LocalAttachmentServer,
   LocalAttachmentTransport,
+  readGateAttachmentAuthorizer,
+  type AttachmentPeerLink,
   type LocalAttachmentAuthorizer,
   type LocalAttachmentBeginResponse,
   type LocalAttachmentCancelRequest,
@@ -31,11 +32,13 @@ export {
   type LocalAttachmentResponse,
   type LocalAttachmentServerOptions,
   type LocalAttachmentTransportOptions,
+  type ReadGateAttachmentAuthorizerOptions,
 } from "./local/index.js";
 export {
   AttachmentPeerLinks,
   attachmentOriginOf,
   PeeredAttachmentTransport,
+  type AttachmentPeerLinkOptions,
   type AttachmentPeerLinksOptions,
   type AttachmentServedStats,
   type PeeredAttachmentTransportOptions,

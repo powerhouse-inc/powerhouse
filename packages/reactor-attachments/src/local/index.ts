@@ -1,8 +1,10 @@
 export {
-  attachmentReferenceAuthorizer,
   LocalAttachmentServer,
+  readGateAttachmentAuthorizer,
+  type AttachmentPeerLink,
   type LocalAttachmentAuthorizer,
   type LocalAttachmentServerOptions,
+  type ReadGateAttachmentAuthorizerOptions,
 } from "./local-attachment-server.js";
 export {
   LocalAttachmentTransport,
