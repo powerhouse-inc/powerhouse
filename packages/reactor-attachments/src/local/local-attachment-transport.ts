@@ -242,7 +242,21 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
         return;
       }
       case "end": {
-        entry.controller?.close();
+        if (!entry.controller) {
+          // A terminal reply with no body stream behind it: `end` arrived
+          // without a `begin`, so the fetch promise was never settled. Failing
+          // it (rather than silently releasing) rejects the awaiting fetch and
+          // frees the concurrency slot, mirroring the `chunk`-before-`begin`
+          // abandon path; a silent release would hang the fetch forever.
+          this.abandon(
+            id,
+            new Error(
+              "Local attachment peer ended the transfer before announcing the attachment",
+            ),
+          );
+          return;
+        }
+        entry.controller.close();
         this.release(id, entry);
         return;
       }
