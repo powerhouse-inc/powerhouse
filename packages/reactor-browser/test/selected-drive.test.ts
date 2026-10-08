@@ -11,6 +11,7 @@ import {
 import { addDrivesEventHandler, setDrives } from "../src/hooks/drives.js";
 import {
   addSelectedDriveIdEventHandler,
+  addSetSelectedDriveOnPopStateEventHandler,
   setSelectedDrive,
 } from "../src/hooks/selected-drive.js";
 import { addSelectedNodeIdEventHandler } from "../src/hooks/selected-node.js";
@@ -285,5 +286,60 @@ describe("setSelectedDrive deep-link race", () => {
 
     expect(window.ph?.selectedDriveId).toBe("drive-id-8");
     expect(window.location.pathname).toBe("/d/fresh-drive");
+  });
+});
+
+describe("back and forward within a drive", () => {
+  beforeAll(() => {
+    addDrivesEventHandler();
+    addSelectedDriveIdEventHandler();
+    addSetSelectedDriveOnPopStateEventHandler();
+  });
+
+  afterEach(() => {
+    setSelectedDrive(undefined);
+    window.ph = {};
+    window.history.replaceState(null, "", ROOT);
+  });
+
+  it("keeps a drive whose slug does not embed its id", () => {
+    window.ph = {};
+    setDrives([makeDrive("workflows", "drive-id-3")]);
+    window.history.replaceState(null, "", "/d/workflows");
+    setSelectedDrive("workflows");
+    window.history.pushState(null, "", "/d/workflows#a");
+    window.history.pushState(null, "", "/d/workflows#b");
+
+    window.history.replaceState(null, "", "/d/workflows#a");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(window.ph.selectedDriveId).toBe("drive-id-3");
+    expect(window.location.pathname).toBe("/d/workflows");
+  });
+
+  it("keeps a drive selected before the drive list includes it", () => {
+    window.ph = {};
+    setDrives([makeDrive("one", "id-1")]);
+    window.history.replaceState(null, "", "/d/fresh");
+    setSelectedDrive(makeDrive("fresh", "id-fresh"));
+    window.history.pushState(null, "", "/d/fresh#a");
+
+    window.history.replaceState(null, "", "/d/fresh");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(window.ph.selectedDriveId).toBe("id-fresh");
+    expect(window.location.pathname).toBe("/d/fresh");
+  });
+
+  it("switches drives when the path names another drive", () => {
+    window.ph = {};
+    setDrives([makeDrive("one", "id-1"), makeDrive("two", "id-2")]);
+    window.history.replaceState(null, "", "/d/one");
+    setSelectedDrive("one");
+
+    window.history.replaceState(null, "", "/d/two");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(window.ph.selectedDriveId).toBe("id-2");
   });
 });

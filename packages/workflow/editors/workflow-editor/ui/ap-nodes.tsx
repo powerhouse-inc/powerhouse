@@ -272,8 +272,9 @@ export function ApStepNode(props: NodeProps) {
 // Shared with the edges, which label a taken port the same way.
 export const PORT_LABEL_CLASSES: Record<string, string> = {
   true: "bg-wf-ok/10 text-wf-ok hover:bg-green-200",
-  false: "bg-wf-fail/10 text-wf-fail hover:bg-red-200",
-  error: "bg-wf-warn/10 text-wf-warn hover:bg-wf-warn/20",
+  // False is an ordinary outcome; red is kept for a step that failed.
+  false: "bg-foreground/5 text-muted-foreground hover:bg-foreground/10",
+  error: "bg-wf-fail/10 text-wf-fail hover:bg-red-200",
 };
 
 function AddButton(props: {

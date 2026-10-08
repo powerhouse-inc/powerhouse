@@ -51,7 +51,7 @@ type JobInfo = {
 
 ### What `execute()` and `executeBatch()` throw
 
-The [`IReactorClient`](/academy/Reference/Reactor/ReactorClient) mutation methods do not surface the typed error. On a `FAILED` job they throw a bare `Error` carrying only the message string:
+Most [`IReactorClient`](/academy/Reference/Reactor/ReactorClient) mutation methods do not surface the typed error. On a `FAILED` job they throw a bare `Error` carrying only the message string:
 
 ```typescript
 // inside ReactorClient, after the job reaches a terminal status
@@ -60,7 +60,7 @@ if (job.status === JobStatus.FAILED) {
 }
 ```
 
-The same pattern runs in `execute`, `executeBatch`, `create`, `deleteDocument`, `deleteDocuments`, `addRelationship`, and `removeRelationship`. Two consequences:
+The same pattern runs in `execute`, `create`, `deleteDocument`, `deleteDocuments`, `addRelationship`, and `removeRelationship`. `executeBatch` is the exception, below. Two consequences:
 
 - The thrown `Error.message` equals `job.error?.message`, which can be `undefined` if `error` was never set. Guard for that when you display it.
 - The original error class, stack, and `errorHistory` are lost at the client boundary. To inspect them, drop to the lower-level `IReactor.getJobStatus(jobId)` and read `JobInfo.error`, `JobInfo.errorHistory`, and `JobInfo.job`. See [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
@@ -75,6 +75,37 @@ try {
 ```
 
 Several internal write-path errors surface only as the `.message` string here and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
+
+#### `executeBatch` throws `BatchJobFailedError`
+
+`executeBatch` waits for every job in the batch to settle. If any job is `FAILED`, it throws a `BatchJobFailedError` (exported from `@powerhousedao/reactor`) for the first failed job in plan order:
+
+| Field        | Value                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `message`    | The failed job's `error.message`.                                                           |
+| `key`        | The plan key of the failed job.                                                             |
+| `jobs`       | Every job's final `JobInfo`, keyed by plan key, including the jobs that committed.          |
+| `cause.name` | The failed job's own error name, such as `DocumentAlreadyExistsError`.                      |
+
+A batch is not atomic: each job commits on its own, and a failed job still releases the jobs that depend on it. Read `jobs` to see which jobs committed before you retry, since re-submitting re-applies them.
+
+```typescript
+import { BatchJobFailedError, JobStatus } from "@powerhousedao/reactor";
+
+try {
+  await client.executeBatch({ jobs });
+} catch (err) {
+  if (BatchJobFailedError.isError(err)) {
+    const committed = Object.keys(err.jobs).filter(
+      (key) => err.jobs[key].status === JobStatus.READ_READY,
+    );
+    console.error(`job ${err.key} failed:`, (err.cause as Error).name);
+    console.error("committed:", committed);
+  }
+}
+```
+
+Across the SharedWorker RPC boundary an error is rebuilt from `name`, `message`, `stack` and `cause` only, so `key` and `jobs` do not survive and `BatchJobFailedError.isError` returns `false` there. Classify by the names in the `cause` chain instead: the failed job's error name is still on `cause.name`.
 
 ## Cancellation
 

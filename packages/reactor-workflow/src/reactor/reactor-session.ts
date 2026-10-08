@@ -11,7 +11,9 @@ import {
   ReactorHostServer,
   type IRpcTransport,
 } from "@powerhousedao/reactor/rpc";
+import { context as otelContext } from "@opentelemetry/api";
 import type { ReactorTap } from "../pieces/index.js";
+import { tracedMethods, type WorkflowTelemetry } from "../telemetry.js";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { accessDenied, refusedMethod } from "./reactor-errors.js";
 import type { ReactorRunScopeBase } from "./run-scope-builder.js";
@@ -117,6 +119,7 @@ export function reactorTap(
   base: ReactorRunScopeBase,
   journal: RunScope["journal"],
   options: RunScopedReactorClientOptions = {},
+  telemetry?: WorkflowTelemetry,
 ): ReactorTap {
   // Documents a run creates also grant the host, so it can keep writing them.
   const clientOptions: RunScopedReactorClientOptions = {
@@ -132,8 +135,13 @@ export function reactorTap(
         host,
         clientOptions,
       );
+      const served = servedClient(client);
+      // RPC calls arrive as IPC events, outside the step's async context.
+      const parent = otelContext.active();
       const server = new ReactorHostServer(
-        servedClient(client),
+        telemetry
+          ? tracedMethods(served, telemetry, "reactor", parent)
+          : served,
         transport as unknown as IRpcTransport,
       );
       server.start();

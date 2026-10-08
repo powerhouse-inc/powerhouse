@@ -331,6 +331,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       });
 
       expect(result.preferredEditor).toBe("custom-editor");
+      expect(result.meta).toMatchObject({ preferredEditor: "custom-editor" });
     });
 
     it("should clear the preferred editor when given null", async () => {

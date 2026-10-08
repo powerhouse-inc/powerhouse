@@ -1,8 +1,16 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Readable } from "node:stream";
+import { FileTooLargeError } from "../../../src/pieces/activepieces/context/limits.js";
 import {
   normalizePropsValue,
   normalizeValue,
   toApFile,
   type ApFileValue,
+  type ApStreamingFileValue,
 } from "../../../src/pieces/activepieces/context/normalize.js";
 import type { ApProperty } from "../../../src/pieces/activepieces/types.js";
 
@@ -166,5 +174,113 @@ describe("normalizePropsValue", () => {
     expect(await normalizePropsValue(undefined, { a: "1" })).toEqual({
       a: "1",
     });
+  });
+});
+
+describe("streaming FILE props and size caps", () => {
+  let server: Server;
+  let base = "";
+
+  beforeAll(async () => {
+    server = createServer((req, res) => {
+      if (req.url === "/known") {
+        res.writeHead(200, {
+          "content-type": "text/csv",
+          "content-length": "6",
+        });
+        res.end("a,b\n1\n");
+        return;
+      }
+      // No content-length: only counting what arrives can stop it.
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.write("1234");
+      res.write("5678");
+      res.end("9012");
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterAll(async () => {
+    delete process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  async function text(body: Readable): Promise<string> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of body) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks).toString("utf8");
+  }
+
+  const streaming: ApProperty = { type: "FILE", streaming: true };
+
+  it("hands a streaming prop a body, not bytes", async () => {
+    const fromUri = (await normalizeValue(
+      streaming,
+      `data:text/csv;base64,${Buffer.from("x,y").toString("base64")}`,
+    )) as ApStreamingFileValue;
+    expect(fromUri).toMatchObject({
+      filename: "file.csv",
+      extension: "csv",
+      size: 3,
+    });
+    expect("data" in fromUri).toBe(false);
+    expect(await text(fromUri.body)).toBe("x,y");
+
+    const fromUrl = (await normalizeValue(
+      streaming,
+      `${base}/known`,
+    )) as ApStreamingFileValue;
+    expect(fromUrl).toMatchObject({ filename: "known", size: 6 });
+    expect(await text(fromUrl.body)).toBe("a,b\n1\n");
+  });
+
+  it("streams a staged reference from disk", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ap-open-ref-"));
+    const path = join(dir, "in-0");
+    await writeFile(path, "staged");
+    const file = (await normalizeValue(streaming, "attachment://v1:abc", {
+      openRef: (ref) => {
+        expect(ref).toBe("attachment://v1:abc");
+        return Promise.resolve({ path, size: 6, filename: "s.csv" });
+      },
+    })) as ApStreamingFileValue;
+    expect(file).toMatchObject({
+      filename: "s.csv",
+      extension: "csv",
+      size: 6,
+    });
+    expect(await text(file.body)).toBe("staged");
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("caps a URL body with no declared length as it arrives", async () => {
+    process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES = "8";
+    try {
+      await expect(toApFile(`${base}/chunked`)).rejects.toThrow(
+        "exceeds the 8 byte limit",
+      );
+      const file = (await normalizeValue(
+        streaming,
+        `${base}/chunked`,
+      )) as ApStreamingFileValue;
+      await expect(text(file.body)).rejects.toBeInstanceOf(FileTooLargeError);
+    } finally {
+      delete process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
+    }
+  });
+
+  it("computes base64 only when it is read", async () => {
+    const file = (await toApFile(
+      `data:text/plain;base64,${Buffer.from("lazy").toString("base64")}`,
+    )) as ApFileValue;
+    expect(typeof Object.getOwnPropertyDescriptor(file, "base64")?.get).toBe(
+      "function",
+    );
+    expect(file.base64).toBe(Buffer.from("lazy").toString("base64"));
+    // Spread and JSON still see it, so a piece copying the value loses nothing.
+    expect({ ...file }.base64).toBe(file.base64);
   });
 });

@@ -636,7 +636,7 @@ export function coreTrigger(name: string): Promise<TriggerBlock> {
   return pieceTrigger(CORE_PIECE_NAME, name);
 }
 
-type SeedRole = "http" | "parseUrl" | "openai" | "slack";
+type SeedRole = "http" | "parseUrl" | "openai" | "slack" | "branch";
 
 interface SeedInput {
   drive: string;
@@ -653,6 +653,7 @@ export interface Seeded {
   digest: string;
   smoke: string;
   ping: string;
+  router: string;
   connection: string;
 }
 
@@ -891,7 +892,80 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
       ]);
       await client.rename(ping, "Uptime ping");
 
-      return { digest, smoke, ping, connection };
+      // Branches, a join and an error path, for the overview graph.
+      const routerDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const router = routerDoc.header.id;
+      await client.execute(router, "main", [
+        wf.setWorkflowName({ name: "Order router" }),
+        wf.setWorkflowDescription({
+          description: "Big orders wait for approval; every order is recorded.",
+        }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.manual,
+          config: { ...defaults.manual },
+        }),
+        wf.addStep({
+          id: "check",
+          key: "check",
+          name: "Over $1,000?",
+          ...blocks.branch,
+          config: {
+            ...defaults.branch,
+            left: "{{trigger.payload.total}}",
+            operator: "NUMBER_IS_GREATER_THAN",
+            right: "1000",
+          },
+        }),
+        wf.addStep({
+          id: "approve",
+          key: "approve",
+          name: "Ask for approval",
+          ...blocks.slack,
+          connectionId: connection,
+          config: {
+            ...defaults.slack,
+            channel: "#approvals",
+            text: "Order over $1,000: {{trigger.payload.id}}",
+          },
+        }),
+        wf.addStep({
+          id: "record",
+          key: "record",
+          name: "Record order",
+          ...blocks.http,
+          config: {
+            ...defaults.http,
+            method: "POST",
+            url: "https://orders.acme.dev/api/orders",
+          },
+        }),
+        wf.addStep({
+          id: "alert",
+          key: "alert",
+          name: "Alert #ops",
+          ...blocks.slack,
+          connectionId: connection,
+          config: {
+            ...defaults.slack,
+            channel: "#ops",
+            text: "Could not record order {{trigger.payload.id}}",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "check", port: "next" }),
+        wf.addEdge({ id: "e2", from: "check", to: "approve", port: "true" }),
+        wf.addEdge({ id: "e3", from: "check", to: "record", port: "false" }),
+        wf.addEdge({ id: "e4", from: "approve", to: "record", port: "next" }),
+        wf.addEdge({ id: "e5", from: "record", to: "alert", port: "error" }),
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(router, "Order router");
+
+      return { digest, smoke, ping, router, connection };
     },
     input,
   );
@@ -951,11 +1025,12 @@ export async function openConnect(
   browser: Browser,
   options: {
     colorScheme?: "light" | "dark";
-    viewport?: { width: number; height: number };
+    // null follows the window, for a window a person resizes.
+    viewport?: { width: number; height: number } | null;
   } = {},
 ): Promise<ConnectPage> {
   const context = await browser.newContext({
-    viewport: options.viewport ?? VIEWPORT,
+    viewport: options.viewport === undefined ? VIEWPORT : options.viewport,
     colorScheme: options.colorScheme ?? "light",
     // The build's service worker precaches the whole app.
     serviceWorkers: "block",
@@ -1080,15 +1155,17 @@ export async function addSeededDrive(
   await attachDrive(page, driveSlug, drive);
   if (options.seed === false) return { drive, seeded: unseeded() };
 
-  const [http, parseUrl, openai, slack, schedule, manual] = await Promise.all([
-    pieceAction("@activepieces/piece-http", "send_request"),
-    pieceAction("@activepieces/piece-http", "parse_url"),
-    pieceAction("@activepieces/piece-openai", "ask_chatgpt"),
-    pieceAction("@activepieces/piece-slack", "send_channel_message"),
-    coreTrigger("schedule"),
-    coreTrigger("manual"),
-  ]);
-  const blocks = { http, parseUrl, openai, slack, schedule, manual };
+  const [http, parseUrl, openai, slack, branch, schedule, manual] =
+    await Promise.all([
+      pieceAction("@activepieces/piece-http", "send_request"),
+      pieceAction("@activepieces/piece-http", "parse_url"),
+      pieceAction("@activepieces/piece-openai", "ask_chatgpt"),
+      pieceAction("@activepieces/piece-slack", "send_channel_message"),
+      coreAction("branch"),
+      coreTrigger("schedule"),
+      coreTrigger("manual"),
+    ]);
+  const blocks = { http, parseUrl, openai, slack, branch, schedule, manual };
   const botTokenRef = await createSecret(
     "xoxb-demo-token",
     "Ops Slack · Bot Token",
@@ -1134,7 +1211,7 @@ export async function openSeededPage(
   browser: Browser,
   options: {
     colorScheme?: "light" | "dark";
-    viewport?: { width: number; height: number };
+    viewport?: { width: number; height: number } | null;
     seed?: boolean;
   } = {},
 ): Promise<SeededPage> {
@@ -1167,6 +1244,8 @@ export interface WorkflowSpec {
   })[];
   // False leaves it a draft that has never been turned on.
   enabled?: boolean;
+  // Replaces the default chain; "trigger" names the trigger.
+  edges?: { from: string; to: string; port: string }[];
 }
 
 /** Adds a workflow, enabled unless told otherwise, through Connect's reactor. */
@@ -1216,11 +1295,19 @@ export async function createWorkflowInBrowser(
       let from = "trigger";
       for (const step of spec.steps) {
         actions.push(wf.addStep({ id: step.key, ...step }));
-        actions.push(
-          wf.addEdge({ id: `e-${step.key}`, from, to: step.key, port: "next" }),
-        );
+        if (!spec.edges)
+          actions.push(
+            wf.addEdge({
+              id: `e-${step.key}`,
+              from,
+              to: step.key,
+              port: "next",
+            }),
+          );
         from = step.key;
       }
+      for (const [i, edge] of (spec.edges ?? []).entries())
+        actions.push(wf.addEdge({ id: `e-${i}`, ...edge }));
       if (spec.enabled !== false) {
         actions.push(
           wf.publishWorkflow({ publishedAt: new Date().toISOString() }),

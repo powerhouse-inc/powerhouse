@@ -479,6 +479,7 @@ export class ReactorBuilder {
     return this;
   }
 
+  /** Mutually exclusive with {@link withChannelScheme}; setting both fails the build. */
   withSync(syncBuilder: SyncBuilder): this {
     this.syncBuilder = syncBuilder;
     return this;
@@ -558,6 +559,7 @@ export class ReactorBuilder {
     return this;
   }
 
+  /** Mutually exclusive with {@link withSync}; setting both fails the build. */
   withChannelScheme(scheme: ChannelScheme): this {
     this.channelScheme = scheme;
     return this;
@@ -665,6 +667,12 @@ export class ReactorBuilder {
         protocolSupport: localSupports(this.getPeerCapabilities(), featureFlags)
           .protocols,
       };
+    }
+
+    if (this.channelScheme !== undefined && this.syncBuilder !== undefined) {
+      throw new Error(
+        "withChannelScheme and withSync are mutually exclusive; use one (the scheme builds its own SyncBuilder)",
+      );
     }
 
     if (

@@ -16,6 +16,9 @@ import type {
   ModelManifestEntry,
 } from "../../src/executor/worker/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
+import type { IChannelFactory } from "../../src/sync/interfaces.js";
+import { SyncBuilder } from "../../src/sync/sync-builder.js";
+import { ChannelScheme } from "../../src/sync/types.js";
 
 /** An ILogger that keeps what it was handed, so the report can be asserted. */
 function recordingLogger(): ILogger & {
@@ -800,6 +803,68 @@ describe("ReactorBuilder", () => {
         ).toEqual(["test/alpha"]);
       } finally {
         await module.reactor.kill();
+      }
+    });
+  });
+
+  describe("sync configuration", () => {
+    const unusedFactory: IChannelFactory = {
+      instance: () => {
+        throw new Error("not reached");
+      },
+    };
+
+    it("refuses withChannelScheme together with withSync", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withSync(new SyncBuilder().withChannelFactory(unusedFactory));
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "withChannelScheme and withSync are mutually exclusive",
+      );
+    });
+
+    it("refuses the combination whichever order it was set in", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withSync(new SyncBuilder().withChannelFactory(unusedFactory))
+        .withChannelScheme(ChannelScheme.SWITCHBOARD);
+
+      await expect(builder.build()).rejects.toThrow(
+        "withChannelScheme and withSync are mutually exclusive",
+      );
+    });
+
+    it("builds the scheme's sync module from withChannelScheme alone", async () => {
+      const module = await new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.SWITCHBOARD)
+        .buildModule();
+
+      try {
+        expect(module.syncModule).toBeDefined();
+      } finally {
+        module.syncModule?.syncManager.shutdown();
+        module.reactor.kill();
+      }
+    });
+
+    it("builds the caller's SyncBuilder from withSync alone", async () => {
+      const syncBuilder = new SyncBuilder().withChannelFactory(unusedFactory);
+      const buildSpy = vi.spyOn(syncBuilder, "buildModule");
+
+      const module = await new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withSync(syncBuilder)
+        .buildModule();
+
+      try {
+        expect(buildSpy).toHaveBeenCalledTimes(1);
+        expect(module.syncModule).toBe(buildSpy.mock.results[0]?.value);
+      } finally {
+        module.syncModule?.syncManager.shutdown();
+        module.reactor.kill();
       }
     });
   });
