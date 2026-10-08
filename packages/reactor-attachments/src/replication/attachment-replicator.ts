@@ -156,6 +156,13 @@ export class AttachmentReplicator {
    *
    * The subscription is taken BEFORE the scan so no operation committed during
    * the scan can slip between the two. A hash both paths find is one entry.
+   *
+   * A restart resumes its own unfinished work: a `stop()` empties the queue but
+   * keeps the entries, so entries left `queued` or `waiting` are re-armed here.
+   * Without that, a hash that was outstanding at `stop()` would sit in the map
+   * forever unless an unrelated live operation happened to pump the queue --
+   * the backlog re-scan does not rescue it, because `observeReference` treats
+   * an already-known hash as nothing to do.
    */
   start(): void {
     if (this.running) {
@@ -168,6 +175,7 @@ export class AttachmentReplicator {
         this.observeOperations(event.operations);
       },
     );
+    this.resumeOutstanding();
     this.backlogScan = this.scanBacklog();
   }
 
@@ -328,10 +336,29 @@ export class AttachmentReplicator {
     await this.backlogScan;
   }
 
+  /** Re-queues every non-terminal entry a previous `stop()` stranded. */
+  private resumeOutstanding(): void {
+    for (const entry of this.entries.values()) {
+      if (entry.state !== "queued" && entry.state !== "waiting") {
+        continue;
+      }
+      entry.state = "queued";
+      entry.nextAttemptAtMs = undefined;
+      if (!this.queue.includes(entry.hash)) {
+        this.queue.push(entry.hash);
+      }
+    }
+    this.pump();
+  }
+
   private async scanBacklog(): Promise<void> {
     const backlog = this.backlog;
     if (!backlog) {
-      this.backlogDone = true;
+      // No reference index to re-scan: this reactor learns refs only from live
+      // operations and is NOT resumable across a restart. `backlogScanned`
+      // stays false, matching build-reactor's documented contract and the
+      // inspector's false-branch text; claiming a finished scan would promise
+      // a resumability this reactor does not have.
       return;
     }
 
@@ -419,7 +446,11 @@ export class AttachmentReplicator {
     const result = await this.transport.fetch(entry.hash, documentId, signal);
 
     if (result.kind === "pending") {
-      this.schedule(entry, result.retryAfterMs || this.policy.pendingRetryMs);
+      // The answer's own retryAfterMs, used as-is -- NOT `|| pendingRetryMs`,
+      // which would turn a legitimate "retry immediately" (0ms) into the 5s
+      // default. A pending answer always carries a retryAfterMs (see the
+      // transport result type), so no fallback is reached.
+      this.schedule(entry, result.retryAfterMs);
       return;
     }
 
