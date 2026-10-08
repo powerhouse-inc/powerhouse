@@ -476,6 +476,7 @@ export class AttachmentReplicator {
       this.markHeld(entry);
       return;
     }
+    signal.throwIfAborted();
 
     // Rotate the authorizing document across attempts: a `not-found` can be
     // one document's authorization lagging rather than the bytes being absent,

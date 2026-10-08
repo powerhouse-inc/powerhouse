@@ -371,6 +371,75 @@ describe("PeeredAttachmentTransport", () => {
       expect((await transport.fetch(hash, DOC)).kind).toBe("data");
     });
 
+    describe("rejects an aborted fetch instead of answering for it", () => {
+      function notFoundFetch(onCall?: () => void): {
+        fetchFn: typeof fetch;
+        calls: string[];
+      } {
+        const calls: string[] = [];
+        const fetchFn = ((url: string) => {
+          calls.push(url);
+          onCall?.();
+          return Promise.resolve(new Response(null, { status: 404 }));
+        }) as unknown as typeof fetch;
+        return { fetchFn, calls };
+      }
+
+      it("before any source is asked", async () => {
+        const { fetchFn, calls } = notFoundFetch();
+        const transport = new PeeredAttachmentTransport({
+          switchboardUrl: "http://a",
+          fetchFn,
+        });
+        const controller = new AbortController();
+        controller.abort();
+
+        await expect(
+          transport.fetch(HASH, DOC, controller.signal),
+        ).rejects.toThrow();
+        expect(calls).toEqual([]);
+      });
+
+      it("between Switchboards", async () => {
+        const controller = new AbortController();
+        const { fetchFn, calls } = notFoundFetch(() => controller.abort());
+        const transport = new PeeredAttachmentTransport({
+          switchboardUrl: "http://a",
+          syncManager: syncManagerWith([
+            { type: GQL_CHANNEL_TYPE, url: "http://b/graphql/d" },
+          ]),
+          fetchFn,
+        });
+
+        await expect(
+          transport.fetch(HASH, DOC, controller.signal),
+        ).rejects.toThrow();
+        expect(calls).toHaveLength(1);
+      });
+
+      it("after a peer answered pending", async () => {
+        const transport = new PeeredAttachmentTransport();
+        transport.addPeer(
+          "uploading",
+          "col-1",
+          source({
+            kind: "pending",
+            hash: HASH,
+            expiresAtUtc: "2026-01-01T00:05:00.000Z",
+            retryAfterMs: 1_000,
+          }),
+        );
+        transport.addPeer("dead", "col-1", silent([]));
+        const controller = new AbortController();
+
+        const inFlight = transport.fetch(HASH, DOC, controller.signal);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        controller.abort();
+
+        await expect(inFlight).rejects.toThrow();
+      });
+    });
+
     it("aborts every peer when the caller aborts", async () => {
       const signals: AbortSignal[] = [];
       const transport = new PeeredAttachmentTransport();

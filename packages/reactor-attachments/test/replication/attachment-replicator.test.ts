@@ -5,7 +5,7 @@ import {
   type Unsubscribe,
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IAttachmentTransport } from "../../src/interfaces.js";
 import {
   AttachmentReplicator,
@@ -675,6 +675,31 @@ describe("AttachmentReplicator", () => {
     expect((await replicator.status()).held).toBe(2);
     expect((await replicator.status()).failed).toBe(0);
     await replicator.stop();
+  });
+
+  it("does not ask the transport once stop() lands during the store check", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const h = harness(() => ({ kind: "not-found" }));
+    const has = h.store.has.bind(h.store);
+    vi.spyOn(h.store, "has").mockImplementation(async (hash) => {
+      await gate;
+      return has(hash);
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await flush();
+
+    await h.replicator.stop();
+    release();
+    await flush();
+
+    expect(h.fetches).toEqual([]);
+    const [entry] = h.replicator.report();
+    expect(entry.state).toBe("queued");
+    expect(entry.notFoundAnswers).toBe(0);
   });
 
   it.each([

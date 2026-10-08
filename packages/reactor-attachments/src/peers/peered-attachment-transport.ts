@@ -136,6 +136,8 @@ export class PeeredAttachmentTransport implements IAttachmentTransport {
     documentId: string,
     signal?: AbortSignal,
   ): Promise<TransportFetchResult> {
+    // An aborted fetch rejects; an answer would count as the sources' own.
+    signal?.throwIfAborted();
     const peers = [...this.peers.values()].map((entry) => entry.transport);
     const switchboards = this.switchboardSources().map((url) =>
       this.switchboardFor(url),
@@ -158,9 +160,7 @@ export class PeeredAttachmentTransport implements IAttachmentTransport {
       }
     }
     for (const switchboard of switchboards) {
-      if (signal?.aborted) {
-        break;
-      }
+      signal?.throwIfAborted();
       const data = await this.ask(
         switchboard,
         hash,
@@ -172,6 +172,7 @@ export class PeeredAttachmentTransport implements IAttachmentTransport {
         return data;
       }
     }
+    signal?.throwIfAborted();
     return answers.result();
   }
 
