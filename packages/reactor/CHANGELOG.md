@@ -1,3 +1,18 @@
+## 6.2.3-dev.49 (2026-10-08)
+
+### 🚀 Features
+
+- **reactor:** throw BatchJobFailedError carrying every batch job's state ([b5a3c0eeb8](https://github.com/powerhouse-inc/powerhouse/commit/b5a3c0eeb8))
+
+### 🩹 Fixes
+
+- **reactor:** narrow BatchJobFailedError.isError on its fields, not the name alone ([ff9a4adb3c](https://github.com/powerhouse-inc/powerhouse/commit/ff9a4adb3c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.48 (2026-10-07)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

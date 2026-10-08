@@ -1,3 +1,33 @@
+## 6.2.3-dev.49 (2026-10-08)
+
+### 🚀 Features
+
+- **reactor-browser:** add executeBatch and drive extensions to the graphql client ([4e13998e26](https://github.com/powerhouse-inc/powerhouse/commit/4e13998e26))
+- **reactor-browser:** map document meta and protocolVersions onto remote headers ([87e6f2ef81](https://github.com/powerhouse-inc/powerhouse/commit/87e6f2ef81))
+- **reactor-browser:** refuse unservable graphql reads with a typed error ([04f49cb922](https://github.com/powerhouse-inc/powerhouse/commit/04f49cb922))
+- **reactor-browser:** serve find and relationship reads over graphql ([b032c4009a](https://github.com/powerhouse-inc/powerhouse/commit/b032c4009a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** narrow the batch error mirror's isError on its fields ([c2643571b5](https://github.com/powerhouse-inc/powerhouse/commit/c2643571b5))
+- **reactor-browser:** read announced batch documents on the branch written ([ddc85c42d2](https://github.com/powerhouse-inc/powerhouse/commit/ddc85c42d2))
+- **reactor-browser:** skip batch announcements nobody hears, and read them concurrently ([dbc932c98d](https://github.com/powerhouse-inc/powerhouse/commit/dbc932c98d))
+- **reactor-browser:** sign for a batch-created id without looking it up ([de762f0ef8](https://github.com/powerhouse-inc/powerhouse/commit/de762f0ef8))
+- **reactor-browser:** announce the documents a graphql batch changed ([62d6571bf2](https://github.com/powerhouse-inc/powerhouse/commit/62d6571bf2))
+- **reactor-browser:** resolve a batch job's slug before signing for it ([2d57177a90](https://github.com/powerhouse-inc/powerhouse/commit/2d57177a90))
+- **reactor-browser:** throw BatchJobFailedError from a failed graphql batch ([fc61d238e3](https://github.com/powerhouse-inc/powerhouse/commit/fc61d238e3))
+- **reactor-browser:** sign setPreferredEditor as an action through execute ([b95c1c2d1b](https://github.com/powerhouse-inc/powerhouse/commit/b95c1c2d1b))
+- **reactor-browser:** decide find's servability through findIsServableOverGraphQL ([c0e11ef359](https://github.com/powerhouse-inc/powerhouse/commit/c0e11ef359))
+- **reactor-browser:** do not re-sign an already-signed batch action ([c7fa5d2f04](https://github.com/powerhouse-inc/powerhouse/commit/c7fa5d2f04))
+- **reactor-browser:** make graphql waitForJob wait for a settled job ([f4174a74ce](https://github.com/powerhouse-inc/powerhouse/commit/f4174a74ce))
+- **reactor-browser:** refuse graphql create defaults instead of guessing ([33486247df](https://github.com/powerhouse-inc/powerhouse/commit/33486247df))
+- **reactor-browser:** return the job the server reported, not placeholders ([e23e82da7e](https://github.com/powerhouse-inc/powerhouse/commit/e23e82da7e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.48 (2026-10-07)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
