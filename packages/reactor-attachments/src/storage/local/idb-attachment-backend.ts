@@ -214,6 +214,16 @@ export class IdbAttachmentBackend implements ILocalAttachmentBackend {
     };
 
     return requestResult(request).then((db) => {
+      if (this.closed) {
+        // close() ran while this open was in flight. Keeping the handle would
+        // leak a connection the backend will never release (and would re-arm
+        // onversionchange over a dead instance); drop it and fail this caller
+        // with the same closed error open() raises up front.
+        db.close();
+        throw new Error(
+          `IndexedDB attachment backend for database "${this.databaseName}" is closed`,
+        );
+      }
       this.database = db;
       // A second tab asking for a higher version must not be blocked by this
       // handle; closing here loses nothing, the next call reopens.

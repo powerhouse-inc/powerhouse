@@ -21,12 +21,23 @@ function encodeCursor(cursor: ScanCursor): string {
 }
 
 function decodeCursor(cursor: string): ScanCursor {
-  const parsed: unknown = JSON.parse(cursor);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cursor);
+  } catch {
+    // Malformed JSON is a bad cursor, not an uncaught SyntaxError leaking out
+    // of a scan: report it as the named error the caller expects.
+    throw new Error(
+      `Invalid attachment reference scan cursor: ${JSON.stringify(cursor)}`,
+    );
+  }
   if (
     !Array.isArray(parsed) ||
     parsed.length !== 2 ||
     typeof parsed[0] !== "string" ||
-    typeof parsed[1] !== "string"
+    parsed[0] === "" ||
+    typeof parsed[1] !== "string" ||
+    parsed[1] === ""
   ) {
     throw new Error(
       `Invalid attachment reference scan cursor: ${JSON.stringify(cursor)}`,
