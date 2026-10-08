@@ -26,6 +26,11 @@ const BANNER_TEXT: Record<
     detail:
       "Another Connect tab still holds local storage. Close or reload the other Connect tabs to continue.",
   },
+  "version-conflict": {
+    title: "Connect tabs are on different builds",
+    detail:
+      "Open tabs keep restarting the reactor. Close the other Connect tabs, then reload.",
+  },
   "storage-unusable": {
     title: "Local storage is unusable",
     detail:

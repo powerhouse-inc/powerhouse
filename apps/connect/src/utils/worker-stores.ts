@@ -7,10 +7,46 @@ export type StoreCloser = (store: Closable | undefined) => Promise<boolean>;
 
 export type OpenStore = { namespace?: string; store?: Closable };
 
+type Queue = {
+  readonly isDrained: boolean;
+  readonly paused?: boolean;
+  getExecutingJobIds?: () => ReadonlyMap<string, ReadonlySet<string>>;
+};
+
+const DEPLOY_DRAIN_MS = 10_000;
+
+const isExecuting = (queue: Queue): boolean =>
+  [...(queue.getExecutingJobIds?.().values() ?? [])].some((ids) => ids.size);
+
+// Polls, so a pause mid-drain ends it too. A paused queue's pending jobs are
+// held by the operator and not waited on; a job it is already running is.
+async function drainWithin(
+  queue: () => Queue | undefined,
+  ms: number,
+): Promise<void> {
+  const deadline = Date.now() + ms;
+  for (;;) {
+    const current = queue();
+    if (!current || current.isDrained) return;
+    if (current.paused && !isExecuting(current)) return;
+    if (Date.now() >= deadline) {
+      console.warn(`[connect] reactor queue did not drain within ${ms}ms`);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 type Options = {
   locks: StoreLocks;
   /** Stops the reactor and sync manager, bounded. */
   stopReactor: () => Promise<void>;
+  /** Stops sync enqueueing inbound jobs. */
+  stopSync: () => void;
+  /** The running reactor's job queue; undefined once it is stopped. */
+  queue: () => Queue | undefined;
+  /** How long a deploy's retirement waits for accepted jobs. */
+  drainMs?: number;
   relational: () => OpenStore;
   reactor: () => OpenStore;
   /** Clears the worker's refs to both stores. */
@@ -36,6 +72,9 @@ export type AdminFlow = {
 export function createWorkerStores({
   locks,
   stopReactor,
+  stopSync,
+  queue,
+  drainMs = DEPLOY_DRAIN_MS,
   relational,
   reactor,
   forget,
@@ -54,11 +93,16 @@ export function createWorkerStores({
   };
 
   // Returns the lock release, covering only the stores this call closed.
-  const closeAll = async (closer: StoreCloser): Promise<() => void> => {
+  const closeAll = async (
+    closer: StoreCloser,
+    keepOpening = false,
+  ): Promise<() => void> => {
     const open = [relational(), reactor()];
     forget();
     const closed: string[] = [];
     for (const { namespace, store } of open) {
+      // A build may still be opening it; it closes and releases once it settles.
+      if (keepOpening && namespace && !store) continue;
       const done = await closer(store);
       if (!namespace) continue;
       if (done && !kept.has(namespace)) closed.push(namespace);
@@ -78,11 +122,16 @@ export function createWorkerStores({
 
   return {
     releaseAfterBootFailure: () => serial(releaseAll),
+    /** Lets the jobs the tabs had accepted run before a deploy's reload, bounded. */
+    drain: async (): Promise<void> => {
+      stopSync();
+      await drainWithin(queue, drainMs);
+    },
     /** A retired worker must stop writing before a fresh one opens the same stores. */
     retire: (): Promise<void> =>
       serial(async () => {
         await stopReactor();
-        await releaseAll();
+        (await closeAll(close, true))();
       }),
     /** Stops the worker for good: it retires once `run` settles, either way. */
     runAdmin: ({

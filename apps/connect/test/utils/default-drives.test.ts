@@ -26,7 +26,11 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 vi.mock("@renown/sdk", () => ({ createSignatureVerifier: vi.fn() }));
 vi.mock("document-model", () => ({ ConsoleLogger: class {} }));
 vi.mock("kysely", () => ({ Kysely: class {} }));
-vi.mock("@powerhousedao/reactor", () => ({ HardenedPGliteDialect: class {} }));
+vi.mock("@powerhousedao/reactor", () => ({
+  HardenedPGliteDialect: class {},
+  ReactorEventTypes: {},
+  SyncEventTypes: {},
+}));
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: vi.fn(),
 }));
