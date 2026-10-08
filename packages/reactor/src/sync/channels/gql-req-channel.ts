@@ -66,7 +66,14 @@ export type GqlChannelConfig = {
   retryBaseDelayMs: number;
   /** Maximum delay in ms for exponential backoff on push retries */
   retryMaxDelayMs: number;
+  /** Bound on one request's fetch and body read; 0 disables it. */
+  requestTimeoutMs?: number;
 };
+
+export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
+
+/** Agreement probe, up to three poll attempts as schema flags clear, manifest refresh. */
+export const MAX_REQUESTS_PER_POLL = 5;
 
 /**
  * Fields the auth projection added to the sync schema. A remote that predates
@@ -118,6 +125,24 @@ type DeadLetterWire = {
   operationCount: number;
 };
 
+type CursorType = "inbox" | "outbox";
+
+/** `requested`: highest ordinal no write has taken yet; `tail`: the write chain. */
+type CursorWriter = {
+  persisted: number;
+  requested: number;
+  tail: Promise<void>;
+};
+
+/** A single GraphQL request's abort signal and expiry. */
+type RequestDeadline = {
+  signal: AbortSignal;
+  /** Resolves when the deadline passes; never resolves when unbounded. */
+  expired: Promise<void>;
+  timeoutMs: number;
+  dispose: () => void;
+};
+
 type PollSyncEnvelopesResult = {
   pollSyncEnvelopes: {
     envelopes: SyncEnvelope[];
@@ -149,8 +174,10 @@ export class GqlRequestChannel implements IChannel {
   private failureCount: number;
   private lastSuccessUtcMs?: number;
   private lastFailureUtcMs?: number;
-  private lastPersistedInboxOrdinal: number = 0;
-  private lastPersistedOutboxOrdinal: number = 0;
+  private readonly cursorWriters: Record<CursorType, CursorWriter> = {
+    inbox: { persisted: 0, requested: 0, tail: Promise.resolve() },
+    outbox: { persisted: 0, requested: 0, tail: Promise.resolve() },
+  };
   private pushFailureCount: number = 0;
   private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private pushBlocked: boolean = false;
@@ -177,6 +204,8 @@ export class GqlRequestChannel implements IChannel {
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
   private requiresAuth: boolean = false;
+  private polling = false;
+  private polledSinceStart = false;
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
 
@@ -202,6 +231,7 @@ export class GqlRequestChannel implements IChannel {
       filter: config.filter,
       retryBaseDelayMs: config.retryBaseDelayMs,
       retryMaxDelayMs: config.retryMaxDelayMs,
+      requestTimeoutMs: config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
     };
     this.isShutdown = false;
     this.failureCount = 0;
@@ -263,46 +293,52 @@ export class GqlRequestChannel implements IChannel {
         getLatestAppliedOrdinal(syncOps),
         this.unappliedFloor() - 1,
       );
-      if (ordinal > this.lastPersistedOutboxOrdinal) {
-        this.lastPersistedOutboxOrdinal = ordinal;
-        this.cursorStorage
-          .upsert({
-            remoteName: this.remoteName,
-            cursorType: "outbox",
-            cursorOrdinal: ordinal,
-            lastSyncedAtUtcMs: Date.now(),
-          })
-          .catch((error) => {
-            this.logger.error(
-              "Failed to update outbox cursor for @ChannelId! This means that future application runs may resend duplicate operations. This is recoverable (with deduplication protection), but not-optimal: @Error",
-              this.channelId,
-              error,
-            );
-          });
-      }
+      this.persistCursor("outbox", ordinal);
     });
 
     // The inbox ack, which never passes a marker still awaiting its load.
     this.inbox.onRemoved(() => {
-      const maxOrdinal = this.inbox.ackOrdinal;
-      if (maxOrdinal > this.lastPersistedInboxOrdinal) {
-        this.lastPersistedInboxOrdinal = maxOrdinal;
-        this.cursorStorage
-          .upsert({
-            remoteName: this.remoteName,
-            cursorType: "inbox",
-            cursorOrdinal: maxOrdinal,
-            lastSyncedAtUtcMs: Date.now(),
-          })
-          .catch((error) => {
-            this.logger.error(
-              "Failed to update inbox cursor for @ChannelId! This is unlikely to cause a problem, but not-optimal: @Error",
-              this.channelId,
-              error,
-            );
-          });
-      }
+      this.persistCursor("inbox", this.inbox.ackOrdinal);
     });
+  }
+
+  /** Advances the watermark only once the write lands; writes per row run one at a time, coalesced. */
+  private persistCursor(cursorType: CursorType, ordinal: number): void {
+    const writer = this.cursorWriters[cursorType];
+    if (ordinal <= Math.max(writer.persisted, writer.requested)) {
+      return;
+    }
+    writer.requested = ordinal;
+    writer.tail = writer.tail.then(() => this.writeCursor(cursorType));
+  }
+
+  /** One link of a cursor write chain; never rejects, so the chain survives. */
+  private async writeCursor(cursorType: CursorType): Promise<void> {
+    const writer = this.cursorWriters[cursorType];
+    const ordinal = writer.requested;
+    if (ordinal <= writer.persisted) {
+      return;
+    }
+    writer.requested = 0;
+
+    try {
+      await this.cursorStorage.upsert({
+        remoteName: this.remoteName,
+        cursorType,
+        cursorOrdinal: ordinal,
+        lastSyncedAtUtcMs: Date.now(),
+      });
+    } catch (error) {
+      this.logger.error(
+        "Failed to update @CursorType cursor for @ChannelId at ordinal @Ordinal; the watermark stays put so the next advance retries it: @Error",
+        cursorType,
+        this.channelId,
+        ordinal,
+        error,
+      );
+      return;
+    }
+    writer.persisted = Math.max(writer.persisted, ordinal);
   }
 
   /**
@@ -312,7 +348,7 @@ export class GqlRequestChannel implements IChannel {
     this.abortController.abort();
     this.bufferedOutbox.flush();
     this.isShutdown = true;
-    this.pollTimer.stop();
+    this.stopPolling();
 
     if (this.pushRetryTimer) {
       clearTimeout(this.pushRetryTimer);
@@ -398,11 +434,13 @@ export class GqlRequestChannel implements IChannel {
 
   /**
    * Re-touches once when either side's manifest moved; touching is idempotent.
-   * False when the refresh failed, so polled rows must not be judged yet.
+   * False only when shutting down; a failed refresh raises as a recoverable
+   * poll failure, so the next tick retries it.
    */
   private async refreshManifestsIfStale(
     manifestRevision: string | null | undefined,
     peerManifestRevision: string | null | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<boolean> {
     if (!this.peerServesAgreement || typeof manifestRevision !== "string") {
       return true;
@@ -417,7 +455,7 @@ export class GqlRequestChannel implements IChannel {
     if (this.isShutdown) {
       return false;
     }
-    this.manifestRefresh ??= this.touchRemoteChannel()
+    this.manifestRefresh ??= this.touchRemoteChannel(signal)
       .then(({ ackOrdinal }) => {
         if (ackOrdinal > 0) {
           trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
@@ -428,22 +466,20 @@ export class GqlRequestChannel implements IChannel {
       });
     try {
       await this.manifestRefresh;
-      return true;
     } catch (error) {
-      this.logger.error(
-        "GqlChannel @ChannelId manifest refresh failed: @Error",
-        this.channelId,
-        error,
+      throw new Error(
+        `Manifest refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
-      return false;
     }
+    return true;
   }
 
   /** Re-touches a silent remote in case it was upgraded. */
-  private async probeAgreement(): Promise<void> {
+  private async probeAgreement(signal: AbortSignal | undefined): Promise<void> {
     this.agreementStoppedUtcMs = Date.now();
     try {
-      const { ackOrdinal } = await this.touchRemoteChannel();
+      const { ackOrdinal } = await this.touchRemoteChannel(signal);
       if (ackOrdinal > 0) {
         trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
       }
@@ -460,7 +496,7 @@ export class GqlRequestChannel implements IChannel {
    * Initializes the channel by registering it on the remote server and starting polling.
    */
   async init(): Promise<void> {
-    const { ackOrdinal } = await this.touchRemoteChannel();
+    const { ackOrdinal } = await this.touchRemoteChannel(undefined);
 
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);
@@ -470,20 +506,44 @@ export class GqlRequestChannel implements IChannel {
       cursors.find((c) => c.cursorType === "outbox")?.cursorOrdinal ?? 0;
     this.inbox.init(inboxOrdinal);
     this.outbox.init(outboxOrdinal);
-    this.lastPersistedInboxOrdinal = inboxOrdinal;
-    this.lastPersistedOutboxOrdinal = outboxOrdinal;
+    this.cursorWriters.inbox.persisted = inboxOrdinal;
+    this.cursorWriters.outbox.persisted = outboxOrdinal;
 
     if (ackOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
 
-    this.pollTimer.setDelegate(() => this.poll());
+    this.pollTimer.setDelegate((signal) => this.poll(signal));
+    this.startPolling();
+    this.transitionConnectionState(this.reachedState());
+  }
+
+  private startPolling(): void {
+    this.polling = true;
+    this.polledSinceStart = false;
     this.pollTimer.start();
-    this.transitionConnectionState("connected");
+  }
+
+  private stopPolling(): void {
+    this.polling = false;
+    this.polledSinceStart = false;
+    this.pollTimer.stop();
+  }
+
+  /**
+   * `"connected"` is earned by a poll completed since the loop last started; a
+   * timer that polls only on demand earns it with the touch that started it.
+   */
+  private reachedState(): ConnectionState {
+    return this.polledSinceStart || this.pollTimer.isPaused?.() === true
+      ? "connected"
+      : "connecting";
   }
 
   private transitionConnectionState(next: ConnectionState): void {
-    if (next === "connected") this.requiresAuth = false;
+    if (next === "connected" || next === "connecting") {
+      this.requiresAuth = false;
+    }
     if (this.connectionState === next) return;
     this.connectionState = next;
     const snapshot = this.getConnectionState();
@@ -500,32 +560,37 @@ export class GqlRequestChannel implements IChannel {
   }
 
   /**
-   * Polls the remote for new sync envelopes.
+   * Polls the remote for new sync envelopes; any failure of the body is recorded.
    */
-  private async poll(): Promise<void> {
+  private async poll(signal: AbortSignal | undefined): Promise<void> {
     if (this.isShutdown) {
       return;
     }
 
-    if (
-      !this.peerServesAgreement &&
-      Date.now() - this.agreementStoppedUtcMs >= AGREEMENT_PROBE_INTERVAL_MS
-    ) {
-      await this.probeAgreement();
-    }
-
-    let response;
     try {
-      response = await this.pollSyncEnvelopes(
-        this.inbox.ackOrdinal,
-        this.inbox.latestOrdinal,
-      );
+      await this.pollOnce(signal);
     } catch (error) {
       if (!this.handlePollError(error)) {
         throw error;
       }
-      return;
     }
+  }
+
+  private async pollOnce(signal: AbortSignal | undefined): Promise<void> {
+    if (
+      !this.peerServesAgreement &&
+      Date.now() - this.agreementStoppedUtcMs >= AGREEMENT_PROBE_INTERVAL_MS
+    ) {
+      await this.probeAgreement(signal);
+    }
+
+    const response = await this.pollSyncEnvelopes(
+      this.inbox.ackOrdinal,
+      this.inbox.latestOrdinal,
+      signal,
+    );
+
+    this.throwIfPollCancelled(signal);
 
     const {
       envelopes,
@@ -549,10 +614,13 @@ export class GqlRequestChannel implements IChannel {
       !(await this.refreshManifestsIfStale(
         manifestRevision,
         peerManifestRevision,
+        signal,
       ))
     ) {
       return;
     }
+
+    this.throwIfPollCancelled(signal);
 
     // convert the envelopes to sync operations
     const allSyncOps: SyncOperation[] = [];
@@ -591,6 +659,7 @@ export class GqlRequestChannel implements IChannel {
 
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
+    this.polledSinceStart = true;
     this.transitionConnectionState("connected");
   }
 
@@ -673,7 +742,7 @@ export class GqlRequestChannel implements IChannel {
     );
 
     if (classification === "unrecoverable") {
-      this.pollTimer.stop();
+      this.stopPolling();
       this.requiresAuth = isDriveAuthError(err);
       this.transitionConnectionState("error");
       return true;
@@ -696,7 +765,7 @@ export class GqlRequestChannel implements IChannel {
       this.channelId,
     );
 
-    this.pollTimer.stop();
+    this.stopPolling();
 
     const attemptRecovery = (attempt: number): void => {
       if (this.isShutdown) {
@@ -704,7 +773,7 @@ export class GqlRequestChannel implements IChannel {
         return;
       }
 
-      void this.touchRemoteChannel()
+      void this.touchRemoteChannel(undefined)
         .then(({ ackOrdinal }) => {
           this.logger.info(
             "GqlChannel @ChannelId re-registered successfully",
@@ -715,8 +784,8 @@ export class GqlRequestChannel implements IChannel {
           if (ackOrdinal > 0) {
             trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
           }
-          this.pollTimer.start();
-          this.transitionConnectionState("connected");
+          this.startPolling();
+          this.transitionConnectionState(this.reachedState());
           this.resumePushAfterRecovery();
         })
         .catch((recoveryError: unknown) => {
@@ -786,6 +855,7 @@ export class GqlRequestChannel implements IChannel {
   private async pollSyncEnvelopes(
     ackOrdinal: number,
     latestOrdinal: number,
+    signal: AbortSignal | undefined,
   ): Promise<{
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
@@ -824,6 +894,7 @@ export class GqlRequestChannel implements IChannel {
           this.peerServesAgreement
             ? { ...variables, manifestRevision: revision, refusals }
             : variables,
+          signal,
         );
         break;
       } catch (error) {
@@ -1008,7 +1079,9 @@ export class GqlRequestChannel implements IChannel {
    * Registers or updates this channel on the remote server via GraphQL mutation.
    * Returns the remote's ack ordinal so the client can trim its outbox.
    */
-  private async touchRemoteChannel(): Promise<{ ackOrdinal: number }> {
+  private async touchRemoteChannel(
+    signal: AbortSignal | undefined,
+  ): Promise<{ ackOrdinal: number }> {
     let sinceTimestampUtcMs = "0";
     try {
       const result = await this.operationIndex.getLatestTimestampForCollection(
@@ -1055,6 +1128,7 @@ export class GqlRequestChannel implements IChannel {
             ...(manifest ? { manifest } : {}),
           },
         },
+        signal,
       );
     };
 
@@ -1100,11 +1174,13 @@ export class GqlRequestChannel implements IChannel {
         this.isPushing = false;
         this.pushBlocked = false;
         this.pushFailureCount = 0;
+        // A stopped poll loop keeps its error; a push says nothing about it.
         if (
-          this.connectionState === "reconnecting" ||
-          this.connectionState === "error"
+          this.polling &&
+          (this.connectionState === "reconnecting" ||
+            this.connectionState === "error")
         ) {
-          this.transitionConnectionState("connected");
+          this.transitionConnectionState(this.reachedState());
         }
         this.drainOutbox();
       })
@@ -1132,7 +1208,9 @@ export class GqlRequestChannel implements IChannel {
             this.pushFailureCount,
             err,
           );
-          this.transitionConnectionState("reconnecting");
+          if (this.polling) {
+            this.transitionConnectionState("reconnecting");
+          }
           this.schedulePushRetry();
         } else {
           const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
@@ -1253,6 +1331,8 @@ export class GqlRequestChannel implements IChannel {
       }
       case "parse":
         return "recoverable";
+      case "timeout":
+        return "recoverable";
       case "graphql":
         // A remote that classified the failure as worth polling through is
         // taken at its word. Everything else stays permanent: it stops the poll
@@ -1292,6 +1372,7 @@ export class GqlRequestChannel implements IChannel {
             ? { peerManifestRevision: gatedUnder }
             : {}),
         },
+        undefined,
       );
       return;
     } catch (error) {
@@ -1309,6 +1390,7 @@ export class GqlRequestChannel implements IChannel {
     await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
       pushMutation(false),
       { envelopes: this.envelopesFor(remaining) },
+      undefined,
     );
   }
 
@@ -1375,24 +1457,122 @@ export class GqlRequestChannel implements IChannel {
     return undefined;
   }
 
-  /**
-   * Executes a GraphQL query or mutation against the remote endpoint.
-   */
+  /** Aborted by shutdown, tick cancellation or the deadline; `expired` bounds what ignores it. */
+  private requestDeadline(
+    timeoutMs: number,
+    tick: AbortSignal | undefined,
+  ): RequestDeadline {
+    const controller = new AbortController();
+    const onShutdown = () =>
+      controller.abort(this.abortController.signal.reason);
+    if (this.abortController.signal.aborted) {
+      onShutdown();
+    } else {
+      this.abortController.signal.addEventListener("abort", onShutdown, {
+        once: true,
+      });
+    }
+
+    let expireTick = () => undefined as void;
+    const onTickCancelled = () => {
+      controller.abort(tick?.reason);
+      expireTick();
+    };
+    if (tick?.aborted) {
+      onTickCancelled();
+    } else {
+      tick?.addEventListener("abort", onTickCancelled, { once: true });
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const expired = new Promise<void>((resolve) => {
+      expireTick = () => resolve();
+      if (tick?.aborted) {
+        resolve();
+      }
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          controller.abort(new Error("request deadline exceeded"));
+          resolve();
+        }, timeoutMs);
+      }
+    });
+
+    return {
+      signal: controller.signal,
+      expired,
+      timeoutMs,
+      dispose: () => {
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+        this.abortController.signal.removeEventListener("abort", onShutdown);
+        tick?.removeEventListener("abort", onTickCancelled);
+      },
+    };
+  }
+
+  /** A cancelled poll must not touch mailboxes or cursors the next poll will. */
+  private throwIfPollCancelled(signal: AbortSignal | undefined): void {
+    if (signal?.aborted !== true) {
+      return;
+    }
+    const reason: unknown = signal.reason;
+    throw reason instanceof Error
+      ? reason
+      : new Error(`poll cancelled: ${String(reason)}`);
+  }
+
+  private async withDeadline<T>(
+    work: Promise<T>,
+    deadline: RequestDeadline,
+    what: string,
+  ): Promise<T> {
+    const timedOut = Symbol("timed-out");
+    const outcome = await Promise.race([
+      work,
+      deadline.expired.then(() => timedOut),
+    ]);
+    if (outcome === timedOut) {
+      throw new GraphQLRequestError(
+        `GraphQL ${what} timed out after ${deadline.timeoutMs}ms`,
+        "timeout",
+      );
+    }
+    return outcome as T;
+  }
+
+  /** Executes a GraphQL query or mutation against the remote endpoint. */
   private async executeGraphQL<T>(
     query: string,
-    variables?: Record<string, unknown>,
+    variables: Record<string, unknown> | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
 
-    const authHeader = await this.getAuthorizationHeader();
+    const operationMatch = query.match(/(?:query|mutation)\s+(\w+)/);
+    const operationName = operationMatch?.[1] ?? "unknown";
+
+    const timeoutMs =
+      this.config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const deadline = this.requestDeadline(timeoutMs, signal);
+
+    let authHeader: string | undefined;
+    try {
+      authHeader = await this.withDeadline(
+        this.getAuthorizationHeader(),
+        deadline,
+        `${operationName} authorization`,
+      );
+    } catch (error) {
+      deadline.dispose();
+      throw error;
+    }
     if (authHeader) {
       headers["Authorization"] = authHeader;
     }
-
-    const operationMatch = query.match(/(?:query|mutation)\s+(\w+)/);
-    const operationName = operationMatch?.[1] ?? "unknown";
 
     this.logger.verbose(
       "GQL request @channelId @operation @url vars=@variables",
@@ -1405,16 +1585,24 @@ export class GqlRequestChannel implements IChannel {
     const fetchFn = this.config.fetchFn ?? fetch;
     let response;
     try {
-      response = await fetchFn(this.config.url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          query,
-          variables,
+      response = await this.withDeadline(
+        fetchFn(this.config.url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            query,
+            variables,
+          }),
+          signal: deadline.signal,
         }),
-        signal: this.abortController.signal,
-      });
+        deadline,
+        `${operationName} request`,
+      );
     } catch (error) {
+      deadline.dispose();
+      if (error instanceof GraphQLRequestError) {
+        throw error;
+      }
       throw new GraphQLRequestError(
         `GraphQL request failed: ${error instanceof Error ? error.message : String(error)}`,
         "network",
@@ -1422,6 +1610,7 @@ export class GqlRequestChannel implements IChannel {
     }
 
     if (!response.ok) {
+      deadline.dispose();
       throw new GraphQLRequestError(
         `GraphQL request failed: ${response.status} ${response.statusText}`,
         "http",
@@ -1431,15 +1620,24 @@ export class GqlRequestChannel implements IChannel {
 
     let result;
     try {
-      result = (await response.json()) as {
+      result = (await this.withDeadline(
+        response.json(),
+        deadline,
+        `${operationName} response body`,
+      )) as {
         data?: T;
         errors?: Array<{ message: string; extensions?: { code?: string } }>;
       };
     } catch (error) {
+      if (error instanceof GraphQLRequestError) {
+        throw error;
+      }
       throw new GraphQLRequestError(
         `Failed to parse GraphQL response: ${error instanceof Error ? error.message : String(error)}`,
         "parse",
       );
+    } finally {
+      deadline.dispose();
     }
 
     this.logger.verbose(

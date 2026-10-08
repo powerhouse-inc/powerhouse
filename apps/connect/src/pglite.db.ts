@@ -1,7 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
+import { HardenedPGliteDialect } from "@powerhousedao/reactor";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import {
   detectReactorPgMajor,
   detectRelationalPgMajor,
@@ -10,6 +10,7 @@ import {
   type DetectedMajor,
   type SupportedPgMajor,
 } from "./utils/pglite-runtime.js";
+import { reloadPageForPoisonedStore } from "./utils/poisoned-store-budget.js";
 import {
   REACTOR_PGLITE_NAME,
   RELATIONAL_PGLITE_NAME,
@@ -125,7 +126,9 @@ export async function getDb() {
   const pgLite = await getRelationalPGlite();
   const relationalDb = createRelationalDb(
     new Kysely({
-      dialect: new PGliteDialect(pgLite),
+      dialect: new HardenedPGliteDialect(pgLite, {
+        onPoisoned: reloadPageForPoisonedStore,
+      }),
     }),
   );
   return { pgLite, relationalDb };

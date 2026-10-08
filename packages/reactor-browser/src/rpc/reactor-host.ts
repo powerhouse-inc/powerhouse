@@ -63,6 +63,8 @@ export type ReactorHostOptions = {
   onAdminRestart?: () => void;
   onAdminClearStorage?: () => Promise<void>;
   onAdminMigrate?: () => Promise<void>;
+  /** Stops the reactor and releases its stores once the worker is retired. */
+  onRetire?: () => Promise<void>;
 };
 
 function versionsCompatible(
@@ -98,13 +100,19 @@ function mismatchReason(
 }
 
 // Worker names end up in devtools and IndexedDB keys, so the flag set is
-// folded to a short stable token rather than spelled out.
+// reduced to a short stable token rather than spelled out.
 function hashFlags(flags: string): string {
   let hash = 0;
   for (let i = 0; i < flags.length; i++) {
     hash = (hash * 31 + flags.charCodeAt(i)) | 0;
   }
   return (hash >>> 0).toString(36);
+}
+
+export const RETIRED_WORKER_RELOAD_REASON = "worker retired";
+
+function retiredError(): Error {
+  return new Error("This worker was retired; reloading into the current one");
 }
 
 export class ReactorHost {
@@ -118,6 +126,7 @@ export class ReactorHost {
   private readonly ownerId: string;
   private readonly bootedAtMs: number;
   private migrationState: WorkerMigrationState | null = null;
+  private retirement: { reason: string; workerGen: string } | null = null;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
@@ -169,6 +178,11 @@ export class ReactorHost {
         reply.errForKind(msg, new Error("migration in progress"));
         return;
       }
+      // No reload here: a tab past its poisoned-store budget stays put on purpose.
+      if (this.retirement && isDataMessage(msg)) {
+        reply.errForKind(msg, retiredError());
+        return;
+      }
       if (msg.k === "hello") {
         void this.handleHello(msg, transport, reply, ensureServer, drainBuffer);
         return;
@@ -206,7 +220,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "admin") {
-        this.handleAdmin(msg, reply);
+        this.handleAdmin(msg, reply, transport);
         return;
       }
       if (ready && server) {
@@ -219,6 +233,9 @@ export class ReactorHost {
     this.clients.add(transport);
     if (this.migrationState) {
       transport.post({ k: "migration", state: this.migrationState });
+    }
+    if (this.retirement) {
+      transport.post({ k: "reload", ...this.retirement });
     }
     if (this.options.client) {
       void ensureServer()
@@ -257,6 +274,18 @@ export class ReactorHost {
     }
   }
 
+  // A reload this worker never recovers from; tabs that connect later get it too.
+  retireAndReload(reason: string, workerGen: string): void {
+    if (this.retirement) {
+      return;
+    }
+    this.retirement = { reason, workerGen };
+    this.broadcastReload(reason, workerGen);
+    this.options.onRetire?.().catch((error: unknown) => {
+      console.error("ReactorHost retirement cleanup failed", error);
+    });
+  }
+
   // Cache + fan out the worker's migration state so tabs drive the banner from it.
   setMigrationState(state: WorkerMigrationState): void {
     this.migrationState = state;
@@ -265,11 +294,29 @@ export class ReactorHost {
     }
   }
 
+  get retired(): boolean {
+    return this.retirement !== null;
+  }
+
   get connectionCount(): number {
     return this.disposers.size;
   }
 
-  private handleAdmin(message: RpcAdmin, reply: IHostResponder): void {
+  private handleAdmin(
+    message: RpcAdmin,
+    reply: IHostResponder,
+    transport: IRpcTransport,
+  ): void {
+    // A retired worker no longer owns the store: send the tab to the one that does.
+    if (this.retirement && message.method !== "info") {
+      transport.post({
+        k: "reload",
+        reason: RETIRED_WORKER_RELOAD_REASON,
+        workerGen: this.retirement.workerGen,
+      });
+      reply.err(message.id, retiredError());
+      return;
+    }
     if (message.method === "restart") {
       this.options.onAdminRestart?.();
       reply.ok(message.id);
@@ -312,6 +359,10 @@ export class ReactorHost {
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {
+    // A retired worker's client may sit on stopped stores.
+    if (this.retirement) {
+      return Promise.reject(retiredError());
+    }
     if (!this.clientPromise) {
       const build = this.options.build;
       if (!build) {

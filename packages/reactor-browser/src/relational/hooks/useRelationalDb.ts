@@ -1,11 +1,12 @@
-import type { PGlite } from "@electric-sql/pglite";
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
 import { createRelationalDb } from "@powerhousedao/reactor";
 import type { IRelationalDb as IRelationalDbCore } from "@powerhousedao/shared/processors";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { usePGliteDB } from "../../pglite/usePGlite.js";
+import {
+  relationalKysely,
+  subscribeRelationalPoisoned,
+} from "../utils/relational-dialect.js";
 
 // Type for Relational DB instance enhanced with live capabilities
 export type RelationalDbWithLive<Schema> = IRelationalDbCore<Schema> & {
@@ -22,9 +23,7 @@ interface IRelationalDbState<Schema> {
 function createRelationalDbWithLive<Schema>(
   pgliteInstance: PGliteWithLive,
 ): RelationalDbWithLive<Schema> {
-  const baseDb = new Kysely<Schema>({
-    dialect: new PGliteDialect(pgliteInstance as unknown as PGlite),
-  });
+  const baseDb = relationalKysely<Schema>(pgliteInstance);
   const relationalDb = createRelationalDb(baseDb);
 
   // Inject the live namespace with proper typing
@@ -35,8 +34,21 @@ function createRelationalDbWithLive<Schema>(
   return relationalDBWithLive;
 }
 
-export const useRelationalDb = <Schema>(): IRelationalDbState<Schema> => {
+export type RelationalDbOptions = {
+  /**
+   * Called once if the shared PGlite session becomes unusable; every hook that
+   * passes one is told, and it unsubscribes on unmount. Recovery is the caller's.
+   */
+  onPoisoned?: (cause: Error) => void;
+};
+
+export const useRelationalDb = <Schema>(
+  options: RelationalDbOptions = {},
+): IRelationalDbState<Schema> => {
   const pglite = usePGliteDB();
+  const onPoisoned = useRef(options.onPoisoned);
+  onPoisoned.current = options.onPoisoned;
+  const wantsPoisoned = options.onPoisoned !== undefined;
 
   const relationalDb = useMemo<IRelationalDbState<Schema>>(() => {
     if (!pglite.db || pglite.isLoading || pglite.error) {
@@ -55,6 +67,13 @@ export const useRelationalDb = <Schema>(): IRelationalDbState<Schema> => {
       error: null,
     };
   }, [pglite]);
+
+  useEffect(() => {
+    if (!pglite.db || !wantsPoisoned) return;
+    return subscribeRelationalPoisoned(pglite.db, (cause) =>
+      onPoisoned.current?.(cause),
+    );
+  }, [pglite.db, wantsPoisoned]);
 
   return relationalDb;
 };

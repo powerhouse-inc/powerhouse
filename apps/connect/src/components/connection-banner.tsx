@@ -1,3 +1,4 @@
+import { showPHModal } from "@powerhousedao/reactor-browser";
 import { useSyncExternalStore } from "react";
 import {
   getWorkerConnectionStatus,
@@ -6,6 +7,31 @@ import {
 } from "../connection-state.js";
 
 const CONNECTED: WorkerConnectionStatus = "connected";
+
+const BANNER_TEXT: Record<
+  Exclude<WorkerConnectionStatus, "connected">,
+  { title: string; detail: string }
+> = {
+  failed: {
+    title: "Reactor worker failed to load",
+    detail:
+      "The background worker script could not be loaded. Reload to retry.",
+  },
+  lost: {
+    title: "Lost connection to the reactor",
+    detail: "The background worker stopped responding. Reload to reconnect.",
+  },
+  "storage-held": {
+    title: "Waiting for another Connect tab",
+    detail:
+      "Another Connect tab still holds local storage. Close or reload the other Connect tabs to continue.",
+  },
+  "storage-unusable": {
+    title: "Local storage is unusable",
+    detail:
+      "The local database stopped responding. Clear storage to start over, or reload to retry.",
+  },
+};
 
 export const ConnectionBanner: React.FC = () => {
   const status = useSyncExternalStore(
@@ -18,14 +44,7 @@ export const ConnectionBanner: React.FC = () => {
     return null;
   }
 
-  const title =
-    status === "failed"
-      ? "Reactor worker failed to load"
-      : "Lost connection to the reactor";
-  const detail =
-    status === "failed"
-      ? "The background worker script could not be loaded. Reload to retry."
-      : "The background worker stopped responding. Reload to reconnect.";
+  const { title, detail } = BANNER_TEXT[status];
 
   return (
     <div className="absolute inset-x-0 top-0 z-30 flex justify-center p-3">
@@ -34,6 +53,15 @@ export const ConnectionBanner: React.FC = () => {
           <div className="font-semibold">{title}</div>
           <div className="text-foreground">{detail}</div>
         </div>
+        {status === "storage-unusable" && (
+          <button
+            type="button"
+            onClick={() => showPHModal({ type: "clearStorage" })}
+            className="rounded-sm bg-primary px-3 py-1 text-sm font-medium text-primary-foreground hover:hover-effect"
+          >
+            Clear storage
+          </button>
+        )}
         <button
           type="button"
           onClick={() => window.location.reload()}
