@@ -125,7 +125,7 @@
     "viem": "~2.50.4",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vitest-browser-react": "^1.0.1"
+    "vitest-browser-react": "^2.3.0"
   },
   "peerDependencies": {
     "graphql": "^16",

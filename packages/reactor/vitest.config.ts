@@ -71,6 +71,8 @@ export default defineConfig({
         test: {
           name: "holds-xid",
           include: HOLDS_XID,
+          // Benchmarks run once, in the reactor project's bench variant.
+          benchmark: { include: [] },
           maxWorkers: 1,
           sequence: { groupOrder: 1 },
           env: { REACTOR_TEST_HOLDS_XID: "1" },
