@@ -4,6 +4,10 @@ import type * as BudgetModule from "./poisoned-store-budget.js";
 import { RETIRED_WORKER_RELOAD_REASON } from "@powerhousedao/reactor-browser/rpc";
 import { POISONED_STORE_RELOAD_REASON } from "./poisoned-store-reload.js";
 
+const MISMATCH = "reactor version mismatch";
+const FLAGS_CHANGED =
+  "reactor enforcement flags changed (worker: none, tab: authEnforcement)";
+
 let connectionState: typeof ConnectionStateModule;
 let budget: typeof BudgetModule;
 
@@ -137,5 +141,87 @@ describe("poisoned-store reload budget", () => {
 
     expect(reload).toHaveBeenCalledOnce();
     expect(budget.claimPoisonedStoreReload(storage, Date.now())).toBe(true);
+  });
+  // Two builds served at once retire each other's worker; tabs would bounce forever.
+  it("stops reloading on repeated build mismatches and shows the version conflict", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    budget.reloadForWorker(MISMATCH, reload, storage, 0);
+    await loadPage();
+    budget.reloadForWorker(FLAGS_CHANGED, reload, storage, 1);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+
+    expect(reload).toHaveBeenCalledTimes(2);
+    expect(connectionState.getWorkerConnectionStatus()).toBe(
+      "version-conflict",
+    );
+    connectionState.setWorkerConnectionStatus("connected");
+    expect(connectionState.getWorkerConnectionStatus()).toBe(
+      "version-conflict",
+    );
+  });
+
+  it("keeps mismatch and poisoned-store reloads on separate budgets", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    for (let i = 0; i < 2; i++) {
+      await loadPage();
+      budget.reloadForWorker(MISMATCH, reload, storage, i);
+    }
+    await loadPage();
+    budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 2);
+    expect(reload).toHaveBeenCalledTimes(3);
+
+    await loadPage();
+    budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, 3);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 70_000);
+    expect(reload).toHaveBeenCalledTimes(5);
+  });
+
+  it("still reloads a mismatch right after two poisoned-store reloads", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    for (let i = 0; i < 2; i++) {
+      await loadPage();
+      budget.reloadForWorker(POISONED_STORE_RELOAD_REASON, reload, storage, i);
+    }
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+
+    expect(reload).toHaveBeenCalledTimes(3);
+    expect(connectionState.getWorkerConnectionStatus()).toBe("connected");
+  });
+
+  it("reloads for every deploy that lands minutes after the last", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    for (const minute of [0, 8, 16, 24]) {
+      await loadPage();
+      budget.reloadForWorker(MISMATCH, reload, storage, minute * 60_000);
+    }
+
+    expect(reload).toHaveBeenCalledTimes(4);
+    expect(connectionState.getWorkerConnectionStatus()).toBe("connected");
+  });
+
+  it("spends one slot when a page hears the same mismatch twice", async () => {
+    const storage = memoryStorage();
+    const reload = vi.fn();
+
+    budget.reloadForWorker(MISMATCH, reload, storage, 0);
+    budget.reloadForWorker(MISMATCH, reload, storage, 1);
+    expect(reload).toHaveBeenCalledOnce();
+
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 2);
+    await loadPage();
+    budget.reloadForWorker(MISMATCH, reload, storage, 3);
+    expect(reload).toHaveBeenCalledTimes(2);
   });
 });
