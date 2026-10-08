@@ -451,7 +451,7 @@ export class RouteDispatcher {
     );
   }
 
-  /** Retries a failed read once, only on a backend that proves it holds it. */
+  /** Retries a failed read once on a proven holder; routes stay unchanged. */
   private async recoverRead<T>(
     target: RouteTarget,
     failed: RouterBackend,
@@ -465,8 +465,6 @@ export class RouteDispatcher {
     if (serving.length === 0) {
       rethrow(error);
     }
-    const value = await run(serving[0]);
-    target.accepted(serving[0], "probed");
-    return value;
+    return run(serving[0]);
   }
 }

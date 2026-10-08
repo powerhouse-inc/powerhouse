@@ -65,8 +65,7 @@ export type CollectionRoute = {
 
 /**
  * What an operation proved about where a collection lives:
- * - `probed`: an ownership probe answered yes, e.g. a read recovered after an
- *   ordinary error. Nothing refused.
+ * - `probed`: an ownership probe answered yes while placing. Nothing refused.
  * - `accepted`: the backend ran the operation on the first attempt.
  * - `refusal`: the backend ran it after another backend refused it.
  */

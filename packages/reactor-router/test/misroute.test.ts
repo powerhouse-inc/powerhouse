@@ -167,7 +167,7 @@ describe("advisory routing", () => {
     expect(two.called("execute")).toBe(false);
   });
 
-  it("recovers a READ from a stale cache on positive evidence", async () => {
+  it("recovers a READ from a stale cache on positive evidence, leaving the table alone", async () => {
     const one = new FakeBackend("one");
     const two = new FakeBackend("two");
     two.seed(fakeDocument({ id: "doc-1", name: "on two" }));
@@ -184,7 +184,7 @@ describe("advisory routing", () => {
     );
 
     expect(document.header.name).toBe("on two");
-    expect(dispatcher.table.documentBackend("doc-1")).toBe("two");
+    expect(dispatcher.table.documentBackend("doc-1")).toBe("one");
   });
 
   it("preserves a read's own error when no other backend serves the target", async () => {
@@ -488,6 +488,36 @@ describe("route-source precedence over operation sequences", () => {
     expect(two.count("execute")).toBe(0);
     expect(route(dispatcher, "drive-a").source).not.toBe("corrected");
     expect(reported.join()).not.toMatch(/misroute resolved/);
+  });
+
+  it("keeps document writes on the owner after a read recovered on a replica", async () => {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    one.seed(fakeDocument({ id: "drive-a" }));
+    two.seed(fakeDocument({ id: "drive-a" }));
+    const dispatcher = new RouteDispatcher([one.handle(), two.handle()], {
+      onDiagnostic: silent,
+    });
+
+    one.failing.add("get");
+    await dispatcher.onDocument(
+      "get",
+      "drive-a",
+      (backend) => backend.api.get("drive-a"),
+      ATTEMPT.read,
+    );
+    one.failing.delete("get");
+    await dispatcher.onDocument(
+      "execute",
+      "drive-a",
+      renamer("drive-a", "after"),
+      ATTEMPT.write,
+    );
+
+    expect(two.count("get")).toBe(1);
+    expect(one.count("execute")).toBe(1);
+    expect(two.count("execute")).toBe(0);
+    expect(dispatcher.table.documentBackend("drive-a")).toBe("one");
   });
 
   it("keeps a correction when a later read recovers on another backend", async () => {
