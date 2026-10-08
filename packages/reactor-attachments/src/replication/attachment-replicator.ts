@@ -90,7 +90,12 @@ type Entry = {
   errorAnswers: number;
   nextAttemptAtMs: number | undefined;
   lastError: string | undefined;
+  /** Asked on the next attempt instead of the rotation. */
+  nextDocumentId: string | undefined;
 };
+
+/** setTimeout's largest delay; a longer one fires at once. */
+const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
 
 /**
  * Lazy fetch-on-reference: pulls attachment bytes a reactor's own operations
@@ -111,9 +116,10 @@ type Entry = {
  * second truth that is wrong in the one direction that loses data.
  *
  * Loop-safety is structural: one entry per hash, created once, and a terminal
- * entry (`not-found`, `failed`) is never re-queued by a further reference to
- * the same hash. Only {@link AttachmentReplicator.retry} moves a terminal entry
- * back, and only when something asks. A held hash drops its entry and is
+ * entry (`not-found`, `failed`) is never re-queued by a further reference from
+ * a document it already knows. A document it has not seen gives a `not-found`
+ * entry one more attempt, through that document. Otherwise only
+ * {@link AttachmentReplicator.retry} moves a terminal entry back. A held hash drops its entry and is
  * remembered in a bounded set, so the map holds only unfinished work.
  */
 export class AttachmentReplicator {
@@ -241,8 +247,17 @@ export class AttachmentReplicator {
     }
     const existing = this.entries.get(hash);
     if (existing) {
-      if (!existing.documentIds.includes(documentId)) {
-        existing.documentIds.push(documentId);
+      if (existing.documentIds.includes(documentId)) {
+        return;
+      }
+      existing.documentIds.push(documentId);
+      if (existing.state === "not-found") {
+        existing.state = "queued";
+        existing.nextDocumentId = documentId;
+        if (!this.queue.includes(hash)) {
+          this.queue.push(hash);
+        }
+        this.pump();
       }
       return;
     }
@@ -256,6 +271,7 @@ export class AttachmentReplicator {
       errorAnswers: 0,
       nextAttemptAtMs: undefined,
       lastError: undefined,
+      nextDocumentId: undefined,
     });
     this.queue.push(hash);
     this.pump();
@@ -433,7 +449,13 @@ export class AttachmentReplicator {
     try {
       await this.attempt(entry, controller.signal);
     } catch (error) {
-      this.recordError(entry, error);
+      if (controller.signal.aborted) {
+        // Only stop() aborts; a restart's resumeOutstanding picks it up.
+        entry.state = "queued";
+        entry.nextAttemptAtMs = undefined;
+      } else {
+        this.recordError(entry, error);
+      }
     } finally {
       this.aborts.delete(controller);
       this.inFlight -= 1;
@@ -455,15 +477,21 @@ export class AttachmentReplicator {
     // one document's authorization lagging rather than the bytes being absent,
     // and a hash referenced by several documents has several chances.
     const documentId =
+      entry.nextDocumentId ??
       entry.documentIds[(entry.attempts - 1) % entry.documentIds.length];
+    entry.nextDocumentId = undefined;
     const result = await this.transport.fetch(entry.hash, documentId, signal);
 
     if (result.kind === "pending") {
-      // The answer's own retryAfterMs, used as-is -- NOT `|| pendingRetryMs`,
-      // which would turn a legitimate "retry immediately" (0ms) into the 5s
-      // default. A pending answer always carries a retryAfterMs (see the
-      // transport result type), so no fallback is reached.
-      this.schedule(entry, result.retryAfterMs);
+      // A valid 0 means retry now; only a delay that is not a usable number
+      // falls back to the policy.
+      const delay = result.retryAfterMs;
+      this.schedule(
+        entry,
+        Number.isFinite(delay) && delay >= 0
+          ? Math.min(delay, MAX_TIMER_DELAY_MS)
+          : this.policy.pendingRetryMs,
+      );
       return;
     }
 

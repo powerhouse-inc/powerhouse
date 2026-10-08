@@ -27,7 +27,8 @@ export interface IOperationAttachmentRefs {
  *   {@link AttachmentRetryPolicy.notFoundAttempts}), or a transport error; a
  *   retry is scheduled.
  * - `not-found`: the peer answered `not-found` as many times as the policy
- *   allows. Terminal until something asks again.
+ *   allows. Terminal until something asks again, or a document not yet seen
+ *   references the hash, which earns one more attempt.
  * - `failed`: the transport kept erroring. Terminal until something asks again.
  */
 export type AttachmentReplicationState =
