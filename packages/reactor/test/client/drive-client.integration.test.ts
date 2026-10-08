@@ -10,9 +10,10 @@ import {
   signaturePolicyOf,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import { childLogger, documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { DriveClient } from "../../src/client/drive-client.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
@@ -145,6 +146,41 @@ describe("DriveClient Integration Tests", () => {
       );
       const ids = children.results.map((c) => c.header.id);
       expect(ids).toContain(child.header.id);
+    });
+  });
+
+  describe("constructor", () => {
+    async function addFileThrough(
+      submitter: ConstructorParameters<typeof DriveClient>[2],
+    ) {
+      const drive = await createDrive();
+      const drives = new DriveClient(
+        client,
+        childLogger(["drive-client-test"]),
+        submitter,
+        (await TestP256Signer.create()).asISigner(),
+        (identifier) => Promise.resolve(identifier),
+      );
+      const document = documentModelDocumentModelModule.utils.createDocument();
+      const added = await drives.addFile(drive.header.id, document);
+      const after = await client.get<DocumentDriveDocument>(drive.header.id);
+      return { added, after };
+    }
+
+    it("accepts a batch submitter", async () => {
+      const { added, after } = await addFileThrough((request, signal) =>
+        reactor.executeBatch(request, signal),
+      );
+      expect(after.state.global.nodes.map((node) => node.id)).toContain(
+        added.header.id,
+      );
+    });
+
+    it("still accepts an IReactor, as before the submitter form", async () => {
+      const { added, after } = await addFileThrough(reactor);
+      expect(after.state.global.nodes.map((node) => node.id)).toContain(
+        added.header.id,
+      );
     });
   });
 

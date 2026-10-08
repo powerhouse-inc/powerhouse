@@ -42,6 +42,7 @@ import type {
   BatchExecutionRequest,
   BatchExecutionResult,
   ExecutionJobPlan,
+  IReactor,
 } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
 import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
@@ -80,16 +81,24 @@ function withSelectedVersions(
 }
 
 export class DriveClient implements IDriveClient {
+  private readonly executeBatch: BatchSubmitter;
+
+  /** `submitter` may still be an IReactor, whose executeBatch is used. */
   constructor(
     private readonly client: DriveClientDeps,
     private readonly logger: ILogger,
-    private readonly executeBatch: BatchSubmitter,
+    submitter: BatchSubmitter | IReactor,
     private readonly signer: ISigner,
     private readonly resolveReference: (
       identifier: string,
       signal?: AbortSignal,
     ) => Promise<string>,
-  ) {}
+  ) {
+    this.executeBatch =
+      typeof submitter === "function"
+        ? submitter
+        : (request, signal) => submitter.executeBatch(request, signal);
+  }
 
   async create(
     input: DriveInput,
