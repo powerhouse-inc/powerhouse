@@ -499,7 +499,7 @@ export class RoutingReactorClient implements IReactorClient {
   }
 
   /** Strict: a backend that fails would leave the page silently short. */
-  find(
+  async find(
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
@@ -524,7 +524,7 @@ export class RoutingReactorClient implements IReactorClient {
       onDiagnostic,
     );
     const options = { mode: "strict", onDiagnostic } as const;
-    return mergePaged(
+    return await mergePaged(
       pagedParticipants("find", backends, paging, options),
       (backend, backendPaging) =>
         backend.api.find(search, view, backendPaging, signal),

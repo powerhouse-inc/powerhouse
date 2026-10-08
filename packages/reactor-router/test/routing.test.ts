@@ -253,12 +253,12 @@ describe("fan-in reads through the client", () => {
     );
   });
 
-  it("refuses a find no backend supports", () => {
+  it("refuses a find no backend supports, as a rejection", async () => {
     const one = new FakeBackend("one");
     one.supports = { find: () => false, pointInTimeViews: true };
     const client = router([one.config()]);
 
-    expect(() => client.find({ type: "test/note" })).toThrow(
+    await expect(client.find({ type: "test/note" })).rejects.toThrow(
       UnsupportedByBackendError,
     );
   });
