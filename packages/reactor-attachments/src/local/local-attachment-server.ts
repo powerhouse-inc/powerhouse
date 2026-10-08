@@ -239,6 +239,9 @@ export class LocalAttachmentServer {
       });
       return;
     }
+    if (this.stopped(request.id)) {
+      return;
+    }
 
     let held: boolean;
     try {
@@ -249,6 +252,9 @@ export class LocalAttachmentServer {
         "reading the local attachment store failed",
         error,
       );
+      return;
+    }
+    if (this.stopped(request.id)) {
       return;
     }
     if (!held) {

@@ -623,6 +623,64 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     server.close();
   });
 
+  it.each(["authorize", "has"] as const)(
+    "drops a serve cancelled while parked in %s before reading the body",
+    async (parkedIn) => {
+      const bytes = new TextEncoder().encode("held bytes");
+      const hash = await sha256Hex(bytes);
+      const store = new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        new NullAttachmentTransport(),
+      );
+      await store.putLocal(
+        hash,
+        metadata(bytes.byteLength),
+        streamFromBytes(bytes),
+      );
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const has = store.has.bind(store);
+      vi.spyOn(store, "has").mockImplementation(async (h) => {
+        if (parkedIn === "has") await gate;
+        return has(h);
+      });
+      const get = vi.spyOn(store, "get");
+      const fake = fakePort();
+      const server = new LocalAttachmentServer({
+        port: fake.port,
+        link: TEST_LINK,
+        store,
+        authorize: async () => {
+          if (parkedIn === "authorize") await gate;
+          return true;
+        },
+      });
+
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "fetch",
+        id: "req-1",
+        hash,
+        documentId: DOC,
+      });
+      await settle();
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "cancel",
+        id: "req-1",
+      });
+      release();
+      await settle();
+
+      expect(get).not.toHaveBeenCalled();
+      expect(fake.sent).toEqual([]);
+      expect(state(server).inFlight.size).toBe(0);
+      server.close();
+    },
+  );
+
   it("refuses a malformed hash or document id before the authorizer or the store sees it", async () => {
     const fake = fakePort();
     const store = new LocalAttachmentStore(
