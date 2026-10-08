@@ -46,16 +46,27 @@ class RegisteredPort implements LocalChannelPort {
     this.raw.postMessage(data);
   }
 
-  /** One channel at a time; a newer attach supersedes an older one. */
+  /**
+   * One channel at a time; a newer attach supersedes an older one. A receive
+   * that throws during replay detaches it and leaves the rest queued.
+   */
   onMessage(callback: (data: unknown) => void): () => void {
     this.subscriber = callback;
     this.discardingPushes = false;
-    while (this.queued.length > 0 && this.subscriber === callback) {
-      callback(this.queued.shift());
-    }
-    return () => {
+    const detach = (): void => {
       if (this.subscriber === callback) this.subscriber = undefined;
     };
+    while (this.queued.length > 0 && this.subscriber === callback) {
+      const frame = this.queued.shift();
+      try {
+        callback(frame);
+      } catch (error) {
+        detach();
+        if (frameKind(frame) === "push") this.discardPushes();
+        throw error;
+      }
+    }
+    return detach;
   }
 
   /** The registry closes the raw port on unregister; a channel cannot. */
@@ -83,8 +94,14 @@ class RegisteredPort implements LocalChannelPort {
         this.maxQueuedFrames,
       );
     }
-    this.discardingPushes = true;
+    this.discardPushes();
     this.compact();
+  }
+
+  /** Until the next attach, so no later push replays across the gap. */
+  private discardPushes(): void {
+    this.discardingPushes = true;
+    this.queued = this.queued.filter((frame) => frameKind(frame) !== "push");
   }
 
   /** Keeps only the latest hello or resend and the latest ack, in order. */

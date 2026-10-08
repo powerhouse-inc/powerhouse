@@ -193,6 +193,29 @@ describe("LocalChannelPortRegistry", () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  it("detaches a subscriber whose receive throws during replay, keeping the rest queued", () => {
+    const registry = new LocalChannelPortRegistry();
+    const raw = new BrowserPortLike();
+    registry.register("peer", "chan", messagePortTransport(raw));
+    const port = registry.provider("peer", "chan")!;
+    raw.receive("one");
+    raw.receive("two");
+
+    const failing: unknown[] = [];
+    expect(() =>
+      port.onMessage((data) => {
+        failing.push(data);
+        if (data === "one") throw new Error("receive failed");
+      }),
+    ).toThrow(/receive failed/);
+    raw.receive("three");
+
+    const next: unknown[] = [];
+    port.onMessage((data) => next.push(data));
+    expect(failing).toEqual(["one"]);
+    expect(next).toEqual(["two", "three"]);
+  });
+
   it("delivers only to the latest attach, and an older detach is a no-op", () => {
     const registry = new LocalChannelPortRegistry();
     const raw = new BrowserPortLike();
@@ -375,6 +398,73 @@ describe("LocalChannel over a registered port", () => {
       },
     };
   }
+
+  class GatedCursorStorage extends MemoryCursorStorage {
+    private readonly gate: Promise<void>;
+    open!: () => void;
+
+    constructor() {
+      super();
+      this.gate = new Promise((resolve) => {
+        this.open = resolve;
+      });
+    }
+
+    override async list(
+      remoteName: string,
+    ): ReturnType<MemoryCursorStorage["list"]> {
+      await this.gate;
+      return super.list(remoteName);
+    }
+  }
+
+  it("does not hand the queue to a channel shut down mid-init", async () => {
+    const { a, makeB, close } = link();
+    try {
+      const gated = new GatedCursorStorage();
+      const dead = makeB(gated);
+      const initing = dead.init();
+      await dead.shutdown();
+
+      await a.init();
+      a.outbox.add(syncOp("a->b", 1));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      gated.open();
+      await initing;
+
+      const live = makeB();
+      await live.init();
+      expect(live.inbox.items).toHaveLength(1);
+      await live.shutdown();
+    } finally {
+      await a.shutdown();
+      close();
+    }
+  });
+
+  it("keeps the live channel subscribed when a channel shut down mid-init resumes", async () => {
+    const { a, makeB, close } = link();
+    try {
+      const gated = new GatedCursorStorage();
+      const dead = makeB(gated);
+      const initing = dead.init();
+      await dead.shutdown();
+
+      const live = makeB();
+      await a.init();
+      await live.init();
+      await waitFor(() => live.getConnectionState().state === "connected");
+      gated.open();
+      await initing;
+
+      a.outbox.add(syncOp("a->b", 1));
+      await waitFor(() => live.inbox.items.length === 1);
+      await live.shutdown();
+    } finally {
+      await a.shutdown();
+      close();
+    }
+  });
 
   it("loses no push when the attach queue overflows while detached", async () => {
     const { a, makeB, close } = link(2);

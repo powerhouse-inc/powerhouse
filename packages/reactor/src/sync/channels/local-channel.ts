@@ -151,6 +151,7 @@ export class LocalChannel implements IChannel {
    */
   async init(): Promise<void> {
     const cursors = await this.cursorStorage.list(this.remoteName);
+    if (this.isShutdown) return;
     const inboxOrdinal =
       cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0;
     const outboxOrdinal =
