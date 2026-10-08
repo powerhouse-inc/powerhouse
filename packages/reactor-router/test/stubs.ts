@@ -14,6 +14,7 @@ import type {
   RoutableBackendConfig,
 } from "../src/backend.js";
 import { RouterBackend } from "../src/backend.js";
+import { WrongBackendError } from "../src/errors.js";
 import type { ReactorReach } from "../src/types.js";
 
 export const IN_PROCESS: ReactorReach = Object.freeze({
@@ -75,6 +76,8 @@ export class FakeBackend {
   /** Optional members this backend does not declare. */
   readonly undeclared = new Set<Member>();
   supports: BackendSupports = { find: () => true, pointInTimeViews: true };
+  /** Refuses a write for a document it lacks with WrongBackendError. */
+  refuses = false;
 
   constructor(
     readonly name: string,
@@ -90,7 +93,7 @@ export class FakeBackend {
       backend: this.api(),
       facts: this.info,
       reach: this.reach,
-      refusesMisroutes: false,
+      refusesMisroutes: this.refuses,
       ...overrides,
     };
   }
@@ -140,6 +143,17 @@ export class FakeBackend {
       );
     }
     return document;
+  }
+
+  private own(identifier: string, method: string): PHDocument {
+    if (this.refuses && !this.documents.has(identifier)) {
+      throw new WrongBackendError({
+        documentId: identifier,
+        rejectedBy: this.name,
+        operation: method,
+      });
+    }
+    return this.require(identifier, method);
   }
 
   private run<T>(method: string, args: readonly unknown[], body: () => T) {
@@ -224,7 +238,7 @@ export class FakeBackend {
         actions: unknown[],
       ) =>
         this.run("execute", [identifier, actions], () => {
-          const document = this.require(identifier, "execute");
+          const document = this.own(identifier, "execute");
           const next = bumpRevision(document);
           for (const action of actions as {
             type?: string;
@@ -252,11 +266,11 @@ export class FakeBackend {
         }),
       deleteDocument: (identifier) =>
         this.run("deleteDocument", [identifier], () => {
-          this.require(identifier, "deleteDocument");
+          this.own(identifier, "deleteDocument");
         }),
       setPreferredEditor: (identifier) =>
         this.run("setPreferredEditor", [identifier], () =>
-          this.require(identifier, "setPreferredEditor"),
+          this.own(identifier, "setPreferredEditor"),
         ),
       getJob: (jobId) =>
         this.run("getJob", [jobId], () => this.jobs.get(jobId)),
@@ -298,7 +312,7 @@ export class FakeBackend {
         }),
       addRelationship: (source, target, relationshipType) =>
         this.run("addRelationship", [source, target, relationshipType], () => {
-          const document = this.require(source, "addRelationship");
+          const document = this.own(source, "addRelationship");
           this.relationships.push({
             sourceId: document.header.id,
             targetId: target,
@@ -308,15 +322,15 @@ export class FakeBackend {
         }),
       updateRelationship: (source) =>
         this.run("updateRelationship", [source], () =>
-          this.require(source, "updateRelationship"),
+          this.own(source, "updateRelationship"),
         ),
       removeRelationship: (source) =>
         this.run("removeRelationship", [source], () =>
-          this.require(source, "removeRelationship"),
+          this.own(source, "removeRelationship"),
         ),
       moveRelationship: (sourceParent, targetParent) =>
         this.run("moveRelationship", [sourceParent, targetParent], () => ({
-          source: this.require(sourceParent, "moveRelationship"),
+          source: this.own(sourceParent, "moveRelationship"),
           target: this.require(targetParent, "moveRelationship"),
         })),
       getDocumentModelModules: () =>
