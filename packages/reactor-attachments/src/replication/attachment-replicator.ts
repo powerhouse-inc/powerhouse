@@ -88,6 +88,7 @@ type Entry = {
   attempts: number;
   notFoundAnswers: number;
   errorAnswers: number;
+  pendingAnswers: number;
   nextAttemptAtMs: number | undefined;
   lastError: string | undefined;
   /** Asked instead of the rotation until an attempt is answered. */
@@ -269,6 +270,7 @@ export class AttachmentReplicator {
       attempts: 0,
       notFoundAnswers: 0,
       errorAnswers: 0,
+      pendingAnswers: 0,
       nextAttemptAtMs: undefined,
       lastError: undefined,
       nextDocumentId: undefined,
@@ -338,6 +340,7 @@ export class AttachmentReplicator {
       entry.state = "queued";
       entry.notFoundAnswers = 0;
       entry.errorAnswers = 0;
+      entry.pendingAnswers = 0;
       entry.nextAttemptAtMs = undefined;
       if (!this.queue.includes(entry.hash)) {
         this.queue.push(entry.hash);
@@ -487,14 +490,24 @@ export class AttachmentReplicator {
     const result = await this.transport.fetch(entry.hash, documentId, signal);
 
     if (result.kind === "pending") {
-      // A valid 0 means retry now; only a delay that is not a usable number
-      // falls back to the policy.
+      entry.pendingAnswers += 1;
+      if (entry.pendingAnswers >= this.policy.pendingAttempts) {
+        entry.pendingAnswers = 0;
+        throw new Error(
+          `Attachment ${entry.hash} was still pending after ${this.policy.pendingAttempts} answers`,
+        );
+      }
       const delay = result.retryAfterMs;
+      const asked =
+        Number.isFinite(delay) && delay >= 0
+          ? delay
+          : this.policy.pendingRetryMs;
       this.schedule(
         entry,
-        Number.isFinite(delay) && delay >= 0
-          ? Math.min(delay, MAX_TIMER_DELAY_MS)
-          : this.policy.pendingRetryMs,
+        Math.min(
+          Math.max(asked, this.policy.minPendingRetryMs),
+          MAX_TIMER_DELAY_MS,
+        ),
       );
       return;
     }

@@ -56,6 +56,10 @@ export type AttachmentReplicationState =
 export type AttachmentRetryPolicy = {
   /** Fallback wait when a `pending` answer carries no `retryAfterMs`. */
   pendingRetryMs: number;
+  /** Shortest wait honoured after a `pending`, whatever it asks for. */
+  minPendingRetryMs: number;
+  /** How many `pending` answers in a row count as one transport error. */
+  pendingAttempts: number;
   /** How many `not-found` answers to absorb as reference-index lag. */
   notFoundAttempts: number;
   /** Base wait between `not-found` retries; doubles per attempt. */
@@ -68,6 +72,8 @@ export type AttachmentRetryPolicy = {
 
 export const DEFAULT_ATTACHMENT_RETRY_POLICY: AttachmentRetryPolicy = {
   pendingRetryMs: 5_000,
+  minPendingRetryMs: 250,
+  pendingAttempts: 60,
   notFoundAttempts: 3,
   notFoundRetryMs: 2_000,
   errorAttempts: 5,

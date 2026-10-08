@@ -190,6 +190,7 @@ function harness(
     backlog: ReturnType<typeof staticAttachmentReferenceScanner>;
     verifyHash: boolean;
     notFoundAttempts: number;
+    pendingAttempts: number;
     fetch: IAttachmentTransport["fetch"];
     onDiagnostic: (message: string) => void;
   }> = {},
@@ -237,6 +238,9 @@ function harness(
       errorRetryMs: 100,
       ...(overrides.notFoundAttempts !== undefined
         ? { notFoundAttempts: overrides.notFoundAttempts }
+        : {}),
+      ...(overrides.pendingAttempts !== undefined
+        ? { pendingAttempts: overrides.pendingAttempts }
         : {}),
     },
   });
@@ -706,8 +710,10 @@ describe("AttachmentReplicator", () => {
     ["missing", Number.NaN, 1_000],
     ["negative", -5, 1_000],
     ["beyond the timer range", 1e12, 2 ** 31 - 1],
+    ["zero", 0, 250],
+    ["below the floor", 10, 250],
   ])(
-    "falls back or clamps when a pending delay is %s",
+    "falls back, floors or clamps when a pending delay is %s",
     async (_name, retryAfterMs, expectedDelay) => {
       const h = harness([
         {
@@ -902,4 +908,30 @@ describe("AttachmentReplicator", () => {
       await h.replicator.stop();
     },
   );
+
+  it("counts a run of pending answers as one error, so pending alone ends in failed", async () => {
+    const h = harness(
+      () => ({
+        kind: "pending",
+        hash: HASH,
+        expiresAtUtc: "2026-01-01T00:05:00.000Z",
+        retryAfterMs: 0,
+      }),
+      { pendingAttempts: 3 },
+    );
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+
+    for (let step = 0; step < 40; step += 1) {
+      h.timers.advance(2_000);
+      await h.replicator.idle();
+    }
+
+    const [entry] = h.replicator.report();
+    expect(entry.state).toBe("failed");
+    expect(entry.lastError).toMatch(/pending/);
+    expect(h.fetches).toHaveLength(15);
+    await h.replicator.stop();
+  });
 });
