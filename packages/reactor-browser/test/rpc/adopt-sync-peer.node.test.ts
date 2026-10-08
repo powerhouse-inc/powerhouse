@@ -246,6 +246,27 @@ describe("ReactorHost adopt-sync-peer routing", () => {
     dispose();
   });
 
+  it("closes the transferred port when a retired host bounces an adopt", async () => {
+    const onAdoptSyncPeer = vi.fn(() => Promise.resolve());
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onAdoptSyncPeer,
+    });
+    const { transport, sent, receive } = injectableTransport();
+    const dispose = host.connect(transport);
+    host.retireAndReload("worker retired", "gen-2");
+    const port = fakePort();
+
+    receive(adoptMessage("a6", port.port));
+
+    await vi.waitFor(() =>
+      expect(sent.some((message) => message.k === "err")).toBe(true),
+    );
+    expect(port.close).toHaveBeenCalledTimes(1);
+    expect(onAdoptSyncPeer).not.toHaveBeenCalled();
+    dispose();
+  });
+
   it("leaves the port open when the adopt succeeds", async () => {
     const host = new ReactorHost({
       build: () => Promise.resolve({} as IReactorClient),
@@ -307,6 +328,42 @@ describe("remove-sync-peer round trip", () => {
         remoteName: PARAMS.remoteName,
       }),
     ).rejects.toThrow(/no remove-sync-peer handler/);
+
+    router.detach();
+    dispose();
+  });
+
+  it.each([
+    [
+      "a migrating",
+      (host: ReactorHost) => host.setMigrationState({ status: "migrating" }),
+      /migration in progress/,
+    ],
+    [
+      "a retired",
+      (host: ReactorHost) => host.retireAndReload("worker retired", "gen-2"),
+      /retired/,
+    ],
+  ])("refuses a remove on %s host", async (_, enterState, error) => {
+    const onRemoveSyncPeer = vi.fn(() => Promise.resolve());
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onRemoveSyncPeer,
+    });
+    const { hostTransport, clientTransport } = linkedTransports();
+    const dispose = host.connect(hostTransport);
+    const router = new MessageRouter();
+    router.attach(clientTransport);
+    enterState(host);
+
+    await expect(
+      sendRemoveSyncPeer(router, {
+        peerId: PARAMS.peerId,
+        channelName: PARAMS.channelName,
+        remoteName: PARAMS.remoteName,
+      }),
+    ).rejects.toThrow(error);
+    expect(onRemoveSyncPeer).not.toHaveBeenCalled();
 
     router.detach();
     dispose();
