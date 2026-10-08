@@ -1,4 +1,5 @@
 import type {
+  DocumentModelOperationDefinition,
   DocumentModelSpecificationDefinition,
   InputTypeDefinition,
   NamedGraphQLTypeDefinition,
@@ -57,19 +58,24 @@ export function structuredModelProjection(
   };
 }
 
+type MutationOperationDefinition = DocumentModelOperationDefinition & {
+  readonly name: string;
+  readonly input: InputTypeDefinition;
+};
+
 /**
  * Returns the operations with a stored name and an input type, which are the
  * ones that get a mutation. The stored-SDL path's `hasValidSchema(op.schema)`
  * check selects the same operations.
  */
-function mutationOperations(
+export function mutationOperations(
   specification: DocumentModelSpecificationDefinition,
-): readonly { readonly name: string; readonly input: InputTypeDefinition }[] {
+): readonly MutationOperationDefinition[] {
   return specification.modules.flatMap((module) =>
     module.operations.flatMap((operation) =>
       operation.name === null || operation.input === null
         ? []
-        : [{ name: operation.name, input: operation.input }],
+        : [{ ...operation, name: operation.name, input: operation.input }],
     ),
   );
 }
@@ -116,16 +122,4 @@ function structuredInitialState(
     return { name, type: `${documentName}_${root.name}Input` };
   });
   return { inputTypes: inputTypes.join("\n\n"), scopes };
-}
-
-/**
- * Returns the stored operation names a code-first model's mutations are keyed
- * by. The host derives the mutation field and the action creator from
- * `camelCase(name)` for both authoring approaches, so this uses the stored name
- * rather than the operation key.
- */
-export function structuredOperationNames(
-  model: StructuredModel,
-): readonly string[] {
-  return mutationOperations(model.specification).map(({ name }) => name);
 }

@@ -86,34 +86,46 @@ export function reactorClientFor(module: DocumentModelModule): {
     }
   ).utils;
   let document = utils.createDocument();
+  const execute = (
+    _id: string,
+    _branch: string,
+    actions: readonly { type: string }[],
+  ) => {
+    const reducer = (
+      module as unknown as {
+        reducer: (doc: PHDocument, action: unknown) => PHDocument;
+      }
+    ).reducer;
+    // Report only the operations this call appended. A reactor does not fail
+    // later requests because an earlier operation in the history failed.
+    const before = operationCounts(document);
+    for (const action of actions) document = reducer(document, action);
+    const failure = appendedSince(document, before).find(
+      (operation) => operation.error !== undefined,
+    );
+    if (failure?.error !== undefined) throw new Error(failure.error);
+    return Promise.resolve(document);
+  };
   const client = {
     resolveIdOrSlug: (identifier: string) => Promise.resolve(identifier),
     get: () => Promise.resolve(document),
-    execute: (
-      _id: string,
-      _branch: string,
+    execute,
+    executeAsync: async (
+      id: string,
+      branch: string,
       actions: readonly { type: string }[],
     ) => {
-      const reducer = (
-        module as unknown as {
-          reducer: (doc: PHDocument, action: unknown) => PHDocument;
-        }
-      ).reducer;
-      // Report only the operations this call appended. A reactor does not fail
-      // later requests because an earlier operation in the history failed.
-      const before = operationCounts(document);
-      for (const action of actions) document = reducer(document, action);
-      const failure = appendedSince(document, before).find(
-        (operation) => operation.error !== undefined,
-      );
-      if (failure?.error !== undefined) throw new Error(failure.error);
-      return Promise.resolve(document);
+      await execute(id, branch, actions);
+      return { id: "job-1" };
     },
   } as unknown as IReactorClient;
   return { client, current: () => document };
 }
 
-export function subgraphArgs(client: IReactorClient): SubgraphArgs {
+export function subgraphArgs(
+  client: IReactorClient,
+  authorization: Partial<IAuthorizationService> = {},
+): SubgraphArgs {
   // The golden regenerator runs this harness outside vitest, so these are
   // plain functions.
   const authorizationService: Partial<IAuthorizationService> = {
@@ -124,6 +136,7 @@ export function subgraphArgs(client: IReactorClient): SubgraphArgs {
     canWrite: () => Promise.resolve(true),
     canManage: () => Promise.resolve(true),
     canMutate: () => Promise.resolve(true),
+    ...authorization,
   } as unknown as Partial<IAuthorizationService>;
   return {
     reactorClient: client,
@@ -144,9 +157,15 @@ type Host = {
   readonly state: () => Record<string, unknown>;
 };
 
-export function hostFor(module: DocumentModelModule): Host {
+export function hostFor(
+  module: DocumentModelModule,
+  authorization: Partial<IAuthorizationService> = {},
+): Host {
   const { client, current } = reactorClientFor(module);
-  const subgraph = new DocumentModelSubgraph(module, subgraphArgs(client));
+  const subgraph = new DocumentModelSubgraph(
+    module,
+    subgraphArgs(client, authorization),
+  );
   const schema = createSchema(
     [module],
     subgraph.resolvers as never,

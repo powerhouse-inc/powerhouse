@@ -1,6 +1,7 @@
 import { camelCase, kebabCase } from "change-case";
 import {
   setName,
+  type Action,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError, Kind, parse } from "graphql";
@@ -11,7 +12,7 @@ import {
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
-import { structuredOperationNames } from "./structured-model-schema.js";
+import { mutationOperations } from "./structured-model-schema.js";
 import { structuredModelOf } from "./structured-projection.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
 import type {
@@ -139,6 +140,13 @@ export interface DocumentModelSubgraphResolvers<
     | DocumentModelQueryResolvers<TDocument>
     | DocumentModelMutationResolvers<TDocument>;
 }
+
+type MutationOperation = {
+  readonly storedName: string;
+  readonly creatorKey: string;
+  readonly operationType: string;
+  readonly authorizeBuiltActionType: boolean;
+};
 
 /**
  * Resolves an abstract value by its typename or a field unique to a member,
@@ -350,14 +358,60 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       this.documentModel.documentModel.global,
     );
     const structured = structuredModelOf(this.documentModel);
-    const operations =
+    const hasUnreadableDefinition =
+      structured === null &&
+      (this.documentModel as { definition?: unknown }).definition !== undefined;
+    const operations: readonly MutationOperation[] =
       structured !== null
-        ? structuredOperationNames(structured).map((name) => ({ name }))
+        ? mutationOperations(structured.specification).map((op) => ({
+            storedName: op.name,
+            creatorKey: op.creatorKey,
+            operationType: op.actionType,
+            authorizeBuiltActionType: false,
+          }))
         : (this.documentModel.documentModel.global.specifications
             .at(-1)
             ?.modules.flatMap((module) =>
-              module.operations.filter((op) => op.name),
+              module.operations.flatMap((op) =>
+                op.name
+                  ? [
+                      {
+                        storedName: op.name,
+                        creatorKey: camelCase(op.name),
+                        operationType: op.name,
+                        authorizeBuiltActionType: hasUnreadableDefinition,
+                      },
+                    ]
+                  : [],
+              ),
             ) ?? []);
+    const createAction = async (
+      op: MutationOperation,
+      input: unknown,
+      documentIdOrSlug: string,
+      ctx: Context,
+    ): Promise<Action> => {
+      const creator = this.documentModel.actions[op.creatorKey];
+      if (!creator) {
+        throw new GraphQLError(`Action ${op.storedName} not found`);
+      }
+      let action: Action;
+      try {
+        action = creator(input);
+      } catch (error) {
+        throw new GraphQLError(
+          error instanceof Error ? error.message : `Failed to ${op.storedName}`,
+        );
+      }
+      if (op.authorizeBuiltActionType && action.type !== op.operationType) {
+        await this.assertCanExecuteOperation(
+          documentIdOrSlug,
+          action.type,
+          ctx,
+        );
+      }
+      return action;
+    };
 
     return {
       ...this.generateAbstractTypeResolvers(),
@@ -651,7 +705,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         // Generate sync and async mutations for each operation
         ...operations.reduce((mutations, op) => {
           // Sync mutation
-          mutations[camelCase(op.name!)] = async (
+          mutations[camelCase(op.storedName)] = async (
             _: unknown,
             args: {
               documentIdOrSlug?: string | null;
@@ -669,7 +723,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               documentIdOrSlug,
-              op.name!,
+              op.operationType,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -683,29 +737,28 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               );
             }
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
-            if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
-            }
+            const action = await createAction(op, input, documentIdOrSlug, ctx);
 
             try {
               const updatedDoc = await this.reactorClient.execute(
                 effectiveDocId,
                 "main",
-                [action(input)],
+                [action],
                 undefined,
                 this.viewSubject(ctx),
               );
               return toGqlPhDocument(updatedDoc);
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${op.storedName}`,
               );
             }
           };
 
           // Async mutation - returns job ID
-          mutations[`${camelCase(op.name!)}Async`] = async (
+          mutations[`${camelCase(op.storedName)}Async`] = async (
             _: unknown,
             args: {
               documentIdOrSlug?: string | null;
@@ -723,7 +776,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               documentIdOrSlug,
-              op.name!,
+              op.operationType,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -737,21 +790,20 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               );
             }
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
-            if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
-            }
+            const action = await createAction(op, input, documentIdOrSlug, ctx);
 
             try {
               const jobInfo = await this.reactorClient.executeAsync(
                 effectiveDocId,
                 "main",
-                [action(input)],
+                [action],
               );
               return jobInfo.id;
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${op.storedName}`,
               );
             }
           };

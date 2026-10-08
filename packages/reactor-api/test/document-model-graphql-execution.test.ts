@@ -3,10 +3,16 @@ import {
   defineDocumentModel,
   defineDocumentModelFamily,
   ph,
+  schemaFirstSpecification,
+  type SchemaFirstSpecificationCompatibility,
 } from "document-model";
 import type { ExecutionResult } from "graphql";
 import { describe, expect, it } from "vitest";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import {
+  AuthorizationPolicy,
+  type IAuthorizationService,
+} from "../src/services/authorization.service.js";
 import {
   asSchemaFirst,
   hostFor,
@@ -191,6 +197,187 @@ describe("a code-first model serves real requests", () => {
       "that is more than the tracker can hold",
     ]);
     expect(messages(outcome.structured)).toEqual(messages(outcome.stored));
+  });
+});
+
+function buildRenamer(
+  compatibility?: SchemaFirstSpecificationCompatibility,
+): DocumentModelModule {
+  const context = defineDocumentModel({
+    id: "test/renamer",
+    name: "Renamer",
+    description: "A renamer.",
+    extension: "renamer",
+    version: 1,
+    author: { name: "Powerhouse", website: null },
+    specifications: {
+      global: {
+        schema: ph.object("RenamerState", {
+          fields: { title: ph.String({ required: true }) },
+        }),
+        initialValue: { title: "" },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  });
+  const entries = context.module("entries", {
+    operations: ({ global }) => ({
+      setTitle: global({
+        input: ph.input({ fields: { title: ph.String({ required: true }) } }),
+        reduce(state, input) {
+          state.title = input.title;
+        },
+      }),
+    }),
+  });
+  return defineDocumentModelFamily({
+    versions: [context.version({ modules: [entries], compatibility })],
+    upgradeManifest: {
+      documentType: "test/renamer",
+      latestVersion: 1,
+      supportedVersions: [1],
+      upgrades: {},
+    },
+  }).at(1) as unknown as DocumentModelModule;
+}
+
+function recordingAuthorization(denied?: string): {
+  readonly authorization: Partial<IAuthorizationService>;
+  readonly checked: string[];
+} {
+  const checked: string[] = [];
+  return {
+    checked,
+    authorization: {
+      config: {
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      } as never,
+      isSupremeAdmin: () => false,
+      canMutate: (_documentId, operationType) => {
+        checked.push(operationType);
+        return Promise.resolve(operationType !== denied);
+      },
+    },
+  };
+}
+
+function withUnreadableDefinition(
+  module: DocumentModelModule,
+): DocumentModelModule {
+  const { definition } = module as DocumentModelModule & {
+    definition: Record<string, unknown>;
+  };
+  return {
+    ...module,
+    definition: { ...definition, formatVersion: 2 },
+  } as DocumentModelModule;
+}
+
+describe("operation name overrides", () => {
+  const renamed = schemaFirstSpecification({
+    names: { "operation/entries/setTitle": { storedName: "RenameTitle" } },
+  });
+  const forbidden =
+    'Forbidden: insufficient permissions to execute operation "SET_TITLE" on this document';
+
+  it("runs a mutation whose stored name differs from its creator key", async () => {
+    const host = hostFor(buildRenamer(renamed));
+    const result = await host.run(
+      `mutation ($input: Renamer_SetTitleInput!) {
+         Renamer { renameTitle(docId: "doc-1", input: $input) { name } }
+       }`,
+      { input: { title: "Q3" } },
+    );
+    expect(messages(result)).toEqual([]);
+    expect(host.state()).toEqual({ title: "Q3" });
+  });
+
+  it("runs the async mutation whose stored name differs from its creator key", async () => {
+    const host = hostFor(buildRenamer(renamed));
+    const result = await host.run(
+      `mutation ($input: Renamer_SetTitleInput!) {
+         Renamer { renameTitleAsync(docId: "doc-1", input: $input) }
+       }`,
+      { input: { title: "Q4" } },
+    );
+    expect(result).toEqual({
+      data: { Renamer: { renameTitleAsync: "job-1" } },
+    });
+    expect(host.state()).toEqual({ title: "Q4" });
+  });
+
+  it("checks a code-first mutation's permission against its action type", async () => {
+    const cases = [
+      { compatibility: undefined, field: "setTitle", expected: "SET_TITLE" },
+      { compatibility: renamed, field: "renameTitle", expected: "SET_TITLE" },
+      {
+        compatibility: schemaFirstSpecification({
+          names: { "operation/entries/setTitle": { actionType: "RETITLE" } },
+        }),
+        field: "setTitle",
+        expected: "RETITLE",
+      },
+    ];
+    for (const { compatibility, field, expected } of cases) {
+      const { authorization, checked } = recordingAuthorization();
+      const host = hostFor(buildRenamer(compatibility), authorization);
+      const direct = await host.run(
+        `mutation { Renamer { ${field}(docId: "doc-1", input: { title: "a" }) { name } } }`,
+      );
+      const queued = await host.run(
+        `mutation { Renamer { ${field}Async(docId: "doc-1", input: { title: "b" }) } }`,
+      );
+      expect([...messages(direct), ...messages(queued)]).toEqual([]);
+      expect(checked).toEqual([expected, expected]);
+    }
+  });
+
+  it("denies a code-first mutation whose action type is restricted", async () => {
+    const { authorization } = recordingAuthorization("SET_TITLE");
+    const host = hostFor(buildRenamer(renamed), authorization);
+    const direct = await host.run(
+      `mutation { Renamer { renameTitle(docId: "doc-1", input: { title: "a" }) { name } } }`,
+    );
+    const queued = await host.run(
+      `mutation { Renamer { renameTitleAsync(docId: "doc-1", input: { title: "b" }) } }`,
+    );
+    expect([...messages(direct), ...messages(queued)]).toEqual([
+      forbidden,
+      forbidden,
+    ]);
+    expect(host.state()).toEqual({ title: "" });
+  });
+
+  it("denies the action type of a model whose definition the host cannot read", async () => {
+    const { authorization, checked } = recordingAuthorization("SET_TITLE");
+    const host = hostFor(
+      withUnreadableDefinition(buildRenamer()),
+      authorization,
+    );
+    const direct = await host.run(
+      `mutation { Renamer { setTitle(docId: "doc-1", input: { title: "a" }) { name } } }`,
+    );
+    const queued = await host.run(
+      `mutation { Renamer { setTitleAsync(docId: "doc-1", input: { title: "b" }) } }`,
+    );
+    expect([...messages(direct), ...messages(queued)]).toEqual([
+      forbidden,
+      forbidden,
+    ]);
+    expect(checked).toEqual(["SetTitle", "SET_TITLE", "SetTitle", "SET_TITLE"]);
+    expect(host.state()).toEqual({ title: "" });
+  });
+
+  it("checks a schema-first mutation's permission against its stored name", async () => {
+    const { authorization, checked } = recordingAuthorization();
+    const host = hostFor(asSchemaFirst(buildRenamer()), authorization);
+    const result = await host.run(
+      `mutation { Renamer { setTitle(docId: "doc-1", input: { title: "a" }) { name } } }`,
+    );
+    expect(messages(result)).toEqual([]);
+    expect(checked).toEqual(["SetTitle"]);
   });
 });
 
