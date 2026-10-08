@@ -84,3 +84,28 @@ export type ScalarsState = {
   fUnknown: Maybe<Scalars["Unknown"]["output"]>;
   fUpload: Maybe<Scalars["Upload"]["output"]>;
 };
+
+export type SetScalarsInput = {
+  fAddress: Scalars["Address"]["input"];
+  fAmount: Scalars["Amount"]["input"];
+  fAmount_Crypto: Scalars["Amount_Crypto"]["input"];
+  fAmount_Currency: Scalars["Amount_Currency"]["input"];
+  fAmount_Fiat: Scalars["Amount_Fiat"]["input"];
+  fAmount_Money: Scalars["Amount_Money"]["input"];
+  fAmount_Percentage: Scalars["Amount_Percentage"]["input"];
+  fAmount_Tokens: Scalars["Amount_Tokens"]["input"];
+  fAttachmentRef: Scalars["AttachmentRef"]["input"];
+  fCurrency: Scalars["Currency"]["input"];
+  fDate: Scalars["Date"]["input"];
+  fDateTime: Scalars["DateTime"]["input"];
+  fEmailAddress: Scalars["EmailAddress"]["input"];
+  fEthereumAddress: Scalars["EthereumAddress"]["input"];
+  fOID: Scalars["OID"]["input"];
+  fOLabel: Scalars["OLabel"]["input"];
+  fPHID: Scalars["PHID"]["input"];
+  fURL: Scalars["URL"]["input"];
+  fUnknown: Scalars["Unknown"]["input"];
+  fUpload: Scalars["Upload"]["input"];
+  ids: Array<Scalars["PHID"]["input"]>;
+  note?: InputMaybe<Scalars["String"]["input"]>;
+};

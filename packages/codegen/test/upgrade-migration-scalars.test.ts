@@ -19,32 +19,48 @@ const previousSpec = spec(
   '{"title":""}',
 );
 
-function planFor(field: string, extraSdl = "") {
+function planFor(field: string, extraSdl = "", initialValue = '{"title":""}') {
   return buildMigrationPlan({
     previousSpec,
     specification: spec(
       `${extraSdl}type TestState {\n  title: String!\n  ${field}\n}`,
-      '{"title":""}',
+      initialValue,
     ),
     stateName: "TestState",
     localStateName: "TestLocalState",
   });
 }
 
-describe("migration zero values for custom scalars", () => {
-  it.each(["PHID!", "Amount_Money!", "EthereumAddress!", "JSONObject!"])(
-    "asks for a manual migration when a %s field is added",
-    (type) => {
-      expect(planFor(`added: ${type}`).kind).toBe("manual");
-    },
-  );
+const manual = {
+  kind: "manual",
+  reason:
+    'no initial value could be derived for the added global state field "added"',
+};
+
+describe("migration plan for an added state field", () => {
+  it("asks for a manual migration when a required field has no initial value", () => {
+    expect(planFor("added: PHID!")).toStrictEqual(manual);
+  });
 
   it("asks for a manual migration for a scalar the schema declares", () => {
-    expect(planFor("added: Local!", "scalar Local\n\n").kind).toBe("manual");
+    expect(planFor("added: Local!", "scalar Local\n\n")).toStrictEqual(manual);
+  });
+
+  it("fills a required field from the new version's initial value", () => {
+    expect(
+      planFor("added: PHID!", "", '{"title":"","added":"phd:x"}'),
+    ).toStrictEqual({ kind: "fill", fills: { global: { added: "phd:x" } } });
+  });
+
+  it("fills a nullable field with null", () => {
+    expect(planFor("added: PHID")).toStrictEqual({
+      kind: "fill",
+      fills: { global: { added: null } },
+    });
   });
 
   it("still fills a built-in scalar with its zero value", () => {
-    expect(planFor("added: Int!")).toEqual({
+    expect(planFor("added: Int!")).toStrictEqual({
       kind: "fill",
       fills: { global: { added: 0 } },
     });

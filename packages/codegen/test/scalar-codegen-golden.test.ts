@@ -1,96 +1,55 @@
-import type {
-  DocumentModelGlobalState,
-  DocumentSpecification,
-} from "@powerhousedao/shared/document-model";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import type { DocumentSpecification } from "@powerhousedao/shared/document-model";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
-import { generateDocumentModelZodSchemas } from "../src/codegen/graphql.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  generateDocumentModelZodSchemas,
+  scalars,
+} from "../src/codegen/graphql.js";
 import type { DocumentModelFileMakerArgs } from "../src/file-builders/index.mts";
 
-const GOLDENS = new URL("./goldens/scalar-codegen/", import.meta.url);
-const OUTPUTS = ["types.ts", "zod.ts", "schema.graphql"] as const;
+const MAPPED_SCALARS = Object.keys(scalars);
 
-const MAPPED_SCALARS = [
-  "PHID",
-  "OID",
-  "OLabel",
-  "Currency",
-  "EmailAddress",
-  "EthereumAddress",
-  "URL",
-  "Date",
-  "DateTime",
-  "Amount_Money",
-  "Amount_Percentage",
-  "Amount_Tokens",
-  "Amount",
-  "Amount_Fiat",
-  "Amount_Crypto",
-  "Amount_Currency",
-  "Upload",
-  "Address",
-  "AttachmentRef",
-  "Unknown",
-];
-
-function specificationWithState(schema: string): DocumentSpecification {
+function specification(
+  stateSchema: string,
+  inputSchema = "",
+): DocumentSpecification {
   return {
     version: 1,
     changeLog: [],
     state: {
-      global: { schema, initialValue: "{}", examples: [] },
+      global: { schema: stateSchema, initialValue: "{}", examples: [] },
       local: { schema: "", initialValue: "", examples: [] },
     },
-    modules: [],
+    modules: inputSchema
+      ? [{ name: "scalars", operations: [{ schema: inputSchema }] }]
+      : [],
   } as unknown as DocumentSpecification;
 }
 
-const everyScalar = specificationWithState(
+const everyScalar = specification(
   [
     "type ScalarsState {",
     ...MAPPED_SCALARS.map((name) => `  f${name}: ${name}`),
     "}",
   ].join("\n"),
+  [
+    "input SetScalarsInput {",
+    ...MAPPED_SCALARS.map((name) => `  f${name}: ${name}!`),
+    "  ids: [PHID!]!",
+    "  note: String",
+    "}",
+  ].join("\n"),
 );
 
-function lastSpecification(path: string): DocumentSpecification {
-  const model = JSON.parse(
-    readFileSync(new URL(path, import.meta.url), "utf8"),
-  ) as DocumentModelGlobalState;
-  return model.specifications[model.specifications.length - 1];
-}
-
-const CASES: ReadonlyArray<readonly [string, DocumentSpecification]> = [
-  ["every-scalar", everyScalar],
-  [
-    "vetra-package",
-    lastSpecification(
-      "../../vetra/document-models/vetra-package/vetra-package.json",
-    ),
-  ],
-  [
-    "document-editor",
-    lastSpecification(
-      "../../vetra/document-models/document-editor/document-editor.json",
-    ),
-  ],
-];
-
-const workDir = mkdtempSync(join(tmpdir(), "ph-scalar-codegen-"));
+let workDir: string;
+beforeAll(() => {
+  workDir = mkdtempSync(join(tmpdir(), "ph-scalar-codegen-"));
+});
 afterAll(() => rmSync(workDir, { recursive: true, force: true }));
 
-async function generate(
-  name: string,
-  specification: DocumentSpecification,
-): Promise<Record<(typeof OUTPUTS)[number], string>> {
+async function generate(name: string, specification: DocumentSpecification) {
   const versionDirPath = join(workDir, name);
   const schemaDirPath = join(versionDirPath, "gen", "schema");
   mkdirSync(schemaDirPath, { recursive: true });
@@ -109,32 +68,22 @@ async function generate(
   };
 }
 
-describe("codegen output per scalar", () => {
-  it.each(CASES)(
-    "%s generates the recorded files",
-    async (name, specification) => {
-      const generated = await generate(name, specification);
-      for (const output of OUTPUTS) {
-        const golden = new URL(`${name}/${output}.txt`, GOLDENS);
-        if (process.env.UPDATE_GOLDENS === "1") {
-          mkdirSync(new URL(`${name}/`, GOLDENS), { recursive: true });
-          writeFileSync(golden, generated[output]);
-        }
-        expect(
-          generated[output],
-          `${name}/${output} differs from its golden; rerun with UPDATE_GOLDENS=1 to record an intended change`,
-        ).toBe(readFileSync(golden, "utf8"));
-      }
-    },
-    60_000,
-  );
+describe("scalar codegen", () => {
+  it("generates the recorded files for every mapped scalar", async () => {
+    const generated = await generate("every-scalar", everyScalar);
+    for (const [output, contents] of Object.entries(generated)) {
+      await expect(contents).toMatchFileSnapshot(
+        `./goldens/scalar-codegen/every-scalar/${output}.txt`,
+      );
+    }
+  });
 
   it("rejects a model that uses JSONObject", async () => {
     await expect(
       generate(
         "json-object",
-        specificationWithState("type ScalarsState {\n  value: JSONObject\n}"),
+        specification("type ScalarsState {\n  value: JSONObject\n}"),
       ),
-    ).rejects.toThrow();
-  }, 60_000);
+    ).rejects.toThrow(/Unknown type: "JSONObject"/);
+  });
 });

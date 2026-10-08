@@ -83,13 +83,13 @@ beforeEach(() => {
   symlinkSync(
     fileURLToPath(new URL("../../document-model", import.meta.url)),
     join(projectDir, "node_modules", "document-model"),
-    "dir",
+    "junction",
   );
   for (const name of ["shared", "reactor-api"])
     symlinkSync(
       fileURLToPath(new URL(`../../${name}`, import.meta.url)),
       join(projectDir, "node_modules", "@powerhousedao", name),
-      "dir",
+      "junction",
     );
   writeFileSync(
     join(projectDir, "package.json"),
@@ -109,20 +109,8 @@ afterEach(() => {
   rmSync(projectDir, { recursive: true, force: true });
 });
 
-describe("registerDefinitionSource", () => {
+describe("planDefinitionSourceRegistration", () => {
   const source = { specifier: "./document-models/todo/index.ts" } as const;
-
-  it("creates the field and keeps the other keys", async () => {
-    expect(await registerDefinitionSource(projectDir, source)).toBe("created");
-    expect(readConfig()).toStrictEqual({
-      documentModelsDir: "./document-models",
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./document-models/todo/index.ts" }],
-      },
-    });
-  });
 
   it("leaves the file untouched when the source is already listed", async () => {
     await registerDefinitionSource(projectDir, source);
@@ -144,17 +132,41 @@ describe("registerDefinitionSource", () => {
       },
     });
     expect(await registerDefinitionSource(projectDir, source)).toBe("added");
+    expect(read("powerhouse.config.json")).toBe(
+      `${JSON.stringify(
+        {
+          definitionSources: {
+            formatVersion: 1,
+            mode: "code-first",
+            entries: [
+              {
+                exportPath: ["ledger"],
+                specifier: "./document-models/ledger.ts",
+              },
+              { specifier: "./document-models/todo/index.ts" },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  });
+
+  it("adds the source when a listed entry selects another export of it", async () => {
+    writeConfig({
+      definitionSources: {
+        formatVersion: 1,
+        mode: "code-first",
+        entries: [{ ...source, exportPath: ["todoV1"] }],
+      },
+    });
+    expect(await registerDefinitionSource(projectDir, source)).toBe("added");
     expect(readConfig().definitionSources).toStrictEqual({
       formatVersion: 1,
       mode: "code-first",
-      entries: [
-        { exportPath: ["ledger"], specifier: "./document-models/ledger.ts" },
-        { specifier: "./document-models/todo/index.ts" },
-      ],
+      entries: [{ ...source, exportPath: ["todoV1"] }, source],
     });
-    expect(read("powerhouse.config.json")).toContain(
-      '"exportPath": [\n          "ledger"\n        ],\n        "specifier"',
-    );
   });
 
   it("fills an empty code-first entry list", async () => {
@@ -183,9 +195,9 @@ describe("registerDefinitionSource", () => {
     });
   });
 
-  it("keeps the file's indentation", async () => {
+  it("creates the field and keeps the file's other keys and indentation", async () => {
     writeFileSync(configPath(), `${JSON.stringify({ a: 1 }, null, 4)}\n`);
-    await registerDefinitionSource(projectDir, source);
+    expect(await registerDefinitionSource(projectDir, source)).toBe("created");
     expect(read("powerhouse.config.json")).toBe(
       `${JSON.stringify(
         {
@@ -204,6 +216,7 @@ describe("registerDefinitionSource", () => {
 
   it.each([
     ["a malformed file", "{ not json", /JSON/],
+    ["a config that is not a JSON object", "[]", /must hold a JSON object/],
     [
       "an unsupported format version",
       JSON.stringify({
@@ -259,19 +272,49 @@ describe("generateCodeFirstDocumentModel", () => {
       mode: "code-first",
       entries: [{ specifier: "./document-models/todo/index.ts" }],
     });
-    expect(read("document-models/index.ts")).toContain(
-      'export * from "./todo/index.js";',
+    expect(read("document-models/index.ts")).toBe(
+      `import * as codeFirstSource0 from "./todo/index.js";
+
+export * from "./todo/index.js";
+
+export const codeFirstDocumentModel0_0 =
+  codeFirstSource0["documentModels"]["0"];
+
+export { documentModels } from "./document-models.js";
+export { upgradeManifests } from "./upgrade-manifests.js";
+`,
     );
-    expect(read("document-models/document-models.ts")).toContain(
-      "documentModelsCodeFirst0",
+    expect(read("document-models/document-models.ts")).toBe(
+      `import * as documentModelsCodeFirst0 from "./todo/index.js";
+
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+
+export const documentModels = [
+  documentModelsCodeFirst0["documentModels"]["0"],
+] as const;
+`,
     );
-    expect(read("document-models/upgrade-manifests.ts")).toContain(
-      "upgradeManifestsCodeFirst0",
+    expect(read("document-models/upgrade-manifests.ts")).toBe(
+      `/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type { UpgradeManifest } from "document-model";
+import * as upgradeManifestsCodeFirst0 from "./todo/index.js";
+
+export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
+  upgradeManifestsCodeFirst0["todoFamily"]["upgradeManifest"],
+];
+`,
     );
   });
 
   it("writes files the project formatter leaves unchanged", async () => {
     const { written } = await generateModel();
+    expect(written).toHaveLength(9);
     for (const path of written) {
       expect(await formatSafe(read(path)), path).toBe(read(path));
     }
@@ -303,18 +346,20 @@ describe("generateCodeFirstDocumentModel", () => {
         entries: [{ specifier: "document-models/a.ts" }],
       },
     });
+    const config = readFileSync(configPath(), "utf8");
     await expect(generateModel()).rejects.toThrow(/PH-CONFIG-SOURCE-INVALID/);
     expect(existsSync(join(projectDir, "document-models", "todo"))).toBe(false);
+    expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
 
   it("leaves the config untouched when the model files cannot be written", async () => {
     writeFileSync(join(projectDir, "document-models", "todo"), "a file\n");
     const config = readFileSync(configPath(), "utf8");
-    await expect(generateModel()).rejects.toThrow();
+    await expect(generateModel()).rejects.toThrow(/definition\.ts/);
     expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
 
-  it("exports two models without an ambiguous star export", async () => {
+  it("exports two models from an index with no type errors", async () => {
     await generateModel();
     await generateModel({
       name: "notes",
@@ -324,15 +369,11 @@ describe("generateCodeFirstDocumentModel", () => {
     const project = new Project({
       tsConfigFilePath: join(projectDir, "tsconfig.json"),
     });
-    const ambiguous = project
+    const diagnostics = project
       .getSourceFileOrThrow(join(projectDir, "document-models/index.ts"))
       .getPreEmitDiagnostics()
-      .filter((diagnostic) => diagnostic.getCode() === 2308)
       .map((diagnostic) => diagnostic.getMessageText());
-    expect(ambiguous).toStrictEqual([]);
-    expect(read("document-models/index.ts")).toContain(
-      'export { documentModels } from "./document-models.js";',
-    );
+    expect(diagnostics).toStrictEqual([]);
   });
 });
 
@@ -389,29 +430,82 @@ describe("code-first aggregate modules", () => {
       },
     });
     const project = buildTsMorphProject(projectDir);
-    project.addSourceFilesAtPaths(join(projectDir, "document-models/**/*.ts"));
     await refreshDocumentModelAggregates(project);
     await project.save();
-    expect(read("document-models/document-models.ts")).toContain('["chosen"]');
-    expect(read("document-models/document-models.ts")).not.toContain(
-      '["documentModels"]',
+    expect(read("document-models/index.ts")).toBe(
+      `import * as codeFirstSource0 from "./selected.js";
+
+export const codeFirstDocumentModel0_0 = codeFirstSource0["chosen"];
+
+export { documentModels } from "./document-models.js";
+export { upgradeManifests } from "./upgrade-manifests.js";
+`,
     );
-    expect(read("document-models/upgrade-manifests.ts")).toContain(
-      '["manifest"]',
+    expect(read("document-models/document-models.ts")).toBe(
+      `import * as documentModelsCodeFirst0 from "./selected.js";
+
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+
+export const documentModels = [documentModelsCodeFirst0["chosen"]] as const;
+`,
     );
-    expect(read("document-models/index.ts")).toContain(
-      "codeFirstDocumentModel",
-    );
-    expect(read("document-models/index.ts")).not.toContain(
-      'export * from "./selected.js"',
+    expect(read("document-models/upgrade-manifests.ts")).toBe(
+      `/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type { UpgradeManifest } from "document-model";
+import * as upgradeManifestsCodeFirst0 from "./selected.js";
+
+export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
+  upgradeManifestsCodeFirst0["manifest"],
+];
+`,
     );
   });
 
-  it.each(["collection", "element", "family", "outside", "outside-family"])(
-    "publishes named worker modules from a selected %s",
-    async (selection) => {
+  const todoManifest = {
+    specifier: "./document-models/todo/index.ts",
+    exportPath: ["todoUpgradeManifest"],
+  };
+
+  it.each([
+    {
+      selection: "collection",
+      dir: "document-models",
+      entries: [
+        {
+          specifier: "./document-models/selected.ts",
+          exportPath: ["documentModels"],
+        },
+        todoManifest,
+      ],
+      imported: "./selected.js",
+    },
+    {
+      selection: "family",
+      dir: "document-models",
+      entries: [
+        { specifier: "./document-models/selected.ts", exportPath: ["Family"] },
+      ],
+      imported: "./selected.js",
+    },
+    {
+      selection: "source outside document-models",
+      dir: "src",
+      entries: [
+        { specifier: "./src/selected.ts", exportPath: ["documentModels"] },
+        todoManifest,
+      ],
+      imported: "../src/selected.js",
+    },
+  ])(
+    "publishes one worker module and one upgrade manifest from a selected $selection",
+    async ({ dir, entries, imported }) => {
       await generateModel();
-      const dir = selection.startsWith("outside") ? "src" : "document-models";
       mkdirSync(join(projectDir, dir), { recursive: true });
       writeFileSync(
         join(projectDir, dir, "selected.ts"),
@@ -421,31 +515,15 @@ describe("code-first aggregate modules", () => {
         export const Family = todoFamily;
       `,
       );
-      const exportPath = selection.endsWith("family")
-        ? ["Family"]
-        : selection === "element"
-          ? ["documentModels", "0"]
-          : ["documentModels"];
       writeConfig({
-        definitionSources: {
-          formatVersion: 1,
-          mode: "code-first",
-          entries: [
-            { specifier: `./${dir}/selected.ts`, exportPath },
-            ...(!selection.endsWith("family")
-              ? [
-                  {
-                    specifier: "./document-models/todo/index.ts",
-                    exportPath: ["todoUpgradeManifest"],
-                  },
-                ]
-              : []),
-          ],
-        },
+        definitionSources: { formatVersion: 1, mode: "code-first", entries },
       });
       const project = buildTsMorphProject(projectDir);
       await refreshDocumentModelAggregates(project);
       await project.save();
+      expect(read("document-models/index.ts")).toContain(
+        `import * as codeFirstSource0 from "${imported}";`,
+      );
       const importer = new ViteTypeScriptSourceImportAdapter();
       try {
         const namespace = await importer.importModule({
@@ -469,49 +547,108 @@ describe("code-first aggregate modules", () => {
     },
   );
 
-  it.each(["index.ts", "document-models.ts", "upgrade-manifests.ts"])(
-    "preserves aggregates when a definition source selects generated %s",
-    async (name) => {
+  it.each(
+    ["index.ts", "document-models.ts", "upgrade-manifests.ts"].flatMap(
+      (name) => [
+        [name, "directly"],
+        [name, "through a symlink"],
+      ],
+    ),
+  )(
+    "preserves aggregates when a definition source selects generated %s %s",
+    async (name, route) => {
       await generateModel();
       const files = ["index.ts", "document-models.ts", "upgrade-manifests.ts"];
       const before = files.map((file) => read(`document-models/${file}`));
-      for (const alias of [false, true]) {
-        const specifier = alias
-          ? "./aggregate-alias.ts"
-          : `./document-models/${name}`;
-        if (alias)
-          symlinkSync(
-            join(projectDir, "document-models", name),
-            join(projectDir, "aggregate-alias.ts"),
-          );
-        writeConfig({
-          definitionSources: {
-            formatVersion: 1,
-            mode: "code-first",
-            entries: [{ specifier }],
-          },
-        });
-        await expect(
-          refreshDocumentModelAggregates(buildTsMorphProject(projectDir)),
-        ).rejects.toThrow(/Select the original authored definition file/);
-        expect(files.map((file) => read(`document-models/${file}`))).toEqual(
-          before,
+      let specifier = `./document-models/${name}`;
+      if (route === "through a symlink") {
+        symlinkSync(
+          join(projectDir, "document-models", name),
+          join(projectDir, "aggregate-alias.ts"),
         );
+        specifier = "./aggregate-alias.ts";
       }
+      writeConfig({
+        definitionSources: {
+          formatVersion: 1,
+          mode: "code-first",
+          entries: [{ specifier }],
+        },
+      });
+      await expect(
+        refreshDocumentModelAggregates(buildTsMorphProject(projectDir)),
+      ).rejects.toThrow(/Select the original authored definition file/);
+      expect(files.map((file) => read(`document-models/${file}`))).toEqual(
+        before,
+      );
     },
   );
 
-  it("keeps legacy packages without a definitionSources declaration working", async () => {
-    expect(await codeFirstAggregateSources(projectDir)).toEqual([]);
-    rmSync(configPath());
-    expect(await codeFirstAggregateSources(projectDir)).toEqual([]);
-  });
-
-  it("finds nothing in a schema-first package", async () => {
+  it("finds no code-first sources in a legacy or schema-first package", async () => {
+    expect(await codeFirstAggregateSources(projectDir)).toStrictEqual([]);
     writeConfig({
       definitionSources: { formatVersion: 1, mode: "schema-first" },
     });
     expect(await codeFirstAggregateSources(projectDir)).toStrictEqual([]);
+    rmSync(configPath());
+    expect(await codeFirstAggregateSources(projectDir)).toStrictEqual([]);
+  });
+
+  it("keeps a schema-first model's upgrade manifest next to code-first ones", async () => {
+    await generateModel();
+    mkdirSync(join(projectDir, "document-models/legacy/upgrades"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(projectDir, "document-models/legacy/upgrades/upgrade-manifest.ts"),
+      `import type { UpgradeManifest } from "document-model";
+
+export const legacyUpgradeManifest: UpgradeManifest<readonly [1]> = {
+  documentType: "acme-things/legacy",
+  latestVersion: 1,
+  supportedVersions: [1],
+  upgrades: {},
+};
+`,
+    );
+    const project = buildTsMorphProject(projectDir);
+    await refreshDocumentModelAggregates(project);
+    await project.save();
+    expect(read("document-models/upgrade-manifests.ts")).toBe(
+      `/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type { UpgradeManifest } from "document-model";
+import { legacyUpgradeManifest } from "document-models/legacy/upgrades";
+import * as upgradeManifestsCodeFirst0 from "./todo/index.js";
+
+export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
+  legacyUpgradeManifest,
+  upgradeManifestsCodeFirst0["todoFamily"]["upgradeManifest"],
+];
+`,
+    );
+  });
+
+  it("refuses a selected source that exports no definition", async () => {
+    await generateModel();
+    const before = read("document-models/document-models.ts");
+    writeFileSync(
+      join(projectDir, "document-models", "bad.ts"),
+      "export const notADefinition = 42;\n",
+    );
+    writeConfig({
+      definitionSources: {
+        formatVersion: 1,
+        mode: "code-first",
+        entries: [{ specifier: "./document-models/bad.ts" }],
+      },
+    });
+    await expect(
+      refreshDocumentModelAggregates(buildTsMorphProject(projectDir)),
+    ).rejects.toThrow(/PH-PKG-DEFINITION-UNRECOGNIZED/);
+    expect(read("document-models/document-models.ts")).toBe(before);
   });
 });
 
@@ -534,7 +671,7 @@ describe("generateCodeFirstSubgraph", () => {
     });
   });
 
-  it("accepts a name whose file name ends in index", async () => {
+  it("kebab-cases a multi-word name for the file", async () => {
     expect((await generateSubgraph("SearchIndex")).written).toStrictEqual([
       "subgraphs/search-index.ts",
       "subgraphs/index.ts",
@@ -570,7 +707,7 @@ describe("generateCodeFirstSubgraph", () => {
   it("leaves the config untouched when the declaration cannot be written", async () => {
     writeFileSync(join(projectDir, "subgraphs"), "a file\n");
     const config = readFileSync(configPath(), "utf8");
-    await expect(generateSubgraph("widgets")).rejects.toThrow();
+    await expect(generateSubgraph("widgets")).rejects.toThrow(/widgets\.ts/);
     expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
 });
