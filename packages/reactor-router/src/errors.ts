@@ -1,8 +1,5 @@
 export const WRONG_BACKEND_CODE = "wrong-backend";
 
-/** reactor-api's drive middleware body: `{ error: "wrong-shard", driveId }`. */
-export const WRONG_SHARD_CODE = "wrong-shard";
-
 /** What the router learned from a refusal. Fields it cannot read are `""`. */
 export type MisrouteInfo = {
   readonly misrouted: boolean;
@@ -58,82 +55,42 @@ export class WrongBackendError extends Error {
   }
 }
 
-const MESSAGE_FIELD_PATTERN =
-  /^wrong-backend: collection=(\S*) document=(\S*) owner=(\S*) rejectedBy=(\S*)/;
-
-/** Reads a thrown value as a misroute; anything else is {@link NOT_MISROUTED}. */
+/** A WrongBackendError by name, or the GraphQL client's 421 refusal. */
 export function misrouteOf(value: unknown): MisrouteInfo {
-  if (value instanceof WrongBackendError) {
+  if (!Error.isError(value)) {
+    return NOT_MISROUTED;
+  }
+  if (value.name === "WrongBackendError") {
+    const fields = value as Partial<WrongBackendError>;
     return Object.freeze({
       misrouted: true,
-      collectionId: value.collectionId,
-      documentId: value.documentId,
-      ownerHint: value.ownerHint,
-      rejectedBy: value.rejectedBy,
+      collectionId: fields.collectionId ?? "",
+      documentId: fields.documentId ?? "",
+      ownerHint: fields.ownerHint ?? "",
+      rejectedBy: fields.rejectedBy ?? "",
       reason: value.message,
     });
   }
-  const fromMessage = misrouteFromMessage(value);
-  if (fromMessage.misrouted) {
-    return fromMessage;
+  const refusal = value as { status?: unknown; driveId?: unknown };
+  if (
+    value.name === "GraphQLWrongBackendError" &&
+    refusal.status === 421 &&
+    typeof refusal.driveId === "string"
+  ) {
+    return Object.freeze({
+      misrouted: true,
+      collectionId: "",
+      documentId: refusal.driveId,
+      ownerHint: "",
+      rejectedBy: "",
+      reason: value.message,
+    });
   }
-  return misrouteFromWrongShard(value);
+  return NOT_MISROUTED;
 }
 
 export function isMisroute(value: unknown): boolean {
   return misrouteOf(value).misrouted;
-}
-
-function misrouteFromMessage(value: unknown): MisrouteInfo {
-  if (typeof value !== "object" || value === null) {
-    return NOT_MISROUTED;
-  }
-  const candidate = value as { name?: unknown; message?: unknown };
-  if (typeof candidate.message !== "string") {
-    return NOT_MISROUTED;
-  }
-  const match = MESSAGE_FIELD_PATTERN.exec(candidate.message);
-  if (match === null) {
-    if (candidate.name === "WrongBackendError") {
-      return Object.freeze({
-        misrouted: true,
-        collectionId: "",
-        documentId: "",
-        ownerHint: "",
-        rejectedBy: "",
-        reason: candidate.message,
-      });
-    }
-    return NOT_MISROUTED;
-  }
-  return Object.freeze({
-    misrouted: true,
-    collectionId: match[1],
-    documentId: match[2],
-    ownerHint: match[3],
-    rejectedBy: match[4],
-    reason: candidate.message,
-  });
-}
-
-function misrouteFromWrongShard(value: unknown): MisrouteInfo {
-  if (typeof value !== "object" || value === null) {
-    return NOT_MISROUTED;
-  }
-  const candidate = value as { error?: unknown; driveId?: unknown };
-  if (candidate.error !== WRONG_SHARD_CODE) {
-    return NOT_MISROUTED;
-  }
-  const driveId =
-    typeof candidate.driveId === "string" ? candidate.driveId : "";
-  return Object.freeze({
-    misrouted: true,
-    collectionId: "",
-    documentId: driveId,
-    ownerHint: "",
-    rejectedBy: "",
-    reason: `${WRONG_SHARD_CODE}: driveId=${driveId}`,
-  });
 }
 
 export class UnknownBackendError extends Error {

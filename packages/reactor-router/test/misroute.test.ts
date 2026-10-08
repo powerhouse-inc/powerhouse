@@ -372,3 +372,51 @@ describe("placement facts", () => {
     ).rejects.toThrow(NoEligibleBackendError);
   });
 });
+
+/** reactor-browser's GraphQLWrongBackendError (#3187), as the router sees it. */
+function graphqlWrongBackend(driveId: string): Error {
+  const error = new Error(
+    `The Switchboard does not serve drive ${driveId}: 421 Misdirected Request`,
+  );
+  error.name = "GraphQLWrongBackendError";
+  Object.assign(error, {
+    status: 421,
+    driveId,
+    payload: { error: "wrong-shard", driveId },
+  });
+  return error;
+}
+
+describe("a Switchboard's wrong-shard refusal", () => {
+  it("re-aims the write and corrects the table", async () => {
+    const owner = refusing("owner");
+    owner.seed(fakeDocument({ id: "drive-x" }));
+    let refusals = 0;
+    const remote = stubBackend("remote", {
+      isServed: () => Promise.resolve(false),
+      execute: () => {
+        refusals++;
+        return Promise.reject(graphqlWrongBackend("drive-x"));
+      },
+    });
+    const dispatcher = new RouteDispatcher([remote, owner.handle()], {
+      collections: { "drive-x": "remote" },
+      onDiagnostic: silent,
+    });
+
+    const renamed = await dispatcher.onCollection(
+      "execute",
+      "drive-x",
+      "main",
+      renamer("drive-x", "re-aimed"),
+      ATTEMPT.write,
+    );
+
+    expect(refusals).toBe(1);
+    expect(renamed.header.name).toBe("re-aimed");
+    expect(owner.count("execute")).toBe(1);
+    expect(
+      dispatcher.table.collectionRoute(DriveCollectionId.forDrive("drive-x")),
+    ).toMatchObject({ backend: "owner", source: "corrected" });
+  });
+});

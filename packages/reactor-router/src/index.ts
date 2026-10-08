@@ -11,7 +11,6 @@ export {
   NOT_MISROUTED,
   UnknownBackendError,
   WRONG_BACKEND_CODE,
-  WRONG_SHARD_CODE,
   WrongBackendError,
   type MisrouteInfo,
   type WrongBackendDetails,
