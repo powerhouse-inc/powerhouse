@@ -1204,15 +1204,7 @@ export class RoutingReactorClient implements IReactorClient {
     if (documentId === "") {
       return this.dispatcher.primary;
     }
-    const route = await this.dispatcher.placed(() =>
-      this.dispatcher.table.collectionRoute(
-        DriveCollectionId.forDrive(documentId),
-      ),
-    );
-    return this.dispatcher.table.backend(
-      route.backend,
-      `placement for a new document ${JSON.stringify(documentId)}`,
-    );
+    return this.dispatcher.placeDocument(documentId);
   }
 
   private recordBatchJobs(

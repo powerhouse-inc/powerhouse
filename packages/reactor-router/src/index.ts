@@ -48,7 +48,6 @@ export {
   eligibleBackends,
   ineligibleReason,
   placeCollection,
-  placeStandalone,
 } from "./placement.js";
 export { RouterTable } from "./table.js";
 export {

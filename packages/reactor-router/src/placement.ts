@@ -1,4 +1,5 @@
-import { bucketFor, DriveCollectionId } from "@powerhousedao/reactor";
+import type { DriveCollectionId } from "@powerhousedao/reactor";
+import { bucketFor } from "@powerhousedao/reactor";
 import type { RouterBackend } from "./backend.js";
 import { NoEligibleBackendError } from "./errors.js";
 import type { BackendFacts, CollectionRequirements } from "./types.js";
@@ -63,17 +64,4 @@ export function placeCollection(
     );
   }
   return eligible[bucketFor(collection.key, eligible.length)];
-}
-
-/** A parentless document is placed as a collection of its own id. */
-export function placeStandalone(
-  documentId: string,
-  backends: readonly RouterBackend[],
-  requirements: CollectionRequirements,
-): RouterBackend {
-  return placeCollection(
-    DriveCollectionId.forDrive(documentId),
-    backends,
-    requirements,
-  );
 }

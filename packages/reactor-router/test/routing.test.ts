@@ -236,6 +236,98 @@ describe("placement through the client", () => {
     expect(two.count("executeBatch")).toBe(4);
   });
 
+  const createJob = (id: string) => ({
+    ...job("c", id),
+    actions: [{ type: "CREATE_DOCUMENT" }] as unknown as Action[],
+  });
+  const loadJob = (id: string) => ({
+    key: "l",
+    documentId: id,
+    scope: "global",
+    branch: "main",
+    operations: [],
+    dependsOn: [],
+    externalDeps: [],
+  });
+
+  it("places an unserved id in a batch by the id's collection requirements", async () => {
+    expect(parentless.some((id) => hashedTo(id, 2) === 0)).toBe(true);
+    const plain = new FakeBackend("plain");
+    const node = new FakeBackend("node", workflowInfo(), REMOTE);
+    const client = router([plain.config(), node.config()], {
+      requirements: Object.fromEntries(
+        parentless.map((id) => [id, { workflows: true }]),
+      ),
+    });
+
+    for (const id of parentless.slice(0, 4)) {
+      await client.executeBatch({ jobs: [createJob(id)] });
+    }
+    for (const id of parentless.slice(4)) {
+      await client.loadBatch({ jobs: [loadJob(id)] });
+    }
+
+    expect(plain.count("executeBatch") + plain.count("loadBatch")).toBe(0);
+    expect(node.count("executeBatch")).toBe(4);
+    expect(node.count("loadBatch")).toBe(4);
+  });
+
+  it("places an unserved id in a batch on the id's collections override", async () => {
+    expect(parentless.some((id) => hashedTo(id, 2) === 0)).toBe(true);
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    const client = router([one.config(), two.config()], {
+      collections: Object.fromEntries(parentless.map((id) => [id, "two"])),
+    });
+
+    for (const id of parentless.slice(0, 4)) {
+      await client.executeBatch({ jobs: [createJob(id)] });
+    }
+    for (const id of parentless.slice(4)) {
+      await client.loadBatch({ jobs: [loadJob(id)] });
+    }
+
+    expect(one.count("executeBatch") + one.count("loadBatch")).toBe(0);
+    expect(two.count("executeBatch")).toBe(4);
+    expect(two.count("loadBatch")).toBe(4);
+  });
+
+  it("places an unserved id the same way in a batch as in a parentless create", async () => {
+    const backends = () => [
+      new FakeBackend("a"),
+      new FakeBackend("b", workflowInfo(), REMOTE),
+      new FakeBackend("c"),
+    ];
+    const options: RoutingClientOptions = {
+      requirements: { [parentless[0]]: { workflows: true } },
+      collections: { [parentless[1]]: "c" },
+    };
+    const viaCreate = backends();
+    const viaBatch = backends();
+    const creating = router(
+      viaCreate.map((backend) => backend.config()),
+      options,
+    );
+    const batching = router(
+      viaBatch.map((backend) => backend.config()),
+      options,
+    );
+
+    const landed = (fakes: FakeBackend[], method: string, before: number[]) =>
+      fakes.findIndex((backend, i) => backend.count(method) > before[i]);
+    for (const id of parentless) {
+      const created = viaCreate.map((backend) => backend.count("create"));
+      const batched = viaBatch.map((backend) => backend.count("executeBatch"));
+      await creating.create(fakeDocument({ id }));
+      await batching.executeBatch({ jobs: [createJob(id)] });
+      expect(landed(viaBatch, "executeBatch", batched), id).toBe(
+        landed(viaCreate, "create", created),
+      );
+    }
+    expect(viaCreate[1].count("create")).toBeGreaterThan(0);
+    expect(viaCreate[2].count("create")).toBeGreaterThan(0);
+  });
+
   it("reads lazy facts before it is handed out", async () => {
     const node = new FakeBackend("node");
     const client = await createRoutingClient(

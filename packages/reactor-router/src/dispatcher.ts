@@ -235,7 +235,24 @@ export class RouteDispatcher {
       this.table.recordDocument(identifier, serving[0].name);
       return serving[0];
     }
-    return this.placed(() => this.table.standaloneRoute(identifier, excluded));
+    return this.placeDocument(identifier, excluded);
+  }
+
+  /** An id no backend serves is placed as a collection of its own. */
+  async placeDocument(
+    identifier: string,
+    excluded: ReadonlySet<string> = new Set(),
+  ): Promise<RouterBackend> {
+    const route = await this.placed(() =>
+      this.table.collectionRoute(
+        DriveCollectionId.forDrive(identifier),
+        excluded,
+      ),
+    );
+    return this.table.backend(
+      route.backend,
+      `placement for ${JSON.stringify(identifier)}`,
+    );
   }
 
   async resolveCollectionBackend(

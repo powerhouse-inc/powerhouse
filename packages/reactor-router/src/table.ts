@@ -1,11 +1,7 @@
 import type { DriveCollectionId } from "@powerhousedao/reactor";
 import type { RouterBackend } from "./backend.js";
 import { UnknownBackendError } from "./errors.js";
-import {
-  ineligibleReason,
-  placeCollection,
-  placeStandalone,
-} from "./placement.js";
+import { ineligibleReason, placeCollection } from "./placement.js";
 import {
   collectionRequirements,
   DEFAULT_DOCUMENT_CACHE_SIZE,
@@ -247,26 +243,6 @@ export class RouterTable {
       backend: (alternative ?? placed).name,
       source: "placed",
     };
-  }
-
-  standaloneRoute(
-    documentId: string,
-    excluded: ReadonlySet<string> = new Set(),
-  ): RouterBackend {
-    const placed = placeStandalone(
-      documentId,
-      this.order,
-      this.fallbackRequirements,
-    );
-    if (!excluded.has(placed.name)) {
-      return placed;
-    }
-    const alternative = this.order.find(
-      (backend) =>
-        !excluded.has(backend.name) &&
-        this.isEligible(backend, this.fallbackRequirements),
-    );
-    return alternative ?? placed;
   }
 
   /** Records what an operation proved; see {@link nextCollectionRoute}. */
