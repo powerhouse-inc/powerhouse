@@ -440,6 +440,17 @@ export class SyncManager
       throw new Error("SyncManager is already shutdown and cannot be started");
     }
 
+    // Purged first: their dead letters and holds go with them, so loading
+    // those before would keep a quarantine nothing can lift.
+    const remoteRecords: RemoteRecord[] = [];
+    for (const record of await this.remoteStorage.list()) {
+      if (isSessionScoped(record.options)) {
+        await this.purgeSessionRemote(record.name);
+        continue;
+      }
+      remoteRecords.push(record);
+    }
+
     try {
       const quarantinedIds =
         await this.deadLetterStorage.listQuarantinedDocumentIds();
@@ -478,15 +489,10 @@ export class SyncManager
       );
     }
 
-    const remoteRecords = await this.remoteStorage.list();
     const head = await this.watermarkHead();
     this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
-      if (isSessionScoped(record.options)) {
-        await this.purgeSessionRemote(record.name);
-        continue;
-      }
       // Building the channel and wiring it up is guarded as a whole: a factory
       // that rejects this record's config (or a wiring step that throws) must
       // degrade THIS remote, never the boot. A reactor whose sync module cannot

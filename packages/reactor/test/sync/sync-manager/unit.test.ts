@@ -5968,6 +5968,108 @@ describe("SyncManager - Unit Tests", () => {
       restarted.shutdown();
     });
 
+    it("should not quarantine a document whose only dead letter was a purged session remote's", async () => {
+      const stored = new Map<string, RemoteRecord>();
+      const deadLetters = new Map<string, string[]>([
+        ["local:peer-b:drive-1", ["session-quarantined-doc"]],
+      ]);
+      vi.mocked(mockRemoteStorage.upsert).mockImplementation((record) => {
+        stored.set(record.name, record);
+        return Promise.resolve();
+      });
+      vi.mocked(mockRemoteStorage.list).mockImplementation(() =>
+        Promise.resolve([...stored.values()]),
+      );
+      // sync_dead_letters cascades from sync_remotes.
+      vi.mocked(mockRemoteStorage.remove).mockImplementation((name) => {
+        stored.delete(name);
+        deadLetters.delete(name);
+        return Promise.resolve();
+      });
+      vi.mocked(
+        mockDeadLetterStorage.listQuarantinedDocumentIds,
+      ).mockImplementation(() =>
+        Promise.resolve([...new Set([...deadLetters.values()].flat())]),
+      );
+
+      await syncManager.add(
+        "local:peer-b:drive-1",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "local", parameters: { peerId: "peer-b" } },
+        { documentId: [], scope: [], branch: "" },
+        sessionOptions,
+      );
+      await syncManager.add(
+        "durable-remote",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "internal", parameters: {} },
+      );
+
+      const channel = {
+        ...mockChannel,
+        inbox: createMockMailbox(),
+        outbox: createMockMailbox(),
+        deadLetter: createMockMailbox(),
+      } as IChannel;
+      const restarted = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        { instance: () => channel },
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
+      );
+      await restarted.startup();
+      vi.mocked(mockReactor.load).mockClear();
+
+      const inboxCb = vi.mocked(channel.inbox.onAdded).mock.calls[0][0];
+      inboxCb([
+        new SyncOperation(
+          "inbox-after-restart",
+          "",
+          [],
+          "durable-remote",
+          "session-quarantined-doc",
+          ["global"],
+          "main",
+          [
+            {
+              operation: {
+                index: 0,
+                skip: 0,
+                id: "op-after-restart",
+                hash: "h",
+                timestampUtcMs: "1000",
+                action: { type: "CREATE", scope: "global" } as any,
+              },
+              context: {
+                documentId: "session-quarantined-doc",
+                documentType: "test",
+                scope: "global",
+                branch: "main",
+                ordinal: 1,
+              },
+            },
+          ],
+        ),
+      ]);
+
+      await vi.waitFor(() => {
+        expect(mockReactor.load).toHaveBeenCalledWith(
+          "session-quarantined-doc",
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+        );
+      });
+      restarted.shutdown();
+    });
+
     it("should persist a remote by default", async () => {
       await syncManager.add(
         "durable-remote",
