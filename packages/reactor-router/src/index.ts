@@ -69,9 +69,9 @@ export {
   type MergePagedOptions,
   type PagedParticipant,
 } from "./fan-in.js";
+export { ATTEMPT, RouteDispatcher, type AttemptOptions } from "./dispatcher.js";
 export {
-  ATTEMPT,
-  RouteDispatcher,
-  type AttemptOptions,
+  OwnershipGuard,
   type Ownership,
-} from "./dispatcher.js";
+  type OwnershipProbe,
+} from "./guard.js";

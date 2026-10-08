@@ -8,15 +8,15 @@ import {
   rethrow,
   type MisrouteInfo,
 } from "./errors.js";
+import { OwnershipGuard, type Ownership } from "./guard.js";
 import { RouterTable } from "./table.js";
 import {
   DEFAULT_BRANCH,
+  DEFAULT_DOCUMENT_CACHE_SIZE,
   DEFAULT_MISROUTE_ATTEMPTS,
   type RouterDiagnostic,
   type RoutingOptions,
 } from "./types.js";
-
-export type Ownership = "yes" | "no" | "unknown";
 
 /** What one operation is aimed at, and what the table learns from it. */
 interface RouteTarget {
@@ -45,6 +45,7 @@ export class RouteDispatcher {
   readonly onDiagnostic: RouterDiagnostic;
   private readonly attempts: number;
   private readonly primaryName: string;
+  private readonly guard: OwnershipGuard;
 
   constructor(
     backends: readonly RouterBackend[],
@@ -59,6 +60,10 @@ export class RouteDispatcher {
     this.attempts = Math.max(
       1,
       options.misrouteAttempts ?? DEFAULT_MISROUTE_ATTEMPTS,
+    );
+    this.guard = new OwnershipGuard(
+      (backend, identifier) => this.owns(backend, identifier),
+      options.documentCacheSize ?? DEFAULT_DOCUMENT_CACHE_SIZE,
     );
     this.primaryName =
       options.primaryBackend === undefined
@@ -336,6 +341,13 @@ export class RouteDispatcher {
         break;
       }
       try {
+        if (!options.recoverOnError) {
+          await this.guard.assertOwned(
+            backend,
+            target.probeKey,
+            target.operation,
+          );
+        }
         const value = await run(backend);
         target.accepted(backend, attempt > 0);
         return value;
