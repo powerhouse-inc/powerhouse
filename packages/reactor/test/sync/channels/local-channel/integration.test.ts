@@ -10,6 +10,7 @@ import { LocalChannelFactory } from "../../../../src/sync/channels/local-channel
 import {
   LocalChannelPortRegistry,
   registerLocalPeer,
+  removeLocalPeer,
 } from "../../../../src/sync/channels/local-channel-registry.js";
 import { messagePortTransport } from "../../../../src/sync/channels/local-channel-transport.js";
 import type { ISyncAdmin } from "../../../../src/sync/interfaces.js";
@@ -272,6 +273,28 @@ describe("LocalChannel over a message port between two reactors", () => {
     await b.admin.resetChannel("b->a");
 
     await expectBothWays(pair, driveId, "afterReset");
+  }, 40_000);
+
+  it("removes a local peer whose reset is still running", async () => {
+    const a = await buildPeer("a", WIDE);
+    const b = await buildPeer("b", WIDE);
+    pair = new Pair(a, b);
+
+    const driveId = "remove-during-reset-drive";
+    await pair.connect(driveId);
+
+    const reset = a.admin.resetChannel("a->b");
+    await removeLocalPeer(a.sync, a.ports, {
+      remoteName: "a->b",
+      peerId: "b",
+      channelName: driveId,
+    });
+    await reset;
+
+    expect(a.sync.list().map((remote) => remote.meta.name)).not.toContain(
+      "a->b",
+    );
+    expect(a.ports.isClosed("b", driveId)).toBe(true);
   }, 40_000);
 
   it("recovers after the link is re-brokered over a fresh port", async () => {

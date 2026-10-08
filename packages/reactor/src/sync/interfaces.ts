@@ -316,6 +316,9 @@ export interface ISyncManager {
    */
   remove(name: string): Promise<void>;
 
+  /** Settles once no reset of the remote is running or queued; never rejects. */
+  resetSettled?(name: string): Promise<void>;
+
   /**
    * Lists all configured remotes.
    *

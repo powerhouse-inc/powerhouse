@@ -202,7 +202,7 @@ export type LocalRemoveSpec = {
 
 export type LocalPeerSyncManager = Pick<
   ISyncManager,
-  "list" | "add" | "remove"
+  "list" | "add" | "remove" | "resetSettled"
 >;
 
 /** Registers before `add`, because `add` resolves the port through the factory. */
@@ -241,15 +241,26 @@ export async function registerLocalPeer(
   }
 }
 
-/** Unregisters even when `remove` throws, so the peer can be adopted again. */
+/**
+ * Waits out a running reset, then removes. The port is closed only once the
+ * remote is gone, so a failed remove (a reset that started meanwhile) leaves
+ * the link intact for a retry.
+ */
 export async function removeLocalPeer(
   syncManager: LocalPeerSyncManager,
   registry: LocalChannelPortRegistry,
   spec: LocalRemoveSpec,
 ): Promise<void> {
+  await syncManager.resetSettled?.(spec.remoteName);
   try {
     await syncManager.remove(spec.remoteName);
-  } finally {
-    registry.unregister(spec.peerId, spec.channelName);
+  } catch (error) {
+    if (
+      !syncManager.list().some((remote) => remote.meta.name === spec.remoteName)
+    ) {
+      registry.unregister(spec.peerId, spec.channelName);
+    }
+    throw error;
   }
+  registry.unregister(spec.peerId, spec.channelName);
 }

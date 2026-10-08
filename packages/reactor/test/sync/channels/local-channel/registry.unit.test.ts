@@ -14,6 +14,7 @@ import {
   type LocalChannelPort,
   type MessagePortLike,
 } from "../../../../src/sync/channels/local-channel-transport.js";
+import type { Remote } from "../../../../src/sync/interfaces.js";
 import { createMockLogger } from "../../../factories.js";
 
 type FakePort = LocalChannelPort & { close: Mock<() => void> };
@@ -253,6 +254,52 @@ describe("removeLocalPeer", () => {
     ).rejects.toThrow(/remove failed/);
 
     expect(registry.has(spec.peerId, spec.channelName)).toBe(false);
+  });
+});
+
+describe("removeLocalPeer around a live remote", () => {
+  const live = { meta: { name: spec.remoteName } } as Remote;
+
+  it("keeps the port open when remove fails and the remote is still live", async () => {
+    const registry = new LocalChannelPortRegistry();
+    const port = fakePort();
+    registry.register(spec.peerId, spec.channelName, port);
+    const manager = { ...failingSyncManager("remove"), list: () => [live] };
+
+    await expect(removeLocalPeer(manager, registry, spec)).rejects.toThrow(
+      /remove failed/,
+    );
+
+    expect(port.close).not.toHaveBeenCalled();
+    expect(registry.has(spec.peerId, spec.channelName)).toBe(true);
+  });
+
+  it("waits for an in-flight reset before it removes", async () => {
+    const registry = new LocalChannelPortRegistry();
+    const port = fakePort();
+    registry.register(spec.peerId, spec.channelName, port);
+    let settle!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const remove = vi.fn<LocalPeerSyncManager["remove"]>(() =>
+      Promise.resolve(),
+    );
+    const manager: LocalPeerSyncManager = {
+      list: () => [live],
+      add: vi.fn<LocalPeerSyncManager["add"]>(),
+      remove,
+      resetSettled: () => settled,
+    };
+
+    const removing = removeLocalPeer(manager, registry, spec);
+    await Promise.resolve();
+    expect(remove).not.toHaveBeenCalled();
+
+    settle();
+    await removing;
+    expect(remove).toHaveBeenCalledWith(spec.remoteName);
+    expect(port.close).toHaveBeenCalledTimes(1);
   });
 });
 

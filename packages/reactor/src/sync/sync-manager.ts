@@ -1559,6 +1559,14 @@ export class SyncManager
     await Promise.all(this.markerWritesOf(remoteNames));
   }
 
+  async resetSettled(name: string): Promise<void> {
+    for (;;) {
+      const pending = this.queuedResets.get(name) ?? this.resets.get(name);
+      if (!pending) return;
+      await pending.catch(() => undefined);
+    }
+  }
+
   /** Never joins a running rebuild: it may have read state older than the request. */
   resetChannel(remoteName: string): Promise<void> {
     const queued = this.queuedResets.get(remoteName);
