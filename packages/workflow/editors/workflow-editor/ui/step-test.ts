@@ -44,3 +44,14 @@ export function explainTestError(error: string): TestErrorExplained {
   }
   return { message: error, targets: [] };
 }
+
+// How the panel shows a step test's outcome.
+export type TestOutcomeView = "output" | "failed" | "indeterminate";
+
+// INDETERMINATE: a write the step asked for may have landed, so it is shown
+// as neither a pass nor a failure. Anything unknown is not a pass either.
+export function testOutcomeView(status: string): TestOutcomeView {
+  if (status === "SUCCEEDED") return "output";
+  if (status === "INDETERMINATE") return "indeterminate";
+  return "failed";
+}

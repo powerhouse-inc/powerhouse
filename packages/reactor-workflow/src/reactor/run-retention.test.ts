@@ -1,10 +1,11 @@
-// Retention is opt-in, prunes only finished runs past the window, and takes
-// their steps and documents with them.
+// Retention is ON by default, prunes only finished runs past the window, and
+// takes their steps and documents with them.
 import type { OperationWithContext } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import {
+  DEFAULT_RUN_RETENTION_DAYS,
   RUN_RETENTION_ENV,
   runRetentionMs,
   sweepRetention,
@@ -50,11 +51,25 @@ function run(id: string, workflowId: string, endedAt: string | null): RunRow {
 }
 
 describe("runRetentionMs", () => {
-  it("is off unless a positive number of days is set", () => {
-    expect(runRetentionMs({})).toBeUndefined();
-    expect(runRetentionMs({ [RUN_RETENTION_ENV]: "0" })).toBeUndefined();
-    expect(runRetentionMs({ [RUN_RETENTION_ENV]: "soon" })).toBeUndefined();
-    expect(runRetentionMs({ [RUN_RETENTION_ENV]: "30" })).toBe(30 * DAY_MS);
+  it("defaults to a window rather than to unbounded growth", () => {
+    // The whole point of the change: a host that says nothing gets a bound.
+    expect(runRetentionMs({})).toBe(DEFAULT_RUN_RETENTION_DAYS * DAY_MS);
+    expect(runRetentionMs({ [RUN_RETENTION_ENV]: "7" })).toBe(7 * DAY_MS);
+  });
+
+  it("takes an explicit opt-out, in the spellings an operator writes", () => {
+    for (const raw of ["0", "off", "OFF", " never ", "false", "none"]) {
+      expect(runRetentionMs({ [RUN_RETENTION_ENV]: raw })).toBeUndefined();
+    }
+  });
+
+  it("falls back to the default on a value it cannot read", () => {
+    // A typo must not silently remove the bound the variable exists to set.
+    for (const raw of ["soon", "-5", "thirty"]) {
+      expect(runRetentionMs({ [RUN_RETENTION_ENV]: raw })).toBe(
+        DEFAULT_RUN_RETENTION_DAYS * DAY_MS,
+      );
+    }
   });
 });
 

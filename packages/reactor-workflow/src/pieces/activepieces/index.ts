@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./indeterminate.js";
 export * from "./fetch.js";
 export * from "./loader.js";
 export { throwingStub } from "./context/stubs.js";
