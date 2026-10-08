@@ -511,6 +511,84 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     expect(state(server).inFlight.size).toBe(0);
   });
 
+  it("stops posting a single-read body once the requester cancels mid-body", async () => {
+    const bytes = new Uint8Array(256 * 1024);
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = i % 253;
+    const hash = await sha256Hex(bytes);
+    const store = new LocalAttachmentStore(
+      new MemoryAttachmentBackend(),
+      new NullAttachmentTransport(),
+    );
+    await store.putLocal(
+      hash,
+      metadata(bytes.byteLength),
+      streamFromBytes(bytes),
+    );
+    const channel = link();
+    let chunksPosted = 0;
+    const counted: LocalChannelPort = {
+      ...channel.portA,
+      postMessage: (data) => {
+        if ((data as { kind?: string }).kind === "chunk") chunksPosted += 1;
+        channel.portA.postMessage(data);
+      },
+      onMessage: (callback) => channel.portA.onMessage(callback),
+    };
+    const chunkSizeBytes = 1024;
+    const server = new LocalAttachmentServer({
+      port: counted,
+      link: TEST_LINK,
+      store,
+      authorize: allowAll,
+      chunkSizeBytes,
+    });
+    const puller = new LocalAttachmentTransport({ port: channel.portB });
+
+    const result = await puller.fetch(hash, DOC);
+    expect(result.kind).toBe("data");
+    if (result.kind !== "data") return;
+    await result.response.body.cancel();
+
+    await vi.waitFor(() => expect(state(server).inFlight.size).toBe(0));
+    expect(chunksPosted).toBeLessThan(bytes.byteLength / chunkSizeBytes);
+    expect(server.stats().served).toBe(0);
+    server.close();
+    puller.close();
+    channel.dispose();
+  });
+
+  it("answers error past its concurrent serve cap", async () => {
+    const fake = fakePort();
+    const parked = new Promise<boolean>(() => undefined);
+    const server = new LocalAttachmentServer({
+      port: fake.port,
+      link: TEST_LINK,
+      store: new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        new NullAttachmentTransport(),
+      ),
+      authorize: () => parked,
+      maxConcurrentServes: 2,
+    });
+
+    for (let i = 0; i < 3; i += 1) {
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "fetch",
+        id: `r${i}`,
+        hash: "a".repeat(64),
+        documentId: DOC,
+      });
+    }
+    await settle();
+
+    expect(fake.sent).toEqual([
+      expect.objectContaining({ kind: "error", id: "r2" }),
+    ]);
+    expect(state(server).inFlight.size).toBe(2);
+    server.close();
+  });
+
   it("refuses a malformed hash or document id before the authorizer or the store sees it", async () => {
     const fake = fakePort();
     const store = new LocalAttachmentStore(

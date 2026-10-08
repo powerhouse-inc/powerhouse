@@ -1,4 +1,5 @@
 export {
+  DEFAULT_LOCAL_MAX_CONCURRENT_SERVES,
   LocalAttachmentServer,
   readGateAttachmentAuthorizer,
   type AttachmentPeerLink,

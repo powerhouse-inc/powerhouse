@@ -42,8 +42,18 @@ export type LocalAttachmentServerOptions = {
   authorize?: LocalAttachmentAuthorizer;
   /** Bytes per `chunk` message; defaults to {@link DEFAULT_LOCAL_CHUNK_BYTES}. */
   chunkSizeBytes?: number;
+  /** Requests served at once; one past it is answered `error`. */
+  maxConcurrentServes?: number;
   onDiagnostic?: (message: string, error?: unknown) => void;
 };
+
+/** Default {@link LocalAttachmentServerOptions.maxConcurrentServes}. */
+export const DEFAULT_LOCAL_MAX_CONCURRENT_SERVES = 4;
+
+/** A macrotask, so a cancel posted by the peer is handled between slices. */
+function nextTurn(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 export type ReadGateAttachmentAuthorizerOptions = {
   readGate: AttachmentReadGate;
@@ -104,6 +114,7 @@ export class LocalAttachmentServer {
   private readonly store: IAttachmentStore;
   private readonly authorize: LocalAttachmentAuthorizer;
   private readonly chunkSizeBytes: number;
+  private readonly maxConcurrentServes: number;
   private readonly onDiagnostic: (message: string, error?: unknown) => void;
   private readonly cancelled = new Set<string>();
   private readonly inFlight = new Set<string>();
@@ -120,6 +131,8 @@ export class LocalAttachmentServer {
     this.authorize =
       options.authorize ?? ((): Promise<boolean> => Promise.resolve(false));
     this.chunkSizeBytes = options.chunkSizeBytes ?? DEFAULT_LOCAL_CHUNK_BYTES;
+    this.maxConcurrentServes =
+      options.maxConcurrentServes ?? DEFAULT_LOCAL_MAX_CONCURRENT_SERVES;
     this.onDiagnostic = options.onDiagnostic ?? ((): void => undefined);
     this.detachPort = this.port.onMessage((data) => this.onMessage(data));
   }
@@ -133,7 +146,7 @@ export class LocalAttachmentServer {
     };
   }
 
-  /** Detaches from the port. In-flight serves stop at their next chunk. */
+  /** Detaches from the port. In-flight serves stop at their next slice. */
   close(): void {
     if (this.closed) {
       return;
@@ -159,7 +172,28 @@ export class LocalAttachmentServer {
       }
       return;
     }
+    if (
+      !isAttachmentHash(data.hash) ||
+      typeof data.documentId !== "string" ||
+      data.documentId === ""
+    ) {
+      this.refuse(data);
+      return;
+    }
+    if (this.inFlight.size >= this.maxConcurrentServes) {
+      this.post({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "error",
+        id: data.id,
+        message: "too many concurrent attachment requests",
+      });
+      return;
+    }
     void this.serve(data);
+  }
+
+  private stopped(id: string): boolean {
+    return this.closed || this.cancelled.has(id);
   }
 
   private async serve(request: LocalAttachmentFetchRequest): Promise<void> {
@@ -175,14 +209,6 @@ export class LocalAttachmentServer {
   private async serveInner(
     request: LocalAttachmentFetchRequest,
   ): Promise<void> {
-    if (
-      !isAttachmentHash(request.hash) ||
-      typeof request.documentId !== "string" ||
-      request.documentId === ""
-    ) {
-      this.refuse(request);
-      return;
-    }
     try {
       const authorized = await this.authorize(
         { ...this.link },
@@ -271,8 +297,7 @@ export class LocalAttachmentServer {
     let seq = 0;
     try {
       for (;;) {
-        if (this.closed || this.cancelled.has(request.id)) {
-          this.cancelled.delete(request.id);
+        if (this.stopped(request.id)) {
           await reader.cancel();
           return;
         }
@@ -285,6 +310,13 @@ export class LocalAttachmentServer {
           offset < value.byteLength;
           offset += this.chunkSizeBytes
         ) {
+          if (offset > 0) {
+            await nextTurn();
+          }
+          if (this.stopped(request.id)) {
+            await reader.cancel();
+            return;
+          }
           const slice = value.subarray(
             offset,
             Math.min(offset + this.chunkSizeBytes, value.byteLength),

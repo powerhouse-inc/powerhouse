@@ -10,6 +10,7 @@ export {
 } from "./access/attachment-read-gate.js";
 export {
   DEFAULT_LOCAL_CHUNK_BYTES,
+  DEFAULT_LOCAL_MAX_CONCURRENT_SERVES,
   DEFAULT_LOCAL_REQUEST_TIMEOUT_MS,
   isLocalAttachmentRequest,
   isLocalAttachmentResponse,
