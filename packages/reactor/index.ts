@@ -22,10 +22,12 @@ export {
   DocumentChangeType,
   type ActionCandidate,
   type ActionEvaluations,
+  type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,
+  type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
@@ -198,6 +200,12 @@ export {
   type JobStartedEvent,
   type ReactorFeatureFlags,
 } from "./src/executor/types.js";
+
+// The one placement hash: worker pool, projection shards and the router.
+export {
+  bucketFor,
+  hashDocumentId,
+} from "./src/executor/worker-pool-router.js";
 
 // Executor Worker Utilities
 export {
