@@ -38,21 +38,34 @@ import {
   removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
-import type { ExecutionJobPlan, IReactor } from "../core/types.js";
+import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
+  ExecutionJobPlan,
+} from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
 import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { parsePagingOptions } from "../shared/utils.js";
 import type { IDriveClient, IReactorClient } from "./types.js";
 
-/**
- * Implementation of {@link IDriveClient}.
- *
- * Holds a back-reference to its parent {@link IReactorClient} for read and
- * single-document write primitives, plus direct access to {@link IReactor}
- * for batch execution. The back-reference is captured but never invoked
- * during construction, so the partial-`this` hazard does not apply.
- */
+/** The client members a {@link DriveClient} reads and writes through. */
+export type DriveClientDeps = Pick<
+  IReactorClient,
+  | "get"
+  | "execute"
+  | "create"
+  | "setPreferredEditor"
+  | "getCreateSignaturePolicy"
+  | "getCreateProtocolVersions"
+  | "waitForJob"
+>;
+
+export type BatchSubmitter = (
+  request: BatchExecutionRequest,
+  signal?: AbortSignal,
+) => Promise<BatchExecutionResult>;
+
 /** A copy keeps its source's versions; selection fills only the keys it lacks. */
 function withSelectedVersions(
   header: PHDocumentHeader,
@@ -68,9 +81,9 @@ function withSelectedVersions(
 
 export class DriveClient implements IDriveClient {
   constructor(
-    private readonly client: IReactorClient,
+    private readonly client: DriveClientDeps,
     private readonly logger: ILogger,
-    private readonly reactor: IReactor,
+    private readonly executeBatch: BatchSubmitter,
     private readonly signer: ISigner,
     private readonly resolveReference: (
       identifier: string,
@@ -548,7 +561,7 @@ export class DriveClient implements IDriveClient {
     jobs: ExecutionJobPlan[],
     signal?: AbortSignal,
   ): Promise<JobInfo[]> {
-    const batchResult = await this.reactor.executeBatch({ jobs }, signal);
+    const batchResult = await this.executeBatch({ jobs }, signal);
 
     const completedJobs = await Promise.all(
       Object.values(batchResult.jobs).map((job) =>

@@ -13,7 +13,18 @@ export {
 } from "./src/actions/index.js";
 
 // Reactor Interface and Implementation
-export { DriveClient } from "./src/client/drive-client.js";
+export {
+  DriveClient,
+  type BatchSubmitter,
+  type DriveClientDeps,
+} from "./src/client/drive-client.js";
+export {
+  buildCreateJobs,
+  createEmptyDocument,
+  selectDocumentModelModule,
+  upgradeDocumentWith,
+  type UpgradeDocumentDeps,
+} from "./src/client/derivations.js";
 export {
   ReactorClient,
   type ActionEvaluationConfig,

@@ -1,7 +1,6 @@
 import type {
   Action,
   AuthSubject,
-  CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
   Operation,
@@ -15,19 +14,13 @@ import {
   DEFAULT_SIGNATURE_POLICY,
   PEER_CAPABILITIES,
   selectProtocolVersions,
-  DowngradeNotSupportedError,
   normalizeDocumentModelVersion,
-  requestedSignaturePolicy,
   UnsupportedDocumentModelVersionError,
-  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
-  addRelationshipAction,
-  createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
-  upgradeDocumentAction,
 } from "../actions/index.js";
 import type {
   BatchExecutionRequest,
@@ -37,7 +30,7 @@ import type {
   ExecutionJobPlan,
   IReactor,
 } from "../core/types.js";
-import { getSharedActionScope, signActions } from "../core/utils.js";
+import { signActions } from "../core/utils.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   AuthEnforcementDisabledError,
@@ -47,6 +40,7 @@ import {
   JobStatus,
   PropagationMode,
   RelationshipChangeType,
+  type ConsistencyToken,
   type JobInfo,
   type PagedResults,
   type PagingOptions,
@@ -66,9 +60,14 @@ import {
   encodeCompositeCursor,
   isCompositeCursor,
 } from "./cursor.js";
+import {
+  buildCreateJobs,
+  createEmptyDocument,
+  selectDocumentModelModule,
+  upgradeDocumentWith,
+} from "./derivations.js";
 import { DriveClient } from "./drive-client.js";
 import {
-  DEFAULT_UPGRADE_CONFLICT_RETRIES,
   DocumentChangeType,
   type ActionCandidate,
   type ActionEvaluations,
@@ -232,8 +231,12 @@ export class ReactorClient implements IReactorClient {
     this.eventReads = new EventReadsSource(reactor, documentView, readGate);
     this.actionEvaluation = actionEvaluation;
     this.createSignaturePolicy = createSignaturePolicy;
-    this.drives = new DriveClient(this, logger, reactor, signer, (id, signal) =>
-      this.resolveReference(id, "main", signal),
+    this.drives = new DriveClient(
+      this,
+      logger,
+      (request, signal) => reactor.executeBatch(request, signal),
+      signer,
+      (id, signal) => this.resolveReference(id, "main", signal),
     );
     this.logger.verbose("ReactorClient initialized");
   }
@@ -849,80 +852,10 @@ export class ReactorClient implements IReactorClient {
     parentIdentifier: string | undefined,
     signal: AbortSignal | undefined,
   ): Promise<BatchExecutionResult> {
-    const documentId = document.header.id;
-    const branch = document.header.branch || "main";
     const parentId = parentIdentifier
       ? await this.resolveReference(parentIdentifier, "main", signal)
       : undefined;
-
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId,
-      signing: {
-        signature: documentId,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
-    };
-
-    const createActions: Action[] = await signActions(
-      [
-        createDocumentAction(createInput),
-        upgradeDocumentAction({
-          documentId,
-          model: document.header.documentType,
-          fromVersion: 0,
-          toVersion: normalizeDocumentModelVersion(
-            (document.state as Partial<typeof document.state>).document
-              ?.version,
-          ),
-          initialState: document.state,
-        }),
-      ],
-      this.signer,
-      { documentId, branch },
-      signal,
-    );
-
-    const jobs: ExecutionJobPlan[] = [
-      {
-        key: "create",
-        documentId,
-        scope: getSharedActionScope(createActions),
-        branch,
-        actions: createActions,
-        dependsOn: [],
-      },
-    ];
-
-    if (parentId) {
-      const parentActions: Action[] = await signActions(
-        [addRelationshipAction(parentId, documentId, "child")],
-        this.signer,
-        { documentId: parentId, branch: "main" },
-        signal,
-      );
-
-      jobs.push({
-        key: "parent",
-        documentId: parentId,
-        scope: getSharedActionScope(parentActions),
-        branch: "main",
-        actions: parentActions,
-        dependsOn: ["create"],
-      });
-    }
-
+    const jobs = await buildCreateJobs(document, parentId, this.signer, signal);
     return this.reactor.executeBatch({ jobs }, signal);
   }
 
@@ -978,54 +911,21 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
-
-    const matchingModules = modulesResult.results.filter(
-      (m) => m.documentModel.global.id === documentModelType,
+    const module = selectDocumentModelModule(
+      modulesResult.results,
+      documentModelType,
+      options?.documentModelVersion,
     );
-
-    let module: DocumentModelModule | undefined;
-    if (options?.documentModelVersion !== undefined) {
-      const requestedVersion = normalizeDocumentModelVersion(
-        options.documentModelVersion,
-      );
-      module = matchingModules.find(
-        (m) => normalizeDocumentModelVersion(m.version) === requestedVersion,
-      );
-      if (!module) {
-        throw new Error(
-          `Document model not found for type: ${documentModelType} with version: ${options.documentModelVersion}`,
-        );
-      }
-    } else {
-      module = matchingModules.reduce<DocumentModelModule | undefined>(
-        (latest, current) => {
-          if (latest === undefined) return current;
-          const currentVersion = normalizeDocumentModelVersion(current.version);
-          const latestVersion = normalizeDocumentModelVersion(latest.version);
-          return currentVersion > latestVersion ? current : latest;
-        },
-        undefined,
-      );
-      if (!module) {
-        throw new Error(
-          `Document model not found for type: ${documentModelType}`,
-        );
-      }
-    }
-
     const base = await this.getCreateProtocolVersions(
       options?.parentIdentifier,
       signal,
     );
-    const document = withSignaturePolicy(
-      module.utils.createDocument(),
-      requestedSignaturePolicy(options, this.createSignaturePolicy),
-      { protocolVersions: { ...base, ...options?.protocolVersions } },
+    return createEmptyDocument(
+      module,
+      options,
+      this.createSignaturePolicy,
+      base,
     );
-    document.state.document.version = normalizeDocumentModelVersion(
-      module.version,
-    );
-    return document;
   }
 
   /**
@@ -1050,83 +950,36 @@ export class ReactorClient implements IReactorClient {
       documentIdentifier,
       toVersion,
     );
-
-    const maxConflictRetries =
-      options?.maxConflictRetries ?? DEFAULT_UPGRADE_CONFLICT_RETRIES;
-
-    let lastConflictMessage = "";
-    for (let attempt = 0; attempt <= maxConflictRetries; attempt++) {
-      const document = await this.reactor.getByIdOrSlug<TDocument>(
-        documentIdentifier,
-        undefined,
-        undefined,
-        signal,
-      );
-
-      const documentId = document.header.id;
-      const documentType = document.header.documentType;
-      const branch = document.header.branch || "main";
-      const fromVersion = normalizeDocumentModelVersion(
-        (document.state as Partial<typeof document.state>).document?.version,
-      );
-
-      let targetVersion = toVersion;
-      if (targetVersion === undefined) {
-        const module = await this.getDocumentModelModule(documentType);
-        targetVersion = normalizeDocumentModelVersion(module.version);
-      }
-
-      if (targetVersion === fromVersion) {
-        return this.gateDocument(document, { branch }, signal);
-      }
-      if (targetVersion < fromVersion) {
-        throw new DowngradeNotSupportedError(
-          documentType,
-          fromVersion,
-          targetVersion,
-        );
-      }
-
-      const action = upgradeDocumentAction({
-        documentId,
-        model: documentType,
-        fromVersion,
-        toVersion: targetVersion,
-        revision: { ...document.header.revision },
-      });
-
-      const signedActions = await signActions(
-        [action],
-        this.signer,
-        { documentId, branch },
-        signal,
-      );
-      const jobInfo = await this.reactor.execute(
-        documentId,
-        branch,
-        signedActions,
-        signal,
-      );
-      const completedJob = await this.waitForJob(jobInfo, signal);
-
-      if (completedJob.status !== JobStatus.FAILED) {
-        const upgraded = await this.reactor.getByIdOrSlug<TDocument>(
-          documentId,
-          { branch },
-          completedJob.consistencyToken,
-          signal,
-        );
-        return this.gateDocument(upgraded, { branch }, signal);
-      }
-
-      if (completedJob.error?.name !== "UpgradePreconditionFailedError") {
-        throw new Error(completedJob.error?.message);
-      }
-      lastConflictMessage = completedJob.error.message;
-    }
-
-    throw new Error(
-      `Upgrade of document ${documentIdentifier} conflicted with concurrent edits after ${maxConflictRetries + 1} attempts: ${lastConflictMessage}`,
+    const upgraded = await upgradeDocumentWith<TDocument>(
+      {
+        signer: this.signer,
+        read: <T extends PHDocument>(
+          identifier: string,
+          branch: string | undefined,
+          consistencyToken: ConsistencyToken | undefined,
+          readSignal?: AbortSignal,
+        ) =>
+          this.reactor.getByIdOrSlug<T>(
+            identifier,
+            branch === undefined ? undefined : { branch },
+            consistencyToken,
+            readSignal,
+          ),
+        getDocumentModelModule: (documentType) =>
+          this.getDocumentModelModule(documentType),
+        submit: (documentId, branch, actions, submitSignal) =>
+          this.reactor.execute(documentId, branch, actions, submitSignal),
+        waitForJob: (job, waitSignal) => this.waitForJob(job, waitSignal),
+      },
+      documentIdentifier,
+      toVersion,
+      options,
+      signal,
+    );
+    return this.gateDocument(
+      upgraded,
+      { branch: upgraded.header.branch || "main" },
+      signal,
     );
   }
 
