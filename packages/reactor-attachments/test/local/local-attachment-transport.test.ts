@@ -557,7 +557,7 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     channel.dispose();
   });
 
-  it("answers error past its concurrent serve cap", async () => {
+  it("answers a retryable pending past its concurrent serve cap", async () => {
     const fake = fakePort();
     const parked = new Promise<boolean>(() => undefined);
     const server = new LocalAttachmentServer({
@@ -583,10 +583,42 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     await settle();
 
     expect(fake.sent).toEqual([
-      expect.objectContaining({ kind: "error", id: "r2" }),
+      expect.objectContaining({
+        kind: "pending",
+        id: "r2",
+        hash: "a".repeat(64),
+      }),
     ]);
+    const retryAfterMs = fake.sent[0].retryAfterMs as number;
+    expect(retryAfterMs).toBeGreaterThan(0);
+    expect(retryAfterMs).toBeLessThanOrEqual(1_000);
     expect(state(server).inFlight.size).toBe(2);
     server.close();
+  });
+
+  it("is seen as pending, not an error, by a requester over a real channel", async () => {
+    const channel = link();
+    const server = new LocalAttachmentServer({
+      port: channel.portA,
+      link: TEST_LINK,
+      store: new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        new NullAttachmentTransport(),
+      ),
+      authorize: () => new Promise<boolean>(() => undefined),
+      maxConcurrentServes: 1,
+    });
+    const puller = new LocalAttachmentTransport({ port: channel.portB });
+    const hash = "b".repeat(64);
+
+    const first = puller.fetch(hash, DOC);
+    first.catch(() => undefined);
+    const second = await puller.fetch(hash, DOC);
+
+    expect(second).toMatchObject({ kind: "pending", hash });
+    server.close();
+    puller.close();
+    channel.dispose();
   });
 
   it("ignores a fetch whose id is already in flight, past the cap", async () => {

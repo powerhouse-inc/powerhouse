@@ -42,7 +42,7 @@ export type LocalAttachmentServerOptions = {
   authorize?: LocalAttachmentAuthorizer;
   /** Bytes per `chunk` message; defaults to {@link DEFAULT_LOCAL_CHUNK_BYTES}. */
   chunkSizeBytes?: number;
-  /** Requests served at once; one past it is answered `error`. */
+  /** Requests served at once; one past it is answered `pending`. */
   maxConcurrentServes?: number;
   onDiagnostic?: (message: string, error?: unknown) => void;
 };
@@ -188,11 +188,14 @@ export class LocalAttachmentServer {
       return;
     }
     if (this.inFlight.size >= this.maxConcurrentServes) {
+      // Busy is a wait, not a fault, so it never spends the requester's error budget.
       this.post({
         protocol: LOCAL_ATTACHMENT_PROTOCOL,
-        kind: "error",
+        kind: "pending",
         id: data.id,
-        message: "too many concurrent attachment requests",
+        hash: data.hash,
+        expiresAtUtc: new Date(Date.now() + BUSY_RETRY_MS).toISOString(),
+        retryAfterMs: BUSY_RETRY_MS,
       });
       return;
     }
@@ -406,3 +409,6 @@ export class LocalAttachmentServer {
  * value mirrors `SwitchboardAttachmentTransport`'s own default.
  */
 const DEFAULT_PENDING_RETRY_MS = 5_000;
+
+/** Retry hint sent with the `pending` that answers a request over the serve cap. */
+const BUSY_RETRY_MS = 1_000;
