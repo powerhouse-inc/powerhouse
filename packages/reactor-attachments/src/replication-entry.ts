@@ -1,5 +1,14 @@
 // Browser-safe byte movement; each symbol is exported from this entry only.
 export {
+  ATTACHMENT_READ_BRANCH,
+  ATTACHMENT_READ_SCOPE,
+  isAttachmentHash,
+  readGateAllowsAttachmentRead,
+  scopeGateAllowsAttachmentRead,
+  type AttachmentReadGate,
+  type IDocumentScopeGate,
+} from "./access/attachment-read-gate.js";
+export {
   attachmentReferenceAuthorizer,
   DEFAULT_LOCAL_CHUNK_BYTES,
   DEFAULT_LOCAL_REQUEST_TIMEOUT_MS,

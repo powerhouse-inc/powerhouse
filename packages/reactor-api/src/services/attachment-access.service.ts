@@ -1,10 +1,13 @@
-import type {
-  AttachmentHash,
-  AttachmentRef,
-  IReactorClient,
-} from "@powerhousedao/reactor";
+import type { AttachmentRef } from "@powerhousedao/reactor";
 import { createRef, parseRef } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentReferenceReader } from "@powerhousedao/reactor-attachments";
+import {
+  isAttachmentHash,
+  readGateAllowsAttachmentRead,
+  scopeGateAllowsAttachmentRead,
+  type AttachmentReadGate,
+  type IDocumentScopeGate,
+} from "@powerhousedao/reactor-attachments/replication";
 import type {
   CanonicalDocumentId,
   IAuthorizationService,
@@ -53,29 +56,7 @@ export interface AttachmentAccessRequest {
   appKey?: string;
 }
 
-/** The reactor's read gate, as the attachment facade consults it. */
-export type AttachmentReadGate = Pick<IReactorClient, "isServed" | "get">;
-
-/**
- * Which scopes of a document a subject may read, asked by document id.
- *
- * Structural on purpose: the composition that has a policy model to enforce
- * supplies `SyncScopeGate`, and one that does not supplies nothing at all.
- */
-export interface IDocumentScopeGate {
-  scopePredicateById(
-    documentId: string,
-    subject: { address?: string; key?: string },
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<(scope: string) => boolean>;
-}
-
-/** The scope an attachment's bytes belong to: the document's own domain state. */
-const ATTACHMENT_SCOPE = "global";
-
-/** The branch an attachment reference is resolved against. */
-const ATTACHMENT_BRANCH = "main";
+export type { AttachmentReadGate, IDocumentScopeGate };
 
 export type AttachmentCallerResult =
   | { kind: "admitted" }
@@ -103,8 +84,6 @@ export interface AttachmentAccessServiceOptions {
   /** Refuse reads from a caller with no address. Default `false`. */
   refuseAnonymousReads?: boolean;
 }
-
-const HASH_PATTERN = /^[a-f0-9]{64}$/;
 
 /**
  * Composes document authorization with the projected document/ref
@@ -182,34 +161,14 @@ export class AttachmentAccessService implements IAttachmentAccessService {
       return { kind: "denied" };
     }
 
-    const subject = { address: request.userAddress, key: request.appKey };
-
-    let served: boolean;
-    try {
-      served = await this.readGate.isServed(documentId, { subject });
-    } catch {
-      return { kind: "denied" };
-    }
-    if (!served) {
-      return { kind: "denied" };
-    }
-
-    const scopes = await this.references.referencingScopes(documentId, ref);
-    if (scopes.length === 0) {
-      return { kind: "denied" };
-    }
-
-    let held: Record<string, unknown>;
-    try {
-      const document = await this.readGate.get(documentId, {
-        subject,
-        scopes,
-      });
-      held = document.state as Record<string, unknown>;
-    } catch {
-      return { kind: "denied" };
-    }
-    if (!scopes.some((scope) => scope in held)) {
+    const allowed = await readGateAllowsAttachmentRead(
+      this.readGate,
+      this.references,
+      documentId,
+      ref,
+      { address: request.userAddress, key: request.appKey },
+    );
+    if (!allowed) {
       return { kind: "denied" };
     }
 
@@ -231,12 +190,10 @@ export class AttachmentAccessService implements IAttachmentAccessService {
     if (!this.scopeGate) {
       return this.authorization.canRead(documentId, request.userAddress);
     }
-    const readable = await this.scopeGate.scopePredicateById(
-      documentId,
-      { address: request.userAddress, key: request.appKey },
-      ATTACHMENT_BRANCH,
-    );
-    return readable(ATTACHMENT_SCOPE);
+    return scopeGateAllowsAttachmentRead(this.scopeGate, documentId, {
+      address: request.userAddress,
+      key: request.appKey,
+    });
   }
 }
 
@@ -255,8 +212,8 @@ function normalizeAttachmentRef(value: string): AttachmentRef | null {
   } catch {
     return null;
   }
-  if (version !== 1 || !HASH_PATTERN.test(hash)) {
+  if (version !== 1 || !isAttachmentHash(hash)) {
     return null;
   }
-  return createRef(hash as AttachmentHash, version);
+  return createRef(hash, version);
 }
