@@ -22,6 +22,7 @@ import type {
   RunActionRequest,
   TriggerHookRequest,
 } from "./protocol.js";
+import type { WorkflowTelemetry } from "../../../telemetry.js";
 
 // Thrown when a session asks for a slot the pool will not queue.
 
@@ -152,7 +153,11 @@ export class PieceWorkerSession implements IPieceWorker {
   }
 
   private async acquire(): Promise<IPieceWorker> {
-    await this.pool.acquire(this);
+    // The wait for a slot; a run's own timings can't show it.
+    const { telemetry } = this.pool;
+    await (telemetry
+      ? telemetry.phase("worker.acquire", {}, () => this.pool.acquire(this))
+      : this.pool.acquire(this));
     this.held = true;
     // Closed while queueing: hand the slot straight back rather than fork a
     // child for a run that is already over.
@@ -175,6 +180,8 @@ export class PieceWorkerSession implements IPieceWorker {
 // for one, so a burst of runs is served first-come rather than at random.
 export class PieceWorkerPool {
   readonly size: number;
+  /** @internal */
+  readonly telemetry: WorkflowTelemetry | undefined;
   private readonly maxQueueDepth: number;
   private readonly createWorker: (options: PieceWorkerOptions) => IPieceWorker;
   private readonly workerOptions: PieceWorkerOptions;
@@ -189,6 +196,7 @@ export class PieceWorkerPool {
     this.maxQueueDepth = Math.max(0, Math.trunc(maxQueueDepth ?? 0));
     this.createWorker = createWorker ?? ((o) => new PieceWorker(o));
     this.workerOptions = workerOptions;
+    this.telemetry = workerOptions.telemetry;
   }
 
   // A run's claim on a worker, for the length of the run. Free until its

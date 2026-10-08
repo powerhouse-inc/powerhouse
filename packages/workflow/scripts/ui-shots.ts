@@ -186,12 +186,16 @@ async function main() {
     // A real window on a seeded drive: the config override that turns
     // workflows on lives in this browser context, so use this window.
     // The installed Chrome: Playwright may only have the headless shell.
+    const window = {
+      headless: false,
+      args: [`--window-size=${values.width},${values.height}`],
+    };
     const browser = await chromium
-      .launch({ headless: false, channel: "chrome" })
-      .catch(() => chromium.launch({ headless: false }));
+      .launch({ ...window, channel: "chrome" })
+      .catch(() => chromium.launch(window));
     const { page } = await openSeededPage(browser, {
       colorScheme: values.theme === "dark" ? "dark" : "light",
-      viewport: { width: Number(values.width), height: Number(values.height) },
+      viewport: null,
     });
     await openDrive(page);
     console.log(

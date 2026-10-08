@@ -35,13 +35,13 @@ afterEach(() => {
 
 describe("useRenownLoginMethods", () => {
   it("is empty when no provider has published descriptors", async () => {
-    const screen = render(<Probe />);
+    const screen = await render(<Probe />);
     await expect.element(screen.getByTestId("methods")).toHaveTextContent("");
   });
 
   it("reads descriptors published by a provider elsewhere in the app", async () => {
     setWalletDescriptors([descriptor("rainbow", ["wallet"])]);
-    const screen = render(<Probe />);
+    const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId("methods"))
       .toHaveTextContent("wallet");
@@ -52,14 +52,14 @@ describe("useRenownLoginMethods", () => {
       descriptor("privy", ["google", "email"]),
       descriptor("rainbow", ["wallet", "google"]),
     ]);
-    const screen = render(<Probe />);
+    const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId("methods"))
       .toHaveTextContent("google,email,wallet");
   });
 
   it("re-renders when a provider mounts after the login UI", async () => {
-    const screen = render(<Probe />);
+    const screen = await render(<Probe />);
     await expect.element(screen.getByTestId("methods")).toHaveTextContent("");
     setWalletDescriptors([descriptor("privy", ["google"])]);
     await expect
@@ -69,7 +69,7 @@ describe("useRenownLoginMethods", () => {
 
   it("clears when the provider unmounts", async () => {
     setWalletDescriptors([descriptor("privy", ["google"])]);
-    const screen = render(<Probe />);
+    const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId("methods"))
       .toHaveTextContent("google");
@@ -79,7 +79,7 @@ describe("useRenownLoginMethods", () => {
 
   it("applies overridden labels", async () => {
     setWalletDescriptors([descriptor("rainbow", ["wallet"])]);
-    const screen = render(<LabelledProbe />);
+    const screen = await render(<LabelledProbe />);
     await expect
       .element(screen.getByTestId("labels"))
       .toHaveTextContent("Use my wallet");

@@ -33,17 +33,17 @@ function fakeEvent(opts: {
   return { event, preventDefault, stopPropagation };
 }
 
-function mountHook(): {
+async function mountHook(): Promise<{
   handlers: Handlers;
   container: HTMLElement;
   result: { current: Handlers };
-} {
+}> {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const noop = async (): Promise<void> => {
     /* no-op */
   };
-  const { result } = renderHook(() =>
+  const { result } = await renderHook(() =>
     useDropFile(
       noop as (file: File, parent: Node | undefined) => Promise<void>,
     ),
@@ -62,8 +62,8 @@ describe("useDropFile", () => {
     document.body.innerHTML = "";
   });
 
-  it("stops propagation on a plain file drag-over", () => {
-    const { handlers, container } = mountHook();
+  it("stops propagation on a plain file drag-over", async () => {
+    const { handlers, container } = await mountHook();
     const { event, preventDefault, stopPropagation } = fakeEvent({
       target: container,
     });
@@ -74,8 +74,8 @@ describe("useDropFile", () => {
     expect(stopPropagation).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores non-file drags (e.g. UI_NODE) so they bubble", () => {
-    const { handlers, container } = mountHook();
+  it("ignores non-file drags (e.g. UI_NODE) so they bubble", async () => {
+    const { handlers, container } = await mountHook();
     const { event, preventDefault, stopPropagation } = fakeEvent({
       target: container,
       types: ["UI_NODE"],
@@ -87,14 +87,14 @@ describe("useDropFile", () => {
     expect(stopPropagation).not.toHaveBeenCalled();
   });
 
-  it("does NOT preventDefault when target is inside [data-accepts-files]", () => {
+  it("does NOT preventDefault when target is inside [data-accepts-files]", async () => {
     const editor = document.createElement("div");
     editor.setAttribute("data-accepts-files", "");
     const inner = document.createElement("span");
     editor.appendChild(inner);
     document.body.appendChild(editor);
 
-    const { handlers } = mountHook();
+    const { handlers } = await mountHook();
     const { event, preventDefault, stopPropagation } = fakeEvent({
       target: inner,
     });
@@ -113,7 +113,7 @@ describe("useDropFile", () => {
     editor.setAttribute("data-accepts-files", "");
     document.body.appendChild(editor);
 
-    const { result } = mountHook();
+    const { result } = await mountHook();
 
     await act(async () => {
       await Promise.resolve();
@@ -128,10 +128,10 @@ describe("useDropFile", () => {
     expect(result.current.isDropTarget).toBe(false);
   });
 
-  it("still claims drops outside any opted-out editor", () => {
+  it("still claims drops outside any opted-out editor", async () => {
     const outside = document.createElement("div");
     document.body.appendChild(outside);
-    const { handlers } = mountHook();
+    const { handlers } = await mountHook();
     const { event, preventDefault, stopPropagation } = fakeEvent({
       target: outside,
     });

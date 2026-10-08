@@ -6,7 +6,7 @@ import {
 } from "@powerhousedao/pieces-framework/block-type";
 import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { lstat, mkdir, realpath, rm } from "node:fs/promises";
 import path from "node:path";
 import {
   bundleResolver,
@@ -18,6 +18,11 @@ import {
   rewriteFileRefs,
   type StagedFile,
 } from "../activepieces/context/files.js";
+import {
+  FileTooLargeError,
+  maxFileBytes,
+} from "../activepieces/context/limits.js";
+import { AttachmentCache } from "./attachment-cache.js";
 import { PieceWorker, type IPieceWorker } from "../activepieces/worker/host.js";
 import type { ReactorTap } from "../activepieces/worker/reactor-rpc.js";
 import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
@@ -46,6 +51,7 @@ import type {
   ResolvedConnection,
 } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
+import type { WorkflowTelemetry } from "../../telemetry.js";
 import { builtinPiece, isBuiltinPiece, runBuiltinAction } from "../builtin.js";
 import {
   blockLabel,
@@ -75,13 +81,20 @@ export interface AttachmentPort {
   read(
     ref: string,
     destPath: string,
+    signal?: AbortSignal,
   ): Promise<{ fileName?: string; contentType?: string }>;
-  write(file: {
-    path: string;
-    fileName: string;
-    size: number;
-    contentType?: string;
-  }): Promise<string>;
+  // Whether the running workflow may read the ref, without fetching it: a
+  // cached copy is only handed over after the same check a download makes.
+  authorize?(ref: string): Promise<void>;
+  write(
+    file: {
+      path: string;
+      fileName: string;
+      size: number;
+      contentType?: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<string>;
 }
 
 const ATTACHMENT_REF = /^attachment:\/\//i;
@@ -175,6 +188,9 @@ export interface ActivepiecesBlockExecutorOptions {
   // piece calling ctx.files falls back to inline data URIs.
   stagingRoot?: string;
   attachments?: AttachmentPort;
+  // Keeps downloaded attachments by content so later steps and runs skip the
+  // download. Needs `attachments.authorize`.
+  attachmentCache?: AttachmentCache;
   // Without it `ctx.store` falls back to the worker's heap, which a step
   // timeout discards.
   pieceStore?: PieceStorePort;
@@ -198,6 +214,7 @@ export interface ActivepiecesBlockExecutorOptions {
   identity?: () => Omit<ActionContextIdentity, "stepName"> | undefined;
   // Whether this step runs as a single-step test, asked per step likewise.
   stepTest?: () => boolean;
+  telemetry?: WorkflowTelemetry;
 }
 
 export interface StepReactorRequest {
@@ -316,7 +333,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     } else if (supplied) {
       return supplied;
     }
-    return (this.own ??= new PieceWorker());
+    return (this.own ??= new PieceWorker({
+      telemetry: this.options.telemetry,
+    }));
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
@@ -359,11 +378,15 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     const runSecrets = execution.redactValues ?? [];
     let redactValues: string[] = [...runSecrets];
     try {
-      const piece = await this.resolver.resolve({
+      const ref = {
         name: parsed.packageName,
         version: parsed.version,
         ...(parsed.source ? { source: parsed.source } : {}),
-      });
+      };
+      const telemetry = this.options.telemetry;
+      const piece = await (telemetry
+        ? telemetry.phase("piece.resolve", {}, () => this.resolver.resolve(ref))
+        : this.resolver.resolve(ref));
       const connection = await this.resolveConnection(execution.connectionId, {
         piecePackage: parsed.packageName,
         stepId: execution.step.id,
@@ -375,7 +398,18 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       const timeoutMs = execution.step.timeoutSeconds
         ? execution.step.timeoutSeconds * 1000
         : this.options.defaultTimeoutMs;
-      const stagedInputs = await this.stageInputs(execution.config, stagingDir);
+      // Staging and ingest count against the step's timeout, not only the
+      // piece's own run.
+      const deadline = timeoutMs ? Date.now() + timeoutMs : undefined;
+      const signal = deadline ? AbortSignal.timeout(timeoutMs!) : undefined;
+      const stagedInputs = await this.stageInputs(
+        execution.config,
+        stagingDir,
+        signal,
+      );
+      const remainingMs = deadline
+        ? Math.max(1, deadline - Date.now())
+        : undefined;
       const pieceStore = this.options.pieceStore;
       const notifications = stepTaps(this.options, execution, redactValues);
       const egress =
@@ -406,14 +440,19 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(egress ? { egress } : {}),
         },
         {
-          ...(timeoutMs ? { timeoutMs } : {}),
+          ...(remainingMs ? { timeoutMs: remainingMs } : {}),
           ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
           ...(notifications ? { notifications } : {}),
           ...(reactorTap ? { reactor: reactorTap } : {}),
         },
       );
       return {
-        output: await this.ingestFiles(result.output, result.files),
+        output: await this.ingestFiles(
+          result.output,
+          result.files,
+          stagingDir,
+          signal,
+        ),
         redactValues,
       };
     } catch (error) {
@@ -443,6 +482,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   private async stageInputs(
     config: unknown,
     stagingDir: string | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<StagedInput[] | undefined> {
     const port = this.options.attachments;
     if (!stagingDir || !port) return undefined;
@@ -455,9 +495,15 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     for (const ref of refs) {
       const destPath = path.join(stagingDir, `in-${index++}`);
       try {
-        const meta = await port.read(ref, destPath);
+        const meta = await this.readAttachment(port, ref, destPath, signal);
         staged.push({ ref, path: destPath, ...meta });
       } catch (error) {
+        if (signal?.aborted) throw error;
+        staged.push({
+          ref,
+          path: "",
+          error: error instanceof Error ? error.message : String(error),
+        });
         // Staging is opportunistic: refs are collected from the whole config
         // without knowing which props are FILE, because the prop schema lives
         // in the worker. So a ref this step was never going to open must not
@@ -474,6 +520,68 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     return staged;
   }
 
+  // The cache answers only after the port's own read check.
+  private async readAttachment(
+    port: AttachmentPort,
+    ref: string,
+    destPath: string,
+    signal: AbortSignal | undefined,
+  ): Promise<{ fileName?: string; contentType?: string }> {
+    const cache = this.options.attachmentCache;
+    if (!cache || !port.authorize || !AttachmentCache.cacheable(ref)) {
+      return port.read(ref, destPath, signal);
+    }
+    await port.authorize(ref);
+    const hit = await cache.get(ref, destPath).catch(() => undefined);
+    if (hit) {
+      return {
+        ...(hit.fileName !== undefined ? { fileName: hit.fileName } : {}),
+        ...(hit.contentType !== undefined
+          ? { contentType: hit.contentType }
+          : {}),
+      };
+    }
+    const meta = await port.read(ref, destPath, signal);
+    await cache.put(ref, destPath, meta).catch((error: unknown) => {
+      logger.debug(
+        "Could not cache @ref: @error",
+        ref,
+        error instanceof Error ? error.message : String(error),
+      );
+    });
+    return meta;
+  }
+
+  // A file the worker reports must be one it wrote into this step's staging
+  // directory: the host reads the path, and piece code runs in the worker.
+  private async checkStagedFile(
+    file: StagedFile,
+    stagingDir: string | undefined,
+  ): Promise<number> {
+    if (!stagingDir) {
+      throw new Error(
+        `Refusing to ingest "${file.fileName}": no staging directory`,
+      );
+    }
+    const root = await realpath(stagingDir);
+    const resolved = path.resolve(file.path);
+    const info = await lstat(resolved).catch(() => undefined);
+    // A hard link (nlink > 1) could point at any file the host user owns.
+    if (
+      !info?.isFile() ||
+      info.nlink !== 1 ||
+      path.dirname(await realpath(resolved)) !== root ||
+      path.dirname(resolved) !== path.resolve(stagingDir)
+    ) {
+      throw new Error(
+        `Refusing to ingest "${file.fileName}": it is not a file the step wrote`,
+      );
+    }
+    const limit = maxFileBytes();
+    if (info.size > limit) throw new FileTooLargeError(info.size, limit);
+    return info.size;
+  }
+
   // A provisional apfile:// token only becomes a real reference once the step
   // has returned, so a piece that writes a file and then reads it back by URL
   // within the same run would not work. No action needs that today; the fix is
@@ -481,6 +589,8 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   private async ingestFiles(
     output: unknown,
     files: StagedFile[] | undefined,
+    stagingDir: string | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<unknown> {
     if (!files || files.length === 0) return output;
     const port = this.options.attachments;
@@ -491,14 +601,18 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     }
     const refs = new Map<string, string>();
     for (const file of files) {
+      const size = await this.checkStagedFile(file, stagingDir);
       refs.set(
         file.token,
-        await port.write({
-          path: file.path,
-          fileName: file.fileName,
-          size: file.size,
-          contentType: file.contentType,
-        }),
+        await port.write(
+          {
+            path: path.resolve(file.path),
+            fileName: file.fileName,
+            size,
+            contentType: file.contentType,
+          },
+          signal,
+        ),
       );
     }
     return rewriteFileRefs(output, refs);

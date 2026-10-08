@@ -88,6 +88,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   InvalidSignatureError,
   RelationshipNotFoundError,
   UnsupportedStoredProtocolError,

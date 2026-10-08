@@ -91,6 +91,12 @@
       "default": "8388608"
     },
     {
+      "name": "PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES",
+      "type": "var",
+      "description": "Bytes of downloaded attachments kept on disk by content, so later steps and runs skip the download. 0 turns the cache off.",
+      "default": "1073741824"
+    },
+    {
       "name": "PH_WORKFLOWS_RUN_RETENTION_DAYS",
       "type": "var",
       "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. Unset or 0 keeps every run."

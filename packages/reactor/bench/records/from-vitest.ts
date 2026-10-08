@@ -729,35 +729,46 @@ export function stampReadings(
  * Only the keys the adapter reads. Unknown ones are dropped rather than
  * rejected: a vitest upgrade that adds a field should not stop a recording.
  */
-const VitestBenchmark = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  rank: z.number(),
-  rme: z.number(),
-  totalTime: z.number(),
+const VitestLatency = z.object({
+  mean: z.number(),
   min: z.number(),
   max: z.number(),
-  hz: z.number(),
-  mean: z.number(),
-  p75: z.number().optional(),
-  p99: z.number().optional(),
-  p999: z.number().optional(),
-  sampleCount: z.number(),
-  median: z.number(),
+  p50: z.number(),
+  p75: z.number(),
+  p99: z.number(),
+  p999: z.number(),
+  rme: z.number(),
+  samplesCount: z.number(),
 });
 
-const VitestGroup = z.object({
-  fullName: z.string().min(1),
+const VitestBenchmarkTask = z.object({
+  name: z.string().min(1),
+  latency: VitestLatency,
+  totalTime: z.number(),
+  /** A `bench.from()` baseline, replayed rather than run. */
+  fromStore: z.boolean().optional(),
+});
+
+const VitestBenchmark = z.object({
+  name: z.string(),
+  tasks: z.array(VitestBenchmarkTask),
+});
+
+const VitestAssertion = z.object({
+  ancestorTitles: z.array(z.string()),
+  title: z.string(),
   benchmarks: z.array(VitestBenchmark),
 });
 
-const VitestFile = z.object({
-  filepath: z.string().min(1),
-  groups: z.array(VitestGroup),
+const VitestTestFile = z.object({
+  /** Absolute. */
+  name: z.string().min(1),
+  assertionResults: z.array(VitestAssertion),
 });
 
+/** `vitest bench --reporter=json`: one assertion per case, its describe path the suite. */
 export const VitestBenchReport = z.object({
-  files: z.array(VitestFile).min(1),
+  testResults: z.array(VitestTestFile).min(1),
 });
 export type VitestBenchReport = z.infer<typeof VitestBenchReport>;
 
@@ -802,60 +813,68 @@ export type MicroEntryInput = {
   supersedes: string[];
 };
 
+function posixRelative(root: string, path: string): string {
+  return relative(root, path).split(sep).join("/");
+}
+
 /**
  * Renames every field to its unit-suffixed form. Vitest reports milliseconds
- * throughout and ops/sec for hz, so this is a rename and nothing else: the
- * moment it starts computing a duration it becomes a place numbers can be
- * invented.
+ * throughout, so the only arithmetic is hz, which is 1000 over the mean as
+ * tinybench 2 defined it, and rank, which orders a suite by mean.
  */
 export function suitesFromVitest(
   report: VitestBenchReport,
+  root: string,
   renames: Record<string, string> = {},
 ): MicroSuite[] {
   const formerly = new Map(
     Object.entries(renames).map(([from, to]) => [to, from]),
   );
-  const suites: MicroSuite[] = [];
-  for (const file of report.files) {
-    for (const group of file.groups) {
-      if (group.benchmarks.length === 0) {
+  const suites = new Map<string, MicroCase[]>();
+  for (const file of report.testResults) {
+    const path = posixRelative(root, file.name);
+    for (const assertion of file.assertionResults) {
+      const fullName = [path, ...assertion.ancestorTitles].join(" > ");
+      const tasks = assertion.benchmarks
+        .flatMap((benchmark) => benchmark.tasks)
+        .filter((task) => task.fromStore !== true);
+      if (tasks.length === 0) {
         continue;
       }
-      suites.push({
-        fullName: group.fullName,
-        cases: group.benchmarks.map((benchmark) => {
-          const converted: MicroCase = {
-            name: benchmark.name,
-            rank: benchmark.rank,
-            hz: benchmark.hz,
-            meanMs: benchmark.mean,
-            medianMs: benchmark.median,
-            minMs: benchmark.min,
-            maxMs: benchmark.max,
-            rmePct: benchmark.rme,
-            sampleCount: benchmark.sampleCount,
-            totalTimeMs: benchmark.totalTime,
-            vitestId: benchmark.id,
-          };
-          if (benchmark.p75 !== undefined) {
-            converted.p75Ms = benchmark.p75;
-          }
-          if (benchmark.p99 !== undefined) {
-            converted.p99Ms = benchmark.p99;
-          }
-          if (benchmark.p999 !== undefined) {
-            converted.p999Ms = benchmark.p999;
-          }
-          const previous = formerly.get(benchmark.name);
-          if (previous !== undefined) {
-            converted.continues = previous;
-          }
-          return converted;
-        }),
-      });
+      const cases = suites.get(fullName) ?? [];
+      suites.set(fullName, cases);
+      for (const task of tasks) {
+        const converted: MicroCase = {
+          name: task.name,
+          rank: 0,
+          hz: 1000 / task.latency.mean,
+          meanMs: task.latency.mean,
+          medianMs: task.latency.p50,
+          minMs: task.latency.min,
+          maxMs: task.latency.max,
+          p75Ms: task.latency.p75,
+          p99Ms: task.latency.p99,
+          p999Ms: task.latency.p999,
+          rmePct: task.latency.rme,
+          sampleCount: task.latency.samplesCount,
+          totalTimeMs: task.totalTime,
+        };
+        const previous = formerly.get(task.name);
+        if (previous !== undefined) {
+          converted.continues = previous;
+        }
+        cases.push(converted);
+      }
     }
   }
-  return suites;
+
+  return [...suites].map(([fullName, cases]) => {
+    const byMean = [...cases].sort((a, b) => a.meanMs - b.meanMs);
+    for (const [index, item] of byMean.entries()) {
+      item.rank = index + 1;
+    }
+    return { fullName, cases };
+  });
 }
 
 /**
@@ -867,9 +886,7 @@ export function sourceFilesFromVitest(
   report: VitestBenchReport,
   cwd: string,
 ): string[] {
-  return report.files.map((file) =>
-    relative(cwd, file.filepath).split(sep).join("/"),
-  );
+  return report.testResults.map((file) => posixRelative(cwd, file.name));
 }
 
 /**
