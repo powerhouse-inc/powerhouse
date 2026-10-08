@@ -23,6 +23,7 @@ import {
   extractDedupeKey,
   pieceModuleRef,
   PieceWorker,
+  type IPieceWorker,
   PieceWorkerError,
   secretsFor,
   storeHandlers,
@@ -153,7 +154,7 @@ export interface TriggerSupervisorOptions {
   // Where a trigger's piece comes from. Defaults to fetching into cacheDir,
   // so a host that ships pieces in a package passes its own.
   resolver?: PieceResolver;
-  worker?: PieceWorker;
+  worker?: IPieceWorker;
   // Sent to the supervisor's own worker; a supplied worker brings its own.
   models?: ModelManifestSource;
   // Traces the supervisor's own worker, as models above.
@@ -314,7 +315,7 @@ interface TriggerRuntime {
 
 export class TriggerSupervisor {
   private readonly bindings = new Map<string, TriggerBinding>();
-  private readonly worker: PieceWorker;
+  private readonly worker: IPieceWorker;
   private readonly tickMs: number;
   private readonly defaultIntervalMs: number;
   private readonly hookTimeoutMs: number;

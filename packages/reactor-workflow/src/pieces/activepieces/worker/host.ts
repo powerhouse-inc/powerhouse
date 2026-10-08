@@ -33,6 +33,7 @@ import {
   type RunActionRequest,
   type SerializedPieceError,
   type TriggerHookRequest,
+  type WorkerMemory,
   type WorkerResponse,
   type WorkerTimings,
 } from "./protocol.js";
@@ -173,6 +174,18 @@ export interface PieceWorkerOptions {
   hostCallTimeoutMs?: number;
   // Sent to each child on fork, and looked up by type on a miss.
   models?: ModelManifestSource;
+  // The child's V8 heap limit (`--max-old-space-size`); Node's default if unset.
+  heapMb?: number;
+}
+
+// What a pool needs to decide whether a child can serve another request.
+export interface PieceWorkerHealth {
+  // A child is running; false before the first request and after it exits.
+  alive: boolean;
+  // From the child's last reply; absent until it has replied once.
+  memory?: WorkerMemory;
+  // A request switched TLS verification off, which the child may have cached.
+  tlsPoisoned: boolean;
 }
 
 // The five requests a worker serves, plus teardown. Callers hold this rather
@@ -202,6 +215,8 @@ export interface IPieceWorker {
   // Ends the worker. A caller that was handed one it does not own must not
   // call this; PieceWorkerPool disposes the workers it hands out.
   dispose(): void;
+  // Absent on a worker a pool can't inspect; the pool then trusts it.
+  health?(): PieceWorkerHealth;
 }
 
 // Executes piece actions in a child process. Side-effects (TLS env poisoning,
@@ -218,12 +233,15 @@ export class PieceWorker implements IPieceWorker {
   private queue: Promise<unknown> = Promise.resolve();
   private nextId = 1;
   private disposed = false;
+  private memory: WorkerMemory | undefined;
+  private tlsPoisoned = false;
 
   constructor(options: PieceWorkerOptions = {}) {
     const entryPath = options.entryPath;
+    const { heapMb } = options;
     this.connect =
       options.transport ??
-      (() => createForkTransport(entryPath ?? defaultEntryPath()));
+      (() => createForkTransport(entryPath ?? defaultEntryPath(), { heapMb }));
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 30_000;
     this.hostCallTimeoutMs = options.hostCallTimeoutMs;
     this.models = options.models;
@@ -314,8 +332,39 @@ export class PieceWorker implements IPieceWorker {
     this.worker = undefined;
   }
 
+  health(): PieceWorkerHealth {
+    return {
+      alive: this.worker !== undefined,
+      ...(this.memory ? { memory: this.memory } : {}),
+      tlsPoisoned: this.tlsPoisoned,
+    };
+  }
+
+  // A fresh child starts clean, so what the last one reported no longer holds.
+  private forgetChild(): void {
+    this.memory = undefined;
+    this.tlsPoisoned = false;
+  }
+
+  // Read from piece-controlled output, so only well-formed numbers count.
+  private noteReply(response: ChildMessage): void {
+    if ("tlsPoisoned" in response && response.tlsPoisoned === true) {
+      this.tlsPoisoned = true;
+    }
+    const memory = (response as { timings?: WorkerTimings }).timings?.memory;
+    if (
+      memory &&
+      [memory.rss, memory.heapUsed, memory.heapTotal, memory.external].every(
+        (value) => Number.isFinite(value),
+      )
+    ) {
+      this.memory = memory;
+    }
+  }
+
   private spawn(): IPieceWorkerTransport {
     if (this.worker) return this.worker;
+    this.forgetChild();
     this.forkedAt = epochNow();
     const worker = this.connect();
     this.sendModels(worker);
@@ -420,6 +469,7 @@ export class PieceWorker implements IPieceWorker {
         if (response.id !== id) return;
         cleanup();
         const received = epochNow();
+        this.noteReply(response);
         if (response.type === "result") {
           resolve({
             output: response.output,

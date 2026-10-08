@@ -270,6 +270,19 @@ transport finds that child's code by walking up to this package's own
 `package.json` and reading `dist/worker-entry.js`, so `pnpm build` must have run
 before anything executes a piece — including the suites here.
 
+Children come from one warm pool (`worker/pool.ts`, ADR 0007). Every piece
+request leases an idle child, preferring one that has the piece loaded, and
+returns it when it settles: a step, a trigger hook, an editor's options or
+describe. A run holds no child between steps. Trigger hooks have children of
+their own, so a burst of runs can't delay a poll, and so does the editor (one
+child, which exits when idle). A child is retired when it
+dies or times out, when a request switches TLS verification off, past 80% of
+its heap budget, after `PH_WORKFLOWS_WORKER_MAX_REQUESTS` requests, or after a
+minute idle above `PH_WORKFLOWS_WORKER_MIN`.
+
+Piece code is trusted: what a piece keeps in module state carries over to the
+next request its child serves, whichever workflow sent it.
+
 That entry is `src/worker/entry.ts`: the piece worker from `src/pieces`, plus
 `ctx.reactor` (`src/worker/reactor.ts`), which needs `@powerhousedao/reactor`
 and so lives outside the piece layer. For an action, trigger or option resolver
@@ -563,8 +576,12 @@ explanation behind it.
 | ------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------- |
 | `PH_WORKFLOWS_SECRETS_MASTER_KEY`     | generated key file | 64 hex chars (32 bytes) encrypting connection secrets at rest (`reactor/secret-store.ts`) |
 | `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` | unset              | Addresses or CIDRs a piece may reach, widening the default policy (`reactor/lib.ts`)      |
-| `PH_WORKFLOWS_RUN_CONCURRENCY`        | `4`                | Runs executing at once; one forked node child each (`worker/pool.ts`)                     |
-| `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                | Runs that may wait for a slot before new ones are refused; `0` waits without limit        |
+| `PH_WORKFLOWS_RUN_CONCURRENCY`        | from the host      | Most piece children at once (`worker/pool.ts`); unset, sized from the cores and memory, at most 32 |
+| `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                | Requests that may wait for a child before new ones are refused; `0` waits without limit   |
+| `PH_WORKFLOWS_WORKER_MEMORY_MB`       | `256`              | Each child's V8 heap (`--max-old-space-size`); a child past 80% of it is retired          |
+| `PH_WORKFLOWS_WORKER_MAX_REQUESTS`    | `1000`             | Requests a child serves before it is retired                                              |
+| `PH_WORKFLOWS_WORKER_MIN`             | `1`                | Idle children kept warm; `0` lets every idle child exit                                   |
+| `PH_WORKFLOWS_TRIGGER_SLOTS`          | `1`                | Children reserved for trigger hooks                                                       |
 | `PH_WORKFLOWS_MAX_QUEUED_FIRINGS`     | `100`              | Firings of ONE workflow that may wait for its concurrency slot; past it a firing is journaled CANCELLED (`reactor/run-gate.ts`) |
 | `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`            | Cadence for a polling trigger that names none of its own                                  |
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
@@ -577,6 +594,7 @@ explanation behind it.
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.
+`PH_WORKFLOWS_WORKER_MIN` also takes `0`.
 
 **Run retention is ON by default, at 30 days.** It used to be opt-in, which
 meant unbounded growth on every host that did not know to set the variable —

@@ -37,7 +37,7 @@ import {
   resolvedBlock,
   stepConfigHash,
   pieceModuleRef,
-  PieceWorker,
+  type IPieceWorker,
   PieceWorkerError,
   PieceWorkerPool,
   PieceWorkerTimeoutError,
@@ -2248,6 +2248,8 @@ export class WorkflowRuntimeService {
       reactorAccess: (binding, requireReactor, runUser) =>
         this.triggerReactorAccess(binding, requireReactor, runUser),
       models: this.models,
+      // Hooks lease the pool's trigger children; the pool owns their lifetime.
+      worker: this.workers().session("trigger"),
       telemetry: this.telemetry,
       cacheDir: bundleCacheDir(),
       resolver: pieceResolver(),
@@ -2314,9 +2316,6 @@ export class WorkflowRuntimeService {
     this.pieceWorkers?.dispose();
     this.unobservePool?.();
     this.unobservePool = undefined;
-    // Forked on the editor's first request and never replaced, so it outlives
-    // a hot reload unless it goes with everything else.
-    this.designWorker?.dispose();
     this.designWorker = undefined;
   }
 
@@ -2820,11 +2819,11 @@ export class WorkflowRuntimeService {
   }
 
   private readonly descriptors = new Map<string, PieceDescriptor>();
-  private designWorker?: PieceWorker;
+  private designWorker?: IPieceWorker;
 
-  // Describe, options and connection checks: traced like a run's requests.
-  private createDesignWorker(): PieceWorker {
-    return new PieceWorker({ models: this.models, telemetry: this.telemetry });
+  // Describe, options and connection checks lease children like a run's steps.
+  private createDesignWorker(): IPieceWorker {
+    return this.workers().session("design");
   }
 
   // Design-time piece code runs under the policy a run would get, so nothing
@@ -4182,19 +4181,32 @@ export class WorkflowRuntimeService {
     ));
   }
 
-  // One child per run, N runs at a time. Sized by the operator: each slot is a
-  // node process, so this is the reactor's real connector concurrency.
+  // Every piece request leases a warm child from one pool: runs, the editor
+  // and trigger hooks. Unset sizes come from the container's cores and memory.
   private workers(): PieceWorkerPool {
-    // A queue depth of 0 waits without limit, which is what one shared worker
-    // did — a cap turns a saturated pool into failures instead of latency.
     if (this.pieceWorkers) return this.pieceWorkers;
+    const env = (name: string) => Number(process.env[name]) || undefined;
+    // Where 0 is a setting rather than "unset".
+    const count = (name: string) => {
+      const value = Number(process.env[name] || Number.NaN);
+      return value >= 0 ? value : undefined;
+    };
     const pool = new PieceWorkerPool({
       models: this.models,
-      size: Number(process.env.PH_WORKFLOWS_RUN_CONCURRENCY) || undefined,
-      maxQueueDepth:
-        Number(process.env.PH_WORKFLOWS_RUN_QUEUE_DEPTH) || undefined,
+      size: env("PH_WORKFLOWS_RUN_CONCURRENCY"),
+      maxQueueDepth: env("PH_WORKFLOWS_RUN_QUEUE_DEPTH"),
+      heapMb: env("PH_WORKFLOWS_WORKER_MEMORY_MB"),
+      maxRequests: env("PH_WORKFLOWS_WORKER_MAX_REQUESTS"),
+      minWarm: count("PH_WORKFLOWS_WORKER_MIN"),
+      triggerSlots: env("PH_WORKFLOWS_TRIGGER_SLOTS"),
+      reactorThreads: this.host.reactorThreads,
       telemetry: this.telemetry,
     });
+    // Built after shutdown, by a late supervisor or editor call: forks nothing.
+    if (this.closed) {
+      pool.dispose();
+      return (this.pieceWorkers = pool);
+    }
     this.unobservePool = this.telemetry.observeWorkerPool(() => pool.stats());
     return (this.pieceWorkers = pool);
   }
@@ -4462,9 +4474,9 @@ export class WorkflowRuntimeService {
         },
       );
       if (runId) run.span.setAttribute("run.id", runId);
-      // Also in here: a pool disposed while this run was starting up refuses
-      // here, and the journal records the run as failed rather than leaving it
-      // to be swept up as an orphan.
+      // Shut down during the journal write: refused here, and the journal
+      // records the run as failed rather than leaving it to be swept up.
+      if (this.closed) throw new WorkflowRuntimeClosedError(workflowId);
       session = this.workers().session();
       // Resolved per run, so a rotated secret takes effect on the next one.
       const { variables, secretValues } = await resolveVariables(

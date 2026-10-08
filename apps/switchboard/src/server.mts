@@ -1065,6 +1065,9 @@ async function initServer(
       pieces: api.packageManager,
       pieceRegistryUrl: registryUrl,
       models: workerModels,
+      // The piece pool leaves the reactor's threads their share of the cores.
+      reactorThreads:
+        (workerPool?.numWorkers ?? 0) + (projectionWorker ? 1 : 0),
       logger: logger.child(["workflow-runtime"]),
       exclusiveJournal: readModelPgliteDir !== null,
       onSingletonLost: workflowSingletonLossHandler(logger),

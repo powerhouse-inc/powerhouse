@@ -24,9 +24,13 @@ class DurationsByName implements SpanProcessor {
     if (!this.recording) return;
     const [seconds, nanos] = span.duration;
     const ms = seconds * 1000 + nanos / 1e6;
-    const list = this.durations.get(span.name) ?? [];
+    this.add(span.name, ms);
+  }
+
+  private add(name: string, ms: number): void {
+    const list = this.durations.get(name) ?? [];
     list.push(ms);
-    this.durations.set(span.name, list);
+    this.durations.set(name, list);
   }
 
   forceFlush(): Promise<void> {
