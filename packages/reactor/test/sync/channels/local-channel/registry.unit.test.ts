@@ -193,6 +193,31 @@ describe("LocalChannelPortRegistry", () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  it("after an overflow, drops live pushes until the peer's next hello", () => {
+    const registry = new LocalChannelPortRegistry({
+      logger: createMockLogger(),
+      maxQueuedFrames: 2,
+    });
+    const raw = new BrowserPortLike();
+    registry.register("peer", "chan", messagePortTransport(raw));
+    const push = (n: number) => ({ kind: "push", channelId: "p", n });
+    const hello = {
+      kind: "hello",
+      channelId: "p",
+      sinceOrdinal: 0,
+      reply: true,
+    };
+    for (const n of [1, 2, 3]) raw.receive(push(n));
+
+    const received: unknown[] = [];
+    registry.provider("peer", "chan")!.onMessage((data) => received.push(data));
+    raw.receive(push(4));
+    raw.receive(hello);
+    raw.receive(push(5));
+
+    expect(received).toEqual([hello, push(5)]);
+  });
+
   it("detaches a subscriber whose receive throws during replay, keeping the rest queued", () => {
     const registry = new LocalChannelPortRegistry();
     const raw = new BrowserPortLike();

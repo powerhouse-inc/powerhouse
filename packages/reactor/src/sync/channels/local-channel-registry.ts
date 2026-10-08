@@ -23,9 +23,11 @@ function frameKind(data: unknown): unknown {
  * (a reset) is queued and replayed to the next one instead of lost.
  *
  * Past the bound, every queued push is discarded, and so is every later one
- * until a channel attaches: the inbox ack is the highest applied ordinal, so
- * replaying pushes after a gap would ack past the missing ones. The peer still
- * holds them unacked and re-pushes them on the fresh channel's hello.
+ * until a channel is attached and hears a live hello: the inbox ack is the
+ * highest applied ordinal, so delivering pushes after a gap would ack past the
+ * missing ones. The peer still holds them unacked and re-pushes them right
+ * after the hello it answers the fresh channel's hello with, or after its own
+ * opening hello's backfill.
  */
 class RegisteredPort implements LocalChannelPort {
   private subscriber: ((data: unknown) => void) | undefined;
@@ -52,7 +54,6 @@ class RegisteredPort implements LocalChannelPort {
    */
   onMessage(callback: (data: unknown) => void): () => void {
     this.subscriber = callback;
-    this.discardingPushes = false;
     const detach = (): void => {
       if (this.subscriber === callback) this.subscriber = undefined;
     };
@@ -80,11 +81,15 @@ class RegisteredPort implements LocalChannelPort {
   }
 
   private dispatch(data: unknown): void {
+    if (this.discardingPushes) {
+      const kind = frameKind(data);
+      if (kind === "push") return;
+      if (kind === "hello" && this.subscriber) this.discardingPushes = false;
+    }
     if (this.subscriber) {
       this.subscriber(data);
       return;
     }
-    if (this.discardingPushes && frameKind(data) === "push") return;
     this.queued.push(data);
     if (this.queued.length <= this.maxQueuedFrames) return;
     if (!this.discardingPushes) {
@@ -98,7 +103,7 @@ class RegisteredPort implements LocalChannelPort {
     this.compact();
   }
 
-  /** Until the next attach, so no later push replays across the gap. */
+  /** Until a live hello, so no later push lands across the gap. */
   private discardPushes(): void {
     this.discardingPushes = true;
     this.queued = this.queued.filter((frame) => frameKind(frame) !== "push");
