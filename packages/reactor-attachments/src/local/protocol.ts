@@ -67,7 +67,7 @@ export type LocalAttachmentEndResponse = {
   id: string;
 };
 
-/** The peer has a reservation for the hash but no committed bytes yet. */
+/** Retry later: the peer holds a reservation without bytes, or is at its serve cap. */
 export type LocalAttachmentPendingResponse = {
   protocol: typeof LOCAL_ATTACHMENT_PROTOCOL;
   kind: "pending";
