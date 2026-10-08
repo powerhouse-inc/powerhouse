@@ -181,6 +181,9 @@ describe("a fired run's telemetry", () => {
     expect(parentOf(only("workflow.journal.step"))).toBe(
       run.spanContext().spanId,
     );
+    // The child's memory as it answered.
+    expect(request.attributes["worker.memory.rss_mb"]).toBeGreaterThan(0);
+    expect(request.attributes["worker.memory.heap_used_mb"]).toBeGreaterThan(0);
     // No reactor connection is bound, so no run user is looked up.
     expect(named("workflow.run_user")).toHaveLength(0);
   });
