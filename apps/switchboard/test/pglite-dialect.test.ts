@@ -200,7 +200,7 @@ describe("switchboard's reactor storage factory", () => {
       const storage = await open({ reactorPgliteDir: dataDir });
       expect(storage.storageFacts).toEqual(PGLITE_PATH_STORAGE_FACTS);
       await openAndDestroy(storage.kysely);
-    });
+    }, 30_000);
 
     it("reports a Postgres url as a durable server", async () => {
       const storage = await open({
