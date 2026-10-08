@@ -1,4 +1,5 @@
 import {
+  bucketFor,
   DriveCollectionId,
   JobStatus,
   type JobInfo,
@@ -187,6 +188,52 @@ describe("placement through the client", () => {
 
     await expect(run).rejects.toThrow(NoEligibleBackendError);
     await expect(run).rejects.toThrow(/workflows is false/);
+  });
+
+  const parentless = Array.from({ length: 8 }, (_v, i) => `parentless-${i}`);
+  const hashedTo = (id: string, count: number): number =>
+    bucketFor(DriveCollectionId.forDrive(id).key, count);
+
+  it("places a parentless create by the id's collection requirements", async () => {
+    expect(parentless.some((id) => hashedTo(id, 2) === 0)).toBe(true);
+    const plain = new FakeBackend("plain");
+    const node = new FakeBackend("node", workflowInfo(), REMOTE);
+    const client = router([plain.config(), node.config()], {
+      requirements: Object.fromEntries(
+        parentless.map((id) => [id, { workflows: true }]),
+      ),
+    });
+
+    for (const id of parentless.slice(0, 4)) {
+      await client.create(fakeDocument({ id }));
+    }
+    for (const id of parentless.slice(4)) {
+      await client.createAsync(fakeDocument({ id }));
+    }
+
+    expect(plain.count("create") + plain.count("executeBatch")).toBe(0);
+    expect(node.count("create")).toBe(4);
+    expect(node.count("executeBatch")).toBe(4);
+  });
+
+  it("places a parentless create on the id's collections override", async () => {
+    expect(parentless.some((id) => hashedTo(id, 2) === 0)).toBe(true);
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    const client = router([one.config(), two.config()], {
+      collections: Object.fromEntries(parentless.map((id) => [id, "two"])),
+    });
+
+    for (const id of parentless.slice(0, 4)) {
+      await client.create(fakeDocument({ id }));
+    }
+    for (const id of parentless.slice(4)) {
+      await client.createAsync(fakeDocument({ id }));
+    }
+
+    expect(one.count("create") + one.count("executeBatch")).toBe(0);
+    expect(two.count("create")).toBe(4);
+    expect(two.count("executeBatch")).toBe(4);
   });
 
   it("reads lazy facts before it is handed out", async () => {

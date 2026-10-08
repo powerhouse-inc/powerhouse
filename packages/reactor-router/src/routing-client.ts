@@ -1,6 +1,7 @@
 import {
   buildCreateJobs,
   createEmptyDocument,
+  DriveCollectionId,
   JOB_NOT_FOUND_ERROR_NAME,
   JobStatus,
   selectDocumentModelModule,
@@ -581,7 +582,7 @@ export class RoutingReactorClient implements IReactorClient {
 
   // Creation
 
-  /** On the parent's backend; parentless, placed by the document id. */
+  /** On the parent's backend; parentless, placed as the collection of its id. */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
@@ -1146,12 +1147,18 @@ export class RoutingReactorClient implements IReactorClient {
     if (parentIdentifier !== undefined && parentIdentifier !== "") {
       return this.dispatcher.resolveDocumentBackend(parentIdentifier);
     }
-    if (documentId !== "") {
-      return this.dispatcher.placed(() =>
-        this.dispatcher.table.standaloneRoute(documentId),
-      );
+    if (documentId === "") {
+      return this.dispatcher.primary;
     }
-    return this.dispatcher.primary;
+    const route = await this.dispatcher.placed(() =>
+      this.dispatcher.table.collectionRoute(
+        DriveCollectionId.forDrive(documentId),
+      ),
+    );
+    return this.dispatcher.table.backend(
+      route.backend,
+      `placement for a new document ${JSON.stringify(documentId)}`,
+    );
   }
 
   private recordBatchJobs(
