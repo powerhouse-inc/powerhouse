@@ -1,3 +1,36 @@
+## 6.2.3-dev.49 (2026-10-08)
+
+This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.48 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.47 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** journal one document-created run when the document and its drive both report it ([f9b734b06b](https://github.com/powerhouse-inc/powerhouse/commit/f9b734b06b))
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **reactor-workflow:** close the journal-cap residuals ([0119f56f59](https://github.com/powerhouse-inc/powerhouse/commit/0119f56f59))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **reactor-workflow:** cap trigger payloads and tame the redact regexes ([25917fe58c](https://github.com/powerhouse-inc/powerhouse/commit/25917fe58c))
+- **reactor-workflow:** bound the step journal and arm trigger contexts ([878dabd2ee](https://github.com/powerhouse-inc/powerhouse/commit/878dabd2ee))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features
