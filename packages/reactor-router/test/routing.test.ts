@@ -505,6 +505,113 @@ describe("v1 constraints", () => {
   });
 });
 
+describe("a stale document entry under a batch-shaped write", () => {
+  function stale(refuses: boolean) {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    one.refuses = refuses;
+    two.refuses = refuses;
+    one.seed(fakeDocument({ id: "doc-1" }));
+    one.seed(
+      fakeDocument({
+        id: "drive-a",
+        documentType: "powerhouse/document-drive",
+      }),
+    );
+    const client = router([one.config(), two.config()], {
+      documents: { "doc-1": "two", "drive-a": "two" },
+    });
+    const owner = (identifier: string) =>
+      client
+        .describeRouting()
+        .documents.find((entry) => entry.identifier === identifier)?.backend;
+    return { one, two, client, owner };
+  }
+
+  it("deleteDocuments forgets the stale entry and deletes on the owner, every time", async () => {
+    const { one, client, owner } = stale(true);
+
+    await client.deleteDocuments(["doc-1"]);
+    await client.deleteDocuments(["doc-1"]);
+
+    expect(one.count("deleteDocument")).toBe(2);
+    expect(owner("doc-1")).toBe("one");
+  });
+
+  it("executeBatch re-resolves once after a refusal", async () => {
+    const { one, two, client, owner } = stale(true);
+
+    const result = await client.executeBatch({ jobs: [job("a", "doc-1")] });
+
+    expect(Object.keys(result.jobs)).toEqual(["a"]);
+    expect(two.count("executeBatch")).toBe(1);
+    expect(one.count("executeBatch")).toBe(1);
+    expect(owner("doc-1")).toBe("one");
+  });
+
+  it("executeBatch is guarded on a backend that does not refuse", async () => {
+    const { one, two, client, owner } = stale(false);
+
+    await client.executeBatch({ jobs: [job("a", "doc-1")] });
+
+    expect(two.called("executeBatch")).toBe(false);
+    expect(one.count("executeBatch")).toBe(1);
+    expect(owner("doc-1")).toBe("one");
+  });
+
+  it("loadBatch is guarded on a backend that does not refuse", async () => {
+    const { one, two, client } = stale(false);
+
+    await client.loadBatch({
+      jobs: [
+        {
+          key: "a",
+          documentId: "doc-1",
+          scope: "global",
+          branch: "main",
+          operations: [],
+          dependsOn: [],
+          externalDeps: [],
+        },
+      ],
+    });
+
+    expect(two.called("loadBatch")).toBe(false);
+    expect(one.count("loadBatch")).toBe(1);
+  });
+
+  it("create with a parent lands on the parent's real backend", async () => {
+    const { one, two, client, owner } = stale(false);
+
+    await client.create(fakeDocument({ id: "child" }), "drive-a");
+
+    expect(two.called("create")).toBe(false);
+    expect(one.count("create")).toBe(1);
+    expect(owner("drive-a")).toBe("one");
+  });
+
+  it("createAsync re-resolves once when the parent is not found before submitting", async () => {
+    const { one, two, client, owner } = stale(true);
+
+    await client.createAsync(fakeDocument({ id: "child" }), "drive-a");
+
+    expect(two.called("executeBatch")).toBe(false);
+    expect(one.count("executeBatch")).toBe(1);
+    expect(owner("drive-a")).toBe("one");
+  });
+
+  it("keeps a not-found when no backend holds the parent", async () => {
+    const { one, two, client } = stale(true);
+
+    const run = client.createAsync(fakeDocument({ id: "child" }), "nowhere");
+
+    await expect(run).rejects.toMatchObject({ name: "DocumentNotFoundError" });
+    expect(one.called("executeBatch") || two.called("executeBatch")).toBe(
+      false,
+    );
+  });
+});
+
 describe("registry", () => {
   const module = (id: string, version: number) =>
     ({

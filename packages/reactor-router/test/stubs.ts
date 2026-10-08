@@ -147,6 +147,16 @@ export class FakeBackend {
     return document;
   }
 
+  private refuseUnless(identifier: string, method: string): void {
+    if (this.refuses && !this.documents.has(identifier)) {
+      throw new WrongBackendError({
+        documentId: identifier,
+        rejectedBy: this.name,
+        operation: method,
+      });
+    }
+  }
+
   private own(identifier: string, method: string): PHDocument {
     if (this.refuses && !this.documents.has(identifier)) {
       throw new WrongBackendError({
@@ -256,6 +266,14 @@ export class FakeBackend {
         }),
       executeBatch: (request: BatchExecutionRequest) =>
         this.run("executeBatch", [request], () => {
+          for (const plan of request.jobs) {
+            const creates = (plan.actions as { type?: string }[]).some(
+              (action) => action.type === "CREATE_DOCUMENT",
+            );
+            if (!creates) {
+              this.refuseUnless(plan.documentId, "executeBatch");
+            }
+          }
           const jobs: Record<string, JobInfo> = {};
           for (const plan of request.jobs) {
             const job = fakeJob(
@@ -304,6 +322,9 @@ export class FakeBackend {
         }),
       loadBatch: (request) =>
         this.run("loadBatch", [request], () => {
+          for (const plan of request.jobs) {
+            this.refuseUnless(plan.documentId, "loadBatch");
+          }
           const jobs: Record<string, JobInfo> = {};
           for (const plan of request.jobs) {
             jobs[plan.key] = fakeJob(

@@ -46,7 +46,7 @@ import {
   type IRoutableBackend,
   type RoutableBackendConfig,
 } from "./backend.js";
-import { ATTEMPT, RouteDispatcher } from "./dispatcher.js";
+import { ATTEMPT, RouteDispatcher, type BeforeSubmit } from "./dispatcher.js";
 import {
   CrossBackendBatchError,
   CrossBackendRelationshipError,
@@ -588,16 +588,12 @@ export class RoutingReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const backend = await this.placeNewDocument(
+    const { value: created, backend } = await this.onNewDocument(
+      "create",
       document.header.id,
       parentIdentifier,
-    );
-    const created = await this.dispatcher.onBackend(
-      "create",
-      backend,
       (target) =>
         target.api.create<TDocument>(document, parentIdentifier, signal),
-      ATTEMPT.write,
     );
     this.dispatcher.recordDocument(created.header.id, backend.name);
     return created;
@@ -608,18 +604,17 @@ export class RoutingReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const backend = await this.placeNewDocument(
+    const { value: result, backend } = await this.onNewDocument(
+      "createAsync",
       document.header.id,
       parentIdentifier,
-    );
-    const result = await this.dispatcher.onBackend(
-      "createAsync",
-      backend,
-      async (target) => {
+      async (target, beforeSubmit) => {
         const parentId =
           parentIdentifier === undefined || parentIdentifier === ""
             ? undefined
-            : await resolveOn(target, parentIdentifier, signal);
+            : await beforeSubmit(() =>
+                resolveOn(target, parentIdentifier, signal),
+              );
         const jobs = await buildCreateJobs(
           document,
           parentId,
@@ -628,7 +623,6 @@ export class RoutingReactorClient implements IReactorClient {
         );
         return target.api.executeBatch({ jobs }, signal);
       },
-      ATTEMPT.write,
     );
     this.dispatcher.recordDocument(document.header.id, backend.name);
     this.recordBatchJobs(result.jobs, backend.name);
@@ -762,15 +756,12 @@ export class RoutingReactorClient implements IReactorClient {
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const backend = await this.singleBackendFor(
+    const identifiers = request.jobs.map((job) => job.documentId);
+    const { value: result, backend } = await this.dispatcher.onDocuments(
       "executeBatch",
-      request.jobs.map((job) => job.documentId),
-    );
-    const result = await this.dispatcher.onBackend(
-      "executeBatch",
-      backend,
+      identifiers,
+      () => this.singleBackendFor("executeBatch", identifiers),
       (target) => target.api.executeBatch(request, signal),
-      ATTEMPT.write,
     );
     this.recordBatchJobs(result.jobs, backend.name);
     return result;
@@ -780,16 +771,16 @@ export class RoutingReactorClient implements IReactorClient {
     request: BatchLoadRequest,
     signal?: AbortSignal,
   ): Promise<BatchLoadResult> {
-    const backend = await this.singleBackendFor(
+    const identifiers = request.jobs.map((job) => job.documentId);
+    const { value: result, backend } = await this.dispatcher.onDocuments(
       "loadBatch",
-      request.jobs.map((job) => job.documentId),
-    );
-    const load = declared(backend, "loadBatch");
-    const result = await this.dispatcher.onBackend(
-      "loadBatch",
-      backend,
-      () => load(request, signal),
-      ATTEMPT.write,
+      identifiers,
+      async () => {
+        const target = await this.singleBackendFor("loadBatch", identifiers);
+        declared(target, "loadBatch");
+        return target;
+      },
+      (target) => declared(target, "loadBatch")(request, signal),
     );
     this.recordBatchJobs(result.jobs, backend.name);
     return result;
@@ -962,24 +953,26 @@ export class RoutingReactorClient implements IReactorClient {
     );
   }
 
-  /** Every identifier must resolve to one backend; nothing is deleted otherwise. */
+  /**
+   * Every identifier must resolve to one backend; nothing is deleted otherwise.
+   * Each delete then routes as its own write, so a stale entry is corrected.
+   */
   async deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    const backend = await this.singleBackendFor("deleteDocuments", identifiers);
-    await this.dispatcher.onBackend(
-      "deleteDocuments",
-      backend,
-      async (target) => {
-        await Promise.all(
-          identifiers.map((identifier) =>
-            target.api.deleteDocument(identifier, propagate, signal),
-          ),
-        );
-      },
-      ATTEMPT.write,
+    await this.singleBackendFor("deleteDocuments", identifiers);
+    await Promise.all(
+      identifiers.map((identifier) =>
+        this.dispatcher.onDocument(
+          "deleteDocuments",
+          identifier,
+          (backend) =>
+            backend.api.deleteDocument(identifier, propagate, signal),
+          ATTEMPT.write,
+        ),
+      ),
     );
   }
 
@@ -1140,13 +1133,32 @@ export class RoutingReactorClient implements IReactorClient {
     ];
   }
 
-  private async placeNewDocument(
+  /** With a parent, guarded on it and re-resolved once; else placed. */
+  private async onNewDocument<T>(
+    label: string,
     documentId: string,
-    parentIdentifier?: string,
-  ): Promise<RouterBackend> {
+    parentIdentifier: string | undefined,
+    run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
+  ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
     if (parentIdentifier !== undefined && parentIdentifier !== "") {
-      return this.dispatcher.resolveDocumentBackend(parentIdentifier);
+      return this.dispatcher.onDocuments(
+        label,
+        [parentIdentifier],
+        () => this.dispatcher.resolveDocumentBackend(parentIdentifier),
+        run,
+      );
     }
+    const backend = await this.placeNewDocument(documentId);
+    const value = await this.dispatcher.onBackend(
+      label,
+      backend,
+      (target) => run(target, (step) => step()),
+      ATTEMPT.write,
+    );
+    return { value, backend };
+  }
+
+  private async placeNewDocument(documentId: string): Promise<RouterBackend> {
     if (documentId === "") {
       return this.dispatcher.primary;
     }

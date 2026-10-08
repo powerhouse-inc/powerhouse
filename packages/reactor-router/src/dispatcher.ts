@@ -5,6 +5,7 @@ import {
   MisrouteUnresolvedError,
   misrouteOf,
   NoEligibleBackendError,
+  NOT_MISROUTED,
   rethrow,
   type MisrouteInfo,
 } from "./errors.js";
@@ -28,6 +29,11 @@ interface RouteTarget {
   accepted(backend: RouterBackend, evidence: RouteEvidence): void;
   refused(backend: RouterBackend, info: MisrouteInfo): void;
 }
+
+const NOT_FOUND_ERROR_NAME = "DocumentNotFoundError";
+
+/** Marks a step that runs before anything is submitted. */
+export type BeforeSubmit = <T>(step: () => Promise<T>) => Promise<T>;
 
 export type AttemptOptions = {
   /** Retry a non-misroute failure elsewhere; reads only, a write may have landed. */
@@ -146,6 +152,73 @@ export class RouteDispatcher {
       },
       run,
       options,
+    );
+  }
+
+  /**
+   * A batch-shaped write on the one backend `resolve` names. Each identifier is
+   * guarded before anything is sent. A misroute, or a not-found raised by a
+   * step wrapped in `beforeSubmit`, forgets the identifiers' entries and
+   * re-resolves once; any other failure is the caller's, since a job may have
+   * landed.
+   */
+  async onDocuments<T>(
+    label: string,
+    identifiers: readonly string[],
+    resolve: () => Promise<RouterBackend>,
+    run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
+  ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
+    const distinct = [...new Set(identifiers.filter((id) => id !== ""))];
+    const notFoundBeforeSubmit = new WeakSet<object>();
+    const beforeSubmit: BeforeSubmit = async (step) => {
+      try {
+        return await step();
+      } catch (error) {
+        if (Error.isError(error) && error.name === NOT_FOUND_ERROR_NAME) {
+          notFoundBeforeSubmit.add(error);
+        }
+        throw error;
+      }
+    };
+    const refusedBy: string[] = [];
+    let failure: unknown = undefined;
+    let info = NOT_MISROUTED;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const backend = await resolve();
+      if (refusedBy.includes(backend.name)) {
+        break;
+      }
+      try {
+        for (const identifier of distinct) {
+          await this.guard.assertOwned(backend, identifier, label);
+        }
+        return { value: await run(backend, beforeSubmit), backend };
+      } catch (error) {
+        info = misrouteOf(error);
+        const notFound =
+          Error.isError(error) && notFoundBeforeSubmit.has(error);
+        if (!info.misrouted && !notFound) {
+          throw error;
+        }
+        refusedBy.push(backend.name);
+        failure = error;
+        for (const identifier of distinct) {
+          this.table.forgetDocument(identifier);
+          this.guard.forget(backend, identifier);
+        }
+        if (info.misrouted && distinct.includes(info.documentId)) {
+          this.applyHint(info.documentId, info);
+        }
+      }
+    }
+    if (!info.misrouted) {
+      rethrow(failure);
+    }
+    throw new MisrouteUnresolvedError(
+      label,
+      distinct.join(", "),
+      refusedBy,
+      info.reason,
     );
   }
 
