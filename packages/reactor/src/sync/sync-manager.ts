@@ -352,6 +352,8 @@ export class SyncManager
     string,
     Map<string, SyncOperation>
   >();
+  // remote name -> applied marker op id -> its item's highest ordinal
+  private readonly appliedMarkers = new Map<string, Map<string, number>>();
   private readonly markerStorage: ISyncReceivedMarkerStorage;
   private readonly refusalStorage: ISyncPurgeRefusalStorage;
   // remote name + marker id -> its storage writes, applied in order
@@ -1421,6 +1423,7 @@ export class SyncManager
       this.derivedThrough.delete(name);
       this.prunePending.delete(name);
       this.receivedMarkers.delete(name);
+      this.appliedMarkers.delete(name);
       for (const [id, retry] of [...this.markerRetries]) {
         if (retry.remoteName !== name) continue;
         clearTimeout(retry.timer);
@@ -2272,6 +2275,7 @@ export class SyncManager
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
     const received = this.receivedMarkersOf(remote.meta.name);
+    const applied = this.appliedMarkers.get(remote.meta.name);
     // A resent marker whose first copy is still loading or awaiting a retry.
     const loading = (id: string, syncOp: SyncOperation): boolean => {
       const item = received.get(id);
@@ -2285,7 +2289,10 @@ export class SyncManager
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
         const ids = markerIdsOf(syncOp);
-        if (ids.every((id) => loading(id, syncOp))) {
+        if (applied !== undefined && ids.every((id) => applied.has(id))) {
+          // Re-pushed while the ack is held below a marker already applied.
+          dropped.push(syncOp);
+        } else if (ids.every((id) => loading(id, syncOp))) {
           // Stored again: the pusher resends when its earlier ack failed.
           this.storeReceivedMarker(remote, syncOp);
           dropped.push(syncOp);
@@ -2371,16 +2378,50 @@ export class SyncManager
 
   /** Forgets a marker once the item loading it leaves the inbox. */
   private handleInboxRemoved(remote: Remote, syncOps: SyncOperation[]): void {
-    const received = this.receivedMarkers.get(remote.meta.name);
-    if (received === undefined || received.size === 0) return;
     const name = remote.meta.name;
-    for (const syncOp of syncOps) {
-      for (const id of markerIdsOf(syncOp)) {
-        if (received.get(id) !== syncOp) continue;
-        received.delete(id);
-        this.writeMarker(name, id, () => this.markerStorage.remove(name, id));
+    const received = this.receivedMarkers.get(name);
+    if (received !== undefined && received.size > 0) {
+      for (const syncOp of syncOps) {
+        for (const id of markerIdsOf(syncOp)) {
+          if (received.get(id) !== syncOp) continue;
+          received.delete(id);
+          this.writeMarker(name, id, () => this.markerStorage.remove(name, id));
+          if (syncOp.status === SyncOperationStatus.Applied) {
+            this.rememberAppliedMarker(name, id, syncOp);
+          }
+        }
       }
     }
+    this.forgetAckedMarkers(remote);
+  }
+
+  /** Kept until the ack passes it: the pusher re-pushes everything above the ack. */
+  private rememberAppliedMarker(
+    name: string,
+    id: string,
+    syncOp: SyncOperation,
+  ): void {
+    let applied = this.appliedMarkers.get(name);
+    if (applied === undefined) {
+      applied = new Map();
+      this.appliedMarkers.set(name, applied);
+    }
+    let ordinal = 0;
+    for (const op of syncOp.operations) {
+      ordinal = Math.max(ordinal, op.context.ordinal);
+    }
+    applied.set(id, ordinal);
+  }
+
+  private forgetAckedMarkers(remote: Remote): void {
+    const name = remote.meta.name;
+    const applied = this.appliedMarkers.get(name);
+    if (applied === undefined) return;
+    const ack = remote.channel.inbox.ackOrdinal;
+    for (const [id, ordinal] of applied) {
+      if (ordinal <= ack) applied.delete(id);
+    }
+    if (applied.size === 0) this.appliedMarkers.delete(name);
   }
 
   private markerWritesOf(remoteNames?: Iterable<string>): Promise<void>[] {
