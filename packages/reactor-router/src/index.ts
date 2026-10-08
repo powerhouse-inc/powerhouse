@@ -1,1 +1,18 @@
-export {};
+export {
+  CrossBackendBatchError,
+  CrossBackendRelationshipError,
+  FanInPartialFailureError,
+  InvalidFanInCursorError,
+  isMisroute,
+  messageOf,
+  MisrouteUnresolvedError,
+  misrouteOf,
+  NoEligibleBackendError,
+  NOT_MISROUTED,
+  UnknownBackendError,
+  WRONG_BACKEND_CODE,
+  WRONG_SHARD_CODE,
+  WrongBackendError,
+  type MisrouteInfo,
+  type WrongBackendDetails,
+} from "./errors.js";
