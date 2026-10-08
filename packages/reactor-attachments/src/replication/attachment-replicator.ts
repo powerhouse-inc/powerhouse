@@ -8,6 +8,10 @@ import {
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { IAttachmentStore, IAttachmentTransport } from "../interfaces.js";
+import type {
+  AttachmentReferenceRow,
+  IAttachmentReferenceScanner,
+} from "../read-models/attachment-reference/types.js";
 import { parseRef } from "../ref.js";
 import { collectStream, streamFromBytes } from "../storage/local/bytes.js";
 import { sha256Hex } from "./hash.js";
@@ -19,9 +23,7 @@ import {
   type AttachmentReplicationState,
   type AttachmentReplicatorStatus,
   type AttachmentRetryPolicy,
-  type IAttachmentReferenceBacklog,
   type IOperationAttachmentRefs,
-  type PersistedAttachmentReference,
 } from "./types.js";
 
 /**
@@ -56,7 +58,7 @@ export type AttachmentReplicatorOptions = {
    * correct for a reactor with no reference index, and NOT resumable across a
    * restart, which {@link AttachmentReplicatorStatus.backlogScanned} reports.
    */
-  backlog?: IAttachmentReferenceBacklog;
+  backlog?: IAttachmentReferenceScanner;
   concurrency?: number;
   retry?: Partial<AttachmentRetryPolicy>;
   backlogPageSize?: number;
@@ -97,11 +99,10 @@ type Entry = {
  * the write path: a slow or unreachable peer cannot delay a commit, because
  * the subscriber only notes hashes and returns.
  *
- * Resume is a re-scan, not a cursor. See
- * {@link IAttachmentReferenceBacklog}: the reference index plus `store.has()`
- * re-derives the exact outstanding work set on every boot, idempotently, and a
- * persisted cursor could only add a second truth that is wrong in the one
- * direction that loses data.
+ * Resume is a re-scan of the reference index ({@link IAttachmentReferenceScanner}),
+ * not a cursor: the index plus `store.has()` re-derives the exact outstanding
+ * work set on every boot, idempotently, and a persisted cursor could only add a
+ * second truth that is wrong in the one direction that loses data.
  *
  * Loop-safety is structural: one entry per hash, created once, and a terminal
  * entry (`held`, `not-found`, `failed`) is never re-queued by a further
@@ -113,7 +114,7 @@ export class AttachmentReplicator {
   private readonly transport: IAttachmentTransport;
   private readonly refs: IOperationAttachmentRefs;
   private readonly eventBus: IEventBus;
-  private readonly backlog: IAttachmentReferenceBacklog | undefined;
+  private readonly backlog: IAttachmentReferenceScanner | undefined;
   private readonly concurrency: number;
   private readonly policy: AttachmentRetryPolicy;
   private readonly backlogPageSize: number;
@@ -583,10 +584,10 @@ export class AttachmentReplicator {
   }
 }
 
-/** Convenience: the backlog shape over a plain list, for a host without an index. */
-export function staticAttachmentBacklog(
-  references: readonly PersistedAttachmentReference[],
-): IAttachmentReferenceBacklog {
+/** A scanner over a plain list, for a host without a reference index. */
+export function staticAttachmentReferenceScanner(
+  references: readonly AttachmentReferenceRow[],
+): IAttachmentReferenceScanner {
   return {
     listReferences: (cursor, limit) => {
       const start = cursor === undefined ? 0 : Number(cursor);

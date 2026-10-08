@@ -16,42 +16,6 @@ export interface IOperationAttachmentRefs {
   refsOf(item: OperationWithContext): readonly AttachmentRef[];
 }
 
-/** One persisted reference: the hash to fetch and the document that authorizes it. */
-export type PersistedAttachmentReference = {
-  documentId: string;
-  ref: AttachmentRef;
-};
-
-/** One page of {@link IAttachmentReferenceBacklog.listReferences}. */
-export type AttachmentReferencePage = {
-  references: readonly PersistedAttachmentReference[];
-  /** Absent when this was the last page. */
-  nextCursor: string | undefined;
-};
-
-/**
- * The durable list of references this reactor has ever indexed -- the
- * replicator's resume mechanism.
- *
- * There is deliberately NO replication cursor. The reference index already
- * persists every (document, ref) pair, `store.has()` is the only other fact a
- * decision needs, and both are idempotent: re-scanning on boot re-derives the
- * exact work set, including hashes whose fetch failed or was still pending when
- * the realm went away. A cursor would be a second source of truth that can only
- * ever be wrong in the dangerous direction -- past a ref whose bytes never
- * arrived.
- */
-export interface IAttachmentReferenceBacklog {
-  /**
-   * One page of persisted references in a stable order, continuing from
-   * `cursor` (absent for the first page).
-   */
-  listReferences(
-    cursor: string | undefined,
-    limit: number,
-  ): Promise<AttachmentReferencePage>;
-}
-
 /**
  * What the replicator is doing about one hash.
  *

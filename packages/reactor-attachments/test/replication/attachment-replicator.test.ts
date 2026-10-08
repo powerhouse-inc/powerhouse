@@ -10,7 +10,7 @@ import type { IAttachmentTransport } from "../../src/interfaces.js";
 import {
   AttachmentReplicator,
   sha256Hex,
-  staticAttachmentBacklog,
+  staticAttachmentReferenceScanner,
   type ReplicationTimers,
 } from "../../src/replication/index.js";
 import type { IOperationAttachmentRefs } from "../../src/replication/types.js";
@@ -187,7 +187,7 @@ function harness(
   answers: TransportFetchResult[] | (() => TransportFetchResult),
   overrides: Partial<{
     backend: MemoryAttachmentBackend;
-    backlog: ReturnType<typeof staticAttachmentBacklog>;
+    backlog: ReturnType<typeof staticAttachmentReferenceScanner>;
     verifyHash: boolean;
     notFoundAttempts: number;
   }> = {},
@@ -427,7 +427,9 @@ describe("AttachmentReplicator", () => {
 
   it("re-derives outstanding work from the reference backlog on start", async () => {
     const h = harness([dataAnswer()], {
-      backlog: staticAttachmentBacklog([{ documentId: DOC, ref: REF }]),
+      backlog: staticAttachmentReferenceScanner([
+        { documentId: DOC, ref: REF },
+      ]),
     });
     h.replicator.start();
 
@@ -442,7 +444,9 @@ describe("AttachmentReplicator", () => {
 
   it("survives a restart by re-scanning rather than by a cursor", async () => {
     const backend = new MemoryAttachmentBackend();
-    const backlog = staticAttachmentBacklog([{ documentId: DOC, ref: REF }]);
+    const backlog = staticAttachmentReferenceScanner([
+      { documentId: DOC, ref: REF },
+    ]);
 
     // First life: the peer has nothing yet, so the hash ends terminal.
     const first = harness(() => ({ kind: "not-found" }), {
@@ -470,7 +474,9 @@ describe("AttachmentReplicator", () => {
 
   it("a restart does not re-fetch what the store already holds", async () => {
     const backend = new MemoryAttachmentBackend();
-    const backlog = staticAttachmentBacklog([{ documentId: DOC, ref: REF }]);
+    const backlog = staticAttachmentReferenceScanner([
+      { documentId: DOC, ref: REF },
+    ]);
 
     const first = harness([dataAnswer()], { backend, backlog });
     first.replicator.start();

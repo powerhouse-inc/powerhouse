@@ -135,17 +135,14 @@ export {
   DEFAULT_ATTACHMENT_RETRY_POLICY,
   SchemaCompiledOperationRefs,
   sha256Hex,
-  staticAttachmentBacklog,
+  staticAttachmentReferenceScanner,
   SYSTEM_REPLICATION_TIMERS,
-  type AttachmentReferencePage,
   type AttachmentReplicationEntry,
   type AttachmentReplicationState,
   type AttachmentReplicatorOptions,
   type AttachmentReplicatorStatus,
   type AttachmentRetryPolicy,
-  type IAttachmentReferenceBacklog,
   type IOperationAttachmentRefs,
-  type PersistedAttachmentReference,
   type ReplicationTimers,
 } from "./replication/index.js";
 export {
