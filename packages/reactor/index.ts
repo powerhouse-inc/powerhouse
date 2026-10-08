@@ -88,6 +88,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   InvalidSignatureError,
   RelationshipNotFoundError,
   UnsupportedStoredProtocolError,
@@ -321,6 +322,21 @@ export {
 } from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export {
+  DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
+  DEFAULT_RECOVERY_TIMEOUT_MS,
+  DEFAULT_STATEMENT_TIMEOUT_MS,
+  HardenedPGliteDialect,
+  isLongRunningStatement,
+  PGliteAbortedTransactionError,
+  PGliteAcquireTimeoutError,
+  PGliteSessionError,
+  PGliteSessionPoisonedError,
+  PGliteStatementTimeoutError,
+  queryThroughDialect,
+  type HardenedPGliteDialectOptions,
+  type PGliteSession,
+} from "./src/storage/kysely/pglite-dialect.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,
@@ -449,6 +465,7 @@ export {
   type ISyncStatusTracker,
   type JwtHandler,
   type OperationBatch,
+  type PollDelegate,
   type Remote,
   type RemoteCursor,
   type RemoteMeta,

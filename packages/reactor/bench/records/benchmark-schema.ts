@@ -153,8 +153,8 @@ export type ConcurrencyPayload = z.infer<typeof ConcurrencyPayload>;
  * theirs - `mean` in milliseconds sits next to `hz` in ops/sec - which is the
  * seam hand-written records drifted through. Renaming is the adapter's job.
  *
- * `samples` is deliberately absent: vitest hardcodes it to an empty array
- * regardless of config, so a field for it would be empty in every record.
+ * `samples` is deliberately absent: vitest drops them unless
+ * `benchmark.retainSamples` is set, so a field for it would be empty.
  */
 export const MicroCase = z.strictObject({
   name: z.string().min(1),
@@ -173,8 +173,7 @@ export const MicroCase = z.strictObject({
   rmePct: z.number().nonnegative(),
   sampleCount: z.int().nonnegative(),
   totalTimeMs: z.number().positive(),
-  /** vitest's --compare join key, hash-derived from file plus name: worth
-   * recording, not worth trusting across a rename. */
+  /** vitest 4's task id, hash-derived from file plus name; vitest 5 reports none. */
   vitestId: z.string().min(1).optional(),
   /**
    * The name this case had in earlier records of the same series. A viewer

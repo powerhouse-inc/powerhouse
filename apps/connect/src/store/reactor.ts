@@ -60,7 +60,9 @@ import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { closeDeletedSelection } from "../utils/deleted-selection.js";
-import { bumpWorkerGen } from "../reactor-worker-name.js";
+import { closeWithin } from "../utils/close-within.js";
+import { reloadForWorker } from "../utils/poisoned-store-budget.js";
+import { startupOwningStores } from "../utils/worker-startup.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
@@ -198,7 +200,7 @@ export async function clearReactorStorage() {
     return;
   }
   if (module?.kind === "browser") {
-    await module.reactorModule?.pg?.close();
+    await closeWithin(module.reactorModule?.pg);
   }
 
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB
@@ -442,12 +444,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       upgradeManifests,
       documentModelLoader,
       renown,
-      onReload: (reason, workerGen) => {
+      onReload: (reason) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
-        if (workerGen) {
-          bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
-        }
-        window.location.reload();
+        reloadForWorker(reason, () => window.location.reload());
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
@@ -470,8 +469,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
+    // The worker boots only once it owns both stores.
     try {
-      await workerClient.syncManagerProxy.startup();
+      await startupOwningStores(
+        (options) => workerClient.syncManagerProxy.startup(options),
+        [REACTOR_INSTANCE_NAMESPACE, RELATIONAL_PGLITE_NAME],
+      );
     } catch (error) {
       window.ph.loading = false;
       logger.error("Reactor worker failed to start: @error", error);

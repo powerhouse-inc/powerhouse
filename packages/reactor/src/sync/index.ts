@@ -76,6 +76,7 @@ export {
   IntervalPollTimer,
   type GqlChannelConfig,
   type IPollTimer,
+  type PollDelegate,
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";

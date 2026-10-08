@@ -8,15 +8,17 @@ import { useDocumentModelModuleById } from "../src/hooks/document-model-modules.
  * storybook). It must return `undefined` rather than throw in the latter.
  */
 describe("useDocumentModelModuleById without a provider", () => {
-  it("returns undefined when no vetra package manager is registered", () => {
-    const { result } = renderHook(() =>
+  it("returns undefined when no vetra package manager is registered", async () => {
+    const { result } = await renderHook(() =>
       useDocumentModelModuleById("powerhouse/invoice"),
     );
     expect(result.current).toBeUndefined();
   });
 
-  it("returns undefined for a missing id", () => {
-    const { result } = renderHook(() => useDocumentModelModuleById(undefined));
+  it("returns undefined for a missing id", async () => {
+    const { result } = await renderHook(() =>
+      useDocumentModelModuleById(undefined),
+    );
     expect(result.current).toBeUndefined();
   });
 });

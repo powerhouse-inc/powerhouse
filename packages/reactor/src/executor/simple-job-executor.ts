@@ -2830,6 +2830,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       incomingOpsToApply,
     } = selection;
 
+    // Before costing the reshuffle: a re-delivery of held operations moves nothing.
+    if (incomingOpsToApply.length === 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
     // Creation holds the first two indexes for the life of the document, so it
     // never moves however far back the conflicting range reaches. The auth stream
     // moves nothing at all.
@@ -2874,16 +2885,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
       const logicalSkip = latestRevision - minLogicalIndex;
       if (logicalSkip > skipCount) skipCount = logicalSkip;
-    }
-
-    if (incomingOpsToApply.length === 0) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
-      };
     }
 
     // After the dedup, never before: a re-appended auth operation keeps its

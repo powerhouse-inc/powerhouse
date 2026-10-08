@@ -5,12 +5,14 @@ import { join } from "node:path";
 import {
   ReactorBuilder,
   ReactorClientBuilder,
+  type AttachmentRef,
   type Database,
   type InProcessReactorClientModule,
   type IReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
   BaseSubgraph,
+  type CanonicalDocumentId,
   type GraphQLManager,
   type PackagePieceEntry,
 } from "@powerhousedao/reactor-api";
@@ -33,7 +35,7 @@ import { startSwitchboard } from "../src/server.mjs";
 import {
   PH_WORKFLOWS_ENABLED,
   bindPackagePieces,
-  canReadAttachmentRef,
+  attachmentReadPolicy,
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
   hostPrincipalOf,
@@ -209,16 +211,98 @@ describe("composeWorkflowRuntime", () => {
     return composed;
   }
 
-  it("lets a step read any well-formed attachment ref", async () => {
-    const hash = "a".repeat(64);
-    // No document references it: runs read attachments as they read documents.
-    expect(await canReadAttachmentRef("wf-1", `attachment://v1:${hash}`)).toBe(
-      true,
+  it("lets a step read a ref only through a document its user may read", async () => {
+    const ref = `attachment://v1:${"a".repeat(64)}`;
+    const asked: unknown[] = [];
+    const policy = attachmentReadPolicy(
+      {
+        canReadAttachment: (request) => {
+          asked.push(request);
+          return Promise.resolve(
+            request.documentId === "doc-b" && request.userAddress === "0xabc"
+              ? {
+                  kind: "allowed",
+                  documentId: "doc-b" as CanonicalDocumentId,
+                  ref: request.attachmentRef as AttachmentRef,
+                }
+              : { kind: "denied" },
+          );
+        },
+        admitCaller: () => Promise.resolve({ kind: "admitted" }),
+      },
+      1,
     );
-    expect(await canReadAttachmentRef("wf-1", `attachment://v2:${hash}`)).toBe(
-      false,
+    const runUser = {
+      address: "0xabc",
+      subject: { address: "0xabc", key: "did:key:z1" },
+    };
+    expect(
+      await policy({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-a", "doc-b"],
+        runUser,
+      }),
+    ).toBe(true);
+    expect(asked[1]).toEqual({
+      documentId: "doc-b",
+      attachmentRef: ref,
+      userAddress: "0xabc",
+      appKey: "did:key:z1",
+    });
+    // No document to read it through, another user, or not a ref: refused.
+    expect(
+      await policy({ workflowId: "wf-1", ref, documentIds: [], runUser }),
+    ).toBe(false);
+    expect(
+      await policy({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-b"],
+        runUser: null,
+      }),
+    ).toBe(false);
+    expect(
+      await policy({
+        workflowId: "wf-1",
+        ref: "not-a-ref",
+        documentIds: ["doc-b"],
+        runUser,
+      }),
+    ).toBe(false);
+    expect(
+      await attachmentReadPolicy(undefined)({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-b"],
+        runUser,
+      }),
+    ).toBe(false);
+  });
+
+  it("waits for the reference index to catch up with the triggering operation", async () => {
+    const ref = `attachment://v1:${"b".repeat(64)}`;
+    let calls = 0;
+    const policy = attachmentReadPolicy(
+      {
+        canReadAttachment: (request) =>
+          Promise.resolve(
+            ++calls < 3
+              ? { kind: "denied" }
+              : {
+                  kind: "allowed",
+                  documentId: request.documentId as CanonicalDocumentId,
+                  ref: request.attachmentRef as AttachmentRef,
+                },
+          ),
+        admitCaller: () => Promise.resolve({ kind: "admitted" }),
+      },
+      1,
     );
-    expect(await canReadAttachmentRef("wf-1", "not-a-ref")).toBe(false);
+    expect(
+      await policy({ workflowId: "wf-1", ref, documentIds: ["doc-a"] }),
+    ).toBe(true);
+    expect(calls).toBe(3);
   });
 
   it("serves a subgraph the GraphQL manager can construct", async () => {

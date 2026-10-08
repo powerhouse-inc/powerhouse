@@ -112,7 +112,7 @@ export function WorkflowEditorApp(props: {
           <input
             key={model.name}
             aria-label="Workflow name"
-            className="min-w-16 max-w-72 shrink rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
+            className="min-w-16 max-w-72 shrink rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold [field-sizing:content] text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
             defaultValue={model.name}
             placeholder="Untitled workflow"
             spellCheck={false}
@@ -127,6 +127,22 @@ export function WorkflowEditorApp(props: {
           <span className="text-xs tabular-nums text-muted-foreground">
             v{model.version}
           </span>
+          <input
+            key={model.description ?? ""}
+            aria-label="Workflow description"
+            className="min-w-32 max-w-md flex-1 rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[13px] text-muted-foreground placeholder:text-muted-foreground/60 hover:border-foreground/15 focus:border-ring focus:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/25"
+            defaultValue={model.description ?? ""}
+            placeholder="Add a description"
+            title={model.description ?? undefined}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            onBlur={(event) => {
+              const description = event.target.value.trim();
+              if (description !== (model.description ?? ""))
+                callbacks.setDescription(description);
+            }}
+          />
           <PublishState model={model} />
           <PublishedMissingNote missing={publishedMissing} />
           <ReactorDenialNote denial={denial} />

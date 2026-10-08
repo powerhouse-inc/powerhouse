@@ -44,6 +44,8 @@ export type ApProperty = Partial<
     options?: ApStaticDropdownState | ((...args: unknown[]) => unknown);
     // Resolver function on DYNAMIC properties.
     props?: (...args: unknown[]) => unknown;
+    // FILE: hand the piece a stream instead of the bytes.
+    streaming?: boolean;
     // ARRAY: schema of each item's fields; absent for plain value arrays.
     properties?: Record<string, ApProperty>;
     // Layout and control hints, each read off only the types that declare it.

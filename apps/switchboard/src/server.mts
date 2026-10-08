@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import type { PGlite } from "@electric-sql/pglite";
+import { metrics, trace } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
 import {
   createDurableNodeFs,
@@ -91,10 +92,12 @@ import {
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
+  WORKFLOW_TELEMETRY_SCOPE,
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
@@ -106,7 +109,10 @@ import {
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
 } from "./workflow-runtime.mjs";
-import { ClosablePGliteDialect } from "./pglite-dialect.js";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "./pglite-dialect.js";
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   CURRENT_PG_MAJOR,
@@ -274,7 +280,7 @@ type ReactorStorage = {
   poolInstrumentation: PoolInstrumentation | undefined;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
@@ -333,7 +339,10 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      dialect: new ClosablePGliteDialect(
+        pglite,
+        reactorPgliteDialectOptions(logger),
+      ),
     }),
     poolInstrumentation: undefined,
   };
@@ -1031,6 +1040,7 @@ async function initServer(
           ? readModelPath
           : path.resolve(readModelPath),
       attachments: createAttachmentClient(api.attachments.service),
+      attachmentAccess: api.attachmentAccess,
       // The workflow package's own HTTP namespace: its webhook endpoints live
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
@@ -1044,6 +1054,11 @@ async function initServer(
       logger: logger.child(["workflow-runtime"]),
       exclusiveJournal: readModelPgliteDir !== null,
       onSingletonLost: workflowSingletonLossHandler(logger),
+      // The providers observability.mts registered before this module loaded.
+      telemetry: {
+        tracer: trace.getTracer(WORKFLOW_TELEMETRY_SCOPE),
+        meter: metrics.getMeter(WORKFLOW_TELEMETRY_SCOPE),
+      },
     });
   const registerWorkflowSubgraph = (composed: ComposedWorkflowRuntime) => {
     const WorkflowRuntimeSubgraph = composed.subgraph;
@@ -1348,6 +1363,12 @@ export const startSwitchboard = async (
 ): Promise<SwitchboardReactor> => {
   const requestedPort = options.port ?? DEFAULT_PORT;
   const logger = options.logger ?? defaultLogger;
+  // Here as well as in index.mts, so a host embedding the server is profiled.
+  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+    await initProfilerFromEnv(process.env).catch((error: unknown) =>
+      logger.error("Error starting profiler: @error", error),
+    );
+  }
   const serverPort = await resolveServerPort(
     requestedPort,
     options.strictPort ?? false,

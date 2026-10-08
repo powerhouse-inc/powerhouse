@@ -13,7 +13,10 @@ import {
   type JwtHandler,
   type ReactorFeatureFlags,
 } from "@powerhousedao/reactor-browser";
-import type { UnsupportedStoredDocuments } from "@powerhousedao/reactor";
+import {
+  HardenedPGliteDialect,
+  type UnsupportedStoredDocuments,
+} from "@powerhousedao/reactor";
 import type {
   PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
@@ -28,8 +31,8 @@ import type {
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { getReactorPGlite } from "../pglite.db.js";
+import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -75,7 +78,9 @@ export async function createBrowserReactor(
     .withJwtHandler(jwtHandler)
     .withKysely(
       new Kysely<Database>({
-        dialect: new PGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(pg, {
+          onPoisoned: reloadPageForPoisonedStore,
+        }),
       }),
     );
   const builder = new ReactorClientBuilder()
