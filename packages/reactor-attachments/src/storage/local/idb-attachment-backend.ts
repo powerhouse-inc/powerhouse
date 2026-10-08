@@ -181,7 +181,15 @@ export class IdbAttachmentBackend implements ILocalAttachmentBackend {
     if (this.database) {
       return Promise.resolve(this.database);
     }
-    this.opening ??= this.openDatabase();
+    if (!this.opening) {
+      const opening = this.openDatabase();
+      this.opening = opening;
+      opening.catch(() => {
+        if (this.opening === opening) {
+          this.opening = undefined;
+        }
+      });
+    }
     return this.opening;
   }
 
@@ -226,11 +234,17 @@ export class IdbAttachmentBackend implements ILocalAttachmentBackend {
       this.database = db;
       // A second tab asking for a higher version must not be blocked by this
       // handle; closing here loses nothing, the next call reopens.
+      const forget = (): void => {
+        if (this.database === db) {
+          this.database = undefined;
+          this.opening = undefined;
+        }
+      };
       db.onversionchange = () => {
         db.close();
-        this.database = undefined;
-        this.opening = undefined;
+        forget();
       };
+      db.onclose = forget;
       return db;
     });
   }

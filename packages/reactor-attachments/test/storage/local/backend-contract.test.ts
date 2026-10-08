@@ -168,3 +168,47 @@ describe("IdbAttachmentBackend without a realm IndexedDB", () => {
     await expect(idb.readRecord(HASH_A)).rejects.toThrow(/is closed/);
   });
 });
+
+describe("IdbAttachmentBackend connection recovery", () => {
+  it("opens again after a transient open failure", async () => {
+    const real = new IDBFactory();
+    let opens = 0;
+    const flaky = {
+      open: (name: string, version?: number) => {
+        opens += 1;
+        if (opens === 1) {
+          const failing = {
+            error: new DOMException("transient", "UnknownError"),
+            onerror: null as null | (() => void),
+          };
+          setTimeout(() => failing.onerror?.(), 0);
+          return failing;
+        }
+        return real.open(name, version);
+      },
+    } as unknown as IDBFactory;
+    const store = new IdbAttachmentBackend({
+      indexedDB: flaky,
+      databaseName: "ph-flaky-open",
+    });
+
+    await expect(store.readRecord(HASH_A)).rejects.toThrow();
+    expect(await store.readRecord(HASH_A)).toBeUndefined();
+    await store.close();
+  });
+
+  it("opens again after the browser closes the connection", async () => {
+    const store = new IdbAttachmentBackend({
+      indexedDB: new IDBFactory(),
+      databaseName: "ph-closed-by-browser",
+    });
+    await store.write(record(HASH_A), new Uint8Array([1]));
+
+    const db = (store as unknown as { database: IDBDatabase }).database;
+    db.close();
+    db.onclose?.call(db, new Event("close"));
+
+    expect((await store.readRecord(HASH_A))?.hash).toBe(HASH_A);
+    await store.close();
+  });
+});
