@@ -740,6 +740,40 @@ describe("AttachmentReplicator", () => {
     expect(diagnostics).toEqual([]);
   });
 
+  it("resumes a fetch aborted by stop() when start() follows at once", async () => {
+    let calls = 0;
+    const h = harness([], {
+      fetch: (_hash, _documentId, signal) => {
+        calls += 1;
+        if (calls > 1) return Promise.resolve(dataAnswer());
+        return new Promise((_resolve, reject) => {
+          // A transport may settle its abort a task later, as fetch() can.
+          signal?.addEventListener(
+            "abort",
+            () =>
+              setTimeout(
+                () => reject(new Error("Attachment fetch aborted")),
+                0,
+              ),
+            { once: true },
+          );
+        });
+      },
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await flush();
+
+    await h.replicator.stop();
+    h.replicator.start();
+    await flush();
+    await h.replicator.idle();
+
+    expect(h.fetches).toHaveLength(2);
+    expect(await h.store.has(HASH)).toBe(true);
+    await h.replicator.stop();
+  });
+
   it("gives a terminal not-found one more chance when a new document references it", async () => {
     const h = harness(
       [

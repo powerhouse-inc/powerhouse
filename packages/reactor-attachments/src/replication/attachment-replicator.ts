@@ -450,9 +450,13 @@ export class AttachmentReplicator {
       await this.attempt(entry, controller.signal);
     } catch (error) {
       if (controller.signal.aborted) {
-        // Only stop() aborts; a restart's resumeOutstanding picks it up.
+        // Only stop() aborts. Stopped, the next start() re-queues it; already
+        // restarted, resumeOutstanding saw it fetching, so queue it here.
         entry.state = "queued";
         entry.nextAttemptAtMs = undefined;
+        if (this.running && !this.queue.includes(entry.hash)) {
+          this.queue.push(entry.hash);
+        }
       } else {
         this.recordError(entry, error);
       }
