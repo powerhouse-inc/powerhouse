@@ -16,7 +16,7 @@ import { ParkState } from "./park-state.js";
 import { packagePieces } from "./piece-registry.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
 import type { WorkflowRunGate } from "./run-gate.js";
-import type { WorkflowRuntimeService } from "./service.js";
+import type { PersistedRunResult, WorkflowRuntimeService } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
 import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
@@ -119,6 +119,25 @@ function workflowOp(id: string, document: WorkflowDocument) {
       ordinal,
     },
   } as unknown as OperationWithContext;
+}
+
+// The runs a trigger starts during `during`, settled. A trigger's fire is not
+// awaited by onOperations, so its promise is the only completion signal.
+async function settledFirings(
+  runtime: WorkflowRuntimeService,
+  during: () => Promise<void>,
+): Promise<PersistedRunResult[]> {
+  const fire = vi.spyOn(runtime, "fire");
+  try {
+    await during();
+    return await Promise.all(
+      fire.mock.results.map(
+        (result) => result.value as Promise<PersistedRunResult>,
+      ),
+    );
+  } finally {
+    fire.mockRestore();
+  }
 }
 
 beforeAll(async () => {
@@ -586,18 +605,20 @@ describe("PARK on a trigger the supervisor does not drive", () => {
     await service.onOperations([workflowOp(id, documentEventWorkflow(id))]);
     const store = (await service.store())!;
 
-    await service.onOperations([noteOp("note-1")]);
-    await vi.waitFor(async () =>
-      expect((await store.listRuns(id)).map((run) => run.status)).toEqual([
-        "FAILED",
-      ]),
+    const fired = await settledFirings(service, () =>
+      service.onOperations([noteOp("note-1")]),
     );
-    await vi.waitFor(async () =>
-      expect(await store.getWorkflowPark(id)).toBeDefined(),
-    );
+    expect(fired.map((run) => run.status)).toEqual(["FAILED"]);
+    expect((await store.listRuns(id)).map((run) => run.status)).toEqual([
+      "FAILED",
+    ]);
+    expect(await store.getWorkflowPark(id)).toBeDefined();
 
-    await service.onOperations([noteOp("note-2")]);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(
+      await settledFirings(service, () =>
+        service.onOperations([noteOp("note-2")]),
+      ),
+    ).toEqual([]);
     expect(await store.listRuns(id)).toHaveLength(1);
   });
 });
@@ -661,13 +682,11 @@ describe("a re-publish of a PARKED workflow", () => {
     const id = "wf-park-event-republish";
     await service.onOperations([workflowOp(id, documentEventWorkflow(id))]);
     const store = (await service.store())!;
-    await service.onOperations([noteOp("note-r1")]);
-    await vi.waitFor(async () =>
-      expect(await store.listRuns(id)).toHaveLength(1),
+    const fired = await settledFirings(service, () =>
+      service.onOperations([noteOp("note-r1")]),
     );
-    await vi.waitFor(async () =>
-      expect(await store.getWorkflowPark(id)).toBeDefined(),
-    );
+    expect(fired.map((run) => run.status)).toEqual(["FAILED"]);
+    expect(await store.getWorkflowPark(id)).toBeDefined();
 
     const republished = documents.apply(
       id,
@@ -675,11 +694,12 @@ describe("a re-publish of a PARKED workflow", () => {
       actions.publishWorkflow({ publishedAt: "2026-01-02T00:00:00.000Z" }),
     );
     await service.onOperations([workflowOp(id, republished)]);
-    await service.onOperations([noteOp("note-r2")]);
-
-    await vi.waitFor(async () =>
-      expect(await store.listRuns(id)).toHaveLength(2),
+    const refired = await settledFirings(service, () =>
+      service.onOperations([noteOp("note-r2")]),
     );
+
+    expect(refired.map((run) => run.status)).toEqual(["FAILED"]);
+    expect(await store.listRuns(id)).toHaveLength(2);
   }, 60_000);
 });
 
@@ -1128,10 +1148,11 @@ describe("a park released while the trigger lane is busy", () => {
   async function parkedEventWorkflow(id: string, note: string) {
     await service.onOperations([workflowOp(id, documentEventWorkflow(id))]);
     const store = (await service.store())!;
-    await service.onOperations([noteOp(note)]);
-    await vi.waitFor(async () =>
-      expect(await store.getWorkflowPark(id)).toBeDefined(),
+    const fired = await settledFirings(service, () =>
+      service.onOperations([noteOp(note)]),
     );
+    expect(fired.map((run) => run.status)).toEqual(["FAILED"]);
+    expect(await store.getWorkflowPark(id)).toBeDefined();
     return store;
   }
 
@@ -1167,10 +1188,11 @@ describe("a park released while the trigger lane is busy", () => {
       expect(await store.getWorkflowPark(id)).toBeUndefined(),
     );
 
-    await service.onOperations([noteOp("note-busy-2")]);
-    await vi.waitFor(async () =>
-      expect(await store.listRuns(id)).toHaveLength(2),
+    const refired = await settledFirings(service, () =>
+      service.onOperations([noteOp("note-busy-2")]),
     );
+    expect(refired.map((run) => run.status)).toEqual(["FAILED"]);
+    expect(await store.listRuns(id)).toHaveLength(2);
   }, 60_000);
 
   it("does not hold up seeding a disabled workflow", async () => {
