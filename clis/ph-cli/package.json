@@ -66,8 +66,11 @@
     "@types/node": "catalog:",
     "@types/npm-registry-fetch": "^8.0.9",
     "@types/pg": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "copyfiles": "catalog:",
     "ts-morph": "catalog:",
+    "typescript": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
     "write-package": "catalog:",
     "zod": "catalog:"
   }

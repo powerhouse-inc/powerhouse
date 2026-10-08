@@ -11,8 +11,9 @@ import {
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { vitestConfigTemplate } from "@powerhousedao/codegen/templates";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { startGenerateDocumentModel } from "../src/services/generate-document-model.js";
@@ -104,6 +105,13 @@ function materializeProject(): string {
     if (existsSync(source)) {
       symlinkSync(source, join(modules, dependency));
     }
+  }
+  mkdirSync(join(modules, "@vitest"));
+  for (const dependency of ["@vitest/coverage-v8", "vite-tsconfig-paths"]) {
+    symlinkSync(
+      join(HERE, "..", "node_modules", dependency),
+      join(modules, dependency),
+    );
   }
   mkdirSync(join(modules, ".bin"), { recursive: true });
   const tsc = join(REPOSITORY_ROOT, "node_modules", ".bin", "tsc");
@@ -263,6 +271,34 @@ describe("a scaffolded code-first model", () => {
       { cwd: projectDir, encoding: "utf8" },
     );
     expect(result.status, `${result.stdout}${result.stderr}`).toBe(0);
+  }, 120_000);
+
+  it("meets the coverage threshold the project config enforces", () => {
+    writeFileSync(join(projectDir, "vitest.config.ts"), vitestConfigTemplate);
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(REPOSITORY_ROOT, "node_modules", "vitest", "vitest.mjs"),
+        "run",
+        "--coverage",
+        "--coverage.reporter=json-summary",
+      ],
+      { cwd: projectDir, encoding: "utf8" },
+    );
+    expect(result.status, `${result.stdout}${result.stderr}`).toBe(0);
+
+    const summary = JSON.parse(
+      readFileSync(
+        join(projectDir, "coverage", "coverage-summary.json"),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    const measured = Object.keys(summary)
+      .filter((key) => key !== "total")
+      .map((file) => relative(projectDir, file));
+    expect(measured).toEqual([
+      join("document-models", "todo", "v1", "modules", "items.ts"),
+    ]);
   }, 120_000);
 
   it("is refused a second time rather than overwritten", async () => {

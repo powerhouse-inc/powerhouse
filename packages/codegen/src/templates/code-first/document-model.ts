@@ -260,6 +260,16 @@ describe("${v.pascalCaseDocumentType} v1 items", () => {
     );
   });
 
+  it("refuses to mark an item it does not hold", () => {
+    const document = ${v.moduleV1Name}.reducer(
+      ${v.moduleV1Name}.utils.createDocument(),
+      ${v.moduleV1Name}.actions.setDone({ id: "missing", done: true }),
+    );
+    expect(document.operations.global.at(-1)?.error).toContain(
+      "No item with id missing",
+    );
+  });
+
   it("refuses an input the declaration does not allow", () => {
     expect(() =>
       ${v.moduleV1Name}.actions.setTitle({ title: 12 as unknown as string }),

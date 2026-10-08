@@ -12,7 +12,10 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, ".ph/**"],
     coverage: {
       provider: "v8",
-      include: ["document-models/**/src/reducers/**"],
+      include: [
+        "document-models/**/src/reducers/**",
+        "document-models/**/v*/modules/**",
+      ],
       thresholds: {
         lines: 95,
         branches: 95,
