@@ -75,7 +75,11 @@ export {
   postReactorIdentity,
   type ReactorHello,
 } from "./connect-reactor.js";
-export { ReactorHost, RETIRED_WORKER_RELOAD_REASON } from "./reactor-host.js";
+export {
+  isFingerprintMismatchReload,
+  ReactorHost,
+  RETIRED_WORKER_RELOAD_REASON,
+} from "./reactor-host.js";
 export {
   createSyncManagerProxy,
   SyncManagerProxy,

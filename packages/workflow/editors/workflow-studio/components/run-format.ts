@@ -45,6 +45,10 @@ export const STEP_TONE: Record<string, Tone> = {
   ...RUN_TONE,
   SKIPPED: "idle",
   REPLAYED: "run",
+  // Neither a success nor a failure: a host call the step made timed out, so
+  // a write it asked for may well have been committed. Its own tone, because
+  // reading it as either of the other two is the mistake.
+  INDETERMINATE: "warn",
 };
 
 export const WORKFLOW_TONE: Record<string, Tone> = {
@@ -216,4 +220,16 @@ export function runStats(runs: RunRecord[]): RunStats {
     successRate:
       finished === 0 ? null : Math.round((succeeded / finished) * 100),
   };
+}
+
+// The error name of a run its deadline cancelled (the runtime's
+// RUN_DEADLINE_ERROR_NAME); a refused firing is CANCELLED without one.
+const RUN_DEADLINE_ERROR_NAME = "RunDeadlineExceeded";
+
+// Whether the runtime will resume this run.
+export function canRerun(run: { status: string; errorName?: string | null }) {
+  return (
+    run.status === "FAILED" ||
+    (run.status === "CANCELLED" && run.errorName === RUN_DEADLINE_ERROR_NAME)
+  );
 }

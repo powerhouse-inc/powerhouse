@@ -8,6 +8,7 @@ import {
   formatWhen,
   runStats,
   workflowHealth,
+  canRerun,
 } from "./run-format.js";
 
 describe("formatMs", () => {
@@ -168,5 +169,19 @@ describe("runTone", () => {
     expect(runStatusLabel({ status: "FAILED", warningNotes: ["x"] })).toBe(
       "Failed",
     );
+  });
+});
+
+describe("canRerun", () => {
+  it("offers a rerun of a failed run and of one its deadline cancelled", () => {
+    expect(canRerun({ status: "FAILED" })).toBe(true);
+    expect(
+      canRerun({ status: "CANCELLED", errorName: "RunDeadlineExceeded" }),
+    ).toBe(true);
+  });
+
+  it("does not offer one for a refused firing or a finished run", () => {
+    expect(canRerun({ status: "CANCELLED", errorName: null })).toBe(false);
+    expect(canRerun({ status: "SUCCEEDED" })).toBe(false);
   });
 });
