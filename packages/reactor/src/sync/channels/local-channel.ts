@@ -533,10 +533,10 @@ export class LocalChannel implements IChannel {
     }
   }
 
+  /** Leaves the push retry alone: only a push that lands clears it. */
   private markSuccess(): void {
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
-    this.clearPushRetry();
   }
 
   private recordFailure(error: Error): void {

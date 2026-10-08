@@ -332,6 +332,27 @@ describe("LocalChannel", () => {
       }
     });
 
+    it("keeps its push retry armed when the peer pushes to it", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+        transport.throwOnPost = new Error("port temporarily unusable");
+        channel.outbox.add(syncOp("a->b", 5));
+        expect(channel.getConnectionState().pushBlocked).toBe(true);
+        transport.throwOnPost = undefined;
+
+        transport.deliver(pushFrame("channel-peer", [syncOp("b->a", 1)]));
+
+        expect(channel.inbox.items).toHaveLength(1);
+        const state = channel.getConnectionState();
+        expect(state.pushBlocked).toBe(true);
+        expect(state.pushFailureCount).toBe(1);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+
     it("dead-letters an op on an unrecoverable serialization failure", async () => {
       const transport = new FakeTransport();
       const channel = makeChannel({ transport });
