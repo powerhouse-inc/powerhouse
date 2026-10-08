@@ -995,9 +995,7 @@ export class RoutingReactorClient implements IReactorClient {
     }
     const found = await this.findJob(jobId, signal);
     if (found === undefined) {
-      throw new Error(
-        `waitForJob: no backend of this router knows job ${JSON.stringify(jobId)}`,
-      );
+      return unknownJob(jobId);
     }
     return found.backend.api.waitForJob(job, signal);
   }

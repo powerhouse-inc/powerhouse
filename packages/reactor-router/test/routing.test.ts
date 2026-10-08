@@ -733,6 +733,16 @@ describe("jobs", () => {
     expect(status.status).toBe(JobStatus.FAILED);
   });
 
+  it("waits on a job no backend knows by answering it failed, by name", async () => {
+    const { backends } = topology();
+
+    const done = await router(backends).waitForJob("nobody-knows");
+
+    expect(done.status).toBe(JobStatus.FAILED);
+    expect(done.error?.name).toBe("JobNotFoundError");
+    expect(done.id).toBe("nobody-knows");
+  });
+
   it("waits on the backend that knows the job", async () => {
     const { two, backends } = topology();
     two.jobs.set("job-on-two", fakeJob("job-on-two", "doc-on-two"));
