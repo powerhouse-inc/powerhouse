@@ -131,6 +131,14 @@ export function isDriveAuthError(error: unknown): boolean {
   return false;
 }
 
+/** A repair lever declined a request it cannot carry out safely. */
+export class SyncRepairRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SyncRepairRefusedError";
+  }
+}
+
 export class PollingChannelError extends Error {
   constructor(message: string) {
     super(message);

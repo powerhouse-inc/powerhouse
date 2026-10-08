@@ -347,3 +347,18 @@ export interface ISyncManager {
    */
   onSyncStatusChange(callback: SyncStatusChangeCallback): () => void;
 }
+
+/** Repair levers for one remote's sync state; each is safe to repeat. */
+export interface ISyncAdmin {
+  /** Rebuilds the channel from cursor storage; never drops the remote's record. */
+  resetChannel(remoteName: string): Promise<void>;
+
+  /** Retries a dead letter; its document's quarantine lifts once none remain. */
+  requeueDeadLetter(remoteName: string, id: string): Promise<void>;
+
+  /**
+   * Drops a dead-lettered operation from the mailbox and from storage; a no-op
+   * for an id that is not this remote's.
+   */
+  clearDeadLetter(remoteName: string, id: string): Promise<void>;
+}

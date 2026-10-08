@@ -64,9 +64,12 @@ import {
   ChannelError,
   GraphQLRequestError,
   isDriveAuthError,
+  SyncRepairRefusedError,
 } from "./errors.js";
 import type {
+  IChannel,
   IChannelFactory,
+  ISyncAdmin,
   ISyncManager,
   Remote,
   RemoteMeta,
@@ -249,7 +252,7 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
 }
 
 export class SyncManager
-  implements ISyncManager, IDeliveryTracking, IPurgeRefusalRecorder
+  implements ISyncManager, ISyncAdmin, IDeliveryTracking, IPurgeRefusalRecorder
 {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -272,7 +275,15 @@ export class SyncManager
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
+  // inbox items held back while their document was quarantined
+  private readonly parkedByQuarantine = new WeakSet<SyncOperation>();
   private readonly purgedDocumentIds = new Set<string>();
+  // Requeued dead letters whose row stays until the retry's job succeeds.
+  private readonly requeuedDeadLetterIds = new Map<
+    string,
+    { remoteName: string; documentId: string }
+  >();
+  private readonly requeuesInFlight = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
@@ -287,6 +298,9 @@ export class SyncManager
   private derivingOutboxes = 0;
   private pruneDrainDeferred = false;
   private readonly removing = new Set<string>();
+  private readonly resets = new Map<string, Promise<void>>();
+  // remote name -> the rebuild queued behind its running reset
+  private readonly queuedResets = new Map<string, Promise<void>>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private readonly watermark: ISettledWatermark;
   // remote name -> ordinal its outbox is owed through
@@ -830,12 +844,26 @@ export class SyncManager
         (item) => item.documentId === documentId,
       );
       if (dead.length > 0) remote.channel.deadLetter.remove(...dead);
+      // Parked items would otherwise hold the inbox cursor for good.
+      const parked = remote.channel.inbox.items.filter(
+        (item) =>
+          item.documentId === documentId && this.parkedByQuarantine.has(item),
+      );
+      for (const item of parked) {
+        this.parkedByQuarantine.delete(item);
+        item.executed();
+      }
+      if (parked.length > 0) remote.channel.inbox.remove(...parked);
     }
   }
 
   private async forgetRemote(name: string): Promise<void> {
     this.records.delete(name);
     this.heldKeys.delete(name);
+    // A reset keeps them: the retry's job outlives the channel it came from.
+    for (const [id, pending] of [...this.requeuedDeadLetterIds]) {
+      if (pending.remoteName === name) this.requeuedDeadLetterIds.delete(id);
+    }
     await this.holds.removeRemote(name);
     await Promise.allSettled(this.markerWritesOf([name]));
     await this.markerStorage.removeRemote(name);
@@ -1239,11 +1267,7 @@ export class SyncManager
 
     this.remotes.set(name, remote);
     this.records.set(name, meta);
-    await this.loadDeadLetters(remote);
-    await this.restoreReceivedMarkers(remote);
-    // Restored, or pushed while the remote was reachable but unwired.
-    const unheard = [...remote.channel.inbox.items];
-    this.wireChannelCallbacks(remote);
+    const unheard = await this.wireRemote(remote);
 
     try {
       await channel.init();
@@ -1259,33 +1283,8 @@ export class SyncManager
 
       throw error;
     }
-    if (unheard.length > 0) this.handleInboxAdded(remote, unheard);
-    await this.peerUpdates.get(name);
 
-    this.owe(name, await this.watermarkHead());
-
-    // backfill asynchronously -- don't block channel registration
-    const backfillController = new AbortController();
-    this.backfillAbortControllers.set(name, backfillController);
-    void this.updateOutbox(
-      remote,
-      0,
-      OutboxMode.Backfill,
-      backfillController.signal,
-    )
-      .catch((error) => {
-        if (backfillController.signal.aborted) return;
-        this.logger.error(
-          "Backfill failed for remote @RemoteName: @Error",
-          remote.meta.name,
-          error instanceof Error ? error : new Error(String(error)),
-        );
-      })
-      .finally(() => {
-        this.backfillAbortControllers.delete(name);
-        void this.drainPrunes();
-      });
-
+    await this.activateRemote(remote, unheard, 0);
     return remote;
   }
 
@@ -1301,6 +1300,9 @@ export class SyncManager
     const remote = this.remotes.get(name);
     if (!remote) {
       throw new Error(`Remote with name '${name}' does not exist`);
+    }
+    if (this.resets.has(name) || this.queuedResets.has(name)) {
+      throw new Error(`Remote with name '${name}' is being reset`);
     }
 
     // The channel shuts down and the rows go several awaits before the map
@@ -1373,6 +1375,14 @@ export class SyncManager
       backfillController.abort();
       this.backfillAbortControllers.delete(name);
     }
+    // A parked requeue has no job to outlive the channel; its row reloads.
+    for (const [id, pending] of [...this.requeuedDeadLetterIds]) {
+      if (pending.remoteName !== name) continue;
+      const item = remote.channel.inbox.get(id);
+      if (item && this.parkedByQuarantine.has(item)) {
+        this.requeuedDeadLetterIds.delete(id);
+      }
+    }
 
     try {
       await remote.channel.shutdown();
@@ -1417,6 +1427,433 @@ export class SyncManager
   /** Settles once the remotes' received markers are stored; rejects if one failed. */
   async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
     await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  /** Never joins a running rebuild: it may have read state older than the request. */
+  resetChannel(remoteName: string): Promise<void> {
+    const queued = this.queuedResets.get(remoteName);
+    if (queued) return queued;
+    const running = this.resets.get(remoteName);
+    if (!running) return this.startReset(remoteName);
+    const next = running
+      .catch(() => undefined)
+      .then(() => {
+        this.queuedResets.delete(remoteName);
+        return this.startReset(remoteName);
+      });
+    this.queuedResets.set(remoteName, next);
+    return next;
+  }
+
+  private startReset(name: string): Promise<void> {
+    const reset = this.rebuildChannel(name).finally(() => {
+      this.resets.delete(name);
+    });
+    this.resets.set(name, reset);
+    return reset;
+  }
+
+  /** On failure the remote is unregistered, record kept, and can be reset again. */
+  private async rebuildChannel(name: string): Promise<void> {
+    if (this.isShutdown) {
+      throw new Error("SyncManager is shutdown and cannot reset remotes");
+    }
+    if (this.removing.has(name)) {
+      throw new Error(`Remote with name '${name}' is being removed`);
+    }
+    const live = this.remotes.get(name);
+    const meta = live?.meta ?? this.records.get(name);
+    if (!meta) {
+      throw new Error(`Remote with name '${name}' does not exist`);
+    }
+
+    this.removing.add(name);
+    // Parked requeues reload as dead letters rather than carry over.
+    const requeued = new Set(
+      [...this.requeuedDeadLetterIds]
+        .filter(([, pending]) => pending.remoteName === name)
+        .map(([id]) => id),
+    );
+    if (live) {
+      try {
+        await this.teardownRemoteResources(live);
+      } catch (error) {
+        this.abandonReset(name, error);
+        throw error;
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) {
+      const error = new Error("SyncManager shut down during the reset");
+      this.abandonReset(name, error);
+      throw error;
+    }
+
+    let channel: IChannel;
+    try {
+      channel = this.channelFactory.instance(
+        meta.id,
+        meta.name,
+        meta.channelConfig,
+        this.cursorStorage,
+        meta.collectionId,
+        meta.filter,
+        this.operationIndex,
+        meta.options,
+      );
+    } catch (error) {
+      this.abandonReset(name, error);
+      throw error;
+    }
+    const fresh: Remote = { meta, channel };
+    this.remotes.set(name, fresh);
+    if (live) this.carryParked(live, fresh, requeued);
+
+    let unheard: SyncOperation[];
+    try {
+      unheard = await this.wireRemote(fresh, true);
+    } catch (error) {
+      this.removing.delete(name);
+      await this.failReset(fresh, error);
+      throw error;
+    }
+    this.removing.delete(name);
+
+    try {
+      await channel.init();
+    } catch (error) {
+      await this.failReset(fresh, error);
+      throw error;
+    }
+
+    await this.activateRemote(fresh, unheard, channel.outbox.ackOrdinal);
+  }
+
+  /** A pushing remote never resends them, so the fresh inbox parks them again. */
+  private carryParked(
+    live: Remote,
+    fresh: Remote,
+    requeued: ReadonlySet<string>,
+  ): void {
+    for (const item of live.channel.inbox.items) {
+      if (!this.parkedByQuarantine.has(item) || requeued.has(item.id)) continue;
+      const copy = new SyncOperation(
+        item.id,
+        item.jobId,
+        item.jobDependencies,
+        item.remoteName,
+        item.documentId,
+        item.scopes,
+        item.branch,
+        item.operations,
+      );
+      fresh.channel.inbox.add(copy);
+      fresh.channel.inbox.hold?.(copy);
+    }
+  }
+
+  /** Before a fresh channel is registered: nothing to tear down. */
+  private abandonReset(name: string, error: unknown): void {
+    this.logResetFailure(name, error);
+    this.remotes.delete(name);
+    this.removing.delete(name);
+  }
+
+  private async failReset(fresh: Remote, error: unknown): Promise<void> {
+    this.logResetFailure(fresh.meta.name, error);
+    await this.dropRemoteAfterFailedInit(fresh, false);
+  }
+
+  private logResetFailure(name: string, error: unknown): void {
+    this.logger.error(
+      "Resetting remote @name failed; it stays down until reset again or restarted: @error",
+      name,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  /**
+   * Restores and wires the mailboxes; returns the inbox items not yet heard.
+   * `strict` fails on a storage read rather than wiring a partial channel.
+   */
+  private async wireRemote(
+    remote: Remote,
+    strict = false,
+  ): Promise<SyncOperation[]> {
+    await this.loadDeadLetters(remote, strict);
+    await this.restoreReceivedMarkers(remote, strict);
+    // Restored, or pushed while the remote was reachable but unwired.
+    const unheard = [...remote.channel.inbox.items];
+    this.wireChannelCallbacks(remote);
+    return unheard;
+  }
+
+  /** After init: hands over unheard items and starts the outbox backfill. */
+  private async activateRemote(
+    remote: Remote,
+    unheard: SyncOperation[],
+    backfillFrom: number,
+  ): Promise<void> {
+    const name = remote.meta.name;
+    if (unheard.length > 0) this.handleInboxAdded(remote, unheard);
+    await this.peerUpdates.get(name);
+
+    this.owe(name, await this.watermarkHead());
+
+    // backfill asynchronously -- don't block channel registration
+    const backfillController = new AbortController();
+    this.backfillAbortControllers.set(name, backfillController);
+    void this.updateOutbox(
+      remote,
+      backfillFrom,
+      OutboxMode.Backfill,
+      backfillController.signal,
+    )
+      .catch((error) => {
+        if (backfillController.signal.aborted) return;
+        this.logger.error(
+          "Backfill failed for remote @RemoteName: @Error",
+          name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      })
+      .finally(() => {
+        this.backfillAbortControllers.delete(name);
+        void this.drainPrunes();
+      });
+  }
+
+  /** Keeps the row until the retry succeeds, so a crash cannot lose the op. */
+  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    if (
+      this.requeuesInFlight.has(id) ||
+      this.requeuedDeadLetterIds.has(id) ||
+      remote.channel.inbox.get(id)
+    ) {
+      return;
+    }
+    this.requeuesInFlight.add(id);
+    try {
+      await this.requeue(remote, remoteName, id);
+    } finally {
+      this.requeuesInFlight.delete(id);
+    }
+  }
+
+  private async requeue(
+    remote: Remote,
+    remoteName: string,
+    id: string,
+  ): Promise<void> {
+    const source = await this.findDeadLetter(remote, id);
+    if (!source) {
+      return;
+    }
+    this.assertServing(remote, id);
+    const errorSource =
+      source instanceof SyncOperation
+        ? source.error?.source
+        : source.errorSource;
+    if (errorSource !== ChannelErrorSource.Inbox) {
+      throw new SyncRepairRefusedError(
+        `Cannot requeue dead letter '${id}' of '${remoteName}': it failed on the ${errorSource ?? "unknown"} side, not while applying here.`,
+      );
+    }
+
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    this.requeuedDeadLetterIds.set(source.id, {
+      remoteName: remote.meta.name,
+      documentId: source.documentId,
+    });
+    const lift = await this.mayLiftQuarantine(source.documentId);
+    try {
+      this.assertServing(remote, id);
+    } catch (error) {
+      this.requeuedDeadLetterIds.delete(source.id);
+      throw error;
+    }
+
+    const requeued = new SyncOperation(
+      source.id,
+      source.jobId,
+      source.jobDependencies,
+      source.remoteName,
+      source.documentId,
+      source.scopes,
+      source.branch,
+      source.operations,
+    );
+    // Parked while still quarantined, so the lift loads it ahead of later ops.
+    remote.channel.inbox.add(requeued);
+    if (lift) this.liftQuarantine(source.documentId);
+  }
+
+  /** A requeue into a channel torn down meanwhile would never load. */
+  private assertServing(remote: Remote, id: string): void {
+    const name = remote.meta.name;
+    if (this.remotes.get(name) === remote && !this.removing.has(name)) return;
+    throw new SyncRepairRefusedError(
+      `Remote '${name}' was reset or removed while requeueing dead letter '${id}'; requeue it again`,
+    );
+  }
+
+  private async liftQuarantineIfClear(documentId: string): Promise<void> {
+    if (await this.mayLiftQuarantine(documentId)) {
+      this.liftQuarantine(documentId);
+    }
+  }
+
+  /** Whether the restart rule would lift it: no quarantining dead letter left. */
+  private async mayLiftQuarantine(documentId: string): Promise<boolean> {
+    if (!this.quarantinedDocumentIds.has(documentId)) return false;
+    if (this.holdsQuarantiningDeadLetter(documentId)) return false;
+    let stored: boolean;
+    try {
+      stored = await this.storesQuarantiningDeadLetter(documentId);
+    } catch (error) {
+      this.logger.warn(
+        "Could not read dead letters for @documentId; its quarantine stays: @error",
+        documentId,
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
+    // A dead letter can land during the read, before its row does.
+    return (
+      !stored &&
+      this.quarantinedDocumentIds.has(documentId) &&
+      !this.holdsQuarantiningDeadLetter(documentId)
+    );
+  }
+
+  private holdsQuarantiningDeadLetter(documentId: string): boolean {
+    for (const remote of this.remotes.values()) {
+      for (const item of remote.channel.deadLetter.items) {
+        if (
+          item.documentId === documentId &&
+          !this.requeuedDeadLetterIds.has(item.id) &&
+          quarantinesDocument(syncOperationErrorType(item.error))
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** The restart rule, less the rows kept only for a pending requeue. */
+  private async storesQuarantiningDeadLetter(
+    documentId: string,
+  ): Promise<boolean> {
+    const quarantined = await this.deadLetterStorage.listQuarantinedDocumentIds(
+      undefined,
+      [...this.requeuedDeadLetterIds.keys()],
+    );
+    return quarantined.includes(documentId);
+  }
+
+  /** Hands the document's parked inbox items to the apply path again. */
+  private liftQuarantine(documentId: string): void {
+    if (!this.quarantinedDocumentIds.delete(documentId)) return;
+    for (const remote of this.remotes.values()) {
+      // Its parked items come back through the fresh channel.
+      if (this.removing.has(remote.meta.name)) continue;
+      const parked = remote.channel.inbox.items
+        .filter(
+          (item) =>
+            item.documentId === documentId && this.parkedByQuarantine.has(item),
+        )
+        .sort((a, b) => firstOrdinalOf(a) - firstOrdinalOf(b));
+      if (parked.length === 0) continue;
+      for (const item of parked) this.parkedByQuarantine.delete(item);
+      // One batch rejects a repeated plan key.
+      const rounds: SyncOperation[][] = [];
+      const seen = new Map<string, number>();
+      for (const item of parked) {
+        const round = item.jobId ? (seen.get(item.jobId) ?? 0) : 0;
+        if (item.jobId) seen.set(item.jobId, round + 1);
+        (rounds[round] ??= []).push(item);
+      }
+      for (const round of rounds) this.handleInboxAdded(remote, round);
+    }
+  }
+
+  /** A failed remove leaves a row for a later clear; the op itself is durable. */
+  private async dropRequeuedDeadLetter(
+    id: string,
+    remoteName: string,
+  ): Promise<void> {
+    if (this.requeuedDeadLetterIds.get(id)?.remoteName !== remoteName) {
+      return;
+    }
+    this.requeuedDeadLetterIds.delete(id);
+    // A reset since the requeue reloaded the row into the fresh mailbox.
+    const current = this.remotes.get(remoteName);
+    const reloaded = current?.channel.deadLetter.get(id);
+    if (current && reloaded) current.channel.deadLetter.remove(reloaded);
+    try {
+      await this.deadLetterStorage.remove(id);
+    } catch (error) {
+      this.logger.error(
+        "Failed to remove a requeued dead letter after its retry succeeded (@id, @error)",
+        id,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const source = await this.findDeadLetter(remote, id);
+    // Storage removes by id alone, so another remote's row must not get here.
+    if (!source) return;
+    await this.deadLetterStorage.remove(id);
+    // A reset during the remove can have reloaded the row into a fresh mailbox.
+    for (const holder of new Set([remote, this.remotes.get(remoteName)])) {
+      if (!holder) continue;
+      const item = holder.channel.deadLetter.get(id);
+      if (item) holder.channel.deadLetter.remove(item);
+      // A requeue parked by the quarantine would otherwise load at the lift.
+      const parked = holder.channel.inbox.get(id);
+      if (parked && this.parkedByQuarantine.has(parked)) {
+        this.parkedByQuarantine.delete(parked);
+        parked.executed();
+        holder.channel.inbox.remove(parked);
+      }
+    }
+    this.requeuedDeadLetterIds.delete(id);
+    await this.liftQuarantineIfClear(source.documentId);
+  }
+
+  /** Live item first; else scans storage for one the capped mailbox evicted. */
+  private async findDeadLetter(
+    remote: Remote,
+    id: string,
+  ): Promise<SyncOperation | DeadLetterRecord | undefined> {
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      return item;
+    }
+    let cursor = "0";
+    for (;;) {
+      const page = await this.deadLetterStorage.list(remote.meta.name, {
+        cursor,
+        limit: this.config.maxDeadLettersPerRemote,
+      });
+      const match = page.results.find((record) => record.id === id);
+      if (match) {
+        return match;
+      }
+      if (!page.nextCursor) {
+        return undefined;
+      }
+      cursor = page.nextCursor;
+    }
   }
 
   private recordPlanKeyMapping(planKey: string, jobId: string): void {
@@ -1515,6 +1952,7 @@ export class SyncManager
       const syncOps = remaining.filter((syncOp) => !purged.includes(syncOp));
 
       for (const syncOp of syncOps) {
+        this.requeuedDeadLetterIds.delete(syncOp.id);
         this.logger.error(
           "Dead letter (@remote, @documentId, @jobId, @error, @dependencies)",
           remote.meta.name,
@@ -1583,7 +2021,7 @@ export class SyncManager
     });
   }
 
-  private async loadDeadLetters(remote: Remote): Promise<void> {
+  private async loadDeadLetters(remote: Remote, strict = false): Promise<void> {
     let records: DeadLetterRecord[];
     try {
       const page = await this.deadLetterStorage.list(remote.meta.name, {
@@ -1592,6 +2030,7 @@ export class SyncManager
       });
       records = page.results;
     } catch (error) {
+      if (strict) throw error;
       this.logger.error(
         "Failed to load dead letters for remote (@name, @error)",
         remote.meta.name,
@@ -1834,14 +2273,27 @@ export class SyncManager
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
+        void this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
         eligible.push(syncOp);
+      } else if (
+        // A requeue parks as its own copy; its row goes only once it loads.
+        !this.requeuedDeadLetterIds.has(syncOp.id) &&
+        this.parkedCopyOf(remote, syncOp)
+      ) {
+        // Its ordinals are held by the parked copy; two would share a plan key.
+        dropped.push(syncOp);
+      } else {
+        this.parkedByQuarantine.add(syncOp);
+        // Holds the cursor across a reset. Memory only: a push-fed channel loses
+        // it on restart unless the client re-pushes, as on main, until rewind/replay.
+        remote.channel.inbox.hold?.(syncOp);
       }
     }
     // A purged id's history is gone here; a job or a dead letter would restore it.
     for (const syncOp of dropped) {
       this.logger.debug(
-        "Dropping received operations of a purged or already-loading document (@remote, @documentId)",
+        "Dropping received operations of a purged, already-loading or already-parked document (@remote, @documentId)",
         remote.meta.name,
         syncOp.documentId,
       );
@@ -1873,6 +2325,25 @@ export class SyncManager
       );
       void this.processInboxChunks(chunks);
     }
+  }
+
+  private parkedCopyOf(remote: Remote, syncOp: SyncOperation): boolean {
+    const ops = syncOp.operations.map((op) => op.operation);
+    if (ops.length === 0) return false;
+    return remote.channel.inbox.items.some(
+      (item) =>
+        item !== syncOp &&
+        this.parkedByQuarantine.has(item) &&
+        item.documentId === syncOp.documentId &&
+        item.branch === syncOp.branch &&
+        item.jobId === syncOp.jobId &&
+        ops.every((op) =>
+          item.operations.some(
+            ({ operation }) =>
+              operation.id === op.id && operation.index === op.index,
+          ),
+        ),
+    );
   }
 
   /** Forgets a marker once the item loading it leaves the inbox. */
@@ -1943,12 +2414,16 @@ export class SyncManager
   }
 
   /** Queued before init resets latestOrdinal, so a puller is re-served above it. */
-  private async restoreReceivedMarkers(remote: Remote): Promise<void> {
+  private async restoreReceivedMarkers(
+    remote: Remote,
+    strict = false,
+  ): Promise<void> {
     const name = remote.meta.name;
     let records;
     try {
       records = await this.markerStorage.list(name);
     } catch (error) {
+      if (strict) throw error;
       this.logger.error(
         "Failed to load received markers for remote (@name, @error)",
         name,
@@ -2073,12 +2548,15 @@ export class SyncManager
 
     if (this.isShutdown) return;
 
+    let resolved = false;
     if (completedJobInfo.status !== JobStatus.FAILED) {
       syncOp.executed();
       if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      resolved = true;
     } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
       this.tombstone(syncOp.documentId);
       syncOp.executed();
+      resolved = true;
     } else {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
@@ -2098,6 +2576,10 @@ export class SyncManager
 
     this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
+
+    if (resolved) {
+      await this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
+    }
   }
 
   /** Reloads a marker with backoff; it stays in the inbox, not dead-lettered. */
@@ -2158,6 +2640,7 @@ export class SyncManager
       this.markerRetries.delete(syncOp.id);
       syncOp.executed();
       remote.channel.inbox.remove(syncOp);
+      await this.dropRequeuedDeadLetter(syncOp.id, name);
       return;
     }
     await this.applyInboxJob(remote, syncOp);
@@ -2280,12 +2763,15 @@ export class SyncManager
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
 
+      let resolved = false;
       if (completedJobInfo.status !== JobStatus.FAILED) {
         syncOp.executed();
         if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+        resolved = true;
       } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
         this.tombstone(syncOp.documentId);
         syncOp.executed();
+        resolved = true;
       } else if (
         carriesMarker(syncOp) &&
         !isRefusedMarker(completedJobInfo.error)
@@ -2302,6 +2788,10 @@ export class SyncManager
       }
 
       remote.channel.inbox.remove(syncOp);
+
+      if (resolved) {
+        await this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
+      }
     }
   }
 
