@@ -161,10 +161,6 @@ export class RouterTable {
     );
   }
 
-  get defaultRequirements(): CollectionRequirements {
-    return this.fallbackRequirements;
-  }
-
   /** Correction, override, learned, hash; `excluded` backends are skipped. */
   collectionRoute(
     collection: DriveCollectionId,
