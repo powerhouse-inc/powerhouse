@@ -2532,6 +2532,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
+      document-model:
+        specifier: workspace:*
+        version: link:../document-model
     devDependencies:
       tsdown:
         specifier: 'catalog:'

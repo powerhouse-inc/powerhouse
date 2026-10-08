@@ -245,7 +245,8 @@ export class FakeBackend {
             input?: unknown;
           }[]) {
             if (action.type === "SET_NAME") {
-              next.header.name = action.input as string;
+              const input = action.input as string | { name: string };
+              next.header.name = typeof input === "string" ? input : input.name;
             }
           }
           this.seed(next);

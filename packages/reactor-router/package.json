@@ -38,7 +38,8 @@
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
-    "@powerhousedao/shared": "workspace:*"
+    "@powerhousedao/shared": "workspace:*",
+    "document-model": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "catalog:",

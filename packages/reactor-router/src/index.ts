@@ -21,7 +21,6 @@ export {
   RouterBackend,
   UnsupportedByBackendError,
   type BackendSupports,
-  type BatchSubmitter,
   type FindSupport,
   type IRoutableBackend,
   type RoutableBackendConfig,
@@ -75,3 +74,10 @@ export {
   type Ownership,
   type OwnershipProbe,
 } from "./guard.js";
+export {
+  createRoutingClient,
+  RoutingReactorClient,
+  type RoutingClientOptions,
+} from "./routing-client.js";
+export { resolveOn, RoutingDriveClient } from "./routing-drive-client.js";
+export { changeKey, subscribeAll } from "./subscribe-mux.js";

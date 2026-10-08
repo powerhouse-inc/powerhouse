@@ -1,8 +1,7 @@
 import type {
   ActionCandidate,
   ActionEvaluations,
-  BatchExecutionRequest,
-  BatchExecutionResult,
+  BatchSubmitter,
   BatchLoadRequest,
   BatchLoadResult,
   DocumentChangeEvent,
@@ -42,11 +41,6 @@ export type BackendSupports = {
   /** Reads with `view.revision`. */
   readonly pointInTimeViews: boolean;
 };
-
-export type BatchSubmitter = (
-  request: BatchExecutionRequest,
-  signal?: AbortSignal,
-) => Promise<BatchExecutionResult>;
 
 /** An absent optional member declares non-support; never use a catch-all Proxy. */
 export interface IRoutableBackend {
