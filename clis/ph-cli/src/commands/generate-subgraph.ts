@@ -40,7 +40,7 @@ export const generateSubgraphCmd = command({
     codeFirst: flag({
       long: "code-first",
       description:
-        "Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name.",
+        "Declare the new subgraph in TypeScript and register it in definitionSources and powerhouse.manifest.json. Use with --name.",
     }),
     ...skipInstallArgs,
     ...debugArgs,

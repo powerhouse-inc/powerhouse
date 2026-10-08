@@ -24,13 +24,16 @@ import {
   getOrCreateSourceFile,
 } from "utils";
 import { planDefinitionSourceRegistration } from "../definition-sources.js";
+import { createOrUpdateManifest, readManifest } from "../manifest.js";
 import { refreshDocumentModelAggregates } from "./document-model.js";
 
 /**
  * Writes a code-first model's files, then registers it in
  * `definitionSources`, so a failed write leaves the config untouched. Rebuilds
- * the aggregates that export it in the project for the caller to save.
- * Refuses to overwrite any of the files.
+ * and saves the aggregates that export it, then registers it in
+ * `powerhouse.manifest.json`, so a failed save leaves the manifest untouched.
+ * Refuses to overwrite any of the files, and refuses a manifest that does not
+ * validate before writing anything.
  */
 export async function tsMorphGenerateCodeFirstDocumentModel(
   args: GenerateCodeFirstDocumentModelArgs,
@@ -77,6 +80,7 @@ export async function tsMorphGenerateCodeFirstDocumentModel(
     projectDir,
     { specifier: `./${modelDir}/index.ts` },
   );
+  await readManifest(projectDir);
   for (const [path, text] of files) {
     const { sourceFile } = getOrCreateSourceFile(
       project,
@@ -88,6 +92,24 @@ export async function tsMorphGenerateCodeFirstDocumentModel(
   }
   await commit();
   await refreshDocumentModelAggregates(project);
+  for (const name of [
+    "index.ts",
+    "document-models.ts",
+    "upgrade-manifests.ts",
+  ]) {
+    await project
+      .getSourceFileOrThrow(join(documentModelsDir.getPath(), name))
+      .save();
+  }
+  await createOrUpdateManifest(
+    {
+      documentModels: [{ name: v.pascalCaseDocumentType, id: v.documentType }],
+    },
+    projectDir,
+  );
 
-  return { written: files.map(([path]) => path), registration };
+  return {
+    written: [...files.map(([path]) => path), "powerhouse.manifest.json"],
+    registration,
+  };
 }

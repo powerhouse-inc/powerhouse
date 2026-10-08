@@ -1,6 +1,6 @@
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import type { CodeFirstGenerationResult } from "file-builders";
-import { createOrUpdateManifest } from "file-builders";
+import { createOrUpdateManifest, readManifest } from "file-builders";
 import { existsSync } from "node:fs";
 import path from "path";
 import { filter, isTruthy, map, pipe, uniqueBy } from "remeda";
@@ -169,9 +169,10 @@ function addMissingNamespaceExports(
 /**
  * Writes a code-first subgraph declaration, then registers it in
  * `definitionSources`, so a failed write leaves the config untouched. Exports
- * it from `subgraphs/index.ts` under the name of its inner constant, in the
- * project for the caller to save. Refuses to overwrite an existing
- * declaration.
+ * it from `subgraphs/index.ts` under the name of its inner constant and saves
+ * that file, then registers it in `powerhouse.manifest.json`, so a failed save
+ * leaves the manifest untouched. Refuses to overwrite an existing declaration,
+ * and refuses a manifest that does not validate before writing anything.
  */
 export async function tsMorphGenerateCodeFirstSubgraph(args: {
   subgraphName: string;
@@ -198,6 +199,7 @@ export async function tsMorphGenerateCodeFirstSubgraph(args: {
     projectDir,
     { specifier: `./${declarationPath}` },
   );
+  await readManifest(projectDir);
   const declaration = getOrCreateSourceFile(
     project,
     path.join(projectDir, declarationPath),
@@ -226,6 +228,18 @@ export async function tsMorphGenerateCodeFirstSubgraph(args: {
     },
   ]);
   await formatSourceFileWithPrettier(index);
+  await index.save();
+  await createOrUpdateManifest(
+    { subgraphs: [{ name: subgraphName, id: kebabCaseName }] },
+    projectDir,
+  );
 
-  return { written: [declarationPath, "subgraphs/index.ts"], registration };
+  return {
+    written: [
+      declarationPath,
+      "subgraphs/index.ts",
+      "powerhouse.manifest.json",
+    ],
+    registration,
+  };
 }

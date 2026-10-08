@@ -63,7 +63,7 @@ Name of the directory of an existing document model to re-generate<br><br>
 **usage:** `--dir <dir>`<br>
 
 #### Code First <br>
-Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources<br><br>
+Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources and powerhouse.manifest.json<br><br>
 **usage:** `--code-first <str>`<br>
 
 
@@ -241,7 +241,7 @@ Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs
 **usage:** `--extract, -x`<br>
 
 #### Code First <br>
-Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name.<br><br>
+Declare the new subgraph in TypeScript and register it in definitionSources and powerhouse.manifest.json. Use with --name.<br><br>
 **usage:** `--code-first`<br>
 
 #### Skip Install <br>

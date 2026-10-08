@@ -35,7 +35,7 @@ export const generateDocumentModelCmd = command({
       type: optional(string),
       long: "code-first",
       description:
-        "Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources",
+        "Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources and powerhouse.manifest.json",
     }),
     ...debugArgs,
   },

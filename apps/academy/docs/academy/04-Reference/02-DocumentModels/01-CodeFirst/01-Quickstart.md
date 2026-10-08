@@ -24,9 +24,10 @@ document-models/todo/v1/tests/document-model.test.ts
 document-models/todo/v1/tests/items.test.ts
 ```
 
-The command also registers the model in two files:
+The command also registers the model in three files:
 
 - `powerhouse.config.json` gets an entry under `definitionSources`. `ph model check` reads this list.
+- `powerhouse.manifest.json` gets an entry under `documentModels`. The registry reads this list to find the package for a document type.
 - `document-models/index.ts` gets a re-export. Every host loader reads this file.
 
 :::warning

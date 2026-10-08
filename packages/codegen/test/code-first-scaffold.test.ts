@@ -1,27 +1,31 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { DefinitionSourceLoader } from "document-model/tooling";
 import { Project } from "ts-morph";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 import {
   generateCodeFirstDocumentModel,
   generateCodeFirstSubgraph,
 } from "../src/codegen/generate.js";
 import { codeFirstAggregateSources } from "../src/file-builders/document-model/code-first-aggregates.js";
-import { planDefinitionSourceRegistration } from "../src/file-builders/index.mts";
+import {
+  createOrUpdateManifest,
+  planDefinitionSourceRegistration,
+} from "../src/file-builders/index.mts";
 import { buildTsMorphProject, formatSafe } from "../src/utils/index.mts";
 import { refreshDocumentModelAggregates } from "../src/file-builders/document-model/document-model.js";
 import { ViteTypeScriptSourceImportAdapter } from "../src/utils/definition-source-importer.js";
+import { createCodeFirstPackage } from "./code-first-package.js";
 
 let projectDir: string;
 let enteredFrom: string;
@@ -53,6 +57,16 @@ function read(path: string): string {
   return readFileSync(join(projectDir, path), "utf8");
 }
 
+const manifestPath = () => join(projectDir, "powerhouse.manifest.json");
+
+function readManifestJson(): unknown {
+  return JSON.parse(read("powerhouse.manifest.json"));
+}
+
+async function writeInitManifest(): Promise<void> {
+  await createOrUpdateManifest({ name: "new-project" }, projectDir);
+}
+
 const todo = {
   name: "todo",
   documentType: "acme-things/todo",
@@ -75,33 +89,7 @@ async function generateSubgraph(name: string) {
 
 beforeEach(() => {
   enteredFrom = process.cwd();
-  projectDir = mkdtempSync(join(tmpdir(), "ph-code-first-"));
-  mkdirSync(join(projectDir, "document-models"), { recursive: true });
-  mkdirSync(join(projectDir, "node_modules", "@powerhousedao"), {
-    recursive: true,
-  });
-  symlinkSync(
-    fileURLToPath(new URL("../../document-model", import.meta.url)),
-    join(projectDir, "node_modules", "document-model"),
-    "junction",
-  );
-  for (const name of ["shared", "reactor-api"])
-    symlinkSync(
-      fileURLToPath(new URL(`../../${name}`, import.meta.url)),
-      join(projectDir, "node_modules", "@powerhousedao", name),
-      "junction",
-    );
-  writeFileSync(
-    join(projectDir, "package.json"),
-    JSON.stringify({ name: "@acme/things", type: "module" }),
-  );
-  writeFileSync(
-    join(projectDir, "tsconfig.json"),
-    JSON.stringify({
-      compilerOptions: { module: "nodenext", moduleResolution: "nodenext" },
-    }),
-  );
-  writeConfig({ documentModelsDir: "./document-models" });
+  projectDir = createCodeFirstPackage();
 });
 
 afterEach(() => {
@@ -264,6 +252,7 @@ describe("generateCodeFirstDocumentModel", () => {
         "document-models/todo/upgrades/upgrade-manifest.ts",
         "document-models/todo/upgrades/index.ts",
         "document-models/todo/index.ts",
+        "powerhouse.manifest.json",
       ],
       registration: "created",
     });
@@ -314,8 +303,9 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
 
   it("writes files the project formatter leaves unchanged", async () => {
     const { written } = await generateModel();
-    expect(written).toHaveLength(9);
-    for (const path of written) {
+    const sources = written.filter((path) => path.endsWith(".ts"));
+    expect(sources).toHaveLength(9);
+    for (const path of sources) {
       expect(await formatSafe(read(path)), path).toBe(read(path));
     }
   });
@@ -655,7 +645,11 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
 describe("generateCodeFirstSubgraph", () => {
   it("writes the declaration and exports it under its constant's name", async () => {
     expect(await generateSubgraph("widgets")).toStrictEqual({
-      written: ["subgraphs/widgets.ts", "subgraphs/index.ts"],
+      written: [
+        "subgraphs/widgets.ts",
+        "subgraphs/index.ts",
+        "powerhouse.manifest.json",
+      ],
       registration: "created",
     });
     expect(read("subgraphs/index.ts")).toBe(
@@ -675,6 +669,7 @@ describe("generateCodeFirstSubgraph", () => {
     expect((await generateSubgraph("SearchIndex")).written).toStrictEqual([
       "subgraphs/search-index.ts",
       "subgraphs/index.ts",
+      "powerhouse.manifest.json",
     ]);
     expect(read("subgraphs/index.ts")).toBe(
       'export * as SearchIndexSubgraph from "./search-index.js";\n',
@@ -709,5 +704,219 @@ describe("generateCodeFirstSubgraph", () => {
     const config = readFileSync(configPath(), "utf8");
     await expect(generateSubgraph("widgets")).rejects.toThrow(/widgets\.ts/);
     expect(readFileSync(configPath(), "utf8")).toBe(config);
+  });
+});
+
+describe("code-first manifest registration", () => {
+  const notes = {
+    name: "notes",
+    documentType: "acme-things/notes",
+    author: todo.author,
+  };
+  const readOnlyUnsupported =
+    process.platform === "win32" || process.getuid?.() === 0;
+
+  it("adds the model to the manifest ph init wrote and changes nothing else", async () => {
+    await writeInitManifest();
+    await generateModel();
+    expect(read("powerhouse.manifest.json")).toBe(`{
+  "name": "new-project",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "name": "Todo",
+      "id": "acme-things/todo"
+    }
+  ],
+  "apps": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}
+`);
+  });
+
+  it("creates the manifest, named after the package, when there is none", async () => {
+    await generateModel();
+    expect(read("powerhouse.manifest.json")).toBe(`{
+  "name": "@acme/things",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "name": "Todo",
+      "id": "acme-things/todo"
+    }
+  ],
+  "apps": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}
+`);
+  });
+
+  it("keeps an existing entry for the document type and adds no second one", async () => {
+    writeFileSync(
+      manifestPath(),
+      JSON.stringify({
+        name: "@acme/things",
+        documentModels: [{ name: "Todo List", id: "acme-things/todo" }],
+      }),
+    );
+    await generateModel();
+    expect(readManifestJson()).toStrictEqual({
+      name: "@acme/things",
+      documentModels: [{ id: "acme-things/todo", name: "Todo List" }],
+      publisher: {},
+      editors: [],
+      apps: [],
+      processors: [],
+      subgraphs: [],
+      config: [],
+    });
+  });
+
+  it("lists every model it scaffolds", async () => {
+    await generateModel();
+    await generateModel(notes);
+    expect(readManifestJson()).toMatchObject({
+      documentModels: [
+        { id: "acme-things/todo", name: "Todo" },
+        { id: "acme-things/notes", name: "Notes" },
+      ],
+    });
+  });
+
+  it.each([
+    ["model", () => generateModel(), "document-models/todo"],
+    ["subgraph", () => generateSubgraph("widgets"), "subgraphs/widgets.ts"],
+  ])(
+    "refuses an invalid manifest before writing the %s",
+    async (_, generate, written) => {
+      const manifest = JSON.stringify({
+        name: "@acme/things",
+        config: [{ name: "OLD", type: "legacy" }],
+      });
+      writeFileSync(manifestPath(), manifest);
+      const config = readFileSync(configPath(), "utf8");
+      const rejection = generate();
+      await expect(rejection).rejects.toBeInstanceOf(ZodError);
+      await expect(rejection).rejects.toMatchObject({
+        issues: [{ path: ["config", 0, "type"] }],
+      });
+      expect(existsSync(join(projectDir, written))).toBe(false);
+      expect(readFileSync(configPath(), "utf8")).toBe(config);
+      expect(read("powerhouse.manifest.json")).toBe(manifest);
+    },
+  );
+
+  it("saves the aggregates it rebuilds and no other file in the caller's project", async () => {
+    writeFileSync(join(projectDir, "notes.ts"), "export const notes = 1;\n");
+    const project = buildTsMorphProject(projectDir);
+    project
+      .addSourceFileAtPath(join(projectDir, "notes.ts"))
+      .replaceWithText("export const notes = 2;\n");
+    await generateCodeFirstDocumentModel(todo, project);
+    expect(read("notes.ts")).toBe("export const notes = 1;\n");
+    expect(read("document-models/index.ts")).toContain(
+      'export * from "./todo/index.js";',
+    );
+    expect(
+      readdirSync(join(projectDir, "document-models")).sort(),
+    ).toStrictEqual([
+      "document-models.ts",
+      "index.ts",
+      "todo",
+      "upgrade-manifests.ts",
+    ]);
+  });
+
+  it.skipIf(readOnlyUnsupported)(
+    "leaves the manifest untouched when document-models/index.ts cannot be saved",
+    async () => {
+      await generateModel();
+      const manifest = read("powerhouse.manifest.json");
+      chmodSync(join(projectDir, "document-models", "index.ts"), 0o444);
+      await expect(generateModel(notes)).rejects.toThrow(/EACCES/);
+      expect(read("powerhouse.manifest.json")).toBe(manifest);
+    },
+  );
+
+  it.skipIf(readOnlyUnsupported)(
+    "leaves the manifest untouched when subgraphs/index.ts cannot be saved",
+    async () => {
+      await generateSubgraph("widgets");
+      const manifest = read("powerhouse.manifest.json");
+      chmodSync(join(projectDir, "subgraphs", "index.ts"), 0o444);
+      await expect(generateSubgraph("gadgets")).rejects.toThrow(/EACCES/);
+      expect(read("powerhouse.manifest.json")).toBe(manifest);
+    },
+  );
+
+  it("adds a multi-word subgraph next to an existing one", async () => {
+    writeFileSync(
+      manifestPath(),
+      JSON.stringify({
+        name: "@acme/things",
+        subgraphs: [{ name: "billing", id: "billing" }],
+      }),
+    );
+    await generateSubgraph("Widget Feed");
+    expect(readManifestJson()).toStrictEqual({
+      name: "@acme/things",
+      subgraphs: [
+        { id: "billing", name: "billing" },
+        { name: "Widget Feed", id: "widget-feed" },
+      ],
+      publisher: {},
+      documentModels: [],
+      editors: [],
+      apps: [],
+      processors: [],
+      config: [],
+    });
+  });
+
+  it("lists the ids the loader compiles", async () => {
+    await generateModel();
+    await generateSubgraph("Widget Feed");
+    const loader = new DefinitionSourceLoader(
+      new ViteTypeScriptSourceImportAdapter(),
+    );
+    try {
+      const loaded = await loader.normalizeDefinitionSources({
+        configFile: configPath(),
+        packageRevision: `sha256:${"2".repeat(64)}`,
+      });
+      expect(
+        loaded.documentModels.map(({ value }) => ({
+          name: value.documentModel.global.name,
+          id: value.documentModel.global.id,
+        })),
+      ).toStrictEqual([{ name: "Todo", id: "acme-things/todo" }]);
+      expect(loaded.subgraphs).toHaveLength(1);
+      expect(loaded.subgraphs[0]?.value).toHaveProperty(
+        ["definition", "name"],
+        "widget-feed",
+      );
+    } finally {
+      await loader.dispose();
+    }
+    expect(readManifestJson()).toMatchObject({
+      documentModels: [{ name: "Todo", id: "acme-things/todo" }],
+      subgraphs: [{ name: "Widget Feed", id: "widget-feed" }],
+    });
   });
 });

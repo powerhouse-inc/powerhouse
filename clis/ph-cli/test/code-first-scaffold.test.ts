@@ -143,7 +143,8 @@ afterAll(() => {
 describe("a scaffolded code-first model", () => {
   it("prints what it wrote and what to run next", () => {
     expect(modelOutput).toContain("Wrote document-models/todo/index.ts");
-    expect(modelOutput.slice(-2)).toEqual([
+    expect(modelOutput.slice(-3)).toEqual([
+      "Wrote powerhouse.manifest.json",
       "Registered the model in powerhouse.config.json definitionSources (created)",
       "Next: ph model check",
     ]);
@@ -469,7 +470,8 @@ describe("a scaffolded code-first subgraph", () => {
 
   it("prints what it wrote and what to run next", () => {
     expect(subgraphOutput).toContain("Wrote subgraphs/widgets.ts");
-    expect(subgraphOutput.slice(-2)).toEqual([
+    expect(subgraphOutput.slice(-3)).toEqual([
+      "Wrote powerhouse.manifest.json",
       "Registered the subgraph in powerhouse.config.json definitionSources (added)",
       "Next: ph model check",
     ]);
@@ -483,6 +485,17 @@ describe("a scaffolded code-first subgraph", () => {
       "./document-models/todo/index.ts",
       "./subgraphs/widgets.ts",
     ]);
+  });
+
+  it("lists the model and the subgraph in the package manifest", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(projectDir, "powerhouse.manifest.json"), "utf8"),
+    ) as unknown;
+    expect(manifest).toMatchObject({
+      name: "@acme/things",
+      documentModels: [{ id: "acme-things/todo", name: "Todo" }],
+      subgraphs: [{ id: "widgets", name: "widgets" }],
+    });
   });
 
   it("typechecks under the project's own tsconfig", () => {

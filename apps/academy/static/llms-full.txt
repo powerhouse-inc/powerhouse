@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-08T13:43:18.254Z
+> Generated: 2026-10-08T17:17:43.774Z
 > Total Documents: 124
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -7978,9 +7978,10 @@ document-models/todo/v1/tests/document-model.test.ts
 document-models/todo/v1/tests/items.test.ts
 ```
 
-The command also registers the model in two files:
+The command also registers the model in three files:
 
 - `powerhouse.config.json` gets an entry under `definitionSources`. `ph model check` reads this list.
+- `powerhouse.manifest.json` gets an entry under `documentModels`. The registry reads this list to find the package for a document type.
 - `document-models/index.ts` gets a re-export. Every host loader reads this file.
 
 **WARNING:**
@@ -15369,7 +15370,7 @@ Generate a document model
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
-**Code First** - Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources - Usage: `--code-first <str>`
+**Code First** - Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources and powerhouse.manifest.json - Usage: `--code-first <str>`
 
 
 ### Flags
@@ -15483,7 +15484,7 @@ Generate a subgraph
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
-**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name. - Usage: `--code-first`
+**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources and powerhouse.manifest.json. Use with --name. - Usage: `--code-first`
 
 **Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 

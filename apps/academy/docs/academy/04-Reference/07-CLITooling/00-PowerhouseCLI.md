@@ -295,7 +295,7 @@ Generate a document model
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
-**Code First** - Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources - Usage: `--code-first <str>`
+**Code First** - Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources and powerhouse.manifest.json - Usage: `--code-first <str>`
 
 
 
@@ -423,7 +423,7 @@ Generate a subgraph
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
-**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources. Use with --name. - Usage: `--code-first`
+**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources and powerhouse.manifest.json. Use with --name. - Usage: `--code-first`
 
 **Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
