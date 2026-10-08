@@ -26,6 +26,8 @@ export class InMemoryQueue implements IQueue {
   private jobIdToDocId = new Map<string, string>();
   private completedJobs = new Set<string>();
   private jobIndex = new Map<string, Job>();
+  private jobIdToSeq = new Map<string, number>();
+  private nextSeq = 0;
   private isBlocked = false;
   private onDrainedCallback?: () => void;
   private isPausedFlag = false;
@@ -157,14 +159,17 @@ export class InMemoryQueue implements IQueue {
     const queueKey = this.createQueueKey(job.documentId, job.scope, job.branch);
     const queue = this.getQueue(queueKey);
 
-    // A retried or flushed job at the tail would sit behind a head waiting on it.
-    const firstDependent = queue.findIndex((queued) =>
-      queued.queueHint.includes(job.id),
-    );
-    if (firstDependent === -1) {
+    // A retried or flushed job returns to its original position; at the tail
+    // it could sit behind a head that waits on it.
+    const seq = this.jobIdToSeq.get(job.id);
+    if (seq === undefined) {
+      this.jobIdToSeq.set(job.id, this.nextSeq++);
       queue.push(job);
     } else {
-      queue.splice(firstDependent, 0, job);
+      const later = queue.findIndex(
+        (queued) => (this.jobIdToSeq.get(queued.id) ?? Infinity) > seq,
+      );
+      queue.splice(later === -1 ? queue.length : later, 0, job);
     }
 
     // Track job location for removal and dependency resolution
@@ -420,6 +425,7 @@ export class InMemoryQueue implements IQueue {
     // Remove from job index
     this.jobIdToQueueKey.delete(jobId);
     this.jobIndex.delete(jobId);
+    this.jobIdToSeq.delete(jobId);
 
     // Clean up empty queue
     if (queue.length === 0) {
@@ -438,6 +444,7 @@ export class InMemoryQueue implements IQueue {
       for (const job of queue) {
         this.jobIdToQueueKey.delete(job.id);
         this.jobIndex.delete(job.id);
+        this.jobIdToSeq.delete(job.id);
       }
 
       // Remove the queue
@@ -451,6 +458,7 @@ export class InMemoryQueue implements IQueue {
     // Clear all job indices
     this.jobIdToQueueKey.clear();
     this.jobIndex.clear();
+    this.jobIdToSeq.clear();
     this.completedJobs.clear();
 
     this.queues.clear();
@@ -478,6 +486,7 @@ export class InMemoryQueue implements IQueue {
 
     // Remove from job index
     this.jobIndex.delete(jobId);
+    this.jobIdToSeq.delete(jobId);
 
     // For in-memory queue, completing just removes the job
     // In a persistent queue, this would update the job status
@@ -505,6 +514,7 @@ export class InMemoryQueue implements IQueue {
 
     // Remove from job index
     this.jobIndex.delete(jobId);
+    this.jobIdToSeq.delete(jobId);
 
     // Completed here means finished, not succeeded: this is the same set
     // areDependenciesMet reads, and it cannot tell the two apart. A failed job

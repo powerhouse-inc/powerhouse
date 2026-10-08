@@ -1559,8 +1559,19 @@ describe("InMemoryQueue", () => {
     });
   });
 
-  describe("re-enqueue ahead of a dependent", () => {
+  describe("re-enqueue at the job's original position", () => {
     const transient = { name: "Error", message: "transient", stack: "" };
+
+    async function drain(): Promise<string[]> {
+      const order: string[] = [];
+      let next = await queue.dequeueNext();
+      while (next) {
+        order.push(next.job.id);
+        await queue.completeJob(next.job.id);
+        next = await queue.dequeueNext();
+      }
+      return order;
+    }
 
     async function startJ1ThenQueueJ2(): Promise<IJobExecutionHandle> {
       await queue.enqueue(createTestJob({ id: "J1", kind: "load" }));
@@ -1570,6 +1581,20 @@ describe("InMemoryQueue", () => {
       await queue.enqueue(
         createTestJob({ id: "J2", kind: "load", queueHint: ["J1"] }),
       );
+      return handle!;
+    }
+
+    async function startK1OfChain(): Promise<IJobExecutionHandle> {
+      await queue.enqueue(createTestJob({ id: "K1", documentId: "D" }));
+      await queue.enqueue(
+        createTestJob({ id: "K2", documentId: "E", queueHint: ["K1"] }),
+      );
+      await queue.enqueue(
+        createTestJob({ id: "K3", documentId: "D", queueHint: ["K2"] }),
+      );
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("K1");
+      handle!.start();
       return handle!;
     }
 
@@ -1596,7 +1621,26 @@ describe("InMemoryQueue", () => {
       expect((await queue.dequeueNext())?.job.id).toBe("J2");
     });
 
-    it("keeps a job queued before the dependent ahead of the re-enqueued one", async () => {
+    it("completes a retried job whose same-document dependent waits through another document", async () => {
+      await startK1OfChain();
+
+      await queue.retryJob("K1", transient);
+
+      expect(await drain()).toEqual(["K1", "K2", "K3"]);
+      expect(await queue.totalSize()).toBe(0);
+    });
+
+    it("completes a flushed job whose same-document dependent waits through another document", async () => {
+      const handle = await startK1OfChain();
+
+      handle.defer();
+      await queue.enqueue(handle.job);
+
+      expect(await drain()).toEqual(["K1", "K2", "K3"]);
+      expect(await queue.totalSize()).toBe(0);
+    });
+
+    it("puts a retried job back ahead of jobs queued after it", async () => {
       await queue.enqueue(createTestJob({ id: "J1" }));
       await queue.dequeueNext();
       await queue.enqueue(createTestJob({ id: "X" }));
@@ -1604,26 +1648,32 @@ describe("InMemoryQueue", () => {
 
       await queue.retryJob("J1", transient);
 
-      const order: string[] = [];
-      let next = await queue.dequeueNext();
-      while (next) {
-        order.push(next.job.id);
-        await queue.completeJob(next.job.id);
-        next = await queue.dequeueNext();
-      }
-      expect(order).toEqual(["X", "J1", "J2"]);
+      expect(await drain()).toEqual(["J1", "X", "J2"]);
     });
 
-    it("still re-enqueues at the tail when nothing queued depends on the job", async () => {
-      await queue.enqueue(createTestJob({ id: "J1" }));
-      await queue.dequeueNext();
+    it("keeps the original order of several jobs flushed for one sub-queue", async () => {
+      await queue.enqueue(createTestJob({ id: "A" }));
+      await queue.enqueue(createTestJob({ id: "B" }));
+      const a = await queue.dequeueNext();
+      a!.start();
+      a!.defer();
+      const b = await queue.dequeueNext();
+      b!.start();
+      b!.defer();
       await queue.enqueue(createTestJob({ id: "X" }));
 
-      await queue.retryJob("J1", transient);
+      await queue.enqueue(a!.job);
+      await queue.enqueue(b!.job);
 
-      expect((await queue.dequeueNext())?.job.id).toBe("X");
-      await queue.completeJob("X");
-      expect((await queue.dequeueNext())?.job.id).toBe("J1");
+      expect(await drain()).toEqual(["A", "B", "X"]);
+    });
+
+    it("appends a fresh job at the tail", async () => {
+      await queue.enqueue(createTestJob({ id: "A" }));
+      await queue.enqueue(createTestJob({ id: "B" }));
+      await queue.enqueue(createTestJob({ id: "C" }));
+
+      expect(await drain()).toEqual(["A", "B", "C"]);
     });
   });
 
