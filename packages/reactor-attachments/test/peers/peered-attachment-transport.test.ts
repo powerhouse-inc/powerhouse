@@ -9,6 +9,8 @@ import {
   attachmentOriginOf,
   PeeredAttachmentTransport,
 } from "../../src/peers/index.js";
+import { sha256Hex } from "../../src/replication/hash.js";
+import { collectStream } from "../../src/storage/local/bytes.js";
 import type { TransportFetchResult } from "../../src/types.js";
 
 const HASH = "a".repeat(64);
@@ -110,6 +112,7 @@ describe("PeeredAttachmentTransport", () => {
 
   it("tries local peers before Switchboards and returns the first data answer", async () => {
     const calls: string[] = [];
+    const emptyHash = await sha256Hex(new Uint8Array());
     const transport = new PeeredAttachmentTransport({
       syncManager: syncManagerWith([
         { type: GQL_CHANNEL_TYPE, url: "http://a/graphql/d" },
@@ -122,7 +125,7 @@ describe("PeeredAttachmentTransport", () => {
         {
           kind: "data",
           response: {
-            hash: HASH,
+            hash: emptyHash,
             metadata: {
               mimeType: "text/plain",
               fileName: "x",
@@ -140,7 +143,7 @@ describe("PeeredAttachmentTransport", () => {
       ),
     );
 
-    const result = await transport.fetch(HASH, DOC);
+    const result = await transport.fetch(emptyHash, DOC);
     expect(result.kind).toBe("data");
     // The Switchboard was never asked: the local hop answered.
     expect(calls).toEqual(["peer-a"]);
@@ -264,5 +267,123 @@ describe("PeeredAttachmentTransport", () => {
   it("is pull-only", async () => {
     const transport = new PeeredAttachmentTransport();
     await expect(transport.push()).rejects.toThrow(/pull-only/);
+  });
+
+  describe("asking several sources", () => {
+    const GOOD = new TextEncoder().encode("the right bytes");
+    const BAD = new TextEncoder().encode("corrupt bytes");
+
+    function dataOf(bytes: Uint8Array, hash: string): TransportFetchResult {
+      return {
+        kind: "data",
+        response: {
+          hash,
+          metadata: {
+            mimeType: "text/plain",
+            fileName: "x",
+            sizeBytes: bytes.byteLength,
+            extension: null,
+            createdAtUtc: "2026-01-01T00:00:00.000Z",
+          },
+          body: new ReadableStream<Uint8Array>({
+            start: (controller) => {
+              controller.enqueue(bytes);
+              controller.close();
+            },
+          }),
+        },
+      };
+    }
+
+    function silent(signals: AbortSignal[]): IAttachmentTransport {
+      return {
+        fetch: (_hash, _documentId, signal) =>
+          new Promise((_resolve, reject) => {
+            if (signal) signals.push(signal);
+            signal?.addEventListener("abort", () =>
+              reject(new Error("Attachment fetch aborted")),
+            );
+          }),
+        announce: () => Promise.resolve(),
+        push: () => Promise.resolve(),
+      };
+    }
+
+    async function settled(
+      promise: Promise<TransportFetchResult>,
+    ): Promise<TransportFetchResult | "hung"> {
+      return Promise.race([
+        promise,
+        new Promise<"hung">((resolve) =>
+          setTimeout(() => resolve("hung"), 200),
+        ),
+      ]);
+    }
+
+    it("moves past a peer whose bytes do not hash to what was asked", async () => {
+      const hash = await sha256Hex(GOOD);
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("corrupt", "col-1", source(dataOf(BAD, hash)));
+      transport.addPeer("holder", "col-1", source(dataOf(GOOD, hash)));
+
+      const result = await transport.fetch(hash, DOC);
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") return;
+      expect(await sha256Hex(await collectStream(result.response.body))).toBe(
+        hash,
+      );
+    });
+
+    it("reports a source's wrong bytes as that source's error", async () => {
+      const hash = await sha256Hex(GOOD);
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("corrupt", "col-1", source(dataOf(BAD, hash)));
+
+      await expect(transport.fetch(hash, DOC)).rejects.toThrow(/hashed to/);
+    });
+
+    it("asks peers in parallel and cancels the rest once one has the bytes", async () => {
+      const hash = await sha256Hex(GOOD);
+      const signals: AbortSignal[] = [];
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("dead", "col-1", silent(signals));
+      transport.addPeer("holder", "col-1", source(dataOf(GOOD, hash)));
+
+      const result = await settled(transport.fetch(hash, DOC));
+      expect(result).not.toBe("hung");
+      expect(signals).toHaveLength(1);
+      expect(signals[0].aborted).toBe(true);
+    });
+
+    it("keeps waiting on other peers after a fast not-found", async () => {
+      const hash = await sha256Hex(GOOD);
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("quiet", "col-1", source({ kind: "not-found" }));
+      transport.addPeer("slow", "col-1", {
+        fetch: () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve(dataOf(GOOD, hash)), 20),
+          ),
+        announce: () => Promise.resolve(),
+        push: () => Promise.resolve(),
+      });
+
+      expect((await transport.fetch(hash, DOC)).kind).toBe("data");
+    });
+
+    it("aborts every peer when the caller aborts", async () => {
+      const signals: AbortSignal[] = [];
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("a", "col-1", silent(signals));
+      transport.addPeer("b", "col-1", silent(signals));
+      const controller = new AbortController();
+
+      const inFlight = transport.fetch(HASH, DOC, controller.signal);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      controller.abort();
+
+      await expect(inFlight).rejects.toThrow(/aborted/);
+      expect(signals.map((signal) => signal.aborted)).toEqual([true, true]);
+    });
   });
 });

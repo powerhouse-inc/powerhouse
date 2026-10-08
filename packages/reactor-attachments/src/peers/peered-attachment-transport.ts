@@ -5,8 +5,51 @@ import {
   type JwtHandler,
 } from "@powerhousedao/reactor";
 import type { IAttachmentTransport } from "../interfaces.js";
+import { sha256Hex } from "../replication/hash.js";
+import { collectStream, streamFromBytes } from "../storage/local/bytes.js";
 import { SwitchboardAttachmentTransport } from "../switchboard/switchboard-attachment-transport.js";
 import type { TransportFetchResult } from "../types.js";
+
+type DataResult = Extract<TransportFetchResult, { kind: "data" }>;
+
+/** What the sources that did not answer data said, ranked by the combine rule. */
+class Answers {
+  pending: TransportFetchResult | undefined;
+  firstError: Error | undefined;
+
+  error(error: unknown): void {
+    this.firstError ??=
+      error instanceof Error ? error : new Error(String(error));
+  }
+
+  result(): TransportFetchResult {
+    if (this.pending) {
+      return this.pending;
+    }
+    if (this.firstError !== undefined) {
+      throw this.firstError;
+    }
+    return { kind: "not-found" };
+  }
+}
+
+/** Collects and checks a body, so a source's wrong bytes are its own error. */
+async function verified(
+  hash: AttachmentHash,
+  result: DataResult,
+): Promise<DataResult> {
+  const bytes = await collectStream(result.response.body);
+  const actual = await sha256Hex(bytes);
+  if (actual !== hash) {
+    throw new Error(
+      `Attachment bytes for ${hash} hashed to ${actual}; the source served content that is not what was asked for`,
+    );
+  }
+  return {
+    kind: "data",
+    response: { ...result.response, body: streamFromBytes(bytes) },
+  };
+}
 
 export type PeeredAttachmentTransportOptions = {
   /** Read at fetch time for the Switchboard origins of its gql remotes. */
@@ -17,7 +60,10 @@ export type PeeredAttachmentTransportOptions = {
   fetchFn?: typeof fetch;
 };
 
-/** Peers, then Switchboards; data > pending > error > unanimous not-found. */
+/**
+ * Peers in parallel, then Switchboards in turn; verified data > pending >
+ * error > unanimous not-found.
+ */
 export class PeeredAttachmentTransport implements IAttachmentTransport {
   private readonly syncManager: Pick<ISyncManager, "list"> | undefined;
   private readonly switchboardUrl: string | undefined;
@@ -90,38 +136,117 @@ export class PeeredAttachmentTransport implements IAttachmentTransport {
     documentId: string,
     signal?: AbortSignal,
   ): Promise<TransportFetchResult> {
-    const sources = this.sources();
-    if (sources.length === 0) {
+    const peers = [...this.peers.values()].map((entry) => entry.transport);
+    const switchboards = this.switchboardSources().map((url) =>
+      this.switchboardFor(url),
+    );
+    if (peers.length === 0 && switchboards.length === 0) {
       return { kind: "not-found" };
     }
 
-    let pending: TransportFetchResult | undefined;
-    let firstError: Error | undefined;
+    const answers = new Answers();
+    if (peers.length > 0) {
+      const data = await this.askPeers(
+        peers,
+        hash,
+        documentId,
+        answers,
+        signal,
+      );
+      if (data) {
+        return data;
+      }
+    }
+    for (const switchboard of switchboards) {
+      if (signal?.aborted) {
+        break;
+      }
+      const data = await this.ask(
+        switchboard,
+        hash,
+        documentId,
+        answers,
+        signal,
+      );
+      if (data) {
+        return data;
+      }
+    }
+    return answers.result();
+  }
 
-    for (const source of sources) {
-      let result: TransportFetchResult;
-      try {
-        result = await source.fetch(hash, documentId, signal);
-      } catch (error) {
-        firstError ??=
-          error instanceof Error ? error : new Error(String(error));
-        continue;
-      }
-      if (result.kind === "data") {
-        return result;
-      }
-      if (result.kind === "pending") {
-        pending ??= result;
-      }
+  private async ask(
+    source: IAttachmentTransport,
+    hash: AttachmentHash,
+    documentId: string,
+    answers: Answers,
+    signal: AbortSignal | undefined,
+  ): Promise<DataResult | undefined> {
+    let result: TransportFetchResult;
+    try {
+      result = await source.fetch(hash, documentId, signal);
+    } catch (error) {
+      answers.error(error);
+      return undefined;
     }
+    if (result.kind === "pending") {
+      answers.pending ??= result;
+      return undefined;
+    }
+    if (result.kind === "not-found") {
+      return undefined;
+    }
+    try {
+      return await verified(hash, result);
+    } catch (error) {
+      answers.error(error);
+      return undefined;
+    }
+  }
 
-    if (pending) {
-      return pending;
+  /** The first verified data wins and cancels the other peers. */
+  private askPeers(
+    peers: IAttachmentTransport[],
+    hash: AttachmentHash,
+    documentId: string,
+    answers: Answers,
+    signal: AbortSignal | undefined,
+  ): Promise<DataResult | undefined> {
+    const controllers = peers.map(() => new AbortController());
+    const abortAll = (): void => {
+      for (const controller of controllers) controller.abort();
+    };
+    if (signal?.aborted) {
+      abortAll();
     }
-    if (firstError !== undefined) {
-      throw firstError;
-    }
-    return { kind: "not-found" };
+    signal?.addEventListener("abort", abortAll, { once: true });
+
+    return new Promise<DataResult | undefined>((resolve) => {
+      let remaining = peers.length;
+      let won = false;
+      peers.forEach((peer, index) => {
+        void this.ask(
+          peer,
+          hash,
+          documentId,
+          answers,
+          controllers[index].signal,
+        ).then((data) => {
+          remaining -= 1;
+          if (data && !won) {
+            won = true;
+            controllers.forEach((controller, other) => {
+              if (other !== index) controller.abort();
+            });
+            resolve(data);
+            return;
+          }
+          if (remaining === 0 && !won) {
+            resolve(undefined);
+          }
+        });
+      });
+    }).finally(() => signal?.removeEventListener("abort", abortAll));
   }
 
   /** Best effort across every source. */
