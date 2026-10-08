@@ -172,6 +172,13 @@ export class LocalAttachmentServer {
       }
       return;
     }
+    // Any answer would settle the requester's live request under that id.
+    if (this.inFlight.has(data.id)) {
+      this.onDiagnostic(
+        `ignoring a duplicate attachment request id ${data.id}`,
+      );
+      return;
+    }
     if (
       !isAttachmentHash(data.hash) ||
       typeof data.documentId !== "string" ||

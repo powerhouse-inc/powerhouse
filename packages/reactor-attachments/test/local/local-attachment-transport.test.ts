@@ -589,6 +589,40 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     server.close();
   });
 
+  it("ignores a fetch whose id is already in flight, past the cap", async () => {
+    const fake = fakePort();
+    const diagnostics: string[] = [];
+    const authorize = vi.fn(() => new Promise<boolean>(() => undefined));
+    const server = new LocalAttachmentServer({
+      port: fake.port,
+      link: TEST_LINK,
+      store: new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        new NullAttachmentTransport(),
+      ),
+      authorize,
+      maxConcurrentServes: 2,
+      onDiagnostic: (message) => diagnostics.push(message),
+    });
+
+    for (let i = 0; i < 5; i += 1) {
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "fetch",
+        id: "x",
+        hash: i === 4 ? "bad" : "a".repeat(64),
+        documentId: DOC,
+      });
+    }
+    await settle();
+
+    expect(authorize).toHaveBeenCalledTimes(1);
+    expect(fake.sent).toEqual([]);
+    expect(diagnostics).toHaveLength(4);
+    expect(state(server).inFlight.size).toBe(1);
+    server.close();
+  });
+
   it("refuses a malformed hash or document id before the authorizer or the store sees it", async () => {
     const fake = fakePort();
     const store = new LocalAttachmentStore(
