@@ -70,6 +70,7 @@ export {
 export { ATTEMPT, RouteDispatcher, type AttemptOptions } from "./dispatcher.js";
 export {
   OwnershipGuard,
+  type OtherOwnership,
   type Ownership,
   type OwnershipProbe,
 } from "./guard.js";
