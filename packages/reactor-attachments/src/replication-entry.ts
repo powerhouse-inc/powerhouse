@@ -23,6 +23,11 @@ export {
   type LocalAttachmentServerOptions,
   type LocalAttachmentTransportOptions,
 } from "./local/index.js";
+export {
+  attachmentOriginOf,
+  PeeredAttachmentTransport,
+  type PeeredAttachmentTransportOptions,
+} from "./peers/index.js";
 export type {
   AttachmentReferencePageResult,
   AttachmentReferenceRow,
