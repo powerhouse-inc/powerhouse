@@ -841,4 +841,65 @@ describe("AttachmentReplicator", () => {
     expect(await h.store.has(HASH)).toBe(true);
     await h.replicator.stop();
   });
+
+  it.each(["error", "pending", "abort"] as const)(
+    "keeps the earned document for the next attempt after an %s",
+    async (outcome) => {
+      let calls = 0;
+      const h = harness([], {
+        notFoundAttempts: 3,
+        fetch: (_hash, _documentId, signal) => {
+          calls += 1;
+          if (calls <= 3) return Promise.resolve({ kind: "not-found" });
+          if (calls > 4) return Promise.resolve(dataAnswer());
+          if (outcome === "error") return Promise.reject(new Error("boom"));
+          if (outcome === "pending") {
+            return Promise.resolve({
+              kind: "pending",
+              hash: HASH,
+              expiresAtUtc: "2026-01-01T00:05:00.000Z",
+              retryAfterMs: 1_000,
+            });
+          }
+          return new Promise((_resolve, reject) => {
+            signal?.addEventListener(
+              "abort",
+              () => reject(new Error("Attachment fetch aborted")),
+              { once: true },
+            );
+          });
+        },
+      });
+      h.replicator.start();
+      await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+      await h.replicator.idle();
+      h.timers.advance(500);
+      await h.replicator.idle();
+      h.timers.advance(1_000);
+      await h.replicator.idle();
+      expect((await h.replicator.status()).notFound).toBe(1);
+
+      await h.bus.fire({
+        jobId: "job-2",
+        operations: [operation(REF, OTHER_DOC)],
+      });
+      await flush();
+      expect(h.fetches.at(-1)).toEqual([HASH, OTHER_DOC]);
+
+      if (outcome === "abort") {
+        await h.replicator.stop();
+        h.replicator.start();
+      } else {
+        await h.replicator.idle();
+        h.timers.advance(1_000);
+      }
+      await flush();
+      await h.replicator.idle();
+
+      expect(h.fetches).toHaveLength(5);
+      expect(h.fetches.at(-1)).toEqual([HASH, OTHER_DOC]);
+      expect(await h.store.has(HASH)).toBe(true);
+      await h.replicator.stop();
+    },
+  );
 });

@@ -90,7 +90,7 @@ type Entry = {
   errorAnswers: number;
   nextAttemptAtMs: number | undefined;
   lastError: string | undefined;
-  /** Asked on the next attempt instead of the rotation. */
+  /** Asked instead of the rotation until an attempt is answered. */
   nextDocumentId: string | undefined;
 };
 
@@ -484,7 +484,6 @@ export class AttachmentReplicator {
     const documentId =
       entry.nextDocumentId ??
       entry.documentIds[(entry.attempts - 1) % entry.documentIds.length];
-    entry.nextDocumentId = undefined;
     const result = await this.transport.fetch(entry.hash, documentId, signal);
 
     if (result.kind === "pending") {
@@ -501,6 +500,8 @@ export class AttachmentReplicator {
     }
 
     if (result.kind === "not-found") {
+      // Spent only on an answer; an error, pending or abort keeps it.
+      entry.nextDocumentId = undefined;
       entry.notFoundAnswers += 1;
       if (entry.notFoundAnswers < this.policy.notFoundAttempts) {
         // Treated as pending: the likeliest cause for a freshly synced ref is
