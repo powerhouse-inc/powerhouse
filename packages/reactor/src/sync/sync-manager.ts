@@ -2309,7 +2309,7 @@ export class SyncManager
       } else {
         // Left in the inbox unapplied, which holds the cursor below it. Memory
         // only: a push-fed channel loses it on restart unless the client
-        // re-pushes, as on main, until rewind/replay.
+        // re-pushes, as on main.
         this.parkedByQuarantine.add(syncOp);
       }
     }
