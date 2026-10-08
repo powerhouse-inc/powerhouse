@@ -19,6 +19,7 @@ export {
   fromReactorClient,
   RouterBackend,
   UnsupportedByBackendError,
+  type BackendSubmit,
   type BackendSupports,
   type FindSupport,
   type IRoutableBackend,

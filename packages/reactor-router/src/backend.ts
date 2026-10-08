@@ -3,6 +3,7 @@ import {
   JobStatus,
   type ActionCandidate,
   type ActionEvaluations,
+  type BatchExecutionResult,
   type BatchSubmitter,
   type BatchLoadRequest,
   type BatchLoadResult,
@@ -44,9 +45,26 @@ export type BackendSupports = {
   readonly pointInTimeViews: boolean;
 };
 
+/** Submits without waiting: each call returns once the reactor holds the job. */
+export type BackendSubmit = {
+  execute(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+  create(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
+};
+
 /** An absent optional member declares non-support; never use a catch-all Proxy. */
 export interface IRoutableBackend {
   readonly supports: BackendSupports;
+  /** Absent, the router's async variants wait through executeBatch. */
+  readonly submit?: BackendSubmit;
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -232,6 +250,12 @@ const SUPPORTS_EVERYTHING: BackendSupports = Object.freeze({
 export function fromReactorClient(client: IReactorClient): IRoutableBackend {
   return {
     supports: SUPPORTS_EVERYTHING,
+    submit: {
+      execute: (identifier, branch, actions, signal) =>
+        client.executeAsync(identifier, branch, actions, signal),
+      create: (document, parent, signal) =>
+        client.createAsync(document, parent, signal),
+    },
     get: (identifier, view, signal) => client.get(identifier, view, signal),
     getOperations: (identifier, view, filter, paging, signal) =>
       client.getOperations(identifier, view, filter, paging, signal),

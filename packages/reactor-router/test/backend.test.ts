@@ -47,6 +47,25 @@ describe("fromReactorClient", () => {
   });
 });
 
+describe("fromReactorClient submit", () => {
+  it("submits through the client's non-waiting executeAsync and createAsync", async () => {
+    const executeAsync = vi.fn(() => Promise.resolve({ id: "job-1" }));
+    const createAsync = vi.fn(() => Promise.resolve({ jobs: {} }));
+    const backend = fromReactorClient({
+      executeAsync,
+      createAsync,
+    } as unknown as IReactorClient);
+    const signal = new AbortController().signal;
+    const document = { header: { id: "doc" } } as never;
+
+    await backend.submit?.execute("doc", "main", [], signal);
+    await backend.submit?.create(document, "drive", signal);
+
+    expect(executeAsync).toHaveBeenCalledWith("doc", "main", [], signal);
+    expect(createAsync).toHaveBeenCalledWith(document, "drive", signal);
+  });
+});
+
 describe("RouterBackend facts", () => {
   it("holds static facts as known", () => {
     const handle = new FakeBackend("one").handle();

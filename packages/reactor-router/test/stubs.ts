@@ -78,6 +78,8 @@ export class FakeBackend {
   supports: BackendSupports = { find: () => true, pointInTimeViews: true };
   /** Refuses a write for a document it lacks with WrongBackendError. */
   refuses = false;
+  /** Declares a non-waiting submit. */
+  submits = false;
 
   constructor(
     readonly name: string,
@@ -367,6 +369,29 @@ export class FakeBackend {
           throw new Error(`${this.name}: no module ${documentType}`);
         }),
     };
+    if (this.submits) {
+      Object.assign(api, {
+        submit: {
+          execute: (identifier: string) =>
+            this.run("submit.execute", [identifier], () => {
+              this.own(identifier, "submit.execute");
+              const job = fakeJob(`${this.name}-submitted`, identifier);
+              this.jobs.set(job.id, job);
+              return job;
+            }),
+          create: (document: PHDocument, parent?: string) =>
+            this.run("submit.create", [document.header.id, parent], () => {
+              if (parent !== undefined) {
+                this.require(parent, "submit.create");
+              }
+              this.seed(document);
+              const job = fakeJob(`${this.name}-created`, document.header.id);
+              this.jobs.set(job.id, job);
+              return { jobs: { create: job } };
+            }),
+        },
+      });
+    }
     for (const member of this.undeclared) {
       delete (api as Partial<Record<Member, unknown>>)[member];
     }

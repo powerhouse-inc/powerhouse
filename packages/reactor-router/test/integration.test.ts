@@ -9,6 +9,7 @@ import {
   type DocumentDriveDocument,
 } from "@powerhousedao/shared/document-drive";
 import {
+  actions,
   withSignaturePolicy,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
@@ -198,5 +199,17 @@ describe("routing over real in-process reactors", () => {
 
     expect(renamed.header.name).toBe("renamed");
     expect(upgraded.header.id).toBe(created.header.id);
+  });
+
+  it("submits executeAsync without waiting and reports a failed job as FAILED", async () => {
+    const client = await router();
+
+    const submitted = await client.executeAsync("never-created", "main", [
+      actions.setName("x"),
+    ]);
+    const settled = await client.waitForJob(submitted);
+
+    expect(settled.status).toBe("FAILED");
+    expect(settled.error?.name).toBe("DocumentNotFoundError");
   });
 });

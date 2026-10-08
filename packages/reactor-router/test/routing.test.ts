@@ -672,6 +672,111 @@ describe("registry", () => {
   });
 });
 
+describe("async submission", () => {
+  const rename = [
+    { type: "SET_NAME", input: "x", scope: "global" } as unknown as Action,
+  ];
+
+  function submitting() {
+    const one = new FakeBackend("one");
+    one.submits = true;
+    one.seed(fakeDocument({ id: "doc-1" }));
+    one.seed(
+      fakeDocument({
+        id: "drive-a",
+        documentType: "powerhouse/document-drive",
+      }),
+    );
+    return { one, client: router([one.config()]) };
+  }
+
+  it("executeAsync uses a declared submit and does not wait", async () => {
+    const { one, client } = submitting();
+
+    const job = await client.executeAsync("doc-1", "main", rename);
+
+    expect(one.methods()).toContain("submit.execute");
+    expect(one.called("executeBatch")).toBe(false);
+    expect(one.called("waitForJob")).toBe(false);
+    expect(job.status).toBe(JobStatus.PENDING);
+    expect(client.describeRouting().jobs).toEqual([
+      { jobId: job.id, backend: "one" },
+    ]);
+  });
+
+  it("createAsync uses a declared submit, with and without a parent", async () => {
+    const { one, client } = submitting();
+
+    await client.createAsync(fakeDocument({ id: "child" }), "drive-a");
+    await client.createAsync(fakeDocument({ id: "loose" }));
+
+    expect(one.count("submit.create")).toBe(2);
+    expect(one.called("executeBatch")).toBe(false);
+    expect(client.describeRouting().jobs).toHaveLength(1);
+  });
+
+  it("falls back to a waiting submit and returns the job's terminal state", async () => {
+    const one = new FakeBackend("one");
+    one.seed(fakeDocument({ id: "doc-1" }));
+    const client = router([one.config()]);
+
+    const job = await client.executeAsync("doc-1", "main", rename);
+    const created = await client.createAsync(fakeDocument({ id: "loose" }));
+
+    expect(job.status).toBe(JobStatus.READ_READY);
+    const statuses = Object.values(created.jobs).map((entry) => entry.status);
+    expect(statuses.length).toBeGreaterThan(0);
+    expect(statuses.every((status) => status === JobStatus.READ_READY)).toBe(
+      true,
+    );
+  });
+
+  it("answers a failed job on the fallback as a FAILED JobInfo with its name", async () => {
+    const one = new FakeBackend("one");
+    const api = one.api();
+    const failed: JobInfo = {
+      ...fakeJob("failed-create", "loose"),
+      status: JobStatus.FAILED,
+      error: {
+        name: "DocumentAlreadyExistsError",
+        message: "taken",
+        stack: "",
+      },
+    };
+    const client = router([
+      one.config({
+        backend: {
+          ...api,
+          executeBatch: () => {
+            const error = new Error("taken");
+            error.name = "BatchJobFailedError";
+            Object.assign(error, { key: "create", jobs: { create: failed } });
+            return Promise.reject(error);
+          },
+        },
+      }),
+    ]);
+
+    const created = await client.createAsync(fakeDocument({ id: "loose" }));
+
+    expect(created.jobs.create).toMatchObject({
+      status: JobStatus.FAILED,
+      error: { name: "DocumentAlreadyExistsError" },
+    });
+  });
+
+  it("rethrows a fallback failure that carries no job", async () => {
+    const one = new FakeBackend("one");
+    one.seed(fakeDocument({ id: "doc-1" }));
+    one.failing.add("executeBatch");
+    const client = router([one.config()]);
+
+    await expect(client.executeAsync("doc-1", "main", rename)).rejects.toThrow(
+      /executeBatch is configured to fail/,
+    );
+  });
+});
+
 describe("upgradeDocument", () => {
   it("retries a conflicted upgrade from a fresh read", async () => {
     const one = new FakeBackend("one");
@@ -721,6 +826,58 @@ describe("upgradeDocument", () => {
 
     expect(submissions).toBe(2);
     expect(upgraded.header.id).toBe("doc-1");
+  });
+
+  it("retries a conflicted upgrade submitted through a declared submit", async () => {
+    const one = new FakeBackend("one");
+    const document = fakeDocument({ id: "doc-1", documentType: "test/doc" });
+    (document as { state: unknown }).state = { document: { version: 1 } };
+    one.seed(document);
+    const api = one.api();
+    let submissions = 0;
+    const conflicted: JobInfo = {
+      ...fakeJob("conflict", "doc-1"),
+      status: JobStatus.FAILED,
+      error: {
+        name: "UpgradePreconditionFailedError",
+        message: "revision moved",
+        stack: "",
+      },
+    };
+    const accepted = fakeJob("accepted", "doc-1");
+    one.jobs.set(accepted.id, accepted);
+    const client = router(
+      [
+        one.config({
+          backend: {
+            ...api,
+            submit: {
+              execute: () => {
+                submissions++;
+                return Promise.resolve(
+                  submissions === 1 ? conflicted : accepted,
+                );
+              },
+              create: () => Promise.reject(new Error("not used")),
+            },
+          },
+        }),
+      ],
+      {
+        documentModelModules: [
+          {
+            documentModel: { global: { id: "test/doc" } },
+            version: 2,
+          } as unknown as DocumentModelModule,
+        ],
+      },
+    );
+
+    const upgraded = await client.upgradeDocument<PHDocument>("doc-1");
+
+    expect(submissions).toBe(2);
+    expect(upgraded.header.id).toBe("doc-1");
+    expect(one.called("executeBatch")).toBe(false);
   });
 });
 

@@ -119,19 +119,46 @@ function sharedScope(actions: readonly Action[]): string {
   return scope;
 }
 
-/** The failed job a batch error carries, when it carries one. */
-function failedBatchJob(error: unknown, key: string): JobInfo | undefined {
+/** The jobs a batch error carries, when it carries them. */
+function failedBatchJobs(
+  error: unknown,
+): Readonly<Record<string, JobInfo>> | undefined {
   if (typeof error !== "object" || error === null) {
     return undefined;
   }
   const candidate = error as {
     name?: unknown;
-    jobs?: Record<string, JobInfo | undefined>;
+    jobs?: Record<string, JobInfo>;
   };
   if (candidate.name !== "BatchJobFailedError") {
     return undefined;
   }
-  return candidate.jobs?.[key];
+  return candidate.jobs;
+}
+
+/** executeBatch, for a backend without submit; failed jobs are answered, not thrown. */
+async function submitAndWait(
+  backend: RouterBackend,
+  request: BatchExecutionRequest,
+  signal: AbortSignal | undefined,
+): Promise<BatchExecutionResult> {
+  let result: BatchExecutionResult;
+  try {
+    result = await backend.api.executeBatch(request, signal);
+  } catch (error) {
+    const jobs = failedBatchJobs(error);
+    if (jobs === undefined) {
+      throw error;
+    }
+    return { jobs: { ...jobs } };
+  }
+  const settled = await Promise.all(
+    Object.entries(result.jobs).map(
+      async ([key, job]) =>
+        [key, await backend.api.waitForJob(job, signal)] as const,
+    ),
+  );
+  return { jobs: Object.fromEntries(settled) };
 }
 
 const documentIdentity = (document: PHDocument): string => document.header.id;
@@ -175,7 +202,15 @@ export type RoutingClientOptions = RoutingOptions & {
   readonly logger?: ILogger;
 };
 
-/** One IReactorClient over many backends; spanning writes are refused. */
+/**
+ * One IReactorClient over many backends; spanning writes are refused.
+ *
+ * executeAsync, createAsync and createEmptyAsync submit through a backend's
+ * `submit` and do not wait. On a backend without `submit` they fall back to
+ * executeBatch, which waits for the jobs: they then return each job's terminal
+ * state, a failed job carried by a BatchJobFailedError as its FAILED JobInfo,
+ * and rethrow a failure that carries no job.
+ */
 export class RoutingReactorClient implements IReactorClient {
   readonly drives: RoutingDriveClient;
   private readonly dispatcher: RouteDispatcher;
@@ -618,6 +653,10 @@ export class RoutingReactorClient implements IReactorClient {
       document.header.id,
       parentIdentifier,
       async (target, beforeSubmit) => {
+        const submit = target.api.submit;
+        if (submit !== undefined) {
+          return submit.create(document, parentIdentifier, signal);
+        }
         const parentId =
           parentIdentifier === undefined || parentIdentifier === ""
             ? undefined
@@ -630,7 +669,7 @@ export class RoutingReactorClient implements IReactorClient {
           this.signer,
           signal,
         );
-        return target.api.executeBatch({ jobs }, signal);
+        return submitAndWait(target, { jobs }, signal);
       },
     );
     this.dispatcher.recordDocument(document.header.id, backend.name);
@@ -1072,6 +1111,10 @@ export class RoutingReactorClient implements IReactorClient {
       documentIdentifier,
       async (backend) => {
         owner = backend.name;
+        const submit = backend.api.submit;
+        if (submit !== undefined) {
+          return submit.execute(documentIdentifier, branch, actions, signal);
+        }
         const request: BatchExecutionRequest = {
           jobs: [
             {
@@ -1084,16 +1127,8 @@ export class RoutingReactorClient implements IReactorClient {
             },
           ],
         };
-        try {
-          const result = await backend.api.executeBatch(request, signal);
-          return result.jobs[key];
-        } catch (error) {
-          const failed = failedBatchJob(error, key);
-          if (failed === undefined) {
-            throw error;
-          }
-          return failed;
-        }
+        const result = await submitAndWait(backend, request, signal);
+        return result.jobs[key];
       },
       ATTEMPT.write,
     );
