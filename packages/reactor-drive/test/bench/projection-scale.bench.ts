@@ -1,10 +1,19 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { afterAll, bench, beforeAll, describe } from "vitest";
+import { afterAll, beforeAll, describe, test } from "vitest";
+import type { BenchRunOptions } from "vitest";
 import { DriveNodeView } from "../../src/read-model/drive-node-view.js";
 import { runReactorDriveMigrations } from "../../src/schema/migrations/migrator.js";
 import type { ReactorDriveDatabase } from "../../src/schema/tables.js";
+
+/** tinybench 2's defaults, which earlier runs of this file used. */
+const RUN_OPTIONS: BenchRunOptions = {
+  time: 500,
+  iterations: 10,
+  warmupTime: 100,
+  warmupIterations: 5,
+};
 
 interface BenchFixture {
   pg: PGlite;
@@ -69,11 +78,14 @@ describe("DriveNodeView paged listing scales with page size, not catalogue size"
         await teardownFixture(fixture);
       });
 
-      bench("listChildren first page of 50", async () => {
-        await fixture.view.listChildren(fixture.driveId, null, {
-          cursor: "",
-          limit: 50,
-        });
+      const name = "listChildren first page of 50";
+      test(name, { timeout: 0 }, async ({ bench }) => {
+        await bench(name, async () => {
+          await fixture.view.listChildren(fixture.driveId, null, {
+            cursor: "",
+            limit: 50,
+          });
+        }).run(RUN_OPTIONS);
       });
     });
   }

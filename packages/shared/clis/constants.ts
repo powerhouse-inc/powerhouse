@@ -302,7 +302,7 @@ export const externalDevDependencies = {
   "@types/react": "^19.2.3",
   "@types/react-dom": "^19.2.3",
   "@vitejs/plugin-react": "^6.0.1",
-  "@vitest/coverage-v8": "4.1.1",
+  "@vitest/coverage-v8": "5.0.3",
   oxfmt: "0.68.0",
   oxlint: "1.70.0",
   "oxlint-tsgolint": "0.23.0",
@@ -310,7 +310,7 @@ export const externalDevDependencies = {
   typescript: "~7.0.2",
   vite: "^8.0.10",
   "vite-tsconfig-paths": "6.1.1",
-  vitest: "4.1.1",
+  vitest: "5.0.3",
 } as const;
 
 export const defaultManifest: Manifest = {

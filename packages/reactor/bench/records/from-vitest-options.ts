@@ -1,4 +1,4 @@
-export const FROM_VITEST_USAGE = `Converts one vitest bench --outputJson report into a micro benchmark entry,
+export const FROM_VITEST_USAGE = `Converts one vitest bench --reporter=json report into a micro benchmark entry,
 printed as a single JSON object on stdout. Nothing is written: pipe it into
 \`bench:records add-benchmark -\`.
 
@@ -7,7 +7,7 @@ Usage:
 
   <benchmark>   one of the names below, whose results file is read from
                 bench/results
-  <path>        a path to a vitest --outputJson report
+  <path>        a path to a vitest bench --reporter=json report
 
   --conclusion <text>  append a claim of your own, repeatable
   --caveat <text>      append a limit of your own, repeatable

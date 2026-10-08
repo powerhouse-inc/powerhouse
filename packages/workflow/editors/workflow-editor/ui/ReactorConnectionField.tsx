@@ -14,6 +14,7 @@ import { CONNECTION_TYPE } from "./connection-create.js";
 import { useBlockForm, useConnectionList } from "./design-time.js";
 import { reactorConnections } from "./reactor-access.js";
 import { newReactorConnectionActions } from "./reactor-connection-create.js";
+import { ConnectionName, useConnectionName } from "./ConnectionName.js";
 import { SignInPrompt } from "./SignInPrompt.js";
 
 const LINK_ATTEMPTS = 30;
@@ -53,7 +54,10 @@ export function ReactorConnectionField(props: {
   const [error, setError] = useState<string | null>(null);
   // A new or just-bound connection reaches the listing a moment later.
   const linking = props.value || null;
-  const listed = connections.some((connection) => connection.id === linking);
+  const listing = connections.find((connection) => connection.id === linking);
+  const listed = Boolean(listing);
+  // Only an unlisted value needs its document read for a name.
+  const bound = useConnectionName(listed ? null : props.value);
   useEffect(() => {
     if (!linking || listed) return;
     let attempts = 0;
@@ -124,6 +128,13 @@ export function ReactorConnectionField(props: {
             ariaLabel="Reactor connection"
             value={props.value}
             options={options}
+            valueLabel={
+              props.value ? (
+                <ConnectionName
+                  name={listing ? listing.name || listing.id : bound.name}
+                />
+              ) : undefined
+            }
             invalid={Boolean(declared) && !props.value}
             placeholder={
               creating ? "Creating connection…" : "Choose a reactor connection"
@@ -156,7 +167,8 @@ export function ReactorConnectionField(props: {
         ) : (
           <Hint>This block takes no reactor connection.</Hint>
         )}
-        {props.value && connections.length > 0 && !known ? (
+        {/* Not yet listed is not wrong: a new connection lists a moment later. */}
+        {props.value && !known && (listed || bound.invalid) ? (
           <p className="mt-1.5 text-xs text-wf-warn">
             Not a reactor connection in this drive.
           </p>
