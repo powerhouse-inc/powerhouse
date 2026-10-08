@@ -301,8 +301,10 @@ export class LocalChannel implements IChannel {
   /**
    * A HELLO's sinceOrdinal is the peer's inbox ack, so the outbox is trimmed to
    * it exactly as an ACK would, letting a reconnect resume without re-serving
-   * applied ops; the remaining unacked items are then re-pushed in case the
-   * peer reconnected and lost them.
+   * applied ops. An opening hello then re-pushes the remaining unacked items in
+   * case the peer reconnected and lost them. A reply does not: it answers this
+   * side's own opening, so the peer did not reset, and re-pushing would hand
+   * it every unacked op a second time.
    */
   private receiveHello(message: LocalHelloMessage): void {
     if (message.sinceOrdinal > 0) {
@@ -310,7 +312,7 @@ export class LocalChannel implements IChannel {
     }
     if (!message.reply) this.sendHello(true);
     void this.hearPeer(message.manifest);
-    this.rePushUnacked();
+    if (!message.reply) this.rePushUnacked();
   }
 
   /**

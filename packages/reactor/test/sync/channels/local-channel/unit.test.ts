@@ -180,6 +180,23 @@ describe("LocalChannel", () => {
       expect(pair.b.inbox.items).toHaveLength(0);
     });
 
+    it("delivers an unacked op at most once more over one handshake", async () => {
+      pair = makePair();
+      await pair.a.init();
+      pair.a.outbox.add(syncOp("a->b", 5));
+
+      await pair.b.init();
+      await waitFor(
+        () =>
+          pair!.a.getConnectionState().state === "connected" &&
+          pair!.b.getConnectionState().state === "connected",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(pair.b.inbox.items.length).toBeGreaterThan(0);
+      expect(pair.b.inbox.items.length).toBeLessThanOrEqual(2);
+    });
+
     it("re-pushes unacked items on a resend request", async () => {
       pair = makePair();
       await pair.a.init();
