@@ -10,10 +10,7 @@
 export interface LocalChannelPort {
   /** Sends one structured-clone-safe message to the peer. */
   postMessage(data: unknown): void;
-  /**
-   * Registers a listener for messages from the peer. Returns a function that
-   * removes it; a port may have at most the listeners its callers register.
-   */
+  /** Registers a listener for messages from the peer; returns its removal. */
   onMessage(callback: (data: unknown) => void): () => void;
   /** Releases the transport. Idempotent; the registrant calls it, not a channel. */
   close(): void;
@@ -59,13 +56,11 @@ export interface MessagePortLike {
  * Wraps a real MessagePort as a {@link LocalChannelPort}.
  *
  * A `node:worker_threads` port is an EventEmitter, so the EventEmitter surface
- * (`on`/`off`) is preferred when present; attaching a `message` listener there
- * also begins delivery, and messages posted before it attaches are buffered. A
- * browser port is driven through `addEventListener` and needs an explicit
- * `start()`, whose event carries the payload on `.data`.
- *
- * The browser branch has no Node test coverage in W1.1; it needs a real-browser
- * pass in W1.2/W1.3.
+ * (`on`/`off`) is preferred when present. A browser port is driven through
+ * `addEventListener` and an explicit `start()`, whose event carries the payload
+ * on `.data`; once started it drops what arrives with no listener attached.
+ * Register the result with a `LocalChannelPortRegistry`, which holds one
+ * listener for the port's life and queues frames between channels.
  */
 export function messagePortTransport(port: MessagePortLike): LocalChannelPort {
   return {

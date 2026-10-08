@@ -23,6 +23,7 @@ export {
   LocalChannelPortRegistry,
   registerLocalPeer,
   removeLocalPeer,
+  type LocalChannelPortRegistryOptions,
   type LocalPeerSyncManager,
   type LocalRemoteSpec,
   type LocalRemoveSpec,

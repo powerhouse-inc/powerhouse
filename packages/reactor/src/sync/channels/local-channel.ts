@@ -140,12 +140,12 @@ export class LocalChannel implements IChannel {
    * ack while leaving that frame pinning the floor -- dragging the live ack
    * below the durable cursor and re-loading already-applied ops as fresh jobs.
    *
-   * Loading first is safe because both the browser MessagePort and the
-   * node:worker_threads port buffer messages posted before a listener attaches:
-   * a peer frame sent during the cursor load is delivered, in order, the moment
-   * the listener is attached here -- never lost, and never applied before the
-   * ack floor is known. Nothing needs the subscription during the load, since
-   * this side announces itself only once init completes.
+   * Loading first relies on the port holding frames until a listener attaches.
+   * A `LocalChannelPortRegistry` port does: it keeps one listener on the
+   * raw port for its whole registration and replays, in order, what arrived
+   * while no channel was attached. A raw browser MessagePort handed straight to
+   * a channel does not once started, so a frame arriving between a shutdown
+   * and the next init on it is lost.
    */
   async init(): Promise<void> {
     const cursors = await this.cursorStorage.list(this.remoteName);

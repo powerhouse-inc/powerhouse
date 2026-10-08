@@ -9,7 +9,12 @@ import {
   removeLocalPeer,
   type LocalPeerSyncManager,
 } from "../../../../src/sync/channels/local-channel-registry.js";
-import type { LocalChannelPort } from "../../../../src/sync/channels/local-channel-transport.js";
+import {
+  messagePortTransport,
+  type LocalChannelPort,
+  type MessagePortLike,
+} from "../../../../src/sync/channels/local-channel-transport.js";
+import { createMockLogger } from "../../../factories.js";
 
 type FakePort = LocalChannelPort & { close: Mock<() => void> };
 
@@ -19,6 +24,45 @@ function fakePort(): FakePort {
     onMessage: vi.fn(() => () => {}),
     close: vi.fn<() => void>(),
   };
+}
+
+/** A started browser MessagePort drops what arrives while it has no listener. */
+class BrowserPortLike implements MessagePortLike {
+  readonly listeners = new Set<(event: unknown) => void>();
+  closed = false;
+  private started = false;
+  private readonly beforeStart: unknown[] = [];
+
+  postMessage(): void {}
+
+  close(): void {
+    this.closed = true;
+  }
+
+  addEventListener(_type: "message", listener: (event: unknown) => void): void {
+    this.listeners.add(listener);
+  }
+
+  removeEventListener(
+    _type: "message",
+    listener: (event: unknown) => void,
+  ): void {
+    this.listeners.delete(listener);
+  }
+
+  start(): void {
+    this.started = true;
+    for (const data of this.beforeStart.splice(0)) this.receive(data);
+  }
+
+  /** A frame from the peer. */
+  receive(data: unknown): void {
+    if (!this.started) {
+      this.beforeStart.push(data);
+      return;
+    }
+    for (const listener of this.listeners) listener({ data });
+  }
 }
 
 function failingSyncManager(failure: "add" | "remove"): LocalPeerSyncManager & {
@@ -91,6 +135,80 @@ describe("LocalChannelPortRegistry", () => {
     registry.register("peer", "chan", fakePort());
     expect(registry.isClosed("peer", "chan")).toBe(false);
     expect(registry.provider("peer", "chan")).toBeDefined();
+  });
+
+  it("replays frames that arrive while no channel is attached", () => {
+    const registry = new LocalChannelPortRegistry();
+    const raw = new BrowserPortLike();
+    registry.register("peer", "chan", messagePortTransport(raw));
+    const port = registry.provider("peer", "chan")!;
+
+    const first: unknown[] = [];
+    const detach = port.onMessage((data) => first.push(data));
+    raw.receive("one");
+    detach();
+    raw.receive("two");
+
+    const second: unknown[] = [];
+    port.onMessage((data) => second.push(data));
+    raw.receive("three");
+
+    expect(first).toEqual(["one"]);
+    expect(second).toEqual(["two", "three"]);
+  });
+
+  it("drops the oldest queued frame past its bound, with a warning", () => {
+    const warn = vi.fn();
+    const logger = { ...createMockLogger(), warn };
+    const registry = new LocalChannelPortRegistry({
+      logger,
+      maxQueuedFrames: 2,
+    });
+    const raw = new BrowserPortLike();
+    registry.register("peer", "chan", messagePortTransport(raw));
+
+    raw.receive("one");
+    raw.receive("two");
+    raw.receive("three");
+
+    const received: unknown[] = [];
+    registry.provider("peer", "chan")!.onMessage((data) => received.push(data));
+    expect(received).toEqual(["two", "three"]);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("delivers only to the latest attach, and an older detach is a no-op", () => {
+    const registry = new LocalChannelPortRegistry();
+    const raw = new BrowserPortLike();
+    registry.register("peer", "chan", messagePortTransport(raw));
+    const port = registry.provider("peer", "chan")!;
+
+    const older: unknown[] = [];
+    const newer: unknown[] = [];
+    const detachOlder = port.onMessage((data) => older.push(data));
+    port.onMessage((data) => newer.push(data));
+    detachOlder();
+    raw.receive("one");
+
+    expect(older).toEqual([]);
+    expect(newer).toEqual(["one"]);
+  });
+
+  it("holds one raw listener for the port's registered life", () => {
+    const registry = new LocalChannelPortRegistry();
+    const raw = new BrowserPortLike();
+    registry.register("peer", "chan", messagePortTransport(raw));
+    const port = registry.provider("peer", "chan")!;
+
+    port.onMessage(() => {})();
+    port.onMessage(() => {});
+    port.close();
+    expect(raw.listeners.size).toBe(1);
+    expect(raw.closed).toBe(false);
+
+    registry.unregister("peer", "chan");
+    expect(raw.listeners.size).toBe(0);
+    expect(raw.closed).toBe(true);
   });
 
   it("keeps keys whose halves contain the separator of a joined key apart", () => {

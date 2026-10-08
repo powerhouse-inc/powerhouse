@@ -1,3 +1,4 @@
+import { ConsoleLogger, type ILogger } from "document-model";
 import { DriveCollectionId } from "../../cache/operation-index-types.js";
 import type { ISyncManager, Remote } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter, RemoteOptions } from "../types.js";
@@ -8,10 +9,89 @@ import type {
   LocalChannelTransportProvider,
 } from "./local-channel-transport.js";
 
+const DEFAULT_MAX_QUEUED_FRAMES = 1024;
+
+/**
+ * The port a channel sees. It holds the registry's one listener on the raw port
+ * for the whole registration, so a frame that arrives between two channels
+ * (a reset) is queued and replayed to the next one instead of lost.
+ */
+class RegisteredPort implements LocalChannelPort {
+  private subscriber: ((data: unknown) => void) | undefined;
+  private readonly queued: unknown[] = [];
+  private droppedSinceAttach = 0;
+  private readonly detachRaw: () => void;
+
+  constructor(
+    private readonly raw: LocalChannelPort,
+    private readonly label: string,
+    private readonly logger: ILogger,
+    private readonly maxQueuedFrames: number,
+  ) {
+    this.detachRaw = raw.onMessage((data) => this.dispatch(data));
+  }
+
+  postMessage(data: unknown): void {
+    this.raw.postMessage(data);
+  }
+
+  /** One channel at a time; a newer attach supersedes an older one. */
+  onMessage(callback: (data: unknown) => void): () => void {
+    this.subscriber = callback;
+    this.droppedSinceAttach = 0;
+    while (this.queued.length > 0 && this.subscriber === callback) {
+      callback(this.queued.shift());
+    }
+    return () => {
+      if (this.subscriber === callback) this.subscriber = undefined;
+    };
+  }
+
+  /** The registry closes the raw port on unregister; a channel cannot. */
+  close(): void {}
+
+  release(): void {
+    this.subscriber = undefined;
+    this.queued.length = 0;
+    this.detachRaw();
+    this.raw.close();
+  }
+
+  private dispatch(data: unknown): void {
+    if (this.subscriber) {
+      this.subscriber(data);
+      return;
+    }
+    this.queued.push(data);
+    if (this.queued.length <= this.maxQueuedFrames) return;
+    this.queued.shift();
+    if (this.droppedSinceAttach++ === 0) {
+      this.logger.warn(
+        "Local sync port @Label queued more than @Max frames with no channel attached; dropping the oldest",
+        this.label,
+        this.maxQueuedFrames,
+      );
+    }
+  }
+}
+
+export type LocalChannelPortRegistryOptions = {
+  logger?: ILogger;
+  /** Frames held for a detached port before the oldest is dropped. */
+  maxQueuedFrames?: number;
+};
+
 /** Brokered local-sync ports by (peerId, channelName); owns closing them. */
 export class LocalChannelPortRegistry {
-  private readonly ports = new Map<string, LocalChannelPort>();
+  private readonly ports = new Map<string, RegisteredPort>();
   private readonly closedKeys = new Set<string>();
+  private readonly logger: ILogger;
+  private readonly maxQueuedFrames: number;
+
+  constructor(options: LocalChannelPortRegistryOptions = {}) {
+    this.logger = options.logger ?? new ConsoleLogger(["local-sync"]);
+    this.maxQueuedFrames = options.maxQueuedFrames ?? DEFAULT_MAX_QUEUED_FRAMES;
+  }
 
   /** Hand this to the {@link LocalChannelFactory}. */
   readonly provider: LocalChannelTransportProvider = (peerId, channelName) => {
@@ -37,7 +117,10 @@ export class LocalChannelPortRegistry {
       );
     }
     this.closedKeys.delete(key);
-    this.ports.set(key, port);
+    this.ports.set(
+      key,
+      new RegisteredPort(port, key, this.logger, this.maxQueuedFrames),
+    );
   }
 
   has(peerId: string, channelName: string): boolean {
@@ -48,13 +131,13 @@ export class LocalChannelPortRegistry {
     return this.closedKeys.has(this.key(peerId, channelName));
   }
 
-  /** Closes the port; a channel only unsubscribes, so a reset reuses it. */
+  /** Detaches the registry's listener and closes the port. */
   unregister(peerId: string, channelName: string): void {
     const key = this.key(peerId, channelName);
     const port = this.ports.get(key);
     this.ports.delete(key);
     this.closedKeys.add(key);
-    port?.close();
+    port?.release();
   }
 
   private key(peerId: string, channelName: string): string {

@@ -451,6 +451,7 @@ export {
   type LocalChannelPort,
   type LocalChannelTransportProvider,
   type LocalHelloMessage,
+  type LocalChannelPortRegistryOptions,
   type LocalPeerSyncManager,
   type LocalRemoteSpec,
   type LocalRemoveSpec,
