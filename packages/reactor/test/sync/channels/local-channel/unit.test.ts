@@ -165,6 +165,25 @@ describe("LocalChannel", () => {
       expect(pair.b.inbox.ackOrdinal).toBe(5);
     });
 
+    it("re-announces its ack for a push it drops as already applied", async () => {
+      const cursorsB = new MemoryCursorStorage();
+      await cursorsB.upsert({
+        remoteName: "b->a",
+        cursorType: "inbox",
+        cursorOrdinal: 10,
+        lastSyncedAtUtcMs: Date.now(),
+      });
+      pair = makePair({ cursorsB });
+      await pair.a.init();
+      await pair.b.init();
+      await waitFor(() => pair!.a.getConnectionState().state === "connected");
+
+      pair.a.outbox.add(syncOp("a->b", 5));
+
+      await waitFor(() => pair!.a.outbox.items.length === 0);
+      expect(pair.b.inbox.items).toHaveLength(0);
+    });
+
     it("re-pushes unacked items on a resend request", async () => {
       pair = makePair();
       await pair.a.init();
@@ -245,7 +264,9 @@ describe("LocalChannel", () => {
         expect(channel.inbox.items).toHaveLength(0);
         expect(channel.inbox.ackOrdinal).toBe(10);
         expect((await cursors.get("a->b", "inbox")).cursorOrdinal).toBe(10);
-        expect(transport.sentOfKind("ack")).toHaveLength(0);
+        expect(
+          transport.sentOfKind("ack").map((frame) => frame.ackOrdinal),
+        ).toEqual([10]);
       } finally {
         await channel.shutdown();
       }

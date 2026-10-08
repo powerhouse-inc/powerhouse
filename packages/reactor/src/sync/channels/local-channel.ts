@@ -259,10 +259,14 @@ export class LocalChannel implements IChannel {
   private onInboxRemoved(): void {
     const ackOrdinal = this.inbox.ackOrdinal;
     this.persistCursor("inbox", ackOrdinal);
-    if (ackOrdinal > this.lastPostedAckOrdinal) {
-      this.lastPostedAckOrdinal = ackOrdinal;
-      this.post({ kind: "ack", channelId: this.channelId, ackOrdinal });
-    }
+    if (ackOrdinal > this.lastPostedAckOrdinal) this.postAck();
+  }
+
+  /** Unconditional, so a peer re-pushing what this side applied can trim. */
+  private postAck(): void {
+    const ackOrdinal = this.inbox.ackOrdinal;
+    this.lastPostedAckOrdinal = Math.max(this.lastPostedAckOrdinal, ackOrdinal);
+    this.post({ kind: "ack", channelId: this.channelId, ackOrdinal });
   }
 
   private receive(data: unknown): void {
@@ -314,23 +318,29 @@ export class LocalChannel implements IChannel {
    * acked. A reconnecting peer may re-push durable ops before it hears this
    * side's ack; adding one back as a fresh sync job would transiently drag the
    * ack floor below the persisted cursor, so a batch entirely at or below the
-   * ack is skipped. A frame whose envelopes are malformed never reaches here --
+   * ack is skipped, and the ack is posted again so the peer can trim them. A
+   * frame whose envelopes are malformed never reaches here --
    * {@link isLocalWireMessage} rejects it and {@link receive} records a failure.
    */
   private receivePush(message: LocalPushMessage): void {
     const ackFloor = this.inbox.ackOrdinal;
     const syncOps: SyncOperation[] = [];
+    let dropped = false;
     for (const envelope of message.envelopes) {
       const converted = envelopesToSyncOperations(
         envelope as SyncEnvelope,
         this.remoteName,
       );
       for (const syncOp of converted) {
-        if (this.highestOrdinal(syncOp) <= ackFloor) continue;
+        if (this.highestOrdinal(syncOp) <= ackFloor) {
+          dropped = true;
+          continue;
+        }
         syncOp.transported();
         syncOps.push(syncOp);
       }
     }
+    if (dropped) this.postAck();
     if (syncOps.length === 0) return;
     try {
       this.inbox.add(...syncOps);
