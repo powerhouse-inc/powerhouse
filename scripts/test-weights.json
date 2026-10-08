@@ -14,6 +14,7 @@
   "@powerhousedao/reactor-group": 2,
   "@powerhousedao/reactor-hypercore": 4,
   "@powerhousedao/reactor-mcp": 8,
+  "@powerhousedao/reactor-router": 1,
   "@powerhousedao/reactor-workflow": 8,
   "@powerhousedao/registry": 4,
   "@powerhousedao/shared": 2,

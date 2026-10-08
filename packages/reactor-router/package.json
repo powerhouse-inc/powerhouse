@@ -1,0 +1,47 @@
+{
+  "name": "@powerhousedao/reactor-router",
+  "version": "6.2.3-dev.48",
+  "description": "Routing reactor client: one IReactorClient over a set of reactor backends, placed by drive with advisory routing and misroute recovery.",
+  "keywords": [
+    "powerhouse",
+    "reactor",
+    "router",
+    "multi-reactor",
+    "placement"
+  ],
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-router"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/reactor-router",
+    "build": "tsdown",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  }
+}
