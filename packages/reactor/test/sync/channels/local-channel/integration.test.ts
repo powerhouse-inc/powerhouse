@@ -132,6 +132,10 @@ class Pair {
   }
 }
 
+function stateOf(peer: Peer, remoteName: string): string {
+  return peer.sync.getByName(remoteName).channel.getConnectionState().state;
+}
+
 /** Proves traffic still flows both ways over the link. */
 async function expectBothWays(pair: Pair, driveId: string, tag: string) {
   await addFolder(pair.a, driveId, `${tag}FromA`);
@@ -227,6 +231,29 @@ describe("LocalChannel over a message port between two reactors", () => {
     await a.admin.resetChannel("a->b");
 
     await expectBothWays(pair, driveId, "afterReset");
+  }, 40_000);
+
+  it("reports both sides connected after one side resets", async () => {
+    const a = await buildPeer("a", WIDE);
+    const b = await buildPeer("b", WIDE);
+    pair = new Pair(a, b);
+
+    const driveId = "reset-state-drive";
+    await pair.connect(driveId);
+    await create(a, driveId, {});
+    await vi.waitFor(async () => expect(await has(b, driveId)).toBe(true), {
+      timeout: 15_000,
+    });
+
+    await a.admin.resetChannel("a->b");
+
+    await vi.waitFor(
+      () => {
+        expect(stateOf(a, "a->b")).toBe("connected");
+        expect(stateOf(b, "b->a")).toBe("connected");
+      },
+      { timeout: 5_000 },
+    );
   }, 40_000);
 
   it("keeps syncing after both sides reset their local remotes", async () => {

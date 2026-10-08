@@ -90,6 +90,53 @@ describe("LocalChannel", () => {
       expect(pair.a.getConnectionState().state).toBe("disconnected");
     });
 
+    it("returns to connected on good traffic after a malformed frame", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+        transport.deliver({
+          kind: "resend",
+          channelId: "peer",
+          sinceOrdinal: 0,
+        });
+        transport.deliver({ kind: "nonsense" });
+        expect(channel.getConnectionState().state).toBe("error");
+
+        transport.deliver({ kind: "ack", channelId: "peer", ackOrdinal: 0 });
+
+        expect(channel.getConnectionState().state).toBe("connected");
+      } finally {
+        await channel.shutdown();
+      }
+    });
+
+    it("answers an opening hello once, and never answers an answer", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+        expect(transport.sentOfKind("hello")).toHaveLength(1);
+        const hello = {
+          kind: "hello",
+          channelId: "peer",
+          collectionId: "drive.main.drive-1",
+          filter: { documentId: [], scope: [], branch: "main" },
+          sinceOrdinal: 0,
+          manifest: null,
+        };
+
+        transport.deliver(hello);
+        transport.deliver({ ...hello, reply: true });
+
+        const hellos = transport.sentOfKind("hello");
+        expect(hellos).toHaveLength(2);
+        expect(hellos[1].reply).toBe(true);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+
     it("leaves its port open on shutdown, for its registrant to close", async () => {
       const transport = new FakeTransport();
       const channel = makeChannel({ transport });

@@ -25,8 +25,9 @@ export type LocalWireMessage =
 export type LocalWireKind = "hello" | "push" | "ack" | "resend";
 
 /**
- * Opens (or re-opens) the link. Both sides send one on init, and again on a
- * reconnect, so the exchange is symmetric without either side replying.
+ * Opens (or re-opens) the link. Each side sends one on init. A side that hears
+ * an opening hello answers with one marked `reply`, so a side that resets while
+ * its peer stays up still completes a handshake; a reply is never answered.
  *
  * `sinceOrdinal` is the sender's inbox ack: the peer trims its outbox up to it,
  * exactly as it would on an {@link LocalAckMessage}, so a HELLO after a restart
@@ -41,6 +42,7 @@ export type LocalHelloMessage = {
   filter: RemoteFilter;
   sinceOrdinal: number;
   manifest: PeerManifest | null;
+  reply?: boolean;
 };
 
 /**

@@ -91,6 +91,8 @@ export class LocalChannel implements IChannel {
   private readonly peerManifestCallbacks = new Set<PeerManifestListener>();
 
   private connectionState: ConnectionState = "connecting";
+  /** Whether any valid frame has arrived since init. */
+  private heardPeer = false;
   private failureCount = 0;
   private lastSuccessUtcMs?: number;
   private lastFailureUtcMs?: number;
@@ -163,7 +165,7 @@ export class LocalChannel implements IChannel {
       this.receive(data),
     );
 
-    this.sendHello();
+    this.sendHello(false);
   }
 
   /** Leaves the port open: whoever registered it closes it. */
@@ -271,6 +273,9 @@ export class LocalChannel implements IChannel {
       );
       return;
     }
+    this.heardPeer = true;
+    this.markSuccess();
+    this.transitionConnectionState("connected");
     switch (data.kind) {
       case "hello":
         this.receiveHello(data);
@@ -299,8 +304,7 @@ export class LocalChannel implements IChannel {
     if (message.sinceOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, message.sinceOrdinal);
     }
-    this.markSuccess();
-    this.transitionConnectionState("connected");
+    if (!message.reply) this.sendHello(true);
     void this.hearPeer(message.manifest);
     this.rePushUnacked();
   }
@@ -328,7 +332,6 @@ export class LocalChannel implements IChannel {
       }
     }
     if (syncOps.length === 0) return;
-    this.markSuccess();
     try {
       this.inbox.add(...syncOps);
     } catch (error) {
@@ -345,7 +348,7 @@ export class LocalChannel implements IChannel {
     this.rePushUnacked();
   }
 
-  private sendHello(): void {
+  private sendHello(reply: boolean): void {
     this.post({
       kind: "hello",
       channelId: this.channelId,
@@ -353,6 +356,7 @@ export class LocalChannel implements IChannel {
       filter: this.filter,
       sinceOrdinal: this.inbox.ackOrdinal,
       manifest: this.localManifestProvider?.() ?? null,
+      ...(reply ? { reply } : {}),
     });
   }
 
@@ -383,6 +387,12 @@ export class LocalChannel implements IChannel {
       return;
     }
     this.clearPushRetry();
+    if (this.heardPeer) {
+      this.markSuccess();
+      this.transitionConnectionState("connected");
+    } else {
+      this.transitionConnectionState("connecting");
+    }
   }
 
   /** Re-pushes every outbox item the peer has not acknowledged. */
