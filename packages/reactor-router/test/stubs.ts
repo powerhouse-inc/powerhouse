@@ -375,7 +375,10 @@ export class FakeBackend {
           execute: (identifier: string) =>
             this.run("submit.execute", [identifier], () => {
               this.own(identifier, "submit.execute");
-              const job = fakeJob(`${this.name}-submitted`, identifier);
+              const job = fakeJob(
+                `${this.name}-submitted-${identifier}`,
+                identifier,
+              );
               this.jobs.set(job.id, job);
               return job;
             }),
@@ -385,7 +388,10 @@ export class FakeBackend {
                 this.require(parent, "submit.create");
               }
               this.seed(document);
-              const job = fakeJob(`${this.name}-created`, document.header.id);
+              const job = fakeJob(
+                `${this.name}-created-${document.header.id}`,
+                document.header.id,
+              );
               this.jobs.set(job.id, job);
               return { jobs: { create: job } };
             }),

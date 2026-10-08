@@ -712,7 +712,7 @@ describe("async submission", () => {
 
     expect(one.count("submit.create")).toBe(2);
     expect(one.called("executeBatch")).toBe(false);
-    expect(client.describeRouting().jobs).toHaveLength(1);
+    expect(client.describeRouting().jobs).toHaveLength(2);
   });
 
   it("falls back to a waiting submit and returns the job's terminal state", async () => {
