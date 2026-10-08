@@ -63,6 +63,12 @@ export class RouteDispatcher {
     );
     this.guard = new OwnershipGuard(
       (backend, identifier) => this.owns(backend, identifier),
+      (backend, identifier) =>
+        Promise.all(
+          this.backends
+            .filter((other) => other !== backend)
+            .map((other) => this.owns(other, identifier)),
+        ),
       options.documentCacheSize ?? DEFAULT_DOCUMENT_CACHE_SIZE,
     );
     this.primaryName =

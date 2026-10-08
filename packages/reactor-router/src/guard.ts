@@ -14,8 +14,13 @@ export type OwnershipProbe = (
 export class OwnershipGuard {
   private readonly owned: BoundedMap;
 
+  /** `probe` asks one backend; `others` asks every backend but the given one. */
   constructor(
     private readonly probe: OwnershipProbe,
+    private readonly others: (
+      backend: RouterBackend,
+      identifier: string,
+    ) => Promise<readonly Ownership[]>,
     cacheSize: number,
   ) {
     this.owned = new BoundedMap(cacheSize);
@@ -38,13 +43,22 @@ export class OwnershipGuard {
       this.owned.set(key, backend.name);
       return;
     }
-    if (answer === "no") {
+    if (answer === "no" && (await this.heldElsewhere(backend, identifier))) {
       throw new WrongBackendError({
         documentId: identifier,
         rejectedBy: backend.name,
         operation,
       });
     }
+  }
+
+  /** When no backend holds it, the backend itself reports not-found. */
+  private async heldElsewhere(
+    backend: RouterBackend,
+    identifier: string,
+  ): Promise<boolean> {
+    const answers = await this.others(backend, identifier);
+    return answers.some((answer) => answer !== "no");
   }
 
   forget(backend: RouterBackend, identifier: string): void {

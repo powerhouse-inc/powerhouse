@@ -138,9 +138,11 @@ export class FakeBackend {
   private require(identifier: string, method: string): PHDocument {
     const document = this.documents.get(identifier);
     if (document === undefined) {
-      throw new Error(
+      const error = new Error(
         `${this.name}: ${method} found no document ${JSON.stringify(identifier)}`,
       );
+      error.name = "DocumentNotFoundError";
+      throw error;
     }
     return document;
   }

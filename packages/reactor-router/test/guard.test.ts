@@ -142,4 +142,59 @@ describe("router-side ownership guard", () => {
 
     expect(one.called("isServed")).toBe(false);
   });
+
+  it("lets the backend report not-found when no backend holds the target", async () => {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    const dispatcher = new RouteDispatcher([one.handle(), two.handle()], {
+      onDiagnostic: silent,
+    });
+
+    const run = dispatcher.onDocument(
+      "execute",
+      "missing",
+      renamer("missing", "x"),
+      ATTEMPT.write,
+    );
+
+    await expect(run).rejects.toMatchObject({ name: "DocumentNotFoundError" });
+    expect(one.count("execute") + two.count("execute")).toBe(1);
+  });
+
+  it("lets a lone backend report not-found for a missing target", async () => {
+    const one = new FakeBackend("one");
+    const dispatcher = new RouteDispatcher([one.handle()], {
+      onDiagnostic: silent,
+    });
+
+    const run = dispatcher.onDocument(
+      "execute",
+      "missing",
+      renamer("missing", "x"),
+      ATTEMPT.write,
+    );
+
+    await expect(run).rejects.toMatchObject({ name: "DocumentNotFoundError" });
+    expect(one.count("execute")).toBe(1);
+  });
+
+  it("does not run on a backend that says no while another cannot answer", async () => {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    two.failing.add("isServed");
+    const dispatcher = new RouteDispatcher([one.handle(), two.handle()], {
+      documents: { "doc-1": "one" },
+      onDiagnostic: silent,
+    });
+
+    const run = dispatcher.onDocument(
+      "execute",
+      "doc-1",
+      renamer("doc-1", "x"),
+      ATTEMPT.write,
+    );
+
+    await expect(run).rejects.toThrow();
+    expect(one.called("execute")).toBe(false);
+  });
 });
