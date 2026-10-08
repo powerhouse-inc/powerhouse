@@ -87,10 +87,10 @@ rather than restated here.
 **Workflow execution is a singleton pinned to one reactor.** The engine forks
 child processes, so no browser reactor can compose it; the hazard a guard is
 needed for is two Node replicas over one run journal. It is not theoretical:
-opening the journal runs `recoverOrphanedRuns` and `recoverAbandonedRuns`,
-which close out every RUNNING and PENDING run that is not in **this** process's
-in-flight set — so a second replica booting marks the first one's live runs
-FAILED, and then both arm every trigger and both poll it.
+opening the journal fails every RUNNING run that is not in **this** process's
+in-flight set, and starting the runtime admits every PENDING one — so a second
+replica booting fails the first one's live runs, runs its queued ones a second
+time, and then both arm every trigger and both poll it.
 
 The guard is a durable claim on the journal's own database
 (`reactor/singleton-lease.ts`, one row in `workflow_singleton`), taken by the host
@@ -122,13 +122,14 @@ the sweeps and the supervisor are per process.
   still on its way in, is recorded once. Every trigger firing (an operation, a
   piece trigger's items, a schedule slot, a webhook delivery) is journaled as a
   PENDING run with its payload before it fires. If its source will not deliver
-  it again, the refusal fails that run, so it can be rerun. If it will (a sync
+  it again, the refusal leaves that run PENDING, and the next owner starts it;
+  a manual fire's caller hears the refusal, so its run is failed. If it will (a sync
   webhook answered 503 for the sender to retry, or piece items whose cursor the
   stopped trigger put back), the run is cancelled as redelivered. A firing
   refused before its run was written is left to its source: the operation is
   replayed, the sender retries, the schedule slot stays due, the trigger's
   cursor is put back or never moved. A close-out write that fails leaves the
-  run PENDING, and the next owner fails it when it opens the journal. Without a
+  run PENDING, and the next owner starts it. Without a
   working journal a firing that still runs is unrecorded, and its refusal is
   logged as an error.
 - A renewal that fails or hangs is retried every 5s. A holder that has gone
@@ -426,6 +427,18 @@ too. Unless an author changed them, a workflow now:
 That is what the fields have said since the first schema; what changed is that
 they are true.
 
+- **Every run is admitted twice**: by its workflow's own `concurrency`, then
+  across workflows (`reactor/run-dispatcher.ts`). The second admits at most
+  `PH_WORKFLOWS_RUNS_IN_FLIGHT` runs at once, and none while the main thread's
+  event-loop utilization is above `PH_WORKFLOWS_ADMIT_MAX_ELU`: that thread
+  caps throughput, so a run admitted past it only adds latency. One run is
+  always admitted when none is running. A run waiting at either gate stays
+  PENDING, a manual fire included, so a crash leaves it for the next boot.
+- **The next boot starts what a stopped reactor journaled.** Its PENDING runs
+  are admitted when the runtime starts, oldest first, through both gates. A
+  run admitted at `FIRE_CRASH_BUDGET` (3) boots without ever starting is
+  failed instead, so a fire that takes the reactor down is not replayed
+  forever. RUNNING runs are still failed at open, and rerunnable.
 - **Concurrency is process-local**, which is exactly right: workflow execution
   is a singleton pinned to one reactor (see **Placement** above), so this
   process is the deployment's whole run set. A firing SINGLETON drops is
@@ -463,8 +476,11 @@ they are true.
   changed or not), and a **disable then re-enable**. Both work across a restart.
   A park blocks the registrations of the version that failed and older ones
   only: a newer version always arms, and lifts the park it outlived. Every park
-  write runs on the trigger supervisor's lane, with enable and disable, so a
-  park cannot land between an enable's check and its write. An unresolvable
+  write runs on the workflow's trigger lane, with its enable and disable, so a
+  park cannot land between an enable's check and its write. Lanes are per
+  workflow: a slow hook delays only its own workflow, and a tick fires due
+  schedules first, then runs polls alongside each other, as many as
+  `PH_WORKFLOWS_TRIGGER_SLOTS`. An unresolvable
   piece leaves a PARKED row alone as well, rather than turning it ERROR and
   letting the ERROR row's own retry arm it.
 - **`retryOn` empty means every error is retryable.** The schema reads "error
@@ -582,6 +598,8 @@ explanation behind it.
 | `PH_WORKFLOWS_WORKER_MAX_REQUESTS`    | `1000`             | Requests a child serves before it is retired                                              |
 | `PH_WORKFLOWS_WORKER_MIN`             | `1`                | Idle children kept warm; `0` lets every idle child exit                                   |
 | `PH_WORKFLOWS_TRIGGER_SLOTS`          | `1`                | Children reserved for trigger hooks                                                       |
+| `PH_WORKFLOWS_RUNS_IN_FLIGHT`         | 8 × the pool       | Runs admitted at once across workflows (`reactor/run-dispatcher.ts`)                      |
+| `PH_WORKFLOWS_ADMIT_MAX_ELU`          | `0.8`              | Main-thread event-loop utilization above which no new run is admitted; one always runs    |
 | `PH_WORKFLOWS_MAX_QUEUED_FIRINGS`     | `100`              | Firings of ONE workflow that may wait for its concurrency slot; past it a firing is journaled CANCELLED (`reactor/run-gate.ts`) |
 | `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`            | Cadence for a polling trigger that names none of its own                                  |
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |

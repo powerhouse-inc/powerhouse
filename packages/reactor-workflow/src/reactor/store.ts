@@ -8,13 +8,14 @@ import {
 } from "@powerhousedao/pieces-framework/workflow";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
+  containsRedactedMarker,
   redact,
   redactMessage,
   type StepExecutionRecord,
   type WorkflowRunResult,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import { sql, type Kysely } from "kysely";
+import { sql, type ColumnType, type Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
 import { CORE_PIECE_NAME } from "../pieces/index.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
@@ -171,6 +172,14 @@ export const FIRED_WITHOUT_RUN_ID = "fired-without-run";
 
 const DEDUPE_CLAIM_MIGRATION = "trigger_dedupe.run_id-null-is-unclaimed";
 
+export function abandonedAdmissionError(attempts: number): string {
+  return (
+    `This run was admitted at ${attempts} boots and the reactor stopped ` +
+    "each time before it started, so it is no longer admitted on boot. Fix " +
+    "the cause, then rerun it to fire the workflow with the same payload."
+  );
+}
+
 export function abandonedFireError(attempts: number): string {
   return (
     `This operation was delivered ${attempts} times and never once got as ` +
@@ -223,7 +232,10 @@ export function workflowParkRow(
 }
 
 export interface WorkflowRuntimeDB {
-  run: RunRow;
+  // admit_attempts: boots that admitted this PENDING run without it starting.
+  run: RunRow & {
+    admit_attempts: ColumnType<number, number | undefined, number>;
+  };
   step_execution: StepExecutionRow;
   run_document: RunDocumentRow;
   trigger_state: TriggerStateRow;
@@ -239,12 +251,6 @@ const logger = childLogger(["workflow", "runtime", "store"]);
 // legible in the UI rather than the run just stopping.
 export const ORPHANED_RUN_ERROR =
   "Reactor stopped before the run finished; steps completed before then were journaled";
-
-// A run that was matched and journaled but never started. Recorded as FAILED
-// so it is both visible and rerunnable: rerun() replays the trigger payload
-// with no completed steps, which is exactly the run that never happened.
-export const ABANDONED_PENDING_RUN_ERROR =
-  "Reactor stopped before the matched trigger started its run; rerun it to fire the workflow with the same payload";
 
 // A matched fire, durable before the operation batch that matched it returns.
 // Nothing executes it yet: fire() adopts the row and turns it RUNNING.
@@ -540,6 +546,18 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .set({ enqueued_at: sql.ref("started_at") })
     .where("enqueued_at", "is", null)
     .execute();
+
+  // Additive migration: boot admission's crash budget.
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("admit_attempts", "integer", (col) =>
+        col.notNull().defaultTo(0),
+      )
+      .execute();
+  } catch {
+    // column already exists
+  }
 
   // Run listings, scoped and unscoped, page newest first on (enqueued_at, id).
   await db.schema.dropIndex("run_workflow_started").ifExists().execute();
@@ -1030,6 +1048,14 @@ const LEGACY_MARKER_KEYS: readonly string[] = [
  * ambiguous, and nothing can resolve that for a row already written; the
  * window is as narrow as the stored data allows.
  */
+function unreplayablePayload(
+  payload: unknown,
+): "truncated" | "redacted" | undefined {
+  if (isTruncatedStepPayload(payload)) return "truncated";
+  if (containsRedactedMarker(payload)) return "redacted";
+  return undefined;
+}
+
 export function isTruncatedStepPayload(
   value: unknown,
 ): value is TruncatedStepPayload {
@@ -1221,6 +1247,19 @@ export interface ErasedRuns {
   dedupeKeysUnlinked: number;
 }
 
+export interface AdmittedRun {
+  runId: string;
+  workflowId: string;
+  triggerKind: string;
+  triggerPayload: unknown;
+}
+
+export interface PollSuccess {
+  workflowId: string;
+  storeState: string;
+  nextPollAtIso: string | null;
+}
+
 async function pollSucceededIn(
   db: Kysely<WorkflowRuntimeDB>,
   workflowId: string,
@@ -1353,7 +1392,6 @@ export class WorkflowRunStore {
     const unmigrated = await up(db);
     const store = new WorkflowRunStore(db, unmigrated);
     await store.recoverOrphanedRuns();
-    await store.recoverAbandonedRuns();
     return store;
   }
 
@@ -1398,30 +1436,96 @@ export class WorkflowRunStore {
     return recovered;
   }
 
-  // A PENDING run left by a stopped process: it was matched and journaled but
-  // nothing ever started it. Recovery for RUNNING runs cannot reach it — that
-  // sweep must not touch a row a live enqueue is about to adopt — so it gets
-  // its own pass, run once when the journal opens.
-  async recoverAbandonedRuns(): Promise<number> {
-    let query = this.db
-      .updateTable("run")
-      .set({
-        status: "FAILED",
-        error: ABANDONED_PENDING_RUN_ERROR,
-        ended_at: new Date().toISOString(),
-      })
-      .where("status", "=", PENDING_RUN_STATUS);
-    if (this.runsInFlight.size > 0) {
-      query = query.where("id", "not in", [...this.runsInFlight]);
-    }
-    // Counted off RETURNING: the knex-backed dialect reports no row count.
-    const recovered = (await query.returning("id").execute()).length;
-    if (recovered > 0) {
-      logger.warn(
-        `Recovered ${recovered} workflow run(s) journaled by a stopped reactor but never started; they are now FAILED and rerunnable`,
+  // PENDING runs a stopped process journaled, oldest first, each counted as
+  // one more admission. The host starts them; RUNNING ones are failed instead.
+
+  // Past the crash budget a run is failed: a fire that takes the reactor down
+  // before it starts is not replayed on every boot.
+  async admitAbandonedRuns(): Promise<AdmittedRun[]> {
+    const admitted = await this.db.transaction().execute(async (trx) => {
+      let query = trx
+        .selectFrom("run")
+        .select([
+          "id",
+          "workflow_id",
+          "trigger_kind",
+          "trigger_payload",
+          "admit_attempts",
+        ])
+        .where("status", "=", PENDING_RUN_STATUS)
+        .orderBy("enqueued_at", "asc")
+        .orderBy("id", "asc");
+      if (this.runsInFlight.size > 0) {
+        query = query.where("id", "not in", [...this.runsInFlight]);
+      }
+      const rows = await query.execute();
+      const runs: AdmittedRun[] = [];
+      const now = new Date().toISOString();
+      for (const row of rows) {
+        if (row.admit_attempts >= FIRE_CRASH_BUDGET) {
+          await trx
+            .updateTable("run")
+            .set({
+              status: "FAILED",
+              error: abandonedAdmissionError(row.admit_attempts),
+              ended_at: now,
+            })
+            .where("id", "=", row.id)
+            .execute();
+          continue;
+        }
+        const triggerPayload =
+          row.trigger_payload === null
+            ? undefined
+            : (JSON.parse(row.trigger_payload) as unknown);
+        // The journal keeps a capped, redacted copy: running it would feed the
+        // workflow markers. Failed as rerun() refuses the same payloads.
+        const unreplayable = unreplayablePayload(triggerPayload);
+        if (unreplayable) {
+          await trx
+            .updateTable("run")
+            .set({
+              status: "FAILED",
+              error: `The trigger payload was ${unreplayable} by the journal and cannot be run after a restart; fire the workflow again`,
+              ended_at: now,
+            })
+            .where("id", "=", row.id)
+            .execute();
+          continue;
+        }
+        await trx
+          .updateTable("run")
+          .set({ admit_attempts: row.admit_attempts + 1 })
+          .where("id", "=", row.id)
+          .execute();
+        runs.push({
+          runId: row.id,
+          workflowId: row.workflow_id,
+          triggerKind: row.trigger_kind,
+          triggerPayload,
+        });
+      }
+      return runs;
+    });
+    for (const run of admitted) this.runsInFlight.add(run.runId);
+    if (admitted.length > 0) {
+      logger.info(
+        `Admitting ${admitted.length} workflow run(s) journaled by a stopped reactor`,
       );
     }
-    return recovered;
+    return admitted;
+  }
+
+  // A graceful shutdown refused this PENDING run before it started: the boot
+  // that admitted it did not crash, so its attempt is given back.
+  async releaseAdmission(runId: string): Promise<void> {
+    this.runsInFlight.delete(runId);
+    await this.db
+      .updateTable("run")
+      .set({ admit_attempts: sql<number>`greatest(admit_attempts - 1, 0)` })
+      .where("id", "=", runId)
+      .where("status", "=", PENDING_RUN_STATUS)
+      .execute();
   }
 
   /**
@@ -1451,11 +1555,23 @@ export class WorkflowRunStore {
   // only known once fire() reads the document, so beginRun fills them in.
   async enqueueRun(options: EnqueueRunOptions): Promise<string> {
     const id = randomUUID();
-    await this.insertPendingRun(this.db, id, options);
-    // In flight from here: the row is this process's to finish, and no sweep
-    // of either kind may close it out underneath the run about to start.
-    this.runsInFlight.add(id);
+    await this.unmarkOnFailure([id], () =>
+      this.insertPendingRun(this.db, id, options),
+    );
     return id;
+  }
+
+  // A row insertPendingRun marked but whose write never landed is no run.
+  private async unmarkOnFailure<T>(
+    ids: string[],
+    write: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await write();
+    } catch (error) {
+      for (const id of ids) this.runsInFlight.delete(id);
+      throw error;
+    }
   }
 
   /**
@@ -1511,53 +1627,70 @@ export class WorkflowRunStore {
     }
 
     const id = randomUUID();
-    const claimed = await this.db.transaction().execute(async (trx) => {
-      // RETURNING, not a row count: the knex-backed dialect reports none.
-      const won = await trx
-        .updateTable("trigger_dedupe")
-        .set({ run_id: id })
-        .where("workflow_id", "=", options.workflowId)
-        .where("dedupe_key", "=", dedupeKey)
-        .where("run_id", "is", null)
-        .returning("dedupe_key")
-        .executeTakeFirst();
-      if (won === undefined) return false;
-      await this.insertPendingRun(trx, id, options);
-      return true;
-    });
+    const claimed = await this.unmarkOnFailure([id], () =>
+      this.db.transaction().execute(async (trx) => {
+        // RETURNING, not a row count: the knex-backed dialect reports none.
+        const won = await trx
+          .updateTable("trigger_dedupe")
+          .set({ run_id: id })
+          .where("workflow_id", "=", options.workflowId)
+          .where("dedupe_key", "=", dedupeKey)
+          .where("run_id", "is", null)
+          .returning("dedupe_key")
+          .executeTakeFirst();
+        if (won === undefined) return false;
+        await this.insertPendingRun(trx, id, options);
+        return true;
+      }),
+    );
     // The read this lost to is committed, so it holds the winner's run.
     if (!claimed) return { outcome: "duplicate" };
-    this.runsInFlight.add(id);
     return { outcome: "claimed", runId: id };
   }
 
   // A trigger batch's claims and PENDING runs, in one write; undefined where already claimed.
+  // With `success`, the poll's success lands with its rows, or neither does:
+  // a crash between them would advance next_poll_at past items never journaled.
   async journalTriggerItems(
     items: { dedupeKey?: string; options: EnqueueRunOptions }[],
     ttlMs: number,
     nowIso: string,
+    success?: PollSuccess,
   ): Promise<(string | undefined)[]> {
-    const ids = await this.db.transaction().execute(async (trx) => {
-      const journaled: (string | undefined)[] = [];
-      for (const { dedupeKey, options } of items) {
-        const id = randomUUID();
-        const won =
-          dedupeKey === undefined ||
-          (await claimDedupeIn(
+    const marked: string[] = [];
+    return this.unmarkOnFailure(marked, () =>
+      this.db.transaction().execute(async (trx) => {
+        if (success) {
+          await pollSucceededIn(
             trx,
-            options.workflowId,
-            dedupeKey,
-            ttlMs,
+            success.workflowId,
+            success.storeState,
             nowIso,
-            id,
-          ));
-        if (won) await this.insertPendingRun(trx, id, options);
-        journaled.push(won ? id : undefined);
-      }
-      return journaled;
-    });
-    for (const id of ids) if (id) this.runsInFlight.add(id);
-    return ids;
+            success.nextPollAtIso,
+          );
+        }
+        const journaled: (string | undefined)[] = [];
+        for (const { dedupeKey, options } of items) {
+          const id = randomUUID();
+          const won =
+            dedupeKey === undefined ||
+            (await claimDedupeIn(
+              trx,
+              options.workflowId,
+              dedupeKey,
+              ttlMs,
+              nowIso,
+              id,
+            ));
+          if (won) {
+            marked.push(id);
+            await this.insertPendingRun(trx, id, options);
+          }
+          journaled.push(won ? id : undefined);
+        }
+        return journaled;
+      }),
+    );
   }
 
   // A schedule slot is consumed and its firing journaled together, or neither.
@@ -1567,17 +1700,18 @@ export class WorkflowRunStore {
     options: EnqueueRunOptions,
   ): Promise<string> {
     const id = randomUUID();
-    await this.db.transaction().execute(async (trx) => {
-      await pollSucceededIn(
-        trx,
-        options.workflowId,
-        "{}",
-        nowIso,
-        nextPollAtIso,
-      );
-      await this.insertPendingRun(trx, id, options);
-    });
-    this.runsInFlight.add(id);
+    await this.unmarkOnFailure([id], () =>
+      this.db.transaction().execute(async (trx) => {
+        await pollSucceededIn(
+          trx,
+          options.workflowId,
+          "{}",
+          nowIso,
+          nextPollAtIso,
+        );
+        await this.insertPendingRun(trx, id, options);
+      }),
+    );
     return id;
   }
 
@@ -1718,11 +1852,14 @@ export class WorkflowRunStore {
     return id;
   }
 
+  // In flight before the row commits: boot admission must never see a row
+  // this process is about to start as one a stopped process left behind.
   private async insertPendingRun(
     db: Kysely<WorkflowRuntimeDB>,
     id: string,
     options: EnqueueRunOptions,
   ): Promise<void> {
+    this.runsInFlight.add(id);
     const now = new Date().toISOString();
     await db
       .insertInto("run")

@@ -91,6 +91,20 @@ describe("the workflow run gate", () => {
     expect(third).toBe(true);
   });
 
+  it("says a firing would wait only when it would queue, not be refused", async () => {
+    const gate = new WorkflowRunGate();
+    const queue = policyOf({ concurrency: "QUEUE" });
+    const singleton = policyOf({ concurrency: "SINGLETON" });
+
+    expect(gate.wouldWait("q", queue)).toBe(false);
+    await gate.admit("q", queue);
+    expect(gate.wouldWait("q", queue)).toBe(true);
+
+    await gate.admit("s", singleton);
+    expect(gate.wouldWait("s", singleton)).toBe(false);
+    expect(gate.wouldWait("u", UNENFORCED_POLICY)).toBe(false);
+  });
+
   it("keeps lanes per workflow", async () => {
     const gate = new WorkflowRunGate();
     const policy = policyOf({ concurrency: "SINGLETON" });

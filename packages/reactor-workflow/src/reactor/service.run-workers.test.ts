@@ -12,6 +12,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
 import { packagePieces } from "./piece-registry.js";
@@ -218,6 +219,51 @@ describe("fire() and the worker pool", () => {
 
     expect(pidOf(other.steps[0]?.output)).not.toBe(
       pidOf(held.steps[0]?.output),
+    );
+  });
+
+  it("holds a run past PH_WORKFLOWS_RUNS_IN_FLIGHT until one ends", async () => {
+    vi.stubEnv("PH_WORKFLOWS_RUNS_IN_FLIGHT", "1");
+    let actions = ["hold"];
+    service = serviceFor(() => Promise.resolve(workflowDocument(actions)));
+    const holding = fireManually(service);
+    await vi.waitFor(() => access(join(dir, "held")), { timeout: 10_000 });
+
+    actions = ["pid"];
+    let second: { status: string } | undefined;
+    const waiting = fireManually(service).then((run) => (second = run));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(second).toBeUndefined();
+    // Journaled while it waits, so a crash now leaves it to the next boot.
+    const runs = await (await service.store())!.listRuns(WORKFLOW_ID);
+    expect(runs.map((run) => run.status)).toContain("PENDING");
+
+    await writeFile(join(dir, "release"), "");
+    await expect(holding).resolves.toMatchObject({ status: "SUCCEEDED" });
+    await expect(waiting).resolves.toMatchObject({ status: "SUCCEEDED" });
+  });
+
+  it("starts the runs a stopped reactor journaled once it starts", async () => {
+    const relationalDb = createFreshRelationalDb();
+    const stopped = await WorkflowRunStore.create(relationalDb);
+    const runId = await stopped.enqueueRun({
+      workflowId: WORKFLOW_ID,
+      triggerKind: "schedule",
+    });
+    service = testRuntime({
+      relationalDb,
+      reactorClient: {
+        get: () => Promise.resolve(workflowDocument(["pid"])),
+      } as never,
+    });
+
+    service.startTriggerSupervisor();
+
+    const store = await service.store();
+    await vi.waitFor(
+      async () =>
+        expect((await store!.getRun(runId))?.status).toBe("SUCCEEDED"),
+      { timeout: 10_000 },
     );
   });
 

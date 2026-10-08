@@ -88,6 +88,18 @@ export class WorkflowRunGate {
    *   journals the refusal rather than dropping it silently, because a firing
    *   that vanished is indistinguishable from a trigger that never fired.
    */
+  /** Whether {@link admit} would queue this firing now; a refusal is not a wait. */
+  wouldWait(workflowId: string, policy: EffectiveRunPolicy): boolean {
+    const limit = concurrencyLimit(policy);
+    const lane = this.lanes.get(workflowId);
+    if (this.closed || limit === null || !lane || lane.active < limit) {
+      return false;
+    }
+    return (
+      policy.concurrency !== "SINGLETON" && lane.waiting.length < this.maxQueued
+    );
+  }
+
   async admit(
     workflowId: string,
     policy: EffectiveRunPolicy,

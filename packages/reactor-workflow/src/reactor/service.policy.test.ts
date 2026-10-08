@@ -1101,16 +1101,20 @@ describe("registrations of one workflow", () => {
 // The supervisor's lane can be held for a minute by one onEnable; operation
 // ingestion and boot seeding must not queue behind it to release a park.
 describe("a park released while the trigger lane is busy", () => {
-  function blockLane(runtime: WorkflowRuntimeService): () => void {
+  // Holds the workflow's own lane: lanes are per workflow.
+  function blockLane(
+    runtime: WorkflowRuntimeService,
+    workflowId: string,
+  ): () => void {
     let open!: () => void;
     const gate = new Promise<void>((resolve) => {
       open = resolve;
     });
     void (
       runtime.supervisor() as unknown as {
-        enqueue(task: () => Promise<void>): Promise<void>;
+        enqueue(id: string, task: () => Promise<void>): Promise<void>;
       }
-    ).enqueue(() => gate);
+    ).enqueue(workflowId, () => gate);
     return open;
   }
 
@@ -1161,7 +1165,7 @@ describe("a park released while the trigger lane is busy", () => {
   it("does not hold up a disable and re-enable, which then fires", async () => {
     const id = "wf-park-busy-toggle";
     const store = await parkedEventWorkflow(id, "note-busy-1");
-    const open = blockLane(service);
+    const open = blockLane(service, id);
     try {
       const disabled = documents.apply(
         id,
@@ -1210,7 +1214,7 @@ describe("a park released while the trigger lane is busy", () => {
         find: () => Promise.resolve({ results: [structuredClone(disabled)] }),
       } as never,
     });
-    const open = blockLane(rebooted);
+    const open = blockLane(rebooted, id);
     try {
       expect(await settlesWithin(rebooted.seedFailure(), 2000)).toBe(true);
     } finally {
@@ -1228,7 +1232,7 @@ describe("a park released while the trigger lane is busy", () => {
     workflow(id, { action: "slow", policy: { onFailure: "IGNORE" } });
     const { version } = runnableDefinition(documents.apply(id).state.global);
     const store = (await service.store())!;
-    const open = blockLane(service);
+    const open = blockLane(service, id);
     let parking: Promise<boolean> | undefined;
     try {
       parking = service.supervisor().park(id, version, "parked for the test");
@@ -1266,7 +1270,7 @@ describe("a park released while the trigger lane is busy", () => {
   it("does not hold up the deletion of a parked workflow", async () => {
     const id = "wf-park-busy-delete";
     const store = await parkedEventWorkflow(id, "note-busy-delete");
-    const open = blockLane(service);
+    const open = blockLane(service, id);
     try {
       expect(
         await settlesWithin(service.onOperations([deleteOp(id)]), 1000),
