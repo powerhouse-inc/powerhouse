@@ -52,3 +52,20 @@ export {
   placeStandalone,
 } from "./placement.js";
 export { RouterTable } from "./table.js";
+export {
+  decodeFanInCursor,
+  encodeFanInCursor,
+  FAN_IN_CURSOR_PREFIX,
+  fanIn,
+  fanInExistence,
+  isFanInCursor,
+  mergePaged,
+  pagedParticipants,
+  supportingBackends,
+  type Answer,
+  type BackendCursor,
+  type FanInMode,
+  type FanInOptions,
+  type MergePagedOptions,
+  type PagedParticipant,
+} from "./fan-in.js";
