@@ -1,11 +1,11 @@
 // Workflow execution is a SINGLETON pinned to one reactor (multi-reactor plan,
 // agreed decision 3). Non-Node reactors cannot compose the engine at all — it
 // forks child processes — so the real hazard is TWO NODE REPLICAS over one
-// journal, which is not a theoretical one: `WorkflowRunStore.create` runs
-// `recoverOrphanedRuns`/`recoverAbandonedRuns` when the journal opens, and
-// those sweeps close out every RUNNING and PENDING run that is not in THIS
-// process's `runsInFlight`. A second replica booting therefore marks the first
-// replica's live runs FAILED, and then both of them arm every trigger.
+// journal, which is not a theoretical one: `WorkflowRunStore.create` fails
+// every RUNNING run when the journal opens, and the runtime's start admits
+// every PENDING one, skipping only THIS process's `runsInFlight`. A second
+// replica booting therefore fails the first replica's live runs, runs its
+// queued ones a second time, and then both of them arm every trigger.
 //
 // This is that guard, made structural rather than documented: a durable claim
 // on the run journal's own database, taken before the runtime is built. One

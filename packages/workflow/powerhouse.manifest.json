@@ -90,6 +90,17 @@
       "default": "1"
     },
     {
+      "name": "PH_WORKFLOWS_RUNS_IN_FLIGHT",
+      "type": "var",
+      "description": "Runs admitted at once across all workflows, after each workflow's own concurrency policy. Unset, eight times the most piece children: a run waiting out a retry holds its place, so the event-loop limit does the throttling."
+    },
+    {
+      "name": "PH_WORKFLOWS_ADMIT_MAX_ELU",
+      "type": "var",
+      "description": "Main-thread event-loop utilization, 0 to 1, above which no new run is admitted. Runs already admitted continue, and one run is always admitted when none is running.",
+      "default": "0.8"
+    },
+    {
       "name": "PH_WORKFLOWS_POLL_INTERVAL_MS",
       "type": "var",
       "description": "Cadence for a polling trigger that names none of its own. An author's override and a piece's requested schedule both win over it; a 1000ms floor applies to all three.",

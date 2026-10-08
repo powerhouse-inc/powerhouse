@@ -46,6 +46,10 @@ export class WorkflowTelemetry {
   private readonly runDuration: Histogram;
   private readonly stepDuration: Histogram;
   private readonly phaseDuration: Histogram;
+  private dispatcherGauges?: Record<
+    "inFlight" | "waiting" | "loop",
+    ObservableGauge
+  >;
   private poolGauges?: Record<
     "size" | "active" | "idle" | "waiting",
     ObservableGauge
@@ -201,6 +205,41 @@ export class WorkflowTelemetry {
       result.observe(active, current.active);
       result.observe(idle, current.idle);
       result.observe(waiting, current.waiting);
+    };
+    this.meter.addBatchObservableCallback(callback, observables);
+    return () =>
+      this.meter.removeBatchObservableCallback(callback, observables);
+  }
+
+  // Runs admitted and waiting across workflows, and the loop that admits them.
+  observeDispatcher(
+    stats: () => { inFlight: number; waiting: number; utilization: number },
+  ): () => void {
+    // Created once: a replaced runtime re-observes the same instruments.
+    this.dispatcherGauges ??= {
+      inFlight: this.meter.createObservableGauge("workflow.runs.in_flight", {
+        description: "Runs admitted and not yet finished",
+        unit: "{run}",
+      }),
+      waiting: this.meter.createObservableGauge("workflow.runs.waiting", {
+        description: "Runs waiting for admission across workflows",
+        unit: "{run}",
+      }),
+      loop: this.meter.createObservableGauge(
+        "workflow.host.event_loop.utilization",
+        {
+          description: "Main thread busy share over the last second",
+          unit: "1",
+        },
+      ),
+    };
+    const { inFlight, waiting, loop } = this.dispatcherGauges;
+    const observables = [inFlight, waiting, loop];
+    const callback: BatchObservableCallback = (result) => {
+      const current = stats();
+      result.observe(inFlight, current.inFlight);
+      result.observe(waiting, current.waiting);
+      result.observe(loop, current.utilization);
     };
     this.meter.addBatchObservableCallback(callback, observables);
     return () =>
