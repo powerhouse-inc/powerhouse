@@ -420,3 +420,104 @@ describe("a Switchboard's wrong-shard refusal", () => {
     ).toMatchObject({ backend: "owner", source: "corrected" });
   });
 });
+
+describe("route-source precedence over operation sequences", () => {
+  const route = (dispatcher: RouteDispatcher, drive: string) =>
+    dispatcher.table.collectionRoute(DriveCollectionId.forDrive(drive));
+  const write = (dispatcher: RouteDispatcher, drive: string, name: string) =>
+    dispatcher.onCollection(
+      "execute",
+      drive,
+      "main",
+      renamer(drive, name),
+      ATTEMPT.write,
+    );
+  const read = (dispatcher: RouteDispatcher, drive: string) =>
+    dispatcher.onCollection(
+      "get",
+      drive,
+      "main",
+      (backend) => backend.api.get(drive),
+      ATTEMPT.read,
+    );
+
+  it("keeps a correction over a stale override across many writes", async () => {
+    const one = refusing("one");
+    const two = refusing("two");
+    one.seed(fakeDocument({ id: "drive-a" }));
+    const reported: string[] = [];
+    const dispatcher = new RouteDispatcher([one.handle(), two.handle()], {
+      collections: { "drive-a": "two" },
+      onDiagnostic: (message) => reported.push(message),
+    });
+
+    for (const name of ["w1", "w2", "w3", "w4"]) {
+      await write(dispatcher, "drive-a", name);
+    }
+
+    expect(two.count("execute")).toBe(1);
+    expect(one.count("execute")).toBe(4);
+    expect(reported.filter((m) => /override is stale/i.test(m))).toHaveLength(
+      1,
+    );
+    expect(route(dispatcher, "drive-a")).toMatchObject({
+      backend: "one",
+      source: "corrected",
+    });
+  });
+
+  it("does not redirect writes to a replica after a read recovered there", async () => {
+    const one = refusing("one");
+    const two = refusing("two");
+    one.seed(fakeDocument({ id: "drive-a" }));
+    two.seed(fakeDocument({ id: "drive-a" }));
+    const reported: string[] = [];
+    const dispatcher = new RouteDispatcher([one.handle(), two.handle()], {
+      collections: { "drive-a": "one" },
+      onDiagnostic: (message) => reported.push(message),
+    });
+
+    one.failing.add("get");
+    await read(dispatcher, "drive-a");
+    one.failing.delete("get");
+    await write(dispatcher, "drive-a", "after");
+    await write(dispatcher, "drive-a", "again");
+
+    expect(two.count("get")).toBe(1);
+    expect(one.count("execute")).toBe(2);
+    expect(two.count("execute")).toBe(0);
+    expect(route(dispatcher, "drive-a").source).not.toBe("corrected");
+    expect(reported.join()).not.toMatch(/misroute resolved/);
+  });
+
+  it("keeps a correction when a later read recovers on another backend", async () => {
+    const one = refusing("one");
+    const two = refusing("two");
+    const three = refusing("three");
+    one.seed(fakeDocument({ id: "drive-a" }));
+    two.seed(fakeDocument({ id: "drive-a" }));
+    const dispatcher = new RouteDispatcher(
+      [one.handle(), two.handle(), three.handle()],
+      { collections: { "drive-a": "three" }, onDiagnostic: silent },
+    );
+
+    await write(dispatcher, "drive-a", "corrects");
+    expect(route(dispatcher, "drive-a")).toMatchObject({
+      backend: "one",
+      source: "corrected",
+    });
+
+    one.failing.add("get");
+    await read(dispatcher, "drive-a");
+    one.failing.delete("get");
+    await write(dispatcher, "drive-a", "stays");
+
+    expect(route(dispatcher, "drive-a")).toMatchObject({
+      backend: "one",
+      source: "corrected",
+    });
+    expect(one.count("execute")).toBe(2);
+    expect(two.count("execute")).toBe(0);
+    expect(three.count("execute")).toBe(1);
+  });
+});

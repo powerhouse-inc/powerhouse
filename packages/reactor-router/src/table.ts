@@ -58,10 +58,45 @@ export class BoundedMap {
   }
 }
 
-type CollectionRoute = {
+export type CollectionRoute = {
   readonly backend: string;
   readonly source: RouteSource;
 };
+
+/**
+ * What an operation proved about where a collection lives:
+ * - `probed`: an ownership probe answered yes, e.g. a read recovered after an
+ *   ordinary error. Nothing refused.
+ * - `accepted`: the backend ran the operation on the first attempt.
+ * - `refusal`: the backend ran it after another backend refused it.
+ */
+export type RouteEvidence = "probed" | "accepted" | "refusal";
+
+/**
+ * The single place route-source precedence is decided:
+ * - only a refusal produces `corrected`;
+ * - an acceptance keeps an entry naming the same backend, never downgrades a
+ *   `corrected` entry, and otherwise records `learned`;
+ * - a probe never replaces an entry; it only fills an empty one as `learned`.
+ */
+export function nextCollectionRoute(
+  current: CollectionRoute | undefined,
+  backend: string,
+  evidence: RouteEvidence,
+): CollectionRoute {
+  if (evidence === "refusal") {
+    return { backend, source: "corrected" };
+  }
+  if (current !== undefined) {
+    if (evidence === "probed" || current.backend === backend) {
+      return current;
+    }
+    if (current.source === "corrected") {
+      return current;
+    }
+  }
+  return { backend, source: "learned" };
+}
 
 /** Routing state. Any entry may be wrong; a refusal corrects it. */
 export class RouterTable {
@@ -235,19 +270,16 @@ export class RouterTable {
     return alternative ?? placed;
   }
 
-  recordLearnedCollection(
+  /** Records what an operation proved; see {@link nextCollectionRoute}. */
+  recordCollection(
     collection: DriveCollectionId,
     backend: string,
+    evidence: RouteEvidence,
   ): void {
-    this.learned.set(collection.key, { backend, source: "learned" });
-  }
-
-  /** Recorded even over an override: the override's backend refused. */
-  recordCorrectedCollection(
-    collection: DriveCollectionId,
-    backend: string,
-  ): void {
-    this.learned.set(collection.key, { backend, source: "corrected" });
+    this.learned.set(
+      collection.key,
+      nextCollectionRoute(this.learned.get(collection.key), backend, evidence),
+    );
   }
 
   overrideFor(collection: DriveCollectionId): string {

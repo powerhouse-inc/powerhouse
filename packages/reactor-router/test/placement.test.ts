@@ -7,7 +7,7 @@ import {
   ineligibleReason,
   placeCollection,
 } from "../src/placement.js";
-import { RouterTable } from "../src/table.js";
+import { nextCollectionRoute, RouterTable } from "../src/table.js";
 import {
   collectionRequirements,
   NO_REQUIREMENTS,
@@ -222,10 +222,10 @@ describe("RouterTable", () => {
 
     expect(table.collectionRoute(target).source).toBe("override");
 
-    table.recordLearnedCollection(target, "two");
+    table.recordCollection(target, "two", "accepted");
     expect(table.collectionRoute(target).backend).toBe("one");
 
-    table.recordCorrectedCollection(target, "three");
+    table.recordCollection(target, "three", "refusal");
     const corrected = table.collectionRoute(target);
     expect(corrected.backend).toBe("three");
     expect(corrected.source).toBe("corrected");
@@ -275,7 +275,7 @@ describe("RouterTable", () => {
   it("reports what it believes, with the evidence", () => {
     const pool = backends("one", "two");
     const table = new RouterTable(pool, { collections: { "drive-a": "one" } });
-    table.recordCorrectedCollection(collection("drive-b"), "two");
+    table.recordCollection(collection("drive-b"), "two", "refusal");
     table.recordDocument("doc-1", "two");
     table.recordJob("job-1", "two");
 
@@ -304,7 +304,7 @@ describe("RouterTable", () => {
     const table = new RouterTable(pool, {
       collections: { [target.key]: "one" },
     });
-    table.recordLearnedCollection(target, "two");
+    table.recordCollection(target, "two", "accepted");
 
     expect(
       table
@@ -321,7 +321,7 @@ describe("RouterTable", () => {
     const table = new RouterTable(pool, {
       collections: { [target.key]: "one" },
     });
-    table.recordCorrectedCollection(target, "two");
+    table.recordCollection(target, "two", "refusal");
 
     expect(
       table
@@ -331,4 +331,30 @@ describe("RouterTable", () => {
       { collectionId: target.key, backend: "two", source: "corrected" },
     ]);
   });
+});
+
+describe("nextCollectionRoute", () => {
+  const learned = { backend: "one", source: "learned" } as const;
+  const corrected = { backend: "one", source: "corrected" } as const;
+
+  it.each([
+    ["nothing", "probed", "two", "two", "learned", undefined],
+    ["nothing", "accepted", "two", "two", "learned", undefined],
+    ["nothing", "refusal", "two", "two", "corrected", undefined],
+    ["learned", "probed", "two", "one", "learned", learned],
+    ["learned", "accepted", "two", "two", "learned", learned],
+    ["learned", "refusal", "two", "two", "corrected", learned],
+    ["corrected", "probed", "two", "one", "corrected", corrected],
+    ["corrected", "accepted", "one", "one", "corrected", corrected],
+    ["corrected", "accepted", "two", "one", "corrected", corrected],
+    ["corrected", "refusal", "two", "two", "corrected", corrected],
+  ] as const)(
+    "%s, then %s on %s -> %s %s",
+    (_label, evidence, backend, expectedBackend, expectedSource, current) => {
+      expect(nextCollectionRoute(current, backend, evidence)).toEqual({
+        backend: expectedBackend,
+        source: expectedSource,
+      });
+    },
+  );
 });

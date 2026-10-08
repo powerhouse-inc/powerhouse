@@ -80,9 +80,10 @@ export class RoutingDriveClient implements IDriveClient {
     if (drive.header.slug !== "") {
       this.dispatcher.recordDocument(drive.header.slug, backend.name);
     }
-    this.dispatcher.table.recordLearnedCollection(
+    this.dispatcher.table.recordCollection(
       this.dispatcher.collectionFor(drive.header.id, drive.header.branch),
       backend.name,
+      "accepted",
     );
     return drive;
   }

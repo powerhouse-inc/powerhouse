@@ -9,7 +9,7 @@ import {
   type MisrouteInfo,
 } from "./errors.js";
 import { OwnershipGuard, type Ownership } from "./guard.js";
-import { RouterTable } from "./table.js";
+import { RouterTable, type RouteEvidence } from "./table.js";
 import {
   DEFAULT_BRANCH,
   DEFAULT_DOCUMENT_CACHE_SIZE,
@@ -25,7 +25,7 @@ interface RouteTarget {
   /** The identifier an ownership probe asks about; `""` disables recovery. */
   readonly probeKey: string;
   select(excluded: ReadonlySet<string>): Promise<RouterBackend>;
-  accepted(backend: RouterBackend, recovered: boolean): void;
+  accepted(backend: RouterBackend, evidence: RouteEvidence): void;
   refused(backend: RouterBackend, info: MisrouteInfo): void;
 }
 
@@ -174,7 +174,7 @@ export class RouteDispatcher {
     }
     const serving = await this.servingBackends(collection.driveId, excluded);
     if (serving.length > 0) {
-      this.table.recordLearnedCollection(collection, serving[0].name);
+      this.table.recordCollection(collection, serving[0].name, "probed");
       this.table.recordDocument(collection.driveId, serving[0].name);
       return serving[0];
     }
@@ -248,9 +248,9 @@ export class RouteDispatcher {
       subject: identifier,
       probeKey: identifier,
       select: (excluded) => this.resolveDocumentBackend(identifier, excluded),
-      accepted: (backend, recovered) => {
+      accepted: (backend, evidence) => {
         this.table.recordDocument(identifier, backend.name);
-        if (recovered) {
+        if (evidence === "refusal") {
           this.onDiagnostic(
             `misroute resolved: ${JSON.stringify(identifier)} is on ${backend.name}; the document route was corrected`,
           );
@@ -273,14 +273,13 @@ export class RouteDispatcher {
       subject: collection.key,
       probeKey: driveIdentifier,
       select: (excluded) => this.resolveCollectionBackend(collection, excluded),
-      accepted: (backend, recovered) => {
+      accepted: (backend, evidence) => {
         this.table.recordDocument(driveIdentifier, backend.name);
-        if (!recovered) {
-          this.table.recordLearnedCollection(collection, backend.name);
+        this.table.recordCollection(collection, backend.name, evidence);
+        if (evidence !== "refusal") {
           return;
         }
         const override = this.table.overrideFor(collection);
-        this.table.recordCorrectedCollection(collection, backend.name);
         if (override !== "" && override !== backend.name) {
           this.onDiagnostic(
             `collections override for ${collection.key} names ${override}, which refused the operation; ${backend.name} accepted it and the route was corrected. The override is stale.`,
@@ -323,7 +322,7 @@ export class RouteDispatcher {
       );
       return;
     }
-    this.table.recordCorrectedCollection(collection, info.ownerHint);
+    this.table.recordCollection(collection, info.ownerHint, "refusal");
   }
 
   /** Stops early when `select` offers a backend that already refused. */
@@ -349,7 +348,7 @@ export class RouteDispatcher {
           );
         }
         const value = await run(backend);
-        target.accepted(backend, attempt > 0);
+        target.accepted(backend, attempt > 0 ? "refusal" : "accepted");
         return value;
       } catch (error) {
         const info = misrouteOf(error);
@@ -388,7 +387,7 @@ export class RouteDispatcher {
       rethrow(error);
     }
     const value = await run(serving[0]);
-    target.accepted(serving[0], true);
+    target.accepted(serving[0], "probed");
     return value;
   }
 }
