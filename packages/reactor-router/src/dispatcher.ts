@@ -159,13 +159,13 @@ export class RouteDispatcher {
    * A batch-shaped write on the one backend `resolve` names. Each identifier
    * not in `created` is guarded before anything is sent. A misroute, or a not-found raised by a
    * step wrapped in `beforeSubmit`, forgets the identifiers' entries and
-   * re-resolves once; any other failure is the caller's, since a job may have
-   * landed.
+   * re-resolves without the refusing backends; any other failure is the
+   * caller's, since a job may have landed.
    */
   async onDocuments<T>(
     label: string,
     identifiers: readonly string[],
-    resolve: () => Promise<RouterBackend>,
+    resolve: (excluded: ReadonlySet<string>) => Promise<RouterBackend>,
     run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
     created: ReadonlySet<string> = new Set(),
   ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
@@ -182,12 +182,13 @@ export class RouteDispatcher {
         throw error;
       }
     };
+    const excluded = new Set<string>();
     const refusedBy: string[] = [];
     let failure: unknown = undefined;
     let info = NOT_MISROUTED;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const backend = await resolve();
-      if (refusedBy.includes(backend.name)) {
+    for (let attempt = 0; attempt < this.attempts; attempt++) {
+      const backend = await resolve(excluded);
+      if (excluded.has(backend.name)) {
         break;
       }
       try {
@@ -204,6 +205,7 @@ export class RouteDispatcher {
         if (!info.misrouted && !notFound) {
           throw error;
         }
+        excluded.add(backend.name);
         refusedBy.push(backend.name);
         failure = error;
         for (const identifier of distinct) {

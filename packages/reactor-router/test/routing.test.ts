@@ -19,6 +19,7 @@ import {
   NoEligibleBackendError,
   RoutingReactorClient,
   UnsupportedByBackendError,
+  WrongBackendError,
   type RoutableBackendConfig,
   type RoutingClientOptions,
 } from "../src/index.js";
@@ -751,6 +752,30 @@ describe("a batch-shaped write beside other backends", () => {
     return { one, client };
   }
 
+  /** A refusing backend holding a replica of doc-1 that it will not write. */
+  function replica(name: string): RoutableBackendConfig {
+    const backend = new FakeBackend(name);
+    backend.refuses = true;
+    backend.seed(fakeDocument({ id: "doc-1" }));
+    const config = backend.config();
+    const refuse = () =>
+      Promise.reject(
+        new WrongBackendError({
+          documentId: "doc-1",
+          rejectedBy: name,
+          operation: "executeBatch",
+        }),
+      );
+    return { ...config, backend: { ...config.backend, executeBatch: refuse } };
+  }
+
+  function owner() {
+    const one = new FakeBackend("one");
+    one.refuses = true;
+    one.seed(fakeDocument({ id: "doc-1" }));
+    return one;
+  }
+
   it("creates a document in executeBatch while another backend cannot answer a probe", async () => {
     const { one, client } = blip();
 
@@ -779,6 +804,26 @@ describe("a batch-shaped write beside other backends", () => {
     });
 
     expect(one.count("loadBatch")).toBe(1);
+  });
+
+  it("does not re-resolve a batch to a replica that refused it", async () => {
+    const one = owner();
+    const client = router([replica("two"), one.config()]);
+
+    await client.executeBatch({ jobs: [job("a", "doc-1")] });
+
+    expect(one.count("executeBatch")).toBe(1);
+  });
+
+  it("re-resolves a batch up to misrouteAttempts times", async () => {
+    const one = owner();
+    const client = router([replica("two"), replica("three"), one.config()], {
+      misrouteAttempts: 3,
+    });
+
+    await client.executeBatch({ jobs: [job("a", "doc-1")] });
+
+    expect(one.count("executeBatch")).toBe(1);
   });
 });
 

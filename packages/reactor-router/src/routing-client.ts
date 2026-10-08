@@ -828,7 +828,8 @@ export class RoutingReactorClient implements IReactorClient {
     const { value: result, backend } = await this.dispatcher.onDocuments(
       "executeBatch",
       identifiers,
-      () => this.singleBackendFor("executeBatch", identifiers),
+      (excluded) =>
+        this.singleBackendFor("executeBatch", identifiers, excluded),
       (target) => target.api.executeBatch(request, signal),
       createdByExecution(request),
     );
@@ -844,8 +845,12 @@ export class RoutingReactorClient implements IReactorClient {
     const { value: result, backend } = await this.dispatcher.onDocuments(
       "loadBatch",
       identifiers,
-      async () => {
-        const target = await this.singleBackendFor("loadBatch", identifiers);
+      async (excluded) => {
+        const target = await this.singleBackendFor(
+          "loadBatch",
+          identifiers,
+          excluded,
+        );
         declared(target, "loadBatch");
         return target;
       },
@@ -1197,7 +1202,7 @@ export class RoutingReactorClient implements IReactorClient {
     ];
   }
 
-  /** With a parent, guarded on it and re-resolved once; else placed. */
+  /** With a parent, guarded on it and re-resolved after a refusal; else placed. */
   private async onNewDocument<T>(
     label: string,
     documentId: string,
@@ -1208,7 +1213,8 @@ export class RoutingReactorClient implements IReactorClient {
       return this.dispatcher.onDocuments(
         label,
         [parentIdentifier],
-        () => this.dispatcher.resolveDocumentBackend(parentIdentifier),
+        (excluded) =>
+          this.dispatcher.resolveDocumentBackend(parentIdentifier, excluded),
         run,
       );
     }
@@ -1241,6 +1247,7 @@ export class RoutingReactorClient implements IReactorClient {
   private async singleBackendFor(
     operation: string,
     identifiers: readonly string[],
+    excluded: ReadonlySet<string> = new Set(),
   ): Promise<RouterBackend> {
     const distinct = [...new Set(identifiers.filter((id) => id !== ""))];
     if (distinct.length === 0) {
@@ -1249,7 +1256,10 @@ export class RoutingReactorClient implements IReactorClient {
     const resolved = await Promise.all(
       distinct.map(async (documentId) => ({
         documentId,
-        backend: await this.dispatcher.resolveDocumentBackend(documentId),
+        backend: await this.dispatcher.resolveDocumentBackend(
+          documentId,
+          excluded,
+        ),
       })),
     );
     const first = resolved[0];
