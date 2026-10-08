@@ -34,7 +34,7 @@ the flag axis to each rather than introducing a new runner or report format.
 
 | Tier | Harness | A/B mechanism | Status |
 | --- | --- | --- | --- |
-| micro | `bench/auth-scope.bench.ts` | `vitest bench --outputJson` / `--compare` | landed |
+| micro | `bench/auth-scope.bench.ts` | `bench:auth:record` / `bench:auth:compare` | landed |
 | meso | `scripts/profiling/reactor-direct.ts` | `pyroscope-analyse.ts --baseline` | flag axis landed, PGlite and Postgres |
 | macro | `bench/docker-compose.yml` + k6 + Prometheus | `runNN.sh` appending to `BASELINE.md` | not yet wired |
 

@@ -44,10 +44,12 @@ describe("useRelationalDb onPoisoned", () => {
     const onFirst = (cause: Error) => first.push(cause);
     const onSecond = (cause: Error) => second.push(cause);
     const onGone = (cause: Error) => gone.push(cause);
-    renderHook(() => useRelationalDb({ onPoisoned: onFirst }));
-    renderHook(() => useRelationalDb({ onPoisoned: onSecond }));
-    const unmounted = renderHook(() => useRelationalDb({ onPoisoned: onGone }));
-    unmounted.unmount();
+    await renderHook(() => useRelationalDb({ onPoisoned: onFirst }));
+    await renderHook(() => useRelationalDb({ onPoisoned: onSecond }));
+    const unmounted = await renderHook(() =>
+      useRelationalDb({ onPoisoned: onGone }),
+    );
+    await unmounted.unmount();
 
     await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
     expect(first).toHaveLength(1);
@@ -64,13 +66,13 @@ describe("useRelationalDb onPoisoned", () => {
     setPGliteDB({ db: dead as never, isLoading: false, error: null });
 
     const calls: Error[] = [];
-    const hook = renderHook(() =>
+    const hook = await renderHook(() =>
       useRelationalDb({ onPoisoned: (cause) => calls.push(cause) }),
     );
 
     await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
-    hook.rerender();
-    hook.rerender();
+    await hook.rerender();
+    await hook.rerender();
     expect(calls).toHaveLength(1);
   });
 });

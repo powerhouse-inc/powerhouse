@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.2.3-dev.45",
+  "version": "6.2.3-dev.49",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -125,7 +125,7 @@
     "viem": "~2.50.4",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vitest-browser-react": "^1.0.1"
+    "vitest-browser-react": "^2.3.0"
   },
   "peerDependencies": {
     "graphql": "^16",

@@ -4,6 +4,7 @@ import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
 import { randomUUID } from "node:crypto";
 import { createIpcTransport, type ReactorTap } from "./reactor-rpc.js";
+import type { WorkflowTelemetry } from "../../../telemetry.js";
 import {
   createForkTransport,
   defaultEntryPath,
@@ -30,7 +31,9 @@ import {
   type SerializedPieceError,
   type TriggerHookRequest,
   type WorkerResponse,
+  type WorkerTimings,
 } from "./protocol.js";
+import { epochNow } from "./timings.js";
 
 type WorkerRequestType =
   | "run"
@@ -102,6 +105,12 @@ export interface RequestOptions extends RequestTaps {
  * now. Kept because the old name is on main, in this package's public types. */
 export type RunActionOptions = RequestOptions;
 
+// The child's marks, plus when the host sent the request and got the reply.
+export type OnWorkerTimings = (
+  timings: WorkerTimings,
+  ipc: { sent: number; received: number },
+) => void;
+
 type ChildMessage =
   | WorkerResponse
   | HostCallMessage
@@ -141,6 +150,7 @@ function serveNotify(
 export interface PieceWorkerOptions {
   // Absolute path to the compiled worker entry; defaults to dist/worker-entry.js.
   entryPath?: string;
+  telemetry?: WorkflowTelemetry;
   defaultTimeoutMs?: number;
   // How to reach a worker. Defaults to a forked child on this machine; a
   // remote transport replaces it without touching the protocol above.
@@ -187,7 +197,10 @@ export class PieceWorker implements IPieceWorker {
   private readonly defaultTimeoutMs: number;
   private readonly hostCallTimeoutMs: number | undefined;
   private readonly models: ModelManifestSource | undefined;
+  private readonly telemetry: WorkflowTelemetry | undefined;
   private worker: IPieceWorkerTransport | undefined;
+  // When the current child was forked, in epoch ms.
+  private forkedAt = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private nextId = 1;
 
@@ -199,6 +212,7 @@ export class PieceWorker implements IPieceWorker {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 30_000;
     this.hostCallTimeoutMs = options.hostCallTimeoutMs;
     this.models = options.models;
+    this.telemetry = options.telemetry;
   }
 
   // Requests are serialized per worker; concurrency comes from holding more
@@ -251,9 +265,29 @@ export class PieceWorker implements IPieceWorker {
     timeoutMs?: number,
     taps: RequestTaps = {},
   ): Promise<PieceWorkerResult> {
-    const run = this.queue.then(() =>
-      this.execute(type, request, timeoutMs ?? this.defaultTimeoutMs, taps),
-    );
+    const run = this.queue.then(() => {
+      const execute = (onTimings?: OnWorkerTimings) =>
+        this.execute(
+          type,
+          request,
+          timeoutMs ?? this.defaultTimeoutMs,
+          taps,
+          onTimings,
+        );
+      const telemetry = this.telemetry;
+      if (!telemetry) return execute();
+      // Named apart, not just attributed: the phase metric keys on the name,
+      // and a cold request pays for the fork and the child's module loading.
+      const cold = !this.worker;
+      return telemetry.phase(
+        `worker.${type}${cold ? ".cold" : ""}`,
+        { "worker.cold": cold },
+        (span) =>
+          execute((timings, ipc) =>
+            telemetry.workerTimings(span, timings, this.forkedAt, ipc),
+          ),
+      );
+    });
     this.queue = run.catch(() => undefined);
     return run;
   }
@@ -265,6 +299,7 @@ export class PieceWorker implements IPieceWorker {
 
   private spawn(): IPieceWorkerTransport {
     if (this.worker) return this.worker;
+    this.forkedAt = epochNow();
     const worker = this.connect();
     this.sendModels(worker);
     const forget = () => {
@@ -318,10 +353,13 @@ export class PieceWorker implements IPieceWorker {
     request: WorkerRequest,
     timeoutMs: number,
     taps: RequestTaps,
+    onTimings?: OnWorkerTimings,
   ): Promise<PieceWorkerResult> {
     const worker = this.spawn();
     const id = this.nextId++;
 
+    // When the request was handed to IPC, for the ipc.in span.
+    let sentAt = 0;
     return new Promise<PieceWorkerResult>((resolve, reject) => {
       // The kill timer's own reading, so the child can give up in time to say why.
       const deadline = Date.now() + timeoutMs;
@@ -353,6 +391,7 @@ export class PieceWorker implements IPieceWorker {
         }
         if (response.id !== id) return;
         cleanup();
+        const received = epochNow();
         if (response.type === "result") {
           resolve({
             output: response.output,
@@ -365,6 +404,14 @@ export class PieceWorker implements IPieceWorker {
           });
         } else {
           reject(new PieceWorkerError(response.error));
+        }
+        // After settling: the child is piece code and its timings may be junk.
+        if (response.timings && onTimings) {
+          try {
+            onTimings(response.timings, { sent: sentAt, received });
+          } catch {
+            // Tracing must never fail the request it describes.
+          }
         }
       };
 
@@ -402,6 +449,7 @@ export class PieceWorker implements IPieceWorker {
       // values are piece-authored, and the contract is JSON-shaped both ways.
       // The file ceiling is stamped on the same way the egress policy is passed
       // in: the child reads no environment of its own.
+      sentAt = epochNow();
       worker.send(
         jsonSafe({
           id,

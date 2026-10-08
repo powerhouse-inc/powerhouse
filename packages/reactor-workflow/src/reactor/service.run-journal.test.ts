@@ -122,7 +122,13 @@ describe("fire() and the run journal", () => {
         return Promise.resolve("run-1");
       },
     };
-    await serviceWithStore(store).fire(WORKFLOW_ID, {}, CTX);
+    await serviceWithStore(store).fire(
+      WORKFLOW_ID,
+      {},
+      "manual",
+      undefined,
+      CTX,
+    );
     expect(recorded).toBe("Journalled");
   });
 
@@ -139,7 +145,13 @@ describe("fire() and the run journal", () => {
         return Promise.resolve("run-1");
       },
     };
-    await serviceWithUnnamedWorkflow(store).fire(WORKFLOW_ID, {}, CTX);
+    await serviceWithUnnamedWorkflow(store).fire(
+      WORKFLOW_ID,
+      {},
+      "manual",
+      undefined,
+      CTX,
+    );
     expect(recorded).toBe("Named on the document");
   });
 

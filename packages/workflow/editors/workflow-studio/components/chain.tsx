@@ -4,8 +4,10 @@ import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { BlockLogo } from "../../workflow-editor/ui/BlockSelector.js";
 import {
   CORE_PIECE,
+  stepBlock,
   type BlockIdentity,
 } from "../../workflow-editor/ui/blocks.js";
+import { stepOutline } from "./step-outline.js";
 import {
   formatAbsolute,
   RUN_TONE,
@@ -28,7 +30,7 @@ const RING: Record<Tone, string> = {
   fail: "ring-wf-fail",
   warn: "ring-wf-warn",
   run: "ring-wf-run",
-  idle: "ring-foreground/15",
+  idle: "ring-foreground/15 dark:ring-foreground/30",
 };
 
 const RAIL: Record<Tone, string> = {
@@ -36,7 +38,7 @@ const RAIL: Record<Tone, string> = {
   fail: "bg-wf-fail",
   warn: "bg-wf-warn",
   run: "bg-wf-run",
-  idle: "bg-foreground/15",
+  idle: "bg-foreground/15 dark:bg-foreground/30",
 };
 
 // Past this many stops the chain ends in "+N", so a long workflow can't spill
@@ -75,11 +77,19 @@ export function MiniChain(props: { links: ChainLink[]; size?: "sm" | "md" }) {
                 ? `${link.label}: ${link.status.toLowerCase()}`
                 : link.label
             }
-            className={`flex shrink-0 items-center justify-center rounded-full bg-card ring-[1.5px] dark:bg-white ${
+            className={`flex shrink-0 items-center justify-center rounded-full bg-card ${
               md ? "h-8 w-8" : "h-6 w-6"
-            } ${RING[tones[index]]} ${link.status === "SKIPPED" ? "opacity-50" : ""}`}
+            } ${
+              link.status === "SKIPPED"
+                ? "border-[1.5px] border-dashed border-foreground/40"
+                : `ring-[1.5px] dark:bg-white ${RING[tones[index]]}`
+            }`}
           >
-            <BlockLogo bare block={link.block} size={md ? 16 : 14} />
+            <span
+              className={link.status === "SKIPPED" ? "flex opacity-40" : "flex"}
+            >
+              <BlockLogo bare block={link.block} size={md ? 16 : 14} />
+            </span>
           </span>
         </li>
       ))}
@@ -120,6 +130,22 @@ export function triggerOfKind(kind: string): BlockIdentity {
   return { pieceName: CORE_PIECE, kind: "trigger", name: kind };
 }
 
+/** A workflow's steps in the order a run reaches them, coloured by a run. */
+export function workflowLinks(
+  workflow: Parameters<typeof stepOutline>[0],
+  latest?: RunRecord,
+): ChainLink[] {
+  const status = new Map(
+    (latest?.steps ?? []).map((step) => [step.stepKey, step.status]),
+  );
+  return stepOutline(workflow).rows.map(({ step }) => ({
+    id: step.id,
+    block: stepBlock(step),
+    label: step.name || step.key,
+    status: status.get(step.key),
+  }));
+}
+
 /** A run's own chain: the trigger, then every step it recorded. */
 export function runLinks(run: RunRecord, trigger?: BlockIdentity): ChainLink[] {
   return [
@@ -153,13 +179,17 @@ const TICK: Record<Tone, string> = {
 };
 
 /** Recent runs as ticks, oldest to newest, padded so strips line up. */
-export function RunStrip(props: { runs: RunRecord[] }) {
+export function RunStrip(props: {
+  runs: RunRecord[];
+  // Dots on the strip's centre line rather than its foot, to sit on a text line.
+  centered?: boolean;
+}) {
   // Runs arrive newest first.
   const recent = props.runs.slice(0, STRIP_LENGTH).reverse();
   const padding = STRIP_LENGTH - recent.length;
   return (
     <span
-      className="flex h-5 items-end gap-[3px]"
+      className={`flex h-5 gap-[3px] ${props.centered ? "items-center" : "items-end"}`}
       aria-label={
         recent.length === 0
           ? "No runs yet"

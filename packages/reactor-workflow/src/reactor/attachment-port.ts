@@ -4,24 +4,64 @@
 import type { AttachmentPort } from "../pieces/index.js";
 import { FileTooLargeError, maxFileBytes } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import { open, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { open, rm } from "node:fs/promises";
+import path from "node:path";
+import { Readable } from "node:stream";
+import type { ReadableStream as NodeWebStream } from "node:stream/web";
 
 const logger = childLogger(["workflow", "attachments"]);
 
 // The slice of IAttachmentClient this needs, declared structurally so the
 // subgraph does not depend on the attachments package's types.
 export interface AttachmentClientLike {
-  upload(input: {
-    file: Blob;
-    fileName?: string;
-    mimeType?: string;
-  }): Promise<{ ref?: string } & Record<string, unknown>>;
+  upload(
+    input:
+      | { file: Blob; fileName?: string; mimeType?: string }
+      | { preprocessed: PreprocessedUpload; signal?: AbortSignal },
+  ): Promise<{ ref?: string } & Record<string, unknown>>;
   // Streamed rather than materialized: the size limit has to refuse an
   // oversized attachment before its bytes are in this process's memory.
-  download(input: { documentId: string; ref: string }): Promise<{
+  download(input: {
+    documentId: string;
+    ref: string;
+    signal?: AbortSignal;
+  }): Promise<{
     header: { sizeBytes?: number; mimeType?: string; fileName?: string };
     body: ReadableStream<Uint8Array>;
   }>;
+}
+
+// The client's PreprocessResult: hash, reservation options and the bytes as a
+// stream, so a file on disk is uploaded without being read into memory.
+export interface PreprocessedUpload {
+  ref: string;
+  hash: string;
+  sizeBytes: number;
+  options: {
+    mimeType: string;
+    fileName: string;
+    extension?: string | null;
+    clientHash: string;
+    sizeBytes: number;
+  };
+  data: ReadableStream<Uint8Array>;
+  stream: () => ReadableStream<Uint8Array>;
+}
+
+function fileStream(filePath: string): ReadableStream<Uint8Array> {
+  return Readable.toWeb(
+    createReadStream(filePath),
+  ) as NodeWebStream<Uint8Array> as unknown as ReadableStream<Uint8Array>;
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(filePath)) {
+    hash.update(chunk as Buffer);
+  }
+  return hash.digest("hex");
 }
 
 function refOf(result: Record<string, unknown>): string {
@@ -62,28 +102,46 @@ async function writeCapped(
   await handle.close();
 }
 
+export interface AttachmentPortAccess {
+  // The workflow document a download is made under.
+  documentIdFor: () => string | undefined;
+  // Whether the running workflow may read the ref.
+  canReadRef: (ref: string) => Promise<boolean>;
+  // Told about every ref a step wrote, so the run may read it back.
+  onWritten?: (ref: string) => void;
+}
+
 export function createAttachmentPort(
   client: AttachmentClientLike,
-  // The workflow document a download is made under.
-  documentIdFor: () => string | undefined,
-  // The host's answer to whether a run of that workflow may read the ref.
-  canReadRef: (documentId: string, ref: string) => Promise<boolean>,
+  access: AttachmentPortAccess,
 ): AttachmentPort {
+  const authorize = async (ref: string): Promise<string> => {
+    const documentId = access.documentIdFor();
+    if (!documentId) {
+      throw new Error(
+        `Cannot resolve ${ref}: no workflow document is in scope to authorize the read`,
+      );
+    }
+    if (!(await access.canReadRef(ref))) {
+      throw new Error(
+        `Cannot resolve ${ref}: workflow "${documentId}" may not read it`,
+      );
+    }
+    return documentId;
+  };
   return {
-    async read(ref, destPath) {
-      const documentId = documentIdFor();
-      if (!documentId) {
-        throw new Error(
-          `Cannot resolve ${ref}: no workflow document is in scope to authorize the read`,
-        );
-      }
-      if (!(await canReadRef(documentId, ref))) {
-        throw new Error(
-          `Cannot resolve ${ref}: workflow "${documentId}" may not read it`,
-        );
-      }
+    async authorize(ref) {
+      await authorize(ref);
+    },
+
+    async read(ref, destPath, signal) {
+      const documentId = await authorize(ref);
       const limit = maxFileBytes();
-      const { header, body } = await client.download({ documentId, ref });
+      const { header, body } = await client.download({
+        documentId,
+        ref,
+        ...(signal ? { signal } : {}),
+      });
       // The declared size refuses before a byte is read; writeCapped's own
       // count is what catches a header that understated the body.
       if (
@@ -102,16 +160,31 @@ export function createAttachmentPort(
       return { fileName: header.fileName, contentType };
     },
 
-    async write(file) {
-      const bytes = await readFile(file.path);
+    async write(file, signal) {
+      // Hashed and uploaded straight from disk: the host never holds the file.
+      const hash = await sha256File(file.path);
+      const mimeType = file.contentType ?? "application/octet-stream";
+      const extension = path.extname(file.fileName).slice(1);
+      const preprocessed: PreprocessedUpload = {
+        ref: `attachment://v1:${hash}`,
+        hash,
+        sizeBytes: file.size,
+        options: {
+          mimeType,
+          fileName: file.fileName,
+          ...(extension ? { extension } : {}),
+          clientHash: hash,
+          sizeBytes: file.size,
+        },
+        data: fileStream(file.path),
+        stream: () => fileStream(file.path),
+      };
       const result = await client.upload({
-        file: new Blob([new Uint8Array(bytes)], {
-          type: file.contentType ?? "application/octet-stream",
-        }),
-        fileName: file.fileName,
-        mimeType: file.contentType,
+        preprocessed,
+        ...(signal ? { signal } : {}),
       });
       const ref = refOf(result);
+      access.onWritten?.(ref);
       logger.debug(`Ingested ${file.fileName} (${file.size} bytes) as ${ref}`);
       return ref;
     },
