@@ -9,7 +9,10 @@ export {
 export { KyselyAttachmentReferenceStore } from "./kysely-attachment-reference-store.js";
 export type {
   AttachmentReferenceInput,
+  AttachmentReferencePageResult,
+  AttachmentReferenceRow,
   IAttachmentReferenceReader,
+  IAttachmentReferenceScanner,
   IAttachmentReferenceWriter,
 } from "./types.js";
 export {
