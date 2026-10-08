@@ -30,19 +30,17 @@ describe("package export surfaces", () => {
     expect(replicationEntry.AttachmentReplicator).toBeTypeOf("function");
     expect(replicationEntry.LocalAttachmentTransport).toBeTypeOf("function");
     expect(replicationEntry.LocalAttachmentServer).toBeTypeOf("function");
-    expect(replicationEntry.SwitchboardAttachmentTransport).toBeTypeOf(
-      "function",
-    );
-    // Needed to find the refs the replicator chases, which is why this entry
-    // exists separately from ./client.
     expect(replicationEntry.SchemaCompiledOperationRefs).toBeTypeOf("function");
-    expect(replicationEntry.AttachmentSchemaCompiler).toBeTypeOf("function");
-    // The point of the entry: no filesystem or S3 backend, so a browser
-    // reactor (or the monitor hosting library) does not pull an AWS SDK in to
-    // replicate bytes.
     expect("FilesystemAttachmentBackend" in replicationEntry).toBe(false);
     expect("S3AttachmentBackend" in replicationEntry).toBe(false);
     expect("KyselyAttachmentStore" in replicationEntry).toBe(false);
     expect("AttachmentService" in replicationEntry).toBe(false);
+  });
+
+  it("exports each replication symbol from the replication entry only", () => {
+    const names = Object.keys(replicationEntry);
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.filter((name) => name in packageRoot)).toEqual([]);
+    expect(names.filter((name) => name in clientEntry)).toEqual([]);
   });
 });

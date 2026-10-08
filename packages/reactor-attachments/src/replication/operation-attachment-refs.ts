@@ -6,6 +6,7 @@ import {
   isPurgeMarker,
   type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
+import { AttachmentSchemaCompiler } from "../reference-index/attachment-schema-compiler.js";
 import type { IAttachmentSchemaCompiler } from "../reference-index/types.js";
 import type { IOperationAttachmentRefs } from "./types.js";
 
@@ -16,7 +17,8 @@ import type { IOperationAttachmentRefs } from "./types.js";
  * This is the same `(registry, compiler)` pair `AttachmentReferenceReadModel`
  * runs, so a ref the index records and a ref the replicator chases are found by
  * one piece of code -- including the compiler's per-module/per-action cache,
- * which is held by the compiler instance a host shares between the two.
+ * which is held by the compiler instance a host shares between the two. A host
+ * with no read model to share one with takes the default compiler.
  *
  * Extraction failures do NOT propagate. A malformed ref or an unregistered
  * document type must not take down the event-bus subscriber the replicator
@@ -28,7 +30,7 @@ import type { IOperationAttachmentRefs } from "./types.js";
 export class SchemaCompiledOperationRefs implements IOperationAttachmentRefs {
   constructor(
     private readonly registry: IDocumentModelRegistry,
-    private readonly compiler: IAttachmentSchemaCompiler,
+    private readonly compiler: IAttachmentSchemaCompiler = new AttachmentSchemaCompiler(),
     private readonly onDiagnostic: (
       message: string,
       error: unknown,
