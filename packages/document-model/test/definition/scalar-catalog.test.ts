@@ -3,6 +3,7 @@ import type {
   PowerhouseScalarName,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import * as installedModule from "@powerhousedao/document-engineering/graphql";
 import { z } from "zod";
 import * as fieldModule from "../../src/definition/field.js";
 import { ph } from "../../src/definition/field.js";
@@ -57,17 +58,13 @@ const EXPECTED_NAMES = [
   "JSONObject",
 ];
 
-const installedScalars = new URL(
-  "../../../codegen/node_modules/@powerhousedao/document-engineering/dist/src/scalars/graphql/index.js",
-  import.meta.url,
-);
 type InstalledCoercer = {
   parseValue(value: unknown): unknown;
   parseLiteral(node: unknown): unknown;
   serialize(value: unknown): unknown;
 };
 
-const installed = (await import(installedScalars.href)) as Record<
+const installed = installedModule as unknown as Record<
   string,
   {
     schema?: z.ZodType;
