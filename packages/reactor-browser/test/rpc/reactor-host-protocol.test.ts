@@ -73,6 +73,16 @@ function rawTab(port: MessagePort) {
   return { send, reloads, workerGens, migrations };
 }
 
+function openTab(host: ReactorHost) {
+  const channel = new MessageChannel();
+  host.connect(createPortTransport(channel.port1));
+  return rawTab(channel.port2);
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+// Long enough for a port message to arrive.
+const deliver = () => new Promise((resolve) => setTimeout(resolve, 20));
+
 function fakeClient(calls: string[]): IReactorClient {
   return {
     get: (id: string) => {
@@ -126,6 +136,241 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     const result = await tab2.send({ k: "hello", version: V2 });
     expect(result).toMatchObject({ ok: false });
     expect(tab2.reloads).toContain("reactor version mismatch");
+  });
+
+  // A stale tab left on the old worker means two workers over one idb namespace.
+  it("reloads every connected tab onto one generation on a mismatch", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    const tab2 = openTab(host);
+    await tab2.send({ k: "hello", version: V2 });
+    await settle();
+
+    expect(tab1.reloads).toEqual(["reactor version mismatch"]);
+    expect(tab2.reloads).toEqual(["reactor version mismatch"]);
+    expect(tab1.workerGens[0]).toMatch(/^v1-build-2-/);
+    expect(tab2.workerGens).toEqual(tab1.workerGens);
+    expect(host.retired).toBe(true);
+  });
+
+  it("stops the reactor and stores of a worker a mismatch retires", async () => {
+    const retired: string[] = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onRetire: (reason) => {
+        retired.push(reason);
+        return Promise.resolve();
+      },
+    });
+    await openTab(host).send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+    expect(retired).toEqual(["reactor version mismatch"]);
+  });
+
+  // A tab that named its worker before any sibling bumped the gen lands here late.
+  it("sends a late tab on the new build away instead of serving it", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+
+    const late = openTab(host);
+    expect(await late.send({ k: "hello", version: V2 })).toEqual({
+      ok: false,
+    });
+    await settle();
+    expect(late.reloads).toEqual(["reactor version mismatch"]);
+    expect(late.workerGens).toEqual(tab1.workerGens);
+  });
+
+  it("sends every later hello away once retired, even one matching its build", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+
+    const sameBuild = openTab(host);
+    await expect(sameBuild.send({ k: "hello", version: V1 })).rejects.toThrow(
+      /retired/,
+    );
+    expect(sameBuild.workerGens).toEqual(tab1.workerGens);
+  });
+
+  it("keeps reporting the build it booted for after a mismatch", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    await openTab(host).send({ k: "hello", version: V2 });
+
+    expect(await tab1.send({ k: "admin", method: "info" })).toMatchObject({
+      appBuildId: "build-1",
+    });
+  });
+
+  // A slow package load can outlast the retirement and open the stores after it.
+  it("stops the reactor and stores again when a build finishes after retirement", async () => {
+    let finishBuild: (client: IReactorClient) => void = () => undefined;
+    const built = new Promise<IReactorClient>((resolve) => {
+      finishBuild = resolve;
+    });
+    let retired = 0;
+    const host = new ReactorHost({
+      build: () => built,
+      onRetire: () => {
+        retired += 1;
+        return Promise.resolve();
+      },
+    });
+    void openTab(host)
+      .send({ k: "hello", version: V1 })
+      .catch(() => undefined);
+    await settle();
+    await openTab(host).send({ k: "hello", version: V2 });
+    await settle();
+    expect(retired).toBe(1);
+
+    finishBuild(fakeClient([]));
+    await settle();
+    expect(retired).toBe(2);
+  });
+
+  // Stored gen v1-A, a switch to build B and back to A would land on this worker again.
+  it("never names its own worker as the generation to reload onto", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      namespace: "ph-reactor:ns#v1-build-1",
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V2 });
+    await openTab(host).send({ k: "hello", version: V1 });
+    await settle();
+    expect(tab1.workerGens).toHaveLength(1);
+    expect(tab1.workerGens[0]).toMatch(/^v1-build-1-/);
+  });
+
+  // The tabs are the worker's owners: once they reload, the browser can end it.
+  it("sends a deploy's reload, and stops the reactor, only once the drain settles", async () => {
+    let finishDrain = () => undefined as void;
+    const drain = new Promise<void>((resolve) => (finishDrain = resolve));
+    const retired: string[] = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onRetire: (reason) => {
+        retired.push(reason);
+        return Promise.resolve();
+      },
+      drainBeforeReload: () => drain,
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    const tab2 = openTab(host);
+    expect(await tab2.send({ k: "hello", version: V2 })).toEqual({
+      ok: false,
+    });
+    await deliver();
+    const late = openTab(host);
+    await expect(
+      tab1.send({ k: "req", method: "get", args: ["abc"] }),
+    ).rejects.toThrow(/retired/);
+    await expect(tab1.send({ k: "admin", method: "restart" })).rejects.toThrow(
+      /retired/,
+    );
+    await deliver();
+    expect(host.retired).toBe(true);
+    expect(tab1.reloads).toEqual([]);
+    expect(tab2.reloads).toEqual([]);
+    expect(late.reloads).toEqual([]);
+    expect(retired).toEqual([]);
+
+    finishDrain();
+    await deliver();
+    expect(tab1.reloads).toEqual(["reactor version mismatch"]);
+    expect(tab2.reloads).toEqual(["reactor version mismatch"]);
+    expect(late.reloads).toEqual(["reactor version mismatch"]);
+    expect(late.workerGens).toEqual(tab1.workerGens);
+    expect(retired).toEqual(["reactor version mismatch"]);
+  });
+
+  it.each([
+    ["rejects", () => Promise.reject(new Error("drain failed"))],
+    [
+      "throws",
+      (): Promise<void> => {
+        throw new Error("drain failed");
+      },
+    ],
+  ])(
+    "sends a deploy's reload when the drain before it %s",
+    async (_, drainBeforeReload) => {
+      const host = new ReactorHost({
+        build: () => Promise.resolve(fakeClient([])),
+        drainBeforeReload,
+      });
+      const tab1 = openTab(host);
+      await tab1.send({ k: "hello", version: V1 });
+      await openTab(host).send({ k: "hello", version: V2 });
+      await deliver();
+      expect(tab1.reloads).toEqual(["reactor version mismatch"]);
+    },
+  );
+
+  it("does not stop a reactor whose build finishes during the drain until the reload", async () => {
+    let finishBuild: (client: IReactorClient) => void = () => undefined;
+    const built = new Promise<IReactorClient>((resolve) => {
+      finishBuild = resolve;
+    });
+    let finishDrain = () => undefined as void;
+    const drain = new Promise<void>((resolve) => (finishDrain = resolve));
+    let retired = 0;
+    const host = new ReactorHost({
+      build: () => built,
+      onRetire: () => {
+        retired += 1;
+        return Promise.resolve();
+      },
+      drainBeforeReload: () => drain,
+    });
+    void openTab(host)
+      .send({ k: "hello", version: V1 })
+      .catch(() => undefined);
+    await deliver();
+    await openTab(host).send({ k: "hello", version: V2 });
+    finishBuild(fakeClient([]));
+    await deliver();
+    expect(retired).toBe(0);
+
+    finishDrain();
+    await deliver();
+    expect(retired).toBe(1);
+  });
+
+  it("reloads at once, without the drain, for a retirement that is not a deploy", async () => {
+    let drains = 0;
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      drainBeforeReload: () => {
+        drains += 1;
+        return new Promise<void>(() => undefined);
+      },
+    });
+    const tab1 = openTab(host);
+    await tab1.send({ k: "hello", version: V1 });
+    host.retireAndReload("storage session poisoned", "gen-2");
+    await deliver();
+    expect(tab1.reloads).toEqual(["storage session poisoned"]);
+    expect(drains).toBe(0);
   });
 
   it("reloads a tab whose enforcement flags differ from the running worker's", async () => {
