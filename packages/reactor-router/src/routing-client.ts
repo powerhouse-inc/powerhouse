@@ -46,12 +46,7 @@ import {
   type RoutableBackendConfig,
 } from "./backend.js";
 import { ATTEMPT, RouteDispatcher, type BeforeSubmit } from "./dispatcher.js";
-import {
-  CrossBackendBatchError,
-  CrossBackendRelationshipError,
-  messageOf,
-  rethrow,
-} from "./errors.js";
+import { CrossBackendRelationshipError, messageOf, rethrow } from "./errors.js";
 import {
   fanInExistence,
   mergePaged,
@@ -162,7 +157,7 @@ async function submitAndWait(
 
 const CREATE_DOCUMENT = "CREATE_DOCUMENT";
 
-/** Ids a job of the batch creates; nothing holds them yet to guard. */
+/** Ids a job of the batch creates; they follow the batch's backend. */
 function createdByExecution(request: BatchExecutionRequest): Set<string> {
   return new Set(
     request.jobs
@@ -828,8 +823,6 @@ export class RoutingReactorClient implements IReactorClient {
     const { value: result, backend } = await this.dispatcher.onDocuments(
       "executeBatch",
       identifiers,
-      (excluded) =>
-        this.singleBackendFor("executeBatch", identifiers, excluded),
       (target) => target.api.executeBatch(request, signal),
       createdByExecution(request),
     );
@@ -845,15 +838,6 @@ export class RoutingReactorClient implements IReactorClient {
     const { value: result, backend } = await this.dispatcher.onDocuments(
       "loadBatch",
       identifiers,
-      async (excluded) => {
-        const target = await this.singleBackendFor(
-          "loadBatch",
-          identifiers,
-          excluded,
-        );
-        declared(target, "loadBatch");
-        return target;
-      },
       (target) => declared(target, "loadBatch")(request, signal),
       createdByLoad(request),
     );
@@ -1037,7 +1021,7 @@ export class RoutingReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this.singleBackendFor("deleteDocuments", identifiers);
+    await this.dispatcher.resolveBatchBackend("deleteDocuments", identifiers);
     await Promise.all(
       identifiers.map((identifier) =>
         this.dispatcher.onDocument(
@@ -1210,13 +1194,7 @@ export class RoutingReactorClient implements IReactorClient {
     run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
   ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
     if (parentIdentifier !== undefined && parentIdentifier !== "") {
-      return this.dispatcher.onDocuments(
-        label,
-        [parentIdentifier],
-        (excluded) =>
-          this.dispatcher.resolveDocumentBackend(parentIdentifier, excluded),
-        run,
-      );
+      return this.dispatcher.onDocuments(label, [parentIdentifier], run);
     }
     const backend = await this.placeNewDocument(documentId);
     const value = await this.dispatcher.onBackend(
@@ -1242,37 +1220,6 @@ export class RoutingReactorClient implements IReactorClient {
     for (const job of Object.values(jobs)) {
       this.dispatcher.recordJob(job.id, backend);
     }
-  }
-
-  private async singleBackendFor(
-    operation: string,
-    identifiers: readonly string[],
-    excluded: ReadonlySet<string> = new Set(),
-  ): Promise<RouterBackend> {
-    const distinct = [...new Set(identifiers.filter((id) => id !== ""))];
-    if (distinct.length === 0) {
-      return this.dispatcher.primary;
-    }
-    const resolved = await Promise.all(
-      distinct.map(async (documentId) => ({
-        documentId,
-        backend: await this.dispatcher.resolveDocumentBackend(
-          documentId,
-          excluded,
-        ),
-      })),
-    );
-    const first = resolved[0];
-    if (resolved.some((entry) => entry.backend !== first.backend)) {
-      throw new CrossBackendBatchError(
-        operation,
-        resolved.map((entry) => ({
-          documentId: entry.documentId,
-          backend: entry.backend.name,
-        })),
-      );
-    }
-    return first.backend;
   }
 
   private async assertSameBackend(

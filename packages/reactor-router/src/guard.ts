@@ -10,6 +10,12 @@ export type OwnershipProbe = (
   identifier: string,
 ) => Promise<Ownership>;
 
+/** One other backend's answer. */
+export type OtherOwnership = {
+  readonly backend: string;
+  readonly answer: Ownership;
+};
+
 /** Router-side misroute refusal for backends that do not refuse themselves. */
 export class OwnershipGuard {
   private readonly owned: BoundedMap;
@@ -20,7 +26,7 @@ export class OwnershipGuard {
     private readonly others: (
       backend: RouterBackend,
       identifier: string,
-    ) => Promise<readonly Ownership[]>,
+    ) => Promise<readonly OtherOwnership[]>,
     cacheSize: number,
   ) {
     this.owned = new BoundedMap(cacheSize);
@@ -34,16 +40,11 @@ export class OwnershipGuard {
     if (backend.refusesMisroutes || identifier === "") {
       return;
     }
-    const key = `${backend.name}\u0000${identifier}`;
-    if (this.owned.get(key) !== "") {
+    if ((await this.ownership(backend, identifier)) !== "no") {
       return;
     }
-    const answer = await this.probe(backend, identifier);
-    if (answer === "yes") {
-      this.owned.set(key, backend.name);
-      return;
-    }
-    if (answer === "no" && (await this.heldElsewhere(backend, identifier))) {
+    const answers = await this.others(backend, identifier);
+    if (answers.some(({ answer }) => answer !== "no")) {
       throw new WrongBackendError({
         documentId: identifier,
         rejectedBy: backend.name,
@@ -52,16 +53,50 @@ export class OwnershipGuard {
     }
   }
 
-  /** When no backend holds it, the backend itself reports not-found. */
-  private async heldElsewhere(
+  /**
+   * For an id the operation creates: refuses only when another backend holds
+   * it, naming that backend. A refusing backend is checked too, since it
+   * cannot know a create duplicates an id held elsewhere.
+   */
+  async assertNotHeldElsewhere(
     backend: RouterBackend,
     identifier: string,
-  ): Promise<boolean> {
+    operation: string,
+  ): Promise<void> {
+    if (identifier === "") {
+      return;
+    }
+    if ((await this.ownership(backend, identifier)) === "yes") {
+      return;
+    }
     const answers = await this.others(backend, identifier);
-    return answers.some((answer) => answer !== "no");
+    const holder = answers.find(({ answer }) => answer === "yes");
+    if (holder !== undefined) {
+      throw new WrongBackendError({
+        documentId: identifier,
+        ownerHint: holder.backend,
+        rejectedBy: backend.name,
+        operation,
+      });
+    }
   }
 
   forget(backend: RouterBackend, identifier: string): void {
     this.owned.delete(`${backend.name}\u0000${identifier}`);
+  }
+
+  private async ownership(
+    backend: RouterBackend,
+    identifier: string,
+  ): Promise<Ownership> {
+    const key = `${backend.name}\u0000${identifier}`;
+    if (this.owned.get(key) !== "") {
+      return "yes";
+    }
+    const answer = await this.probe(backend, identifier);
+    if (answer === "yes") {
+      this.owned.set(key, backend.name);
+    }
+    return answer;
   }
 }
