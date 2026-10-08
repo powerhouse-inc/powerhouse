@@ -1,4 +1,5 @@
 import type { AttachmentHash, LocalChannelPort } from "@powerhousedao/reactor";
+import { isAttachmentMetadata } from "../attachment-metadata.js";
 import type { IAttachmentTransport } from "../interfaces.js";
 import type { TransportFetchResult } from "../types.js";
 import {
@@ -27,6 +28,8 @@ export type LocalAttachmentTransportOptions = {
   clearTimer?: (handle: unknown) => void;
   /** Identifies this instance's request ids; defaults to a random nonce. */
   instanceId?: string;
+  /** Refuses a body the peer declares larger than this. */
+  maxBytes?: number;
 };
 
 type Pending = {
@@ -36,6 +39,8 @@ type Pending = {
   /** Set once `begin` has arrived and the body stream exists. */
   controller: ReadableStreamDefaultController<Uint8Array> | undefined;
   nextSeq: number;
+  declaredBytes: number;
+  receivedBytes: number;
   timer: unknown;
   detachAbort: (() => void) | undefined;
 };
@@ -64,6 +69,7 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
   private readonly setTimer: (callback: () => void, delayMs: number) => unknown;
   private readonly clearTimer: (handle: unknown) => void;
   private readonly instanceId: string;
+  private readonly maxBytes: number | undefined;
   private readonly pending = new Map<string, Pending>();
   private readonly detachPort: () => void;
   private nextRequest = 0;
@@ -81,6 +87,7 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
       ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
     this.instanceId =
       options.instanceId ?? Math.random().toString(36).slice(2, 10);
+    this.maxBytes = options.maxBytes;
     this.detachPort = this.port.onMessage((data) => this.onMessage(data));
   }
 
@@ -106,6 +113,8 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
         fail: reject,
         controller: undefined,
         nextSeq: 0,
+        declaredBytes: 0,
+        receivedBytes: 0,
         timer: undefined,
         detachAbort: undefined,
       };
@@ -190,8 +199,36 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
     entry: Pending,
     message: LocalAttachmentResponse,
   ): void {
+    if (
+      entry.controller &&
+      (message.kind === "begin" ||
+        message.kind === "pending" ||
+        message.kind === "not-found")
+    ) {
+      this.violate(
+        id,
+        `Local attachment peer sent ${message.kind} after the body began`,
+      );
+      return;
+    }
     switch (message.kind) {
       case "begin": {
+        if (
+          message.hash !== entry.hash ||
+          !isAttachmentMetadata(message.metadata)
+        ) {
+          this.violate(id, "Local attachment peer sent a malformed begin");
+          return;
+        }
+        const sizeBytes = message.metadata.sizeBytes;
+        if (this.maxBytes !== undefined && sizeBytes > this.maxBytes) {
+          this.violate(
+            id,
+            `Local attachment of ${sizeBytes} bytes exceeds the ${this.maxBytes} byte limit`,
+          );
+          return;
+        }
+        entry.declaredBytes = sizeBytes;
         const body = new ReadableStream<Uint8Array>({
           start: (controller) => {
             entry.controller = controller;
@@ -225,6 +262,10 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
           );
           return;
         }
+        if (!(message.bytes instanceof Uint8Array)) {
+          this.violate(id, "Local attachment peer sent a malformed chunk");
+          return;
+        }
         if (message.seq !== entry.nextSeq) {
           // The port preserves order, so an out-of-order sequence means the
           // two sides disagree about the transfer; serving a body with a hole
@@ -234,6 +275,14 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
             new Error(
               `Local attachment chunk out of order: expected ${entry.nextSeq}, got ${message.seq}`,
             ),
+          );
+          return;
+        }
+        entry.receivedBytes += message.bytes.byteLength;
+        if (entry.receivedBytes > entry.declaredBytes) {
+          this.violate(
+            id,
+            `Local attachment peer sent more than the ${entry.declaredBytes} bytes it declared`,
           );
           return;
         }
@@ -256,16 +305,36 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
           );
           return;
         }
+        if (entry.receivedBytes !== entry.declaredBytes) {
+          this.abandon(
+            id,
+            new Error(
+              `Local attachment peer ended after ${entry.receivedBytes} of ${entry.declaredBytes} declared bytes`,
+            ),
+          );
+          return;
+        }
         entry.controller.close();
         this.release(id, entry);
         return;
       }
       case "pending": {
+        if (
+          message.hash !== entry.hash ||
+          typeof message.expiresAtUtc !== "string"
+        ) {
+          this.violate(id, "Local attachment peer sent a malformed pending");
+          return;
+        }
         entry.settle({
           kind: "pending",
           hash: message.hash,
           expiresAtUtc: message.expiresAtUtc,
-          retryAfterMs: message.retryAfterMs,
+          // The replicator falls back to its policy for a non-finite delay.
+          retryAfterMs:
+            typeof message.retryAfterMs === "number"
+              ? message.retryAfterMs
+              : Number.NaN,
         });
         this.release(id, entry);
         return;
@@ -283,6 +352,12 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
         return;
       }
     }
+  }
+
+  /** A reply that breaks the protocol: tell the peer to stop, fail the request. */
+  private violate(id: string, message: string): void {
+    this.post({ protocol: LOCAL_ATTACHMENT_PROTOCOL, kind: "cancel", id });
+    this.abandon(id, new Error(message));
   }
 
   /** Resets this request's silence timer. */

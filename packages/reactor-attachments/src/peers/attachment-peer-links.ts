@@ -22,6 +22,10 @@ export type AttachmentPeerLinksOptions = {
   authorize?: LocalAttachmentAuthorizer;
   chunkSizeBytes?: number;
   requestTimeoutMs?: number;
+  /** Each link's transport refuses a body declared larger than this. */
+  maxBytes?: number;
+  /** Requests each link's server serves at once. */
+  maxConcurrentServes?: number;
   /** Called after a link is added; a host re-chases terminal hashes here. */
   onPeerAdded?: (peerId: string, channelName: string) => void;
   onDiagnostic?: (message: string, error?: unknown) => void;
@@ -128,12 +132,18 @@ export class AttachmentPeerLinks {
       ...(this.options.chunkSizeBytes !== undefined
         ? { chunkSizeBytes: this.options.chunkSizeBytes }
         : {}),
+      ...(this.options.maxConcurrentServes !== undefined
+        ? { maxConcurrentServes: this.options.maxConcurrentServes }
+        : {}),
       onDiagnostic: this.onDiagnostic,
     });
     const transport = new LocalAttachmentTransport({
       port: linkPort.view(),
       ...(this.options.requestTimeoutMs !== undefined
         ? { requestTimeoutMs: this.options.requestTimeoutMs }
+        : {}),
+      ...(this.options.maxBytes !== undefined
+        ? { maxBytes: this.options.maxBytes }
         : {}),
     });
 

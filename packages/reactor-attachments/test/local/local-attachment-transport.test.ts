@@ -670,3 +670,146 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     server.close();
   });
 });
+
+describe("LocalAttachmentTransport against a misbehaving peer", () => {
+  const HASH = "d".repeat(64);
+  const P = LOCAL_ATTACHMENT_PROTOCOL;
+
+  async function outcome(
+    body: ReadableStream<Uint8Array>,
+  ): Promise<"closed" | "errored" | "hung"> {
+    return Promise.race([
+      readAll(body).then(
+        () => "closed" as const,
+        () => "errored" as const,
+      ),
+      new Promise<"hung">((resolve) => setTimeout(() => resolve("hung"), 100)),
+    ]);
+  }
+
+  async function begun(
+    options: { sizeBytes?: number; maxBytes?: number } = {},
+  ): Promise<{
+    fake: ReturnType<typeof fakePort>;
+    id: string;
+    body: ReadableStream<Uint8Array>;
+  }> {
+    const fake = fakePort();
+    const puller = new LocalAttachmentTransport({
+      port: fake.port,
+      requestTimeoutMs: 10_000,
+      ...(options.maxBytes !== undefined ? { maxBytes: options.maxBytes } : {}),
+    });
+    const inFlight = puller.fetch(HASH, DOC);
+    const { id } = fake.takeFetch();
+    fake.deliver({
+      protocol: P,
+      kind: "begin",
+      id,
+      hash: HASH,
+      metadata: metadata(options.sizeBytes ?? 10),
+    });
+    const result = await inFlight;
+    if (result.kind !== "data") throw new Error("expected data");
+    return { fake, id, body: result.response.body };
+  }
+
+  it("errors the body and cancels once the peer sends more than it declared", async () => {
+    const { fake, id, body } = await begun({ sizeBytes: 10 });
+    fake.deliver({
+      protocol: P,
+      kind: "chunk",
+      id,
+      seq: 0,
+      bytes: new Uint8Array(8),
+    });
+    fake.deliver({
+      protocol: P,
+      kind: "chunk",
+      id,
+      seq: 1,
+      bytes: new Uint8Array(8),
+    });
+    fake.deliver({ protocol: P, kind: "end", id });
+
+    expect(await outcome(body)).toBe("errored");
+    expect(fake.sent).toContainEqual({ protocol: P, kind: "cancel", id });
+  });
+
+  it("errors a body shorter than declared at end", async () => {
+    const { fake, id, body } = await begun({ sizeBytes: 10 });
+    fake.deliver({
+      protocol: P,
+      kind: "chunk",
+      id,
+      seq: 0,
+      bytes: new Uint8Array(4),
+    });
+    fake.deliver({ protocol: P, kind: "end", id });
+
+    expect(await outcome(body)).toBe("errored");
+  });
+
+  it("refuses a declared size above maxBytes", async () => {
+    const fake = fakePort();
+    const puller = new LocalAttachmentTransport({
+      port: fake.port,
+      maxBytes: 100,
+    });
+    const inFlight = puller.fetch(HASH, DOC);
+    const { id } = fake.takeFetch();
+    fake.deliver({
+      protocol: P,
+      kind: "begin",
+      id,
+      hash: HASH,
+      metadata: metadata(1_000),
+    });
+
+    await expect(inFlight).rejects.toThrow(/exceeds/);
+  });
+
+  it.each([
+    ["a second begin", { kind: "begin", hash: HASH, metadata: metadata(10) }],
+    ["a not-found", { kind: "not-found" }],
+    [
+      "a pending",
+      { kind: "pending", hash: HASH, expiresAtUtc: "x", retryAfterMs: 1 },
+    ],
+  ])("errors the body on %s after begin", async (_name, reply) => {
+    const { fake, id, body } = await begun({ sizeBytes: 2 });
+    fake.deliver({ protocol: P, id, ...reply });
+    fake.deliver({
+      protocol: P,
+      kind: "chunk",
+      id,
+      seq: 0,
+      bytes: new Uint8Array(2),
+    });
+    fake.deliver({ protocol: P, kind: "end", id });
+
+    expect(await outcome(body)).toBe("errored");
+  });
+
+  it.each([
+    ["no metadata", { hash: HASH }],
+    ["a negative size", { hash: HASH, metadata: metadata(-1) }],
+    ["another hash", { hash: "e".repeat(64), metadata: metadata(1) }],
+  ])("rejects a begin with %s", async (_name, fields) => {
+    const fake = fakePort();
+    const puller = new LocalAttachmentTransport({ port: fake.port });
+    const inFlight = puller.fetch(HASH, DOC);
+    const { id } = fake.takeFetch();
+    fake.deliver({ protocol: P, kind: "begin", id, ...fields });
+
+    await expect(inFlight).rejects.toThrow(/malformed/);
+  });
+
+  it("rejects a chunk whose bytes are not a Uint8Array", async () => {
+    const { fake, id, body } = await begun({ sizeBytes: 0 });
+    fake.deliver({ protocol: P, kind: "chunk", id, seq: 0, bytes: "xx" });
+    fake.deliver({ protocol: P, kind: "end", id });
+
+    expect(await outcome(body)).toBe("errored");
+  });
+});

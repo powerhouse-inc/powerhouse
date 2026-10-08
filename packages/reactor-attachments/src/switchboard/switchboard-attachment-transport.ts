@@ -1,6 +1,7 @@
 import type { AttachmentHash } from "@powerhousedao/reactor";
 import type { JwtHandler } from "@powerhousedao/reactor";
 import type { IAttachmentTransport } from "../interfaces.js";
+import { isAttachmentMetadata, isRecord } from "../attachment-metadata.js";
 import type { AttachmentMetadata, TransportFetchResult } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 
@@ -146,34 +147,6 @@ function parseRetryAfterMs(response: Response): number {
   const seconds = Number(retryAfter);
   if (!Number.isFinite(seconds) || seconds < 0) return DEFAULT_RETRY_AFTER_MS;
   return Math.round(seconds * 1000);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isAttachmentMetadata(value: unknown): value is AttachmentMetadata {
-  if (!isRecord(value)) return false;
-  if (typeof value.mimeType !== "string") return false;
-  if (typeof value.fileName !== "string") return false;
-  if (
-    typeof value.sizeBytes !== "number" ||
-    !Number.isFinite(value.sizeBytes) ||
-    value.sizeBytes < 0
-  ) {
-    return false;
-  }
-  if (value.extension !== null && typeof value.extension !== "string") {
-    return false;
-  }
-  if (typeof value.createdAtUtc !== "string") return false;
-  if (
-    value.lastAccessedAtUtc !== undefined &&
-    typeof value.lastAccessedAtUtc !== "string"
-  ) {
-    return false;
-  }
-  return true;
 }
 
 function contentTypeFallback(response: Response): AttachmentMetadata {
