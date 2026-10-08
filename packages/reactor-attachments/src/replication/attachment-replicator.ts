@@ -94,7 +94,7 @@ type Entry = {
 
 /**
  * Lazy fetch-on-reference: pulls attachment bytes a reactor's own operations
- * reference but whose hash its local store lacks (multi-reactor W3.4).
+ * reference but whose hash its local store lacks.
  *
  * The seam is `ReactorEventTypes.JOB_READ_READY` on the reactor's event bus,
  * and that choice matters in two ways. It is AFTER the pre-ready read models,
@@ -370,10 +370,8 @@ export class AttachmentReplicator {
     const backlog = this.backlog;
     if (!backlog) {
       // No reference index to re-scan: this reactor learns refs only from live
-      // operations and is NOT resumable across a restart. `backlogScanned`
-      // stays false, matching build-reactor's documented contract and the
-      // inspector's false-branch text; claiming a finished scan would promise
-      // a resumability this reactor does not have.
+      // operations and is NOT resumable across a restart, so `backlogScanned`
+      // stays false.
       return;
     }
 

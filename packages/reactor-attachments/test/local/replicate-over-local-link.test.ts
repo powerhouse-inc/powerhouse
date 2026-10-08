@@ -104,12 +104,7 @@ function operation(ref: AttachmentRef): OperationWithContext {
   } as unknown as OperationWithContext;
 }
 
-/**
- * The package-level shape of the W3.4 end-to-end claim: peer A holds the
- * bytes, peer B replicates them on reference over a brokered port, with no
- * Switchboard and no HTTP anywhere in the path. `test/local-attachment-sync`
- * in reactor-monitor runs the same claim through two real reactors.
- */
+/** Peer A holds the bytes; peer B replicates them on reference over a brokered port. */
 describe("replicating bytes over a brokered local link", () => {
   const cleanups: Array<() => Promise<void> | void> = [];
 

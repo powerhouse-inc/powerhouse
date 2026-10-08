@@ -36,7 +36,7 @@ function headerOf(record: LocalAttachmentRecord): AttachmentHeader {
 /**
  * A realm-resident, content-addressed {@link IAttachmentStore} over a
  * {@link ILocalAttachmentBackend} -- the browser-capable half of attachment
- * byte movement (multi-reactor W3.4).
+ * byte movement.
  *
  * The same class serves both backends, so an IndexedDB store in a tab and the
  * memory twin a Node test runs cannot diverge in behaviour: every semantic the

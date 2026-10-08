@@ -17,8 +17,7 @@ export interface IAttachmentReferenceReader {
 
 /**
  * Pages the whole reference index, in a stable order, for a consumer that has
- * to re-derive work from it on boot -- the `AttachmentReplicator`'s resume
- * (multi-reactor W3.4).
+ * to re-derive work from it on boot -- the `AttachmentReplicator`'s resume.
  *
  * Separate from {@link IAttachmentReferenceReader} rather than added to it:
  * the reader is the authorization surface every attachment read goes through,

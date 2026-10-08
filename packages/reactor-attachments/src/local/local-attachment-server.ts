@@ -59,7 +59,7 @@ export function attachmentReferenceAuthorizer(
 
 /**
  * Serves attachment bytes to a brokered local peer from this reactor's own
- * store (multi-reactor W3.4).
+ * store.
  *
  * The answering half of {@link LocalAttachmentTransport}; both run on the same
  * `LocalChannelPort` and ignore each other's messages.
@@ -94,7 +94,7 @@ export class LocalAttachmentServer {
     this.detachPort = this.port.onMessage((data) => this.onMessage(data));
   }
 
-  /** What this peer has handed out, for the monitor's attachments panel. */
+  /** What this peer has handed out. */
   stats(): { served: number; bytesServed: number; refused: number } {
     return {
       served: this.served,

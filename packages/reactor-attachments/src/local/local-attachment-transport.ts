@@ -41,9 +41,9 @@ type Pending = {
 };
 
 /**
- * `IAttachmentTransport` over a brokered `LocalChannelPort`: one monitor-linked
- * reactor pulling attachment bytes straight from its peer, with no Switchboard
- * and no HTTP (multi-reactor W3.4).
+ * `IAttachmentTransport` over a brokered `LocalChannelPort`: one linked reactor
+ * pulling attachment bytes straight from its peer, with no Switchboard and no
+ * HTTP.
  *
  * The counterpart of {@link LocalAttachmentServer}, and a pair of them runs on
  * each end of one port: a reactor both asks for bytes and serves them. The two

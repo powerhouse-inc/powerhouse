@@ -62,8 +62,7 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 /**
  * An IndexedDB-backed {@link ILocalAttachmentBackend}: the browser-resident
- * attachment store a reactor in a tab or a SharedWorker replicates into
- * (multi-reactor W3.4).
+ * attachment store a reactor in a tab or a SharedWorker replicates into.
  *
  * Two object stores, written in one transaction so a record and its blob land
  * or fail together (the atomicity {@link ILocalAttachmentBackend.write}

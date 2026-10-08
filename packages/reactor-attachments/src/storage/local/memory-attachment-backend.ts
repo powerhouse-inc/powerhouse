@@ -10,7 +10,7 @@ import type {
  * It exists so the whole {@link LocalAttachmentStore} contract -- and the
  * replicator above it -- is testable in Node without an IndexedDB shim, and so
  * a reactor that wants a deliberately ephemeral attachment store (a test, a
- * throwaway monitor reactor) has one. The backend contract suite runs against
+ * throwaway reactor) has one. The backend contract suite runs against
  * this and against the IndexedDB backend, so the two answer identically.
  *
  * Records are copied in and out: a caller mutating a returned record must not
