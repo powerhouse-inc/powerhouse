@@ -29,23 +29,30 @@ fire `core` runs only during the warm-up.
 
 ## Options
 
-| Option          | Default                        | Effect                                                         |
-| --------------- | ------------------------------ | -------------------------------------------------------------- |
-| `--runs`        | 100                            | Measured operations                                            |
-| `--warmup`      | 5                              | Unmeasured runs fired first                                    |
-| `--steps`       | 1                              | Steps per workflow, chained                                    |
-| `--concurrency` | 1                              | Operations in flight; also sets `PH_WORKFLOWS_RUN_CONCURRENCY` |
-| `--batch`       | 25                             | Operations per printed row                                     |
-| `--seed-runs`   | 0                              | Runs inserted into the journal by SQL before measuring         |
-| `--seed-steps`  | 3                              | Steps per seeded run                                           |
-| `--history`     | 0                              | Extra operations on the workflow document before measuring     |
-| `--scope`       | `all`                          | `runs-page`: every workflow's runs, or `workflow` for one      |
-| `--page-size`   | 25                             | `runs-page`: runs per page                                     |
-| `--profile`     | off                            | Write CPU profiles of the host and of every forked worker      |
-| `--pyroscope`   |                                | Push those profiles to this Pyroscope; turns on `--profile`    |
-| `--otlp`        |                                | Export every span to this OTLP/HTTP endpoint                   |
-| `--no-trace`    | off                            | Run without a tracer or meter, to measure what telemetry costs |
-| `--out`         | `bench/.out/<time>-<workload>` | Directory for `result.json` and profiles                       |
+| Option                | Default                        | Effect                                                         |
+| --------------------- | ------------------------------ | -------------------------------------------------------------- |
+| `--runs`              | 100                            | Measured operations                                            |
+| `--warmup`            | 5                              | Unmeasured runs fired first                                    |
+| `--steps`             | 1                              | Steps per workflow, chained                                    |
+| `--concurrency`       | 1                              | Operations in flight                                           |
+| `--pool`              | `--concurrency`                | Worker slots (`PH_WORKFLOWS_RUN_CONCURRENCY`)                  |
+| `--mix`               | the workload                   | Step kinds repeated across `--steps`, e.g. `piece,core`        |
+| `--batch`             | 25                             | Operations per printed row                                     |
+| `--seed-runs`         | 0                              | Runs inserted into the journal by SQL before measuring         |
+| `--seed-steps`        | 3                              | Steps per seeded run                                           |
+| `--history`           | 0                              | Extra operations on the workflow document before measuring     |
+| `--scope`             | `all`                          | `runs-page`: every workflow's runs, or `workflow` for one      |
+| `--page-size`         | 25                             | `runs-page`: runs per page                                     |
+| `--profile`           | off                            | Write CPU profiles of the host and of every forked worker      |
+| `--pyroscope`         |                                | Push those profiles to this Pyroscope; turns on `--profile`    |
+| `--otlp`              |                                | Export every span to this OTLP/HTTP endpoint                   |
+| `--no-trace`          | off                            | Run without a tracer or meter, to measure what telemetry costs |
+| `--postgres`          |                                | Postgres server URL; each run creates a fresh database on it   |
+| `--pglite-dir`        |                                | On-disk PGlite under this directory, as Switchboard keeps it   |
+| `--policy`            | `PARALLEL`                     | The workflow's `policy.concurrency`; `QUEUE` runs one at a time |
+| `--reactor-workers`   | 0                              | Reactor executor worker threads (`REACTOR_WORKERS`); Postgres  |
+| `--projection-worker` | off                            | The reactor's projection worker thread; Postgres               |
+| `--out`               | `bench/.out/<time>-<workload>` | Directory for `result.json` and profiles                       |
 
 Columns:
 
@@ -54,6 +61,9 @@ Columns:
   and the journal writes.
 - In the span table, `perRun` is the total time in that span divided by the
   measured operations. Spans nest, so the column does not add up to a run.
+- The `host` line gives the main thread's event-loop utilization and the CPU
+  the bench process used across all its threads, in cores. Children are not
+  counted.
 
 ## Spans and metrics
 
@@ -100,6 +110,9 @@ SIGKILL, so that it can write its profile.
 ```bash
 docker compose -f scripts/profiling/docker-compose.yml up -d  # from the repo root
 pnpm bench --workload reactor-write --runs 40 \
+  --postgres postgres://postgres:postgres@localhost:5432/postgres \
+  --reactor-workers 8 --projection-worker
+pnpm bench --workload reactor-write --runs 40 \
   --otlp http://localhost:4318 --pyroscope http://localhost:4040
 ```
 
@@ -112,3 +125,22 @@ pnpm bench --workload reactor-write --runs 40 \
   `bench_run`. Its own UI is at http://localhost:4040.
 - To push profiles you already have, run
   `node bench/pyroscope-push.ts <dir> --labels process=worker`.
+
+## In a Linux container
+
+`bench/docker.sh <cpus> <memory> <command>` runs a command in
+`node:24-bookworm-slim` with a CPU quota and a memory limit, on the profiling
+stack's network. Inside it, `os.availableParallelism()` and
+`process.constrainedMemory()` report those limits. Build on the host first;
+the monorepo is mounted as is.
+
+```bash
+docker compose -f scripts/profiling/docker-compose.yml up -d postgres  # from the repo root
+bench/docker.sh 4 4g node bench/run.ts --workload reactor-write \
+  --runs 128 --concurrency 8 \
+  --postgres postgres://postgres:postgres@postgres16:5432/postgres
+bench/docker.sh 4 4g node bench/run.ts --workload reactor-write \
+  --runs 128 --concurrency 4 --pglite-dir /tmp/pg
+```
+
+On-disk PGlite fsyncs every commit unless `PH_PGLITE_FSYNC=0`.
