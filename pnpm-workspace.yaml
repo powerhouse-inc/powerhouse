@@ -118,7 +118,7 @@ catalog:
   "@graphql-codegen/add": 6.0.0
   "write-package": 7.2.0
   "get-tsconfig": 4.13.7
-  "vitest": 4.1.1
+  "vitest": 4.1.11
   "npm-package-arg": 13.0.2
   "@types/npm-package-arg": 6.1.4
   "pg": 8.18.0
@@ -145,11 +145,11 @@ catalog:
   "tinybench": 6.0.0
   "@tsconfig/node-lts": 24.0.0
   "glob": 13.0.4
-  "@vitest/browser": 4.1.1
+  "@vitest/browser": 4.1.11
   "playwright": 1.60.0
   "date-fns": 4.1.0
-  "@vitest/browser-playwright": 4.1.1
-  "@vitest/coverage-v8": 4.1.1
+  "@vitest/browser-playwright": 4.1.11
+  "@vitest/coverage-v8": 4.1.11
   "@preact/preset-vite": 2.10.5
   "tsdown": 0.23.0
   "@tsdown/css": 0.23.0
