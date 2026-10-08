@@ -157,10 +157,10 @@ export class RouteDispatcher {
 
   /**
    * A batch-shaped write on the one backend `resolve` names. Each identifier
-   * not in `created` is guarded before anything is sent. A misroute, or a not-found raised by a
-   * step wrapped in `beforeSubmit`, forgets the identifiers' entries and
-   * re-resolves without the refusing backends; any other failure is the
-   * caller's, since a job may have landed.
+   * not in `created` is guarded before anything is sent. A misroute, or a
+   * not-found raised by a step wrapped in `beforeSubmit`, forgets the
+   * identifiers' entries and re-resolves without the refusing backends; any
+   * other failure is the caller's, since a job may have landed.
    */
   async onDocuments<T>(
     label: string,
