@@ -413,16 +413,20 @@ export function inTab(tab: SourceTab, piece: { source?: PieceSourceKind }) {
   );
 }
 
+// Accents dropped, as the runtime's search drops them.
+function folded(text: string): string {
+  return text.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
 export function queryTokens(query: string): string[] {
-  return query
-    .toLowerCase()
+  return folded(query)
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
 }
 
 // Every token somewhere in the text, in any order.
 export function matchesQuery(text: string, tokens: string[]): boolean {
-  const lowered = text.toLowerCase();
+  const lowered = folded(text);
   return tokens.every((token) => lowered.includes(token));
 }
 
@@ -460,15 +464,21 @@ const INDEXING_RETRY_MS = 2000;
 type SearchState =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "done"; result: PieceSearchResultUi }
+  // Stale: answered for an earlier query or filter, while the current one runs.
+  | { kind: "done"; result: PieceSearchResultUi; stale: boolean }
   | { kind: "error"; message: string };
+
+type SearchAnswer =
+  | { kind: "idle" }
+  | { kind: "done"; key: string; result: PieceSearchResultUi }
+  | { kind: "error"; key: string; message: string };
 
 // Debounced catalog-wide search; keeps polling while the runtime indexes.
 function usePieceSearch(
   query: string,
   filter: PieceSearchFilterUi | null,
 ): SearchState {
-  const [state, setState] = useState<SearchState>({ kind: "idle" });
+  const [state, setState] = useState<SearchAnswer>({ kind: "idle" });
   const [attempt, setAttempt] = useState(0);
   const trimmed = query.trim();
   const search = usePieceSource()?.searchPieces;
@@ -478,6 +488,7 @@ function usePieceSearch(
     trimmed.length >= SEARCH_MIN_CHARS;
   // A key, so a filter rebuilt with the same fields does not search again.
   const filterKey = JSON.stringify(filter);
+  const key = `${trimmed}\n${filterKey}`;
 
   useEffect(() => {
     if (!active) {
@@ -488,13 +499,10 @@ function usePieceSearch(
     let alive = true;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const timer = setTimeout(() => {
-      setState((previous) =>
-        previous.kind === "done" ? previous : { kind: "loading" },
-      );
       search(trimmed, JSON.parse(filterKey) as PieceSearchFilterUi).then(
         (result) => {
           if (!alive) return;
-          setState({ kind: "done", result });
+          setState({ kind: "done", key, result });
           if (result.status === "indexing") {
             retry = setTimeout(
               () => setAttempt((value) => value + 1),
@@ -506,6 +514,7 @@ function usePieceSearch(
           if (alive) {
             setState({
               kind: "error",
+              key,
               message: error instanceof Error ? error.message : String(error),
             });
           }
@@ -519,9 +528,16 @@ function usePieceSearch(
     };
   }, [active, trimmed, filterKey, attempt, search]);
 
-  // Loading through the debounce, so the browse list does not flash first.
   if (!active) return { kind: "idle" };
-  return state.kind === "idle" ? { kind: "loading" } : state;
+  // Loading through the debounce, so the browse list does not flash first.
+  if (state.kind === "idle") return { kind: "loading" };
+  if (state.kind === "error") {
+    return state.key === key
+      ? { kind: "error", message: state.message }
+      : { kind: "loading" };
+  }
+  // The last answer stays on screen while the next one runs, marked stale.
+  return { kind: "done", result: state.result, stale: state.key !== key };
 }
 
 // Arrow keys move focus along a row of buttons, wrapping at the ends.
@@ -855,6 +871,7 @@ function EntriesPane(props: {
       ) : (
         <VirtualList
           id={props.listId}
+          resetKey={source?.id}
           label={`${title ?? ""} ${kind}s`}
           className="flex-1 py-1"
           items={entries}
@@ -886,13 +903,18 @@ function SearchList(props: {
   onExpand: (pieceName: string) => void;
   footer: React.ReactNode;
   listId: string;
+  resetKey: string;
+  stale: boolean;
 }) {
   const size = props.rows.length;
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      className={`flex min-h-0 flex-1 flex-col ${props.stale ? "opacity-60" : ""}`}
+    >
       <VirtualList
         id={props.listId}
         label="Search results"
+        resetKey={props.resetKey}
         className="flex-1 py-1"
         items={props.rows}
         heightOf={searchRowHeight}
@@ -1209,7 +1231,7 @@ export function BlockSelector(props: {
   };
 
   // Our own lists, each a source in the left pane. A chip narrows to pieces.
-  const lists = useMemo(() => {
+  const lists = (() => {
     if (activeChip !== null) return [];
     const result: Extract<Source, { kind: "list" }>[] = [];
     const add = (
@@ -1278,24 +1300,21 @@ export function BlockSelector(props: {
         "Recently used",
         `Your last ${kind}s`,
         <ListTile icon="clock" color="#64748b" />,
-        recent.map(presetEntry),
+        recent.map((preset) => {
+          const entry = presetEntry(preset);
+          // A piece this runtime has since stopped running stays inert.
+          const reason = catalog?.pieces.find(
+            (piece) => piece.name === preset.block.pieceName,
+          )?.unsupported;
+          return reason ? { ...entry, unavailable: reason } : entry;
+        }),
       );
     }
     return result;
-    // presetEntry and installed read catalog and the draft; both are deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    activeChip,
-    tab,
-    kind,
-    catalog,
-    props.presets,
-    props.attachSteps,
-    props.onAttach,
-  ]);
+  })();
 
   // Browse: lists then pieces, narrowed by a short query on the client.
-  const sources = useMemo<Source[]>(() => {
+  const sources = ((): Source[] => {
     const listSources = lists
       .map((list) => ({
         ...list,
@@ -1317,33 +1336,26 @@ export function BlockSelector(props: {
           .map((piece) => ({ kind: "piece", id: piece.name, piece }))
       : [];
     return [...listSources, ...pieceSources];
-    // tokens is derived from query.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lists, showCatalog, tabPieces, activeChip, query]);
+  })();
 
   const selected: Source | undefined =
     sources.find((source) => source.id === selectedId) ?? sources.at(0);
   const sourceIndex = selected ? sources.indexOf(selected) : -1;
   const selectedPiece = selected?.kind === "piece" ? selected.piece : undefined;
   const loaded = usePieceEntries(selectedPiece, mode);
-  const pieceEntries = useMemo(
-    () =>
-      selectedPiece && loaded.entries
-        ? loaded.entries.map((entry) =>
-            blockEntry(
-              entry,
-              <LogoFrame
-                src={selectedPiece.logoUrl}
-                alt={selectedPiece.displayName}
-                size={ROW_LOGO}
-              />,
-            ),
-          )
-        : null,
-    // blockEntry reads the draft for version notes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedPiece, loaded.entries, catalog],
-  );
+  const pieceEntries =
+    selectedPiece && loaded.entries
+      ? loaded.entries.map((entry) =>
+          blockEntry(
+            entry,
+            <LogoFrame
+              src={selectedPiece.logoUrl}
+              alt={selectedPiece.displayName}
+              size={ROW_LOGO}
+            />,
+          ),
+        )
+      : null;
   const entries =
     selected?.kind === "list" ? selected.entries : (pieceEntries ?? []);
 
@@ -1438,6 +1450,11 @@ export function BlockSelector(props: {
   };
   // From a search group to the piece itself, in the browse panes.
   const openPiece = (pieceName: string) => {
+    // Not in the browse list (the catalog lacks it): show its blocks here.
+    if (!modePieces.some((piece) => piece.name === pieceName)) {
+      setExpanded(new Set([...expanded, pieceName]));
+      return;
+    }
     setQuery("");
     setChip(null);
     if (tab !== "all") setTab("all");
@@ -1473,6 +1490,8 @@ export function BlockSelector(props: {
       }
       if (key === "Enter") {
         event.preventDefault();
+        // Rows answered for an earlier query are not what Enter means.
+        if (search.kind === "done" && search.stale) return;
         const row = rows.at(activeRow);
         if (!row) return;
         if (row.type === "entry") {
@@ -1523,7 +1542,7 @@ export function BlockSelector(props: {
   const activeOption =
     activeIndex >= 0 ? optionId(activeList, activeIndex) : undefined;
   const statusFooter =
-    search.kind === "loading" ? (
+    search.kind === "loading" || (search.kind === "done" && search.stale) ? (
       <Status>Searching…</Status>
     ) : search.kind === "error" ? (
       <Status error>{search.message}</Status>
@@ -1619,6 +1638,8 @@ export function BlockSelector(props: {
           onExpand={(name) => setExpanded(new Set([...expanded, name]))}
           footer={statusFooter}
           listId={listIds.results}
+          resetKey={`${query} ${JSON.stringify(searchFilter)}`}
+          stale={search.kind === "done" && search.stale}
         />
       ) : (
         <div className="flex min-h-0 flex-1">
@@ -1642,6 +1663,7 @@ export function BlockSelector(props: {
               <VirtualList
                 id={listIds.sources}
                 label="Pieces"
+                resetKey={`${tab} ${activeChip ?? ""} ${query}`}
                 className="flex-1 py-1"
                 items={sources}
                 heightOf={sourceHeight}

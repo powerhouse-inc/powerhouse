@@ -36,6 +36,8 @@ export function VirtualList<T>(props: {
   label?: string;
   // The listbox the search box's aria-controls names.
   id?: string;
+  // A new value is a new list, which starts from its top.
+  resetKey?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -54,10 +56,10 @@ export function VirtualList<T>(props: {
     return () => observer.disconnect();
   }, []);
 
-  // A new list starts from its top; the scroll event syncs the state.
+  // The scroll event syncs the state.
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = 0;
-  }, [props.items]);
+  }, [props.resetKey]);
 
   useEffect(() => {
     const element = ref.current;

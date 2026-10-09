@@ -92,6 +92,8 @@ interface IndexedBlock {
 interface IndexedPiece {
   meta: SearchPieceMeta;
   name: Words;
+  // The display name as a query would spell it, for the exact-name bonus.
+  exactName: string;
   // Description and category words.
   about: Words;
   blocks: IndexedBlock[];
@@ -130,6 +132,7 @@ function indexPiece(piece: SearchablePiece): IndexedPiece {
   return {
     meta,
     name: wordsOf(meta.displayName, slugOf(meta.pieceName)),
+    exactName: tokenize(meta.displayName).join(" "),
     about: wordsOf(meta.description, ...meta.categories),
     blocks: piece.blocks.map((hit) => ({
       hit,
@@ -318,19 +321,24 @@ export function searchIndex(
     const nameScores = tokens.map((token) =>
       termScore(token, piece.name, true),
     );
-    const ofKind = piece.blocks.filter(
-      (block) => block.hit.kind === filter.kind,
-    );
+    // Each block's own score per token, computed once for both passes.
+    const ofKind = piece.blocks
+      .filter((block) => block.hit.kind === filter.kind)
+      .map((block) => ({
+        hit: block.hit,
+        scores: tokens.map((token) =>
+          Math.max(
+            BLOCK_NAME * termScore(token, block.name, true),
+            BLOCK_DESCRIPTION * termScore(token, block.description, false),
+          ),
+        ),
+      }));
     const matchBlocks = (pieceScores: number[]) => {
       const found: { score: number; order: number; hit: BlockSearchHit }[] = [];
       ofKind.forEach((block, order) => {
         let score = 0;
         for (let i = 0; i < tokens.length; i++) {
-          const best = Math.max(
-            pieceScores[i],
-            BLOCK_NAME * termScore(tokens[i], block.name, true),
-            BLOCK_DESCRIPTION * termScore(tokens[i], block.description, false),
-          );
+          const best = Math.max(pieceScores[i], block.scores[i]);
           if (best === 0) return;
           score += best;
         }
@@ -353,8 +361,7 @@ export function searchIndex(
     }
     if (blocks.length === 0) continue;
     blocks.sort((a, b) => b.score - a.score || a.order - b.order);
-    const nameBonus =
-      tokenize(piece.meta.displayName).join(" ") === exactName ? EXACT : 0;
+    const nameBonus = piece.exactName === exactName ? EXACT : 0;
     matches.push({
       score: blocks[0].score + nameBonus,
       match: {

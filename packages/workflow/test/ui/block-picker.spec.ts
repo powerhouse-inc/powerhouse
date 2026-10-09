@@ -230,6 +230,33 @@ test.describe("Block picker", () => {
     await expect(search).toHaveCount(0);
   });
 
+  test("keeps its place in the results, and Enter waits for fresh ones", async ({
+    app,
+  }) => {
+    await app.setViewportSize({ width: 1440, height: 1400 });
+    await openWorkflowEditor(app);
+    const picker = await openPicker(app, addStep(app));
+    const search = app.getByPlaceholder("Search pieces and actions…");
+    await search.fill("google");
+    const results = picker.getByRole("listbox", { name: "Search results" });
+    await expect(results.getByRole("option").nth(8)).toBeAttached();
+    await results.hover();
+    await app.mouse.wheel(0, 400);
+    await expect
+      .poll(() => results.evaluate((list) => list.scrollTop))
+      .toBeGreaterThan(0);
+    // Hovering rows re-renders the list; it must not snap to the top.
+    await app.mouse.move(800, 1200);
+    await app.mouse.move(820, 1260);
+    expect(await results.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+
+    // Typed and entered at once: the rows on screen answer "google".
+    await search.fill("gmail");
+    await app.keyboard.press("Enter");
+    await expect(search).toBeVisible();
+    await expect(search).toHaveValue("gmail");
+  });
+
   test("stays on screen near the bottom edge", async ({ app }) => {
     await app.setViewportSize({ width: 1280, height: 720 });
     await openWorkflowEditor(app);

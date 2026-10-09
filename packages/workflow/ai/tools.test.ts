@@ -209,6 +209,29 @@ describe("getConnectors", () => {
     ]);
   });
 
+  it("answers a package name exactly, and falls back when the search ranks nothing", async () => {
+    let searches = 0;
+    serve({
+      pieceCatalog: [IMAP_PIECE, SLACK_PIECE],
+      ...LISTINGS,
+      searchPieces: () => {
+        searches += 1;
+        return { status: "ready", indexedPieces: 2, error: null, pieces: [] };
+      },
+    });
+
+    const exact = await tools.getConnectors(SLACK_PIECE.name);
+    expect(exact.connectors.map((entry) => entry.pieceName)).toEqual([
+      SLACK_PIECE.name,
+    ]);
+    expect(searches).toBe(0);
+
+    const fallback = await tools.getConnectors("emails");
+    expect(fallback.connectors.map((entry) => entry.pieceName)).toEqual([
+      IMAP_PIECE.name,
+    ]);
+  });
+
   it("falls back to a substring match while the search indexes", async () => {
     serve({
       pieceCatalog: [IMAP_PIECE, SLACK_PIECE],
