@@ -169,7 +169,7 @@ function failure(
     return {
       entry: { ...entry, errorRun, pendingRun: 0, busyRun: 0 },
       state: "waiting",
-      delayMs: backoff(policy.errorRetryMs, errorRun),
+      delayMs: backoff(policy.errorRetryMs, errorRun, policy),
     };
   }
   const next: RetryEntry = {
@@ -183,11 +183,7 @@ function failure(
       : [...entry.asked, documentId],
   };
   if (next.unasked.length > 0) {
-    return {
-      entry: next,
-      state: "waiting",
-      delayMs: backoff(policy.errorRetryMs, errorRun),
-    };
+    return { entry: next, state: "waiting", delayMs: policy.errorRetryMs };
   }
   return { entry: next, state: "failed", delayMs: undefined };
 }
@@ -215,15 +211,16 @@ function notFound(
     unasked: without(entry.unasked, documentId),
     asked: [...without(entry.asked, documentId), documentId],
   };
-  if (
-    notFoundAnswers < policy.notFoundAttempts ||
-    next.unasked.length > 0 ||
-    livePending !== undefined
-  ) {
+  // The next ask is an unasked document or the pending one; neither has
+  // answered not-found, so neither earns a longer wait.
+  if (next.unasked.length > 0 || livePending !== undefined) {
+    return { entry: next, state: "waiting", delayMs: policy.notFoundRetryMs };
+  }
+  if (notFoundAnswers < policy.notFoundAttempts) {
     return {
       entry: next,
       state: "waiting",
-      delayMs: backoff(policy.notFoundRetryMs, notFoundAnswers),
+      delayMs: backoff(policy.notFoundRetryMs, notFoundAnswers, policy),
     };
   }
   return { entry: next, state: "not-found", delayMs: undefined };
@@ -257,8 +254,16 @@ function pendingDelay(
   );
 }
 
-function backoff(baseMs: number, run: number): number {
-  return Math.min(baseMs * 2 ** (run - 1), MAX_TIMER_DELAY_MS);
+function backoff(
+  baseMs: number,
+  run: number,
+  policy: AttachmentRetryPolicy,
+): number {
+  return Math.min(
+    baseMs * 2 ** (run - 1),
+    policy.maxRetryMs,
+    MAX_TIMER_DELAY_MS,
+  );
 }
 
 function without(list: readonly string[], item: string): string[] {

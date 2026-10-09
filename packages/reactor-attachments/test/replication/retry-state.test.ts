@@ -24,6 +24,7 @@ const POLICY: AttachmentRetryPolicy = {
   notFoundRetryMs: 500,
   errorAttempts: 3,
   errorRetryMs: 100,
+  maxRetryMs: 30_000,
 };
 
 function entry(overrides: Partial<RetryEntry> = {}): RetryEntry {
@@ -255,11 +256,11 @@ const ROWS: Row[] = [
     expect: { notFoundAnswers: 3, unasked: [], asked: ["D1"] },
   },
   {
-    name: "a not-found at the budget waits while a document is unasked",
+    name: "a not-found at the budget asks an unasked document after the base wait",
     from: entry({ notFoundAnswers: 2, unasked: ["D1", "D2"] }),
     outcome: notFound("D1"),
     state: "waiting",
-    delayMs: 2_000,
+    delayMs: 500,
     next: "D2",
   },
   {
@@ -272,7 +273,7 @@ const ROWS: Row[] = [
     }),
     outcome: notFound("D2"),
     state: "waiting",
-    delayMs: 2_000,
+    delayMs: 500,
     expect: { livePending: { documentId: "D1", untilMs: NOW + 60_000 } },
     next: "D1",
   },
@@ -331,11 +332,11 @@ const ROWS: Row[] = [
     expect: { errorRun: 3, unasked: [], asked: ["D1"] },
   },
   {
-    name: "an error at the budget waits while another document is unasked",
+    name: "an error at the budget asks another unasked document after the base wait",
     from: entry({ errorRun: 2, unasked: ["D1", "D2"] }),
     outcome: error("D1"),
     state: "waiting",
-    delayMs: 400,
+    delayMs: 100,
     expect: { unasked: ["D2"], asked: ["D1"] },
     next: "D2",
   },
@@ -346,6 +347,22 @@ const ROWS: Row[] = [
     state: "failed",
     delayMs: undefined,
     expect: { unasked: [], asked: ["D1", "D2"] },
+  },
+  {
+    name: "a not-found wait stops growing at the cap",
+    from: entry({ notFoundAnswers: 30 }),
+    outcome: notFound("D1"),
+    state: "waiting",
+    delayMs: 30_000,
+    policy: { notFoundAttempts: 100 },
+  },
+  {
+    name: "an error wait stops growing at the cap",
+    from: entry({ errorRun: 30 }),
+    outcome: error("D1"),
+    state: "waiting",
+    delayMs: 30_000,
+    policy: { errorAttempts: 100 },
   },
 ];
 
@@ -448,6 +465,44 @@ describe("nextAfter", () => {
     }
     expect(state).toBe("failed");
     expect(now - NOW).toBeLessThan(60_000);
+  });
+
+  function walk(
+    documents: number,
+    answer: (documentId: string) => FetchOutcome,
+  ): { state: RetryState; delays: number[]; asked: string[] } {
+    let current = entry();
+    for (let i = 2; i <= documents; i += 1) {
+      current = withDocument(current, `D${i}`, "queued").entry;
+    }
+    const delays: number[] = [];
+    const asked: string[] = [];
+    let state: RetryState = "waiting";
+    while (state === "waiting" && asked.length < 1_000) {
+      const documentId = documentToAsk(current)!;
+      asked.push(documentId);
+      const transition = nextAfter(current, answer(documentId), NOW, POLICY);
+      current = transition.entry;
+      state = transition.state;
+      if (transition.delayMs !== undefined) {
+        delays.push(transition.delayMs);
+      }
+    }
+    return { state, delays, asked };
+  }
+
+  it("does not grow the not-found wait with the number of documents", () => {
+    const { state, delays, asked } = walk(20, notFound);
+    expect(state).toBe("not-found");
+    expect(asked).toHaveLength(20);
+    expect(new Set(delays)).toEqual(new Set([500]));
+  });
+
+  it("does not grow the error hand-off wait with the number of documents", () => {
+    const { state, delays, asked } = walk(20, error);
+    expect(state).toBe("failed");
+    expect(asked.at(-1)).toBe("D20");
+    expect(Math.max(...delays)).toBe(200);
   });
 
   it("never ends on pending alone", () => {

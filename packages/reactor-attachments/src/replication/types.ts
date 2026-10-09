@@ -70,6 +70,8 @@ export type AttachmentRetryPolicy = {
   errorAttempts: number;
   /** Base wait between error retries; doubles per attempt. */
   errorRetryMs: number;
+  /** Cap for not-found and error waits. */
+  maxRetryMs: number;
 };
 
 export const DEFAULT_ATTACHMENT_RETRY_POLICY: AttachmentRetryPolicy = {
@@ -80,6 +82,7 @@ export const DEFAULT_ATTACHMENT_RETRY_POLICY: AttachmentRetryPolicy = {
   notFoundRetryMs: 2_000,
   errorAttempts: 5,
   errorRetryMs: 1_000,
+  maxRetryMs: 300_000,
 };
 
 /** Default bounded concurrency for in-flight attachment fetches. */
