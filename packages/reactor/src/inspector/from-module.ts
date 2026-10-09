@@ -7,12 +7,12 @@ import { ReactorInspector } from "./reactor-inspector.js";
 import type {
   IInspectableAttachmentStore,
   InspectorAccess,
-  IStorageHealthProvider,
+  IInspectorStorageHealthProvider,
 } from "./types.js";
 
 export type ReactorInspectorOptions = {
   /** Absent: health reports `tracked: false`. */
-  storageHealth?: IStorageHealthProvider;
+  storageHealth?: IInspectorStorageHealthProvider;
   attachmentStore?: IInspectableAttachmentStore;
   /** The tiers the host serves beyond reads; defaults to reads only. */
   access?: InspectorAccess;

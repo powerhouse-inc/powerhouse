@@ -89,6 +89,7 @@ const NOT_A_READ: Record<string, Record<string, string>> = {
   reactor: {
     "Query.documentModels": "Document model metadata, not a document.",
     "Mutation.executeAsync": "Returns a job, not a document.",
+    "Mutation.executeBatch": "Returns per-job JobInfo, not a document.",
     "Mutation.mutateDocumentAsync": "Returns a job id, not a document.",
     "Mutation.deleteDocument": "Returns a boolean.",
     "Mutation.deleteDocuments": "Returns a boolean.",

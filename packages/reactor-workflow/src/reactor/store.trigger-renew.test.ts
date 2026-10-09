@@ -107,6 +107,40 @@ describe("trigger renewal columns", () => {
     expect(state?.last_error).toBe("feed down");
     expect(state?.consecutive_failures).toBe(1);
   });
+
+  it("keeps a parked trigger's renewal, due again once the park lifts", async () => {
+    await store.upsertTriggerState(
+      row("wf-parked", { next_renew_at: EARLIER }),
+    );
+    await store.recordRenewFailure("wf-parked", "expired", NOW, EARLIER, 2);
+    expect(await store.parkWorkflow("wf-parked", 1, "failed")).toBe(true);
+    let state = await store.getTriggerState("wf-parked");
+    expect(state?.next_renew_at).toBe(EARLIER);
+    expect(state?.renew_failures).toBe(2);
+    let due = await store.listDueTriggerRenewals(NOW);
+    expect(due.map((r) => r.workflow_id)).not.toContain("wf-parked");
+
+    await store.liftPark("wf-parked", true);
+    state = await store.getTriggerState("wf-parked");
+    expect(state?.status).toBe("ENABLED");
+    expect(state?.renew_error).toBe("expired");
+    expect(state?.renew_failures).toBe(2);
+    due = await store.listDueTriggerRenewals(NOW);
+    expect(due.map((r) => r.workflow_id)).toContain("wf-parked");
+  });
+
+  it("drops a parked trigger's renewal when a disable clears the park", async () => {
+    await store.upsertTriggerState(
+      row("wf-parked-off", { next_renew_at: EARLIER }),
+    );
+    await store.parkWorkflow("wf-parked-off", 1, "failed");
+    await store.clearParkOnDisable("wf-parked-off");
+    const state = await store.getTriggerState("wf-parked-off");
+    expect(state?.status).toBe("DISABLED");
+    expect(state?.next_renew_at).toBeNull();
+    expect(state?.renew_error).toBeNull();
+    expect(state?.renew_failures).toBe(0);
+  });
 });
 
 describe("the renewal columns migration", () => {

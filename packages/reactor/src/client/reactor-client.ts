@@ -34,6 +34,7 @@ import { signActions } from "../core/utils.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   RelationshipNotFoundError,
 } from "../shared/errors.js";
 import {
@@ -1122,15 +1123,17 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.waitForJob(job, signal),
+    const settled = await Promise.all(
+      Object.entries(batchResult.jobs).map(
+        async ([key, job]) =>
+          [key, await this.waitForJob(job, signal)] as const,
       ),
     );
+    const jobs = Object.fromEntries(settled);
 
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
+    for (const job of signedJobs) {
+      if (jobs[job.key]?.status === JobStatus.FAILED) {
+        throw new BatchJobFailedError(job.key, jobs);
       }
     }
 

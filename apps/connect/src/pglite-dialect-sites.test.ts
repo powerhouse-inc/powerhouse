@@ -12,14 +12,24 @@ describe("connect's own pglite stores", () => {
     expect(db).toMatch(/new HardenedPGliteDialect\(/);
   });
 
-  it("hand both in-tab dialects the bounded page reload for a poisoned session", () => {
-    for (const file of ["./pglite.db.ts", "./utils/reactor.ts"]) {
-      const calls = [
-        ...source(file).matchAll(/new HardenedPGliteDialect\(([\s\S]*?)\)/g),
-      ];
+  it("hand both in-tab stores the bounded page reload for a poisoned session", () => {
+    const sites = [
+      {
+        file: "./pglite.db.ts",
+        call: /new HardenedPGliteDialect\(([\s\S]*?)\)/g,
+        hook: /onPoisoned: reloadPageForPoisonedStore/,
+      },
+      {
+        file: "./utils/reactor.ts",
+        call: /\.withGroupCommitPGlite\(\{([\s\S]*?)\}\)/g,
+        hook: /onUnrecoverable: reloadPageForPoisonedStore/,
+      },
+    ];
+    for (const { file, call, hook } of sites) {
+      const calls = [...source(file).matchAll(call)];
       expect(calls.length, file).toBeGreaterThan(0);
-      for (const [call] of calls) {
-        expect(call, file).toMatch(/onPoisoned: reloadPageForPoisonedStore/);
+      for (const [match] of calls) {
+        expect(match, file).toMatch(hook);
       }
     }
   });

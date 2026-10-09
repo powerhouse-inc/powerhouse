@@ -1,4 +1,5 @@
 import type { SignatureRefusalCode } from "../signer/types.js";
+import type { JobInfo } from "./types.js";
 
 /**
  * Error thrown when attempting to access a deleted document.
@@ -504,6 +505,41 @@ export class UnsupportedStoredProtocolError extends Error {
   static isError(error: unknown): error is UnsupportedStoredProtocolError {
     return (
       Error.isError(error) && error.name === "UnsupportedStoredProtocolError"
+    );
+  }
+}
+
+/**
+ * A batch job failed. A batch is not atomic, so `jobs` holds every job's final
+ * state, keyed by plan key; `cause` carries the failed job's own error name.
+ *
+ * The SharedWorker RPC boundary rebuilds a thrown error from `{ name, message,
+ * stack, cause }` alone (`src/rpc/error-info.ts`), so `key` and
+ * `jobs` do not survive it. `isError` therefore checks for them, not only the
+ * name; across that boundary, classify by the `cause` chain's names instead.
+ */
+export class BatchJobFailedError extends Error {
+  public readonly key: string;
+  public readonly jobs: Readonly<Record<string, JobInfo>>;
+
+  constructor(key: string, jobs: Record<string, JobInfo>) {
+    const failure = jobs[key].error;
+    const cause = new Error(failure?.message ?? "Job failed");
+    cause.name = failure?.name ?? "Error";
+    super(failure?.message ?? "Job failed", { cause });
+    this.name = "BatchJobFailedError";
+    this.key = key;
+    this.jobs = jobs;
+
+    Error.captureStackTrace(this, BatchJobFailedError);
+  }
+
+  static isError(error: unknown): error is BatchJobFailedError {
+    return (
+      Error.isError(error) &&
+      error.name === "BatchJobFailedError" &&
+      typeof (error as Partial<BatchJobFailedError>).key === "string" &&
+      typeof (error as Partial<BatchJobFailedError>).jobs === "object"
     );
   }
 }

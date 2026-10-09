@@ -674,8 +674,9 @@ export interface IReactorClient {
   /**
    * Applies multiple mutation jobs in dependency order and waits for all to
    * complete. Actions on each job are signed by the client signer before
-   * dispatch. Throws on the first failed job; the others may still execute
-   * because dispatch is fire-and-await-all.
+   * dispatch. Waits for every job, then throws a `BatchJobFailedError` naming
+   * the first failed job in plan order and carrying every job's final state:
+   * the others, dependents included, may still have committed.
    *
    * @param request - Batch mutation request with per-job actions and dependsOn keys
    * @param signal - Optional abort signal to cancel the request

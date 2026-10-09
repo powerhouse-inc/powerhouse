@@ -114,6 +114,7 @@ export interface PublishedModel {
 
 export interface WorkflowModel {
   name: string;
+  description?: string | null;
   status: WorkflowStatusValue;
   version: number;
   trigger: TriggerModel | null;
@@ -173,6 +174,7 @@ export interface ConfigExtras {
 
 export interface WorkflowEditorCallbacks {
   setName: (name: string) => void;
+  setDescription: (description: string) => void;
   setStatus: (status: WorkflowStatusValue) => void;
   setTrigger: (
     input: {

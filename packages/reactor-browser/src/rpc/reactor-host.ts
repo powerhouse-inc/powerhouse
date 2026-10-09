@@ -64,7 +64,9 @@ export type ReactorHostOptions = {
   onAdminClearStorage?: () => Promise<void>;
   onAdminMigrate?: () => Promise<void>;
   /** Stops the reactor and releases its stores once the worker is retired. */
-  onRetire?: () => Promise<void>;
+  onRetire?: (reason: string) => Promise<void>;
+  /** Bounded; a deploy's reload waits on it while data is already refused. */
+  drainBeforeReload?: () => Promise<void>;
 };
 
 function versionsCompatible(
@@ -86,17 +88,25 @@ function workerGenForVersion(version: VersionFingerprint): string {
   return `v${version.rpcProtocolVersion}-${version.appBuildId}${suffix}`;
 }
 
+const VERSION_MISMATCH = "reactor version mismatch";
+const FLAGS_CHANGED = "reactor enforcement flags changed";
+
+/** Whether a reload reason comes from a build fingerprint mismatch. */
+export function isFingerprintMismatchReload(reason: string): boolean {
+  return reason === VERSION_MISMATCH || reason.startsWith(FLAGS_CHANGED);
+}
+
 /** Names what differs, so a reload is diagnosable from the tab's console. */
 function mismatchReason(
   baseline: VersionFingerprint,
   incoming: VersionFingerprint,
 ): string {
   if ((baseline.featureFlags ?? "") !== (incoming.featureFlags ?? "")) {
-    return `reactor enforcement flags changed (worker: ${
+    return `${FLAGS_CHANGED} (worker: ${
       baseline.featureFlags || "none"
     }, tab: ${incoming.featureFlags || "none"})`;
   }
-  return "reactor version mismatch";
+  return VERSION_MISMATCH;
 }
 
 // Worker names end up in devtools and IndexedDB keys, so the flag set is
@@ -127,6 +137,7 @@ export class ReactorHost {
   private readonly bootedAtMs: number;
   private migrationState: WorkerMigrationState | null = null;
   private retirement: { reason: string; workerGen: string } | null = null;
+  private reloadSent = false;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
@@ -234,7 +245,8 @@ export class ReactorHost {
     if (this.migrationState) {
       transport.post({ k: "migration", state: this.migrationState });
     }
-    if (this.retirement) {
+    // Mid-drain it waits for the broadcast, which reaches it too.
+    if (this.retirement && this.reloadSent) {
       transport.post({ k: "reload", ...this.retirement });
     }
     if (this.options.client) {
@@ -275,13 +287,41 @@ export class ReactorHost {
   }
 
   // A reload this worker never recovers from; tabs that connect later get it too.
+  // A deploy's reload waits for the drain: the tabs keep the worker alive.
   retireAndReload(reason: string, workerGen: string): void {
     if (this.retirement) {
       return;
     }
     this.retirement = { reason, workerGen };
+    const drain = this.options.drainBeforeReload;
+    if (!drain || !isFingerprintMismatchReload(reason)) {
+      this.sendReload(reason, workerGen);
+      return;
+    }
+    void this.drainThenReload(drain, reason, workerGen);
+  }
+
+  private async drainThenReload(
+    drain: () => Promise<void>,
+    reason: string,
+    workerGen: string,
+  ): Promise<void> {
+    try {
+      await drain();
+    } catch (error) {
+      console.error("ReactorHost drain before reload failed", error);
+    }
+    this.sendReload(reason, workerGen);
+  }
+
+  private sendReload(reason: string, workerGen: string): void {
+    this.reloadSent = true;
     this.broadcastReload(reason, workerGen);
-    this.options.onRetire?.().catch((error: unknown) => {
+    this.stopRetired(reason);
+  }
+
+  private stopRetired(reason: string): void {
+    this.options.onRetire?.(reason).catch((error: unknown) => {
       console.error("ReactorHost retirement cleanup failed", error);
     });
   }
@@ -309,11 +349,13 @@ export class ReactorHost {
   ): void {
     // A retired worker no longer owns the store: send the tab to the one that does.
     if (this.retirement && message.method !== "info") {
-      transport.post({
-        k: "reload",
-        reason: RETIRED_WORKER_RELOAD_REASON,
-        workerGen: this.retirement.workerGen,
-      });
+      if (this.reloadSent) {
+        transport.post({
+          k: "reload",
+          reason: RETIRED_WORKER_RELOAD_REASON,
+          workerGen: this.retirement.workerGen,
+        });
+      }
       reply.err(message.id, retiredError());
       return;
     }
@@ -373,6 +415,16 @@ export class ReactorHost {
       const pending = build(construct);
       this.clientPromise = pending;
       this.buildFailure = null;
+      // A build outliving the retirement holds stores onRetire left to it.
+      void pending.then(
+        () => {
+          // Mid-drain, the reload's own stop comes after.
+          if (this.retirement && this.reloadSent) {
+            this.stopRetired(this.retirement.reason);
+          }
+        },
+        () => undefined,
+      );
       pending.catch((error: unknown) => {
         if (this.clientPromise === pending) {
           this.clientPromise = null;
@@ -406,6 +458,7 @@ export class ReactorHost {
     return false;
   }
 
+  // A mismatch retires the worker for good: every tab reloads onto one gen.
   private async handleHello(
     message: RpcHello,
     transport: IRpcTransport,
@@ -415,11 +468,11 @@ export class ReactorHost {
   ): Promise<void> {
     if (this.baseline) {
       if (!versionsCompatible(this.baseline, message.version)) {
-        transport.post({
-          k: "reload",
-          reason: mismatchReason(this.baseline, message.version),
-          workerGen: workerGenForVersion(message.version),
-        });
+        // Salted per instance: the bare gen can be this worker's own name.
+        this.retireAndReload(
+          mismatchReason(this.baseline, message.version),
+          `${workerGenForVersion(message.version)}-${this.ownerId.slice(0, 8)}`,
+        );
         reply.ok(message.id, { ok: false });
         return;
       }

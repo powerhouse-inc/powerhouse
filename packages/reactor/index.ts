@@ -101,6 +101,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
@@ -356,6 +357,22 @@ export {
   type HardenedPGliteDialectOptions,
   type PGliteSession,
 } from "./src/storage/kysely/pglite-dialect.js";
+export {
+  PGliteFlushSyncTimeoutError,
+  type GroupCommitPGliteInstance,
+} from "./src/storage/kysely/group-commit-pglite-client.js";
+export type {
+  GroupCommitPGliteOptions,
+  IGroupCommitStorage,
+} from "./src/storage/kysely/group-commit-storage.js";
+export {
+  StoragePoisonedError,
+  type IStorageFlusher,
+} from "./src/storage/storage-flush.js";
+export type {
+  IStorageHealthProvider,
+  StorageHealth,
+} from "./src/storage/storage-health.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,

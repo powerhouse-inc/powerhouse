@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { explainTestError } from "./step-test.js";
+import { explainTestError, testOutcomeView } from "./step-test.js";
 
 describe("explainTestError", () => {
   it("points an untested upstream step at that step, whatever the reason", () => {
@@ -58,5 +58,21 @@ describe("explainTestError", () => {
       message: "HTTP 500 from example.com",
       targets: [],
     });
+  });
+});
+
+describe("testOutcomeView", () => {
+  it("shows output only for a pass", () => {
+    expect(testOutcomeView("SUCCEEDED")).toBe("output");
+    expect(testOutcomeView("FAILED")).toBe("failed");
+  });
+
+  // A write the step asked for may have landed: not a pass, not a failure.
+  it("gives INDETERMINATE its own warning", () => {
+    expect(testOutcomeView("INDETERMINATE")).toBe("indeterminate");
+  });
+
+  it("never shows an unknown status as a pass", () => {
+    expect(testOutcomeView("SOMETHING_NEW")).toBe("failed");
   });
 });
