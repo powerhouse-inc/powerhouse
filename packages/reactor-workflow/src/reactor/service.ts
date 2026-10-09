@@ -255,6 +255,7 @@ import {
   runRetentionMs,
   sweepRetention,
 } from "./run-retention.js";
+import { isShutdownRefusal, WorkflowRuntimeClosedError } from "./shutdown.js";
 import {
   TriggerSupervisor,
   type PieceTriggerBinding,
@@ -293,6 +294,8 @@ export type FiringRefusal =
   | "stale"
   | "queue-full"
   | "expired";
+
+export { WorkflowRuntimeClosedError };
 
 export type PersistedRunResult = WorkflowRunResult & {
   runId: string | null;
@@ -635,6 +638,9 @@ const DELIVERY_TIMEOUT_MS =
 
 const TIMED_OUT = Symbol("webhook delivery timed out");
 
+const WEBHOOK_REDELIVERED_REASON =
+  "Redelivered: the runtime shut down before this delivery ran, and the sender was told to retry";
+
 /** Resolves to TIMED_OUT, and never keeps the process alive waiting to. */
 function timeout(ms: number): Promise<typeof TIMED_OUT> {
   return new Promise((resolve) => {
@@ -839,7 +845,11 @@ export class WorkflowRuntimeService {
   // The journal is best-effort: a broken store never blocks runs. One that
   // failed to open is opened again once its backoff has passed.
   async store(): Promise<WorkflowRunStore | undefined> {
+    // Never (re)opened after shutdown: opening runs the sweeps, which would
+    // fail the next owner's live runs. One already open stays readable, so
+    // what this process adopted can still be closed out.
     if (
+      !this.closed &&
       this.storeError !== undefined &&
       !this.storeOpening &&
       Date.now() >= this.storeReopenAt
@@ -1081,7 +1091,7 @@ export class WorkflowRuntimeService {
       this.supervisor()
         .releasePark(workflowId, !(held && SUPERVISED_KINDS.has(held.kind)))
         .catch((error: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Could not clear the park of disabled workflow ${workflowId}`,
             error,
           );
@@ -1091,7 +1101,7 @@ export class WorkflowRuntimeService {
       this.supervisor()
         .unpark(workflowId, version)
         .catch((error: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Could not lift the outdated park of workflow ${workflowId}`,
             error,
           );
@@ -1166,7 +1176,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .upsert(binding, publishedVersion)
       .catch((error: unknown) => {
-        this.logger.error(`Trigger enable failed for ${workflowId}`, error);
+        this.laneFailed(`Trigger enable failed for ${workflowId}`, error);
       });
   }
 
@@ -1249,7 +1259,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .reject(workflowId, binding.block, binding.config, reason, retryAt)
       .catch((error: unknown) => {
-        this.logger.error(
+        this.laneFailed(
           `Could not record the refused trigger for workflow ${workflowId}`,
           error,
         );
@@ -1280,7 +1290,7 @@ export class WorkflowRuntimeService {
       this.supervisor()
         .reject(workflowId, block, configRecord(rawConfig), message)
         .catch((recordError: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Could not record the rejected webhook trigger for workflow ${workflowId}`,
             recordError,
           );
@@ -1527,7 +1537,7 @@ export class WorkflowRuntimeService {
         reason,
       )
       .catch((error: unknown) => {
-        this.logger.error(
+        this.laneFailed(
           `Could not record the reactor access denial for workflow ${workflowId}`,
           error,
         );
@@ -1570,7 +1580,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .reject(workflowId, block, configRecord(trigger.config), reason, retryAt)
       .catch((error: unknown) => {
-        this.logger.error(
+        this.laneFailed(
           `Could not record the unresolved trigger for workflow ${workflowId}`,
           error,
         );
@@ -1622,7 +1632,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .remove(workflowId)
       .catch((error: unknown) => {
-        this.logger.error(`Trigger disable failed for ${workflowId}`, error);
+        this.laneFailed(`Trigger disable failed for ${workflowId}`, error);
       });
   }
 
@@ -1667,6 +1677,7 @@ export class WorkflowRuntimeService {
   async onDocumentsPurged(
     markers: OperationWithContext[],
   ): Promise<ErasedRuns> {
+    this.throwIfClosed();
     const documentIds = [
       ...new Set(markers.map((marker) => marker.context.documentId)),
     ];
@@ -1703,8 +1714,10 @@ export class WorkflowRuntimeService {
   // journal write for every matched fire are awaited; execution is not, so
   // runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
+    this.throwIfClosed();
     const hints = collectLifecycleParentHints(operations);
     for (const { operation, context } of operations) {
+      this.throwIfClosed();
       if (context.scope !== DOCUMENT_SCOPE && context.scope !== "global") {
         continue;
       }
@@ -1790,7 +1803,7 @@ export class WorkflowRuntimeService {
         "Too many unjournaled workflow fires held; a redelivery of the oldest fires again",
       );
     }
-    this.fireFromTrigger(workflowId, payload, kind);
+    this.startFiring(workflowId, payload, kind);
   }
 
   // Journals the fire, then lets it run on its own. Awaiting only the write is
@@ -1806,6 +1819,8 @@ export class WorkflowRuntimeService {
   ): Promise<void> {
     const fireKey = JSON.stringify([workflowId, dedupeKey]);
     const store = await this.store();
+    // Shut down meanwhile: unwritten, so the next owner replays the operation.
+    this.throwIfClosed();
     if (this.unjournaledFires.has(fireKey)) {
       if (!store) return;
       try {
@@ -1877,10 +1892,48 @@ export class WorkflowRuntimeService {
       }
       return;
     }
-    this.fireFromTrigger(workflowId, payload, kind, claim.runId);
+    this.startFiring(workflowId, payload, kind, claim.runId);
   }
 
-  private fireFromTrigger(
+  // Journal before fire: a trigger firing is a PENDING run with its payload
+  // before fire() reaches an await the shutdown can land in. Resolves once the
+  // row is durable; the run itself is not awaited.
+  private async fireFromTrigger(
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+  ): Promise<void> {
+    const runId = await this.journalFiring(workflowId, payload, kind);
+    this.startFiring(workflowId, payload, kind, runId);
+  }
+
+  // Refused with nothing written once closed: the firing's source still holds
+  // it. Without a journal the firing runs unrecorded, as every run does then.
+  private async journalFiring(
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+  ): Promise<string | undefined> {
+    const store = await this.store();
+    // No await between this check and the write, so none starts after shutdown.
+    if (this.closed) throw new WorkflowRuntimeClosedError(workflowId);
+    if (!store) return undefined;
+    try {
+      return await store.enqueueRun({
+        workflowId,
+        triggerKind: kind,
+        triggerPayload: payload,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Could not journal the ${kind} fire for workflow ${workflowId}; running it without a durable record`,
+        error,
+      );
+      return undefined;
+    }
+  }
+
+  private startFiring(
     workflowId: string,
     payload: unknown,
     kind: string,
@@ -1898,6 +1951,13 @@ export class WorkflowRuntimeService {
         this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
       (error: unknown) => {
+        // Not lost: the journaled row is FAILED, for an operator to rerun.
+        if (enqueuedRunId && isShutdownRefusal(error)) {
+          this.logger.warn(
+            `${kind} fire of workflow ${workflowId} was refused by the shutdown; run ${enqueuedRunId} is left to rerun`,
+          );
+          return;
+        }
         // The message, truncated, rather than the error object: a piece error
         // carries the HTTP response the framework's formatter lifted out of
         // it, which can be a whole HTML error page. An unbounded write on the
@@ -2180,8 +2240,8 @@ export class WorkflowRuntimeService {
         // trigger hook throws; nothing else travels with it.
         return rememberSecrets(resolved.auth, resolved.secretValues);
       },
-      fire: (workflowId, payload, kind) => {
-        this.fireFromTrigger(workflowId, payload, kind);
+      fire: (workflowId, payload, kind, runId) => {
+        this.startFiring(workflowId, payload, kind, runId);
       },
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
@@ -2199,7 +2259,18 @@ export class WorkflowRuntimeService {
       reconcileIntervalMs:
         Number(process.env.PH_WORKFLOWS_WEBHOOK_RECONCILE_MS) || undefined,
     });
+    // Built after shutdown: stopped before anything can queue on it.
+    if (this.closed) this.triggerSupervisor.stop();
     return this.triggerSupervisor;
+  }
+
+  // Lane work refused because this runtime shut down is the designed outcome.
+  private laneFailed(message: string, error: unknown): void {
+    if (isShutdownRefusal(error)) {
+      this.logger.debug(message, error);
+      return;
+    }
+    this.logger.error(message, error);
   }
 
   startTriggerSupervisor(): void {
@@ -2210,10 +2281,26 @@ export class WorkflowRuntimeService {
     this.triggerSupervisor?.stop();
   }
 
+  // Set by shutdown. A runtime that lost the workflow singleton is shut down
+  // while its reactor keeps serving, so nothing may start a run after it.
+  private closed = false;
+
+  // For the read model: a delivery refused here stays below its cursor, so
+  // the next owner replays it rather than this runtime acknowledging it.
+  private throwIfClosed(): void {
+    if (this.closed) {
+      throw new Error(
+        "This workflow runtime has shut down; the operations are left for the next owner",
+      );
+    }
+  }
+
   // Teardown for the whole runtime, driven by the host. The run children
   // outlive the reactor otherwise — they are forked, not
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
+    this.closed = true;
+    this.runGate.close();
     clearInterval(this.retentionTimer);
     for (const { timer } of this.resolutionRetries.values())
       clearTimeout(timer);
@@ -2402,6 +2489,8 @@ export class WorkflowRuntimeService {
   /** A delivery the service has already rate-limited, verified, de-duplicated and
    * answered any challenge for; all that is left is deciding what it means. */
   async deliverWebhook(request: WebhookRequest): Promise<WebhookReply> {
+    // Retryable: the sender tries again, and reaches the owner that runs it.
+    if (this.closed) return { status: 503, unprocessed: true };
     const workflowId = request.key;
     const registration = this.liveWebhook(workflowId);
     // A waiting test samples the delivery; an armed workflow still runs it.
@@ -2420,19 +2509,55 @@ export class WorkflowRuntimeService {
     const { config } = registration;
     const payload = webhookPayload(request);
 
+    // Answered only once journaled: after the reply the sender never retries.
     if (config.responseMode === "async") {
-      this.fireFromTrigger(workflowId, payload, WEBHOOK_TRIGGER_KIND);
+      try {
+        await this.fireFromTrigger(workflowId, payload, WEBHOOK_TRIGGER_KIND);
+      } catch (error) {
+        if (error instanceof WorkflowRuntimeClosedError) {
+          return { status: 503, unprocessed: true };
+        }
+        throw error;
+      }
       return { status: config.responseStatus };
+    }
+    let runId: string | undefined;
+    try {
+      runId = await this.journalFiring(
+        workflowId,
+        payload,
+        WEBHOOK_TRIGGER_KIND,
+      );
+    } catch (error) {
+      if (error instanceof WorkflowRuntimeClosedError) {
+        return { status: 503, unprocessed: true };
+      }
+      throw error;
     }
     // Sync mode holds the provider's socket, so the wait is bounded. On expiry the run is left
     // going — cancelling would lose announced work — and the 504 retry is what dedupe absorbs.
-    const run = await Promise.race([
-      this.fire(workflowId, payload, WEBHOOK_TRIGGER_KIND).then(
-        (result) => ({ ok: true, result }) as const,
-        (error: unknown) => ({ ok: false, error }) as const,
-      ),
-      timeout(DELIVERY_TIMEOUT_MS),
-    ]);
+    const firing = this.fire(
+      workflowId,
+      payload,
+      WEBHOOK_TRIGGER_KIND,
+      undefined,
+      undefined,
+      runId,
+    ).then(
+      (result) => ({ ok: true, result }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+    let replied = false;
+    const takeReply = () => !replied && (replied = true);
+    if (runId) this.heldReplies.set(runId, takeReply);
+    let run: Awaited<typeof firing> | typeof TIMED_OUT;
+    try {
+      run = await Promise.race([firing, timeout(DELIVERY_TIMEOUT_MS)]);
+      // A shutdown that took the reply first is answered 503, not 504.
+      if (run === TIMED_OUT && !takeReply()) run = await firing;
+    } finally {
+      if (runId) this.heldReplies.delete(runId);
+    }
 
     if (run === TIMED_OUT) {
       this.logger.warn(
@@ -2449,6 +2574,11 @@ export class WorkflowRuntimeService {
     }
 
     if (!run.ok) {
+      // Not run, and not this runtime's to run: the sender retries and
+      // reaches the owner. A 500 would keep the dedupe key and lose it.
+      if (run.error instanceof WorkflowRuntimeClosedError) {
+        return { status: 503, unprocessed: true };
+      }
       const message =
         run.error instanceof Error ? run.error.message : String(run.error);
       this.logger.error(
@@ -2493,7 +2623,7 @@ export class WorkflowRuntimeService {
     } catch (error) {
       // A failed probe is the sender's answer, so it must not look like a
       // delivery: 500 tells it to retry rather than that the endpoint is gone.
-      this.logger.error(
+      this.logger[isShutdownRefusal(error) ? "debug" : "error"](
         "Handshake failed for @block on workflow @workflow",
         blockLabel(binding.block),
         binding.workflowId,
@@ -2546,7 +2676,7 @@ export class WorkflowRuntimeService {
           );
         },
         (error: unknown) => {
-          this.logger.error(
+          this.laneFailed(
             `Webhook delivery failed for workflow ${binding.workflowId}`,
             error,
           );
@@ -4078,6 +4208,9 @@ export class WorkflowRuntimeService {
     // A PENDING run this workflow's trigger journaled, adopted rather than created.
     enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
+    if (this.closed) {
+      return this.refuseClosed(await this.store(), workflowId, enqueuedRunId);
+    }
     const started = performance.now();
     const attributes = {
       "workflow.id": workflowId,
@@ -4245,7 +4378,16 @@ export class WorkflowRuntimeService {
     }
     if (parked) return skipped(parked, "parked");
     const admission = await this.runGate.admit(workflowId, policy);
+    // Shut down while it waited, or as it was handed the slot: refused, not
+    // journaled as a fresh CANCELLED run.
+    if (this.closed) {
+      if (admission.admitted) admission.release();
+      return this.refuseClosed(store, workflowId, enqueuedRunId);
+    }
     if (!admission.admitted) {
+      if (admission.refusal === "closed") {
+        return this.refuseClosed(store, workflowId, enqueuedRunId);
+      }
       return skipped(admission.reason, admission.refusal);
     }
     // A firing that queued read the workflow before it waited: disabled,
@@ -4445,6 +4587,9 @@ export class WorkflowRuntimeService {
 
   // Firings of one workflow at a time; see run-gate.ts.
   private readonly runGate = new WorkflowRunGate();
+  // Sync deliveries still holding the sender's socket, by run. Taking one
+  // commits the delivery to a 503, before a 504 can.
+  private readonly heldReplies = new Map<string, () => boolean>();
 
   /** Why a trigger's firing of a PARKED workflow is refused; undefined when
    * it is not parked, or when an operator started the run. */
@@ -4522,6 +4667,37 @@ export class WorkflowRuntimeService {
    * of bug this work package exists to stamp out. An already-enqueued row is
    * closed out in place, so nothing is left PENDING for a sweep to find.
    */
+  // An adopted row is durable, so a refused firing closes it out: left
+  // PENDING, the next owner reads its dedupe claim as handled and never runs it.
+  private async refuseClosed(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+    enqueuedRunId: string | undefined,
+  ): Promise<never> {
+    const error = new WorkflowRuntimeClosedError(workflowId);
+    if (enqueuedRunId) {
+      // Answered 503, the sender's retry is the record: not left to rerun.
+      const redelivered = this.heldReplies.get(enqueuedRunId)?.() ?? false;
+      try {
+        if (redelivered) {
+          await store?.cancelRun(enqueuedRunId, WEBHOOK_REDELIVERED_REASON);
+        } else {
+          await store?.failRun(
+            enqueuedRunId,
+            error.message,
+            errorNameOf(error),
+          );
+        }
+      } catch (failure) {
+        this.logger.warn(
+          `Could not close out run ${enqueuedRunId} after shutdown: @error`,
+          failure,
+        );
+      }
+    }
+    throw error;
+  }
+
   private async skipFiring(
     store: WorkflowRunStore | undefined,
     workflowId: string,
@@ -4576,7 +4752,9 @@ export class WorkflowRuntimeService {
     runId: string | null,
     error: string | undefined,
   ): Promise<void> {
-    if (policy.onFailure === "IGNORE") return;
+    // A run that failed as the runtime shut down says nothing about the
+    // workflow, and a park now would land in the next owner's journal.
+    if (policy.onFailure === "IGNORE" || this.closed) return;
     const detail = error ?? "the run failed";
     if (policy.onFailure === "NOTIFY") {
       this.logger.error(
@@ -4593,6 +4771,7 @@ export class WorkflowRuntimeService {
       // The run may have outlived its version: a disable or re-publish that
       // landed meanwhile is not the state that failed.
       if (!(await this.stillRunsVersion(workflowId, publishedVersion))) return;
+      if (this.closed) return;
       // The park row covers every trigger kind; the trigger_state row is what
       // stops the supervisor polling a schedule or piece trigger.
       const trigger = await this.supervisor().park(

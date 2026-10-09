@@ -165,10 +165,44 @@ describe("PieceWorker over a transport", () => {
     });
 
     await worker.runAction(runRequest());
-    worker.dispose();
+    built[0]!.kill();
     await worker.runAction(runRequest());
 
     expect(built).toHaveLength(2);
+  });
+
+  // Disposed is ended for good: a caller still holding it (a trigger lane
+  // draining after shutdown) must not fork a child nobody will dispose.
+  it("forks nothing once disposed", async () => {
+    let built = 0;
+    const worker = new PieceWorker({
+      transport: () => {
+        built += 1;
+        return fakeTransport((message, reply) =>
+          reply({
+            id: message.id,
+            type: "result",
+            output: null,
+            touched: [],
+            tlsPoisoned: false,
+          }),
+        );
+      },
+    });
+    await worker.runAction(runRequest());
+    const queued = worker.runAction(runRequest());
+
+    worker.dispose();
+
+    await expect(queued).rejects.toThrow("disposed");
+    await expect(
+      worker.runTriggerHook({
+        bundleDir: "/nowhere",
+        triggerName: "t",
+        hook: "run",
+      } as never),
+    ).rejects.toThrow("disposed");
+    expect(built).toBe(1);
   });
 });
 
