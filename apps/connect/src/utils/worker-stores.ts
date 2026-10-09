@@ -121,7 +121,14 @@ export function createWorkerStores({
   };
 
   return {
-    releaseAfterBootFailure: () => serial(releaseAll),
+    /** Retires if a store did not close: a rebuild would open it twice. */
+    releaseAfterBootFailure: () =>
+      serial(async () => {
+        await releaseAll();
+        if (kept.size > 0) {
+          retireWorker("a store did not close after a failed boot");
+        }
+      }),
     /** Lets the jobs the tabs had accepted run before a deploy's reload, bounded. */
     drain: async (): Promise<void> => {
       stopSync();

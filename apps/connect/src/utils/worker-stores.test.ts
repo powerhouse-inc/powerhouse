@@ -65,6 +65,7 @@ async function setup(
   relationalClose?: Promise<void>,
   host?: Retirement,
   reactor: Reactor = {},
+  reactorClose?: Promise<void>,
 ) {
   seq += 1;
   const names = { relational: `rel-${seq}`, reactor: `reactor-${seq}` };
@@ -78,7 +79,10 @@ async function setup(
   const refs: {
     relational?: ReturnType<typeof fakeStore>;
     reactor?: ReturnType<typeof fakeStore>;
-  } = { relational: fakeStore(relationalClose), reactor: fakeStore() };
+  } = {
+    relational: fakeStore(relationalClose),
+    reactor: fakeStore(reactorClose),
+  };
   const log: string[] = [];
   // Stands in for ReactorHost.retireAndReload, which calls `stores.retire`.
   let retired = false;
@@ -415,7 +419,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(statusAtStop).toHaveLength(1), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     const done = [JobStatus.WRITE_READY, JobStatus.READ_READY];
     expect(done).toContain(await statusAtReload[0]);
     expect(done).toContain(statusAtStop[0]);
@@ -432,7 +436,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(next.granted).toBe(true), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(300);
     expect(Date.now() - startedAt).toBeLessThan(2_000);
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
@@ -449,7 +453,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(next.granted).toBe(true), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
   });
 
@@ -480,7 +484,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(statusAtStop).toHaveLength(1), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     const done = [JobStatus.WRITE_READY, JobStatus.READ_READY];
     expect(done).toContain(await statusAtReload[0]);
   });
@@ -606,5 +610,44 @@ describe("worker after Clear storage", () => {
     expect(worker).toMatch(
       /begin: \(\) =>\s*setMigration\(\{\s*status: "migrating"/,
     );
+  });
+});
+
+describe("worker after a failed boot", () => {
+  it("retires instead of reopening a store whose close did not settle", async () => {
+    const reactorClose = deferred();
+    let builds = 0;
+    const { names, refs, stores } = await setup(
+      undefined,
+      {
+        isRetired: () => host.retired,
+        retireWorker: (reason) =>
+          host.retireAndReload(reason, crypto.randomUUID()),
+      },
+      {},
+      reactorClose.promise,
+    );
+    const host: ReactorHost = new ReactorHost({
+      build: async () => {
+        builds += 1;
+        refs.reactor ??= fakeStore();
+        await stores.releaseAfterBootFailure();
+        throw new Error("migration failed");
+      },
+      onRetire: () => stores.retire(),
+    });
+    const open = tab(host);
+    await expect(open.send(HELLO)).rejects.toThrow("migration failed");
+    await expect(open.send(HELLO)).rejects.toThrow(/retired/);
+    expect(builds).toBe(1);
+    expect(open.reloads).toHaveLength(1);
+    expect(open.reloads[0].workerGen).toMatch(/^[0-9a-f-]{36}$/);
+
+    const relationalNext = otherWorkerAcquires(names.relational);
+    const reactorNext = otherWorkerAcquires(names.reactor);
+    await vi.waitFor(() => expect(relationalNext.granted).toBe(true));
+    await tick();
+    expect(reactorNext.granted).toBe(false);
+    reactorClose.resolve();
   });
 });
