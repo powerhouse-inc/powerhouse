@@ -1,11 +1,12 @@
-// Piece-selector-style popover, adapted from the Activepieces builder
-// pieces-selector (MIT, activepieces packages/web).
+// Two-pane block picker: sources on the left, the selected one's blocks on the
+// right, and a grouped search list. Shaped after the Activepieces selector.
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type RefObject,
 } from "react";
 import { Icon, type IconName } from "../../shared/icons.js";
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
@@ -32,6 +33,9 @@ import {
 import { useBlockFormPrefetch } from "./design-time.js";
 import type { StepModel } from "./model.js";
 import { useDraftBlocks } from "./version-badge.js";
+import { PICKER_SIZE } from "./PickerPopover.js";
+import { recentPicks, rememberPick } from "./picker-recent.js";
+import { VirtualList } from "./VirtualList.js";
 import {
   blockUnavailable,
   type PieceActionUi,
@@ -193,6 +197,8 @@ function Row(props: {
   // Warms what a pick will need, while the row is hovered or focused.
   onHover?: () => void;
   disabled?: boolean;
+  // The keyboard's row.
+  active?: boolean;
   // The piece version a pick pins to; shown on hover unless `versionNote`
   // says why it matters here.
   version?: string;
@@ -201,14 +207,18 @@ function Row(props: {
   return (
     <button
       type="button"
-      className={`group flex w-full items-center gap-2 px-3 py-1.5 text-left ${
+      // Focus stays in the search box, which drives the keyboard.
+      tabIndex={-1}
+      className={`group flex h-11 w-full items-center gap-2 px-3 text-left ${
+        props.active ? "bg-foreground/[0.07]" : ""
+      } ${
         props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
       title={props.title}
       disabled={props.disabled}
       onClick={props.onClick}
+      onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={props.onHover}
-      onFocus={props.onHover}
     >
       {props.logo}
       <span className="min-w-0">
@@ -224,7 +234,9 @@ function Row(props: {
           className={`ml-auto shrink-0 pl-2 text-[10px] tabular-nums text-muted-foreground/70 ${
             props.versionNote
               ? ""
-              : "hidden group-hover:inline group-focus-visible:inline"
+              : props.active
+                ? ""
+                : "hidden group-hover:inline"
           }`}
           title={props.versionNote ?? `Pinned to version ${props.version}`}
         >
@@ -276,14 +288,6 @@ function useVersionNote(
       ? `A local build; v${published} is published`
       : undefined;
   };
-}
-
-function SectionLabel(props: { children: string }) {
-  return (
-    <div className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
-      {props.children}
-    </div>
-  );
 }
 
 // null while loading.
@@ -417,232 +421,6 @@ function Highlight(props: { text: string; tokens: string[] }) {
   );
 }
 
-function blockRow(props: {
-  entry: {
-    pieceName: string;
-    pieceVersion: string;
-    name: string;
-    displayName: string;
-    description: string;
-    unsupported?: string | null;
-    strategy?: string | null;
-  };
-  kind: "action" | "trigger";
-  logo: React.ReactNode;
-  tokens: string[];
-  onPick: (preset: BlockPreset) => void;
-  onHover: (block: BlockRef) => void;
-  versionNote: VersionNote;
-}) {
-  const { entry, kind } = props;
-  // Visible but inert: picking one would build a step that never runs.
-  const unavailable = blockUnavailable({ ...entry, kind });
-  const block: BlockRef = {
-    pieceName: entry.pieceName,
-    pieceVersion: entry.pieceVersion,
-    kind,
-    name: entry.name,
-  };
-  return (
-    <Row
-      key={blockKey(block)}
-      logo={props.logo}
-      label={<Highlight text={entry.displayName} tokens={props.tokens} />}
-      title={entry.description || entry.displayName}
-      description={
-        unavailable ?? (
-          <Highlight text={entry.description} tokens={props.tokens} />
-        )
-      }
-      disabled={unavailable !== undefined}
-      version={shownVersion(entry.pieceName, entry.pieceVersion)}
-      versionNote={props.versionNote(entry.pieceName, entry.pieceVersion)}
-      onHover={
-        unavailable === undefined ? () => props.onHover(block) : undefined
-      }
-      onClick={() =>
-        props.onPick({
-          label: entry.displayName,
-          block,
-          description: entry.description,
-          defaultConfig: {},
-        })
-      }
-    />
-  );
-}
-
-// Drill-in view: one piece's actions or triggers, per mode, with a filter.
-function PieceEntries(props: {
-  piece: PieceSummaryUi;
-  mode: PieceMode;
-  onPick: (preset: BlockPreset) => void;
-  onHover: (block: BlockRef) => void;
-  onBack: () => void;
-  versionNote: VersionNote;
-}) {
-  const [entries, setEntries] = useState<
-    (PieceActionUi & Partial<PieceTriggerUi>)[] | null
-  >(null);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState("");
-  const pieceSource = usePieceSource();
-
-  useEffect(() => {
-    let cancelled = false;
-    const load =
-      props.mode === "triggers"
-        ? pieceSource?.loadTriggers(props.piece.name)
-        : pieceSource?.loadActions(props.piece.name);
-    load
-      ?.then((result) => {
-        if (!cancelled) setEntries(result);
-      })
-      .catch((loadError: unknown) => {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error ? loadError.message : String(loadError),
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [props.piece.name, props.mode, pieceSource]);
-
-  const kind = props.mode === "triggers" ? "trigger" : "action";
-  const tokens = queryTokens(filter);
-  const shown = (entries ?? []).filter((entry) =>
-    matchesQuery(
-      `${entry.displayName} ${entry.name} ${entry.description}`,
-      tokens,
-    ),
-  );
-
-  return (
-    <>
-      <div className="flex items-center gap-1 border-b border-foreground/10 p-2">
-        <button
-          type="button"
-          aria-label="Back to pieces"
-          className="shrink-0 px-1 text-xs text-muted-foreground/80 hover:text-foreground"
-          onClick={props.onBack}
-        >
-          ←
-        </button>
-        <LogoFrame
-          src={props.piece.logoUrl}
-          alt={props.piece.displayName}
-          size={16}
-        />
-        <input
-          autoFocus
-          className="min-w-0 flex-1 rounded border border-foreground/10 px-2 py-1 text-xs"
-          placeholder={`Search ${props.piece.displayName} ${kind}s…`}
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-        />
-      </div>
-      <div className="max-h-96 overflow-y-auto py-1">
-        {error ? (
-          <div className="px-3 py-2 text-xs text-wf-fail">{error}</div>
-        ) : entries === null ? (
-          <div className="px-3 py-2 text-xs text-muted-foreground/80">
-            Loading…
-          </div>
-        ) : shown.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-muted-foreground/80">
-            No matching {kind}s
-          </div>
-        ) : (
-          shown.map((entry) =>
-            blockRow({
-              entry,
-              kind,
-              logo: (
-                <LogoFrame
-                  src={props.piece.logoUrl}
-                  alt={props.piece.displayName}
-                  size={ROW_LOGO}
-                />
-              ),
-              tokens,
-              onPick: props.onPick,
-              onHover: props.onHover,
-              versionNote: props.versionNote,
-            }),
-          )
-        )}
-      </div>
-    </>
-  );
-}
-
-// Blocks a search group shows before "more"; all of them for one or two groups.
-const GROUP_BLOCKS = 4;
-
-function PieceGroup(props: {
-  match: PieceSearchMatchUi;
-  tokens: string[];
-  // Shows every block without a "more" row.
-  open: boolean;
-  onOpenPiece: () => void;
-  onPick: (preset: BlockPreset) => void;
-  onHover: (block: BlockRef) => void;
-  versionNote: VersionNote;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const { match } = props;
-  const all = props.open || expanded;
-  const blocks = all ? match.blocks : match.blocks.slice(0, GROUP_BLOCKS);
-  const hidden = match.blocks.length - blocks.length;
-  return (
-    <div className="pb-1">
-      <Row
-        logo={
-          <LogoFrame
-            src={match.logoUrl}
-            alt={match.displayName}
-            size={ROW_LOGO}
-          />
-        }
-        label={
-          <>
-            <Highlight text={match.displayName} tokens={props.tokens} />
-            {match.deprecated ? " (deprecated)" : ""}
-          </>
-        }
-        title={match.description || match.displayName}
-        description={match.unsupported ?? match.description}
-        version={shownVersion(match.pieceName, match.pieceVersion)}
-        versionNote={props.versionNote(match.pieceName, match.pieceVersion)}
-        onClick={props.onOpenPiece}
-      />
-      {blocks.map((hit) =>
-        blockRow({
-          entry: hit,
-          kind: hit.kind,
-          // An empty slot keeps the blocks indented under their piece.
-          logo: <span className="shrink-0" style={{ width: ROW_LOGO }} />,
-          tokens: props.tokens,
-          onPick: props.onPick,
-          onHover: props.onHover,
-          versionNote: props.versionNote,
-        }),
-      )}
-      {hidden > 0 ? (
-        <button
-          type="button"
-          className="w-full py-0.5 pl-[44px] text-left text-[11px] text-muted-foreground/80 hover:text-foreground"
-          onClick={() => setExpanded(true)}
-        >
-          {hidden} more…
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 const SEARCH_MIN_CHARS = 2;
 const SEARCH_DEBOUNCE_MS = 250;
 const INDEXING_RETRY_MS = 2000;
@@ -768,37 +546,419 @@ function Status(props: { children: React.ReactNode; error?: boolean }) {
   );
 }
 
+// One pickable row, in either pane or the search list.
+interface Entry {
+  key: string;
+  logo: React.ReactNode;
+  label: string;
+  description: string;
+  // Why it cannot be picked; listed anyway, so the reason shows.
+  unavailable?: string;
+  version?: string;
+  versionNote?: string;
+  pick: () => void;
+  // Warms what a pick needs.
+  warm?: () => void;
+}
+
+type ListId = "recent" | "attach" | "core" | "powerhouse";
+
+// A left-pane item: one of our own lists, or a catalog piece.
+type Source =
+  | {
+      kind: "list";
+      id: ListId;
+      title: string;
+      subtitle: string;
+      logo: React.ReactNode;
+      entries: Entry[];
+    }
+  | { kind: "piece"; id: string; piece: PieceSummaryUi };
+
+type SearchRow =
+  | { type: "list"; source: Extract<Source, { kind: "list" }> }
+  | { type: "piece"; match: PieceSearchMatchUi }
+  | { type: "entry"; entry: Entry }
+  | { type: "more"; pieceName: string; hidden: number };
+
+const ROW_HEIGHT = 44;
+const HEADER_HEIGHT = 36;
+const MORE_HEIGHT = 24;
+// Blocks a search group shows before "more"; all of them for one or two groups.
+const GROUP_BLOCKS = 4;
+// Hovering a piece previews it once the pointer settles.
+const HOVER_PREVIEW_MS = 120;
+
+const searchRowHeight = (row: SearchRow) =>
+  row.type === "entry"
+    ? ROW_HEIGHT
+    : row.type === "more"
+      ? MORE_HEIGHT
+      : HEADER_HEIGHT;
+const sourceHeight = () => ROW_HEIGHT;
+const entryHeight = () => ROW_HEIGHT;
+
+function ListTile(props: { icon: IconName; color: string }) {
+  return <CoreTile tile={props} size={ROW_LOGO} />;
+}
+
+function EntryRow(props: {
+  entry: Entry;
+  tokens: string[];
+  active: boolean;
+  indent?: boolean;
+  onActivate: () => void;
+}) {
+  const { entry } = props;
+  return (
+    <Row
+      logo={
+        props.indent ? (
+          // An empty slot keeps the block indented under its piece.
+          <span className="shrink-0" style={{ width: ROW_LOGO }} />
+        ) : (
+          entry.logo
+        )
+      }
+      label={<Highlight text={entry.label} tokens={props.tokens} />}
+      title={entry.description || entry.label}
+      description={
+        entry.unavailable ?? (
+          <Highlight text={entry.description} tokens={props.tokens} />
+        )
+      }
+      disabled={entry.unavailable !== undefined}
+      active={props.active}
+      version={entry.version}
+      versionNote={entry.versionNote}
+      onHover={() => {
+        props.onActivate();
+        if (entry.unavailable === undefined) entry.warm?.();
+      }}
+      onClick={entry.pick}
+    />
+  );
+}
+
+function SourceRow(props: {
+  source: Source;
+  tokens: string[];
+  mode: PieceMode;
+  active: boolean;
+  onActivate: () => void;
+  onOpen: () => void;
+}) {
+  const { source } = props;
+  if (source.kind === "list") {
+    return (
+      <Row
+        logo={source.logo}
+        label={source.title}
+        description={source.subtitle}
+        active={props.active}
+        onHover={props.onActivate}
+        onClick={props.onOpen}
+      />
+    );
+  }
+  const { piece } = source;
+  const count =
+    props.mode === "triggers" ? piece.triggerCount : piece.actionCount;
+  const noun = props.mode === "triggers" ? "trigger" : "action";
+  return (
+    <Row
+      logo={
+        <LogoFrame
+          src={piece.logoUrl}
+          alt={piece.displayName}
+          size={ROW_LOGO}
+        />
+      }
+      label={
+        <>
+          <Highlight text={piece.displayName} tokens={props.tokens} />
+          {piece.deprecated ? " (deprecated)" : ""}
+        </>
+      }
+      title={piece.description || piece.displayName}
+      description={
+        piece.unsupported ?? `${count} ${noun}${count === 1 ? "" : "s"}`
+      }
+      active={props.active}
+      onHover={props.onActivate}
+      onClick={props.onOpen}
+    />
+  );
+}
+
+// The actions or triggers of one piece, once loaded.
+function usePieceEntries(
+  piece: PieceSummaryUi | undefined,
+  mode: PieceMode,
+): {
+  entries: (PieceActionUi & Partial<PieceTriggerUi>)[] | null;
+  error: string | null;
+} {
+  const pieceSource = usePieceSource();
+  const [state, setState] = useState<{
+    name: string;
+    entries: (PieceActionUi & Partial<PieceTriggerUi>)[] | null;
+    error: string | null;
+  } | null>(null);
+  const name = piece?.name;
+
+  useEffect(() => {
+    if (!name || !pieceSource) return;
+    let cancelled = false;
+    const load =
+      mode === "triggers"
+        ? pieceSource.loadTriggers(name)
+        : pieceSource.loadActions(name);
+    load.then(
+      (entries) => {
+        if (!cancelled) setState({ name, entries, error: null });
+      },
+      (error: unknown) => {
+        if (!cancelled) {
+          setState({
+            name,
+            entries: null,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [name, mode, pieceSource]);
+
+  return state && state.name === name
+    ? { entries: state.entries, error: state.error }
+    : { entries: null, error: null };
+}
+
+function EntriesPane(props: {
+  source: Source | undefined;
+  mode: PieceMode;
+  pieceEntries: Entry[] | null;
+  pieceError: string | null;
+  tokens: string[];
+  activeIndex: number;
+  onActivate: (index: number) => void;
+}) {
+  const { source } = props;
+  const entries = source?.kind === "list" ? source.entries : props.pieceEntries;
+  const kind = props.mode === "triggers" ? "trigger" : "action";
+  const title =
+    source?.kind === "list" ? source.title : source?.piece.displayName;
+  const about =
+    source?.kind === "list" ? source.subtitle : source?.piece.description;
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {source ? (
+        <div className="border-b border-foreground/10 px-3 py-2">
+          <div className="truncate text-xs font-semibold text-foreground">
+            {title}
+          </div>
+          {about ? (
+            <div
+              className="line-clamp-2 text-[11px] text-muted-foreground/80"
+              title={about}
+            >
+              {about}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {!source ? (
+        <Status>Pick a piece to see its {kind}s</Status>
+      ) : props.pieceError ? (
+        <Status error>{props.pieceError}</Status>
+      ) : entries === null ? (
+        <Status>Loading…</Status>
+      ) : entries.length === 0 ? (
+        <Status>No {kind}s</Status>
+      ) : (
+        <VirtualList
+          label={`${title ?? ""} ${kind}s`}
+          className="flex-1 py-1"
+          items={entries}
+          heightOf={entryHeight}
+          keyOf={(entry) => entry.key}
+          activeIndex={props.activeIndex}
+          render={(entry, index) => (
+            <EntryRow
+              entry={entry}
+              tokens={props.tokens}
+              active={index === props.activeIndex}
+              onActivate={() => props.onActivate(index)}
+            />
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
+function SearchList(props: {
+  rows: SearchRow[];
+  tokens: string[];
+  activeIndex: number;
+  onActivate: (index: number) => void;
+  onOpenPiece: (pieceName: string) => void;
+  onOpenList: (id: ListId) => void;
+  onExpand: (pieceName: string) => void;
+  footer: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <VirtualList
+        label="Search results"
+        className="flex-1 py-1"
+        items={props.rows}
+        heightOf={searchRowHeight}
+        keyOf={(row, index) =>
+          row.type === "entry"
+            ? `e:${row.entry.key}`
+            : row.type === "piece"
+              ? `p:${row.match.pieceName}`
+              : row.type === "list"
+                ? `l:${row.source.id}`
+                : `m:${row.pieceName}:${index}`
+        }
+        activeIndex={props.activeIndex}
+        render={(row, index) => {
+          const active = index === props.activeIndex;
+          const activate = () => props.onActivate(index);
+          if (row.type === "entry") {
+            return (
+              <EntryRow
+                entry={row.entry}
+                tokens={props.tokens}
+                active={active}
+                indent
+                onActivate={activate}
+              />
+            );
+          }
+          if (row.type === "more") {
+            return (
+              <button
+                type="button"
+                tabIndex={-1}
+                className={`h-full w-full pl-[44px] text-left text-[11px] text-muted-foreground/80 hover:text-foreground ${active ? "bg-foreground/[0.07]" : ""}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={activate}
+                onClick={() => props.onExpand(row.pieceName)}
+              >
+                {row.hidden} more…
+              </button>
+            );
+          }
+          const header =
+            row.type === "piece"
+              ? {
+                  logo: (
+                    <LogoFrame
+                      src={row.match.logoUrl}
+                      alt={row.match.displayName}
+                      size={20}
+                    />
+                  ),
+                  label: row.match.displayName,
+                  note: row.match.deprecated
+                    ? "deprecated"
+                    : (row.match.unsupported ?? undefined),
+                  open: () => props.onOpenPiece(row.match.pieceName),
+                }
+              : {
+                  logo: row.source.logo,
+                  label: row.source.title,
+                  note: undefined,
+                  open: () => props.onOpenList(row.source.id),
+                };
+          return (
+            <button
+              type="button"
+              tabIndex={-1}
+              title={`Open ${header.label}`}
+              className={`flex h-full w-full items-center gap-2 px-3 text-left ${active ? "bg-foreground/[0.07]" : "hover:bg-muted/50"}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={activate}
+              onClick={header.open}
+            >
+              {header.logo}
+              <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <Highlight text={header.label} tokens={props.tokens} />
+              </span>
+              {header.note ? (
+                <span className="truncate text-[10px] text-muted-foreground/70">
+                  {header.note}
+                </span>
+              ) : null}
+              <span className="ml-auto text-[10px] text-muted-foreground/60">
+                Open →
+              </span>
+            </button>
+          );
+        }}
+      />
+      {props.footer}
+    </div>
+  );
+}
+
 export function BlockSelector(props: {
   title: string;
   presets: BlockPreset[];
   onPick: (preset: PickedPreset) => void;
   onClose: () => void;
-  // Show the piece catalog below the presets.
+  // Show the piece catalog beside the presets.
   showPieces?: boolean;
-  // Which piece entries the drill-in offers; defaults to actions.
+  // Which piece entries the picker offers; defaults to actions.
   pieceMode?: PieceMode;
   // Detached steps offered for re-attachment at this insertion point.
   attachSteps?: StepModel[];
   onAttach?: (stepId: string) => void;
+  // The button that opened it: clicks there are its own to handle.
+  anchor?: RefObject<HTMLElement | null>;
+  width?: number;
+  height?: number;
 }) {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<SourceTab>("all");
   const [chip, setChip] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
-  const [piece, setPiece] = useState<PieceSummaryUi | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pane, setPane] = useState<"sources" | "entries">("sources");
+  const [entryIndex, setEntryIndex] = useState(-1);
+  const [rowIndex, setRowIndex] = useState(-1);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Hover only counts once the pointer has moved, so a list scrolling under
+  // a still pointer does not steal the selection.
+  const pointerMoved = useRef(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const { anchor, onClose } = props;
 
   useEffect(() => {
     const handler = (event: PointerEvent) => {
-      const container = containerRef.current;
-      // The opener toggles the picker itself, so its clicks count as inside.
-      const root = container?.closest("[data-picker-root]") ?? container;
-      if (!root?.contains(event.target as globalThis.Node)) props.onClose();
+      const target = event.target as globalThis.Node;
+      if (containerRef.current?.contains(target)) return;
+      // The opener toggles the picker itself.
+      if (anchor?.current?.contains(target)) return;
+      onClose();
     };
     // Capture: the canvas pan handler stops the event before it bubbles.
     window.addEventListener("pointerdown", handler, true);
     return () => window.removeEventListener("pointerdown", handler, true);
-  }, [props]);
+  }, [anchor, onClose]);
+
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
   const anySource = usePieceSource();
   const pieceSource = props.showPieces ? anySource : undefined;
@@ -848,13 +1008,16 @@ export function BlockSelector(props: {
   const pinned = (preset: BlockPreset) => pinBlock(preset.block, installed);
   const pick = (preset: BlockPreset) => {
     const block = pinned(preset);
-    if (block) props.onPick({ ...preset, block });
+    if (!block) return;
+    rememberPick(preset);
+    props.onPick({ ...preset, block });
   };
   const prefetch = useBlockFormPrefetch();
 
   const mode: PieceMode = props.pieceMode ?? "actions";
   const kind = mode === "triggers" ? "trigger" : "action";
   const tokens = queryTokens(query);
+  const searching = query.trim().length >= SEARCH_MIN_CHARS;
   const showCatalog = pieceSource !== undefined && tab !== "core";
   const tabs: SourceTab[] = pieceSource
     ? ["all", "core", "powerhouse", "activepieces"]
@@ -882,8 +1045,6 @@ export function BlockSelector(props: {
   const showChips = showCatalog && chips.length > 1;
   const activeChip =
     showChips && chip !== null && chips.includes(chip) ? chip : null;
-  const inChip = (entry: { categories: string[] }) =>
-    activeChip === null || chipsOf(entry).has(activeChip);
 
   const searchFilter = useMemo<PieceSearchFilterUi | null>(
     () =>
@@ -898,291 +1059,516 @@ export function BlockSelector(props: {
         : null,
     [showCatalog, kind, tab, activeChip, tabPieces],
   );
-  const search = usePieceSearch(query, piece ? null : searchFilter);
-  const searchActive = search.kind !== "idle";
+  const search = usePieceSearch(query, searchFilter);
 
-  // A chip narrows to pieces, so the presets step aside.
-  const matching =
-    activeChip === null
-      ? props.presets.filter((preset) =>
-          matchesQuery(
-            `${preset.label} ${preset.description} ${preset.block.pieceName} ${preset.block.name}`,
-            tokens,
-          ),
-        )
+  const presetEntry = (preset: BlockPreset): Entry => {
+    const block = pinned(preset);
+    return {
+      key: `${blockKey(preset.block)} ${preset.label}`,
+      logo: <BlockLogo block={preset.block} size={ROW_LOGO} />,
+      label: preset.label,
+      description: preset.description,
+      unavailable: block
+        ? undefined
+        : catalog === null
+          ? "Loading…"
+          : "Not installed on this runtime",
+      version: shownVersion(preset.block.pieceName, block?.pieceVersion),
+      versionNote: versionNote(preset.block.pieceName, block?.pieceVersion),
+      pick: () => pick(preset),
+      warm: block ? () => prefetch(block) : undefined,
+    };
+  };
+
+  const blockEntry = (
+    entry: {
+      pieceName: string;
+      pieceVersion: string;
+      name: string;
+      displayName: string;
+      description: string;
+      unsupported?: string | null;
+      strategy?: string | null;
+    },
+    logo: React.ReactNode,
+  ): Entry => {
+    const block: BlockRef = {
+      pieceName: entry.pieceName,
+      pieceVersion: entry.pieceVersion,
+      kind,
+      name: entry.name,
+    };
+    return {
+      key: blockKey(block),
+      logo,
+      label: entry.displayName,
+      description: entry.description,
+      // Visible but inert: picking one would build a step that never runs.
+      unavailable: blockUnavailable({ ...entry, kind }),
+      version: shownVersion(entry.pieceName, entry.pieceVersion),
+      versionNote: versionNote(entry.pieceName, entry.pieceVersion),
+      pick: () =>
+        pick({
+          label: entry.displayName,
+          block,
+          description: entry.description,
+          defaultConfig: {},
+        }),
+      warm: () => prefetch(block),
+    };
+  };
+
+  // Our own lists, each a source in the left pane. A chip narrows to pieces.
+  const lists = useMemo(() => {
+    if (activeChip !== null) return [];
+    const result: Extract<Source, { kind: "list" }>[] = [];
+    const add = (
+      id: ListId,
+      title: string,
+      subtitle: string,
+      logo: React.ReactNode,
+      entries: Entry[],
+    ) => {
+      if (entries.length > 0) {
+        result.push({ kind: "list", id, title, subtitle, logo, entries });
+      }
+    };
+    // Detached steps first: re-attaching is why the picker opened there.
+    if (tab === "all") {
+      if (props.onAttach) {
+        add(
+          "attach",
+          "Detached steps",
+          "Re-attach a step at this point",
+          <ListTile icon="branch" color="#64748b" />,
+          (props.attachSteps ?? []).map((step) => ({
+            key: `attach ${step.id}`,
+            logo: <BlockLogo block={stepBlock(step)} size={ROW_LOGO} />,
+            label: step.name,
+            description: `{{steps.${step.key}}} · detached`,
+            pick: () => props.onAttach?.(step.id),
+          })),
+        );
+      }
+    }
+    if (tab === "all" || tab === "core") {
+      add(
+        "core",
+        "Core",
+        "Built into the workflow engine",
+        <ListTile icon="bolt" color="#2563eb" />,
+        props.presets
+          .filter((preset) => preset.group !== "powerhouse")
+          .map(presetEntry),
+      );
+    }
+    if (tab === "all" || tab === "powerhouse") {
+      const reactorPreset = props.presets.find(
+        (preset) => preset.group === "powerhouse",
+      );
+      add(
+        "powerhouse",
+        "Documents",
+        "Read and change documents on this reactor",
+        reactorPreset ? (
+          <BlockLogo block={reactorPreset.block} size={ROW_LOGO} />
+        ) : null,
+        props.presets
+          .filter((preset) => preset.group === "powerhouse")
+          .map(presetEntry),
+      );
+    }
+    if (tab === "all") {
+      const recent = recentPicks(kind).filter(
+        (preset) =>
+          isCoreBlock(preset.block) || installed(preset.block.pieceName),
+      );
+      add(
+        "recent",
+        "Recently used",
+        `Your last ${kind}s`,
+        <ListTile icon="clock" color="#64748b" />,
+        recent.map(presetEntry),
+      );
+    }
+    return result;
+    // presetEntry and installed read catalog and the draft; both are deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeChip,
+    tab,
+    kind,
+    catalog,
+    props.presets,
+    props.attachSteps,
+    props.onAttach,
+  ]);
+
+  // Browse: lists then pieces, narrowed by a short query on the client.
+  const sources = useMemo<Source[]>(() => {
+    const listSources = lists
+      .map((list) => ({
+        ...list,
+        entries: list.entries.filter((entry) =>
+          matchesQuery(`${entry.label} ${entry.description}`, tokens),
+        ),
+      }))
+      .filter((list) => list.entries.length > 0);
+    const pieceSources: Source[] = showCatalog
+      ? tabPieces
+          .filter(
+            (entry) =>
+              (activeChip === null || chipsOf(entry).has(activeChip)) &&
+              matchesQuery(
+                `${entry.displayName} ${entry.name} ${entry.description}`,
+                tokens,
+              ),
+          )
+          .map((piece) => ({ kind: "piece", id: piece.name, piece }))
       : [];
-  // The engine's own blocks, then the reactor's: the document blocks are a
-  // piece, and saying so is honest.
-  const corePresets =
-    tab === "all" || tab === "core"
-      ? matching.filter((preset) => preset.group !== "powerhouse")
-      : [];
-  const powerhousePresets =
-    tab === "all" || tab === "powerhouse"
-      ? matching.filter((preset) => preset.group === "powerhouse")
-      : [];
-  const presetBlocks = new Set(
+    return [...listSources, ...pieceSources];
+    // tokens is derived from query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lists, showCatalog, tabPieces, activeChip, query]);
+
+  const selected: Source | undefined =
+    sources.find((source) => source.id === selectedId) ?? sources.at(0);
+  const sourceIndex = selected ? sources.indexOf(selected) : -1;
+  const selectedPiece = selected?.kind === "piece" ? selected.piece : undefined;
+  const loaded = usePieceEntries(selectedPiece, mode);
+  const pieceEntries = useMemo(
+    () =>
+      selectedPiece && loaded.entries
+        ? loaded.entries.map((entry) =>
+            blockEntry(
+              entry,
+              <LogoFrame
+                src={selectedPiece.logoUrl}
+                alt={selectedPiece.displayName}
+                size={ROW_LOGO}
+              />,
+            ),
+          )
+        : null,
+    // blockEntry reads the draft for version notes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedPiece, loaded.entries, catalog],
+  );
+  const entries =
+    selected?.kind === "list" ? selected.entries : (pieceEntries ?? []);
+
+  // Search: our lists that match, then the server's groups.
+  const presetKeys = new Set(
     props.presets.map(
       (preset) => `${preset.block.pieceName} ${preset.block.name}`,
     ),
   );
-  const filteredAttach = (
-    props.onAttach && tab === "all" ? (props.attachSteps ?? []) : []
-  ).filter((step) =>
-    matchesQuery(
-      `${step.name} ${step.key} ${step.pieceName} ${step.actionName}`,
-      tokens,
-    ),
-  );
-  // The browse list, or the fallback when the source cannot search.
-  const filteredPieces =
-    showCatalog && !searchActive
-      ? tabPieces.filter(
-          (entry) =>
-            inChip(entry) &&
-            matchesQuery(
-              `${entry.displayName} ${entry.name} ${entry.description}`,
-              tokens,
-            ),
-        )
-      : [];
-  // Blocks a preset already offers are listed once, as the preset.
-  const groups =
-    search.kind === "done"
-      ? search.result.pieces
-          .map((match) => ({
-            ...match,
-            blocks: match.blocks.filter(
-              (hit) => !presetBlocks.has(`${hit.pieceName} ${hit.name}`),
-            ),
-          }))
-          .filter((match) => match.blocks.length > 0)
-      : [];
+  const rows: SearchRow[] = [];
+  if (searching) {
+    for (const source of sources) {
+      if (source.kind !== "list" || source.id === "recent") continue;
+      rows.push({ type: "list", source });
+      for (const entry of source.entries) rows.push({ type: "entry", entry });
+    }
+    const groups =
+      search.kind === "done"
+        ? search.result.pieces
+            .map((match) => ({
+              ...match,
+              // A block a preset offers is listed once, as the preset.
+              blocks: match.blocks.filter(
+                (hit) => !presetKeys.has(`${hit.pieceName} ${hit.name}`),
+              ),
+            }))
+            .filter((match) => match.blocks.length > 0)
+        : [];
+    for (const match of groups) {
+      rows.push({ type: "piece", match });
+      const all = groups.length <= 2 || expanded.has(match.pieceName);
+      const shown = all ? match.blocks : match.blocks.slice(0, GROUP_BLOCKS);
+      const logo = (
+        <LogoFrame
+          src={match.logoUrl}
+          alt={match.displayName}
+          size={ROW_LOGO}
+        />
+      );
+      for (const hit of shown) {
+        rows.push({ type: "entry", entry: blockEntry(hit, logo) });
+      }
+      if (shown.length < match.blocks.length) {
+        rows.push({
+          type: "more",
+          pieceName: match.pieceName,
+          hidden: match.blocks.length - shown.length,
+        });
+      }
+    }
+    // A source that cannot search falls back to the pieces' own names.
+    if (showCatalog && !pieceSource.searchPieces) {
+      for (const source of sources) {
+        if (source.kind !== "piece") continue;
+        rows.push({
+          type: "piece",
+          match: {
+            pieceName: source.piece.name,
+            pieceVersion: source.piece.version ?? "",
+            displayName: source.piece.displayName,
+            description: source.piece.description,
+            logoUrl: source.piece.logoUrl,
+            categories: source.piece.categories,
+            source: source.piece.source ?? "activepieces",
+            namedPiece: true,
+            blocks: [],
+          },
+        });
+      }
+    }
+  }
 
-  const openPiece = (match: PieceSearchMatchUi) =>
-    setPiece(
-      catalog?.pieces.find((entry) => entry.name === match.pieceName) ?? {
-        name: match.pieceName,
-        displayName: match.displayName,
-        description: match.description,
-        logoUrl: match.logoUrl,
-        actionCount: 0,
-        triggerCount: 0,
-        categories: match.categories,
-        source: match.source,
-        version: match.pieceVersion,
-      },
-    );
+  // Until the keyboard moves, the best block: Enter picks it.
+  const activeRow =
+    rowIndex < 0
+      ? rows.findIndex((row) => row.type === "entry")
+      : Math.min(rowIndex, rows.length - 1);
 
-  const presetRow = (preset: BlockPreset) => {
-    const block = pinned(preset);
-    return (
-      <Row
-        key={blockKey(preset.block) + preset.label}
-        logo={<BlockLogo block={preset.block} size={ROW_LOGO} />}
-        label={<Highlight text={preset.label} tokens={tokens} />}
-        description={
-          block
-            ? preset.description
-            : catalog === null
-              ? "Loading…"
-              : "Not installed on this runtime"
-        }
-        disabled={!block}
-        version={shownVersion(preset.block.pieceName, block?.pieceVersion)}
-        versionNote={versionNote(preset.block.pieceName, block?.pieceVersion)}
-        onHover={block ? () => prefetch(block) : undefined}
-        onClick={() => pick(preset)}
-      />
-    );
+  const selectSource = (id: string) => {
+    setSelectedId(id);
+    setPane("sources");
+    setEntryIndex(-1);
   };
-  // Labels earn their place once there is more than one thing to tell apart.
-  const labelPresets =
-    showCatalog ||
-    filteredAttach.length > 0 ||
-    (corePresets.length > 0 && powerhousePresets.length > 0);
-  const nothing =
-    corePresets.length + powerhousePresets.length === 0 &&
-    filteredAttach.length === 0;
+  const openSource = (id: string) => {
+    setSelectedId(id);
+    setPane("entries");
+    setEntryIndex(0);
+  };
+  // From a search group to the piece itself, in the browse panes.
+  const openPiece = (pieceName: string) => {
+    setQuery("");
+    setChip(null);
+    if (tab !== "all") setTab("all");
+    openSource(pieceName);
+    inputRef.current?.focus();
+  };
+  const hoverSource = (id: string) => {
+    if (!pointerMoved.current) return;
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => selectSource(id), HOVER_PREVIEW_MS);
+  };
+
+  const step = (index: number, delta: number, count: number) =>
+    count === 0 ? -1 : Math.min(Math.max(index + delta, 0), count - 1);
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    const key = event.key;
+    if (key === "Escape") {
+      event.stopPropagation();
+      if (query !== "") setQuery("");
+      else if (pane === "entries" && !searching) setPane("sources");
+      else onClose();
+      return;
+    }
+    const delta = key === "ArrowDown" ? 1 : key === "ArrowUp" ? -1 : 0;
+    if (searching) {
+      if (delta !== 0) {
+        event.preventDefault();
+        setRowIndex(Math.max(step(activeRow, delta, rows.length), 0));
+        return;
+      }
+      if (key === "Enter") {
+        event.preventDefault();
+        const row = rows.at(activeRow);
+        if (!row) return;
+        if (row.type === "entry") {
+          if (row.entry.unavailable === undefined) row.entry.pick();
+        } else if (row.type === "piece") openPiece(row.match.pieceName);
+        else if (row.type === "list") openSource(row.source.id);
+        else setExpanded(new Set([...expanded, row.pieceName]));
+      }
+      return;
+    }
+    // Left and right move the caret while there is text to move it in.
+    const sideways = query === "";
+    if (pane === "sources") {
+      if (delta !== 0) {
+        event.preventDefault();
+        const next = sources.at(step(sourceIndex, delta, sources.length));
+        if (next) selectSource(next.id);
+      } else if (key === "Enter" || (sideways && key === "ArrowRight")) {
+        event.preventDefault();
+        if (selected) openSource(selected.id);
+      }
+      return;
+    }
+    if (delta !== 0) {
+      event.preventDefault();
+      setEntryIndex(step(entryIndex, delta, entries.length));
+    } else if (sideways && key === "ArrowLeft") {
+      event.preventDefault();
+      setPane("sources");
+    } else if (key === "Enter") {
+      event.preventDefault();
+      const entry = entryIndex < 0 ? undefined : entries.at(entryIndex);
+      if (entry && entry.unavailable === undefined) entry.pick();
+    }
+  };
+
+  const twoPane = showCatalog || sources.length > 1;
+  const width = props.width ?? (pieceSource ? PICKER_SIZE.width : 360);
+  const statusFooter =
+    search.kind === "loading" ? (
+      <Status>Searching…</Status>
+    ) : search.kind === "error" ? (
+      <Status error>{search.message}</Status>
+    ) : search.kind === "done" && search.result.status === "indexing" ? (
+      // Status covers the published catalog only; local pieces are listed.
+      <Status>Indexing the catalog… more results appear shortly.</Status>
+    ) : search.kind === "done" && search.result.status === "error" ? (
+      <Status error>{search.result.error ?? "Search failed"}</Status>
+    ) : rows.length === 0 ? (
+      <Status>No matching {kind}s</Status>
+    ) : null;
 
   return (
     <div
       ref={containerRef}
-      className="nodrag nopan nowheel w-96 rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
+      className="nodrag nopan nowheel flex flex-col overflow-hidden rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
+      style={{ width, height: props.height ?? PICKER_SIZE.height }}
       onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        if (event.key !== "Escape") return;
-        event.stopPropagation();
-        if (piece) setPiece(null);
-        else props.onClose();
+      onKeyDown={onKeyDown}
+      onMouseMove={() => {
+        pointerMoved.current = true;
       }}
     >
-      {piece ? (
-        <PieceEntries
-          piece={piece}
-          mode={mode}
-          onPick={pick}
-          onHover={prefetch}
-          onBack={() => setPiece(null)}
-          versionNote={versionNote}
+      <div className="shrink-0 border-b border-foreground/10 px-2 pt-2">
+        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+          {props.title}
+        </div>
+        <input
+          ref={inputRef}
+          autoFocus
+          role="combobox"
+          aria-expanded
+          aria-autocomplete="list"
+          className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
+          placeholder={pieceSource ? `Search pieces and ${kind}s…` : "Search…"}
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setRowIndex(-1);
+            setExpanded(new Set());
+          }}
         />
-      ) : (
-        <>
-          <div className="border-b border-foreground/10 px-2 pt-2">
-            <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-              {props.title}
-            </div>
-            <input
-              autoFocus
-              className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
-              placeholder={
-                pieceSource ? `Search pieces and ${kind}s…` : "Search…"
-              }
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <Tabs
-              tabs={tabs}
-              active={tab}
-              onSelect={(next) => {
-                setTab(next);
-                setChip(null);
+        <Tabs
+          tabs={tabs}
+          active={tab}
+          onSelect={(next) => {
+            setTab(next);
+            setChip(null);
+            setSelectedId(null);
+            setPane("sources");
+            inputRef.current?.focus();
+          }}
+        />
+      </div>
+      {showChips && catalog && !catalog.error ? (
+        <div className="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-foreground/10 px-2.5 py-1.5 [scrollbar-width:thin]">
+          {chips.map((label) => (
+            <Chip
+              key={label}
+              label={label}
+              active={activeChip === label}
+              onClick={() => {
+                setChip(activeChip === label ? null : label);
+                setSelectedId(null);
+                inputRef.current?.focus();
               }}
             />
-          </div>
-          {showChips && catalog && !catalog.error ? (
-            <div className="flex gap-1 overflow-x-auto whitespace-nowrap border-b border-foreground/10 px-2.5 py-1.5 [scrollbar-width:thin]">
-              {chips.map((label) => (
-                <Chip
-                  key={label}
-                  label={label}
-                  active={activeChip === label}
-                  onClick={() => setChip(activeChip === label ? null : label)}
-                />
-              ))}
+          ))}
+        </div>
+      ) : null}
+      {searching ? (
+        <SearchList
+          rows={rows}
+          tokens={tokens}
+          activeIndex={activeRow}
+          onActivate={(index) => {
+            if (pointerMoved.current) setRowIndex(index);
+          }}
+          onOpenPiece={openPiece}
+          onOpenList={(id) => {
+            setQuery("");
+            openSource(id);
+          }}
+          onExpand={(name) => setExpanded(new Set([...expanded, name]))}
+          footer={statusFooter}
+        />
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          {twoPane ? (
+            <div className="flex w-56 shrink-0 flex-col border-r border-foreground/10">
+              {catalog?.error ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-wf-fail">
+                  <span className="min-w-0 flex-1">{catalog.error}</span>
+                  <button
+                    type="button"
+                    className="shrink-0 cursor-pointer rounded border border-solid border-foreground/15 bg-card px-1.5 py-0.5 text-foreground hover:border-foreground/25"
+                    onClick={() => {
+                      setCatalog(null);
+                      setCatalogRound((round) => round + 1);
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : null}
+              <VirtualList
+                label="Pieces"
+                className="flex-1 py-1"
+                items={sources}
+                heightOf={sourceHeight}
+                keyOf={(source) => `${source.kind}:${source.id}`}
+                activeIndex={sourceIndex}
+                render={(source, index) => (
+                  <SourceRow
+                    source={source}
+                    tokens={tokens}
+                    mode={mode}
+                    active={index === sourceIndex}
+                    onActivate={() => hoverSource(source.id)}
+                    onOpen={() => {
+                      clearTimeout(hoverTimer.current);
+                      openSource(source.id);
+                      inputRef.current?.focus();
+                    }}
+                  />
+                )}
+              />
+              {showCatalog && catalog === null ? (
+                <Status>Loading catalog…</Status>
+              ) : sources.length === 0 ? (
+                <Status>
+                  {tab === "powerhouse" && tokens.length === 0
+                    ? "No registry pieces on this runtime"
+                    : "No matching pieces"}
+                </Status>
+              ) : null}
             </div>
           ) : null}
-          <div className="max-h-96 overflow-y-auto py-1">
-            {filteredAttach.length > 0 ? (
-              <>
-                <SectionLabel>Attach existing step</SectionLabel>
-                {filteredAttach.map((step) => (
-                  <Row
-                    key={step.id}
-                    logo={<BlockLogo block={stepBlock(step)} size={ROW_LOGO} />}
-                    label={step.name}
-                    description={`{{steps.${step.key}}} · detached`}
-                    onClick={() => props.onAttach?.(step.id)}
-                  />
-                ))}
-              </>
-            ) : null}
-            {corePresets.length > 0 && labelPresets ? (
-              <SectionLabel>Core</SectionLabel>
-            ) : null}
-            {corePresets.map(presetRow)}
-            {powerhousePresets.length > 0 && labelPresets ? (
-              <SectionLabel>Powerhouse</SectionLabel>
-            ) : null}
-            {powerhousePresets.map(presetRow)}
-            {searchActive ? (
-              <>
-                <SectionLabel>Pieces</SectionLabel>
-                {search.kind === "loading" ? (
-                  <Status>Searching…</Status>
-                ) : search.kind === "error" ? (
-                  <Status error>{search.message}</Status>
-                ) : (
-                  <>
-                    {groups.map((match) => (
-                      <PieceGroup
-                        key={match.pieceName}
-                        match={match}
-                        tokens={tokens}
-                        open={groups.length <= 2}
-                        onOpenPiece={() => openPiece(match)}
-                        onPick={pick}
-                        onHover={prefetch}
-                        versionNote={versionNote}
-                      />
-                    ))}
-                    {/* Status covers the published catalog only; local
-                      pieces are already in the groups above. */}
-                    {search.result.status === "indexing" ? (
-                      <Status>
-                        Indexing the catalog… more results appear shortly.
-                      </Status>
-                    ) : search.result.status === "error" ? (
-                      <Status error>
-                        {search.result.error ?? "Search failed"}
-                      </Status>
-                    ) : groups.length === 0 ? (
-                      <Status>No matching {kind}s</Status>
-                    ) : null}
-                  </>
-                )}
-              </>
-            ) : null}
-            {showCatalog && !searchActive ? (
-              <>
-                <SectionLabel>Pieces</SectionLabel>
-                {catalog === null ? (
-                  <Status>Loading catalog…</Status>
-                ) : catalog.error ? (
-                  <div className="flex items-center gap-2 px-3 py-2 text-xs text-wf-fail">
-                    <span className="min-w-0 flex-1">{catalog.error}</span>
-                    <button
-                      type="button"
-                      className="shrink-0 cursor-pointer rounded border border-solid border-foreground/15 bg-card px-1.5 py-0.5 text-foreground hover:border-foreground/25"
-                      onClick={() => {
-                        setCatalog(null);
-                        setCatalogRound((round) => round + 1);
-                      }}
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : filteredPieces.length === 0 ? (
-                  <Status>
-                    {tab === "powerhouse" && tokens.length === 0
-                      ? "No registry pieces on this runtime"
-                      : "No matching pieces"}
-                  </Status>
-                ) : (
-                  filteredPieces.map((entry) => (
-                    <Row
-                      key={entry.name}
-                      logo={
-                        <LogoFrame
-                          src={entry.logoUrl}
-                          alt={entry.displayName}
-                          size={ROW_LOGO}
-                        />
-                      }
-                      label={
-                        <>
-                          <Highlight text={entry.displayName} tokens={tokens} />
-                          {entry.deprecated ? " (deprecated)" : ""}
-                        </>
-                      }
-                      title={entry.description || entry.displayName}
-                      description={
-                        entry.unsupported ??
-                        (mode === "triggers"
-                          ? `${entry.triggerCount} trigger${entry.triggerCount === 1 ? "" : "s"} · ${entry.description}`
-                          : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`)
-                      }
-                      version={shownVersion(entry.name, entry.version)}
-                      versionNote={versionNote(entry.name, entry.version)}
-                      onClick={() => setPiece(entry)}
-                    />
-                  ))
-                )}
-              </>
-            ) : null}
-            {!showCatalog && nothing ? <Status>No matches</Status> : null}
-          </div>
-        </>
+          <EntriesPane
+            source={selected}
+            mode={mode}
+            pieceEntries={pieceEntries}
+            pieceError={selected?.kind === "piece" ? loaded.error : null}
+            tokens={tokens}
+            activeIndex={pane === "entries" ? entryIndex : -1}
+            onActivate={(index) => {
+              if (!pointerMoved.current) return;
+              setPane("entries");
+              setEntryIndex(index);
+            }}
+          />
+        </div>
       )}
     </div>
   );
