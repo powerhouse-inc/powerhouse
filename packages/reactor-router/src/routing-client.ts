@@ -1021,7 +1021,7 @@ export class RoutingReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this.dispatcher.resolveBatchBackend("deleteDocuments", identifiers);
+    await this.dispatcher.verifyBatchBackend("deleteDocuments", identifiers);
     await Promise.all(
       identifiers.map((identifier) =>
         this.dispatcher.onDocument(

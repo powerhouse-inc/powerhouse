@@ -170,8 +170,10 @@ export class RouteDispatcher {
    * Existing ids are guarded strictly, created ids only against a holder
    * elsewhere. A refusal excludes the refusing backend for the id it refused
    * (every id when it names none, or for a not-found raised by a step wrapped
-   * in `beforeSubmit`); a created id it names an owner for routes as existing.
-   * Any other failure is the caller's, since a job may have landed.
+   * in `beforeSubmit`), and forgets the cached routes of every id of the
+   * batch, so the next attempt probes them; a created id it names an owner
+   * for routes as existing. Any other failure is the caller's, since a job
+   * may have landed.
    */
   async onDocuments<T>(
     label: string,
@@ -229,6 +231,8 @@ export class RouteDispatcher {
           const excluded = excludedById.get(identifier) ?? new Set<string>();
           excluded.add(backend.name);
           excludedById.set(identifier, excluded);
+        }
+        for (const identifier of distinct) {
           this.table.forgetDocument(identifier);
           this.guard.forget(backend, identifier);
         }
@@ -252,16 +256,50 @@ export class RouteDispatcher {
   }
 
   /**
-   * The one backend a batch runs on. Each existing id resolves to its holder,
-   * skipping a backend only for an id it refused; existing ids on different
-   * holders throw CrossBackendBatchError. Created ids follow and are placed
-   * only when the batch creates every id.
+   * The one backend a batch runs on:
+   * 1. Each existing id resolves to its holder, skipping a backend only for an
+   *    id it refused. A cached route is a hint for where to look first, never
+   *    evidence of a split.
+   * 2. Existing ids on different holders throw CrossBackendBatchError only
+   *    after every cached holder is re-probed on that attempt; a route the
+   *    probe contradicts is replaced. The deleteDocuments pre-check re-probes
+   *    every cached holder, split or not.
+   * 3. Created ids follow the existing ids' holder; a batch that creates every
+   *    id is placed by its first id.
+   * 4. A created id another backend holds is refused, naming that holder, and
+   *    then routes as existing (see {@link onDocuments}).
+   * 5. A refusal excludes the refusing backend only for the id it refused, and
+   *    forgets the cached routes of every id of the batch.
    */
-  async resolveBatchBackend(
+  resolveBatchBackend(
     operation: string,
     identifiers: readonly string[],
     created: ReadonlySet<string> = NONE,
     excludedById: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
+  ): Promise<RouterBackend> {
+    return this.resolveBatch(
+      operation,
+      identifiers,
+      created,
+      excludedById,
+      false,
+    );
+  }
+
+  /** Like {@link resolveBatchBackend}, but re-probes every cached holder. */
+  verifyBatchBackend(
+    operation: string,
+    identifiers: readonly string[],
+  ): Promise<RouterBackend> {
+    return this.resolveBatch(operation, identifiers, NONE, new Map(), true);
+  }
+
+  private async resolveBatch(
+    operation: string,
+    identifiers: readonly string[],
+    created: ReadonlySet<string>,
+    excludedById: ReadonlyMap<string, ReadonlySet<string>>,
+    verifyCached: boolean,
   ): Promise<RouterBackend> {
     const distinct = distinctIds(identifiers);
     if (distinct.length === 0) {
@@ -274,17 +312,34 @@ export class RouteDispatcher {
       );
       return this.placeDocument(distinct[0], excluded);
     }
-    const holders = await Promise.all(
+    let holders = await Promise.all(
       existing.map(async (documentId) => ({
         documentId,
-        backend: await this.holderOf(
+        ...(await this.holderOf(
           documentId,
           excludedById.get(documentId) ?? NONE,
-        ),
+        )),
       })),
     );
-    const first = holders[0].backend;
-    if (holders.some((entry) => entry.backend !== first)) {
+    const split = () =>
+      holders.some((entry) => entry.backend !== holders[0].backend);
+    if (verifyCached || split()) {
+      holders = await Promise.all(
+        holders.map(async (entry) =>
+          entry.cached
+            ? {
+                ...entry,
+                backend: await this.verifiedHolder(
+                  entry.documentId,
+                  entry.backend,
+                  excludedById.get(entry.documentId) ?? NONE,
+                ),
+              }
+            : entry,
+        ),
+      );
+    }
+    if (split()) {
       throw new CrossBackendBatchError(
         operation,
         holders.map((entry) => ({
@@ -293,7 +348,7 @@ export class RouteDispatcher {
         })),
       );
     }
-    return first;
+    return holders[0].backend;
   }
 
   async resolveDocumentBackend(
@@ -388,10 +443,13 @@ export class RouteDispatcher {
   private async holderOf(
     identifier: string,
     excluded: ReadonlySet<string>,
-  ): Promise<RouterBackend> {
+  ): Promise<{ readonly backend: RouterBackend; readonly cached: boolean }> {
     const cached = this.table.documentBackend(identifier);
     if (cached !== "" && this.table.has(cached) && !excluded.has(cached)) {
-      return this.table.backend(cached, `cached route for ${identifier}`);
+      return {
+        backend: this.table.backend(cached, `cached route for ${identifier}`),
+        cached: true,
+      };
     }
     const answers = await Promise.all(
       this.backends.map((backend) => this.owns(backend, identifier)),
@@ -400,12 +458,38 @@ export class RouteDispatcher {
     const holder = serving.find((backend) => !excluded.has(backend.name));
     if (holder !== undefined) {
       this.table.recordDocument(identifier, holder.name);
-      return holder;
+      return { backend: holder, cached: false };
     }
     if (serving.length > 0) {
+      return { backend: serving[0], cached: false };
+    }
+    return {
+      backend: await this.placeDocument(identifier, excluded),
+      cached: false,
+    };
+  }
+
+  /** A cached holder that a probe finds elsewhere is replaced by the probed one. */
+  private async verifiedHolder(
+    identifier: string,
+    cached: RouterBackend,
+    excluded: ReadonlySet<string>,
+  ): Promise<RouterBackend> {
+    const answers = await Promise.all(
+      this.backends.map((backend) => this.owns(backend, identifier)),
+    );
+    const serving = this.backends.filter((_backend, i) => answers[i] === "yes");
+    if (serving.length === 0 || serving.includes(cached)) {
+      return cached;
+    }
+    this.table.forgetDocument(identifier);
+    this.guard.forget(cached, identifier);
+    const holder = serving.find((backend) => !excluded.has(backend.name));
+    if (holder === undefined) {
       return serving[0];
     }
-    return this.placeDocument(identifier, excluded);
+    this.table.recordDocument(identifier, holder.name);
+    return holder;
   }
 
   /** isServed, then isDocumentIdTaken when declared. A failure is unknown. */

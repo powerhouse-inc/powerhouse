@@ -208,6 +208,20 @@ const rows: Row[] = [
     expected: "three",
   },
   {
+    rule: "2: a stale cached route is re-probed before it splits a batch",
+    holds: { a: ["one"], b: ["one"] },
+    ids: ["a", "b"],
+    documents: { b: "two" },
+    expected: "one",
+  },
+  {
+    rule: "2: a split the probe confirms names the probed holders",
+    holds: { a: ["one"], b: ["two"] },
+    ids: ["a", "b"],
+    documents: { a: "three" },
+    expected: "CrossBackendBatchError a@one, b@two",
+  },
+  {
     rule: "1: a backend excluded for an id is skipped for that id",
     holds: { a: ["one", "two"], b: ["two"] },
     ids: ["a", "b"],
@@ -402,5 +416,79 @@ describe("the batch ownership guard", () => {
 
     await expect(run).rejects.toThrow("a@one, b@two");
     expect(refused).toBe(1);
+  });
+});
+
+describe("a cached route is a hint, not evidence of a split", () => {
+  for (const refuses of [false, true]) {
+    const label = refuses ? "refusing" : "non-refusing";
+
+    for (const moved of [
+      ["d1", "d2"],
+      ["d1", "d2", "d3"],
+    ]) {
+      it(`runs ${moved.length} stale ids of a moved drive on their holder (${label})`, async () => {
+        const one = new FakeBackend("one");
+        const two = new FakeBackend("two");
+        one.refuses = refuses;
+        two.refuses = refuses;
+        for (const id of moved) {
+          two.seed(fakeDocument({ id }));
+        }
+        const client = router([one.config(), two.config()], {
+          documents: Object.fromEntries(moved.map((id) => [id, "one"])),
+        });
+        const request = () => ({
+          jobs: moved.map((id) => job(id, id, ["SET_NAME"])),
+        });
+
+        await client.executeBatch(request());
+        await client.executeBatch(request());
+
+        expect(one.count("executeBatch")).toBe(refuses ? 1 : 0);
+        expect(two.count("executeBatch")).toBe(2);
+      });
+    }
+  }
+
+  it("corrects a single stale entry instead of reporting a split", async () => {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    one.seed(fakeDocument({ id: "a" }));
+    one.seed(fakeDocument({ id: "b" }));
+    const client = router([one.config(), two.config()], {
+      documents: { b: "two" },
+    });
+    const request = () => ({
+      jobs: [job("a", "a", ["SET_NAME"]), job("b", "b", ["SET_NAME"])],
+    });
+
+    await client.executeBatch(request());
+    await client.executeBatch(request());
+    await client.deleteDocuments(["a", "b"]);
+
+    expect(one.count("executeBatch")).toBe(2);
+    expect(two.count("executeBatch")).toBe(0);
+    expect(one.count("deleteDocument")).toBe(2);
+    expect(client.describeRouting().documents).toContainEqual({
+      identifier: "b",
+      backend: "one",
+    });
+  });
+
+  it("refuses deleteDocuments when a stale entry hides a real split", async () => {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    one.seed(fakeDocument({ id: "a" }));
+    two.seed(fakeDocument({ id: "b" }));
+    const client = router([one.config(), two.config()], {
+      documents: { b: "one" },
+    });
+
+    const run = client.deleteDocuments(["a", "b"]);
+
+    await expect(run).rejects.toThrow(CrossBackendBatchError);
+    await expect(run).rejects.toThrow("a@one, b@two");
+    expect(one.count("deleteDocument") + two.count("deleteDocument")).toBe(0);
   });
 });
