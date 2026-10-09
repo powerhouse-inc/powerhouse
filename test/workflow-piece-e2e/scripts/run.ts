@@ -39,7 +39,7 @@ import {
   fireWorkflow,
   pieceCatalog,
   runtimeHealth,
-  searchBlocksWhenReady,
+  searchPiecesWhenReady,
   SwitchboardClient,
   waitForRun,
 } from "./lib/graphql.js";
@@ -333,15 +333,16 @@ async function main(): Promise<void> {
       ["E2E Greeter", FIXTURE_VERSION, 1, 0],
     );
 
-    const search = await searchBlocksWhenReady(client, "greet");
-    const hit = search.hits.find(
+    const search = await searchPiecesWhenReady(client, "greet");
+    const hits = search.pieces.flatMap((piece) => piece.blocks);
+    const hit = hits.find(
       (h) => h.pieceName === FIXTURE_PACKAGE && h.name === "greet",
     );
     checks.ok(
-      "searchBlocks finds the piece's action",
+      "searchPieces finds the piece's action",
       hit !== undefined,
       () =>
-        `status=${search.status}, hits=${JSON.stringify(search.hits.map((h) => [h.pieceName, h.name]))}`,
+        `status=${search.status}, hits=${JSON.stringify(hits.map((h) => [h.pieceName, h.name]))}`,
     );
     checks.equal(
       "the hit is an action of this piece",
@@ -473,15 +474,23 @@ async function main(): Promise<void> {
       ["E2E Greeter", FIXTURE_VERSION, 1, 0],
     );
 
-    const fetchedSearch = await searchBlocksWhenReady(registryClient, "greet");
-    const fetchedHit = fetchedSearch.hits.find(
+    const fetchedSearch = await searchPiecesWhenReady(registryClient, "greet");
+    const fetchedPiece = fetchedSearch.pieces.find(
+      (piece) => piece.pieceName === FIXTURE_PACKAGE,
+    );
+    const fetchedHit = fetchedPiece?.blocks.find(
       (h) => h.pieceName === FIXTURE_PACKAGE,
     );
     checks.ok(
-      "searchBlocks finds the piece's action",
+      "searchPieces finds the piece's action",
       fetchedHit !== undefined,
       () =>
-        `status=${fetchedSearch.status}, hits=${JSON.stringify(fetchedSearch.hits.map((h) => [h.pieceName, h.name]))}`,
+        `status=${fetchedSearch.status}, pieces=${JSON.stringify(fetchedSearch.pieces.map((p) => [p.pieceName, p.source]))}`,
+    );
+    checks.equal(
+      "and lists it as a registry piece",
+      fetchedPiece?.source,
+      "registry",
     );
     // A piece nobody installed is offered at its published version, the
     // version a step picked from the listing pins.
