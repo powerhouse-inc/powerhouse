@@ -2,10 +2,9 @@ import {
   createReactorInspector,
   type ReactorInfo,
 } from "@powerhousedao/reactor";
-import {
-  getSwitchboardGatewayUrlFromDriveUrl,
-  type BrowserReactorClientModule,
-  type WorkerReactorClientModule,
+import type {
+  BrowserReactorClientModule,
+  WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
   createRoutingClient,
@@ -70,7 +69,8 @@ export function deriveSwitchboardGraphqlUrl(
   } catch {
     return undefined;
   }
-  return getSwitchboardGatewayUrlFromDriveUrl(parsed.href);
+  const prefix = /^(.*)\/d\/[^/]+\/?$/.exec(parsed.pathname)?.[1];
+  return prefix === undefined ? undefined : `${parsed.origin}${prefix}/graphql`;
 }
 
 export type MultiReactorParams = {

@@ -191,7 +191,7 @@ describe("local facts", () => {
     expect(inspector.info).toHaveBeenCalledTimes(2);
   });
 
-  it("a router built over a rebuilt module holds the new client and facts", async () => {
+  it("a router uses only the module it was built over", async () => {
     const before = localClient(servedLocal("doc-a"));
     const after = localClient(servedLocal("doc-a"));
     const old = workerModule(before);
@@ -369,6 +369,26 @@ describe("deriveSwitchboardGraphqlUrl", () => {
 
   it("answers undefined for a URL that does not parse", () => {
     expect(deriveSwitchboardGraphqlUrl("not a url")).toBeUndefined();
+  });
+
+  it("accepts a trailing slash after the slug", () => {
+    expect(deriveSwitchboardGraphqlUrl("http://localhost:4001/d/abc/")).toBe(
+      "http://localhost:4001/graphql",
+    );
+    expect(deriveSwitchboardGraphqlUrl("https://host/team-a/d/slug/")).toBe(
+      "https://host/team-a/graphql",
+    );
+  });
+
+  it("answers undefined for a URL with no /d/<slug>", () => {
+    expect(
+      deriveSwitchboardGraphqlUrl("http://localhost:4001"),
+    ).toBeUndefined();
+    expect(
+      deriveSwitchboardGraphqlUrl("http://localhost:4001/graphql"),
+    ).toBeUndefined();
+    expect(deriveSwitchboardGraphqlUrl("http://host/d/")).toBeUndefined();
+    expect(deriveSwitchboardGraphqlUrl("http://host/d/a/b")).toBeUndefined();
   });
 });
 
