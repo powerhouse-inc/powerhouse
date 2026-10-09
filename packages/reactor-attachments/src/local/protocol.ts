@@ -75,6 +75,8 @@ export type LocalAttachmentPendingResponse = {
   hash: AttachmentHash;
   expiresAtUtc: string;
   retryAfterMs: number;
+  /** At its serve cap: the peer did not authorize or look up the hash. */
+  busy?: true;
 };
 
 /**

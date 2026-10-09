@@ -188,8 +188,8 @@ export class LocalAttachmentServer {
       return;
     }
     if (this.inFlight.size >= this.maxConcurrentServes) {
-      // Busy is a wait, not a fault; the expiry outlasts a slow delivery,
-      // since the requester reads an expired pending as not-found.
+      // Busy is a wait, not a fault, and not a reservation: nothing was
+      // authorized or looked up.
       this.post({
         protocol: LOCAL_ATTACHMENT_PROTOCOL,
         kind: "pending",
@@ -197,6 +197,7 @@ export class LocalAttachmentServer {
         hash: data.hash,
         expiresAtUtc: new Date(Date.now() + BUSY_PENDING_TTL_MS).toISOString(),
         retryAfterMs: BUSY_RETRY_MS,
+        busy: true,
       });
       return;
     }
@@ -414,5 +415,5 @@ const DEFAULT_PENDING_RETRY_MS = 5_000;
 /** Retry hint sent with the `pending` that answers a request over the serve cap. */
 const BUSY_RETRY_MS = 1_000;
 
-/** Expiry of that `pending`; long enough that a slow delivery is still live. */
+/** Expiry of that `pending`, for callers that surface it as `AttachmentPending`. */
 const BUSY_PENDING_TTL_MS = 60_000;

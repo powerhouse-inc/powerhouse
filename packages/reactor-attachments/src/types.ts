@@ -237,6 +237,8 @@ export type TransportFetchResult =
       hash: AttachmentHash;
       expiresAtUtc: string;
       retryAfterMs: number;
+      /** The source is at capacity and did not look; not a reservation. */
+      busy?: true;
     }
   | { kind: "not-found" };
 

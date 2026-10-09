@@ -235,6 +235,67 @@ describe("PeeredAttachmentTransport", () => {
     });
   });
 
+  describe("a busy peer", () => {
+    const busyAnswer = {
+      kind: "pending",
+      hash: HASH,
+      expiresAtUtc: "2026-01-01T00:01:00.000Z",
+      retryAfterMs: 1_000,
+      busy: true,
+    } as const;
+
+    it("does not outrank another source's not-found", async () => {
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("busy", "col-1", source(busyAnswer));
+      transport.addPeer("quiet", "col-1", source({ kind: "not-found" }));
+      await expect(transport.fetch(HASH, DOC)).resolves.toEqual({
+        kind: "not-found",
+      });
+    });
+
+    it("does not outrank another source's error", async () => {
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("busy", "col-1", source(busyAnswer));
+      transport.addPeer(
+        "severed",
+        "col-1",
+        source(() => {
+          throw new Error("port is closed");
+        }),
+      );
+      await expect(transport.fetch(HASH, DOC)).rejects.toThrow(
+        /port is closed/,
+      );
+    });
+
+    it("does not hide another source's reservation", async () => {
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("busy", "col-1", source(busyAnswer));
+      transport.addPeer(
+        "uploading",
+        "col-1",
+        source({
+          kind: "pending",
+          hash: HASH,
+          expiresAtUtc: "2026-01-01T00:05:00.000Z",
+          retryAfterMs: 1_000,
+        }),
+      );
+      await expect(transport.fetch(HASH, DOC)).resolves.toEqual({
+        kind: "pending",
+        hash: HASH,
+        expiresAtUtc: "2026-01-01T00:05:00.000Z",
+        retryAfterMs: 1_000,
+      });
+    });
+
+    it("is the answer when no source said anything else", async () => {
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("busy", "col-1", source(busyAnswer));
+      await expect(transport.fetch(HASH, DOC)).resolves.toEqual(busyAnswer);
+    });
+  });
+
   it("refuses a second link to the same peer on the same channel, and forgets one on removal", () => {
     const transport = new PeeredAttachmentTransport();
     transport.addPeer("peer", "col-1", source({ kind: "not-found" }));

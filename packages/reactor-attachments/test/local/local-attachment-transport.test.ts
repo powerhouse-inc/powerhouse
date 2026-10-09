@@ -587,6 +587,7 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
         kind: "pending",
         id: "r2",
         hash: "a".repeat(64),
+        busy: true,
       }),
     ]);
     const retryAfterMs = fake.sent[0].retryAfterMs as number;
@@ -619,7 +620,7 @@ describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
     first.catch(() => undefined);
     const second = await puller.fetch(hash, DOC);
 
-    expect(second).toMatchObject({ kind: "pending", hash });
+    expect(second).toMatchObject({ kind: "pending", hash, busy: true });
     server.close();
     puller.close();
     channel.dispose();

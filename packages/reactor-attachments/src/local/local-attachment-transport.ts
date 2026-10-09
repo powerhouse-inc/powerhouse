@@ -335,6 +335,7 @@ export class LocalAttachmentTransport implements IAttachmentTransport {
             typeof message.retryAfterMs === "number"
               ? message.retryAfterMs
               : Number.NaN,
+          ...(message.busy === true ? { busy: true as const } : {}),
         });
         this.release(id, entry);
         return;

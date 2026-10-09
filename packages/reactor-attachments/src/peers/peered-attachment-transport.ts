@@ -12,10 +12,15 @@ import type { TransportFetchResult } from "../types.js";
 
 type DataResult = Extract<TransportFetchResult, { kind: "data" }>;
 
-/** What the sources that did not answer data said, ranked by the combine rule. */
+/**
+ * What the sources that did not answer data said, ranked by the combine rule:
+ * a reservation, then an error, then a not-found, then a busy source.
+ */
 class Answers {
   pending: TransportFetchResult | undefined;
+  busy: TransportFetchResult | undefined;
   firstError: Error | undefined;
+  notFound = false;
 
   error(error: unknown): void {
     this.firstError ??=
@@ -28,6 +33,9 @@ class Answers {
     }
     if (this.firstError !== undefined) {
       throw this.firstError;
+    }
+    if (this.busy && !this.notFound) {
+      return this.busy;
     }
     return { kind: "not-found" };
   }
@@ -191,10 +199,15 @@ export class PeeredAttachmentTransport implements IAttachmentTransport {
       return undefined;
     }
     if (result.kind === "pending") {
-      answers.pending ??= result;
+      if (result.busy) {
+        answers.busy ??= result;
+      } else {
+        answers.pending ??= result;
+      }
       return undefined;
     }
     if (result.kind === "not-found") {
+      answers.notFound = true;
       return undefined;
     }
     try {
