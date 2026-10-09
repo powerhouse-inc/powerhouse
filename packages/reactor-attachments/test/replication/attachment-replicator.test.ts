@@ -945,6 +945,38 @@ describe("AttachmentReplicator", () => {
     await h.replicator.stop();
   });
 
+  it("ends a source that only ever answers busy in failed, with an error", async () => {
+    const h = harness([], {
+      fetch: () =>
+        Promise.resolve({
+          kind: "pending",
+          hash: HASH,
+          expiresAtUtc: new Date(h.timers.now() + 60_000).toISOString(),
+          retryAfterMs: 1_000,
+          busy: true,
+        }),
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+
+    const startedAt = h.timers.now();
+    for (let step = 0; step < 200; step += 1) {
+      const [entry] = h.replicator.report();
+      if (entry.state !== "waiting") {
+        break;
+      }
+      h.timers.advance(entry.nextAttemptAtMs! - h.timers.now());
+      await h.replicator.idle();
+    }
+
+    const [entry] = h.replicator.report();
+    expect(entry.state).toBe("failed");
+    expect(entry.lastError).toMatch(/busy/);
+    expect(h.timers.now() - startedAt).toBeLessThan(2 * 60 * 60_000);
+    await h.replicator.stop();
+  });
+
   it("ends an expired pending in not-found, which a new document revives", async () => {
     const h = harness(
       [

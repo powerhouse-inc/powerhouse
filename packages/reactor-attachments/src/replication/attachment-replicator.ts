@@ -490,6 +490,9 @@ export class AttachmentReplicator {
     signal.throwIfAborted();
 
     const result = await this.transport.fetch(entry.hash, documentId, signal);
+    if (result.kind === "pending" && result.busy) {
+      return { kind: "busy", documentId, retryAfterMs: result.retryAfterMs };
+    }
     if (result.kind === "pending") {
       return {
         kind: "pending",
@@ -526,6 +529,14 @@ export class AttachmentReplicator {
       this.timers.now(),
       this.policy,
     );
+    if (outcome.kind === "busy" && next.entry.errorRun > entry.retry.errorRun) {
+      this.recordError(
+        entry,
+        new Error(
+          `the attachment source stayed busy for ${entry.hash} through a full backoff`,
+        ),
+      );
+    }
     entry.retry = next.entry;
     switch (next.state) {
       case "held":

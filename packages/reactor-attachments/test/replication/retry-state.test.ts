@@ -46,6 +46,11 @@ const error = (documentId: string): FetchOutcome => ({
   kind: "error",
   documentId,
 });
+const busy = (documentId: string, retryAfterMs = 1_000): FetchOutcome => ({
+  kind: "busy",
+  documentId,
+  retryAfterMs,
+});
 
 type Row = {
   name: string;
@@ -145,6 +150,52 @@ const ROWS: Row[] = [
     state: "waiting",
     delayMs: 2_000,
     expect: { notFoundAnswers: 2, errorRun: 0 },
+  },
+  {
+    name: "a busy answer waits without touching the reservation, the runs or the documents",
+    from: entry({
+      notFoundAnswers: 1,
+      errorRun: 2,
+      pendingRun: 2,
+      livePending: { documentId: "D2", untilMs: NOW + 60_000 },
+      unasked: [],
+      asked: ["D1", "D2"],
+    }),
+    outcome: busy("D1"),
+    state: "waiting",
+    delayMs: 1_000,
+    expect: {
+      busyRun: 1,
+      notFoundAnswers: 1,
+      errorRun: 2,
+      pendingRun: 2,
+      livePending: { documentId: "D2", untilMs: NOW + 60_000 },
+      asked: ["D1", "D2"],
+    },
+    next: "D1",
+  },
+  {
+    name: "a busy delay doubles per busy answer in the run",
+    from: entry({ busyRun: 2 }),
+    outcome: busy("D1"),
+    state: "waiting",
+    delayMs: 4_000,
+    expect: { busyRun: 3 },
+  },
+  {
+    name: "a busy run that reaches the pending cap counts as one error",
+    from: entry({ busyRun: 3, errorRun: 1 }),
+    outcome: busy("D1"),
+    state: "waiting",
+    delayMs: 200,
+    expect: { busyRun: 0, errorRun: 2 },
+  },
+  {
+    name: "a busy run that reaches the cap at the error budget fails",
+    from: entry({ busyRun: 3, errorRun: 2 }),
+    outcome: busy("D1"),
+    state: "failed",
+    delayMs: undefined,
   },
   {
     name: "an expired pending is a not-found",
@@ -370,6 +421,35 @@ describe("nextAfter", () => {
     ]);
   });
 
+  it("ends any other outcome's busy run", () => {
+    for (const outcome of [
+      pending("D1"),
+      notFound("D1"),
+      error("D1"),
+      { kind: "data" } as const,
+    ]) {
+      expect(
+        nextAfter(entry({ busyRun: 3 }), outcome, NOW, POLICY).entry,
+      ).toMatchObject({ busyRun: 0 });
+    }
+  });
+
+  it("ends a source that only ever answers busy in failed", () => {
+    let current = entry();
+    let now = NOW;
+    let answers = 0;
+    let state: RetryState = "waiting";
+    while (state === "waiting" && answers < 1_000) {
+      const transition = nextAfter(current, busy("D1"), now, POLICY);
+      current = transition.entry;
+      state = transition.state;
+      now += transition.delayMs ?? 0;
+      answers += 1;
+    }
+    expect(state).toBe("failed");
+    expect(now - NOW).toBeLessThan(60_000);
+  });
+
   it("never ends on pending alone", () => {
     let current = entry();
     for (let i = 0; i < 1_000; i += 1) {
@@ -417,6 +497,7 @@ describe("document selection", () => {
       notFoundAnswers: 0,
       errorRun: 0,
       pendingRun: 0,
+      busyRun: 0,
       livePending: undefined,
       unasked: ["D1", "D2"],
       asked: [],

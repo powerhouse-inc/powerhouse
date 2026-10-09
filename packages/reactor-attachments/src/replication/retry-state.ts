@@ -14,6 +14,8 @@ export type RetryEntry = {
   errorRun: number;
   /** Per run: pendings since the last non-pending outcome; backoff only. */
   pendingRun: number;
+  /** Per run: busy answers since the last other outcome; a run reaching the cap is one error. */
+  busyRun: number;
   /** While live, a not-found from another document is not terminal. */
   livePending: { documentId: string; untilMs: number } | undefined;
   /** Never answered through, oldest first; asked before `asked`. */
@@ -30,6 +32,7 @@ export type FetchOutcome =
       expiresAtUtc: string;
       retryAfterMs: number;
     }
+  | { kind: "busy"; documentId: string; retryAfterMs: number }
   | { kind: "not-found"; documentId: string }
   | { kind: "error"; documentId: string }
   | { kind: "aborted" };
@@ -48,6 +51,7 @@ export function newRetryEntry(documentId: string): RetryEntry {
     notFoundAnswers: 0,
     errorRun: 0,
     pendingRun: 0,
+    busyRun: 0,
     livePending: undefined,
     unasked: [documentId],
     asked: [],
@@ -65,6 +69,7 @@ export function resetRetry(documentIds: readonly string[]): RetryEntry {
     notFoundAnswers: 0,
     errorRun: 0,
     pendingRun: 0,
+    busyRun: 0,
     livePending: undefined,
     unasked: [...documentIds],
     asked: [],
@@ -93,7 +98,13 @@ export function nextAfter(
   switch (outcome.kind) {
     case "data":
       return {
-        entry: { ...entry, errorRun: 0, pendingRun: 0, livePending: undefined },
+        entry: {
+          ...entry,
+          errorRun: 0,
+          pendingRun: 0,
+          busyRun: 0,
+          livePending: undefined,
+        },
         state: "held",
         delayMs: undefined,
       };
@@ -113,6 +124,7 @@ export function nextAfter(
           ...entry,
           errorRun: 0,
           pendingRun,
+          busyRun: 0,
           livePending: { documentId: outcome.documentId, untilMs },
           unasked: without(entry.unasked, outcome.documentId),
           asked: [
@@ -124,36 +136,60 @@ export function nextAfter(
         delayMs: pendingDelay(outcome.retryAfterMs, pendingRun, policy),
       };
     }
+    case "busy": {
+      // Not a reservation: no budget is spent and no run ends, but a run
+      // that backs off to the cap counts as one error.
+      const busyRun = entry.busyRun + 1;
+      if (
+        pendingGrowth(outcome.retryAfterMs, busyRun, policy) >=
+        policy.maxPendingRetryMs
+      ) {
+        return failure(entry, outcome.documentId, policy);
+      }
+      return {
+        entry: { ...entry, busyRun },
+        state: "waiting",
+        delayMs: pendingDelay(outcome.retryAfterMs, busyRun, policy),
+      };
+    }
     case "not-found":
       return notFound(entry, outcome.documentId, now, policy);
-    case "error": {
-      const errorRun = entry.errorRun + 1;
-      if (errorRun < policy.errorAttempts) {
-        return {
-          entry: { ...entry, errorRun, pendingRun: 0 },
-          state: "waiting",
-          delayMs: backoff(policy.errorRetryMs, errorRun),
-        };
-      }
-      const next: RetryEntry = {
-        ...entry,
-        errorRun,
-        pendingRun: 0,
-        unasked: without(entry.unasked, outcome.documentId),
-        asked: entry.asked.includes(outcome.documentId)
-          ? entry.asked
-          : [...entry.asked, outcome.documentId],
-      };
-      if (next.unasked.length > 0) {
-        return {
-          entry: next,
-          state: "waiting",
-          delayMs: backoff(policy.errorRetryMs, errorRun),
-        };
-      }
-      return { entry: next, state: "failed", delayMs: undefined };
-    }
+    case "error":
+      return failure(entry, outcome.documentId, policy);
   }
+}
+
+function failure(
+  entry: RetryEntry,
+  documentId: string,
+  policy: AttachmentRetryPolicy,
+): RetryTransition {
+  const errorRun = entry.errorRun + 1;
+  if (errorRun < policy.errorAttempts) {
+    return {
+      entry: { ...entry, errorRun, pendingRun: 0, busyRun: 0 },
+      state: "waiting",
+      delayMs: backoff(policy.errorRetryMs, errorRun),
+    };
+  }
+  const next: RetryEntry = {
+    ...entry,
+    errorRun,
+    pendingRun: 0,
+    busyRun: 0,
+    unasked: without(entry.unasked, documentId),
+    asked: entry.asked.includes(documentId)
+      ? entry.asked
+      : [...entry.asked, documentId],
+  };
+  if (next.unasked.length > 0) {
+    return {
+      entry: next,
+      state: "waiting",
+      delayMs: backoff(policy.errorRetryMs, errorRun),
+    };
+  }
+  return { entry: next, state: "failed", delayMs: undefined };
 }
 
 function notFound(
@@ -174,6 +210,7 @@ function notFound(
     notFoundAnswers,
     errorRun: 0,
     pendingRun: 0,
+    busyRun: 0,
     livePending,
     unasked: without(entry.unasked, documentId),
     asked: [...without(entry.asked, documentId), documentId],
@@ -192,18 +229,26 @@ function notFound(
   return { entry: next, state: "not-found", delayMs: undefined };
 }
 
-function pendingDelay(
+/** A run's uncapped wait: the asked delay, floored, doubled per answer. */
+function pendingGrowth(
   retryAfterMs: number,
-  pendingRun: number,
+  run: number,
   policy: AttachmentRetryPolicy,
 ): number {
   const asked =
     Number.isFinite(retryAfterMs) && retryAfterMs >= 0
       ? retryAfterMs
       : policy.pendingRetryMs;
-  const base = Math.max(asked, policy.minPendingRetryMs);
+  return Math.max(asked, policy.minPendingRetryMs) * 2 ** (run - 1);
+}
+
+function pendingDelay(
+  retryAfterMs: number,
+  pendingRun: number,
+  policy: AttachmentRetryPolicy,
+): number {
   const grown = Math.min(
-    base * 2 ** (pendingRun - 1),
+    pendingGrowth(retryAfterMs, pendingRun, policy),
     policy.maxPendingRetryMs,
   );
   return Math.min(
