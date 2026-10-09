@@ -30,6 +30,19 @@ export enum PollBehavior {
   Manual = "manual",
 }
 
+/**
+ * Whether a remote outlives the process that added it.
+ *
+ * A `Session` remote's transport is a live object of this session, such as a
+ * brokered `MessagePort`. Its record is written like any other, so its cursors,
+ * holds and dead letters have a parent row, and the next `startup()` removes
+ * it instead of rehydrating it.
+ */
+export enum RemotePersistence {
+  Durable = "durable",
+  Session = "session",
+}
+
 export type RemoteOptions = {
   /**
    * Stringified UTC timestamp (ms). When set and not `"0"`, outbox operations older
@@ -37,6 +50,8 @@ export type RemoteOptions = {
    * the filter, syncing from the beginning of history.
    */
   sinceTimestampUtcMs?: string;
+  /** Defaults to {@link RemotePersistence.Durable}. */
+  persistence?: RemotePersistence;
   /**
    * Polling cadence for this remote. Defaults to `PollBehavior.Auto` when omitted.
    */

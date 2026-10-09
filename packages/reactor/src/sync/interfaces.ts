@@ -135,6 +135,9 @@ export type PeerManifestListener = (
  * their own factories that implement this interface.
  */
 export interface IChannelFactory {
+  /** The `ChannelConfig.type`s this factory builds; absent when it does not say. */
+  readonly channelTypes?: readonly string[];
+
   /**
    * Creates a new channel instance with the given configuration.
    *
@@ -312,6 +315,9 @@ export interface ISyncManager {
    * @throws Error if the remote does not exist
    */
   remove(name: string): Promise<void>;
+
+  /** Settles once no reset of the remote is running or queued; never rejects. */
+  resetSettled?(name: string): Promise<void>;
 
   /**
    * Lists all configured remotes.

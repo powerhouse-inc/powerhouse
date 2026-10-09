@@ -1,4 +1,8 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  AdoptSyncPeerParams,
+  RemoveSyncPeerParams,
+} from "./adopt-sync-peer.js";
 import {
   hostResponder,
   type IHostResponder,
@@ -8,11 +12,13 @@ import {
   type CorrelationId,
   type ReactorIdentity,
   type RpcAdmin,
+  type RpcAdoptSyncPeer,
   type RpcDbOp,
   type RpcHello,
   type RpcInspectorOp,
   type RpcLiveSubscribe,
   type RpcRegisterPackages,
+  type RpcRemoveSyncPeer,
   type RpcSyncOp,
   type RpcUnregisterPackages,
   type VersionFingerprint,
@@ -34,8 +40,15 @@ function isDataMessage(
     msg.k === "sync-op" ||
     msg.k === "db-op" ||
     msg.k === "inspector-op" ||
+    msg.k === "adopt-sync-peer" ||
+    msg.k === "remove-sync-peer" ||
     msg.k === "sub-live"
   );
+}
+
+/** A rejected adopt still owns the port it moved here, so close it. */
+function closeTransferredPort(msg: ClientMessage): void {
+  if (msg.k === "adopt-sync-peer") msg.port.close();
 }
 
 export type ReactorHostOptions = {
@@ -50,6 +63,12 @@ export type ReactorHostOptions = {
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onInspectorOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  /** See `localSyncPeerHandlers`, which builds both over the reactor's registry. */
+  onAdoptSyncPeer?: (
+    params: AdoptSyncPeerParams,
+    port: MessagePort,
+  ) => Promise<void>;
+  onRemoveSyncPeer?: (params: RemoveSyncPeerParams) => Promise<void>;
   onLiveQuery?: (
     sql: string,
     params: unknown[],
@@ -186,11 +205,13 @@ export class ReactorHost {
       }
       if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
         // Route the rejection to the kind's owner (sub -> sub-err, etc.).
+        closeTransferredPort(msg);
         reply.errForKind(msg, new Error("migration in progress"));
         return;
       }
       // No reload here: a tab past its poisoned-store budget stays put on purpose.
       if (this.retirement && isDataMessage(msg)) {
+        closeTransferredPort(msg);
         reply.errForKind(msg, retiredError());
         return;
       }
@@ -220,6 +241,14 @@ export class ReactorHost {
       }
       if (msg.k === "inspector-op") {
         void this.handleOp(msg, this.options.onInspectorOp, "inspector", reply);
+        return;
+      }
+      if (msg.k === "adopt-sync-peer") {
+        void this.handleAdoptSyncPeer(msg, reply);
+        return;
+      }
+      if (msg.k === "remove-sync-peer") {
+        void this.handleRemoveSyncPeer(msg, reply);
         return;
       }
       if (msg.k === "sub-live") {
@@ -526,6 +555,58 @@ export class ReactorHost {
       },
       (value) => value,
     );
+  }
+
+  /** Closes the moved port on every failure; the sender can no longer close it. */
+  private async handleAdoptSyncPeer(
+    message: RpcAdoptSyncPeer,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onAdoptSyncPeer;
+    if (!handler) {
+      closeTransferredPort(message);
+      reply.errForKind(
+        message,
+        new Error("ReactorHost has no adopt-sync-peer handler"),
+      );
+      return;
+    }
+    await reply.run(message.id, async () => {
+      try {
+        await this.awaitClientReady();
+        await handler(
+          {
+            peerId: message.peerId,
+            channelName: message.channelName,
+            collectionIdKey: message.collectionIdKey,
+            remoteName: message.remoteName,
+            filter: message.filter,
+          },
+          message.port,
+        );
+      } catch (error) {
+        closeTransferredPort(message);
+        throw error;
+      }
+    });
+  }
+
+  private async handleRemoveSyncPeer(
+    message: RpcRemoveSyncPeer,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onRemoveSyncPeer;
+    if (!this.requireHandler(handler, message, reply, "remove-sync-peer")) {
+      return;
+    }
+    await reply.run(message.id, async () => {
+      await this.awaitClientReady();
+      await handler({
+        peerId: message.peerId,
+        channelName: message.channelName,
+        remoteName: message.remoteName,
+      });
+    });
   }
 
   private async handleLiveSubscribe(

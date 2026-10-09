@@ -110,6 +110,7 @@ import type {
 } from "./types.js";
 import {
   ChannelErrorSource,
+  RemotePersistence,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
@@ -186,6 +187,20 @@ function isCredentialOrNetworkError(error: unknown): boolean {
     (error.category === "network" || error.category === "timeout")
   );
 }
+
+function isSessionScoped(options: RemoteOptions): boolean {
+  return options.persistence === RemotePersistence.Session;
+}
+
+/**
+ * A stored remote brought back up by startup(), with the inbox items that were
+ * already there before its callbacks were wired -- restored from storage, or
+ * pushed while the remote was reachable but unwired.
+ */
+type RehydratedRemote = {
+  remote: Remote;
+  unheard: SyncOperation[];
+};
 
 const holdKey = (documentId: string, branch: string): string =>
   `${documentId}\u0000${branch}`;
@@ -426,6 +441,17 @@ export class SyncManager
       throw new Error("SyncManager is already shutdown and cannot be started");
     }
 
+    // Purged first: their dead letters and holds go with them, so loading
+    // those before would keep a quarantine nothing can lift.
+    const remoteRecords: RemoteRecord[] = [];
+    for (const record of await this.remoteStorage.list()) {
+      if (isSessionScoped(record.options)) {
+        await this.purgeSessionRemote(record.name);
+        continue;
+      }
+      remoteRecords.push(record);
+    }
+
     try {
       const quarantinedIds =
         await this.deadLetterStorage.listQuarantinedDocumentIds();
@@ -464,43 +490,24 @@ export class SyncManager
       );
     }
 
-    const remoteRecords = await this.remoteStorage.list();
     const head = await this.watermarkHead();
     this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
-      const channel = this.channelFactory.instance(
-        record.id,
-        record.name,
-        record.channelConfig,
-        this.cursorStorage,
-        record.collectionId,
-        record.filter,
-        this.operationIndex,
-        record.options,
-      );
-
-      const remote: Remote = {
-        meta: {
-          id: record.id,
-          name: record.name,
-          collectionId: record.collectionId,
-          channelConfig: record.channelConfig,
-          filter: record.filter,
-          options: record.options,
-          peer: record.peer,
-        },
-        channel,
-      };
-
-      this.remotes.set(record.name, remote);
-      this.owe(record.name, head);
-      this.records.set(record.name, remote.meta);
-      await this.loadDeadLetters(remote);
-      await this.restoreReceivedMarkers(remote);
-      // Restored, or pushed while the remote was reachable but unwired.
-      const unheard = [...remote.channel.inbox.items];
-      this.wireChannelCallbacks(remote);
+      // Building the channel and wiring it up is guarded as a whole: a factory
+      // that rejects this record's config (or a wiring step that throws) must
+      // degrade THIS remote, never the boot. A reactor whose sync module cannot
+      // start is a reactor that cannot be repaired from.
+      let rehydrated: RehydratedRemote;
+      try {
+        rehydrated = await this.rehydrateRemote(record, head);
+      } catch (error) {
+        await this.degradeRemoteAfterFailedRehydration(record, error);
+        continue;
+      }
+      const remote = rehydrated.remote;
+      const channel = remote.channel;
+      const unheard = rehydrated.unheard;
 
       try {
         await channel.init();
@@ -1192,6 +1199,21 @@ export class SyncManager
     return kept;
   }
 
+  /** A previous session's transport is gone, so its remote and rows go too. */
+  private async purgeSessionRemote(name: string): Promise<void> {
+    try {
+      await this.remoteStorage.remove(name);
+      await this.cursorStorage.remove(name);
+      await this.forgetRemote(name);
+    } catch (error) {
+      this.logger.error(
+        "Error removing a previous session's remote at startup (@name, @error)",
+        name,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
   private recordOf(meta: RemoteMeta): RemoteRecord {
     return {
       id: meta.id,
@@ -1251,8 +1273,9 @@ export class SyncManager
           : { manifest: peer, receivedAtUtcMs: Date.now() },
     };
 
-    await this.remoteStorage.upsert(this.recordOf(meta));
-
+    // The factory validates the config, so it runs BEFORE the record is
+    // persisted: a config the factory rejects must not leave a durable remote
+    // behind that every later startup would then try (and fail) to rehydrate.
     const channel = this.channelFactory.instance(
       remoteId,
       name,
@@ -1263,6 +1286,8 @@ export class SyncManager
       this.operationIndex,
       options,
     );
+
+    await this.remoteStorage.upsert(this.recordOf(meta));
 
     const remote: Remote = { meta, channel };
 
@@ -1325,6 +1350,111 @@ export class SyncManager
       // finally still guarantees the slot is freed if one of them throws.
       this.remotes.delete(name);
       this.removing.delete(name);
+    }
+  }
+
+  /**
+   * Rebuilds one stored remote's channel and wires it up, short of init().
+   *
+   * Everything here can throw -- the factory rejects an unusable config, the
+   * dead-letter and marker reads touch storage -- so startup() calls it inside
+   * a guard and degrades just this remote when it does. Nothing is left half
+   * registered on the throwing path that {@link degradeRemoteAfterFailedRehydration}
+   * does not then clear.
+   */
+  private async rehydrateRemote(
+    record: RemoteRecord,
+    head: number,
+  ): Promise<RehydratedRemote> {
+    const channel = this.channelFactory.instance(
+      record.id,
+      record.name,
+      record.channelConfig,
+      this.cursorStorage,
+      record.collectionId,
+      record.filter,
+      this.operationIndex,
+      record.options,
+    );
+
+    const remote: Remote = {
+      meta: {
+        id: record.id,
+        name: record.name,
+        collectionId: record.collectionId,
+        channelConfig: record.channelConfig,
+        filter: record.filter,
+        options: record.options,
+        peer: record.peer,
+      },
+      channel,
+    };
+
+    this.remotes.set(record.name, remote);
+    this.owe(record.name, head);
+    this.records.set(record.name, remote.meta);
+    await this.loadDeadLetters(remote);
+    await this.restoreReceivedMarkers(remote);
+    const unheard = [...remote.channel.inbox.items];
+    this.wireChannelCallbacks(remote);
+    return { remote, unheard };
+  }
+
+  /**
+   * Records a stored remote startup() could not bring up and moves on.
+   *
+   * Classified exactly as a failed init is: a credential or network failure
+   * says nothing about the configuration, so the row stays and a retry after
+   * sign-in can re-add it; anything else -- a factory with no scheme for this
+   * config, a transport this session cannot resolve -- says the record itself
+   * is unusable, so it is dropped rather than left to fail every boot. Either
+   * way the boot carries on without it.
+   */
+  private async degradeRemoteAfterFailedRehydration(
+    record: RemoteRecord,
+    error: unknown,
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(
+      "Error rehydrating stored remote at startup (@name, @error)",
+      record.name,
+      message,
+    );
+
+    const recordKept = isCredentialOrNetworkError(error);
+
+    this.remotes.delete(record.name);
+    this.owed.delete(record.name);
+    this.derivedThrough.delete(record.name);
+    this.connectionStateUnsubscribes.get(record.name)?.();
+    this.connectionStateUnsubscribes.delete(record.name);
+
+    if (recordKept) {
+      return;
+    }
+
+    try {
+      await this.remoteStorage.remove(record.name);
+    } catch (removeError) {
+      this.logger.error(
+        "Error removing unusable remote record at startup (@name, @error)",
+        record.name,
+        removeError instanceof Error
+          ? removeError.message
+          : String(removeError),
+      );
+    }
+
+    try {
+      await this.forgetRemote(record.name);
+    } catch (forgetError) {
+      this.logger.error(
+        "Error forgetting unusable remote at startup (@name, @error)",
+        record.name,
+        forgetError instanceof Error
+          ? forgetError.message
+          : String(forgetError),
+      );
     }
   }
 
@@ -1428,6 +1558,14 @@ export class SyncManager
   /** Settles once the remotes' received markers are stored; rejects if one failed. */
   async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
     await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  async resetSettled(name: string): Promise<void> {
+    for (;;) {
+      const pending = this.queuedResets.get(name) ?? this.resets.get(name);
+      if (!pending) return;
+      await pending.catch(() => undefined);
+    }
   }
 
   /** Never joins a running rebuild: it may have read state older than the request. */

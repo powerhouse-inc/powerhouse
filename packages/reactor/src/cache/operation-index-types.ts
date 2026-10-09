@@ -188,6 +188,16 @@ export class DriveCollectionId {
    * The single deserializer for the wire/storage form. `branch` may contain
    * dots, while `driveId` is a dot-free document id, so the drive id is the
    * final dot-delimited segment.
+   *
+   * That asymmetry is a real constraint, not a convention: a drive id
+   * containing a dot does NOT survive `key` -> `fromKey`, because the split
+   * takes the LAST dot and so hands the tail of the drive id back as the drive
+   * id and everything before it as the branch. The key format is the wire and
+   * storage representation of existing `document_collections` rows, so it
+   * cannot be changed; callers that accept a drive id or branch from outside
+   * (a UI field, an RPC payload) must reject dots in the drive id at their own
+   * boundary. The round-trip is verifiable without parsing rules:
+   * `DriveCollectionId.fromKey(id.key).key === id.key`.
    */
   static fromKey(key: string): DriveCollectionId {
     if (!key.startsWith(DRIVE_COLLECTION_PREFIX)) {
