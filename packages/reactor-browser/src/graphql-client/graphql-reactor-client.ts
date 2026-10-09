@@ -708,6 +708,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     return { jobs };
   }
 
+  /** The job as `jobStatus` reports it now; `undefined` when it reports none. */
+  async getJob(
+    jobId: string,
+    signal?: AbortSignal,
+  ): Promise<JobInfo | undefined> {
+    const result = await this.sdk.GetJobStatus({ jobId }, undefined, signal);
+    return result.jobStatus ? jobInfoFromGql(result.jobStatus) : undefined;
+  }
+
   /** Polls `jobStatus` until the job is READ_READY or FAILED. */
   async waitForJob(
     jobOrId: string | JobInfo,
