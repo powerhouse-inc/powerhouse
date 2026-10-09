@@ -1,3 +1,25 @@
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **switchboard:** start the Pyroscope profiler in embedded servers ([3dc361721d](https://github.com/powerhouse-inc/powerhouse/commit/3dc361721d))
+- **reactor-workflow:** stream, cache and authorize step attachments ([2c33603d58](https://github.com/powerhouse-inc/powerhouse/commit/2c33603d58))
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **switchboard:** shut down and restart when the reactor's pglite session is poisoned ([ccbb0ecef1](https://github.com/powerhouse-inc/powerhouse/commit/ccbb0ecef1))
+- **switchboard:** build the pglite store on the hardened dialect ([8c359d9278](https://github.com/powerhouse-inc/powerhouse/commit/8c359d9278))
+- **reactor-workflow:** carry INDETERMINATE through test reporting ([ada7daaa61](https://github.com/powerhouse-inc/powerhouse/commit/ada7daaa61))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

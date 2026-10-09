@@ -17,7 +17,7 @@ describe("reloadOnPoisonedStore", () => {
     expect(gen).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it("is what the worker hands both of its stores' dialects", () => {
+  it("is what the worker hands both of its stores", () => {
     const worker = readFileSync(
       fileURLToPath(new URL("../reactor.worker.ts", import.meta.url)),
       "utf8",
@@ -25,10 +25,13 @@ describe("reloadOnPoisonedStore", () => {
     const dialects = [
       ...worker.matchAll(/new HardenedPGliteDialect\(([\s\S]*?)\)/g),
     ];
-    expect(dialects).toHaveLength(2);
-    for (const [call] of dialects) {
-      expect(call).toMatch(/onPoisoned: onStorePoisoned/);
-    }
+    expect(dialects).toHaveLength(1);
+    expect(dialects[0]?.[0]).toMatch(/onPoisoned: onStorePoisoned/);
+    const groupCommit = [
+      ...worker.matchAll(/\.withGroupCommitPGlite\(\{([\s\S]*?)\}\)/g),
+    ];
+    expect(groupCommit).toHaveLength(1);
+    expect(groupCommit[0]?.[0]).toMatch(/onUnrecoverable: onStorePoisoned/);
     expect(worker).toMatch(
       /const onStorePoisoned = reloadOnPoisonedStore\(\s*\(reason, gen\) =>\s*host\.retireAndReload\(reason, gen\)/,
     );

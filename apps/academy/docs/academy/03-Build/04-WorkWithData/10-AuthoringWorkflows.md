@@ -38,16 +38,23 @@ To search across everything instead:
 ```graphql
 query {
   workflowRuntime {
-    searchBlocks(query: "invoice", limit: 20) {
+    searchPieces(query: "invoice", kind: "action", limit: 20) {
       status
-      hits { pieceName pieceVersion name kind displayName }
+      pieces {
+        pieceName
+        source
+        blocks { pieceName pieceVersion name kind displayName }
+      }
     }
   }
 }
 ```
 
-The search index builds lazily, so the first call may report a status of
-`indexing` — poll until it settles.
+Results come grouped by piece, best match first. `kind` is `action` or
+`trigger`. `sources` (`local`, `registry`, `activepieces`) and `categories`
+narrow the search, and `limit` caps the number of pieces. The search index
+builds lazily, so the first call may report a status of `indexing` — poll
+until it settles.
 
 Two more queries:
 

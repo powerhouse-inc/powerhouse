@@ -1,3 +1,76 @@
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+- ⚠️  **reactor:** refuse withChannelScheme together with withSync ([1a4ae14508](https://github.com/powerhouse-inc/powerhouse/commit/1a4ae14508))
+- **reactor:** requeue a dead letter, dropping its row only after the retry lands ([16481bf37b](https://github.com/powerhouse-inc/powerhouse/commit/16481bf37b))
+- **reactor:** add ISyncAdmin with reset and clear levers ([1a786e26c4](https://github.com/powerhouse-inc/powerhouse/commit/1a786e26c4))
+- **reactor:** report a poisoned pglite session to its owner through onPoisoned ([de2915e76d](https://github.com/powerhouse-inc/powerhouse/commit/de2915e76d))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor:** never settle a pending requeue against a parked copy ([84c842d42e](https://github.com/powerhouse-inc/powerhouse/commit/84c842d42e))
+- **reactor:** keep one parked copy of an operation per inbox ([95b0c05df2](https://github.com/powerhouse-inc/powerhouse/commit/95b0c05df2))
+- **reactor:** drop a parked requeue when its dead letter is cleared ([50d2bab5dc](https://github.com/powerhouse-inc/powerhouse/commit/50d2bab5dc))
+- **reactor:** carry a reset channel's parked inbox items into its fresh inbox ([41fd68ab89](https://github.com/powerhouse-inc/powerhouse/commit/41fd68ab89))
+- **reactor:** release a held inbox item replaced under its id ([148aadfd99](https://github.com/powerhouse-inc/powerhouse/commit/148aadfd99))
+- **reactor:** drop a cleared dead letter that a reset reloaded meanwhile ([2e11b0cb33](https://github.com/powerhouse-inc/powerhouse/commit/2e11b0cb33))
+- **reactor:** leave a resetting channel's parked items to its fresh channel on a lift ([4a2ea5fa3f](https://github.com/powerhouse-inc/powerhouse/commit/4a2ea5fa3f))
+- **reactor:** refuse a requeue raced by a reset with SyncRepairRefusedError ([d67e3666f5](https://github.com/powerhouse-inc/powerhouse/commit/d67e3666f5))
+- **reactor:** release a parked requeue when its channel is reset ([fa9859722f](https://github.com/powerhouse-inc/powerhouse/commit/fa9859722f))
+- **reactor:** keep a remote's pending requeues across a reset ([7f417e2939](https://github.com/powerhouse-inc/powerhouse/commit/7f417e2939))
+- **reactor:** load a requeued op ahead of the ops its quarantine parked ([4bbbb219bb](https://github.com/powerhouse-inc/powerhouse/commit/4bbbb219bb))
+- **reactor:** check the dead-letter mailboxes again after the lift's storage read ([7e13a5da34](https://github.com/powerhouse-inc/powerhouse/commit/7e13a5da34))
+- **reactor:** fail a reset whose dead-letter or marker read fails ([3a4ee4afcf](https://github.com/powerhouse-inc/powerhouse/commit/3a4ee4afcf))
+- **reactor:** clear only a dead letter that belongs to the named remote ([795fc130f7](https://github.com/powerhouse-inc/powerhouse/commit/795fc130f7))
+- **reactor:** hold the inbox cursor below items parked by a quarantine ([9237a4d893](https://github.com/powerhouse-inc/powerhouse/commit/9237a4d893))
+- **reactor:** forget a remote's pending requeues when its channel goes ([fb3b397c6c](https://github.com/powerhouse-inc/powerhouse/commit/fb3b397c6c))
+- **reactor:** judge a quarantine lift by the restart rule alone ([2dedbe21cd](https://github.com/powerhouse-inc/powerhouse/commit/2dedbe21cd))
+- **reactor:** record a re-dead-lettered op's latest failure ([5ecdf7b106](https://github.com/powerhouse-inc/powerhouse/commit/5ecdf7b106))
+- **reactor:** claim a requeue before its first await ([675f6239d7](https://github.com/powerhouse-inc/powerhouse/commit/675f6239d7))
+- **reactor:** release a requeued dead letter dropped for a purged document ([27dcec913a](https://github.com/powerhouse-inc/powerhouse/commit/27dcec913a))
+- **reactor:** lift a quarantine only when no quarantining dead letter remains ([b66fae32b3](https://github.com/powerhouse-inc/powerhouse/commit/b66fae32b3))
+- **reactor:** dispatch inbox items parked by a quarantine when it lifts ([ada39c7fd1](https://github.com/powerhouse-inc/powerhouse/commit/ada39c7fd1))
+- **reactor:** make requeueing a pending dead letter a no-op ([7fb94b01cb](https://github.com/powerhouse-inc/powerhouse/commit/7fb94b01cb))
+- **reactor:** requeue only dead letters that failed while applying here ([ae83fbf80d](https://github.com/powerhouse-inc/powerhouse/commit/ae83fbf80d))
+- **reactor:** never let a reset join a rebuild that started before it ([84d2a59f4b](https://github.com/powerhouse-inc/powerhouse/commit/84d2a59f4b))
+- **reactor:** keep a reset's fresh channel from outliving a removal ([1b0e68e87e](https://github.com/powerhouse-inc/powerhouse/commit/1b0e68e87e))
+- **reactor:** backfill a reset channel from its outbox cursor ([dabaf5a76c](https://github.com/powerhouse-inc/powerhouse/commit/dabaf5a76c))
+- **reactor:** leave a remote unregistered, not half-dead, when its reset fails ([ad7ee575b6](https://github.com/powerhouse-inc/powerhouse/commit/ad7ee575b6))
+- **reactor:** leave a stopped poll loop's error in place on a recoverable push failure ([abf5452407](https://github.com/powerhouse-inc/powerhouse/commit/abf5452407))
+- **reactor:** keep a stopped poll loop's error through a successful push ([1eb1e8fcda](https://github.com/powerhouse-inc/powerhouse/commit/1eb1e8fcda))
+- **reactor:** earn "connected" with a poll since the loop last started ([74106c8648](https://github.com/powerhouse-inc/powerhouse/commit/74106c8648))
+- **reactor:** size the poll tick watchdog by the requests one tick makes ([26626937b6](https://github.com/powerhouse-inc/powerhouse/commit/26626937b6))
+- **reactor:** bound the sync request's token fetch by its deadline ([638f1e94c1](https://github.com/powerhouse-inc/powerhouse/commit/638f1e94c1))
+- **reactor:** fail a unique violation inside a job transaction without a replay lookup ([65d6bd82b0](https://github.com/powerhouse-inc/powerhouse/commit/65d6bd82b0))
+- **reactor:** always hand the pglite lease back when session recovery throws ([85d7072817](https://github.com/powerhouse-inc/powerhouse/commit/85d7072817))
+- **reactor:** refuse a pglite session at once after a call dies, instead of recovering it ([e6e27bdc8d](https://github.com/powerhouse-inc/powerhouse/commit/e6e27bdc8d))
+- **reactor:** stop bounding the pglite lease wait by default ([d31f333125](https://github.com/powerhouse-inc/powerhouse/commit/d31f333125))
+- **reactor:** retry a failed manifest refresh instead of stopping the poll loop ([72ebee56d7](https://github.com/powerhouse-inc/powerhouse/commit/72ebee56d7))
+- **reactor:** advance sync cursor watermarks only after the write lands ([0f0149e1f3](https://github.com/powerhouse-inc/powerhouse/commit/0f0149e1f3))
+- **reactor:** make the sync poll loop report the truth and survive a stall ([e216f6476f](https://github.com/powerhouse-inc/powerhouse/commit/e216f6476f))
+- **reactor:** classify a missing ancestor as MISSING_OPERATIONS ([5826f020a6](https://github.com/powerhouse-inc/powerhouse/commit/5826f020a6))
+- **reactor:** resolve a load with nothing to apply before costing its reshuffle ([0062e4171b](https://github.com/powerhouse-inc/powerhouse/commit/0062e4171b))
+- **reactor:** bound every pglite statement so a dead wasm call cannot wedge the reactor ([f3be072212](https://github.com/powerhouse-inc/powerhouse/commit/f3be072212))
+- **reactor:** harden the pglite kysely dialect against session poisoning ([a4b93e12de](https://github.com/powerhouse-inc/powerhouse/commit/a4b93e12de))
+- **reactor:** run the unique-constraint replay lookup on the job transaction ([124a6fba80](https://github.com/powerhouse-inc/powerhouse/commit/124a6fba80))
+
+### 🔥 Performance
+
+- **reactor:** export the model registry from /rpc and load document-model helpers from dependency-free shared entries ([3ddd4c1889](https://github.com/powerhouse-inc/powerhouse/commit/3ddd4c1889))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** refuse withChannelScheme together with withSync  ([1a4ae14508](https://github.com/powerhouse-inc/powerhouse/commit/1a4ae14508))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 ### 🚀 Features

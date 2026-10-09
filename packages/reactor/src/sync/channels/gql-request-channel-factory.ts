@@ -25,6 +25,14 @@ import {
 } from "./interval-poll-timer.js";
 
 /**
+ * The {@link ChannelConfig.type} a GqlRequestChannel is created from.
+ *
+ * Named so {@link CompositeChannelFactory} registration and the callers that
+ * build a `{ type: "gql" }` config agree on one spelling.
+ */
+export const GQL_CHANNEL_TYPE = "gql";
+
+/**
  * Factory for creating GqlRequestChannel instances.
  *
  * Extracts GraphQL-specific configuration from ChannelConfig.parameters and
@@ -34,6 +42,7 @@ import {
  * which is useful for short-lived tokens with audience-specific claims.
  */
 export class GqlRequestChannelFactory implements IChannelFactory {
+  readonly channelTypes = [GQL_CHANNEL_TYPE];
   private readonly logger: ILogger;
   private readonly jwtHandler?: JwtHandler;
   private readonly queue: IQueue;

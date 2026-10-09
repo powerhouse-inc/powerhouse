@@ -79,6 +79,7 @@ export interface SyncRemoteTable {
   pull_last_failure_utc_ms: string | null;
   pull_failure_count: number;
   bound_address: string | null;
+  persistence: Generated<string>;
   peer_manifest: string | null;
   // bigint: pg returns a string, PGlite may return a number.
   peer_manifest_at_utc_ms: ColumnType<

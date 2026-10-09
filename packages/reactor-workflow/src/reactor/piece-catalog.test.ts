@@ -175,10 +175,11 @@ it("lists the pieces an allowed registry serves alongside the cloud's", async ()
     displayName: "Invoices",
     version: "1.0.0",
     actionCount: 1,
+    source: "registry",
   });
   expect(
-    catalog.find((p) => p.name === "@activepieces/piece-slack"),
-  ).toBeDefined();
+    catalog.find((p) => p.name === "@activepieces/piece-slack")?.source,
+  ).toBe("activepieces");
 });
 
 it("prefers the registry's copy of a name the cloud also lists", async () => {
@@ -192,6 +193,7 @@ it("prefers the registry's copy of a name the cloud also lists", async () => {
   );
   expect(matches).toHaveLength(1);
   expect(matches[0]?.displayName).toBe("Invoices (registry)");
+  expect(matches[0]?.source).toBe("registry");
 });
 
 it("serves the registry's pieces when the cloud catalog is unreachable", async () => {
@@ -225,7 +227,8 @@ it("indexes the registry's blocks for block search", async () => {
     ],
   });
   const index = buildSearchIndex(await fetchCatalogWithSuggestions());
-  expect(index.entries.map((e) => e.hit)).toEqual([
+  expect(index.pieces.map((piece) => piece.meta.source)).toEqual(["registry"]);
+  expect(index.pieces[0].blocks.map((block) => block.hit)).toEqual([
     expect.objectContaining({
       pieceName: "@acme/piece-invoices",
       pieceVersion: "1.0.0",

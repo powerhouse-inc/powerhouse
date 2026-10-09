@@ -337,6 +337,22 @@ export {
   type HardenedPGliteDialectOptions,
   type PGliteSession,
 } from "./src/storage/kysely/pglite-dialect.js";
+export {
+  PGliteFlushSyncTimeoutError,
+  type GroupCommitPGliteInstance,
+} from "./src/storage/kysely/group-commit-pglite-client.js";
+export type {
+  GroupCommitPGliteOptions,
+  IGroupCommitStorage,
+} from "./src/storage/kysely/group-commit-storage.js";
+export {
+  StoragePoisonedError,
+  type IStorageFlusher,
+} from "./src/storage/storage-flush.js";
+export type {
+  IStorageHealthProvider,
+  StorageHealth,
+} from "./src/storage/storage-health.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,
@@ -425,13 +441,42 @@ export {
   ChannelError,
   ChannelErrorSource,
   ChannelScheme,
+  CompositeChannelFactory,
   consolidateSyncOperations,
   envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
+  GQL_CHANNEL_TYPE,
   IntervalPollTimer,
+  LocalChannel,
+  LocalChannelFactory,
+  LOCAL_CHANNEL_TYPE,
+  assertCollectionIdParts,
+  collectionIdFromKey,
+  DEFAULT_LOCAL_FILTER,
+  LOCAL_REMOTE_OPTIONS,
+  localChannelConfig,
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+  removeLocalPeer,
+  POLLING_CHANNEL_TYPE,
+  messagePortTransport,
+  isLocalWireMessage,
+  type LocalAckMessage,
+  type LocalChannelPort,
+  type LocalChannelTransportProvider,
+  type LocalHelloMessage,
+  type LocalChannelPortRegistryOptions,
+  type LocalPeerSyncManager,
+  type LocalRemoteSpec,
+  type LocalRemoveSpec,
+  type LocalPushMessage,
+  type LocalResendMessage,
+  type LocalWireKind,
+  type LocalWireMessage,
+  type MessagePortLike,
   DRIVE_AUTH_ERROR_MESSAGES,
   DriveRequestError,
   isDriveAuthError,
@@ -440,6 +485,7 @@ export {
   Mailbox,
   PollBehavior,
   PollingChannelError,
+  RemotePersistence,
   SyncBuilder,
   SyncRepairRefusedError,
   SyncEventTypes,

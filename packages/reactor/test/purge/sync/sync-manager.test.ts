@@ -1,3 +1,4 @@
+import { cursorProtectedLoadMeta } from "../../../src/shared/types.js";
 import { isPurgeMarker } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
@@ -238,7 +239,7 @@ describe("receiving operations of a purged document [Postgres]", () => {
       "main",
       [marker],
       expect.anything(),
-      { sourceRemote: "remote" },
+      cursorProtectedLoadMeta("remote"),
     );
     expect(quarantined(harness).has(DOC)).toBe(false);
 

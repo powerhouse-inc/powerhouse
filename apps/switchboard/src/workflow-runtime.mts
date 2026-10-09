@@ -763,6 +763,8 @@ async function composeClaimed(
       // Lost or stopped while registering.
       if (loss.lost || stopped) return;
       runtime.startTriggerSupervisor();
+      // So the first search in the editor finds the catalog indexed.
+      runtime.warmPieceSearch();
     },
 
     async stop() {
