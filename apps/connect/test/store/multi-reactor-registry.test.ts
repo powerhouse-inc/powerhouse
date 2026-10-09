@@ -52,7 +52,8 @@ function liveLocal() {
     getDocumentModelModule: (type: string) => {
       const found = registry
         .filter((module) => module.documentModel.global.id === type)
-        .sort((a, b) => (b.version ?? 1) - (a.version ?? 1))[0];
+        .sort((a, b) => (b.version ?? 1) - (a.version ?? 1))
+        .at(0);
       return found
         ? Promise.resolve(found)
         : Promise.reject(new Error(`not found: ${type}`));
