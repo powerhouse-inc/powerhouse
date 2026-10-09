@@ -153,6 +153,8 @@ export type PHConnectOpenPanel = {
 export type PHConnectInstance = {
   namespace: string | null;
   reactorWorker: boolean;
+  /** Routes through the in-browser reactor plus remote backends. Off by default. */
+  multiReactor?: boolean;
 };
 
 /** Each flag implies its predecessors, and must match the fleet Connect syncs

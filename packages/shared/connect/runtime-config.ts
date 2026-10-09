@@ -64,6 +64,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   instance: {
     namespace: null,
     reactorWorker: false,
+    multiReactor: false,
   },
   reactor: {
     featureFlags: {
