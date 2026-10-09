@@ -26,6 +26,20 @@ interface PieceArgs {
 
 type BlockRef = Parameters<WorkflowRuntimeService["blockDescriptor"]>[0];
 
+type PieceSource = NonNullable<
+  Parameters<WorkflowRuntimeService["searchPieces"]>[1]["sources"]
+>[number];
+
+const PIECE_SOURCES: readonly string[] = [
+  "local",
+  "registry",
+  "activepieces",
+] satisfies PieceSource[];
+
+function isPieceSource(value: string): value is PieceSource {
+  return PIECE_SOURCES.includes(value);
+}
+
 interface BlockInput {
   pieceName: string;
   pieceVersion: string;
@@ -353,10 +367,22 @@ export const getResolvers = (
       ) => runtime.blockResolutions(args.workflowId, ctx),
       pieceDetail: (_parent: unknown, args: PieceArgs) =>
         runtime.pieceDetail(args.packageName, args.version ?? undefined),
-      searchBlocks: (
+      searchPieces: (
         _parent: unknown,
-        args: { query: string; limit?: number | null },
-      ) => runtime.searchBlocks(args.query, args.limit ?? undefined),
+        args: {
+          query: string;
+          kind: string;
+          sources?: string[] | null;
+          categories?: string[] | null;
+          limit?: number | null;
+        },
+      ) =>
+        runtime.searchPieces(args.query, {
+          kind: args.kind === "trigger" ? "trigger" : "action",
+          sources: (args.sources ?? []).filter(isPieceSource),
+          categories: args.categories ?? undefined,
+          limit: args.limit ?? undefined,
+        }),
       connections: (_parent: unknown, _args: unknown, ctx: Context) =>
         runtime.connections(ctx),
       webhookEndpoint: (

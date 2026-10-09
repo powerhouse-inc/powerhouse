@@ -142,14 +142,15 @@ import {
   actionsResult,
   catalogEntry,
   detailResult,
-  localSearchHits,
+  localSearchPiece,
   triggersResult,
 } from "./local-catalog.js";
 import {
-  indexFromHits,
-  searchBlocks,
+  indexPieces,
+  searchPieces,
   type BlockSearchIndex,
-  type BlockSearchResult,
+  type PieceSearchFilter,
+  type PieceSearchResult,
 } from "./block-search.js";
 import { installedPiece, installedPieces } from "./piece-registry.js";
 import { BlockResolver } from "./block-resolver.js";
@@ -3386,15 +3387,15 @@ export class WorkflowRuntimeService {
 
   // Catalog search, with this reactor's own pieces always in it: the index
   // behind the published half may still be building, or unreachable.
-  async searchBlocks(
+  async searchPieces(
     query: string,
-    limit?: number,
-  ): Promise<BlockSearchResult> {
+    filter: PieceSearchFilter,
+  ): Promise<PieceSearchResult> {
     let local: BlockSearchIndex | undefined;
     try {
-      local = indexFromHits(
-        (await this.localPieces()).flatMap(({ piece, descriptor }) =>
-          localSearchHits(descriptor, piece.name, piece.version),
+      local = indexPieces(
+        (await this.localPieces()).map(({ piece, descriptor }) =>
+          localSearchPiece(descriptor, piece.name, piece.version),
         ),
       );
     } catch (error) {
@@ -3404,7 +3405,7 @@ export class WorkflowRuntimeService {
         String(error),
       );
     }
-    return searchBlocks(query, limit, local);
+    return searchPieces(query, filter, local);
   }
 
   async pieceDetail(packageName: string, version?: string): Promise<unknown> {

@@ -27,7 +27,7 @@ const PICKERS: Partial<Record<ContextMenuActionId, string>> = {
   changeTrigger: "Choose a trigger",
 };
 
-const PICKER_SIZE = { width: 320, height: 400 };
+const PICKER_SIZE = { width: 384, height: 520 };
 
 export function CanvasContextMenu(props: {
   state: CanvasMenuState;
