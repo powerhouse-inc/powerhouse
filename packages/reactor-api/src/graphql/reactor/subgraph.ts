@@ -496,6 +496,40 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      documentServed: async (_parent, args, ctx: Context) => {
+        this.logger.debug("documentServed(@args)", args);
+        try {
+          return await this.listsDocument(args.idOrSlug, ctx, {
+            branch: args.view?.branch ?? undefined,
+            scopes: args.view?.scopes ? [...args.view.scopes] : undefined,
+          });
+        } catch (error) {
+          this.logger.error("Error in documentServed: @Error", error);
+          throw error;
+        }
+      },
+
+      createDefaults: async (_parent, args, ctx: Context) => {
+        this.logger.debug("createDefaults(@args)", args);
+        try {
+          const parentIdOrSlug = args.parentIdOrSlug ?? undefined;
+          // Without a parent the answer is host-wide, so nothing is gated.
+          if (
+            parentIdOrSlug !== undefined &&
+            !(await this.listsDocument(parentIdOrSlug, ctx))
+          ) {
+            throw new ForbiddenError("to read this document");
+          }
+          return await resolvers.createDefaults(
+            this.reactorClient,
+            parentIdOrSlug,
+          );
+        } catch (error) {
+          this.logger.error("Error in createDefaults: @Error", error);
+          throw error;
+        }
+      },
+
       documentOperations: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentOperations(@args)", args);
         try {

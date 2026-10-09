@@ -3,6 +3,7 @@ import type {
   IRelationalDb,
   ISyncManager,
   SyncScopeGate,
+  ViewFilter,
 } from "@powerhousedao/reactor";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
@@ -225,12 +226,44 @@ export class BaseSubgraph implements ISubgraph {
       return false;
     }
     try {
-      return await this.reactorClient.isServed(documentId, {
-        subject: this.viewSubject(ctx),
-      });
+      return await this.servesDocumentOrThrows(documentId, ctx);
     } catch {
       return false;
     }
+  }
+
+  /** {@link servesDocument}, but a reactor that cannot answer throws. */
+  protected servesDocumentOrThrows(
+    identifier: string,
+    ctx: Context,
+    view?: Pick<ViewFilter, "branch" | "scopes">,
+  ): Promise<boolean> {
+    return this.reactorClient.isServed(identifier, {
+      ...view,
+      subject: this.viewSubject(ctx),
+    });
+  }
+
+  /**
+   * Whether a listing would serve the document to the caller: the reactor read
+   * gate, then the host's legacy layer, as `findDocuments` applies them. Absent
+   * or withheld is `false`; a failure to decide throws.
+   */
+  protected async listsDocument(
+    identifier: string,
+    ctx: Context,
+    view?: Pick<ViewFilter, "branch" | "scopes">,
+  ): Promise<boolean> {
+    if (!(await this.servesDocumentOrThrows(identifier, ctx, view))) {
+      return false;
+    }
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return true;
+    }
+    return this.canReadDocument(
+      await this.resolveCanonicalDocumentId(identifier, ctx),
+      ctx,
+    );
   }
 
   /**

@@ -24,6 +24,7 @@ import type {
 import {
   actions,
   actionSigningTarget,
+  isSignaturePolicy,
   normalizeDocumentModelVersion,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
@@ -40,13 +41,16 @@ import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
   type DocumentRelationshipFieldsFragment,
+  type GetCreateDefaultsQuery,
   type JobInfoFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
   type PhDocumentFieldsFragment,
+  type SdkFunctionWrapper,
   type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
+import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
@@ -63,6 +67,7 @@ import {
 import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
+  GraphQLWrongBackendError,
 } from "./errors.js";
 import {
   MutateDocumentWithOperationsDocument,
@@ -86,6 +91,19 @@ import {
   type DocumentChangesEventPayload,
 } from "./subscriptions.js";
 
+/** A call the client asks {@link GraphQLReactorClientOptions.driveIdFor} about. */
+export type DriveIdCall = {
+  readonly method:
+    | "create"
+    | "execute"
+    | "executeBatch"
+    | "deleteDocument"
+    | "find";
+  readonly documentId?: string;
+  readonly parentId?: string;
+  readonly jobs?: readonly { readonly documentId: string }[];
+};
+
 export type GraphQLReactorClientOptions = {
   /** The Switchboard GraphQL endpoint, e.g. `http://localhost:4001/graphql`. */
   url: string;
@@ -94,8 +112,9 @@ export type GraphQLReactorClientOptions = {
    * A pre-built SDK to use instead of the transport derived from `url`.
    * Mainly a test seam.
    *
-   * A client built this way carries no auth middleware: the injected SDK owns
-   * its own transport, and therefore its own headers.
+   * A client built this way carries no auth middleware and no 421 mapping:
+   * the injected SDK owns its own transport, and therefore its own headers
+   * and transport errors.
    */
   graphqlClient?: ReactorGraphQLClient;
 
@@ -151,6 +170,14 @@ export type GraphQLReactorClientOptions = {
    * scripts, and integration suites that must sign deterministically.
    */
   signer?: ISigner;
+
+  /**
+   * Names the drive a call belongs to when the client cannot prove it itself,
+   * for its `Drive-Id` header; `undefined` sends none. Return only a drive id
+   * the caller knows: a Switchboard that does not own it answers 421. Where
+   * the client has proof of its own and the two disagree, the proof is sent.
+   */
+  driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
 
 /** Paging defaults, matching the reactor's own client. */
@@ -192,6 +219,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: readonly DocumentModelModule<any>[];
   private readonly signer: ISigner | undefined;
+  private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private stopRealtime: (() => void) | undefined;
   private realtimeStarted = false;
   private realtimeGeneration = 0;
@@ -205,6 +233,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // reducer a later batch is signed with.
     this.documentModels = [...(options.documentModels ?? [])];
     this.signer = options.signer;
+    this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
       options.realtime === false
         ? undefined
@@ -213,7 +242,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     // The middleware wraps the generated SDK methods AND `RunDocument`, so the
     // hand-authored mutation is authenticated by the same code path.
-    const middleware = makeAuthMiddleware(this.tokenProvider);
+    const middleware = withWrongBackendErrors(
+      makeAuthMiddleware(this.tokenProvider),
+    );
     this.sdk = options.graphqlClient ?? createClient(options.url, middleware);
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
@@ -242,6 +273,38 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       document.document,
       view?.branch,
     );
+  }
+
+  /**
+   * Whether the Switchboard would serve the document to this client's caller,
+   * from its `documentServed` query: the same read gate `find` passes. Absent
+   * or withheld is `false`; a failure to decide throws.
+   *
+   * A point-in-time view throws {@link GraphQLOperationNotSupportedError}, as
+   * does a Switchboard without the query.
+   */
+  async isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    try {
+      const result = await this.sdk.GetDocumentServed(
+        { idOrSlug: identifier, view: viewInput },
+        undefined,
+        signal,
+      );
+      return result.documentServed;
+    } catch (error) {
+      if (queriesUnknownField(error, "documentServed")) {
+        throw new GraphQLOperationNotSupportedError(
+          "isServed",
+          "the Switchboard predates the documentServed query",
+        );
+      }
+      throw error;
+    }
   }
 
   async getOperations(
@@ -325,7 +388,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         view: viewInput,
         paging: pagingInputFromPaging(effectivePaging),
       },
-      undefined,
+      search.parentId === undefined
+        ? undefined
+        : this.driveIdHeaders({ method: "find", parentId: search.parentId }),
       signal,
     );
 
@@ -477,9 +542,20 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    // A new top-level drive is pinned to the backend its own id routes to;
+    // under a parent it goes where the parent is, which only the hook knows.
     const result = await this.sdk.CreateDocument(
       { document, parentIdentifier },
-      undefined,
+      this.driveIdHeaders(
+        {
+          method: "create",
+          documentId: document.header.id || undefined,
+          parentId: parentIdentifier,
+        },
+        isDrive(document) && parentIdentifier === undefined
+          ? document.header.id
+          : undefined,
+      ),
       signal,
     );
 
@@ -538,6 +614,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         operationType: "mutation",
         document: MutateDocumentWithOperationsDocument,
         variables,
+        requestHeaders: this.driveIdHeaders(
+          { method: "execute", documentId: documentIdentifier },
+          isDrive(document) ? document.header.id : undefined,
+        ),
         signal,
       });
 
@@ -607,7 +687,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     const result = await this.sdk.ExecuteBatch(
       { jobs: jobInputs },
-      undefined,
+      this.driveIdHeaders({
+        method: "executeBatch",
+        jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
+      }),
       signal,
     );
 
@@ -648,33 +731,69 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * Not served: the Switchboard has no query for the policy it gives new
-   * documents, and a guessed default would under-sign on a stricter host.
+   * The policy the Switchboard gives a new document, read from its
+   * `createDefaults` query. A Switchboard without that query is refused with
+   * {@link GraphQLOperationNotSupportedError}: a guessed default would
+   * under-sign on a stricter host.
    */
-  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    return Promise.reject(
-      new GraphQLOperationNotSupportedError(
-        "getCreateSignaturePolicy",
-        "the Switchboard exposes no create signature policy",
-      ),
-    );
+  async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    const defaults = await this.createDefaults("getCreateSignaturePolicy");
+    return defaults.signaturePolicy;
   }
 
   /**
-   * Not served: the versions a new document takes come from the host's peer
-   * agreement, which the Switchboard does not expose. A parent's own versions
-   * are not that answer.
+   * The protocol versions the Switchboard selects for a new document under
+   * `parentIdentifier`, read from its `createDefaults` query. A parent the
+   * caller may not read is refused by the server, never answered as if none
+   * was named; a Switchboard without the query is refused with
+   * {@link GraphQLOperationNotSupportedError}.
    */
-  getCreateProtocolVersions(
-    _parentIdentifier?: string,
-    _signal?: AbortSignal,
+  async getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return Promise.reject(
-      new GraphQLOperationNotSupportedError(
-        "getCreateProtocolVersions",
-        "the Switchboard exposes no create protocol versions",
-      ),
+    const defaults = await this.createDefaults(
+      "getCreateProtocolVersions",
+      parentIdentifier,
+      signal,
     );
+    return defaults.protocolVersions;
+  }
+
+  private async createDefaults(
+    operation: string,
+    parentIdOrSlug?: string,
+    signal?: AbortSignal,
+  ): Promise<{
+    signaturePolicy: SignaturePolicy;
+    protocolVersions: ProtocolVersions;
+  }> {
+    let result: GetCreateDefaultsQuery;
+    try {
+      result = await this.sdk.GetCreateDefaults(
+        { parentIdOrSlug },
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (queriesUnknownField(error, "createDefaults")) {
+        throw new GraphQLOperationNotSupportedError(
+          operation,
+          "the Switchboard predates the createDefaults query",
+        );
+      }
+      throw error;
+    }
+    const { signaturePolicy, protocolVersions } = result.createDefaults;
+    if (!isSignaturePolicy(signaturePolicy)) {
+      throw new Error(
+        `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
+      );
+    }
+    return {
+      signaturePolicy,
+      protocolVersions: protocolVersionsFrom(protocolVersions),
+    };
   }
 
   /**
@@ -693,6 +812,26 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
+  }
+
+  /** The `Drive-Id` header for a call: the client's own proof, else the hook's. */
+  private driveIdHeaders(
+    call: DriveIdCall,
+    proven?: string,
+  ): Record<string, string> | undefined {
+    const hinted = this.driveIdFor?.(call);
+    if (proven) {
+      if (hinted && hinted !== proven) {
+        logger.warn(
+          "GraphQLReactorClient: driveIdFor named @hinted for @method, which belongs to drive @proven; sending the proven drive",
+          hinted,
+          call.method,
+          proven,
+        );
+      }
+      return driveIdHeaders(proven);
+    }
+    return hinted ? driveIdHeaders(hinted) : undefined;
   }
 
   /**
@@ -864,7 +1003,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<void> {
     await this.sdk.DeleteDocument(
       { identifier, propagate: propagationModeInput(propagate) },
-      undefined,
+      this.driveIdHeaders({ method: "deleteDocument", documentId: identifier }),
       signal,
     );
 
@@ -1501,6 +1640,104 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
     };
   }
   return info;
+}
+
+/**
+ * Whether a request failed because the server's schema has no such root field:
+ * a Switchboard older than the field. graphql-js validation words this the same
+ * under every gateway the Switchboard can run.
+ */
+function queriesUnknownField(error: unknown, field: string): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  const prefix = `Cannot query field "${field}" on type "`;
+  return errors.some(
+    (entry) =>
+      typeof (entry as { message?: unknown } | null)?.message === "string" &&
+      (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
+/**
+ * The header a Switchboard's drive middleware and load balancer key on. A
+ * request carries it only when it is known to belong to that one drive: the
+ * server answers any drive it does not own with 421.
+ */
+const DRIVE_ID_HEADER = "Drive-Id";
+
+function driveIdHeaders(driveId: string): Record<string, string> | undefined {
+  return driveId === "" ? undefined : { [DRIVE_ID_HEADER]: driveId };
+}
+
+function isDrive(document: PHDocument): boolean {
+  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(
+    document.header.documentType,
+  );
+}
+
+/**
+ * Surfaces a 421 from the Switchboard's drive middleware, which graphql-request
+ * reports as a `ClientError`, as {@link GraphQLWrongBackendError}.
+ */
+function withWrongBackendErrors(
+  middleware: SdkFunctionWrapper,
+): SdkFunctionWrapper {
+  return async (action, ...rest) => {
+    try {
+      return await middleware(action, ...rest);
+    } catch (error) {
+      throw wrongBackendErrorOf(error) ?? error;
+    }
+  };
+}
+
+function wrongBackendErrorOf(
+  error: unknown,
+): GraphQLWrongBackendError | undefined {
+  const response = (
+    error as {
+      response?: { status?: unknown; body?: unknown; [key: string]: unknown };
+    } | null
+  )?.response;
+  if (response?.status !== 421) {
+    return undefined;
+  }
+  let payload: unknown = response.body;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      // Not JSON: kept as the text the server sent.
+    }
+  }
+  const driveId = (payload as { driveId?: unknown } | null)?.driveId;
+  return new GraphQLWrongBackendError(
+    typeof driveId === "string" ? driveId : "",
+    payload,
+    { cause: error },
+  );
+}
+
+/** Protocol versions as the server sent them; anything but a version map throws. */
+function protocolVersionsFrom(value: unknown): ProtocolVersions {
+  if (!isPlainObject(value)) {
+    throw new Error(
+      "The Switchboard answered malformed create protocol versions",
+    );
+  }
+  const versions: ProtocolVersions = {};
+  for (const [protocol, version] of Object.entries(value)) {
+    if (typeof version !== "number" || !Number.isInteger(version)) {
+      throw new Error(
+        `The Switchboard answered a malformed version for protocol ${protocol}`,
+      );
+    }
+    versions[protocol] = version;
+  }
+  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {
