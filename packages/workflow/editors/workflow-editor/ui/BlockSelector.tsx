@@ -526,7 +526,7 @@ function usePieceSearch(
       clearTimeout(timer);
       if (retry) clearTimeout(retry);
     };
-  }, [active, trimmed, filterKey, attempt, search]);
+  }, [active, trimmed, filterKey, key, attempt, search]);
 
   if (!active) return { kind: "idle" };
   // Loading through the debounce, so the browse list does not flash first.
@@ -871,7 +871,7 @@ function EntriesPane(props: {
       ) : (
         <VirtualList
           id={props.listId}
-          resetKey={source?.id}
+          resetKey={source.id}
           label={`${title ?? ""} ${kind}s`}
           className="flex-1 py-1"
           items={entries}
