@@ -89,6 +89,25 @@ export type JobMeta = BatchMeta & Record<string, unknown>;
 import type { Job } from "../queue/types.js";
 
 /**
+ * Marks a load whose operations a sync cursor keeps re-pullable, so its
+ * write-ready needs no flush. A symbol, not exported from the package: it
+ * cannot be set by an outside caller or survive any serialization boundary.
+ */
+const CURSOR_PROTECTED = Symbol("cursorProtected");
+
+/** Load meta for the sync manager's inbox, the only owner of the cursor. */
+export function cursorProtectedLoadMeta(
+  sourceRemote: string,
+): Record<string, unknown> {
+  return { sourceRemote, [CURSOR_PROTECTED]: true };
+}
+
+export function isCursorProtectedLoad(job: Job): boolean {
+  const meta = job.meta as { [CURSOR_PROTECTED]?: unknown };
+  return job.kind === "load" && meta[CURSOR_PROTECTED] === true;
+}
+
+/**
  * What became of one action the caller submitted, at the position the
  * operation carrying it was written to.
  */

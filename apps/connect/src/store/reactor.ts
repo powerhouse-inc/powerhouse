@@ -200,7 +200,9 @@ export async function clearReactorStorage() {
     return;
   }
   if (module?.kind === "browser") {
-    await closeWithin(module.reactorModule?.pg);
+    // Flushes the group commit, then closes.
+    const reactorModule = module.reactorModule;
+    await closeWithin(reactorModule?.groupCommitStorage ?? reactorModule?.pg);
   }
 
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB

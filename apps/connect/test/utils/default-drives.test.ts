@@ -33,6 +33,7 @@ vi.mock("@powerhousedao/reactor", () => ({
 }));
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: vi.fn(),
+  discardReactorPGlite: () => Promise.resolve(),
 }));
 vi.mock("../../src/utils/stored-documents-refused.js", () => ({
   toStoredDocumentsRefused: (error: unknown) => error,

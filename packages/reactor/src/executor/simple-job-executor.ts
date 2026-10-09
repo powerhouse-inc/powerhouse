@@ -57,7 +57,18 @@ import {
   ReservedActionError,
 } from "../shared/errors.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
-import { yieldToMain } from "../shared/utils.js";
+import {
+  delay,
+  TIMED_OUT,
+  withDeadline,
+  yieldToMain,
+} from "../shared/utils.js";
+import { isCursorProtectedLoad } from "../shared/types.js";
+import type { IStorageFlusher } from "../storage/storage-flush.js";
+import {
+  NoopStorageFlusher,
+  StoragePoisonedError,
+} from "../storage/storage-flush.js";
 import {
   AppendConditionFailedError,
   type AppendCondition,
@@ -115,6 +126,9 @@ import {
 } from "./util.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
+
+/** Retries of a failed flush before a committed job's write-ready is withheld. */
+const MAX_ANNOUNCE_FLUSH_ATTEMPTS = 5;
 
 const ISO_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
@@ -276,10 +290,12 @@ export class SimpleJobExecutor implements IJobExecutor {
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
   private signer: ISigner;
+  private readonly flusher: IStorageFlusher;
 
   /**
    * `signer` signs the operations the reducer synthesizes; unsigned if omitted.
    * `trustPolicy` decides which keys may sign as which users at admission.
+   * `flusher` makes a job durable before its write-ready is announced.
    */
   constructor(
     private logger: ILogger,
@@ -295,7 +311,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     executionScope?: IExecutionScope,
     signer?: ISigner,
     trustPolicy?: SignatureTrustPolicy,
+    flusher: IStorageFlusher = new NoopStorageFlusher(),
   ) {
+    this.flusher = flusher;
     this.signer = signer ?? new PassthroughSigner();
     // Resolved separately so reads are plain booleans; the config keeps what
     // the caller passed, because that is what crosses to a pooled worker. The
@@ -320,6 +338,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         localSupports(PEER_CAPABILITIES, this.featureFlags).protocols,
       maxPurgeOperations:
         config.maxPurgeOperations ?? DEFAULT_MAX_PURGE_OPERATIONS,
+      durabilityWaitMs: config.durabilityWaitMs ?? 0,
     };
 
     this.decisionModel = selectDecisionModel(this.featureFlags, registry);
@@ -376,7 +395,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    * but nothing here closes it, and a caller that needs to know a write is
    * real has the job status to ask.
    */
-  async executeJob(job: Job, signal?: AbortSignal): Promise<JobResult> {
+  async executeJob(
+    job: Job,
+    signal?: AbortSignal,
+    onCommitting?: () => void,
+  ): Promise<JobResult> {
     const startTime = Date.now();
 
     // Streams the job wrote, to evict when its transaction does not commit
@@ -405,6 +428,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           throw new JobRollbackSignal(scoped.result);
         }
 
+        // The point of no return: one tick, so a timeout and the COMMIT are exclusive.
+        signal?.throwIfAborted();
+        onCommitting?.();
         return scoped;
       }, signal);
     } catch (error) {
@@ -430,7 +456,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const { pendingEvent } = outcome;
-    if (pendingEvent) {
+    if (pendingEvent && (await this.awaitDurable(job, signal))) {
       this.eventBus
         .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
         .catch((error) => {
@@ -443,6 +469,94 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     return outcome.result;
+  }
+
+  /**
+   * Waits for a flush covering the committed job before its write-ready goes
+   * out; false withholds the announcement. A failed flush is never a failed
+   * job, since the commit stands: it is retried, and the announcement is
+   * withheld once the store is poisoned (the host restarts), the attempts run
+   * out, the wait outlives `durabilityWaitMs`, or the job's signal aborts.
+   */
+  private async awaitDurable(
+    job: Job,
+    signal: AbortSignal | undefined,
+  ): Promise<boolean> {
+    if (isCursorProtectedLoad(job)) {
+      return true;
+    }
+    const budgetMs = this.config.durabilityWaitMs;
+    const deadline = budgetMs > 0 ? Date.now() + budgetMs : Infinity;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const outcome = await this.withinDurabilityWait(
+          this.flusher.flush(),
+          deadline,
+          signal,
+        );
+        if (outcome !== TIMED_OUT) {
+          return true;
+        }
+        this.logger.error(
+          "Job @JobId committed but its flush outlived the durability wait or the job was aborted; its write-ready is withheld",
+          job.id,
+        );
+        return false;
+      } catch (error) {
+        this.logger.error(
+          "Flush before announcing job @JobId failed (attempt @Attempt): @Error",
+          job.id,
+          attempt,
+          error,
+        );
+        if (
+          error instanceof StoragePoisonedError ||
+          attempt >= MAX_ANNOUNCE_FLUSH_ATTEMPTS
+        ) {
+          this.logger.error(
+            "Job @JobId committed but is not durable; its write-ready is withheld",
+            job.id,
+          );
+          return false;
+        }
+      }
+      const backoff = await this.withinDurabilityWait(
+        delay(
+          Math.min(
+            this.config.retryMaxDelayMs,
+            this.config.retryBaseDelayMs * 2 ** (attempt - 1),
+          ),
+        ),
+        deadline,
+        signal,
+      );
+      if (backoff === TIMED_OUT) {
+        return false;
+      }
+    }
+  }
+
+  /** Settles with TIMED_OUT at the deadline or on abort; the wait itself is abandoned. */
+  private async withinDurabilityWait<T>(
+    pending: Promise<T>,
+    deadline: number,
+    signal: AbortSignal | undefined,
+  ): Promise<T | typeof TIMED_OUT> {
+    pending.catch(() => undefined);
+    if (signal?.aborted) return TIMED_OUT;
+    let onAbort: (() => void) | undefined;
+    const aborted = new Promise<typeof TIMED_OUT>((resolve) => {
+      onAbort = () => resolve(TIMED_OUT);
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
+    try {
+      const raced = Promise.race([pending, aborted]);
+      return deadline === Infinity
+        ? await raced
+        : await withDeadline(raced, Math.max(0, deadline - Date.now()));
+    } finally {
+      if (onAbort) signal?.removeEventListener("abort", onAbort);
+    }
   }
 
   /**
