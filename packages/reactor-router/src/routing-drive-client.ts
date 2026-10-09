@@ -99,8 +99,14 @@ export class RoutingDriveClient implements IDriveClient {
       "drives.addFile",
       driveIdentifier,
       DEFAULT_BRANCH,
-      (backend) => {
+      async (backend) => {
         owner = backend.name;
+        await this.dispatcher.assertCreatableBeside(
+          "drives.addFile",
+          backend,
+          document.header.id,
+          driveIdentifier,
+        );
         return this.on(backend).addFile<TDocument>(
           driveIdentifier,
           document,

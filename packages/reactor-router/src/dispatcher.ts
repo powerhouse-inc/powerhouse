@@ -270,6 +270,9 @@ export class RouteDispatcher {
    *    then routes as existing (see {@link onDocuments}).
    * 5. A refusal excludes the refusing backend only for the id it refused, and
    *    forgets the cached routes of every id of the batch.
+   * Every create resolves by these rules: executeBatch, create, createAsync and
+   * createEmpty* (the new id as created, beside its parent when given), and
+   * drives.addFile (see {@link assertCreatableBeside}).
    */
   resolveBatchBackend(
     operation: string,
@@ -292,6 +295,31 @@ export class RouteDispatcher {
     identifiers: readonly string[],
   ): Promise<RouterBackend> {
     return this.resolveBatch(operation, identifiers, NONE, new Map(), true);
+  }
+
+  /**
+   * An id created beside an anchor on `backend` and held on another backend
+   * spans two backends, as the same create in one batch would.
+   */
+  async assertCreatableBeside(
+    operation: string,
+    backend: RouterBackend,
+    createdId: string,
+    anchorId: string,
+  ): Promise<void> {
+    try {
+      await this.guard.assertNotHeldElsewhere(backend, createdId, operation);
+    } catch (error) {
+      const info = misrouteOf(error);
+      if (!info.misrouted || !this.table.has(info.ownerHint)) {
+        throw error;
+      }
+      this.table.recordDocument(createdId, info.ownerHint);
+      throw new CrossBackendBatchError(operation, [
+        { documentId: createdId, backend: info.ownerHint },
+        { documentId: anchorId, backend: backend.name },
+      ]);
+    }
   }
 
   private async resolveBatch(

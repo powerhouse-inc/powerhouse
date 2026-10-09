@@ -1186,31 +1186,23 @@ export class RoutingReactorClient implements IReactorClient {
     ];
   }
 
-  /** With a parent, guarded on it and re-resolved after a refusal; else placed. */
-  private async onNewDocument<T>(
+  /** Resolved as a batch creating the id, beside its parent when given. */
+  private onNewDocument<T>(
     label: string,
     documentId: string,
     parentIdentifier: string | undefined,
     run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
   ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
-    if (parentIdentifier !== undefined && parentIdentifier !== "") {
-      return this.dispatcher.onDocuments(label, [parentIdentifier], run);
-    }
-    const backend = await this.placeNewDocument(documentId);
-    const value = await this.dispatcher.onBackend(
+    const identifiers =
+      parentIdentifier === undefined || parentIdentifier === ""
+        ? [documentId]
+        : [documentId, parentIdentifier];
+    return this.dispatcher.onDocuments(
       label,
-      backend,
-      (target) => run(target, (step) => step()),
-      ATTEMPT.write,
+      identifiers,
+      run,
+      new Set([documentId]),
     );
-    return { value, backend };
-  }
-
-  private async placeNewDocument(documentId: string): Promise<RouterBackend> {
-    if (documentId === "") {
-      return this.dispatcher.primary;
-    }
-    return this.dispatcher.placeDocument(documentId);
   }
 
   private recordBatchJobs(

@@ -492,3 +492,71 @@ describe("a cached route is a hint, not evidence of a split", () => {
     expect(one.count("deleteDocument") + two.count("deleteDocument")).toBe(0);
   });
 });
+
+describe("every create path resolves like a batch", () => {
+  const underParent = (submits: boolean) => {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    one.submits = submits;
+    two.submits = submits;
+    one.seed(
+      fakeDocument({
+        id: "drive-d",
+        documentType: "powerhouse/document-drive",
+      }),
+    );
+    two.seed(fakeDocument({ id: "child" }));
+    return { one, two, client: router([one.config(), two.config()]) };
+  };
+
+  for (const submits of [false, true]) {
+    const label = submits ? "submitting" : "non-submitting";
+    const creates = {
+      create: (client: RoutingReactorClient) =>
+        client.create(fakeDocument({ id: "child" }), "drive-d"),
+      createAsync: (client: RoutingReactorClient) =>
+        client.createAsync(fakeDocument({ id: "child" }), "drive-d"),
+      "drives.addFile": (client: RoutingReactorClient) =>
+        client.drives.addFile("drive-d", fakeDocument({ id: "child" })),
+    };
+
+    for (const [name, create] of Object.entries(creates)) {
+      it(`${name} under a parent reports a child held elsewhere (${label})`, async () => {
+        const { one, client } = underParent(submits);
+
+        const run = create(client);
+
+        await expect(run).rejects.toThrow(CrossBackendBatchError);
+        await expect(run).rejects.toThrow(/child@two/);
+        await expect(run).rejects.toThrow(/drive-d@one/);
+        expect(one.documents.has("child")).toBe(false);
+        expect(one.count("executeBatch")).toBe(0);
+      });
+    }
+
+    it(`a parentless create of an id held elsewhere lands on its holder (${label})`, async () => {
+      for (const id of ids("held")) {
+        for (const create of [
+          (client: RoutingReactorClient) => client.create(fakeDocument({ id })),
+          (client: RoutingReactorClient) =>
+            client.createAsync(fakeDocument({ id })),
+        ]) {
+          const one = new FakeBackend("one");
+          const two = new FakeBackend("two");
+          one.submits = submits;
+          two.submits = submits;
+          two.seed(fakeDocument({ id }));
+          const client = router([one.config(), two.config()]);
+
+          await create(client);
+
+          expect(one.documents.has(id), id).toBe(false);
+          expect(
+            one.methods().filter((m) => /create|executeBatch/.test(m)),
+            id,
+          ).toEqual([]);
+        }
+      }
+    });
+  }
+});
