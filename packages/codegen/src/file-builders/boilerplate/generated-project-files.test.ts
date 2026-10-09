@@ -45,6 +45,8 @@ describe("a new project's pieces entry", () => {
       }
     ).exports;
     expect(exports["./pieces"]).toEqual(packageJsonExports["./pieces"]);
+    // Node only, like ./pieces: `ph build` builds no browser subgraphs.
+    expect(exports["./subgraphs"]).not.toHaveProperty("browser");
     // Content, not existence: a fresh project's subgraphs aggregate is the
     // banner and nothing else — no export, so no subgraph registers until
     // codegen appends one (makeSubgraphsIndexFile).

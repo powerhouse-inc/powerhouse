@@ -2,6 +2,56 @@ import { installArgs } from "@powerhousedao/shared/clis/args";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 
+const MANIFEST_TIMEOUT_MS = 10_000;
+
+// The external packages a registry package's manifest lists; none when unreadable.
+export async function fetchExternalDependencies(
+  registryUrl: string,
+  dependency: { name: string; version?: string },
+): Promise<string[]> {
+  const base = registryUrl.endsWith("/") ? registryUrl : `${registryUrl}/`;
+  const spec = dependency.version
+    ? `${dependency.name}@${dependency.version}`
+    : dependency.name;
+  try {
+    const response = await fetch(
+      `${base}-/cdn/${spec}/powerhouse.manifest.json`,
+      { signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS) },
+    );
+    if (!response.ok) return [];
+    const manifest = (await response.json()) as {
+      externalDependencies?: unknown;
+    };
+    const external = manifest.externalDependencies;
+    return typeof external === "object" && external !== null
+      ? Object.keys(external).sort()
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function warnAboutExternalDependencies(
+  registryUrl: string,
+  dependencies: { name: string; version?: string }[],
+): Promise<void> {
+  // Fetched together: each manifest may take the whole timeout.
+  const found = await Promise.all(
+    dependencies.map((dependency) =>
+      fetchExternalDependencies(registryUrl, dependency),
+    ),
+  );
+  for (const [i, dependency] of dependencies.entries()) {
+    const external = found[i];
+    if (external.length === 0) continue;
+    console.warn(
+      `⚠ ${dependency.name}: its subgraphs and processors need packages with native addons or WebAssembly modules (${external.join(", ")}) ` +
+        `and only run when the package is installed locally: ph install --local ${dependency.name}\n` +
+        `  Its pieces work either way.`,
+    );
+  }
+}
+
 export const install = command({
   name: "install",
   aliases: ["add", "i"],
@@ -148,6 +198,13 @@ Resolution order for the registry URL:
     } catch (error) {
       console.error("❌ Failed to update config file");
       throw error;
+    }
+
+    if (!args.local) {
+      await warnAboutExternalDependencies(
+        registryUrl,
+        dependenciesWithVersions,
+      );
     }
 
     if (args.local) {

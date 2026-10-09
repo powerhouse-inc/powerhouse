@@ -876,6 +876,9 @@ export const ManifestSchema = z.object({
   // host that runs them. Optional like every other module list, so a package
   // that ships none says nothing.
   pieces: PieceModulesSchema,
+  // Packages with native addons or WebAssembly modules the node build keeps
+  // external, name -> version; written by `ph build` into the dist copy only.
+  externalDependencies: z.record(z.string(), z.string()).optional(),
   config: z.array(ConfigEntrySchema).optional(),
   pwa: PwaConfigSchema.optional(),
 });
