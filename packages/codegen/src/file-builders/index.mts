@@ -5,7 +5,9 @@ export * from "./clis/generate-cli-docs.js";
 export * from "./definition-sources.js";
 export * from "./document-editor.js";
 export {
+  findCodeFirstDocumentModelExport,
   loadCodeFirstInventory,
+  type CodeFirstDocumentModelExport,
   type CodeFirstInventory,
 } from "./document-model/code-first-aggregates.js";
 export * from "./document-model/code-first-model.js";

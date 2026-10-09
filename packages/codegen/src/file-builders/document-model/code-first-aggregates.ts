@@ -18,8 +18,8 @@ import {
 } from "document-model/tooling";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, realpathSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
-import { isObjectType, isString, prop, uniqueBy } from "remeda";
+import { dirname, join, relative, resolve } from "node:path";
+import { firstBy, isObjectType, isString, prop, uniqueBy } from "remeda";
 import {
   VariableDeclarationKind,
   type ArrayLiteralExpression,
@@ -62,13 +62,33 @@ function resolveCodeFirstSelection(
   return selection;
 }
 
+type ImportSource = (
+  specifier: `./${string}`,
+) => Promise<Readonly<Record<string, unknown>>>;
+
+/** The import path, from `fromDir`, of the JavaScript a source compiles to. */
+export function emittedImportPath(
+  fromDir: string,
+  projectDir: string,
+  specifier: `./${string}`,
+) {
+  const emitted = specifier.replace(/\.(m?)ts$/, ".$1js");
+  const path = relative(fromDir, resolve(projectDir, emitted)).replaceAll(
+    "\\",
+    "/",
+  );
+  return path.startsWith(".") ? path : `./${path}`;
+}
+
 async function readCodeFirstSources<T>(
   configFile: string,
-  read: (loaded: LoadedDefinitionSet) => T,
+  read: (
+    loaded: LoadedDefinitionSet,
+    importSource: ImportSource,
+  ) => T | Promise<T>,
 ): Promise<T> {
-  const loader = new DefinitionSourceLoader(
-    new ViteTypeScriptSourceImportAdapter(),
-  );
+  const importer = new ViteTypeScriptSourceImportAdapter();
+  const loader = new DefinitionSourceLoader(importer);
   // A fresh import environment binds each generation pass; none is reused across passes.
   const packageRevision: Sha256Digest = `sha256:${createHash("sha256").update(randomUUID()).digest("hex")}`;
   try {
@@ -80,7 +100,12 @@ async function readCodeFirstSources<T>(
       throw new Error(
         loaded.diagnostics.map(formatDefinitionDiagnostic).join("\n"),
       );
-    return read(loaded);
+    // The loader imports under the real path, so this reaches the module
+    // instances the loaded values came from.
+    const packageRoot = realpathSync(dirname(configFile));
+    return await read(loaded, (specifier) =>
+      importer.importModule({ packageRoot, specifier, packageRevision }),
+    );
   } finally {
     await loader.dispose();
   }
@@ -113,13 +138,12 @@ export async function codeFirstAggregateSources(
         const specifier = artifact.source.specifier;
         let source = sources.get(specifier);
         if (!source) {
-          const emitted = specifier.replace(/\.(m?)ts$/, ".$1js");
-          const path = relative(
-            join(projectDir, "document-models"),
-            resolve(projectDir, emitted),
-          ).replaceAll("\\", "/");
           source = {
-            moduleSpecifier: path.startsWith(".") ? path : `./${path}`,
+            moduleSpecifier: emittedImportPath(
+              join(projectDir, "document-models"),
+              projectDir,
+              specifier,
+            ),
             exportNamespace: loaded.sourceSet.sources.some(
               (entry) => entry.specifier === specifier && !entry.exportPath,
             ),
@@ -217,6 +241,79 @@ export async function loadCodeFirstInventory(
       reason: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+export type CodeFirstDocumentModelExport = {
+  readonly name: string;
+  readonly version: number | undefined;
+  /** The source the loader read the latest version from. */
+  readonly specifier: `./${string}`;
+  /** A selected source that exports the latest version by an importable name. */
+  readonly binding:
+    | { readonly specifier: `./${string}`; readonly exportName: string }
+    | undefined;
+};
+
+const isImportableName = (name: string) =>
+  name !== "default" && /^[A-Za-z_$][\w$]*$/.test(name);
+
+/**
+ * The latest code-first version of `documentModelId`, or `undefined` when no
+ * code-first source declares that type. The loader records a version under the
+ * first export path it reaches in sorted key order, which can be a collection
+ * such as `documentModels`, so the named binding is found by identity against
+ * the namespace of each selected source.
+ */
+export async function findCodeFirstDocumentModelExport(
+  projectDir: string,
+  documentModelId: string,
+): Promise<CodeFirstDocumentModelExport | undefined> {
+  const configFile = join(projectDir, POWERHOUSE_CONFIG_FILE);
+  if (
+    !existsSync(configFile) ||
+    selectsEmptyEntryList(configFile) ||
+    resolveCodeFirstSelection(configFile) === undefined
+  )
+    return undefined;
+  return await readCodeFirstSources(
+    configFile,
+    async ({ documentModels, sourceSet }, importSource) => {
+      const latest = firstBy(
+        documentModels.filter(({ value }) => {
+          const global: unknown = value.documentModel.global;
+          return (
+            isObjectType(global) &&
+            "id" in global &&
+            global.id === documentModelId
+          );
+        }),
+        [({ value }) => value.version ?? 0, "desc"],
+      );
+      if (latest === undefined) return undefined;
+      const specifiers = new Set([
+        latest.source.specifier,
+        ...sourceSet.sources.map(prop("specifier")),
+      ]);
+      let binding: CodeFirstDocumentModelExport["binding"];
+      for (const specifier of specifiers) {
+        const namespace = await importSource(specifier);
+        const exportName = Object.keys(namespace)
+          .filter(isImportableName)
+          .sort()
+          .find((key) => namespace[key] === latest.value);
+        if (exportName !== undefined) {
+          binding = { specifier, exportName };
+          break;
+        }
+      }
+      return {
+        name: latest.value.documentModel.global.name,
+        version: latest.value.version,
+        specifier: latest.source.specifier,
+        binding,
+      };
+    },
+  );
 }
 
 function accessPath(alias: string, source: DefinitionSource): string {

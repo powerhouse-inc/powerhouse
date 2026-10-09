@@ -1,6 +1,5 @@
 import {
   copyFileSync,
-  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -23,7 +22,10 @@ import {
 } from "../src/codegen/generate.js";
 import { loadCodeFirstInventory } from "../src/file-builders/index.mts";
 import { buildTsMorphProject } from "../src/utils/index.mts";
-import { createCodeFirstPackage } from "./code-first-package.js";
+import {
+  addTaskVersion2,
+  createCodeFirstPackage,
+} from "./code-first-package.js";
 
 const TEST_DOC_JSON = fileURLToPath(
   new URL(
@@ -430,66 +432,7 @@ describe("bulk generation in a code-first package", () => {
 
   it("lists a model with two versions once", async () => {
     await scaffoldCodeFirst();
-    cpSync(path("document-models/task/v1"), path("document-models/task/v2"), {
-      recursive: true,
-    });
-    replaceIn(
-      "document-models/task/v2/definition.ts",
-      "version: 1,",
-      "version: 2,",
-    );
-    replaceIn(
-      "document-models/task/v2/index.ts",
-      "taskV1Definition",
-      "taskV2Definition",
-    );
-    writeFileSync(
-      path("document-models/task/upgrades/v2.ts"),
-      [
-        'import type { UpgradeTransition } from "document-model";',
-        "",
-        "export const v2: UpgradeTransition = {",
-        "  toVersion: 2,",
-        "  upgradeReducer: (document) => document,",
-        "};",
-        "",
-      ].join("\n"),
-    );
-    replaceIn(
-      "document-models/task/upgrades/versions.ts",
-      "[1] as const",
-      "[1, 2] as const",
-    );
-    replaceIn(
-      "document-models/task/upgrades/upgrade-manifest.ts",
-      'from "./versions.js";',
-      'from "./versions.js";\nimport { v2 } from "./v2.js";',
-    );
-    replaceIn(
-      "document-models/task/upgrades/upgrade-manifest.ts",
-      "upgrades: {},",
-      "upgrades: { v2 },",
-    );
-    replaceIn(
-      "document-models/task/index.ts",
-      'import { taskV1Definition } from "./v1/index.js";',
-      'import { taskV1Definition } from "./v1/index.js";\nimport { taskV2Definition } from "./v2/index.js";',
-    );
-    replaceIn(
-      "document-models/task/index.ts",
-      "versions: [taskV1Definition]",
-      "versions: [taskV1Definition, taskV2Definition]",
-    );
-    replaceIn(
-      "document-models/task/index.ts",
-      "export const taskV1 = taskFamily.at(1);",
-      "export const taskV1 = taskFamily.at(1);\nexport const taskV2 = taskFamily.at(2);",
-    );
-    replaceIn(
-      "document-models/task/index.ts",
-      "[taskV1];",
-      "[taskV1, taskV2];",
-    );
+    addTaskVersion2(projectDir);
     writeManifest({ name: "@acme/things", documentModels: [] });
     await inProject(generateAllDocumentModels);
     expect(readManifestJson()).toMatchObject({
