@@ -1,59 +1,48 @@
-import { describe, expect, it } from "vitest";
-import { resolveMultiReactorEnabled } from "../../src/utils/multi-reactor-flag.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isMultiReactorEnabled } from "../../src/utils/multi-reactor-flag.js";
 
-describe("resolveMultiReactorEnabled", () => {
-  it("falls back to the config flag with no override", () => {
-    expect(resolveMultiReactorEnabled({ configFlag: false })).toBe(false);
-    expect(resolveMultiReactorEnabled({ configFlag: true })).toBe(true);
+const config = vi.hoisted(() => ({
+  multiReactor: false as boolean | undefined,
+}));
+
+vi.mock("../../src/runtime-config.js", () => ({
+  getRuntimeConfig: () => ({
+    connect: { instance: { multiReactor: config.multiReactor } },
+  }),
+}));
+
+function tab(search: string, stored: Record<string, string>) {
+  vi.stubGlobal("window", {
+    location: { search },
+    localStorage: {
+      getItem: (key: string) => stored[key] ?? null,
+      setItem: vi.fn(),
+    },
+  });
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("isMultiReactorEnabled", () => {
+  it("reads the runtime config", () => {
+    tab("", {});
+    config.multiReactor = true;
+    expect(isMultiReactorEnabled()).toBe(true);
+    config.multiReactor = false;
+    expect(isMultiReactorEnabled()).toBe(false);
+    config.multiReactor = undefined;
+    expect(isMultiReactorEnabled()).toBe(false);
   });
 
-  it("lets a query param override the config flag", () => {
-    expect(
-      resolveMultiReactorEnabled({ configFlag: false, queryParam: "true" }),
-    ).toBe(true);
-    expect(
-      resolveMultiReactorEnabled({ configFlag: false, queryParam: "1" }),
-    ).toBe(true);
-    expect(
-      resolveMultiReactorEnabled({ configFlag: true, queryParam: "false" }),
-    ).toBe(false);
-  });
+  it("takes no per-tab override, since the flag is in the worker fingerprint", () => {
+    config.multiReactor = false;
+    tab("?multiReactor=1", { "ph:multiReactor": "true" });
+    expect(isMultiReactorEnabled()).toBe(false);
 
-  it("lets a stored value override the config flag when no query param", () => {
-    expect(
-      resolveMultiReactorEnabled({ configFlag: false, storedValue: "true" }),
-    ).toBe(true);
-    expect(
-      resolveMultiReactorEnabled({ configFlag: true, storedValue: "false" }),
-    ).toBe(false);
-  });
-
-  it("prefers the query param over the stored value", () => {
-    expect(
-      resolveMultiReactorEnabled({
-        configFlag: false,
-        queryParam: "true",
-        storedValue: "false",
-      }),
-    ).toBe(true);
-  });
-
-  it("ignores an unrecognized query param instead of disabling", () => {
-    expect(
-      resolveMultiReactorEnabled({ configFlag: true, queryParam: "on" }),
-    ).toBe(true);
-    expect(
-      resolveMultiReactorEnabled({
-        configFlag: false,
-        queryParam: "yes",
-        storedValue: "true",
-      }),
-    ).toBe(true);
-  });
-
-  it("treats 0 as an explicit disable", () => {
-    expect(
-      resolveMultiReactorEnabled({ configFlag: true, queryParam: "0" }),
-    ).toBe(false);
+    config.multiReactor = true;
+    tab("?multiReactor=0", { "ph:multiReactor": "false" });
+    expect(isMultiReactorEnabled()).toBe(true);
   });
 });
