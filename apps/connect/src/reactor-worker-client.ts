@@ -62,6 +62,8 @@ export type WorkerReactorClientArgs = {
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
   featureFlags: Partial<ReactorFeatureFlags>;
+  /** The resolved multiReactor flag; the worker has no runtime config either. */
+  multiReactor: boolean;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
   /** Whether the worker boots over stored documents this build does not run. */
@@ -98,6 +100,26 @@ function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
     .map(([name]) => name)
     .sort()
     .join(",");
+}
+
+/** What the worker's build reads; flags arrive here because it has no config. */
+export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
+  return {
+    namespace: args.namespace,
+    relationalNamespace: args.relationalNamespace,
+    cdnUrl: args.cdnUrl,
+    packageSpecs: args.packageSpecs,
+    sharedImports: args.sharedImports,
+    studioMode: args.studioMode,
+    workflowsEnabled: args.workflowsEnabled,
+    renownChainId: args.renownChainId,
+    featureFlags: args.featureFlags,
+    multiReactor: args.multiReactor,
+    createSignaturePolicy: args.createSignaturePolicy,
+    unsupportedStoredDocuments: args.unsupportedStoredDocuments,
+    renownEndpoints: args.renownEndpoints,
+    packageSources: args.packageSources,
+  };
 }
 
 function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
@@ -165,21 +187,7 @@ export function createWorkerReactorClientModule(
         })),
         featureFlags: enabledFlagList(args.featureFlags),
       },
-      construct: {
-        namespace: args.namespace,
-        relationalNamespace: args.relationalNamespace,
-        cdnUrl: args.cdnUrl,
-        packageSpecs: args.packageSpecs,
-        sharedImports: args.sharedImports,
-        studioMode: args.studioMode,
-        workflowsEnabled: args.workflowsEnabled,
-        renownChainId: args.renownChainId,
-        featureFlags: args.featureFlags,
-        createSignaturePolicy: args.createSignaturePolicy,
-        unsupportedStoredDocuments: args.unsupportedStoredDocuments,
-        renownEndpoints: args.renownEndpoints,
-        packageSources: args.packageSources,
-      },
+      construct: buildWorkerConstruct(args),
       packages: args.packageSpecs,
     },
     (reason, nextGen) => {

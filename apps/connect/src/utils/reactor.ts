@@ -1,7 +1,6 @@
 import {
   addDrive,
   addRemoteDrive,
-  ChannelScheme,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -14,6 +13,8 @@ import {
 } from "@powerhousedao/reactor-browser";
 import {
   type GroupCommitPGliteInstance,
+  LocalChannelFactory,
+  LocalChannelPortRegistry,
   PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
@@ -32,6 +33,7 @@ import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
 import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
+import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -51,6 +53,7 @@ export async function createBrowserReactor(
   createSignaturePolicy?: SignaturePolicy,
   renownEndpoints: RenownTrustEndpoints = {},
   unsupportedStoredDocuments?: UnsupportedStoredDocuments,
+  multiReactor = false,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig = await createConnectSignerConfig(
     renown.signer,
@@ -72,7 +75,6 @@ export async function createBrowserReactor(
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(documentModelModules)
     .withUpgradeManifests(upgradeManifests)
-    .withChannelScheme(ChannelScheme.CONNECT)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
     .withGroupCommitPGlite({
@@ -84,6 +86,15 @@ export async function createBrowserReactor(
         console.error(`[reactor] pglite: ${message}`, error),
     })
     .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+  // No brokered-port seam on the main thread, so the registry stays empty.
+  configureConnectChannelScheme(reactorBuilder, {
+    multiReactor,
+    createLocalChannelFactory: () =>
+      new LocalChannelFactory(
+        logger,
+        new LocalChannelPortRegistry({ logger }).provider,
+      ),
+  });
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)

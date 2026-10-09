@@ -65,6 +65,7 @@ import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { startupOwningStores } from "../utils/worker-startup.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
+import { isMultiReactorEnabled } from "../utils/multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
@@ -370,6 +371,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     renownUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
   };
+  const multiReactor = isMultiReactorEnabled();
 
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
@@ -439,6 +441,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      multiReactor,
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,
@@ -492,6 +495,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       createSignaturePolicy,
       renownEndpoints,
       unsupportedStoredDocuments,
+      multiReactor,
     );
   }
 

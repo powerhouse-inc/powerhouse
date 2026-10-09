@@ -1,10 +1,11 @@
 import {
-  ChannelScheme,
   createReactorInspector,
   DriveCollectionId,
   HardenedPGliteDialect,
   type GroupCommitPGliteInstance,
   InMemoryQueue,
+  LocalChannelFactory,
+  LocalChannelPortRegistry,
   queryThroughDialect,
   PGLITE_IDB_STORAGE_FACTS,
   ReactorBuilder,
@@ -59,6 +60,7 @@ import {
   type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
+import { configureConnectChannelScheme } from "./utils/reactor-channel-scheme.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { closeWithin } from "./utils/close-within.js";
 import { createWorkerStores } from "./utils/worker-stores.js";
@@ -66,6 +68,7 @@ import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
 import { createStoreLocks } from "./utils/store-lock.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
+import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
@@ -111,6 +114,8 @@ type WorkerConstruct = {
   // Same reason: enforcement flags arrive from the tab. Absent means all off,
   // which is what a tab on an older build sends.
   featureFlags?: Partial<ReactorFeatureFlags>;
+  // Absent (an older tab) means off.
+  multiReactor?: boolean;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
   // Absent means the reactor's default, refuse.
@@ -480,7 +485,6 @@ const host = new ReactorHost({
       console.info(`[reactor.worker] boot: ${phase}`);
       const reactorBuilder = new ReactorBuilder()
         .withDocumentModelSources(models)
-        .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
         .withGroupCommitPGlite({
@@ -490,6 +494,16 @@ const host = new ReactorHost({
             console.error(`[reactor.worker] pglite: ${message}`, error),
         })
         .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+      configureConnectChannelScheme(reactorBuilder, {
+        multiReactor: construct.multiReactor ?? false,
+        createLocalChannelFactory: () => {
+          const logger = new ConsoleLogger(["reactor.worker", "local-sync"]);
+          return new LocalChannelFactory(
+            logger,
+            new LocalChannelPortRegistry({ logger }).provider,
+          );
+        },
+      });
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,
