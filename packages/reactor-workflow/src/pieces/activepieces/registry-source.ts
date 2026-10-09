@@ -54,6 +54,11 @@ export function setPieceRegistryUrl(url: string | undefined): void {
   logger.info(`Pieces may be fetched from ${configured.baseUrl}`);
 }
 
+/** The registry at `baseUrl`, whichever one this host is configured with. */
+export function pieceRegistrySourceAt(baseUrl: string): PieceRegistrySource {
+  return source(baseUrl.replace(/\/+$/, ""));
+}
+
 export function pieceRegistrySource(): PieceRegistrySource | undefined {
   return configured;
 }

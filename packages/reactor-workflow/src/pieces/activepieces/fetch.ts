@@ -4,7 +4,11 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { gunzip as gunzipCb } from "node:zlib";
-import { pieceRegistrySource } from "./registry-source.js";
+import {
+  pieceRegistrySource,
+  pieceRegistrySourceAt,
+  type PieceRegistrySource,
+} from "./registry-source.js";
 
 const gunzip = promisify(gunzipCb);
 
@@ -179,16 +183,17 @@ function tarballSources(
   name: string,
   version: string,
   only?: readonly BundleSource[],
+  registry = pieceRegistrySource(),
 ): { source: BundleSource; url: string }[] {
-  const all = allTarballSources(name, version);
+  const all = allTarballSources(name, version, registry);
   return only ? all.filter(({ source }) => only.includes(source)) : all;
 }
 
 function allTarballSources(
   name: string,
   version: string,
+  registry: PieceRegistrySource | undefined,
 ): { source: BundleSource; url: string }[] {
-  const registry = pieceRegistrySource();
   return [
     ...(registry
       ? [
@@ -208,8 +213,9 @@ async function downloadTarball(
   version: string,
   timeoutMs: number,
   only?: readonly BundleSource[],
+  registry?: PieceRegistrySource,
 ): Promise<{ tgz: Buffer; source: BundleSource }> {
-  const sources = tarballSources(name, version, only);
+  const sources = tarballSources(name, version, only, registry);
   let lastError: unknown;
   for (const { source, url } of sources) {
     try {
@@ -394,7 +400,9 @@ async function installPieceBundle(
   }
   try {
     await stageInstallWorkspace(workspace, options);
-    await runInstall(workspace, timeoutMs);
+    // A package's piece installs from the registry the package came from,
+    // which proxies npm; an npm piece keeps the host's own npm config.
+    await runInstall(workspace, timeoutMs, packageRegistry(options)?.baseUrl);
     await writeFile(path.join(workspace, INSTALL_READY_MARKER), "true");
   } catch (error) {
     // Swept, so the next attempt starts clean: a half-written node_modules
@@ -412,6 +420,21 @@ async function installPieceBundle(
   };
 }
 
+// "<registry>/-/cdn/<package>@<version>/<file>" -> "<registry>".
+export function registryOf(entryUrl: string): string | undefined {
+  const at = entryUrl.indexOf("/-/cdn/");
+  return at > 0 ? entryUrl.slice(0, at) : undefined;
+}
+
+// A package's piece comes from, and installs through, the package's registry.
+function packageRegistry(
+  options: FetchPieceBundleOptions,
+): PieceRegistrySource | undefined {
+  if (!options.entryUrl) return undefined;
+  const base = registryOf(options.entryUrl);
+  return base ? pieceRegistrySourceAt(base) : pieceRegistrySource();
+}
+
 // The tarball, not the directory already extracted: npm symlinks a directory
 // dependency, and node resolves a symlinked module from its realpath.
 
@@ -426,6 +449,7 @@ async function stageInstallWorkspace(
     options.version,
     options.timeoutMs ?? 30_000,
     options.sources,
+    packageRegistry(options),
   );
   await rm(workspace, { recursive: true, force: true });
   await mkdir(workspace, { recursive: true });
@@ -459,7 +483,11 @@ const INSTALL_TIMEOUT_MS =
 
 // Activepieces use bun and it is much faster, but the install is cached per
 // name and version and off every hot path, so what it would buy is one-off.
-function installCommand(): { file: string; args: string[]; shell: boolean } {
+function installCommand(registry?: string): {
+  file: string;
+  args: string[];
+  shell: boolean;
+} {
   // Windows installs npm as npm.cmd, which only a shell can spawn.
   const windows = process.platform === "win32";
   return {
@@ -473,19 +501,24 @@ function installCommand(): { file: string; args: string[]; shell: boolean } {
       "--no-fund",
       "--omit=dev",
       "--loglevel=error",
+      ...(registry ? [`--registry=${registry}/`] : []),
     ],
     shell: windows,
   };
 }
 
-async function runInstall(cwd: string, timeoutMs: number): Promise<void> {
-  const { file, args, shell } = installCommand();
+async function runInstall(
+  cwd: string,
+  timeoutMs: number,
+  registry?: string,
+): Promise<void> {
+  const { file, args, shell } = installCommand(registry);
   await new Promise<void>((resolve, reject) => {
     execFile(
       file,
       args,
-      // No network of its own to configure and no bunfig to inherit: npm reads
-      // the ambient registry config, which is the host's to set.
+      // No bunfig to inherit: npm reads the host's config, and only the
+      // registry above overrides it.
       { cwd, timeout: timeoutMs, shell, windowsHide: true },
       (error, _stdout, stderr) => {
         if (!error) return resolve();
