@@ -204,7 +204,7 @@ function Row(props: {
   active?: boolean;
   // The piece the other pane shows, while the keyboard is elsewhere.
   selected?: boolean;
-  // Two lines of description, for blocks.
+  // Two lines of description, for blocks; the list sizes the row.
   tall?: boolean;
   // Where it sits in its listbox; only the rows in view are mounted.
   option?: OptionPlace;
@@ -221,11 +221,10 @@ function Row(props: {
       role="option"
       aria-selected={(props.active ?? false) || (props.selected ?? false)}
       aria-disabled={props.disabled}
-      className={`group flex w-full cursor-pointer items-center gap-2 border-l-2 pl-[10px] pr-3 text-left ${
-        props.tall ? "h-[54px]" : "h-11"
-      } ${rowTone(props.active, props.selected)} ${
-        props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
-      }`}
+      className={`group mx-1.5 my-px flex h-[calc(100%-2px)] cursor-pointer items-center gap-2.5 rounded-md px-2 text-left ${rowTone(
+        props.active,
+        props.selected,
+      )} ${props.disabled ? "cursor-not-allowed opacity-50" : ""}`}
       title={props.title}
       onClick={props.disabled ? undefined : props.onClick}
       onMouseDown={(event) => event.preventDefault()}
@@ -236,12 +235,12 @@ function Row(props: {
         {props.logo}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-xs font-medium text-foreground">
+        <span className="block truncate text-[13px] font-medium leading-[18px] text-foreground">
           {props.label}
         </span>
         <span
           // line-clamp sets its own display; `block` would undo it.
-          className={`text-[11px] text-muted-foreground/80 ${
+          className={`text-xs leading-4 text-muted-foreground ${
             props.tall ? "line-clamp-2" : "block truncate"
           }`}
         >
@@ -250,7 +249,7 @@ function Row(props: {
       </span>
       {props.version ? (
         <span
-          className={`ml-auto shrink-0 pl-2 text-[10px] tabular-nums text-muted-foreground/70 ${
+          className={`ml-auto shrink-0 pl-2 text-[11px] tabular-nums text-muted-foreground ${
             props.versionNote
               ? ""
               : props.active
@@ -266,11 +265,12 @@ function Row(props: {
   );
 }
 
+// The keyboard's row is tinted with the accent; the piece open beside the
+// list sits raised on the rail, joined to the pane that shows it.
 function rowTone(active?: boolean, selected?: boolean): string {
-  if (active) return "border-wf-run bg-foreground/[0.07]";
-  return selected
-    ? "border-transparent bg-foreground/[0.04]"
-    : "border-transparent";
+  if (active) return "bg-wf-run/10 ring-1 ring-inset ring-wf-run/25";
+  if (selected) return "bg-card shadow-sm ring-1 ring-foreground/10";
+  return "hover:bg-foreground/[0.05]";
 }
 
 // A row's id and position, named by the search box's aria-activedescendant.
@@ -582,10 +582,10 @@ function Chip(props: {
       type="button"
       aria-pressed={props.active}
       tabIndex={props.tabStop ? 0 : -1}
-      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium focus-visible:outline-2 focus-visible:outline-wf-run ${
         props.active
-          ? "border-wf-run bg-wf-run text-white"
-          : "border-foreground/10 text-muted-foreground hover:border-foreground/25"
+          ? "border-wf-run/40 bg-wf-run/10 text-wf-run"
+          : "border-foreground/10 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
       }`}
       // A keyboard click reports no pointer clicks.
       onClick={(event) => props.onClick(event.detail === 0)}
@@ -634,7 +634,7 @@ function ChipBar(props: { children: React.ReactNode }) {
         ref={ref}
         role="toolbar"
         aria-label="Categories"
-        className="flex gap-1 overflow-x-auto whitespace-nowrap px-2.5 py-1.5 [scrollbar-width:none]"
+        className="flex gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-2 [scrollbar-width:none]"
         onKeyDown={rovingFocus}
         onScroll={measure}
       >
@@ -648,18 +648,42 @@ function ChipBar(props: { children: React.ReactNode }) {
 
 // What the keys do, where they do it.
 function KeyHints(props: { searching: boolean; twoPane: boolean }) {
-  const hints = props.searching
-    ? ["↑↓ move", "Enter pick", "Esc clear"]
+  const hints: [string[], string][] = props.searching
+    ? [
+        [["↑", "↓"], "Move"],
+        [["Enter"], "Select"],
+        [["Esc"], "Clear"],
+      ]
     : props.twoPane
-      ? ["↑↓ move", "→ open", "← back", "Enter pick", "Esc close"]
-      : ["↑↓ move", "Enter pick", "Esc close"];
+      ? [
+          [["↑", "↓"], "Move"],
+          [["→"], "Open"],
+          [["←"], "Back"],
+          [["Enter"], "Select"],
+          [["Esc"], "Close"],
+        ]
+      : [
+          [["↑", "↓"], "Move"],
+          [["Enter"], "Select"],
+          [["Esc"], "Close"],
+        ];
   return (
     <div
       aria-hidden="true"
-      className="flex shrink-0 gap-3 border-t border-foreground/10 px-3 py-1 text-[10px] text-muted-foreground/70"
+      className="flex shrink-0 items-center gap-4 border-t border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-[11px] text-muted-foreground"
     >
-      {hints.map((hint) => (
-        <span key={hint}>{hint}</span>
+      {hints.map(([keys, label]) => (
+        <span key={label} className="flex items-center gap-1">
+          {keys.map((key) => (
+            <kbd
+              key={key}
+              className="min-w-[18px] rounded border border-b-2 border-foreground/15 bg-card px-1 text-center font-sans text-[10px] leading-4 text-foreground/80"
+            >
+              {key}
+            </kbd>
+          ))}
+          {label}
+        </span>
       ))}
     </div>
   );
@@ -674,7 +698,7 @@ function Tabs(props: {
     <div
       role="tablist"
       aria-label="Piece sources"
-      className="mt-1.5 flex gap-3 px-1"
+      className="inline-flex gap-0.5 rounded-md bg-foreground/[0.05] p-0.5"
       onKeyDown={(event) => {
         rovingFocus(event);
         // Following focus, as a tab list does.
@@ -691,10 +715,10 @@ function Tabs(props: {
           data-tab={tab}
           aria-selected={props.active === tab}
           tabIndex={props.active === tab ? 0 : -1}
-          className={`-mb-px border-b-2 pb-1 text-[11px] font-medium ${
+          className={`rounded px-2.5 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-wf-run ${
             props.active === tab
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
           onClick={(event) => props.onSelect(tab, event.detail === 0)}
         >
@@ -709,7 +733,7 @@ function Status(props: { children: React.ReactNode; error?: boolean }) {
   return (
     <div
       role="status"
-      className={`px-3 py-1 text-xs ${props.error ? "text-wf-fail" : "text-muted-foreground/80"}`}
+      className={`px-4 py-2.5 text-xs ${props.error ? "text-wf-fail" : "text-muted-foreground"}`}
     >
       {props.children}
     </div>
@@ -740,7 +764,8 @@ type Source =
       id: ListId;
       title: string;
       subtitle: string;
-      logo: React.ReactNode;
+      // Drawn small in the list and large over its blocks.
+      logo: (size: number) => React.ReactNode;
       entries: Entry[];
     }
   | { kind: "piece"; id: string; piece: PieceSummaryUi };
@@ -751,10 +776,12 @@ type SearchRow =
   | { type: "entry"; entry: Entry }
   | { type: "more"; pieceName: string; hidden: number };
 
-const ROW_HEIGHT = 44;
-const BLOCK_HEIGHT = 54;
-const HEADER_HEIGHT = 36;
-const MORE_HEIGHT = 24;
+const ROW_HEIGHT = 46;
+const BLOCK_HEIGHT = 60;
+// The open piece's logo, over its blocks.
+const HEADER_LOGO = 36;
+const HEADER_HEIGHT = 38;
+const MORE_HEIGHT = 28;
 // Blocks a search group shows before "more"; all of them for one or two groups.
 const GROUP_BLOCKS = 4;
 // Hovering a piece previews it once the pointer settles.
@@ -769,8 +796,8 @@ const searchRowHeight = (row: SearchRow) =>
 const sourceHeight = () => ROW_HEIGHT;
 const entryHeight = () => BLOCK_HEIGHT;
 
-function ListTile(props: { icon: IconName; color: string }) {
-  return <CoreTile tile={props} size={ROW_LOGO} />;
+function listTile(icon: IconName, color: string) {
+  return (size: number) => <CoreTile tile={{ icon, color }} size={size} />;
 }
 
 function EntryRow(props: {
@@ -828,7 +855,7 @@ function SourceRow(props: {
   if (source.kind === "list") {
     return (
       <Row
-        logo={source.logo}
+        logo={source.logo(ROW_LOGO)}
         label={source.title}
         description={source.subtitle}
         active={props.active}
@@ -940,18 +967,27 @@ function EntriesPane(props: {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {source && props.showHeader ? (
-        <div className="border-b border-foreground/10 px-3 py-2">
-          <div className="truncate text-xs font-semibold text-foreground">
-            {title}
-          </div>
-          {about ? (
-            <div
-              className="line-clamp-3 text-[11px] text-muted-foreground/80"
-              title={about}
-            >
-              {about}
+        <div className="flex shrink-0 items-start gap-3 border-b border-foreground/10 px-4 py-3">
+          <span aria-hidden="true" className="contents">
+            {source.kind === "list" ? (
+              source.logo(HEADER_LOGO)
+            ) : (
+              <LogoFrame src={source.piece.logoUrl} alt="" size={HEADER_LOGO} />
+            )}
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold leading-5 text-foreground">
+              {title}
             </div>
-          ) : null}
+            {about ? (
+              <div
+                className="line-clamp-2 text-xs leading-4 text-muted-foreground"
+                title={about}
+              >
+                {about}
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {!source ? (
@@ -996,6 +1032,8 @@ function SearchList(props: {
   onOpenList: (id: ListId) => void;
   onExpand: (pieceName: string) => void;
   status: React.ReactNode;
+  // "action" or "trigger", for the heading's link.
+  kind: string;
   listId: string;
   resetKey: string;
   stale: boolean;
@@ -1043,7 +1081,7 @@ function SearchList(props: {
                 {...optionAttributes(option)}
                 role="option"
                 aria-selected={active}
-                className={`flex h-full w-full cursor-pointer items-center border-l-2 pl-[42px] text-[11px] text-muted-foreground hover:text-foreground ${rowTone(active)}`}
+                className={`mx-1.5 my-px flex h-[calc(100%-2px)] cursor-pointer items-center rounded-md pl-[42px] text-xs text-muted-foreground hover:text-foreground ${rowTone(active)}`}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseEnter={activate}
                 onClick={() => props.onExpand(row.pieceName)}
@@ -1064,14 +1102,16 @@ function SearchList(props: {
                   ),
                   label: row.match.displayName,
                   note: row.match.deprecated
-                    ? "deprecated"
+                    ? "Deprecated"
                     : (row.match.unsupported ?? undefined),
+                  kind: props.kind,
                   open: () => props.onOpenPiece(row.match.pieceName),
                 }
               : {
-                  logo: row.source.logo,
+                  logo: row.source.logo(20),
                   label: row.source.title,
                   note: undefined,
+                  kind: props.kind,
                   open: () => props.onOpenList(row.source.id),
                 };
           return (
@@ -1080,7 +1120,7 @@ function SearchList(props: {
               role="option"
               aria-selected={active}
               title={`Open ${header.label}`}
-              className={`flex h-full w-full cursor-pointer items-center gap-2 border-l-2 pl-[10px] pr-3 text-left ${rowTone(active)} hover:bg-muted/50`}
+              className={`group mx-1.5 mt-1 flex h-[calc(100%-4px)] cursor-pointer items-center gap-2.5 rounded-md px-2 text-left ${rowTone(active)}`}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={activate}
               onClick={header.open}
@@ -1088,16 +1128,21 @@ function SearchList(props: {
               <span aria-hidden="true" className="contents">
                 {header.logo}
               </span>
-              <span className="truncate text-xs font-semibold text-foreground">
+              <span className="truncate text-[13px] font-semibold text-foreground">
                 <Highlight text={header.label} tokens={props.tokens} />
               </span>
               {header.note ? (
-                <span className="truncate text-[10px] text-muted-foreground/70">
+                <span className="truncate text-[11px] text-muted-foreground">
                   {header.note}
                 </span>
               ) : null}
-              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                Open →
+              <span
+                className={`ml-auto flex shrink-0 items-center gap-0.5 text-[11px] text-muted-foreground ${
+                  active ? "" : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                All {header.kind}s
+                <Icon name="chevron" size={12} />
               </span>
             </div>
           );
@@ -1334,7 +1379,7 @@ export function BlockSelector(props: {
       id: ListId,
       title: string,
       subtitle: string,
-      logo: React.ReactNode,
+      logo: (size: number) => React.ReactNode,
       entries: Entry[],
     ) => {
       if (entries.length > 0) {
@@ -1348,7 +1393,7 @@ export function BlockSelector(props: {
           "attach",
           "Detached steps",
           "Re-attach a step at this point",
-          <ListTile icon="branch" color="#64748b" />,
+          listTile("branch", "#64748b"),
           (props.attachSteps ?? []).map((step) => ({
             key: `attach ${step.id}`,
             logo: <BlockLogo block={stepBlock(step)} size={ROW_LOGO} />,
@@ -1364,7 +1409,7 @@ export function BlockSelector(props: {
         "core",
         "Core",
         "Built into the workflow engine",
-        <ListTile icon="bolt" color="#2563eb" />,
+        listTile("bolt", "#2563eb"),
         props.presets
           .filter((preset) => preset.group !== "powerhouse")
           .map(presetEntry),
@@ -1378,9 +1423,10 @@ export function BlockSelector(props: {
         "powerhouse",
         "Documents",
         "Read and change documents on this reactor",
-        reactorPreset ? (
-          <BlockLogo block={reactorPreset.block} size={ROW_LOGO} />
-        ) : null,
+        (size) =>
+          reactorPreset ? (
+            <BlockLogo block={reactorPreset.block} size={size} />
+          ) : null,
         props.presets
           .filter((preset) => preset.group === "powerhouse")
           .map(presetEntry),
@@ -1395,7 +1441,7 @@ export function BlockSelector(props: {
         "recent",
         "Recently used",
         `Your last ${kind}s`,
-        <ListTile icon="clock" color="#64748b" />,
+        listTile("clock", "#64748b"),
         recent.map((preset) => {
           const entry = presetEntry(preset);
           // A piece this runtime has since stopped running stays inert.
@@ -1454,6 +1500,9 @@ export function BlockSelector(props: {
       : null;
   const entries =
     selected?.kind === "list" ? selected.entries : (pieceEntries ?? []);
+  // The keyboard's block, once the list it points into has loaded.
+  const entryAt =
+    entries.length === 0 ? -1 : Math.min(entryIndex, entries.length - 1);
 
   // Search: our lists that match, then the server's groups.
   const presetKeys = new Set(
@@ -1574,8 +1623,9 @@ export function BlockSelector(props: {
     hoverTimer.current = setTimeout(() => selectSource(id), HOVER_PREVIEW_MS);
   };
 
+  // An empty list (a piece's blocks still loading) keeps the position.
   const step = (index: number, delta: number, count: number) =>
-    count === 0 ? -1 : Math.min(Math.max(index + delta, 0), count - 1);
+    count === 0 ? index : Math.min(Math.max(index + delta, 0), count - 1);
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     const key = event.key;
@@ -1630,7 +1680,7 @@ export function BlockSelector(props: {
       setPane("sources");
     } else if (key === "Enter") {
       event.preventDefault();
-      const entry = entryIndex < 0 ? undefined : entries.at(entryIndex);
+      const entry = entryAt < 0 ? undefined : entries.at(entryAt);
       if (entry && entry.unavailable === undefined) entry.pick();
     }
   };
@@ -1644,7 +1694,7 @@ export function BlockSelector(props: {
   const activeIndex = searching
     ? activeRow
     : pane === "entries"
-      ? entryIndex
+      ? entryAt
       : sourceIndex;
   const activeOption =
     activeIndex >= 0 ? optionId(activeList, activeIndex) : undefined;
@@ -1673,7 +1723,7 @@ export function BlockSelector(props: {
   return (
     <div
       ref={containerRef}
-      className="nodrag nopan nowheel flex flex-col overflow-hidden rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
+      className="nodrag nopan nowheel flex flex-col overflow-hidden rounded-lg border border-solid border-foreground/10 bg-card shadow-xl"
       style={compact ? { width, maxHeight: height } : { width, height }}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={onKeyDown}
@@ -1681,26 +1731,33 @@ export function BlockSelector(props: {
         pointerMoved.current = true;
       }}
     >
-      <div className="shrink-0 border-b border-foreground/10 px-2 pt-2">
-        <input
-          ref={inputRef}
-          autoFocus
-          role="combobox"
-          aria-expanded
-          aria-autocomplete="list"
-          aria-label={`Search ${props.title.toLowerCase()}`}
-          aria-controls={activeList}
-          aria-activedescendant={activeOption}
-          className="w-full rounded border border-foreground/10 bg-card px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground"
-          placeholder={pieceSource ? `Search pieces and ${kind}s…` : "Search…"}
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setRowIndex(-1);
-            setExpanded(new Set());
-          }}
-        />
-        <div className="flex items-end justify-between gap-2">
+      <div className="shrink-0 border-b border-foreground/10">
+        <div className="flex items-center gap-2 px-3.5 pt-3 text-muted-foreground">
+          <Icon name="search" size={15} />
+          <input
+            ref={inputRef}
+            autoFocus
+            role="combobox"
+            aria-expanded
+            aria-autocomplete="list"
+            aria-label={`Search ${props.title.toLowerCase()}`}
+            aria-controls={activeList}
+            aria-activedescendant={activeOption}
+            // Always focused while open; the caret is its focus indicator.
+            className="min-w-0 flex-1 bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            placeholder={
+              pieceSource ? `Search pieces and ${kind}s…` : "Search…"
+            }
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setRowIndex(-1);
+              setExpanded(new Set());
+            }}
+          />
+          <span className="shrink-0 truncate text-xs">{props.title}</span>
+        </div>
+        <div className="px-3 pb-2.5 pt-2">
           <Tabs
             tabs={tabs}
             active={tab}
@@ -1712,9 +1769,6 @@ export function BlockSelector(props: {
               if (!fromKeyboard) inputRef.current?.focus();
             }}
           />
-          <span className="truncate pb-1 pr-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-            {props.title}
-          </span>
         </div>
       </div>
       {showChips && catalog && !catalog.error ? (
@@ -1749,6 +1803,7 @@ export function BlockSelector(props: {
           }}
           onExpand={(name) => setExpanded(new Set([...expanded, name]))}
           status={searchStatus}
+          kind={kind}
           listId={listIds.results}
           resetKey={`${query} ${JSON.stringify(searchFilter)}`}
           stale={search.kind === "done" && search.stale}
@@ -1756,7 +1811,8 @@ export function BlockSelector(props: {
       ) : (
         <div className="flex min-h-0 flex-1">
           {twoPane ? (
-            <div className="flex w-56 shrink-0 flex-col border-r border-foreground/10">
+            // A tinted rail, so the open piece can sit raised on it.
+            <div className="flex w-56 shrink-0 flex-col border-r border-foreground/10 bg-foreground/[0.025]">
               {catalog?.error ? (
                 <div className="flex items-center gap-2 px-3 py-2 text-xs text-wf-fail">
                   <span className="min-w-0 flex-1">{catalog.error}</span>
@@ -1819,7 +1875,7 @@ export function BlockSelector(props: {
             pieceEntries={pieceEntries}
             pieceError={selected?.kind === "piece" ? loaded.error : null}
             tokens={tokens}
-            activeIndex={pane === "entries" ? entryIndex : -1}
+            activeIndex={pane === "entries" ? entryAt : -1}
             listId={listIds.entries}
             showHeader={twoPane}
             onActivate={(index) => {
