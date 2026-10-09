@@ -32,6 +32,7 @@ import type {
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
+import { getFullReactorClient } from "../store/app-reactor-client.js";
 import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
@@ -197,7 +198,7 @@ async function addRemoteDefaultDrive(
       // only exists once initial backfill delivers it — wait for it first
       // so the name/icon override isn't lost to a sync race.
       // waitForDocumentReady needs the full reactor client
-      const reactorClient = window.ph?.reactorClientModule?.client;
+      const reactorClient = getFullReactorClient();
       if (reactorClient) {
         await waitForDocumentReady(reactorClient, driveId, {
           timeoutMs: 15_000,
@@ -244,7 +245,7 @@ async function addLocalDefaultDrive(
     // path asks — is the id reserved, deleted or not — where find() reports
     // only live documents, so a deleted drive would look absent and be
     // re-created (and rejected) on every boot.
-    const reactorClient = window.ph?.reactorClientModule?.client;
+    const reactorClient = getFullReactorClient();
     if (reactorClient) {
       const taken = await reactorClient.isDocumentIdTaken(drive.id);
       if (taken) {

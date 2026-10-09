@@ -81,6 +81,7 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
+import { selectAppReactorClient } from "./app-reactor-client.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -499,12 +500,20 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     );
   }
 
-  const drives = await getDrives(reactorClientModule.client);
+  const appReactorClient = await selectAppReactorClient({
+    multiReactor,
+    module: reactorClientModule,
+    remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
+    signer: renown.signer,
+    documentModelModules,
+  });
+
+  const drives = await getDrives(appReactorClient);
 
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
 
-  const documentCache = new DocumentCache(reactorClientModule.client);
+  const documentCache = new DocumentCache(appReactorClient);
 
   const basePath = phGlobalConfig.basePath ?? "/";
   const routerBasename = phGlobalConfig.routerBasename ?? "/";
@@ -521,7 +530,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
-  setReactorClient(reactorClientModule.client);
+  setReactorClient(appReactorClient);
 
   const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
   if (_defaultDrivesUrl) {
@@ -574,11 +583,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // Refresh the drive list on any drive-type change so async-added
   // default/remote drives surface on first load without a manual reload.
-  const reactorClient = reactorClientModule.client;
+  const reactorClient = appReactorClient;
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
     reactorClient.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+      refreshReactorDataClient(appReactorClient).catch((e) =>
         logger.error("@error", e),
       );
     });
@@ -595,7 +604,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
   });
 
-  await refreshReactorDataClient(reactorClientModule.client);
+  await refreshReactorDataClient(appReactorClient);
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,
