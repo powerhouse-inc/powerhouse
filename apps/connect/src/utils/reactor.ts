@@ -12,9 +12,10 @@ import {
   type JwtHandler,
   type ReactorFeatureFlags,
 } from "@powerhousedao/reactor-browser";
-import type {
-  GroupCommitPGliteInstance,
-  UnsupportedStoredDocuments,
+import {
+  type GroupCommitPGliteInstance,
+  PGLITE_IDB_STORAGE_FACTS,
+  type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type {
   PHConnectDefaultDrive,
@@ -81,7 +82,8 @@ export async function createBrowserReactor(
       onUnrecoverable: reloadPageForPoisonedStore,
       onDiagnostic: (message, error) =>
         console.error(`[reactor] pglite: ${message}`, error),
-    });
+    })
+    .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)

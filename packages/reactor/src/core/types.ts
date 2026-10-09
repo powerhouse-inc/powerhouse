@@ -8,6 +8,8 @@ import type {
 import type { Kysely } from "kysely";
 
 import type { IProcessorManager } from "@powerhousedao/shared/processors";
+import type { ReactorStorageFacts } from "../inspector/types.js";
+import type { ISyncInspector } from "../sync/sync-inspection.js";
 import type { DocumentPurgeService } from "../admin/document-purge-service.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -518,6 +520,8 @@ export interface SyncModule {
   syncManager: ISyncManager;
   /** Absent where the host cannot reach the sync manager's repair levers. */
   syncAdmin?: ISyncAdmin;
+  /** Absent where the host cannot read the sync manager's channel state. */
+  syncInspector?: ISyncInspector;
 }
 
 /**
@@ -612,6 +616,8 @@ export interface InProcessReactorModule extends ReactorModule {
   settledWatermark: ISettledWatermark;
   /** Enqueues purge jobs; the erasure scheduler is its only caller. */
   documentPurgeService: DocumentPurgeService;
+  /** What the builder knows about the store; see `withStorageFacts`. */
+  storageFacts: ReactorStorageFacts;
   /** Set by `withGroupCommitPGlite`; the host closes the store through it. */
   groupCommitStorage?: IGroupCommitStorage;
 }

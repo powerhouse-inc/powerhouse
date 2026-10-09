@@ -139,6 +139,14 @@ export class SyncRepairRefusedError extends Error {
   }
 }
 
+/** A dead-letter page cursor that is not a row offset. */
+export class InvalidDeadLetterCursorError extends Error {
+  constructor(readonly cursor: string) {
+    super(`Invalid dead-letter cursor: ${JSON.stringify(cursor)}`);
+    this.name = "InvalidDeadLetterCursorError";
+  }
+}
+
 export class PollingChannelError extends Error {
   constructor(message: string) {
     super(message);

@@ -341,21 +341,10 @@ export class ReactorSubgraph extends BaseSubgraph {
             },
             this.viewSubject(ctx),
           );
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const filteredItems = [];
-            for (const item of result.items) {
-              const canRead = await this.canReadDocument(
-                item.id as CanonicalDocumentId,
-                ctx,
-              );
-              if (canRead) {
-                filteredItems.push(item);
-              }
-            }
-            return { ...result, items: filteredItems };
-          }
-
-          return result;
+          return {
+            ...result,
+            items: await this.readableByHost(result.items, ctx),
+          };
         } catch (error) {
           this.logger.error(
             "Error in documentIncomingRelationships: @Error",
@@ -441,21 +430,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
 
           // Filter results to only include documents the user can read
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const filteredItems = [];
-            for (const item of result.items) {
-              const canRead = await this.canReadDocument(
-                item.id as CanonicalDocumentId,
-                ctx,
-              );
-              if (canRead) {
-                filteredItems.push(item);
-              }
-            }
-            return { ...result, items: filteredItems };
-          }
-
-          return result;
+          return {
+            ...result,
+            items: await this.readableByHost(result.items, ctx),
+          };
         } catch (error) {
           this.logger.error("Error in findDocuments: @Error", error);
           throw error;

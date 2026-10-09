@@ -1,3 +1,13 @@
+export {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
+
 export type {
   ConnectionStateChangeCallback,
   IChannel,
@@ -63,6 +73,7 @@ export {
   ChannelError,
   DriveRequestError,
   PollingChannelError,
+  InvalidDeadLetterCursorError,
   SyncRepairRefusedError,
   isDriveAuthError,
   isRecoverableGraphQLError,
@@ -71,13 +82,14 @@ export {
 } from "./errors.js";
 
 export {
+  channelFactoryTypes,
   CompositeChannelFactory,
   envelopesToSyncOperations,
+  GQL_CHANNEL_TYPE,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
-  GQL_CHANNEL_TYPE,
   IntervalPollTimer,
   LocalChannel,
   LocalChannelFactory,

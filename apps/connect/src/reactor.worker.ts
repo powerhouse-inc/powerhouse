@@ -6,6 +6,7 @@ import {
   type GroupCommitPGliteInstance,
   InMemoryQueue,
   queryThroughDialect,
+  PGLITE_IDB_STORAGE_FACTS,
   ReactorBuilder,
   ReactorClientBuilder,
   type ChannelConfig,
@@ -474,7 +475,8 @@ const host = new ReactorHost({
           onUnrecoverable: onStorePoisoned,
           onDiagnostic: (message, error) =>
             console.error(`[reactor.worker] pglite: ${message}`, error),
-        });
+        })
+        .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,

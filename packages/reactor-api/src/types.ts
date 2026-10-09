@@ -13,6 +13,7 @@ import type {
   IRelationalDb,
   ProcessorFactory,
 } from "@powerhousedao/shared/processors";
+import type { IReactorInspectionSource } from "./graphql/inspection/source.js";
 import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
@@ -76,6 +77,8 @@ export type API = {
   /** The read-model relational store, for the same host-composed component:
    * its tables belong in this database and nothing else hands one over. */
   relationalDb: IRelationalDb;
+  /** Present when the host serves inspection; `facts` takes late-bound facts. */
+  inspection?: IReactorInspectionSource;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,
    * closes WebSocket and HTTP servers, destroys knex pools, and closes any

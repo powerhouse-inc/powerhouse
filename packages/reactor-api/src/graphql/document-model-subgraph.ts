@@ -182,16 +182,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     page: PhDocumentResultPage,
     ctx: Context,
   ): Promise<PhDocumentResultPage> {
-    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-      return page;
-    }
-    const items: PhDocument[] = [];
-    for (const item of page.items) {
-      if (await this.canReadDocument(item.id as CanonicalDocumentId, ctx)) {
-        items.push(item);
-      }
-    }
-    return { ...page, items };
+    return { ...page, items: await this.readableByHost(page.items, ctx) };
   }
 
   /**

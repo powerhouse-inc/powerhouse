@@ -443,12 +443,14 @@ export {
   ChannelScheme,
   CompositeChannelFactory,
   consolidateSyncOperations,
+  channelFactoryTypes,
   envelopesToSyncOperations,
+  deriveConnectionHealth,
+  GQL_CHANNEL_TYPE,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
-  GQL_CHANNEL_TYPE,
   IntervalPollTimer,
   LocalChannel,
   LocalChannelFactory,
@@ -477,6 +479,12 @@ export {
   type LocalWireKind,
   type LocalWireMessage,
   type MessagePortLike,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
   DRIVE_AUTH_ERROR_MESSAGES,
   DriveRequestError,
   isDriveAuthError,
@@ -487,6 +495,7 @@ export {
   PollingChannelError,
   RemotePersistence,
   SyncBuilder,
+  InvalidDeadLetterCursorError,
   SyncRepairRefusedError,
   SyncEventTypes,
   SyncOperation,
@@ -590,6 +599,7 @@ export type {
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
+export * from "./src/inspector/index.js";
 
 // Document erasure
 export {

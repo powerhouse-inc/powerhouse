@@ -120,6 +120,8 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 }
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
+// SYNC_INSPECTION_OPS join once a worker host dispatches through
+// dispatchSyncInspectionOp.
 export class SyncManagerProxy implements ISyncManager {
   private readonly ops: IOpChannel;
   private readonly connectionStates = new Map<

@@ -2,6 +2,14 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely, sql } from "kysely";
 import type { ILogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_PATH_STORAGE_FACTS,
+  POSTGRES_STORAGE_FACTS,
+} from "@powerhousedao/reactor";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createReactorKysely } from "../src/server.mjs";
 import { EventEmitter } from "node:events";
 import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
@@ -151,6 +159,56 @@ describe("switchboard's reactor storage factory", () => {
     expect(storage.poolInstrumentation).toBeUndefined();
 
     await storage.kysely.destroy();
+  });
+
+  describe("storage facts", () => {
+    let dataDir: string | undefined;
+
+    afterEach(async () => {
+      if (dataDir) await rm(dataDir, { recursive: true, force: true });
+      dataDir = undefined;
+    });
+
+    const open = (opts: Partial<Parameters<typeof createReactorKysely>[0]>) =>
+      createReactorKysely({
+        reactorDbUrl: undefined,
+        reactorPgliteDir: ".ph/unused-by-the-in-memory-branch",
+        reactorPgliteMajor: 17,
+        inMemory: false,
+        hostPoolSize: () => 1,
+        logger: stubLogger(),
+        ...opts,
+      });
+
+    // Kysely closes only a driver that has run a query; an unopened PGlite
+    // would still be initialising its data dir when afterEach removes it.
+    const openAndDestroy = async (
+      kysely: Awaited<ReturnType<typeof createReactorKysely>>["kysely"],
+    ) => {
+      await sql`select 1`.execute(kysely);
+      await kysely.destroy();
+    };
+
+    it("reports in-memory PGlite as not durable", async () => {
+      const storage = await open({ inMemory: true });
+      expect(storage.storageFacts).toEqual(IN_MEMORY_PGLITE_STORAGE_FACTS);
+      await openAndDestroy(storage.kysely);
+    });
+
+    it("reports a PGlite data directory as durable on a path", async () => {
+      dataDir = await mkdtemp(join(tmpdir(), "sb-facts-"));
+      const storage = await open({ reactorPgliteDir: dataDir });
+      expect(storage.storageFacts).toEqual(PGLITE_PATH_STORAGE_FACTS);
+      await openAndDestroy(storage.kysely);
+    }, 30_000);
+
+    it("reports a Postgres url as a durable server", async () => {
+      const storage = await open({
+        reactorDbUrl: "postgres://postgres:postgres@127.0.0.1:1/never-dialed",
+      });
+      expect(storage.storageFacts).toEqual(POSTGRES_STORAGE_FACTS);
+      await storage.kysely.destroy();
+    });
   });
 });
 

@@ -11,6 +11,9 @@ import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumenta
 import {
   DriveCollectionId,
   EventBus,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_PATH_STORAGE_FACTS,
+  POSTGRES_STORAGE_FACTS,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -21,6 +24,7 @@ import {
   type InProcessReactorClientModule,
   type JwtHandler,
   type PoolInstrumentation,
+  type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
 } from "@powerhousedao/reactor";
 import {
@@ -278,6 +282,7 @@ async function resolveServerPort(
 type ReactorStorage = {
   kysely: Kysely<Database>;
   poolInstrumentation: PoolInstrumentation | undefined;
+  storageFacts: ReactorStorageFacts;
 };
 
 export async function createReactorKysely(opts: {
@@ -318,6 +323,7 @@ export async function createReactorKysely(opts: {
     return {
       kysely: new Kysely<Database>({ dialect: new PostgresDialect({ pool }) }),
       poolInstrumentation,
+      storageFacts: POSTGRES_STORAGE_FACTS,
     };
   }
 
@@ -345,6 +351,9 @@ export async function createReactorKysely(opts: {
       ),
     }),
     poolInstrumentation: undefined,
+    storageFacts: inMemory
+      ? IN_MEMORY_PGLITE_STORAGE_FACTS
+      : PGLITE_PATH_STORAGE_FACTS,
   };
 }
 
@@ -603,15 +612,18 @@ async function initServer(
       };
     }
 
-    const { kysely: baseKysely, poolInstrumentation } =
-      await createReactorKysely({
-        reactorDbUrl,
-        reactorPgliteDir,
-        reactorPgliteMajor,
-        inMemory: PGLITE_IN_MEMORY,
-        hostPoolSize: () => resolveHostPoolSize(process.env),
-        logger,
-      });
+    const {
+      kysely: baseKysely,
+      poolInstrumentation,
+      storageFacts,
+    } = await createReactorKysely({
+      reactorDbUrl,
+      reactorPgliteDir,
+      reactorPgliteMajor,
+      inMemory: PGLITE_IN_MEMORY,
+      hostPoolSize: () => resolveHostPoolSize(process.env),
+      logger,
+    });
 
     const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
     const hasSkipThreshold = !isNaN(maxSkipThreshold) && maxSkipThreshold > 0;
@@ -632,6 +644,7 @@ async function initServer(
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
       .withKysely(baseKysely)
+      .withStorageFacts(storageFacts)
       .withFeatures({
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
@@ -1125,6 +1138,7 @@ async function initServer(
     lateSubgraphs.push(registerWorkflowSubgraph(workflows));
     await workflows.start();
     logger.info("Workflow runtime started");
+    api.inspection?.facts.setWorkflows(true);
   }
 
   let privacy: RunningPrivacy | undefined;

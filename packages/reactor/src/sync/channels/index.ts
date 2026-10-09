@@ -7,6 +7,7 @@ export {
   GqlResponseChannelFactory,
   POLLING_CHANNEL_TYPE,
 } from "./gql-response-channel-factory.js";
+export { channelFactoryTypes } from "./channel-factory-types.js";
 export { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
 export { GqlResponseChannel } from "./gql-res-channel.js";
 export { LocalChannel } from "./local-channel.js";
