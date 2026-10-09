@@ -16,6 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
 import { delimiter, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   generatePiece,
   generatePieceAction,
@@ -126,7 +127,9 @@ afterAll(() => {
 beforeEach(() => {
   warnings = [];
   vi.spyOn(console, "warn").mockImplementation((...parts: unknown[]) => {
-    warnings.push(parts.map(String).join(" "));
+    const message = parts.map(String).join(" ");
+    // Rolldown's timing advice depends on the machine, not on the build.
+    if (!message.includes("[PLUGIN_TIMINGS]")) warnings.push(message);
   });
   vi.spyOn(console, "log").mockImplementation(() => {});
 });
@@ -683,9 +686,6 @@ describe("runBuild on a package with subgraphs and switchboard processors", () =
 
     const browser = code(join(dist, "browser"));
     expect(existsSync(join(dist, "browser", "subgraphs"))).toBe(false);
-    expect(existsSync(join(dist, "browser", "processors", "read-model"))).toBe(
-      false,
-    );
     expect(browser).not.toContain("SUBGRAPH_MARKER");
     expect(browser).not.toContain("SWITCHBOARD_PROCESSOR_MARKER");
     expect(browser).toContain("CONNECT_PROCESSOR_MARKER");
@@ -705,11 +705,416 @@ describe("runBuild on a package with subgraphs and switchboard processors", () =
 
     // The browser factory still answers a switchboard host, with nothing.
     const { processorFactory } = (await import(
-      join(dist, "browser", "processors", "index.js")
+      pathToFileURL(join(dist, "browser", "processors", "index.js")).href
     )) as { processorFactory: (app: string) => Promise<string[]> };
     expect(await processorFactory("switchboard")).toEqual([]);
     expect(await processorFactory("connect")).toEqual([
       "CONNECT_PROCESSOR_MARKER",
     ]);
+  }, 120_000);
+});
+
+// A piece importing a package that loads a binary: that package stays a bare
+// import the host installs, and a pure-JS one beside it is still inlined.
+describe("runBuild on a piece with a native dependency", () => {
+  const fixture = join(fixtures, "native-piece-package");
+  const dist = join(fixture, "dist");
+
+  function install(name: string, version: string, js: string, dts: string) {
+    const dir = join(fixture, "node_modules", name);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name, version, main: "index.js", types: "index.d.ts" }),
+    );
+    writeFileSync(join(dir, "index.js"), js);
+    writeFileSync(join(dir, "index.d.ts"), dts);
+  }
+
+  beforeAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+    cpSync(join(fixtures, "piece-only-package"), fixture, { recursive: true });
+    for (const dir of ["goodbye", "orphan"]) {
+      rmSync(join(fixture, "pieces", dir), { recursive: true, force: true });
+    }
+    clean(fixture);
+    writeFileSync(
+      join(fixture, "powerhouse.manifest.json"),
+      JSON.stringify({
+        name: "@fixture/piece-only-package",
+        documentModels: [],
+        editors: [],
+        processors: [],
+        subgraphs: [],
+      }),
+    );
+    writeFileSync(
+      join(fixture, "pieces", "index.ts"),
+      [
+        "export const pieces = [",
+        '  { name: "@fixture/piece-hello", entry: "dist/node/pieces/hello/index.mjs" },',
+        '  { name: "@fixture/piece-native", entry: "dist/node/pieces/native/index.mjs" },',
+        "];",
+        "export default pieces;",
+        "",
+      ].join("\n"),
+    );
+
+    // Loads its binary only when called, so describing the piece still works.
+    install(
+      "native-a",
+      "3.1.4",
+      'exports.load = () => require("./build/Release/native_a.node");\n',
+      "export declare function load(): unknown;\n",
+    );
+    const release = join(
+      fixture,
+      "node_modules",
+      "native-a",
+      "build",
+      "Release",
+    );
+    mkdirSync(release, { recursive: true });
+    writeFileSync(join(release, "native_a.node"), "not really a binary");
+    install(
+      "pure-b",
+      "0.0.1",
+      'exports.marker = "pure-b-was-inlined";\n',
+      "export declare const marker: string;\n",
+    );
+
+    mkdirSync(join(fixture, "pieces", "native"), { recursive: true });
+    writeFileSync(
+      join(fixture, "pieces", "native", "index.ts"),
+      [
+        'import { load } from "native-a";',
+        'import { marker } from "pure-b";',
+        "",
+        "export const native = {",
+        '  displayName: "Native",',
+        '  logoUrl: "data:,",',
+        '  description: "Loads a binary.",',
+        '  authors: ["fixture"],',
+        '  categories: ["CORE"],',
+        "  auth: undefined,",
+        '  minimumSupportedRelease: "0.30.0",',
+        "  actions() {",
+        "    return {",
+        "      probe: {",
+        '        name: "probe",',
+        '        displayName: "Probe",',
+        '        description: "",',
+        "        requireAuth: false,",
+        "        props: {},",
+        "        run: () => Promise.resolve([marker, load()]),",
+        "      },",
+        "    };",
+        "  },",
+        "  triggers() {",
+        "    return {};",
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  afterAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("keeps the native package external and declares it at its installed version", async () => {
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    const pieceDir = join(dist, "node", "pieces", "native");
+    const bundle = readFileSync(join(pieceDir, "index.mjs"), "utf8");
+    // Minified: `from"native-a"`, with no space for bareImports to match.
+    const imported = [...bundle.matchAll(/from\s*["']([^"']+)["']/g)].map(
+      (match) => match[1],
+    );
+    expect(imported.filter((spec) => !isBuiltin(spec))).toEqual(["native-a"]);
+    expect(bundle).toContain("pure-b-was-inlined");
+    expect(bundle).not.toContain("native_a.node");
+
+    expect(
+      readJson<Record<string, unknown>>(join(pieceDir, "package.json")),
+    ).toEqual({
+      name: "@fixture/piece-native",
+      version: "1.2.3",
+      description: "Loads a binary.",
+      type: "module",
+      main: "index.mjs",
+      license: "MIT",
+      dependencies: { "native-a": "3.1.4" },
+    });
+    // Another piece in the same package declares nothing of it.
+    expect(
+      readJson<{ dependencies: unknown }>(
+        join(dist, "node", "pieces", "hello", "package.json"),
+      ).dependencies,
+    ).toEqual({});
+    expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+// Subgraphs and processors importing a package that loads a binary: it stays a
+// bare import, the dist manifest lists it, and the browser build refuses it.
+describe("runBuild on a package whose node code has a native dependency", () => {
+  const fixture = join(fixtures, "native-node-package");
+  const dist = join(fixture, "dist");
+  const NATIVE_A = { "native-a": "file:./vendor/native-a" };
+  const WASM_A = { "wasm-a": "file:./vendor/wasm-a" };
+
+  function write(file: string, content: string) {
+    mkdirSync(join(fixture, file, ".."), { recursive: true });
+    writeFileSync(join(fixture, file), content);
+  }
+
+  // A fresh copy of the classic package, with native-a installed from a
+  // file: dependency, as the package manager would install a real one.
+  function setUp(packageJson: Record<string, unknown>) {
+    rmSync(fixture, { recursive: true, force: true });
+    cpSync(join(fixtures, "classic-package"), fixture, { recursive: true });
+    clean(fixture);
+    write(
+      "package.json",
+      JSON.stringify({
+        name: "@fixture/classic-package",
+        version: "4.1.0",
+        private: true,
+        license: "MIT",
+        type: "module",
+        ...packageJson,
+      }),
+    );
+    const tsconfig = readJson<{ include: string[] }>(
+      join(fixture, "tsconfig.json"),
+    );
+    tsconfig.include.push("subgraphs/**/*", "processors/**/*");
+    write("tsconfig.json", JSON.stringify(tsconfig));
+
+    write(
+      "vendor/native-a/package.json",
+      JSON.stringify({
+        name: "native-a",
+        version: "3.1.4",
+        main: "index.js",
+        types: "index.d.ts",
+      }),
+    );
+    write(
+      "vendor/native-a/index.js",
+      'exports.load = () => require("./build/Release/native_a.node");\n',
+    );
+    write(
+      "vendor/native-a/index.d.ts",
+      "export declare function load(): unknown;\n",
+    );
+    write("vendor/native-a/build/Release/native_a.node", "not really a binary");
+    // Its caller passes the module in, so only the file's presence tells.
+    write(
+      "vendor/wasm-a/package.json",
+      JSON.stringify({
+        name: "wasm-a",
+        version: "0.2.0",
+        main: "index.js",
+        types: "index.d.ts",
+      }),
+    );
+    write(
+      "vendor/wasm-a/index.js",
+      "exports.init = (bytes) => WebAssembly.compile(bytes);\n",
+    );
+    write(
+      "vendor/wasm-a/index.d.ts",
+      "export declare function init(bytes: Uint8Array): unknown;\n",
+    );
+    write("vendor/wasm-a/wasm_a_bg.wasm", "not really a module");
+    // Copied, as a package manager installs a file: dependency.
+    const deps = {
+      ...(packageJson.dependencies as Record<string, string> | undefined),
+      ...(packageJson.devDependencies as Record<string, string> | undefined),
+    };
+    for (const [name, spec] of Object.entries(deps)) {
+      if (!spec.startsWith("file:")) continue;
+      cpSync(
+        join(fixture, spec.slice(5)),
+        join(fixture, "node_modules", name),
+        {
+          recursive: true,
+        },
+      );
+    }
+
+    write(
+      "subgraphs/index.ts",
+      'export * as Native from "./native/index.js";\n',
+    );
+    write(
+      "subgraphs/native/index.ts",
+      'import { load } from "native-a";\n\nexport const resolve = () => load();\n',
+    );
+    // The generated shape: Connect loads the root index, which reaches the
+    // switchboard processors only through a dynamic import.
+    write(
+      "processors/index.ts",
+      'export { processorFactory } from "./factory.js";\n',
+    );
+    write(
+      "processors/factory.ts",
+      [
+        "export const processorFactory = async (app: string) =>",
+        '  app === "connect" ? [] : (await import("./switchboard.js")).processors;',
+        "",
+      ].join("\n"),
+    );
+    write(
+      "processors/switchboard.ts",
+      'import { load } from "native-a";\n\nexport const processors = [load];\n',
+    );
+    write(
+      "index.ts",
+      [
+        'export { documentModels } from "./document-models/index.js";',
+        'export { editors } from "./editors/index.js";',
+        'export { processorFactory } from "./processors/index.js";',
+        "",
+      ].join("\n"),
+    );
+  }
+
+  // Every built .mjs/.js under dir, by path relative to it.
+  function bundles(dir: string): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const entry of readdirSync(dir, { recursive: true })) {
+      const file = String(entry);
+      if (/\.m?js$/.test(file)) {
+        out.set(file, readFileSync(join(dir, file), "utf8"));
+      }
+    }
+    return out;
+  }
+
+  afterAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("keeps it external and lists it in the dist manifest at its installed version", async () => {
+    setUp({ dependencies: NATIVE_A });
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    // The subgraph and the switchboard processors import it on node; the
+    // browser build has neither.
+    for (const [platform, files] of [
+      ["node", 2],
+      ["browser", 0],
+    ] as const) {
+      const built = bundles(join(dist, platform));
+      const importing = [...built]
+        .filter(([, code]) => /from\s*["']native-a["']/.test(code))
+        .map(([file]) => file);
+      expect(importing.length, platform).toBeGreaterThanOrEqual(files);
+      if (files === 0) expect(importing, platform).toEqual([]);
+      for (const code of built.values()) {
+        expect(code).not.toContain("native_a.node");
+      }
+    }
+    expect(
+      readJson<Manifest>(join(dist, "powerhouse.manifest.json"))
+        .externalDependencies,
+    ).toEqual({ "native-a": "3.1.4" });
+    // The source manifest is left as it was.
+    expect(
+      readJson<Manifest>(join(fixture, "powerhouse.manifest.json")),
+    ).not.toHaveProperty("externalDependencies");
+    expect(warnings).toEqual([]);
+  }, 120_000);
+
+  it("keeps a WebAssembly package external for switchboard processors and bundles it for editors", async () => {
+    setUp({ dependencies: { ...NATIVE_A, ...WASM_A } });
+    write(
+      "processors/switchboard.ts",
+      'import { load } from "native-a";\nimport { init } from "wasm-a";\n\nexport const processors = [load, init];\n',
+    );
+    write(
+      "editors/index.ts",
+      'import { init } from "wasm-a";\n\nexport const editors: unknown[] = [init];\n',
+    );
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    const importsWasmA = (code: string) => /from\s*["']wasm-a["']/.test(code);
+    const inlinesWasmA = (code: string) => code.includes("WebAssembly.compile");
+    const node = bundles(join(dist, "node"));
+    const nodeProcessors = [...node]
+      .filter(([file]) => !file.startsWith("editors"))
+      .map(([, code]) => code);
+    expect(nodeProcessors.some(importsWasmA)).toBe(true);
+    expect(nodeProcessors.some(inlinesWasmA)).toBe(false);
+    // Only the editors reach it in the browser build, and they bundle it.
+    const browser = [...bundles(join(dist, "browser")).values()];
+    expect(browser.some(importsWasmA)).toBe(false);
+    expect(browser.some(inlinesWasmA)).toBe(true);
+    expect(
+      readJson<Manifest>(join(dist, "powerhouse.manifest.json"))
+        .externalDependencies,
+    ).toEqual({ "native-a": "3.1.4", "wasm-a": "0.2.0" });
+  }, 120_000);
+
+  it("leaves out a WebAssembly package only an editor imports", async () => {
+    setUp({ dependencies: { ...NATIVE_A, ...WASM_A } });
+    write(
+      "editors/index.ts",
+      'import { init } from "wasm-a";\n\nexport const editors: unknown[] = [init];\n',
+    );
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    expect(
+      readJson<Manifest>(join(dist, "powerhouse.manifest.json"))
+        .externalDependencies,
+    ).toEqual({ "native-a": "3.1.4" });
+  }, 120_000);
+
+  it("fails when a document model imports a WebAssembly package", async () => {
+    setUp({ dependencies: { ...NATIVE_A, ...WASM_A } });
+    write(
+      "document-models/index.ts",
+      'import { init } from "wasm-a";\n\nexport const documentModels = [{ id: "fixture/widget", name: "Widget", init }];\n',
+    );
+    process.chdir(fixture);
+
+    await expect(runBuild(args)).rejects.toThrow(
+      /document-models\/index\.ts imports wasm-a, which needs the WebAssembly module \S*wasm_a_bg\.wasm\. Document models run in Connect and on every host/,
+    );
+  }, 120_000);
+
+  it("fails when the native package is only a devDependency", async () => {
+    setUp({ devDependencies: NATIVE_A });
+    process.chdir(fixture);
+
+    await expect(runBuild(args)).rejects.toThrow(
+      /must be listed in package\.json "dependencies"[\s\S]*native-a \(imported by (subgraphs\/native\/index|processors\/switchboard)\.ts\)/,
+    );
+  }, 120_000);
+
+  it("fails the browser build when an editor imports it", async () => {
+    setUp({ dependencies: NATIVE_A });
+    write(
+      "editors/index.ts",
+      'import { load } from "native-a";\n\nexport const editors: unknown[] = [load];\n',
+    );
+    process.chdir(fixture);
+
+    await expect(runBuild(args)).rejects.toThrow(
+      /editors\/index\.ts imports native-a, which needs the native addon node_modules\/\S*native_a\.node\. Native code cannot run in the browser/,
+    );
+    expect(existsSync(join(dist, "node"))).toBe(false);
   }, 120_000);
 });

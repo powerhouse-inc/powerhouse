@@ -25,6 +25,30 @@ import {
 import type { InlineConfig } from "tsdown";
 import type { Manifest, PieceModule } from "../document-model/types.js";
 import { buildPieceBuildConfig, PIECE_ENTRY_GLOB } from "./build-config.mjs";
+import {
+  externalDependencyVersions,
+  externalDepsPlugin,
+  projectPath,
+  type DetectionCache,
+  type ExternalDependency,
+  type TraceFiles,
+} from "./external-deps.mjs";
+
+export {
+  createDetectionCache,
+  projectPath,
+  findRequiredFile,
+  externalDependencyVersions,
+  externalDepsPlugin,
+  undeclaredExternalDependencies,
+} from "./external-deps.mjs";
+export type {
+  DetectionCache,
+  FileTrace,
+  ExternalDependency,
+  ExternalDepsPluginOptions,
+  TraceFiles,
+} from "./external-deps.mjs";
 
 export type PiecePlan = {
   /** The directory under pieces/, and so under <outDir>/node/pieces. */
@@ -91,6 +115,9 @@ export type PackageIdentity = {
 export type PieceBuildOptions = {
   /** The bundler: tsdown's `build`, handed in so this module never loads it. */
   bundle: (config: InlineConfig) => Promise<unknown>;
+  /** Traces a module's run-time files; without it nothing is kept external. */
+  trace?: TraceFiles;
+  cache?: DetectionCache;
 };
 
 const toPosix = (p: string) => p.split(sep).join("/");
@@ -443,6 +470,7 @@ export function piecePackageJson(options: {
   description?: string;
   main: string;
   license?: string;
+  dependencies?: Record<string, string>;
 }): Record<string, unknown> {
   return {
     name: options.name,
@@ -451,9 +479,9 @@ export function piecePackageJson(options: {
     type: "module",
     main: options.main,
     ...(options.license ? { license: options.license } : {}),
-    // Empty on purpose: the runtime treats a bundle that declares dependencies
-    // as not self-contained, and everything a piece needs is inlined already.
-    dependencies: {},
+    // Only external packages: everything else is inlined, and a host installs
+    // what is listed here before it loads the piece.
+    dependencies: options.dependencies ?? {},
   };
 }
 
@@ -530,14 +558,33 @@ export async function buildPieces(
   assertPiecesOutDir(target);
   // resolve, not join: an absolute --out-dir is what the browser and node
   // steps hand tsdown, and joining it onto the project root mangles it.
+  const externalByDir = new Map<string, Map<string, ExternalDependency>>();
   for (const piece of target.pieces) {
     console.log(`\n▶ Building piece ${piece.dir}...`);
+    const outDir = resolve(projectRoot, piece.outDir);
+    const external = new Map<string, ExternalDependency>();
     await options.bundle(
       buildPieceBuildConfig({
         entry: resolve(projectRoot, piece.entry),
-        outDir: resolve(projectRoot, piece.outDir),
+        outDir,
+        ...(options.trace
+          ? {
+              plugins: [
+                externalDepsPlugin(options.trace, external, {
+                  root: projectRoot,
+                  ...(options.cache ? { cache: options.cache } : {}),
+                }),
+              ],
+            }
+          : {}),
       }),
     );
+    for (const dep of external.values()) {
+      console.log(
+        `piece ${piece.dir}: ${dep.name}@${dep.version} stays external, it needs ${projectPath(projectRoot, dep.file)}`,
+      );
+    }
+    externalByDir.set(outDir, external);
   }
 
   // The list is the source of truth for names; a package that
@@ -586,6 +633,9 @@ export async function buildPieces(
             description: metadata.description,
             main: relative(location.dir, location.entryFile),
             license: pkg.license,
+            dependencies: externalDependencyVersions(
+              externalByDir.get(resolve(location.dir))?.values() ?? [],
+            ),
           })
         : bundlePackageJson(location.dir, pkg.version);
     writeFileSync(
@@ -634,6 +684,7 @@ function warnUnlistedPieces(
 export function syncDistManifest(
   target: PieceBuildTarget,
   built: BuiltPiece[],
+  externalDependencies: Record<string, string> = {},
 ): string | undefined {
   const { projectRoot, outDir } = target;
   const source = join(projectRoot, "powerhouse.manifest.json");
@@ -642,21 +693,31 @@ export function syncDistManifest(
   // The built list, not the source plan: a package whose pieces are all
   // `bundle:` entries has no pieces/<dir> and still ships pieces.
   const shipsPieces = existsSync(pieceListPath(target));
+  const shipsExternal = Object.keys(externalDependencies).length > 0;
   if (!existsSync(source)) {
     if (shipsPieces) {
       console.warn("⚠ no powerhouse.manifest.json; pieces will not be listed");
+    }
+    if (shipsExternal) {
+      console.warn(
+        "⚠ no powerhouse.manifest.json; external dependencies will not be listed",
+      );
     }
     return undefined;
   }
   mkdirSync(dirname(copy), { recursive: true });
   copyFileSync(source, copy);
-  if (!shipsPieces) return copy;
+  if (!shipsPieces && !shipsExternal) return copy;
 
-  const manifest = JSON.parse(readFileSync(copy, "utf8")) as Manifest;
-  const enriched = enrichManifestPieces(manifest, built);
-  for (const id of enriched.unbuilt) {
-    console.warn(`⚠ manifest lists piece "${id}" but nothing built it`);
+  let manifest = JSON.parse(readFileSync(copy, "utf8")) as Manifest;
+  if (shipsPieces) {
+    const enriched = enrichManifestPieces(manifest, built);
+    for (const id of enriched.unbuilt) {
+      console.warn(`⚠ manifest lists piece "${id}" but nothing built it`);
+    }
+    manifest = enriched.manifest;
   }
-  writeFileSync(copy, JSON.stringify(enriched.manifest, null, 2) + "\n");
+  if (shipsExternal) manifest = { ...manifest, externalDependencies };
+  writeFileSync(copy, JSON.stringify(manifest, null, 2) + "\n");
   return copy;
 }
