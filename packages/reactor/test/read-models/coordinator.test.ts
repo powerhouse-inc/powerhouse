@@ -79,6 +79,29 @@ describe("ReadModelCoordinator", () => {
       ).toThrow('Read model "duplicate" is already registered');
     });
 
+    it("removes a model by identity, so its name can register again", async () => {
+      const eventBus = new EventBus();
+      const coordinator = new ReadModelCoordinator(eventBus, [], []);
+      const first = createMockReadModel("live");
+      const other = createMockReadModel("live");
+      coordinator.addReadModel(first, "post_ready");
+
+      expect(coordinator.removeReadModel(other)).toBe(false);
+      expect(coordinator.removeReadModel(first)).toBe(true);
+      expect(coordinator.postReady).toEqual([]);
+      expect(coordinator.readModels).toEqual([]);
+
+      coordinator.addReadModel(other, "post_ready");
+      coordinator.start();
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        operations: createMockOperations(),
+      });
+      await coordinator.drain();
+
+      expect(first.indexOperations).not.toHaveBeenCalled();
+      expect(other.indexOperations).toHaveBeenCalledOnce();
+    });
+
     it("does not require custom coordinators to support registration", () => {
       const customCoordinator: IReadModelCoordinator = {
         readModels: [],
@@ -390,6 +413,52 @@ describe("ReadModelCoordinator", () => {
       await coordinator.drain();
 
       expect(indexed).toEqual(["op-ok"]);
+    });
+  });
+
+  describe("a read model that throws", () => {
+    it("does not let its stage move to the next batch while a sibling still indexes", async () => {
+      const eventBus = new EventBus();
+      const events: string[] = [];
+      const failing: IReadModel = {
+        name: "failing",
+        indexOperations: vi.fn().mockRejectedValue(new Error("closed")),
+      };
+      const slow: IReadModel = {
+        name: "slow",
+        indexOperations: vi.fn().mockImplementation(async (ops) => {
+          const opId = ops[0].operation.id;
+          events.push(`start:${opId}`);
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          events.push(`end:${opId}`);
+        }),
+      };
+      const coordinator = new ReadModelCoordinator(
+        eventBus,
+        [],
+        [failing, slow],
+      );
+      coordinator.start();
+
+      const ops1 = createMockOperations();
+      ops1[0].operation.id = "op-a";
+      const ops2 = createMockOperations();
+      ops2[0].operation.id = "op-b";
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        operations: ops1,
+      });
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        operations: ops2,
+      });
+      await coordinator.drain();
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      expect(events).toEqual([
+        "start:op-a",
+        "end:op-a",
+        "start:op-b",
+        "end:op-b",
+      ]);
     });
   });
 

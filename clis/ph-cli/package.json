@@ -45,6 +45,7 @@
     "@renown/sdk": "workspace:*",
     "@sentry/node-core": "^10.52.0",
     "@tsdown/css": "catalog:",
+    "@vercel/nft": "^1.11.0",
     "ajv": "^8.18.0",
     "chalk": "catalog:",
     "change-case": "catalog:",

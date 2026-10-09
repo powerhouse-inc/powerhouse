@@ -76,6 +76,13 @@ export class PieceWorkerExitError extends Error {
   }
 }
 
+export class PieceWorkerDisposedError extends Error {
+  constructor() {
+    super("This piece worker is disposed");
+    this.name = "PieceWorkerDisposedError";
+  }
+}
+
 export interface PieceWorkerResult {
   output: unknown;
   touched: string[];
@@ -210,6 +217,7 @@ export class PieceWorker implements IPieceWorker {
   private forkedAt = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private nextId = 1;
+  private disposed = false;
 
   constructor(options: PieceWorkerOptions = {}) {
     const entryPath = options.entryPath;
@@ -299,7 +307,9 @@ export class PieceWorker implements IPieceWorker {
     return run;
   }
 
+  // For good: a request still queued, or made later, forks nothing.
   dispose(): void {
+    this.disposed = true;
     this.worker?.kill();
     this.worker = undefined;
   }
@@ -362,6 +372,7 @@ export class PieceWorker implements IPieceWorker {
     taps: RequestOptions,
     onTimings?: OnWorkerTimings,
   ): Promise<PieceWorkerResult> {
+    if (this.disposed) return Promise.reject(new PieceWorkerDisposedError());
     const worker = this.spawn();
     const id = this.nextId++;
     // An explicit per-worker cap is the host's own decision and wins. With

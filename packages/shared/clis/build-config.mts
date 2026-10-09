@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 import {
@@ -21,10 +20,10 @@ const entry = [
 // is loaded and run by a host process, never by the browser. Only the list of
 // pieces builds here; each piece is its own build (buildPieceBuildConfig), so
 // two pieces never share a chunk and each ships as one self-contained module.
-// ./subgraphs is node-only too: a Switchboard serves them, and Connect only
-// reaches them over GraphQL. Connect reaches processors through processors/index.ts.
 const nodeEntry = [
   ...entry,
+  // Node-only: Connect reaches processors through processors/index.ts, and
+  // subgraphs only over GraphQL.
   "processors/*/index.ts",
   "subgraphs/index.ts",
   "subgraphs/*/index.ts",
@@ -119,19 +118,20 @@ type Plugin = NonNullable<InlineConfig["plugins"]>;
 
 const SWITCHBOARD_PROCESSORS_STUB = "\0powerhouse:switchboard-processors";
 
-// Connect runs processors with processorApp "connect", so the factory's import
-// of processors/switchboard.ts gets an empty list in the browser build.
+// Connect runs processors with processorApp "connect", so the generated
+// factory's import of ./switchboard gets an empty list in the browser build.
 function switchboardProcessorsStub(): Plugin {
   return {
     name: "powerhouse:switchboard-processors-stub",
-    async resolveId(source, importer, extra) {
-      if (!importer || !/switchboard(\.[cm]?[jt]s)?$/.test(source)) return null;
-      const resolved = await this.resolve(source, importer, {
-        ...extra,
-        skipSelf: true,
-      });
-      const target = resolve("processors", "switchboard.ts");
-      return resolved?.id === target ? SWITCHBOARD_PROCESSORS_STUB : null;
+    resolveId(source, importer) {
+      if (!importer || !/^\.\/switchboard(\.[cm]?[jt]s)?$/.test(source)) {
+        return null;
+      }
+      const path = importer.replaceAll("\\", "/");
+      const isFactory =
+        /(^|\/)processors\/factory\.[cm]?[jt]s$/.test(path) &&
+        !path.includes("/node_modules/");
+      return isFactory ? SWITCHBOARD_PROCESSORS_STUB : null;
     },
     load(id) {
       return id === SWITCHBOARD_PROCESSORS_STUB
@@ -161,9 +161,14 @@ const baseBrowserConfig = {
   },
 };
 
+const pluginList = (plugins: InlineConfig["plugins"]) =>
+  plugins === undefined ? [] : Array.isArray(plugins) ? plugins : [plugins];
+
 export type BrowserBuildConfigOptions = {
   /** Externalize the shared dependency set (default: true). */
   sharedDeps?: boolean;
+  /** Extra bundler plugins, such as the external dependency guard. */
+  plugins?: InlineConfig["plugins"];
 };
 
 export function buildBrowserBuildConfig(
@@ -172,6 +177,7 @@ export function buildBrowserBuildConfig(
   const sharedDeps = options.sharedDeps ?? true;
   return {
     ...baseBrowserConfig,
+    plugins: [...baseBrowserConfig.plugins, ...pluginList(options.plugins)],
     deps: {
       alwaysBundle,
       neverBundle: [
@@ -203,6 +209,8 @@ export function findBundledSharedDeps(
 export type NodeBuildConfigOptions = {
   /** Externalize the shared dependency set (default: true). */
   sharedDeps?: boolean;
+  /** Extra bundler plugins, such as the external dependency detector. */
+  plugins?: InlineConfig["plugins"];
 };
 
 /**
@@ -229,6 +237,7 @@ export function buildNodeBuildConfig(
       ],
     },
     platform: "node",
+    ...(options.plugins ? { plugins: options.plugins } : {}),
     config,
     clean,
     dts,
@@ -244,6 +253,8 @@ export type PieceBuildConfigOptions = {
   entry: string;
   /** Where the piece lands: `<outDir>/node/pieces/<dir>`. */
   outDir: string;
+  /** Extra bundler plugins, such as the external dependency detector. */
+  plugins?: InlineConfig["plugins"];
 };
 
 /**
@@ -261,6 +272,7 @@ export function buildPieceBuildConfig(
     entry: { index: options.entry },
     outDir: options.outDir,
     platform: "node",
+    ...(options.plugins ? { plugins: options.plugins } : {}),
     deps: {
       alwaysBundle,
       neverBundle: [],

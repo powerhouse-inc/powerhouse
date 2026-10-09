@@ -180,12 +180,13 @@ interface:
 | Method                                                  | Notes                                                                                                                                                |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `find(search, view?, paging?, signal?)`                 | By `type` and `parentId` at head. `ids`, `slugs` or a point-in-time view throw `GraphQLOperationNotSupportedError`; see `findIsServableOverGraphQL`. |
+| `isServed(identifier, view?, signal?)`                  | Asks `documentServed`, the gate `find` passes. A point-in-time view, or a Switchboard without the query, throws `GraphQLOperationNotSupportedError`.  |
 | `get{Outgoing,Incoming}Relationships`                   | Paged documents.                                                                                                                                     |
 | `get{Outgoing,Incoming}RelationshipEdges`               | Paged edges.                                                                                                                                         |
 | `executeBatch(request, signal?)`                        | Signs each job for its resolved id and emits the changes. A FAILED job throws `BatchJobFailedError` with every job's state.                          |
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
-| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Throw `GraphQLOperationNotSupportedError`: the Switchboard exposes neither.                                                                          |
+| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`.                                             |
 
 `drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
 module getters are not implemented here.
@@ -272,6 +273,20 @@ alike. The header is a lowercase `authorization`; on the socket it is the
 Return `undefined` (or an empty string) and the request goes out with no
 authorization header at all. A rejecting provider fails the request rather than
 silently downgrading to anonymous.
+
+### Drive routing
+
+A request that is known to belong to one drive carries that drive's id in a
+`Drive-Id` header, which a Switchboard load balancer pins on: `create` of a
+drive with no parent (its own id) and `execute` on a drive. The client cannot tell from an
+identifier alone whether it names a drive, so for `create` under a parent,
+`executeBatch`, `deleteDocument` and `find({ parentId })` it asks the
+`driveIdFor` option, and sends nothing when that is absent or names no drive.
+Where the client has its own proof and the option disagrees, the proof is sent
+and the disagreement logged.
+
+A Switchboard that does not own the drive answers 421, and the client throws
+`GraphQLWrongBackendError` with the drive id and the server's payload.
 
 ## Typed subgraphs
 

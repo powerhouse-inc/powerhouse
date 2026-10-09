@@ -73,6 +73,7 @@ import {
   createRequireAuthFetchMiddleware,
   type RequireAuthFetchMiddleware,
 } from "./graphql/gateway/require-auth-middleware.js";
+import type { DriveStore } from "./graphql/gateway/drive-ownership-cache.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import {
@@ -516,6 +517,7 @@ type SetupGraphQLManagerOptions = {
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
   inspection?: IReactorInspectionSource;
+  driveStore?: DriveStore;
 };
 
 /**
@@ -543,6 +545,7 @@ async function setupGraphQLManager({
   httpRoutes,
   attachments,
   inspection,
+  driveStore,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -570,6 +573,7 @@ async function setupGraphQLManager({
     httpRoutes,
     attachments,
     inspection,
+    driveStore,
   });
 
   await graphqlManager.init(
@@ -1243,6 +1247,7 @@ async function _setupAPI(
   httpRoutes?: HttpRouteService,
   attachmentReadsFollowDocumentPolicy = false,
   inspection?: IReactorInspectionSource,
+  driveStore?: DriveStore,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1427,6 +1432,7 @@ async function _setupAPI(
     httpRoutes,
     attachments: attachmentClientProvider,
     inspection,
+    driveStore,
   });
 
   // Set up event listeners
@@ -1718,6 +1724,7 @@ export async function initializeAndStartAPI(
           attachmentStore: attachmentInspectionStore(attachments),
         })
       : undefined,
+    reactorClientModule.reactorModule?.reactor,
   );
 
   return {

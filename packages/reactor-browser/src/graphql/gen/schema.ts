@@ -167,6 +167,11 @@ export type ConsistencyToken = {
   readonly version: Scalars["Int"]["output"];
 };
 
+export type CreateDefaults = {
+  readonly protocolVersions: Scalars["JSONObject"]["output"];
+  readonly signaturePolicy: Scalars["String"]["output"];
+};
+
 export type DeadLetterInfo = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
@@ -610,6 +615,7 @@ export enum PropagationMode {
 }
 
 export type Query = {
+  readonly createDefaults: CreateDefaults;
   readonly document?: Maybe<DocumentWithChildren>;
   readonly documentIncomingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentIncomingRelationships: PhDocumentResultPage;
@@ -617,6 +623,7 @@ export type Query = {
   readonly documentOperations: ReactorOperationResultPage;
   readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
+  readonly documentServed: Scalars["Boolean"]["output"];
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
    * set of candidate operations, without submitting any of them. A UI asks this to
@@ -661,6 +668,10 @@ export type Query = {
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
   readonly syncHolds: ReadonlyArray<SyncHold>;
+};
+
+export type QueryCreateDefaultsArgs = {
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryDocumentArgs = {
@@ -708,6 +719,11 @@ export type QueryDocumentOutgoingRelationshipsArgs = {
   relationshipType: Scalars["String"]["input"];
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryDocumentServedArgs = {
+  idOrSlug: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -1303,6 +1319,24 @@ export type GetJobStatusQuery = {
       }
     | null
     | undefined;
+};
+
+export type GetDocumentServedQueryVariables = Exact<{
+  idOrSlug: Scalars["String"]["input"];
+  view?: InputMaybe<ViewFilterInput>;
+}>;
+
+export type GetDocumentServedQuery = { readonly documentServed: boolean };
+
+export type GetCreateDefaultsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetCreateDefaultsQuery = {
+  readonly createDefaults: {
+    readonly signaturePolicy: string;
+    readonly protocolVersions: NonNullable<unknown>;
+  };
 };
 
 export type EvaluateActionsQueryVariables = Exact<{
@@ -2086,6 +2120,19 @@ export const GetJobStatusDocument = gql`
   }
   ${JobInfoFieldsFragmentDoc}
 `;
+export const GetDocumentServedDocument = gql`
+  query GetDocumentServed($idOrSlug: String!, $view: ViewFilterInput) {
+    documentServed(idOrSlug: $idOrSlug, view: $view)
+  }
+`;
+export const GetCreateDefaultsDocument = gql`
+  query GetCreateDefaults($parentIdOrSlug: String) {
+    createDefaults(parentIdOrSlug: $parentIdOrSlug) {
+      signaturePolicy
+      protocolVersions
+    }
+  }
+`;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
     $documentIdentifier: String!
@@ -2625,6 +2672,42 @@ export function getSdk(
             signal,
           }),
         "GetJobStatus",
+        "query",
+        variables,
+      );
+    },
+    GetDocumentServed(
+      variables: GetDocumentServedQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDocumentServedQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentServedQuery>({
+            document: GetDocumentServedDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentServed",
+        "query",
+        variables,
+      );
+    },
+    GetCreateDefaults(
+      variables?: GetCreateDefaultsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCreateDefaultsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCreateDefaultsQuery>({
+            document: GetCreateDefaultsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetCreateDefaults",
         "query",
         variables,
       );
