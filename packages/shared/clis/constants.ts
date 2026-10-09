@@ -207,7 +207,6 @@ export const packageJsonExports = {
   },
   "./subgraphs": {
     types: "./dist/types/subgraphs/index.d.ts",
-    browser: "./dist/browser/subgraphs/index.js",
     node: "./dist/node/subgraphs/index.mjs",
   },
   "./processors": {
