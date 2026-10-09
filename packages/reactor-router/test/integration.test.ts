@@ -24,6 +24,16 @@ import {
   type RoutingReactorClient,
 } from "../src/index.js";
 
+function causeNames(error: unknown): string[] {
+  const names: string[] = [];
+  let current: unknown = error;
+  while (current instanceof Error) {
+    names.push(current.name);
+    current = current.cause;
+  }
+  return names;
+}
+
 async function inProcessReactor(): Promise<InProcessReactorClientModule> {
   const builder = new ReactorBuilder().withDocumentModelSources([
     driveDocumentModelModule as unknown as DocumentModelModule,
@@ -188,6 +198,22 @@ describe("routing over real in-process reactors", () => {
     );
   });
 
+  it("rejects a colliding addFile with DocumentAlreadyExistsError on its cause", async () => {
+    const client = await router();
+    const document = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+    );
+    await client.drives.addFile(driveB, document);
+
+    const error: unknown = await client.drives.addFile(driveB, document).then(
+      () => undefined,
+      (rejected: unknown) => rejected,
+    );
+
+    expect(causeNames(error)).toContain("DocumentAlreadyExistsError");
+  });
+
   it("renames and upgrades through derived calls", async () => {
     const client = await router();
     const created = await client.createEmpty("powerhouse/document-model", {
@@ -211,5 +237,20 @@ describe("routing over real in-process reactors", () => {
 
     expect(settled.status).toBe("FAILED");
     expect(settled.error?.name).toBe("DocumentNotFoundError");
+  });
+
+  it("answers a failed job as FAILED on a backend without submit", async () => {
+    const { submit: _submit, ...waiting } = fromReactorClient(alpha.client);
+    const client = await createRoutingClient(
+      [{ ...backends[0], backend: waiting }],
+      { onDiagnostic: () => {} },
+    );
+
+    const submitted = await client.executeAsync("never-created", "main", [
+      actions.setName("x"),
+    ]);
+
+    expect(submitted.status).toBe("FAILED");
+    expect(submitted.error?.name).toBe("DocumentNotFoundError");
   });
 });
