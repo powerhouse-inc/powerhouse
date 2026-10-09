@@ -1,5 +1,6 @@
 import { DocumentIntegrityService } from "../admin/document-integrity-service.js";
 import type { InProcessReactorModule } from "../core/types.js";
+import type { IGroupCommitStorage } from "../storage/kysely/group-commit-storage.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { channelFactoryTypes } from "../sync/channels/channel-factory-types.js";
 import { DriveInspection } from "./drive-inspection.js";
@@ -11,7 +12,7 @@ import type {
 } from "./types.js";
 
 export type ReactorInspectorOptions = {
-  /** Absent: health reports `tracked: false`. */
+  /** Absent: a group-commit store's own health, else `tracked: false`. */
   storageHealth?: IInspectorStorageHealthProvider;
   attachmentStore?: IInspectableAttachmentStore;
   /** The tiers the host serves beyond reads; defaults to reads only. */
@@ -19,6 +20,23 @@ export type ReactorInspectorOptions = {
   /** Set later through `setWorkflows` when the runtime is composed after build. */
   workflows?: boolean;
 };
+
+/** A group-commit store is never recreated in place; a poison needs a restart. */
+function groupCommitHealth(
+  storage: IGroupCommitStorage | undefined,
+): IInspectorStorageHealthProvider | undefined {
+  if (!storage) {
+    return undefined;
+  }
+  return {
+    getStorageHealth: () => ({
+      tracked: true,
+      healthy: storage.health.getStorageHealth().healthy,
+      everRecreated: false,
+      recreateCount: 0,
+    }),
+  };
+}
 
 /** The in-process inspector over a built module; drive reads run as the host. */
 export function createReactorInspector(
@@ -36,7 +54,8 @@ export function createReactorInspector(
       module.documentView,
       module.documentModelRegistry,
     ),
-    storageHealth: options.storageHealth,
+    storageHealth:
+      options.storageHealth ?? groupCommitHealth(module.groupCommitStorage),
     documentModelRegistry: module.documentModelRegistry,
     drives: new DriveInspection(module.reactor, module.documentModelRegistry),
     attachmentStore: options.attachmentStore,

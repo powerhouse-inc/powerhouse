@@ -21,7 +21,7 @@ export interface IReactorInspectionSource {
 }
 
 export type ReactorInspectionOptions = {
-  /** Absent: storage health reports `tracked: false`. */
+  /** Absent: a group-commit store's own health, else `tracked: false`. */
   storageHealth?: IInspectorStorageHealthProvider;
   attachmentStore?: IInspectableAttachmentStore;
   workflows?: boolean;
