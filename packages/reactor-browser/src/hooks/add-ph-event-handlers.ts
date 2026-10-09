@@ -66,6 +66,7 @@ import { addLoadingEventHandler } from "./loading.js";
 import { addModalEventHandler } from "./modals.js";
 import { addPackageDiscoveryServiceEventHandler } from "./package-discovery.js";
 import {
+  addFullReactorClientEventHandler,
   addReactorClientEventHandler,
   addReactorClientModuleEventHandler,
 } from "./reactor.js";
@@ -106,6 +107,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   ...commonGlobalEventHandlerFunctions,
   reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
+  fullReactorClient: addFullReactorClientEventHandler,
   attachmentService: addAttachmentServiceEventHandler,
   features: addFeaturesEventHandler,
   modal: addModalEventHandler,
