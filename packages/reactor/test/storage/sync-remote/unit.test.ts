@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KyselySyncRemoteStorage } from "../../../src/storage/kysely/sync-remote-storage.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
-import type { RemoteRecord } from "../../../src/sync/types.js";
+import {
+  RemotePersistence,
+  type RemoteRecord,
+} from "../../../src/sync/types.js";
 import { testSyncStorageBackends } from "../../factories.js";
 
 describe.each(testSyncStorageBackends)(
@@ -576,6 +579,35 @@ describe.each(testSyncStorageBackends)(
 
         const stored = await storage.get("bound-remote");
         expect(stored.options.boundAddress).toBe("0xadopter");
+      });
+    });
+
+    describe("the remote's persistence", () => {
+      const record = (persistence?: RemotePersistence): RemoteRecord => ({
+        id: "persistence-id",
+        name: "persistence-remote",
+        collectionId: DriveCollectionId.forDrive("collection-persistence"),
+        channelConfig: { type: "local", parameters: {} },
+        filter: { documentId: [], scope: [], branch: "main" },
+        options: { sinceTimestampUtcMs: "0", persistence },
+        status: {
+          push: { state: "idle", failureCount: 0 },
+          pull: { state: "idle", failureCount: 0 },
+        },
+      });
+
+      it("round-trips a session remote", async () => {
+        await storage.upsert(record(RemotePersistence.Session));
+
+        const stored = await storage.get("persistence-remote");
+        expect(stored.options.persistence).toBe(RemotePersistence.Session);
+      });
+
+      it("reads a durable remote back without the option", async () => {
+        await storage.upsert(record());
+
+        const stored = await storage.get("persistence-remote");
+        expect(stored.options.persistence).toBeUndefined();
       });
     });
   },

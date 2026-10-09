@@ -23,7 +23,10 @@ const CALLS: { [K in Operation]: Parameters<RuntimeClient[K]> } = {
   fetchPieceCatalog: [],
   fetchPieceActions: ["@acme/piece-x"],
   fetchPieceTriggers: ["@acme/piece-x"],
-  searchBlocks: ["send", 5],
+  searchPieces: [
+    "send",
+    { kind: "action", sources: ["registry"], categories: ["AI"], limit: 5 },
+  ],
   fetchBlockOutputTree: [BLOCK, { a: 1 }],
   fetchStepOutputTree: ["wf-1", "s1"],
   fetchConnections: [],

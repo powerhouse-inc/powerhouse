@@ -200,6 +200,8 @@ export interface PieceSummary {
   triggerCount: number;
   // Activepieces category ids, e.g. ARTIFICIAL_INTELLIGENCE, SALES_AND_CRM.
   categories: string[];
+  // Absent from runtimes older than the field; read as "activepieces".
+  source?: PieceSource;
   // PieceAuth descriptor, verbatim from the piece; null when authless.
   auth?: unknown;
   // Why none of the piece's blocks can run on this reactor.
@@ -309,31 +311,64 @@ export interface BlockSearchHit {
   unsupported: string | null;
 }
 
-export interface BlockSearchResult {
+export type PieceSource = "local" | "registry" | "activepieces";
+
+export interface PieceSearchMatch {
+  pieceName: string;
+  pieceVersion: string;
+  displayName: string;
+  description: string;
+  logoUrl: string;
+  categories: string[];
+  source: PieceSource;
+  deprecated: boolean | null;
+  unsupported: string | null;
+  // Every query token matched the piece's own name.
+  namedPiece: boolean;
+  blocks: BlockSearchHit[];
+}
+
+export interface PieceSearchResult {
   status: "ready" | "indexing" | "error";
-  hits: BlockSearchHit[];
+  pieces: PieceSearchMatch[];
   indexedPieces: number;
   error: string | null;
 }
 
-// Catalog-wide action/trigger search; "indexing" on the very first calls.
-export async function searchBlocks(
+export interface PieceSearchFilter {
+  kind: "action" | "trigger";
+  sources?: readonly PieceSource[];
+  categories?: readonly string[];
+  limit?: number;
+}
+
+// Catalog-wide search grouped by piece; "indexing" on the very first calls.
+export async function searchPieces(
   t: Transport,
   query: string,
-  limit = 30,
-): Promise<BlockSearchResult> {
+  filter: PieceSearchFilter,
+): Promise<PieceSearchResult> {
   const data = await t.gql<{
-    workflowRuntime: { searchBlocks: BlockSearchResult };
+    workflowRuntime: { searchPieces: PieceSearchResult };
   }>(
-    `query SearchBlocks($query: String!, $limit: Int) {
-      workflowRuntime { searchBlocks(query: $query, limit: $limit) {
+    `query SearchPieces($query: String!, $kind: String!, $sources: [String!], $categories: [String!], $limit: Int) {
+      workflowRuntime { searchPieces(query: $query, kind: $kind, sources: $sources, categories: $categories, limit: $limit) {
         status indexedPieces error
-        hits { pieceName pieceVersion name pieceDisplayName logoUrl displayName description kind strategy unsupported }
+        pieces {
+          pieceName pieceVersion displayName description logoUrl categories source deprecated unsupported namedPiece
+          blocks { pieceName pieceVersion name pieceDisplayName logoUrl displayName description kind strategy unsupported }
+        }
       } }
     }`,
-    { query, limit },
+    {
+      query,
+      kind: filter.kind,
+      sources: filter.sources ?? null,
+      categories: filter.categories ?? null,
+      limit: filter.limit ?? null,
+    },
   );
-  return data.workflowRuntime.searchBlocks;
+  return data.workflowRuntime.searchPieces;
 }
 
 export interface OutputTreeNode {
@@ -935,7 +970,7 @@ const operations = {
   fetchPieceCatalog,
   fetchPieceActions,
   fetchPieceTriggers,
-  searchBlocks,
+  searchPieces,
   fetchBlockOutputTree,
   fetchStepOutputTree,
   fetchConnections,

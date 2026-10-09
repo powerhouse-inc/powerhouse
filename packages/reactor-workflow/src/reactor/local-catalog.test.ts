@@ -142,13 +142,18 @@ describe("a package piece in the catalog", () => {
         actionCount: 1,
         triggerCount: 0,
         categories: [],
+        source: "registry",
         auth: null,
       },
     ]);
     const catalog = await runtime.pieceCatalog();
 
     expect(catalog.filter((entry) => entry.name === PIECE)).toEqual([
-      expect.objectContaining({ version: "2.0.0", publishedVersion: "1.4.0" }),
+      expect.objectContaining({
+        version: "2.0.0",
+        publishedVersion: "1.4.0",
+        source: "local",
+      }),
     ]);
   });
 
@@ -201,11 +206,14 @@ describe("a package piece in the catalog", () => {
     resetBlockSearchIndex();
     // The published index never builds here, and a block this reactor ships
     // must still be findable — it is the only kind an offline host has.
-    const result = await runtime.searchBlocks("thing");
+    const search = async (kind: "action" | "trigger") =>
+      (await runtime.searchPieces("thing", { kind })).pieces.flatMap(
+        (piece) => piece.blocks,
+      );
+    const hits = [...(await search("trigger")), ...(await search("action"))];
 
-    // Ranked as any hit is: a name the query prefixes comes first.
     expect(
-      result.hits
+      hits
         .filter((hit) => hit.pieceName === PIECE)
         .map(({ pieceName, pieceVersion, kind, name }) => ({
           pieceName,
