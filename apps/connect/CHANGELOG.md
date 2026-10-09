@@ -1,3 +1,44 @@
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **connect:** drain a paused queue's executing job before a deploy's reload ([c6e93866a0](https://github.com/powerhouse-inc/powerhouse/commit/c6e93866a0))
+- **connect:** drain a deploy's accepted jobs before the reload, not after ([8fb30ef68c](https://github.com/powerhouse-inc/powerhouse/commit/8fb30ef68c))
+- **connect:** let a deploy's retirement finish accepted jobs first ([e1c881204c](https://github.com/powerhouse-inc/powerhouse/commit/e1c881204c))
+- **connect:** keep a store's lock while a retired worker's build opens it ([508ce445ef](https://github.com/powerhouse-inc/powerhouse/commit/508ce445ef))
+- **connect:** give build-mismatch reloads their own budget ([d1f5a5ba2b](https://github.com/powerhouse-inc/powerhouse/commit/d1f5a5ba2b))
+- **connect:** stop reloading after repeated build-fingerprint mismatches ([7cd9d2bfb9](https://github.com/powerhouse-inc/powerhouse/commit/7cd9d2bfb9))
+- **connect:** retire the worker on admin restart ([8b8ef7473d](https://github.com/powerhouse-inc/powerhouse/commit/8b8ef7473d))
+- **connect:** retire the worker once an admin flow has stopped it ([51449d9a64](https://github.com/powerhouse-inc/powerhouse/commit/51449d9a64))
+- **connect:** run the worker's store flows one at a time ([6c4674d346](https://github.com/powerhouse-inc/powerhouse/commit/6c4674d346))
+- **connect:** wait out another tab's store lock instead of failing boot ([5dd833d366](https://github.com/powerhouse-inc/powerhouse/commit/5dd833d366))
+- **connect:** let a retiring worker's store handoff finish before reporting a wait ([920593bcfd](https://github.com/powerhouse-inc/powerhouse/commit/920593bcfd))
+- **connect:** give each idb store one owning worker through a web lock ([24c2caf5f6](https://github.com/powerhouse-inc/powerhouse/commit/24c2caf5f6))
+- **connect:** never write a retired worker's stale gen over a newer one ([b191b1ecf2](https://github.com/powerhouse-inc/powerhouse/commit/b191b1ecf2))
+- **connect:** stop a retired worker's reactor and stores, and refuse its data calls ([7075d92701](https://github.com/powerhouse-inc/powerhouse/commit/7075d92701))
+- **connect:** stop the storage-unusable banner claiming a reload was tried ([fb20b1fbc3](https://github.com/powerhouse-inc/powerhouse/commit/fb20b1fbc3))
+- **connect:** spend one reload slot per page for a poisoned store ([0d735202d7](https://github.com/powerhouse-inc/powerhouse/commit/0d735202d7))
+- **connect:** count poisoned-store reloads in a row instead of per time window ([07306f1f1f](https://github.com/powerhouse-inc/powerhouse/commit/07306f1f1f))
+- **connect:** send admin calls on a retired worker to the current one ([6b45b3867a](https://github.com/powerhouse-inc/powerhouse/commit/6b45b3867a))
+- **connect:** reload the page, within budget, when an in-tab store's session is poisoned ([ae5d28ad4d](https://github.com/powerhouse-inc/powerhouse/commit/ae5d28ad4d))
+- **connect:** stop clear storage waiting forever on a dead store's close ([f66bab729a](https://github.com/powerhouse-inc/powerhouse/commit/f66bab729a))
+- **connect:** bound poisoned-store reloads and show a storage-unusable state past the budget ([28287e05ea](https://github.com/powerhouse-inc/powerhouse/commit/28287e05ea))
+- **connect:** replay a poisoned-store reload to tabs that connect to the old worker ([4927cc2597](https://github.com/powerhouse-inc/powerhouse/commit/4927cc2597))
+- **connect:** reload every tab onto a fresh worker when a store's pglite session is poisoned ([d592b9f72e](https://github.com/powerhouse-inc/powerhouse/commit/d592b9f72e))
+- **connect:** harden the in-tab relational store and the relational hook's dialect ([22a9d2ba6f](https://github.com/powerhouse-inc/powerhouse/commit/22a9d2ba6f))
+- **connect:** run connect's pglite stores through the hardened dialect ([7d8ac11629](https://github.com/powerhouse-inc/powerhouse/commit/7d8ac11629))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
