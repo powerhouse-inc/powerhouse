@@ -257,6 +257,46 @@ test.describe("Block picker", () => {
     await expect(search).toHaveValue("gmail");
   });
 
+  test("matches piece names while the catalog is still indexing", async ({
+    app,
+  }) => {
+    await app.setViewportSize({ width: 1440, height: 1400 });
+    await app.route("**/graphql/workflow-runtime", async (route) => {
+      if (route.request().postData()?.includes("searchPieces")) {
+        await route.fulfill({
+          json: {
+            data: {
+              workflowRuntime: {
+                searchPieces: {
+                  status: "indexing",
+                  indexedPieces: 0,
+                  error: null,
+                  pieces: [],
+                },
+              },
+            },
+          },
+        });
+      } else await route.continue();
+    });
+    await openWorkflowEditor(app);
+    const picker = await openPicker(app, addStep(app));
+    await app.getByPlaceholder("Search pieces and actions…").fill("http");
+    await expect(picker.getByRole("status")).toContainText(
+      "Still indexing the catalog",
+    );
+    // A name match leads; the heading opens the piece.
+    const first = picker
+      .getByRole("listbox", { name: "Search results" })
+      .getByRole("option")
+      .first();
+    await expect(first).toContainText(/^HTTP/);
+    await first.click();
+    await expect(
+      app.getByRole("option").filter({ hasText: /^Send HTTP request/ }),
+    ).toBeVisible();
+  });
+
   test("stays on screen near the bottom edge", async ({ app }) => {
     await app.setViewportSize({ width: 1280, height: 720 });
     await openWorkflowEditor(app);

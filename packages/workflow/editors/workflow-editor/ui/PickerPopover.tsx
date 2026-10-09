@@ -48,7 +48,14 @@ export function PickerPopover(props: {
     <div
       data-selector-open="true"
       className="nodrag nopan nowheel fixed z-50"
-      style={{ left: placement.left, top: placement.top }}
+      style={
+        placement.above
+          ? {
+              left: placement.left,
+              bottom: window.innerHeight - placement.top - placement.height,
+            }
+          : { left: placement.left, top: placement.top }
+      }
     >
       {props.children(placement)}
     </div>,

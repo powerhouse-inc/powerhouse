@@ -410,6 +410,15 @@ function ensureIndex(): CachedIndex {
   return entry;
 }
 
+// Starts the build ahead of the first search. A failure is dropped, so that
+// search retries rather than reports it.
+export function warmSearchIndex(): void {
+  const entry = ensureIndex();
+  entry.promise.catch(() => {
+    if (cached === entry) cached = undefined;
+  });
+}
+
 // Never blocks on the index build: callers poll while status is "indexing".
 // Status covers the published half only; local pieces are always searched.
 export function searchPieces(

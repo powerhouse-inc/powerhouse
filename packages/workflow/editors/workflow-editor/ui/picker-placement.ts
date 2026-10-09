@@ -18,6 +18,8 @@ export interface PickerPlacement {
   top: number;
   width: number;
   height: number;
+  // Opened above the button: a picker shorter than `height` keeps to it.
+  above: boolean;
 }
 
 const MARGIN = 8;
@@ -46,5 +48,5 @@ export function pickerPlacement(
   const top = downward
     ? Math.min(anchor.bottom + GAP, viewport.height - height - MARGIN)
     : Math.max(anchor.top - GAP - height, MARGIN);
-  return { left, top: Math.max(top, MARGIN), width, height };
+  return { left, top: Math.max(top, MARGIN), width, height, above: !downward };
 }
