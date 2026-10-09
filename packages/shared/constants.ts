@@ -18,6 +18,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/reactor-hypercore",
   "@powerhousedao/reactor-mcp",
   "@powerhousedao/reactor-privacy",
+  "@powerhousedao/reactor-router",
   "@powerhousedao/reactor-workflow",
   "@powerhousedao/registry",
   "@powerhousedao/switchboard-gui",
