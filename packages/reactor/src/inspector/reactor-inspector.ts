@@ -26,11 +26,11 @@ import type {
   InspectorDrivePage,
   InspectorProcessorInfo,
   IReactorFactsSink,
-  IStorageHealthProvider,
+  IInspectorStorageHealthProvider,
   QueueStateSnapshot,
   ReactorInfo,
   ReactorStorageFacts,
-  StorageHealth,
+  InspectorStorageHealth,
 } from "./types.js";
 
 /** The facts a `ReactorInspector` reports; `workflows` changes after build. */
@@ -47,14 +47,14 @@ export type ReactorInspectorComponents = {
   processorManager?: IProcessorManager;
   catchUp?: ICatchUp;
   integrity?: IDocumentIntegrityService;
-  storageHealth?: IStorageHealthProvider;
+  storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
   drives?: DriveInspection;
   attachmentStore?: IInspectableAttachmentStore;
   facts?: ReactorInspectorFacts;
 };
 
-const untrackedStorageHealth: StorageHealth = {
+const untrackedStorageHealth: InspectorStorageHealth = {
   tracked: false,
   healthy: false,
   everRecreated: false,
@@ -232,7 +232,7 @@ export class ReactorInspector
     return Promise.resolve(catchUp.status());
   }
 
-  getStorageHealth(): Promise<StorageHealth> {
+  getStorageHealth(): Promise<InspectorStorageHealth> {
     const provider = this.components.storageHealth;
     if (!provider) {
       return Promise.resolve({ ...untrackedStorageHealth });

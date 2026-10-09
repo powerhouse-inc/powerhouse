@@ -38,7 +38,7 @@ export type ReactorInfo = {
 };
 
 /** Untracked health reports `healthy: false`, so an unwatched store never reads green. */
-export type StorageHealth = {
+export type InspectorStorageHealth = {
   tracked: boolean;
   healthy: boolean;
   everRecreated: boolean;
@@ -46,8 +46,8 @@ export type StorageHealth = {
 };
 
 /** The storage-health source a `ReactorInspector` reads, when one is wired. */
-export interface IStorageHealthProvider {
-  getStorageHealth(): StorageHealth;
+export interface IInspectorStorageHealthProvider {
+  getStorageHealth(): InspectorStorageHealth;
 }
 
 /** Point-in-time view of the job queue. */
@@ -167,7 +167,7 @@ export interface IInspector {
   getQueueState(): Promise<QueueStateSnapshot>;
   getProcessors(): Promise<InspectorProcessorInfo[]>;
   getCatchUpStatus(): Promise<CatchUpStatus>;
-  getStorageHealth(): Promise<StorageHealth>;
+  getStorageHealth(): Promise<InspectorStorageHealth>;
   /** Replays the whole document; read-only but expensive. */
   validateDocument(
     documentId: string,

@@ -6,7 +6,7 @@ import {
   type IInspector,
   type InProcessReactorModule,
   type IReactorFactsSink,
-  type IStorageHealthProvider,
+  type IInspectorStorageHealthProvider,
   type ISyncInspector,
 } from "@powerhousedao/reactor";
 
@@ -22,7 +22,7 @@ export interface IReactorInspectionSource {
 
 export type ReactorInspectionOptions = {
   /** Absent: storage health reports `tracked: false`. */
-  storageHealth?: IStorageHealthProvider;
+  storageHealth?: IInspectorStorageHealthProvider;
   attachmentStore?: IInspectableAttachmentStore;
   workflows?: boolean;
 };

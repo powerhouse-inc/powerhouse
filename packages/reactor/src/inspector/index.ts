@@ -52,11 +52,11 @@ export type {
   InspectorProcessorInfo,
   IReactorDbQuery,
   IReactorFactsSink,
-  IStorageHealthProvider,
+  IInspectorStorageHealthProvider,
   QueueStateSnapshot,
   ReactorInfo,
   ReactorStorageFacts,
-  StorageHealth,
+  InspectorStorageHealth,
   StoragePersistence,
 } from "./types.js";
 export {
