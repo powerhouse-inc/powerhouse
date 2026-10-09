@@ -4,8 +4,6 @@ import {
   HardenedPGliteDialect,
   type GroupCommitPGliteInstance,
   InMemoryQueue,
-  LocalChannelFactory,
-  LocalChannelPortRegistry,
   queryThroughDialect,
   PGLITE_IDB_STORAGE_FACTS,
   ReactorBuilder,
@@ -63,6 +61,7 @@ import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import { configureConnectChannelScheme } from "./utils/reactor-channel-scheme.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { closeWithin } from "./utils/close-within.js";
+import { createWorkerLocalPeers } from "./utils/worker-local-peers.js";
 import { createWorkerStores } from "./utils/worker-stores.js";
 import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
 import { createStoreLocks } from "./utils/store-lock.js";
@@ -160,6 +159,9 @@ let inspector: ReactorInspector | undefined;
 let syncInspection: SyncInspectionOpTargets | undefined;
 const INSPECTOR_ACCESS: InspectorAccess = { admin: true, sql: true };
 let currentIdentity: ReactorIdentity | null = null;
+const localPeers = createWorkerLocalPeers(
+  new ConsoleLogger(["reactor.worker", "local-sync"]),
+);
 
 // Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
 function toWireRemote(remote: Remote) {
@@ -360,7 +362,7 @@ const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
-  onRetire: () => stores.retire(),
+  onRetire: localPeers.retiring(() => stores.retire()),
   drainBeforeReload: () => stores.drain(),
   onAdminRestart: () =>
     host.retireAndReload("admin restart", crypto.randomUUID()),
@@ -496,13 +498,7 @@ const host = new ReactorHost({
         .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
       configureConnectChannelScheme(reactorBuilder, {
         multiReactor: construct.multiReactor ?? false,
-        createLocalChannelFactory: () => {
-          const logger = new ConsoleLogger(["reactor.worker", "local-sync"]);
-          return new LocalChannelFactory(
-            logger,
-            new LocalChannelPortRegistry({ logger }).provider,
-          );
-        },
+        createLocalChannelFactory: () => localPeers.createChannelFactory(),
       });
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
@@ -545,6 +541,9 @@ const host = new ReactorHost({
           host.broadcastBusEvent(forwardedType, event),
         );
       }
+      if (construct.multiReactor && syncManager) {
+        localPeers.attach(syncManager);
+      }
       syncManager?.onSyncStatusChange((documentId, status) =>
         host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, {
           documentId,
@@ -577,6 +576,8 @@ const host = new ReactorHost({
       );
     }
   },
+  onAdoptSyncPeer: localPeers.onAdoptSyncPeer,
+  onRemoveSyncPeer: localPeers.onRemoveSyncPeer,
   onIdentity: (user) => {
     currentIdentity = user;
     if (signer) {
