@@ -147,6 +147,40 @@ describe("LocalChannelPortRegistry", () => {
     expect(registry.provider("peer", "chan")).toBeDefined();
   });
 
+  it("closes every port on close and refuses later registrations", () => {
+    const registry = new LocalChannelPortRegistry();
+    const a = fakePort();
+    const b = fakePort();
+    registry.register("peer", "a", a);
+    registry.register("peer", "b", b);
+
+    registry.close();
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(b.close).toHaveBeenCalledTimes(1);
+    expect(registry.isClosed("peer", "a")).toBe(true);
+    expect(() => registry.provider("peer", "b")).toThrow(/severed/);
+    expect(() => registry.register("peer", "c", fakePort())).toThrow(/closed/);
+  });
+
+  it("closes the remaining ports when one fails to close", () => {
+    const registry = new LocalChannelPortRegistry({
+      logger: createMockLogger(),
+    });
+    const failing = fakePort();
+    failing.close.mockImplementation(() => {
+      throw new Error("already detached");
+    });
+    const other = fakePort();
+    registry.register("peer", "a", failing);
+    registry.register("peer", "b", other);
+
+    registry.close();
+
+    expect(other.close).toHaveBeenCalledTimes(1);
+    expect(registry.has("peer", "a")).toBe(false);
+  });
+
   it("replays frames that arrive while no channel is attached", () => {
     const registry = new LocalChannelPortRegistry();
     const raw = new BrowserPortLike();

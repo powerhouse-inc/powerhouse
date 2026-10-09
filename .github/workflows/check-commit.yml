@@ -91,6 +91,11 @@ jobs:
       - name: Run circular imports check
         run: pnpm check-circular-imports
 
+      # The consumer's own TypeScript, as `ph-cli connect build` runs it; it
+      # checks Connect's source through project references.
+      - name: Typecheck consumer project
+        run: pnpm typecheck:consumers
+
   # The whole suite, split three ways. Three is the useful maximum: switchboard
   # alone is 44s of the 137s total, so a fourth shard would sit idle.
   test:

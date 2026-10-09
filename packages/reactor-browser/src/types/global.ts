@@ -1,6 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
   InProcessReactorClientModule,
+  IReactorClient,
   InProcessReactorModule,
   ReactorClientModule,
   ReactorModule,
@@ -56,6 +57,8 @@ export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule | WorkerReactorClientModule;
   reactorClient?: IReactorBrowserClient;
+  /** Replaces `reactorClientModule.client` in full-client actions; Connect's router. */
+  fullReactorClient?: IReactorClient;
   attachmentService?: IAttachmentService;
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;

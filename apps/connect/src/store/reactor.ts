@@ -20,7 +20,6 @@ import {
   DRIVE_DOCUMENT_TYPES,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
-  getDrives,
   login,
   refreshReactorDataClient,
   RegistryClient,
@@ -65,6 +64,7 @@ import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { startupOwningStores } from "../utils/worker-startup.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
+import { isMultiReactorEnabled } from "../utils/multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
@@ -80,6 +80,11 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
+import {
+  getAppDrives,
+  refreshAppDrives,
+  selectAppReactorClient,
+} from "./app-reactor-client.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -370,6 +375,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     renownUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
   };
+  const multiReactor = isMultiReactorEnabled();
 
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
@@ -439,6 +445,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      multiReactor,
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,
@@ -492,15 +499,27 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       createSignaturePolicy,
       renownEndpoints,
       unsupportedStoredDocuments,
+      multiReactor,
     );
   }
 
-  const drives = await getDrives(reactorClientModule.client);
+  const appReactorClient = await selectAppReactorClient({
+    multiReactor,
+    module: reactorClientModule,
+    remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
+    signer: renown.signer,
+    documentModelModules,
+  });
+
+  const drives = await getAppDrives(
+    appReactorClient,
+    reactorClientModule.client,
+  );
 
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
 
-  const documentCache = new DocumentCache(reactorClientModule.client);
+  const documentCache = new DocumentCache(appReactorClient);
 
   const basePath = phGlobalConfig.basePath ?? "/";
   const routerBasename = phGlobalConfig.routerBasename ?? "/";
@@ -517,7 +536,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
-  setReactorClient(reactorClientModule.client);
+  setReactorClient(appReactorClient);
 
   const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
   if (_defaultDrivesUrl) {
@@ -570,11 +589,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // Refresh the drive list on any drive-type change so async-added
   // default/remote drives surface on first load without a manual reload.
-  const reactorClient = reactorClientModule.client;
+  const reactorClient = appReactorClient;
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
     reactorClient.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+      refreshReactorDataClient(appReactorClient).catch((e) =>
         logger.error("@error", e),
       );
     });
@@ -591,7 +610,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
   });
 
-  await refreshReactorDataClient(reactorClientModule.client);
+  await refreshAppDrives(appReactorClient, reactorClientModule.client);
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,

@@ -589,7 +589,18 @@ describe("worker after Clear storage", () => {
       "utf8",
     );
     expect(worker).toMatch(/isRetired: \(\) => host\.retired,/);
-    expect(worker).toMatch(/onRetire: \(\) => stores\.retire\(\),/);
+    expect(worker).toMatch(
+      /onRetire: localPeers\.retiring\(\(\) => stores\.retire\(\)\),/,
+    );
+    expect(worker).toMatch(
+      /get onAdoptSyncPeer\(\) \{\s*return localPeers\.adoptHandler\(\);/,
+    );
+    expect(worker).toMatch(
+      /get onRemoveSyncPeer\(\) \{\s*return localPeers\.removeHandler\(\);/,
+    );
+    expect(worker).toMatch(
+      /const construct = raw as WorkerConstruct;\s*localPeers\.serve\(construct\.multiReactor \?\? false\);/,
+    );
     expect(worker).toMatch(/drainBeforeReload: \(\) => stores\.drain\(\),/);
     expect(worker).toMatch(/stopSync,/);
     expect(worker).toMatch(

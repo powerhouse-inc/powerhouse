@@ -175,6 +175,20 @@ Both reactor hosts read it; the SharedWorker gets it in its construct message.
 A worker that refused retries the build on the next tab's connect, so the new
 value takes effect without closing other tabs.
 
+### Multi-reactor routing (`connect.instance.multiReactor`)
+
+Experimental, optional, default `false`. When on, Connect reads and writes
+through a router over its own reactor and the Switchboard of the first remote
+default drive (`drives.defaultDrives[].url`), and its reactor gains a local sync
+channel.
+
+```jsonc
+"instance": { "multiReactor": true }
+```
+
+It is part of the worker's version fingerprint, so like the enforcement flags
+it is set in this file only, with no query-param or localStorage override.
+
 ## Setting values — the precedence ladder
 
 When `ph connect build` runs, the _dist_ `powerhouse.config.json` is produced by deep-merging in this order (lowest → highest):

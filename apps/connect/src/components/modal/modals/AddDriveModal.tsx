@@ -10,6 +10,7 @@ import {
   closePHModal,
   extractDriveSlugFromPath,
   fetchDriveInfo,
+  getFullReactorClient,
   getDrives,
   setSelectedDrive,
   useAppModules,
@@ -73,7 +74,7 @@ export function AddDriveModal() {
       // Navigate into the drive if its initial sync lands in time.
       // Not awaited so the modal closes immediately.
       // waiting for the drive and listing drives both need the full reactor client
-      const reactorClient = window.ph?.reactorClientModule?.client;
+      const reactorClient = getFullReactorClient();
       // Only a still unselected, un-pinned (home) view gets pulled into the
       // new drive — the user may have navigated elsewhere meanwhile.
       const stillOnHome = () =>
