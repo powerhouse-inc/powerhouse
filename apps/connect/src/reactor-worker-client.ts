@@ -23,6 +23,7 @@ import {
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
   type ReactorIdentity,
+  type VersionFingerprint,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
@@ -94,12 +95,34 @@ export type WorkerReactorClient = {
 };
 
 /** Sorted so the same set always produces the same fingerprint. */
-function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
-  return Object.entries(flags)
+function enabledFlagList(
+  flags: Partial<ReactorFeatureFlags>,
+  multiReactor: boolean,
+): string {
+  return Object.entries({ ...flags, multiReactor })
     .filter(([, enabled]) => enabled)
     .map(([name]) => name)
     .sort()
     .join(",");
+}
+
+/** The hello fingerprint; a running worker with a different one retires. */
+export function buildWorkerVersion(
+  args: WorkerReactorClientArgs,
+): VersionFingerprint {
+  const gitSha = getGitSha();
+  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
+  return {
+    appBuildId: args.workerDigest
+      ? `${buildId}+w.${args.workerDigest}`
+      : buildId,
+    rpcProtocolVersion: RPC_PROTOCOL_VERSION,
+    models: args.documentModelModules.map((m) => ({
+      id: m.documentModel.global.id,
+      version: m.version ?? 1,
+    })),
+    featureFlags: enabledFlagList(args.featureFlags, args.multiReactor),
+  };
 }
 
 /** What the worker's build reads; flags arrive here because it has no config. */
@@ -171,22 +194,10 @@ export function createWorkerReactorClientModule(
   documentModelRegistry.registerModules(...args.documentModelModules);
   documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
-  const gitSha = getGitSha();
-  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
   const clientProxy = connectReactorClient(
     router,
     {
-      version: {
-        appBuildId: args.workerDigest
-          ? `${buildId}+w.${args.workerDigest}`
-          : buildId,
-        rpcProtocolVersion: RPC_PROTOCOL_VERSION,
-        models: args.documentModelModules.map((m) => ({
-          id: m.documentModel.global.id,
-          version: m.version ?? 1,
-        })),
-        featureFlags: enabledFlagList(args.featureFlags),
-      },
+      version: buildWorkerVersion(args),
       construct: buildWorkerConstruct(args),
       packages: args.packageSpecs,
     },
