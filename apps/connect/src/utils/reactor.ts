@@ -1,6 +1,7 @@
 import {
   addDrive,
   addRemoteDrive,
+  getFullReactorClient,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -32,7 +33,6 @@ import type {
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
-import { getFullReactorClient } from "../store/app-reactor-client.js";
 import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";

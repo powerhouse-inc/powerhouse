@@ -10,6 +10,7 @@ import {
   closePHModal,
   extractDriveSlugFromPath,
   fetchDriveInfo,
+  getFullReactorClient,
   getDrives,
   setSelectedDrive,
   useAppModules,
@@ -17,7 +18,6 @@ import {
   waitForDocumentReady,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
-import { getFullReactorClient } from "../../../store/app-reactor-client.js";
 import { getCreateDriveAppOptions } from "../../../utils/create-drive-app-options.js";
 
 // Max wait for a remote drive's initial sync before skipping navigation.

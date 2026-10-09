@@ -1,4 +1,5 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import { setFullReactorClient } from "@powerhousedao/reactor-browser";
 import type {
   DocumentModelModule,
   ISigner,
@@ -8,13 +9,6 @@ import type * as MultiReactor from "./multi-reactor.js";
 import type { LocalReactorModule } from "./multi-reactor.js";
 
 type MultiReactorModule = typeof MultiReactor;
-
-let routed: IReactorClient | undefined;
-
-/** The full client Connect writes through; the router under multiReactor. */
-export function getFullReactorClient(): IReactorClient | undefined {
-  return routed ?? window.ph?.reactorClientModule?.client;
-}
 
 export type AppReactorClientParams = {
   multiReactor: boolean;
@@ -33,11 +27,15 @@ const loadMultiReactor = (): Promise<MultiReactorModule> =>
 export async function selectAppReactorClient(
   params: AppReactorClientParams,
 ): Promise<IReactorClient> {
-  routed = undefined;
   if (!params.multiReactor) {
+    if (window.ph?.fullReactorClient) {
+      setFullReactorClient(undefined);
+    }
     return params.module.client;
   }
-  routed = await buildRouter(params);
+  setFullReactorClient(undefined);
+  const routed = await buildRouter(params);
+  setFullReactorClient(routed);
   return routed ?? params.module.client;
 }
 

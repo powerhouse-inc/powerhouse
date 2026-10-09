@@ -1,5 +1,10 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { WorkerReactorClientModule } from "@powerhousedao/reactor-browser";
+import {
+  addFullReactorClientEventHandler,
+  getFullReactorClient,
+  renameDrive,
+  type WorkerReactorClientModule,
+} from "@powerhousedao/reactor-browser";
 import { RoutingReactorClient } from "@powerhousedao/reactor-router";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
@@ -9,7 +14,6 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  getFullReactorClient,
   selectAppReactorClient,
   type AppReactorClientParams,
 } from "../../src/store/app-reactor-client.js";
@@ -20,6 +24,14 @@ import {
   switchboard,
   type StubSwitchboard,
 } from "./switchboard-stub.js";
+
+// A window before reactor-browser loads, so its PH setters are not server no-ops.
+vi.hoisted(() => {
+  (globalThis as { window?: unknown }).window = Object.assign(
+    new EventTarget(),
+    { ph: {} },
+  );
+});
 
 const loads = vi.hoisted(() => ({ count: 0 }));
 
@@ -49,12 +61,14 @@ function localModule() {
 
 let stub: StubSwitchboard | undefined;
 
+addFullReactorClientEventHandler();
+
 beforeEach(() => {
-  vi.stubGlobal("window", { ph: {} });
+  window.ph = {};
 });
 
 afterEach(async () => {
-  vi.unstubAllGlobals();
+  window.ph = {};
   await stub?.close();
   stub = undefined;
 });
@@ -120,4 +134,45 @@ describe("selectAppReactorClient with multiReactor on", () => {
       "drive-x",
     );
   });
+
+  it("sends a reactor-browser drive rename to the Switchboard that holds the drive", async () => {
+    const { module, client: local } = localModule();
+    (window.ph as { reactorClientModule?: unknown }).reactorClientModule =
+      module;
+    stub = await serve(switchboard({ "drive-x": DRIVE_TYPE }));
+    const remoteDriveUrl = stub.url.replace(/\/graphql$/, "/d/drive-x");
+    await selectAppReactorClient(
+      params(module, { multiReactor: true, remoteDriveUrl }),
+    );
+
+    await renameDrive("drive-x", "renamed");
+
+    expect(local.execute).not.toHaveBeenCalled();
+    expect(driveIdOf(stub.received, "MutateDocumentWithOperations")).toBe(
+      "drive-x",
+    );
+  });
+
+  it.each([
+    ["the flag off", { multiReactor: false }],
+    ["no remote drive URL", { multiReactor: true }],
+  ])(
+    "drops the router when a later selection runs with %s",
+    async (_, overrides) => {
+      const first = localModule();
+      stub = await serve(switchboard({ "drive-x": DRIVE_TYPE }));
+      const remoteDriveUrl = stub.url.replace(/\/graphql$/, "/d/drive-x");
+      const router = await selectAppReactorClient(
+        params(first.module, { multiReactor: true, remoteDriveUrl }),
+      );
+      expect(getFullReactorClient()).toBe(router);
+
+      const second = localModule();
+      (window.ph as { reactorClientModule?: unknown }).reactorClientModule =
+        second.module;
+      await selectAppReactorClient(params(second.module, overrides));
+
+      expect(getFullReactorClient()).toBe(second.module.client);
+    },
+  );
 });
