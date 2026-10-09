@@ -161,6 +161,22 @@ test.describe("Block picker", () => {
     await expect(search).toHaveCount(0);
   });
 
+  test("closes on a click on the canvas", async ({ app }) => {
+    await openWorkflowEditor(app);
+    await openPicker(app, addStep(app));
+    const search = app.getByPlaceholder("Search pieces and actions…");
+    await expect(search).toBeVisible();
+    // The pane's top-left corner holds no node.
+    await app
+      .locator(".react-flow__pane")
+      .click({ position: { x: 20, y: 20 } });
+    await expect(search).toHaveCount(0);
+    // Its own button still toggles it.
+    await openPicker(app, addStep(app));
+    await addStep(app).click();
+    await expect(search).toHaveCount(0);
+  });
+
   test("a changed trigger opens its panel", async ({ app }) => {
     await openWorkflowEditor(app);
     await app

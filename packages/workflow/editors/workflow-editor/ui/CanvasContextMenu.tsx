@@ -48,11 +48,12 @@ export function CanvasContextMenu(props: {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") props.onClose();
     };
-    window.addEventListener("mousedown", onMouseDown);
+    // Capture: the canvas pan handler stops the event before it bubbles.
+    window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("scroll", props.onClose, true);
     return () => {
-      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("scroll", props.onClose, true);
     };
