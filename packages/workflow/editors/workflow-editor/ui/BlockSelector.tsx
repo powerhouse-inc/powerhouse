@@ -359,7 +359,7 @@ const TAB_LABELS: Record<SourceTab, string> = {
   all: "All",
   core: "Core",
   powerhouse: "Powerhouse",
-  activepieces: "Activepieces",
+  activepieces: "Integrations",
 };
 
 // Pieces each tab lists; Core lists the engine's presets only.
