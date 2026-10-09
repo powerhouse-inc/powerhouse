@@ -547,7 +547,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  /** Declares the store's facts; without it a `withKysely` store is unknown. */
+  /** Declares the store's facts; without it a caller-supplied store is unknown. */
   withStorageFacts(facts: ReactorStorageFacts): this {
     this.storageFactsOverride = facts;
     return this;
@@ -900,7 +900,7 @@ export class ReactorBuilder {
         : await createDefaultDatabase());
     const storageFacts =
       this.storageFactsOverride ??
-      (this.kyselyInstance
+      (this.kyselyInstance || groupCommit
         ? UNKNOWN_STORAGE_FACTS
         : reactorDbConfig
           ? POSTGRES_STORAGE_FACTS

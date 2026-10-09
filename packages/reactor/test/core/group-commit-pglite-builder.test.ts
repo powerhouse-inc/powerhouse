@@ -9,6 +9,10 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import {
+  PGLITE_PATH_STORAGE_FACTS,
+  UNKNOWN_STORAGE_FACTS,
+} from "../../src/inspector/storage-facts.js";
+import {
   JobExecutorEventTypes,
   type JobStartedEvent,
 } from "../../src/executor/types.js";
@@ -158,6 +162,18 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
       .withGroupCommitPGlite({ pg, onUnrecoverable: () => undefined });
     await expect(builder.buildModule()).rejects.toThrow(/jobTimeoutMs/);
     await pg.pg.close();
+  });
+
+  it("reports a group-commit store's facts as unknown unless declared", async () => {
+    const unknown = await builderOver(await openFresh(), []).buildModule();
+    modules.push(unknown);
+    expect(unknown.storageFacts).toEqual(UNKNOWN_STORAGE_FACTS);
+
+    const declared = await builderOver(await openFresh(), [])
+      .withStorageFacts(PGLITE_PATH_STORAGE_FACTS)
+      .buildModule();
+    modules.push(declared);
+    expect(declared.storageFacts).toEqual(PGLITE_PATH_STORAGE_FACTS);
   });
 
   it("never fails a committed job whose flush outlasts the job timeout but not the durability wait", async () => {
