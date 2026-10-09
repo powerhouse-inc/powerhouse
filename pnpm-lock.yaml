@@ -536,6 +536,9 @@ importers:
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../../packages/reactor-mcp
+      '@powerhousedao/reactor-router':
+        specifier: workspace:*
+        version: link:../../packages/reactor-router
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
