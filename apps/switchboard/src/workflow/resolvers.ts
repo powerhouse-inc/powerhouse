@@ -376,13 +376,28 @@ export const getResolvers = (
           categories?: string[] | null;
           limit?: number | null;
         },
-      ) =>
-        runtime.searchPieces(args.query, {
-          kind: args.kind === "trigger" ? "trigger" : "action",
+      ) => {
+        // A misspelt value would otherwise widen the search without a word.
+        if (args.kind !== "action" && args.kind !== "trigger") {
+          throw new GraphQLError(
+            `A search's kind is "action" or "trigger", got "${args.kind}"`,
+          );
+        }
+        const unknown = (args.sources ?? []).filter(
+          (source) => !isPieceSource(source),
+        );
+        if (unknown.length > 0) {
+          throw new GraphQLError(
+            `A search's sources are ${PIECE_SOURCES.join(", ")}, got ${unknown.join(", ")}`,
+          );
+        }
+        return runtime.searchPieces(args.query, {
+          kind: args.kind,
           sources: (args.sources ?? []).filter(isPieceSource),
           categories: args.categories ?? undefined,
           limit: args.limit ?? undefined,
-        }),
+        });
+      },
       connections: (_parent: unknown, _args: unknown, ctx: Context) =>
         runtime.connections(ctx),
       webhookEndpoint: (

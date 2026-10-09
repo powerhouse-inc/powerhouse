@@ -55,8 +55,9 @@ export function rememberPick(preset: BlockPreset): void {
     other.block.pieceName === pieceName &&
     other.block.kind === kind &&
     other.block.name === name;
-  const ofKind = readAll().filter((other) => other.block.kind === kind);
-  const others = readAll().filter((other) => other.block.kind !== kind);
+  const all = readAll();
+  const ofKind = all.filter((other) => other.block.kind === kind);
+  const others = all.filter((other) => other.block.kind !== kind);
   const next = [entry, ...ofKind.filter((other) => !same(other))].slice(
     0,
     MAX_RECENT,

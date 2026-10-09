@@ -68,4 +68,9 @@ describe("client-side filter", () => {
     expect(matchesQuery("Google Docs", tokens)).toBe(false);
     expect(matchesQuery("anything", queryTokens(""))).toBe(true);
   });
+
+  it("ignores accents, as the runtime's search does", () => {
+    expect(matchesQuery("Café Orders", queryTokens("cafe"))).toBe(true);
+    expect(matchesQuery("Cafe Orders", queryTokens("café"))).toBe(true);
+  });
 });

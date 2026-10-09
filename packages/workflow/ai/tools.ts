@@ -84,7 +84,8 @@ async function connectorDetail(piece: PieceSummary): Promise<ConnectorDetail> {
 }
 
 // Pieces the runtime's search ranks for the query, actions' and triggers'
-// rankings interleaved; null while its index builds or where it has none.
+// rankings interleaved; null while its index builds, where it has none, or
+// when it ranks nothing (a package name, say).
 async function rankedPieces(
   catalog: PieceSummary[],
   query: string,
@@ -110,7 +111,7 @@ async function rankedPieces(
       if (piece && !ranked.has(piece.name)) ranked.set(piece.name, piece);
     }
   }
-  return [...ranked.values()];
+  return ranked.size > 0 ? [...ranked.values()] : null;
 }
 
 /**
@@ -128,14 +129,18 @@ export async function getConnectors(query?: string): Promise<{
   syncRuntimeUrl();
   const catalog = await fetchPieceCatalog();
   const needle = query?.trim().toLowerCase();
-  const matches = needle
-    ? ((await rankedPieces(catalog, needle)) ??
-      catalog.filter((piece) =>
-        [piece.name, piece.displayName, piece.description].some((field) =>
-          field.toLowerCase().includes(needle),
-        ),
-      ))
-    : [...catalog];
+  // A package name is an answer, not a search.
+  const exact = catalog.filter((piece) => piece.name.toLowerCase() === needle);
+  const matches = !needle
+    ? [...catalog]
+    : exact.length > 0
+      ? exact
+      : ((await rankedPieces(catalog, needle)) ??
+        catalog.filter((piece) =>
+          [piece.name, piece.displayName, piece.description].some((field) =>
+            field.toLowerCase().includes(needle),
+          ),
+        ));
   const page = matches.slice(0, MAX_CONNECTORS);
   const connectors = await Promise.all(page.map(connectorDetail));
   return {
