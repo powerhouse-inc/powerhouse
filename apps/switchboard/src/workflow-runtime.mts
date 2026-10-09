@@ -491,6 +491,8 @@ export async function composeWorkflowRuntime(
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();
       runtime.startTriggerSupervisor();
+      // So the first search in the editor finds the catalog indexed.
+      runtime.warmPieceSearch();
     },
 
     stop() {

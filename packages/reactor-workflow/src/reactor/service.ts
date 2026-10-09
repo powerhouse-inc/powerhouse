@@ -148,6 +148,7 @@ import {
 import {
   indexPieces,
   searchPieces,
+  warmSearchIndex,
   type BlockSearchIndex,
   type PieceSearchFilter,
   type PieceSearchResult,
@@ -3383,6 +3384,11 @@ export class WorkflowRuntimeService {
     return local
       ? triggersResult(local.descriptor, local.piece.name, local.piece.version)
       : fetchPieceTriggers(packageName, version);
+  }
+
+  // The published index takes a large download; a host starts it at boot.
+  warmPieceSearch(): void {
+    warmSearchIndex();
   }
 
   // Catalog search, with this reactor's own pieces always in it: the index

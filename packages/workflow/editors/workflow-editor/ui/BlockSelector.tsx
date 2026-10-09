@@ -8,6 +8,7 @@ import {
   type CSSProperties,
   type RefObject,
   useId,
+  useLayoutEffect,
 } from "react";
 import { Icon, type IconName } from "../../shared/icons.js";
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
@@ -199,8 +200,12 @@ function Row(props: {
   // Warms what a pick will need, while the row is hovered or focused.
   onHover?: () => void;
   disabled?: boolean;
-  // The keyboard's row.
+  // The keyboard's row: tinted and marked.
   active?: boolean;
+  // The piece the other pane shows, while the keyboard is elsewhere.
+  selected?: boolean;
+  // Two lines of description, for blocks.
+  tall?: boolean;
   // Where it sits in its listbox; only the rows in view are mounted.
   option?: OptionPlace;
   // The piece version a pick pins to; shown on hover unless `versionNote`
@@ -214,11 +219,11 @@ function Row(props: {
     <div
       {...optionAttributes(props.option)}
       role="option"
-      aria-selected={props.active ?? false}
+      aria-selected={(props.active ?? false) || (props.selected ?? false)}
       aria-disabled={props.disabled}
-      className={`group flex h-11 w-full cursor-pointer items-center gap-2 px-3 text-left ${
-        props.active ? "bg-foreground/[0.07]" : ""
-      } ${
+      className={`group flex w-full cursor-pointer items-center gap-2 border-l-2 pl-[10px] pr-3 text-left ${
+        props.tall ? "h-[54px]" : "h-11"
+      } ${rowTone(props.active, props.selected)} ${
         props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
       title={props.title}
@@ -234,7 +239,12 @@ function Row(props: {
         <span className="block truncate text-xs font-medium text-foreground">
           {props.label}
         </span>
-        <span className="block truncate text-[11px] text-muted-foreground/80">
+        <span
+          // line-clamp sets its own display; `block` would undo it.
+          className={`text-[11px] text-muted-foreground/80 ${
+            props.tall ? "line-clamp-2" : "block truncate"
+          }`}
+        >
           {props.description}
         </span>
       </span>
@@ -254,6 +264,13 @@ function Row(props: {
       ) : null}
     </div>
   );
+}
+
+function rowTone(active?: boolean, selected?: boolean): string {
+  if (active) return "border-wf-run bg-foreground/[0.07]";
+  return selected
+    ? "border-transparent bg-foreground/[0.04]"
+    : "border-transparent";
 }
 
 // A row's id and position, named by the search box's aria-activedescendant.
@@ -567,7 +584,7 @@ function Chip(props: {
       tabIndex={props.tabStop ? 0 : -1}
       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
         props.active
-          ? "border-primary bg-primary text-primary-foreground"
+          ? "border-wf-run bg-wf-run text-white"
           : "border-foreground/10 text-muted-foreground hover:border-foreground/25"
       }`}
       // A keyboard click reports no pointer clicks.
@@ -575,6 +592,76 @@ function Chip(props: {
     >
       {props.label}
     </button>
+  );
+}
+
+// A scrolling row of chips that fades at an edge with more beyond it.
+function ChipBar(props: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState({ left: false, right: false });
+  const measure = () => {
+    const element = ref.current;
+    if (!element) return;
+    const left = element.scrollLeft > 1;
+    const right =
+      element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+    setMore((previous) =>
+      previous.left === left && previous.right === right
+        ? previous
+        : { left, right },
+    );
+  };
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const fade = (side: "left" | "right") => (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 w-14"
+      style={{
+        [side]: 0,
+        background: `linear-gradient(to ${side === "left" ? "right" : "left"}, var(--card), transparent)`,
+      }}
+    />
+  );
+  return (
+    <div className="relative shrink-0 border-b border-foreground/10">
+      <div
+        ref={ref}
+        role="toolbar"
+        aria-label="Categories"
+        className="flex gap-1 overflow-x-auto whitespace-nowrap px-2.5 py-1.5 [scrollbar-width:none]"
+        onKeyDown={rovingFocus}
+        onScroll={measure}
+      >
+        {props.children}
+      </div>
+      {more.left ? fade("left") : null}
+      {more.right ? fade("right") : null}
+    </div>
+  );
+}
+
+// What the keys do, where they do it.
+function KeyHints(props: { searching: boolean; twoPane: boolean }) {
+  const hints = props.searching
+    ? ["↑↓ move", "Enter pick", "Esc clear"]
+    : props.twoPane
+      ? ["↑↓ move", "→ open", "← back", "Enter pick", "Esc close"]
+      : ["↑↓ move", "Enter pick", "Esc close"];
+  return (
+    <div
+      aria-hidden="true"
+      className="flex shrink-0 gap-3 border-t border-foreground/10 px-3 py-1 text-[10px] text-muted-foreground/70"
+    >
+      {hints.map((hint) => (
+        <span key={hint}>{hint}</span>
+      ))}
+    </div>
   );
 }
 
@@ -665,6 +752,7 @@ type SearchRow =
   | { type: "more"; pieceName: string; hidden: number };
 
 const ROW_HEIGHT = 44;
+const BLOCK_HEIGHT = 54;
 const HEADER_HEIGHT = 36;
 const MORE_HEIGHT = 24;
 // Blocks a search group shows before "more"; all of them for one or two groups.
@@ -674,12 +762,12 @@ const HOVER_PREVIEW_MS = 120;
 
 const searchRowHeight = (row: SearchRow) =>
   row.type === "entry"
-    ? ROW_HEIGHT
+    ? BLOCK_HEIGHT
     : row.type === "more"
       ? MORE_HEIGHT
       : HEADER_HEIGHT;
 const sourceHeight = () => ROW_HEIGHT;
-const entryHeight = () => ROW_HEIGHT;
+const entryHeight = () => BLOCK_HEIGHT;
 
 function ListTile(props: { icon: IconName; color: string }) {
   return <CoreTile tile={props} size={ROW_LOGO} />;
@@ -713,6 +801,7 @@ function EntryRow(props: {
       }
       disabled={entry.unavailable !== undefined}
       active={props.active}
+      tall
       option={props.option}
       version={entry.version}
       versionNote={entry.versionNote}
@@ -730,6 +819,7 @@ function SourceRow(props: {
   tokens: string[];
   mode: PieceMode;
   active: boolean;
+  selected: boolean;
   option: OptionPlace;
   onActivate: () => void;
   onOpen: () => void;
@@ -742,6 +832,7 @@ function SourceRow(props: {
         label={source.title}
         description={source.subtitle}
         active={props.active}
+        selected={props.selected}
         option={props.option}
         onHover={props.onActivate}
         onClick={props.onOpen}
@@ -772,6 +863,7 @@ function SourceRow(props: {
         piece.unsupported ?? `${count} ${noun}${count === 1 ? "" : "s"}`
       }
       active={props.active}
+      selected={props.selected}
       option={props.option}
       onHover={props.onActivate}
       onClick={props.onOpen}
@@ -834,6 +926,8 @@ function EntriesPane(props: {
   tokens: string[];
   activeIndex: number;
   listId: string;
+  // Off where the source is the whole picker, as a tab already names it.
+  showHeader: boolean;
   onActivate: (index: number) => void;
 }) {
   const { source } = props;
@@ -845,14 +939,14 @@ function EntriesPane(props: {
     source?.kind === "list" ? source.subtitle : source?.piece.description;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {source ? (
+      {source && props.showHeader ? (
         <div className="border-b border-foreground/10 px-3 py-2">
           <div className="truncate text-xs font-semibold text-foreground">
             {title}
           </div>
           {about ? (
             <div
-              className="line-clamp-2 text-[11px] text-muted-foreground/80"
+              className="line-clamp-3 text-[11px] text-muted-foreground/80"
               title={about}
             >
               {about}
@@ -901,21 +995,20 @@ function SearchList(props: {
   onOpenPiece: (pieceName: string) => void;
   onOpenList: (id: ListId) => void;
   onExpand: (pieceName: string) => void;
-  footer: React.ReactNode;
+  status: React.ReactNode;
   listId: string;
   resetKey: string;
   stale: boolean;
 }) {
   const size = props.rows.length;
   return (
-    <div
-      className={`flex min-h-0 flex-1 flex-col ${props.stale ? "opacity-60" : ""}`}
-    >
+    <div className="flex min-h-0 flex-1 flex-col">
+      {props.status}
       <VirtualList
         id={props.listId}
         label="Search results"
         resetKey={props.resetKey}
-        className="flex-1 py-1"
+        className={`flex-1 py-1 ${props.stale ? "opacity-60" : ""}`}
         items={props.rows}
         heightOf={searchRowHeight}
         keyOf={(row, index) =>
@@ -950,7 +1043,7 @@ function SearchList(props: {
                 {...optionAttributes(option)}
                 role="option"
                 aria-selected={active}
-                className={`flex h-full w-full cursor-pointer items-center pl-[44px] text-[11px] text-muted-foreground/80 hover:text-foreground ${active ? "bg-foreground/[0.07]" : ""}`}
+                className={`flex h-full w-full cursor-pointer items-center border-l-2 pl-[42px] text-[11px] text-muted-foreground hover:text-foreground ${rowTone(active)}`}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseEnter={activate}
                 onClick={() => props.onExpand(row.pieceName)}
@@ -987,7 +1080,7 @@ function SearchList(props: {
               role="option"
               aria-selected={active}
               title={`Open ${header.label}`}
-              className={`flex h-full w-full cursor-pointer items-center gap-2 px-3 text-left ${active ? "bg-foreground/[0.07]" : "hover:bg-muted/50"}`}
+              className={`flex h-full w-full cursor-pointer items-center gap-2 border-l-2 pl-[10px] pr-3 text-left ${rowTone(active)} hover:bg-muted/50`}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={activate}
               onClick={header.open}
@@ -995,7 +1088,7 @@ function SearchList(props: {
               <span aria-hidden="true" className="contents">
                 {header.logo}
               </span>
-              <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="truncate text-xs font-semibold text-foreground">
                 <Highlight text={header.label} tokens={props.tokens} />
               </span>
               {header.note ? (
@@ -1003,14 +1096,13 @@ function SearchList(props: {
                   {header.note}
                 </span>
               ) : null}
-              <span className="ml-auto text-[10px] text-muted-foreground/60">
+              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
                 Open →
               </span>
             </div>
           );
         }}
       />
-      {props.footer}
     </div>
   );
 }
@@ -1153,8 +1245,12 @@ export function BlockSelector(props: {
     [modePieces, tab],
   );
   const chips = useMemo(() => orderChips(tabPieces), [tabPieces]);
-  // One chip has nothing to narrow.
-  const showChips = showCatalog && chips.length > 1;
+  // Categories narrow catalogs; All and Core lead with our own lists. One
+  // chip has nothing to narrow.
+  const showChips =
+    showCatalog &&
+    (tab === "activepieces" || tab === "powerhouse") &&
+    chips.length > 1;
   const activeChip =
     showChips && chip !== null && chips.includes(chip) ? chip : null;
 
@@ -1406,10 +1502,21 @@ export function BlockSelector(props: {
         });
       }
     }
-    // A source that cannot search falls back to the pieces' own names.
-    if (showCatalog && !pieceSource.searchPieces) {
-      for (const source of sources) {
-        if (source.kind !== "piece") continue;
+    // A source that cannot search, or an index still building, falls back to
+    // matching the catalog's piece names.
+    const partial =
+      !pieceSource?.searchPieces ||
+      (search.kind === "done" && search.result.status !== "ready");
+    if (showCatalog && partial) {
+      const grouped = new Set(groups.map((match) => match.pieceName));
+      // Names that match ahead of descriptions that mention them.
+      const named = (source: Source) =>
+        source.kind === "piece" &&
+        matchesQuery(source.piece.displayName, tokens)
+          ? 0
+          : 1;
+      for (const source of [...sources].sort((a, b) => named(a) - named(b))) {
+        if (source.kind !== "piece" || grouped.has(source.id)) continue;
         rows.push({
           type: "piece",
           match: {
@@ -1541,25 +1648,33 @@ export function BlockSelector(props: {
       : sourceIndex;
   const activeOption =
     activeIndex >= 0 ? optionId(activeList, activeIndex) : undefined;
-  const statusFooter =
+  const searchStatus =
     search.kind === "loading" || (search.kind === "done" && search.stale) ? (
       <Status>Searching…</Status>
     ) : search.kind === "error" ? (
       <Status error>{search.message}</Status>
     ) : search.kind === "done" && search.result.status === "indexing" ? (
       // Status covers the published catalog only; local pieces are listed.
-      <Status>Indexing the catalog… more results appear shortly.</Status>
+      <Status>
+        Still indexing the catalog: pieces are matched by name until it is
+        ready.
+      </Status>
     ) : search.kind === "done" && search.result.status === "error" ? (
-      <Status error>{search.result.error ?? "Search failed"}</Status>
+      <Status error>
+        {search.result.error ?? "Search failed"}; pieces are matched by name.
+      </Status>
     ) : rows.length === 0 ? (
       <Status>No matching {kind}s</Status>
     ) : null;
+  // Fitted to its content where one short list is all there is to show.
+  const compact = !twoPane && !searching;
+  const height = props.height ?? PICKER_SIZE.height;
 
   return (
     <div
       ref={containerRef}
       className="nodrag nopan nowheel flex flex-col overflow-hidden rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
-      style={{ width, height: props.height ?? PICKER_SIZE.height }}
+      style={compact ? { width, maxHeight: height } : { width, height }}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={onKeyDown}
       onMouseMove={() => {
@@ -1567,9 +1682,6 @@ export function BlockSelector(props: {
       }}
     >
       <div className="shrink-0 border-b border-foreground/10 px-2 pt-2">
-        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-          {props.title}
-        </div>
         <input
           ref={inputRef}
           autoFocus
@@ -1588,25 +1700,25 @@ export function BlockSelector(props: {
             setExpanded(new Set());
           }}
         />
-        <Tabs
-          tabs={tabs}
-          active={tab}
-          onSelect={(next, fromKeyboard) => {
-            setTab(next);
-            setChip(null);
-            setSelectedId(null);
-            setPane("sources");
-            if (!fromKeyboard) inputRef.current?.focus();
-          }}
-        />
+        <div className="flex items-end justify-between gap-2">
+          <Tabs
+            tabs={tabs}
+            active={tab}
+            onSelect={(next, fromKeyboard) => {
+              setTab(next);
+              setChip(null);
+              setSelectedId(null);
+              setPane("sources");
+              if (!fromKeyboard) inputRef.current?.focus();
+            }}
+          />
+          <span className="truncate pb-1 pr-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+            {props.title}
+          </span>
+        </div>
       </div>
       {showChips && catalog && !catalog.error ? (
-        <div
-          role="toolbar"
-          aria-label="Categories"
-          className="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-foreground/10 px-2.5 py-1.5 [scrollbar-width:thin]"
-          onKeyDown={rovingFocus}
-        >
+        <ChipBar>
           {chips.map((label, index) => (
             <Chip
               key={label}
@@ -1620,7 +1732,7 @@ export function BlockSelector(props: {
               }}
             />
           ))}
-        </div>
+        </ChipBar>
       ) : null}
       {searching ? (
         <SearchList
@@ -1636,7 +1748,7 @@ export function BlockSelector(props: {
             openSource(id);
           }}
           onExpand={(name) => setExpanded(new Set([...expanded, name]))}
-          footer={statusFooter}
+          status={searchStatus}
           listId={listIds.results}
           resetKey={`${query} ${JSON.stringify(searchFilter)}`}
           stale={search.kind === "done" && search.stale}
@@ -1674,7 +1786,8 @@ export function BlockSelector(props: {
                     source={source}
                     tokens={tokens}
                     mode={mode}
-                    active={index === sourceIndex}
+                    active={pane === "sources" && index === sourceIndex}
+                    selected={index === sourceIndex}
                     option={{
                       list: listIds.sources,
                       index,
@@ -1708,6 +1821,7 @@ export function BlockSelector(props: {
             tokens={tokens}
             activeIndex={pane === "entries" ? entryIndex : -1}
             listId={listIds.entries}
+            showHeader={twoPane}
             onActivate={(index) => {
               if (!pointerMoved.current) return;
               setPane("entries");
@@ -1716,6 +1830,7 @@ export function BlockSelector(props: {
           />
         </div>
       )}
+      <KeyHints searching={searching} twoPane={twoPane} />
     </div>
   );
 }

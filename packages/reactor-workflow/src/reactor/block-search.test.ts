@@ -5,6 +5,7 @@ import {
   resetBlockSearchIndex,
   searchIndex,
   searchPieces,
+  warmSearchIndex,
   type BlockSearchHit,
   type BlockSearchIndex,
   type PieceSearchFilter,
@@ -356,5 +357,31 @@ describe("local pieces in the search", () => {
     ]);
     // Counted once, rather than once per listing merged.
     expect(result.indexedPieces).toBe(buildSearchIndex(raw).pieces.length);
+  });
+});
+
+describe("warming the index", () => {
+  beforeEach(() => resetBlockSearchIndex());
+  afterEach(() => resetBlockSearchIndex());
+
+  it("builds it ahead of the first search", async () => {
+    vi.mocked(fetchCatalogWithSuggestions).mockClear();
+    vi.mocked(fetchCatalogWithSuggestions).mockResolvedValue(raw);
+    warmSearchIndex();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(searchPieces("slack", { kind: "action" }).status).toBe("ready");
+    expect(fetchCatalogWithSuggestions).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a failed build, so the first search retries", async () => {
+    vi.mocked(fetchCatalogWithSuggestions).mockRejectedValueOnce(
+      new Error("offline"),
+    );
+    warmSearchIndex();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    vi.mocked(fetchCatalogWithSuggestions).mockResolvedValue(raw);
+
+    expect(searchPieces("slack", { kind: "action" }).status).toBe("indexing");
   });
 });

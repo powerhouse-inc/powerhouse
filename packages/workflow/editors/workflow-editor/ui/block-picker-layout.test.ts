@@ -19,6 +19,7 @@ describe("pickerPlacement", () => {
       top: 116,
       width: 640,
       height: 480,
+      above: false,
     });
   });
 
@@ -26,6 +27,7 @@ describe("pickerPlacement", () => {
     const placement = pickerPlacement(button(720, 860), SIZE, SCREEN);
     expect(placement.height).toBe(480);
     expect(placement.top + placement.height).toBe(844);
+    expect(placement.above).toBe(true);
   });
 
   it("shrinks to the roomier side when neither fits", () => {
