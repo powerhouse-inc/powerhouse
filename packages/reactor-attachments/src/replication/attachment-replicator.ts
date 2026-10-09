@@ -16,6 +16,16 @@ import { parseRef } from "../ref.js";
 import { collectStream, streamFromBytes } from "../storage/local/bytes.js";
 import { sha256Hex } from "./hash.js";
 import {
+  documentToAsk,
+  MAX_TIMER_DELAY_MS,
+  newRetryEntry,
+  nextAfter,
+  resetRetry,
+  withDocument,
+  type FetchOutcome,
+  type RetryEntry,
+} from "./retry-state.js";
+import {
   DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE,
   DEFAULT_ATTACHMENT_HELD_HASH_LIMIT,
   DEFAULT_ATTACHMENT_REPLICATION_CONCURRENCY,
@@ -33,6 +43,7 @@ import {
  * replicator's own promises.
  */
 export type ReplicationTimers = {
+  /** Epoch ms; a pending answer's `expiresAtUtc` is compared against it. */
   now: () => number;
   setTimer: (callback: () => void, delayMs: number) => unknown;
   clearTimer: (handle: unknown) => void;
@@ -83,20 +94,13 @@ export type AttachmentReplicatorOptions = {
 type Entry = {
   hash: AttachmentHash;
   state: AttachmentReplicationState;
-  /** Insertion-ordered; a retry rotates through them. */
+  /** Insertion-ordered. */
   documentIds: string[];
   attempts: number;
-  notFoundAnswers: number;
-  errorAnswers: number;
-  pendingAnswers: number;
+  retry: RetryEntry;
   nextAttemptAtMs: number | undefined;
   lastError: string | undefined;
-  /** Asked instead of the rotation until an attempt is answered. */
-  nextDocumentId: string | undefined;
 };
-
-/** setTimeout's largest delay; a longer one fires at once. */
-const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
 
 /**
  * Lazy fetch-on-reference: pulls attachment bytes a reactor's own operations
@@ -116,12 +120,13 @@ const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
  * work set on every boot, idempotently, and a persisted cursor could only add a
  * second truth that is wrong in the one direction that loses data.
  *
- * Loop-safety is structural: one entry per hash, created once, and a terminal
- * entry (`not-found`, `failed`) is never re-queued by a further reference from
- * a document it already knows. A document it has not seen gives a `not-found`
- * entry one more attempt, through that document. Otherwise only
- * {@link AttachmentReplicator.retry} moves a terminal entry back. A held hash drops its entry and is
- * remembered in a bounded set, so the map holds only unfinished work.
+ * Loop-safety is structural: one entry per hash, created once, and every
+ * retry decision is {@link nextAfter}'s. A terminal entry (`not-found`,
+ * `failed`) is never re-queued by a further reference from a document it
+ * already knows; a document it has not seen earns it one more attempt, through
+ * that document. Otherwise only {@link AttachmentReplicator.retry} moves a
+ * terminal entry back. A held hash drops its entry and is remembered in a
+ * bounded set, so the map holds only unfinished work.
  */
 export class AttachmentReplicator {
   private readonly store: IAttachmentStore;
@@ -252,9 +257,14 @@ export class AttachmentReplicator {
         return;
       }
       existing.documentIds.push(documentId);
-      if (existing.state === "not-found") {
+      const { entry, revive } = withDocument(
+        existing.retry,
+        documentId,
+        existing.state,
+      );
+      existing.retry = entry;
+      if (revive) {
         existing.state = "queued";
-        existing.nextDocumentId = documentId;
         if (!this.queue.includes(hash)) {
           this.queue.push(hash);
         }
@@ -268,12 +278,9 @@ export class AttachmentReplicator {
       state: "queued",
       documentIds: [documentId],
       attempts: 0,
-      notFoundAnswers: 0,
-      errorAnswers: 0,
-      pendingAnswers: 0,
+      retry: newRetryEntry(documentId),
       nextAttemptAtMs: undefined,
       lastError: undefined,
-      nextDocumentId: undefined,
     });
     this.queue.push(hash);
     this.pump();
@@ -314,7 +321,7 @@ export class AttachmentReplicator {
       state: entry.state,
       documentIds: [...entry.documentIds],
       attempts: entry.attempts,
-      notFoundAnswers: entry.notFoundAnswers,
+      notFoundAnswers: entry.retry.notFoundAnswers,
       nextAttemptAtMs: entry.nextAttemptAtMs,
       lastError: entry.lastError,
     }));
@@ -338,9 +345,7 @@ export class AttachmentReplicator {
         continue;
       }
       entry.state = "queued";
-      entry.notFoundAnswers = 0;
-      entry.errorAnswers = 0;
-      entry.pendingAnswers = 0;
+      entry.retry = resetRetry(entry.documentIds);
       entry.nextAttemptAtMs = undefined;
       if (!this.queue.includes(entry.hash)) {
         this.queue.push(entry.hash);
@@ -449,20 +454,20 @@ export class AttachmentReplicator {
     this.inFlight += 1;
     const controller = new AbortController();
     this.aborts.add(controller);
+    const documentId = documentToAsk(entry.retry) ?? entry.documentIds[0];
+    let outcome: FetchOutcome;
     try {
-      await this.attempt(entry, controller.signal);
+      outcome = await this.attempt(entry, documentId, controller.signal);
     } catch (error) {
       if (controller.signal.aborted) {
-        // Only stop() aborts. Stopped, the next start() re-queues it; already
-        // restarted, resumeOutstanding saw it fetching, so queue it here.
-        entry.state = "queued";
-        entry.nextAttemptAtMs = undefined;
-        if (this.running && !this.queue.includes(entry.hash)) {
-          this.queue.push(entry.hash);
-        }
+        outcome = { kind: "aborted" };
       } else {
         this.recordError(entry, error);
+        outcome = { kind: "error", documentId };
       }
+    }
+    try {
+      this.apply(entry, outcome);
     } finally {
       this.aborts.delete(controller);
       this.inFlight -= 1;
@@ -470,65 +475,31 @@ export class AttachmentReplicator {
     }
   }
 
-  private async attempt(entry: Entry, signal: AbortSignal): Promise<void> {
+  private async attempt(
+    entry: Entry,
+    documentId: string,
+    signal: AbortSignal,
+  ): Promise<FetchOutcome> {
     // Re-checked every attempt, not once at enqueue: another path (a local
     // upload, a store-level re-fetch, a previous attempt that lost the race)
     // may have landed the bytes meanwhile, and asking a peer for bytes already
     // held is the one wasted round trip worth a cheap local read to avoid.
     if (await this.store.has(entry.hash)) {
-      this.markHeld(entry);
-      return;
+      return { kind: "data" };
     }
     signal.throwIfAborted();
 
-    // Rotate the authorizing document across attempts: a `not-found` can be
-    // one document's authorization lagging rather than the bytes being absent,
-    // and a hash referenced by several documents has several chances.
-    const documentId =
-      entry.nextDocumentId ??
-      entry.documentIds[(entry.attempts - 1) % entry.documentIds.length];
     const result = await this.transport.fetch(entry.hash, documentId, signal);
-
     if (result.kind === "pending") {
-      entry.pendingAnswers += 1;
-      if (entry.pendingAnswers >= this.policy.pendingAttempts) {
-        entry.pendingAnswers = 0;
-        throw new Error(
-          `Attachment ${entry.hash} was still pending after ${this.policy.pendingAttempts} answers`,
-        );
-      }
-      const delay = result.retryAfterMs;
-      const asked =
-        Number.isFinite(delay) && delay >= 0
-          ? delay
-          : this.policy.pendingRetryMs;
-      this.schedule(
-        entry,
-        Math.min(
-          Math.max(asked, this.policy.minPendingRetryMs),
-          MAX_TIMER_DELAY_MS,
-        ),
-      );
-      return;
+      return {
+        kind: "pending",
+        documentId,
+        expiresAtUtc: result.expiresAtUtc,
+        retryAfterMs: result.retryAfterMs,
+      };
     }
-
     if (result.kind === "not-found") {
-      // Spent only on an answer; an error, pending or abort keeps it.
-      entry.nextDocumentId = undefined;
-      entry.notFoundAnswers += 1;
-      if (entry.notFoundAnswers < this.policy.notFoundAttempts) {
-        // Treated as pending: the likeliest cause for a freshly synced ref is
-        // the serving peer's reference index lagging its own sync, which is a
-        // wait, not an absence. See AttachmentRetryPolicy.
-        this.schedule(
-          entry,
-          this.policy.notFoundRetryMs * 2 ** (entry.notFoundAnswers - 1),
-        );
-        return;
-      }
-      entry.state = "not-found";
-      entry.nextAttemptAtMs = undefined;
-      return;
+      return { kind: "not-found", documentId };
     }
 
     const bytes = await collectStream(result.response.body);
@@ -545,7 +516,39 @@ export class AttachmentReplicator {
       result.response.metadata,
       streamFromBytes(bytes),
     );
-    this.markHeld(entry);
+    return { kind: "data" };
+  }
+
+  private apply(entry: Entry, outcome: FetchOutcome): void {
+    const next = nextAfter(
+      entry.retry,
+      outcome,
+      this.timers.now(),
+      this.policy,
+    );
+    entry.retry = next.entry;
+    switch (next.state) {
+      case "held":
+        this.markHeld(entry);
+        return;
+      case "waiting":
+        this.schedule(entry, next.delayMs ?? 0);
+        return;
+      case "queued":
+        // Only stop() aborts. Stopped, the next start() re-queues it; already
+        // restarted, resumeOutstanding saw it fetching, so queue it here.
+        entry.state = "queued";
+        entry.nextAttemptAtMs = undefined;
+        if (this.running && !this.queue.includes(entry.hash)) {
+          this.queue.push(entry.hash);
+        }
+        return;
+      case "not-found":
+      case "failed":
+        entry.state = next.state;
+        entry.nextAttemptAtMs = undefined;
+        return;
+    }
   }
 
   private markHeld(entry: Entry): void {
@@ -566,22 +569,13 @@ export class AttachmentReplicator {
     const message = error instanceof Error ? error.message : String(error);
     entry.lastError = message;
     this.lastError = message;
-    entry.errorAnswers += 1;
     this.onDiagnostic(`fetching attachment ${entry.hash} failed`, error);
-    if (entry.errorAnswers < this.policy.errorAttempts) {
-      this.schedule(
-        entry,
-        this.policy.errorRetryMs * 2 ** (entry.errorAnswers - 1),
-      );
-      return;
-    }
-    entry.state = "failed";
-    entry.nextAttemptAtMs = undefined;
   }
 
   private schedule(entry: Entry, delayMs: number): void {
     entry.state = "waiting";
-    entry.nextAttemptAtMs = this.timers.now() + Math.max(delayMs, 0);
+    entry.nextAttemptAtMs =
+      this.timers.now() + Math.min(Math.max(delayMs, 0), MAX_TIMER_DELAY_MS);
     this.armTimer();
   }
 

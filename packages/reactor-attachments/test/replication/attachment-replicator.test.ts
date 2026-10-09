@@ -190,7 +190,6 @@ function harness(
     backlog: ReturnType<typeof staticAttachmentReferenceScanner>;
     verifyHash: boolean;
     notFoundAttempts: number;
-    pendingAttempts: number;
     fetch: IAttachmentTransport["fetch"];
     onDiagnostic: (message: string) => void;
   }> = {},
@@ -238,9 +237,6 @@ function harness(
       errorRetryMs: 100,
       ...(overrides.notFoundAttempts !== undefined
         ? { notFoundAttempts: overrides.notFoundAttempts }
-        : {}),
-      ...(overrides.pendingAttempts !== undefined
-        ? { pendingAttempts: overrides.pendingAttempts }
         : {}),
     },
   });
@@ -709,7 +705,7 @@ describe("AttachmentReplicator", () => {
   it.each([
     ["missing", Number.NaN, 1_000],
     ["negative", -5, 1_000],
-    ["beyond the timer range", 1e12, 2 ** 31 - 1],
+    ["beyond the cap", 1e12, 300_000],
     ["zero", 0, 250],
     ["below the floor", 10, 250],
   ])(
@@ -909,29 +905,242 @@ describe("AttachmentReplicator", () => {
     },
   );
 
-  it("counts a run of pending answers as one error, so pending alone ends in failed", async () => {
+  it("honours a long-lived pending until its bytes land, backing off to the cap", async () => {
+    const pendingFor = 60 * 60_000;
+    const h = harness([], {
+      fetch: () =>
+        Promise.resolve(
+          h.timers.now() < 1_000_000 + pendingFor
+            ? {
+                kind: "pending",
+                hash: HASH,
+                expiresAtUtc: new Date(
+                  h.timers.now() + 24 * 60 * 60_000,
+                ).toISOString(),
+                retryAfterMs: 5_000,
+              }
+            : dataAnswer(),
+        ),
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+
+    const delays: number[] = [];
+    while (h.replicator.report().length > 0) {
+      const [entry] = h.replicator.report();
+      expect(entry.state).toBe("waiting");
+      expect(entry.lastError).toBeUndefined();
+      delays.push((entry.nextAttemptAtMs ?? 0) - h.timers.now());
+      h.timers.advance(entry.nextAttemptAtMs! - h.timers.now());
+      await h.replicator.idle();
+    }
+
+    expect(await h.store.has(HASH)).toBe(true);
+    expect(delays.slice(0, 8)).toEqual([
+      5_000, 10_000, 20_000, 40_000, 80_000, 160_000, 300_000, 300_000,
+    ]);
+    expect(h.fetches.length).toBe(delays.length + 1);
+    expect(h.fetches.length).toBeLessThan(25);
+    await h.replicator.stop();
+  });
+
+  it("ends an expired pending in not-found, which a new document revives", async () => {
     const h = harness(
-      () => ({
-        kind: "pending",
-        hash: HASH,
-        expiresAtUtc: "2026-01-01T00:05:00.000Z",
-        retryAfterMs: 0,
-      }),
-      { pendingAttempts: 3 },
+      [
+        {
+          kind: "pending",
+          hash: HASH,
+          expiresAtUtc: new Date(1_000_000 - 1).toISOString(),
+          retryAfterMs: 1_000,
+        },
+        dataAnswer(),
+      ],
+      { notFoundAttempts: 1 },
     );
     h.replicator.start();
     await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
     await h.replicator.idle();
 
-    for (let step = 0; step < 40; step += 1) {
-      h.timers.advance(2_000);
+    const [entry] = h.replicator.report();
+    expect(entry.state).toBe("not-found");
+    expect(entry.lastError).toBeUndefined();
+
+    await h.bus.fire({
+      jobId: "job-2",
+      operations: [operation(REF, OTHER_DOC)],
+    });
+    await h.replicator.idle();
+    expect(h.fetches.at(-1)).toEqual([HASH, OTHER_DOC]);
+    expect(await h.store.has(HASH)).toBe(true);
+    await h.replicator.stop();
+  });
+
+  it("does not carry a pending run across a not-found", async () => {
+    const live = (): TransportFetchResult => ({
+      kind: "pending",
+      hash: HASH,
+      expiresAtUtc: "2026-01-01T00:05:00.000Z",
+      retryAfterMs: 1_000,
+    });
+    const h = harness(
+      [live(), live(), live(), live(), { kind: "not-found" }, live()],
+      { notFoundAttempts: 1 },
+    );
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+    const delays: number[] = [];
+    for (let step = 0; step < 4; step += 1) {
+      const [entry] = h.replicator.report();
+      delays.push(entry.nextAttemptAtMs! - h.timers.now());
+      h.timers.advance(entry.nextAttemptAtMs! - h.timers.now());
+      await h.replicator.idle();
+    }
+    expect(delays).toEqual([1_000, 2_000, 4_000, 8_000]);
+    expect(h.replicator.report()[0].state).toBe("not-found");
+
+    // The new document's single pending starts a fresh run: the base delay,
+    // and no error spent.
+    await h.bus.fire({
+      jobId: "job-2",
+      operations: [operation(REF, OTHER_DOC)],
+    });
+    await h.replicator.idle();
+    const [entry] = h.replicator.report();
+    expect(entry.state).toBe("waiting");
+    expect(entry.lastError).toBeUndefined();
+    expect(entry.nextAttemptAtMs! - h.timers.now()).toBe(1_000);
+    await h.replicator.stop();
+  });
+
+  it("asks a document that arrives while waiting before going terminal", async () => {
+    const h = harness(() => ({ kind: "not-found" }));
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+    h.timers.advance(500);
+    await h.replicator.idle();
+
+    await h.bus.fire({
+      jobId: "job-2",
+      operations: [operation(REF, OTHER_DOC)],
+    });
+    h.timers.advance(1_000);
+    await h.replicator.idle();
+
+    expect(h.fetches.map(([, documentId]) => documentId)).toEqual([
+      DOC,
+      DOC,
+      OTHER_DOC,
+    ]);
+    expect(h.replicator.report()[0].state).toBe("not-found");
+    await h.replicator.stop();
+  });
+
+  it("asks a document that arrives during the last attempt before going terminal", async () => {
+    let release: (() => void) | undefined;
+    const h = harness([], {
+      notFoundAttempts: 1,
+      fetch: (_hash, documentId) =>
+        documentId === DOC
+          ? new Promise((resolve) => {
+              release = () => resolve({ kind: "not-found" });
+            })
+          : Promise.resolve(dataAnswer()),
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await flush();
+
+    await h.bus.fire({
+      jobId: "job-2",
+      operations: [operation(REF, OTHER_DOC)],
+    });
+    release?.();
+    await flush();
+    h.timers.advance(500);
+    await h.replicator.idle();
+
+    expect(h.fetches.map(([, documentId]) => documentId)).toEqual([
+      DOC,
+      OTHER_DOC,
+    ]);
+    expect(await h.store.has(HASH)).toBe(true);
+    await h.replicator.stop();
+  });
+
+  it("keeps asking the pending document when a new document answers not-found", async () => {
+    const h = harness([], {
+      notFoundAttempts: 1,
+      fetch: (_hash, documentId) =>
+        Promise.resolve(
+          documentId === OTHER_DOC
+            ? { kind: "not-found" }
+            : h.fetches.length < 4
+              ? {
+                  kind: "pending",
+                  hash: HASH,
+                  expiresAtUtc: "2026-01-01T00:05:00.000Z",
+                  retryAfterMs: 1_000,
+                }
+              : dataAnswer(),
+        ),
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+    await h.bus.fire({
+      jobId: "job-2",
+      operations: [operation(REF, OTHER_DOC)],
+    });
+    for (let step = 0; step < 3; step += 1) {
+      const [entry] = h.replicator.report();
+      expect(entry.state).toBe("waiting");
+      h.timers.advance(entry.nextAttemptAtMs! - h.timers.now());
       await h.replicator.idle();
     }
 
-    const [entry] = h.replicator.report();
-    expect(entry.state).toBe("failed");
-    expect(entry.lastError).toMatch(/pending/);
-    expect(h.fetches).toHaveLength(15);
+    expect(h.fetches.map(([, documentId]) => documentId)).toEqual([
+      DOC,
+      OTHER_DOC,
+      DOC,
+      DOC,
+    ]);
+    expect(await h.store.has(HASH)).toBe(true);
+    await h.replicator.stop();
+  });
+
+  it("gives a failed hash one more attempt when a new document references it", async () => {
+    const h = harness([], {
+      fetch: () => Promise.reject(new Error("peer unreachable")),
+    });
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+    for (let i = 0; i < 6; i += 1) {
+      h.timers.advance(10_000);
+      await h.replicator.idle();
+    }
+    expect(h.replicator.report()[0].state).toBe("failed");
+    expect(h.fetches).toHaveLength(5);
+
+    await h.bus.fire({
+      jobId: "job-2",
+      operations: [operation(REF, OTHER_DOC)],
+    });
+    await h.replicator.idle();
+    expect(h.fetches).toHaveLength(6);
+    expect(h.fetches.at(-1)).toEqual([HASH, OTHER_DOC]);
+    expect(h.replicator.report()[0].state).toBe("failed");
+    expect(h.timers.pendingCount()).toBe(0);
+
+    await h.bus.fire({
+      jobId: "job-3",
+      operations: [operation(REF, OTHER_DOC), operation(REF)],
+    });
+    await h.replicator.idle();
+    expect(h.fetches).toHaveLength(6);
     await h.replicator.stop();
   });
 });

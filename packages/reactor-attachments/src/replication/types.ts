@@ -23,13 +23,15 @@ export interface IOperationAttachmentRefs {
  * - `fetching`: a transport fetch is in flight.
  * - `held`: the bytes are in the local store. Terminal and the goal; a held
  *   hash leaves the report.
- * - `waiting`: the last answer was `pending`, a bounded `not-found` (see
- *   {@link AttachmentRetryPolicy.notFoundAttempts}), or a transport error; a
- *   retry is scheduled.
- * - `not-found`: the peer answered `not-found` as many times as the policy
- *   allows. Terminal until something asks again, or a document not yet seen
- *   references the hash, which earns one more attempt.
- * - `failed`: the transport kept erroring. Terminal until something asks again.
+ * - `waiting`: the last answer was an unexpired `pending`, a bounded
+ *   `not-found` (see {@link AttachmentRetryPolicy.notFoundAttempts}), or a
+ *   transport error; a retry is scheduled.
+ * - `not-found`: the `not-found` budget is spent (an expired `pending` counts
+ *   as a `not-found`), no document is left unasked and no `pending` is live.
+ * - `failed`: the transport kept erroring and no document is left unasked.
+ *
+ * Both terminal states wait for `retry()`, or for a document not yet seen to
+ * reference the hash, which earns one more attempt through that document.
  */
 export type AttachmentReplicationState =
   | "queued"
@@ -58,13 +60,13 @@ export type AttachmentRetryPolicy = {
   pendingRetryMs: number;
   /** Shortest wait honoured after a `pending`, whatever it asks for. */
   minPendingRetryMs: number;
-  /** How many `pending` answers in a row count as one transport error. */
-  pendingAttempts: number;
-  /** How many `not-found` answers to absorb as reference-index lag. */
+  /** Cap for a run of `pending` answers, whose wait doubles per answer. */
+  maxPendingRetryMs: number;
+  /** `not-found` answers absorbed as index lag; cumulative until `retry()`. */
   notFoundAttempts: number;
   /** Base wait between `not-found` retries; doubles per attempt. */
   notFoundRetryMs: number;
-  /** How many transport errors to absorb before giving up on a hash. */
+  /** Transport errors in a row before giving up; any answer ends the run. */
   errorAttempts: number;
   /** Base wait between error retries; doubles per attempt. */
   errorRetryMs: number;
@@ -73,7 +75,7 @@ export type AttachmentRetryPolicy = {
 export const DEFAULT_ATTACHMENT_RETRY_POLICY: AttachmentRetryPolicy = {
   pendingRetryMs: 5_000,
   minPendingRetryMs: 250,
-  pendingAttempts: 60,
+  maxPendingRetryMs: 300_000,
   notFoundAttempts: 3,
   notFoundRetryMs: 2_000,
   errorAttempts: 5,
