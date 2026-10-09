@@ -34,9 +34,11 @@ import type { StepModel } from "./model.js";
 import { useDraftBlocks } from "./version-badge.js";
 import {
   blockUnavailable,
-  type BlockSearchHitUi,
-  type BlockSearchResultUi,
   type PieceActionUi,
+  type PieceSearchFilterUi,
+  type PieceSearchMatchUi,
+  type PieceSearchResultUi,
+  type PieceSourceKind,
   type PieceSummaryUi,
   type PieceTriggerUi,
   usePieceSource,
@@ -183,8 +185,10 @@ function LogoFrame(props: {
 
 function Row(props: {
   logo: React.ReactNode;
-  label: string;
-  description: string;
+  label: React.ReactNode;
+  description: React.ReactNode;
+  // Full text for truncated labels.
+  title?: string;
   onClick: () => void;
   // Warms what a pick will need, while the row is hovered or focused.
   onHover?: () => void;
@@ -200,6 +204,7 @@ function Row(props: {
       className={`group flex w-full items-center gap-2 px-3 py-1.5 text-left ${
         props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
+      title={props.title}
       disabled={props.disabled}
       onClick={props.onClick}
       onMouseEnter={props.onHover}
@@ -287,8 +292,7 @@ interface CatalogState {
   error?: string;
 }
 
-// Activepieces category ids → chip labels; AI variants share one chip and
-// their CORE/FLOW_CONTROL utilities are renamed so "Core" stays ours.
+// Activepieces category ids → chip labels; AI variants share one chip.
 const CATEGORY_LABELS: Record<string, string> = {
   ARTIFICIAL_INTELLIGENCE: "AI",
   UNIVERSAL_AI: "AI",
@@ -309,10 +313,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   HUMAN_RESOURCES: "HR",
 };
 
-export const CORE_CHIP = "Core";
-// The reactor's own blocks: its own chip, beside Core, because they are a
-// piece rather than an engine built-in and an author looks for them by name.
-export const POWERHOUSE_CHIP = "Powerhouse";
 const AI_CHIP = "AI";
 
 function categoryLabel(id: string): string {
@@ -329,7 +329,16 @@ export function chipsOf(piece: { categories: string[] }): Set<string> {
   return new Set(piece.categories.map(categoryLabel));
 }
 
-// Chip order: Core and Powerhouse pinned, AI next, then by piece count.
+// The category ids a chip stands for, among those the pieces carry.
+export function categoriesOfChip(
+  chip: string,
+  pieces: { categories: string[] }[],
+): string[] {
+  const ids = new Set(pieces.flatMap((piece) => piece.categories));
+  return [...ids].filter((id) => categoryLabel(id) === chip);
+}
+
+// Chip order: AI first, then by piece count.
 export function orderChips(pieces: { categories: string[] }[]): string[] {
   const counts = new Map<string, number>();
   for (const piece of pieces) {
@@ -341,15 +350,129 @@ export function orderChips(pieces: { categories: string[] }[]): string[] {
     .filter(([chip]) => chip !== AI_CHIP)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([chip]) => chip);
-  return [
-    CORE_CHIP,
-    POWERHOUSE_CHIP,
-    ...(counts.has(AI_CHIP) ? [AI_CHIP] : []),
-    ...rest,
-  ];
+  return [...(counts.has(AI_CHIP) ? [AI_CHIP] : []), ...rest];
 }
 
-// Drill-in view: one piece's actions or triggers, per mode.
+export type SourceTab = "all" | "core" | "powerhouse" | "activepieces";
+
+const TAB_LABELS: Record<SourceTab, string> = {
+  all: "All",
+  core: "Core",
+  powerhouse: "Powerhouse",
+  activepieces: "Activepieces",
+};
+
+// Pieces each tab lists; Core lists the engine's presets only.
+const TAB_SOURCES: Record<SourceTab, readonly PieceSourceKind[] | undefined> = {
+  all: undefined,
+  core: [],
+  powerhouse: ["local", "registry"],
+  activepieces: ["activepieces"],
+};
+
+export function inTab(tab: SourceTab, piece: { source?: PieceSourceKind }) {
+  const sources = TAB_SOURCES[tab];
+  return (
+    sources === undefined || sources.includes(piece.source ?? "activepieces")
+  );
+}
+
+export function queryTokens(query: string): string[] {
+  return query
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+// Every token somewhere in the text, in any order.
+export function matchesQuery(text: string, tokens: string[]): boolean {
+  const lowered = text.toLowerCase();
+  return tokens.every((token) => lowered.includes(token));
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Bolds the words the query's tokens start.
+function Highlight(props: { text: string; tokens: string[] }) {
+  if (props.tokens.length === 0) return <>{props.text}</>;
+  const pattern = new RegExp(
+    `(?<![\\p{L}\\p{N}])(${props.tokens.map(escapeRegExp).join("|")})`,
+    "giu",
+  );
+  const parts = props.text.split(pattern);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} className="bg-transparent font-bold text-foreground">
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+function blockRow(props: {
+  entry: {
+    pieceName: string;
+    pieceVersion: string;
+    name: string;
+    displayName: string;
+    description: string;
+    unsupported?: string | null;
+    strategy?: string | null;
+  };
+  kind: "action" | "trigger";
+  logo: React.ReactNode;
+  tokens: string[];
+  onPick: (preset: BlockPreset) => void;
+  onHover: (block: BlockRef) => void;
+  versionNote: VersionNote;
+}) {
+  const { entry, kind } = props;
+  // Visible but inert: picking one would build a step that never runs.
+  const unavailable = blockUnavailable({ ...entry, kind });
+  const block: BlockRef = {
+    pieceName: entry.pieceName,
+    pieceVersion: entry.pieceVersion,
+    kind,
+    name: entry.name,
+  };
+  return (
+    <Row
+      key={blockKey(block)}
+      logo={props.logo}
+      label={<Highlight text={entry.displayName} tokens={props.tokens} />}
+      title={entry.description || entry.displayName}
+      description={
+        unavailable ?? (
+          <Highlight text={entry.description} tokens={props.tokens} />
+        )
+      }
+      disabled={unavailable !== undefined}
+      version={shownVersion(entry.pieceName, entry.pieceVersion)}
+      versionNote={props.versionNote(entry.pieceName, entry.pieceVersion)}
+      onHover={
+        unavailable === undefined ? () => props.onHover(block) : undefined
+      }
+      onClick={() =>
+        props.onPick({
+          label: entry.displayName,
+          block,
+          description: entry.description,
+          defaultConfig: {},
+        })
+      }
+    />
+  );
+}
+
+// Drill-in view: one piece's actions or triggers, per mode, with a filter.
 function PieceEntries(props: {
   piece: PieceSummaryUi;
   mode: PieceMode;
@@ -362,6 +485,7 @@ function PieceEntries(props: {
     (PieceActionUi & Partial<PieceTriggerUi>)[] | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
   const pieceSource = usePieceSource();
 
   useEffect(() => {
@@ -386,67 +510,135 @@ function PieceEntries(props: {
     };
   }, [props.piece.name, props.mode, pieceSource]);
 
+  const kind = props.mode === "triggers" ? "trigger" : "action";
+  const tokens = queryTokens(filter);
+  const shown = (entries ?? []).filter((entry) =>
+    matchesQuery(
+      `${entry.displayName} ${entry.name} ${entry.description}`,
+      tokens,
+    ),
+  );
+
   return (
-    <div className="max-h-80 overflow-y-auto py-1">
-      <button
-        type="button"
-        className="flex w-full items-center gap-1 px-3 py-1 text-[11px] text-muted-foreground/80 hover:text-muted-foreground"
-        onClick={props.onBack}
-      >
-        ← {props.piece.displayName}
-      </button>
-      {error ? (
-        <div className="px-3 py-2 text-xs text-wf-fail">{error}</div>
-      ) : entries === null ? (
-        <div className="px-3 py-2 text-xs text-muted-foreground/80">
-          Loading…
-        </div>
-      ) : (
-        entries.map((entry) => {
-          // Visible but inert: picking one would build a step that never runs.
-          const kind = props.mode === "triggers" ? "trigger" : "action";
-          const unavailable = blockUnavailable({ ...entry, kind });
-          const block: BlockRef = {
-            pieceName: entry.pieceName,
-            pieceVersion: entry.pieceVersion,
-            kind,
-            name: entry.name,
-          };
-          return (
-            <Row
-              key={entry.name}
-              logo={
+    <>
+      <div className="flex items-center gap-1 border-b border-foreground/10 p-2">
+        <button
+          type="button"
+          aria-label="Back to pieces"
+          className="shrink-0 px-1 text-xs text-muted-foreground/80 hover:text-foreground"
+          onClick={props.onBack}
+        >
+          ←
+        </button>
+        <LogoFrame
+          src={props.piece.logoUrl}
+          alt={props.piece.displayName}
+          size={16}
+        />
+        <input
+          autoFocus
+          className="min-w-0 flex-1 rounded border border-foreground/10 px-2 py-1 text-xs"
+          placeholder={`Search ${props.piece.displayName} ${kind}s…`}
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+        />
+      </div>
+      <div className="max-h-96 overflow-y-auto py-1">
+        {error ? (
+          <div className="px-3 py-2 text-xs text-wf-fail">{error}</div>
+        ) : entries === null ? (
+          <div className="px-3 py-2 text-xs text-muted-foreground/80">
+            Loading…
+          </div>
+        ) : shown.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-muted-foreground/80">
+            No matching {kind}s
+          </div>
+        ) : (
+          shown.map((entry) =>
+            blockRow({
+              entry,
+              kind,
+              logo: (
                 <LogoFrame
                   src={props.piece.logoUrl}
                   alt={props.piece.displayName}
                   size={ROW_LOGO}
                 />
-              }
-              label={entry.displayName}
-              description={unavailable ?? entry.description}
-              disabled={unavailable !== undefined}
-              version={shownVersion(entry.pieceName, entry.pieceVersion)}
-              versionNote={props.versionNote(
-                props.piece.name,
-                entry.pieceVersion,
-              )}
-              onHover={
-                unavailable === undefined
-                  ? () => props.onHover(block)
-                  : undefined
-              }
-              onClick={() =>
-                props.onPick({
-                  label: entry.displayName,
-                  block,
-                  description: entry.description,
-                  defaultConfig: {},
-                })
-              }
-            />
-          );
-        })
+              ),
+              tokens,
+              onPick: props.onPick,
+              onHover: props.onHover,
+              versionNote: props.versionNote,
+            }),
+          )
+        )}
+      </div>
+    </>
+  );
+}
+
+// Blocks a search group shows before "more"; all of them for one or two groups.
+const GROUP_BLOCKS = 4;
+
+function PieceGroup(props: {
+  match: PieceSearchMatchUi;
+  tokens: string[];
+  // Shows every block without a "more" row.
+  open: boolean;
+  onOpenPiece: () => void;
+  onPick: (preset: BlockPreset) => void;
+  onHover: (block: BlockRef) => void;
+  versionNote: VersionNote;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { match } = props;
+  const all = props.open || expanded;
+  const blocks = all ? match.blocks : match.blocks.slice(0, GROUP_BLOCKS);
+  const hidden = match.blocks.length - blocks.length;
+  return (
+    <div className="pb-1">
+      <Row
+        logo={
+          <LogoFrame
+            src={match.logoUrl}
+            alt={match.displayName}
+            size={ROW_LOGO}
+          />
+        }
+        label={
+          <>
+            <Highlight text={match.displayName} tokens={props.tokens} />
+            {match.deprecated ? " (deprecated)" : ""}
+          </>
+        }
+        title={match.description || match.displayName}
+        description={match.unsupported ?? match.description}
+        version={shownVersion(match.pieceName, match.pieceVersion)}
+        versionNote={props.versionNote(match.pieceName, match.pieceVersion)}
+        onClick={props.onOpenPiece}
+      />
+      {blocks.map((hit) =>
+        blockRow({
+          entry: hit,
+          kind: hit.kind,
+          // An empty slot keeps the blocks indented under their piece.
+          logo: <span className="shrink-0" style={{ width: ROW_LOGO }} />,
+          tokens: props.tokens,
+          onPick: props.onPick,
+          onHover: props.onHover,
+          versionNote: props.versionNote,
+        }),
       )}
+      {hidden > 0 ? (
+        <button
+          type="button"
+          className="w-full py-0.5 pl-[44px] text-left text-[11px] text-muted-foreground/80 hover:text-foreground"
+          onClick={() => setExpanded(true)}
+        >
+          {hidden} more…
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -458,19 +650,27 @@ const INDEXING_RETRY_MS = 2000;
 type SearchState =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "done"; result: BlockSearchResultUi }
+  | { kind: "done"; result: PieceSearchResultUi }
   | { kind: "error"; message: string };
 
 // Debounced catalog-wide search; keeps polling while the runtime indexes.
-function useBlockSearch(query: string, enabled: boolean): SearchState {
+function usePieceSearch(
+  query: string,
+  filter: PieceSearchFilterUi | null,
+): SearchState {
   const [state, setState] = useState<SearchState>({ kind: "idle" });
   const [attempt, setAttempt] = useState(0);
   const trimmed = query.trim();
-  const active = enabled && trimmed.length >= SEARCH_MIN_CHARS;
-  const search = usePieceSource()?.searchBlocks;
+  const search = usePieceSource()?.searchPieces;
+  const active =
+    filter !== null &&
+    search !== undefined &&
+    trimmed.length >= SEARCH_MIN_CHARS;
+  // A key, so a filter rebuilt with the same fields does not search again.
+  const filterKey = JSON.stringify(filter);
 
   useEffect(() => {
-    if (!active || !search) {
+    if (!active) {
       // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- drops a finished search when the query goes inactive
       setState({ kind: "idle" });
       return;
@@ -481,7 +681,7 @@ function useBlockSearch(query: string, enabled: boolean): SearchState {
       setState((previous) =>
         previous.kind === "done" ? previous : { kind: "loading" },
       );
-      search(trimmed).then(
+      search(trimmed, JSON.parse(filterKey) as PieceSearchFilterUi).then(
         (result) => {
           if (!alive) return;
           setState({ kind: "done", result });
@@ -507,16 +707,19 @@ function useBlockSearch(query: string, enabled: boolean): SearchState {
       clearTimeout(timer);
       if (retry) clearTimeout(retry);
     };
-  }, [active, trimmed, attempt, search]);
+  }, [active, trimmed, filterKey, attempt, search]);
 
-  return active ? state : { kind: "idle" };
+  // Loading through the debounce, so the browse list does not flash first.
+  if (!active) return { kind: "idle" };
+  return state.kind === "idle" ? { kind: "loading" } : state;
 }
 
 function Chip(props: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
-      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+      aria-pressed={props.active}
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
         props.active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-foreground/10 text-muted-foreground hover:border-foreground/25"
@@ -528,12 +731,49 @@ function Chip(props: { label: string; active: boolean; onClick: () => void }) {
   );
 }
 
+function Tabs(props: {
+  tabs: SourceTab[];
+  active: SourceTab;
+  onSelect: (tab: SourceTab) => void;
+}) {
+  return (
+    <div role="tablist" className="mt-1.5 flex gap-3 px-1">
+      {props.tabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          role="tab"
+          aria-selected={props.active === tab}
+          className={`-mb-px border-b-2 pb-1 text-[11px] font-medium ${
+            props.active === tab
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => props.onSelect(tab)}
+        >
+          {TAB_LABELS[tab]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Status(props: { children: React.ReactNode; error?: boolean }) {
+  return (
+    <div
+      className={`px-3 py-1 text-xs ${props.error ? "text-wf-fail" : "text-muted-foreground/80"}`}
+    >
+      {props.children}
+    </div>
+  );
+}
+
 export function BlockSelector(props: {
   title: string;
   presets: BlockPreset[];
   onPick: (preset: PickedPreset) => void;
   onClose: () => void;
-  // Show the Activepieces catalog below the presets.
+  // Show the piece catalog below the presets.
   showPieces?: boolean;
   // Which piece entries the drill-in offers; defaults to actions.
   pieceMode?: PieceMode;
@@ -542,6 +782,7 @@ export function BlockSelector(props: {
   onAttach?: (stepId: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<SourceTab>("all");
   const [chip, setChip] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
   const [piece, setPiece] = useState<PieceSummaryUi | null>(null);
@@ -610,60 +851,126 @@ export function BlockSelector(props: {
   const prefetch = useBlockFormPrefetch();
 
   const mode: PieceMode = props.pieceMode ?? "actions";
-  const lowered = query.toLowerCase();
-  const modePieces = useMemo(
-    () =>
-      (catalog?.pieces ?? []).filter(
-        (entry) =>
-          (mode === "triggers" ? entry.triggerCount : entry.actionCount) > 0,
-      ),
-    [catalog, mode],
-  );
-  const chips = useMemo(() => orderChips(modePieces), [modePieces]);
-  const chipsByPiece = useMemo(
-    () => new Map(modePieces.map((entry) => [entry.name, chipsOf(entry)])),
-    [modePieces],
-  );
-  const inChip = (pieceName: string) =>
-    chip === null || chip === CORE_CHIP
-      ? true
-      : (chipsByPiece.get(pieceName)?.has(chip) ?? false);
+  const kind = mode === "triggers" ? "trigger" : "action";
+  const tokens = queryTokens(query);
+  const showCatalog = pieceSource !== undefined && tab !== "core";
+  const tabs: SourceTab[] = pieceSource
+    ? ["all", "core", "powerhouse", "activepieces"]
+    : ["all", "core", "powerhouse"];
 
-  const presetChip = chip === CORE_CHIP || chip === POWERHOUSE_CHIP;
-  const showCatalog = pieceSource !== undefined && !presetChip;
-  const matching = props.presets.filter((preset) =>
-    `${preset.label} ${preset.block.pieceName} ${preset.block.name}`
-      .toLowerCase()
-      .includes(lowered),
+  // A piece whose every block is a preset is listed as those presets.
+  const modePieces = useMemo(() => {
+    const presetCounts = new Map<string, number>();
+    for (const preset of props.presets) {
+      const name = preset.block.pieceName;
+      presetCounts.set(name, (presetCounts.get(name) ?? 0) + 1);
+    }
+    return (catalog?.pieces ?? []).filter((entry) => {
+      const count =
+        mode === "triggers" ? entry.triggerCount : entry.actionCount;
+      return count > (presetCounts.get(entry.name) ?? 0);
+    });
+  }, [catalog, mode, props.presets]);
+  const tabPieces = useMemo(
+    () => modePieces.filter((entry) => inTab(tab, entry)),
+    [modePieces, tab],
   );
-  // The engine's own blocks, then the reactor's. Two sections rather than one
-  // "Core": the document blocks are a piece, and saying so is honest.
+  const chips = useMemo(() => orderChips(tabPieces), [tabPieces]);
+  // One chip has nothing to narrow.
+  const showChips = showCatalog && chips.length > 1;
+  const activeChip =
+    showChips && chip !== null && chips.includes(chip) ? chip : null;
+  const inChip = (entry: { categories: string[] }) =>
+    activeChip === null || chipsOf(entry).has(activeChip);
+
+  const searchFilter = useMemo<PieceSearchFilterUi | null>(
+    () =>
+      showCatalog
+        ? {
+            kind,
+            ...(TAB_SOURCES[tab] ? { sources: TAB_SOURCES[tab] } : {}),
+            ...(activeChip
+              ? { categories: categoriesOfChip(activeChip, tabPieces) }
+              : {}),
+          }
+        : null,
+    [showCatalog, kind, tab, activeChip, tabPieces],
+  );
+  const search = usePieceSearch(query, piece ? null : searchFilter);
+  const searchActive = search.kind !== "idle";
+
+  // A chip narrows to pieces, so the presets step aside.
+  const matching =
+    activeChip === null
+      ? props.presets.filter((preset) =>
+          matchesQuery(
+            `${preset.label} ${preset.description} ${preset.block.pieceName} ${preset.block.name}`,
+            tokens,
+          ),
+        )
+      : [];
+  // The engine's own blocks, then the reactor's: the document blocks are a
+  // piece, and saying so is honest.
   const corePresets =
-    chip === null || chip === CORE_CHIP
+    tab === "all" || tab === "core"
       ? matching.filter((preset) => preset.group !== "powerhouse")
       : [];
   const powerhousePresets =
-    chip === null || chip === POWERHOUSE_CHIP
+    tab === "all" || tab === "powerhouse"
       ? matching.filter((preset) => preset.group === "powerhouse")
       : [];
-  const filteredAttach = (
-    props.onAttach ? (props.attachSteps ?? []) : []
-  ).filter((step) =>
-    `${step.name} ${step.key} ${step.pieceName} ${step.actionName}`
-      .toLowerCase()
-      .includes(lowered),
+  const presetBlocks = new Set(
+    props.presets.map(
+      (preset) => `${preset.block.pieceName} ${preset.block.name}`,
+    ),
   );
-  const filteredPieces = showCatalog
-    ? modePieces.filter(
-        (entry) =>
-          inChip(entry.name) &&
-          `${entry.displayName} ${entry.name} ${entry.description}`
-            .toLowerCase()
-            .includes(lowered),
-      )
-    : [];
+  const filteredAttach = (
+    props.onAttach && tab === "all" ? (props.attachSteps ?? []) : []
+  ).filter((step) =>
+    matchesQuery(
+      `${step.name} ${step.key} ${step.pieceName} ${step.actionName}`,
+      tokens,
+    ),
+  );
+  // The browse list, or the fallback when the source cannot search.
+  const filteredPieces =
+    showCatalog && !searchActive
+      ? tabPieces.filter(
+          (entry) =>
+            inChip(entry) &&
+            matchesQuery(
+              `${entry.displayName} ${entry.name} ${entry.description}`,
+              tokens,
+            ),
+        )
+      : [];
+  // Blocks a preset already offers are listed once, as the preset.
+  const groups =
+    search.kind === "done"
+      ? search.result.pieces
+          .map((match) => ({
+            ...match,
+            blocks: match.blocks.filter(
+              (hit) => !presetBlocks.has(`${hit.pieceName} ${hit.name}`),
+            ),
+          }))
+          .filter((match) => match.blocks.length > 0)
+      : [];
 
-  const search = useBlockSearch(query, showCatalog && !piece);
+  const openPiece = (match: PieceSearchMatchUi) =>
+    setPiece(
+      catalog?.pieces.find((entry) => entry.name === match.pieceName) ?? {
+        name: match.pieceName,
+        displayName: match.displayName,
+        description: match.description,
+        logoUrl: match.logoUrl,
+        actionCount: 0,
+        triggerCount: 0,
+        categories: match.categories,
+        source: match.source,
+        version: match.pieceVersion,
+      },
+    );
 
   const presetRow = (preset: BlockPreset) => {
     const block = pinned(preset);
@@ -671,7 +978,7 @@ export function BlockSelector(props: {
       <Row
         key={blockKey(preset.block) + preset.label}
         logo={<BlockLogo block={preset.block} size={ROW_LOGO} />}
-        label={preset.label}
+        label={<Highlight text={preset.label} tokens={tokens} />}
         description={
           block
             ? preset.description
@@ -692,51 +999,22 @@ export function BlockSelector(props: {
     showCatalog ||
     filteredAttach.length > 0 ||
     (corePresets.length > 0 && powerhousePresets.length > 0);
-  const wantedKind = mode === "triggers" ? "trigger" : "action";
-  const hits: BlockSearchHitUi[] =
-    search.kind === "done"
-      ? search.result.hits.filter(
-          (hit) => hit.kind === wantedKind && inChip(hit.pieceName),
-        )
-      : [];
-  const searchActive = search.kind !== "idle";
+  const nothing =
+    corePresets.length + powerhousePresets.length === 0 &&
+    filteredAttach.length === 0;
 
   return (
     <div
       ref={containerRef}
-      className="nodrag nopan nowheel w-80 rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
+      className="nodrag nopan nowheel w-96 rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
       onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.stopPropagation();
+        if (piece) setPiece(null);
+        else props.onClose();
+      }}
     >
-      <div className="border-b border-foreground/10 p-2">
-        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-          {props.title}
-        </div>
-        {piece ? null : (
-          <>
-            <input
-              autoFocus
-              className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
-              placeholder={
-                pieceSource ? "Search pieces, actions, triggers…" : "Search…"
-              }
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            {pieceSource && catalog && !catalog.error ? (
-              <div className="mt-1.5 flex flex-wrap gap-1 px-0.5">
-                {chips.map((label) => (
-                  <Chip
-                    key={label}
-                    label={label}
-                    active={chip === label}
-                    onClick={() => setChip(chip === label ? null : label)}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
       {piece ? (
         <PieceEntries
           piece={piece}
@@ -747,168 +1025,162 @@ export function BlockSelector(props: {
           versionNote={versionNote}
         />
       ) : (
-        <div className="max-h-80 overflow-y-auto py-1">
-          {filteredAttach.length > 0 ? (
-            <>
-              <SectionLabel>Attach existing step</SectionLabel>
-              {filteredAttach.map((step) => (
-                <Row
-                  key={step.id}
-                  logo={<BlockLogo block={stepBlock(step)} size={ROW_LOGO} />}
-                  label={step.name}
-                  description={`{{steps.${step.key}}} · detached`}
-                  onClick={() => props.onAttach?.(step.id)}
+        <>
+          <div className="border-b border-foreground/10 px-2 pt-2">
+            <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+              {props.title}
+            </div>
+            <input
+              autoFocus
+              className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
+              placeholder={
+                pieceSource ? `Search pieces and ${kind}s…` : "Search…"
+              }
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <Tabs
+              tabs={tabs}
+              active={tab}
+              onSelect={(next) => {
+                setTab(next);
+                setChip(null);
+              }}
+            />
+          </div>
+          {showChips && catalog && !catalog.error ? (
+            <div className="flex gap-1 overflow-x-auto whitespace-nowrap border-b border-foreground/10 px-2.5 py-1.5 [scrollbar-width:thin]">
+              {chips.map((label) => (
+                <Chip
+                  key={label}
+                  label={label}
+                  active={activeChip === label}
+                  onClick={() => setChip(activeChip === label ? null : label)}
                 />
               ))}
-            </>
-          ) : null}
-          {corePresets.length > 0 && labelPresets ? (
-            <SectionLabel>Core</SectionLabel>
-          ) : null}
-          {corePresets.map(presetRow)}
-          {powerhousePresets.length > 0 && labelPresets ? (
-            <SectionLabel>Powerhouse</SectionLabel>
-          ) : null}
-          {powerhousePresets.map(presetRow)}
-          {searchActive ? (
-            <>
-              <SectionLabel>
-                {mode === "triggers" ? "Triggers" : "Actions & triggers"}
-              </SectionLabel>
-              {search.kind === "loading" ? (
-                <div className="px-3 py-1 text-xs text-muted-foreground/80">
-                  Searching…
-                </div>
-              ) : search.kind === "error" ? (
-                <div className="px-3 py-1 text-xs text-wf-fail">
-                  {search.message}
-                </div>
-              ) : (
-                <>
-                  {hits.map((hit) => {
-                    const unavailable = blockUnavailable(hit);
-                    const block: BlockRef = {
-                      pieceName: hit.pieceName,
-                      pieceVersion: hit.pieceVersion,
-                      kind: hit.kind,
-                      name: hit.name,
-                    };
-                    return (
-                      <Row
-                        key={blockKey(block)}
-                        logo={
-                          <LogoFrame
-                            src={hit.logoUrl}
-                            alt={hit.pieceDisplayName}
-                            size={ROW_LOGO}
-                          />
-                        }
-                        label={`${hit.displayName} · ${hit.pieceDisplayName}`}
-                        description={
-                          unavailable ??
-                          (hit.description || hit.pieceDisplayName)
-                        }
-                        disabled={unavailable !== undefined}
-                        version={shownVersion(hit.pieceName, hit.pieceVersion)}
-                        versionNote={versionNote(
-                          hit.pieceName,
-                          hit.pieceVersion,
-                        )}
-                        onHover={
-                          unavailable === undefined
-                            ? () => prefetch(block)
-                            : undefined
-                        }
-                        onClick={() =>
-                          pick({
-                            label: hit.displayName,
-                            block,
-                            description: hit.description,
-                            defaultConfig: {},
-                          })
-                        }
-                      />
-                    );
-                  })}
-                  {/* Status describes the published catalog only. Blocks this
-                    reactor ships are already listed above it. */}
-                  {search.result.status === "indexing" ? (
-                    <div className="px-3 py-1 text-xs text-muted-foreground/80">
-                      Indexing the catalog… more results appear shortly.
-                    </div>
-                  ) : search.result.status === "error" ? (
-                    <div className="px-3 py-1 text-xs text-wf-fail">
-                      {search.result.error ?? "Search failed"}
-                    </div>
-                  ) : hits.length === 0 ? (
-                    <div className="px-3 py-1 text-xs text-muted-foreground/80">
-                      No matching {wantedKind}s
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </>
-          ) : null}
-          {showCatalog ? (
-            <>
-              <SectionLabel>Pieces</SectionLabel>
-              {catalog === null ? (
-                <div className="px-3 py-2 text-xs text-muted-foreground/80">
-                  Loading catalog…
-                </div>
-              ) : catalog.error ? (
-                <div className="flex items-center gap-2 px-3 py-2 text-xs text-wf-fail">
-                  <span className="min-w-0 flex-1">{catalog.error}</span>
-                  <button
-                    type="button"
-                    className="shrink-0 cursor-pointer rounded border border-solid border-foreground/15 bg-card px-1.5 py-0.5 text-foreground hover:border-foreground/25"
-                    onClick={() => {
-                      setCatalog(null);
-                      setCatalogRound((round) => round + 1);
-                    }}
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                filteredPieces.map((entry) => (
-                  <Row
-                    key={entry.name}
-                    logo={
-                      <LogoFrame
-                        src={entry.logoUrl}
-                        alt={entry.displayName}
-                        size={ROW_LOGO}
-                      />
-                    }
-                    label={
-                      entry.deprecated
-                        ? `${entry.displayName} (deprecated)`
-                        : entry.displayName
-                    }
-                    description={
-                      entry.unsupported ??
-                      (mode === "triggers"
-                        ? `${entry.triggerCount} trigger${entry.triggerCount === 1 ? "" : "s"} · ${entry.description}`
-                        : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`)
-                    }
-                    version={shownVersion(entry.name, entry.version)}
-                    versionNote={versionNote(entry.name, entry.version)}
-                    onClick={() => setPiece(entry)}
-                  />
-                ))
-              )}
-            </>
-          ) : null}
-          {corePresets.length + powerhousePresets.length === 0 &&
-          filteredPieces.length === 0 &&
-          filteredAttach.length === 0 &&
-          !searchActive ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground/80">
-              No matches
             </div>
           ) : null}
-        </div>
+          <div className="max-h-96 overflow-y-auto py-1">
+            {filteredAttach.length > 0 ? (
+              <>
+                <SectionLabel>Attach existing step</SectionLabel>
+                {filteredAttach.map((step) => (
+                  <Row
+                    key={step.id}
+                    logo={<BlockLogo block={stepBlock(step)} size={ROW_LOGO} />}
+                    label={step.name}
+                    description={`{{steps.${step.key}}} · detached`}
+                    onClick={() => props.onAttach?.(step.id)}
+                  />
+                ))}
+              </>
+            ) : null}
+            {corePresets.length > 0 && labelPresets ? (
+              <SectionLabel>Core</SectionLabel>
+            ) : null}
+            {corePresets.map(presetRow)}
+            {powerhousePresets.length > 0 && labelPresets ? (
+              <SectionLabel>Powerhouse</SectionLabel>
+            ) : null}
+            {powerhousePresets.map(presetRow)}
+            {searchActive ? (
+              <>
+                <SectionLabel>Pieces</SectionLabel>
+                {search.kind === "loading" ? (
+                  <Status>Searching…</Status>
+                ) : search.kind === "error" ? (
+                  <Status error>{search.message}</Status>
+                ) : (
+                  <>
+                    {groups.map((match) => (
+                      <PieceGroup
+                        key={match.pieceName}
+                        match={match}
+                        tokens={tokens}
+                        open={groups.length <= 2}
+                        onOpenPiece={() => openPiece(match)}
+                        onPick={pick}
+                        onHover={prefetch}
+                        versionNote={versionNote}
+                      />
+                    ))}
+                    {/* Status covers the published catalog only; local
+                      pieces are already in the groups above. */}
+                    {search.result.status === "indexing" ? (
+                      <Status>
+                        Indexing the catalog… more results appear shortly.
+                      </Status>
+                    ) : search.result.status === "error" ? (
+                      <Status error>
+                        {search.result.error ?? "Search failed"}
+                      </Status>
+                    ) : groups.length === 0 ? (
+                      <Status>No matching {kind}s</Status>
+                    ) : null}
+                  </>
+                )}
+              </>
+            ) : null}
+            {showCatalog && !searchActive ? (
+              <>
+                <SectionLabel>Pieces</SectionLabel>
+                {catalog === null ? (
+                  <Status>Loading catalog…</Status>
+                ) : catalog.error ? (
+                  <div className="flex items-center gap-2 px-3 py-2 text-xs text-wf-fail">
+                    <span className="min-w-0 flex-1">{catalog.error}</span>
+                    <button
+                      type="button"
+                      className="shrink-0 cursor-pointer rounded border border-solid border-foreground/15 bg-card px-1.5 py-0.5 text-foreground hover:border-foreground/25"
+                      onClick={() => {
+                        setCatalog(null);
+                        setCatalogRound((round) => round + 1);
+                      }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : filteredPieces.length === 0 ? (
+                  <Status>
+                    {tab === "powerhouse" && tokens.length === 0
+                      ? "No registry pieces on this runtime"
+                      : "No matching pieces"}
+                  </Status>
+                ) : (
+                  filteredPieces.map((entry) => (
+                    <Row
+                      key={entry.name}
+                      logo={
+                        <LogoFrame
+                          src={entry.logoUrl}
+                          alt={entry.displayName}
+                          size={ROW_LOGO}
+                        />
+                      }
+                      label={
+                        <>
+                          <Highlight text={entry.displayName} tokens={tokens} />
+                          {entry.deprecated ? " (deprecated)" : ""}
+                        </>
+                      }
+                      title={entry.description || entry.displayName}
+                      description={
+                        entry.unsupported ??
+                        (mode === "triggers"
+                          ? `${entry.triggerCount} trigger${entry.triggerCount === 1 ? "" : "s"} · ${entry.description}`
+                          : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`)
+                      }
+                      version={shownVersion(entry.name, entry.version)}
+                      versionNote={versionNote(entry.name, entry.version)}
+                      onClick={() => setPiece(entry)}
+                    />
+                  ))
+                )}
+              </>
+            ) : null}
+            {!showCatalog && nothing ? <Status>No matches</Status> : null}
+          </div>
+        </>
       )}
     </div>
   );

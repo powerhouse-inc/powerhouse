@@ -37,7 +37,7 @@ test.describe("Block picker", () => {
     await app.setViewportSize({ width: 1440, height: 1400 });
     await openWorkflowEditor(app);
     await openPicker(app, addStep(app));
-    await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
+    await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
     const row = app
       .getByRole("button")
       .filter({ hasText: "Reads a document's current state" });
@@ -48,13 +48,13 @@ test.describe("Block picker", () => {
     await expect(version).toBeVisible();
     await shot(app, "block-picker-versions");
     // Core blocks show no version.
-    await app.getByRole("button", { name: "Core", exact: true }).click();
+    await app.getByRole("tab", { name: "Core", exact: true }).click();
     const branch = app
       .getByRole("button")
       .filter({ hasText: "Routes true/false" });
     await branch.hover();
     await expect(branch.getByText(VERSION)).toHaveCount(0);
-    await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
+    await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
 
     await row.click();
     await expect
@@ -83,7 +83,7 @@ test.describe("Block picker", () => {
       await route.continue();
     });
     await openPicker(app, addStep(app));
-    await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
+    await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
     const row = app
       .getByRole("button")
       .filter({ hasText: "Lists documents by type and name" });
@@ -122,7 +122,7 @@ test.describe("Block picker", () => {
       await route.continue();
     });
     await openPicker(app, addStep(app));
-    await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
+    await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
     await app
       .getByRole("button")
       .filter({ hasText: "Lists documents by type and name" })
@@ -135,6 +135,30 @@ test.describe("Block picker", () => {
     release();
     await expect(app.getByLabel("Include state")).toBeVisible();
     await expect(connection).toHaveCount(0);
+  });
+
+  test("search groups matching blocks under their piece", async ({ app }) => {
+    await app.setViewportSize({ width: 1440, height: 1400 });
+    await openWorkflowEditor(app);
+    await openPicker(app, addStep(app));
+    const search = app.getByPlaceholder("Search pieces and actions…");
+    // Out of order, and one token naming the piece rather than the block.
+    await search.fill("request http");
+    const piece = app.getByRole("button").filter({ hasText: /^HTTP/ }).first();
+    // A block row under the piece, not the piece's own description.
+    await expect(
+      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+    ).toBeVisible();
+    await expect(piece).toBeVisible();
+    await shot(app, "block-picker-search");
+
+    // The piece opens with a filter of its own; Escape steps back out.
+    await piece.click();
+    await expect(app.getByPlaceholder("Search HTTP actions…")).toBeFocused();
+    await app.keyboard.press("Escape");
+    await expect(search).toBeVisible();
+    await app.keyboard.press("Escape");
+    await expect(search).toHaveCount(0);
   });
 
   test("a changed trigger opens its panel", async ({ app }) => {
@@ -182,9 +206,7 @@ test.describe("Block picker", () => {
       await openWorkflowEditor(app, "Mixed versions");
       await canvasNode(app, "Old call").waitFor();
       await openPicker(app, addStep(app));
-      await app
-        .getByPlaceholder("Search pieces, actions, triggers…")
-        .fill("HTTP");
+      await app.getByPlaceholder("Search pieces and actions…").fill("HTTP");
       const row = app
         .getByRole("button")
         .filter({ hasText: "Send HTTP request" })
