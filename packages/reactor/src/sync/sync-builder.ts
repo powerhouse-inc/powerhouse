@@ -12,6 +12,7 @@ import type {
   ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
+import { FlushGuardedSyncCursorStorage } from "../storage/flush-guarded-sync-cursor-storage.js";
 import { deliveryAt } from "../storage/kysely/delivery-lookup.js";
 import { listPurged } from "../storage/kysely/document-purges.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
@@ -21,6 +22,8 @@ import { KyselySyncPurgeRefusalStorage } from "../storage/kysely/sync-purge-refu
 import { KyselySyncReceivedMarkerStorage } from "../storage/kysely/sync-received-marker-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
+import type { IStorageFlusher } from "../storage/storage-flush.js";
+import { NoopStorageFlusher } from "../storage/storage-flush.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
 import type { LocalPeer } from "./types.js";
 import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
@@ -33,6 +36,7 @@ export class SyncBuilder {
   private holdStorage?: ISyncHoldStorage;
   private receivedMarkerStorage?: ISyncReceivedMarkerStorage;
   private purgeRefusalStorage?: ISyncPurgeRefusalStorage;
+  private storageFlusher: IStorageFlusher = new NoopStorageFlusher();
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -47,6 +51,12 @@ export class SyncBuilder {
 
   withCursorStorage(storage: ISyncCursorStorage): this {
     this.cursorStorage = storage;
+    return this;
+  }
+
+  /** The barrier every cursor write, including a custom storage's, goes behind. */
+  withStorageFlusher(flusher: IStorageFlusher): this {
+    this.storageFlusher = flusher;
     return this;
   }
 
@@ -128,7 +138,10 @@ export class SyncBuilder {
     }
 
     const remoteStorage = this.remoteStorage ?? new KyselySyncRemoteStorage(db);
-    const cursorStorage = this.cursorStorage ?? new KyselySyncCursorStorage(db);
+    const cursorStorage = new FlushGuardedSyncCursorStorage(
+      this.cursorStorage ?? new KyselySyncCursorStorage(db),
+      this.storageFlusher,
+    );
     const deadLetterStorage =
       this.deadLetterStorage ?? new KyselySyncDeadLetterStorage(db);
     const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);

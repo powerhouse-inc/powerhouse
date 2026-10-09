@@ -27,6 +27,7 @@ export const PGLITE_USE_WORKER: boolean = false;
 async function createMainThreadPGlite(
   major: SupportedPgMajor,
   dbName: string,
+  relaxedDurability: boolean,
 ): Promise<PGlite> {
   const { PGlite } = await loadPGliteModule(major);
   const { live } =
@@ -34,7 +35,7 @@ async function createMainThreadPGlite(
       ? await import("pglite-legacy-02/live")
       : await import("@electric-sql/pglite/live");
   return new PGlite(`idb://${dbName}`, {
-    relaxedDurability: true,
+    relaxedDurability,
     extensions: { live },
   }) as unknown as PGlite;
 }
@@ -82,45 +83,99 @@ function chainedCreate(create: () => Promise<PGlite>): Promise<PGlite> {
   return pending;
 }
 
+const CLOSE_TIMEOUT_MS = 30_000;
+
+type PGliteSingleton = {
+  get: () => Promise<PGlite>;
+  /**
+   * Closes and forgets the instance; the next get reopens after the close. A
+   * close that does not settle leaves the store unusable until a reload.
+   */
+  discard: () => Promise<void>;
+};
+
 function pgliteSingleton(opts: {
   dbName: string;
   detectMajor: () => Promise<DetectedMajor>;
   label: string;
-}): () => Promise<PGlite> {
+  relaxedDurability: boolean;
+}): PGliteSingleton {
   let cached: Promise<PGlite> | undefined;
-  return function getPGlite(): Promise<PGlite> {
-    if (cached) return cached;
-    const pending = chainedCreate(async () => {
-      const major = resolvePgMajorForRuntime(await opts.detectMajor());
-      if (major !== 17) {
-        console.warn(
-          `[${opts.label}] Opening legacy Postgres ${major} data dir. Migrate to PG17 from the banner or the Inspector → Debug tab.`,
-        );
+  // A second idb:// instance beside one still closing would overwrite its pages.
+  let unusable: Error | undefined;
+  return {
+    get(): Promise<PGlite> {
+      if (cached) return cached;
+      const pending = chainedCreate(async () => {
+        if (unusable) throw unusable;
+        const major = resolvePgMajorForRuntime(await opts.detectMajor());
+        if (major !== 17) {
+          console.warn(
+            `[${opts.label}] Opening legacy Postgres ${major} data dir. Migrate to PG17 from the banner or the Inspector → Debug tab.`,
+          );
+        }
+        return PGLITE_USE_WORKER
+          ? createWorkerPGlite(major, opts.dbName)
+          : createMainThreadPGlite(major, opts.dbName, opts.relaxedDurability);
+      });
+      // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
+      cached = pending;
+      pending.catch(() => {
+        if (cached === pending) cached = undefined;
+      });
+      return pending;
+    },
+    async discard(): Promise<void> {
+      const pending = cached;
+      if (!pending) return;
+      cached = undefined;
+      const closing = bootChain.then(async () => {
+        const pg = await pending;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            pg.close(),
+            new Promise<void>((resolve) => {
+              timer = setTimeout(() => {
+                unusable = new Error(
+                  `[${opts.label}] PGlite did not close within ${CLOSE_TIMEOUT_MS}ms; reload the page to reopen its store`,
+                );
+                console.warn(unusable.message);
+                resolve();
+              }, CLOSE_TIMEOUT_MS);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      });
+      bootChain = closing.catch(() => undefined);
+      try {
+        await closing;
+      } catch (error) {
+        console.error(`[${opts.label}] closing PGlite failed:`, error);
       }
-      return PGLITE_USE_WORKER
-        ? createWorkerPGlite(major, opts.dbName)
-        : createMainThreadPGlite(major, opts.dbName);
-    });
-    // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
-    cached = pending;
-    pending.catch(() => {
-      if (cached === pending) cached = undefined;
-    });
-    return pending;
+    },
   };
 }
 
-export const getReactorPGlite = pgliteSingleton({
+// Not relaxed: group commit flushes through syncToFs, which a relaxed
+// instance resolves before the sync has run.
+const reactorPGlite = pgliteSingleton({
   dbName: REACTOR_PGLITE_NAME,
   detectMajor: detectReactorPgMajor,
   label: "reactor",
+  relaxedDurability: false,
 });
+export const getReactorPGlite = reactorPGlite.get;
+export const discardReactorPGlite = reactorPGlite.discard;
 
 const getRelationalPGlite = pgliteSingleton({
   dbName: RELATIONAL_PGLITE_NAME,
   detectMajor: detectRelationalPgMajor,
   label: "relational",
-});
+  relaxedDurability: true,
+}).get;
 
 export async function getDb() {
   const pgLite = await getRelationalPGlite();

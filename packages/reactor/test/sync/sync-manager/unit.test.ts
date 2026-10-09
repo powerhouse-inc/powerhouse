@@ -1,3 +1,4 @@
+import { cursorProtectedLoadMeta } from "../../../src/shared/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
@@ -3119,7 +3120,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-inbox" },
+        cursorProtectedLoadMeta("remote-inbox"),
       );
     });
 
@@ -3250,7 +3251,7 @@ describe("SyncManager - Unit Tests", () => {
         "main",
         expect.any(Array),
         expect.any(AbortSignal),
-        { sourceRemote: "remote-inbox2" },
+        cursorProtectedLoadMeta("remote-inbox2"),
       );
     });
 
@@ -3687,7 +3688,7 @@ describe("SyncManager - Unit Tests", () => {
         "main",
         expect.any(Array),
         expect.any(AbortSignal),
-        { sourceRemote: "remote-mixed" },
+        cursorProtectedLoadMeta("remote-mixed"),
       );
 
       expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
@@ -3699,7 +3700,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-mixed" },
+        cursorProtectedLoadMeta("remote-mixed"),
       );
     });
 
@@ -3937,7 +3938,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-empty-dep" },
+        cursorProtectedLoadMeta("remote-empty-dep"),
       );
 
       expect(ch.deadLetter.add).not.toHaveBeenCalled();
@@ -4045,7 +4046,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-fifo" },
+        cursorProtectedLoadMeta("remote-fifo"),
       );
       expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
         2,
@@ -4058,7 +4059,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-fifo" },
+        cursorProtectedLoadMeta("remote-fifo"),
       );
     });
 
@@ -4168,7 +4169,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-xdoc" },
+        cursorProtectedLoadMeta("remote-xdoc"),
       );
     });
 
@@ -4238,7 +4239,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-stale" },
+        cursorProtectedLoadMeta("remote-stale"),
       );
     });
 
@@ -4361,7 +4362,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-concurrent" },
+        cursorProtectedLoadMeta("remote-concurrent"),
       );
     });
   });

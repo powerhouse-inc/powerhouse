@@ -53,6 +53,7 @@ import type {
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
+import type { IGroupCommitStorage } from "../storage/kysely/group-commit-storage.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type {
   IChannelFactory,
@@ -617,6 +618,8 @@ export interface InProcessReactorModule extends ReactorModule {
   documentPurgeService: DocumentPurgeService;
   /** What the builder knows about the store; see `withStorageFacts`. */
   storageFacts: ReactorStorageFacts;
+  /** Set by `withGroupCommitPGlite`; the host closes the store through it. */
+  groupCommitStorage?: IGroupCommitStorage;
 }
 
 /**

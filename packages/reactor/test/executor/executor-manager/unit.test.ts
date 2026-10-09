@@ -16,6 +16,7 @@ import type { IQueue } from "../../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
 import { JobQueueState } from "../../../src/queue/types.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
@@ -191,7 +192,64 @@ describe("SimpleJobExecutorManager", () => {
       expect(mockExecutors[0].executeJob).toHaveBeenCalledWith(
         job,
         expect.any(AbortSignal),
+        expect.any(Function),
       );
+    });
+
+    describe("job timeout", () => {
+      function timedManager(
+        executeJob: IJobExecutor["executeJob"],
+      ): SimpleJobExecutorManager {
+        return new SimpleJobExecutorManager(
+          () => ({ executeJob }),
+          eventBus,
+          queue,
+          jobTracker,
+          createMockLogger(),
+          new NullDocumentModelResolver(),
+          50,
+        );
+      }
+
+      async function runOne(
+        timed: SimpleJobExecutorManager,
+        id: string,
+      ): Promise<JobStatus | undefined> {
+        await timed.start(1);
+        const job = createTestJob({ id });
+        await queue.enqueue(job);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        await timed.stop(false);
+        return jobTracker.getJobStatus(id)?.status;
+      }
+
+      it("fails a job that runs past the timeout before it commits", async () => {
+        const timed = timedManager(
+          (job) =>
+            new Promise((resolve) =>
+              setTimeout(
+                () => resolve({ job, success: true, duration: 150 }),
+                150,
+              ),
+            ),
+        );
+
+        expect(await runOne(timed, "job-uncommitted")).toBe(JobStatus.FAILED);
+      });
+
+      it("never fails a job past its point of no return", async () => {
+        const timed = timedManager((job, _signal, onCommitting) => {
+          onCommitting?.();
+          return new Promise((resolve) =>
+            setTimeout(
+              () => resolve({ job, success: true, duration: 150 }),
+              150,
+            ),
+          );
+        });
+
+        expect(await runOne(timed, "job-committed")).not.toBe(JobStatus.FAILED);
+      });
     });
 
     it("should call start() on the job execution handle", async () => {
@@ -1172,6 +1230,7 @@ describe("SimpleJobExecutorManager", () => {
       expect(mockExecutor.executeJob).toHaveBeenCalledWith(
         expect.objectContaining({ id: "signal-job" }),
         expect.any(AbortSignal),
+        expect.any(Function),
       );
     });
   });
