@@ -3,6 +3,7 @@ import {
   JobStatus,
   type PagedResults,
   type ReactorInfo,
+  type ViewFilter,
 } from "@powerhousedao/reactor";
 import {
   DRIVE_DOCUMENT_TYPES,
@@ -12,7 +13,7 @@ import {
   type GraphQLReactorClientOptions,
 } from "@powerhousedao/reactor-browser";
 import type { IRoutableBackend } from "@powerhousedao/reactor-router";
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 
 const REMOTE_INFO_QUERY = /* GraphQL */ `
   query RemoteReactorInfo {
@@ -106,8 +107,11 @@ export function createGraphQLRoutableBackend(
   });
   const backend: IRoutableBackend = {
     supports: { find: findIsServableOverGraphQL, pointInTimeViews: false },
-    get: async (identifier, view, signal) =>
-      drives.learn(await gql.get(identifier, view, signal)),
+    get: async <TDocument extends PHDocument>(
+      identifier: string,
+      view?: ViewFilter,
+      signal?: AbortSignal,
+    ) => drives.learn(await gql.get<TDocument>(identifier, view, signal)),
     getOperations: (identifier, view, filter, paging, signal) =>
       gql.getOperations(identifier, view, filter, paging, signal),
     find: async (search, view, paging, signal) =>
@@ -127,10 +131,20 @@ export function createGraphQLRoutableBackend(
     getCreateSignaturePolicy: () => gql.getCreateSignaturePolicy(),
     getCreateProtocolVersions: (parent, signal) =>
       gql.getCreateProtocolVersions(parent, signal),
-    create: async (document, parent, signal) =>
-      drives.learn(await gql.create(document, parent, signal)),
-    execute: async (identifier, branch, actions, signal) =>
-      drives.learn(await gql.execute(identifier, branch, actions, signal)),
+    create: async <TDocument extends PHDocument = PHDocument>(
+      document: PHDocument,
+      parent?: string,
+      signal?: AbortSignal,
+    ) => drives.learn(await gql.create<TDocument>(document, parent, signal)),
+    execute: async <TDocument extends PHDocument>(
+      identifier: string,
+      branch: string,
+      actions: Action[],
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await gql.execute<TDocument>(identifier, branch, actions, signal),
+      ),
     executeBatch: (request, signal) => gql.executeBatch(request, signal),
     deleteDocument: (identifier, propagate, signal) =>
       gql.deleteDocument(identifier, propagate, signal),
