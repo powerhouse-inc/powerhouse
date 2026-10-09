@@ -34,6 +34,8 @@ export function VirtualList<T>(props: {
   activeIndex?: number;
   className?: string;
   label?: string;
+  // The listbox the search box's aria-controls names.
+  id?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -74,16 +76,22 @@ export function VirtualList<T>(props: {
   return (
     <div
       ref={ref}
+      id={props.id}
+      role="listbox"
       aria-label={props.label}
       className={`min-h-0 overflow-y-auto ${props.className ?? ""}`}
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
     >
-      <div style={{ height: offsets.at(-1), position: "relative" }}>
+      <div
+        role="presentation"
+        style={{ height: offsets.at(-1), position: "relative" }}
+      >
         {props.items.slice(start, end).map((item, i) => {
           const index = start + i;
           return (
             <div
               key={props.keyOf(item, index)}
+              role="presentation"
               style={{
                 position: "absolute",
                 top: offsets[index],

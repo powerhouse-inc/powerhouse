@@ -164,6 +164,70 @@ describe("getConnectors", () => {
     expect(miss.connectors).toEqual([]);
   });
 
+  it("ranks with the runtime's search, actions and triggers interleaved", async () => {
+    const match = (pieceName: string) => ({
+      pieceName,
+      pieceVersion: "1.0.0",
+      displayName: pieceName,
+      description: "",
+      logoUrl: "",
+      categories: [],
+      source: "activepieces",
+      deprecated: null,
+      unsupported: null,
+      namedPiece: false,
+      blocks: [],
+    });
+    const asked: unknown[] = [];
+    serve({
+      pieceCatalog: [IMAP_PIECE, SLACK_PIECE],
+      ...LISTINGS,
+      searchPieces: (args: { query: string; kind: string }) => {
+        asked.push(args);
+        return {
+          status: "ready",
+          indexedPieces: 2,
+          error: null,
+          pieces:
+            args.kind === "action"
+              ? [match(SLACK_PIECE.name), match("@acme/piece-unlisted")]
+              : [match(IMAP_PIECE.name), match(SLACK_PIECE.name)],
+        };
+      },
+    });
+
+    const result = await tools.getConnectors("send message");
+
+    expect(asked).toEqual([
+      expect.objectContaining({ query: "send message", kind: "action" }),
+      expect.objectContaining({ query: "send message", kind: "trigger" }),
+    ]);
+    // A piece the catalog does not list is not a connector.
+    expect(result.connectors.map((entry) => entry.pieceName)).toEqual([
+      SLACK_PIECE.name,
+      IMAP_PIECE.name,
+    ]);
+  });
+
+  it("falls back to a substring match while the search indexes", async () => {
+    serve({
+      pieceCatalog: [IMAP_PIECE, SLACK_PIECE],
+      ...LISTINGS,
+      searchPieces: () => ({
+        status: "indexing",
+        indexedPieces: 0,
+        error: null,
+        pieces: [],
+      }),
+    });
+
+    const result = await tools.getConnectors("emails");
+
+    expect(result.connectors.map((entry) => entry.pieceName)).toEqual([
+      IMAP_PIECE.name,
+    ]);
+  });
+
   it("caps the detail page at 20 and reports truncation", async () => {
     const catalog = Array.from({ length: 25 }, (_, index) => ({
       ...SLACK_PIECE,

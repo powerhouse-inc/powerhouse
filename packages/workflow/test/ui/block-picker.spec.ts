@@ -39,7 +39,7 @@ test.describe("Block picker", () => {
     await openPicker(app, addStep(app));
     await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
     const row = app
-      .getByRole("button")
+      .getByRole("option")
       .filter({ hasText: "Reads a document's current state" });
     const version = row.getByText(VERSION);
     // Every row pins the same installed version: it only says so on hover.
@@ -50,7 +50,7 @@ test.describe("Block picker", () => {
     // Core blocks show no version.
     await app.getByRole("tab", { name: "Core", exact: true }).click();
     const branch = app
-      .getByRole("button")
+      .getByRole("option")
       .filter({ hasText: "Routes true/false" });
     await branch.hover();
     await expect(branch.getByText(VERSION)).toHaveCount(0);
@@ -85,7 +85,7 @@ test.describe("Block picker", () => {
     await openPicker(app, addStep(app));
     await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
     const row = app
-      .getByRole("button")
+      .getByRole("option")
       .filter({ hasText: "Lists documents by type and name" });
     await row.hover();
     await row.click();
@@ -124,7 +124,7 @@ test.describe("Block picker", () => {
     await openPicker(app, addStep(app));
     await app.getByRole("tab", { name: "Powerhouse", exact: true }).click();
     await app
-      .getByRole("button")
+      .getByRole("option")
       .filter({ hasText: "Lists documents by type and name" })
       .click();
 
@@ -147,7 +147,7 @@ test.describe("Block picker", () => {
     const header = app.getByTitle("Open HTTP", { exact: true });
     await expect(header).toBeVisible();
     await expect(
-      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+      app.getByRole("option").filter({ hasText: /^Send HTTP request/ }),
     ).toBeVisible();
     await shot(app, "block-picker-search");
 
@@ -156,7 +156,7 @@ test.describe("Block picker", () => {
     await expect(search).toHaveValue("");
     await expect(search).toBeFocused();
     await expect(
-      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+      app.getByRole("option").filter({ hasText: /^Send HTTP request/ }),
     ).toBeVisible();
     // Logos mount with the panes; the shot waits for them.
     await app.waitForFunction(() =>
@@ -179,7 +179,7 @@ test.describe("Block picker", () => {
       .getByPlaceholder("Search pieces and actions…")
       .fill("send http request");
     await expect(
-      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+      app.getByRole("option").filter({ hasText: /^Send HTTP request/ }),
     ).toBeVisible();
     // The best block is the keyboard's row from the start.
     await app.keyboard.press("Enter");
@@ -187,13 +187,47 @@ test.describe("Block picker", () => {
 
     await openPicker(app, addStep(app));
     const recent = app
-      .getByRole("button")
+      .getByRole("option")
       .filter({ hasText: /^Recently used/ });
     await expect(recent).toBeVisible();
     await recent.click();
     await expect(
-      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+      app.getByRole("option").filter({ hasText: /^Send HTTP request/ }),
     ).toBeVisible();
+  });
+
+  test("points assistive tech at the keyboard's row, and tabs take arrows", async ({
+    app,
+  }) => {
+    await app.setViewportSize({ width: 1440, height: 1400 });
+    await openWorkflowEditor(app);
+    await openPicker(app, addStep(app));
+    const search = app.getByRole("combobox");
+    await expect(search).toBeFocused();
+    const activeOption = async () => {
+      const id = await search.getAttribute("aria-activedescendant");
+      return app.locator(`[id="${id}"]`);
+    };
+    await expect(await activeOption()).toHaveAttribute("aria-selected", "true");
+    await expect(await activeOption()).toContainText("Core");
+    await app.keyboard.press("ArrowDown");
+    await expect(await activeOption()).toContainText("Documents");
+    // Into the blocks, and back.
+    await app.keyboard.press("ArrowRight");
+    await expect(await activeOption()).toContainText("Create document");
+    await app.keyboard.press("ArrowLeft");
+    await expect(await activeOption()).toContainText("Documents");
+
+    // Tab reaches the selected tab; arrows move along the tabs.
+    await app.keyboard.press("Tab");
+    const all = app.getByRole("tab", { name: "All", exact: true });
+    await expect(all).toBeFocused();
+    await app.keyboard.press("ArrowRight");
+    const core = app.getByRole("tab", { name: "Core", exact: true });
+    await expect(core).toBeFocused();
+    await expect(core).toHaveAttribute("aria-selected", "true");
+    await app.keyboard.press("Escape");
+    await expect(search).toHaveCount(0);
   });
 
   test("stays on screen near the bottom edge", async ({ app }) => {
@@ -231,12 +265,42 @@ test.describe("Block picker", () => {
       .click({ button: "right" });
     await app.getByRole("button", { name: "Change trigger" }).click();
     await app
-      .getByRole("button", { name: /^Manual/ })
+      .getByRole("option", { name: /^Manual/ })
       .first()
       .click();
     await expect(
       app.getByRole("button", { name: "Close panel" }),
     ).toBeVisible();
+  });
+
+  test.describe("in dark mode", () => {
+    test.use({ theme: "dark" });
+
+    test("browses and searches on a dark card", async ({ app }) => {
+      await app.setViewportSize({ width: 1440, height: 1400 });
+      await openWorkflowEditor(app);
+      const picker = await openPicker(app, addStep(app));
+      await app.keyboard.press("ArrowDown");
+      await app.keyboard.press("ArrowRight");
+      await expect(
+        picker
+          .getByRole("listbox", { name: "Documents actions" })
+          .getByRole("option", { selected: true }),
+      ).toContainText("Create document");
+      await shot(app, "block-picker-dark-browse");
+      await app
+        .getByPlaceholder("Search pieces and actions…")
+        .fill("request http");
+      await expect(
+        app.getByRole("option").filter({ hasText: /^Send HTTP request/ }),
+      ).toBeVisible();
+      await app.waitForFunction(() =>
+        [...document.querySelectorAll("[data-selector-open] img")].every(
+          (image) => (image as HTMLImageElement).complete,
+        ),
+      );
+      await shot(app, "block-picker-dark-search");
+    });
   });
 
   test.describe("on a workflow of its own", () => {
@@ -270,7 +334,7 @@ test.describe("Block picker", () => {
       await openPicker(app, addStep(app));
       await app.getByPlaceholder("Search pieces and actions…").fill("HTTP");
       const row = app
-        .getByRole("button")
+        .getByRole("option")
         .filter({ hasText: "Send HTTP request" })
         .first();
       const version = row.getByText(VERSION);
