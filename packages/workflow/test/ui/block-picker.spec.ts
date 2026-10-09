@@ -144,21 +144,67 @@ test.describe("Block picker", () => {
     const search = app.getByPlaceholder("Search pieces and actions…");
     // Out of order, and one token naming the piece rather than the block.
     await search.fill("request http");
-    const piece = app.getByRole("button").filter({ hasText: /^HTTP/ }).first();
-    // A block row under the piece, not the piece's own description.
+    const header = app.getByTitle("Open HTTP", { exact: true });
+    await expect(header).toBeVisible();
     await expect(
       app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
     ).toBeVisible();
-    await expect(piece).toBeVisible();
     await shot(app, "block-picker-search");
 
-    // The piece opens with a filter of its own; Escape steps back out.
-    await piece.click();
-    await expect(app.getByPlaceholder("Search HTTP actions…")).toBeFocused();
+    // The header opens the piece in the browse panes; Escape backs out.
+    await header.click();
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    await expect(
+      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+    ).toBeVisible();
+    // Logos mount with the panes; the shot waits for them.
+    await app.waitForFunction(() =>
+      [...document.querySelectorAll("[data-selector-open] img")].every(
+        (image) => (image as HTMLImageElement).complete,
+      ),
+    );
+    await shot(app, "block-picker-browse");
     await app.keyboard.press("Escape");
     await expect(search).toBeVisible();
     await app.keyboard.press("Escape");
     await expect(search).toHaveCount(0);
+  });
+
+  test("picks with the keyboard and remembers the pick", async ({ app }) => {
+    await app.setViewportSize({ width: 1440, height: 1400 });
+    await openWorkflowEditor(app);
+    await openPicker(app, addStep(app));
+    await app
+      .getByPlaceholder("Search pieces and actions…")
+      .fill("send http request");
+    await expect(
+      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+    ).toBeVisible();
+    // The best block is the keyboard's row from the start.
+    await app.keyboard.press("Enter");
+    await expect(canvasNode(app, "Send HTTP request")).toBeVisible();
+
+    await openPicker(app, addStep(app));
+    const recent = app
+      .getByRole("button")
+      .filter({ hasText: /^Recently used/ });
+    await expect(recent).toBeVisible();
+    await recent.click();
+    await expect(
+      app.getByRole("button").filter({ hasText: /^Send HTTP request/ }),
+    ).toBeVisible();
+  });
+
+  test("stays on screen near the bottom edge", async ({ app }) => {
+    await app.setViewportSize({ width: 1280, height: 720 });
+    await openWorkflowEditor(app);
+    await openPicker(app, addStep(app));
+    const box = await app.locator('[data-selector-open="true"]').boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(720);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1280);
   });
 
   test("closes on a click on the canvas", async ({ app }) => {
