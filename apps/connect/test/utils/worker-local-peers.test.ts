@@ -83,19 +83,41 @@ function adopt(id: string, peerId: string, port: unknown): RpcMessage {
   };
 }
 
-function workerHost(multiReactor: boolean) {
+function hello(multiReactor: boolean): RpcMessage {
+  return {
+    k: "hello",
+    id: "h",
+    version: VERSION,
+    construct: { multiReactor },
+  } as RpcMessage;
+}
+
+function workerHost(
+  options: { built?: () => Promise<void>; attaches?: boolean } = {},
+) {
   const peers = createWorkerLocalPeers(new ConsoleLogger(["test"]));
   const retired = vi.fn(() => Promise.resolve());
   const host = new ReactorHost({
-    build: () => {
+    build: async (construct) => {
+      const multiReactor =
+        (construct as { multiReactor?: boolean } | undefined)?.multiReactor ??
+        false;
+      peers.serve(multiReactor);
+      await options.built?.();
       if (multiReactor) {
         peers.createChannelFactory();
-        peers.attach(syncManager());
+        if (options.attaches ?? true) {
+          peers.attach(syncManager());
+        }
       }
-      return Promise.resolve({} as IReactorClient);
+      return {} as IReactorClient;
     },
-    onAdoptSyncPeer: peers.onAdoptSyncPeer,
-    onRemoveSyncPeer: peers.onRemoveSyncPeer,
+    get onAdoptSyncPeer() {
+      return peers.adoptHandler();
+    },
+    get onRemoveSyncPeer() {
+      return peers.removeHandler();
+    },
     onRetire: peers.retiring(retired),
   });
   const tab = injectableTransport();
@@ -105,8 +127,8 @@ function workerHost(multiReactor: boolean) {
 
 describe("worker local sync peers", () => {
   it("closes every adopted port when the host retires", async () => {
-    const { host, tab, retired } = workerHost(true);
-    tab.receive({ k: "hello", id: "h", version: VERSION } as RpcMessage);
+    const { host, tab, retired } = workerHost();
+    tab.receive(hello(true));
     await tab.reply("h");
     const a = fakePort();
     const b = fakePort();
@@ -126,8 +148,8 @@ describe("worker local sync peers", () => {
   });
 
   it("refuses an adopt and closes its port with the flag off", async () => {
-    const { tab } = workerHost(false);
-    tab.receive({ k: "hello", id: "h", version: VERSION } as RpcMessage);
+    const { tab } = workerHost();
+    tab.receive(hello(false));
     await tab.reply("h");
     const port = fakePort();
     tab.receive(adopt("a", "reactor-a", port));
@@ -135,6 +157,64 @@ describe("worker local sync peers", () => {
     expect(await tab.reply("a")).toMatchObject({
       k: "err",
       error: { message: "ReactorHost has no adopt-sync-peer handler" },
+    });
+    expect(port.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses adopt and remove at once with the flag off while the build runs", async () => {
+    const { tab } = workerHost({ built: () => new Promise(() => {}) });
+    tab.receive(hello(false));
+    const port = fakePort();
+    tab.receive(adopt("a", "reactor-a", port));
+    tab.receive({
+      k: "remove-sync-peer",
+      id: "r",
+      peerId: "reactor-a",
+      channelName: "drive-1:main",
+      remoteName: "local:reactor-a",
+    } as RpcMessage);
+
+    expect(port.close).toHaveBeenCalledTimes(1);
+    expect(await tab.reply("a")).toMatchObject({
+      k: "err",
+      error: { message: "ReactorHost has no adopt-sync-peer handler" },
+    });
+    expect(await tab.reply("r")).toMatchObject({
+      k: "err",
+      error: { message: "ReactorHost has no remove-sync-peer handler" },
+    });
+  });
+
+  it("holds an adopt until a flag-on build is ready", async () => {
+    let finish = () => {};
+    const { tab } = workerHost({
+      built: () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    });
+    tab.receive(hello(true));
+    const port = fakePort();
+    tab.receive(adopt("a", "reactor-a", port));
+    await Promise.resolve();
+    expect(port.close).not.toHaveBeenCalled();
+
+    finish();
+
+    expect(await tab.reply("a")).toMatchObject({ k: "res" });
+    expect(port.close).not.toHaveBeenCalled();
+  });
+
+  it("says the reactor is not ready when a flag-on build attached no peers", async () => {
+    const { tab } = workerHost({ attaches: false });
+    tab.receive(hello(true));
+    await tab.reply("h");
+    const port = fakePort();
+    tab.receive(adopt("a", "reactor-a", port));
+
+    expect(await tab.reply("a")).toMatchObject({
+      k: "err",
+      error: { message: "The reactor is not ready for local sync peers" },
     });
     expect(port.close).toHaveBeenCalledTimes(1);
   });

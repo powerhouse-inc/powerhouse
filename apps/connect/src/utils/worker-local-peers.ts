@@ -19,7 +19,9 @@ type PeerHandlers = {
   onRemoveSyncPeer: (params: RemoveSyncPeerParams) => Promise<void>;
 };
 
-export type WorkerLocalPeers = PeerHandlers & {
+export type WorkerLocalPeers = {
+  /** Set from each build's construct, before its first await. */
+  serve(multiReactor: boolean): void;
   /** The factory a flag-on build composes; its registry starts empty. */
   createChannelFactory(): IChannelFactory;
   /** Serves adopt/remove once the reactor that owns the registry is built. */
@@ -28,12 +30,30 @@ export type WorkerLocalPeers = PeerHandlers & {
   retiring(
     retire: (reason: string) => Promise<void>,
   ): (reason: string) => Promise<void>;
+  /** Undefined unless the flag is on, so the host refuses before any build. */
+  adoptHandler(): PeerHandlers["onAdoptSyncPeer"] | undefined;
+  removeHandler(): PeerHandlers["onRemoveSyncPeer"] | undefined;
 };
 
-/** Without an attached reactor the host answers as if it had no handlers. */
 export function createWorkerLocalPeers(logger: ILogger): WorkerLocalPeers {
+  let enabled = false;
   let registry: LocalChannelPortRegistry | undefined;
   let handlers: PeerHandlers | undefined;
+
+  const peerHandlers: PeerHandlers = {
+    onAdoptSyncPeer: async (params, port) => {
+      if (!handlers) {
+        throw new Error("The reactor is not ready for local sync peers");
+      }
+      return handlers.onAdoptSyncPeer(params, port);
+    },
+    onRemoveSyncPeer: async (params) => {
+      if (!handlers) {
+        throw new Error("The reactor is not ready for local sync peers");
+      }
+      return handlers.onRemoveSyncPeer(params);
+    },
+  };
 
   const release = () => {
     handlers = undefined;
@@ -42,6 +62,9 @@ export function createWorkerLocalPeers(logger: ILogger): WorkerLocalPeers {
   };
 
   return {
+    serve: (multiReactor) => {
+      enabled = multiReactor;
+    },
     createChannelFactory: () => {
       release();
       registry = new LocalChannelPortRegistry({ logger });
@@ -59,17 +82,7 @@ export function createWorkerLocalPeers(logger: ILogger): WorkerLocalPeers {
         release();
       }
     },
-    onAdoptSyncPeer: async (params, port) => {
-      if (!handlers) {
-        throw new Error("ReactorHost has no adopt-sync-peer handler");
-      }
-      return handlers.onAdoptSyncPeer(params, port);
-    },
-    onRemoveSyncPeer: async (params) => {
-      if (!handlers) {
-        throw new Error("ReactorHost has no remove-sync-peer handler");
-      }
-      return handlers.onRemoveSyncPeer(params);
-    },
+    adoptHandler: () => (enabled ? peerHandlers.onAdoptSyncPeer : undefined),
+    removeHandler: () => (enabled ? peerHandlers.onRemoveSyncPeer : undefined),
   };
 }

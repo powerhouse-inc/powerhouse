@@ -592,8 +592,15 @@ describe("worker after Clear storage", () => {
     expect(worker).toMatch(
       /onRetire: localPeers\.retiring\(\(\) => stores\.retire\(\)\),/,
     );
-    expect(worker).toMatch(/onAdoptSyncPeer: localPeers\.onAdoptSyncPeer,/);
-    expect(worker).toMatch(/onRemoveSyncPeer: localPeers\.onRemoveSyncPeer,/);
+    expect(worker).toMatch(
+      /get onAdoptSyncPeer\(\) \{\s*return localPeers\.adoptHandler\(\);/,
+    );
+    expect(worker).toMatch(
+      /get onRemoveSyncPeer\(\) \{\s*return localPeers\.removeHandler\(\);/,
+    );
+    expect(worker).toMatch(
+      /const construct = raw as WorkerConstruct;\s*localPeers\.serve\(construct\.multiReactor \?\? false\);/,
+    );
     expect(worker).toMatch(/drainBeforeReload: \(\) => stores\.drain\(\),/);
     expect(worker).toMatch(/stopSync,/);
     expect(worker).toMatch(

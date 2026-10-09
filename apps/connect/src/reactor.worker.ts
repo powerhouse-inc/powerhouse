@@ -419,6 +419,7 @@ const host = new ReactorHost({
     let phase = "init";
     try {
       const construct = raw as WorkerConstruct;
+      localPeers.serve(construct.multiReactor ?? false);
       phase = "loading packages";
       console.info(`[reactor.worker] boot: ${phase}`);
       loader = new WorkerPackageLoader({
@@ -576,8 +577,13 @@ const host = new ReactorHost({
       );
     }
   },
-  onAdoptSyncPeer: localPeers.onAdoptSyncPeer,
-  onRemoveSyncPeer: localPeers.onRemoveSyncPeer,
+  // Read per message: the flag arrives with the construct, after the host exists.
+  get onAdoptSyncPeer() {
+    return localPeers.adoptHandler();
+  },
+  get onRemoveSyncPeer() {
+    return localPeers.removeHandler();
+  },
   onIdentity: (user) => {
     currentIdentity = user;
     if (signer) {
