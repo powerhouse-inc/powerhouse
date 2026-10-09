@@ -1,5 +1,11 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { setFullReactorClient } from "@powerhousedao/reactor-browser";
+import {
+  getDrives,
+  refreshReactorDataClient,
+  setDrives,
+  setFullReactorClient,
+} from "@powerhousedao/reactor-browser";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   ISigner,
@@ -37,6 +43,35 @@ export async function selectAppReactorClient(
   const routed = await buildRouter(params);
   setFullReactorClient(routed);
   return routed ?? params.module.client;
+}
+
+/** A Switchboard that cannot answer must not fail boot: list the tab's drives. */
+export async function getAppDrives(
+  client: IReactorClient,
+  local: IReactorClient,
+): Promise<DocumentDriveDocument[]> {
+  if (client === local) {
+    return getDrives(local);
+  }
+  try {
+    return await getDrives(client);
+  } catch (error) {
+    logger.warn(
+      "Could not list drives through the router; listing the local reactor's: @error",
+      error,
+    );
+    return getDrives(local);
+  }
+}
+
+export async function refreshAppDrives(
+  client: IReactorClient,
+  local: IReactorClient,
+): Promise<void> {
+  if (client === local) {
+    return refreshReactorDataClient(client);
+  }
+  setDrives(await getAppDrives(client, local));
 }
 
 async function buildRouter(

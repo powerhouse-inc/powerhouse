@@ -20,7 +20,6 @@ import {
   DRIVE_DOCUMENT_TYPES,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
-  getDrives,
   login,
   refreshReactorDataClient,
   RegistryClient,
@@ -81,7 +80,11 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
-import { selectAppReactorClient } from "./app-reactor-client.js";
+import {
+  getAppDrives,
+  refreshAppDrives,
+  selectAppReactorClient,
+} from "./app-reactor-client.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -508,7 +511,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     documentModelModules,
   });
 
-  const drives = await getDrives(appReactorClient);
+  const drives = await getAppDrives(
+    appReactorClient,
+    reactorClientModule.client,
+  );
 
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
@@ -604,7 +610,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
   });
 
-  await refreshReactorDataClient(appReactorClient);
+  await refreshAppDrives(appReactorClient, reactorClientModule.client);
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,
