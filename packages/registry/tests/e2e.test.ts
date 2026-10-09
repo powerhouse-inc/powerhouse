@@ -437,8 +437,13 @@ describe("registry e2e", () => {
       await vi.waitFor(
         async () => {
           const res = await fetch(`${REGISTRY_URL}/packages/${NAME}`);
-          const pkg = (await res.json()) as { versions?: string[] };
+          const pkg = (await res.json()) as {
+            distTags?: Record<string, string>;
+            versions?: string[];
+          };
           expect(pkg.versions).toHaveLength(3);
+          // The dev tag lands in a second write after its version
+          expect(pkg.distTags?.dev).toBe("2.1.0-dev.1");
         },
         { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
       );
