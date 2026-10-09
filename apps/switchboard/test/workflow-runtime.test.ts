@@ -655,7 +655,8 @@ describe("composeWorkflowRuntime", () => {
     }
 
     expect(selfFence).toEqual([false, true]);
-  });
+    // Two reactors and two PGlite stores: past 5s on a Windows runner
+  }, 30_000);
 
   it("opens no journal when the lease is lost before the runtime exists", async () => {
     const clientModule = await buildReactorModule();
