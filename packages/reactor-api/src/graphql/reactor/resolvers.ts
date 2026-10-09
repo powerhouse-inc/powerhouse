@@ -15,6 +15,7 @@ import {
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
+  JOB_NOT_FOUND_ERROR_NAME,
   JobStatus,
   type OperationFilter,
   type PagedResults,
@@ -554,7 +555,11 @@ function unknownJob(jobId: string): JobInfo {
     status: JobStatus.FAILED,
     createdAtUtcIso: now,
     completedAtUtcIso: now,
-    error: { name: "Error", message: "Job not found", stack: "" },
+    error: {
+      name: JOB_NOT_FOUND_ERROR_NAME,
+      message: "Job not found",
+      stack: "",
+    },
     consistencyToken: { version: 1, createdAtUtcIso: now, coordinates: [] },
     meta: { batchId: jobId, batchJobIds: [jobId] },
   };
