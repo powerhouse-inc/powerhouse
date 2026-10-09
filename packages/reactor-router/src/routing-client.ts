@@ -46,7 +46,12 @@ import {
   type RoutableBackendConfig,
 } from "./backend.js";
 import { ATTEMPT, RouteDispatcher, type BeforeSubmit } from "./dispatcher.js";
-import { CrossBackendRelationshipError, messageOf, rethrow } from "./errors.js";
+import {
+  CrossBackendBatchError,
+  CrossBackendRelationshipError,
+  messageOf,
+  rethrow,
+} from "./errors.js";
 import {
   fanInExistence,
   mergePaged,
@@ -977,10 +982,6 @@ export class RoutingReactorClient implements IReactorClient {
       "moveRelationship",
       sourceParentIdentifier,
       targetParentIdentifier,
-    );
-    await this.assertSameBackend(
-      "moveRelationship",
-      sourceParentIdentifier,
       targetIdentifier,
     );
     return this.dispatcher.onDocument(
@@ -1217,22 +1218,28 @@ export class RoutingReactorClient implements IReactorClient {
   private async assertSameBackend(
     operation: string,
     source: string,
-    target: string,
+    ...targets: string[]
   ): Promise<void> {
-    const [sourceBackend, targetBackend] = await Promise.all([
-      this.dispatcher.resolveDocumentBackend(source),
-      this.dispatcher.resolveDocumentBackend(target),
-    ]);
-    if (sourceBackend === targetBackend) {
-      return;
+    try {
+      await this.dispatcher.verifyBatchBackend(operation, [source, ...targets]);
+    } catch (error) {
+      if (!(error instanceof CrossBackendBatchError)) {
+        throw error;
+      }
+      const backendOf = new Map(
+        error.placement.map((entry) => [entry.documentId, entry.backend]),
+      );
+      const sourceBackend = backendOf.get(source) ?? "";
+      const target =
+        targets.find((id) => backendOf.get(id) !== sourceBackend) ?? targets[0];
+      throw new CrossBackendRelationshipError(
+        operation,
+        source,
+        sourceBackend,
+        target,
+        backendOf.get(target) ?? "",
+      );
     }
-    throw new CrossBackendRelationshipError(
-      operation,
-      source,
-      sourceBackend.name,
-      target,
-      targetBackend.name,
-    );
   }
 }
 

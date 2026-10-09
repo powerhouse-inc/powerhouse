@@ -629,6 +629,92 @@ describe("v1 constraints", () => {
   });
 });
 
+describe("a stale document entry under a relationship write", () => {
+  function backends(refuses: boolean) {
+    const one = new FakeBackend("one");
+    const two = new FakeBackend("two");
+    one.refuses = refuses;
+    two.refuses = refuses;
+    return { one, two };
+  }
+
+  for (const refuses of [false, true]) {
+    it(`corrects a stale entry instead of refusing a false split (refusesMisroutes ${refuses})`, async () => {
+      const { one, two } = backends(refuses);
+      one.seed(fakeDocument({ id: "a" }));
+      one.seed(fakeDocument({ id: "b" }));
+      const client = router([one.config(), two.config()], {
+        documents: { b: "two" },
+      });
+
+      await client.addRelationship("a", "b", "child");
+
+      expect(one.count("addRelationship")).toBe(1);
+      expect(client.describeRouting().documents).toContainEqual({
+        identifier: "b",
+        backend: "one",
+      });
+    });
+
+    it(`refuses a real split a stale entry hides (refusesMisroutes ${refuses})`, async () => {
+      const { one, two } = backends(refuses);
+      one.seed(fakeDocument({ id: "a" }));
+      two.seed(fakeDocument({ id: "b" }));
+      const client = router([one.config(), two.config()], {
+        documents: { b: "one" },
+      });
+
+      const runs = [
+        client.addRelationship("a", "b", "child"),
+        client.updateRelationship("a", "b", "child", null),
+        client.removeRelationship("a", "b", "child"),
+      ];
+
+      for (const run of runs) {
+        await expect(run).rejects.toThrow(CrossBackendRelationshipError);
+        await expect(run).rejects.toThrow(/target "b" is on two/);
+      }
+      for (const method of [
+        "addRelationship",
+        "updateRelationship",
+        "removeRelationship",
+      ]) {
+        expect(one.called(method)).toBe(false);
+      }
+    });
+  }
+
+  it("verifies all three moveRelationship ids", async () => {
+    const { one, two } = backends(false);
+    one.seed(fakeDocument({ id: "from" }));
+    one.seed(fakeDocument({ id: "to" }));
+    one.seed(fakeDocument({ id: "child" }));
+    const client = router([one.config(), two.config()], {
+      documents: { to: "two", child: "two" },
+    });
+
+    await client.moveRelationship("from", "to", "child", "child");
+
+    expect(one.count("moveRelationship")).toBe(1);
+  });
+
+  it("refuses a moveRelationship whose target a stale entry hides on another backend", async () => {
+    const { one, two } = backends(false);
+    one.seed(fakeDocument({ id: "from" }));
+    one.seed(fakeDocument({ id: "to" }));
+    two.seed(fakeDocument({ id: "child" }));
+    const client = router([one.config(), two.config()], {
+      documents: { child: "one" },
+    });
+
+    const run = client.moveRelationship("from", "to", "child", "child");
+
+    await expect(run).rejects.toThrow(CrossBackendRelationshipError);
+    await expect(run).rejects.toThrow(/target "child" is on two/);
+    expect(one.called("moveRelationship")).toBe(false);
+  });
+});
+
 describe("a stale document entry under a batch-shaped write", () => {
   function stale(refuses: boolean) {
     const one = new FakeBackend("one");
