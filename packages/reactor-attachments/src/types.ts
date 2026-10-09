@@ -239,6 +239,8 @@ export type TransportFetchResult =
       retryAfterMs: number;
       /** The source is at capacity and did not look; not a reservation. */
       busy?: true;
+      /** With `busy`: every source that was not busy answered not-found. */
+      othersNotFound?: true;
     }
   | { kind: "not-found" };
 

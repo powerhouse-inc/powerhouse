@@ -47,10 +47,15 @@ const error = (documentId: string): FetchOutcome => ({
   kind: "error",
   documentId,
 });
-const busy = (documentId: string, retryAfterMs = 1_000): FetchOutcome => ({
+const busy = (
+  documentId: string,
+  retryAfterMs = 1_000,
+  othersNotFound = false,
+): FetchOutcome => ({
   kind: "busy",
   documentId,
   retryAfterMs,
+  othersNotFound,
 });
 
 type Row = {
@@ -196,6 +201,21 @@ const ROWS: Row[] = [
     from: entry({ busyRun: 3, errorRun: 2 }),
     outcome: busy("D1"),
     state: "failed",
+    delayMs: undefined,
+  },
+  {
+    name: "a busy run that caps while every other source said not-found counts as one not-found",
+    from: entry({ busyRun: 3, errorRun: 1 }),
+    outcome: busy("D1", 1_000, true),
+    state: "waiting",
+    delayMs: 500,
+    expect: { busyRun: 0, errorRun: 0, notFoundAnswers: 1 },
+  },
+  {
+    name: "a busy run that caps at the not-found budget, with every other source not-found, is not-found",
+    from: entry({ busyRun: 3, notFoundAnswers: 2 }),
+    outcome: busy("D1", 1_000, true),
+    state: "not-found",
     delayMs: undefined,
   },
   {
@@ -464,6 +484,28 @@ describe("nextAfter", () => {
       answers += 1;
     }
     expect(state).toBe("failed");
+    expect(now - NOW).toBeLessThan(60_000);
+  });
+
+  it("ends a source that only ever answers busy, while every other source says not-found, in not-found", () => {
+    let current = entry();
+    let now = NOW;
+    let answers = 0;
+    let state: RetryState = "waiting";
+    while (state === "waiting" && answers < 1_000) {
+      const transition = nextAfter(
+        current,
+        busy("D1", 1_000, true),
+        now,
+        POLICY,
+      );
+      current = transition.entry;
+      state = transition.state;
+      now += transition.delayMs ?? 0;
+      answers += 1;
+    }
+    expect(state).toBe("not-found");
+    expect(current.errorRun).toBe(0);
     expect(now - NOW).toBeLessThan(60_000);
   });
 

@@ -491,7 +491,12 @@ export class AttachmentReplicator {
 
     const result = await this.transport.fetch(entry.hash, documentId, signal);
     if (result.kind === "pending" && result.busy) {
-      return { kind: "busy", documentId, retryAfterMs: result.retryAfterMs };
+      return {
+        kind: "busy",
+        documentId,
+        retryAfterMs: result.retryAfterMs,
+        othersNotFound: result.othersNotFound === true,
+      };
     }
     if (result.kind === "pending") {
       return {

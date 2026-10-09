@@ -14,7 +14,7 @@ export type RetryEntry = {
   errorRun: number;
   /** Per run: pendings since the last non-pending outcome; backoff only. */
   pendingRun: number;
-  /** Per run: busy answers since the last other outcome; a run reaching the cap is one error. */
+  /** Per run: busy answers since the last other outcome; a run reaching the cap is one not-found or error. */
   busyRun: number;
   /** While live, a not-found from another document is not terminal. */
   livePending: { documentId: string; untilMs: number } | undefined;
@@ -32,7 +32,13 @@ export type FetchOutcome =
       expiresAtUtc: string;
       retryAfterMs: number;
     }
-  | { kind: "busy"; documentId: string; retryAfterMs: number }
+  | {
+      kind: "busy";
+      documentId: string;
+      retryAfterMs: number;
+      /** Every source that was not busy answered not-found. */
+      othersNotFound: boolean;
+    }
   | { kind: "not-found"; documentId: string }
   | { kind: "error"; documentId: string }
   | { kind: "aborted" };
@@ -138,13 +144,16 @@ export function nextAfter(
     }
     case "busy": {
       // Not a reservation: no budget is spent and no run ends, but a run
-      // that backs off to the cap counts as one error.
+      // that backs off to the cap counts as one not-found when every other
+      // source said so, else as one error.
       const busyRun = entry.busyRun + 1;
       if (
         pendingGrowth(outcome.retryAfterMs, busyRun, policy) >=
         policy.maxPendingRetryMs
       ) {
-        return failure(entry, outcome.documentId, policy);
+        return outcome.othersNotFound
+          ? notFound(entry, outcome.documentId, now, policy)
+          : failure(entry, outcome.documentId, policy);
       }
       return {
         entry: { ...entry, busyRun },
