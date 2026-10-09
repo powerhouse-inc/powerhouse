@@ -406,7 +406,7 @@ function Highlight(props: { text: string; tokens: string[] }) {
     <>
       {parts.map((part, i) =>
         i % 2 === 1 ? (
-          <mark key={i} className="bg-transparent font-bold text-foreground">
+          <mark key={i} className="bg-transparent font-semibold text-inherit">
             {part}
           </mark>
         ) : (
@@ -789,13 +789,15 @@ export function BlockSelector(props: {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as globalThis.Node)) {
-        props.onClose();
-      }
+    const handler = (event: PointerEvent) => {
+      const container = containerRef.current;
+      // The opener toggles the picker itself, so its clicks count as inside.
+      const root = container?.closest("[data-picker-root]") ?? container;
+      if (!root?.contains(event.target as globalThis.Node)) props.onClose();
     };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
+    // Capture: the canvas pan handler stops the event before it bubbles.
+    window.addEventListener("pointerdown", handler, true);
+    return () => window.removeEventListener("pointerdown", handler, true);
   }, [props]);
 
   const anySource = usePieceSource();

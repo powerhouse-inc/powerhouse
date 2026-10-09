@@ -293,7 +293,11 @@ function AddButton(props: {
   const size = props.size ?? ADD_BUTTON_SIZE;
   const label = props.label;
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div
+      data-picker-root
+      className="relative"
+      style={{ width: size, height: size }}
+    >
       <button
         type="button"
         aria-label={props.title}
