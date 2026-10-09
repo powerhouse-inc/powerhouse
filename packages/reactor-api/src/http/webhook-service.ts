@@ -256,8 +256,10 @@ export class WebhookService {
         return;
       }
 
+      let recordedKey: string | undefined;
       if (policy.dedupe) {
         const key = dedupeKey(policy.dedupe.field, queryParams, headers, body);
+        recordedKey = key;
         if (
           key !== undefined &&
           (await this.#store.seen(
@@ -283,6 +285,19 @@ export class WebhookService {
         raw,
         body,
       });
+
+      // Only on the handler's word: a status alone cannot say it, since an
+      // endpoint may be configured to answer 503 to a delivery it ran.
+      if (reply.unprocessed === true && recordedKey !== undefined) {
+        try {
+          await this.#store.forget(token, recordedKey);
+        } catch (error) {
+          logger.warn(
+            "Could not forget an unprocessed webhook delivery: @error",
+            error as Error,
+          );
+        }
+      }
 
       res.statusCode = reply.status;
       if (reply.body !== undefined && method !== "HEAD") {

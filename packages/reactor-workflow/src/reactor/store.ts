@@ -99,7 +99,8 @@ export interface TriggerStateRow {
   last_poll_at: string | null;
   last_error: string | null;
   consecutive_failures: number;
-  // Written for rolling-deploy overlap; not enforced yet.
+  // Always null and never read: kept so the schema matches main's and a
+  // rollback finds the columns it writes. Placement is singleton-lease.ts.
   lease_owner: string | null;
   lease_expires_at: string | null;
   updated_at: string;
@@ -1220,6 +1221,27 @@ export interface ErasedRuns {
   dedupeKeysUnlinked: number;
 }
 
+async function pollSucceededIn(
+  db: Kysely<WorkflowRuntimeDB>,
+  workflowId: string,
+  storeState: string,
+  nowIso: string,
+  nextPollAtIso: string | null,
+): Promise<void> {
+  await db
+    .updateTable("trigger_state")
+    .set({
+      store_state: storeState,
+      last_poll_at: nowIso,
+      next_poll_at: nextPollAtIso,
+      last_error: null,
+      consecutive_failures: 0,
+      updated_at: nowIso,
+    })
+    .where("workflow_id", "=", workflowId)
+    .execute();
+}
+
 // The insert's own conflict outcome is the claim; a prior select can't be trusted.
 async function claimDedupeIn(
   db: Kysely<WorkflowRuntimeDB>,
@@ -1227,6 +1249,7 @@ async function claimDedupeIn(
   dedupeKey: string,
   ttlMs: number,
   nowIso: string,
+  runId = FIRED_WITHOUT_RUN_ID,
 ): Promise<boolean> {
   const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
   await db
@@ -1239,7 +1262,7 @@ async function claimDedupeIn(
     .values({
       workflow_id: workflowId,
       dedupe_key: dedupeKey,
-      run_id: FIRED_WITHOUT_RUN_ID,
+      run_id: runId,
       created_at: nowIso,
       attempts: 1,
     })
@@ -1247,7 +1270,7 @@ async function claimDedupeIn(
     .onConflict((oc) =>
       oc
         .columns(["workflow_id", "dedupe_key"])
-        .doUpdateSet({ run_id: FIRED_WITHOUT_RUN_ID })
+        .doUpdateSet({ run_id: runId })
         .where("trigger_dedupe.run_id", "is", null),
     )
     .returning("dedupe_key")
@@ -1506,6 +1529,112 @@ export class WorkflowRunStore {
     if (!claimed) return { outcome: "duplicate" };
     this.runsInFlight.add(id);
     return { outcome: "claimed", runId: id };
+  }
+
+  // A trigger batch's claims and PENDING runs, in one write; undefined where already claimed.
+  async journalTriggerItems(
+    items: { dedupeKey?: string; options: EnqueueRunOptions }[],
+    ttlMs: number,
+    nowIso: string,
+  ): Promise<(string | undefined)[]> {
+    const ids = await this.db.transaction().execute(async (trx) => {
+      const journaled: (string | undefined)[] = [];
+      for (const { dedupeKey, options } of items) {
+        const id = randomUUID();
+        const won =
+          dedupeKey === undefined ||
+          (await claimDedupeIn(
+            trx,
+            options.workflowId,
+            dedupeKey,
+            ttlMs,
+            nowIso,
+            id,
+          ));
+        if (won) await this.insertPendingRun(trx, id, options);
+        journaled.push(won ? id : undefined);
+      }
+      return journaled;
+    });
+    for (const id of ids) if (id) this.runsInFlight.add(id);
+    return ids;
+  }
+
+  // A schedule slot is consumed and its firing journaled together, or neither.
+  async recordScheduleFire(
+    nowIso: string,
+    nextPollAtIso: string,
+    options: EnqueueRunOptions,
+  ): Promise<string> {
+    const id = randomUUID();
+    await this.db.transaction().execute(async (trx) => {
+      await pollSucceededIn(
+        trx,
+        options.workflowId,
+        "{}",
+        nowIso,
+        nextPollAtIso,
+      );
+      await this.insertPendingRun(trx, id, options);
+    });
+    this.runsInFlight.add(id);
+    return id;
+  }
+
+  /**
+   * Puts a piece_store partition back to `entries` and, in the same write,
+   * cancels the runs the restored cursor delivers again and releases their
+   * claims, so no reader sees the old cursor while the claims still hold.
+   */
+  async rewindPieceStore(
+    scope: string,
+    scopeKey: string,
+    entries: Record<string, unknown>,
+    redelivered: { runIds: string[]; reason: string } = {
+      runIds: [],
+      reason: "",
+    },
+  ): Promise<void> {
+    const live = redelivered.runIds.filter((runId) => !erasedRuns.has(runId));
+    const nowIso = new Date().toISOString();
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("piece_store")
+        .where("scope", "=", scope)
+        .where("scope_key", "=", scopeKey)
+        .execute();
+      for (const [key, value] of Object.entries(entries)) {
+        assertPieceStoreEntry(key, value);
+        await trx
+          .insertInto("piece_store")
+          .values({
+            scope,
+            scope_key: scopeKey,
+            key,
+            value: JSON.stringify(value),
+            updated_at: nowIso,
+          })
+          .execute();
+      }
+      if (live.length === 0) return;
+      await trx
+        .updateTable("run")
+        .set({
+          status: "CANCELLED",
+          error: redactMessage(redelivered.reason),
+          ended_at: nowIso,
+        })
+        .where("id", "in", live)
+        .execute();
+      await trx
+        .deleteFrom("trigger_dedupe")
+        .where("run_id", "in", live)
+        .execute();
+    });
+    for (const runId of redelivered.runIds) {
+      this.runsInFlight.delete(runId);
+      erasedRuns.delete(runId);
+    }
   }
 
   /**
@@ -2181,18 +2310,13 @@ export class WorkflowRunStore {
     nowIso: string,
     nextPollAtIso: string | null,
   ): Promise<void> {
-    await this.db
-      .updateTable("trigger_state")
-      .set({
-        store_state: storeState,
-        last_poll_at: nowIso,
-        next_poll_at: nextPollAtIso,
-        last_error: null,
-        consecutive_failures: 0,
-        updated_at: nowIso,
-      })
-      .where("workflow_id", "=", workflowId)
-      .execute();
+    await pollSucceededIn(
+      this.db,
+      workflowId,
+      storeState,
+      nowIso,
+      nextPollAtIso,
+    );
   }
 
   async recordPollFailure(

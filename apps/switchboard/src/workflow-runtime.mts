@@ -49,6 +49,7 @@ import type {
   ReactorAccessInfo,
   ReactorIdentity,
 } from "./workflow/resolvers.js";
+import { triggerFatalShutdown } from "./fatal-shutdown.mjs";
 import { createWorkflowRuntimeSubgraph } from "./workflow/subgraph.js";
 
 type WorkflowEngineModule = typeof WorkflowEngine;
@@ -68,8 +69,14 @@ export type WorkflowTriggersCapability =
       status: "unavailable";
       reason:
         | "in-process-reactor-module-unavailable"
-        | "live-read-model-registration-unsupported";
+        | "live-read-model-registration-unsupported"
+        | "workflow-singleton-lost";
     };
+
+const SINGLETON_LOST: WorkflowTriggersCapability = {
+  status: "unavailable",
+  reason: "workflow-singleton-lost",
+};
 
 /** The slice of switchboard's OpenFeature client this needs. */
 export interface BooleanFlagSource {
@@ -122,6 +129,137 @@ export async function assertWorkflowPackageLoadable(
   }
 }
 
+/**
+ * Whether a composition failure was the workflow singleton refusing this
+ * process, rather than something that should take the boot down.
+ *
+ * Matched by NAME: the engine loads lazily, and importing it here for the
+ * constructor would defeat that. The fields the engine's error carries are
+ * typed optional for the same reason.
+ */
+export function isWorkflowSingletonConflict(
+  error: unknown,
+): error is Error & { owner?: string; expiresAt?: string; wouldBe?: string } {
+  return (
+    error instanceof Error && error.name === "WorkflowSingletonConflictError"
+  );
+}
+
+/** How often a host refused the singleton at boot tries the claim again: the
+ * engine's renewal period. */
+export const WORKFLOW_SINGLETON_RETRY_MS = 20_000;
+
+export interface WorkflowSingletonRetry {
+  /** Stops retrying; waits for an attempt in flight, and stops what it
+   * composed if the host is going away. */
+  stop(): Promise<void>;
+}
+
+/**
+ * Retries the singleton claim for a host that booted without it, and hands
+ * the runtime over once a claim succeeds.
+ *
+ * Without it a rolling deploy whose slots have different owner names ends
+ * with nobody running workflows: the new pod is refused while the old one
+ * still holds the lease, and nothing retries once the old pod releases it.
+ * Only for a host that never composed; one that lost the lease after
+ * composing stays without workflows until it restarts.
+ */
+export function retryWorkflowSingleton(options: {
+  compose: () => Promise<ComposedWorkflowRuntime>;
+  onComposed: (workflows: ComposedWorkflowRuntime) => Promise<void>;
+  logger: ILogger;
+  intervalMs?: number;
+}): WorkflowSingletonRetry {
+  const intervalMs = options.intervalMs ?? WORKFLOW_SINGLETON_RETRY_MS;
+  let stopped = false;
+  let timer: NodeJS.Timeout | undefined;
+  let attempt: Promise<void> | undefined;
+
+  const run = async () => {
+    let workflows: ComposedWorkflowRuntime;
+    try {
+      workflows = await options.compose();
+    } catch (error) {
+      if (!isWorkflowSingletonConflict(error)) {
+        options.logger.error(
+          "Composing the workflow runtime after the singleton came free failed: @error",
+          error,
+        );
+      }
+      schedule();
+      return;
+    }
+    if (stopped) {
+      await workflows.stop();
+      return;
+    }
+    options.logger.info(
+      "Claimed the workflow singleton after boot; starting the workflow runtime",
+    );
+    await options.onComposed(workflows);
+  };
+
+  const schedule = () => {
+    if (stopped) return;
+    timer = setTimeout(() => {
+      timer = undefined;
+      attempt = run().finally(() => {
+        attempt = undefined;
+      });
+    }, intervalMs);
+    timer.unref();
+  };
+
+  schedule();
+  return {
+    async stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      timer = undefined;
+      await attempt?.catch(() => undefined);
+    },
+  };
+}
+
+/**
+ * What a host does once its composed runtime has shut down for losing the
+ * workflow singleton.
+ *
+ * Taken over by another claim: that process runs workflows now, so this one
+ * stays without them until it restarts. Unrenewable with no takeover seen (a
+ * database blip): nothing else runs them, so the process goes down through
+ * the fatal shutdown and its supervisor restarts it, which re-claims at boot.
+ * A host with no fatal shutdown installed (embedded) stays without workflows
+ * and says a restart is needed.
+ */
+export function workflowSingletonLossHandler(
+  logger: ILogger,
+  fatal: (kind: string, error: unknown) => boolean = triggerFatalShutdown,
+): (loss: WorkflowEngine.WorkflowSingletonLoss) => void {
+  return (loss) => {
+    if (loss.reason === "taken") {
+      logger.error(
+        `Another process ("${loss.heldBy ?? "unknown"}") took the workflow ` +
+          "singleton. This Switchboard has stopped its workflow runtime " +
+          "and runs no workflows until it is restarted; everything else " +
+          "serves normally.",
+      );
+      return;
+    }
+    const error = new Error(
+      "The workflow singleton lease could not be renewed for " +
+        `${Math.round(loss.silentMs)}ms; no other process was seen taking it ` +
+        "over",
+    );
+    if (fatal("Workflow singleton lease unrenewable", error)) return;
+    logger.error(
+      `${error.message}. This Switchboard has stopped its workflow runtime ` +
+        "and runs no workflows until it is restarted.",
+    );
+  };
+}
+
 /** The importable models piece workers load: the boot list, and a type's entries. */
 export interface ModelManifestSource {
   modelManifest(): ModelManifestEntry[];
@@ -171,12 +309,41 @@ export interface ComposeWorkflowRuntimeDeps {
   telemetry?: WorkflowEngine.WorkflowRuntimeHostDeps["telemetry"];
   /** Overridden by the tests; production always loads the real engine. */
   load?: () => Promise<WorkflowEngineModule>;
+  /**
+   * Whether to claim the workflow singleton before composing (plan agreed
+   * decision 3). On by default, and the only honest setting for a real host:
+   * two replicas over one run journal fail each other's live runs. A suite
+   * that composes several runtimes over separate databases turns it off.
+   */
+  singletonLease?: boolean;
+  /**
+   * Where this host's read-model database lives — the Postgres URL, or the
+   * absolute PGlite directory. It is the stable half of the default singleton
+   * owner name, so a restart of THIS slot re-claims its own lease at once
+   * instead of waiting out the 60s TTL for a killed process's claim. Hashed
+   * before it is used, so a connection string's credentials go no further.
+   */
+  storageId?: string;
+  /**
+   * True when the journal's database is an embedded one no other process can
+   * open (PGlite). Nothing can then take the lease, so a renewal that stalls
+   * (a busy queue, a blocked event loop) is logged rather than turning
+   * workflows off.
+   */
+  exclusiveJournal?: boolean;
+  /** Called once when the composed runtime has shut down for losing the
+   * singleton; see {@link workflowSingletonLossHandler}. */
+  onSingletonLost?: (loss: WorkflowEngine.WorkflowSingletonLoss) => void;
 }
 
 export interface ComposedWorkflowRuntime {
   subgraph: SubgraphClass;
-  /** Whether document operations reach the runtime at all. */
-  triggers: WorkflowTriggersCapability;
+  /** Whether document operations reach the runtime at all; unavailable once
+   * the singleton is lost. */
+  readonly triggers: WorkflowTriggersCapability;
+  /** The owner name this host holds the workflow singleton under; undefined
+   * when the lease was not taken (a suite that opted out). */
+  singletonOwner?: string;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -333,12 +500,20 @@ export function attachmentReadPolicy(
   };
 }
 
+// The trigger read model lives exactly as long as its runtime: tearDown takes
+// it off the coordinator, so a later compose in this process can register.
+interface TriggersRegistration {
+  tornDown: boolean;
+  detach?: () => void;
+}
+
 // Live registration is the capability the attachment reference index needs
 // too, so a coordinator without it reads unavailable for the same reason.
 async function registerWorkflowTriggersReadModel(
   engine: WorkflowEngineModule,
   runtime: WorkflowEngine.WorkflowRuntimeService,
   clientModule: InProcessReactorClientModule | undefined,
+  registration: TriggersRegistration,
 ): Promise<WorkflowTriggersCapability> {
   const reactorModule = clientModule?.reactorModule;
   if (!reactorModule) {
@@ -367,10 +542,13 @@ async function registerWorkflowTriggersReadModel(
     runtime,
   );
   await readModel.init();
+  // Torn down while it replayed: registered now, it would outlive the runtime.
+  if (registration.tornDown) return SINGLETON_LOST;
   coordinator.addReadModel(
     readModel,
     engine.WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
   );
+  registration.detach = () => coordinator.removeReadModel(readModel);
 
   return { status: "available" };
 }
@@ -412,6 +590,74 @@ export async function composeWorkflowRuntime(
     );
   }
 
+  // BEFORE anything else touches the run journal. Opening the journal runs
+  // its orphan/abandoned sweeps, which close out every RUNNING and PENDING
+  // run that is not this process's — i.e. a second replica booting fails the
+  // first replica's live runs. The claim is what makes the plan's singleton
+  // decision structural instead of documented; it refuses by name.
+  const loss: SingletonLoss = { lost: false };
+  const lease =
+    deps.singletonLease === false
+      ? undefined
+      : await engine.acquireWorkflowSingletonLease({
+          relationalDb: deps.relationalDb,
+          logger: deps.logger,
+          ...(deps.storageId ? { storageId: deps.storageId } : {}),
+          selfFence: deps.exclusiveJournal !== true,
+          onLost: (lost) => {
+            loss.lost = true;
+            if (lost.reason === "taken") loss.heldBy = lost.heldBy;
+            loss.tearDown?.();
+            // While composing, the compose itself fails with a conflict and
+            // the host retries the claim.
+            if (loss.composed) deps.onSingletonLost?.(lost);
+          },
+        });
+
+  try {
+    const composed = await composeClaimed(engine, deps, lease, loss);
+    if (loss.lost) throw singletonLostError(engine, loss, lease);
+    loss.composed = true;
+    return composed;
+  } catch (error) {
+    // Renewing since the claim, so a compose that fails hands it back, after
+    // stopping whatever runtime it had already built.
+    loss.tearDown?.();
+    await lease?.release();
+    throw error;
+  }
+}
+
+type SingletonLease = Awaited<
+  ReturnType<WorkflowEngineModule["acquireWorkflowSingletonLease"]>
+>;
+
+// Losing the lease shuts the runtime down; tearDown is set once it exists.
+interface SingletonLoss {
+  lost: boolean;
+  composed?: boolean;
+  heldBy?: string;
+  tearDown?: () => void;
+}
+
+function singletonLostError(
+  engine: WorkflowEngineModule,
+  loss: SingletonLoss,
+  lease: SingletonLease | undefined,
+): Error {
+  return new engine.WorkflowSingletonConflictError(
+    loss.heldBy ?? "unknown",
+    "unknown",
+    lease?.owner ?? "unknown",
+  );
+}
+
+async function composeClaimed(
+  engine: WorkflowEngineModule,
+  deps: ComposeWorkflowRuntimeDeps,
+  lease: SingletonLease | undefined,
+  loss: SingletonLoss,
+): Promise<ComposedWorkflowRuntime> {
   // The same registry the host installs packages from, so a piece it indexes
   // is reachable without a second setting to keep in step.
   engine.setPieceRegistryUrl(deps.pieceRegistryUrl);
@@ -420,6 +666,9 @@ export async function composeWorkflowRuntime(
   // the supervisor starts, and the catalog is served from the same holder.
   if (deps.pieces) bindPackagePieces(engine.packagePieces, deps.pieces);
 
+  // Creating the runtime opens the journal, whose sweeps fail every run not
+  // in this process: never after the lease has gone.
+  if (loss.lost) throw singletonLostError(engine, loss, lease);
   const access = reactorAccessOf(deps.clientModule);
   const models = deps.models;
   const runtime = engine.createWorkflowRuntime({
@@ -452,11 +701,28 @@ export async function composeWorkflowRuntime(
     ...(deps.telemetry ? { telemetry: deps.telemetry } : {}),
   });
 
+  // Set before anything below can throw, so a failed compose stops it.
+  const routes: { oauthCallback?: ScopedRouteHandle } = {};
+  const registration: TriggersRegistration = { tornDown: false };
+  const tearDown = () => {
+    if (registration.tornDown) return;
+    registration.tornDown = true;
+    routes.oauthCallback?.dispose();
+    runtime.shutdown();
+    // After the shutdown, so a batch already queued for it is refused and
+    // replays on the next owner instead of being acknowledged here.
+    registration.detach?.();
+  };
+  loss.tearDown = tearDown;
+
   const triggers = await registerWorkflowTriggersReadModel(
     engine,
     runtime,
     deps.clientModule,
+    registration,
   );
+  // Lost while registering: mount nothing a torn-down runtime would leave.
+  if (registration.tornDown) throw singletonLostError(engine, loss, lease);
   if (triggers.status === "available") {
     deps.logger.info(
       `Workflow trigger read model registered (${engine.WORKFLOW_TRIGGERS_READ_MODEL}, ${engine.WORKFLOW_TRIGGERS_READ_MODEL_STAGE})`,
@@ -474,9 +740,9 @@ export async function composeWorkflowRuntime(
   }
 
   let stopped = false;
-  const oauthCallback: ScopedRouteHandle | undefined = deps.http
-    ? registerOAuthCallback(deps.http, runtime)
-    : undefined;
+  if (deps.http) {
+    routes.oauthCallback = registerOAuthCallback(deps.http, runtime);
+  }
 
   return {
     subgraph: createWorkflowRuntimeSubgraph(
@@ -484,23 +750,30 @@ export async function composeWorkflowRuntime(
       deps.http ? { callbackUrl: callbackUrlOf(deps.http) } : undefined,
       access,
     ),
-    triggers,
+    get triggers() {
+      return loss.lost ? SINGLETON_LOST : triggers;
+    },
+    ...(lease ? { singletonOwner: lease.owner } : {}),
 
     async start() {
+      if (registration.tornDown) return;
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();
+      // Lost or stopped while registering.
+      if (loss.lost || stopped) return;
       runtime.startTriggerSupervisor();
       // So the first search in the editor finds the catalog indexed.
       runtime.warmPieceSearch();
     },
 
-    stop() {
-      if (stopped) return Promise.resolve();
+    async stop() {
+      if (stopped) return;
       stopped = true;
-      oauthCallback?.dispose();
-      runtime.shutdown();
-      return Promise.resolve();
+      tearDown();
+      // Released, so the next boot owns workflows immediately instead of
+      // waiting out the lease TTL.
+      await lease?.release();
     },
   };
 }

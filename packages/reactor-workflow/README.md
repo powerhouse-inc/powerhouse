@@ -82,6 +82,93 @@ rather than restated here.
   the text of an HTML error page reach the run journal. Redaction runs last,
   over the formatter's output as well.
 
+## Placement: one reactor runs workflows
+
+**Workflow execution is a singleton pinned to one reactor.** The engine forks
+child processes, so no browser reactor can compose it; the hazard a guard is
+needed for is two Node replicas over one run journal. It is not theoretical:
+opening the journal runs `recoverOrphanedRuns` and `recoverAbandonedRuns`,
+which close out every RUNNING and PENDING run that is not in **this** process's
+in-flight set — so a second replica booting marks the first one's live runs
+FAILED, and then both arm every trigger and both poll it.
+
+The guard is a durable claim on the journal's own database
+(`reactor/singleton-lease.ts`, one row in `workflow_singleton`), taken by the host
+**before** the runtime is built, and refused by name when another live process
+holds it (`WorkflowSingletonConflictError`). The
+`trigger_state.lease_owner` / `lease_expires_at` columns stay in the schema,
+always null and unread: they were per trigger, the wrong granularity, since
+the sweeps and the supervisor are per process.
+
+- The lease is valid for 60s and renewed every 20s from the moment it is
+  claimed, so a slow compose cannot outlast it. A compose that fails after the
+  claim releases it, and so does `stop()`, so the next boot owns workflows
+  immediately instead of waiting out the TTL.
+- An **expired** lease is taken over: a killed process does not lock workflows
+  out until a human intervenes. A claim under the holder's own owner name may
+  take it over earlier, once the holder's heartbeat has been silent for two
+  renewal periods (40s), but never from a holder that is still renewing: the
+  new process opening the journal would fail the old one's live runs.
+- Each claim records a random **instance** token, never configured. Heartbeat
+  and release match on owner and instance, so during a rolling deploy under
+  one stable owner name the old process can neither renew nor delete the new
+  process's lease.
+- A heartbeat that finds the lease held by another claim logs an **error**
+  naming the holder, stops renewing and calls `onLost`. The host shuts the
+  runtime down: no trigger, webhook or manual run starts after that, and the
+  host reports its triggers unavailable. It does not re-claim; workflows come
+  back on the next boot, since re-arming needs a fresh compose.
+- A firing the shutdown refuses, whether queued for its concurrency slot or
+  still on its way in, is recorded once. Every trigger firing (an operation, a
+  piece trigger's items, a schedule slot, a webhook delivery) is journaled as a
+  PENDING run with its payload before it fires. If its source will not deliver
+  it again, the refusal fails that run, so it can be rerun. If it will (a sync
+  webhook answered 503 for the sender to retry, or piece items whose cursor the
+  stopped trigger put back), the run is cancelled as redelivered. A firing
+  refused before its run was written is left to its source: the operation is
+  replayed, the sender retries, the schedule slot stays due, the trigger's
+  cursor is put back or never moved. A close-out write that fails leaves the
+  run PENDING, and the next owner fails it when it opens the journal. Without a
+  working journal a firing that still runs is unrecorded, and its refusal is
+  logged as an error.
+- A renewal that fails or hangs is retried every 5s. A holder that has gone
+  30s without a renewal it knows landed reports itself lost
+  (`reason: "unrenewable"`), before a stale same-owner claim (40s) or expiry
+  (60s) could take the lease: journal writes are best-effort, so it would
+  otherwise keep running workflows beside the next owner. Switchboard then
+  goes down through its fatal shutdown, since nobody else runs workflows,
+  and the restarted process re-claims; an embedded host without one stays
+  without workflows and logs that a restart is needed.
+- Over a journal no other process can open (embedded PGlite) nothing can take
+  the lease, so the holder never fences itself; a stalled renewal is logged.
+- Nothing fences the journal itself: writes do not check the lease, so a
+  process keeps writing until it notices the loss.
+- **A refused claim does not take the API down.** The host boots WITHOUT the
+  workflow runtime and warns, naming the current owner: no trigger fires here
+  and the workflow GraphQL face is absent, while inspection, GraphQL, sync, MCP
+  and every drive serve normally. The one thing this process must not do is run
+  workflows against a journal a live process owns; aborting the whole boot over
+  it turned "not allowed to run one component" into an outage — and, with a
+  random owner name, into a crash loop for the TTL after every unclean kill.
+  The host retries the claim every 20s and starts workflows once it succeeds,
+  so a rolling deploy whose slots have different owner names does not end
+  with nobody running them. This is only for a host that never composed: one
+  that lost the lease after composing stays without workflows until restart.
+- **The default owner is stable**: `<hostname>/<fingerprint of the journal's
+  storage location>`. So one deployment slot restarting re-claims its OWN lease
+  once the killed process's heartbeat is stale (40s) rather than waiting out
+  the whole TTL. A genuine second replica still differs
+  by hostname or by the journal it points at. The storage location is hashed,
+  never printed: it can be a Postgres URL with credentials, and the owner name
+  goes into a database row and every log line about the lease. The case a stable
+  name cannot separate is two processes on ONE host over ONE journal, which is a
+  misconfiguration those two already share — and it is not silent: the loser's
+  heartbeat finds the lease taken and says so by name.
+- `PH_WORKFLOWS_SINGLETON_OWNER` is still the operator's contract and overrides
+  the derived name. Set it per deployment slot when the hostname is not stable
+  (a fresh container id each deploy) or when two slots share a journal on
+  purpose.
+
 ## How the host composes it
 
 The engine names no host type. `WorkflowRuntimeHostDeps` (`src/reactor/host.ts`)
@@ -327,7 +414,7 @@ That is what the fields have said since the first schema; what changed is that
 they are true.
 
 - **Concurrency is process-local**, which is exactly right: workflow execution
-  is a singleton pinned to one reactor, so this
+  is a singleton pinned to one reactor (see **Placement** above), so this
   process is the deployment's whole run set. A firing SINGLETON drops is
   journaled as a CANCELLED run rather than discarded — a firing that vanished
   is indistinguishable from a trigger that never fired.
@@ -486,6 +573,7 @@ explanation behind it.
 | `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer, clipped to the step deadline (`activepieces/context/limits.ts`) |
 | `PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES` | `1073741824`       | Downloaded attachments kept on disk by content (`engine/attachment-cache.ts`); `0` is off |
 | `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
+| `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<journal hash>` | Names this process as the workflow singleton's owner; the default is stable per slot, so a restart re-claims once the old heartbeat is stale (`reactor/singleton-lease.ts`) |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.

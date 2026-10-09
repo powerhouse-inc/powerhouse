@@ -3,7 +3,10 @@
 import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WorkflowRuntimeService } from "./service.js";
+import {
+  WorkflowRuntimeClosedError,
+  type WorkflowRuntimeService,
+} from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
 import { memoryWebhooks } from "../../test/helpers/webhooks.js";
@@ -283,6 +286,44 @@ describe("WorkflowRuntimeService webhooks", () => {
       expect(await replyFor("queue-full")).toBe(429);
       expect(await replyFor(undefined, "FAILED")).toBe(500);
       expect(await replyFor(undefined, "CANCELLED")).toBe(500);
+    });
+
+    // A runtime shut down after losing the workflow singleton sits on a live
+    // reactor; the sender has to retry against the owner instead.
+    it("answers 503 and starts no run once the runtime has shut down", async () => {
+      await arm({ responseMode: "async" });
+      service.shutdown();
+      await expect(service.fire(WORKFLOW)).rejects.toThrow("shut down");
+      const fire = vi.spyOn(service, "fire");
+
+      const reply = await service.deliverWebhook(request());
+
+      expect(reply).toMatchObject({ status: 503, unprocessed: true });
+      expect(fire).not.toHaveBeenCalled();
+    });
+
+    // Shut down while a sync delivery waited for its slot: 500 would keep the
+    // dedupe key, so the provider's retry to the new owner reads as a
+    // duplicate and the delivery is lost.
+    it("answers 503 when the runtime shuts down under a sync delivery", async () => {
+      await arm({ responseMode: "sync" });
+      let refuse!: () => void;
+      const fire = vi.spyOn(service, "fire").mockImplementation(
+        () =>
+          new Promise((_, reject) => {
+            refuse = () => {
+              service.shutdown();
+              reject(new WorkflowRuntimeClosedError(WORKFLOW));
+            };
+          }) as never,
+      );
+
+      const pending = service.deliverWebhook(request());
+      await vi.waitFor(() => expect(fire).toHaveBeenCalled());
+      refuse();
+      const reply = await pending;
+
+      expect(reply).toMatchObject({ status: 503, unprocessed: true });
     });
 
     it("answers 500 when the run throws", async () => {

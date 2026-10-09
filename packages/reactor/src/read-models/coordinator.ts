@@ -53,6 +53,34 @@ export function indexReserved(
     : readModel.indexOperations(operations);
 }
 
+/** Splices the instance out of each array; true when any held it. */
+export function spliceReadModel(
+  readModel: IReadModel,
+  ...lists: IReadModel[][]
+): boolean {
+  let found = false;
+  for (const list of lists) {
+    const index = list.indexOf(readModel);
+    if (index < 0) continue;
+    list.splice(index, 1);
+    found = true;
+  }
+  return found;
+}
+
+/** Waits for every model, so a sibling that throws early cannot let the
+ * chain start the next batch while another model still applies this one. */
+export async function indexStage(
+  readModels: readonly IReadModel[],
+  index: (readModel: IReadModel) => Promise<void>,
+  onError: (error: unknown) => void,
+): Promise<void> {
+  const results = await Promise.allSettled(readModels.map(index));
+  for (const result of results) {
+    if (result.status === "rejected") onError(result.reason);
+  }
+}
+
 /** Frees every claim a run did not apply, so a sweep can take it. */
 export function releaseBatch(reservations: BatchReservations): void {
   for (const reservation of reservations.values()) reservation.release();
@@ -143,6 +171,15 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     this.readModels.push(readModel);
   }
 
+  removeReadModel(readModel: IReadModel): boolean {
+    return spliceReadModel(
+      readModel,
+      this.preReady,
+      this.postReady,
+      this.readModels,
+    );
+  }
+
   private handleWriteReady(event: JobWriteReadyEvent): void {
     if (event.operations.length === 0) {
       void this.emitEmptyReadReady(event);
@@ -213,19 +250,17 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     const chainWaitDurationMs = chainStartedAt - enqueuedAt;
 
     const preReadyStart = performance.now();
-    try {
-      await Promise.all(
-        this.preReady.map((readModel) =>
-          this.indexWithTiming(readModel, "pre_ready", event, reservations),
+    await indexStage(
+      [...this.preReady],
+      (readModel) =>
+        this.indexWithTiming(readModel, "pre_ready", event, reservations),
+      (error) =>
+        this.logger.error(
+          "Pre-ready read model indexing failed for job @jobId: @Error",
+          { jobId: event.jobId },
+          error,
         ),
-      );
-    } catch (error) {
-      this.logger.error(
-        "Pre-ready read model indexing failed for job @jobId: @Error",
-        { jobId: event.jobId },
-        error,
-      );
-    }
+    );
     const preReadyDurationMs = performance.now() - preReadyStart;
 
     const readyEvent: JobReadReadyEvent = {
@@ -245,19 +280,17 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     const emitDurationMs = performance.now() - emitStart;
 
     const postReadyStart = performance.now();
-    try {
-      await Promise.all(
-        this.postReady.map((readModel) =>
-          this.indexWithTiming(readModel, "post_ready", event, reservations),
+    await indexStage(
+      [...this.postReady],
+      (readModel) =>
+        this.indexWithTiming(readModel, "post_ready", event, reservations),
+      (error) =>
+        this.logger.error(
+          "Post-ready read model indexing failed for job @jobId: @Error",
+          { jobId: event.jobId },
+          error,
         ),
-      );
-    } catch (error) {
-      this.logger.error(
-        "Post-ready read model indexing failed for job @jobId: @Error",
-        { jobId: event.jobId },
-        error,
-      );
-    }
+    );
     const postReadyDurationMs = performance.now() - postReadyStart;
 
     this.emitBatchCompleted({
