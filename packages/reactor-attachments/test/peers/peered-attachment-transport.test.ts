@@ -244,18 +244,31 @@ describe("PeeredAttachmentTransport", () => {
       busy: true,
     } as const;
 
-    it("does not outrank another source's not-found", async () => {
+    it("outranks another source's not-found, and says every other source answered not-found", async () => {
       const transport = new PeeredAttachmentTransport();
       transport.addPeer("busy", "col-1", source(busyAnswer));
       transport.addPeer("quiet", "col-1", source({ kind: "not-found" }));
       await expect(transport.fetch(HASH, DOC)).resolves.toEqual({
-        kind: "not-found",
+        ...busyAnswer,
+        othersNotFound: true,
       });
     });
 
-    it("does not outrank another source's error", async () => {
+    it("counts another busy source as unknown, not as a source that did not say not-found", async () => {
       const transport = new PeeredAttachmentTransport();
       transport.addPeer("busy", "col-1", source(busyAnswer));
+      transport.addPeer("busy-too", "col-1", source(busyAnswer));
+      transport.addPeer("quiet", "col-1", source({ kind: "not-found" }));
+      await expect(transport.fetch(HASH, DOC)).resolves.toEqual({
+        ...busyAnswer,
+        othersNotFound: true,
+      });
+    });
+
+    it("outranks another source's error, without saying the others answered not-found", async () => {
+      const transport = new PeeredAttachmentTransport();
+      transport.addPeer("busy", "col-1", source(busyAnswer));
+      transport.addPeer("quiet", "col-1", source({ kind: "not-found" }));
       transport.addPeer(
         "severed",
         "col-1",
@@ -263,9 +276,7 @@ describe("PeeredAttachmentTransport", () => {
           throw new Error("port is closed");
         }),
       );
-      await expect(transport.fetch(HASH, DOC)).rejects.toThrow(
-        /port is closed/,
-      );
+      await expect(transport.fetch(HASH, DOC)).resolves.toEqual(busyAnswer);
     });
 
     it("does not hide another source's reservation", async () => {

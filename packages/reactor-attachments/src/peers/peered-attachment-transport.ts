@@ -12,13 +12,16 @@ import type { TransportFetchResult } from "../types.js";
 
 type DataResult = Extract<TransportFetchResult, { kind: "data" }>;
 
+type PendingResult = Extract<TransportFetchResult, { kind: "pending" }>;
+
 /**
  * What the sources that did not answer data said, ranked by the combine rule:
- * a reservation, then an error, then a not-found, then a busy source.
+ * a reservation, then a busy source, then an error, then a not-found. A busy
+ * source may hold the bytes; the replicator bounds a busy run.
  */
 class Answers {
-  pending: TransportFetchResult | undefined;
-  busy: TransportFetchResult | undefined;
+  pending: PendingResult | undefined;
+  busy: PendingResult | undefined;
   firstError: Error | undefined;
   notFound = false;
 
@@ -31,11 +34,15 @@ class Answers {
     if (this.pending) {
       return this.pending;
     }
+    if (this.busy) {
+      // A source's own flag speaks only for the sources behind it.
+      const { othersNotFound: _, ...busy } = this.busy;
+      return this.notFound && this.firstError === undefined
+        ? { ...busy, othersNotFound: true }
+        : busy;
+    }
     if (this.firstError !== undefined) {
       throw this.firstError;
-    }
-    if (this.busy && !this.notFound) {
-      return this.busy;
     }
     return { kind: "not-found" };
   }
@@ -70,7 +77,7 @@ export type PeeredAttachmentTransportOptions = {
 
 /**
  * Peers in parallel, then Switchboards in turn; verified data > pending >
- * error > unanimous not-found.
+ * busy > error > unanimous not-found.
  */
 export class PeeredAttachmentTransport implements IAttachmentTransport {
   private readonly syncManager: Pick<ISyncManager, "list"> | undefined;

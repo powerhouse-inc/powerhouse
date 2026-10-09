@@ -7,6 +7,7 @@ import {
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IAttachmentTransport } from "../../src/interfaces.js";
+import { PeeredAttachmentTransport } from "../../src/peers/index.js";
 import {
   AttachmentReplicator,
   sha256Hex,
@@ -975,6 +976,81 @@ describe("AttachmentReplicator", () => {
     expect(entry.lastError).toMatch(/busy/);
     expect(h.timers.now() - startedAt).toBeLessThan(2 * 60 * 60_000);
     await h.replicator.stop();
+  });
+
+  describe("a busy holder behind another source's not-found", () => {
+    function peered(holder: () => TransportFetchResult): IAttachmentTransport {
+      const transport = new PeeredAttachmentTransport();
+      const peer = (
+        answer: () => TransportFetchResult,
+      ): IAttachmentTransport => ({
+        fetch: () => Promise.resolve(answer()),
+        announce: () => Promise.resolve(),
+        push: () => Promise.resolve(),
+      });
+      transport.addPeer("holder", "col-1", peer(holder));
+      transport.addPeer(
+        "quiet",
+        "col-1",
+        peer(() => ({ kind: "not-found" })),
+      );
+      return transport;
+    }
+
+    function busyAnswer(now: number): TransportFetchResult {
+      return {
+        kind: "pending",
+        hash: HASH,
+        expiresAtUtc: new Date(now + 60_000).toISOString(),
+        retryAfterMs: 1_000,
+        busy: true,
+      };
+    }
+
+    async function settle(h: Harness): Promise<void> {
+      for (let step = 0; step < 200; step += 1) {
+        const entries = h.replicator.report();
+        if (entries.length === 0 || entries[0].state !== "waiting") {
+          return;
+        }
+        const [entry] = entries;
+        h.timers.advance(entry.nextAttemptAtMs! - h.timers.now());
+        await h.replicator.idle();
+      }
+    }
+
+    it("gets the bytes once the holder frees up", async () => {
+      let freeAt = 0;
+      const transport = peered(() =>
+        h.timers.now() < freeAt ? busyAnswer(h.timers.now()) : dataAnswer(),
+      );
+      const h = harness([], { fetch: (...args) => transport.fetch(...args) });
+      freeAt = h.timers.now() + 20_000;
+      h.replicator.start();
+      await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+      await h.replicator.idle();
+      await settle(h);
+
+      expect(await h.store.has(HASH)).toBe(true);
+      expect(h.replicator.report()).toEqual([]);
+      await h.replicator.stop();
+    });
+
+    it("ends a permanently busy holder in not-found, not failed", async () => {
+      const transport = peered(() => busyAnswer(h.timers.now()));
+      const h = harness([], { fetch: (...args) => transport.fetch(...args) });
+      h.replicator.start();
+      await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+      await h.replicator.idle();
+      const startedAt = h.timers.now();
+      await settle(h);
+
+      const [entry] = h.replicator.report();
+      expect(entry.state).toBe("not-found");
+      expect(entry.lastError).toBeUndefined();
+      expect(h.timers.now() - startedAt).toBeLessThan(60 * 60_000);
+      await h.replicator.stop();
+    });
   });
 
   it("ends an expired pending in not-found, which a new document revives", async () => {
