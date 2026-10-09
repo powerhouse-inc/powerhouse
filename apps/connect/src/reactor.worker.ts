@@ -1,6 +1,6 @@
 import {
   ChannelScheme,
-  DocumentIntegrityService,
+  createReactorInspector,
   DriveCollectionId,
   HardenedPGliteDialect,
   type GroupCommitPGliteInstance,
@@ -11,11 +11,12 @@ import {
   ReactorClientBuilder,
   type ChannelConfig,
   type Database,
-  type ICatchUp,
+  type InspectorAccess,
   type IReactor,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
+  type ReactorInspector,
   type Remote,
   type RemoteFilter,
   type RemoteOptions,
@@ -23,11 +24,15 @@ import {
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
+  dispatchInspectorOp,
+  dispatchSyncInspectionOp,
   FORWARDED_EVENT_TYPES,
+  isSyncInspectionOp,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
   type ReactorIdentity,
+  type SyncInspectionOpTargets,
   type WorkerMigrationState,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
@@ -37,7 +42,6 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
-  type IProcessorManager,
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
@@ -147,10 +151,9 @@ type OwnedStorage = {
 const owned: OwnedStorage = {};
 // Another worker (a retired one, or a second gen) may still have these stores open.
 const storeLocks = createStoreLocks();
-let inspectorQueue: InMemoryQueue | undefined;
-let inspectorProcessors: IProcessorManager | undefined;
-let inspectorIntegrity: DocumentIntegrityService | undefined;
-let inspectorCatchUp: ICatchUp | undefined;
+let inspector: ReactorInspector | undefined;
+let syncInspection: SyncInspectionOpTargets | undefined;
+const INSPECTOR_ACCESS: InspectorAccess = { admin: true, sql: true };
 let currentIdentity: ReactorIdentity | null = null;
 
 // Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
@@ -278,12 +281,21 @@ async function closeUnbounded(
   }
 }
 
+// Reads the store at call time; a retire clears it.
+async function queryReactorDb(sql: string, params?: unknown[]) {
+  if (!owned.reactorDb) {
+    throw new Error("Reactor store not available");
+  }
+  return queryThroughDialect(owned.reactorDb, sql, params);
+}
+
 const RETIRE_STOP_MS = 5_000;
 
 // Once only; the reactor's stop awaits the channels it closes.
 function stopSync(): void {
   const manager = syncManager;
   syncManager = undefined;
+  syncInspection = undefined;
   try {
     syncStopped = manager?.shutdown().completed ?? syncStopped;
   } catch (error) {
@@ -328,6 +340,7 @@ const stores = createWorkerStores({
     store: owned.reactorPg,
   }),
   forget: () => {
+    inspector = undefined;
     relational.pg = undefined;
     relational.db = undefined;
     relational.kysely = undefined;
@@ -494,7 +507,12 @@ const host = new ReactorHost({
       registrar = registry
         ? createWorkerModelRegistrar(registry, staticModels)
         : undefined;
-      syncManager = module.reactorModule?.syncModule?.syncManager;
+      const syncModule = module.reactorModule?.syncModule;
+      syncManager = syncModule?.syncManager;
+      syncInspection = {
+        inspector: syncModule?.syncInspector,
+        admin: syncModule?.syncAdmin,
+      };
       reactorInstance = module.reactorModule?.reactor;
       const queue = module.reactorModule?.queue;
       reactorQueue = queue instanceof InMemoryQueue ? queue : undefined;
@@ -502,17 +520,7 @@ const host = new ReactorHost({
       if (rm) {
         owned.reactorPg = rm.groupCommitStorage ?? pg;
         owned.reactorDb = rm.database;
-        inspectorQueue =
-          rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
-        inspectorProcessors = rm.processorManager;
-        inspectorCatchUp = rm.catchUp;
-        inspectorIntegrity = new DocumentIntegrityService(
-          rm.keyframeStore,
-          rm.operationStore,
-          rm.writeCache,
-          rm.documentView,
-          rm.documentModelRegistry,
-        );
+        inspector = createReactorInspector(rm, { access: INSPECTOR_ACCESS });
       }
       registrar?.markRegistered(models);
       // Manifests ride along in the models entries the loader imported; the
@@ -564,6 +572,14 @@ const host = new ReactorHost({
   onSyncOp: async (method, args) => {
     if (!syncManager) {
       throw new Error("SyncManager not available");
+    }
+    if (isSyncInspectionOp(method)) {
+      return dispatchSyncInspectionOp(
+        syncInspection ?? {},
+        INSPECTOR_ACCESS,
+        method,
+        args,
+      );
     }
     switch (method) {
       case "list":
@@ -636,98 +652,15 @@ const host = new ReactorHost({
     };
   },
   onInspectorOp: async (method, args) => {
-    switch (method) {
-      case "queue.getState": {
-        if (!inspectorQueue) {
-          return {
-            isPaused: false,
-            pendingJobs: [],
-            executingJobs: [],
-            totalPending: 0,
-            totalExecuting: 0,
-          };
-        }
-        const pendingJobs = inspectorQueue.getPendingJobs();
-        const executingJobs = [];
-        for (const jobIds of inspectorQueue.getExecutingJobIds().values()) {
-          for (const jobId of jobIds) {
-            const job = inspectorQueue.getJob(jobId);
-            if (job) {
-              executingJobs.push(job);
-            }
-          }
-        }
-        return {
-          isPaused: inspectorQueue.paused,
-          pendingJobs,
-          executingJobs,
-          totalPending: pendingJobs.length,
-          totalExecuting: executingJobs.length,
-        };
-      }
-      case "queue.pause":
-        inspectorQueue?.pause();
-        return undefined;
-      case "queue.resume":
-        await inspectorQueue?.resume();
-        return undefined;
-      case "processors.getAll":
-        return (inspectorProcessors?.getAll() ?? []).map((tracked) => ({
-          processorId: tracked.processorId,
-          factoryId: tracked.factoryId,
-          driveId: tracked.driveId,
-          processorIndex: tracked.processorIndex,
-          lastOrdinal: tracked.lastOrdinal,
-          status: tracked.status,
-          lastError: tracked.lastError,
-          lastErrorTimestamp: tracked.lastErrorTimestamp,
-        }));
-      case "processors.retry": {
-        const [processorId] = args as [string];
-        await inspectorProcessors?.get(processorId)?.retry();
-        return undefined;
-      }
-      case "catchUp.status":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.status();
-      case "catchUp.sweepNow":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.sweepNow();
-      case "integrity.validate": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.validateDocument(documentId, branch);
-      }
-      case "integrity.rebuildKeyframes": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildKeyframes(documentId, branch);
-      }
-      case "integrity.rebuildSnapshots": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildSnapshots(documentId, branch);
-      }
-      case "db.query": {
-        if (!owned.reactorDb) {
-          throw new Error("Reactor store not available");
-        }
-        const [sql, params] = args as [string, unknown[]];
-        return queryThroughDialect(owned.reactorDb, sql, params);
-      }
-      default:
-        throw new Error(`Unknown inspector op: ${method}`);
+    if (!inspector) {
+      throw new Error("Inspector not available");
     }
+    return dispatchInspectorOp(
+      { inspector, dbQuery: { queryDb: queryReactorDb } },
+      INSPECTOR_ACCESS,
+      method,
+      args,
+    );
   },
 });
 
