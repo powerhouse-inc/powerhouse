@@ -32,6 +32,10 @@ export const fetchPieceActions = (packageName: string) =>
   ambient.fetchPieceActions(packageName);
 export const fetchPieceTriggers = (packageName: string) =>
   ambient.fetchPieceTriggers(packageName);
+export const searchPieces = (
+  query: string,
+  filter: Parameters<RuntimeClient["searchPieces"]>[1],
+) => ambient.searchPieces(query, filter);
 export const fetchConnections = () => ambient.fetchConnections();
 export const checkConnection = (connectionId: string) =>
   ambient.checkConnection(connectionId);

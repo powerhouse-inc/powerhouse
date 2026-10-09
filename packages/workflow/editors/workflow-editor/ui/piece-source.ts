@@ -12,6 +12,8 @@ export interface PieceSummaryUi {
   triggerCount: number;
   // Activepieces category ids; empty for uncategorised pieces.
   categories: string[];
+  // Absent from older runtimes, which list Activepieces pieces only.
+  source?: PieceSourceKind;
   // Why none of the piece's blocks can run on this reactor.
   unsupported?: string | null;
   // Retired by its publisher: still listed, marked as such.
@@ -36,10 +38,38 @@ export interface BlockSearchHitUi {
   unsupported?: string | null;
 }
 
-export interface BlockSearchResultUi {
+// Where a piece is listed from: a reactor package, the Powerhouse registry,
+// or the Activepieces cloud catalog.
+export type PieceSourceKind = "local" | "registry" | "activepieces";
+
+export interface PieceSearchMatchUi {
+  pieceName: string;
+  pieceVersion: string;
+  displayName: string;
+  description: string;
+  logoUrl: string;
+  categories: string[];
+  source: PieceSourceKind;
+  deprecated?: boolean | null;
+  unsupported?: string | null;
+  // Every query token matched the piece's own name.
+  namedPiece: boolean;
+  // Matching blocks, best first.
+  blocks: BlockSearchHitUi[];
+}
+
+export interface PieceSearchResultUi {
   status: "ready" | "indexing" | "error";
-  hits: BlockSearchHitUi[];
+  pieces: PieceSearchMatchUi[];
   error: string | null;
+}
+
+export interface PieceSearchFilterUi {
+  kind: "action" | "trigger";
+  // Any of; all when absent.
+  sources?: readonly PieceSourceKind[];
+  // Category ids, any of; all when absent.
+  categories?: readonly string[];
 }
 
 // One action of a piece, at the version its listing answered with.
@@ -82,11 +112,11 @@ export interface PieceCatalogSource {
   reloadCatalog?: () => Promise<PieceSummaryUi[]>;
   loadActions: (packageName: string) => Promise<PieceActionUi[]>;
   loadTriggers: (packageName: string) => Promise<PieceTriggerUi[]>;
-  // Catalog-wide action/trigger name search; optional for offline sources.
-  searchBlocks?: (
+  // Catalog-wide search grouped by piece; optional for offline sources.
+  searchPieces?: (
     query: string,
-    limit?: number,
-  ) => Promise<BlockSearchResultUi>;
+    filter: PieceSearchFilterUi,
+  ) => Promise<PieceSearchResultUi>;
 }
 
 const PieceSourceContext = createContext<PieceCatalogSource | undefined>(
