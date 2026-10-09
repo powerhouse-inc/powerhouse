@@ -78,6 +78,7 @@ export type MultiReactorParams = {
   module: LocalReactorModule;
   remoteGraphqlUrl: string;
   signer: ISigner;
+  /** Signing models when the local module exposes no registry; the router asks the local reactor. */
   documentModelModules: readonly DocumentModelModule[];
   onDiagnostic?: RouterDiagnostic;
 };
@@ -91,9 +92,11 @@ export type CredentialsAwareClient = RoutingReactorClient & {
 export async function buildMultiReactorClient(
   params: MultiReactorParams,
 ): Promise<CredentialsAwareClient> {
+  const registry = params.module.reactorModule?.documentModelRegistry;
   const remote = createGraphQLRoutableBackend({
     url: params.remoteGraphqlUrl,
-    documentModels: params.documentModelModules,
+    documentModels: () =>
+      registry?.getAllModules() ?? params.documentModelModules,
   });
   const router = await createRoutingClient(
     [
@@ -116,7 +119,6 @@ export async function buildMultiReactorClient(
       primaryBackend: LOCAL_BACKEND_NAME,
       defaultRequirements: PLACE_ON_LOCAL,
       signer: params.signer,
-      documentModelModules: params.documentModelModules,
       onDiagnostic: params.onDiagnostic,
     },
   );
