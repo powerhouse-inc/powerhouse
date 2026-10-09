@@ -7,18 +7,24 @@ import type {
   WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
-  createRoutingClient,
+  FanInPartialFailureError,
   fromReactorClient,
+  RoutingReactorClient,
   type CollectionRequirementsInput,
   type ReactorReach,
+  type RoutableBackendConfig,
   type RouterDiagnostic,
-  type RoutingReactorClient,
+  type RoutingClientOptions,
 } from "@powerhousedao/reactor-router";
 import type {
   DocumentModelModule,
   ISigner,
 } from "@powerhousedao/shared/document-model";
-import { createGraphQLRoutableBackend } from "./graphql-routable-backend.js";
+import { logger } from "document-model";
+import {
+  createGraphQLRoutableBackend,
+  type GraphQLRoutableBackend,
+} from "./graphql-routable-backend.js";
 
 export const LOCAL_BACKEND_NAME = "connect-local";
 export const REMOTE_BACKEND_NAME = "switchboard-remote";
@@ -83,22 +89,63 @@ export type MultiReactorParams = {
   onDiagnostic?: RouterDiagnostic;
 };
 
-/** Renown's sign-in and sign-out call this on whatever client is installed. */
-export type CredentialsAwareClient = RoutingReactorClient & {
-  notifyCredentialsChanged(): void;
-};
+/** The router Connect installs, with Connect's handling of credentials and id checks. */
+export class ConnectRoutingClient extends RoutingReactorClient {
+  private readonly remote: GraphQLRoutableBackend;
+
+  constructor(
+    backends: readonly RoutableBackendConfig[],
+    options: RoutingClientOptions,
+    remote: GraphQLRoutableBackend,
+  ) {
+    super(backends, options);
+    this.remote = remote;
+  }
+
+  /** Renown's sign-in and sign-out call this on whatever client is installed. */
+  notifyCredentialsChanged(): void {
+    this.remote.notifyCredentialsChanged();
+  }
+
+  /** The local answer stands when only the Switchboard could not answer. */
+  override async isDocumentIdTaken(
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    try {
+      return await super.isDocumentIdTaken(documentId, signal);
+    } catch (error) {
+      if (!failedOnlyOnRemote(error)) {
+        throw error;
+      }
+      logger.warn(
+        "The Switchboard could not say whether @id is taken; using the local reactor's answer: @error",
+        documentId,
+        error,
+      );
+      return false;
+    }
+  }
+}
+
+function failedOnlyOnRemote(error: unknown): boolean {
+  return (
+    error instanceof FanInPartialFailureError &&
+    error.failures.every((failure) => failure.backend === REMOTE_BACKEND_NAME)
+  );
+}
 
 /** The router over the tab's reactor (primary) and the Switchboard. */
 export async function buildMultiReactorClient(
   params: MultiReactorParams,
-): Promise<CredentialsAwareClient> {
+): Promise<ConnectRoutingClient> {
   const registry = params.module.reactorModule?.documentModelRegistry;
   const remote = createGraphQLRoutableBackend({
     url: params.remoteGraphqlUrl,
     documentModels: () =>
       registry?.getAllModules() ?? params.documentModelModules,
   });
-  const router = await createRoutingClient(
+  const router = new ConnectRoutingClient(
     [
       {
         name: LOCAL_BACKEND_NAME,
@@ -121,8 +168,8 @@ export async function buildMultiReactorClient(
       signer: params.signer,
       onDiagnostic: params.onDiagnostic,
     },
+    remote,
   );
-  return Object.assign(router, {
-    notifyCredentialsChanged: () => remote.notifyCredentialsChanged(),
-  });
+  await router.refreshFacts();
+  return router;
 }
