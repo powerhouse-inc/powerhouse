@@ -101,7 +101,7 @@ const READ_RULES: { reads: RegExp; asCaller: RegExp }[] = [
   // The reactor client, itself or handed on.
   {
     reads: /\breactorClient\b/,
-    asCaller: /\bviewSubject\b|\bservesDocument\b/,
+    asCaller: /\bviewSubject\b|\bservesDocument\b|\blistsDocument\b/,
   },
   // Inspection drive reads; the host's own inspector reads as the host.
   {
@@ -133,7 +133,7 @@ const EXPECTED_READS: Record<string, string[]> = {
  * document-model readableItems helpers.
  */
 const GUARD_PATTERN =
-  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\breadableByHost\b|\bisOperator\b|\bservedDocument\b|\breadableIds\b/;
+  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\blistsDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\breadableByHost\b|\bisOperator\b|\bservedDocument\b|\breadableIds\b/;
 
 function resolverSource(value: unknown): string {
   if (typeof value === "function") return value.toString();

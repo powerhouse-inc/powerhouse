@@ -23,11 +23,17 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 import { HttpPackageLoader } from "../src/packages/http-loader.js";
-import { isExpectedLoaderMiss } from "../src/packages/package-manager.js";
+import {
+  isExpectedLoaderMiss,
+  PackageManager,
+} from "../src/packages/package-manager.js";
 import {
   MANIFEST_FILE,
+  REGISTRY_ENTRY_ABSENT,
+  REGISTRY_EXTERNAL_DEPS_MISSING,
   RegistryPackageCache,
 } from "../src/packages/registry-cache.js";
 
@@ -409,5 +415,139 @@ describe("HttpPackageLoader", () => {
     expect(source).toEqual({
       filePath: path.join(entryDir(), "node/document-models/index.mjs"),
     });
+  });
+});
+
+// A package built with external dependencies: its manifest lists them, and its
+// subgraphs and processors import them.
+describe("a registry package with external dependencies", () => {
+  const NATIVE_VERSION = "3.0.0";
+
+  function serveNative(
+    native: string,
+    version: string,
+    { processors = true } = {},
+  ): void {
+    const at = root(NATIVE_VERSION);
+    files.set(`${at}package.json`, {
+      body: JSON.stringify({ version: NATIVE_VERSION }),
+    });
+    serveTree(at, {
+      ...tree(NATIVE_VERSION),
+      "node/subgraphs/todo/index.mjs": [
+        `import * as native from "${native}";`,
+        `class BaseSubgraph {}`,
+        `export class Subgraph extends BaseSubgraph { static native = native; }`,
+      ].join("\n"),
+      ...(processors
+        ? {
+            "node/processors/index.mjs": [
+              `import * as native from "${native}";`,
+              `export const processorFactory = () => () => [native];`,
+            ].join("\n"),
+          }
+        : {}),
+      "powerhouse.manifest.json": JSON.stringify({
+        name: PKG,
+        externalDependencies: { [native]: version },
+      }),
+    });
+    serveLatest(NATIVE_VERSION);
+  }
+
+  let errors: string[];
+  let warnings: string[];
+
+  beforeEach(() => {
+    errors = [];
+    warnings = [];
+    vi.spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
+      errors.push(parts.map(String).join(" "));
+    });
+    vi.spyOn(console, "warn").mockImplementation((...parts: unknown[]) => {
+      warnings.push(parts.map(String).join(" "));
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("loads its document models and skips its subgraphs and processors with one error", async () => {
+    serveNative("native-not-installed", "2.0.0");
+    const manager = new PackageManager([newLoader()], { packages: [PKG] });
+
+    const result = await manager.init();
+
+    expect(
+      result.documentModels.map((m) => m.documentModel.global.id),
+    ).toContain("test/todo");
+    expect(result.subgraphs.get(PKG)).toEqual([]);
+    expect(result.processors.get(PKG)).toEqual([]);
+    const reported = errors.filter((line) => line.includes("native"));
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toContain(`${PKG}@${NATIVE_VERSION}`);
+    expect(reported[0]).toContain("native-not-installed@2.0.0");
+    expect(reported[0]).toContain(`ph install --local ${PKG}`);
+    expect(reported[0]).toContain("PH_PACKAGES");
+    // Neither the cache nor the package manager repeats it.
+    expect(warnings.filter((line) => line.includes("native"))).toEqual([]);
+    expect(
+      warnings.filter((line) => line.includes("All package loaders failed")),
+    ).toEqual([]);
+  });
+
+  it("answers an entry it does not ship as absent, not as missing dependencies", async () => {
+    serveNative("native-not-installed", "2.0.0", { processors: false });
+
+    const error = (await newLoader()
+      .loadProcessors(PKG)
+      .catch((e: unknown) => e)) as NodeJS.ErrnoException;
+
+    expect(error.code).toBe(REGISTRY_ENTRY_ABSENT);
+    expect(errors.filter((line) => line.includes("native"))).toEqual([]);
+  });
+
+  it("refuses the subgraphs with an error the package manager recognizes", async () => {
+    serveNative("native-not-installed", "2.0.0");
+
+    const error = (await newLoader()
+      .loadSubgraphs(PKG)
+      .catch((e: unknown) => e)) as NodeJS.ErrnoException;
+
+    expect(error.code).toBe(REGISTRY_EXTERNAL_DEPS_MISSING);
+    expect(error.message).toContain("native-not-installed@2.0.0");
+  });
+
+  it("loads them normally when the host provides the native package", async () => {
+    // Resolves from reactor-api, as a host-installed native package would.
+    serveNative("es-module-lexer", "1.0.0");
+    const loader = newLoader();
+
+    const [subgraph] = (await loader.loadSubgraphs(PKG)) as unknown as {
+      native: { init: unknown };
+    }[];
+    const factory = await loader.loadProcessors(PKG);
+
+    expect(subgraph.native.init).toBeDefined();
+    expect(factory).toBeTypeOf("function");
+    expect(errors).toEqual([]);
+  });
+
+  it("fetches a cache entry again when it does not record external dependencies", async () => {
+    serveNative("native-not-installed", "2.0.0");
+    await newCache().ensurePackage(PKG, NATIVE_VERSION);
+    const manifestFile = path.join(entryDir(NATIVE_VERSION), MANIFEST_FILE);
+    const cached = JSON.parse(await readFile(manifestFile, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    delete cached.externalDependencies;
+    await writeFile(manifestFile, JSON.stringify(cached));
+
+    const again = await newCache().ensurePackage(PKG, NATIVE_VERSION);
+
+    expect(again.source).toBe("download");
+    expect(again.missingExternalDependencies).toEqual(["native-not-installed"]);
   });
 });

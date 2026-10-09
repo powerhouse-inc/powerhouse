@@ -1,3 +1,11 @@
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "@powerhousedao/reactor";
+import {
+  Kind,
+  OperationTypeNode,
+  parse,
+  valueFromASTUntyped,
+  type OperationDefinitionNode,
+} from "graphql";
 import type { DriveOwnershipCache } from "./drive-ownership-cache.js";
 import type { FetchHandler } from "./types.js";
 
@@ -31,11 +39,13 @@ export function getRequestDriveId(
  *
  * - No header → pass through. The LB has already round-robined; nothing
  *   to validate here.
- * - Header present and drive in cache → record on the request map (for
- *   the context factory to read into `context.driveId`) and pass through.
- * - Header present, drive missing, but the operation is `createDocument`
- *   or `createEmptyDocument` → pass through. The drive may be in the
- *   process of being created.
+ * - Header present and the drive held here (the cache, else the reactor) →
+ *   record on the request map (for the context factory to read into
+ *   `context.driveId`) and pass through. A failed lookup passes through.
+ * - Header present, drive missing, but the operation is named
+ *   `createDocument` or `createEmptyDocument`, or it creates, with no
+ *   parent, the very drive the header names → pass through. The drive is
+ *   being created.
  * - Otherwise → return `421 Misdirected Request` with a structured body.
  *   The client (or LB) can surface this as a wrong-shard signal.
  */
@@ -49,12 +59,19 @@ export function createDriveFetchMiddleware(
         return next(request);
       }
 
-      if (cache.has(driveId)) {
+      let held: boolean;
+      try {
+        held = await cache.holds(driveId);
+      } catch {
+        // Undecided is not "elsewhere": the request goes on and fails here.
+        return next(request);
+      }
+      if (held) {
         driveIdMap.set(request, driveId);
         return next(request);
       }
 
-      if (await isCacheBypassOperation(request)) {
+      if (await isCacheBypassOperation(request, driveId)) {
         return next(request);
       }
 
@@ -64,6 +81,7 @@ export function createDriveFetchMiddleware(
 
 async function isCacheBypassOperation(
   request: globalThis.Request,
+  driveId: string,
 ): Promise<boolean> {
   if (request.method !== "POST") {
     return false;
@@ -72,17 +90,92 @@ async function isCacheBypassOperation(
     const body = (await request.clone().json()) as {
       operationName?: unknown;
       query?: unknown;
+      variables?: unknown;
     };
-    if (typeof body.operationName === "string") {
-      return CACHE_BYPASS_OPERATIONS.has(body.operationName);
+    const operationName =
+      typeof body.operationName === "string" ? body.operationName : undefined;
+    if (operationName !== undefined) {
+      if (CACHE_BYPASS_OPERATIONS.has(operationName)) {
+        return true;
+      }
+    } else if (
+      typeof body.query === "string" &&
+      CACHE_BYPASS_OPERATIONS.has(extractOperationName(body.query))
+    ) {
+      return true;
     }
-    if (typeof body.query === "string") {
-      return CACHE_BYPASS_OPERATIONS.has(extractOperationName(body.query));
-    }
-    return false;
+    return (
+      typeof body.query === "string" &&
+      createsTheNamedDrive(
+        body.query,
+        operationName,
+        isRecord(body.variables) ? body.variables : {},
+        driveId,
+      )
+    );
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether the operation does nothing but create, with no parent, the drive the
+ * Drive-Id names: whatever the client named it (reactor-browser sends
+ * `CreateDocument`), and with the document resolved through its variables.
+ */
+function createsTheNamedDrive(
+  query: string,
+  operationName: string | undefined,
+  variables: Record<string, unknown>,
+  driveId: string,
+): boolean {
+  const operations = parse(query).definitions.filter(
+    (definition): definition is OperationDefinitionNode =>
+      definition.kind === Kind.OPERATION_DEFINITION,
+  );
+  const operation =
+    operationName === undefined
+      ? operations.length === 1
+        ? operations[0]
+        : undefined
+      : operations.find((candidate) => candidate.name?.value === operationName);
+  if (
+    !operation ||
+    operation.operation !== OperationTypeNode.MUTATION ||
+    operation.selectionSet.selections.length !== 1
+  ) {
+    return false;
+  }
+  const [field] = operation.selectionSet.selections;
+  if (field.kind !== Kind.FIELD || field.name.value !== "createDocument") {
+    return false;
+  }
+  const argument = (name: string): unknown => {
+    const node = field.arguments?.find((arg) => arg.name.value === name);
+    return node ? valueFromASTUntyped(node.value, variables) : undefined;
+  };
+  if (
+    PARENT_ARGUMENTS.some((name) => {
+      const parent = argument(name);
+      return parent !== undefined && parent !== null;
+    })
+  ) {
+    return false;
+  }
+  const header = (argument("document") as { header?: unknown } | undefined)
+    ?.header;
+  return (
+    isRecord(header) &&
+    header.id === driveId &&
+    typeof header.documentType === "string" &&
+    DEFAULT_DRIVE_CONTAINER_TYPES.has(header.documentType)
+  );
+}
+
+const PARENT_ARGUMENTS = ["parentIdOrSlug", "parentIdentifier"];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const OPERATION_NAME_PATTERN = /\b(?:mutation|query|subscription)\s+(\w+)/;
