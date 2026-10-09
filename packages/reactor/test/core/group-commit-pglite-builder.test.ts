@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
+import { createReactorInspector } from "../../src/inspector/from-module.js";
 import {
   PGLITE_PATH_STORAGE_FACTS,
   UNKNOWN_STORAGE_FACTS,
@@ -370,6 +371,32 @@ describe("ReactorBuilder.withGroupCommitPGlite", () => {
     expect(unrecoverable).toHaveLength(1);
     expect(module.groupCommitStorage?.health.getStorageHealth()).toEqual({
       healthy: false,
+    });
+  });
+
+  it("reports a group-commit store's health to an inspector that was given none", async () => {
+    const pg = await openFresh();
+    const module = await builderOver(pg, []).buildModule();
+    modules.push(module);
+    const inspector = createReactorInspector(module);
+
+    expect(await inspector.getStorageHealth()).toEqual({
+      tracked: true,
+      healthy: true,
+      everRecreated: false,
+      recreateCount: 0,
+    });
+
+    pg.hangNext = /select/i;
+    await module.reactor
+      .find({ type: "powerhouse/document-model" })
+      .catch(() => undefined);
+
+    expect(await inspector.getStorageHealth()).toEqual({
+      tracked: true,
+      healthy: false,
+      everRecreated: false,
+      recreateCount: 0,
     });
   });
 

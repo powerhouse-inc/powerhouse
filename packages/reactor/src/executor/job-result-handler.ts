@@ -70,6 +70,11 @@ export function toErrorInfo(error: Error | string): ErrorInfo {
   };
 }
 
+/** Whether a retry charged to the job's limit is still within it. */
+export function hasRetriesLeft(job: Job): boolean {
+  return (job.retryCount || 0) < (job.maxRetries || 0);
+}
+
 export class JobResultHandler implements IJobResultHandler {
   constructor(
     private queue: IQueue,
@@ -113,7 +118,7 @@ export class JobResultHandler implements IJobResultHandler {
         }
       }
 
-      if (modelLoaded) {
+      if (modelLoaded && hasRetriesLeft(handle.job)) {
         const errorInfo = toErrorInfo(result.error);
         try {
           await this.queue.retryJob(handle.job.id, errorInfo);
@@ -195,9 +200,8 @@ export class JobResultHandler implements IJobResultHandler {
     }
 
     const retryCount = handle.job.retryCount || 0;
-    const maxRetries = handle.job.maxRetries || 0;
 
-    if (retryCount < maxRetries) {
+    if (hasRetriesLeft(handle.job)) {
       const currentErrorInfo = result.error
         ? toErrorInfo(result.error)
         : toErrorInfo("Unknown error");

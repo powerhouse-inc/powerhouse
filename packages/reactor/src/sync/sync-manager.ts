@@ -119,6 +119,7 @@ import type {
 } from "./types.js";
 import {
   ChannelErrorSource,
+  RemotePersistence,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
@@ -163,6 +164,22 @@ export type SyncManagerConfig = {
   /** Backoff for reloading a received marker whose load failed transiently. */
   markerRetryBaseDelayMs: number;
   markerRetryMaxDelayMs: number;
+  /**
+   * How many inbox chunks may be inside their enqueue at once. Chunks on
+   * different lanes run side by side; this bounds how many a wide poll hands
+   * the queue in one turn. Not a bound on chunks awaiting their jobs: a chunk
+   * deferred on a missing ancestor would hold its slot for the deferral's
+   * whole time-to-live, and enough of them would keep that ancestor out.
+   */
+  maxConcurrentInboxChunks: number;
+};
+
+type InboxItem = { remote: Remote; syncOp: SyncOperation };
+
+/** One inbox chunk's loads, enqueued and awaiting their jobs. */
+type InboxBatchEnqueued = {
+  items: InboxItem[];
+  result: BatchLoadResult;
 };
 
 enum OutboxMode {
@@ -177,6 +194,7 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   staleRemotePollWindowMs: 5 * 60_000,
   markerRetryBaseDelayMs: 1_000,
   markerRetryMaxDelayMs: 60_000,
+  maxConcurrentInboxChunks: 8,
 };
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
@@ -195,6 +213,20 @@ function isCredentialOrNetworkError(error: unknown): boolean {
     (error.category === "network" || error.category === "timeout")
   );
 }
+
+function isSessionScoped(options: RemoteOptions): boolean {
+  return options.persistence === RemotePersistence.Session;
+}
+
+/**
+ * A stored remote brought back up by startup(), with the inbox items that were
+ * already there before its callbacks were wired -- restored from storage, or
+ * pushed while the remote was reachable but unwired.
+ */
+type RehydratedRemote = {
+  remote: Remote;
+  unheard: SyncOperation[];
+};
 
 const holdKey = (documentId: string, branch: string): string =>
   `${documentId}\u0000${branch}`;
@@ -325,7 +357,10 @@ export class SyncManager
   // settled ordinals at or below this have owed their collections' remotes
   private sweptThrough = 0;
   private settledUnsubscribe?: () => void;
-  private inboxChunkChain: Promise<void> = Promise.resolve();
+  // lane key -> the tail of the chunks queued on it
+  private readonly inboxLanes = new Map<string, Promise<void>>();
+  private inboxChunksInFlight = 0;
+  private readonly inboxSlotWaiters: Array<() => void> = [];
   private readonly capabilities: readonly PeerCapability[];
   private readonly manifest: PeerManifest;
   private readonly localSupport: Supports;
@@ -346,6 +381,8 @@ export class SyncManager
     string,
     Map<string, SyncOperation>
   >();
+  // remote name -> applied marker op id -> its item's highest ordinal
+  private readonly appliedMarkers = new Map<string, Map<string, number>>();
   private readonly markerStorage: ISyncReceivedMarkerStorage;
   private readonly refusalStorage: ISyncPurgeRefusalStorage;
   // remote name + marker id -> its storage writes, applied in order
@@ -440,6 +477,17 @@ export class SyncManager
       throw new Error("SyncManager is already shutdown and cannot be started");
     }
 
+    // Purged first: their dead letters and holds go with them, so loading
+    // those before would keep a quarantine nothing can lift.
+    const remoteRecords: RemoteRecord[] = [];
+    for (const record of await this.remoteStorage.list()) {
+      if (isSessionScoped(record.options)) {
+        await this.purgeSessionRemote(record.name);
+        continue;
+      }
+      remoteRecords.push(record);
+    }
+
     try {
       const quarantinedIds =
         await this.deadLetterStorage.listQuarantinedDocumentIds();
@@ -478,43 +526,24 @@ export class SyncManager
       );
     }
 
-    const remoteRecords = await this.remoteStorage.list();
     const head = await this.watermarkHead();
     this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
-      const channel = this.channelFactory.instance(
-        record.id,
-        record.name,
-        record.channelConfig,
-        this.cursorStorage,
-        record.collectionId,
-        record.filter,
-        this.operationIndex,
-        record.options,
-      );
-
-      const remote: Remote = {
-        meta: {
-          id: record.id,
-          name: record.name,
-          collectionId: record.collectionId,
-          channelConfig: record.channelConfig,
-          filter: record.filter,
-          options: record.options,
-          peer: record.peer,
-        },
-        channel,
-      };
-
-      this.remotes.set(record.name, remote);
-      this.owe(record.name, head);
-      this.records.set(record.name, remote.meta);
-      await this.loadDeadLetters(remote);
-      await this.restoreReceivedMarkers(remote);
-      // Restored, or pushed while the remote was reachable but unwired.
-      const unheard = [...remote.channel.inbox.items];
-      this.wireChannelCallbacks(remote);
+      // Building the channel and wiring it up is guarded as a whole: a factory
+      // that rejects this record's config (or a wiring step that throws) must
+      // degrade THIS remote, never the boot. A reactor whose sync module cannot
+      // start is a reactor that cannot be repaired from.
+      let rehydrated: RehydratedRemote;
+      try {
+        rehydrated = await this.rehydrateRemote(record, head);
+      } catch (error) {
+        await this.degradeRemoteAfterFailedRehydration(record, error);
+        continue;
+      }
+      const remote = rehydrated.remote;
+      const channel = remote.channel;
+      const unheard = rehydrated.unheard;
 
       try {
         await channel.init();
@@ -580,6 +609,9 @@ export class SyncManager
     this.backfillAbortControllers.clear();
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
+    this.inboxLanes.clear();
+    // Released rather than abandoned, or their lanes stay pending for good.
+    for (const waiter of this.inboxSlotWaiters.splice(0)) waiter();
     this.prunePending.clear();
     this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
@@ -1206,6 +1238,21 @@ export class SyncManager
     return kept;
   }
 
+  /** A previous session's transport is gone, so its remote and rows go too. */
+  private async purgeSessionRemote(name: string): Promise<void> {
+    try {
+      await this.remoteStorage.remove(name);
+      await this.cursorStorage.remove(name);
+      await this.forgetRemote(name);
+    } catch (error) {
+      this.logger.error(
+        "Error removing a previous session's remote at startup (@name, @error)",
+        name,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
   private recordOf(meta: RemoteMeta): RemoteRecord {
     return {
       id: meta.id,
@@ -1265,8 +1312,9 @@ export class SyncManager
           : { manifest: peer, receivedAtUtcMs: Date.now() },
     };
 
-    await this.remoteStorage.upsert(this.recordOf(meta));
-
+    // The factory validates the config, so it runs BEFORE the record is
+    // persisted: a config the factory rejects must not leave a durable remote
+    // behind that every later startup would then try (and fail) to rehydrate.
     const channel = this.channelFactory.instance(
       remoteId,
       name,
@@ -1277,6 +1325,8 @@ export class SyncManager
       this.operationIndex,
       options,
     );
+
+    await this.remoteStorage.upsert(this.recordOf(meta));
 
     const remote: Remote = { meta, channel };
 
@@ -1339,6 +1389,111 @@ export class SyncManager
       // finally still guarantees the slot is freed if one of them throws.
       this.remotes.delete(name);
       this.removing.delete(name);
+    }
+  }
+
+  /**
+   * Rebuilds one stored remote's channel and wires it up, short of init().
+   *
+   * Everything here can throw -- the factory rejects an unusable config, the
+   * dead-letter and marker reads touch storage -- so startup() calls it inside
+   * a guard and degrades just this remote when it does. Nothing is left half
+   * registered on the throwing path that {@link degradeRemoteAfterFailedRehydration}
+   * does not then clear.
+   */
+  private async rehydrateRemote(
+    record: RemoteRecord,
+    head: number,
+  ): Promise<RehydratedRemote> {
+    const channel = this.channelFactory.instance(
+      record.id,
+      record.name,
+      record.channelConfig,
+      this.cursorStorage,
+      record.collectionId,
+      record.filter,
+      this.operationIndex,
+      record.options,
+    );
+
+    const remote: Remote = {
+      meta: {
+        id: record.id,
+        name: record.name,
+        collectionId: record.collectionId,
+        channelConfig: record.channelConfig,
+        filter: record.filter,
+        options: record.options,
+        peer: record.peer,
+      },
+      channel,
+    };
+
+    this.remotes.set(record.name, remote);
+    this.owe(record.name, head);
+    this.records.set(record.name, remote.meta);
+    await this.loadDeadLetters(remote);
+    await this.restoreReceivedMarkers(remote);
+    const unheard = [...remote.channel.inbox.items];
+    this.wireChannelCallbacks(remote);
+    return { remote, unheard };
+  }
+
+  /**
+   * Records a stored remote startup() could not bring up and moves on.
+   *
+   * Classified exactly as a failed init is: a credential or network failure
+   * says nothing about the configuration, so the row stays and a retry after
+   * sign-in can re-add it; anything else -- a factory with no scheme for this
+   * config, a transport this session cannot resolve -- says the record itself
+   * is unusable, so it is dropped rather than left to fail every boot. Either
+   * way the boot carries on without it.
+   */
+  private async degradeRemoteAfterFailedRehydration(
+    record: RemoteRecord,
+    error: unknown,
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(
+      "Error rehydrating stored remote at startup (@name, @error)",
+      record.name,
+      message,
+    );
+
+    const recordKept = isCredentialOrNetworkError(error);
+
+    this.remotes.delete(record.name);
+    this.owed.delete(record.name);
+    this.derivedThrough.delete(record.name);
+    this.connectionStateUnsubscribes.get(record.name)?.();
+    this.connectionStateUnsubscribes.delete(record.name);
+
+    if (recordKept) {
+      return;
+    }
+
+    try {
+      await this.remoteStorage.remove(record.name);
+    } catch (removeError) {
+      this.logger.error(
+        "Error removing unusable remote record at startup (@name, @error)",
+        record.name,
+        removeError instanceof Error
+          ? removeError.message
+          : String(removeError),
+      );
+    }
+
+    try {
+      await this.forgetRemote(record.name);
+    } catch (forgetError) {
+      this.logger.error(
+        "Error forgetting unusable remote at startup (@name, @error)",
+        record.name,
+        forgetError instanceof Error
+          ? forgetError.message
+          : String(forgetError),
+      );
     }
   }
 
@@ -1412,6 +1567,7 @@ export class SyncManager
       this.derivedThrough.delete(name);
       this.prunePending.delete(name);
       this.receivedMarkers.delete(name);
+      this.appliedMarkers.delete(name);
       for (const [id, retry] of [...this.markerRetries]) {
         if (retry.remoteName !== name) continue;
         clearTimeout(retry.timer);
@@ -1508,6 +1664,14 @@ export class SyncManager
   /** Settles once the remotes' received markers are stored; rejects if one failed. */
   async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
     await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  async resetSettled(name: string): Promise<void> {
+    for (;;) {
+      const pending = this.queuedResets.get(name) ?? this.resets.get(name);
+      if (!pending) return;
+      await pending.catch(() => undefined);
+    }
   }
 
   /** Never joins a running rebuild: it may have read state older than the request. */
@@ -1630,7 +1794,6 @@ export class SyncManager
         item.operations,
       );
       fresh.channel.inbox.add(copy);
-      fresh.channel.inbox.hold?.(copy);
     }
   }
 
@@ -2330,6 +2493,7 @@ export class SyncManager
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
     const received = this.receivedMarkersOf(remote.meta.name);
+    const applied = this.appliedMarkers.get(remote.meta.name);
     // A resent marker whose first copy is still loading or awaiting a retry.
     const loading = (id: string, syncOp: SyncOperation): boolean => {
       const item = received.get(id);
@@ -2343,7 +2507,10 @@ export class SyncManager
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
         const ids = markerIdsOf(syncOp);
-        if (ids.every((id) => loading(id, syncOp))) {
+        if (applied !== undefined && ids.every((id) => applied.has(id))) {
+          // Re-pushed while the ack is held below a marker already applied.
+          dropped.push(syncOp);
+        } else if (ids.every((id) => loading(id, syncOp))) {
           // Stored again: the pusher resends when its earlier ack failed.
           this.storeReceivedMarker(remote, syncOp);
           dropped.push(syncOp);
@@ -2365,10 +2532,10 @@ export class SyncManager
         // Its ordinals are held by the parked copy; two would share a plan key.
         dropped.push(syncOp);
       } else {
+        // Left in the inbox unapplied, which holds the cursor below it. Memory
+        // only: a push-fed channel loses it on restart unless the client
+        // re-pushes, as on main.
         this.parkedByQuarantine.add(syncOp);
-        // Holds the cursor across a reset. Memory only: a push-fed channel loses
-        // it on restart unless the client re-pushes, as on main, until rewind/replay.
-        remote.channel.inbox.hold?.(syncOp);
       }
     }
     // A purged id's history is gone here; a job or a dead letter would restore it.
@@ -2429,16 +2596,50 @@ export class SyncManager
 
   /** Forgets a marker once the item loading it leaves the inbox. */
   private handleInboxRemoved(remote: Remote, syncOps: SyncOperation[]): void {
-    const received = this.receivedMarkers.get(remote.meta.name);
-    if (received === undefined || received.size === 0) return;
     const name = remote.meta.name;
-    for (const syncOp of syncOps) {
-      for (const id of markerIdsOf(syncOp)) {
-        if (received.get(id) !== syncOp) continue;
-        received.delete(id);
-        this.writeMarker(name, id, () => this.markerStorage.remove(name, id));
+    const received = this.receivedMarkers.get(name);
+    if (received !== undefined && received.size > 0) {
+      for (const syncOp of syncOps) {
+        for (const id of markerIdsOf(syncOp)) {
+          if (received.get(id) !== syncOp) continue;
+          received.delete(id);
+          this.writeMarker(name, id, () => this.markerStorage.remove(name, id));
+          if (syncOp.status === SyncOperationStatus.Applied) {
+            this.rememberAppliedMarker(name, id, syncOp);
+          }
+        }
       }
     }
+    this.forgetAckedMarkers(remote);
+  }
+
+  /** Kept until the ack passes it: the pusher re-pushes everything above the ack. */
+  private rememberAppliedMarker(
+    name: string,
+    id: string,
+    syncOp: SyncOperation,
+  ): void {
+    let applied = this.appliedMarkers.get(name);
+    if (applied === undefined) {
+      applied = new Map();
+      this.appliedMarkers.set(name, applied);
+    }
+    let ordinal = 0;
+    for (const op of syncOp.operations) {
+      ordinal = Math.max(ordinal, op.context.ordinal);
+    }
+    applied.set(id, ordinal);
+  }
+
+  private forgetAckedMarkers(remote: Remote): void {
+    const name = remote.meta.name;
+    const applied = this.appliedMarkers.get(name);
+    if (applied === undefined) return;
+    const ack = remote.channel.inbox.ackOrdinal;
+    for (const [id, ordinal] of applied) {
+      if (ordinal <= ack) applied.delete(id);
+    }
+    if (applied.size === 0) this.appliedMarkers.delete(name);
   }
 
   private markerWritesOf(remoteNames?: Iterable<string>): Promise<void>[] {
@@ -2541,22 +2742,109 @@ export class SyncManager
     return received;
   }
 
-  private processInboxChunks(
-    chunks: Array<Array<{ remote: Remote; syncOp: SyncOperation }>>,
-  ): Promise<void> {
-    const next = this.inboxChunkChain.then(async () => {
-      for (const chunk of chunks) {
-        if (this.isShutdown) return;
-        await this.applyInboxBatch(chunk);
+  private processInboxChunks(chunks: InboxItem[][]): Promise<void> {
+    return Promise.all(chunks.map((chunk) => this.queueInboxChunk(chunk))).then(
+      () => undefined,
+    );
+  }
+
+  /**
+   * Queues a chunk behind every chunk it shares a lane key with and beside the
+   * rest, so one document's stalled or failing load does not hold up another's.
+   */
+  private queueInboxChunk(chunk: InboxItem[]): Promise<void> {
+    const keys = this.inboxLaneKeys(chunk);
+    const predecessors: Array<Promise<void>> = [];
+    for (const key of keys) {
+      const tail = this.inboxLanes.get(key);
+      if (tail !== undefined) predecessors.push(tail);
+    }
+
+    const lane = Promise.all(predecessors)
+      .then(() => this.runInboxChunk(chunk))
+      .catch((err: unknown) => {
+        this.logger.error(
+          "Inbox chunk processing failed (@error)",
+          err instanceof Error ? err.message : String(err),
+        );
+      });
+
+    for (const key of keys) this.inboxLanes.set(key, lane);
+    void lane.then(() => {
+      for (const key of keys) {
+        if (this.inboxLanes.get(key) === lane) this.inboxLanes.delete(key);
       }
     });
-    this.inboxChunkChain = next.catch((err) => {
+    return lane;
+  }
+
+  /**
+   * The documents a chunk writes, since the FIFO dependency reads the job last
+   * enqueued for its document, and the plan keys its edges name, since a
+   * cross-chunk edge resolves only once its provider is enqueued. Per document
+   * rather than per scope or branch: the queue serialises a document across both.
+   */
+  private inboxLaneKeys(chunk: InboxItem[]): string[] {
+    const keys = new Set<string>();
+    for (const { syncOp } of chunk) {
+      keys.add(`doc ${syncOp.documentId}`);
+      keys.add(`plan ${syncOp.jobId}`);
+      for (const dep of syncOp.jobDependencies) {
+        if (dep) keys.add(`plan ${dep}`);
+      }
+    }
+    return [...keys];
+  }
+
+  /**
+   * Settles once the chunk is enqueued, which is all its lane waits for; the
+   * queue orders the writes. The slot is released there too, and the items
+   * then resolve beside one another, unbounded: each is a passive wait on a
+   * job for an item the inbox already holds.
+   */
+  private async runInboxChunk(chunk: InboxItem[]): Promise<void> {
+    if (this.isShutdown) return;
+    await this.acquireInboxSlot();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) {
+      this.releaseInboxSlot();
+      return;
+    }
+
+    let enqueued: InboxBatchEnqueued | undefined;
+    try {
+      enqueued = await this.enqueueInboxBatch(chunk);
+    } finally {
+      this.releaseInboxSlot();
+    }
+    if (enqueued === undefined) return;
+
+    void this.resolveInboxBatch(enqueued).catch((err: unknown) => {
       this.logger.error(
-        "Inbox chunk processing failed (@error)",
+        "Inbox chunk resolution failed (@error)",
         err instanceof Error ? err.message : String(err),
       );
     });
-    return next;
+  }
+
+  private acquireInboxSlot(): Promise<void> {
+    if (this.inboxChunksInFlight < this.config.maxConcurrentInboxChunks) {
+      this.inboxChunksInFlight++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      this.inboxSlotWaiters.push(resolve);
+    });
+  }
+
+  /** Hands the slot straight to a waiter rather than freeing it. */
+  private releaseInboxSlot(): void {
+    const waiter = this.inboxSlotWaiters.shift();
+    if (waiter !== undefined) {
+      waiter();
+      return;
+    }
+    this.inboxChunksInFlight--;
   }
 
   private async applyInboxJob(
@@ -2727,9 +3015,10 @@ export class SyncManager
     await this.applyInboxJob(remote, syncOp);
   }
 
-  private async applyInboxBatch(
-    received: Array<{ remote: Remote; syncOp: SyncOperation }>,
-  ): Promise<void> {
+  /** Enqueues one chunk's loads; the resolution runs outside the lane. */
+  private async enqueueInboxBatch(
+    received: InboxItem[],
+  ): Promise<InboxBatchEnqueued | undefined> {
     const refused = new Set<SyncOperation>();
     for (const { remote, syncOp } of received) {
       const refusals = await this.refuseOnReceipt(remote, [syncOp]);
@@ -2738,7 +3027,7 @@ export class SyncManager
       }
     }
     const items = received.filter(({ syncOp }) => !refused.has(syncOp));
-    if (items.length === 0) return;
+    if (items.length === 0) return undefined;
     const sourceRemote = items[0].remote.meta.name;
 
     const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
@@ -2778,7 +3067,7 @@ export class SyncManager
         cursorProtectedLoadMeta(sourceRemote),
       );
     } catch (error) {
-      if (this.isShutdown) return;
+      if (this.isShutdown) return undefined;
       for (const { remote, syncOp } of items) {
         const err = error instanceof Error ? error : new Error(String(error));
         if (carriesMarker(syncOp)) {
@@ -2789,10 +3078,10 @@ export class SyncManager
         remote.channel.deadLetter.add(syncOp);
         remote.channel.inbox.remove(syncOp);
       }
-      return;
+      return undefined;
     }
 
-    if (this.isShutdown) return;
+    if (this.isShutdown) return undefined;
 
     for (const plan of jobs) {
       if (!(plan.key in result.jobs)) continue;
@@ -2802,77 +3091,92 @@ export class SyncManager
       this.lastEnqueuedJobIdByKey.set(fifoKey, info.id);
     }
 
-    for (const { remote, syncOp } of items) {
-      if (!(syncOp.jobId in result.jobs)) {
-        this.logger.error(
-          "Job key missing from batch load result (@remote, @documentId, @jobId)",
-          remote.meta.name,
-          syncOp.documentId,
-          syncOp.jobId,
-        );
-        const error = new ChannelError(
-          ChannelErrorSource.Inbox,
-          new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
-        );
-        syncOp.failed(error);
-        remote.channel.deadLetter.add(syncOp);
-        remote.channel.inbox.remove(syncOp);
-        continue;
-      }
-      const jobInfo = result.jobs[syncOp.jobId];
+    return { items, result };
+  }
 
-      let completedJobInfo;
-      try {
-        completedJobInfo = await this.awaiter.waitForJob(
-          jobInfo.id,
-          this.abortController.signal,
-        );
-      } catch (error) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
-        if (this.isShutdown) continue;
-        const err = error instanceof Error ? error : new Error(String(error));
-        if (carriesMarker(syncOp)) {
-          this.retryMarker(remote, syncOp, err.message);
-          continue;
-        }
-        syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
-        remote.channel.deadLetter.add(syncOp);
-        remote.channel.inbox.remove(syncOp);
-        continue;
-      }
+  /** Each item awaits its own job, so one deferred load holds no other. */
+  private async resolveInboxBatch(enqueued: InboxBatchEnqueued): Promise<void> {
+    await Promise.all(
+      enqueued.items.map(({ remote, syncOp }) =>
+        this.resolveInboxItem(remote, syncOp, enqueued.result),
+      ),
+    );
+  }
 
+  private async resolveInboxItem(
+    remote: Remote,
+    syncOp: SyncOperation,
+    result: BatchLoadResult,
+  ): Promise<void> {
+    if (!(syncOp.jobId in result.jobs)) {
+      this.logger.error(
+        "Job key missing from batch load result (@remote, @documentId, @jobId)",
+        remote.meta.name,
+        syncOp.documentId,
+        syncOp.jobId,
+      );
+      const error = new ChannelError(
+        ChannelErrorSource.Inbox,
+        new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
+      );
+      syncOp.failed(error);
+      remote.channel.deadLetter.add(syncOp);
+      remote.channel.inbox.remove(syncOp);
+      return;
+    }
+    const jobInfo = result.jobs[syncOp.jobId];
+
+    let completedJobInfo;
+    try {
+      completedJobInfo = await this.awaiter.waitForJob(
+        jobInfo.id,
+        this.abortController.signal,
+      );
+    } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
-
-      let resolved = false;
-      if (completedJobInfo.status !== JobStatus.FAILED) {
-        syncOp.executed();
-        if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-        resolved = true;
-      } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
-        this.tombstone(syncOp.documentId);
-        syncOp.executed();
-        resolved = true;
-      } else if (
-        carriesMarker(syncOp) &&
-        !isRefusedMarker(completedJobInfo.error)
-      ) {
-        this.retryMarker(
-          remote,
-          syncOp,
-          completedJobInfo.error?.message || "Unknown error",
-        );
-        continue;
-      } else {
-        syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
-        remote.channel.deadLetter.add(syncOp);
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (carriesMarker(syncOp)) {
+        this.retryMarker(remote, syncOp, err.message);
+        return;
       }
-
+      syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
+      remote.channel.deadLetter.add(syncOp);
       remote.channel.inbox.remove(syncOp);
+      return;
+    }
 
-      if (resolved) {
-        await this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
-      }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) return;
+
+    let resolved = false;
+    if (completedJobInfo.status !== JobStatus.FAILED) {
+      syncOp.executed();
+      if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      resolved = true;
+    } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
+      this.tombstone(syncOp.documentId);
+      syncOp.executed();
+      resolved = true;
+    } else if (
+      carriesMarker(syncOp) &&
+      !isRefusedMarker(completedJobInfo.error)
+    ) {
+      this.retryMarker(
+        remote,
+        syncOp,
+        completedJobInfo.error?.message || "Unknown error",
+      );
+      return;
+    } else {
+      syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
+      remote.channel.deadLetter.add(syncOp);
+    }
+
+    remote.channel.inbox.remove(syncOp);
+
+    if (resolved) {
+      await this.dropRequeuedDeadLetter(syncOp.id, remote.meta.name);
     }
   }
 

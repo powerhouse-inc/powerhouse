@@ -4,7 +4,11 @@
 // ships inside a reactor package has no listing, so its descriptor — built in
 // the worker from the piece module — is the listing.
 import type { PieceDescriptor } from "../pieces/index.js";
-import type { BlockSearchHit } from "./block-search.js";
+import type {
+  BlockSearchHit,
+  SearchablePiece,
+  SearchPieceMeta,
+} from "./block-search.js";
 import {
   aiLast,
   clientAuth,
@@ -28,6 +32,7 @@ export function catalogEntry(
     actionCount: descriptor.actions.length,
     triggerCount: descriptor.triggers.length,
     categories: descriptor.categories ?? [],
+    source: "local",
     auth: clientAuth(descriptor.auth),
     ...reasonOf(descriptor.unsupported),
   };
@@ -77,16 +82,26 @@ export function triggersResult(
   };
 }
 
-// The piece's blocks as search hits, so a block the reactor ships is findable
-// whether or not the published catalog answered.
-export function localSearchHits(
+// The piece as the search indexes it, so a block the reactor ships is
+// findable whether or not the published catalog answered.
+export function localSearchPiece(
   descriptor: PieceDescriptor,
   pieceName: string,
   version: string,
-): BlockSearchHit[] {
+): SearchablePiece {
   const pieceDisplayName = descriptor.displayName || pieceName;
   const logoUrl = descriptor.logoUrl ?? "";
-  return [
+  const meta: SearchPieceMeta = {
+    pieceName,
+    pieceVersion: version,
+    displayName: pieceDisplayName,
+    description: descriptor.description ?? "",
+    logoUrl,
+    categories: descriptor.categories ?? [],
+    source: "local",
+    ...reasonOf(descriptor.unsupported),
+  };
+  const blocks: BlockSearchHit[] = [
     ...descriptor.actions.map((action) => ({
       pieceName,
       pieceVersion: version,
@@ -112,6 +127,7 @@ export function localSearchHits(
       ...reasonOf(descriptor.unsupported ?? trigger.unsupported),
     })),
   ];
+  return { meta, blocks };
 }
 
 // The PieceMetadataModel shape the editor's detail query expects: actions and
