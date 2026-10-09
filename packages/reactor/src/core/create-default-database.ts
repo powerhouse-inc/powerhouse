@@ -4,8 +4,9 @@ import type { Database } from "./types.js";
 export async function createDefaultDatabase(): Promise<Kysely<Database>> {
   const { Kysely } = await import("kysely");
   const { PGlite } = await import("@electric-sql/pglite");
-  const { PGliteDialect } = await import("kysely-pglite-dialect");
+  const { HardenedPGliteDialect } =
+    await import("../storage/kysely/pglite-dialect.js");
   return new Kysely<Database>({
-    dialect: new PGliteDialect(new PGlite()),
+    dialect: new HardenedPGliteDialect(new PGlite()),
   });
 }

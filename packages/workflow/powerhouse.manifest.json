@@ -91,9 +91,28 @@
       "default": "8388608"
     },
     {
+      "name": "PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES",
+      "type": "var",
+      "description": "Bytes of downloaded attachments kept on disk by content, so later steps and runs skip the download. 0 turns the cache off.",
+      "default": "1073741824"
+    },
+    {
       "name": "PH_WORKFLOWS_RUN_RETENTION_DAYS",
       "type": "var",
-      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. Unset or 0 keeps every run."
+      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. On by default at 30 days; 0, \"off\" or \"never\" keeps every run, which lets the journal grow without bound.",
+      "default": "30"
+    },
+    {
+      "name": "PH_WORKFLOWS_MAX_QUEUED_FIRINGS",
+      "type": "var",
+      "description": "Firings of one workflow that may wait for its concurrency slot under QUEUE or a bounded PARALLEL. Past it a firing is journaled as a CANCELLED run instead of waiting.",
+      "default": "100"
+    },
+    {
+      "name": "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS",
+      "type": "var",
+      "description": "How long one call a piece makes of its host (ctx.store, ctx.reactor) may take before the step gives up on it. Raised to the step's own timeoutSeconds when that is longer. A WRITING call that times out records the step INDETERMINATE rather than FAILED, since the write may have been committed.",
+      "default": "10000"
     }
   ]
 }

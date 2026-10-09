@@ -1,7 +1,54 @@
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely, sql } from "kysely";
-import { afterEach, describe, expect, it } from "vitest";
-import { ClosablePGliteDialect } from "../src/pglite-dialect.js";
+import type { ILogger } from "document-model";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createReactorKysely } from "../src/server.mjs";
+import { EventEmitter } from "node:events";
+import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "../src/pglite-dialect.js";
+
+type Row = { id: number };
+type Schema = { t: Row };
+
+function stubLogger(): ILogger {
+  const logger = {
+    verbose: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    child: vi.fn(),
+  };
+  logger.child.mockReturnValue(logger);
+  return logger as unknown as ILogger;
+}
+
+/** COMMIT on an aborted transaction silently rolls back unless the dialect guards it. */
+async function commitOfAnAbortedTransaction(
+  db: Kysely<Schema>,
+): Promise<{ outcome: unknown; rows: Row[] }> {
+  await sql`create table t (id int primary key)`.execute(db);
+  const outcome = await db
+    .transaction()
+    .execute(async (trx) => {
+      await sql`insert into t (id) values (1)`.execute(trx);
+      try {
+        await sql`select 1 / 0`.execute(trx);
+      } catch {
+        /* swallowed, exactly as an unrelated caller would */
+      }
+      return "JOB-SUCCEEDED";
+    })
+    .then(
+      (value: unknown) => value,
+      (error: Error) => ({ error: error.message }),
+    );
+  const rows = await sql<Row>`select id from t`.execute(db);
+  return { outcome, rows: rows.rows };
+}
 
 describe("ClosablePGliteDialect", () => {
   const created: PGlite[] = [];
@@ -64,5 +111,87 @@ describe("ClosablePGliteDialect", () => {
     expect(pglite.closed).toBe(true);
 
     await expect(db.destroy()).resolves.toBeUndefined();
+  });
+
+  it("refuses to report a commit for an aborted transaction", async () => {
+    const pglite = new PGlite();
+    created.push(pglite);
+    const db = new Kysely<Schema>({
+      dialect: new ClosablePGliteDialect(pglite, {
+        onDiagnostic: () => undefined,
+      }),
+    });
+
+    const { outcome, rows } = await commitOfAnAbortedTransaction(db);
+    expect(outcome).not.toBe("JOB-SUCCEEDED");
+    expect(rows).toEqual([]);
+
+    await db.destroy();
+  });
+});
+
+describe("switchboard's reactor storage factory", () => {
+  it("builds a PGlite kysely with the commit guard", async () => {
+    const storage = await createReactorKysely({
+      reactorDbUrl: undefined,
+      reactorPgliteDir: ".ph/unused-by-the-in-memory-branch",
+      reactorPgliteMajor: 17,
+      inMemory: true,
+      hostPoolSize: () => {
+        throw new Error("the PGlite branch must not read the host pool size");
+      },
+      logger: stubLogger(),
+    });
+
+    const { outcome, rows } = await commitOfAnAbortedTransaction(
+      storage.kysely as unknown as Kysely<Schema>,
+    );
+    expect(outcome).not.toBe("JOB-SUCCEEDED");
+    expect(rows).toEqual([]);
+    expect(storage.poolInstrumentation).toBeUndefined();
+
+    await storage.kysely.destroy();
+  });
+});
+
+describe("a poisoned reactor PGlite session", () => {
+  it("takes the fatal shutdown path", async () => {
+    const emitter = new EventEmitter();
+    const proc = Object.assign(emitter, {
+      pid: 1234,
+      exitCode: undefined as number | undefined,
+      kill: vi.fn(() => true),
+      exit: vi.fn(),
+    });
+    const logger = stubLogger();
+    installFatalErrorShutdown(logger, proc as never);
+
+    const pglite = new PGlite();
+    const dead = new Proxy(pglite, {
+      get(target, prop, receiver) {
+        if (prop === "query") {
+          return (text: string, params?: unknown[]) =>
+            /dead_call/.test(text)
+              ? new Promise(() => undefined)
+              : target.query(text, params);
+        }
+        const value = Reflect.get(target, prop, receiver) as unknown;
+        return typeof value === "function"
+          ? (value as (...args: unknown[]) => unknown).bind(target)
+          : value;
+      },
+    });
+    const db = new Kysely<Schema>({
+      dialect: new ClosablePGliteDialect(dead, {
+        ...reactorPgliteDialectOptions(logger, proc as never),
+        statementTimeoutMs: 50,
+      }),
+    });
+
+    await expect(sql`select 1 as dead_call`.execute(db)).rejects.toThrow();
+
+    expect(proc.kill).toHaveBeenCalledWith(1234, "SIGTERM");
+    expect(proc.exitCode).toBe(1);
+    await pglite.close();
   });
 });

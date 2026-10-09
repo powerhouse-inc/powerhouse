@@ -26,7 +26,7 @@ import {
 import { jsonSafe } from "./json-safe.js";
 import { formatPieceError } from "@powerhousedao/pieces-framework/host";
 import { redactError, redactMessage } from "./redact.js";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import { DataUriFilesService, StagedFilesService } from "../context/files.js";
 import { setMaxFileBytes } from "../context/limits.js";
@@ -59,6 +59,13 @@ import {
   UnsupportedPieceFeatureError,
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
+import {
+  finishRequestTimings,
+  markWorkerReady,
+  startRequestTimings,
+  timed,
+  withRequestTimings,
+} from "./timings.js";
 import type {
   StagedInput,
   PieceModuleRef,
@@ -100,11 +107,13 @@ function pieceRefKey(ref: PieceModuleRef): string {
 function loadCached(ref: PieceModuleRef): Promise<LoadedPiece> {
   const key = pieceRefKey(ref);
   let loading = loadedPieces.get(key);
+  const cached = loading !== undefined;
   if (!loading) {
     loading = ref.entryPath ? loadPiece(key) : loadPieceFromDir(key);
     loadedPieces.set(key, loading);
   }
-  return loading;
+  const loaded = loading;
+  return timed("piece.load", () => loaded, { "piece.cached": cached });
 }
 
 // The secret values this request carried, if any. Redacting here rather than
@@ -253,24 +262,40 @@ async function resolveOptions(
 // Reads a FILE prop's attachment ref from the copy the host staged on disk.
 // The fork shares the filesystem with its parent, so this is what keeps a
 // 50 MB scan out of the IPC channel in both directions.
-function stagedInputResolver(
+function stagedInputOptions(
   inputs: StagedInput[] | undefined,
-): NormalizeOptions["resolveRef"] {
+): Pick<NormalizeOptions, "resolveRef" | "openRef"> {
   // An empty list is not the same as no list: it means the host has a store
   // and tried, so a FILE prop that still comes up short is told which
   // reference failed rather than that the context has no resolver.
-  if (!inputs) return undefined;
+  if (!inputs) return {};
   const byRef = new Map(inputs.map((input) => [input.ref, input]));
-  return async (ref: string) => {
-    const staged = byRef.get(ref);
-    if (!staged) {
-      throw new Error(`No staged file for reference "${ref}"`);
+  const staged = (ref: string): StagedInput => {
+    const input = byRef.get(ref);
+    if (!input) throw new Error(`No staged file for reference "${ref}"`);
+    if (input.error !== undefined) {
+      throw new Error(`Could not read "${ref}": ${input.error}`);
     }
-    return {
-      data: await readFile(staged.path),
-      filename: staged.fileName,
-      contentType: staged.contentType,
-    };
+    return input;
+  };
+  return {
+    resolveRef: async (ref: string) => {
+      const input = staged(ref);
+      return {
+        data: await readFile(input.path),
+        filename: input.fileName,
+        contentType: input.contentType,
+      };
+    },
+    openRef: async (ref: string) => {
+      const input = staged(ref);
+      return {
+        path: input.path,
+        size: (await stat(input.path)).size,
+        filename: input.fileName,
+        contentType: input.contentType,
+      };
+    },
   };
 }
 
@@ -330,9 +355,8 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     ? new RemoteKeyValueStore()
     : undefined;
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
-  const session = await openWorkerReactor(
-    request.reactor,
-    action.requireReactor,
+  const session = await timed("reactor.open", () =>
+    openWorkerReactor(request.reactor, action.requireReactor),
   );
   try {
     return await runAction(message, action, {
@@ -366,7 +390,7 @@ async function runAction(
       `action "${request.actionName}"`,
       action.props,
       request.propsValue,
-      { resolveRef: stagedInputResolver(request.stagedInputs) },
+      stagedInputOptions(request.stagedInputs),
     ),
     auth: request.auth,
     store:
@@ -389,7 +413,7 @@ async function runAction(
       request.stepTest && typeof action.test === "function"
         ? action.test
         : action.run;
-    output = await method.call(action, context);
+    output = await timed("action", () => method.call(action, context));
   } finally {
     restoreConsole?.();
     liveOutput?.close();
@@ -624,16 +648,23 @@ export function startPieceWorker(): void {
   // A piece cannot then keep a pristine copy of the socket layer.
   installEgressGuard();
   process.on("message", onMessage);
+  markWorkerReady();
 }
 
 function onMessage(message: unknown): void {
   if (!isWorkerMessage(message)) return;
+  const timings = startRequestTimings();
   // Deferred so a synchronous throw — a malformed egress policy — becomes a
   // rejection the handler below reports, instead of killing the child.
   const handler = Promise.resolve().then(() => {
     setMaxFileBytes(message.request.maxFileBytes);
-    setHostCallTimeout(message.request.hostCallTimeoutMs);
-    return runWithEgressPolicy(message.request.egress, () => dispatch(message));
+    setHostCallTimeout(
+      message.request.hostCallTimeoutMs,
+      message.request.deadline,
+    );
+    return withRequestTimings(timings, () =>
+      runWithEgressPolicy(message.request.egress, () => dispatch(message)),
+    );
   });
   handler
     .catch((error: unknown): WorkerResponse => ({
@@ -642,6 +673,8 @@ function onMessage(message: unknown): void {
       error: serializeError(error, redactValuesOf(message)),
       tlsPoisoned: consumeTlsFlag(),
     }))
-    .then((response) => process.send?.(response))
+    .then((response) =>
+      process.send?.({ ...response, timings: finishRequestTimings(timings) }),
+    )
     .catch(() => process.exit(1));
 }

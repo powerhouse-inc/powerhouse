@@ -1,16 +1,16 @@
 // R5 (testing policy): the step journal is durable storage that grows with
 // every run, so each payload is bounded at the write. The cap bounds row
 // width only — row count is bounded by the retention sweep (run-retention.ts),
-// which run-retention.test.ts pins off by default: with
-// PH_WORKFLOWS_RUN_RETENTION_DAYS unset, capped rows still accumulate for
-// ever. Whoever changes the cap or the retention default should weigh the
-// two together (R4; authority: the 2026-10-02 workflow-step-log-is-unbounded
+// which run-retention.test.ts pins ON by default at 30 days. Whoever changes
+// the cap or the retention default should weigh the two together (R4; authority: the 2026-10-02 workflow-step-log-is-unbounded
 // bug report, where one polling workflow wrote ~46 MB of journal per minute).
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   STEP_PAYLOAD_MAX_BYTES,
   STEP_PAYLOAD_PREFIX_CHARS,
+  TRUNCATED_PAYLOAD_KEY,
+  TRUNCATED_PAYLOAD_SENTINEL,
   WorkflowRunStore,
   isTruncatedStepPayload,
   journaledTriggerDocumentIds,
@@ -62,7 +62,7 @@ describe("WorkflowRunStore payload cap", () => {
     if (!isTruncatedStepPayload(journaled)) {
       throw new Error("expected the journaled output to carry the marker");
     }
-    expect(journaled.truncated).toBe(true);
+    expect(journaled[TRUNCATED_PAYLOAD_KEY]).toBe(TRUNCATED_PAYLOAD_SENTINEL);
     expect(journaled.bytes).toBe(Buffer.byteLength(serialized, "utf8"));
     expect(journaled.prefix).toBe(
       serialized.slice(0, STEP_PAYLOAD_PREFIX_CHARS),
@@ -157,7 +157,7 @@ describe("WorkflowRunStore payload cap", () => {
     if (!isTruncatedStepPayload(journaled)) {
       throw new Error("expected the trigger payload to carry the marker");
     }
-    expect(journaled.truncated).toBe(true);
+    expect(journaled[TRUNCATED_PAYLOAD_KEY]).toBe(TRUNCATED_PAYLOAD_SENTINEL);
     expect(journaled.bytes).toBe(Buffer.byteLength(serialized, "utf8"));
     expect(journaled.prefix).toBe(
       serialized.slice(0, STEP_PAYLOAD_PREFIX_CHARS),
@@ -252,17 +252,50 @@ describe("WorkflowRunStore payload cap", () => {
     expect(journaled.driveId).toBeUndefined();
   });
 
-  it("recognizes only its own marker, so rerun replays real outputs", () => {
+  it("recognizes its reserved marker, so rerun replays real outputs", () => {
     expect(
-      isTruncatedStepPayload({ truncated: true, bytes: 1, prefix: "" }),
+      isTruncatedStepPayload({
+        [TRUNCATED_PAYLOAD_KEY]: TRUNCATED_PAYLOAD_SENTINEL,
+        bytes: 1,
+        prefix: "",
+      }),
     ).toBe(true);
     // Ordinary outputs, including near-misses, replay as before.
     expect(isTruncatedStepPayload(null)).toBe(false);
     expect(isTruncatedStepPayload("truncated")).toBe(false);
-    expect(isTruncatedStepPayload([{ truncated: true }])).toBe(false);
     expect(
-      isTruncatedStepPayload({ truncated: false, bytes: 1, prefix: "" }),
+      isTruncatedStepPayload([
+        { [TRUNCATED_PAYLOAD_KEY]: TRUNCATED_PAYLOAD_SENTINEL },
+      ]),
     ).toBe(false);
-    expect(isTruncatedStepPayload({ truncated: true, bytes: "1" })).toBe(false);
+    expect(
+      isTruncatedStepPayload({ [TRUNCATED_PAYLOAD_KEY]: "something else" }),
+    ).toBe(false);
+    expect(isTruncatedStepPayload({ runJournal: "truncated-payload/v1" })).toBe(
+      false,
+    );
+  });
+
+  // Review backlog item 15: the old predicate duck-typed `{truncated, bytes,
+  // prefix}`, which is exactly the shape of a truncation report a piece might
+  // legitimately return — and being mistaken for a marker makes a
+  // side-effectful step re-run on rerun.
+  it("does not mistake a piece's own truncation report for its marker", () => {
+    const pieceOutput = {
+      truncated: true,
+      bytes: 4096,
+      prefix: "Dear Sir or",
+      source: "pdf-extract",
+    };
+
+    expect(isTruncatedStepPayload(pieceOutput)).toBe(false);
+  });
+
+  it("still reads the legacy marker, for rows written before the sentinel", () => {
+    // Read-only and never written: a row journaled by an older build must not
+    // be replayed as data, which would re-run the step that produced it.
+    expect(
+      isTruncatedStepPayload({ truncated: true, bytes: 1, prefix: "" }),
+    ).toBe(true);
   });
 });

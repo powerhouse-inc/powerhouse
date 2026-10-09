@@ -120,12 +120,17 @@ describe("quarantinesDocument", () => {
     expect(quarantinesDocument("MARKER_REFUSED")).toBe(false);
   });
 
+  // A quarantine stops exactly the traffic that would deliver the ancestor,
+  // and only a purge ever clears one.
+  it("exempts a missing ancestor", () => {
+    expect(quarantinesDocument("MISSING_OPERATIONS")).toBe(false);
+  });
+
   it("quarantines every other classification", () => {
     for (const errorType of [
       "SIGNATURE_INVALID",
       "HASH_MISMATCH",
       "LIBRARY_ERROR",
-      "MISSING_OPERATIONS",
       "EXCESSIVE_SHUFFLE",
       "GRACEFUL_ABORT",
       "INVALID_TIMESTAMP",

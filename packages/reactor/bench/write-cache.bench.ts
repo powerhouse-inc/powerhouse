@@ -39,8 +39,7 @@ import {
   type SignalDispatch,
   type StateReducer,
 } from "@powerhousedao/shared/document-model";
-import type { Options as BenchOptions } from "tinybench";
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
 import { KyselyWriteCache } from "../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../src/cache/write-cache-types.js";
 import { SnapshotPosition } from "../src/cache/write-cache-types.js";
@@ -51,6 +50,8 @@ import type {
   IOperationStore,
 } from "../src/storage/interfaces.js";
 import { createTestOperationStore } from "../test/factories.js";
+import { bench } from "./loud-bench.js";
+import type { BenchOptions } from "./loud-bench.js";
 
 const DOCUMENT_ID = "bench-doc-1";
 const DOCUMENT_TYPE = "powerhouse/document-drive";
@@ -78,9 +79,8 @@ type Fixture = {
 };
 
 /**
- * tinybench does not await teardown, so the destroy it starts is chained here
- * and awaited by the next fixture instead. Without that, a PGlite instance
- * would be torn down while the following task is booting its own.
+ * Teardown hands the destroy it starts to the next fixture, which awaits it,
+ * so a PGlite instance is never torn down while the following task boots its own.
  */
 let pendingTeardown: Promise<void> = Promise.resolve();
 
@@ -116,10 +116,9 @@ async function createFixture(
  * Declares a bench case that boots its PGlite fixture once per phase.
  *
  * tinybench calls setup and teardown once before and once after each of the
- * warmup and run loops, never per iteration, and vitest constructs the Task
- * without FnOptions, so beforeEach/afterEach are unreachable. Anything the
- * measured function needs per iteration therefore has to be cheap enough to
- * pay for on every sample; everything else belongs in prepare.
+ * warmup and run loops, never per iteration. Anything the measured function
+ * needs per iteration therefore has to be cheap enough to pay for on every
+ * sample; everything else belongs in prepare.
  *
  * `throws` makes tinybench rethrow a failing task instead of parking the
  * error on result.error, dispatching no event and reporting a passing suite.
@@ -923,7 +922,7 @@ type MirrorSplitReading = {
 const mirrorSplitReadings = new Map<MirrorLeg, MirrorSplitReading>();
 
 /**
- * Where the recorder reads the decomposition from. `--outputJson` carries case
+ * Where the recorder reads the decomposition from. The JSON report carries case
  * means and nothing else, so a figure that only ever reached stdout is absent
  * from the record that cites it; this file is how the split survives the run.
  */

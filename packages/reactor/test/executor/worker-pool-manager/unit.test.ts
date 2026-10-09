@@ -926,6 +926,50 @@ describe("WorkerPoolJobExecutorManager", () => {
       },
     );
 
+    it("fails a job whose worker keeps dying once its retries are spent, and runs the next job on its document", async () => {
+      const failedEvents: JobFailedEvent[] = [];
+      eventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_t: number, data: JobFailedEvent) => {
+          failedEvents.push(data);
+        },
+      );
+
+      const manager = buildManager(
+        (i) =>
+          new FakeWorker({
+            index: i,
+            executeImpl: async (job) => {
+              await flush(1);
+              if (job.id === "poison") {
+                throw new WorkerExitedError(`worker-${i}`, 137, null);
+              }
+              return { result: { job, success: true, duration: 1 } };
+            },
+          }),
+      );
+      await manager.start(1);
+
+      await queue.enqueue(
+        createTestJob({ id: "poison", documentId: "doc-p", maxRetries: 3 }),
+      );
+      await queue.enqueue(
+        createTestJob({ id: "later", documentId: "doc-p", maxRetries: 3 }),
+      );
+      await flush(150);
+
+      const attempts = createdWorkers.flatMap((w) =>
+        w.executeCalls.map((j) => j.id),
+      );
+      expect(attempts.filter((id) => id === "poison")).toHaveLength(4);
+      expect(attempts).toContain("later");
+      expect(failedEvents.map((e) => e.jobId)).toEqual(["poison"]);
+      expect(failedEvents[0].error.name).toBe("WorkerExitedError");
+      expect(jobTracker.getJobStatus("poison")?.status).toBe("FAILED");
+
+      await manager.stop(true);
+    });
+
     it(
       "treats WorkerExitedError as transport (no JOB_FAILED) while a " +
         "generic execute() throw still emits JOB_FAILED",

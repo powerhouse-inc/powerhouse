@@ -29,7 +29,7 @@ consumer project, started with `PH_WORKFLOWS_ENABLED=1`.
    node resolution and imports `dist/node/pieces/index.mjs` from the installed
    copy.
 5. The suite drives the workflow subgraphs over HTTP: the piece is in
-   `pieceCatalog`, `searchBlocks` finds its action, and a workflow whose one step
+   `pieceCatalog`, `searchPieces` finds its action, and a workflow whose one step
    names `test-workflow-piece-package#greet` fires and is journalled as
    `SUCCEEDED` with the action's output.
 

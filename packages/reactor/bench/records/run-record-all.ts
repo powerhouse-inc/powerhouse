@@ -96,7 +96,11 @@ function convertVitestReport(target: BenchTarget): Record<string, unknown> {
     );
   }
 
-  const suites = suitesFromVitest(parsed.data, target.renames);
+  const suites = suitesFromVitest(
+    parsed.data,
+    PACKAGE_DIRECTORY,
+    target.renames,
+  );
   const readings = stampReadings(target, RESULTS_DIRECTORY, suites);
 
   return buildMicroEntry({

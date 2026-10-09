@@ -96,10 +96,13 @@ describe("a purge whose JOB_WRITE_READY is dropped [Postgres]", () => {
     // No peer behind the channel: what it sends is only recorded.
     channels.delete("remote");
     await succeeded(reactor, (await reactor.deleteDocument(childId)).id);
-    await vi.waitFor(() =>
-      expect(sentFor(childId).map((op) => op.operation.action.type)).toContain(
-        "DELETE_DOCUMENT",
-      ),
+    // The settled watermark is cluster-wide, so another file's long transaction delays the send.
+    await vi.waitFor(
+      () =>
+        expect(
+          sentFor(childId).map((op) => op.operation.action.type),
+        ).toContain("DELETE_DOCUMENT"),
+      { timeout: 5_000 },
     );
 
     const dropped = eventBus.dropWriteReadyFor(childId);

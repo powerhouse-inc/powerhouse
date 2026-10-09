@@ -20,6 +20,7 @@ import type {
   RpcMessage,
 } from "@powerhousedao/reactor/rpc";
 import type { DocumentModelModule, PHDocument } from "document-model";
+import { flushCompileCache } from "node:module";
 import { callHost } from "../pieces/activepieces/worker/host-call.js";
 import {
   MODEL_ENTRIES,
@@ -34,6 +35,7 @@ import {
   type WorkerReactorSession,
 } from "../pieces/activepieces/worker/reactor-provider.js";
 import { isReactorRpcEnvelope } from "../pieces/activepieces/worker/reactor-rpc.js";
+import { timed } from "../pieces/activepieces/worker/timings.js";
 
 function named(name: string, message: string, cause?: unknown): Error {
   const error = new Error(message, cause === undefined ? {} : { cause });
@@ -109,20 +111,24 @@ interface Runtime {
 let runtime: Promise<Runtime> | undefined;
 
 function reactorRuntime(): Promise<Runtime> {
+  // Deep entries, not the package barrels, which load storage, zod and crypto.
   runtime ??= Promise.all([
     import("@powerhousedao/reactor/rpc"),
-    import("@powerhousedao/reactor"),
-    import("@powerhousedao/shared/document-model"),
-  ]).then(([rpc, reactor, model]) => ({
-    rpc,
-    loadSpec: reactor.loadDocumentModelSpec,
-    registry: new reactor.DocumentModelRegistry(),
-    // The version the reactor resolves a document's module by.
-    versionOf: (document) =>
-      model.normalizeDocumentModelVersion(
-        (document.state as Partial<PHDocument["state"]>).document?.version,
-      ),
-  }));
+    import("@powerhousedao/shared/document-model/version"),
+  ]).then(([rpc, model]) => {
+    // Persisted now: the child is SIGKILLed, never exiting cleanly.
+    flushCompileCache();
+    return {
+      rpc,
+      loadSpec: rpc.loadDocumentModelSpec,
+      registry: new rpc.DocumentModelRegistry(),
+      // The version the reactor resolves a document's module by.
+      versionOf: (document: PHDocument) =>
+        model.normalizeDocumentModelVersion(
+          (document.state as Partial<PHDocument["state"]>).document?.version,
+        ),
+    };
+  });
   return runtime;
 }
 
@@ -137,17 +143,33 @@ function unavailable(documentType: string, cause?: unknown): Error {
 }
 
 // Asks the host when the type, or the version a document needs, is not local.
-async function ensureType(
+// Timed only when it starts a lookup or an import, not on every call.
+function ensureType(
   rt: Runtime,
   documentType: string,
   version?: number,
 ): Promise<void> {
+  const load = () => loadType(rt, documentType, version);
+  return missingLocally(documentType, version) || !loading.has(documentType)
+    ? timed("models", load, { "document.type": documentType })
+    : load();
+}
+
+function missingLocally(documentType: string, version?: number): boolean {
   const local = manifest.get(documentType) ?? [];
-  const missing =
+  return (
     local.length === 0 ||
     (version !== undefined &&
-      !local.some((entry) => entry.version === String(version)));
-  if (missing) {
+      !local.some((entry) => entry.version === String(version)))
+  );
+}
+
+async function loadType(
+  rt: Runtime,
+  documentType: string,
+  version?: number,
+): Promise<void> {
+  if (missingLocally(documentType, version)) {
     try {
       await lookUpEntries(documentType);
     } catch (error) {

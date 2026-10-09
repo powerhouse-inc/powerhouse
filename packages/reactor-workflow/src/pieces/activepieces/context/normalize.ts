@@ -1,6 +1,9 @@
 // Run-time coercion of stored config values into the shapes pieces expect: the
 // engine's own property processors, with our file hydration in front of theirs.
 import type { PieceProperty } from "@powerhousedao/pieces-framework";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import {
   arrayZipperProcessor,
   processors,
@@ -10,6 +13,7 @@ import {
 import type { ApProperty } from "../types.js";
 import {
   assertWithinLimit,
+  byteCap,
   DEFAULT_MAX_FILE_BYTES,
   maxFileBytes,
 } from "./limits.js";
@@ -21,6 +25,22 @@ export interface ApFileValue {
   extension?: string;
   base64: string;
   data: Buffer;
+}
+
+// Framework ApStreamingFile: what a `streaming: true` FILE prop receives.
+export interface ApStreamingFileValue {
+  filename: string;
+  extension?: string;
+  size?: number;
+  body: Readable;
+}
+
+// A staged attachment on disk, for a streaming FILE prop.
+export interface OpenedFile {
+  path: string;
+  size: number;
+  filename?: string;
+  contentType?: string;
 }
 
 export interface FetchedFile {
@@ -36,6 +56,8 @@ export interface NormalizeOptions {
   // worker resolves these from files the host staged on disk, so the bytes
   // never cross IPC.
   resolveRef?: (ref: string) => Promise<FetchedFile>;
+  // The staged file itself, for a streaming FILE prop.
+  openRef?: (ref: string) => Promise<OpenedFile>;
 }
 
 // Re-exported for compatibility; the ceiling itself lives in limits.ts so the
@@ -78,24 +100,47 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "text/csv": "csv",
 };
 
-function toFileValue(
+// base64 is computed on first read and kept, like upstream's ApFile getter:
+// a piece that only reads `data` never pays for a second copy of the file.
+function fileValue(
+  filename: string,
+  extension: string | undefined,
   data: Buffer,
+  base64?: string,
+): ApFileValue {
+  const file = { filename, ...(extension ? { extension } : {}), data };
+  let encoded = base64;
+  Object.defineProperty(file, "base64", {
+    enumerable: true,
+    configurable: true,
+    get: () => (encoded ??= data.toString("base64")),
+    set: (value: string) => {
+      encoded = value;
+    },
+  });
+  return file as ApFileValue;
+}
+
+function fileName(
   filename: string | undefined,
   contentType: string | undefined,
-): ApFileValue {
+): { name: string; extension: string | undefined } {
   const mime = contentType?.split(";")[0].trim().toLowerCase();
   const mimeExtension = mime ? MIME_EXTENSIONS[mime] : undefined;
   const name =
     filename && filename !== ""
       ? filename
       : `file${mimeExtension ? `.${mimeExtension}` : ""}`;
-  const extension = extensionOf(name) ?? mimeExtension;
-  return {
-    filename: name,
-    ...(extension ? { extension } : {}),
-    base64: data.toString("base64"),
-    data,
-  };
+  return { name, extension: extensionOf(name) ?? mimeExtension };
+}
+
+function toFileValue(
+  data: Buffer,
+  filename: string | undefined,
+  contentType: string | undefined,
+): ApFileValue {
+  const { name, extension } = fileName(filename, contentType);
+  return fileValue(name, extension, data);
 }
 
 function filenameFromDisposition(header: string | null): string | undefined {
@@ -112,7 +157,11 @@ function filenameFromDisposition(header: string | null): string | undefined {
   return plain ? plain[1].trim() : undefined;
 }
 
-async function defaultFetchFile(url: string): Promise<FetchedFile> {
+async function openUrl(url: string): Promise<{
+  response: Response;
+  declared: number | undefined;
+  filename: string | undefined;
+}> {
   let response: Response;
   try {
     response = await fetch(url, {
@@ -126,13 +175,16 @@ async function defaultFetchFile(url: string): Promise<FetchedFile> {
   }
   if (!response.ok) throw new FileFetchError(url, `HTTP ${response.status}`);
   const limit = maxFileBytes();
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > limit) {
+  // Content-Length counts the encoded body; only an identity body has the
+  // file's own size.
+  const header = response.headers.get("content-length");
+  const declared =
+    header !== null && !response.headers.get("content-encoding")
+      ? Number(header)
+      : undefined;
+  if (declared !== undefined && Number.isFinite(declared) && declared > limit) {
+    await response.body?.cancel().catch(() => undefined);
     throw new FileFetchError(url, `${declared} bytes exceeds ${limit}`);
-  }
-  const data = Buffer.from(await response.arrayBuffer());
-  if (data.byteLength > limit) {
-    throw new FileFetchError(url, `${data.byteLength} bytes exceeds ${limit}`);
   }
   let filename = filenameFromDisposition(
     response.headers.get("content-disposition"),
@@ -142,11 +194,44 @@ async function defaultFetchFile(url: string): Promise<FetchedFile> {
     if (segment) filename = decodeURIComponent(segment);
   }
   return {
-    data,
+    response,
+    declared:
+      declared !== undefined && Number.isFinite(declared)
+        ? declared
+        : undefined,
+    filename,
+  };
+}
+
+function cappedBody(response: Response): Readable {
+  const body = response.body
+    ? Readable.fromWeb(response.body as WebReadableStream<Uint8Array>)
+    : Readable.from([]);
+  const cap = byteCap();
+  body.on("error", (error) => cap.destroy(error));
+  return body.pipe(cap);
+}
+
+async function defaultFetchFile(url: string): Promise<FetchedFile> {
+  const { response, filename } = await openUrl(url);
+  const chunks: Buffer[] = [];
+  try {
+    for await (const chunk of cappedBody(response))
+      chunks.push(chunk as Buffer);
+  } catch (error) {
+    throw new FileFetchError(
+      url,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+  return {
+    data: Buffer.concat(chunks),
     filename,
     contentType: response.headers.get("content-type") ?? undefined,
   };
 }
+
+const FILE_KEYS = new Set(["filename", "extension", "base64", "data"]);
 
 function isFileShaped(value: unknown): value is ApFileValue {
   return (
@@ -170,33 +255,26 @@ export async function toApFile(
     // data URI or file-shaped object would otherwise slip past it.
     assertWithinLimit(data.byteLength);
     const extension = value.extension ?? extensionOf(value.filename);
-    return {
-      ...value,
-      ...(extension ? { extension } : {}),
-      base64:
-        typeof value.base64 === "string"
-          ? value.base64
-          : data.toString("base64"),
-      data,
-    };
+    const rest = Object.fromEntries(
+      Object.entries(value).filter(([key]) => !FILE_KEYS.has(key)),
+    );
+    return Object.assign(
+      fileValue(
+        value.filename,
+        extension,
+        data,
+        typeof value.base64 === "string" ? value.base64 : undefined,
+      ),
+      rest,
+    );
   }
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
   if (trimmed === "") return undefined;
   const dataUri = DATA_URI.exec(trimmed);
   if (dataUri) {
-    const [, mime, params, payload] = dataUri;
-    const isBase64 = /;base64/i.test(params);
-    const data = isBase64
-      ? Buffer.from(payload, "base64")
-      : Buffer.from(decodeURIComponent(payload), "utf8");
-    assertWithinLimit(data.byteLength);
-    const nameParam = /;name=([^;]+)/i.exec(params)?.[1];
-    return toFileValue(
-      data,
-      nameParam ? decodeURIComponent(nameParam) : undefined,
-      mime || undefined,
-    );
+    const decoded = decodeDataUri(dataUri);
+    return toFileValue(decoded.data, decoded.name, decoded.mime);
   }
   if (FILE_REF.test(trimmed)) {
     if (!options.resolveRef) {
@@ -212,6 +290,96 @@ export async function toApFile(
   if (/^https?:\/\//i.test(trimmed)) {
     const fetched = await (options.fetchFile ?? defaultFetchFile)(trimmed);
     return toFileValue(fetched.data, fetched.filename, fetched.contentType);
+  }
+  return value;
+}
+
+function decodeDataUri(match: RegExpExecArray): {
+  data: Buffer;
+  name: string | undefined;
+  mime: string | undefined;
+} {
+  const [, mime, params, payload] = match;
+  const data = /;base64/i.test(params)
+    ? Buffer.from(payload, "base64")
+    : Buffer.from(decodeURIComponent(payload), "utf8");
+  assertWithinLimit(data.byteLength);
+  const nameParam = /;name=([^;]+)/i.exec(params)?.[1];
+  return {
+    data,
+    name: nameParam ? decodeURIComponent(nameParam) : undefined,
+    mime: mime || undefined,
+  };
+}
+
+function streamingValue(
+  name: string,
+  extension: string | undefined,
+  size: number | undefined,
+  body: Readable,
+): ApStreamingFileValue {
+  return {
+    filename: name,
+    ...(extension ? { extension } : {}),
+    ...(size !== undefined ? { size } : {}),
+    body,
+  };
+}
+
+// Streaming FILE prop: the piece reads the body itself, so nothing is held in
+// memory. A staged reference streams from disk, a URL from the network.
+export async function toApStreamingFile(
+  value: unknown,
+  options: NormalizeOptions = {},
+): Promise<unknown> {
+  if (isRecord(value) && value.body instanceof Readable) return value;
+  if (isFileShaped(value)) {
+    const file = (await toApFile(value, options)) as ApFileValue;
+    return streamingValue(
+      file.filename,
+      file.extension,
+      file.data.byteLength,
+      Readable.from([file.data]),
+    );
+  }
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (trimmed === "") return undefined;
+  const dataUri = DATA_URI.exec(trimmed);
+  if (dataUri) {
+    const decoded = decodeDataUri(dataUri);
+    const { name, extension } = fileName(decoded.name, decoded.mime);
+    return streamingValue(
+      name,
+      extension,
+      decoded.data.byteLength,
+      Readable.from([decoded.data]),
+    );
+  }
+  if (FILE_REF.test(trimmed)) {
+    if (!options.openRef) {
+      throw new FileFetchError(
+        trimmed,
+        "no attachment resolver is available in this context",
+      );
+    }
+    const opened = await options.openRef(trimmed);
+    assertWithinLimit(opened.size);
+    const { name, extension } = fileName(opened.filename, opened.contentType);
+    return streamingValue(
+      name,
+      extension,
+      opened.size,
+      createReadStream(opened.path),
+    );
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    const { response, declared, filename } = await openUrl(trimmed);
+    const { name, extension } = fileName(
+      filename,
+      response.headers.get("content-type") ?? undefined,
+    );
+    return streamingValue(name, extension, declared, cappedBody(response));
   }
   return value;
 }
@@ -244,13 +412,7 @@ function plainFile(value: unknown): unknown {
     typeof value.extension === "string"
       ? value.extension
       : extensionOf(value.filename);
-  return {
-    filename: value.filename,
-    ...(extension ? { extension } : {}),
-    base64:
-      typeof value.base64 === "string" ? value.base64 : data.toString("base64"),
-    data,
-  };
+  return fileValue(value.filename, extension, data);
 }
 
 const table = processors as Record<string, ProcessorFn | undefined>;
@@ -266,6 +428,7 @@ export async function normalizeValue(
   if (value === undefined || value === null) return value;
   if (prop.type === "ARRAY") return normalizeArray(prop, value, options);
   if (prop.type === "FILE") {
+    if (prop.streaming === true) return toApStreamingFile(value, options);
     // Our hydration owns the forms the engine's own processor cannot resolve:
     // attachment and apfile refs, the size cap, and a host-injected fetcher.
     const hydrated = await toApFile(value, options);

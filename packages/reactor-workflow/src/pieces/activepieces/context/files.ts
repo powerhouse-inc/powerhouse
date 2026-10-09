@@ -9,10 +9,14 @@
 // `apfile://<token>`; the host ingests each staged file after the step returns
 // and rewrites the tokens in the output before journalling it.
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import {
   assertWithinLimit,
+  byteCap,
   FileTooLargeError,
   maxFileBytes,
 } from "./limits.js";
@@ -31,26 +35,37 @@ export interface StagedFile {
   contentType?: string;
 }
 
-// The framework's FilesService for both actions and triggers, narrowed to a
-// Buffer (the staging path cannot stream) with fileName optional.
+// What a piece may hand ctx.files.write: upstream takes a Buffer or a Readable.
+export type ApFileData = Buffer | Uint8Array | Readable;
+
+// The framework's FilesService for both actions and triggers, with fileName
+// optional.
 export interface ApFilesService {
-  write(file: { fileName?: string; data: Buffer }): Promise<string>;
+  write(file: { fileName?: string; data: ApFileData }): Promise<string>;
+}
+
+// A Readable drained into memory under the cap, for the inline fallback.
+async function drain(data: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of data.pipe(byteCap())) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
 }
 
 // Default for both actions and triggers when the host injects nothing: inline
 // the bytes as a data URI so the payload stays self-contained. Bounded by the
 // shared cap, since a data URI lands in the run journal.
 export class DataUriFilesService implements ApFilesService {
-  write(file: { fileName?: string; data: Buffer }): Promise<string> {
-    const data = Buffer.isBuffer(file.data)
-      ? file.data
-      : Buffer.from(file.data);
+  async write(file: { fileName?: string; data: ApFileData }): Promise<string> {
+    const data =
+      file.data instanceof Readable
+        ? await drain(file.data)
+        : Buffer.isBuffer(file.data)
+          ? file.data
+          : Buffer.from(file.data);
     if (data.byteLength > maxFileBytes()) {
-      return Promise.reject(new FileTooLargeError(data.byteLength));
+      throw new FileTooLargeError(data.byteLength);
     }
-    return Promise.resolve(
-      `data:application/octet-stream;base64,${data.toString("base64")}`,
-    );
+    return `data:application/octet-stream;base64,${data.toString("base64")}`;
   }
 }
 
@@ -83,24 +98,38 @@ export class StagedFilesService implements ApFilesService {
     return [...this.files];
   }
 
-  async write(file: { fileName?: string; data: Buffer }): Promise<string> {
-    const data = Buffer.isBuffer(file.data)
-      ? file.data
-      : Buffer.from(file.data);
-    // Checked before the write: a piece must not be able to fill the disk by
-    // handing over a file the host would refuse anyway.
-    assertWithinLimit(data.byteLength);
+  async write(file: { fileName?: string; data: ApFileData }): Promise<string> {
     const token = randomUUID();
     const fileName =
       file.fileName && file.fileName !== "" ? file.fileName : token;
     const target = path.join(this.stagingDir, token);
-    await mkdir(this.stagingDir, { recursive: true });
-    await writeFile(target, data);
+    let size: number;
+    if (file.data instanceof Readable) {
+      // Capped while it streams to disk: a piece cannot fill the disk with a
+      // file the host would refuse anyway.
+      await mkdir(this.stagingDir, { recursive: true });
+      try {
+        await pipeline(file.data, byteCap(), createWriteStream(target));
+      } catch (error) {
+        await rm(target, { force: true });
+        throw error;
+      }
+      size = (await stat(target)).size;
+    } else {
+      const data = Buffer.isBuffer(file.data)
+        ? file.data
+        : Buffer.from(file.data);
+      // Checked before anything touches the disk, for the same reason.
+      assertWithinLimit(data.byteLength);
+      await mkdir(this.stagingDir, { recursive: true });
+      await writeFile(target, data);
+      size = data.byteLength;
+    }
     this.files.push({
       token: `${APFILE_SCHEME}${token}`,
       path: target,
       fileName,
-      size: data.byteLength,
+      size,
       contentType: contentTypeFor(fileName),
     });
     return `${APFILE_SCHEME}${token}`;

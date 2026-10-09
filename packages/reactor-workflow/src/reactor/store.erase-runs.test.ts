@@ -205,7 +205,7 @@ describe("eraseRunsForDocuments", () => {
     const { store } = await freshStore();
     const doomed = randomUUID();
     const nowIso = new Date().toISOString();
-    const runId = await store.claimAndEnqueueRun("key-1", 60_000, nowIso, {
+    const claim = await store.claimAndEnqueueRun("key-1", 60_000, nowIso, {
       workflowId: "wf-erase",
       triggerKind: "document-event",
       triggerPayload: { documentId: doomed },
@@ -214,8 +214,9 @@ describe("eraseRunsForDocuments", () => {
     const erased = await store.eraseRunsForDocuments([doomed]);
 
     expect(erased).toMatchObject({ runs: 1, dedupeKeysUnlinked: 1 });
-    expect(runId).not.toBeNull();
-    expect(await store.getRun(runId!)).toBeUndefined();
+    expect(claim.outcome).toBe("claimed");
+    if (claim.outcome !== "claimed") throw new Error("expected a claim");
+    expect(await store.getRun(claim.runId)).toBeUndefined();
     expect(await store.claimDedupe("wf-erase", "key-1", 60_000, nowIso)).toBe(
       false,
     );

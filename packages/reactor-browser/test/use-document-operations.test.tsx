@@ -2,7 +2,7 @@ import type { PagedResults } from "@powerhousedao/reactor";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-react";
+import { render, type RenderResult } from "vitest-browser-react";
 import { DocumentCache } from "../src/document-cache.js";
 import { ensurePHEventHandlers } from "../src/graphql-client/graphql-reactor-provider.js";
 import { setDocumentCache } from "../src/hooks/document-cache.js";
@@ -96,13 +96,13 @@ function Probe(props: {
   );
 }
 
-function textOf(screen: ReturnType<typeof render>, testId: string) {
+function textOf(screen: RenderResult, testId: string) {
   return (
     screen.container.querySelector(`[data-testid=${testId}]`)?.textContent ?? ""
   );
 }
 
-function click(screen: ReturnType<typeof render>, testId: string) {
+function click(screen: RenderResult, testId: string) {
   (
     screen.container.querySelector(
       `[data-testid=${testId}]`,
@@ -124,19 +124,20 @@ describe("useDocumentOperations", () => {
   });
 
   it("loads the first page once and reports it", async () => {
-    const getOperations = vi.fn<GetOperations>(() =>
-      Promise.resolve(
-        makePage([createFakeOperation(0), createFakeOperation(1)]),
-      ),
-    );
+    // Held open so the awaited render can observe the loading state.
+    const firstPage = deferred<PagedResults<Operation>>();
+    const getOperations = vi.fn<GetOperations>(() => firstPage.promise);
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe id="doc-1" limit={25} />
       </StrictMode>,
     );
     expect(textOf(screen, "loading")).toBe("true");
+    firstPage.resolve(
+      makePage([createFakeOperation(0), createFakeOperation(1)]),
+    );
     await vi.waitFor(() => {
       expect(textOf(screen, "loading")).toBe("false");
     });
@@ -151,7 +152,7 @@ describe("useDocumentOperations", () => {
     const getOperations = vi.fn(() => Promise.resolve(makePage([])));
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" />);
+    const screen = await render(<Probe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "loading")).toBe("false");
     });
@@ -165,8 +166,8 @@ describe("useDocumentOperations", () => {
     const getOperations = vi.fn(() => Promise.resolve(makePage([])));
     setDocumentCache(makeCache(getOperations));
 
-    const disabled = render(<Probe id="doc-1" enabled={false} />);
-    const noId = render(<Probe id={null} />);
+    const disabled = await render(<Probe id="doc-1" enabled={false} />);
+    const noId = await render(<Probe id={null} />);
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(getOperations).not.toHaveBeenCalled();
     expect(textOf(disabled, "loading")).toBe("false");
@@ -181,9 +182,9 @@ describe("useDocumentOperations", () => {
     );
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" enabled={false} />);
+    const screen = await render(<Probe id="doc-1" enabled={false} />);
     expect(getOperations).not.toHaveBeenCalled();
-    screen.rerender(<Probe id="doc-1" enabled={true} />);
+    await screen.rerender(<Probe id="doc-1" enabled={true} />);
     await vi.waitFor(() => {
       expect(textOf(screen, "count")).toBe("1");
     });
@@ -195,11 +196,11 @@ describe("useDocumentOperations", () => {
     );
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" scope="global" />);
+    const screen = await render(<Probe id="doc-1" scope="global" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "count")).toBe("1");
     });
-    screen.rerender(<Probe id="doc-1" scope="local" />);
+    await screen.rerender(<Probe id="doc-1" scope="local" />);
     await vi.waitFor(() => {
       expect(getOperations).toHaveBeenCalledTimes(2);
     });
@@ -222,7 +223,7 @@ describe("useDocumentOperations", () => {
     );
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" />);
+    const screen = await render(<Probe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "has-next")).toBe("true");
     });
@@ -244,7 +245,7 @@ describe("useDocumentOperations", () => {
     );
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" />);
+    const screen = await render(<Probe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "count")).toBe("1");
     });
@@ -272,7 +273,7 @@ describe("useDocumentOperations", () => {
     const getOperations = vi.fn(() => Promise.reject(new Error("nope")));
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" />);
+    const screen = await render(<Probe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "error")).toBe("nope");
     });
@@ -289,7 +290,7 @@ describe("useDocumentOperations", () => {
     const getOperations = vi.fn().mockRejectedValue("nope");
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" />);
+    const screen = await render(<Probe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "error")).toBe("nope");
     });
@@ -307,13 +308,15 @@ describe("useDocumentOperations", () => {
       captured.push(operations);
     };
 
-    const screen = render(<Probe id="doc-1" onOperations={onOperations} />);
+    const screen = await render(
+      <Probe id="doc-1" onOperations={onOperations} />,
+    );
     await vi.waitFor(() => {
       expect(textOf(screen, "count")).toBe("1");
     });
     const afterSuccess = captured[captured.length - 1];
 
-    screen.rerender(<Probe id="doc-1" onOperations={onOperations} />);
+    await screen.rerender(<Probe id="doc-1" onOperations={onOperations} />);
     const afterRerender = captured[captured.length - 1];
 
     expect(afterRerender).toBe(afterSuccess);
@@ -327,7 +330,7 @@ describe("useDocumentOperations", () => {
     } as unknown as IDocumentCache;
     setDocumentCache(documentsOnly);
 
-    const screen = render(<Probe id="doc-1" />);
+    const screen = await render(<Probe id="doc-1" />);
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(textOf(screen, "loading")).toBe("false");
     expect(textOf(screen, "count")).toBe("0");
@@ -339,7 +342,7 @@ describe("useDocumentOperations", () => {
     const getOperations = vi.fn(() => promise);
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(
+    const screen = await render(
       <>
         <Probe id="doc-1" />
         <Probe id="doc-1" />
@@ -387,22 +390,26 @@ describe("useDocumentOperations (legacy form)", () => {
   });
 
   it("fetches both scopes and pages each to completion", async () => {
-    const getOperations = vi.fn<GetOperations>((_id, view, _filter, paging) => {
-      const scope = view?.scopes?.[0];
-      if (scope === "local") {
-        return Promise.resolve(makePage([createFakeOperation(0, "local")]));
-      }
-      if (paging?.cursor === "g1") {
-        return Promise.resolve(makePage([createFakeOperation(2)]));
-      }
-      return Promise.resolve(
-        makePage([createFakeOperation(0), createFakeOperation(1)], "g1"),
-      );
-    });
+    // Held open so the awaited render can observe the loading state.
+    const gate = deferred<void>();
+    const getOperations = vi.fn<GetOperations>(
+      async (_id, view, _filter, paging) => {
+        await gate.promise;
+        const scope = view?.scopes?.[0];
+        if (scope === "local") {
+          return makePage([createFakeOperation(0, "local")]);
+        }
+        if (paging?.cursor === "g1") {
+          return makePage([createFakeOperation(2)]);
+        }
+        return makePage([createFakeOperation(0), createFakeOperation(1)], "g1");
+      },
+    );
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<LegacyProbe id="doc-1" />);
+    const screen = await render(<LegacyProbe id="doc-1" />);
     expect(textOf(screen, "loading")).toBe("true");
+    gate.resolve();
     await vi.waitFor(() => {
       expect(textOf(screen, "loading")).toBe("false");
     });
@@ -428,7 +435,7 @@ describe("useDocumentOperations (legacy form)", () => {
     });
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<LegacyProbe id="doc-1" />);
+    const screen = await render(<LegacyProbe id="doc-1" />);
     await vi.waitFor(() => {
       // local settled, global's first page settled, and its second page
       // (triggered by useLoadAllPages once hasNextPage is true) requested.
@@ -457,7 +464,7 @@ describe("useDocumentOperations (legacy form)", () => {
     });
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<LegacyProbe id="doc-1" />);
+    const screen = await render(<LegacyProbe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "error")).toBe("boom");
     });
@@ -469,7 +476,7 @@ describe("useDocumentOperations (legacy form)", () => {
     const getOperations = vi.fn(() => Promise.resolve(makePage([])));
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<LegacyProbe id={null} />);
+    const screen = await render(<LegacyProbe id={null} />);
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(textOf(screen, "loading")).toBe("false");
     expect(textOf(screen, "global")).toBe("");
@@ -484,7 +491,7 @@ describe("useDocumentOperations (legacy form)", () => {
     });
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<LegacyProbe id="doc-1" />);
+    const screen = await render(<LegacyProbe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "loading")).toBe("false");
     });
@@ -510,7 +517,7 @@ describe("useDocumentOperations (legacy form)", () => {
     );
     setDocumentCache(makeCache(getOperations));
 
-    const screen = render(<Probe id="doc-1" scope="global" />);
+    const screen = await render(<Probe id="doc-1" scope="global" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "count")).toBe("1");
     });
@@ -536,13 +543,13 @@ describe("useDocumentOperations (legacy form)", () => {
       return <span data-testid="sorted-count">{sorted.length}</span>;
     }
 
-    const screen = render(<CaptureProbe id="doc-1" />);
+    const screen = await render(<CaptureProbe id="doc-1" />);
     await vi.waitFor(() => {
       expect(textOf(screen, "sorted-count")).toBe("2");
     });
     const afterSuccess = captured[captured.length - 1];
 
-    screen.rerender(<CaptureProbe id="doc-1" />);
+    await screen.rerender(<CaptureProbe id="doc-1" />);
     const afterRerender = captured[captured.length - 1];
 
     expect(afterRerender).toBe(afterSuccess);

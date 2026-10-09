@@ -1,5 +1,6 @@
-import type { Options as BenchOptions } from "tinybench";
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
+import { bench } from "./loud-bench.js";
+import type { BenchOptions } from "./loud-bench.js";
 import { EventBus } from "../src/events/event-bus.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
@@ -87,10 +88,9 @@ function makeJob(spec: JobSpec): Job {
  * measurements at all.
  *
  * tinybench calls setup and teardown once around each of the warmup and run
- * loops, never per iteration, and vitest constructs the Task without
- * FnOptions, so beforeEach/afterEach are unreachable. Per-iteration
- * freshness therefore lives inside the measured function (a fresh queue),
- * and prepare only builds iteration-invariant fixtures.
+ * loops, never per iteration. Per-iteration freshness therefore lives inside
+ * the measured function (a fresh queue), and prepare only builds
+ * iteration-invariant fixtures.
  */
 function benchCase<TState>(
   name: string,

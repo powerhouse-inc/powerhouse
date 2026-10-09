@@ -1,8 +1,9 @@
 // Reading an attachment into a step's workspace: the workflow document has to
 // vouch for the ref, and the bytes are capped as they arrive.
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { createAttachmentPort } from "./attachment-port.js";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,6 +32,14 @@ afterEach(async () => {
   dir = undefined;
 });
 
+function access(allowed: boolean, onWritten?: (ref: string) => void) {
+  return {
+    documentIdFor: () => WORKFLOW,
+    canReadRef: () => Promise.resolve(allowed),
+    ...(onWritten ? { onWritten } : {}),
+  };
+}
+
 function clientOver(
   chunks: Uint8Array[],
   header: Record<string, unknown> = {},
@@ -47,11 +56,7 @@ function clientOver(
 describe("the attachment port's read", () => {
   it("refuses a ref the host does not let the workflow read", async () => {
     const client = clientOver([new Uint8Array([1, 2, 3, 4])]);
-    const port = createAttachmentPort(
-      client as never,
-      () => WORKFLOW,
-      () => Promise.resolve(false),
-    );
+    const port = createAttachmentPort(client as never, access(false));
 
     await expect(port.read(REF, await destPath())).rejects.toThrow(
       "may not read it",
@@ -62,11 +67,7 @@ describe("the attachment port's read", () => {
 
   it("writes the bytes out when the document vouches for the ref", async () => {
     const client = clientOver([new Uint8Array([1, 2, 3, 4])]);
-    const port = createAttachmentPort(
-      client as never,
-      () => WORKFLOW,
-      () => Promise.resolve(true),
-    );
+    const port = createAttachmentPort(client as never, access(true));
     const path = await destPath();
 
     const result = await port.read(REF, path);
@@ -85,8 +86,7 @@ describe("the attachment port's read", () => {
     );
     const port = createAttachmentPort(
       { download, upload: vi.fn() } as never,
-      () => WORKFLOW,
-      () => Promise.resolve(true),
+      access(true),
     );
 
     await expect(port.read(REF, await destPath())).rejects.toThrow(
@@ -115,8 +115,7 @@ describe("the attachment port's read", () => {
         download: () => Promise.resolve({ header: { sizeBytes: 4 }, body }),
         upload: vi.fn(),
       } as never,
-      () => WORKFLOW,
-      () => Promise.resolve(true),
+      access(true),
     );
     const path = await destPath();
 
@@ -124,5 +123,55 @@ describe("the attachment port's read", () => {
     expect(cancelled).toBe(true);
     expect(pulls).toBeLessThan(10);
     expect(existsSync(path)).toBe(false);
+  });
+});
+
+describe("the attachment port's write", () => {
+  it("uploads the staged file as a stream with its hash, and reports the ref", async () => {
+    const path = await destPath();
+    const bytes = Buffer.from("date,amount\n2026-01-01,1\n");
+    await writeFile(path, bytes);
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    let sent: Buffer | undefined;
+    let options: unknown;
+    const upload = vi.fn(
+      async (input: {
+        preprocessed: {
+          ref: string;
+          options: unknown;
+          data: ReadableStream<Uint8Array>;
+        };
+      }) => {
+        options = input.preprocessed.options;
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of input.preprocessed.data) chunks.push(chunk);
+        sent = Buffer.concat(chunks);
+        return { ref: input.preprocessed.ref };
+      },
+    );
+    const written: string[] = [];
+    const port = createAttachmentPort(
+      { download: vi.fn(), upload } as never,
+      access(false, (ref) => written.push(ref)),
+    );
+
+    const ref = await port.write({
+      path,
+      fileName: "report.csv",
+      size: bytes.byteLength,
+      contentType: "text/csv",
+    });
+
+    expect(ref).toBe(`attachment://v1:${hash}`);
+    expect(sent?.equals(bytes)).toBe(true);
+    expect(options).toEqual({
+      mimeType: "text/csv",
+      fileName: "report.csv",
+      extension: "csv",
+      clientHash: hash,
+      sizeBytes: bytes.byteLength,
+    });
+    // The run may read back what it wrote.
+    expect(written).toEqual([ref]);
   });
 });

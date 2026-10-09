@@ -22,18 +22,27 @@ export {
   type OpKind,
   type OwnerMessage,
   type ReactorIdentity,
+  type RpcAdoptSyncPeer,
   type RpcDbOp,
   type RpcLiveEvent,
   type RpcLiveSubscribe,
   type RpcLiveUnsub,
   type RpcMessage,
   type RpcPoster,
+  type RpcRemoveSyncPeer,
   type RpcRequestOptions,
   type VersionFingerprint,
   type WorkerInspectorInfo,
   type WorkerMigrationState,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor/rpc";
+export {
+  sendAdoptSyncPeer,
+  sendRemoveSyncPeer,
+  type AdoptSyncPeerParams,
+  type RemoveSyncPeerParams,
+} from "./adopt-sync-peer.js";
+export { localSyncPeerHandlers } from "./local-sync-peer-handlers.js";
 export {
   createWorkerAdminClient,
   type IWorkerAdminClient,
@@ -66,7 +75,11 @@ export {
   postReactorIdentity,
   type ReactorHello,
 } from "./connect-reactor.js";
-export { ReactorHost } from "./reactor-host.js";
+export {
+  isFingerprintMismatchReload,
+  ReactorHost,
+  RETIRED_WORKER_RELOAD_REASON,
+} from "./reactor-host.js";
 export {
   createSyncManagerProxy,
   SyncManagerProxy,

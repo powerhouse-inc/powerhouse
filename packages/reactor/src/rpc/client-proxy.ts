@@ -6,7 +6,7 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
+import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model/version";
 import { fromErrorInfo } from "./error-info.js";
 import type { MessageRouter } from "./message-router.js";
 import { rehydratePage } from "./paging.js";

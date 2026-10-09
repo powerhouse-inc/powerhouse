@@ -1,7 +1,13 @@
 // Step card + add buttons, ported from the Activepieces builder step-node
 // and add-button components (MIT, activepieces packages/web).
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { createContext, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import {
   ADD_BUTTON_SIZE,
   BIG_ADD_BUTTON_SIZE,
@@ -10,6 +16,7 @@ import {
 } from "./ap-layout.js";
 import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo, BlockSelector } from "./BlockSelector.js";
+import { PickerPopover } from "./PickerPopover.js";
 import {
   STEP_PRESETS,
   stepBlock,
@@ -290,11 +297,14 @@ function AddButton(props: {
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLButtonElement>(null);
+  const close = useCallback(() => setOpen(false), []);
   const size = props.size ?? ADD_BUTTON_SIZE;
   const label = props.label;
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <button
+        ref={anchor}
         type="button"
         aria-label={props.title}
         aria-expanded={open}
@@ -332,31 +342,33 @@ function AddButton(props: {
         )}
       </button>
       {open ? (
-        <div
-          data-selector-open="true"
-          className="absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2"
-        >
-          <BlockSelector
-            title={props.title}
-            presets={props.presets}
-            showPieces={props.showPieces}
-            pieceMode={props.pieceMode}
-            attachSteps={props.attachSteps}
-            onAttach={
-              props.onAttach
-                ? (stepId) => {
-                    setOpen(false);
-                    props.onAttach?.(stepId);
-                  }
-                : undefined
-            }
-            onPick={(preset) => {
-              setOpen(false);
-              props.onPick(preset);
-            }}
-            onClose={() => setOpen(false)}
-          />
-        </div>
+        <PickerPopover anchor={anchor} onClose={close}>
+          {(placement) => (
+            <BlockSelector
+              anchor={anchor}
+              width={placement.width}
+              height={placement.height}
+              title={props.title}
+              presets={props.presets}
+              showPieces={props.showPieces}
+              pieceMode={props.pieceMode}
+              attachSteps={props.attachSteps}
+              onAttach={
+                props.onAttach
+                  ? (stepId) => {
+                      setOpen(false);
+                      props.onAttach?.(stepId);
+                    }
+                  : undefined
+              }
+              onPick={(preset) => {
+                setOpen(false);
+                props.onPick(preset);
+              }}
+              onClose={close}
+            />
+          )}
+        </PickerPopover>
       ) : null}
     </div>
   );

@@ -383,10 +383,11 @@ describe("a replica that lost a live operation of its own (#6)", () => {
     const { id, base, x } = await damaged(h);
 
     await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
-    await quiesce(h, id);
-
-    expect(await sourceRemoteOnB(h, id, x)).toContain("");
-    expect(await live(h.a, id)).toContain(x);
+    // The operation index lags the operation store, so poll what is asserted.
+    await eventually(async () =>
+      (await sourceRemoteOnB(h!, id, x)).includes(""),
+    );
+    await eventually(async () => (await live(h!.a, id)).includes(x));
   }, 30_000);
 
   // BUG (b): a trivial-append load keeps the sender's skip; z retracts A's y.
@@ -407,9 +408,11 @@ describe("a replica that lost a live operation of its own (#6)", () => {
 
     // A's next write serves the echo; B reshuffles on its matching action id.
     await executeOn(h.a, id, "w", new Date().toISOString());
+    await eventually(async () =>
+      (await sourceRemoteOnB(h!, id, x)).includes(""),
+    );
     await quiesce(h, id);
 
-    expect(await sourceRemoteOnB(h, id, x)).toContain("");
     expect(await live(h.a, id)).toEqual(await live(h.b, id));
   }, 30_000);
 });

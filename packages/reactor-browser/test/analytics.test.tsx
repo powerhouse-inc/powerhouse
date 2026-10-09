@@ -80,11 +80,14 @@ describe("Analytics Store", () => {
   it("should add and query analytics data", async () => {
     const wrapper = await createWrapper();
 
-    const { result: addResult, act } = renderHook(() => useAddSeriesValue(), {
-      wrapper,
-    });
+    const { result: addResult, act } = await renderHook(
+      () => useAddSeriesValue(),
+      {
+        wrapper,
+      },
+    );
 
-    act(() => {
+    await act(() => {
       addResult.current.mutate({
         start: DateTime.now(),
         source: TEST_SOURCE,
@@ -102,7 +105,7 @@ describe("Analytics Store", () => {
     });
 
     // Test querying series data
-    const { result: queryResult } = renderHook(
+    const { result: queryResult } = await renderHook(
       () =>
         useAnalyticsSeries({
           start: null,
@@ -154,7 +157,7 @@ describe("Analytics Store", () => {
         {children}
       </QueryClientProvider>
     );
-    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+    const { result: addResult } = await renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
@@ -173,7 +176,7 @@ describe("Analytics Store", () => {
       "No analytics store available. Use within an AnalyticsProvider.",
     );
 
-    const { result: queryResult } = renderHook(
+    const { result: queryResult } = await renderHook(
       () =>
         useAnalyticsSeries(
           {
@@ -208,7 +211,7 @@ describe("Analytics Store", () => {
     const wrapper = await createWrapper();
 
     // Add test data
-    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+    const { result: addResult } = await renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
@@ -238,7 +241,9 @@ describe("Analytics Store", () => {
     };
 
     // Test analytics query
-    const { result } = renderHook(() => useAnalyticsQuery(query), { wrapper });
+    const { result } = await renderHook(() => useAnalyticsQuery(query), {
+      wrapper,
+    });
 
     await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -257,7 +262,7 @@ describe("Analytics Store", () => {
     const wrapper = await createWrapper();
 
     // Add test data
-    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+    const { result: addResult } = await renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
@@ -275,7 +280,7 @@ describe("Analytics Store", () => {
     await store.addSeriesValue(addValue);
     await addResult.current.mutateAsync(addValue);
 
-    const { result } = renderHook(() => useGetDimensions(), { wrapper });
+    const { result } = await renderHook(() => useGetDimensions(), { wrapper });
 
     await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toStrictEqual(await store.getDimensions());
@@ -349,7 +354,7 @@ describe("Analytics Store", () => {
     };
 
     // Test analytics query
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useAnalyticsQuery(query, { sources: [TEST_SOURCE] }),
       {
         wrapper,
@@ -359,7 +364,7 @@ describe("Analytics Store", () => {
     await vi.waitFor(() => expect(result.current.data).toStrictEqual([]));
 
     // Add test data
-    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+    const { result: addResult } = await renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 

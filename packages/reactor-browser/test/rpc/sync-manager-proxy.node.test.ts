@@ -13,9 +13,11 @@ import {
   type RpcMessage,
   type IRpcTransport,
 } from "@powerhousedao/reactor/rpc";
+import { RPC_DEFAULT_TIMEOUT_MS } from "../../src/rpc/op-channel.js";
 import {
   createSyncManagerProxy,
   SYNC_STATUS_CHANGED_EVENT,
+  SyncManagerProxy,
 } from "../../src/rpc/sync-manager-proxy.js";
 
 function createFakeTransport() {
@@ -373,5 +375,53 @@ describe("createSyncManagerProxy", () => {
       event: { documentId: "doc-2", status: SyncStatus.Synced },
     });
     expect(calls).toEqual([["doc-1", SyncStatus.Outgoing]]);
+  });
+
+  describe("startup", () => {
+    const ATTEMPT_MS = RPC_DEFAULT_TIMEOUT_MS + 500;
+
+    function startProxy(isWaiting: () => boolean) {
+      const { transport, posted, deliver } = createFakeTransport();
+      const router = new MessageRouter();
+      router.attach(transport);
+      const manager = new SyncManagerProxy(
+        router,
+        createReactorEventBusProxy(router),
+      );
+      const result: { settled?: "ok" | "failed" } = {};
+      manager.startup({ isWaiting }).then(
+        () => (result.settled = "ok"),
+        () => (result.settled = "failed"),
+      );
+      return { posted, deliver, result };
+    }
+
+    it("keeps seeding while a store lock is waited on, then completes", async () => {
+      vi.useFakeTimers();
+      try {
+        let waiting = true;
+        const { posted, deliver, result } = startProxy(() => waiting);
+        await vi.advanceTimersByTimeAsync(5 * ATTEMPT_MS + 1_000);
+        expect(result.settled).toBeUndefined();
+
+        waiting = false;
+        deliver({ k: "res", id: lastSyncOp(posted, "list").id, value: [] });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(result.settled).toBe("ok");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("gives up after its attempts when no store lock is waited on", async () => {
+      vi.useFakeTimers();
+      try {
+        const { result } = startProxy(() => false);
+        await vi.advanceTimersByTimeAsync(3 * ATTEMPT_MS + 1_000);
+        expect(result.settled).toBe("failed");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

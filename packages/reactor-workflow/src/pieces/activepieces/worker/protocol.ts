@@ -14,6 +14,8 @@ export interface StagedInput {
   path: string;
   fileName?: string;
   contentType?: string;
+  // Why the host could not stage it; a FILE prop that needs it fails with this.
+  error?: string;
 }
 
 // Where a piece may connect to while this request runs. Enforced in the child
@@ -263,6 +265,7 @@ export interface ResultResponse {
   storeState?: Record<string, unknown>;
   schedules?: RecordedSchedule[];
   listeners?: RecordedListener[];
+  timings?: WorkerTimings;
 }
 
 export interface ErrorResponse {
@@ -270,6 +273,27 @@ export interface ErrorResponse {
   type: "error";
   error: SerializedPieceError;
   tlsPoisoned: boolean;
+  timings?: WorkerTimings;
+}
+
+// One part of serving a request, in epoch ms: piece.load, reactor.open,
+// models, action.
+export interface WorkerPhaseTiming {
+  name: string;
+  start: number;
+  end: number;
+  // The phase this one ran inside, e.g. "action" for a model loaded mid-action.
+  parent?: string;
+  attributes?: Record<string, string | boolean>;
+}
+
+// Where a request's time went inside the child, in epoch ms.
+export interface WorkerTimings {
+  received: number;
+  sent: number;
+  phases: WorkerPhaseTiming[];
+  // When the child's entry finished loading; on its first response only.
+  ready?: number;
 }
 
 export type WorkerResponse = ResultResponse | ErrorResponse;

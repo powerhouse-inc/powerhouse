@@ -8,12 +8,14 @@ import {
   setDriveMetadata,
   waitForDocumentReady,
   type BrowserReactorClientModule,
-  type Database,
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
 } from "@powerhousedao/reactor-browser";
-import type { UnsupportedStoredDocuments } from "@powerhousedao/reactor";
+import type {
+  GroupCommitPGliteInstance,
+  UnsupportedStoredDocuments,
+} from "@powerhousedao/reactor";
 import type {
   PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
@@ -27,9 +29,8 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
-import { getReactorPGlite } from "../pglite.db.js";
+import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
+import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -73,11 +74,14 @@ export async function createBrowserReactor(
     .withChannelScheme(ChannelScheme.CONNECT)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
-    .withKysely(
-      new Kysely<Database>({
-        dialect: new PGliteDialect(pg),
-      }),
-    );
+    .withGroupCommitPGlite({
+      pg: pg as unknown as GroupCommitPGliteInstance,
+      // A poisoned session's unflushed writes, and every position built on
+      // them, are void: only a reload restarts them from the store.
+      onUnrecoverable: reloadPageForPoisonedStore,
+      onDiagnostic: (message, error) =>
+        console.error(`[reactor] pglite: ${message}`, error),
+    });
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)
@@ -97,6 +101,8 @@ export async function createBrowserReactor(
   try {
     module = await builder.buildModule();
   } catch (error) {
+    // The build leaves pg open; a retry must not reuse it.
+    await discardReactorPGlite();
     throw toStoredDocumentsRefused(error);
   }
   return {

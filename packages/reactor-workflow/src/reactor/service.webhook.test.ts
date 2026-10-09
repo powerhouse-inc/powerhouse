@@ -262,6 +262,29 @@ describe("WorkflowRuntimeService webhooks", () => {
       }
     });
 
+    // A deliberate refusal is not a failure: 500 makes a provider retry it
+    // forever, each retry journaling another CANCELLED run.
+    it("answers a refused firing with 409, and a full queue with 429", async () => {
+      await arm({ responseMode: "sync" });
+      const fire = vi.spyOn(service, "fire");
+      const replyFor = async (refusal?: string, status = "CANCELLED") => {
+        fire.mockResolvedValueOnce({
+          status,
+          steps: [],
+          runId: "run-1",
+          ...(refusal ? { refusal } : {}),
+        } as never);
+        return (await service.deliverWebhook(request())).status;
+      };
+
+      expect(await replyFor("parked")).toBe(409);
+      expect(await replyFor("singleton")).toBe(409);
+      expect(await replyFor("stale")).toBe(409);
+      expect(await replyFor("queue-full")).toBe(429);
+      expect(await replyFor(undefined, "FAILED")).toBe(500);
+      expect(await replyFor(undefined, "CANCELLED")).toBe(500);
+    });
+
     it("answers 500 when the run throws", async () => {
       await arm({ responseMode: "sync" });
       vi.spyOn(service, "fire").mockRejectedValue(new Error("no such step"));

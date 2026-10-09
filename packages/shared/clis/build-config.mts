@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 import {
@@ -13,17 +14,22 @@ const entry = [
   "editors/index.ts",
   "editors/*/index.ts",
   "editors/*/module.ts",
-  "subgraphs/index.ts",
-  "subgraphs/*/index.ts",
   "processors/index.ts",
-  "processors/*/index.ts",
 ];
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
 // is loaded and run by a host process, never by the browser. Only the list of
 // pieces builds here; each piece is its own build (buildPieceBuildConfig), so
 // two pieces never share a chunk and each ships as one self-contained module.
-const nodeEntry = [...entry, "pieces/index.ts"];
+// ./subgraphs is node-only too: a Switchboard serves them, and Connect only
+// reaches them over GraphQL. Connect reaches processors through processors/index.ts.
+const nodeEntry = [
+  ...entry,
+  "processors/*/index.ts",
+  "subgraphs/index.ts",
+  "subgraphs/*/index.ts",
+  "pieces/index.ts",
+];
 
 // Where a package's pieces live, one directory per piece, as the node entry
 // glob spells it; `ph build` expands it against the project to find them.
@@ -109,6 +115,32 @@ const sharedNeverBundle = EXTERNALIZABLE_SHARED_SPECIFIERS.map(
   (s) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/.*)?$`),
 );
 
+type Plugin = NonNullable<InlineConfig["plugins"]>;
+
+const SWITCHBOARD_PROCESSORS_STUB = "\0powerhouse:switchboard-processors";
+
+// Connect runs processors with processorApp "connect", so the factory's import
+// of processors/switchboard.ts gets an empty list in the browser build.
+function switchboardProcessorsStub(): Plugin {
+  return {
+    name: "powerhouse:switchboard-processors-stub",
+    async resolveId(source, importer, extra) {
+      if (!importer || !/switchboard(\.[cm]?[jt]s)?$/.test(source)) return null;
+      const resolved = await this.resolve(source, importer, {
+        ...extra,
+        skipSelf: true,
+      });
+      const target = resolve("processors", "switchboard.ts");
+      return resolved?.id === target ? SWITCHBOARD_PROCESSORS_STUB : null;
+    },
+    load(id) {
+      return id === SWITCHBOARD_PROCESSORS_STUB
+        ? "export const processorFactoryBuilders = [];"
+        : null;
+    },
+  };
+}
+
 const baseBrowserConfig = {
   entry: browserEntry,
   platform: "browser" as const,
@@ -122,6 +154,7 @@ const baseBrowserConfig = {
       external: reactExternals,
       skipDuplicateCheck: true,
     }),
+    switchboardProcessorsStub(),
   ],
   inputOptions: {
     experimental: { resolveNewUrlToAsset: true },

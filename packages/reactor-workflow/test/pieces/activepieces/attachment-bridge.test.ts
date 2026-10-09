@@ -28,6 +28,7 @@ import {
   StagedFilesService,
 } from "../../../src/pieces/activepieces/context/files.js";
 import { FileTooLargeError } from "../../../src/pieces/activepieces/context/limits.js";
+import { AttachmentCache } from "../../../src/pieces/engine/attachment-cache.js";
 
 // Writes two files and nests one reference deep in the output, so the host's
 // rewrite has to walk the whole value rather than string-replace the JSON.
@@ -285,7 +286,7 @@ describe("AttachmentBridge", () => {
         }),
       ),
     ).rejects.toThrow(
-      /No staged file for reference "attachment:\/\/v1:missing"/,
+      /Could not read "attachment:\/\/v1:missing": no seeded attachment/,
     );
     expect(await readdir(stagingRoot)).toEqual([]);
   });
@@ -394,5 +395,302 @@ describe("rewriteFileRefs", () => {
   it("returns the value untouched when nothing was staged", () => {
     const value = { a: 1 };
     expect(rewriteFileRefs(value, new Map())).toBe(value);
+  });
+});
+
+// A streaming FILE prop gets a body to read; a plain one gets bytes whose
+// base64 is only computed when read.
+const STREAM_READER_FIXTURE = `
+const app = {
+  displayName: "Stream Reader Fixture",
+  actions: {
+    consume: {
+      name: "consume",
+      displayName: "Consume",
+      props: {
+        attachment: { type: "FILE", required: true, displayName: "File", streaming: true },
+      },
+      run: async (ctx) => {
+        const file = ctx.propsValue.attachment;
+        const chunks = [];
+        for await (const chunk of file.body) chunks.push(chunk);
+        return {
+          filename: file.filename,
+          size: file.size,
+          text: Buffer.concat(chunks).toString("utf8"),
+          buffered: "data" in file,
+        };
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
+
+const LAZY_READER_FIXTURE = `
+const app = {
+  displayName: "Lazy Reader Fixture",
+  actions: {
+    consume: {
+      name: "consume",
+      displayName: "Consume",
+      props: { attachment: { type: "FILE", required: true, displayName: "File" } },
+      run: async (ctx) => {
+        const file = ctx.propsValue.attachment;
+        const lazy = typeof Object.getOwnPropertyDescriptor(file, "base64").get === "function";
+        return { lazy, text: file.data.toString("utf8"), base64: file.base64 };
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
+
+const STREAM_WRITER_FIXTURE = `
+const { Readable } = require("node:stream");
+const app = {
+  displayName: "Stream Writer Fixture",
+  actions: {
+    emit: {
+      name: "emit",
+      displayName: "Emit",
+      props: {},
+      run: async (ctx) => ({
+        ref: await ctx.files.write({
+          fileName: "out.csv",
+          data: Readable.from([Buffer.from("a,b\\n"), Buffer.from("1,2\\n")]),
+        }),
+      }),
+    },
+  },
+};
+module.exports = { app };
+`;
+
+// A piece reporting a file it did not write: the host must not read it.
+const FORGER_FIXTURE = `
+const fs = require("node:fs");
+const path = require("node:path");
+const app = {
+  displayName: "Forger Fixture",
+  actions: {
+    forge: {
+      name: "forge",
+      displayName: "Forge",
+      props: {
+        mode: { type: "SHORT_TEXT", required: true, displayName: "Mode" },
+        target: { type: "SHORT_TEXT", required: true, displayName: "Target" },
+      },
+      run: async (ctx) => {
+        const { mode, target } = ctx.propsValue;
+        const ref = await ctx.files.write({ fileName: "x.txt", data: Buffer.from("ok") });
+        const staged = ctx.files.files[0];
+        if (mode === "outside") staged.path = target;
+        if (mode === "symlink") {
+          fs.rmSync(staged.path);
+          fs.symlinkSync(target, staged.path);
+        }
+        if (mode === "hardlink") {
+          fs.rmSync(staged.path);
+          fs.linkSync(target, staged.path);
+        }
+        if (mode === "traversal") {
+          staged.path = path.join(path.dirname(staged.path), "..", "..", path.basename(target));
+        }
+        return { ref };
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
+
+describe("Files and attachments", () => {
+  let outside = "";
+
+  beforeAll(async () => {
+    cacheDir = await mkdtemp(join(tmpdir(), "ap-attachments-"));
+    stagingRoot = await mkdtemp(join(tmpdir(), "ap-staging-"));
+    storeDir = await mkdtemp(join(tmpdir(), "ap-store-"));
+    outside = join(await mkdtemp(join(tmpdir(), "ap-outside-")), "secret.key");
+    await writeFile(outside, "host-secret");
+    worker = new PieceWorker();
+  });
+
+  afterAll(async () => {
+    worker.dispose();
+    await rm(cacheDir, { recursive: true, force: true });
+    await rm(stagingRoot, { recursive: true, force: true });
+    await rm(storeDir, { recursive: true, force: true });
+    await rm(join(outside, ".."), { recursive: true, force: true });
+  });
+
+  it("streams an attachment to a streaming FILE prop", async () => {
+    await writeFixture("@test/stream-reader", STREAM_READER_FIXTURE);
+    const port = attachmentPort();
+    await port.seed("attachment://v1:s1", "streamed-bytes", "rates.csv");
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
+
+    const result = await executor.execute(
+      execution("@test/stream-reader", "consume", {
+        attachment: "attachment://v1:s1",
+      }),
+    );
+
+    expect(result.output).toEqual({
+      filename: "rates.csv",
+      size: 14,
+      text: "streamed-bytes",
+      buffered: false,
+    });
+  });
+
+  it("computes base64 only when a piece reads it", async () => {
+    await writeFixture("@test/lazy-reader", LAZY_READER_FIXTURE);
+    const port = attachmentPort();
+    await port.seed("attachment://v1:l1", "lazy-bytes", "a.txt");
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
+
+    const result = await executor.execute(
+      execution("@test/lazy-reader", "consume", {
+        attachment: "attachment://v1:l1",
+      }),
+    );
+
+    expect(result.output).toEqual({
+      lazy: true,
+      text: "lazy-bytes",
+      base64: Buffer.from("lazy-bytes").toString("base64"),
+    });
+  });
+
+  it("ingests a file a piece wrote as a stream", async () => {
+    await writeFixture("@test/stream-writer", STREAM_WRITER_FIXTURE);
+    const port = attachmentPort();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
+
+    const result = await executor.execute(
+      execution("@test/stream-writer", "emit", {}),
+    );
+
+    expect((result.output as { ref: string }).ref).toMatch(/^attachment:\/\//);
+    expect(port.written).toEqual([
+      { fileName: "out.csv", size: 8, contentType: "text/csv" },
+    ]);
+  });
+
+  it.each(["outside", "symlink", "hardlink", "traversal"])(
+    "refuses to ingest a %s path the step did not write",
+    async (mode) => {
+      await writeFixture("@test/forger", FORGER_FIXTURE);
+      const port = attachmentPort();
+      const executor = new ActivepiecesBlockExecutor({
+        cacheDir,
+        worker,
+        stagingRoot,
+        attachments: port,
+      });
+
+      await expect(
+        executor.execute(
+          execution("@test/forger", "forge", { mode, target: outside }),
+        ),
+      ).rejects.toThrow("not a file the step wrote");
+      expect(port.written).toEqual([]);
+    },
+  );
+
+  it("reuses a cached attachment, but only after the read is authorized", async () => {
+    await writeFixture("@test/reader", READER_FIXTURE);
+    const port = attachmentPort();
+    const ref = `attachment://v1:${"c".repeat(64)}`;
+    await port.seed(ref, "cached-bytes", "c.pdf");
+    let downloads = 0;
+    let allowed = true;
+    const read = port.read.bind(port);
+    const counted: AttachmentPort = {
+      ...port,
+      read: (r, dest, signal) => {
+        downloads += 1;
+        return read(r, dest, signal);
+      },
+      authorize: () =>
+        allowed
+          ? Promise.resolve()
+          : Promise.reject(new Error("may not read it")),
+    };
+    const cache = new AttachmentCache({
+      dir: join(storeDir, "cache"),
+      maxBytes: 1024,
+    });
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: counted,
+      attachmentCache: cache,
+    });
+    const run = () =>
+      executor.execute(
+        execution("@test/reader", "consume", { attachment: ref }),
+      );
+
+    expect((await run()).output).toMatchObject({ text: "cached-bytes" });
+    expect((await run()).output).toMatchObject({
+      filename: "c.pdf",
+      text: "cached-bytes",
+    });
+    expect(downloads).toBe(1);
+
+    // A cached copy is no shortcut past the check.
+    allowed = false;
+    await expect(run()).rejects.toThrow();
+    expect(downloads).toBe(1);
+  });
+
+  it("counts staging against the step timeout", async () => {
+    await writeFixture("@test/reader", READER_FIXTURE);
+    const port = attachmentPort();
+    const slow: AttachmentPort = {
+      ...port,
+      read: (_ref, _dest, signal) =>
+        new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () =>
+            reject(new Error("staging aborted")),
+          );
+        }),
+    };
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: slow,
+      defaultTimeoutMs: 200,
+    });
+
+    const started = Date.now();
+    await expect(
+      executor.execute(
+        execution("@test/reader", "consume", {
+          attachment: "attachment://v1:t1",
+        }),
+      ),
+    ).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(5_000);
   });
 });

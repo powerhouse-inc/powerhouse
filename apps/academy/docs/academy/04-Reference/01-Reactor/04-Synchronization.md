@@ -39,7 +39,7 @@ const sync = module.syncModule?.syncManager; // ISyncManager | undefined
 type JwtHandler = (url: string) => Promise<string | undefined>;
 ```
 
-If you set both `withChannelScheme` and `withSync`, only the scheme path runs and your custom `SyncBuilder` is discarded. The scheme path always constructs a fresh `SyncBuilder` with the scheme's factory.
+`withChannelScheme` and `withSync` are mutually exclusive: if you set both, `build()` and `buildModule()` throw. Use the scheme, or pass your own `SyncBuilder`, not both.
 
 ### Full control: `withSync`
 

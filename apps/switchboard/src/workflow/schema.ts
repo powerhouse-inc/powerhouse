@@ -103,10 +103,20 @@ export const schema: DocumentNode = gql`
       version: String
     ): Unknown
     """
-    Action/trigger name search across the catalog. The index builds lazily on
-    first use; poll while status is "indexing".
+    Piece and block search across the catalog, grouped by piece. The index
+    builds lazily on first use; poll while status is "indexing".
     """
-    searchBlocks(query: String!, limit: Int): BlockSearchResult!
+    searchPieces(
+      query: String!
+      "action | trigger"
+      kind: String!
+      "local | registry | activepieces; all when omitted."
+      sources: [String!]
+      "Category ids, any of; all when omitted."
+      categories: [String!]
+      "Pieces returned."
+      limit: Int
+    ): PieceSearchResult!
     """
     Health of every registered piece trigger (poll schedule, errors).
     """
@@ -223,10 +233,28 @@ export const schema: DocumentNode = gql`
     latestVersion: String
   }
 
-  type BlockSearchResult {
+  type PieceSearchMatch {
+    pieceName: String!
+    pieceVersion: String!
+    displayName: String!
+    description: String!
+    logoUrl: String!
+    categories: [String!]!
+    "local | registry | activepieces"
+    source: String!
+    deprecated: Boolean
+    "Why no block of the piece can run on this reactor."
+    unsupported: String
+    "Every query token matched the piece's own name."
+    namedPiece: Boolean!
+    "Matching blocks of the kind asked for, best first."
+    blocks: [BlockSearchHit!]!
+  }
+
+  type PieceSearchResult {
     "ready | indexing | error"
     status: String!
-    hits: [BlockSearchHit!]!
+    pieces: [PieceSearchMatch!]!
     indexedPieces: Int!
     error: String
   }
@@ -392,7 +420,11 @@ export const schema: DocumentNode = gql`
   type WorkflowStepTestResult {
     "Null when the test never started, e.g. an upstream block is untested."
     runId: String
-    "SUCCEEDED | FAILED"
+    """
+    SUCCEEDED | FAILED | INDETERMINATE. INDETERMINATE is neither: a host call
+    the block made timed out, so a write it asked for may well have landed.
+    Show it distinctly - it is not a confirmed pass.
+    """
     status: String!
     output: Unknown
     error: String

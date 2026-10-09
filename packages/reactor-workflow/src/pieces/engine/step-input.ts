@@ -2,6 +2,7 @@
 import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { EXISTENCE_OPERATORS } from "../core/branch-operators.js";
 import {
+  assertNoUnavailableValue,
   resolveExpressions,
   UnresolvedReferenceError,
   type ExpressionScope,
@@ -13,9 +14,28 @@ type StepInputSource = Pick<
   "pieceName" | "actionName" | "config"
 >;
 
+/**
+ * A step's resolved input, and the last gate before it crosses to the piece.
+ *
+ * The unavailable wrapper carries its reason on a symbol, so anything that
+ * serializes it loses the reason — the worker boundary included. Checking the
+ * whole resolved input here, at any depth, is what guarantees that no route
+ * through resolution can hand a piece the wrapper as data: the path checks
+ * inside `lookupPath` catch the ways an expression reaches one, and this
+ * catches whatever they do not.
+ */
+export function resolveStepInput(
+  step: StepInputSource,
+  scope: ExpressionScope,
+): unknown {
+  const input = resolveStepInputRaw(step, scope);
+  assertNoUnavailableValue(input);
+  return input;
+}
+
 // An existence test asks whether its operand names anything, so a reference
 // that resolves to nothing is its answer rather than an error.
-export function resolveStepInput(
+function resolveStepInputRaw(
   step: StepInputSource,
   scope: ExpressionScope,
 ): unknown {

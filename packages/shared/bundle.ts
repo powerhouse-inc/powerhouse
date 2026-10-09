@@ -15,6 +15,10 @@ await build({
     "document-model/index.ts",
     "document-model/utils.ts",
     "document-model/mock.ts",
+    // Dependency-free deep entries for the reactor RPC client, which runs in
+    // piece workers and must not load the document-model barrel (zod, crypto).
+    "document-model/version.ts",
+    "document-model/errors.ts",
     "document-drive/index.ts",
     "processors/index.ts",
     "registry/index.ts",

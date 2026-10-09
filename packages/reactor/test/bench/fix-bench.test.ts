@@ -22,48 +22,48 @@ import type {
 import type { VitestBenchReport } from "../../bench/records/from-vitest.js";
 import { FIX_EXIT } from "../../bench/fix/fix-options.js";
 
-function benchmark(name: string, mean: number, id: string) {
-  return {
-    id,
-    name,
-    rank: 1,
-    rme: 0.5,
-    totalTime: mean * 10,
+const FILE = "bench/write-cache.bench.ts";
+
+/** One case as `vitest bench --reporter=json` writes it: one test, one task. */
+function benchmark(suite: string, name: string, mean: number) {
+  const latency = {
+    mean,
     min: mean,
     max: mean,
-    hz: 1000 / mean,
-    mean,
-    sampleCount: 10,
-    median: mean,
+    p50: mean,
+    p75: mean,
+    p99: mean,
+    p999: mean,
+    rme: 0.5,
+    samplesCount: 10,
+  };
+  return {
+    ancestorTitles: [suite],
+    title: name,
+    benchmarks: [
+      {
+        name: `${suite} > ${name}`,
+        tasks: [{ name, latency, totalTime: mean * 10 }],
+      },
+    ],
   };
 }
 
-const report: VitestBenchReport = {
-  files: [
-    {
-      filepath: "bench/write-cache.bench.ts",
-      groups: [
-        {
-          fullName: "bench/write-cache.bench.ts > Cold Miss",
-          benchmarks: [
-            benchmark("Cold miss rebuild (100 operations)", 16, "a"),
-            benchmark("Cold miss rebuild (1000 operations)", 856, "b"),
-          ],
-        },
-        {
-          fullName: "bench/write-cache.bench.ts > Baseline",
-          benchmarks: [
-            benchmark(
-              "No-cache baseline: manual rebuild (1000 operations)",
-              858,
-              "c",
-            ),
-          ],
-        },
-      ],
-    },
-  ],
-};
+function benchReport(
+  ...assertionResults: ReturnType<typeof benchmark>[]
+): VitestBenchReport {
+  return { testResults: [{ name: FILE, assertionResults }] };
+}
+
+const report = benchReport(
+  benchmark("Cold Miss", "Cold miss rebuild (100 operations)", 16),
+  benchmark("Cold Miss", "Cold miss rebuild (1000 operations)", 856),
+  benchmark(
+    "Baseline",
+    "No-cache baseline: manual rebuild (1000 operations)",
+    858,
+  ),
+);
 
 const cases = flattenReport(report);
 
@@ -311,22 +311,10 @@ describe("judgeBound", () => {
 });
 
 describe("runCriterion and runCompare for a case no before-run has", () => {
-  const withNewArm: VitestBenchReport = {
-    files: [
-      {
-        filepath: "bench/write-cache.bench.ts",
-        groups: [
-          {
-            fullName: "bench/write-cache.bench.ts > Cold Miss",
-            benchmarks: [
-              benchmark("Cold miss rebuild (1000 operations)", 856, "b"),
-              benchmark("Cold miss rebuild (10000 operations)", 9000, "d"),
-            ],
-          },
-        ],
-      },
-    ],
-  };
+  const withNewArm = benchReport(
+    benchmark("Cold Miss", "Cold miss rebuild (1000 operations)", 856),
+    benchmark("Cold Miss", "Cold miss rebuild (10000 operations)", 9000),
+  );
 
   it("writes a bound criterion without --before and judges the after-run with it", () => {
     const dir = mkdtempSync(join(tmpdir(), "fix-bench-"));

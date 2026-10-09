@@ -7,15 +7,19 @@ import {
 } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { GqlChannelConfig } from "../../../../src/sync/channels/gql-req-channel.js";
-import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
+import type {
+  IPollTimer,
+  PollDelegate,
+} from "../../../../src/sync/channels/poll-timer.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import type { RemoteFilter } from "../../../../src/sync/types.js";
 import { createMockLogger } from "../../../factories.js";
 
 export { createMockLogger };
 
+/** Fires ticks on demand, and never cancels one, so it passes no signal. */
 export class ManualPollTimer implements IPollTimer {
-  private delegate: (() => Promise<void>) | undefined;
+  private delegate: PollDelegate | undefined;
   private running = false;
   private readonly autoFire: boolean;
 
@@ -23,14 +27,14 @@ export class ManualPollTimer implements IPollTimer {
     this.autoFire = autoFire;
   }
 
-  setDelegate(delegate: () => Promise<void>): void {
+  setDelegate(delegate: PollDelegate): void {
     this.delegate = delegate;
   }
 
   start(): void {
     this.running = true;
     if (this.autoFire && this.delegate) {
-      void this.delegate().catch(() => {});
+      void this.delegate(undefined).catch(() => {});
     }
   }
 
@@ -38,15 +42,15 @@ export class ManualPollTimer implements IPollTimer {
     this.running = false;
   }
 
-  async tick(): Promise<void> {
+  async tick(signal?: AbortSignal): Promise<void> {
     if (this.running && this.delegate) {
-      await this.delegate();
+      await this.delegate(signal);
     }
   }
 
   triggerNow(): void {
     if (this.running && this.delegate) {
-      void this.delegate().catch(() => {});
+      void this.delegate(undefined).catch(() => {});
     }
   }
 

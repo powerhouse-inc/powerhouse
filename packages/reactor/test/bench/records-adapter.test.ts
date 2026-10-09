@@ -30,6 +30,9 @@ const FIXTURE = join(
   "auth-scope-trimmed.json",
 );
 
+/** The fixture's file sits under this root, as a real run's would. */
+const ROOT = "/repo/packages/reactor";
+
 const ENVIRONMENT: MachineEnvironment = {
   host: "mac-studio-m2",
   os: "darwin 24.6.0",
@@ -53,8 +56,8 @@ function entryFor(
   return buildMicroEntry({
     target,
     runner: "vitest-bench",
-    runnerVersion: "4.1.1",
-    suites: suitesFromVitest(report()),
+    runnerVersion: "5.0.3",
+    suites: suitesFromVitest(report(), ROOT),
     environment: ENVIRONMENT,
     recordedAt: "2026-09-01T12:00:00.000Z",
     derived: [],
@@ -69,38 +72,82 @@ function entryFor(
   });
 }
 
+type RawReport = {
+  testResults: {
+    assertionResults: {
+      benchmarks: { tasks: Record<string, unknown>[] }[];
+    }[];
+  }[];
+};
+
+function rawReport(): RawReport {
+  return JSON.parse(readFileSync(FIXTURE, "utf8")) as RawReport;
+}
+
+function firstTask(value: VitestBenchReport) {
+  return value.testResults[0].assertionResults[0].benchmarks[0].tasks[0];
+}
+
 describe("suitesFromVitest", () => {
-  it("renames every field to its unit-suffixed form without touching the value", () => {
-    const raw = report().files[0].groups[0].benchmarks[0];
-    const converted = suitesFromVitest(report())[0].cases[0];
+  it("renames every latency field to its unit-suffixed form", () => {
+    const raw = firstTask(report());
+    const converted = suitesFromVitest(report(), ROOT)[0].cases[0];
 
     expect(converted).toEqual({
       name: raw.name,
-      rank: raw.rank,
-      hz: raw.hz,
-      meanMs: raw.mean,
-      medianMs: raw.median,
-      minMs: raw.min,
-      maxMs: raw.max,
-      rmePct: raw.rme,
-      sampleCount: raw.sampleCount,
+      rank: 1,
+      hz: 1000 / raw.latency.mean,
+      meanMs: raw.latency.mean,
+      medianMs: raw.latency.p50,
+      minMs: raw.latency.min,
+      maxMs: raw.latency.max,
+      rmePct: raw.latency.rme,
+      sampleCount: raw.latency.samplesCount,
       totalTimeMs: raw.totalTime,
-      vitestId: raw.id,
-      p75Ms: raw.p75,
-      p99Ms: raw.p99,
-      p999Ms: raw.p999,
+      p75Ms: raw.latency.p75,
+      p99Ms: raw.latency.p99,
+      p999Ms: raw.latency.p999,
     });
   });
 
+  it("ranks a suite's cases by mean, keeping their declared order", () => {
+    const suite = suitesFromVitest(report(), ROOT)[1];
+    const byMean = [...suite.cases].sort((a, b) => a.meanMs - b.meanMs);
+
+    expect(suite.cases.map((item) => item.name)).toEqual([
+      "10 grants, group of 10 members",
+      "10 grants, group of 1000 members",
+      "10 grants, group absent from the map",
+    ]);
+    expect(byMean.map((item) => item.rank)).toEqual([1, 2, 3]);
+  });
+
+  it("leaves out a bench.from() baseline replayed beside a case", () => {
+    const raw = rawReport();
+    const benchmark = raw.testResults[0].assertionResults[0].benchmarks[0];
+    benchmark.tasks.push({
+      ...benchmark.tasks[0],
+      name: "baseline",
+      fromStore: true,
+    });
+    const parsed = VitestBenchReport.parse(raw);
+
+    expect(
+      suitesFromVitest(parsed, ROOT)[0].cases.map((item) => item.name),
+    ).not.toContain("baseline");
+  });
+
   it("stamps a renamed case with the name it continues", () => {
-    const current = report().files[0].groups[0].benchmarks[0].name;
-    const suites = suitesFromVitest(report(), { "the old name": current });
+    const current = firstTask(report()).name;
+    const suites = suitesFromVitest(report(), ROOT, {
+      "the old name": current,
+    });
     expect(suites[0].cases[0].continues).toBe("the old name");
     expect(suites[0].cases[1]?.continues).toBeUndefined();
   });
 
-  it("keeps one suite per group, nested groups included", () => {
-    const suites = suitesFromVitest(report());
+  it("keeps one suite per describe path, nested ones included", () => {
+    const suites = suitesFromVitest(report(), ROOT);
 
     expect(suites.map((suite) => suite.fullName)).toEqual([
       "bench/auth-scope.bench.ts > auth policy evaluation (pure CPU)",
@@ -108,33 +155,32 @@ describe("suitesFromVitest", () => {
     ]);
   });
 
-  it("drops a group that ran no cases rather than emitting an empty suite", () => {
+  it("drops a test that ran no benchmark rather than emitting an empty suite", () => {
     const empty = report();
-    empty.files[0].groups[0].benchmarks = [];
+    for (const assertion of empty.testResults[0].assertionResults.slice(0, 2)) {
+      assertion.benchmarks = [];
+    }
 
-    expect(suitesFromVitest(empty)).toHaveLength(1);
+    expect(suitesFromVitest(empty, ROOT)).toHaveLength(1);
   });
 
   it("makes the source path relative to where the run happened", () => {
-    expect(sourceFilesFromVitest(report(), "/repo/packages/reactor")).toEqual([
+    expect(sourceFilesFromVitest(report(), ROOT)).toEqual([
       "bench/auth-scope.bench.ts",
     ]);
   });
 
   it("tolerates a vitest version that adds a field", () => {
-    const raw = JSON.parse(readFileSync(FIXTURE, "utf8")) as {
-      files: { groups: { benchmarks: Record<string, unknown>[] }[] }[];
-    };
-    raw.files[0].groups[0].benchmarks[0].newKeyFromAnUpgrade = 1;
+    const raw = rawReport();
+    raw.testResults[0].assertionResults[0].benchmarks[0].tasks[0].newKeyFromAnUpgrade = 1;
 
     expect(VitestBenchReport.safeParse(raw).success).toBe(true);
   });
 
   it("rejects a report missing a number the payload requires", () => {
-    const raw = JSON.parse(readFileSync(FIXTURE, "utf8")) as {
-      files: { groups: { benchmarks: Record<string, unknown>[] }[] }[];
-    };
-    delete raw.files[0].groups[0].benchmarks[0].median;
+    const raw = rawReport();
+    const task = raw.testResults[0].assertionResults[0].benchmarks[0].tasks[0];
+    delete (task.latency as Record<string, unknown>).p50;
 
     expect(VitestBenchReport.safeParse(raw).success).toBe(false);
   });
@@ -388,7 +434,7 @@ describe("buildMicroEntry", () => {
   });
 
   it("earns a caveat from a case with too few samples to mean much", () => {
-    const suites = suitesFromVitest(report());
+    const suites = suitesFromVitest(report(), ROOT);
     suites[0].cases[0].sampleCount = 12;
 
     const caveats = entryFor(findTarget("auth"), { suites })
@@ -435,7 +481,7 @@ describe("buildMicroEntry", () => {
   });
 
   it("reports a single-case suite without inventing a comparison", () => {
-    const suites = suitesFromVitest(report());
+    const suites = suitesFromVitest(report(), ROOT);
     suites[0].cases = [suites[0].cases[0]];
 
     const entry = entryFor(findTarget("auth"), { suites });

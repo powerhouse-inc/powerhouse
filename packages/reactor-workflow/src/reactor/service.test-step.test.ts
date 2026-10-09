@@ -55,6 +55,19 @@ export const stepTest = {
         throw new Error("the ledger said no");
       },
     },
+    unconfirmed: {
+      name: "unconfirmed",
+      displayName: "Unconfirmed",
+      props: {},
+      // A writing host call that timed out, as the worker reports one: the
+      // class does not cross the IPC boundary, the enumerable flag does.
+      run: async () => {
+        const error = new Error("reactor.submit did not answer within 10000ms; whether it was committed is unknown");
+        error.name = "HostCallIndeterminateError";
+        error.indeterminate = true;
+        throw error;
+      },
+    },
     big: {
       name: "big",
       displayName: "Big",
@@ -332,6 +345,62 @@ describe("testStep", () => {
     );
     expect((await service.testStep("wf-fail", "s2", CTX)).error).toBe(
       'Test "post" first: its last test failed',
+    );
+  }, 60_000);
+
+  // A binary FAILED-or-SUCCEEDED answer made a write-unconfirmed test read
+  // green, which is the one thing INDETERMINATE exists to prevent.
+  it("reports INDETERMINATE, not SUCCEEDED, when a host call does not answer", async () => {
+    documents.apply(
+      "wf-indeterminate",
+      actions.setTrigger({
+        id: "t1",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s1",
+        key: "charge",
+        name: "Charge",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "unconfirmed",
+        config: {},
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "s1", port: "next" }),
+    );
+
+    const result = await service.testStep("wf-indeterminate", "s1", CTX);
+    expect(result.status).toBe("INDETERMINATE");
+    expect(result.status).not.toBe("SUCCEEDED");
+    expect(result.output).toBeUndefined();
+
+    const store = (await service.store())!;
+    const [row] = await store.getSteps(result.runId!);
+    expect(row).toMatchObject({ step_id: "s1", status: "INDETERMINATE" });
+    // And the run it was journaled as is not green either.
+    expect((await store.getRun(result.runId!))?.status).toBe("FAILED");
+
+    // Nor is it a sample: a draft step reading its output would be standing
+    // on a null nobody confirmed.
+    documents.apply(
+      "wf-indeterminate",
+      actions.addStep({
+        id: "s2",
+        key: "after",
+        name: "After",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "echo",
+        config: { text: "{{steps.charge.output}}" },
+        propertySettings: expressionFields("text"),
+      }),
+      actions.addEdge({ id: "e2", from: "s1", to: "s2", port: "next" }),
+    );
+    expect((await service.testStep("wf-indeterminate", "s2", CTX)).error).toBe(
+      'Test "charge" again: its last test is INDETERMINATE, so it has no confirmed output',
     );
   }, 60_000);
 

@@ -17,6 +17,7 @@ import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
 import {
   formatAbsolute,
   formatDuration,
+  canRerun,
   formatMs,
   formatTrigger,
   formatWhen,
@@ -314,7 +315,7 @@ function RunDetail(props: {
             Resumes <span className="font-mono">{run.rerunOf.slice(0, 8)}</span>
           </span>
         ) : null}
-        {run.status === "FAILED" ? (
+        {canRerun(run) ? (
           <Button
             className="ml-auto"
             disabled={rerunning}

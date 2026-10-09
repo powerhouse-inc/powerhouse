@@ -39,11 +39,11 @@ export class MessageRouter {
     this.transport = null;
   }
 
-  post(message: ClientMessage): void {
+  post(message: ClientMessage, transfer?: Transferable[]): void {
     if (!this.transport) {
       throw new Error("MessageRouter.post called before attach");
     }
-    this.transport.post(message);
+    this.transport.post(message, transfer);
   }
 
   /** Register the sole owner of a message kind; throws on a duplicate. */

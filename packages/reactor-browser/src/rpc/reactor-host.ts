@@ -1,4 +1,8 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  AdoptSyncPeerParams,
+  RemoveSyncPeerParams,
+} from "./adopt-sync-peer.js";
 import {
   hostResponder,
   type IHostResponder,
@@ -8,11 +12,13 @@ import {
   type CorrelationId,
   type ReactorIdentity,
   type RpcAdmin,
+  type RpcAdoptSyncPeer,
   type RpcDbOp,
   type RpcHello,
   type RpcInspectorOp,
   type RpcLiveSubscribe,
   type RpcRegisterPackages,
+  type RpcRemoveSyncPeer,
   type RpcSyncOp,
   type RpcUnregisterPackages,
   type VersionFingerprint,
@@ -34,8 +40,15 @@ function isDataMessage(
     msg.k === "sync-op" ||
     msg.k === "db-op" ||
     msg.k === "inspector-op" ||
+    msg.k === "adopt-sync-peer" ||
+    msg.k === "remove-sync-peer" ||
     msg.k === "sub-live"
   );
+}
+
+/** A rejected adopt still owns the port it moved here, so close it. */
+function closeTransferredPort(msg: ClientMessage): void {
+  if (msg.k === "adopt-sync-peer") msg.port.close();
 }
 
 export type ReactorHostOptions = {
@@ -50,6 +63,12 @@ export type ReactorHostOptions = {
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onInspectorOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  /** See `localSyncPeerHandlers`, which builds both over the reactor's registry. */
+  onAdoptSyncPeer?: (
+    params: AdoptSyncPeerParams,
+    port: MessagePort,
+  ) => Promise<void>;
+  onRemoveSyncPeer?: (params: RemoveSyncPeerParams) => Promise<void>;
   onLiveQuery?: (
     sql: string,
     params: unknown[],
@@ -63,6 +82,10 @@ export type ReactorHostOptions = {
   onAdminRestart?: () => void;
   onAdminClearStorage?: () => Promise<void>;
   onAdminMigrate?: () => Promise<void>;
+  /** Stops the reactor and releases its stores once the worker is retired. */
+  onRetire?: (reason: string) => Promise<void>;
+  /** Bounded; a deploy's reload waits on it while data is already refused. */
+  drainBeforeReload?: () => Promise<void>;
 };
 
 function versionsCompatible(
@@ -84,27 +107,41 @@ function workerGenForVersion(version: VersionFingerprint): string {
   return `v${version.rpcProtocolVersion}-${version.appBuildId}${suffix}`;
 }
 
+const VERSION_MISMATCH = "reactor version mismatch";
+const FLAGS_CHANGED = "reactor enforcement flags changed";
+
+/** Whether a reload reason comes from a build fingerprint mismatch. */
+export function isFingerprintMismatchReload(reason: string): boolean {
+  return reason === VERSION_MISMATCH || reason.startsWith(FLAGS_CHANGED);
+}
+
 /** Names what differs, so a reload is diagnosable from the tab's console. */
 function mismatchReason(
   baseline: VersionFingerprint,
   incoming: VersionFingerprint,
 ): string {
   if ((baseline.featureFlags ?? "") !== (incoming.featureFlags ?? "")) {
-    return `reactor enforcement flags changed (worker: ${
+    return `${FLAGS_CHANGED} (worker: ${
       baseline.featureFlags || "none"
     }, tab: ${incoming.featureFlags || "none"})`;
   }
-  return "reactor version mismatch";
+  return VERSION_MISMATCH;
 }
 
 // Worker names end up in devtools and IndexedDB keys, so the flag set is
-// folded to a short stable token rather than spelled out.
+// reduced to a short stable token rather than spelled out.
 function hashFlags(flags: string): string {
   let hash = 0;
   for (let i = 0; i < flags.length; i++) {
     hash = (hash * 31 + flags.charCodeAt(i)) | 0;
   }
   return (hash >>> 0).toString(36);
+}
+
+export const RETIRED_WORKER_RELOAD_REASON = "worker retired";
+
+function retiredError(): Error {
+  return new Error("This worker was retired; reloading into the current one");
 }
 
 export class ReactorHost {
@@ -118,6 +155,8 @@ export class ReactorHost {
   private readonly ownerId: string;
   private readonly bootedAtMs: number;
   private migrationState: WorkerMigrationState | null = null;
+  private retirement: { reason: string; workerGen: string } | null = null;
+  private reloadSent = false;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
@@ -166,7 +205,14 @@ export class ReactorHost {
       }
       if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
         // Route the rejection to the kind's owner (sub -> sub-err, etc.).
+        closeTransferredPort(msg);
         reply.errForKind(msg, new Error("migration in progress"));
+        return;
+      }
+      // No reload here: a tab past its poisoned-store budget stays put on purpose.
+      if (this.retirement && isDataMessage(msg)) {
+        closeTransferredPort(msg);
+        reply.errForKind(msg, retiredError());
         return;
       }
       if (msg.k === "hello") {
@@ -197,6 +243,14 @@ export class ReactorHost {
         void this.handleOp(msg, this.options.onInspectorOp, "inspector", reply);
         return;
       }
+      if (msg.k === "adopt-sync-peer") {
+        void this.handleAdoptSyncPeer(msg, reply);
+        return;
+      }
+      if (msg.k === "remove-sync-peer") {
+        void this.handleRemoveSyncPeer(msg, reply);
+        return;
+      }
       if (msg.k === "sub-live") {
         void this.handleLiveSubscribe(msg, transport, reply, liveSubs);
         return;
@@ -206,7 +260,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "admin") {
-        this.handleAdmin(msg, reply);
+        this.handleAdmin(msg, reply, transport);
         return;
       }
       if (ready && server) {
@@ -219,6 +273,10 @@ export class ReactorHost {
     this.clients.add(transport);
     if (this.migrationState) {
       transport.post({ k: "migration", state: this.migrationState });
+    }
+    // Mid-drain it waits for the broadcast, which reaches it too.
+    if (this.retirement && this.reloadSent) {
+      transport.post({ k: "reload", ...this.retirement });
     }
     if (this.options.client) {
       void ensureServer()
@@ -257,6 +315,46 @@ export class ReactorHost {
     }
   }
 
+  // A reload this worker never recovers from; tabs that connect later get it too.
+  // A deploy's reload waits for the drain: the tabs keep the worker alive.
+  retireAndReload(reason: string, workerGen: string): void {
+    if (this.retirement) {
+      return;
+    }
+    this.retirement = { reason, workerGen };
+    const drain = this.options.drainBeforeReload;
+    if (!drain || !isFingerprintMismatchReload(reason)) {
+      this.sendReload(reason, workerGen);
+      return;
+    }
+    void this.drainThenReload(drain, reason, workerGen);
+  }
+
+  private async drainThenReload(
+    drain: () => Promise<void>,
+    reason: string,
+    workerGen: string,
+  ): Promise<void> {
+    try {
+      await drain();
+    } catch (error) {
+      console.error("ReactorHost drain before reload failed", error);
+    }
+    this.sendReload(reason, workerGen);
+  }
+
+  private sendReload(reason: string, workerGen: string): void {
+    this.reloadSent = true;
+    this.broadcastReload(reason, workerGen);
+    this.stopRetired(reason);
+  }
+
+  private stopRetired(reason: string): void {
+    this.options.onRetire?.(reason).catch((error: unknown) => {
+      console.error("ReactorHost retirement cleanup failed", error);
+    });
+  }
+
   // Cache + fan out the worker's migration state so tabs drive the banner from it.
   setMigrationState(state: WorkerMigrationState): void {
     this.migrationState = state;
@@ -265,11 +363,31 @@ export class ReactorHost {
     }
   }
 
+  get retired(): boolean {
+    return this.retirement !== null;
+  }
+
   get connectionCount(): number {
     return this.disposers.size;
   }
 
-  private handleAdmin(message: RpcAdmin, reply: IHostResponder): void {
+  private handleAdmin(
+    message: RpcAdmin,
+    reply: IHostResponder,
+    transport: IRpcTransport,
+  ): void {
+    // A retired worker no longer owns the store: send the tab to the one that does.
+    if (this.retirement && message.method !== "info") {
+      if (this.reloadSent) {
+        transport.post({
+          k: "reload",
+          reason: RETIRED_WORKER_RELOAD_REASON,
+          workerGen: this.retirement.workerGen,
+        });
+      }
+      reply.err(message.id, retiredError());
+      return;
+    }
     if (message.method === "restart") {
       this.options.onAdminRestart?.();
       reply.ok(message.id);
@@ -312,6 +430,10 @@ export class ReactorHost {
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {
+    // A retired worker's client may sit on stopped stores.
+    if (this.retirement) {
+      return Promise.reject(retiredError());
+    }
     if (!this.clientPromise) {
       const build = this.options.build;
       if (!build) {
@@ -322,6 +444,16 @@ export class ReactorHost {
       const pending = build(construct);
       this.clientPromise = pending;
       this.buildFailure = null;
+      // A build outliving the retirement holds stores onRetire left to it.
+      void pending.then(
+        () => {
+          // Mid-drain, the reload's own stop comes after.
+          if (this.retirement && this.reloadSent) {
+            this.stopRetired(this.retirement.reason);
+          }
+        },
+        () => undefined,
+      );
       pending.catch((error: unknown) => {
         if (this.clientPromise === pending) {
           this.clientPromise = null;
@@ -355,6 +487,7 @@ export class ReactorHost {
     return false;
   }
 
+  // A mismatch retires the worker for good: every tab reloads onto one gen.
   private async handleHello(
     message: RpcHello,
     transport: IRpcTransport,
@@ -364,11 +497,11 @@ export class ReactorHost {
   ): Promise<void> {
     if (this.baseline) {
       if (!versionsCompatible(this.baseline, message.version)) {
-        transport.post({
-          k: "reload",
-          reason: mismatchReason(this.baseline, message.version),
-          workerGen: workerGenForVersion(message.version),
-        });
+        // Salted per instance: the bare gen can be this worker's own name.
+        this.retireAndReload(
+          mismatchReason(this.baseline, message.version),
+          `${workerGenForVersion(message.version)}-${this.ownerId.slice(0, 8)}`,
+        );
         reply.ok(message.id, { ok: false });
         return;
       }
@@ -422,6 +555,58 @@ export class ReactorHost {
       },
       (value) => value,
     );
+  }
+
+  /** Closes the moved port on every failure; the sender can no longer close it. */
+  private async handleAdoptSyncPeer(
+    message: RpcAdoptSyncPeer,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onAdoptSyncPeer;
+    if (!handler) {
+      closeTransferredPort(message);
+      reply.errForKind(
+        message,
+        new Error("ReactorHost has no adopt-sync-peer handler"),
+      );
+      return;
+    }
+    await reply.run(message.id, async () => {
+      try {
+        await this.awaitClientReady();
+        await handler(
+          {
+            peerId: message.peerId,
+            channelName: message.channelName,
+            collectionIdKey: message.collectionIdKey,
+            remoteName: message.remoteName,
+            filter: message.filter,
+          },
+          message.port,
+        );
+      } catch (error) {
+        closeTransferredPort(message);
+        throw error;
+      }
+    });
+  }
+
+  private async handleRemoveSyncPeer(
+    message: RpcRemoveSyncPeer,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onRemoveSyncPeer;
+    if (!this.requireHandler(handler, message, reply, "remove-sync-peer")) {
+      return;
+    }
+    await reply.run(message.id, async () => {
+      await this.awaitClientReady();
+      await handler({
+        peerId: message.peerId,
+        channelName: message.channelName,
+        remoteName: message.remoteName,
+      });
+    });
   }
 
   private async handleLiveSubscribe(

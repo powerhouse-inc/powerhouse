@@ -66,6 +66,10 @@ export function clientAuth(
   return Array.isArray(auth) ? auth.map(one) : one(auth);
 }
 
+// Where a listing came from: a reactor package, the Powerhouse registry, or
+// the Activepieces cloud catalog.
+export type PieceSource = "local" | "registry" | "activepieces";
+
 export interface PieceSummary {
   name: string;
   displayName: string;
@@ -75,6 +79,7 @@ export interface PieceSummary {
   actionCount: number;
   triggerCount: number;
   categories: string[];
+  source: PieceSource;
   // The piece's PieceAuth descriptor, verbatim; null when authless.
   auth: unknown;
   // Why no block of the piece can run here. Listed, so a
@@ -155,6 +160,11 @@ export interface CatalogSuggestionEntry {
   name?: string;
   auth?: unknown;
   displayName?: string;
+  description?: string;
+  categories?: string[];
+  deprecated?: boolean;
+  // Set by this module, not the listing.
+  source?: PieceSource;
   version?: string;
   logoUrl?: string;
   suggestedActions?: PieceDetailAction[];
@@ -271,6 +281,13 @@ function registryFirst<T extends { name?: unknown }>(
   return [...registry, ...cloud.filter((entry) => !claimed.has(entry.name))];
 }
 
+function tagged<T extends object>(
+  entries: T[],
+  source: PieceSource,
+): (T & { source: PieceSource })[] {
+  return entries.map((entry) => ({ ...entry, source }));
+}
+
 // ~17 MB for the whole cloud catalog; fetched once per index build, never
 // cached here (block-search keeps the compact index instead).
 export async function fetchCatalogWithSuggestions(): Promise<
@@ -278,8 +295,8 @@ export async function fetchCatalogWithSuggestions(): Promise<
 > {
   const { registry, cloud } = await publishedLists(true, 120_000);
   return registryFirst(
-    registry as CatalogSuggestionEntry[],
-    cloud as CatalogSuggestionEntry[],
+    tagged(registry as CatalogSuggestionEntry[], "registry"),
+    tagged(cloud as CatalogSuggestionEntry[], "activepieces"),
   );
 }
 
@@ -292,7 +309,7 @@ export function __resetCatalogCacheForTests(): void {
 
 // A listing entry is worth showing only if it names a piece with a version
 // and at least one block; the counts are what the list endpoint carries.
-function toSummaries(raw: CatalogEntry[]): PieceSummary[] {
+function toSummaries(raw: CatalogEntry[], source: PieceSource): PieceSummary[] {
   return raw
     .filter(
       (entry) =>
@@ -311,6 +328,7 @@ function toSummaries(raw: CatalogEntry[]): PieceSummary[] {
       actionCount: typeof entry.actions === "number" ? entry.actions : 0,
       triggerCount: typeof entry.triggers === "number" ? entry.triggers : 0,
       categories: entry.categories ?? [],
+      source,
       auth: entry.auth ?? null,
       ...(entry.deprecated === true ? { deprecated: true } : {}),
       ...reasonOf(unsupportedAuth(entry.auth)),
@@ -323,8 +341,8 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
   }
   const lists = await publishedLists(false, 30_000);
   const published = registryFirst(
-    toSummaries(lists.registry as CatalogEntry[]),
-    toSummaries(lists.cloud as CatalogEntry[]),
+    toSummaries(lists.registry as CatalogEntry[], "registry"),
+    toSummaries(lists.cloud as CatalogEntry[], "activepieces"),
   );
   const value = [...published].sort((a, b) =>
     a.displayName.localeCompare(b.displayName),

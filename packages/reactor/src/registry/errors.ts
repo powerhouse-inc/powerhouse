@@ -91,7 +91,7 @@ export class ManifestNotFoundError extends Error {
   }
 }
 
-export { DowngradeNotSupportedError } from "@powerhousedao/shared/document-model";
+export { DowngradeNotSupportedError } from "@powerhousedao/shared/document-model/errors";
 
 /**
  * Error thrown when a required upgrade transition is missing from the manifest.
