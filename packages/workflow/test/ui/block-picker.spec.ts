@@ -151,8 +151,19 @@ test.describe("Block picker", () => {
     ).toBeVisible();
     await shot(app, "block-picker-search");
 
-    // The header opens the piece in the browse panes; Escape backs out.
+    // The header opens the piece in the browse panes. A key pressed while
+    // its blocks load leaves the keyboard on a real, marked row.
     await header.click();
+    await app.keyboard.press("ArrowDown");
+    const combobox = app.getByRole("combobox");
+    await expect
+      .poll(() => combobox.getAttribute("aria-activedescendant"))
+      .toMatch(/-entries-\d+$/);
+    const activeId = await combobox.getAttribute("aria-activedescendant");
+    await expect(app.locator(`[id="${activeId}"]`)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect(search).toHaveValue("");
     await expect(search).toBeFocused();
     await expect(

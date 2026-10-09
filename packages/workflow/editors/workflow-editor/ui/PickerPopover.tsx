@@ -47,14 +47,19 @@ export function PickerPopover(props: {
   return createPortal(
     <div
       data-selector-open="true"
-      className="nodrag nopan nowheel fixed z-50"
+      className="nodrag nopan nowheel fixed z-50 motion-safe:animate-[wf-picker-in_120ms_ease-out]"
       style={
         placement.above
           ? {
               left: placement.left,
               bottom: window.innerHeight - placement.top - placement.height,
+              transformOrigin: "bottom center",
             }
-          : { left: placement.left, top: placement.top }
+          : {
+              left: placement.left,
+              top: placement.top,
+              transformOrigin: "top center",
+            }
       }
     >
       {props.children(placement)}
