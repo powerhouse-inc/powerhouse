@@ -282,22 +282,15 @@ describe("a finalized module", () => {
     expect(() => codeFirstParity.utils.assertIsDocumentOfType({})).toThrow();
   });
 
-  /**
-   * Wave B pinned the compiled validators against the checked-in
-   * `document-drive` schemas, where a nullable object field is `.nullable()`
-   * (decision 27). The installed validation-schema plugin now emits
-   * `.nullish()` for that position, so a newly generated model accepts an
-   * absent nullable state key while the compiled validator rejects it. The
-   * difference is recorded here rather than hidden; the parity goldens in
-   * `test/parity/goldens` decide whether the compiled mapping moves.
-   */
-  it("pins the one known nullable-state-field divergence", () => {
+  it("accepts an absent nullable state key, as the schema-first model does", () => {
     const withoutTitle = {
       ...codeFirstParity.utils.createDocument().state,
       global: { todos: [] },
     };
-    expect(schemaFirstParity.utils.isStateOfType(withoutTitle)).toBe(true);
-    expect(codeFirstParity.utils.isStateOfType(withoutTitle)).toBe(false);
+    expect([
+      schemaFirstParity.utils.isStateOfType(withoutTitle),
+      codeFirstParity.utils.isStateOfType(withoutTitle),
+    ]).toStrictEqual([true, true]);
   });
 
   it("creates state and documents with the schema-first base fields", () => {

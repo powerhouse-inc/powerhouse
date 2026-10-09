@@ -114,6 +114,33 @@ describe("a generated class", () => {
     expect(() => canonicalJson(definition)).not.toThrow();
     expect(JSON.parse(JSON.stringify(definition))).toStrictEqual(definition);
   });
+
+  it("reports equals on a subgraph field as an error", () => {
+    const Subgraph = defineSubgraph({
+      name: "codes",
+      schemaKind: "typed",
+      entries: (build) => [
+        build.query("code", {
+          args: { code: ph.String({ equals: "[A-Z]{3}" }) },
+          returns: ph.String(),
+          resolve: () => null,
+        }),
+      ],
+    });
+    expect(
+      Subgraph.diagnostics.map(({ severity, code, path }) => ({
+        severity,
+        code,
+        path,
+      })),
+    ).toStrictEqual([
+      {
+        severity: "error",
+        code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+        path: ["entries", 0, "args", "code"],
+      },
+    ]);
+  });
 });
 
 describe("lifecycle", () => {

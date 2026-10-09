@@ -1,4 +1,7 @@
-import type { JsonValue } from "@powerhousedao/shared/document-model";
+import type {
+  DirectiveUseDefinition,
+  JsonValue,
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import { referenceResolver } from "./descriptor-registry.js";
 import { compareCodeUnits, EMPTY_INPUT_FIELD_NAME } from "./primitives.js";
@@ -18,21 +21,71 @@ import type {
 } from "./types.js";
 
 /**
- * Generated state schemas wrap nullable fields with `.nullable()` and
- * generated input schemas with `.nullish()`. The position decides which one a
- * field use gets, so the same descriptor can validate in both.
+ * The generator wraps a nullable field of an object or an input with
+ * `.nullish()`, and a nullable list item with `.nullable()`, whatever the
+ * position. So the slot a field use fills decides, and a descriptor's own
+ * validator is its field-slot validator.
  */
-export type ValidatorPosition = "input" | "output";
+function itemValidator(item: AnyFieldDescriptor): z.ZodType {
+  const base = fieldBase(item);
+  return item.required ? base : base.nullable();
+}
 
-const inputValidators = new WeakMap<object, z.ZodType>();
+function fieldBase(field: AnyFieldDescriptor): z.ZodType {
+  switch (field.kind) {
+    case "scalar":
+      return (field as ScalarDescriptor<any, any, any>).baseValidator;
+    case "list":
+      return z.array(
+        itemValidator((field as ListDescriptor<any, any, any>).item),
+      );
+    case "ref": {
+      const reference = field as ReferenceDescriptor<any, any, any>;
+      return z.lazy(() => resolveReference(reference).validator);
+    }
+  }
+}
 
-function withNullability(
+/**
+ * The regular expression source the generator writes for `@equals(value: v)`.
+ * The plugin fills its template `/^$1$/` with `String.prototype.replace`, so
+ * `v` is inserted unescaped and its replacement tokens (`$&`, `` $` ``, `$'`,
+ * `$$`) are expanded first.
+ */
+export function equalsPattern(value: string): string {
+  return "/^$1$/".replace("$1", value).slice(1, -1);
+}
+
+/**
+ * The generator maps `@equals(value: v)` to `.regex(/^v$/)` and ignores every
+ * other directive.
+ */
+function applyDirective(
   base: z.ZodType,
-  required: boolean,
-  position: ValidatorPosition,
+  directive: DirectiveUseDefinition,
 ): z.ZodType {
-  if (required) return base;
-  return position === "input" ? base.nullish() : base.nullable();
+  const value = directive.arguments.find(
+    (argument) => argument.name === "value",
+  )?.value;
+  if (directive.name !== "equals" || typeof value !== "string") return base;
+  return base.check(z.regex(new RegExp(equalsPattern(value))));
+}
+
+/**
+ * The generator emits `.default(v)` only on a field that is not a list and
+ * whose default is a string, number, boolean, or enum literal. A list, input
+ * object, or `null` default leaves the field as required as it was, although
+ * the generated types make every defaulted field an optional key.
+ */
+function withDefault(field: AnyFieldDescriptor, base: z.ZodType): z.ZodType {
+  const fallback = field.presentation.default;
+  if (!fallback.present || field.kind === "list") return base;
+  const { value } = fallback;
+  return typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+    ? base.default(value as never)
+    : base;
 }
 
 /**
@@ -41,14 +94,11 @@ function withNullability(
  * reports issues in shape order and a failed operation persists that message,
  * so the compiled schemas keep the generated order.
  */
-function objectShape(
-  fields: ObjectFields,
-  position: ValidatorPosition,
-): Record<string, z.ZodType> {
+function objectShape(fields: ObjectFields): Record<string, z.ZodType> {
   return Object.fromEntries(
     Object.entries(fields)
       .sort(([left], [right]) => compareCodeUnits(left, right))
-      .map(([key, field]) => [key, validatorFor(field, position)]),
+      .map(([key, field]) => [key, field.validator]),
   );
 }
 
@@ -62,31 +112,17 @@ export function resolveReference(
   return resolve();
 }
 
-/** Builds the validator a descriptor has in the given position. Not memoized. */
-export function buildValidator(
-  descriptor: AnyDescriptor,
-  position: ValidatorPosition,
-): z.ZodType {
+export function buildValidator(descriptor: AnyDescriptor): z.ZodType {
   switch (descriptor.kind) {
-    case "scalar": {
-      const scalar = descriptor as ScalarDescriptor<any, any, any>;
-      return withNullability(scalar.baseValidator, scalar.required, position);
-    }
-    case "list": {
-      const list = descriptor as ListDescriptor<any, any, any>;
-      return withNullability(
-        z.array(validatorFor(list.item, position)),
-        list.required,
-        position,
-      );
-    }
+    case "scalar":
+    case "list":
     case "ref": {
-      const reference = descriptor as ReferenceDescriptor<any, any, any>;
-      return withNullability(
-        z.lazy(() => validatorFor(resolveReference(reference), position)),
-        reference.required,
-        position,
+      const field = descriptor as AnyFieldDescriptor;
+      const base = withDefault(
+        field,
+        field.presentation.directives.reduce(applyDirective, fieldBase(field)),
       );
+      return field.required ? base : base.nullish();
     }
     case "enum": {
       // Generated enums are alphabetical, and the rejection message lists the
@@ -97,10 +133,7 @@ export function buildValidator(
       return z.enum(names as [string, ...string[]]);
     }
     case "input": {
-      const shape = objectShape(
-        (descriptor as InputDescriptor).fields,
-        "input",
-      );
+      const shape = objectShape((descriptor as InputDescriptor).fields);
       // An explicit empty input projects `_empty: Boolean` in SDL, so its
       // generated validator carries the same optional member.
       return z.object(
@@ -115,13 +148,11 @@ export function buildValidator(
         __typename: z.literal(object.name).optional(),
         // Stored fields only: a computed member has no value in a document,
         // so there is nothing for a validator to check.
-        ...objectShape(object.fields as ObjectFields, "output"),
+        ...objectShape(object.fields as ObjectFields),
       });
     }
     case "interface":
-      return z.object(
-        objectShape((descriptor as InterfaceDescriptor).fields, "output"),
-      );
+      return z.object(objectShape((descriptor as InterfaceDescriptor).fields));
     case "union": {
       // Generated unions list their members alphabetically too.
       const members = [...(descriptor as UnionDescriptor).members]
@@ -130,25 +161,6 @@ export function buildValidator(
       return z.union(members as [z.ZodType, z.ZodType, ...z.ZodType[]]);
     }
   }
-}
-
-/**
- * Returns the memoized validator for a descriptor in a position. A named type
- * has one natural position, so its own validator is returned as is; a field use
- * in input position is built once per descriptor token.
- */
-export function validatorFor(
-  descriptor: AnyDescriptor,
-  position: ValidatorPosition,
-): z.ZodType {
-  if (position === "output" || !isFieldUse(descriptor)) {
-    return descriptor.validator;
-  }
-  const memoized = inputValidators.get(descriptor);
-  if (memoized !== undefined) return memoized;
-  const built = buildValidator(descriptor, position);
-  inputValidators.set(descriptor, built);
-  return built;
 }
 
 export type InitialValueResult =
@@ -195,7 +207,7 @@ export function serializeAndValidateInitialValue(
   }
   const parsed = JSON.parse(serialized) as JsonValue;
   try {
-    validatorFor(root, "output").parse(parsed);
+    root.validator.parse(parsed);
   } catch (error) {
     return {
       ok: false,
@@ -204,14 +216,4 @@ export function serializeAndValidateInitialValue(
     };
   }
   return { ok: true, value: parsed, serialized };
-}
-
-function isFieldUse(
-  descriptor: AnyDescriptor,
-): descriptor is AnyFieldDescriptor {
-  return (
-    descriptor.kind === "scalar" ||
-    descriptor.kind === "list" ||
-    descriptor.kind === "ref"
-  );
 }

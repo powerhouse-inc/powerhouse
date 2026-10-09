@@ -81,16 +81,16 @@ Compiles each declaration into a structured definition.
 | ---- | -------- | ------- |
 | `PH-DEF-ENUM-VALUES-INVALID` | error | An enum has no values, a repeated value, or a reserved value. |
 | `PH-DEF-FIELD-INVALID` | error | A field holds something that is neither a field use nor a named type. |
-| `PH-DEF-FIELD-OPTION-UNSUPPORTED` | error | A field use has a validation option other than `required`. |
-| `PH-DEF-IMPLEMENTS-INVALID` | error | An object implements something that is not a `ph.interface`, or lists the same interface twice. |
+| `PH-DEF-FIELD-OPTION-UNSUPPORTED` | error | A field use has an option that its builder or its position does not support. For example, `equals` on a list, a reference, a scalar whose validator is not a Zod string schema, or a subgraph field. |
+| `PH-DEF-IMPLEMENTS-INVALID` | error | An object or an interface implements something that is not a `ph.interface`, or lists the same interface twice. |
 | `PH-DEF-NAME-INVALID` | error | A type, field, or enum value name is not a valid GraphQL name, or is a reserved name. |
-| `PH-DEF-OPTION-INVALID` | error | A builder option is malformed. For example, it has the wrong type, it is a getter, it uses a symbol key, it is not a plain object, or it sets a default to `undefined`. |
+| `PH-DEF-OPTION-INVALID` | error | A builder option is malformed. For example, it has the wrong type, it is a getter, it uses a symbol key, it is not a plain object, it sets a default to `undefined`, or its `equals` pattern is not a valid regular expression. |
 | `PH-DEF-REFERENCE-TARGET-INVALID` | error | The argument of `ph.ref` is not a named type. For example, it is a field use, another reference, `undefined`, or an input with no name. |
 | `PH-DEF-TYPE-AS-FIELD` | error | A named type is used as a field without `ph.ref`. |
 | `PH-DEF-UNION-MEMBERS-INVALID` | error | A union has no members, a repeated member, or a member that is not a `ph.object`. |
 | `PH-DM-COMPATIBILITY-INVALID` | error | The compatibility data is malformed, or it does not match the declaration. |
 | `PH-DM-DECLARATION-INVALID` | error | A part of a model declaration is missing, malformed, or not supported, or was not created by the builder functions. The part can be a model, module, operation, error, example, version, or family. |
-| `PH-DM-DEFAULT-UNSUPPORTED` | error | A field of the document state or of an action input declares a GraphQL default value. |
+| `PH-DM-DEFAULT-UNSUPPORTED` | error | A field of the document state declares a GraphQL default value. A field of an action input can declare one. |
 | `PH-DM-DUPLICATE-ACTION` | error | Two operations produce the same stored action type. |
 | `PH-DM-DUPLICATE-NAME` | error | Two declarations produce the same module name, GraphQL type name, or action creator name. |
 | `PH-DM-IDENTITY-INVALID` | error | An ID in the declaration is malformed, or two declarations produce the same ID. |

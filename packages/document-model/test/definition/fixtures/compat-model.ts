@@ -202,6 +202,7 @@ export const compatState = ph.object("CompatState", {
   fields: {
     title: ph.String({ required: true }),
     secret: ph.String(),
+    extra: ph.Int(),
   },
 });
 
@@ -216,7 +217,7 @@ export const compat = defineDocumentModel({
     graphQLCompatibility: COMPAT_DOCUMENT,
     global: {
       schema: compatState,
-      initialValue: { title: "", secret: null },
+      initialValue: { title: "", secret: null, extra: null },
     },
     local: { schema: null, initialValue: {} },
   },

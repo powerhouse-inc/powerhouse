@@ -168,6 +168,51 @@ describe("the structured definition builder", () => {
     expect(branch.implements).toStrictEqual(["NamedNode"]);
   });
 
+  it("emits the interfaces an interface implements, as SDL graphql can build", () => {
+    const Named = ph.interface("Named", { fields: { name: ph.String() } });
+    const Titled = ph.interface("Titled", {
+      fields: { name: ph.String(), title: ph.String() },
+      implements: [Named],
+    });
+    const Book = ph.object("Book", {
+      fields: { name: ph.String(), title: ph.String() },
+      implements: [Titled, Named],
+    });
+    const module = defineDocumentModel({
+      id: "test/interface-implements",
+      name: "Shelf",
+      description: "",
+      extension: "shelf",
+      version: 1,
+      author: { name: "Powerhouse" },
+      specifications: {
+        global: {
+          schema: ph.object("ShelfState", { fields: { book: ph.ref(Book) } }),
+          initialValue: { book: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    }).finalize({ modules: [] }) as unknown as typeof Invoice;
+    const specification = specificationOf(module);
+    expect(
+      specification.types.map((type) => [
+        type.name,
+        "implements" in type ? type.implements : undefined,
+      ]),
+    ).toStrictEqual([
+      ["ShelfState", undefined],
+      ["Book", ["Titled", "Named"]],
+      ["Titled", ["Named"]],
+      ["Named", undefined],
+    ]);
+    const sdl = module.documentModel.global.specifications.at(0)?.state.global
+      .schema as string;
+    expect(sdl).toContain("interface Titled implements Named {");
+    expect(
+      validateSchema(buildSchema(`${sdl}\n\ntype Query { state: ShelfState }`)),
+    ).toStrictEqual([]);
+  });
+
   it("puts an anonymous operation input on its operation, not in types", () => {
     const specification = specificationOf(Invoice);
     // Every derived operation input name ends in `Input`; the one named input
@@ -662,7 +707,7 @@ describe("the structured definition builder", () => {
     ]);
   });
 
-  it("rejects an authored default in document state and in an action input", () => {
+  it("rejects an authored default in document state and keeps one in an action input", () => {
     const stateDiagnostics = diagnosticsOf(() =>
       defineDocumentModel({
         id: "test/defaults",
@@ -695,9 +740,106 @@ describe("the structured definition builder", () => {
         }),
       }),
     });
-    expect(codesOf(() => model.finalize({ modules: [module] }))).toContain(
-      "PH-DM-DEFAULT-UNSUPPORTED",
+    const compiled = model.finalize({
+      modules: [module],
+    }) as unknown as typeof Invoice;
+    const operation = specificationOf(compiled).modules[0]?.operations[0];
+    expect(operation.input?.fields).toStrictEqual([
+      {
+        key: "title",
+        name: "title",
+        description: null,
+        deprecated: null,
+        type: { kind: "scalar", name: "String", required: false },
+        defaultValue: "untitled",
+      },
+    ]);
+    expect(
+      compiled.documentModel.global.specifications.at(0)?.modules[0]
+        ?.operations[0]?.schema,
+    ).toContain('title: String = "untitled"');
+  });
+
+  it("records equals as an @equals use in the definition and its SDL", () => {
+    const model = tinyModel();
+    const module = model.module("codes", {
+      operations: ({ global }) => ({
+        setCode: global({
+          input: ph.input({ fields: { code: ph.String({ equals: "abc" }) } }),
+          reduce() {},
+        }),
+      }),
+    });
+    const compiled = model.finalize({
+      modules: [module],
+    }) as unknown as typeof Invoice;
+    const operation = specificationOf(compiled).modules[0]?.operations[0];
+    expect(operation.input?.fields[0]?.directives).toStrictEqual([
+      { name: "equals", arguments: [{ name: "value", value: "abc" }] },
+    ]);
+    expect(
+      compiled.documentModel.global.specifications.at(0)?.modules[0]
+        ?.operations[0]?.schema,
+    ).toContain('code: String @equals(value: "abc")');
+  });
+
+  it("prints an enum default as an enum value in every segment", () => {
+    const Tone = ph.enum("Tone", { values: ["LOW", "HIGH"] });
+    const Filter = ph.input("ToneFilter", {
+      fields: { tone: ph.ref(Tone, { required: true, defaultValue: "HIGH" }) },
+    });
+    const model = defineDocumentModel({
+      id: "test/enum-defaults",
+      name: "Tones",
+      description: "",
+      extension: "tones",
+      version: 1,
+      author: { name: "Powerhouse" },
+      specifications: {
+        auxiliaryTypes: [Filter],
+        global: {
+          schema: ph.object("TonesState", { fields: { tone: ph.ref(Tone) } }),
+          initialValue: { tone: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const module = model.module("tones", {
+      operations: ({ global }) => ({
+        setTone: global({
+          input: ph.input({
+            fields: {
+              tone: ph.ref(Tone, { required: true, defaultValue: "LOW" }),
+            },
+          }),
+          reduce() {},
+        }),
+      }),
+    });
+    const compiled = model.finalize({
+      modules: [module],
+    }) as unknown as typeof Invoice;
+    const stored = compiled.documentModel.global.specifications.at(0);
+    const schema = buildSchema(
+      [
+        stored?.state.global.schema,
+        ...(stored?.modules.flatMap((entry) =>
+          entry.operations.map((operation) => operation.schema),
+        ) ?? []),
+        "type Query { state: TonesState }",
+      ].join("\n\n"),
     );
+    expect(validateSchema(schema)).toStrictEqual([]);
+    const defaultOf = (type: string) =>
+      (
+        schema.getType(type) as {
+          getFields(): Record<string, { defaultValue?: unknown }>;
+        }
+      ).getFields().tone.defaultValue;
+    expect([defaultOf("ToneFilter"), defaultOf("SetToneInput")]).toStrictEqual([
+      "HIGH",
+      "LOW",
+    ]);
   });
 
   it("rejects two descriptors claiming one GraphQL type name", () => {

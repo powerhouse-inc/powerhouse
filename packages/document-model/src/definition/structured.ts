@@ -48,7 +48,7 @@ import {
 } from "./naming.js";
 import { canonicalDigest, compareCodeUnits } from "./primitives.js";
 import { assignStoredSegments } from "./segments.js";
-import { printSchemaSegment } from "./printer.js";
+import { namedTypeInventory, printSchemaSegment } from "./printer.js";
 import {
   isCatalogBinding,
   isReferenceableScalarName,
@@ -70,11 +70,7 @@ import type {
   StateRootDescriptor,
   UnionDescriptor,
 } from "./types.js";
-import {
-  resolveReference,
-  serializeAndValidateInitialValue,
-  validatorFor,
-} from "./zod.js";
+import { resolveReference, serializeAndValidateInitialValue } from "./zod.js";
 
 /**
  * Walks a descriptor graph once and produces the versioned
@@ -229,6 +225,18 @@ function fieldDefault(field: AnyFieldDescriptor): JsonValue | undefined {
     : undefined;
 }
 
+function directivesOf(
+  field: AnyFieldDescriptor,
+): Pick<FieldDefinition, "directives"> {
+  const { directives } = field.presentation;
+  return directives.length > 0 ? { directives } : {};
+}
+
+type DescriptorWalkPolicy = {
+  readonly allowOutputDefaults: boolean;
+  readonly allowEquals: boolean;
+};
+
 export class DescriptorWalk {
   readonly definitions: NamedGraphQLTypeDefinition[] = [];
   readonly scalars = new Set<string>();
@@ -250,19 +258,14 @@ export class DescriptorWalk {
     { readonly token: AnyTypeDescriptor; readonly path: DefinitionPath }
   >();
 
-  /**
-   * A subgraph argument may carry a GraphQL default; a document state or
-   * action input may not. The walk is otherwise identical, so the difference
-   * is a flag rather than a second implementation that would drift.
-   */
-  readonly #allowFieldDefaults: boolean;
+  readonly #policy: DescriptorWalkPolicy;
 
   constructor(
     collector: DefinitionDiagnosticCollector,
-    options: { readonly allowFieldDefaults?: boolean } = {},
+    policy: DescriptorWalkPolicy,
   ) {
     this.#collector = collector;
-    this.#allowFieldDefaults = options.allowFieldDefaults === true;
+    this.#policy = policy;
   }
 
   /**
@@ -324,9 +327,7 @@ export class DescriptorWalk {
         };
       case "object": {
         const object = descriptor as ObjectDescriptor;
-        const implemented = object.implements.map((entry, index) =>
-          this.#requireName(entry, [...path, "implements", index]),
-        );
+        const implemented = this.#implemented(object, path);
         return {
           kind: "object",
           name,
@@ -349,11 +350,16 @@ export class DescriptorWalk {
           ],
         };
       }
-      case "interface":
+      case "interface": {
+        const implemented = this.#implemented(
+          descriptor as InterfaceDescriptor,
+          path,
+        );
         return {
           kind: "interface",
           name,
           description: descriptor.description,
+          ...(implemented.length > 0 && { implements: implemented }),
           fields: this.#requireFields(
             (descriptor as InterfaceDescriptor).fields,
             "interface",
@@ -361,6 +367,7 @@ export class DescriptorWalk {
             path,
           ),
         };
+      }
       case "input":
         return {
           kind: "input",
@@ -383,6 +390,15 @@ export class DescriptorWalk {
           ),
         };
     }
+  }
+
+  #implemented(
+    descriptor: ObjectDescriptor | InterfaceDescriptor,
+    path: DefinitionPath,
+  ): string[] {
+    return descriptor.implements.map((entry, index) =>
+      this.#requireName(entry, [...path, "implements", index]),
+    );
   }
 
   #attempt<T>(build: () => T): T | undefined {
@@ -525,6 +541,7 @@ export class DescriptorWalk {
       description: field.presentation.description,
       deprecated: field.presentation.deprecated,
       type: this.#typeReference(field, [...path, "fields", key]),
+      ...directivesOf(field),
     }));
   }
 
@@ -541,6 +558,7 @@ export class DescriptorWalk {
         deprecated: field.presentation.deprecated,
         type: this.#typeReference(field, [...path, "fields", key]),
         ...(defaultValue !== undefined && { defaultValue }),
+        ...directivesOf(field),
       };
     });
   }
@@ -560,13 +578,12 @@ export class DescriptorWalk {
           path,
         );
         return;
-      case "interface":
-        this.#visitFields(
-          (descriptor as InterfaceDescriptor).fields,
-          "output",
-          path,
-        );
+      case "interface": {
+        const implementing = descriptor as InterfaceDescriptor;
+        this.#visitImplemented(implementing, path);
+        this.#visitFields(implementing.fields, "output", path);
         return;
+      }
       case "union":
         (descriptor as UnionDescriptor).members.forEach((member, index) =>
           this.visitType(member, "output", [...path, "members", index]),
@@ -574,9 +591,7 @@ export class DescriptorWalk {
         return;
       case "object": {
         const object = descriptor as ObjectDescriptor;
-        object.implements.forEach((entry, index) =>
-          this.visitType(entry, "output", [...path, "implements", index]),
-        );
+        this.#visitImplemented(object, path);
         this.#visitFields(object.fields as ObjectFields, position, path);
         // A computed member's return type and arguments are reachable too: a
         // type named only from one still has to be emitted.
@@ -604,6 +619,15 @@ export class DescriptorWalk {
     }
   }
 
+  #visitImplemented(
+    descriptor: ObjectDescriptor | InterfaceDescriptor,
+    path: DefinitionPath,
+  ): void {
+    descriptor.implements.forEach((entry, index) =>
+      this.visitType(entry, "output", [...path, "implements", index]),
+    );
+  }
+
   #visitFields(
     fields: ObjectFields,
     position: Position,
@@ -619,16 +643,31 @@ export class DescriptorWalk {
     position: Position,
     path: DefinitionPath,
   ): void {
-    if (!this.#allowFieldDefaults && fieldDefault(field) !== undefined) {
+    if (
+      !this.#policy.allowOutputDefaults &&
+      position === "output" &&
+      fieldDefault(field) !== undefined
+    ) {
       this.#collector.add({
         code: "PH-DM-DEFAULT-UNSUPPORTED",
         path,
         message:
-          "A document state or action input field cannot declare a GraphQL default value.",
-        expected: "no defaultValue on a document-model field use",
+          "A document state field cannot declare a GraphQL default value.",
+        expected: "no defaultValue on a document state field use",
         received: "defaultValue",
         repair:
-          "Remove defaultValue; set the value in the scope initial value or in the reducer. A compatible stored default enters only through an explicit compatibility declaration.",
+          "Remove defaultValue; set the value in the scope initial value or in the reducer.",
+      });
+    }
+    if (!this.#policy.allowEquals && field.presentation.directives.length > 0) {
+      this.#collector.add({
+        code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+        path,
+        message: "A subgraph field cannot declare equals.",
+        expected: "no equals on a subgraph field use",
+        received: "equals",
+        repair:
+          "Remove equals and check the value in the resolver; a subgraph does not validate its fields, so @equals would constrain nothing.",
       });
     }
     switch (field.kind) {
@@ -1064,7 +1103,10 @@ export function compileDocumentModelVersion(
     key: config.id,
     version: config.version,
   });
-  const walk = new DescriptorWalk(collector);
+  const walk = new DescriptorWalk(collector, {
+    allowOutputDefaults: false,
+    allowEquals: true,
+  });
   const compatibility = new AppliedCompatibility(
     collector,
     config.compatibility,
@@ -1315,7 +1357,7 @@ export function compileDocumentModelVersion(
         storedName: names.storedName,
         input,
         inputSchema: "",
-        inputValidator: validatorFor(contextualInput, "input"),
+        inputValidator: contextualInput.validator,
         errorClasses: Object.freeze(operationErrorClasses),
         definition: {
           id: operationIdentity.id,
@@ -1414,6 +1456,8 @@ export function compileDocumentModelVersion(
   collector.throwIfFailed();
 
   const inventory: readonly NamedGraphQLTypeDefinition[] = walk.definitions;
+  const printSegment = (definitions: readonly NamedGraphQLTypeDefinition[]) =>
+    printSchemaSegment(definitions, namedTypeInventory(inventory));
   const globalName = config.names.globalStateRootName;
   const localRoot = config.specifications.local.root;
   const localName = localRoot === null ? null : config.names.localStateRootName;
@@ -1480,7 +1524,7 @@ export function compileDocumentModelVersion(
           localExamples,
           compatibility.serialization(
             "state/local/schema",
-            printSchemaSegment(localDefinitions),
+            printSegment(localDefinitions),
           ),
           compatibility.initialValue(
             "state/local/initialValue",
@@ -1490,9 +1534,6 @@ export function compileDocumentModelVersion(
           ),
         );
 
-  // An operation segment declares its own input, plus the input-position types
-  // it reaches that no earlier segment declares. A document-model field cannot
-  // carry a default, so no named-type inventory is needed to print one.
   const compiledModules: readonly CompiledModule[] = draftModules.map(
     (module) => ({
       ...module,
@@ -1502,9 +1543,7 @@ export function compileDocumentModelVersion(
           ...operation,
           inputSchema: compatibility.serialization(
             `operation/${path}/schema`,
-            printSchemaSegment(
-              segments.operations.get(path) ?? [operation.input],
-            ),
+            printSegment(segments.operations.get(path) ?? [operation.input]),
           ),
         };
       }),
@@ -1524,7 +1563,7 @@ export function compileDocumentModelVersion(
         globalExamples,
         compatibility.serialization(
           "state/global/schema",
-          printSchemaSegment(globalDefinitions),
+          printSegment(globalDefinitions),
         ),
         compatibility.initialValue(
           "state/global/initialValue",

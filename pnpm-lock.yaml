@@ -1644,6 +1644,9 @@ importers:
 
   packages/document-model:
     dependencies:
+      '@graphql-tools/merge':
+        specifier: 'catalog:'
+        version: 9.1.7(graphql@16.12.0)
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared

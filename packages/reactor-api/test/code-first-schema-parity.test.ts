@@ -2,8 +2,10 @@ import type {
   DocumentModelGlobalState,
   DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
+import { adaptSchemaFirstDocumentModelModule } from "document-model/tooling";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { parse } from "graphql";
 import { describe, expect, it } from "vitest";
 import {
   createSchema,
@@ -52,9 +54,9 @@ describe.each(ROOTS)("the %s golden", (root) => {
   it.each([false, true])(
     "serves the same schema from both paths with useNewApi: %s",
     (useNewApi) => {
-      const stored = servedSchema(schemaFirst, useNewApi);
-      const structured = servedSchema(codeFirst, useNewApi);
-      expect(structured).toBe(stored);
+      expect(servedSchema(codeFirst, useNewApi)).toBe(
+        servedSchema(schemaFirst, useNewApi),
+      );
     },
   );
 });
@@ -97,5 +99,226 @@ describe("a retained serialization", () => {
         servedSchema(schemaFirst, useNewApi),
       );
     }
+  });
+});
+
+type StoredModule = {
+  readonly name: string;
+  readonly operations: readonly {
+    readonly name: string;
+    readonly schema: string | null;
+  }[];
+};
+
+function adaptedModel(globalSchema: string, modules: readonly StoredModule[]) {
+  const { global } = readJson("extensions.state.json") as {
+    global: DocumentModelGlobalState;
+  };
+  const specification = global.specifications.at(-1)!;
+  const [moduleTemplate] = specification.modules;
+  const [operationTemplate] = moduleTemplate.operations;
+  specification.state.global.schema = globalSchema;
+  specification.modules = modules.map((module, moduleIndex) => ({
+    ...moduleTemplate,
+    id: `module-${moduleIndex}`,
+    name: module.name,
+    operations: module.operations.map((operation, operationIndex) => ({
+      ...operationTemplate,
+      id: `operation-${moduleIndex}-${operationIndex}`,
+      name: operation.name,
+      schema: operation.schema,
+    })),
+  }));
+  const { artifacts } = adaptSchemaFirstDocumentModelModule(
+    { global },
+    { specifier: "./extensions.ts" },
+    { version: 1 },
+  );
+  const schemaFirst = {
+    documentModel: { global },
+    actions: {},
+  } as unknown as DocumentModelModule;
+  return {
+    schemaFirst,
+    codeFirst: {
+      ...schemaFirst,
+      definition: artifacts[0].definition,
+    } as DocumentModelModule,
+  };
+}
+
+const RETAINED_STATE = [
+  "enum ExtensionsStatus {\n  OPEN\n}",
+  "extend enum ExtensionsStatus {\n  CLOSED\n}",
+  "type ExtensionsState {\n  title: String!\n  status: ExtensionsStatus!\n}",
+].join("\n\n");
+const PLAIN_STATE = [
+  "enum ExtensionsStatus {\n  OPEN\n  CLOSED\n}",
+  "type ExtensionsState {\n  title: String!\n  status: ExtensionsStatus!\n}",
+].join("\n\n");
+const SET_STATUS = "input SetStatusInput {\n  status: ExtensionsStatus!\n}";
+
+describe.each([
+  {
+    layout: "a retained AST whose module declares an input first",
+    state: RETAINED_STATE,
+    modules: [
+      {
+        name: "statuses",
+        operations: [{ name: "SET_STATUS", schema: SET_STATUS }],
+      },
+    ],
+    proof: '"""Module: Statuses"""\ninput Extensions_SetStatusInput {',
+  },
+  {
+    layout: "a retained AST with a directive named like the module's input",
+    state: RETAINED_STATE,
+    modules: [
+      {
+        name: "statuses",
+        operations: [
+          {
+            name: "SET_STATUS",
+            schema: `directive @SetStatusInput on INPUT_OBJECT\n\n${SET_STATUS}`,
+          },
+        ],
+      },
+    ],
+    proof: '"""Module: Statuses"""\ndirective @SetStatusInput on INPUT_OBJECT',
+  },
+  {
+    layout: "an operation schema that declares an enum before its input",
+    state: PLAIN_STATE,
+    modules: [
+      {
+        name: "statuses",
+        operations: [
+          {
+            name: "SET_STATUS",
+            schema: `enum Reason {\n  A\n}\n\ninput SetStatusInput {\n  status: ExtensionsStatus!\n  reason: Reason\n}`,
+          },
+        ],
+      },
+    ],
+    proof: '"""Module: Statuses"""\nenum Extensions_Reason {',
+  },
+  {
+    layout: "two modules that both declare the same enum first",
+    state: PLAIN_STATE,
+    modules: [
+      {
+        name: "statuses",
+        operations: [
+          {
+            name: "SET_STATUS",
+            schema: `enum Reason {\n  A\n}\n\ninput SetStatusInput {\n  reason: Reason\n}`,
+          },
+        ],
+      },
+      {
+        name: "titles",
+        operations: [
+          {
+            name: "SET_TITLE",
+            schema: `enum Reason {\n  A\n}\n\ninput SetTitleInput {\n  reason: Reason\n}`,
+          },
+        ],
+      },
+    ],
+    proof: "}\n\ninput Extensions_SetTitleInput {",
+  },
+  {
+    layout: "a state input that an operation input reaches",
+    state: `${PLAIN_STATE}\n\ninput Nested {\n  a: Int!\n}\n\ninput Loose {\n  b: Int\n}`,
+    modules: [
+      {
+        name: "statuses",
+        operations: [
+          {
+            name: "SET_STATUS",
+            schema: "input SetStatusInput {\n  nested: Nested\n}",
+          },
+        ],
+      },
+    ],
+    proof: '"""Input Types from State Schema"""\ninput Extensions_Nested {',
+  },
+  {
+    layout: "an operation input that another operation's schema declares",
+    state: PLAIN_STATE,
+    modules: [
+      {
+        name: "statuses",
+        operations: [
+          { name: "SET_STATUS", schema: "input Unused {\n  y: Int\n}" },
+          {
+            name: "OTHER",
+            schema: `${SET_STATUS}\n\ninput OtherInput {\n  x: Int!\n}`,
+          },
+        ],
+      },
+    ],
+    proof: '"""Module: Statuses"""\ninput Extensions_Unused {',
+  },
+  {
+    layout: "an operation schema that declares an object type",
+    state: PLAIN_STATE,
+    modules: [
+      {
+        name: "statuses",
+        operations: [
+          {
+            name: "SET_STATUS",
+            schema: `type StatusMeta {\n  at: String\n}\n\n${SET_STATUS}`,
+          },
+        ],
+      },
+    ],
+    proof: '"""Module: Statuses"""\ntype Extensions_StatusMeta {',
+  },
+])("$layout", ({ state, modules, proof }) => {
+  const { schemaFirst, codeFirst } = adaptedModel(state, modules);
+
+  it.each([false, true])(
+    "serves the schema-first schema with useNewApi: %s",
+    (useNewApi) => {
+      const structured = servedSchema(codeFirst, useNewApi);
+      expect(structured).toBe(servedSchema(schemaFirst, useNewApi));
+      expect(structured).toContain(proof);
+    },
+  );
+
+  it("leaves the template descriptions out of another subgraph", () => {
+    const foreign = printSchema(
+      createSchema(
+        [codeFirst],
+        {},
+        parse(
+          "type ExtensionsQueries { hello: String }\ntype Query { hello: ExtensionsQueries }",
+        ),
+      ),
+    );
+    expect(foreign).not.toContain('"""Module:');
+    expect(foreign).not.toContain('"""Input Types from State Schema"""');
+  });
+});
+
+describe("an object type declared in an operation schema", () => {
+  const { schemaFirst, codeFirst } = adaptedModel(PLAIN_STATE, [
+    {
+      name: "statuses",
+      operations: [
+        {
+          name: "SET_STATUS",
+          schema: `${SET_STATUS}\n\ntype StatusMeta {\n  at: String\n}`,
+        },
+      ],
+    },
+  ]);
+
+  it("stays out of the initial-state input, as in the stored SDL", () => {
+    const structured = servedSchema(codeFirst, true);
+    expect(structured).toBe(servedSchema(schemaFirst, true));
+    expect(structured).not.toContain("Extensions_StatusMetaInput");
   });
 });

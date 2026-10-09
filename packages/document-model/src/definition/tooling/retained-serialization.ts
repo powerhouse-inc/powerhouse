@@ -3,12 +3,21 @@ import type {
   DefinitionPath,
   DocumentModelDefinition,
   DocumentModelPHState,
+  LocationFreeGraphQLDocumentNode,
   NamedGraphQLTypeDefinition,
 } from "@powerhousedao/shared/document-model";
 import { DefinitionDiagnosticCollector } from "../diagnostics.js";
-import { canonicalJson, EMPTY_INPUT_FIELD_NAME } from "../primitives.js";
+import {
+  canonicalJson,
+  compareCodeUnits,
+  EMPTY_INPUT_FIELD_NAME,
+} from "../primitives.js";
 import { assignStoredSegments } from "../segments.js";
-import { structuredTypesFromDocument } from "./ast-to-structured.js";
+import {
+  EMPTY_DOCUMENT,
+  structuredTypesBySegment,
+} from "./ast-to-structured.js";
+import { generatedDifference, mergedDeclaration } from "./codegen-merge.js";
 import { schemaFirstGraphQLDocument } from "./graphql-document.js";
 
 /**
@@ -45,44 +54,178 @@ function withoutEmptyMarker(
     : type;
 }
 
+function withSortedMemberSets(
+  type: NamedGraphQLTypeDefinition,
+): NamedGraphQLTypeDefinition {
+  if (type.kind === "union") {
+    return { ...type, members: [...type.members].sort(compareCodeUnits) };
+  }
+  if (
+    (type.kind === "object" || type.kind === "interface") &&
+    type.implements
+  ) {
+    return { ...type, implements: [...type.implements].sort(compareCodeUnits) };
+  }
+  return type;
+}
+
+function describesSameType(
+  left: NamedGraphQLTypeDefinition,
+  right: NamedGraphQLTypeDefinition,
+): boolean {
+  return (
+    canonicalJson(withSortedMemberSets(withoutEmptyMarker(left))) ===
+    canonicalJson(withSortedMemberSets(withoutEmptyMarker(right)))
+  );
+}
+
 type Segment = {
   readonly path: DefinitionPath;
   readonly stored: string;
-  readonly expected: readonly NamedGraphQLTypeDefinition[];
+  readonly printed: readonly NamedGraphQLTypeDefinition[];
 };
+
+function compareSegments(
+  collector: DefinitionDiagnosticCollector,
+  segments: readonly Segment[],
+  declaration: ReadonlyMap<string, NamedGraphQLTypeDefinition>,
+  serialization: DocumentModelDefinition["compatibility"]["serialization"],
+  path: DefinitionPath,
+): void {
+  const parsed = segments.map((segment) =>
+    segment.stored.trim() === ""
+      ? EMPTY_DOCUMENT
+      : collector.capture(
+          () => schemaFirstGraphQLDocument([segment.stored]).document,
+        ),
+  );
+  const composed = structuredTypesBySegment(
+    parsed.map((document) => document ?? EMPTY_DOCUMENT),
+    new Set(declaration.keys()),
+    path,
+  );
+  collector.merge(composed.diagnostics);
+  if (serialization === "explicit-schema-first") {
+    compareStoredCopies(
+      collector,
+      segments,
+      parsed,
+      composed.types,
+      declaration,
+      path,
+    );
+    return;
+  }
+  segments.forEach((segment, index) => {
+    if (parsed[index] === undefined) return;
+    compareSegment(collector, segment, composed.types[index]);
+  });
+}
+
+function compareStoredCopies(
+  collector: DefinitionDiagnosticCollector,
+  segments: readonly Segment[],
+  parsed: readonly (LocationFreeGraphQLDocumentNode | undefined)[],
+  retained: readonly (readonly NamedGraphQLTypeDefinition[])[],
+  declaration: ReadonlyMap<string, NamedGraphQLTypeDefinition>,
+  path: DefinitionPath,
+): void {
+  const copies = new Map<
+    string,
+    {
+      readonly path: DefinitionPath;
+      readonly type: NamedGraphQLTypeDefinition;
+    }[]
+  >();
+  segments.forEach((segment, index) => {
+    if (parsed[index] === undefined) return;
+    for (const type of retained[index]) {
+      if (!declaration.has(type.name)) {
+        collector.add({
+          code: "PH-DM-COMPATIBILITY-INVALID",
+          path: segment.path,
+          message: `The retained segment declares ${type.name}, which the declaration does not describe.`,
+          expected: [...declaration.keys()].join(", "),
+          received: retained[index].map((entry) => entry.name).join(", "),
+          repair:
+            "Retain the exact stored string of this segment, or drop the override so the declaration prints its own.",
+        });
+        continue;
+      }
+      const list = copies.get(type.name) ?? [];
+      list.push({ path: segment.path, type });
+      copies.set(type.name, list);
+    }
+  });
+  if (parsed.includes(undefined)) return;
+  const documents = parsed.flatMap((document) =>
+    document === undefined ? [] : [document],
+  );
+  const names = new Set(declaration.keys());
+  for (const [name, declared] of declaration) {
+    const stored = copies.get(name);
+    if (stored === undefined) {
+      collector.add({
+        code: "PH-DM-COMPATIBILITY-INVALID",
+        path,
+        message: `No retained segment declares ${name}.`,
+        expected: [...declaration.keys()].join(", "),
+        received: [...copies.keys()].join(", "),
+        repair:
+          "Retain the exact stored string that declares it, or drop the override so the declaration prints its own.",
+      });
+      continue;
+    }
+    const merged =
+      stored.length === 1
+        ? undefined
+        : mergedDeclaration(documents, name, names, path);
+    if (
+      stored.some((copy) => describesSameType(copy.type, declared)) &&
+      (merged === undefined ||
+        ("type" in merged &&
+          generatedDifference(merged.type, declared) === undefined))
+    ) {
+      continue;
+    }
+    const differing =
+      stored.find((copy) => !describesSameType(copy.type, declared)) ??
+      stored[0];
+    collector.add({
+      code: "PH-DM-COMPATIBILITY-INVALID",
+      path: [...differing.path, name],
+      message: `The retained segment describes ${name} differently than the declaration does.`,
+      expected: canonicalJson(declared),
+      received: canonicalJson(differing.type),
+      repair:
+        "Make the declaration describe the stored type, or drop the override; a retained string that describes a different structure is a definition error.",
+    });
+  }
+}
 
 function compareSegment(
   collector: DefinitionDiagnosticCollector,
   segment: Segment,
-  declared: ReadonlySet<string>,
+  retainedTypes: readonly NamedGraphQLTypeDefinition[],
 ): void {
   if (segment.stored.trim() === "") {
-    if (segment.expected.length === 0) return;
+    if (segment.printed.length === 0) return;
     collector.add({
       code: "PH-DM-COMPATIBILITY-INVALID",
       path: segment.path,
       message:
         "The retained segment is empty, but the declaration expects it to declare types.",
-      expected: segment.expected.map((type) => type.name).join(", "),
+      expected: segment.printed.map((type) => type.name).join(", "),
       received: "an empty segment",
       repair: "Retain the stored string that declares those types.",
     });
     return;
   }
-  const parsed = collector.capture(() =>
-    schemaFirstGraphQLDocument([segment.stored]),
-  );
-  if (parsed === undefined) return;
-  const converted = structuredTypesFromDocument(
-    parsed.document,
-    declared,
-    segment.path,
-  );
   const byName = new Map(
-    converted.types.map((type) => [type.name, type] as const),
+    retainedTypes.map((type) => [type.name, type] as const),
   );
-  const expectedNames = segment.expected.map((type) => type.name);
-  const retainedNames = converted.types.map((type) => type.name);
+  const expectedNames = segment.printed.map((type) => type.name);
+  const retainedNames = retainedTypes.map((type) => type.name);
   // A retained string may order its definitions differently — that is one of
   // the differences an override exists to keep — so the comparison is by
   // name, and the first difference is the one reported.
@@ -103,15 +246,10 @@ function compareSegment(
     });
     return;
   }
-  for (const expected of segment.expected) {
+  for (const expected of segment.printed) {
     const retained = byName.get(expected.name);
     if (retained === undefined) continue;
-    if (
-      canonicalJson(withoutEmptyMarker(retained)) ===
-      canonicalJson(withoutEmptyMarker(expected))
-    ) {
-      continue;
-    }
+    if (describesSameType(retained, expected)) continue;
     collector.add({
       code: "PH-DM-COMPATIBILITY-INVALID",
       path: [...segment.path, expected.name],
@@ -160,58 +298,60 @@ export function checkRetainedSerialization(
       localRoot: specification.state.local.root?.name ?? null,
       operations,
     });
-    const declared = new Set<string>([
-      ...specification.types.map((type) => type.name),
+    const declaration = new Map<string, NamedGraphQLTypeDefinition>([
+      ...specification.types.map((type) => [type.name, type] as const),
       ...operations.flatMap((operation) =>
-        operation.input === null ? [] : [operation.input.name],
+        operation.input === null
+          ? []
+          : [[operation.input.name, operation.input] as const],
       ),
     ]);
 
-    compareSegment(
+    compareSegments(
       collector,
-      {
-        path: [...at, "state", "global", "schema"],
-        stored: specification.state.global.materialized.schema,
-        expected: segments.global,
-      },
-      declared,
+      [
+        {
+          path: [...at, "state", "global", "schema"],
+          stored: specification.state.global.materialized.schema,
+          printed: segments.global,
+        },
+        {
+          path: [...at, "state", "local", "schema"],
+          stored: specification.state.local.materialized.schema,
+          printed: segments.local,
+        },
+        ...specification.modules.flatMap((module, moduleIndex) =>
+          module.operations.flatMap((operation, operationIndex) => {
+            const storedSchema =
+              storedSpecification?.modules[moduleIndex]?.operations[
+                operationIndex
+              ]?.schema;
+            if (storedSchema === undefined || storedSchema === null) {
+              return [];
+            }
+            return [
+              {
+                path: [
+                  ...at,
+                  "modules",
+                  moduleIndex,
+                  "operations",
+                  operationIndex,
+                  "schema",
+                ],
+                stored: storedSchema,
+                printed:
+                  segments.operations.get(`${module.key}/${operation.key}`) ??
+                  (operation.input === null ? [] : [operation.input]),
+              },
+            ];
+          }),
+        ),
+      ],
+      declaration,
+      artifact.definition.compatibility.serialization,
+      at,
     );
-    compareSegment(
-      collector,
-      {
-        path: [...at, "state", "local", "schema"],
-        stored: specification.state.local.materialized.schema,
-        expected: segments.local,
-      },
-      declared,
-    );
-
-    specification.modules.forEach((module, moduleIndex) => {
-      module.operations.forEach((operation, operationIndex) => {
-        const storedSchema =
-          storedSpecification?.modules[moduleIndex]?.operations[operationIndex]
-            ?.schema;
-        if (storedSchema === undefined || storedSchema === null) return;
-        compareSegment(
-          collector,
-          {
-            path: [
-              ...at,
-              "modules",
-              moduleIndex,
-              "operations",
-              operationIndex,
-              "schema",
-            ],
-            stored: storedSchema,
-            expected:
-              segments.operations.get(`${module.key}/${operation.key}`) ??
-              (operation.input === null ? [] : [operation.input]),
-          },
-          declared,
-        );
-      });
-    });
 
     // A retained initial value is checked at finalization, where JSON needs
     // no parser this entry cannot load; re-checking it here keeps one report

@@ -183,6 +183,7 @@ describe("presentation metadata", () => {
       description: "A note.",
       deprecated: "Use memo.",
       default: { present: true, value: null },
+      directives: [],
     });
     expect(
       ph.list(ph.Int(), { description: "Counts." }).presentation,
@@ -226,6 +227,75 @@ describe("presentation metadata", () => {
     ).toMatchObject({
       code: "PH-DEF-OPTION-INVALID",
       path: ["options", "description"],
+    });
+  });
+
+  it("records equals as an @equals use on scalars with a Zod string validator", () => {
+    expect(ph.String({ equals: "a.c" }).presentation.directives).toStrictEqual([
+      { name: "equals", arguments: [{ name: "value", value: "a.c" }] },
+    ]);
+    const email = ph.EmailAddress({ equals: "a@b\\.co" }).validator;
+    expect(
+      ["a@b.co", "c@d.co"].map((value) => email.safeParse(value).success),
+    ).toStrictEqual([true, false]);
+    expect(ph.ID({ equals: "1" }).validator.safeParse("1").success).toBe(true);
+    expect(rejection(() => ph.Int({ equals: "1" } as never))).toMatchObject({
+      code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+      path: ["options", "equals"],
+      received: "Int",
+    });
+    expect(rejection(() => ph.Amount({ equals: "1" }))).toMatchObject({
+      code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+      path: ["options", "equals"],
+    });
+    expect(rejection(() => ph.AttachmentRef({ equals: "1" }))).toMatchObject({
+      code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+      path: ["options", "equals"],
+      received: "AttachmentRef",
+    });
+    expect(rejection(() => ph.String({ equals: "[" }))).toMatchObject({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "equals"],
+      received: "[",
+    });
+    const slash =
+      'Escape the slash as \\/ (written "\\\\/" in a JavaScript string), or put it in a character class such as [/].';
+    const lineTerminator =
+      "Write the line terminator as an escape such as \\n, which the regular expression reads the same way.";
+    expect(
+      ["a/b", "x/", "a\nb", "a\u2028b", "a\\\nb"].map(
+        (equals) => rejection(() => ph.String({ equals })).repair,
+      ),
+    ).toStrictEqual([
+      slash,
+      slash,
+      lineTerminator,
+      lineTerminator,
+      lineTerminator,
+    ]);
+    const replaced = ph.String({ equals: "[$&]" }).validator;
+    expect(
+      ["1", "$", "&"].map((value) => replaced.safeParse(value).success),
+    ).toStrictEqual([true, true, false]);
+    expect(rejection(() => ph.String({ equals: "a$'b" })).repair).toBe(slash);
+    expect(
+      ["a\\/b", "[/]", "a\\nb"].map(
+        (equals) => ph.String({ equals }).presentation.directives.length,
+      ),
+    ).toStrictEqual([1, 1, 1]);
+    expect(
+      rejection(() => ph.list(ph.String(), { equals: "a" } as never)),
+    ).toMatchObject({
+      code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+      path: ["options", "equals"],
+    });
+    expect(rejection(() => ph.String({ equals: 1 } as never))).toMatchObject({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "equals"],
+    });
+    expect(rejection(() => ph.list(ph.String({ equals: "a" })))).toMatchObject({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["item", "options", "equals"],
     });
   });
 
@@ -568,6 +638,41 @@ describe("ph.object, ph.interface, ph.input", () => {
     expect(
       rejection(() =>
         ph.object("X", { fields: {}, implements: [Named, Named] }),
+      ).path,
+    ).toStrictEqual(["options", "implements", 1]);
+  });
+
+  it("lets an interface implement interfaces under the object's rules", () => {
+    const Named = ph.interface("Named", {
+      fields: { name: ph.String({ required: true }) },
+    });
+    const Titled = ph.interface("Titled", {
+      fields: {
+        name: ph.String({ required: true }),
+        title: ph.String(),
+      },
+      implements: [Named],
+    });
+    expect(Titled.implements).toStrictEqual([Named]);
+    expect(Named.implements).toStrictEqual([]);
+    const Status = ph.enum("Status", { values: ["A"] });
+    expect(
+      rejection(() =>
+        ph.interface("X", {
+          fields: { name: ph.String() },
+          implements: [Status] as never,
+        }),
+      ),
+    ).toMatchObject({
+      code: "PH-DEF-IMPLEMENTS-INVALID",
+      path: ["options", "implements", 0],
+    });
+    expect(
+      rejection(() =>
+        ph.interface("X", {
+          fields: { name: ph.String() },
+          implements: [Named, Named],
+        }),
       ).path,
     ).toStrictEqual(["options", "implements", 1]);
   });

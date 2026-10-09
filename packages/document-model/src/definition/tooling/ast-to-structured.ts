@@ -1,4 +1,5 @@
 import type {
+  DefinitionDiagnostic,
   DefinitionPath,
   EnumValueDefinition,
   FieldDefinition,
@@ -16,6 +17,11 @@ import type {
   TypeReferenceDefinition,
 } from "@powerhousedao/shared/document-model";
 import type { DefinitionDiagnosticCollector } from "../diagnostics.js";
+import {
+  DEFAULT_DEPRECATION_REASON,
+  foldTypeExtensions,
+} from "../graphql-ast.js";
+import { canonicalJson } from "../primitives.js";
 import { SCALAR_CATALOG_NAMES } from "../scalars/catalog.js";
 
 /**
@@ -104,7 +110,6 @@ function typeReference(
   }
 }
 
-/** `@deprecated(reason: "...")` is the one directive the wire shape absorbs. */
 function splitDeprecation(directives: readonly GraphQLDirectiveNode[]): {
   readonly deprecated: string | null;
   readonly rest: readonly GraphQLDirectiveNode[];
@@ -112,14 +117,18 @@ function splitDeprecation(directives: readonly GraphQLDirectiveNode[]): {
   const index = directives.findIndex(
     (directive) =>
       directive.name.value === "deprecated" &&
-      directive.arguments.length === 1 &&
-      directive.arguments[0]?.name.value === "reason" &&
-      directive.arguments[0].value.kind === "StringValue",
+      (directive.arguments.length === 0 ||
+        (directive.arguments.length === 1 &&
+          directive.arguments[0]?.name.value === "reason" &&
+          directive.arguments[0].value.kind === "StringValue")),
   );
   if (index === -1) return { deprecated: null, rest: directives };
-  const argument = directives[index].arguments[0];
+  const argument = directives[index].arguments.at(0);
   return {
-    deprecated: (argument.value as GraphQLStringValueNode).value,
+    deprecated:
+      argument === undefined
+        ? DEFAULT_DEPRECATION_REASON
+        : (argument.value as GraphQLStringValueNode).value,
     rest: [...directives.slice(0, index), ...directives.slice(index + 1)],
   };
 }
@@ -175,7 +184,10 @@ function outputField(
   };
 }
 
-/** The names a document declares as named types, needed to resolve references. */
+/**
+ * The names a document declares as named types, needed to resolve references.
+ * An extension of a type the document never defines declares it too.
+ */
 export function declaredTypeNames(
   document: LocationFreeGraphQLDocumentNode,
 ): ReadonlySet<string> {
@@ -187,6 +199,11 @@ export function declaredTypeNames(
       case "InputObjectTypeDefinition":
       case "EnumTypeDefinition":
       case "UnionTypeDefinition":
+      case "ObjectTypeExtension":
+      case "InterfaceTypeExtension":
+      case "InputObjectTypeExtension":
+      case "EnumTypeExtension":
+      case "UnionTypeExtension":
         names.add(node.name.value);
         break;
       default:
@@ -272,6 +289,77 @@ export function structuredTypesFromDocument(
   });
 
   return { types, unrepresentable };
+}
+
+export const EMPTY_DOCUMENT: LocationFreeGraphQLDocumentNode = {
+  kind: "Document",
+  definitions: [],
+};
+
+const TYPE_DEFINITION_KINDS: ReadonlySet<string> = new Set([
+  "ObjectTypeDefinition",
+  "InterfaceTypeDefinition",
+  "InputObjectTypeDefinition",
+  "EnumTypeDefinition",
+  "UnionTypeDefinition",
+]);
+
+export function structuredTypesBySegment(
+  segments: readonly LocationFreeGraphQLDocumentNode[],
+  declared: ReadonlySet<string>,
+  path: DefinitionPath,
+): {
+  readonly types: readonly (readonly NamedGraphQLTypeDefinition[])[];
+  readonly diagnostics: readonly DefinitionDiagnostic[];
+} {
+  const folded = foldTypeExtensions(
+    segments.flatMap((segment) => segment.definitions),
+    path,
+  );
+  const effective = [...folded.types.values()];
+  const converted = structuredTypesFromDocument(
+    {
+      kind: "Document",
+      definitions: effective.map(
+        ({ node }) =>
+          node as unknown as LocationFreeGraphQLDocumentNode["definitions"][number],
+      ),
+    },
+    declared,
+    path,
+  ).types;
+  const byIndex = new Map(
+    effective.map(({ index }, position) => [index, converted[position]]),
+  );
+  const unfoldedByIndex = new Map<number, NamedGraphQLTypeDefinition>();
+  const foldedIfIdenticalRepeat = (
+    type: NamedGraphQLTypeDefinition | undefined,
+  ): NamedGraphQLTypeDefinition | undefined => {
+    const first = type && folded.types.get(type.name);
+    if (first === undefined) return type;
+    const firstUnfolded = unfoldedByIndex.get(first.index);
+    return canonicalJson(firstUnfolded) === canonicalJson(type)
+      ? byIndex.get(first.index)
+      : type;
+  };
+  let start = 0;
+  const types = segments.map((segment) => {
+    const own = structuredTypesFromDocument(segment, declared, path).types;
+    let ownPosition = 0;
+    const result: NamedGraphQLTypeDefinition[] = [];
+    segment.definitions.forEach((node, offset) => {
+      const index = start + offset;
+      const unfolded = TYPE_DEFINITION_KINDS.has(node.kind)
+        ? own[ownPosition++]
+        : undefined;
+      if (unfolded !== undefined) unfoldedByIndex.set(index, unfolded);
+      const type = byIndex.get(index) ?? foldedIfIdenticalRepeat(unfolded);
+      if (type !== undefined) result.push(type);
+    });
+    start += segment.definitions.length;
+    return result;
+  });
+  return { types, diagnostics: folded.diagnostics };
 }
 
 /**

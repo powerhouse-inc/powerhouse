@@ -6,7 +6,7 @@ import type {
   Sha256Digest,
 } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
-import type { FieldOptions, Nullable, ScalarDescriptor } from "../types.js";
+import type { ScalarBuilder } from "../types.js";
 import type {
   ResolvedScalarDeclaration,
   ScalarCoercion,
@@ -31,15 +31,9 @@ export type ScalarBinding = {
 };
 
 /** Makes one field use of a scalar. */
-export type ScalarFieldFactory<TBase, TInput = TBase> = <
-  const TRequired extends boolean = false,
->(
-  options?: FieldOptions<TRequired>,
-) => ScalarDescriptor<
-  Nullable<TInput, TRequired>,
-  Nullable<TBase, TRequired>,
-  Nullable<TInput, TRequired>,
-  TRequired
+export type ScalarFieldFactory<TBase, TInput = TBase> = ScalarBuilder<
+  TBase,
+  TInput
 >;
 
 /**

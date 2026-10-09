@@ -4,7 +4,6 @@ import type {
   OutputMembers,
   AnyTypeDescriptor,
   FieldDescriptor,
-  InputOf,
   ObjectDescriptor,
   ObjectFields,
   OutputOf,
@@ -166,7 +165,7 @@ export type RootEntryOptions<
 };
 
 export type ArgsObject<TArgs extends ObjectFields> = {
-  -readonly [K in keyof TArgs]: InputOf<TArgs[K]>;
+  -readonly [K in keyof TArgs]: SourceOf<TArgs[K]>;
 };
 
 export type ObjectWithComputed = ObjectDescriptor & {

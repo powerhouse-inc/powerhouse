@@ -2,12 +2,16 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelPHState,
   DocumentSpecification,
+  NamedGraphQLTypeDefinition,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
+import type { NormalizedDocumentModelArtifact } from "../../src/definition/adapters/types.js";
+import { printTypeReference } from "../../src/definition/printer.js";
 import {
   adaptSchemaFirstDocumentModelModule,
   SCHEMA_FIRST_EXAMPLE_KEY_PREFIX,
 } from "../../src/definition/tooling/adapters/schema-first-document-model-module-adapter.js";
+import { checkRetainedSerialization } from "../../src/definition/tooling/retained-serialization.js";
 import { CORPUS_ROOTS, readCorpusState } from "./corpus.js";
 
 const SOURCE = { specifier: "./models/probe.js" } as const;
@@ -29,6 +33,66 @@ function withOperation(
   const operation = clone.global.specifications[0].modules[0].operations[0];
   Object.assign(operation, patch);
   return clone;
+}
+
+function storedTodo(
+  global: { readonly schema: string; readonly initialValue: string },
+  operations: Readonly<Record<string, string>>,
+): DocumentModelPHState {
+  const state = structuredClone(readCorpusState(CORPUS_ROOTS[7]));
+  const [specification] = state.global.specifications;
+  specification.state.global = { ...global, examples: [] };
+  specification.state.local = { schema: "", initialValue: "", examples: [] };
+  specification.modules = [
+    {
+      id: "ops",
+      name: "ops",
+      description: "",
+      operations: Object.entries(operations).map(([name, schema]) => ({
+        id: name,
+        name,
+        description: "",
+        scope: "global",
+        schema,
+        errors: [],
+        examples: [],
+        template: "",
+        reducer: "",
+      })),
+    },
+  ];
+  return state;
+}
+
+function declaredShapes(
+  artifact: NormalizedDocumentModelArtifact,
+): Record<string, readonly string[]> {
+  const [specification] = artifact.definition.specifications;
+  const types: NamedGraphQLTypeDefinition[] = [
+    ...specification.types,
+    ...specification.modules.flatMap((module) =>
+      module.operations.flatMap((operation) =>
+        operation.input === null ? [] : [operation.input],
+      ),
+    ),
+  ];
+  return Object.fromEntries(
+    types.map((type) => [
+      type.name,
+      type.kind === "enum"
+        ? type.values.map((value) => value.name)
+        : type.kind === "union"
+          ? type.members
+          : type.fields.map(
+              (field) =>
+                `${field.name}: ${printTypeReference(field.type)}${
+                  "defaultValue" in field
+                    ? ` = ${JSON.stringify(field.defaultValue)}`
+                    : ""
+                }${(field.directives ?? []).map(({ name }) => ` @${name}`).join("")}`,
+            ),
+    ]),
+  );
 }
 
 describe("schema-first module adapter", () => {
@@ -225,6 +289,27 @@ describe("schema-first module adapter", () => {
     );
   });
 
+  it("needs no override when an operation input defaults to an enum value", () => {
+    const state = structuredClone(readCorpusState(CORPUS_ROOTS[7]));
+    const specification = state.global.specifications[0];
+    specification.state.global.schema =
+      "type TodoState {\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}\n\nenum Priority {\n  LOW\n  HIGH\n}\n";
+    specification.state.local.schema = "";
+    specification.state.local.initialValue = "{}";
+    specification.modules[0].operations =
+      specification.modules[0].operations.map((operation) => ({
+        ...operation,
+        schema: `input ${(operation.name as string)
+          .split("_")
+          .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+          .join("")}Input {\n  id: String!\n  priority: Priority! = LOW\n}\n`,
+      }));
+    const [artifact] = adapt(state).artifacts;
+    expect(artifact.definition.compatibility.serialization).toBe(
+      "canonical-v1",
+    );
+  });
+
   it("retains a pretty-printed initial value as a serialization difference", () => {
     const state = structuredClone(readCorpusState(CORPUS_ROOTS[7]));
     const specification = state.global.specifications[0];
@@ -312,16 +397,393 @@ describe("schema-first module adapter", () => {
       "InputObjectTypeDefinition",
       "InputObjectTypeDefinition",
     ]);
-    // The representable types are still recorded: consumers and the
-    // agreement checker need them.
     expect(projected.types.map((type) => type.name)).toContain("TodoState");
-    expect(projected.types.map((type) => type.name)).toContain("TodoItem");
+    const todoItem = projected.types.find((type) => type.name === "TodoItem");
+    expect(
+      todoItem?.kind === "object"
+        ? todoItem.fields.map((field) => field.name)
+        : undefined,
+    ).toStrictEqual(["id", "title", "completed", "archived"]);
     // A directive use on a field is representable and stays a directive use.
     const todoState = projected.types.find((type) => type.name === "TodoState");
     expect(
       todoState?.kind === "object" ? todoState.fields[0].directives : undefined,
     ).toStrictEqual([
       { name: "audit", arguments: [{ name: "level", value: "high" }] },
+    ]);
+  });
+
+  it("composes a state type an operation segment extends", () => {
+    const state = structuredClone(readCorpusState(CORPUS_ROOTS[7]));
+    const operation = state.global.specifications[0].modules[0].operations[0];
+    operation.schema = [
+      operation.schema,
+      "",
+      "extend type TodoItem {",
+      "  archived: Boolean",
+      "  legacy: String @deprecated",
+      "}",
+    ].join("\n");
+    const result = adapt(state);
+    expect(result.diagnostics).toStrictEqual([]);
+    const [artifact] = result.artifacts;
+    const specification = artifact.definition.specifications[0];
+    const todoItem = specification.types.find(
+      (type) => type.name === "TodoItem",
+    );
+    expect(
+      todoItem?.kind === "object"
+        ? todoItem.fields.map(({ name, deprecated }) => [name, deprecated])
+        : undefined,
+    ).toStrictEqual([
+      ["id", null],
+      ["title", null],
+      ["completed", null],
+      ["archived", null],
+      ["legacy", "No longer supported"],
+    ]);
+    expect(artifact.documentModel.global.specifications[0]).toStrictEqual(
+      state.global.specifications[0],
+    );
+    expect(checkRetainedSerialization(artifact)).toStrictEqual([]);
+  });
+
+  it("keeps an extension's fields on an input that two operations repeat", () => {
+    const state = structuredClone(readCorpusState(CORPUS_ROOTS[7]));
+    const [add, remove] = state.global.specifications[0].modules[0].operations;
+    add.schema = [
+      "input AddTodoInput {",
+      "  id: String!",
+      "  title: String!",
+      "  completed: Boolean!",
+      "  meta: TodoMeta",
+      "}",
+      "input TodoMeta { tag: String }",
+    ].join("\n");
+    remove.schema = [
+      "input RemoveTodoInput {",
+      "  id: String!",
+      "  meta: TodoMeta",
+      "}",
+      "input TodoMeta { tag: String }",
+      "extend input TodoMeta { rank: Int }",
+    ].join("\n");
+    const result = adapt(state);
+    expect(result.diagnostics).toStrictEqual([]);
+    const todoMeta =
+      result.artifacts[0].definition.specifications[0].types.find(
+        (type) => type.name === "TodoMeta",
+      );
+    expect(
+      todoMeta?.kind === "input"
+        ? todoMeta.fields.map((field) => field.name)
+        : undefined,
+    ).toStrictEqual(["tag", "rank"]);
+  });
+
+  describe("a type stored outside the segment the printer would put it in", () => {
+    const counter = {
+      schema: "type TodoState { x: Int! }",
+      initialValue: '{"x":1}',
+    };
+
+    it("finds an operation's input in another operation's schema", () => {
+      const result = adapt(
+        storedTodo(counter, {
+          SET_X: "input Unused { y: Int }",
+          OTHER:
+            "input SetXInput { base: String! }\ninput OtherInput { x: Int! }",
+        }),
+      );
+      expect(result.diagnostics).toStrictEqual([]);
+      const [artifact] = result.artifacts;
+      expect(checkRetainedSerialization(artifact)).toStrictEqual([]);
+      expect(declaredShapes(artifact)).toStrictEqual({
+        TodoState: ["x: Int!"],
+        Unused: ["y: Int"],
+        SetXInput: ["base: String!"],
+        OtherInput: ["x: Int!"],
+      });
+    });
+
+    it("names an operation input no stored segment defines", () => {
+      const result = adapt(
+        storedTodo(counter, { SET_X: "input SetInput { y: Int }" }),
+      );
+      expect(result.artifacts).toStrictEqual([]);
+      expect(
+        result.diagnostics.map(({ code, message, received, repair }) => ({
+          code,
+          message,
+          received,
+          repair,
+        })),
+      ).toStrictEqual([
+        {
+          code: "PH-DM-DECLARATION-INVALID",
+          message:
+            'No stored schema defines SetXInput, the input type of operation "SET_X".',
+          received: "SetInput",
+          repair:
+            "Declare input SetXInput in the operation's schema, or rename its input to SetXInput; codegen and the host both look the input up by the name derived from the operation.",
+        },
+      ]);
+    });
+
+    it("reads a state enum an operation segment declares", () => {
+      const result = adapt(
+        storedTodo(
+          { schema: "type TodoState { e: E! }", initialValue: '{"e":"OPEN"}' },
+          { SET_X: "enum E { OPEN }\ninput SetXInput { x: Int! }" },
+        ),
+      );
+      expect(result.diagnostics).toStrictEqual([]);
+      const [artifact] = result.artifacts;
+      expect(checkRetainedSerialization(artifact)).toStrictEqual([]);
+      expect(declaredShapes(artifact)).toStrictEqual({
+        TodoState: ["e: E!"],
+        E: ["OPEN"],
+        SetXInput: ["x: Int!"],
+      });
+    });
+
+    it("accepts an input two operations declare identically", () => {
+      const result = adapt(
+        storedTodo(counter, {
+          FIRST: "input Shared { a: Int! }\ninput FirstInput { s: Shared! }",
+          SECOND: "input Shared { a: Int! }\ninput SecondInput { s: Shared! }",
+        }),
+      );
+      expect(result.diagnostics).toStrictEqual([]);
+      const [artifact] = result.artifacts;
+      expect(checkRetainedSerialization(artifact)).toStrictEqual([]);
+      expect(declaredShapes(artifact)).toStrictEqual({
+        TodoState: ["x: Int!"],
+        Shared: ["a: Int!"],
+        FirstInput: ["s: Shared!"],
+        SecondInput: ["s: Shared!"],
+      });
+    });
+
+    it("accepts a global input an operation input reaches", () => {
+      const result = adapt(
+        storedTodo(
+          {
+            schema: "type TodoState { x: Int! }\ninput Nested { a: Int! }",
+            initialValue: '{"x":1}',
+          },
+          { SET_X: "input SetXInput { n: Nested! }" },
+        ),
+      );
+      expect(result.diagnostics).toStrictEqual([]);
+      const [artifact] = result.artifacts;
+      expect(checkRetainedSerialization(artifact)).toStrictEqual([]);
+      expect(declaredShapes(artifact)).toStrictEqual({
+        TodoState: ["x: Int!"],
+        Nested: ["a: Int!"],
+        SetXInput: ["n: Nested!"],
+      });
+    });
+
+    it.each<{
+      readonly layout: string;
+      readonly global: {
+        readonly schema: string;
+        readonly initialValue: string;
+      };
+      readonly operations: Readonly<Record<string, string>>;
+      readonly diagnostic: object;
+    }>([
+      {
+        layout: "an input two operations declare with different fields",
+        global: counter,
+        operations: {
+          FIRST: "input Shared { a: Int! }\ninput FirstInput { s: Shared! }",
+          SECOND: "input Shared { b: Int! }\ninput SecondInput { s: Shared! }",
+        },
+        diagnostic: {
+          path: [
+            "specifications",
+            0,
+            "modules",
+            0,
+            "operations",
+            0,
+            "schema",
+            "Shared",
+          ],
+          message:
+            "Shared is declared more than once in the stored schemas, and the type code generation merges from them validates differently: code generation's Shared has a, which the declaration the adapter keeps lacks.",
+          repair:
+            "Declare Shared once and add the rest with `extend input Shared`, or make every declaration of Shared agree.",
+        },
+      },
+      {
+        layout: "a later repeat that drops a field",
+        global: counter,
+        operations: {
+          FIRST: "input S { a: Int! b: Int! }\ninput FirstInput { s: S! }",
+          SECOND: "input S { a: Int! }\ninput SecondInput { s: S! }",
+        },
+        diagnostic: {
+          path: [
+            "specifications",
+            0,
+            "modules",
+            0,
+            "operations",
+            0,
+            "schema",
+            "S",
+          ],
+          message:
+            "S is declared more than once in the stored schemas, and the type code generation merges from them validates differently: code generation's S has b, which the declaration the adapter keeps lacks.",
+          repair:
+            "Declare S once and add the rest with `extend input S`, or make every declaration of S agree.",
+        },
+      },
+      {
+        layout: "a state type an operation declares with another field",
+        global: {
+          schema: "type TodoState { x: X! }\ntype X { a: Int! }",
+          initialValue: '{"x":{"a":1,"b":2}}',
+        },
+        operations: {
+          SET_X: "type X { b: Int! }\ninput SetXInput { x: Int! }",
+        },
+        diagnostic: {
+          path: ["specifications", 0, "state", "global", "schema", "X"],
+          message:
+            "X is declared more than once in the stored schemas, and the type code generation merges from them validates differently: code generation's X has a, which the declaration the adapter keeps lacks.",
+          repair:
+            "Declare X once and add the rest with `extend type X`, or make every declaration of X agree.",
+        },
+      },
+      {
+        layout: "a later enum repeat that drops a value",
+        global: {
+          schema: "type TodoState { e: E! }\nenum E { OPEN CLOSED }",
+          initialValue: '{"e":"OPEN"}',
+        },
+        operations: { SET_X: "enum E { OPEN }\ninput SetXInput { x: Int! }" },
+        diagnostic: {
+          path: ["specifications", 0, "state", "global", "schema", "E"],
+          message:
+            "E is declared more than once in the stored schemas, and the type code generation merges from them validates differently: code generation's E has CLOSED, which the declaration the adapter keeps lacks.",
+          repair:
+            "Declare E once and add the rest with `extend enum E`, or make every declaration of E agree.",
+        },
+      },
+      {
+        layout: "a field two repeats give different types",
+        global: counter,
+        operations: {
+          FIRST: "input S { a: Int! }\ninput FirstInput { s: S! }",
+          SECOND: "input S { a: String! }\ninput SecondInput { s: S! }",
+        },
+        diagnostic: {
+          path: [
+            "specifications",
+            0,
+            "modules",
+            0,
+            "operations",
+            0,
+            "schema",
+            "S",
+          ],
+          message:
+            'S is declared more than once in the stored schemas, and code generation cannot merge the declarations. Unable to merge GraphQL input type "S": Field "a" already defined with a different type. Declared as "Int", but you tried to override with "String".',
+          repair:
+            "Make every declaration of S agree on each member's type, or declare S once and add the rest with `extend input S`.",
+        },
+      },
+      {
+        layout: "an object and a later input that share a name",
+        global: {
+          schema: "type TodoState { x: Int! }\ntype S { a: Int! }",
+          initialValue: '{"x":1}',
+        },
+        operations: { SET_X: "input S { b: Int! }\ninput SetXInput { s: S! }" },
+        diagnostic: {
+          path: ["specifications", 0, "state", "global", "schema", "S"],
+          message:
+            "S is declared more than once in the stored schemas, and the type code generation merges from them validates differently: code generation's S has a, which the declaration the adapter keeps lacks.",
+          repair: "Rename one of the types; one name holds one type.",
+        },
+      },
+    ])(
+      "rejects $layout, which validates differently from code generation",
+      ({ global, operations, diagnostic }) => {
+        const result = adapt(storedTodo(global, operations));
+        expect(result.artifacts).toStrictEqual([]);
+        expect(
+          result.diagnostics.map(({ code, path, message, repair }) => ({
+            code,
+            path,
+            message,
+            repair,
+          })),
+        ).toStrictEqual([{ code: "PH-DM-DECLARATION-INVALID", ...diagnostic }]);
+      },
+    );
+
+    it("merges an input declared once and extended in another operation", () => {
+      const result = adapt(
+        storedTodo(counter, {
+          FIRST: "input Shared { a: Int! }\ninput FirstInput { s: Shared! }",
+          SECOND:
+            "extend input Shared { b: Int! }\ninput SecondInput { s: Shared! }",
+        }),
+      );
+      expect(result.diagnostics).toStrictEqual([]);
+      const [artifact] = result.artifacts;
+      expect(checkRetainedSerialization(artifact)).toStrictEqual([]);
+      expect(declaredShapes(artifact)).toStrictEqual({
+        TodoState: ["x: Int!"],
+        Shared: ["a: Int!", "b: Int!"],
+        FirstInput: ["s: Shared!"],
+        SecondInput: ["s: Shared!"],
+      });
+    });
+
+    it("reports a declared type no retained segment declares", () => {
+      const [artifact] = adapt(
+        storedTodo(
+          { schema: "type TodoState { e: E! }", initialValue: '{"e":"OPEN"}' },
+          { SET_X: "enum E { OPEN }\ninput SetXInput { x: Int! }" },
+        ),
+      ).artifacts;
+      const edited = structuredClone(artifact.documentModel);
+      edited.global.specifications[0].modules[0].operations[0].schema =
+        "input SetXInput { x: Int! }";
+      expect(
+        checkRetainedSerialization({ ...artifact, documentModel: edited }).map(
+          ({ path, message }) => ({ path, message }),
+        ),
+      ).toStrictEqual([
+        {
+          path: ["specifications", 0],
+          message: "No retained segment declares E.",
+        },
+      ]);
+    });
+  });
+
+  it("refuses a specification whose extension the host would reject", () => {
+    const state = structuredClone(readCorpusState(CORPUS_ROOTS[7]));
+    state.global.specifications[0].state.global.schema +=
+      "\n\nextend enum TodoItem { ARCHIVED }";
+    const result = adapt(state);
+    expect(result.artifacts).toStrictEqual([]);
+    expect(
+      result.diagnostics.map(({ code, message }) => ({ code, message })),
+    ).toStrictEqual([
+      {
+        code: "PH-DM-COMPATIBILITY-INVALID",
+        message:
+          "TodoItem is an object type, so it cannot be extended as an enum.",
+      },
     ]);
   });
 

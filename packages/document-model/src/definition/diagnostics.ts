@@ -52,7 +52,8 @@ const catalog = {
   "PH-DEF-FIELD-OPTION-UNSUPPORTED": {
     severity: "error",
     phase: "definition",
-    meaning: "A field use contains a validation option other than required",
+    meaning:
+      "A field use contains an option its builder or its position does not support",
   },
   "PH-DEF-TYPE-AS-FIELD": {
     severity: "error",
@@ -99,7 +100,7 @@ const catalog = {
     severity: "error",
     phase: "definition",
     meaning:
-      "An object implements something that is not a ph.interface, or the same interface twice",
+      "An object or an interface implements something that is not a ph.interface, or the same interface twice",
   },
   "PH-SCALAR-DECLARATION-INVALID": {
     severity: "error",
@@ -162,8 +163,7 @@ const catalog = {
   "PH-DM-DEFAULT-UNSUPPORTED": {
     severity: "error",
     phase: "definition",
-    meaning:
-      "A document state or action input field declares a GraphQL default value",
+    meaning: "A document state field declares a GraphQL default value",
   },
   "PH-DM-COMPATIBILITY-INVALID": {
     severity: "error",

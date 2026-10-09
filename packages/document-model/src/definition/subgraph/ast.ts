@@ -59,7 +59,10 @@ export function compileSubgraphSchema(
   input: CompileSubgraphInput,
 ): SubgraphSchemaData {
   const collector = new DefinitionDiagnosticCollector();
-  const walk = new DescriptorWalk(collector, { allowFieldDefaults: true });
+  const walk = new DescriptorWalk(collector, {
+    allowOutputDefaults: true,
+    allowEquals: false,
+  });
   const entries: SubgraphEntryDefinition[] = [];
   const roots = new Map<RootName, FieldNode[]>();
   const computedTargets = new Map<string, ReadonlySet<string>>();
@@ -463,7 +466,10 @@ function namedTypeNode(type: NamedGraphQLTypeDefinition): unknown {
         kind: "InterfaceTypeDefinition",
         name: name(type.name),
         ...description(type.description),
-        interfaces: [],
+        interfaces: (type.implements ?? []).map((implemented) => ({
+          kind: "NamedType",
+          name: name(implemented),
+        })),
         directives: [],
         fields: type.fields.map(fieldNode),
       };

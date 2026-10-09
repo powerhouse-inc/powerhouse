@@ -183,9 +183,8 @@ describe("state validation refuses what the catalog refuses", () => {
     for (const { id, value, partition } of allCases(name)) {
       const state = MODEL.utils.createState({ global: { [field]: value } });
       const where = `${name} ${partition}/${id}`;
-      // The state field is nullable, so a null is a valid state whatever the
-      // scalar would have said about it as an operation input.
-      const expected = value === null || fieldAccepts(name, value);
+      const expected =
+        value === null || value === undefined || fieldAccepts(name, value);
       expect(MODEL.utils.isStateOfType(state), where).toBe(expected);
     }
   });

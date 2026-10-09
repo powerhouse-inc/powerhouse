@@ -37,7 +37,6 @@ import {
   type EnumValue,
   type EnumValueInput,
   FIELD_USE_ROLE,
-  type FieldOptions,
   type InputDescriptor,
   type InputOf,
   type InterfaceDescriptor,
@@ -48,9 +47,13 @@ import {
   type ObjectFields,
   type OutputOf,
   type ReferenceDescriptor,
-  type ScalarDescriptor,
+  type ScalarBuilder,
+  type ScalarBuilderOptions,
   type SourceOf,
   type UnionDescriptor,
+  type DefaultFlag,
+  type FieldBuilderOptions,
+  type JsonLiteral,
 } from "./types.js";
 import { buildValidator } from "./zod.js";
 
@@ -61,15 +64,22 @@ type EnumOptions<TValues extends readonly EnumValueInput[]> = NamedOptions & {
 type FieldsOptions<TFields extends ObjectFields> = NamedOptions & {
   readonly fields: TFields;
 };
+type ImplementsOptions<TImplements extends readonly InterfaceDescriptor[]> = {
+  readonly implements?: TImplements;
+};
 type ObjectOptions<
   TFields extends OutputMembers,
   TImplements extends readonly InterfaceDescriptor[],
-> = NamedOptions & {
-  // An output object may declare computed members beside its stored fields;
-  // an input object may not, which is why `FieldsOptions` stays narrow.
-  readonly fields: TFields;
-  readonly implements?: TImplements;
-};
+> = NamedOptions &
+  ImplementsOptions<TImplements> & {
+    // An output object may declare computed members beside its stored fields;
+    // an input object may not, which is why `FieldsOptions` stays narrow.
+    readonly fields: TFields;
+  };
+type InterfaceOptions<
+  TFields extends ObjectFields,
+  TImplements extends readonly InterfaceDescriptor[],
+> = FieldsOptions<TFields> & ImplementsOptions<TImplements>;
 type UnionOptions<TMembers extends readonly ObjectDescriptor[]> =
   NamedOptions & {
     readonly members: TMembers;
@@ -86,15 +96,9 @@ type BuiltInBase<TName extends BuiltInName> = TName extends "Boolean"
     ? number
     : string;
 
-type BuiltInFactory<TName extends BuiltInName> = {
-  <const TRequired extends boolean = false>(
-    options?: FieldOptions<TRequired>,
-  ): ScalarDescriptor<
-    Nullable<BuiltInBase<TName>, TRequired>,
-    Nullable<BuiltInBase<TName>, TRequired>,
-    Nullable<BuiltInBase<TName>, TRequired>,
-    TRequired
-  >;
+type BuiltInFactory<TName extends BuiltInName> = ScalarBuilder<
+  BuiltInBase<TName>
+> & {
   readonly role: `field-use factory; call it, as ph.${TName}({ required: true })`;
   readonly kind: "scalar-factory";
 };
@@ -103,10 +107,12 @@ function builtInFactory<const TName extends BuiltInName>(
   name: TName,
   validator: z.ZodType,
 ): BuiltInFactory<TName> {
-  const factory = <const TRequired extends boolean = false>(
-    options?: FieldOptions<TRequired>,
-  ) =>
-    createScalarField<BuiltInBase<TName>, TRequired>(name, validator, options);
+  const factory = (options?: ScalarBuilderOptions) =>
+    createScalarField<BuiltInBase<TName>, boolean, boolean>(
+      name,
+      validator,
+      options,
+    );
   return registerScalarFactory(
     Object.freeze(
       Object.assign(factory, {
@@ -114,7 +120,7 @@ function builtInFactory<const TName extends BuiltInName>(
         kind: "scalar-factory" as const,
       }),
     ),
-  );
+  ) as unknown as BuiltInFactory<TName>;
 }
 
 function description(options: {
@@ -269,7 +275,7 @@ function namedType<T extends AnyTypeDescriptor>(
     }),
     validator: undefined as unknown as z.ZodType,
   } as unknown as T & { validator: z.ZodType };
-  descriptor.validator = buildValidator(descriptor, "output");
+  descriptor.validator = buildValidator(descriptor);
   return registerTypeDescriptor(Object.freeze(descriptor));
 }
 
@@ -294,6 +300,50 @@ function refTarget(
   return candidate;
 }
 
+function implementedInterfaces(config: {
+  readonly [key: string]: unknown;
+}): readonly InterfaceDescriptor[] {
+  const implemented = Object.hasOwn(config, "implements")
+    ? snapshotDescriptorArray(
+        config.implements,
+        ["options", "implements"],
+        "PH-DEF-IMPLEMENTS-INVALID",
+        "Pass implements as an array of descriptors returned by ph.interface.",
+      )
+    : [];
+  const seen = new Set<string>();
+  implemented.forEach((candidate, index) => {
+    const path = ["options", "implements", index];
+    assertNamedType(
+      candidate,
+      path,
+      "PH-DEF-IMPLEMENTS-INVALID",
+      "Pass a descriptor returned by ph.interface.",
+    );
+    if (candidate.kind !== "interface") {
+      failDefinition({
+        code: "PH-DEF-IMPLEMENTS-INVALID",
+        path,
+        message: `${JSON.stringify(candidate.name)} is a ${candidate.kind}, not an interface.`,
+        received: candidate.kind,
+        repair: "Only descriptors returned by ph.interface can be implemented.",
+      });
+    }
+    const interfaceName = candidate.name as string;
+    if (seen.has(interfaceName)) {
+      failDefinition({
+        code: "PH-DEF-IMPLEMENTS-INVALID",
+        path,
+        message: `Interface ${JSON.stringify(interfaceName)} is implemented twice.`,
+        received: interfaceName,
+        repair: "List each implemented interface once.",
+      });
+    }
+    seen.add(interfaceName);
+  });
+  return Object.freeze([...implemented]) as readonly InterfaceDescriptor[];
+}
+
 export const ph = Object.freeze({
   ID: builtInFactory("ID", stringValidator),
   String: builtInFactory("String", stringValidator),
@@ -305,14 +355,16 @@ export const ph = Object.freeze({
   list<
     const TItem extends AnyFieldDescriptor,
     const TRequired extends boolean = false,
+    const TDefault extends JsonLiteral | undefined = undefined,
   >(
     item: TItem,
-    options?: FieldOptions<TRequired>,
+    options?: FieldBuilderOptions<TRequired, TDefault>,
   ): ListDescriptor<
     Nullable<readonly InputOf<TItem>[], TRequired>,
     Nullable<readonly OutputOf<TItem>[], TRequired>,
     Nullable<readonly SourceOf<TItem>[], TRequired>,
-    TRequired
+    TRequired,
+    DefaultFlag<TDefault>
   > {
     assertFieldUse(item, ["item"]);
     assertBareListItem(item, ["item"]);
@@ -332,23 +384,31 @@ export const ph = Object.freeze({
       presentation,
       validator: undefined as unknown as z.ZodType,
     };
-    descriptor.validator = buildValidator(descriptor, "output");
+    descriptor.validator = buildValidator(descriptor);
     return registerFieldDescriptor(
-      Object.freeze(descriptor) as ListDescriptor<any, any, any, TRequired>,
+      Object.freeze(descriptor) as unknown as ListDescriptor<
+        any,
+        any,
+        any,
+        TRequired,
+        DefaultFlag<TDefault>
+      >,
     );
   },
 
   ref<
     const TTarget extends AnyTypeDescriptor,
     const TRequired extends boolean = false,
+    const TDefault extends JsonLiteral | undefined = undefined,
   >(
     target: TTarget | (() => TTarget),
-    options?: FieldOptions<TRequired>,
+    options?: FieldBuilderOptions<TRequired, TDefault>,
   ): ReferenceDescriptor<
     Nullable<InputOf<TTarget>, TRequired>,
     Nullable<OutputOf<TTarget>, TRequired>,
     Nullable<SourceOf<TTarget>, TRequired>,
-    TRequired
+    TRequired,
+    DefaultFlag<TDefault>
   > {
     let resolved: AnyTypeDescriptor | undefined;
     const resolve = (): AnyTypeDescriptor => {
@@ -378,10 +438,11 @@ export const ph = Object.freeze({
       any,
       any,
       any,
-      TRequired
+      TRequired,
+      DefaultFlag<TDefault>
     >;
     registerReference(reference, resolve);
-    descriptor.validator = buildValidator(reference, "output");
+    descriptor.validator = buildValidator(reference);
     return registerFieldDescriptor(Object.freeze(reference));
   },
 
@@ -427,51 +488,12 @@ export const ph = Object.freeze({
     );
     const members = splitMembers(config.fields, ["options", "fields"]);
     const fields = members.fields as TFields;
-    const implemented = Object.hasOwn(config, "implements")
-      ? snapshotDescriptorArray(
-          config.implements,
-          ["options", "implements"],
-          "PH-DEF-IMPLEMENTS-INVALID",
-          "Pass implements as an array of descriptors returned by ph.interface.",
-        )
-      : [];
-    const seen = new Set<string>();
-    implemented.forEach((candidate, index) => {
-      const path = ["options", "implements", index];
-      assertNamedType(
-        candidate,
-        path,
-        "PH-DEF-IMPLEMENTS-INVALID",
-        "Pass a descriptor returned by ph.interface.",
-      );
-      if (candidate.kind !== "interface") {
-        failDefinition({
-          code: "PH-DEF-IMPLEMENTS-INVALID",
-          path,
-          message: `${JSON.stringify(candidate.name)} is a ${candidate.kind}, not an interface.`,
-          received: candidate.kind,
-          repair:
-            "Only descriptors returned by ph.interface can be implemented.",
-        });
-      }
-      const interfaceName = candidate.name as string;
-      if (seen.has(interfaceName)) {
-        failDefinition({
-          code: "PH-DEF-IMPLEMENTS-INVALID",
-          path,
-          message: `Interface ${JSON.stringify(interfaceName)} is implemented twice.`,
-          received: interfaceName,
-          repair: "List each implemented interface once.",
-        });
-      }
-      seen.add(interfaceName);
-    });
     return namedType<ObjectDescriptor<TFields, TImplements>>({
       kind: "object",
       name: validName,
       description: description(config),
       fields,
-      implements: Object.freeze([...implemented]) as unknown as TImplements,
+      implements: implementedInterfaces(config) as TImplements,
       // Present whether or not anything is computed, so a binding reads the
       // same on every object and a typo is a compile error rather than a
       // read of `undefined`.
@@ -480,21 +502,25 @@ export const ph = Object.freeze({
     });
   },
 
-  interface<const TFields extends ObjectFields>(
+  interface<
+    const TFields extends ObjectFields,
+    const TImplements extends readonly InterfaceDescriptor[] = readonly [],
+  >(
     name: string,
-    options: FieldsOptions<TFields>,
-  ): InterfaceDescriptor<TFields> {
+    options: InterfaceOptions<TFields, TImplements>,
+  ): InterfaceDescriptor<TFields, TImplements> {
     const validName = assertAuthoredName(name, ["name"]);
     const config = snapshotDescriptorOptions(
       options,
-      ["fields", "description"],
+      ["fields", "description", "implements"],
       ["options"],
     );
-    return namedType<InterfaceDescriptor<TFields>>({
+    return namedType<InterfaceDescriptor<TFields, TImplements>>({
       kind: "interface",
       name: validName,
       description: description(config),
       fields: fieldMap(config.fields, ["options", "fields"]) as TFields,
+      implements: implementedInterfaces(config) as TImplements,
     });
   },
 

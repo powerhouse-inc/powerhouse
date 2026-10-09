@@ -55,12 +55,11 @@ describe("nine-root parity", () => {
       "e2e-todo",
       "versioned-todo",
       "sample",
+      "extensions",
     ]);
-    // Ten specification versions across the nine shipped roots, plus the
-    // synthetic one that carries the examples none of them have.
     expect(
       roots
-        .filter((root) => root.name !== "sample")
+        .filter((root) => root.name !== "sample" && root.name !== "extensions")
         .reduce((total, root) => total + root.versions.length, 0),
     ).toBe(10);
   });
@@ -76,6 +75,7 @@ describe("nine-root parity", () => {
     "e2e-todo",
     "versioned-todo",
     "sample",
+    "extensions",
   ])("%s", (name) => {
     const root = (): ParityRoot => {
       const found = roots.find((candidate) => candidate.name === name);

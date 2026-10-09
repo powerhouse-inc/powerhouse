@@ -12,6 +12,7 @@ import type {
   DocumentSpecification,
   InputTypeDefinition,
   JsonValue,
+  LocationFreeGraphQLDocumentNode,
   ModuleSpecification,
   NamedGraphQLTypeDefinition,
   NonEmptyStateDefinition,
@@ -38,17 +39,24 @@ import {
   deriveSchemaFirstOperationNames,
   producesRuntimeSymbol,
 } from "../../naming.js";
-import { canonicalDigest, EMPTY_INPUT_FIELD_NAME } from "../../primitives.js";
-import { printSchemaSegment } from "../../printer.js";
+import {
+  canonicalDigest,
+  canonicalJson,
+  EMPTY_INPUT_FIELD_NAME,
+} from "../../primitives.js";
+import { namedTypeInventory, printSchemaSegment } from "../../printer.js";
 import { assignStoredSegments } from "../../segments.js";
 import { scalarCatalog } from "../../scalars/catalog.js";
 import { checkDocumentModelDefinitionShape } from "../../wire-shape.js";
 import {
   checkScalarReferences,
   declaredTypeNames,
+  EMPTY_DOCUMENT,
+  structuredTypesBySegment,
   structuredTypesFromDocument,
 } from "../ast-to-structured.js";
 import { schemaFirstGraphQLDocument } from "../graphql-document.js";
+import { generatedDifference, mergedDeclaration } from "../codegen-merge.js";
 
 /**
  * Projects the state a generated `DocumentModelModule` already carries into
@@ -285,6 +293,92 @@ function scalarNamesIn(
   return names;
 }
 
+const TYPE_KEYWORDS: Readonly<
+  Record<NamedGraphQLTypeDefinition["kind"], string>
+> = {
+  object: "type",
+  interface: "interface",
+  input: "input",
+  enum: "enum",
+  union: "union",
+};
+
+function divergentRepeat(
+  collector: DefinitionDiagnosticCollector,
+  kept: NamedGraphQLTypeDefinition,
+  kinds: ReadonlySet<NamedGraphQLTypeDefinition["kind"]>,
+  merged:
+    | { readonly type: NamedGraphQLTypeDefinition }
+    | { readonly error: string },
+  path: DefinitionPath,
+): void {
+  const name = kept.name;
+  const extend = `\`extend ${TYPE_KEYWORDS[kept.kind]} ${name}\``;
+  if ("error" in merged) {
+    collector.add({
+      code: "PH-DM-DECLARATION-INVALID",
+      path,
+      message: `${name} is declared more than once in the stored schemas, and code generation cannot merge the declarations. ${merged.error}.`,
+      expected: `declarations of ${name} that code generation can merge`,
+      received: canonicalJson(kept),
+      repair: `Make every declaration of ${name} agree on each member's type, or declare ${name} once and add the rest with ${extend}.`,
+    });
+    return;
+  }
+  collector.add({
+    code: "PH-DM-DECLARATION-INVALID",
+    path,
+    message: `${name} is declared more than once in the stored schemas, and the type code generation merges from them validates differently: ${generatedDifference(merged.type, kept)}.`,
+    expected: canonicalJson(merged.type),
+    received: canonicalJson(kept),
+    repair:
+      kinds.size > 1
+        ? "Rename one of the types; one name holds one type."
+        : `Declare ${name} once and add the rest with ${extend}, or make every declaration of ${name} agree.`,
+  });
+}
+
+function storedRepeatsMatchCodegenMerge(
+  collector: DefinitionDiagnosticCollector,
+  emitted: readonly NamedGraphQLTypeDefinition[],
+  documents: readonly LocationFreeGraphQLDocumentNode[],
+  typesBySegment: readonly (readonly NamedGraphQLTypeDefinition[])[],
+  segmentPaths: readonly DefinitionPath[],
+  declared: ReadonlySet<string>,
+  schemaPath: DefinitionPath,
+): boolean {
+  let matches = true;
+  for (const kept of emitted) {
+    const copies = typesBySegment.flatMap((types, index) =>
+      types
+        .filter((type) => type.name === kept.name)
+        .map((type) => ({ kind: type.kind, path: segmentPaths[index] })),
+    );
+    if (copies.length < 2) continue;
+    const merged = mergedDeclaration(
+      documents,
+      kept.name,
+      declared,
+      schemaPath,
+    );
+    if (
+      "type" in merged &&
+      generatedDifference(merged.type, kept) === undefined
+    ) {
+      continue;
+    }
+    divergentRepeat(
+      collector,
+      kept,
+      new Set(copies.map((copy) => copy.kind)),
+      merged,
+      [...copies[0].path, kept.name],
+    );
+    matches = false;
+  }
+  return matches;
+}
+
 type NormalizedOperation = {
   /** `${moduleKey}/${operationKey}`, the key its stored segment is filed by. */
   readonly key: string;
@@ -338,11 +432,19 @@ function normalizeOperation(
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
       path: [...path, "schema"],
-      message: `Operation ${JSON.stringify(storedName)} declares a schema that does not define ${inputName}.`,
+      message:
+        declared === undefined
+          ? `No stored schema defines ${inputName}, the input type of operation ${JSON.stringify(storedName)}.`
+          : `${inputName}, the input type of operation ${JSON.stringify(storedName)}, is declared with \`${TYPE_KEYWORDS[declared.kind]}\`, not \`input\`.`,
       expected: `input ${inputName} { ... }`,
-      received: segmentTypes.map((type) => type.name).join(", "),
+      received: [...typesByName.values()]
+        .filter((type) => type.kind === "input")
+        .map((type) => type.name)
+        .join(", "),
       repair:
-        "Name the operation's input type after the operation; codegen and the host both look it up by that name.",
+        declared === undefined
+          ? `Declare input ${inputName} in the operation's schema, or rename its input to ${inputName}; codegen and the host both look the input up by the name derived from the operation.`
+          : `Declare ${inputName} with \`input\`; codegen and the host both read the operation's input from it.`,
     });
     return undefined;
   }
@@ -414,56 +516,80 @@ function normalizeSpecification(
   },
   path: DefinitionPath,
 ): NormalizedSpecification | undefined {
-  const stateSegments = [
-    specification.state.global.schema,
-    specification.state.local.schema,
-  ];
-  const operationSegments = specification.modules.flatMap((module) =>
-    module.operations.flatMap((operation) =>
-      operation.schema === null ? [] : [operation.schema],
+  const storedSegments = [
+    {
+      schema: specification.state.global.schema,
+      key: "global",
+      path: [...path, "state", "global", "schema"],
+    },
+    {
+      schema: specification.state.local.schema,
+      key: "local",
+      path: [...path, "state", "local", "schema"],
+    },
+    ...specification.modules.flatMap((module, moduleIndex) =>
+      module.operations.flatMap((operation, operationIndex) =>
+        operation.schema === null
+          ? []
+          : [
+              {
+                schema: operation.schema,
+                key: `${moduleIndex}/${operationIndex}`,
+                path: [
+                  ...path,
+                  "modules",
+                  moduleIndex,
+                  "operations",
+                  operationIndex,
+                  "schema",
+                ],
+              },
+            ],
+      ),
     ),
-  );
+  ];
   const document = collector.capture(() =>
-    schemaFirstGraphQLDocument([...stateSegments, ...operationSegments]),
+    schemaFirstGraphQLDocument(storedSegments.map(({ schema }) => schema)),
   );
   if (document === undefined) return undefined;
   const declared = declaredTypeNames(document.document);
 
-  const parseSegment = (
-    segment: string,
-    at: DefinitionPath,
-  ): {
-    types: readonly NamedGraphQLTypeDefinition[];
-    unrepresentable: boolean;
-  } => {
-    if (segment.trim() === "") return { types: [], unrepresentable: false };
+  const parsedSegments = storedSegments.map(({ schema, path: at }) => {
+    if (schema.trim() === "") {
+      return { document: EMPTY_DOCUMENT, unrepresentable: false };
+    }
     const parsed = collector.capture(() =>
-      schemaFirstGraphQLDocument([segment]),
+      schemaFirstGraphQLDocument([schema]),
     );
-    if (parsed === undefined) return { types: [], unrepresentable: true };
-    const converted = structuredTypesFromDocument(
-      parsed.document,
-      declared,
-      at,
-    );
+    if (parsed === undefined) {
+      return { document: EMPTY_DOCUMENT, unrepresentable: true };
+    }
     return {
-      types: converted.types,
-      unrepresentable: converted.unrepresentable.length > 0,
+      document: parsed.document,
+      unrepresentable:
+        structuredTypesFromDocument(parsed.document, declared, at)
+          .unrepresentable.length > 0,
     };
-  };
-
-  const globalSegment = parseSegment(specification.state.global.schema, [
-    ...path,
-    "state",
-    "global",
-    "schema",
-  ]);
-  const localSegment = parseSegment(specification.state.local.schema, [
-    ...path,
-    "state",
-    "local",
-    "schema",
-  ]);
+  });
+  const composed = structuredTypesBySegment(
+    parsedSegments.map((segment) => segment.document),
+    declared,
+    [...path, "schema"],
+  );
+  if (composed.diagnostics.length > 0) {
+    collector.merge(composed.diagnostics);
+    return undefined;
+  }
+  const segmentAt = (index: number) => ({
+    types: composed.types[index],
+    unrepresentable: parsedSegments[index].unrepresentable,
+  });
+  const segments = new Map(
+    storedSegments.map(({ key }, index) => [key, segmentAt(index)]),
+  );
+  const noSegment = { types: [], unrepresentable: false };
+  const globalSegment = segmentAt(0);
+  const localSegment = segmentAt(1);
   let unrepresentable =
     globalSegment.unrepresentable || localSegment.unrepresentable;
 
@@ -471,7 +597,9 @@ function normalizeSpecification(
   for (const type of [...globalSegment.types, ...localSegment.types]) {
     typesByName.set(type.name, type);
   }
-
+  const declaredAnywhere = new Map(
+    composed.types.flat().map((type) => [type.name, type] as const),
+  );
   const operations: NormalizedOperation[] = [];
   const modules: DocumentModelModuleDefinition[] = [];
   const derivedNames: DerivedModuleNames[] = [];
@@ -489,16 +617,14 @@ function normalizeSpecification(
     module.operations.forEach((operation, operationIndex) => {
       const operationPath = [...modulePath, "operations", operationIndex];
       const segment =
-        operation.schema === null
-          ? { types: [], unrepresentable: false }
-          : parseSegment(operation.schema, [...operationPath, "schema"]);
+        segments.get(`${moduleIndex}/${operationIndex}`) ?? noSegment;
       unrepresentable = unrepresentable || segment.unrepresentable;
       for (const type of segment.types) typesByName.set(type.name, type);
       const normalized = normalizeOperation(
         collector,
         operation,
         deriveSchemaFirstModuleKey(module.name),
-        typesByName,
+        new Map([...declaredAnywhere, ...typesByName]),
         segment.types,
         operationPath,
       );
@@ -591,18 +717,25 @@ function normalizeSpecification(
     return undefined;
   }
 
+  const emitted = [
+    ...order.ordered,
+    ...operations.flatMap((operation) =>
+      operation.definition.input === null ? [] : [operation.definition.input],
+    ),
+  ];
+  if (!checkScalarReferences(collector, emitted, [...path, "types"])) {
+    return undefined;
+  }
+
   if (
-    !checkScalarReferences(
+    !storedRepeatsMatchCodegenMerge(
       collector,
-      [
-        ...order.ordered,
-        ...operations.flatMap((operation) =>
-          operation.definition.input === null
-            ? []
-            : [operation.definition.input],
-        ),
-      ],
-      [...path, "types"],
+      emitted,
+      parsedSegments.map((segment) => segment.document),
+      composed.types,
+      storedSegments.map((segment) => segment.path),
+      declared,
+      [...path, "schema"],
     )
   ) {
     return undefined;
@@ -781,12 +914,13 @@ function printedDiffers(
       input: operation.definition.input,
     })),
   });
-  if (
-    printSchemaSegment(segments.global) !== specification.state.global.schema
-  ) {
+  const inventory = namedTypeInventory(types);
+  const print = (definitions: readonly NamedGraphQLTypeDefinition[]) =>
+    printSchemaSegment(definitions, inventory);
+  if (print(segments.global) !== specification.state.global.schema) {
     return true;
   }
-  if (printSchemaSegment(segments.local) !== specification.state.local.schema) {
+  if (print(segments.local) !== specification.state.local.schema) {
     return true;
   }
   if (
@@ -811,7 +945,7 @@ function printedDiffers(
     if (operation.storedSchema === null) return false;
     const printed = segments.operations.get(operation.key);
     if (printed === undefined) return true;
-    return printSchemaSegment(printed) !== operation.storedSchema;
+    return print(printed) !== operation.storedSchema;
   });
 }
 

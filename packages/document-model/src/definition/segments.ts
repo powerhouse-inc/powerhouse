@@ -5,24 +5,19 @@ import type {
 } from "@powerhousedao/shared/document-model";
 
 /**
- * Which stored segment declares which named type.
+ * Which stored segment the compiler prints each named type in.
  *
- * Every named type is declared in exactly one segment, because the
- * schema-first pipeline concatenates the state segments and every operation
- * segment into one document (`codegen/src/codegen/graphql.ts`) and a repeated
- * definition would fail to build.
- *
- * - An operation segment declares the operation's own input — codegen selects
- *   it there by name — plus the input types it reaches that no earlier
+ * - An operation segment declares the operation's own input, which codegen
+ *   selects there by name, plus the input types it reaches that no earlier
  *   segment declares.
  * - A type only the local root reaches goes to the local segment.
  * - Everything else, including an input type no operation reaches, goes to
  *   the global segment, which is where the host looks for one
  *   (`create-schema.ts` re-extracts input definitions from the state schema).
  *
- * The compiler assigns segments with this rule when it prints them, and the
- * retained-serialization check reads it back to know what a stored string is
- * supposed to declare. One rule, two readers.
+ * A schema-first stored string need not follow this layout, because codegen
+ * concatenates every segment, so the retained-serialization check reads it
+ * back only for canonical-v1 artifacts.
  */
 
 export type SegmentOperation = {

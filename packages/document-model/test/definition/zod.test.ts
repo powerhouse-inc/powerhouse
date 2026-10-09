@@ -1,19 +1,12 @@
 import {
   AddFileInputSchema,
-  DocumentDriveLocalStateSchema,
-  DocumentDriveStateSchema,
-  NodeSchema,
   TransmitterTypeSchema,
 } from "@powerhousedao/shared/document-drive";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ph } from "../../src/definition/field.js";
 import type { AnyDescriptor } from "../../src/definition/types.js";
-import {
-  buildValidator,
-  resolveReference,
-  validatorFor,
-} from "../../src/definition/zod.js";
+import { resolveReference } from "../../src/definition/zod.js";
 
 const FORBIDDEN_DEF_TYPES = new Set([
   "default",
@@ -116,59 +109,46 @@ describe("validators are predicates over the raw input", () => {
       expect(defs.length).toBeGreaterThan(0);
     }
     expect(walkDefs(Big.validator).length).toBeGreaterThan(12);
-    expect(walkDefs(validatorFor(Big.fields.tags, "input"))).not.toContain(
-      "default",
-    );
   });
 });
 
-describe("position-dependent nullability", () => {
-  it("uses nullable in state and nullish in inputs, as generated schemas do", () => {
+describe("nullability by slot", () => {
+  it("lets a nullable field be absent in state and in inputs, as generated schemas do", () => {
     const state = ph.object("S", {
       fields: { note: ph.String(), n: ph.Int({ required: true }) },
     });
     const input = ph.input("I", {
       fields: { note: ph.String(), n: ph.Int({ required: true }) },
     });
-    expect(state.validator.safeParse({ n: 1, note: null }).success).toBe(true);
-    expect(state.validator.safeParse({ n: 1, note: undefined }).success).toBe(
-      false,
-    );
-    expect(state.validator.safeParse({ n: 1 }).success).toBe(false);
-    expect(input.validator.safeParse({ n: 1, note: null }).success).toBe(true);
-    expect(input.validator.safeParse({ n: 1, note: undefined }).success).toBe(
-      true,
-    );
-    expect(input.validator.safeParse({ n: 1 }).success).toBe(true);
-    expect(input.validator.safeParse({ note: "x" }).success).toBe(false);
+    for (const validator of [state.validator, input.validator]) {
+      expect(
+        [{ n: 1, note: null }, { n: 1, note: undefined }, { n: 1 }, {}].map(
+          (value) => validator.safeParse(value).success,
+        ),
+      ).toStrictEqual([true, true, true, false]);
+    }
   });
 
-  it("carries the position through lists and references", () => {
+  it("refuses an undefined nullable list item in state and in inputs", () => {
     const LeafInput = ph.input("LeafInput", { fields: { v: ph.String() } });
-    const list = ph.list(ph.ref(LeafInput));
-    expect(validatorFor(list, "output").safeParse([undefined]).success).toBe(
-      false,
-    );
-    expect(validatorFor(list, "input").safeParse([undefined]).success).toBe(
-      true,
-    );
-    expect(
-      validatorFor(list, "input").safeParse([{ v: undefined }]).success,
-    ).toBe(true);
-    expect(validatorFor(list, "input").safeParse([{ v: 1 }]).success).toBe(
-      false,
-    );
-    expect(validatorFor(list, "output")).toBe(list.validator);
-    expect(validatorFor(list, "input")).toBe(validatorFor(list, "input"));
-    expect(validatorFor(LeafInput, "input")).toBe(LeafInput.validator);
     const Leaf = ph.object("Leaf", { fields: { v: ph.String() } });
-    const outputList = ph.list(ph.ref(Leaf));
+    for (const list of [
+      ph.list(ph.String()),
+      ph.list(ph.ref(LeafInput)),
+      ph.list(ph.ref(Leaf)),
+    ]) {
+      expect(
+        [[null], [undefined], undefined, null].map(
+          (value) => list.validator.safeParse(value).success,
+        ),
+      ).toStrictEqual([true, false, true, true]);
+    }
+    const inputs = ph.list(ph.ref(LeafInput));
     expect(
-      validatorFor(outputList, "output").safeParse([{ v: undefined }]).success,
-    ).toBe(false);
-    expect(
-      validatorFor(outputList, "output").safeParse([{ v: null }]).success,
-    ).toBe(true);
+      [[{ v: undefined }], [{}], [{ v: 1 }]].map(
+        (value) => inputs.validator.safeParse(value).success,
+      ),
+    ).toStrictEqual([true, true, false]);
   });
 
   it("accepts an optional __typename literal on state objects only", () => {
@@ -185,50 +165,64 @@ describe("position-dependent nullability", () => {
   });
 });
 
-describe("parity with the generated document-drive schemas", () => {
-  const state = DocumentDriveStateSchema().shape;
-  const local = DocumentDriveLocalStateSchema().shape;
-  const input = AddFileInputSchema().shape;
+describe("field-use nullability", () => {
+  const verdicts = (validator: z.ZodType, values: readonly unknown[]) =>
+    values.map((value) => validator.safeParse(value).success);
 
-  it("matches a nullable state field", () => {
-    agreesWith(validatorFor(ph.String(), "output"), state.icon, probeValues);
+  it("lets a nullable field be null or absent", () => {
+    expect(
+      verdicts(ph.String().validator, [undefined, null, "", "text", 0]),
+    ).toStrictEqual([true, true, true, true, false]);
   });
 
-  it("matches a required state field", () => {
-    agreesWith(
-      validatorFor(ph.String({ required: true }), "output"),
-      state.name,
-      probeValues,
-    );
-    agreesWith(
-      validatorFor(ph.Boolean({ required: true }), "output"),
-      local.availableOffline,
-      probeValues,
-    );
+  it("refuses null and absence on a required field", () => {
+    expect(
+      verdicts(ph.String({ required: true }).validator, [
+        undefined,
+        null,
+        "",
+        0,
+      ]),
+    ).toStrictEqual([false, false, true, false]);
+    expect(
+      verdicts(ph.Boolean({ required: true }).validator, [
+        undefined,
+        null,
+        true,
+        "true",
+      ]),
+    ).toStrictEqual([false, false, true, false]);
   });
 
-  it("matches a nullable input field, including undefined", () => {
+  it("lets a nullable list item be null but not absent", () => {
+    expect(
+      verdicts(ph.list(ph.String()).validator, [
+        undefined,
+        null,
+        [],
+        ["a", null],
+        ["a", undefined],
+        [1],
+      ]),
+    ).toStrictEqual([true, true, true, true, false, false]);
+  });
+
+  it("refuses a null item in a required list of required strings", () => {
+    expect(
+      verdicts(
+        ph.list(ph.String({ required: true }), { required: true }).validator,
+        [undefined, [], ["a", "b"], ["a", null], [1]],
+      ),
+    ).toStrictEqual([false, true, true, false, false]);
+  });
+
+  it("matches the checked-in document-drive input schema", () => {
+    const input = AddFileInputSchema().shape;
+    agreesWith(ph.String().validator, input.parentFolder, probeValues);
     agreesWith(
-      validatorFor(ph.String(), "input"),
-      input.parentFolder,
-      probeValues,
-    );
-    agreesWith(
-      validatorFor(ph.String({ required: true }), "input"),
+      ph.String({ required: true }).validator,
       input.documentType,
       probeValues,
-    );
-  });
-
-  it("matches a required list of required strings", () => {
-    const generated = z.array(z.string());
-    agreesWith(
-      validatorFor(
-        ph.list(ph.String({ required: true }), { required: true }),
-        "output",
-      ),
-      generated,
-      [...probeValues, ["a", "b"], ["a", null], [1]],
     );
   });
 });
@@ -265,20 +259,12 @@ describe("references", () => {
     expect(resolveReference(A.fields.leaf as never).validator).toBe(
       Leaf.validator,
     );
-    const leafInput = validatorFor(Leaf, "input");
-    expect(validatorFor(Leaf, "input")).toBe(leafInput);
     expect(
       Root.validator.safeParse({
         a: { leaf: { v: 1 } },
         b: { leaf: { v: null } },
       }).success,
     ).toBe(true);
-    expect(buildValidator(A.fields.leaf, "input")).not.toBe(
-      validatorFor(A.fields.leaf, "input"),
-    );
-    expect(validatorFor(A.fields.leaf, "input")).toBe(
-      validatorFor(A.fields.leaf, "input"),
-    );
   });
 });
 
@@ -359,7 +345,7 @@ describe("historical validator behavior", () => {
       z.object({
         __typename: z.literal("File").optional(),
         name: z.string(),
-        size: z.number().nullable(),
+        size: z.number().nullish(),
       }),
       z.object({
         __typename: z.literal("Folder").optional(),
@@ -417,8 +403,6 @@ describe("member order that the platform persists", () => {
   });
 
   it("lists union members in the generated order", () => {
-    // The drive's node types, field for field, so the comparison is against
-    // the real generated `NodeSchema`.
     const FolderNode = ph.object("FolderNode", {
       fields: {
         id: ph.String({ required: true }),
@@ -439,12 +423,16 @@ describe("member order that the platform persists", () => {
     // The SDL is `union Node = FolderNode | FileNode`; the generated schema is
     // `z.union([FileNodeSchema(), FolderNodeSchema()])`.
     const Node = ph.union("Node", { members: [FolderNode, FileNode] });
-    const ours = Node.validator.safeParse({ id: 4 });
-    const theirs = NodeSchema().safeParse({ id: 4 });
-    expect(ours.success).toBe(false);
-    expect(JSON.stringify(ours.error?.issues)).toBe(
-      JSON.stringify(theirs.error?.issues),
-    );
+    const refusal = Node.validator.safeParse({ id: 4 }).error?.issues[0];
+    expect(
+      refusal?.code === "invalid_union" &&
+        refusal.errors.map((branch) =>
+          branch.map((issue) => issue.path.join(".")),
+        ),
+    ).toStrictEqual([
+      ["documentType", "id", "kind", "name"],
+      ["id", "kind", "name"],
+    ]);
     // The authored order is still what the structured definition records.
     expect(Node.members.map((member) => member.name)).toStrictEqual([
       "FolderNode",

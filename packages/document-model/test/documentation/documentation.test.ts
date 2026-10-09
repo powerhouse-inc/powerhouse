@@ -8,6 +8,7 @@ import {
   Item,
   Label,
   Priority,
+  equalsRule,
   requiredRule,
   todoFamily,
 } from "./samples.js";
@@ -156,6 +157,18 @@ describe("the samples the pages show", () => {
     expect(requiredRule.requiredList.validator.safeParse([null]).success).toBe(
       true,
     );
+  });
+
+  it("show the equals pattern the page declares", () => {
+    const line = 'ph.String({ equals: "[A-Z]{3}" })';
+    expect(reference).toContain(line);
+    expect(samples).toContain(line);
+    expect(reference).toContain('// String @equals(value: "[A-Z]{3}")');
+    expect(
+      ["ABC", "ABCD", "abc", null].map(
+        (value) => equalsRule.validator.safeParse(value).success,
+      ),
+    ).toStrictEqual([true, false, false, true]);
   });
 
   it("show the package scalar the page declares", () => {

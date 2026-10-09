@@ -1,4 +1,7 @@
-import type { JsonValue } from "@powerhousedao/shared/document-model";
+import type {
+  DirectiveUseDefinition,
+  JsonValue,
+} from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
 import type { ScalarBinding } from "./scalars/types.js";
 
@@ -6,14 +9,124 @@ export type FieldValidationOptions<TRequired extends boolean = boolean> = {
   readonly required?: TRequired;
 };
 
-export type FieldPresentationOptions = {
+type FieldTextOptions = {
   readonly description?: string;
   readonly deprecated?: string;
+};
+
+export type FieldPresentationOptions = FieldTextOptions & {
   readonly defaultValue?: JsonValue;
 };
 
 export type FieldOptions<TRequired extends boolean = boolean> =
   FieldValidationOptions<TRequired> & FieldPresentationOptions;
+
+type EqualsOption = {
+  /**
+   * Accepts only values matching `^equals$`, as `@equals(value:)` does in a
+   * schema-first model.
+   */
+  readonly equals?: string;
+};
+
+export type ScalarFieldOptions<TRequired extends boolean = boolean> =
+  FieldOptions<TRequired> & EqualsOption;
+
+/** A JSON value as a `const` type parameter infers it: readonly throughout. */
+export type JsonLiteral =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly JsonLiteral[]
+  | { readonly [key: string]: JsonLiteral };
+
+/**
+ * What a builder takes, with `defaultValue` typed so the builder can infer
+ * the default's literal type. When `TDefault` is not inferred, as under an
+ * explicit `<TRequired>`, the slot still accepts any JSON value.
+ */
+export type FieldBuilderOptions<
+  TRequired extends boolean = boolean,
+  TDefault extends JsonLiteral | undefined = JsonLiteral | undefined,
+> = FieldValidationOptions<TRequired> &
+  FieldTextOptions & {
+    readonly defaultValue?:
+      | TDefault
+      | (TDefault extends undefined ? JsonLiteral : never);
+  };
+
+export type ScalarBuilderOptions<
+  TRequired extends boolean = boolean,
+  TDefault extends JsonLiteral | undefined = JsonLiteral | undefined,
+> = FieldBuilderOptions<TRequired, TDefault> & EqualsOption;
+
+type IsLiteral<T> = T extends string
+  ? string extends T
+    ? false
+    : true
+  : T extends number
+    ? number extends T
+      ? false
+      : true
+    : T extends boolean
+      ? boolean extends T
+        ? false
+        : true
+      : T extends null
+        ? true
+        : T extends readonly unknown[]
+          ? number extends T["length"]
+            ? false
+            : AllLiteral<T[number]>
+          : T extends object
+            ? string extends keyof T
+              ? false
+              : Partial<T> extends T
+                ? [keyof T] extends [never]
+                  ? true
+                  : false
+                : AllLiteral<T[keyof T]>
+            : false;
+
+type AllLiteral<T> = [T] extends [never]
+  ? true
+  : false extends IsLiteral<T>
+    ? false
+    : true;
+
+/**
+ * Whether a builder's options carried a default, from the inferred type of
+ * `defaultValue`: `false` when absent, `true` for a literal, and `boolean`
+ * when the type cannot tell, such as a widened `number`, an optional
+ * property, or the constraint `ReturnType` instantiates. `boolean` keeps the
+ * input key required, and accepts both other results.
+ */
+export type DefaultFlag<TDefault> = [TDefault] extends [undefined]
+  ? false
+  : undefined extends TDefault
+    ? boolean
+    : IsLiteral<TDefault> extends true
+      ? true
+      : boolean;
+
+/**
+ * A scalar builder. One generic signature, as before defaults counted, so a
+ * call on a union of builders, an explicit `<TRequired>`, and `ReturnType`
+ * keep working.
+ */
+export type ScalarBuilder<TBase, TInput = TBase> = <
+  const TRequired extends boolean = false,
+  const TDefault extends JsonLiteral | undefined = undefined,
+>(
+  options?: ScalarBuilderOptions<TRequired, TDefault>,
+) => ScalarDescriptor<
+  Nullable<TInput, TRequired>,
+  Nullable<TBase, TRequired>,
+  Nullable<TInput, TRequired>,
+  TRequired,
+  DefaultFlag<TDefault>
+>;
 
 export type FieldDefault =
   | { readonly present: false }
@@ -23,6 +136,7 @@ export type FieldPresentation = {
   readonly description: string | null;
   readonly deprecated: string | null;
   readonly default: FieldDefault;
+  readonly directives: readonly DirectiveUseDefinition[];
 };
 
 export type NamedTypeKind = "enum" | "object" | "input" | "interface" | "union";
@@ -79,11 +193,14 @@ export type FieldDescriptor<
   TOutput,
   TSource = TOutput,
   TRequired extends boolean = boolean,
+  TDefaulted extends boolean = boolean,
 > = DescriptorNode<TInput, TOutput, TSource> & {
   readonly role: typeof FIELD_USE_ROLE;
   readonly kind: FieldUseKind;
   readonly required: TRequired;
-  readonly presentation: FieldPresentation;
+  readonly presentation: FieldPresentation & {
+    readonly default: { readonly present: TDefaulted };
+  };
 };
 
 export type TypeDescriptor<TInput, TOutput, TSource = TOutput> = DescriptorNode<
@@ -122,6 +239,11 @@ export type SourceOf<T> =
 export type RequiredOf<T> = T extends { readonly required: infer TRequired }
   ? TRequired
   : never;
+export type DefaultedOf<T> = T extends {
+  readonly presentation: { readonly default: { readonly present: infer P } };
+}
+  ? P
+  : never;
 
 export type ObjectFields = Readonly<Record<string, AnyFieldDescriptor>>;
 
@@ -153,19 +275,38 @@ export type StoredFieldsOf<TMembers extends OutputMembers> = {
   ]: TMembers[K] extends AnyFieldDescriptor ? TMembers[K] : never;
 };
 
-type RequiredInputKeys<TFields extends ObjectFields> = {
-  [K in keyof TFields]: RequiredOf<TFields[K]> extends true ? K : never;
+/**
+ * A caller may omit a defaulted field, as the generated input type says.
+ * GraphQL fills the default in before a resolver runs, so what a resolver
+ * receives keeps every required key: that is the input's source shape.
+ */
+type RequiredInputKeys<
+  TFields extends ObjectFields,
+  TOmitDefaulted extends boolean,
+> = {
+  [K in keyof TFields]: RequiredOf<TFields[K]> extends true
+    ? TOmitDefaulted extends true
+      ? DefaultedOf<TFields[K]> extends true
+        ? never
+        : K
+      : K
+    : never;
 }[keyof TFields];
 
-type OptionalInputKeys<TFields extends ObjectFields> = Exclude<
-  keyof TFields,
-  RequiredInputKeys<TFields>
->;
-
 export type InputObjectOf<TFields extends ObjectFields> = {
-  -readonly [K in RequiredInputKeys<TFields>]: InputOf<TFields[K]>;
+  -readonly [K in RequiredInputKeys<TFields, true>]: InputOf<TFields[K]>;
 } & {
-  -readonly [K in OptionalInputKeys<TFields>]?: InputOf<TFields[K]>;
+  -readonly [
+    K in Exclude<keyof TFields, RequiredInputKeys<TFields, true>>
+  ]?: InputOf<TFields[K]>;
+};
+
+export type ResolvedInputObjectOf<TFields extends ObjectFields> = {
+  -readonly [K in RequiredInputKeys<TFields, false>]: SourceOf<TFields[K]>;
+} & {
+  -readonly [
+    K in Exclude<keyof TFields, RequiredInputKeys<TFields, false>>
+  ]?: SourceOf<TFields[K]>;
 };
 
 export type OutputObjectOf<TFields extends OutputMembers> = {
@@ -226,16 +367,21 @@ export type EnumDescriptor<
   readonly values: readonly EnumValue[];
 };
 
-export type InterfaceDescriptor<TFields extends ObjectFields = ObjectFields> =
-  TypeDescriptor<
-    InputObjectOf<TFields>,
-    OutputObjectOf<TFields>,
-    SourceObjectOf<TFields>
-  > & {
-    readonly kind: "interface";
-    readonly name: string;
-    readonly fields: TFields;
-  };
+export type InterfaceDescriptor<
+  TFields extends ObjectFields = ObjectFields,
+  // `any` breaks what would otherwise be a circular default.
+  TImplements extends readonly InterfaceDescriptor<ObjectFields, any>[] =
+    readonly InterfaceDescriptor<ObjectFields, any>[],
+> = TypeDescriptor<
+  InputObjectOf<TFields>,
+  OutputObjectOf<TFields>,
+  SourceObjectOf<TFields>
+> & {
+  readonly kind: "interface";
+  readonly name: string;
+  readonly fields: TFields;
+  readonly implements: TImplements;
+};
 
 export type ObjectDescriptor<
   // The default admits computed members, so a bare `ObjectDescriptor` — a
@@ -270,7 +416,7 @@ export type InputDescriptor<TFields extends ObjectFields = ObjectFields> =
   TypeDescriptor<
     InputObjectOf<TFields>,
     InputObjectOf<TFields>,
-    InputObjectOf<TFields>
+    ResolvedInputObjectOf<TFields>
   > & {
     readonly kind: "input";
     readonly fields: TFields;
@@ -295,7 +441,8 @@ export type ReferenceDescriptor<
   TOutput,
   TSource = TOutput,
   TRequired extends boolean = boolean,
-> = FieldDescriptor<TInput, TOutput, TSource, TRequired> & {
+  TDefaulted extends boolean = boolean,
+> = FieldDescriptor<TInput, TOutput, TSource, TRequired, TDefaulted> & {
   readonly kind: "ref";
   readonly target: RefTarget;
 };
@@ -305,7 +452,8 @@ export type ListDescriptor<
   TOutput,
   TSource = TOutput,
   TRequired extends boolean = boolean,
-> = FieldDescriptor<TInput, TOutput, TSource, TRequired> & {
+  TDefaulted extends boolean = boolean,
+> = FieldDescriptor<TInput, TOutput, TSource, TRequired, TDefaulted> & {
   readonly kind: "list";
   readonly item: AnyFieldDescriptor;
 };
@@ -315,7 +463,8 @@ export type ScalarDescriptor<
   TOutput,
   TSource = TOutput,
   TRequired extends boolean = boolean,
-> = FieldDescriptor<TInput, TOutput, TSource, TRequired> & {
+  TDefaulted extends boolean = boolean,
+> = FieldDescriptor<TInput, TOutput, TSource, TRequired, TDefaulted> & {
   readonly kind: "scalar";
   readonly scalarName: string;
   readonly baseValidator: z.ZodType;

@@ -37,6 +37,16 @@ ph.list(ph.String({ required: true }))       // [String!]
 ph.list(ph.String(), { required: true })     // [String]!
 ```
 
+## Match a pattern with `equals`
+
+A string field accepts `equals`. The field then accepts only a value that matches the regular expression `^<equals>$`, the same as `@equals(value:)` in a schema-first model. The value is not escaped. To match a character such as `.` or `$` literally, escape it yourself.
+
+```ts
+ph.String({ equals: "[A-Z]{3}" })            // String @equals(value: "[A-Z]{3}")
+```
+
+`equals` works on a scalar whose validator is a Zod string schema: `ph.String`, `ph.ID`, and catalog scalars such as `ph.PHID`, `ph.EmailAddress`, and `ph.DateTime`. `ph.Address` and `ph.AttachmentRef` are strings, but they validate with a custom check, so they do not accept `equals`. On those, on a number, object, or opaque scalar, on a list, a reference, or a list item, and on a field of a subgraph, the declaration fails. A pattern that is not a valid regular expression also fails. So does a pattern with a `/` outside a character class or with a line terminator, because a schema-first model writes the pattern into a regular expression literal. Write a slash as `\/` and a line break as `\n`. As in a schema-first model, the replacement tokens `$&`, `` $` ``, `$'`, and `$$` in the pattern are expanded before it is used; write `$$` for a literal `$` next to one of those characters.
+
 ## Declarations that fail
 
 The declarations below fail as soon as the module runs. Each failure reports a diagnostic that tells you how to fix it. All four would otherwise produce a model whose runtime behavior does not match its TypeScript types.

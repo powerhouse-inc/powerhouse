@@ -2,19 +2,23 @@ import type {
   DocumentModelDefinition,
   DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
+import { mergeTypeDefs } from "@graphql-tools/merge";
 import {
   defineDocumentModel,
   defineDocumentModelFamily,
   ph,
 } from "document-model";
+import { schemaFirstGraphQLDocument } from "document-model/tooling";
 import {
   buildSchema,
   type DocumentNode,
+  type GraphQLEnumType,
   type GraphQLObjectType,
   type GraphQLSchema,
   Kind,
   parse,
   print,
+  visit,
 } from "graphql";
 import { describe, expect, it } from "vitest";
 import { printCompatibilityDocument } from "../src/graphql/structured-projection.js";
@@ -23,7 +27,7 @@ import {
   generateDocumentModelSchema,
   getDocumentModelTypeDefs,
 } from "../src/utils/create-schema.js";
-import { asSchemaFirst, printSchema } from "./utils/graphql-host.js";
+import { asSchemaFirst, hostFor, printSchema } from "./utils/graphql-host.js";
 
 /**
  * A code-first module carries both a structured definition and the stored
@@ -408,5 +412,461 @@ describe("a model that retains a GraphQL AST", () => {
       "extend type Invoice_Query { more: Int }",
       "type Query { mine: String }",
     ]);
+  });
+});
+
+function withStoredSdl(
+  module: DocumentModelModule,
+  stateSdl: string,
+  inputSdl: string,
+): DocumentModelModule {
+  const global = structuredClone(module.documentModel.global);
+  const specification = global.specifications.at(-1)!;
+  specification.state.global.schema = stateSdl;
+  specification.modules[0].operations[0].schema = inputSdl;
+  return {
+    ...asSchemaFirst(module),
+    documentModel: { ...module.documentModel, global },
+  } as DocumentModelModule;
+}
+
+describe("a retained AST with type extensions", () => {
+  const STATE_SDL = [
+    "enum ProbeStatus { OPEN }",
+    "extend enum ProbeStatus { CLOSED }",
+    "type ProbeState { title: String! status: ProbeStatus! }",
+    "extend type ProbeState { extra: Int }",
+  ].join("\n");
+  const INPUT_SDL = [
+    "input SetTitleInput { title: String! }",
+    "extend input SetTitleInput { note: String }",
+  ].join("\n");
+
+  function buildProbe(): DocumentModelModule {
+    const ProbeStatus = ph.enum("ProbeStatus", { values: ["OPEN", "CLOSED"] });
+    const context = defineDocumentModel({
+      id: "test/probe",
+      name: "Probe",
+      description: "",
+      extension: "probe",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        graphQLCompatibility: schemaFirstGraphQLDocument([
+          STATE_SDL,
+          INPUT_SDL,
+        ]),
+        global: {
+          schema: ph.object("ProbeState", {
+            fields: {
+              title: ph.String({ required: true }),
+              status: ph.ref(ProbeStatus, { required: true }),
+              extra: ph.Int(),
+            },
+          }),
+          initialValue: { title: "", status: "OPEN", extra: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const titles = context.module("titles", {
+      operations: ({ global }) => ({
+        setTitle: global({
+          input: ph.input({
+            fields: { title: ph.String({ required: true }), note: ph.String() },
+          }),
+          reduce(state, input) {
+            state.title = input.title;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [titles],
+    }) as unknown as DocumentModelModule;
+  }
+
+  const normalized = (document: DocumentNode) => {
+    const byName = <T extends { readonly name: { readonly value: string } }>(
+      fields: readonly T[] | undefined,
+    ) =>
+      [...(fields ?? [])].sort((left, right) =>
+        left.name.value.localeCompare(right.name.value),
+      );
+    return print(
+      visit(mergeTypeDefs([document], { sort: true }), {
+        ObjectTypeDefinition: (node) => ({
+          ...node,
+          fields: byName(node.fields),
+        }),
+        InputObjectTypeDefinition: (node) => ({
+          ...node,
+          fields: byName(node.fields),
+        }),
+      }),
+    );
+  };
+
+  const CODE_FIRST = buildProbe();
+  const SCHEMA_FIRST = withStoredSdl(CODE_FIRST, STATE_SDL, INPUT_SDL);
+
+  it("contributes the state types the stored SDL contributes", () => {
+    const hostTypes = (module: DocumentModelModule) => {
+      const schema = createSchema([module], {}, EMPTY_TYPEDEFS);
+      const state = schema.getType("Probe_ProbeState") as GraphQLObjectType;
+      const status = schema.getType("Probe_ProbeStatus") as GraphQLEnumType;
+      return {
+        state: Object.entries(state.getFields()).map(([name, field]) => [
+          name,
+          String(field.type),
+        ]),
+        status: status.getValues().map((value) => value.name),
+      };
+    };
+    expect(hostTypes(CODE_FIRST)).toStrictEqual(hostTypes(SCHEMA_FIRST));
+    expect(hostTypes(CODE_FIRST)).toStrictEqual({
+      state: [
+        ["title", "String!"],
+        ["status", "Probe_ProbeStatus!"],
+        ["extra", "Int"],
+      ],
+      status: ["OPEN", "CLOSED"],
+    });
+  });
+
+  for (const useNewApi of [false, true]) {
+    it(`builds the subgraph the stored SDL builds with useNewApi: ${String(useNewApi)}`, () => {
+      expect(
+        normalized(generateDocumentModelSchema(CODE_FIRST, { useNewApi })),
+      ).toBe(
+        normalized(generateDocumentModelSchema(SCHEMA_FIRST, { useNewApi })),
+      );
+    });
+  }
+
+  it("leaves extension fields out of the initial-state input, as the stored SDL does", () => {
+    const printed = print(
+      generateDocumentModelSchema(CODE_FIRST, { useNewApi: true }),
+    );
+    expect(printed.match(/input Probe_ProbeStateInput \{[^}]*\}/)?.[0]).toBe(
+      "input Probe_ProbeStateInput {\n  title: String\n  status: Probe_ProbeStatus\n}",
+    );
+  });
+
+  it("types the initial state as JSONObject when only an extension defines the root, as the stored SDL does", () => {
+    const context = defineDocumentModel({
+      id: "test/orphan",
+      name: "Orphan",
+      description: "",
+      extension: "orphan",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        graphQLCompatibility: schemaFirstGraphQLDocument([
+          "extend type OrphanState { title: String! }",
+        ]),
+        global: {
+          schema: ph.object("OrphanState", {
+            fields: { title: ph.String({ required: true }) },
+          }),
+          initialValue: { title: "" },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const module = context.finalize({
+      modules: [],
+    }) as unknown as DocumentModelModule;
+    const printed = print(
+      generateDocumentModelSchema(module, { useNewApi: true }),
+    );
+    expect(printed).toContain("global: JSONObject");
+    expect(printed).not.toContain("Orphan_OrphanStateInput");
+  });
+});
+
+describe("a retained AST with types only extensions define", () => {
+  const STATE_SDL = [
+    "type ProbeState { x: Int! }",
+    "extend type Extra { y: Int! }",
+  ].join("\n");
+  const INPUT_SDL = [
+    "extend input Nested { x: Int! }",
+    "extend input SetXInput { nested: Nested! }",
+  ].join("\n");
+
+  function buildProbe(): DocumentModelModule {
+    const Nested = ph.input("Nested", {
+      fields: { x: ph.Int({ required: true }) },
+    });
+    const context = defineDocumentModel({
+      id: "test/probe",
+      name: "Probe",
+      description: "",
+      extension: "probe",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        graphQLCompatibility: schemaFirstGraphQLDocument([
+          STATE_SDL,
+          INPUT_SDL,
+        ]),
+        auxiliaryTypes: [
+          ph.object("Extra", { fields: { y: ph.Int({ required: true }) } }),
+        ],
+        global: {
+          schema: ph.object("ProbeState", {
+            fields: { x: ph.Int({ required: true }) },
+          }),
+          initialValue: { x: 0 },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const probes = context.module("probes", {
+      operations: ({ global }) => ({
+        setX: global({
+          input: ph.input({
+            fields: { nested: ph.ref(Nested, { required: true }) },
+          }),
+          reduce(state, input) {
+            state.x = input.nested.x;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [probes],
+    }) as unknown as DocumentModelModule;
+  }
+
+  const CODE_FIRST = buildProbe();
+  const SCHEMA_FIRST = withStoredSdl(CODE_FIRST, STATE_SDL, INPUT_SDL);
+
+  for (const useNewApi of [false, true]) {
+    it(`serves the subgraph the stored SDL serves with useNewApi: ${String(useNewApi)}`, () => {
+      const served = (module: DocumentModelModule) => {
+        const document = generateDocumentModelSchema(module, { useNewApi });
+        return printSchema(createSchema([module], {}, document));
+      };
+      expect(served(CODE_FIRST)).toBe(served(SCHEMA_FIRST));
+      expect(served(CODE_FIRST)).toContain(
+        "input Probe_SetXInput {\n  nested: Probe_Nested!\n}",
+      );
+    });
+  }
+});
+
+describe("a retained AST whose state field takes an input argument", () => {
+  it("keeps the argument's input in the host types", () => {
+    const Filter = ph.input("Filter", {
+      fields: { term: ph.String({ required: true }) },
+    });
+    const context = defineDocumentModel({
+      id: "test/lookup",
+      name: "Lookup",
+      description: "",
+      extension: "lookup",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        graphQLCompatibility: schemaFirstGraphQLDocument([
+          "input Filter { term: String! }",
+          "type LookupState { title: String! lookup(filter: Filter): String }",
+        ]),
+        global: {
+          schema: ph.object("LookupState", {
+            fields: {
+              title: ph.String({ required: true }),
+              lookup: ph.field({
+                args: { filter: ph.ref(Filter) },
+                returns: ph.String(),
+              }),
+            },
+          }),
+          initialValue: { title: "" },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const module = context.finalize({
+      modules: [],
+    }) as unknown as DocumentModelModule;
+    const schema = createSchema([module], {}, EMPTY_TYPEDEFS);
+    const lookup = (
+      schema.getType("Lookup_LookupState") as GraphQLObjectType
+    ).getFields().lookup;
+    expect(
+      lookup.args.map((arg) => [arg.name, String(arg.type)]),
+    ).toStrictEqual([["filter", "Lookup_Filter"]]);
+  });
+});
+
+describe("a field that declares equals", () => {
+  const PATTERN = "[A-Z]{3}";
+
+  function buildCodes(options: {
+    readonly equals: boolean;
+    readonly retained: boolean;
+  }): DocumentModelModule {
+    const code = () =>
+      ph.String({
+        required: true,
+        ...(options.equals && { equals: PATTERN }),
+      });
+    const use = options.equals ? ` @equals(value: "${PATTERN}")` : "";
+    const context = defineDocumentModel({
+      id: "test/codes",
+      name: "Codes",
+      description: "",
+      extension: "codes",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        ...(options.retained && {
+          graphQLCompatibility: schemaFirstGraphQLDocument([
+            `type CodesState { code: String!${use} }`,
+            `input SetCodeInput { code: String!${use} }`,
+          ]),
+        }),
+        global: {
+          schema: ph.object("CodesState", { fields: { code: code() } }),
+          initialValue: { code: "ABC" },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const codes = context.module("codes", {
+      operations: ({ global }) => ({
+        setCode: global({
+          input: ph.input({ fields: { code: code() } }),
+          reduce(state, input) {
+            state.code = input.code;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [codes],
+    }) as unknown as DocumentModelModule;
+  }
+
+  for (const retained of [false, true]) {
+    for (const useNewApi of [false, true]) {
+      it(`serves the schema it serves without equals, retained: ${String(retained)}, useNewApi: ${String(useNewApi)}`, () => {
+        const served = (module: DocumentModelModule) =>
+          printSchema(
+            createSchema(
+              [module],
+              {},
+              generateDocumentModelSchema(module, { useNewApi }),
+            ),
+          );
+        const withEquals = served(buildCodes({ equals: true, retained }));
+        expect(withEquals).toBe(
+          served(buildCodes({ equals: false, retained })),
+        );
+        expect(withEquals).toContain(
+          "input Codes_SetCodeInput {\n  code: String!\n}",
+        );
+      });
+    }
+  }
+});
+
+describe("an operation input with default values", () => {
+  function buildDefaults(retained = false): DocumentModelModule {
+    const Level = ph.enum("Level", { values: ["LOW", "HIGH"] });
+    const Point = ph.input("Point", { fields: { x: ph.Int() } });
+    const context = defineDocumentModel({
+      id: "test/defaults",
+      name: "Defaults",
+      description: "",
+      extension: "defaults",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        ...(retained && {
+          graphQLCompatibility: schemaFirstGraphQLDocument([
+            "enum Level { LOW HIGH }",
+            "type DefaultsState { level: Level count: Int }",
+            "input Point { x: Int }",
+            'input ConfigureInput { level: Level! = LOW count: Int = 3 tags: [String] = ["a"] origin: Point = { x: 1 } }',
+          ]),
+        }),
+        global: {
+          schema: ph.object("DefaultsState", {
+            fields: { level: ph.ref(Level), count: ph.Int() },
+          }),
+          initialValue: { level: null, count: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const settings = context.module("settings", {
+      operations: ({ global }) => ({
+        configure: global({
+          input: ph.input({
+            fields: {
+              level: ph.ref(Level, { required: true, defaultValue: "LOW" }),
+              count: ph.Int({ defaultValue: 3 }),
+              tags: ph.list(ph.String(), { defaultValue: ["a"] }),
+              origin: ph.ref(Point, { defaultValue: { x: 1 } }),
+            },
+          }),
+          reduce(state, input) {
+            state.level = input.level;
+            state.count = input.count ?? null;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [settings],
+    }) as unknown as DocumentModelModule;
+  }
+
+  for (const [retained, useNewApi] of [
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ]) {
+    it(`serves the stored SDL's defaults, retained: ${String(retained)}, useNewApi: ${String(useNewApi)}`, () => {
+      const served = (module: DocumentModelModule) =>
+        printSchema(
+          createSchema(
+            [module],
+            {},
+            generateDocumentModelSchema(module, { useNewApi }),
+          ),
+        );
+      const structured = served(buildDefaults(retained));
+      expect(structured).toBe(served(asSchemaFirst(buildDefaults(retained))));
+      expect(structured).toContain("  level: Defaults_Level! = LOW\n");
+    });
+  }
+
+  it("leaves the module description out of another subgraph", () => {
+    const foreign = printSchema(
+      createSchema(
+        [buildDefaults(true)],
+        {},
+        parse(
+          "type DefaultsQueries { hello: String }\ntype Query { Defaults: DefaultsQueries }",
+        ),
+      ),
+    );
+    expect(foreign).toContain("input Defaults_ConfigureInput {");
+    expect(foreign).not.toContain('"""Module:');
+  });
+
+  it("fills an omitted enum field from its default", async () => {
+    const host = hostFor(buildDefaults());
+    const result = await host.run(
+      `mutation { Defaults { configure(docId: "doc-1", input: {}) { name } } }`,
+    );
+    expect(result.errors).toBeUndefined();
+    expect(host.state()).toEqual({ level: "LOW", count: 3 });
   });
 });

@@ -14,7 +14,6 @@ import {
   childLogger,
   formatDefinitionDiagnostic,
   packageScalarsOf,
-  printSchemaSegment,
   type ScalarBinding,
 } from "document-model";
 import { orderedScalarNames, scalarCatalog } from "document-model/scalars";
@@ -37,6 +36,7 @@ import {
   type DocumentModelSchemaOptions,
   generateModelSchema,
   getDocumentModelSchemaName,
+  hasValidSchema,
   type ModelProjection,
 } from "../graphql/model-schema-templates.js";
 import {
@@ -46,10 +46,11 @@ import {
 } from "../graphql/scalar-bindings.js";
 import { structuredModelProjection } from "../graphql/structured-model-schema.js";
 import {
-  namespaceTypes,
   printCompatibilityDocument,
+  printNamespacedTypes,
   structuredModelOf,
   type StructuredModel,
+  withHostDescriptions,
 } from "../graphql/structured-projection.js";
 
 export {
@@ -376,9 +377,11 @@ function documentWrapperType(
  * global ones as state input types.
  */
 function structuredModelStateTypes(
-  { specification, segments, packageScalars }: StructuredModel,
+  model: StructuredModel,
   schemaName: string,
+  hostDescriptions: ReadonlyMap<string, string>,
 ): string {
+  const { specification, segments, packageScalars } = model;
   const wrapper = documentWrapperType(
     schemaName,
     specification.state.global.root.name,
@@ -387,19 +390,27 @@ function structuredModelStateTypes(
     // A retained GraphQL AST is projected whole, including its type extensions.
     return (
       printCompatibilityDocument(
-        specification.graphQLCompatibility.document,
+        withHostDescriptions(
+          specification.graphQLCompatibility.document,
+          hostDescriptions,
+        ),
         schemaName,
         packageScalars,
       ) + wrapper
     );
   }
-  const stateTypes = [...segments.global, ...segments.local].filter(
-    (type) => type.kind !== "input",
+  const stateTypes = [...segments.global, ...segments.local].flatMap((type) =>
+    type.kind === "input"
+      ? []
+      : [
+          {
+            ...type,
+            description:
+              type.description ?? hostDescriptions.get(type.name) ?? null,
+          },
+        ],
   );
-  return (
-    printSchemaSegment(namespaceTypes(stateTypes, schemaName, packageScalars)) +
-    wrapper
-  );
+  return printNamespacedTypes(model, stateTypes, schemaName) + wrapper;
 }
 
 function storedModelStateTypes(
@@ -482,7 +493,15 @@ export const getDocumentModelTypeDefs = (
     dmSchema +=
       structured === null
         ? storedModelStateTypes(documentModel.global, dmSchemaName)
-        : structuredModelStateTypes(structured, dmSchemaName);
+        : structuredModelStateTypes(
+            structured,
+            dmSchemaName,
+            // The stored-SDL host serves the template's descriptions only in
+            // the model's own subgraph.
+            templateOwners.get(typeDefs) === dmSchemaName
+              ? structured.hostDescriptions
+              : new Map(),
+          );
   });
 
   // add the mutation and query types
@@ -787,10 +806,6 @@ function applyGraphQLTypePrefixes(
   return print(prefixTypeNames(doc, prefix, names));
 }
 
-/** Whether a stored schema string declares anything at all. */
-const hasValidSchema = (schema: string | null | undefined): boolean =>
-  !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
-
 /** Reads the template inputs out of a schema-first model's stored SDL by regex. */
 function storedModelProjection(
   documentModel: DocumentModelGlobalState,
@@ -917,6 +932,13 @@ function storedInitialState(
  * code-first model is projected from its structured definition. A
  * schema-first caller may pass the stored global state instead.
  */
+/**
+ * The code-first template output each model generated, so the host can tell
+ * a model's own subgraph from a foreign one by identity. SDL content cannot
+ * prove it, because any subgraph may declare the same type names.
+ */
+const templateOwners = new WeakMap<DocumentNode, string>();
+
 export function generateDocumentModelSchema(
   source: DocumentModelModule | DocumentModelGlobalState,
   options: DocumentModelSchemaOptions = {},
@@ -926,10 +948,12 @@ export function generateDocumentModelSchema(
   const documentName = getDocumentModelSchemaName(documentModel);
   const structured =
     "documentModel" in source ? structuredModelOf(source) : null;
-  return generateModelSchema(
+  const document = generateModelSchema(
     structured === null
       ? storedModelProjection(documentModel, documentName)
       : structuredModelProjection(structured, documentName),
     options,
   );
+  if (structured !== null) templateOwners.set(document, documentName);
+  return document;
 }

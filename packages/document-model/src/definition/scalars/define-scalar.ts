@@ -6,7 +6,7 @@ import type {
 import { registerScalarFactory } from "../descriptor-registry.js";
 import { DocumentModelDefinitionError } from "../diagnostics.js";
 import { createScalarField } from "../field-options.js";
-import type { FieldOptions } from "../types.js";
+import type { ScalarBuilderOptions } from "../types.js";
 import { deriveCoercion } from "./coercion.js";
 import {
   PROFILE,
@@ -68,15 +68,13 @@ export function defineScalar<
   });
 
   return withRole(
-    <const TRequired extends boolean = false>(
-      options?: FieldOptions<TRequired>,
-    ) =>
-      createScalarField<TBase, TRequired, TInput>(
+    ((options?: ScalarBuilderOptions) =>
+      createScalarField<TBase, boolean, boolean, TInput>(
         declaration.name,
         declaration.validator,
         options,
         binding,
-      ),
+      )) as ScalarFieldFactory<TBase, TInput>,
     { declaration, definition, binding },
     declaration.builderName,
   );
@@ -102,11 +100,11 @@ export function withRole<
   call: TCall,
 ): ScalarFactory<TName, TBuilderName, TBase, TCall, TInput>;
 export function withRole(
-  make: (options?: FieldOptions<boolean>) => unknown,
+  make: (options?: ScalarBuilderOptions<boolean>) => unknown,
   scalar: Pick<ScalarFactory, "declaration" | "definition" | "binding">,
   call: string,
 ): ScalarFactory {
-  const factory = (options?: FieldOptions<boolean>) => make(options);
+  const factory = (options?: ScalarBuilderOptions<boolean>) => make(options);
   return registerScalarFactory(
     Object.freeze(
       Object.assign(factory, {

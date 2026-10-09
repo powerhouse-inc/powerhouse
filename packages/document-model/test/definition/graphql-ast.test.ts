@@ -227,6 +227,79 @@ describe("a declaration that carries a compatibility AST", () => {
     expect(mismatch?.received).toBe("String");
   });
 
+  it("compares @equals, the one directive use that validates", () => {
+    const declare = (code: ReturnType<typeof ph.String>, pattern = "abc") =>
+      defineDocumentModel({
+        id: "test/compat-equals",
+        name: "Equals",
+        description: "",
+        extension: "equals",
+        version: 1,
+        author: { name: "Powerhouse" },
+        specifications: {
+          graphQLCompatibility: schemaFirstGraphQLDocument([
+            `type EqualsState { code: String @equals(value: ${JSON.stringify(pattern)}) }`,
+          ]),
+          global: {
+            schema: ph.object("EqualsState", { fields: { code } }),
+            initialValue: { code: null },
+          },
+          local: { schema: null, initialValue: {} },
+        },
+      }).finalize({ modules: [] });
+    const mismatch = (code: ReturnType<typeof ph.String>, pattern?: string) =>
+      diagnosticsOf(() => declare(code, pattern)).map(
+        ({ code: diagnosticCode, path, expected, received, repair }) => ({
+          code: diagnosticCode,
+          path: path.slice(3),
+          expected,
+          received,
+          repair,
+        }),
+      );
+    expect(mismatch(ph.String())).toStrictEqual([
+      {
+        code: "PH-DM-COMPATIBILITY-INVALID",
+        path: ["EqualsState", "fields", "code", "equals"],
+        expected: "no @equals",
+        received: '@equals(value: "abc")',
+        repair: 'Pass equals: "abc" in the options of EqualsState.code.',
+      },
+    ]);
+    expect(mismatch(ph.String({ equals: "abd" }))).toStrictEqual([
+      {
+        code: "PH-DM-COMPATIBILITY-INVALID",
+        path: ["EqualsState", "fields", "code", "equals"],
+        expected: '@equals(value: "abd")',
+        received: '@equals(value: "abc")',
+        repair: 'Pass equals: "abc" in the options of EqualsState.code.',
+      },
+    ]);
+    expect(mismatch(ph.String(), "a$'b")[0]?.code).toBe(
+      "PH-DEF-OPTION-INVALID",
+    );
+    expect(mismatch(ph.String(), "a/b")).toStrictEqual([
+      {
+        code: "PH-DEF-OPTION-INVALID",
+        path: ["EqualsState", "fields", "code", "equals"],
+        expected:
+          "a regular expression pattern the generator can write as /^pattern$/",
+        received: "a/b",
+        repair:
+          'Escape the slash as \\/ (written "\\\\/" in a JavaScript string), or put it in a character class such as [/].',
+      },
+    ]);
+    const model = declare(ph.String({ equals: "abc" }));
+    expect(
+      ["abc", "xyz", null].map((code) =>
+        model.utils.isStateOfType({
+          ...model.utils.createState(),
+          global: { code },
+        } as never),
+      ),
+    ).toStrictEqual([true, false, true]);
+  });
+
   it("rejects a descriptor type the AST does not declare", () => {
     const diagnostics = checkGraphQLDocumentAgreement({
       compatibility: COMPAT_DOCUMENT,

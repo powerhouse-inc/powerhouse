@@ -1,6 +1,8 @@
+import { buildASTSchema, defaultFieldResolver, execute, parse } from "graphql";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
+import { compileSubgraphSchema } from "../../src/definition/subgraph/ast.js";
 import {
   createEntryBuilders,
   isRegisteredEntry,
@@ -122,6 +124,53 @@ describe("the entry builders", () => {
     expect(read.key).toBe("post");
     expect(read.fieldName).toBe("post");
     expect(Object.keys(read.args)).toEqual(["id"]);
+  });
+
+  it("hands a resolver its defaulted arguments as present, as GraphQL supplies them", async () => {
+    const Paging = ph.input("PagingInput", {
+      fields: {
+        count: ph.Int({ required: true, defaultValue: 3 }),
+        after: ph.String(),
+      },
+    });
+    const { builders: build, exposed } = builders();
+    let received: unknown;
+    const entry = build.query("posts", {
+      args: {
+        paging: ph.ref(Paging, { required: true }),
+        limit: ph.Int({ required: true, defaultValue: 10 }),
+      },
+      returns: ph.list(ph.ref(Post)),
+      resolve: ({ args }) => {
+        expectTypeOf(args).toEqualTypeOf<{
+          paging: { count: number } & { after?: string | null | undefined };
+          limit: number;
+        }>();
+        received = args;
+        return [];
+      },
+    });
+    const read = readEntry(entry, ["entries", 0]);
+    if (read.kind !== "query") throw new Error("unreachable");
+    const result = await execute({
+      schema: buildASTSchema(
+        compileSubgraphSchema({ name: "posts", entries: [entry], exposed })
+          .document as never,
+      ),
+      document: parse("{ posts(paging: {}) { id } }"),
+      fieldResolver: (source, args, context, info) =>
+        info.fieldName === "posts"
+          ? (read.resolve as (call: unknown) => unknown)({
+              parent: source as unknown,
+              args: args as unknown,
+              subgraph: null,
+              request: null,
+              info,
+            })
+          : defaultFieldResolver(source, args, context, info),
+    });
+    expect(result.errors).toBeUndefined();
+    expect(received).toEqual({ paging: { count: 3 }, limit: 10 });
   });
 
   it("lets a GraphQL field name differ from the author's key", () => {

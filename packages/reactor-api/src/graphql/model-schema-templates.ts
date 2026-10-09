@@ -29,6 +29,15 @@ export interface DocumentModelSchemaOptions {
   useNewApi?: boolean;
 }
 
+export const hasValidSchema = (schema: string | null | undefined): boolean =>
+  !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
+
+export function moduleDescription(name: string): string {
+  return `Module: ${pascalCase(name)}`;
+}
+
+export const STATE_INPUT_TYPES_DESCRIPTION = "Input Types from State Schema";
+
 export function getDocumentModelSchemaName(
   documentModel: DocumentModelGlobalState,
 ) {
@@ -93,7 +102,7 @@ function printModuleSchemas(modules: ModelProjection["modules"]): string {
               ...first,
               description: {
                 kind: Kind.STRING,
-                value: `Module: ${pascalCase(name)}`,
+                value: moduleDescription(name),
                 block: true,
               },
             },
@@ -147,7 +156,7 @@ function generateLegacyApiSchema(projection: ModelProjection): DocumentNode {
     ${
       projection.stateInputTypes
         ? `"""
-    Input Types from State Schema
+    ${STATE_INPUT_TYPES_DESCRIPTION}
     """
     ${projection.stateInputTypes}`
         : ""
@@ -350,7 +359,7 @@ function generateNewApiSchema(projection: ModelProjection): DocumentNode {
     ${
       projection.stateInputTypes
         ? `"""
-    Input Types from State Schema
+    ${STATE_INPUT_TYPES_DESCRIPTION}
     """
     ${projection.stateInputTypes}`
         : ""

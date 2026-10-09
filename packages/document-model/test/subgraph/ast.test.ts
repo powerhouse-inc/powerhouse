@@ -1,4 +1,4 @@
-import { print } from "graphql";
+import { buildASTSchema, buildSchema, print, validateSchema } from "graphql";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -214,6 +214,17 @@ describe("default values", () => {
     expect(printed).toContain("limit: Int = 10");
     // Declared `= null`: a different schema from no default at all.
     expect(printed).toContain("cursor: String = null");
+    const filter = buildSchema(printed).getType("Filter") as {
+      getFields(): Record<string, { defaultValue?: unknown }>;
+    };
+    expect(
+      Object.fromEntries(
+        Object.entries(filter.getFields()).map(([name, field]) => [
+          name,
+          field.defaultValue,
+        ]),
+      ),
+    ).toStrictEqual({ visibility: "PUBLIC", limit: 10, cursor: null });
   });
 
   it("distinguish an absent default from an explicit null", () => {
@@ -443,5 +454,88 @@ describe("a package scalar", () => {
     expect(
       checkSubgraphDefinitionShape(renamed).map((entry) => entry.path),
     ).toContainEqual(["definition", "scalars", "1", "name"]);
+  });
+});
+
+describe("an interface that implements an interface", () => {
+  it("keeps its interfaces in the author AST", () => {
+    const Named = ph.interface("Named", { fields: { name: ph.String() } });
+    const Titled = ph.interface("Titled", {
+      fields: { name: ph.String(), title: ph.String() },
+      implements: [Named],
+    });
+    const Book = ph.object("Book", {
+      fields: { name: ph.String(), title: ph.String() },
+      implements: [Titled, Named],
+    });
+    const { builders, exposed } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+    const compiled = compileSubgraphSchema({
+      name: "shelf",
+      entries: [
+        builders.query("book", { returns: ph.ref(Book), resolve: () => null }),
+      ],
+      exposed,
+    });
+    expect(compiled.diagnostics).toEqual([]);
+    expect(print(compiled.document as never)).toContain(
+      "interface Titled implements Named {",
+    );
+    expect(
+      validateSchema(buildASTSchema(compiled.document as never)),
+    ).toStrictEqual([]);
+  });
+});
+
+describe("equals in a subgraph", () => {
+  it("is refused wherever a field use carries it", () => {
+    const Book = ph.object("Book", {
+      fields: { code: ph.String({ equals: "abc" }) },
+    });
+    const Filter = ph.input("BookFilter", {
+      fields: { code: ph.String({ equals: "abc" }) },
+    });
+    const { builders, exposed } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+    const compiled = compileSubgraphSchema({
+      name: "shelf",
+      entries: [
+        builders.query("book", {
+          args: {
+            code: ph.String({ equals: "abc" }),
+            filter: ph.ref(Filter),
+          },
+          returns: ph.ref(Book),
+          resolve: () => null,
+        }),
+      ],
+      exposed,
+    });
+    expect(
+      compiled.diagnostics.map(({ code, path, repair }) => ({
+        code,
+        path,
+        repair,
+      })),
+    ).toStrictEqual(
+      [
+        ["entries", 0, "args", "code"],
+        ["entries", 0, "args", "filter", "fields", "code"],
+        ["entries", 0, "returns", "fields", "code"],
+      ].map((path) => ({
+        code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+        path,
+        repair:
+          "Remove equals and check the value in the resolver; a subgraph does not validate its fields, so @equals would constrain nothing.",
+      })),
+    );
   });
 });

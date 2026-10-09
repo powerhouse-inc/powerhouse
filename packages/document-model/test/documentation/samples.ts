@@ -24,6 +24,8 @@ export const requiredRule = {
   requiredList: ph.list(ph.String(), { required: true }), // [String]!
 };
 
+export const equalsRule = ph.String({ equals: "[A-Z]{3}" }); // String @equals(value: "[A-Z]{3}")
+
 const todoContext = defineDocumentModel({
   id: "acme/todo",
   name: "Todo",

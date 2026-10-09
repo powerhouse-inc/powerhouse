@@ -1,5 +1,6 @@
 import type {
   DefinitionPath,
+  DirectiveUseDefinition,
   JsonValue,
 } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
@@ -27,19 +28,24 @@ import {
   type AnyTypeDescriptor,
   FIELD_USE_ROLE,
   type FieldDefault,
-  type FieldOptions,
   type FieldPresentation,
   type Nullable,
   type ScalarDescriptor,
+  type ScalarBuilderOptions,
 } from "./types.js";
 import type { ScalarBinding } from "./scalars/types.js";
-import { buildValidator } from "./zod.js";
+import { buildValidator, equalsPattern } from "./zod.js";
 
 export const FIELD_OPTION_KEYS = Object.freeze([
   "required",
   "description",
   "deprecated",
   "defaultValue",
+] as const);
+
+const SCALAR_FIELD_OPTION_KEYS = Object.freeze([
+  ...FIELD_OPTION_KEYS,
+  "equals",
 ] as const);
 
 const LIST_ITEM_METADATA_KEYS = ["description", "deprecated", "defaultValue"];
@@ -264,16 +270,111 @@ export type ResolvedFieldOptions<TRequired extends boolean> = {
   readonly presentation: FieldPresentation;
 };
 
-export function resolveFieldOptions<TRequired extends boolean>(
-  options: FieldOptions<TRequired> | undefined,
+const LINE_TERMINATORS = new Set(["\n", "\r", "\u2028", "\u2029"]);
+
+/**
+ * Why an `@equals` pattern cannot be validated the way the generator does,
+ * if it cannot. The generator writes the pattern, as `equalsPattern`
+ * expands it, into a regex literal: a `/` outside a character class ends
+ * that literal, and a line terminator cannot appear in one, so either leaves
+ * generated code that does not compile or does not validate.
+ */
+export function equalsPatternProblem(pattern: string):
+  | {
+      readonly message: string;
+      readonly expected: string;
+      readonly repair: string;
+    }
+  | undefined {
+  const expected =
+    "a regular expression pattern the generator can write as /^pattern$/";
+  const source = equalsPattern(pattern);
+  let inClass = false;
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index];
+    const escaped = character === "\\";
+    if (escaped) index++;
+    if (LINE_TERMINATORS.has(source[index])) {
+      return {
+        message:
+          "Option equals contains a line terminator, which a regular expression literal cannot hold.",
+        expected,
+        repair:
+          "Write the line terminator as an escape such as \\n, which the regular expression reads the same way.",
+      };
+    }
+    if (escaped) continue;
+    if (character === "[") inClass = true;
+    else if (character === "]") inClass = false;
+    else if (character === "/" && !inClass) {
+      return {
+        message:
+          "Option equals contains a / outside a character class, which ends the generated regular expression literal.",
+        expected,
+        repair:
+          'Escape the slash as \\/ (written "\\\\/" in a JavaScript string), or put it in a character class such as [/].',
+      };
+    }
+  }
+  try {
+    new RegExp(source);
+  } catch (error) {
+    return {
+      message: `Option equals is not a valid regular expression pattern: ${error instanceof Error ? error.message : String(error)}`,
+      expected,
+      repair:
+        "Fix the pattern, or escape the characters that have a meaning in a regular expression.",
+    };
+  }
+  return undefined;
+}
+
+const NO_DIRECTIVES: readonly DirectiveUseDefinition[] = Object.freeze([]);
+
+function equalsDirectives(
+  options: { readonly [key: string]: DataValue },
   path: DataPath,
+): readonly DirectiveUseDefinition[] {
+  if (!Object.hasOwn(options, "equals")) return NO_DIRECTIVES;
+  const value = options.equals;
+  if (typeof value !== "string") {
+    return failDefinition({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [...path, "equals"],
+      message: "Option equals must be a string.",
+      expected: "string",
+      received: typeof value,
+      repair: "Pass the pattern the value must match as a string.",
+    });
+  }
+  const problem = equalsPatternProblem(value);
+  if (problem !== undefined) {
+    return failDefinition({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [...path, "equals"],
+      received: value,
+      ...problem,
+    });
+  }
+  return Object.freeze([
+    Object.freeze({
+      name: "equals",
+      arguments: Object.freeze([Object.freeze({ name: "value", value })]),
+    }),
+  ]);
+}
+
+export function resolveFieldOptions<TRequired extends boolean>(
+  options: ScalarBuilderOptions<TRequired> | undefined,
+  path: DataPath,
+  allowedKeys: readonly string[] = FIELD_OPTION_KEYS,
 ): ResolvedFieldOptions<TRequired> {
   const config =
     options === undefined
       ? {}
       : snapshotDataOptions(
           options,
-          FIELD_OPTION_KEYS,
+          allowedKeys,
           path,
           "PH-DEF-FIELD-OPTION-UNSUPPORTED",
         );
@@ -294,6 +395,7 @@ export function resolveFieldOptions<TRequired extends boolean>(
       description: stringOption(config, "description", path),
       deprecated: stringOption(config, "deprecated", path),
       default: Object.freeze(defaultOption(config, path)),
+      directives: equalsDirectives(config, path),
     }),
   };
 }
@@ -307,32 +409,64 @@ export function assertBareListItem(
       ? item.presentation.default.present
       : item.presentation[key as "description" | "deprecated"] !== null,
   );
-  if (authored.length === 0) return;
-  failDefinition({
-    code: "PH-DEF-OPTION-INVALID",
-    path: [...path, "options", authored[0]],
-    message: `A list item carries ${authored.join(", ")}, but GraphQL has no field or argument definition for a list item.`,
-    received: authored.join(", "),
-    repair: `Move ${authored.join(", ")} to the ph.list(...) options of the outer field use.`,
-  });
+  if (authored.length > 0) {
+    failDefinition({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [...path, "options", authored[0]],
+      message: `A list item carries ${authored.join(", ")}, but GraphQL has no field or argument definition for a list item.`,
+      received: authored.join(", "),
+      repair: `Move ${authored.join(", ")} to the ph.list(...) options of the outer field use.`,
+    });
+  }
+  if (item.presentation.directives.length > 0) {
+    failDefinition({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [...path, "options", "equals"],
+      message:
+        "A list item carries equals, but GraphQL has no field or argument definition for a list item to carry @equals on.",
+      received: "equals",
+      repair:
+        "Remove equals from the list item; a list cannot constrain its items with @equals.",
+    });
+  }
 }
 
 export function createScalarField<
   TBase,
   TRequired extends boolean,
+  TDefaulted extends boolean,
   TInput = TBase,
 >(
   scalarName: string,
   baseValidator: z.ZodType,
-  options: FieldOptions<TRequired> | undefined,
+  options: ScalarBuilderOptions<TRequired> | undefined,
   binding?: ScalarBinding,
 ): ScalarDescriptor<
   Nullable<TInput, TRequired>,
   Nullable<TBase, TRequired>,
   Nullable<TInput, TRequired>,
-  TRequired
+  TRequired,
+  TDefaulted
 > {
-  const { required, presentation } = resolveFieldOptions(options, ["options"]);
+  const { required, presentation } = resolveFieldOptions(
+    options,
+    ["options"],
+    SCALAR_FIELD_OPTION_KEYS,
+  );
+  // The generator appends `.regex(...)` to the scalar's own Zod schema, which
+  // only a string schema has; on any other it emits code that throws.
+  const carriesPattern =
+    typeof (baseValidator as { readonly regex?: unknown }).regex === "function";
+  if (presentation.directives.length > 0 && !carriesPattern) {
+    failDefinition({
+      code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+      path: ["options", "equals"],
+      message: `Option equals adds a pattern check, and the validator of ${scalarName} is not a Zod string schema that can carry one.`,
+      received: scalarName,
+      repair:
+        "Remove equals, or use it on a scalar whose validator is a Zod string schema, such as ph.String() or ph.PHID().",
+    });
+  }
   const descriptor = {
     kind: "scalar" as const,
     role: FIELD_USE_ROLE,
@@ -348,6 +482,14 @@ export function createScalarField<
     presentation,
     validator: undefined as unknown as z.ZodType,
   };
-  descriptor.validator = buildValidator(descriptor, "output");
-  return registerFieldDescriptor(Object.freeze(descriptor));
+  descriptor.validator = buildValidator(descriptor);
+  return registerFieldDescriptor(
+    Object.freeze(descriptor) as unknown as ScalarDescriptor<
+      Nullable<TInput, TRequired>,
+      Nullable<TBase, TRequired>,
+      Nullable<TInput, TRequired>,
+      TRequired,
+      TDefaulted
+    >,
+  );
 }

@@ -1,3 +1,4 @@
+import type { DocumentModelPHState } from "@powerhousedao/shared/document-model";
 import type { NormalizedDocumentModelArtifact } from "../../src/definition/adapters/types.js";
 import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import { adaptSchemaFirstDocumentModelModule } from "../../src/definition/tooling/adapters/schema-first-document-model-module-adapter.js";
@@ -6,6 +7,7 @@ import * as appModule from "./corpus/app-module.code-first.js";
 import * as documentDrive from "./corpus/document-drive.code-first.js";
 import * as documentEditor from "./corpus/document-editor.code-first.js";
 import * as e2eTodo from "./corpus/e2e-todo.code-first.js";
+import * as extensions from "./corpus/extensions.code-first.js";
 import * as processorModule from "./corpus/processor-module.code-first.js";
 import * as reactorGroup from "./corpus/reactor-group.code-first.js";
 import * as subgraphModule from "./corpus/subgraph-module.code-first.js";
@@ -47,6 +49,7 @@ const CODE_FIRST: Readonly<Partial<Record<string, CodeFirstFixture>>> = {
   "e2e-todo": e2eTodo,
   "versioned-todo": versionedTodo,
   sample,
+  extensions,
 };
 
 /**
@@ -61,17 +64,25 @@ const SAMPLE_ROOT = {
   versions: [1],
 } as const;
 
+const EXTENSIONS_ROOT = {
+  name: "extensions",
+  path: "./test/parity/corpus/extensions.code-first.ts",
+  versions: [1],
+} as const;
+
+const SYNTHETIC_STATES: Readonly<Record<string, DocumentModelPHState>> = {
+  [SAMPLE_ROOT.name]: sample.sampleStoredState,
+  [EXTENSIONS_ROOT.name]: extensions.extensionsStoredState,
+};
+
 export function loadParityRoots(): readonly ParityRoot[] {
   const roots: ParityRoot[] = [];
-  for (const root of [...CORPUS_ROOTS, SAMPLE_ROOT]) {
+  for (const root of [...CORPUS_ROOTS, SAMPLE_ROOT, EXTENSIONS_ROOT]) {
     const fixture = CODE_FIRST[root.name];
     if (fixture === undefined) {
       throw new Error(`${root.name} has no committed code-first declaration.`);
     }
-    const state =
-      root.name === SAMPLE_ROOT.name
-        ? sample.sampleStoredState
-        : readCorpusState(root);
+    const state = SYNTHETIC_STATES[root.name] ?? readCorpusState(root);
 
     const codeFirst = fixture.modules.map((module) => {
       const result = adaptCodeFirstDocumentModelSource(module, {
