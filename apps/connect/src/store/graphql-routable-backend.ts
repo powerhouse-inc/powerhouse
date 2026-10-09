@@ -91,6 +91,8 @@ export type GraphQLRoutableBackend = {
   readonly backend: IRoutableBackend;
   /** The Switchboard's own facts, from its inspection subgraph. */
   info(): Promise<ReactorInfo>;
+  /** Reopens the realtime socket on the new credentials. */
+  notifyCredentialsChanged(): void;
 };
 
 /** A Switchboard as a router backend; members GraphQL cannot serve are absent. */
@@ -152,5 +154,6 @@ export function createGraphQLRoutableBackend(
         access: { admin: false, sql: false },
       };
     },
+    notifyCredentialsChanged: () => gql.notifyCredentialsChanged(),
   };
 }

@@ -82,15 +82,20 @@ export type MultiReactorParams = {
   onDiagnostic?: RouterDiagnostic;
 };
 
+/** Renown's sign-in and sign-out call this on whatever client is installed. */
+export type CredentialsAwareClient = RoutingReactorClient & {
+  notifyCredentialsChanged(): void;
+};
+
 /** The router over the tab's reactor (primary) and the Switchboard. */
-export function buildMultiReactorClient(
+export async function buildMultiReactorClient(
   params: MultiReactorParams,
-): Promise<RoutingReactorClient> {
+): Promise<CredentialsAwareClient> {
   const remote = createGraphQLRoutableBackend({
     url: params.remoteGraphqlUrl,
     documentModels: params.documentModelModules,
   });
-  return createRoutingClient(
+  const router = await createRoutingClient(
     [
       {
         name: LOCAL_BACKEND_NAME,
@@ -115,4 +120,7 @@ export function buildMultiReactorClient(
       onDiagnostic: params.onDiagnostic,
     },
   );
+  return Object.assign(router, {
+    notifyCredentialsChanged: () => remote.notifyCredentialsChanged(),
+  });
 }
