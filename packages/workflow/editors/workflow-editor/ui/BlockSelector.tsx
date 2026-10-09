@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type RefObject,
+  useId,
 } from "react";
 import { Icon, type IconName } from "../../shared/icons.js";
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
@@ -22,6 +23,7 @@ import {
   isCoreBlock,
   MANUAL_TRIGGER,
   pinBlock,
+  REACTOR_PIECE,
   SCHEDULE_TRIGGER,
   stepBlock,
   WEBHOOK_TRIGGER,
@@ -199,28 +201,35 @@ function Row(props: {
   disabled?: boolean;
   // The keyboard's row.
   active?: boolean;
+  // Where it sits in its listbox; only the rows in view are mounted.
+  option?: OptionPlace;
   // The piece version a pick pins to; shown on hover unless `versionNote`
   // says why it matters here.
   version?: string;
   versionNote?: string;
 }) {
+  // An option, not a button: focus stays in the search box, which drives the
+  // keyboard and points assistive tech at this row.
   return (
-    <button
-      type="button"
-      // Focus stays in the search box, which drives the keyboard.
-      tabIndex={-1}
-      className={`group flex h-11 w-full items-center gap-2 px-3 text-left ${
+    <div
+      {...optionAttributes(props.option)}
+      role="option"
+      aria-selected={props.active ?? false}
+      aria-disabled={props.disabled}
+      className={`group flex h-11 w-full cursor-pointer items-center gap-2 px-3 text-left ${
         props.active ? "bg-foreground/[0.07]" : ""
       } ${
         props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
       title={props.title}
-      disabled={props.disabled}
-      onClick={props.onClick}
+      onClick={props.disabled ? undefined : props.onClick}
       onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={props.onHover}
     >
-      {props.logo}
+      {/* Decorative: the label names the row. */}
+      <span aria-hidden="true" className="contents">
+        {props.logo}
+      </span>
       <span className="min-w-0">
         <span className="block truncate text-xs font-medium text-foreground">
           {props.label}
@@ -243,8 +252,29 @@ function Row(props: {
           v{props.version}
         </span>
       ) : null}
-    </button>
+    </div>
   );
+}
+
+// A row's id and position, named by the search box's aria-activedescendant.
+interface OptionPlace {
+  list: string;
+  index: number;
+  size: number;
+}
+
+export function optionId(list: string, index: number): string {
+  return `${list}-${index}`;
+}
+
+function optionAttributes(place: OptionPlace | undefined) {
+  return place
+    ? {
+        id: optionId(place.list, place.index),
+        "aria-posinset": place.index + 1,
+        "aria-setsize": place.size,
+      }
+    : {};
 }
 
 // The core piece is the runtime's own, so its rows carry no version.
@@ -281,6 +311,8 @@ function useVersionNote(
     if (others.length > 0) {
       return `Other steps of this workflow use ${others.join(", ")}`;
     }
+    // The reactor piece ships with the runtime, so its copy is the one meant.
+    if (piece === REACTOR_PIECE) return undefined;
     const published = catalog?.find(
       (entry) => entry.name === piece,
     )?.publishedVersion;
@@ -492,17 +524,38 @@ function usePieceSearch(
   return state.kind === "idle" ? { kind: "loading" } : state;
 }
 
-function Chip(props: { label: string; active: boolean; onClick: () => void }) {
+// Arrow keys move focus along a row of buttons, wrapping at the ends.
+function rovingFocus(event: React.KeyboardEvent<HTMLElement>): void {
+  const delta =
+    event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+  if (delta === 0) return;
+  event.preventDefault();
+  const buttons = [
+    ...event.currentTarget.querySelectorAll<HTMLButtonElement>("button"),
+  ];
+  const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+  buttons.at((at + delta) % buttons.length)?.focus();
+}
+
+function Chip(props: {
+  label: string;
+  active: boolean;
+  // The one chip Tab lands on.
+  tabStop: boolean;
+  onClick: (fromKeyboard: boolean) => void;
+}) {
   return (
     <button
       type="button"
       aria-pressed={props.active}
+      tabIndex={props.tabStop ? 0 : -1}
       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
         props.active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-foreground/10 text-muted-foreground hover:border-foreground/25"
       }`}
-      onClick={props.onClick}
+      // A keyboard click reports no pointer clicks.
+      onClick={(event) => props.onClick(event.detail === 0)}
     >
       {props.label}
     </button>
@@ -512,22 +565,35 @@ function Chip(props: { label: string; active: boolean; onClick: () => void }) {
 function Tabs(props: {
   tabs: SourceTab[];
   active: SourceTab;
-  onSelect: (tab: SourceTab) => void;
+  onSelect: (tab: SourceTab, fromKeyboard: boolean) => void;
 }) {
   return (
-    <div role="tablist" className="mt-1.5 flex gap-3 px-1">
+    <div
+      role="tablist"
+      aria-label="Piece sources"
+      className="mt-1.5 flex gap-3 px-1"
+      onKeyDown={(event) => {
+        rovingFocus(event);
+        // Following focus, as a tab list does.
+        const focused = document.activeElement as HTMLElement | null;
+        const tab = focused?.dataset.tab as SourceTab | undefined;
+        if (tab && tab !== props.active) props.onSelect(tab, true);
+      }}
+    >
       {props.tabs.map((tab) => (
         <button
           key={tab}
           type="button"
           role="tab"
+          data-tab={tab}
           aria-selected={props.active === tab}
+          tabIndex={props.active === tab ? 0 : -1}
           className={`-mb-px border-b-2 pb-1 text-[11px] font-medium ${
             props.active === tab
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
-          onClick={() => props.onSelect(tab)}
+          onClick={(event) => props.onSelect(tab, event.detail === 0)}
         >
           {TAB_LABELS[tab]}
         </button>
@@ -539,6 +605,7 @@ function Tabs(props: {
 function Status(props: { children: React.ReactNode; error?: boolean }) {
   return (
     <div
+      role="status"
       className={`px-3 py-1 text-xs ${props.error ? "text-wf-fail" : "text-muted-foreground/80"}`}
     >
       {props.children}
@@ -606,6 +673,7 @@ function EntryRow(props: {
   entry: Entry;
   tokens: string[];
   active: boolean;
+  option: OptionPlace;
   indent?: boolean;
   onActivate: () => void;
 }) {
@@ -629,6 +697,7 @@ function EntryRow(props: {
       }
       disabled={entry.unavailable !== undefined}
       active={props.active}
+      option={props.option}
       version={entry.version}
       versionNote={entry.versionNote}
       onHover={() => {
@@ -645,6 +714,7 @@ function SourceRow(props: {
   tokens: string[];
   mode: PieceMode;
   active: boolean;
+  option: OptionPlace;
   onActivate: () => void;
   onOpen: () => void;
 }) {
@@ -656,6 +726,7 @@ function SourceRow(props: {
         label={source.title}
         description={source.subtitle}
         active={props.active}
+        option={props.option}
         onHover={props.onActivate}
         onClick={props.onOpen}
       />
@@ -685,6 +756,7 @@ function SourceRow(props: {
         piece.unsupported ?? `${count} ${noun}${count === 1 ? "" : "s"}`
       }
       active={props.active}
+      option={props.option}
       onHover={props.onActivate}
       onClick={props.onOpen}
     />
@@ -745,6 +817,7 @@ function EntriesPane(props: {
   pieceError: string | null;
   tokens: string[];
   activeIndex: number;
+  listId: string;
   onActivate: (index: number) => void;
 }) {
   const { source } = props;
@@ -781,6 +854,7 @@ function EntriesPane(props: {
         <Status>No {kind}s</Status>
       ) : (
         <VirtualList
+          id={props.listId}
           label={`${title ?? ""} ${kind}s`}
           className="flex-1 py-1"
           items={entries}
@@ -792,6 +866,7 @@ function EntriesPane(props: {
               entry={entry}
               tokens={props.tokens}
               active={index === props.activeIndex}
+              option={{ list: props.listId, index, size: entries.length }}
               onActivate={() => props.onActivate(index)}
             />
           )}
@@ -810,10 +885,13 @@ function SearchList(props: {
   onOpenList: (id: ListId) => void;
   onExpand: (pieceName: string) => void;
   footer: React.ReactNode;
+  listId: string;
 }) {
+  const size = props.rows.length;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <VirtualList
+        id={props.listId}
         label="Search results"
         className="flex-1 py-1"
         items={props.rows}
@@ -831,12 +909,14 @@ function SearchList(props: {
         render={(row, index) => {
           const active = index === props.activeIndex;
           const activate = () => props.onActivate(index);
+          const option = { list: props.listId, index, size };
           if (row.type === "entry") {
             return (
               <EntryRow
                 entry={row.entry}
                 tokens={props.tokens}
                 active={active}
+                option={option}
                 indent
                 onActivate={activate}
               />
@@ -844,16 +924,17 @@ function SearchList(props: {
           }
           if (row.type === "more") {
             return (
-              <button
-                type="button"
-                tabIndex={-1}
-                className={`h-full w-full pl-[44px] text-left text-[11px] text-muted-foreground/80 hover:text-foreground ${active ? "bg-foreground/[0.07]" : ""}`}
+              <div
+                {...optionAttributes(option)}
+                role="option"
+                aria-selected={active}
+                className={`flex h-full w-full cursor-pointer items-center pl-[44px] text-[11px] text-muted-foreground/80 hover:text-foreground ${active ? "bg-foreground/[0.07]" : ""}`}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseEnter={activate}
                 onClick={() => props.onExpand(row.pieceName)}
               >
                 {row.hidden} more…
-              </button>
+              </div>
             );
           }
           const header =
@@ -879,16 +960,19 @@ function SearchList(props: {
                   open: () => props.onOpenList(row.source.id),
                 };
           return (
-            <button
-              type="button"
-              tabIndex={-1}
+            <div
+              {...optionAttributes(option)}
+              role="option"
+              aria-selected={active}
               title={`Open ${header.label}`}
-              className={`flex h-full w-full items-center gap-2 px-3 text-left ${active ? "bg-foreground/[0.07]" : "hover:bg-muted/50"}`}
+              className={`flex h-full w-full cursor-pointer items-center gap-2 px-3 text-left ${active ? "bg-foreground/[0.07]" : "hover:bg-muted/50"}`}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={activate}
               onClick={header.open}
             >
-              {header.logo}
+              <span aria-hidden="true" className="contents">
+                {header.logo}
+              </span>
               <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 <Highlight text={header.label} tokens={props.tokens} />
               </span>
@@ -900,7 +984,7 @@ function SearchList(props: {
               <span className="ml-auto text-[10px] text-muted-foreground/60">
                 Open →
               </span>
-            </button>
+            </div>
           );
         }}
       />
@@ -931,12 +1015,18 @@ export function BlockSelector(props: {
   const [chip, setChip] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [pane, setPane] = useState<"sources" | "entries">("sources");
+  const [paneState, setPane] = useState<"sources" | "entries">("sources");
   const [entryIndex, setEntryIndex] = useState(-1);
   const [rowIndex, setRowIndex] = useState(-1);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const baseId = useId();
+  const listIds = {
+    sources: `${baseId}-sources`,
+    entries: `${baseId}-entries`,
+    results: `${baseId}-results`,
+  };
   // Hover only counts once the pointer has moved, so a list scrolling under
   // a still pointer does not steal the selection.
   const pointerMoved = useRef(false);
@@ -1332,6 +1422,10 @@ export function BlockSelector(props: {
       ? rows.findIndex((row) => row.type === "entry")
       : Math.min(rowIndex, rows.length - 1);
 
+  // One source needs no list to choose from; its blocks fill the picker.
+  const twoPane = showCatalog || sources.length > 1;
+  const pane = twoPane ? paneState : "entries";
+
   const selectSource = (id: string) => {
     setSelectedId(id);
     setPane("sources");
@@ -1361,10 +1455,12 @@ export function BlockSelector(props: {
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     const key = event.key;
+    // Tabs and chips handle their own keys; the lists answer the search box.
+    if (key !== "Escape" && event.target !== inputRef.current) return;
     if (key === "Escape") {
       event.stopPropagation();
       if (query !== "") setQuery("");
-      else if (pane === "entries" && !searching) setPane("sources");
+      else if (twoPane && pane === "entries" && !searching) setPane("sources");
       else onClose();
       return;
     }
@@ -1413,8 +1509,19 @@ export function BlockSelector(props: {
     }
   };
 
-  const twoPane = showCatalog || sources.length > 1;
   const width = props.width ?? (pieceSource ? PICKER_SIZE.width : 360);
+  const activeList = searching
+    ? listIds.results
+    : pane === "entries"
+      ? listIds.entries
+      : listIds.sources;
+  const activeIndex = searching
+    ? activeRow
+    : pane === "entries"
+      ? entryIndex
+      : sourceIndex;
+  const activeOption =
+    activeIndex >= 0 ? optionId(activeList, activeIndex) : undefined;
   const statusFooter =
     search.kind === "loading" ? (
       <Status>Searching…</Status>
@@ -1450,7 +1557,10 @@ export function BlockSelector(props: {
           role="combobox"
           aria-expanded
           aria-autocomplete="list"
-          className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
+          aria-label={`Search ${props.title.toLowerCase()}`}
+          aria-controls={activeList}
+          aria-activedescendant={activeOption}
+          className="w-full rounded border border-foreground/10 bg-card px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground"
           placeholder={pieceSource ? `Search pieces and ${kind}s…` : "Search…"}
           value={query}
           onChange={(event) => {
@@ -1462,26 +1572,32 @@ export function BlockSelector(props: {
         <Tabs
           tabs={tabs}
           active={tab}
-          onSelect={(next) => {
+          onSelect={(next, fromKeyboard) => {
             setTab(next);
             setChip(null);
             setSelectedId(null);
             setPane("sources");
-            inputRef.current?.focus();
+            if (!fromKeyboard) inputRef.current?.focus();
           }}
         />
       </div>
       {showChips && catalog && !catalog.error ? (
-        <div className="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-foreground/10 px-2.5 py-1.5 [scrollbar-width:thin]">
-          {chips.map((label) => (
+        <div
+          role="toolbar"
+          aria-label="Categories"
+          className="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-foreground/10 px-2.5 py-1.5 [scrollbar-width:thin]"
+          onKeyDown={rovingFocus}
+        >
+          {chips.map((label, index) => (
             <Chip
               key={label}
               label={label}
               active={activeChip === label}
-              onClick={() => {
+              tabStop={activeChip === null ? index === 0 : activeChip === label}
+              onClick={(fromKeyboard) => {
                 setChip(activeChip === label ? null : label);
                 setSelectedId(null);
-                inputRef.current?.focus();
+                if (!fromKeyboard) inputRef.current?.focus();
               }}
             />
           ))}
@@ -1502,6 +1618,7 @@ export function BlockSelector(props: {
           }}
           onExpand={(name) => setExpanded(new Set([...expanded, name]))}
           footer={statusFooter}
+          listId={listIds.results}
         />
       ) : (
         <div className="flex min-h-0 flex-1">
@@ -1523,6 +1640,7 @@ export function BlockSelector(props: {
                 </div>
               ) : null}
               <VirtualList
+                id={listIds.sources}
                 label="Pieces"
                 className="flex-1 py-1"
                 items={sources}
@@ -1535,6 +1653,11 @@ export function BlockSelector(props: {
                     tokens={tokens}
                     mode={mode}
                     active={index === sourceIndex}
+                    option={{
+                      list: listIds.sources,
+                      index,
+                      size: sources.length,
+                    }}
                     onActivate={() => hoverSource(source.id)}
                     onOpen={() => {
                       clearTimeout(hoverTimer.current);
@@ -1562,6 +1685,7 @@ export function BlockSelector(props: {
             pieceError={selected?.kind === "piece" ? loaded.error : null}
             tokens={tokens}
             activeIndex={pane === "entries" ? entryIndex : -1}
+            listId={listIds.entries}
             onActivate={(index) => {
               if (!pointerMoved.current) return;
               setPane("entries");
