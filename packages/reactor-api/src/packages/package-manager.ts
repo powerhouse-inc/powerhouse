@@ -24,7 +24,10 @@ import type {
   PackagePieceEntry,
 } from "./types.js";
 import { debounce, manifestDeclaredSubgraphs } from "./util.js";
-import { REGISTRY_ENTRY_ABSENT } from "./registry-cache.js";
+import {
+  REGISTRY_ENTRY_ABSENT,
+  REGISTRY_EXTERNAL_DEPS_MISSING,
+} from "./registry-cache.js";
 
 /**
  * A loader throwing "this package isn't mine to load" is normal — loaders are
@@ -451,7 +454,11 @@ export class PackageManager implements IPackageManager {
     // and show only those non-expected failures — expected misses would just
     // mislead the reader about which loader actually broke.
     const realFailures = failures.filter(
-      ({ error }) => !isExpectedLoaderMiss(error, pkg, subPath),
+      ({ error }) =>
+        !isExpectedLoaderMiss(error, pkg, subPath) &&
+        // The loader already logged why it skipped the package.
+        (error as NodeJS.ErrnoException | undefined)?.code !==
+          REGISTRY_EXTERNAL_DEPS_MISSING,
     );
     if (realFailures.length === 0) return;
 

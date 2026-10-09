@@ -32,6 +32,13 @@ export type PackageEntryKind = keyof typeof PACKAGE_ENTRIES;
 // Error code for a registry package that ships none of the asked-for entry.
 export const REGISTRY_ENTRY_ABSENT = "ERR_REGISTRY_ENTRY_ABSENT";
 
+// Error code for an entry left unloaded because its external packages are missing.
+export const REGISTRY_EXTERNAL_DEPS_MISSING =
+  "ERR_REGISTRY_EXTERNAL_DEPS_MISSING";
+
+// The package's own manifest, CDN-relative.
+const PACKAGE_MANIFEST = "powerhouse.manifest.json";
+
 export const MANIFEST_FILE = "manifest.json";
 
 export function defaultRegistryCacheDir(cwd = process.cwd()): string {
@@ -72,6 +79,8 @@ export type RegistryCacheManifest = {
   files: Record<string, string>;
   /** Bare specifiers the graph imports. */
   bareImports: string[];
+  /** External packages the package manifest lists, name -> version. */
+  externalDependencies: Record<string, string>;
 };
 
 export type CachedRegistryPackage = {
@@ -81,6 +90,10 @@ export type CachedRegistryPackage = {
   /** Absolute entry files inside `dir`, for the entries the package serves. */
   entries: Partial<Record<PackageEntryKind, string>>;
   source: "cache" | "download";
+  /** External packages the package manifest lists, name -> version. */
+  externalDependencies: Record<string, string>;
+  /** The external packages that resolve from neither the project nor reactor-api. */
+  missingExternalDependencies: string[];
 };
 
 export type RegistryPackageCacheOptions = {
@@ -180,7 +193,8 @@ export class RegistryPackageCache {
       manifest = await this.fill(name, version, dir);
       source = "download";
     }
-    await this.linkBareImports(manifest.bareImports);
+    const external = Object.keys(manifest.externalDependencies);
+    await this.linkBareImports(manifest.bareImports, external);
     const entries: Partial<Record<PackageEntryKind, string>> = {};
     for (const [kind, rel] of Object.entries(manifest.entries)) {
       entries[kind as PackageEntryKind] = path.join(dir, rel);
@@ -191,6 +205,16 @@ export class RegistryPackageCache {
       dir,
       entries,
       source,
+      externalDependencies: manifest.externalDependencies,
+      missingExternalDependencies: external.filter((pkg) => {
+        // What the package imports: one exporting only subpaths has no "." to resolve.
+        const imported = manifest.bareImports.filter(
+          (s) => s === pkg || s.startsWith(`${pkg}/`),
+        );
+        return !(imported.length > 0 ? imported : [pkg]).some((s) =>
+          this.resolvesForCachedPackages(s, pkg),
+        );
+      }),
     };
     this.verified.set(dir, result);
     return result;
@@ -210,6 +234,11 @@ export class RegistryPackageCache {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       this.logger.warn("Unreadable cache manifest in @dir: @error", dir, error);
+      await this.discard(dir);
+      return null;
+    }
+    // An entry without externalDependencies is an older format: fetch it again.
+    if (typeof manifest.externalDependencies !== "object") {
       await this.discard(dir);
       return null;
     }
@@ -368,6 +397,10 @@ export class RegistryPackageCache {
         `${name}@${version} serves no document models, subgraphs or processors`,
       );
     }
+    const packageManifest = await this.fetchBounded(
+      new URL(PACKAGE_MANIFEST, base).href,
+      true,
+    );
     return {
       name,
       version,
@@ -376,6 +409,7 @@ export class RegistryPackageCache {
         Object.entries(files).sort(([a], [b]) => a.localeCompare(b)),
       ),
       bareImports: [...bare].sort(),
+      externalDependencies: externalDependenciesOf(packageManifest),
     };
   }
 
@@ -455,13 +489,26 @@ export class RegistryPackageCache {
     return Buffer.concat(chunks);
   }
 
+  // Where a cached file resolves past the link root: `<cwd>/node_modules` up.
+  private outsideUrl(): string {
+    return pathToFileURL(path.join(path.dirname(this.cacheDir), "/")).href;
+  }
+
+  /** Whether `specifier` resolves from the project or from reactor-api. */
+  resolvesForCachedPackages(specifier: string, pkg: string): boolean {
+    return (
+      packageRoot(specifier, pkg, this.outsideUrl()) !== null ||
+      packageRoot(specifier, pkg, import.meta.url) !== null
+    );
+  }
+
   // Bare imports only reactor-api's tree provides are linked under
   // <cacheDir>/node_modules, which hosts and workers both walk up to.
-  private async linkBareImports(specifiers: string[]): Promise<void> {
-    // Where a cached file resolves past the link root: `<cwd>/node_modules` up.
-    const outsideUrl = pathToFileURL(
-      path.join(path.dirname(this.cacheDir), "/"),
-    ).href;
+  private async linkBareImports(
+    specifiers: string[],
+    external: string[],
+  ): Promise<void> {
+    const outsideUrl = this.outsideUrl();
     const linkRoot = path.join(this.cacheDir, "node_modules");
     for (const specifier of specifiers) {
       const pkg = packageNameOf(specifier);
@@ -475,6 +522,8 @@ export class RegistryPackageCache {
       }
       const fallback = packageRoot(specifier, pkg, import.meta.url);
       if (!fallback) {
+        // Reported once, by whoever loads the entries that need it.
+        if (external.includes(pkg)) continue;
         this.logger.warn(
           "Registry package import @specifier resolves from neither the project nor reactor-api",
           specifier,
@@ -555,6 +604,25 @@ function parseManifest(raw: string): RegistryCacheManifest {
     throw new Error("malformed manifest");
   }
   return value as unknown as RegistryCacheManifest;
+}
+
+// A package manifest's externalDependencies; anything unreadable lists none.
+function externalDependenciesOf(body: Buffer | null): Record<string, string> {
+  if (!body) return {};
+  let value: unknown;
+  try {
+    value = (JSON.parse(body.toString("utf8")) as Record<string, unknown>)
+      .externalDependencies;
+  } catch {
+    return {};
+  }
+  if (typeof value !== "object" || value === null) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([name, version]) =>
+        isValidPackageName(name) && typeof version === "string",
+    ),
+  ) as Record<string, string>;
 }
 
 function packageNameOf(specifier: string): string | null {

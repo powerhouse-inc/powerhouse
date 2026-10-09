@@ -17,6 +17,7 @@ import {
   isValidPackageName,
   PACKAGE_ENTRIES,
   REGISTRY_ENTRY_ABSENT,
+  REGISTRY_EXTERNAL_DEPS_MISSING,
   RegistryPackageCache,
   type CachedRegistryPackage,
   type PackageEntryKind,
@@ -92,6 +93,9 @@ export class HttpPackageLoader implements IPackageLoader {
 
   // Spec -> pinned version, so every part of a package loads the same one.
   private readonly versions = new Map<string, Promise<string | undefined>>();
+
+  // name@version of packages already reported for missing external packages.
+  private readonly reportedExternal = new Set<string>();
 
   constructor(options: HttpPackageLoaderOptions) {
     this.registryUrl = options.registryUrl.endsWith("/")
@@ -212,6 +216,8 @@ export class HttpPackageLoader implements IPackageLoader {
           { code: REGISTRY_ENTRY_ABSENT },
         );
       }
+      // `ph build` refuses document models that import them.
+      if (kind !== "documentModels") this.assertExternalDependencies(cached);
       const module = (await import(
         /* @vite-ignore */ pathToFileURL(filePath).href
       )) as Record<string, unknown>;
@@ -225,6 +231,30 @@ export class HttpPackageLoader implements IPackageLoader {
       unknown
     >;
     return { module };
+  }
+
+  private assertExternalDependencies(cached: CachedRegistryPackage): void {
+    const missing = cached.missingExternalDependencies;
+    if (missing.length === 0) return;
+    const id = `${cached.name}@${cached.version}`;
+    const list = missing
+      .map((dep) => `${dep}@${cached.externalDependencies[dep]}`)
+      .join(", ");
+    if (!this.reportedExternal.has(id)) {
+      this.reportedExternal.add(id);
+      this.logger.error(
+        "@package needs packages with native addons or WebAssembly modules that are not installed (@deps); its subgraphs and processors are not loaded, its document models and pieces are. Install it locally with `ph install --local @name`, or list it in PH_PACKAGES for a Docker image.",
+        id,
+        list,
+        cached.name,
+      );
+    }
+    throw Object.assign(
+      new Error(
+        `${id} needs external dependencies that are not installed: ${list}`,
+      ),
+      { code: REGISTRY_EXTERNAL_DEPS_MISSING },
+    );
   }
 
   importDocumentModels(
