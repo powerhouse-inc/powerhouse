@@ -24,6 +24,7 @@ import type {
 } from "./interfaces.js";
 import { DeferredJobs } from "./deferred-jobs.js";
 import {
+  hasRetriesLeft,
   JobResultHandler,
   toErrorInfo,
   type IJobResultHandler,
@@ -288,25 +289,11 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
         error instanceof Error ? error : String(error),
       );
       if (isWorkerTransportError(error)) {
-        await this.handleWorkerTransportFailure(worker, handle.job, errorInfo);
+        await this.handleWorkerTransportFailure(worker, handle, errorInfo);
         return;
       }
-      // handle.fail resolves the job through queue.failJob, which emits the
-      // one ReactorEventTypes.JOB_FAILED for this failure; emitting here too
-      // delivered every timeout to subscribers twice.
-      handle.fail(errorInfo);
       this.activeJobs--;
-      this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-      const failedEvent: JobFailedEvent = {
-        job: handle.job,
-        error: errorInfo.message,
-        willRetry: false,
-        retryCount: 0,
-        workerId,
-      };
-      this.eventBus
-        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
-        .catch(() => {});
+      this.failInFlight(handle, errorInfo, workerId);
       await this.tryDispatchFor(worker);
       return;
     }
@@ -414,26 +401,61 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     }
   }
 
+  // handle.fail resolves the job through queue.failJob, which emits the one
+  // ReactorEventTypes.JOB_FAILED for this failure; emitting here too
+  // delivered every timeout to subscribers twice.
+  private failInFlight(
+    handle: IJobExecutionHandle,
+    errorInfo: ReturnType<typeof toErrorInfo>,
+    workerId: string,
+  ): void {
+    handle.fail(errorInfo);
+    this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
+    const failedEvent: JobFailedEvent = {
+      job: handle.job,
+      error: errorInfo.message,
+      willRetry: false,
+      retryCount: handle.job.retryCount || 0,
+      workerId,
+    };
+    this.eventBus
+      .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+      .catch(() => {});
+  }
+
   /**
    * Handle a worker-transport failure (worker exited / init failed / abort
-   * timed out) detected while `worker.execute` was in flight. Re-enqueues
-   * the in-flight job via `queue.retryJob` so it is retried on a healthy
-   * worker, then replaces the dead worker with a fresh handle and resumes
-   * dispatch on the same bucket. Does NOT emit JOB_FAILED — the job is
-   * not failed, only the worker is.
+   * timed out) detected while `worker.execute` was in flight. The dead
+   * worker is replaced and dispatch resumes on its bucket. The in-flight
+   * job is retried via `queue.retryJob` while it has retries left, and
+   * failed with the transport error once they are spent.
    */
   private async handleWorkerTransportFailure(
     dead: IExecutorWorker,
-    job: Job,
+    handle: IJobExecutionHandle,
     errorInfo: ReturnType<typeof toErrorInfo>,
   ): Promise<void> {
+    const job = handle.job;
+    this.activeJobs--;
+
+    if (!hasRetriesLeft(job)) {
+      this.logger.error(
+        "worker transport error during execute; job @jobId is out of retries: @error",
+        { jobId: job.id, workerId: dead.workerId },
+        errorInfo.message,
+      );
+      // Released before the replacement dispatches, so the next job on the
+      // document can run.
+      this.failInFlight(handle, errorInfo, dead.workerId);
+      await this.replaceWorker(dead);
+      return;
+    }
+
     this.logger.warn(
       "worker transport error during execute; retrying job @jobId on a replacement worker: @error",
       { jobId: job.id, workerId: dead.workerId },
       errorInfo.message,
     );
-
-    this.activeJobs--;
 
     // Replace the dead worker BEFORE re-enqueuing the job. Otherwise
     // `queue.retryJob` emits JOB_AVAILABLE, the subscriber re-runs

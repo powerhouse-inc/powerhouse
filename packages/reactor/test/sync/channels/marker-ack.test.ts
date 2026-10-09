@@ -77,8 +77,17 @@ describe("an inbox holding a marker that awaits its load", () => {
     expect(inbox.ackOrdinal).toBe(7);
   });
 
-  it("is not held without the option, as an outbox is not", () => {
-    const outbox = new Mailbox();
+  it("still holds for the unapplied marker without the marker option", () => {
+    const inbox = new Mailbox();
+    const marker = markerItem(5);
+    const later = createMockSyncOperation("later", "remote-1", 7);
+    inbox.add(marker, later);
+    applied(later);
+    expect(inbox.ackOrdinal).toBe(4);
+  });
+
+  it("is not held in a mailbox that opted out, as an outbox does", () => {
+    const outbox = new Mailbox({ holdAckBelowUnapplied: false });
     const later = createMockSyncOperation("later", "remote-1", 7);
     outbox.add(markerItem(5), later);
     applied(later);

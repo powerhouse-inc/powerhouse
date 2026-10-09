@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { ReactorEventTypes } from "../../../src/events/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import { SyncOperationStatus } from "../../../src/sync/types.js";
 import { syncOperationErrorType } from "../../../src/sync/utils.js";
+import { createTestOperation } from "../../factories.js";
 import { purgeMarker } from "../helpers.js";
 import {
   createHarness,
@@ -22,6 +24,7 @@ type Internals = {
   quarantinedDocumentIds: Set<string>;
   purgedDocumentIds: Set<string>;
   markerRetries: Map<string, unknown>;
+  appliedMarkers: Map<string, Map<string, number>>;
   sweptThrough: number;
   deriveSettled(): Promise<void>;
   hold(
@@ -218,5 +221,59 @@ describe("a received marker whose load failed [Postgres]", () => {
     await vi.waitFor(() =>
       expect(harness.reactor.load).toHaveBeenCalledTimes(2),
     );
+  });
+  it("drops a resent marker its first copy applied while the ack is held", async () => {
+    harness = await createHarness();
+    await harness.manager.startup();
+    await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
+    const channel = harness.manager.getByName("remote").channel;
+    let running = true;
+    let markerJobs = 0;
+    harness.reactor.load.mockImplementation((documentId: string) =>
+      Promise.resolve({
+        id: documentId === DOC ? `job-m-${++markerJobs}` : "job-x",
+      }),
+    );
+    harness.reactor.getJobStatus.mockImplementation((id: string) =>
+      Promise.resolve({
+        id,
+        status:
+          id === "job-x" && running ? JobStatus.RUNNING : JobStatus.READ_READY,
+      }),
+    );
+
+    const slow = new SyncOperation(
+      crypto.randomUUID(),
+      "",
+      [],
+      "remote",
+      "doc-x",
+      ["global"],
+      "main",
+      [withContext(createTestOperation("doc-x"), "doc-x", 1)],
+    );
+    const marker = withContext(purgeMarker(DOC), DOC, 2, "document");
+    const first = markerSyncOp("", marker);
+    channel.inbox.add(slow);
+    channel.inbox.add(first);
+    await vi.waitFor(() => expect(channel.inbox.items).toEqual([slow]));
+    expect(first.status).toBe(SyncOperationStatus.Applied);
+    expect(channel.inbox.ackOrdinal).toBe(0);
+
+    const resent = markerSyncOp("", marker);
+    channel.inbox.add(resent);
+    await quiesce();
+
+    expect(markerJobs).toBe(1);
+    expect(resent.status).toBe(SyncOperationStatus.Applied);
+    expect(channel.inbox.items).toEqual([slow]);
+
+    running = false;
+    await harness.eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
+      jobId: "job-x",
+    });
+    await vi.waitFor(() => expect(channel.inbox.items).toEqual([]));
+    expect(channel.inbox.ackOrdinal).toBe(2);
+    expect(internals(harness).appliedMarkers.get("remote")?.size ?? 0).toBe(0);
   });
 });
