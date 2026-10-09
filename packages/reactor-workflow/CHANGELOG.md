@@ -1,3 +1,63 @@
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** stream, cache and authorize step attachments ([2c33603d58](https://github.com/powerhouse-inc/powerhouse/commit/2c33603d58))
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+- **reactor-workflow:** an in-memory park state seeded from the store ([3f77add59a](https://github.com/powerhouse-inc/powerhouse/commit/3f77add59a))
+- **reactor-workflow:** enforce the policy knobs, or mark them unenforced ([ef311827ef](https://github.com/powerhouse-inc/powerhouse/commit/ef311827ef))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor-workflow:** clear a deleted workflow's park in its own forget task ([d7bc6ff577](https://github.com/powerhouse-inc/powerhouse/commit/d7bc6ff577))
+- **reactor-workflow:** release a disabled or deleted workflow's park off the ingestion path ([75adede41b](https://github.com/powerhouse-inc/powerhouse/commit/75adede41b))
+- **reactor-workflow:** keep a parked trigger's renewal schedule ([4f075b5c31](https://github.com/powerhouse-inc/powerhouse/commit/4f075b5c31))
+- **reactor-workflow:** clear a deleted workflow's park on the supervisor's lane ([05e14bc8a5](https://github.com/powerhouse-inc/powerhouse/commit/05e14bc8a5))
+- **reactor-workflow:** apply one workflow's registrations in arrival order ([d24a7460eb](https://github.com/powerhouse-inc/powerhouse/commit/d24a7460eb))
+- **reactor-workflow:** let a park block only the version that failed ([862298ecea](https://github.com/powerhouse-inc/powerhouse/commit/862298ecea))
+- **reactor-workflow:** write parks on the trigger supervisor's lane ([2d00ad74e7](https://github.com/powerhouse-inc/powerhouse/commit/2d00ad74e7))
+- **reactor-workflow:** register again after undoing a park a change made stale ([eaa16a59f9](https://github.com/powerhouse-inc/powerhouse/commit/eaa16a59f9))
+- **reactor-workflow:** keep a parked ERROR row's retry, so lifting the park arms afresh ([8674d89bf4](https://github.com/powerhouse-inc/powerhouse/commit/8674d89bf4))
+- **reactor-workflow:** let a run its deadline cancelled be rerun ([77196c4fb5](https://github.com/powerhouse-inc/powerhouse/commit/77196c4fb5))
+- **reactor-workflow:** apply the host-call cap to trigger hooks and design calls ([2ef101fb89](https://github.com/powerhouse-inc/powerhouse/commit/2ef101fb89))
+- **reactor-workflow:** never arm a supervised trigger while its workflow is parked ([a458c331f2](https://github.com/powerhouse-inc/powerhouse/commit/a458c331f2))
+- **reactor-workflow:** release a parked piece trigger's subscription on disable ([ec21ba9d7a](https://github.com/powerhouse-inc/powerhouse/commit/ec21ba9d7a))
+- **reactor-workflow:** answer a refused sync webhook firing with 409 or 429 ([cfd314e9a7](https://github.com/powerhouse-inc/powerhouse/commit/cfd314e9a7))
+- **reactor-workflow:** fail an adopted run whose park check throws ([d9051d4e13](https://github.com/powerhouse-inc/powerhouse/commit/d9051d4e13))
+- **reactor-workflow:** check the run deadline only before a step executes ([3e7eb93da5](https://github.com/powerhouse-inc/powerhouse/commit/3e7eb93da5))
+- **reactor-workflow:** re-run a truncated step on rerun when it only reads ([7a4edc33a4](https://github.com/powerhouse-inc/powerhouse/commit/7a4edc33a4))
+- **reactor-workflow:** clear a PARKED trigger row on any disable ([4c9b50b917](https://github.com/powerhouse-inc/powerhouse/commit/4c9b50b917))
+- **reactor-workflow:** park only the workflow version that failed ([6886ab5b69](https://github.com/powerhouse-inc/powerhouse/commit/6886ab5b69))
+- **reactor-workflow:** key the dedupe NULL conversion on its own mark ([edd34aaadb](https://github.com/powerhouse-inc/powerhouse/commit/edd34aaadb))
+- **reactor-workflow:** let an unjournaled fire take a claim that never landed ([744e61e798](https://github.com/powerhouse-inc/powerhouse/commit/744e61e798))
+- **reactor-workflow:** re-read the workflow after a firing waits for its slot ([08360364a2](https://github.com/powerhouse-inc/powerhouse/commit/08360364a2))
+- **reactor-workflow:** hold a PARK for every trigger kind until a re-publish ([69eeee3e1f](https://github.com/powerhouse-inc/powerhouse/commit/69eeee3e1f))
+- **reactor-workflow:** apply onFailure only to a trigger's own runs ([4f0ca2584c](https://github.com/powerhouse-inc/powerhouse/commit/4f0ca2584c))
+- **reactor-workflow:** end a host call before the step's kill deadline ([3d831fedc1](https://github.com/powerhouse-inc/powerhouse/commit/3d831fedc1))
+- **reactor-workflow:** keep a fired dedupe key a duplicate after the claim protocol ([5386efe810](https://github.com/powerhouse-inc/powerhouse/commit/5386efe810))
+- **reactor-workflow:** bound the QUEUE lane, and start the deadline at firing ([6ab1cf6b1c](https://github.com/powerhouse-inc/powerhouse/commit/6ab1cf6b1c))
+- **reactor-workflow:** keep the truncation fact across a second rerun ([fdcfecaaea](https://github.com/powerhouse-inc/powerhouse/commit/fdcfecaaea))
+- **reactor-workflow:** refuse an unavailable value a parent path reaches ([bd2ecdc6c4](https://github.com/powerhouse-inc/powerhouse/commit/bd2ecdc6c4))
+- **reactor-workflow:** do not retry a deterministic resolution failure ([894ed49f4c](https://github.com/powerhouse-inc/powerhouse/commit/894ed49f4c))
+- **reactor-workflow:** clip a retry wait to the run deadline ([6b8eb2f00a](https://github.com/powerhouse-inc/powerhouse/commit/6b8eb2f00a))
+- **reactor-workflow:** carry INDETERMINATE through test reporting ([ada7daaa61](https://github.com/powerhouse-inc/powerhouse/commit/ada7daaa61))
+- **reactor-workflow:** keep a parked trigger parked across a restart ([8c2cf4f690](https://github.com/powerhouse-inc/powerhouse/commit/8c2cf4f690))
+- **reactor-workflow:** never leak the concurrency slot the gate handed out ([a6b373991b](https://github.com/powerhouse-inc/powerhouse/commit/a6b373991b))
+- **reactor-workflow:** bound crash replays of one fire, and the log writes ([ac9fe0a4e0](https://github.com/powerhouse-inc/powerhouse/commit/ac9fe0a4e0))
+- **reactor-workflow:** bound the run journal, and stop rerun redoing a lost side effect ([4b898216b9](https://github.com/powerhouse-inc/powerhouse/commit/4b898216b9))
+
+### 🔥 Performance
+
+- **reactor-workflow:** bundle the worker entry, share a private compile cache across forks, and allow CPU-profiling workers ([78ab8cc640](https://github.com/powerhouse-inc/powerhouse/commit/78ab8cc640))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.

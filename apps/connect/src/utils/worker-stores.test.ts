@@ -419,7 +419,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(statusAtStop).toHaveLength(1), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     const done = [JobStatus.WRITE_READY, JobStatus.READ_READY];
     expect(done).toContain(await statusAtReload[0]);
     expect(done).toContain(statusAtStop[0]);
@@ -436,7 +436,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(next.granted).toBe(true), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(300);
     expect(Date.now() - startedAt).toBeLessThan(2_000);
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
@@ -453,7 +453,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(next.granted).toBe(true), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
   });
 
@@ -484,7 +484,7 @@ describe("worker retired by a deploy", () => {
     await vi.waitFor(() => expect(statusAtStop).toHaveLength(1), {
       timeout: 5_000,
     });
-    expect(open.reloads).toHaveLength(1);
+    await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     const done = [JobStatus.WRITE_READY, JobStatus.READ_READY];
     expect(done).toContain(await statusAtReload[0]);
   });
