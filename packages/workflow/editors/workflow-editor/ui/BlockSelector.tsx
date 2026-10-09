@@ -646,49 +646,6 @@ function ChipBar(props: { children: React.ReactNode }) {
   );
 }
 
-// What the keys do, where they do it.
-function KeyHints(props: { searching: boolean; twoPane: boolean }) {
-  const hints: [string[], string][] = props.searching
-    ? [
-        [["↑", "↓"], "Move"],
-        [["Enter"], "Select"],
-        [["Esc"], "Clear"],
-      ]
-    : props.twoPane
-      ? [
-          [["↑", "↓"], "Move"],
-          [["→"], "Open"],
-          [["←"], "Back"],
-          [["Enter"], "Select"],
-          [["Esc"], "Close"],
-        ]
-      : [
-          [["↑", "↓"], "Move"],
-          [["Enter"], "Select"],
-          [["Esc"], "Close"],
-        ];
-  return (
-    <div
-      aria-hidden="true"
-      className="flex shrink-0 items-center gap-4 border-t border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-[11px] text-muted-foreground"
-    >
-      {hints.map(([keys, label]) => (
-        <span key={label} className="flex items-center gap-1">
-          {keys.map((key) => (
-            <kbd
-              key={key}
-              className="min-w-[18px] rounded border border-b-2 border-foreground/15 bg-card px-1 text-center font-sans text-[10px] leading-4 text-foreground/80"
-            >
-              {key}
-            </kbd>
-          ))}
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function Tabs(props: {
   tabs: SourceTab[];
   active: SourceTab;
@@ -1886,7 +1843,6 @@ export function BlockSelector(props: {
           />
         </div>
       )}
-      <KeyHints searching={searching} twoPane={twoPane} />
     </div>
   );
 }
