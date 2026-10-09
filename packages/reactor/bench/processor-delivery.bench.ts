@@ -228,10 +228,7 @@ function indexRound(fixture: Fixture): Promise<void[]> {
   );
 }
 
-/**
- * tinybench does not await teardown, so the destroy it starts is chained here
- * and awaited by the next fixture instead.
- */
+/** Chained so teardown returns at once; the next fixture awaits it. */
 let pendingTeardown: Promise<void> = Promise.resolve();
 
 function options(delayMs: number, holder: { fixture: Fixture | undefined }) {

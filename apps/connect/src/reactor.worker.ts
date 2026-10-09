@@ -3,6 +3,7 @@ import {
   DocumentIntegrityService,
   DriveCollectionId,
   HardenedPGliteDialect,
+  type GroupCommitPGliteInstance,
   InMemoryQueue,
   queryThroughDialect,
   ReactorBuilder,
@@ -120,6 +121,10 @@ let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
 let reactorInstance: IReactor | undefined;
+// The concrete queue: a deploy's drain reads `paused` and the executing jobs,
+// which IQueue lacks.
+let reactorQueue: InMemoryQueue | undefined;
+let syncStopped: Promise<void> | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
@@ -176,7 +181,9 @@ async function openReactorPglite(namespace: string) {
     );
   }
   const { PGlite } = await loadPGliteModule(major);
-  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  // Not relaxed: group commit flushes through syncToFs, which a relaxed
+  // instance resolves before the sync has run.
+  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: false });
   await pg.waitReady;
   return { pg, detected };
 }
@@ -272,14 +279,27 @@ async function closeUnbounded(
 
 const RETIRE_STOP_MS = 5_000;
 
+// Once only; the reactor's stop awaits the channels it closes.
+function stopSync(): void {
+  const manager = syncManager;
+  syncManager = undefined;
+  try {
+    syncStopped = manager?.shutdown().completed ?? syncStopped;
+  } catch (error) {
+    console.error("[reactor.worker] stopping sync failed:", error);
+  }
+}
+
 // A poisoned statement can hold up the reactor's stop, so it is bounded.
 async function stopReactorWithin(timeoutMs: number): Promise<void> {
+  stopSync();
   const stopping = Promise.allSettled([
-    syncManager?.shutdown().completed,
+    syncStopped,
     reactorInstance?.kill().completed,
   ]);
-  syncManager = undefined;
+  syncStopped = undefined;
   reactorInstance = undefined;
+  reactorQueue = undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const expired = new Promise<void>((resolve) => {
     timer = setTimeout(() => {
@@ -296,6 +316,8 @@ async function stopReactorWithin(timeoutMs: number): Promise<void> {
 const stores = createWorkerStores({
   locks: storeLocks,
   stopReactor: () => stopReactorWithin(RETIRE_STOP_MS),
+  stopSync,
+  queue: () => reactorQueue,
   relational: () => ({
     namespace: owned.relationalNamespace,
     store: relational.pg,
@@ -320,6 +342,7 @@ const workerName = (self as { name?: string }).name ?? "";
 const host = new ReactorHost({
   namespace: workerName,
   onRetire: () => stores.retire(),
+  drainBeforeReload: () => stores.drain(),
   onAdminRestart: () =>
     host.retireAndReload("admin restart", crypto.randomUUID()),
   onAdminClearStorage: () =>
@@ -415,9 +438,6 @@ const host = new ReactorHost({
       );
       const pg = reactor.pg;
       owned.reactorPg = pg;
-      owned.reactorDb = new Kysely<Database>({
-        dialect: new HardenedPGliteDialect(pg, { onPoisoned: onStorePoisoned }),
-      });
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
       // A store is migratable when coerceMajor kept it (a supported legacy
@@ -449,7 +469,12 @@ const host = new ReactorHost({
         .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(owned.reactorDb);
+        .withGroupCommitPGlite({
+          pg: pg as unknown as GroupCommitPGliteInstance,
+          onUnrecoverable: onStorePoisoned,
+          onDiagnostic: (message, error) =>
+            console.error(`[reactor.worker] pglite: ${message}`, error),
+        });
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,
@@ -469,8 +494,12 @@ const host = new ReactorHost({
         : undefined;
       syncManager = module.reactorModule?.syncModule?.syncManager;
       reactorInstance = module.reactorModule?.reactor;
+      const queue = module.reactorModule?.queue;
+      reactorQueue = queue instanceof InMemoryQueue ? queue : undefined;
       const rm = module.reactorModule;
       if (rm) {
+        owned.reactorPg = rm.groupCommitStorage ?? pg;
+        owned.reactorDb = rm.database;
         inspectorQueue =
           rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
         inspectorProcessors = rm.processorManager;
@@ -502,7 +531,7 @@ const host = new ReactorHost({
       return module.client;
     } catch (error) {
       console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
-      // The next hello rebuilds, which reopens both stores.
+      // The next hello rebuilds, unless a store did not close and the worker retired.
       await stores.releaseAfterBootFailure();
       throw toStoredDocumentsRefused(error);
     }

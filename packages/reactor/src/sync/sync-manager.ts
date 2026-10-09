@@ -39,6 +39,7 @@ import {
 import { JobAwaiter } from "../shared/awaiter.js";
 import { DocumentPurgedError } from "../shared/errors.js";
 import {
+  cursorProtectedLoadMeta,
   JobStatus,
   type ErrorInfo,
   type ShutdownStatus,
@@ -2634,7 +2635,7 @@ export class SyncManager
         syncOp.branch,
         operations,
         this.abortController.signal,
-        { sourceRemote: remote.meta.name },
+        cursorProtectedLoadMeta(remote.meta.name),
       );
     } catch (error) {
       if (this.isShutdown) return;
@@ -2832,7 +2833,7 @@ export class SyncManager
       result = await this.reactor.loadBatch(
         request,
         this.abortController.signal,
-        { sourceRemote },
+        cursorProtectedLoadMeta(sourceRemote),
       );
     } catch (error) {
       if (this.isShutdown) return;

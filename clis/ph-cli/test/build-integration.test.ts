@@ -596,3 +596,120 @@ describe("runBuild on a generated piece", () => {
     expect(warnings).toEqual([]);
   }, 180_000);
 });
+
+// Subgraphs and switchboard processors only run on a host: the browser build
+// leaves them out, and the processor factory's switchboard branch is empty.
+describe("runBuild on a package with subgraphs and switchboard processors", () => {
+  const fixture = join(fixtures, "node-only-package");
+  const dist = join(fixture, "dist");
+
+  function write(file: string, content: string) {
+    mkdirSync(join(fixture, file, ".."), { recursive: true });
+    writeFileSync(join(fixture, file), content);
+  }
+
+  // Every built .js/.mjs under dir, joined.
+  function code(dir: string): string {
+    return readdirSync(dir, { recursive: true })
+      .map(String)
+      .filter((file) => /\.m?js$/.test(file))
+      .map((file) => readFileSync(join(dir, file), "utf8"))
+      .join("\n");
+  }
+
+  beforeAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+    cpSync(join(fixtures, "classic-package"), fixture, { recursive: true });
+    clean(fixture);
+    const tsconfig = readJson<{ include: string[] }>(
+      join(fixture, "tsconfig.json"),
+    );
+    tsconfig.include.push("subgraphs/**/*", "processors/**/*");
+    write("tsconfig.json", JSON.stringify(tsconfig));
+    write("subgraphs/index.ts", 'export * as Demo from "./demo/index.js";\n');
+    write(
+      "subgraphs/demo/index.ts",
+      'export const resolve = () => "SUBGRAPH_MARKER";\n',
+    );
+    write(
+      "processors/index.ts",
+      'export { processorFactory } from "./factory.js";\n',
+    );
+    // The generated factory's shape.
+    write(
+      "processors/factory.ts",
+      [
+        "export const processorFactory = async (processorApp: string) => {",
+        "  const { processorFactoryBuilders } =",
+        '    processorApp === "connect"',
+        '      ? await import("./connect.js")',
+        '      : await import("./switchboard.js");',
+        "  return processorFactoryBuilders;",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    write(
+      "processors/connect.ts",
+      'export const processorFactoryBuilders: string[] = ["CONNECT_PROCESSOR_MARKER"];\n',
+    );
+    write(
+      "processors/switchboard.ts",
+      'import { marker } from "./read-model/index.js";\n\nexport const processorFactoryBuilders: string[] = [marker];\n',
+    );
+    write(
+      "processors/read-model/index.ts",
+      'export const marker = "SWITCHBOARD_PROCESSOR_MARKER";\n',
+    );
+    write(
+      "index.ts",
+      [
+        'export { documentModels } from "./document-models/index.js";',
+        'export { editors } from "./editors/index.js";',
+        'export { processorFactory } from "./processors/index.js";',
+        "",
+      ].join("\n"),
+    );
+  });
+
+  afterAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("builds them for node only, and Connect's processors for both", async () => {
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    const browser = code(join(dist, "browser"));
+    expect(existsSync(join(dist, "browser", "subgraphs"))).toBe(false);
+    expect(existsSync(join(dist, "browser", "processors", "read-model"))).toBe(
+      false,
+    );
+    expect(browser).not.toContain("SUBGRAPH_MARKER");
+    expect(browser).not.toContain("SWITCHBOARD_PROCESSOR_MARKER");
+    expect(browser).toContain("CONNECT_PROCESSOR_MARKER");
+
+    const node = code(join(dist, "node"));
+    expect(existsSync(join(dist, "node", "subgraphs", "index.mjs"))).toBe(true);
+    expect(
+      existsSync(join(dist, "node", "processors", "read-model", "index.mjs")),
+    ).toBe(true);
+    for (const marker of [
+      "SUBGRAPH_MARKER",
+      "SWITCHBOARD_PROCESSOR_MARKER",
+      "CONNECT_PROCESSOR_MARKER",
+    ]) {
+      expect(node).toContain(marker);
+    }
+
+    // The browser factory still answers a switchboard host, with nothing.
+    const { processorFactory } = (await import(
+      join(dist, "browser", "processors", "index.js")
+    )) as { processorFactory: (app: string) => Promise<string[]> };
+    expect(await processorFactory("switchboard")).toEqual([]);
+    expect(await processorFactory("connect")).toEqual([
+      "CONNECT_PROCESSOR_MARKER",
+    ]);
+  }, 120_000);
+});

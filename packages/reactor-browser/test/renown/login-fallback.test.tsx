@@ -69,7 +69,7 @@ function install(renown: IRenown | undefined) {
 describe("useRenownAuth login fallback", () => {
   it("surfaces a switchboard rejection instead of redirecting", async () => {
     install(renownRejectingWith(new Error("Switchboard request failed: 400")));
-    const screen = render(
+    const screen = await render(
       <Probe session={session("0x1000000000000000000000000000000000000001")} />,
     );
 
@@ -86,7 +86,7 @@ describe("useRenownAuth login fallback", () => {
 
   it("redirects to Renown only when no switchboard is configured", async () => {
     install(renownRejectingWith(new MissingSwitchboardError()));
-    const screen = render(
+    const screen = await render(
       <Probe session={session("0x1000000000000000000000000000000000000002")} />,
     );
 

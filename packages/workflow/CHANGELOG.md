@@ -1,3 +1,79 @@
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** stream, cache and authorize step attachments ([2c33603d58](https://github.com/powerhouse-inc/powerhouse/commit/2c33603d58))
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+- **reactor-workflow:** enforce the policy knobs, or mark them unenforced ([ef311827ef](https://github.com/powerhouse-inc/powerhouse/commit/ef311827ef))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor-workflow:** let a run its deadline cancelled be rerun ([77196c4fb5](https://github.com/powerhouse-inc/powerhouse/commit/77196c4fb5))
+- **workflow:** show an INDETERMINATE step test as a warning, not a pass ([890c30ba59](https://github.com/powerhouse-inc/powerhouse/commit/890c30ba59))
+- **reactor-workflow:** bound the run journal, and stop rerun redoing a lost side effect ([4b898216b9](https://github.com/powerhouse-inc/powerhouse/commit/4b898216b9))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.49 (2026-10-08)
+
+This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.48 (2026-10-07)
+
+### 🚀 Features
+
+- **workflow:** more room between a workflow's trigger and its first step ([73cd872a34](https://github.com/powerhouse-inc/powerhouse/commit/73cd872a34))
+- **workflow:** collapsible overview rows, and workflow graphs that wrap ([6c70cc8082](https://github.com/powerhouse-inc/powerhouse/commit/6c70cc8082))
+- **workflow:** name a reactor trigger by the document and action it waits for ([d286a108e4](https://github.com/powerhouse-inc/powerhouse/commit/d286a108e4))
+
+### 🩹 Fixes
+
+- **workflow:** a step's only way out stays on its lane ([9151bf6b95](https://github.com/powerhouse-inc/powerhouse/commit/9151bf6b95))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.47 (2026-10-07)
+
+### 🚀 Features
+
+- **workflow:** edit a workflow's description in the editor and show it on the overview ([77f6e625f9](https://github.com/powerhouse-inc/powerhouse/commit/77f6e625f9))
+- **workflow:** back and forward walk the workflows visited in the studio ([f6bda90d6c](https://github.com/powerhouse-inc/powerhouse/commit/f6bda90d6c))
+- **workflow:** horizontal workflow graph on the studio overview and workflow page ([98784e4d17](https://github.com/powerhouse-inc/powerhouse/commit/98784e4d17))
+- **workflow:** drag-and-drop workflow order in the studio sidebar and overview ([763f001f9c](https://github.com/powerhouse-inc/powerhouse/commit/763f001f9c))
+
+### 🩹 Fixes
+
+- **workflow:** scrolling past the studio's end no longer shifts it inside Connect ([074603d4f0](https://github.com/powerhouse-inc/powerhouse/commit/074603d4f0))
+- **workflow:** connection fields show names and flag documents that are not connections ([54f6c5b9df](https://github.com/powerhouse-inc/powerhouse/commit/54f6c5b9df))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features

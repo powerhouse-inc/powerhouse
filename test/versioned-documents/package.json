@@ -41,7 +41,6 @@
     },
     "./subgraphs": {
       "types": "./.tsbuild/subgraphs/index.d.ts",
-      "browser": "./dist/browser/subgraphs/index.js",
       "node": "./dist/node/subgraphs/index.mjs"
     },
     "./processors": {
@@ -95,7 +94,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "@vitest/coverage-v8": "4.1.1",
+    "@vitest/coverage-v8": "catalog:",
     "document-model": "workspace:*",
     "graphql": "catalog:",
     "graphql-tag": "catalog:",

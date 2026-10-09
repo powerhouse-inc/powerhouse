@@ -1,3 +1,69 @@
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.49 (2026-10-08)
+
+### 🚀 Features
+
+- **reactor-browser:** map document meta and protocolVersions onto remote headers ([87e6f2ef81](https://github.com/powerhouse-inc/powerhouse/commit/87e6f2ef81))
+- **reactor-api:** carry a job's document, error name, token and batch over graphql ([85840b82c5](https://github.com/powerhouse-inc/powerhouse/commit/85840b82c5))
+- **reactor-api:** expose executeBatch over graphql ([9d605e5aa7](https://github.com/powerhouse-inc/powerhouse/commit/9d605e5aa7))
+- **reactor-api:** expose document meta and protocolVersions over graphql ([e5cc452275](https://github.com/powerhouse-inc/powerhouse/commit/e5cc452275))
+
+### 🩹 Fixes
+
+- **reactor-browser:** return the job the server reported, not placeholders ([e23e82da7e](https://github.com/powerhouse-inc/powerhouse/commit/e23e82da7e))
+- **reactor-api:** filter jobStatus coordinates through the reactor read gate too ([742fb52e8f](https://github.com/powerhouse-inc/powerhouse/commit/742fb52e8f))
+- **reactor-api:** gate jobStatus on reading the job's document and its coordinates ([836e71983b](https://github.com/powerhouse-inc/powerhouse/commit/836e71983b))
+- **reactor-api:** leave existing operation selections as older servers serve them ([0b309183f4](https://github.com/powerhouse-inc/powerhouse/commit/0b309183f4))
+- **reactor-api:** report executeBatch job failures per job, not as one error ([deba997303](https://github.com/powerhouse-inc/powerhouse/commit/deba997303))
+- **reactor-api:** accept only createDocument's shape in an executeBatch create ([6bdbbeb53e](https://github.com/powerhouse-inc/powerhouse/commit/6bdbbeb53e))
+- **reactor-api:** authorize an executeBatch create like createDocument ([829a43b567](https://github.com/powerhouse-inc/powerhouse/commit/829a43b567))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.48 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.47 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **reactor-api:** one acceptance rule for document-model modules ([367ea4af15](https://github.com/powerhouse-inc/powerhouse/commit/367ea4af15))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **reactor-api:** accept subgraphs by class through one predicate ([b0146ab55a](https://github.com/powerhouse-inc/powerhouse/commit/b0146ab55a))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.45 (2026-10-06)
 
 ### 🚀 Features
