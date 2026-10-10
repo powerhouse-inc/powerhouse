@@ -94,11 +94,17 @@ async function tryImportMetaResolve<T>(
   subPath: string,
 ): Promise<T | null> {
   try {
-    const resolvedUrl = import.meta.resolve?.(`${packageName}/package.json`);
-    if (!resolvedUrl) return null;
-
-    // fileURLToPath, not URL.pathname: the latter yields "/D:/..." on Windows.
-    const packageRoot = path.dirname(fileURLToPath(resolvedUrl));
+    let packageRoot: string;
+    if (path.isAbsolute(packageName)) {
+      // Already the root. import.meta.resolve reads the drive letter of a
+      // Windows path as a URL scheme and returns a "c:" URL fileURLToPath refuses.
+      packageRoot = packageName;
+    } else {
+      const resolvedUrl = import.meta.resolve?.(`${packageName}/package.json`);
+      if (!resolvedUrl) return null;
+      // fileURLToPath, not URL.pathname: the latter yields "/D:/..." on Windows.
+      packageRoot = path.dirname(fileURLToPath(resolvedUrl));
+    }
     const pathsToTry = [
       path.join(packageRoot, "dist", "node", subPath, "index.mjs"),
       path.join(packageRoot, "dist", "node", `${subPath}.mjs`),
