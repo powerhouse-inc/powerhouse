@@ -1,0 +1,110 @@
+import type {
+  LocalChannelPort,
+  LocalChannelTransportProvider,
+} from "@powerhousedao/reactor";
+
+/**
+ * A reactor's live registry of monitor-brokered local-sync ports.
+ *
+ * `LocalChannelFactory` resolves a port from a `LocalChannelTransportProvider`
+ * keyed by the `(peerId, channelName)` a remote's `ChannelConfig` names -- a
+ * `MessagePort` is not clone-safe config, so it cannot ride in `parameters`.
+ * This is the mutable side of that seam: the monitor broker hands each worker
+ * (or in-process reactor) one end of a `MessageChannel` via the adopt-sync-peer
+ * op, the reactor registers it here, and {@link provider} is what the factory
+ * holds. Nothing here touches the wire protocol or the channel itself.
+ *
+ * A port's life is the link's life, and this registry is what makes that
+ * visible. A registered port is wrapped so that closing it -- which is what
+ * `LocalChannel.shutdown()` does, through the channel this registry's port was
+ * handed to -- also forgets the entry here. The key is then remembered as
+ * CLOSED, and {@link provider} refuses it loudly instead of answering with a
+ * dead port or a bare undefined, so a channel reset (the storage-heal path) on
+ * a severed link fails with a sentence rather than sitting in `connecting`
+ * forever. The link is re-established by brokering a new one.
+ */
+export class LocalChannelPortRegistry {
+  private readonly ports = new Map<string, LocalChannelPort>();
+  private readonly closedKeys = new Set<string>();
+
+  /** The transport provider a {@link LocalChannelFactory} is constructed with. */
+  readonly provider: LocalChannelTransportProvider = (peerId, channelName) => {
+    const key = this.key(peerId, channelName);
+    const port = this.ports.get(key);
+    if (port) {
+      return port;
+    }
+    if (this.closedKeys.has(key)) {
+      throw new Error(
+        `Local sync port for peer '${peerId}' channel '${channelName}' has been closed; the link is severed and must be brokered again (linkLocalSync)`,
+      );
+    }
+    return undefined;
+  };
+
+  /**
+   * Keeps `port` under `(peerId, channelName)`.
+   *
+   * Refuses to replace a live entry: the entry IS the link, so overwriting one
+   * would strand a connected channel's transport with nothing left holding it.
+   * A key that was closed is re-registerable -- that is a re-link.
+   */
+  register(peerId: string, channelName: string, port: LocalChannelPort): void {
+    const key = this.key(peerId, channelName);
+    if (this.ports.has(key)) {
+      throw new Error(
+        `A local sync port is already registered for peer '${peerId}' channel '${channelName}'; unlink the existing link before brokering another`,
+      );
+    }
+    this.closedKeys.delete(key);
+    this.ports.set(key, this.selfForgetting(key, port));
+  }
+
+  has(peerId: string, channelName: string): boolean {
+    return this.ports.has(this.key(peerId, channelName));
+  }
+
+  /** Whether this key names a link whose port this registry saw close. */
+  isClosed(peerId: string, channelName: string): boolean {
+    return this.closedKeys.has(this.key(peerId, channelName));
+  }
+
+  /** Forgets the entry so a later factory lookup fails loudly rather than reusing a dead port. */
+  unregister(peerId: string, channelName: string): void {
+    this.forget(this.key(peerId, channelName));
+  }
+
+  private key(peerId: string, channelName: string): string {
+    return `${peerId}\u0000${channelName}`;
+  }
+
+  private forget(key: string): void {
+    this.ports.delete(key);
+    this.closedKeys.add(key);
+  }
+
+  /**
+   * Wraps `port` so closing it also drops its registry entry.
+   *
+   * The channel owns the port once the factory resolves it, and the channel is
+   * what closes it -- on `shutdown()`, which `syncManager.remove()` and the
+   * reset path both run. Nothing told this registry about that, so a closed
+   * port stayed registered and the next lookup handed it straight back. The
+   * wrapper closes that gap from the monitor side, with no change to
+   * `LocalChannel`.
+   */
+  private selfForgetting(
+    key: string,
+    port: LocalChannelPort,
+  ): LocalChannelPort {
+    return {
+      postMessage: (data: unknown) => port.postMessage(data),
+      onMessage: (callback: (data: unknown) => void) =>
+        port.onMessage(callback),
+      close: () => {
+        this.forget(key);
+        port.close();
+      },
+    };
+  }
+}
