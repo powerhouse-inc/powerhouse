@@ -1,4 +1,7 @@
-import { provisionInProcess } from "./in-process.js";
+import {
+  provisionInProcess,
+  type ProvisionInProcessOptions,
+} from "./in-process.js";
 import { provisionRemote } from "./remote/provision.js";
 import type { ManagedReactor, ReactorDescriptor } from "./types.js";
 import {
@@ -6,7 +9,8 @@ import {
   type ProvisionWorkerOptions,
 } from "./worker/client.js";
 
-export type ProvisionOptions = ProvisionWorkerOptions;
+export type ProvisionOptions = ProvisionWorkerOptions &
+  ProvisionInProcessOptions;
 
 /**
  * Provisions a reactor matching `descriptor` and returns the handle the
@@ -28,7 +32,7 @@ export function provision(
 ): Promise<ManagedReactor> {
   switch (descriptor.kind) {
     case "in-process":
-      return provisionInProcess(descriptor);
+      return provisionInProcess(descriptor, options);
     case "worker":
       try {
         return Promise.resolve(provisionWorkerReactor(descriptor, options));

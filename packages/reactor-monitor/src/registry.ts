@@ -57,8 +57,23 @@ export class ReactorMonitorRegistry {
       );
     }
     this.set({ name: descriptor.name, descriptor, status: "provisioning" });
+    let poisoned: Error | undefined;
+    let ready: ManagedReactor | undefined;
+    const onUnrecoverable = (cause: Error): void => {
+      options?.onUnrecoverable?.(cause);
+      if (poisoned) {
+        return;
+      }
+      poisoned = cause;
+      if (ready) {
+        void this.fail(descriptor, ready, cause);
+      }
+    };
     try {
-      const reactor = await provision(descriptor, options);
+      const reactor = await provision(descriptor, {
+        ...options,
+        onUnrecoverable,
+      });
       // Killed while it was booting: do not resurrect the entry.
       if (this.entries.get(descriptor.name)?.status !== "provisioning") {
         await reactor.kill();
@@ -66,6 +81,11 @@ export class ReactorMonitorRegistry {
           `Reactor ${JSON.stringify(descriptor.name)} was removed while it was provisioning`,
         );
       }
+      if (poisoned) {
+        await reactor.kill();
+        throw poisoned;
+      }
+      ready = reactor;
       this.set({
         name: descriptor.name,
         descriptor,
@@ -158,6 +178,31 @@ export class ReactorMonitorRegistry {
     // wasm instance per realm.
     for (const reactor of reactors) {
       await reactor.kill();
+    }
+  }
+
+  /** A ready reactor whose store was poisoned: failed, and its handle killed. */
+  private async fail(
+    descriptor: ReactorDescriptor,
+    reactor: ManagedReactor,
+    cause: Error,
+  ): Promise<void> {
+    if (this.entries.get(descriptor.name)?.reactor !== reactor) {
+      return;
+    }
+    this.set({
+      name: descriptor.name,
+      descriptor,
+      status: "failed",
+      error: cause,
+    });
+    try {
+      await reactor.kill();
+    } catch (error) {
+      console.error(
+        `[reactor-monitor] killing poisoned reactor ${JSON.stringify(descriptor.name)} failed:`,
+        error,
+      );
     }
   }
 
