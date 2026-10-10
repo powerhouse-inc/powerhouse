@@ -16,8 +16,18 @@ export type ManagedReactorEntry = {
   name: string;
   descriptor: ReactorDescriptor;
 } & (
-  | { status: "provisioning"; reactor?: undefined; error?: undefined }
-  | { status: "ready"; reactor: ManagedReactor; error?: undefined }
+  | {
+      status: "provisioning";
+      reactor?: undefined;
+      error?: undefined;
+      closing?: undefined;
+    }
+  | {
+      status: "ready";
+      reactor: ManagedReactor;
+      error?: undefined;
+      closing?: undefined;
+    }
   | {
       status: "failed";
       reactor?: undefined;
