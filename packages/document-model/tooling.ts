@@ -30,6 +30,12 @@ export {
 } from "./src/definition/tooling/check-definitions.js";
 export { DefinitionSourceLoader } from "./src/definition/tooling/definition-source-loader.js";
 export { resolveDefinitionSelection } from "./src/definition/tooling/definition-source-resolution.js";
+export {
+  findCodeFirstDefinitions,
+  findUnregisteredDefinitions,
+  type UnregisteredDefinition,
+  unregisteredDefinitionDiagnostic,
+} from "./src/definition/tooling/unregistered-definitions.js";
 export type {
   DefinitionSourceLoadRequest,
   DefinitionSourceOrigin,

@@ -442,7 +442,11 @@ describe("DefinitionCheckReport", () => {
     expect(skippedReport.skipReason).toBe("explicit-schema-first-mode");
     expectTypeOf<
       Extract<DefinitionCheckReport, { status: "skipped" }>["skipReason"]
-    >().toEqualTypeOf<"explicit-schema-first-mode">();
+    >().toEqualTypeOf<
+      | "explicit-schema-first-mode"
+      | "definition-sources-absent"
+      | "definition-sources-empty"
+    >();
   });
 
   it("requires skipReason when status is skipped", () => {

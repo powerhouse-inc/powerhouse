@@ -47,7 +47,7 @@ const cases: readonly Case[] = [
   {
     name: "code-first with an empty entry list",
     definitionSources: { formatVersion: 1, mode: "code-first", entries: [] },
-    valid: false,
+    valid: true,
     decidedBy: "envelope",
   },
   {

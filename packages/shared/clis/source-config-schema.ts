@@ -36,9 +36,8 @@ const definitionSourcesSchema = {
         },
         entries: {
           type: "array",
-          minItems: 1,
           description:
-            "At least one definition source. An empty list is invalid.",
+            "The modules that declare code-first definitions. An empty list checks nothing, like schema-first.",
           items: {
             type: "object",
             additionalProperties: false,

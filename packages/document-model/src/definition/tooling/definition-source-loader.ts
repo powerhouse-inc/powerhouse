@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import type {
   DefinitionDiagnostic,
   DefinitionPath,
@@ -23,6 +24,7 @@ import {
 import {
   compareDefinitionSources,
   publicResolution,
+  selectedSources,
   resolveDefinitionSources,
 } from "./definition-source-resolution.js";
 import type {
@@ -635,7 +637,7 @@ export class DefinitionSourceLoader {
     }
     if (!isSha256Digest(request.packageRevision)) {
       return {
-        ...publicResolution(resolution),
+        ...selectedSources(resolution),
         status: "failed",
         diagnostics: [
           createDiagnostic({
@@ -708,7 +710,7 @@ export class DefinitionSourceLoader {
       compareDefinitionDiagnostics,
     );
     return {
-      ...publicResolution(resolution),
+      ...selectedSources(resolution),
       status: diagnostics.length === 0 ? "ready" : "failed",
       diagnostics,
       documentModels: sortBySource(collected.documentModels),
@@ -785,9 +787,13 @@ export class DefinitionSourceLoader {
           value: namespaceSnapshot(await cached.namespace),
         });
       } catch (error) {
+        const missing = !existsSync(moduleIdentity);
         results.set(moduleIdentity, {
           ok: false,
-          diagnostics: (source) => importDiagnostics(error, source),
+          diagnostics: (source) =>
+            missing
+              ? [missingModuleDiagnostic(source)]
+              : importDiagnostics(error, source),
         });
       }
     }
@@ -820,6 +826,21 @@ type ImportedNamespace =
         source: DefinitionSource,
       ) => readonly DefinitionDiagnostic[];
     };
+
+function missingModuleDiagnostic(
+  source: DefinitionSource,
+): DefinitionDiagnostic {
+  return createDiagnostic({
+    code: "PH-IMPORT-FAILED",
+    source,
+    path: [],
+    message: "definitionSources lists a module that does not exist.",
+    expected: "an existing module inside the package",
+    received: source.specifier,
+    repair:
+      "Fix the specifier, or remove the entry from definitionSources.entries in powerhouse.config.json.",
+  });
+}
 
 /**
  * A structured compilation failure keeps its own diagnostics. Any other error

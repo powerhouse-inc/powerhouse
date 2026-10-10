@@ -136,7 +136,6 @@ export {
 } from "./naming.js";
 export {
   canonicalDigest,
-  canonicalJson,
   compareCodeUnits,
   isAuthoredSchemaName,
   isEnumValueName,

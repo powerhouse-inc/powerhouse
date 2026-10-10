@@ -123,14 +123,14 @@ describe("parseDefinitionSourcesConfig", () => {
     });
   });
 
-  it("rejects an empty code-first list rather than checking nothing", () => {
+  it("accepts an empty code-first list", () => {
     expect(
       parseDefinitionSourcesConfig({
         formatVersion: 1,
         mode: "code-first",
         entries: [],
       }),
-    ).toMatchObject({ ok: false, reason: "empty" });
+    ).toEqual({ ok: true, mode: "code-first", entries: [] });
   });
 
   it("rejects entries under schema-first mode", () => {

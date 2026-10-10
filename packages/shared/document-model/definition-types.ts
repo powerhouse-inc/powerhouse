@@ -554,7 +554,7 @@ export type DefinitionSourcesConfig = {
 } & (
   | {
       readonly mode: "code-first";
-      readonly entries: readonly [DefinitionSource, ...DefinitionSource[]];
+      readonly entries: readonly DefinitionSource[];
     }
   | { readonly mode: "schema-first"; readonly entries?: never }
 );
@@ -613,9 +613,14 @@ export type DefinitionCheckReport = {
     }
   | {
       readonly status: "skipped";
-      readonly skipReason: "explicit-schema-first-mode";
+      readonly skipReason: DefinitionCheckSkipReason;
     }
 );
+
+export type DefinitionCheckSkipReason =
+  | "explicit-schema-first-mode"
+  | "definition-sources-absent"
+  | "definition-sources-empty";
 
 /**
  * `fieldName` is `null` for a resolver bound to a type rather than a field.

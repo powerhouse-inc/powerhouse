@@ -51,8 +51,13 @@ type Captured = {
 async function check(
   fixture: string,
   args: Partial<ModelCheckArgs> = {},
+  files: Readonly<Record<string, string>> = {},
 ): Promise<Captured & { readonly root: string }> {
   const materialized = materializeFixturePackage(fixture);
+  for (const [path, text] of Object.entries(files)) {
+    mkdirSync(join(materialized.root, path, ".."), { recursive: true });
+    writeFileSync(join(materialized.root, path), text);
+  }
   const io = recordStreams();
   try {
     const code = await runModelCheck(
@@ -108,11 +113,164 @@ describe("ph model check exit codes", () => {
   }, 60_000);
 
   it("exits 2 when the check could not run", async () => {
-    const result = await check("configs", { json: true });
+    const result = await check("configs", {
+      configFile: "unsupported.config.json",
+      json: true,
+    });
     expect(result.code).toBe(2);
     expect((JSON.parse(result.stdout) as DefinitionCheckReport).status).toBe(
       "failed",
     );
+  }, 60_000);
+
+  it("skips an empty code-first list and still names an unregistered subgraph", async () => {
+    const skipped = await check("configs", {
+      configFile: "empty.config.json",
+      json: true,
+    });
+    const skippedReport = JSON.parse(skipped.stdout) as DefinitionCheckReport;
+    expect([
+      skipped.code,
+      skippedReport.status,
+      skippedReport.skipReason,
+    ]).toEqual([0, "skipped", "definition-sources-empty"]);
+
+    const result = await check(
+      "configs",
+      { configFile: "empty.config.json", json: true },
+      {
+        "subgraphs/orders.ts":
+          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+      },
+    );
+    expect(result.code).toBe(2);
+    const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+    expect(report.diagnostics.map(({ code }) => code)).toEqual([
+      "PH-CONFIG-SOURCE-UNREGISTERED",
+    ]);
+  }, 60_000);
+
+  it("names an entry whose module does not exist", async () => {
+    const result = await check(
+      "configs",
+      { configFile: "stale.config.json", json: true },
+      {
+        "stale.config.json": JSON.stringify({
+          definitionSources: {
+            formatVersion: 1,
+            mode: "code-first",
+            entries: [{ specifier: "./src/gone.ts" }],
+          },
+        }),
+      },
+    );
+    expect(result.code).toBe(2);
+    const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+    expect(
+      report.diagnostics.map(({ code, message, repair }) => ({
+        code,
+        message,
+        repair,
+      })),
+    ).toEqual([
+      {
+        code: "PH-IMPORT-FAILED",
+        message: "definitionSources lists a module that does not exist.",
+        repair:
+          "Fix the specifier, or remove the entry from definitionSources.entries in powerhouse.config.json.",
+      },
+    ]);
+  }, 60_000);
+
+  it("reports only the config error when the config cannot be read", async () => {
+    const result = await check(
+      "configs",
+      { configFile: "malformed.config.json.txt", json: true },
+      {
+        "subgraphs/orders.ts":
+          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+      },
+    );
+    expect(result.code).toBe(2);
+    const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+    expect(report.diagnostics.map(({ code }) => code)).toEqual([
+      "PH-CONFIG-SOURCE-INVALID",
+    ]);
+  }, 60_000);
+
+  it("says a package without definitionSources declares none", async () => {
+    const result = await check("configs");
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain(
+      "This package declares no definitionSources, so no definition was checked.",
+    );
+  }, 60_000);
+
+  it("passes a --source subset with a warning for what it leaves out", async () => {
+    const extra = {
+      "subgraphs/orders.ts":
+        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+    };
+    const plain = await check(
+      "control",
+      { source: ["./src/catalog.ts"], json: true },
+      extra,
+    );
+    const plainReport = JSON.parse(plain.stdout) as DefinitionCheckReport;
+    expect([
+      plain.code,
+      plainReport.status,
+      plainReport.diagnostics.map(({ code }) => code),
+    ]).toEqual([0, "ok", ["PH-CONFIG-SOURCE-UNSELECTED"]]);
+
+    const strict = await check(
+      "control",
+      { source: ["./src/catalog.ts"], json: true, warningsAsErrors: true },
+      extra,
+    );
+    expect([
+      strict.code,
+      (JSON.parse(strict.stdout) as DefinitionCheckReport).status,
+    ]).toEqual([1, "invalid"]);
+  }, 60_000);
+
+  it("skips a package that never declared definitionSources", async () => {
+    const result = await check("configs", { json: true });
+    expect(result.code).toBe(0);
+    const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+    expect([report.status, report.skipReason]).toEqual([
+      "skipped",
+      "definition-sources-absent",
+    ]);
+  }, 60_000);
+
+  it("exits 2 naming a code-first model a schema-first package leaves out", async () => {
+    const result = await check(
+      "schema-first",
+      { json: true },
+      {
+        "document-models/customer/index.ts":
+          'import { defineDocumentModelFamily } from "document-model";\nexport const customer = defineDocumentModelFamily({});\n',
+      },
+    );
+    expect(result.code).toBe(2);
+    const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+    expect(report.status).toBe("failed");
+    expect(
+      report.diagnostics.map(({ code, message, repair }) => ({
+        code,
+        message,
+        repair,
+      })),
+    ).toEqual([
+      {
+        code: "PH-CONFIG-SOURCE-UNREGISTERED",
+        message:
+          "./document-models/customer/ declares a code-first document model that definitionSources does not list, so the package leaves it out.",
+        repair:
+          'Set definitionSources in powerhouse.config.json to { "formatVersion": 1, "mode": "code-first", "entries": [{ "specifier": "./document-models/customer/index.ts" }] }. Schema-first models keep generating from their model documents.',
+      },
+    ]);
   }, 60_000);
 
   it("exits 2 with one failed report when the config file does not exist", async () => {

@@ -5,7 +5,7 @@ import { kebabCase } from "change-case";
 import { createOrUpdateManifest } from "file-builders";
 import { getDocumentModelVariableNames } from "name-builders";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, posix, relative } from "node:path";
+import { dirname, join, posix, relative } from "node:path";
 import {
   capitalize,
   filter,
@@ -35,6 +35,7 @@ import {
   addCodeFirstCollections,
   addCodeFirstExports,
   codeFirstAggregateSources,
+  unregisteredCodeFirstDefinitions,
   type CodeFirstAggregateSource,
 } from "./code-first-aggregates.js";
 import {
@@ -274,6 +275,9 @@ export async function refreshDocumentModelAggregates(
     join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
   ]);
   const codeFirst = await codeFirstAggregateSources(projectDir);
+  const unregisteredDirs = unregisteredCodeFirstDefinitions(projectDir)
+    .filter(({ kind }) => kind === "document-model")
+    .map(({ unit }) => unit);
   // /document-models/document-models.ts
   await makeDocumentModelsFile({ project, documentModelsDirPath, codeFirst });
   // /document-models/index.ts
@@ -283,15 +287,22 @@ export async function refreshDocumentModelAggregates(
     codeFirst,
   });
   // /document-models/upgrade-manifests.ts
-  await makeUpgradeManifestsFile({ project, documentModelsDirPath, codeFirst });
+  await makeUpgradeManifestsFile({
+    project,
+    documentModelsDirPath,
+    codeFirst,
+    unregisteredDirs,
+  });
 }
 
 async function makeUpgradeManifestsFile(args: {
   project: Project;
   documentModelsDirPath: string;
   codeFirst: CodeFirstAggregateSource[];
+  unregisteredDirs: string[];
 }) {
-  const { project, documentModelsDirPath, codeFirst } = args;
+  const { project, documentModelsDirPath, codeFirst, unregisteredDirs } = args;
+  const projectDir = dirname(documentModelsDirPath);
   const sourceFile = project.createSourceFile(
     join(documentModelsDirPath, "upgrade-manifests.ts"),
     upgradeManifestsTemplate,
@@ -309,6 +320,14 @@ async function makeUpgradeManifestsFile(args: {
     project.getSourceFiles(),
     // find the upgrade manifest files for each document model
     filter((sourceFile) => sourceFile.getBaseName() === "upgrade-manifest.ts"),
+    filter(
+      (sourceFile) =>
+        !unregisteredDirs.some((dir) =>
+          `./${relative(projectDir, sourceFile.getFilePath()).replaceAll("\\", "/")}`.startsWith(
+            dir,
+          ),
+        ),
+    ),
     // get the upgrade manifest objects
     map((sourceFile) =>
       getVariableDeclarationByTypeName(sourceFile, "UpgradeManifest"),

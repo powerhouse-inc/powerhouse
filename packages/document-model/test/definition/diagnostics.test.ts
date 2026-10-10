@@ -22,6 +22,7 @@ import {
 const codes = Object.keys(DEFINITION_DIAGNOSTIC_CODES);
 
 const reportOnlyCodes: readonly DefinitionDiagnosticCode[] = [
+  "PH-CONFIG-SOURCE-UNSELECTED",
   "PH-GQL-COORDINATE-OWNED",
   "PH-GQL-SHARED-DEFINITION-MISMATCH",
   "PH-SCALAR-UNREGISTERED",
@@ -35,7 +36,7 @@ const reportOnlyCodes: readonly DefinitionDiagnosticCode[] = [
 describe("DEFINITION_DIAGNOSTIC_CODES", () => {
   it("is frozen and every code carries the PH- prefix", () => {
     expect(Object.isFrozen(DEFINITION_DIAGNOSTIC_CODES)).toBe(true);
-    expect(codes.length).toBe(51);
+    expect(codes.length).toBe(52);
     for (const code of codes) {
       expect(code).toMatch(/^PH-[A-Z0-9-]+$/);
     }
@@ -63,11 +64,12 @@ describe("DEFINITION_DIAGNOSTIC_CODES", () => {
   it("assigns phases by where the check runs", () => {
     const phases: Record<DefinitionDiagnosticCode, DefinitionDiagnosticPhase> =
       {
-        "PH-CONFIG-SOURCES-MISSING": "configuration",
         "PH-CONFIG-VERSION-UNSUPPORTED": "configuration",
         "PH-CONFIG-SOURCE-INVALID": "configuration",
         "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE": "configuration",
         "PH-CONFIG-DUPLICATE-SOURCE": "configuration",
+        "PH-CONFIG-SOURCE-UNREGISTERED": "configuration",
+        "PH-CONFIG-SOURCE-UNSELECTED": "configuration",
         "PH-IMPORT-FAILED": "import",
         "PH-DEF-FIELD-OPTION-UNSUPPORTED": "definition",
         "PH-DEF-TYPE-AS-FIELD": "definition",
@@ -323,7 +325,7 @@ const invoice = { kind: "document-model", key: "powerhouse/invoice" } as const;
 const expectedOrder: readonly DefinitionDiagnostic[] = [
   diagnostic({
     message: "no source, code A",
-    code: "PH-CONFIG-SOURCES-MISSING",
+    code: "PH-CONFIG-DUPLICATE-SOURCE",
   }),
   diagnostic({ message: "no source, code B", code: "PH-IMPORT-FAILED" }),
   diagnostic({ message: "a, no definition", source: sourceA }),
@@ -497,14 +499,14 @@ describe("formatDefinitionDiagnostic", () => {
     expect(
       formatDefinitionDiagnostic(
         createDiagnostic({
-          code: "PH-CONFIG-SOURCES-MISSING",
+          code: "PH-CONFIG-SOURCE-INVALID",
           path: [],
           message: "No sources.",
           repair: "Add definitionSources to powerhouse.config.json.",
         }),
       ),
     ).toBe(
-      "PH-CONFIG-SOURCES-MISSING [error/configuration] <config> (root): No sources. Repair: Add definitionSources to powerhouse.config.json.",
+      "PH-CONFIG-SOURCE-INVALID [error/configuration] <config> (root): No sources. Repair: Add definitionSources to powerhouse.config.json.",
     );
   });
 });

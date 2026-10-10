@@ -68,8 +68,6 @@ export async function planDefinitionSourceRegistration(
     registration = "converted";
   } else if (existing.reason === "missing") {
     registration = "created";
-  } else if (existing.reason === "empty") {
-    registration = "added";
   } else if (existing.reason === "unsupported-version") {
     throw new Error(
       `${configFile} declares definitionSources.formatVersion ${String(existing.received)}, and this release writes ${DEFINITION_SOURCES_FORMAT_VERSION}. Change the field by hand.`,

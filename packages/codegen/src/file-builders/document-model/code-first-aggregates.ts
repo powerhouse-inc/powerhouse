@@ -1,7 +1,9 @@
 import type { PowerhouseModule } from "@powerhousedao/shared";
 import { POWERHOUSE_CONFIG_FILE } from "@powerhousedao/shared/clis";
-import { getConfigStrict } from "@powerhousedao/shared/clis/config-strict";
-import { parseDefinitionSourcesConfig } from "@powerhousedao/shared/clis/definition-sources";
+import {
+  ConfigFileError,
+  getConfigStrict,
+} from "@powerhousedao/shared/clis/config-strict";
 import type {
   DefinitionSource,
   Sha256Digest,
@@ -9,8 +11,12 @@ import type {
 import { kebabCase } from "change-case";
 import {
   DefinitionSourceLoader,
+  findCodeFirstDefinitions,
+  findUnregisteredDefinitions,
   formatDefinitionDiagnostic,
   resolveDefinitionSelection,
+  unregisteredDefinitionDiagnostic,
+  type UnregisteredDefinition,
   type DefinitionSourceResolution,
   type LoadedDefinition,
   type LoadedDefinitionSet,
@@ -45,21 +51,66 @@ export type CodeFirstInventory =
       subgraphs: PowerhouseModule[];
     };
 
+function isReadable(configFile: string): boolean {
+  try {
+    getConfigStrict(configFile);
+    return true;
+  } catch (error) {
+    if (error instanceof ConfigFileError) return false;
+    throw error;
+  }
+}
+
 function resolveCodeFirstSelection(
   configFile: string,
 ): DefinitionSourceResolution | undefined {
-  if (!existsSync(configFile)) return undefined;
+  if (!existsSync(configFile) || !isReadable(configFile)) return undefined;
   const selection = resolveDefinitionSelection({ configFile });
-  if (
-    selection.status === "skipped" ||
-    selection.reason === "sources-undeclared"
-  )
-    return undefined;
+  if (selection.status === "skipped") return undefined;
   if (selection.status === "failed")
     throw new Error(
       selection.diagnostics.map(formatDefinitionDiagnostic).join("\n"),
     );
   return selection;
+}
+
+function unregistered(projectDir: string): {
+  mode: DefinitionSourceResolution["sourceSet"]["mode"];
+  definitions: UnregisteredDefinition[];
+} {
+  const configFile = join(projectDir, POWERHOUSE_CONFIG_FILE);
+  if (!existsSync(configFile))
+    return {
+      mode: "schema-first",
+      definitions: findCodeFirstDefinitions(projectDir),
+    };
+  if (!isReadable(configFile)) return { mode: "schema-first", definitions: [] };
+  const selection = resolveDefinitionSelection({ configFile });
+  return {
+    mode: selection.sourceSet.mode,
+    definitions:
+      selection.status === "failed"
+        ? []
+        : findUnregisteredDefinitions(selection),
+  };
+}
+
+export function unregisteredCodeFirstDefinitions(
+  projectDir: string,
+): UnregisteredDefinition[] {
+  return unregistered(projectDir).definitions;
+}
+
+export function warnUnregisteredCodeFirstDefinitions(
+  projectDir: string,
+  kind: UnregisteredDefinition["kind"],
+) {
+  const { mode, definitions } = unregistered(projectDir);
+  for (const definition of definitions.filter((d) => d.kind === kind)) {
+    console.warn(
+      `⚠ ${formatDefinitionDiagnostic(unregisteredDefinitionDiagnostic(definition, mode))}`,
+    );
+  }
 }
 
 type ImportSource = (
@@ -125,6 +176,11 @@ export async function codeFirstAggregateSources(
   );
   for (const source of selection.sourceSet.sources) {
     const file = resolve(projectDir, source.specifier);
+    if (!existsSync(file)) {
+      throw new Error(
+        `definitionSources in powerhouse.config.json lists ${source.specifier}, which does not exist. Fix the specifier or remove the entry.`,
+      );
+    }
     if (generatedFiles.has(realpathSync(file))) {
       throw new Error(
         `Cannot regenerate document-model aggregates while definitionSources selects ${source.specifier}. Select the original authored definition file instead of a generated aggregate.`,
@@ -201,18 +257,10 @@ function subgraphModule({
   );
 }
 
-function selectsEmptyEntryList(configFile: string) {
-  const parsed = parseDefinitionSourcesConfig(
-    getConfigStrict(configFile).definitionSources,
-  );
-  return !parsed.ok && parsed.reason === "empty";
-}
-
 /**
  * The manifest entries for every model and subgraph the package's code-first
  * sources compile to. Identity comes from the compiled values, not from where
- * the sources live. An empty code-first `entries` list selects nothing, so it
- * is `none`. `unavailable` carries the diagnostics or error of any other
+ * the sources live. `unavailable` carries the diagnostics or error of any other
  * selection or source that cannot be loaded, and names the source of a model
  * or subgraph without an id or a name.
  */
@@ -221,11 +269,7 @@ export async function loadCodeFirstInventory(
 ): Promise<CodeFirstInventory> {
   const configFile = join(projectDir, POWERHOUSE_CONFIG_FILE);
   try {
-    if (
-      !existsSync(configFile) ||
-      selectsEmptyEntryList(configFile) ||
-      resolveCodeFirstSelection(configFile) === undefined
-    )
+    if (resolveCodeFirstSelection(configFile) === undefined)
       return { kind: "none" };
     return await readCodeFirstSources(configFile, (loaded) => ({
       kind: "loaded",
@@ -269,12 +313,7 @@ export async function findCodeFirstDocumentModelExport(
   documentModelId: string,
 ): Promise<CodeFirstDocumentModelExport | undefined> {
   const configFile = join(projectDir, POWERHOUSE_CONFIG_FILE);
-  if (
-    !existsSync(configFile) ||
-    selectsEmptyEntryList(configFile) ||
-    resolveCodeFirstSelection(configFile) === undefined
-  )
-    return undefined;
+  if (resolveCodeFirstSelection(configFile) === undefined) return undefined;
   return await readCodeFirstSources(
     configFile,
     async ({ documentModels, sourceSet }, importSource) => {

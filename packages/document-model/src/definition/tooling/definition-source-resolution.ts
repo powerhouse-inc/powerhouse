@@ -7,6 +7,7 @@ import {
   parseDefinitionSourcesConfig,
 } from "@powerhousedao/shared/clis/definition-sources";
 import type {
+  DefinitionCheckSkipReason,
   DefinitionDiagnostic,
   DefinitionPath,
   DefinitionSource,
@@ -389,7 +390,6 @@ function failed(
   diagnostics: readonly DefinitionDiagnostic[],
   origin: DefinitionSourceOrigin = "config",
   sources: readonly DefinitionSource[] = [],
-  reason?: DefinitionSourceResolution["reason"],
 ): InternalResolution {
   return {
     status: "failed",
@@ -398,7 +398,23 @@ function failed(
     sourceSet: sourceSet("code-first", origin, sources),
     diagnostics: [...diagnostics].sort(compareDefinitionDiagnostics),
     resolved: [],
-    ...(reason !== undefined && { reason }),
+  };
+}
+
+function skipped(
+  packageRoot: string,
+  packageRootIdentity: string,
+  skipReason: DefinitionCheckSkipReason,
+  mode: DefinitionSourceSet["mode"],
+): InternalResolution {
+  return {
+    status: "skipped",
+    skipReason,
+    packageRoot,
+    packageRootIdentity,
+    sourceSet: sourceSet(mode, "config", []),
+    diagnostics: [],
+    resolved: [],
   };
 }
 
@@ -411,41 +427,16 @@ const CONFIG_FAILURE_REPAIR: Record<ConfigFileError["reason"], string> = {
 };
 
 function selectionDiagnostic(
-  narrowed: Extract<
+  narrowed: Exclude<
     ReturnType<typeof parseDefinitionSourcesConfig>,
-    { ok: false }
+    { ok: true } | { reason: "missing" }
   >,
 ): DefinitionDiagnostic {
   const code: DefinitionDiagnosticCode =
-    narrowed.reason === "missing" || narrowed.reason === "empty"
-      ? "PH-CONFIG-SOURCES-MISSING"
-      : narrowed.reason === "unsupported-version"
-        ? "PH-CONFIG-VERSION-UNSUPPORTED"
-        : "PH-CONFIG-SOURCE-INVALID";
+    narrowed.reason === "unsupported-version"
+      ? "PH-CONFIG-VERSION-UNSUPPORTED"
+      : "PH-CONFIG-SOURCE-INVALID";
   switch (narrowed.reason) {
-    case "missing":
-      return createDiagnostic({
-        code,
-        path: narrowed.path,
-        message:
-          "This package has not declared definitionSources, so no command knows which modules declare its definitions.",
-        expected:
-          'formatVersion 1 with mode "code-first" and at least one entry, or mode "schema-first"',
-        received: "no definitionSources field",
-        repair:
-          'Add "definitionSources": { "formatVersion": 1, "mode": "schema-first" } when this package authors no TypeScript definition, or list its roots under mode "code-first".',
-      });
-    case "empty":
-      return createDiagnostic({
-        code,
-        path: narrowed.path,
-        message:
-          "Code-first mode selected an empty entry list, which would check nothing at all.",
-        expected: "at least one definition source entry",
-        received: "an empty entries array",
-        repair:
-          'List this package\'s definition roots, or declare mode "schema-first".',
-      });
     case "unsupported-version":
       return createDiagnostic({
         code,
@@ -545,26 +536,35 @@ export function resolveDefinitionSources(
     origin = "config";
     entryPosition = (index) => ["definitionSources", "entries", index];
     const narrowed = parseDefinitionSourcesConfig(definitionSources);
-    if (!narrowed.ok) {
+    if (!narrowed.ok && narrowed.reason !== "missing") {
       return failed(
         packageRoot,
         packageRootIdentity,
         [selectionDiagnostic(narrowed)],
         origin,
-        [],
-        narrowed.reason === "missing" ? "sources-undeclared" : undefined,
       );
     }
-    if (narrowed.mode === "schema-first") {
-      return {
-        status: "skipped",
+    if (!narrowed.ok)
+      return skipped(
         packageRoot,
         packageRootIdentity,
-        sourceSet: sourceSet("schema-first", "config", []),
-        diagnostics: [],
-        resolved: [],
-      };
-    }
+        "definition-sources-absent",
+        "schema-first",
+      );
+    if (narrowed.mode === "schema-first")
+      return skipped(
+        packageRoot,
+        packageRootIdentity,
+        "explicit-schema-first-mode",
+        "schema-first",
+      );
+    if (narrowed.entries.length === 0)
+      return skipped(
+        packageRoot,
+        packageRootIdentity,
+        "definition-sources-empty",
+        "code-first",
+      );
     entries = narrowed.entries;
   }
 
@@ -621,15 +621,23 @@ export function resolveDefinitionSelection(
   return publicResolution(resolveDefinitionSources(request));
 }
 
+export function selectedSources(value: InternalResolution) {
+  return {
+    packageRoot: value.packageRoot,
+    sourceSet: value.sourceSet,
+    diagnostics: value.diagnostics,
+  };
+}
+
 /** Drops the machine-specific members before a resolution reaches a report. */
 export function publicResolution(
   value: InternalResolution,
 ): DefinitionSourceResolution {
-  return {
-    status: value.status,
-    packageRoot: value.packageRoot,
-    sourceSet: value.sourceSet,
-    diagnostics: value.diagnostics,
-    ...(value.reason !== undefined && { reason: value.reason }),
-  };
+  return value.status === "skipped"
+    ? {
+        ...selectedSources(value),
+        status: value.status,
+        skipReason: value.skipReason,
+      }
+    : { ...selectedSources(value), status: value.status };
 }

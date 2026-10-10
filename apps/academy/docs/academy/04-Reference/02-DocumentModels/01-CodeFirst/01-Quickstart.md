@@ -28,10 +28,10 @@ The command also registers the model in three files:
 
 - `powerhouse.config.json` gets an entry under `definitionSources`. `ph model check` reads this list.
 - `powerhouse.manifest.json` gets an entry under `documentModels`. The registry reads this list to find the package for a document type.
-- `document-models/index.ts` gets a re-export. Every host loader reads this file.
+- `document-models/index.ts` and `document-models/document-models.ts` list the model. Hosts load models from these files.
 
 :::warning
-If you remove the model from `document-models/index.ts`, the model still compiles, checks, and passes its tests, but your package does not publish it.
+`ph generate` writes `document-models/index.ts` from the `definitionSources` entries. If you remove the entry, the next `ph generate all` or `ph generate document-model --all` leaves the model out and warns with `PH-CONFIG-SOURCE-UNREGISTERED`. `ph build` then fails until you add the entry again.
 :::
 
 ## Check the model

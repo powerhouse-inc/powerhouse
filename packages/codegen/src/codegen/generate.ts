@@ -26,6 +26,7 @@ import {
   tsMorphGeneratePieceTrigger,
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
+  warnUnregisteredCodeFirstDefinitions,
 } from "file-builders";
 import { derivePieceId } from "name-builders";
 import { readdirSync } from "node:fs";
@@ -61,6 +62,13 @@ export async function generateDocumentModel(
   project: Project,
 ) {
   await tsMorphGenerateDocumentModel(documentModelState, project);
+  warnUnregisteredCodeFirstDefinitions(projectDirOf(project), "document-model");
+}
+
+function projectDirOf(project: Project) {
+  return getOrCreateDirectory(project, "document-models")
+    .directory.getParentOrThrow()
+    .getPath();
 }
 
 export async function generateCodeFirstDocumentModel(
@@ -81,6 +89,7 @@ export async function generateAllDocumentModels(
   );
   const documentModelsDirPath = documentModelsDir.getPath();
   const projectDir = documentModelsDir.getParentOrThrow().getPath();
+  warnUnregisteredCodeFirstDefinitions(projectDir, "document-model");
   const codeFirst =
     codeFirstInventory ?? (await loadCodeFirstInventory(projectDir));
   const discoveries = pipe(
@@ -99,7 +108,7 @@ export async function generateAllDocumentModels(
   );
 
   for (const documentModelState of documentModelStateFiles) {
-    await generateDocumentModel(documentModelState, project);
+    await tsMorphGenerateDocumentModel(documentModelState, project);
   }
 
   const files = invalid.map(({ dirName }) => `${dirName}/${dirName}.json`);
@@ -311,6 +320,7 @@ export async function generateAllApps(project: Project) {
 }
 export async function generateSubgraph(subgraphName: string, project: Project) {
   await tsMorphGenerateSubgraph({ subgraphName, project });
+  warnUnregisteredCodeFirstDefinitions(projectDirOf(project), "subgraph");
 }
 
 export async function generateCodeFirstSubgraph(
@@ -338,6 +348,7 @@ export async function generateAllSubgraphs(
     "subgraphs",
   );
   const projectDir = subgraphsDir.getParentOrThrow().getPath();
+  warnUnregisteredCodeFirstDefinitions(projectDir, "subgraph");
   const codeFirst =
     codeFirstInventory ?? (await loadCodeFirstInventory(projectDir));
   project.addSourceFilesAtPaths(join(subgraphsDir.getPath(), "*", "index.ts"));
@@ -371,7 +382,7 @@ export async function generateAllSubgraphs(
     unique(),
   );
   for (const subgraphName of subgraphNames) {
-    await generateSubgraph(subgraphName, project);
+    await tsMorphGenerateSubgraph({ subgraphName, project });
   }
 
   await syncManifestSection(

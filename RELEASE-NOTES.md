@@ -20,7 +20,9 @@ These apply to every package, including packages that never adopt code-first doc
 
 **`ph publish` builds before it publishes.** Before, `ph publish` uploaded what was already in `dist`. Now it runs the release gate first. The gate fails on the same errors as `ph build`, and no token is issued and no registry request is made when it fails. A package created by `ph init` also runs `ph-cli model prepack` from its `prepack` script, so a package without a code-first release check builds twice when you publish.
 
-**Packages without `definitionSources` print a warning.** `ph build` prints `This package declares no definitionSources` for a `powerhouse.config.json` without the field. Add `"definitionSources": { "formatVersion": 1, "mode": "schema-first" }` to keep the schema-first behavior and remove the warning. A later release will fail the build when the field is missing.
+**`definitionSources` is optional.** A package without the field, without a `powerhouse.config.json`, or with an empty `code-first` entry list builds like a schema-first package and needs no change.
+
+**Code-first definitions must be registered.** A code-first model or subgraph in the package that no `definitionSources` entry reaches fails `ph build`, `ph publish`, and the `prepack` check with `PH-CONFIG-SOURCE-UNREGISTERED`, and `ph generate` warns about it. The message names the entry to add.
 
 ---
 

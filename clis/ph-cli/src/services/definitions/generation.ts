@@ -3,7 +3,11 @@ import {
   checkDefinitions,
   DefinitionSourceLoader,
   exitCodeFor,
+  findCodeFirstDefinitions,
+  findUnregisteredDefinitions,
+  formatDefinitionDiagnostic,
   type PackedConsumerEvidence,
+  unregisteredDefinitionDiagnostic,
 } from "document-model/tooling";
 import {
   cpSync,
@@ -24,6 +28,9 @@ import { BuildGraphTypeScriptSourceImportAdapter } from "./import-adapters.js";
 import { computePackageRevision, toPosixPath } from "./package-revision.js";
 
 export const GENERATION_DIRECTORY = join(".ph", "build");
+
+const NOTHING_CHECKED =
+  "ℹ This package lists no code-first definitionSources; no definition was checked.\n";
 
 export type CandidateRequest = {
   readonly packageRoot: string;
@@ -307,9 +314,16 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     request.cliSources === undefined &&
     !existsSync(request.configFile)
   ) {
-    log(
-      "⚠ This package declares no definitionSources. Add one; a future release will fail this build.\n",
-    );
+    const unregistered = findCodeFirstDefinitions(request.packageRoot);
+    if (unregistered.length > 0) {
+      for (const definition of unregistered) {
+        log(
+          `✘ ${formatDefinitionDiagnostic(unregisteredDefinitionDiagnostic(definition, "schema-first"))}\n`,
+        );
+      }
+      return failure("failed");
+    }
+    log(NOTHING_CHECKED);
     return await buildWithoutEvidence();
   }
 
@@ -317,16 +331,11 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     configFile: request.configFile,
     ...(request.cliSources !== undefined && { cliSources: request.cliSources }),
   });
-  if (resolution.status === "skipped") {
-    log(
-      'ℹ This package declares definitionSources mode "schema-first"; no definition was checked.\n',
-    );
-    return await buildWithoutEvidence();
-  }
-  if (resolution.reason === "sources-undeclared") {
-    log(
-      "⚠ This package declares no definitionSources. Add one; a future release will fail this build.\n",
-    );
+  if (
+    resolution.status === "skipped" &&
+    findUnregisteredDefinitions(resolution).length === 0
+  ) {
+    log(NOTHING_CHECKED);
     return await buildWithoutEvidence();
   }
 

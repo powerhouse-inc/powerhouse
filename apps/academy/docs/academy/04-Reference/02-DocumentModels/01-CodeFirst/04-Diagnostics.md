@@ -54,7 +54,8 @@ Reads `powerhouse.config.json` and its `definitionSources` field.
 | `PH-CONFIG-DUPLICATE-SOURCE` | error | Two entries point to the same module and export path. |
 | `PH-CONFIG-SOURCE-INVALID` | error | A specifier or an export pointer is malformed. |
 | `PH-CONFIG-SOURCE-OUTSIDE-PACKAGE` | error | A source path or a symlink target points outside the package root. |
-| `PH-CONFIG-SOURCES-MISSING` | error | No definition sources are selected, or the selected list is empty. |
+| `PH-CONFIG-SOURCE-UNREGISTERED` | error | A code-first model or subgraph is in the package, but no entry in `definitionSources` covers it. |
+| `PH-CONFIG-SOURCE-UNSELECTED` | warning | A code-first model or subgraph is in the package, but the `--source` list does not reach it, so the run does not check it. |
 | `PH-CONFIG-VERSION-UNSUPPORTED` | error | `definitionSources.formatVersion` is not a version this release supports. |
 
 ## `typecheck` phase

@@ -1,5 +1,6 @@
 import type {
   DefinitionCheckReport,
+  DefinitionCheckSkipReason,
   DefinitionDiagnostic,
   DefinitionPath,
   DefinitionSource,
@@ -62,20 +63,17 @@ export type DefinitionSourceLoadRequest = DefinitionSourceSelectionRequest & {
 };
 
 export type DefinitionSourceResolution = {
-  readonly status: "ready" | "failed" | "skipped";
   /** The directory of the selected config file. */
   readonly packageRoot: string;
   readonly sourceSet: DefinitionSourceSet;
   readonly diagnostics: readonly DefinitionDiagnostic[];
-  /**
-   * The one failure a caller may treat as something other than a failure: a
-   * package that has not declared `definitionSources` at all. `ph build` warns
-   * and keeps building for it during the compatibility window, so the
-   * distinction is stated here rather than recovered from a diagnostic's
-   * shape.
-   */
-  readonly reason?: "sources-undeclared";
-};
+} & (
+  | { readonly status: "ready" | "failed"; readonly skipReason?: never }
+  | {
+      readonly status: "skipped";
+      readonly skipReason: DefinitionCheckSkipReason;
+    }
+);
 
 /** One value the traversal recognised, with where it was found. */
 export type LoadedDefinition<TValue> = {

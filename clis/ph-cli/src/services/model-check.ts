@@ -1,4 +1,7 @@
-import type { DefinitionCheckReport } from "@powerhousedao/shared/document-model";
+import type {
+  DefinitionCheckReport,
+  DefinitionCheckSkipReason,
+} from "@powerhousedao/shared/document-model";
 import {
   checkDefinitions,
   createDefinitionCheckReport,
@@ -48,6 +51,12 @@ function assertUsableFlags(args: ModelCheckArgs): void {
   }
 }
 
+const SKIP_REASONS: Record<DefinitionCheckSkipReason, string> = {
+  "explicit-schema-first-mode": 'This package declares mode "schema-first"',
+  "definition-sources-absent": "This package declares no definitionSources",
+  "definition-sources-empty": "This package lists no definitionSources entries",
+};
+
 export function renderHuman(report: DefinitionCheckReport): string {
   const lines: string[] = [];
   const sources = report.sourceSet.sources.length;
@@ -56,7 +65,7 @@ export function renderHuman(report: DefinitionCheckReport): string {
   );
   if (report.status === "skipped") {
     lines.push(
-      'This package declares mode "schema-first", so no definition was checked. That is not release approval.',
+      `${SKIP_REASONS[report.skipReason]}, so no definition was checked. That is not release approval.`,
     );
   }
   for (const definition of report.definitions) {
@@ -261,7 +270,7 @@ async function runReleaseCheck(
       definitions: result?.report?.definitions ?? [],
       diagnostics,
       warningsAsErrors: args.warningsAsErrors,
-      skipped: result?.status === "ok" && selection.status === "skipped",
+      ...(result?.status === "ok" && { skipReason: selection.skipReason }),
     });
   });
 }

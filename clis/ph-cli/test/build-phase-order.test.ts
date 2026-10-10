@@ -324,8 +324,77 @@ describe("what a failure is allowed to touch", () => {
   }, 60_000);
 });
 
+describe("unregistered code-first definitions", () => {
+  it("builds a package without a config through the staged build, and refuses one that holds a code-first definition", async () => {
+    const fixture = withPriorOutput("schema-first");
+    const enteredFrom = process.cwd();
+    rmSync(join(fixture.root, "powerhouse.config.json"));
+    process.chdir(fixture.root);
+    try {
+      const plain = { ...buildArgsFor(fixture.root), configFile: undefined };
+      const built = recorder();
+      const builtLog: string[] = [];
+      const result = await runBuild(plain, {
+        steps: built.steps,
+        log: (text) => builtLog.push(text),
+      });
+      expect([result.exitCode, built.promotions]).toEqual([0, 1]);
+      expect(builtLog).toContain(
+        "ℹ This package lists no code-first definitionSources; no definition was checked.\n",
+      );
+
+      mkdirSync(join(fixture.root, "subgraphs"));
+      writeFileSync(
+        join(fixture.root, "subgraphs", "orders.ts"),
+        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+      );
+      const refused = recorder();
+      const refusedLog: string[] = [];
+      const refusal = await runBuild(plain, {
+        steps: refused.steps,
+        log: (text) => refusedLog.push(text),
+      });
+      expect([refusal.exitCode, refused.promotions]).toEqual([2, 0]);
+      expect(refusedLog.join("")).toContain(
+        "PH-CONFIG-SOURCE-UNREGISTERED [error/configuration] <config> /definitionSources/entries: ./subgraphs/orders.ts declares a code-first subgraph",
+      );
+    } finally {
+      process.chdir(enteredFrom);
+      fixture.dispose();
+    }
+  }, 60_000);
+
+  it("fails a schema-first package that holds an unregistered code-first model and keeps its output", async () => {
+    const fixture = withPriorOutput("schema-first");
+    const recording = recorder();
+    try {
+      mkdirSync(join(fixture.root, "document-models", "customer"), {
+        recursive: true,
+      });
+      writeFileSync(
+        join(fixture.root, "document-models", "customer", "index.ts"),
+        'import { defineDocumentModelFamily } from "document-model";\nexport const customer = defineDocumentModelFamily({});\n',
+      );
+      const result = await runBuild(buildArgsFor(fixture.root), {
+        steps: recording.steps,
+        log: silent,
+      });
+      expect(result.exitCode).toBe(2);
+      expect(result.report?.diagnostics.map(({ code }) => code)).toEqual([
+        "PH-CONFIG-SOURCE-UNREGISTERED",
+      ]);
+      expect(recording.promotions).toBe(0);
+      expect(directoryDigest(join(fixture.root, "dist"))).toBe(
+        fixture.priorDigest,
+      );
+    } finally {
+      fixture.dispose();
+    }
+  }, 60_000);
+});
+
 describe("the compatibility window", () => {
-  it("warns and builds a package that has not declared definitionSources", async () => {
+  it("builds a package that has not declared definitionSources without release evidence", async () => {
     const fixture = withPriorOutput("configs");
     const recording = recorder();
     const logged: string[] = [];
@@ -336,7 +405,9 @@ describe("the compatibility window", () => {
       });
       expect(result.exitCode).toBe(0);
       expect(recording.promotions).toBe(1);
-      expect(logged.join("")).toContain("declares no definitionSources");
+      expect(logged.join("")).toContain(
+        "ℹ This package lists no code-first definitionSources; no definition was checked.\n",
+      );
       expect(retained(fixture.root)).toEqual({
         ok: false,
         reason: "no completed release check was retained",
@@ -365,11 +436,24 @@ describe("the compatibility window", () => {
     }
   }, 60_000);
 
-  it("still fails an empty, unsupported, or malformed declared selection", async () => {
+  it("builds an empty code-first list without release evidence", async () => {
+    const fixture = withPriorOutput("configs");
+    const recording = recorder();
+    try {
+      const result = await runBuild(
+        buildArgsFor(fixture.root, "empty.config.json"),
+        { steps: recording.steps, log: silent },
+      );
+      expect([result.exitCode, recording.promotions]).toEqual([0, 1]);
+    } finally {
+      fixture.dispose();
+    }
+  }, 60_000);
+
+  it("still fails an unsupported or malformed declared selection", async () => {
     const fixture = withPriorOutput("configs");
     try {
       for (const configFile of [
-        "empty.config.json",
         "unsupported.config.json",
         "malformed.config.json.txt",
       ]) {

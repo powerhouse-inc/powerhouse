@@ -170,7 +170,7 @@ describe("createDefinitionCheckReport", () => {
         sourceSet,
         definitions: [],
         diagnostics: [],
-        skipped: true,
+        skipReason: "explicit-schema-first-mode",
       }),
     ).toMatchObject({
       status: "skipped",
@@ -185,7 +185,7 @@ describe("createDefinitionCheckReport", () => {
         sourceSet: { ...sourceSet, mode: "code-first" },
         definitions: [],
         diagnostics: [],
-        skipped: true,
+        skipReason: "explicit-schema-first-mode",
       }),
     ).toThrow(TypeError);
     expect(() =>
@@ -201,9 +201,23 @@ describe("createDefinitionCheckReport", () => {
           },
         ],
         diagnostics: [],
-        skipped: true,
+        skipReason: "explicit-schema-first-mode",
       }),
     ).toThrow(TypeError);
+  });
+
+  it("skips an empty code-first selection", () => {
+    const report = createDefinitionCheckReport({
+      profile: "edit",
+      sourceSet: { ...sourceSet, mode: "code-first" },
+      definitions: [],
+      diagnostics: [],
+      skipReason: "definition-sources-empty",
+    });
+    expect([report.status, report.skipReason]).toEqual([
+      "skipped",
+      "definition-sources-empty",
+    ]);
   });
 
   it("never attaches a skip reason to a status that checked something", () => {

@@ -23,6 +23,7 @@ import {
 import {
   emittedImportPath,
   findCodeFirstDocumentModelExport,
+  unregisteredCodeFirstDefinitions,
   type CodeFirstDocumentModelExport,
 } from "./document-model/code-first-aggregates.js";
 import {
@@ -120,8 +121,14 @@ async function resolveEditorDocumentModel(
     documentModelId,
   );
   if (model) return { kind: "code-first", documentModelId, model };
+  const unregistered = unregisteredCodeFirstDefinitions(projectDir)
+    .filter(({ kind }) => kind === "document-model")
+    .map(({ specifier }) => specifier);
   throw new Error(
-    `Failed to get document type metadata for document type: ${documentModelId}.`,
+    `Failed to get document type metadata for document type: ${documentModelId}.` +
+      (unregistered.length === 0
+        ? ""
+        : ` If a code-first model declares it, register that model in definitionSources in powerhouse.config.json. Unregistered: ${unregistered.join(", ")}.`),
   );
 }
 

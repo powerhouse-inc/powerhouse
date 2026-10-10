@@ -34,11 +34,6 @@ type DefinitionSourcesParseResult =
       readonly path: readonly string[];
       readonly expected: string;
       readonly received: unknown;
-    }
-  | {
-      readonly ok: false;
-      readonly reason: "empty";
-      readonly path: readonly string[];
     };
 
 const ROOT = ["definitionSources"] as const;
@@ -114,9 +109,6 @@ export function parseDefinitionSourcesConfig(
       expected: "an array of definition source entries",
       received: value.entries,
     };
-  }
-  if (value.entries.length === 0) {
-    return { ok: false, reason: "empty", path: [...ROOT, "entries"] };
   }
   return { ok: true, mode: "code-first", entries: value.entries };
 }

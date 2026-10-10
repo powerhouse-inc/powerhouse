@@ -33,4 +33,22 @@ Use schema-first when someone who does not write code authors the model, or when
 
 Use code-first when the model lives in a TypeScript codebase. You get rename refactors and go-to-definition across the model, and you do not commit generated files.
 
-You can change your mind later. A package with a code-first model can add a schema-first model next to it, and `ph generate` does not touch the code-first one.
+You can change your mind later. Adding a model of the other kind does not convert the models you already have.
+
+## Use both in one package
+
+A schema-first package can add a code-first model without changing its existing models. For example, a package with a schema-first `Invoice` model can add a code-first `Customer` model:
+
+```bash
+ph generate document-model --code-first customer
+```
+
+After this command:
+
+- `Invoice` keeps its `invoice.json` file and its `gen/` folder. You edit and generate it as before.
+- `Customer` is listed in `definitionSources` in `powerhouse.config.json`. The command sets `mode` to `code-first`, because `mode` describes the registered sources, not every model in the package.
+- `ph generate` writes both models into `document-models/index.ts`, `document-models/document-models.ts`, and `document-models/upgrade-manifests.ts`. Hosts load both from these files.
+
+Model identities, versions, upgrades, and stored documents of `Invoice` do not change.
+
+A package without code-first definitions needs no `definitionSources` field.

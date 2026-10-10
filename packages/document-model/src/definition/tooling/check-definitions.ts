@@ -1,5 +1,6 @@
 import type {
   DefinitionCheckProfile,
+  DefinitionCheckSkipReason,
   DefinitionCheckReport,
   DefinitionCompatibilitySelection,
   DefinitionDiagnostic,
@@ -10,6 +11,7 @@ import type {
   Sha256Digest,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
+import { unregisteredDefinitionDiagnostics } from "./unregistered-definitions.js";
 import { adaptCodeFirstDocumentModelSource } from "../adapters/code-first-document-model-source-adapter.js";
 import type { NormalizedDocumentModelArtifact } from "../adapters/types.js";
 import {
@@ -532,8 +534,9 @@ function statusOf(
   if (
     diagnostics.some(
       (entry) =>
-        TOOLING_FAILURE_PHASES.has(entry.phase) ||
-        TOOLING_FAILURE_CODES.has(entry.code),
+        entry.severity === "error" &&
+        (TOOLING_FAILURE_PHASES.has(entry.phase) ||
+          TOOLING_FAILURE_CODES.has(entry.code)),
     )
   ) {
     return "failed";
@@ -551,28 +554,36 @@ export type DefinitionCheckReportInput = {
   readonly definitions: readonly CheckedDefinition[];
   readonly diagnostics: readonly DefinitionDiagnostic[];
   readonly warningsAsErrors?: boolean;
-  readonly skipped?: boolean;
+  readonly skipReason?: DefinitionCheckSkipReason;
+};
+
+const SKIPPED_MODE: Record<
+  DefinitionCheckSkipReason,
+  DefinitionCheckReport["sourceSet"]["mode"]
+> = {
+  "explicit-schema-first-mode": "schema-first",
+  "definition-sources-absent": "schema-first",
+  "definition-sources-empty": "code-first",
 };
 
 /**
- * Throws when `skipped` is set on anything other than the explicit
- * schema-first selection with no sources, definitions, or diagnostics, because
- * `skipped` is the one status that means nothing was checked.
+ * Throws when `skipReason` is set on anything but a selection that checked
+ * nothing.
  */
 export function createDefinitionCheckReport(
   input: DefinitionCheckReportInput,
 ): DefinitionCheckReport {
   const diagnostics = dedupe(input.diagnostics);
-  if (input.skipped === true) {
+  if (input.skipReason !== undefined) {
     if (
-      input.sourceSet.mode !== "schema-first" ||
+      input.sourceSet.mode !== SKIPPED_MODE[input.skipReason] ||
       input.sourceSet.origin !== "config" ||
       input.sourceSet.sources.length > 0 ||
       diagnostics.length > 0 ||
       input.definitions.length > 0
     ) {
       throw new TypeError(
-        "A skipped definition check is only the explicit schema-first selection: no sources, no definitions, and no diagnostics.",
+        "A skipped definition check needs a config selection whose mode matches its skip reason, with no sources, definitions, or diagnostics.",
       );
     }
     return {
@@ -580,7 +591,7 @@ export function createDefinitionCheckReport(
       formatVersion: 1,
       profile: input.profile,
       status: "skipped",
-      skipReason: "explicit-schema-first-mode",
+      skipReason: input.skipReason,
       sourceSet: input.sourceSet,
       definitions: [],
       diagnostics: [],
@@ -720,14 +731,20 @@ export async function checkDefinitionsWithArtifacts(
   });
   throwIfAborted(request.signal, "The definition check");
 
+  const selectionUnknown = loaded.diagnostics.some(
+    ({ phase }) => phase === "configuration",
+  );
+  const unregistered = selectionUnknown
+    ? []
+    : unregisteredDefinitionDiagnostics(loaded);
   if (loaded.status === "skipped") {
     return {
       report: createDefinitionCheckReport({
         profile: request.profile,
         sourceSet: loaded.sourceSet,
         definitions: [],
-        diagnostics: [],
-        skipped: true,
+        diagnostics: unregistered,
+        ...(unregistered.length === 0 && { skipReason: loaded.skipReason }),
       }),
       artifacts: [],
     };
@@ -736,6 +753,7 @@ export async function checkDefinitionsWithArtifacts(
   const normalized = normalizeLoadedDefinitions(loaded);
   const diagnostics: DefinitionDiagnostic[] = [
     ...loaded.diagnostics,
+    ...unregistered,
     ...normalized.diagnostics,
   ];
 

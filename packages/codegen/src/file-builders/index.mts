@@ -7,6 +7,7 @@ export * from "./document-editor.js";
 export {
   findCodeFirstDocumentModelExport,
   loadCodeFirstInventory,
+  warnUnregisteredCodeFirstDefinitions,
   type CodeFirstDocumentModelExport,
   type CodeFirstInventory,
 } from "./document-model/code-first-aggregates.js";

@@ -16,11 +16,6 @@ type CatalogEntry = {
 };
 
 const catalog = {
-  "PH-CONFIG-SOURCES-MISSING": {
-    severity: "error",
-    phase: "configuration",
-    meaning: "No nonempty V1 definition-source list was selected",
-  },
   "PH-CONFIG-VERSION-UNSUPPORTED": {
     severity: "error",
     phase: "configuration",
@@ -42,6 +37,18 @@ const catalog = {
     phase: "configuration",
     meaning:
       "Two configured entries resolve to the same module ID and export path",
+  },
+  "PH-CONFIG-SOURCE-UNSELECTED": {
+    severity: "warning",
+    phase: "configuration",
+    meaning:
+      "A module declares a code-first definition that a --source selection leaves out",
+  },
+  "PH-CONFIG-SOURCE-UNREGISTERED": {
+    severity: "error",
+    phase: "configuration",
+    meaning:
+      "A module declares a code-first definition that definitionSources does not list",
   },
   "PH-IMPORT-FAILED": {
     severity: "error",
