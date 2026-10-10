@@ -192,7 +192,7 @@ export async function connectManagedWorkerReactor(
     verified = false;
     info = UNVERIFIED_INFO;
     console.warn(
-      `[reactor-monitor] could not read "${descriptor.name}"'s info; offering no levers and no local sync:`,
+      `[reactor-monitor] could not read "${descriptor.name}"'s info; offering no levers, no SQL and no local sync:`,
       error,
     );
   }
@@ -248,7 +248,7 @@ export async function connectManagedWorkerReactor(
         }
       : {}),
     syncManager: toMonitorSyncManager(syncManager, syncManager),
-    syncAdmin: syncManager,
+    ...(info.access.admin ? { syncAdmin: syncManager } : {}),
     events: eventBus,
     module,
     ...(localSync ?? {}),

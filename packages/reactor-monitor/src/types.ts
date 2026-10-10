@@ -306,7 +306,8 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
   readonly module: MonitorWorkerClientModule;
   /** Always present: the proxy exists whether or not the worker built sync. */
   readonly syncManager: MonitorSyncManager;
-  readonly syncAdmin: ISyncAdmin;
+  /** Present when `info.access.admin`. */
+  readonly syncAdmin?: ISyncAdmin;
   adminInfo: () => Promise<WorkerInspectorInfo>;
   restart: () => Promise<void>;
   /**

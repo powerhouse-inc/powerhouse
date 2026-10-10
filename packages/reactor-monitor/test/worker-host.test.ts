@@ -121,9 +121,10 @@ describe("monitor worker host over a MessageChannel", () => {
   it("serves the sync reads and reconfiguration rows over the op channel", async () => {
     await expect(tab.syncManager.inspectRemotes()).resolves.toEqual([]);
     await expect(tab.syncManager.listHolds()).resolves.toEqual([]);
-    await expect(
-      tab.syncAdmin.resetChannel("no-such-remote"),
-    ).rejects.toThrow();
+    // The sync manager's own refusal: the admin row reached syncAdmin.
+    await expect(tab.syncAdmin!.resetChannel("no-such-remote")).rejects.toThrow(
+      /Remote with name 'no-such-remote' does not exist/,
+    );
   });
 
   it("reports the worker reactor's info read over RPC", () => {
@@ -136,6 +137,7 @@ describe("monitor worker host over a MessageChannel", () => {
     });
     expect(tab.admin).toBeDefined();
     expect(tab.dbQuery).toBeDefined();
+    expect(tab.syncAdmin).toBeDefined();
   });
 
   it("declares both sync channels for a connect-mode worker reactor and exposes the link handles", () => {
@@ -349,6 +351,7 @@ describe("monitor worker host over a MessageChannel", () => {
     expect(failingTab.descriptorMismatch).toBe(false);
     expect(failingTab.admin).toBeUndefined();
     expect(failingTab.dbQuery).toBeUndefined();
+    expect(failingTab.syncAdmin).toBeUndefined();
     expect(failingTab.adoptLocalSyncPeer).toBeUndefined();
     expect(failingTab.removeLocalSyncPeer).toBeUndefined();
 
