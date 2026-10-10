@@ -1,3 +1,50 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **switchboard:** stop the workflow runtime when the singleton is lost ([3936e68b76](https://github.com/powerhouse-inc/powerhouse/commit/3936e68b76))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** fetch and install a piece and its external dependencies from its package's registry ([5695a00846](https://github.com/powerhouse-inc/powerhouse/commit/5695a00846))
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **reactor-workflow:** retry the lease table's DDL on duplicate_object too ([6ff55be239](https://github.com/powerhouse-inc/powerhouse/commit/6ff55be239))
+- **reactor-workflow:** rewind a stopped trigger's cursor and release its claims in one write ([00b2c97266](https://github.com/powerhouse-inc/powerhouse/commit/00b2c97266))
+- **reactor-workflow:** journal a webhook delivery as a PENDING run before firing it ([6979fcdce0](https://github.com/powerhouse-inc/powerhouse/commit/6979fcdce0))
+- **reactor-workflow:** journal a lane's firings in the write that consumes their source ([5beefc4cb7](https://github.com/powerhouse-inc/powerhouse/commit/5beefc4cb7))
+- **reactor-workflow:** journal a piece item as a PENDING run before firing it ([4f30368008](https://github.com/powerhouse-inc/powerhouse/commit/4f30368008))
+- **reactor-workflow:** treat whatever the stop cut short on the trigger lane as its refusal ([0c1fe351a9](https://github.com/powerhouse-inc/powerhouse/commit/0c1fe351a9))
+- **reactor-workflow:** log lane work a shutdown refused at debug, and re-arm no retry for it ([db728d4091](https://github.com/powerhouse-inc/powerhouse/commit/db728d4091))
+- **reactor-workflow:** give back a dedupe key whose fire the stopped lane refused ([b4d3b71407](https://github.com/powerhouse-inc/powerhouse/commit/b4d3b71407))
+- **reactor-workflow:** run nothing on the trigger lane after the supervisor stops ([373c7ba258](https://github.com/powerhouse-inc/powerhouse/commit/373c7ba258))
+- **reactor-workflow:** refuse operations after shutdown instead of acknowledging them ([3b500409da](https://github.com/powerhouse-inc/powerhouse/commit/3b500409da))
+- **reactor-workflow:** apply no failure mode to a run the shutdown killed ([c43e3795b7](https://github.com/powerhouse-inc/powerhouse/commit/c43e3795b7))
+- **reactor-api:** forget a webhook's dedupe key only when the handler says it did not process it ([f8422e50d3](https://github.com/powerhouse-inc/powerhouse/commit/f8422e50d3))
+- **reactor-workflow:** answer 503 when a sync webhook's runtime shuts down under it ([dbc7231f8c](https://github.com/powerhouse-inc/powerhouse/commit/dbc7231f8c))
+- **reactor-workflow:** tell a self-fence from a takeover, and restart on the former ([d237e1ac51](https://github.com/powerhouse-inc/powerhouse/commit/d237e1ac51))
+- **reactor-workflow:** release the lease row after a self-fence ([8b89908e04](https://github.com/powerhouse-inc/powerhouse/commit/8b89908e04))
+- **switchboard:** retry the workflow singleton after a refused boot ([62b41a8023](https://github.com/powerhouse-inc/powerhouse/commit/62b41a8023))
+- **reactor-workflow:** run no queued firing after shutdown ([a1d6137e4d](https://github.com/powerhouse-inc/powerhouse/commit/a1d6137e4d))
+- **reactor-workflow:** close out an adopted run, and never reopen the journal, after shutdown ([b31d564439](https://github.com/powerhouse-inc/powerhouse/commit/b31d564439))
+- **reactor-workflow:** retry the lease table's DDL once when two hosts race it ([71769db843](https://github.com/powerhouse-inc/powerhouse/commit/71769db843))
+- **reactor-workflow:** fence a singleton holder that cannot renew ([bc4b81edca](https://github.com/powerhouse-inc/powerhouse/commit/bc4b81edca))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+- **reactor-workflow:** time the singleton lease on the database clock ([0809df708f](https://github.com/powerhouse-inc/powerhouse/commit/0809df708f))
+- **reactor-workflow:** start no run once the runtime has shut down ([97fe837ddc](https://github.com/powerhouse-inc/powerhouse/commit/97fe837ddc))
+- **reactor-workflow:** renew the singleton lease from the claim ([7ef58a3585](https://github.com/powerhouse-inc/powerhouse/commit/7ef58a3585))
+- **reactor-workflow:** key the singleton lease on a per-claim instance ([4f59977b55](https://github.com/powerhouse-inc/powerhouse/commit/4f59977b55))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.51 (2026-10-10)
 
 ### 🚀 Features

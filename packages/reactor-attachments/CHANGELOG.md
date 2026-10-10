@@ -1,3 +1,58 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-attachments:** per-peer attachment links ([4c3b3fac4b](https://github.com/powerhouse-inc/powerhouse/commit/4c3b3fac4b))
+- **reactor-attachments:** move the peered attachment transport into the library ([6baac41ece](https://github.com/powerhouse-inc/powerhouse/commit/6baac41ece))
+- **reactor-attachments:** add a ./replication entry for byte movement ([98aab00ef2](https://github.com/powerhouse-inc/powerhouse/commit/98aab00ef2))
+- **reactor-attachments:** local attachment transport over a brokered port ([752146f1aa](https://github.com/powerhouse-inc/powerhouse/commit/752146f1aa))
+- **reactor-attachments:** lazy fetch-on-reference attachment replicator ([e14a39c691](https://github.com/powerhouse-inc/powerhouse/commit/e14a39c691))
+- **reactor-attachments:** browser-capable local attachment store ([38a7a76783](https://github.com/powerhouse-inc/powerhouse/commit/38a7a76783))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** rank a busy source above error and not-found ([6b2b2d4813](https://github.com/powerhouse-inc/powerhouse/commit/6b2b2d4813))
+- **reactor-attachments:** count a capped busy run as not-found when every other source said so ([70c677d3ea](https://github.com/powerhouse-inc/powerhouse/commit/70c677d3ea))
+- **reactor-attachments:** keep not-found and error waits independent of document count ([e6e26c0e5f](https://github.com/powerhouse-inc/powerhouse/commit/e6e26c0e5f))
+- **reactor-attachments:** bound a busy run instead of treating it as a reservation ([c4ec0b4bb2](https://github.com/powerhouse-inc/powerhouse/commit/c4ec0b4bb2))
+- **reactor-attachments:** mark a busy local pending and rank it below not-found ([5c6a29f534](https://github.com/powerhouse-inc/powerhouse/commit/5c6a29f534))
+- **reactor-attachments:** give a busy local pending a 60 s expiry ([efd2924b49](https://github.com/powerhouse-inc/powerhouse/commit/efd2924b49))
+- **reactor-attachments:** drive replicator retries from one pure state machine ([327f2fc507](https://github.com/powerhouse-inc/powerhouse/commit/327f2fc507))
+- **reactor-attachments:** floor pending retries and bound a run of pendings ([554c1d2f14](https://github.com/powerhouse-inc/powerhouse/commit/554c1d2f14))
+- **reactor-attachments:** keep a new document's attempt until it is answered ([9d5b0960f3](https://github.com/powerhouse-inc/powerhouse/commit/9d5b0960f3))
+- **reactor-attachments:** reject an aborted peered fetch instead of answering ([0e997de47a](https://github.com/powerhouse-inc/powerhouse/commit/0e997de47a))
+- **reactor-attachments:** answer a busy peer serve with a short pending ([64b65c91aa](https://github.com/powerhouse-inc/powerhouse/commit/64b65c91aa))
+- **reactor-attachments:** drop a peer serve cancelled before its body is read ([52a4452750](https://github.com/powerhouse-inc/powerhouse/commit/52a4452750))
+- **reactor-attachments:** ignore a peer fetch whose id is already in flight ([8f898c749f](https://github.com/powerhouse-inc/powerhouse/commit/8f898c749f))
+- **reactor-attachments:** re-queue a stop()-aborted fetch when the replicator restarted first ([45baa569c7](https://github.com/powerhouse-inc/powerhouse/commit/45baa569c7))
+- **reactor-attachments:** hash in place unless the buffer is shared ([6f42f36ecf](https://github.com/powerhouse-inc/powerhouse/commit/6f42f36ecf))
+- **reactor-attachments:** ask peers in parallel and verify each source's bytes ([613c882055](https://github.com/powerhouse-inc/powerhouse/commit/613c882055))
+- **reactor-attachments:** replicator retry bookkeeping for pending, stop and new references ([1c3e3e3c16](https://github.com/powerhouse-inc/powerhouse/commit/1c3e3e3c16))
+- **reactor-attachments:** bound and validate what a peer sends a local transport ([14f2171c1a](https://github.com/powerhouse-inc/powerhouse/commit/14f2171c1a))
+- **reactor-attachments:** stop a peer serve on cancel and cap concurrent serves ([2b50c4afb0](https://github.com/powerhouse-inc/powerhouse/commit/2b50c4afb0))
+- **reactor-attachments:** reopen IndexedDB after a failed open or a closed connection ([1a1550260b](https://github.com/powerhouse-inc/powerhouse/commit/1a1550260b))
+- **reactor-attachments:** authorize peer reads through the reactor read gate ([869249bfff](https://github.com/powerhouse-inc/powerhouse/commit/869249bfff))
+- ⚠️  **reactor-attachments:** refuse local attachment reads by default ([6412d85c29](https://github.com/powerhouse-inc/powerhouse/commit/6412d85c29))
+- **reactor-attachments:** drop a held hash's replication entry ([c7d7d387a3](https://github.com/powerhouse-inc/powerhouse/commit/c7d7d387a3))
+- **reactor-attachments:** guard a closed idb open and a malformed scan cursor ([146724a2f9](https://github.com/powerhouse-inc/powerhouse/commit/146724a2f9))
+- **reactor-attachments:** settle a begin-less terminal reply and bound the server cancel set ([ef57b443a9](https://github.com/powerhouse-inc/powerhouse/commit/ef57b443a9))
+- **reactor-attachments:** resume outstanding work on start and report no-backlog honestly ([431de77635](https://github.com/powerhouse-inc/powerhouse/commit/431de77635))
+- **reactor-attachments:** verify fetched attachment bytes before storing ([8da808e743](https://github.com/powerhouse-inc/powerhouse/commit/8da808e743))
+
+### ⚠️  Breaking Changes
+
+- **reactor-attachments:** refuse local attachment reads by default  ([6412d85c29](https://github.com/powerhouse-inc/powerhouse/commit/6412d85c29))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.51 (2026-10-10)
 
 ### 🚀 Features

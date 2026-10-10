@@ -1,3 +1,42 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **connect:** read and write through the router under multiReactor ([4e86488add](https://github.com/powerhouse-inc/powerhouse/commit/4e86488add))
+- **connect:** build a routing client over the tab's reactor and the Switchboard ([7cb2bc7643](https://github.com/powerhouse-inc/powerhouse/commit/7cb2bc7643))
+- **connect:** a Switchboard as a reactor-router backend over GraphQL ([fb72a15d9a](https://github.com/powerhouse-inc/powerhouse/commit/fb72a15d9a))
+- **connect:** serve local sync peers from the worker under multiReactor ([567f037a20](https://github.com/powerhouse-inc/powerhouse/commit/567f037a20))
+- **connect:** compose the local channel factory only under multiReactor ([fcf80d35cc](https://github.com/powerhouse-inc/powerhouse/commit/fcf80d35cc))
+- **connect:** serve the worker's inspection ops through the op tables ([130894ae09](https://github.com/powerhouse-inc/powerhouse/commit/130894ae09))
+- **connect:** resolve multiReactor like reactorWorker, guarding localStorage ([afa3c74b70](https://github.com/powerhouse-inc/powerhouse/commit/afa3c74b70))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **connect:** run both connect reactors on the group-commit pglite store ([9bd227bd98](https://github.com/powerhouse-inc/powerhouse/commit/9bd227bd98))
+
+### 🩹 Fixes
+
+- **connect:** type the GraphQL backend's generic members for TypeScript 5.9 ([9686e1adb5](https://github.com/powerhouse-inc/powerhouse/commit/9686e1adb5))
+- **connect:** answer id checks locally when only the Switchboard fails ([30725bfd50](https://github.com/powerhouse-inc/powerhouse/commit/30725bfd50))
+- **connect:** resolve document models live through the router ([927f1c2934](https://github.com/powerhouse-inc/powerhouse/commit/927f1c2934))
+- **connect:** derive the Switchboard endpoint only from a /d/<slug> URL ([952f596b9f](https://github.com/powerhouse-inc/powerhouse/commit/952f596b9f))
+- **connect:** tell the Switchboard client when the user signs in or out ([67e6ff6605](https://github.com/powerhouse-inc/powerhouse/commit/67e6ff6605))
+- **connect:** boot on the tab's drives when the Switchboard cannot answer ([d7e079f2e7](https://github.com/powerhouse-inc/powerhouse/commit/d7e079f2e7))
+- **connect:** send reactor-browser actions through the router under multiReactor ([a3af43ba9a](https://github.com/powerhouse-inc/powerhouse/commit/a3af43ba9a))
+- **connect:** read multiReactor from the runtime config only ([04b722c8e3](https://github.com/powerhouse-inc/powerhouse/commit/04b722c8e3))
+- **connect:** refuse local sync peers at once while multiReactor is off ([df04d1da4f](https://github.com/powerhouse-inc/powerhouse/commit/df04d1da4f))
+- **connect:** put multiReactor in the worker fingerprint ([ee5eee7335](https://github.com/powerhouse-inc/powerhouse/commit/ee5eee7335))
+- **switchboard,connect:** declare the reactor store's storage facts ([28d9d364a9](https://github.com/powerhouse-inc/powerhouse/commit/28d9d364a9))
+- **connect:** retire the worker when a store does not close after a failed boot ([e1dfb3cd8f](https://github.com/powerhouse-inc/powerhouse/commit/e1dfb3cd8f))
+- **connect:** never reopen the reactor PGlite beside one that did not close ([731b50403d](https://github.com/powerhouse-inc/powerhouse/commit/731b50403d))
+- **connect:** warn when discarding the reactor PGlite does not close ([47b80bf87e](https://github.com/powerhouse-inc/powerhouse/commit/47b80bf87e))
+- **connect:** reopen the in-tab reactor store after a failed build ([4a4bb8318b](https://github.com/powerhouse-inc/powerhouse/commit/4a4bb8318b))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.51 (2026-10-10)
 
 ### 🚀 Features
