@@ -181,6 +181,7 @@ export {
 // own SharedWorker entry (a test, a future Node host) can assemble one.
 export {
   buildWorkerReactor,
+  type BuildWorkerReactorOptions,
   type BuiltWorkerReactor,
   type WorkerPackageImporters,
 } from "./worker/build-worker-reactor.js";
@@ -190,11 +191,7 @@ export {
   type MonitorWorkerHostOptions,
 } from "./worker/host.js";
 export {
-  builtWorkerConfigOf,
-  parseBuiltWorkerConfig,
   parseWorkerConstruct,
   toWorkerConstruct,
-  type BuiltWorkerConfig,
   type MonitorWorkerConstruct,
 } from "./worker/construct.js";
-export { dispatchSyncOp, toWireRemote } from "./worker/sync-ops.js";

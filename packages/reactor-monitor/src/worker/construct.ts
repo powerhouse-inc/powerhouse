@@ -4,7 +4,6 @@ import {
 } from "@powerhousedao/reactor";
 import type { WorkerPackageSource } from "@powerhousedao/reactor-browser/rpc";
 import { reactorStorageNamespace } from "../naming.js";
-import { DEFAULT_REACTOR_STORAGE } from "../store.js";
 import type { ReactorDescriptor, ReactorStorageConfig } from "../types.js";
 
 /**
@@ -175,84 +174,4 @@ export function toWorkerConstruct(
     construct.localSync = descriptor.sync.local;
   }
   return construct;
-}
-
-/**
- * The capability-relevant facts of whatever construct actually won the
- * build, reported over the "builtConfig" admin op (multi-reactor stage 2
- * review: a worker builds once and `ReactorHost` silently drops every
- * construct after the first, so a later-connecting tab's own descriptor is
- * not a safe thing to derive capabilities from).
- */
-export type BuiltWorkerConfig = {
-  storage: ReactorStorageConfig;
-  /**
-   * `BuiltReactor.syncChannelTypes`: the `ChannelConfig.type`s the worker's
-   * channel factory actually routes.
-   *
-   * Reported instead of the construct's `channelScheme`/`localSync` on purpose.
-   * Those two name a REQUEST, and the tab would have to re-run the builder's
-   * branches on them to guess what routes -- which is how the tab came to put
-   * `adoptLocalSyncPeer` on a handle whose worker had no local factory, and to
-   * withhold it from one that did. The worker reads the fact off the factory it
-   * built and sends that; the tab reads it, and neither side re-derives.
-   */
-  syncChannelTypes: readonly string[];
-  canSelfHeal: boolean;
-};
-
-/**
- * The {@link BuiltWorkerConfig} for the construct that won, plus the two facts
- * only the built reactor knows.
- */
-export function builtWorkerConfigOf(
-  construct: MonitorWorkerConstruct,
-  canSelfHeal: boolean,
-  syncChannelTypes: readonly string[],
-): BuiltWorkerConfig {
-  return {
-    storage: construct.storage ?? DEFAULT_REACTOR_STORAGE,
-    syncChannelTypes: [...syncChannelTypes],
-    canSelfHeal,
-  };
-}
-
-/**
- * Validates the untyped payload the "builtConfig" admin op answers with.
- * Reuses the same realm-boundary discipline as {@link parseWorkerConstruct}:
- * it arrives over `postMessage` from a worker that may be on a different
- * build, so nothing about its shape is guaranteed by the type system.
- */
-export function parseBuiltWorkerConfig(raw: unknown): BuiltWorkerConfig {
-  if (typeof raw !== "object" || raw === null) {
-    throw new Error(
-      "Invalid built worker config: expected an object from the builtConfig admin op",
-    );
-  }
-  const value = raw as Record<string, unknown>;
-  const storage = asStorage(value.storage) ?? DEFAULT_REACTOR_STORAGE;
-  // Required, not defaulted: a worker on a build that predates the routing
-  // report cannot answer this, and silently reading its silence as "routes
-  // nothing" would hide a real version skew behind a plausible-looking
-  // contract. Refusing the payload sends the tab down the conservative
-  // no-local fallback WITH a warning naming the worker.
-  const syncChannelTypes = asStringArray(
-    value.syncChannelTypes,
-    "syncChannelTypes",
-  );
-  if (!syncChannelTypes) {
-    throw new Error(
-      "Invalid built worker config: syncChannelTypes must be string[]; a worker that does not report the channel types it routes cannot be taken to serve any",
-    );
-  }
-  if (typeof value.canSelfHeal !== "boolean") {
-    throw new Error(
-      "Invalid built worker config: canSelfHeal must be a boolean",
-    );
-  }
-  return {
-    storage,
-    syncChannelTypes,
-    canSelfHeal: value.canSelfHeal,
-  };
 }

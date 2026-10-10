@@ -23,6 +23,11 @@ export type WorkerPackageImporters = {
   importSource?: (source: string) => Promise<Record<string, unknown>>;
 };
 
+export type BuildWorkerReactorOptions = {
+  /** The store's session is poisoned; the host asks its tabs to reload. */
+  onUnrecoverable?: (cause: Error) => void;
+};
+
 /** A reactor built inside the worker, plus its registry bookkeeping. */
 export type BuiltWorkerReactor = BuiltReactor & {
   construct: MonitorWorkerConstruct;
@@ -56,6 +61,7 @@ function modelKey(module: DocumentModelModule): string {
 export async function buildWorkerReactor(
   raw: unknown,
   importers?: WorkerPackageImporters,
+  options: BuildWorkerReactorOptions = {},
 ): Promise<BuiltWorkerReactor> {
   const construct = parseWorkerConstruct(raw);
 
@@ -92,6 +98,9 @@ export async function buildWorkerReactor(
     channelScheme: construct.channelScheme,
     localSync: construct.localSync,
     ...(loader ? { documentModelLoader: loader } : {}),
+    ...(options.onUnrecoverable
+      ? { onUnrecoverable: options.onUnrecoverable }
+      : {}),
   });
 
   const registry: IDocumentModelRegistry | undefined =

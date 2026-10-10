@@ -1,7 +1,10 @@
 import {
   GQL_CHANNEL_TYPE,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
   LOCAL_CHANNEL_TYPE,
   ReactorEventTypes,
+  UNKNOWN_STORAGE_FACTS,
+  type ReactorInspector,
 } from "@powerhousedao/reactor";
 import { createPortTransport } from "@powerhousedao/reactor-browser/rpc";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,10 +67,7 @@ describe("monitor worker host over a MessageChannel", () => {
   });
 
   it("builds the reactor from the tab's construct by the time it connects", async () => {
-    // `connectManagedWorkerReactor` awaits the "builtConfig" admin round-trip
-    // to derive truthful capabilities (multi-reactor stage 2 review), which
-    // forces the build to have completed by the time `beforeEach` resolves --
-    // unlike a bare op, which only buffers until a build settles.
+    // Connecting awaits info() over RPC, so the build has completed.
     expect(worker.current()?.construct).toMatchObject({
       name: "w",
       namespace: "reactor-monitor-w",
@@ -95,16 +95,16 @@ describe("monitor worker host over a MessageChannel", () => {
     expect(typeof snapshot.totalPending).toBe("number");
     expect(typeof snapshot.totalExecuting).toBe("number");
 
-    await tab.inspector.pauseQueue();
+    await tab.admin!.pauseQueue();
     expect((await tab.inspector.getQueueState()).isPaused).toBe(true);
-    await tab.inspector.resumeQueue();
+    await tab.admin!.resumeQueue();
     expect((await tab.inspector.getQueueState()).isPaused).toBe(false);
   });
 
   it("serves raw SQL against the worker's own store", async () => {
     await tab.client.createEmpty(DRIVE_TYPE);
 
-    await expect(tab.dbQuery.queryDb("select 1 as n")).resolves.toEqual([
+    await expect(tab.dbQuery!.queryDb("select 1 as n")).resolves.toEqual([
       { n: 1 },
     ]);
   });
@@ -118,13 +118,28 @@ describe("monitor worker host over a MessageChannel", () => {
     expect(tab.syncManager.list()).toEqual([]);
   });
 
-  // W3.0: `descriptor("w")` is connect-mode, and the worker's built config
-  // reports `localSync: false` for it. The handle reads its local capability
-  // off the capability contract rather than off that flag, so a connect-mode
-  // worker reactor is a valid end of a brokered link -- which it has to be
-  // for a browser reactor to sync with a Switchboard AND a sibling worker.
+  it("serves the sync reads and reconfiguration rows over the op channel", async () => {
+    await expect(tab.syncManager.inspectRemotes()).resolves.toEqual([]);
+    await expect(tab.syncManager.listHolds()).resolves.toEqual([]);
+    await expect(
+      tab.syncAdmin.resetChannel("no-such-remote"),
+    ).rejects.toThrow();
+  });
+
+  it("reports the worker reactor's info read over RPC", () => {
+    expect(tab.reach).toEqual({ hosting: "worker", inspection: "rpc" });
+    expect(tab.info).toEqual({
+      storage: IN_MEMORY_PGLITE_STORAGE_FACTS,
+      workflows: false,
+      syncChannels: [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE],
+      access: { admin: true, sql: true },
+    });
+    expect(tab.admin).toBeDefined();
+    expect(tab.dbQuery).toBeDefined();
+  });
+
   it("declares both sync channels for a connect-mode worker reactor and exposes the link handles", () => {
-    expect(tab.capabilities.syncChannels).toEqual([
+    expect(tab.info.syncChannels).toEqual([
       GQL_CHANNEL_TYPE,
       LOCAL_CHANNEL_TYPE,
     ]);
@@ -201,7 +216,7 @@ describe("monitor worker host over a MessageChannel", () => {
     other.port2.close();
   });
 
-  it("derives a later tab's capabilities from the FIRST built construct, and flags the mismatch", async () => {
+  it("reports a later tab the FIRST built reactor's info, and flags the mismatch", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const mismatchHost = createMonitorWorkerHost();
     const firstChannel = new MessageChannel();
@@ -217,25 +232,19 @@ describe("monitor worker host over a MessageChannel", () => {
 
     const secondChannel = new MessageChannel();
     const secondDispose = mismatchHost.host.connectPort(secondChannel.port1);
-    // The SECOND tab connects with a plain gql descriptor for the SAME
-    // worker name -- ReactorHost already built from the first hello, so this
-    // construct is silently dropped (W0.2). The handle must not pretend it
-    // got what IT asked for.
+    // The worker builds once, so this sync-less construct is dropped.
     const second = await connectManagedWorkerReactor(
-      descriptor("mismatch"),
+      descriptor("mismatch", { sync: { channelScheme: null } }),
       createPortTransport(secondChannel.port2),
       { buildId: "test-build" },
     );
 
     try {
-      expect(first.capabilities.syncChannels).toEqual([LOCAL_CHANNEL_TYPE]);
+      expect(first.info.syncChannels).toEqual([LOCAL_CHANNEL_TYPE]);
       expect(first.descriptorMismatch).toBe(false);
       expect(first.adoptLocalSyncPeer).toBeDefined();
 
-      // The SECOND handle's capabilities reflect the FIRST, built construct
-      // -- not its own gql request -- and the disagreement is flagged rather
-      // than silently misreported.
-      expect(second.capabilities.syncChannels).toEqual([LOCAL_CHANNEL_TYPE]);
+      expect(second.info.syncChannels).toEqual([LOCAL_CHANNEL_TYPE]);
       expect(second.descriptorMismatch).toBe(true);
       expect(second.adoptLocalSyncPeer).toBeDefined();
       expect(warn).toHaveBeenCalled();
@@ -264,11 +273,15 @@ describe("monitor worker host over a MessageChannel", () => {
   it("withholds the link handles from a worker that reports no local channel type", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const stale = createMonitorWorkerHost({
-      // The reactor itself is the real one; only what it REPORTS routing is
-      // narrowed, which is exactly what a pre-W3.0 worker's answer looks like.
-      build: async (construct, importers) => {
-        const built = await buildWorkerReactor(construct, importers);
-        return { ...built, syncChannelTypes: [GQL_CHANNEL_TYPE] };
+      // A real reactor; only what its info() reports routing is narrowed.
+      build: async (construct, importers, options) => {
+        const built = await buildWorkerReactor(construct, importers, options);
+        const inspector = Object.create(built.inspector) as ReactorInspector;
+        inspector.info = async () => ({
+          ...(await built.inspector.info()),
+          syncChannels: [GQL_CHANNEL_TYPE],
+        });
+        return { ...built, inspector };
       },
     });
     const staleChannel = new MessageChannel();
@@ -283,7 +296,7 @@ describe("monitor worker host over a MessageChannel", () => {
     );
 
     try {
-      expect(staleTab.capabilities.syncChannels).toEqual([GQL_CHANNEL_TYPE]);
+      expect(staleTab.info.syncChannels).toEqual([GQL_CHANNEL_TYPE]);
       expect(staleTab.adoptLocalSyncPeer).toBeUndefined();
       expect(staleTab.removeLocalSyncPeer).toBeUndefined();
 
@@ -316,29 +329,26 @@ describe("monitor worker host over a MessageChannel", () => {
     });
     const failingChannel = new MessageChannel();
     const failingDispose = failing.host.connectPort(failingChannel.port1);
-    // connectManagedWorkerReactor's own "builtConfig" fetch hits this same
-    // boot failure and falls back to the connecting descriptor rather than
-    // failing provisioning on it -- the handle still connects.
+    // The info() read fails too; the handle still connects, on unknown facts.
     const failingTab = await connectManagedWorkerReactor(
       descriptor("fails"),
       createPortTransport(failingChannel.port2),
     );
 
-    // Inspector and db ops await the client and re-throw the boot failure.
-    // (A plain `req` sent before the first hello settles is buffered by
-    // ReactorHost and never answered on a failed build — see the W0.2
-    // report; that is upstream behaviour, not this host's.)
+    // Inspector ops await the client and re-throw the boot failure.
     await expect(failingTab.inspector.getQueueState()).rejects.toThrow(/boom/);
-    await expect(failingTab.dbQuery.queryDb("select 1")).rejects.toThrow(
-      /boom/,
-    );
     expect(failing.current()).toBeUndefined();
 
-    // And the capabilities that handle fell back on are CONSERVATIVE about
-    // `local`: the descriptor asked for connect mode, which would route local
-    // peers, but nothing was verified, so no adopt handle is offered. A wrong
-    // `true` here is only discovered after a port has been transferred.
-    expect(failingTab.capabilities.syncChannels).toEqual([GQL_CHANNEL_TYPE]);
+    // Nothing was verified, so no lever, no SQL and no adopt handle is offered.
+    expect(failingTab.info).toEqual({
+      storage: UNKNOWN_STORAGE_FACTS,
+      workflows: false,
+      syncChannels: [],
+      access: { admin: false, sql: false },
+    });
+    expect(failingTab.descriptorMismatch).toBe(false);
+    expect(failingTab.admin).toBeUndefined();
+    expect(failingTab.dbQuery).toBeUndefined();
     expect(failingTab.adoptLocalSyncPeer).toBeUndefined();
     expect(failingTab.removeLocalSyncPeer).toBeUndefined();
 

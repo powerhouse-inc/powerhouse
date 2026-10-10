@@ -1,6 +1,10 @@
 import {
   DocumentModelRegistry,
+  LOCAL_CHANNEL_TYPE,
+  READ_ONLY_ACCESS,
+  UNKNOWN_STORAGE_FACTS,
   type ReactorFeatureFlags,
+  type ReactorInfo,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
@@ -17,25 +21,20 @@ import {
   type IRpcTransport,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
-import { LOCAL_CHANNEL_TYPE } from "@powerhousedao/reactor";
 import {
-  reactorCapabilities,
-  supportsSyncChannel,
-  unverifiedReactorCapabilities,
-  type ReactorCapabilities,
-} from "../capabilities.js";
+  toMonitorInspector,
+  toMonitorSyncManager,
+} from "../monitor-inspector.js";
 import { reactorWorkerName } from "../naming.js";
+import { DEFAULT_REACTOR_STORAGE } from "../store.js";
+import { isLocalOnlySync } from "../sync-mode.js";
 import type { AdoptLocalSyncPeerLink } from "../sync/types.js";
 import type {
   ManagedWorkerReactor,
   MonitorWorkerClientModule,
   ReactorDescriptor,
 } from "../types.js";
-import {
-  parseBuiltWorkerConfig,
-  toWorkerConstruct,
-  type BuiltWorkerConfig,
-} from "./construct.js";
+import { toWorkerConstruct } from "./construct.js";
 import { ReactorMonitorVersion } from "../version.js";
 import { reactorMonitorWorkerUrl } from "../worker-url.js";
 
@@ -62,48 +61,26 @@ function resolveWorkerUrl(descriptor: ReactorDescriptor): URL {
   return reactorMonitorWorkerUrl();
 }
 
-/**
- * `ReactorCapabilities` for the construct that WON the build, synthesized
- * from the built-config report rather than from any connecting descriptor --
- * the whole point being that a later tab's descriptor must not leak into
- * what this handle claims the reactor can do (multi-reactor stage 2 review).
- *
- * The report's own `syncChannelTypes` and `canSelfHeal` are passed through as
- * built facts; the synthetic descriptor carries only what is left (the hosting
- * kind and the store), so there is no sync configuration here for anything to
- * be re-derived from.
- */
-function capabilitiesOfBuiltConfig(
-  name: string,
-  builtConfig: BuiltWorkerConfig,
-): ReactorCapabilities {
-  return reactorCapabilities(
-    {
-      kind: "worker",
-      name,
-      storage: builtConfig.storage,
-    },
-    {
-      canSelfHeal: builtConfig.canSelfHeal,
-      syncChannelTypes: builtConfig.syncChannelTypes,
-    },
-  );
-}
+/** Facts for a worker whose build failed: nothing verified, nothing offered. */
+const UNVERIFIED_INFO: ReactorInfo = Object.freeze({
+  storage: UNKNOWN_STORAGE_FACTS,
+  workflows: false,
+  syncChannels: [],
+  access: READ_ONLY_ACCESS,
+});
 
-/**
- * Whether the connecting descriptor asked for a different storage/sync shape
- * than what the worker actually built -- the two facts a later tab's
- * descriptor can disagree with the FIRST, winning one on, because
- * `ReactorHost` builds once and silently drops every construct after the
- * first (multi-reactor stage 2 review).
- */
+/** Whether the worker built a different storage or local channel than asked. */
 function describesDifferentBuild(
-  requested: ReactorCapabilities,
-  built: ReactorCapabilities,
+  descriptor: ReactorDescriptor,
+  info: ReactorInfo,
 ): boolean {
+  const persistence = (descriptor.storage ?? DEFAULT_REACTOR_STORAGE).kind;
+  const wantsLocal =
+    isLocalOnlySync(descriptor.sync?.local) ||
+    descriptor.sync?.channelScheme !== null;
   return (
-    requested.storage.kind !== built.storage.kind ||
-    requested.syncChannels.join(",") !== built.syncChannels.join(",")
+    persistence !== info.storage.persistence ||
+    wantsLocal !== info.syncChannels.includes(LOCAL_CHANNEL_TYPE)
   );
 }
 
@@ -207,64 +184,30 @@ export async function connectManagedWorkerReactor(
     },
   };
 
-  // The construct that actually won the build, not this connection's own
-  // descriptor: a later tab's hello can name a different storage/sync shape
-  // than the first, and `ReactorHost` builds once and silently drops it
-  // (multi-reactor stage 2 review). A failed fetch falls back to a
-  // CONSERVATIVE reading of the connecting descriptor rather than failing
-  // provisioning on it, so a build failure keeps surfacing where it already
-  // does -- at the first op (see `worker-host.test.ts`'s "surfaces a failed
-  // build to the ops that follow it") -- instead of here too.
-  let builtConfig: BuiltWorkerConfig | undefined;
+  let info: ReactorInfo;
+  let verified = true;
   try {
-    builtConfig = parseBuiltWorkerConfig(await adminClient.getBuiltConfig());
+    info = await inspector.info();
   } catch (error) {
+    verified = false;
+    info = UNVERIFIED_INFO;
     console.warn(
-      `[reactor-monitor] could not read "${descriptor.name}"'s built configuration; ` +
-        `falling back to the connecting descriptor's capabilities, with no local sync channel claimed:`,
+      `[reactor-monitor] could not read "${descriptor.name}"'s info; offering no levers and no local sync:`,
       error,
     );
   }
-
-  const requestedCapabilities = reactorCapabilities(descriptor);
-  const capabilities = builtConfig
-    ? capabilitiesOfBuiltConfig(descriptor.name, builtConfig)
-    : unverifiedReactorCapabilities(descriptor);
-  // True only when a LATER tab's descriptor disagrees with the FIRST,
-  // winning one -- never for the tab whose descriptor was actually built.
-  const descriptorMismatch = builtConfig
-    ? describesDifferentBuild(requestedCapabilities, capabilities)
-    : false;
+  const descriptorMismatch =
+    verified && describesDifferentBuild(descriptor, info);
   if (descriptorMismatch) {
     console.warn(
-      `[reactor-monitor] "${descriptor.name}" connected with a descriptor that disagrees with the ` +
-        `worker's already-built reactor (requested storage "${requestedCapabilities.storage.kind}" / ` +
-        `sync [${requestedCapabilities.syncChannels.join(", ")}], built storage "${capabilities.storage.kind}" / ` +
-        `sync [${capabilities.syncChannels.join(", ")}]); this handle's capabilities describe what was ` +
-        `actually built, not this connection's request.`,
+      `[reactor-monitor] "${descriptor.name}" connected with a descriptor that disagrees with the worker's built reactor ` +
+        `(built storage "${info.storage.persistence}", sync [${info.syncChannels.join(", ")}]); its info describes what was built.`,
     );
   }
 
-  // Gated on the channel types the worker REPORTED routing, through the one
-  // capability field: `capabilities` comes from the construct that WON the
-  // build (see `descriptorMismatch` above), and its syncChannels are the
-  // worker's own `syncChannelTypes` rather than anything re-derived from a
-  // requested sync mode. That is what makes this survive version skew in both
-  // directions -- a connect-mode worker DOES serve brokered peers (W3.0) and
-  // must expose the handles, while a worker that reports no local type (an
-  // older build, or one that really has no local factory) must not get them.
-  // Without it, linkLocalSync's requireLocalCapable() saw two methods on every
-  // worker reactor that asked for local sync and only found out the worker had
-  // none after a port had been opened and transferred: a failure with side
-  // effects where a fail-fast belonged.
-  const localSync = supportsSyncChannel(capabilities, LOCAL_CHANNEL_TYPE)
+  const localSync = info.syncChannels.includes(LOCAL_CHANNEL_TYPE)
     ? {
-        /**
-         * Transfers one end of the broker's MessageChannel into the worker and
-         * adds the local remote there via the adopt-sync-peer op. The port is
-         * MOVED, not cloned; this handle must not touch it afterwards. The
-         * transferred-MessagePort path needs a real browser (W1.3).
-         */
+        /** Moves (not clones) one end of the broker's channel into the worker. */
         adoptLocalSyncPeer: (link: AdoptLocalSyncPeerLink): Promise<void> =>
           sendAdoptSyncPeer(
             router,
@@ -277,12 +220,6 @@ export async function connectManagedWorkerReactor(
             },
             link.port as unknown as MessagePort,
           ),
-        /**
-         * Removes the local remote AND unregisters its port inside the worker,
-         * over the remove-sync-peer op. The registry lives in the worker realm,
-         * so the tab cannot unregister anything itself; removing the remote
-         * over the plain sync-op channel left a dead port registered there.
-         */
         removeLocalSyncPeer: (
           remoteName: string,
           peerId: string,
@@ -296,14 +233,22 @@ export async function connectManagedWorkerReactor(
   return {
     name: descriptor.name,
     kind: "worker",
-    capabilities,
+    reach: { hosting: "worker", inspection: "rpc" },
+    info,
     descriptorMismatch,
     client,
-    inspector,
-    dbQuery: {
-      queryDb: (sql, params) => inspector.queryReactorDb(sql, params),
-    },
-    syncManager,
+    inspector: toMonitorInspector(inspector),
+    ...(info.access.admin ? { admin: inspector } : {}),
+    ...(info.access.sql
+      ? {
+          dbQuery: {
+            queryDb: (sql: string, params?: unknown[]) =>
+              inspector.queryReactorDb(sql, params),
+          },
+        }
+      : {}),
+    syncManager: toMonitorSyncManager(syncManager, syncManager),
+    syncAdmin: syncManager,
     events: eventBus,
     module,
     ...(localSync ?? {}),
