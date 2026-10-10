@@ -55,7 +55,7 @@ export function toMonitorSyncManager(
   const reads = toMonitorSyncInspector(inspector);
   return new Proxy(syncManager, {
     get(target, property) {
-      if (property in reads) {
+      if (Object.hasOwn(reads, property)) {
         return reads[property as keyof MonitorSyncInspector];
       }
       const value: unknown = Reflect.get(target, property, target);
