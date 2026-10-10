@@ -47,6 +47,12 @@
       "browser": "./dist/browser/editors/index.js",
       "node": "./dist/node/editors/index.mjs"
     },
+    "./editors/runtime": {
+      "source": "./editors/runtime/index.ts",
+      "types": "./dist/types/editors/runtime/index.d.ts",
+      "browser": "./dist/browser/editors/runtime/index.js",
+      "node": "./dist/node/editors/runtime/index.mjs"
+    },
     "./pieces": {
       "source": "./pieces/index.ts",
       "types": "./dist/types/pieces/index.d.ts",
