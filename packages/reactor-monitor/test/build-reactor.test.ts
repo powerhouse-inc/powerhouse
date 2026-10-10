@@ -1,7 +1,9 @@
 import {
   IN_MEMORY_PGLITE_STORAGE_FACTS,
   PGLITE_IDB_STORAGE_FACTS,
+  PGliteSessionPoisonedError,
 } from "@powerhousedao/reactor";
+import { sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildMonitorReactor, type BuiltReactor } from "../src/index.js";
 import type * as Store from "../src/store.js";
@@ -38,9 +40,51 @@ describe("buildMonitorReactor", () => {
   }
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     for (const reactor of built.splice(0)) {
       await reactor.shutdown();
     }
+  });
+
+  it("reports a poisoned memory store unhealthy and unrecoverable", async () => {
+    const unrecoverable: Error[] = [];
+    const reactor = await buildMonitorReactor({
+      namespace: "build-poisoned-memory",
+      storage: { kind: "memory" },
+      onUnrecoverable: (cause) => unrecoverable.push(cause),
+    });
+    built.push(reactor);
+    const database = reactor.module.reactorModule!.database;
+    // A rollback the session cannot run leaves it poisoned.
+    const { pg } = reactor;
+    const query = pg.query.bind(pg);
+    const exec = pg.exec.bind(pg);
+    const refuse = (text: string) => /^\s*rollback/i.test(text);
+    vi.spyOn(pg, "query").mockImplementation((text, params) =>
+      refuse(text)
+        ? Promise.reject(new Error('cannot drop active portal ""'))
+        : query(text, params),
+    );
+    vi.spyOn(pg, "exec").mockImplementation((text) =>
+      refuse(text)
+        ? Promise.reject(new Error('cannot drop active portal ""'))
+        : exec(text),
+    );
+
+    await database
+      .transaction()
+      .execute(async (trx) => {
+        await sql`select 1`.execute(trx);
+        throw new Error("job failed");
+      })
+      .catch(() => undefined);
+    await expect(sql`select 1`.execute(database)).rejects.toThrow(
+      PGliteSessionPoisonedError,
+    );
+
+    expect(unrecoverable).toHaveLength(1);
+    expect(unrecoverable[0].message).toContain("cannot drop active portal");
+    expect((await reactor.inspector.getStorageHealth()).healthy).toBe(false);
   });
 
   it("hands the inspector the memory store's own health source", async () => {
