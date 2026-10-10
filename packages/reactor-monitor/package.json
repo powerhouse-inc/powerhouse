@@ -1,19 +1,17 @@
 {
   "name": "@powerhousedao/reactor-monitor",
-  "version": "6.2.3-dev.40",
+  "version": "6.2.3-dev.50",
   "description": "Reactor provisioning and inspection APIs for the reactor-monitor lab bench (multi-reactor initiative, stage 0).",
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse",
     "directory": "packages/reactor-monitor"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "files": [
     "dist"
