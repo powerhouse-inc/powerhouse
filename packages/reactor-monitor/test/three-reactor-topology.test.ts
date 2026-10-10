@@ -66,7 +66,7 @@ async function operationCount(
   reactor: ManagedReactor,
   driveId: string,
 ): Promise<number> {
-  const rows = await reactor.dbQuery.queryDb(
+  const rows = await reactor.dbQuery!.queryDb(
     `SELECT COUNT(*)::int AS count FROM "${REACTOR_SCHEMA}"."Operation" WHERE "documentId" = $1`,
     [driveId],
   );
@@ -221,10 +221,9 @@ describe("three-reactor mixed topology (A <-> B <-> C on one drive)", () => {
       expect(inspection.remoteName).toContain("local:");
     }
 
-    // Each reactor's capability contract is the one the router would read.
     for (const reactor of trio) {
-      expect(reactor.capabilities.syncChannels).toEqual(["local"]);
-      expect(reactor.capabilities.hosting).toBe("in-process");
+      expect(reactor.info.syncChannels).toEqual(["local"]);
+      expect(reactor.reach.hosting).toBe("in-process");
     }
   }, 120_000);
 

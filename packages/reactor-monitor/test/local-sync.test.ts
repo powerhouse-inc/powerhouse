@@ -3,7 +3,6 @@ import {
   linkLocalSync,
   provisionInProcess,
   ReactorMonitorRegistry,
-  supportsSyncChannel,
   type ManagedInProcessReactor,
 } from "../src/index.js";
 import { descriptor, folderNames, hasDrive, nodeChannel } from "./helpers.js";
@@ -13,6 +12,7 @@ import {
   GQL_CHANNEL_TYPE,
   LOCAL_CHANNEL_TYPE,
   POLLING_CHANNEL_TYPE,
+  RemotePersistence,
   type MessagePortLike,
 } from "@powerhousedao/reactor";
 
@@ -138,7 +138,7 @@ describe("brokered local sync between two in-process reactors", () => {
     const connect = await provisionInProcess(descriptor("mixed-connect"));
     provisioned.push(connect);
 
-    expect(connect.capabilities.syncChannels).toEqual([
+    expect(connect.info.syncChannels).toEqual([
       GQL_CHANNEL_TYPE,
       LOCAL_CHANNEL_TYPE,
     ]);
@@ -266,18 +266,14 @@ describe("brokered local sync between two in-process reactors", () => {
     );
     provisioned.push(switchboard);
 
-    expect(switchboard.capabilities.syncChannels).toEqual([
+    expect(switchboard.info.syncChannels).toEqual([
       POLLING_CHANNEL_TYPE,
       LOCAL_CHANNEL_TYPE,
     ]);
     // The two UI gates, as the Sync tab reads them: no add-remote form, but a
     // live link panel.
-    expect(
-      supportsSyncChannel(switchboard.capabilities, GQL_CHANNEL_TYPE),
-    ).toBe(false);
-    expect(
-      supportsSyncChannel(switchboard.capabilities, LOCAL_CHANNEL_TYPE),
-    ).toBe(true);
+    expect(switchboard.info.syncChannels).not.toContain(GQL_CHANNEL_TYPE);
+    expect(switchboard.info.syncChannels).toContain(LOCAL_CHANNEL_TYPE);
 
     const drive = await switchboard.client.drives.create({
       global: { name: "Switchboard" },
@@ -311,13 +307,13 @@ describe("brokered local sync between two in-process reactors", () => {
     );
     provisioned.push(island);
 
-    expect(island.capabilities.syncChannels).toEqual([]);
+    expect(island.info.syncChannels).toEqual([]);
     await expect(
       linkLocalSync(local, island, {
         driveId: "nope",
         createChannel: nodeChannel,
       }),
-    ).rejects.toThrow(/declare sync channels \[none at all\]/);
+    ).rejects.toThrow(/routes sync channels \[none at all\]/);
   });
 
   it("refuses before opening a port, so a rejected link leaves no channel behind", async () => {
@@ -340,7 +336,7 @@ describe("brokered local sync between two in-process reactors", () => {
     expect(opened).toBe(0);
   });
 
-  it("keeps the brokered remote out of durable storage", async () => {
+  it("stores the brokered remote as session-scoped", async () => {
     const a = await host("eph-a");
     const b = await host("eph-b");
 
@@ -353,11 +349,14 @@ describe("brokered local sync between two in-process reactors", () => {
     expect(a.syncManager?.list().map((r) => r.meta.name)).toEqual([
       handle.remoteNameA,
     ]);
-    // Session-scoped: live in memory, absent from the storage a restart reads.
+    // The next startup removes a session record instead of rehydrating it.
     const storageA = a.module.reactorModule!.syncModule!.remoteStorage;
     const storageB = b.module.reactorModule!.syncModule!.remoteStorage;
-    expect(await storageA.list()).toEqual([]);
-    expect(await storageB.list()).toEqual([]);
+    for (const storage of [storageA, storageB]) {
+      expect(
+        (await storage.list()).map((record) => record.options.persistence),
+      ).toEqual([RemotePersistence.Session]);
+    }
 
     await handle.unlink();
   }, 60_000);

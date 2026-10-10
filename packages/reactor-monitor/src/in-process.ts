@@ -1,6 +1,12 @@
-import { messagePortTransport } from "@powerhousedao/reactor";
+import {
+  LOCAL_CHANNEL_TYPE,
+  messagePortTransport,
+} from "@powerhousedao/reactor";
 import { buildMonitorReactor } from "./build-reactor.js";
-import { reactorCapabilities } from "./capabilities.js";
+import {
+  toMonitorInspector,
+  toMonitorSyncManager,
+} from "./monitor-inspector.js";
 import { reactorStorageNamespace } from "./naming.js";
 import {
   assertCollectionIdParts,
@@ -13,19 +19,15 @@ import type {
   ReactorDescriptor,
 } from "./types.js";
 
-/**
- * Provisions a reactor on the current thread.
- *
- * The no-worker fallback (plan stage 2) and the path the library's own tests
- * exercise: the whole graph is reachable directly, so the inspector is a
- * `ReactorInspector` over live components rather than an RPC proxy, and
- * `dbQuery` goes straight at the PGlite handle.
- *
- * `descriptor.packages` is ignored — package loading is the worker path's
- * mechanism; in-process callers pass modules in `documentModelModules`.
- */
+export type ProvisionInProcessOptions = {
+  /** The reactor's store was poisoned; the handle is dead and should be killed. */
+  onUnrecoverable?: (cause: Error) => void;
+};
+
+/** Ignores `descriptor.packages`; pass modules in `documentModelModules`. */
 export async function provisionInProcess(
   descriptor: ReactorDescriptor,
+  options: ProvisionInProcessOptions = {},
 ): Promise<ManagedInProcessReactor> {
   const namespace = reactorStorageNamespace(descriptor.name);
   const built = await buildMonitorReactor({
@@ -39,24 +41,33 @@ export async function provisionInProcess(
     jwtHandler: descriptor.sync?.jwtHandler,
     signer: descriptor.signer,
     attachments: descriptor.attachments,
+    ...(options.onUnrecoverable
+      ? { onUnrecoverable: options.onUnrecoverable }
+      : {}),
   });
 
+  let info;
+  try {
+    info = await built.inspector.info();
+  } catch (error) {
+    await built.shutdown();
+    throw error;
+  }
+
   const reactorModule = built.module.reactorModule;
-  const syncManager = reactorModule?.syncModule?.syncManager;
+  const syncModule = reactorModule?.syncModule;
+  const syncManager = syncModule?.syncManager;
+  const syncInspector = syncModule?.syncInspector;
+  const syncAdmin = syncModule?.syncAdmin;
   const localChannelPorts = built.localChannelPorts;
-  // Present whenever a sync module exists -- the local-only mode AND a gql
-  // scheme, which composes a local factory onto itself (W3.0). The broker
-  // (linkLocalSync) hands this reactor one end of the channel directly, so an
-  // in-process adopt needs no transfer -- the node/browser port is wrapped and
-  // registered, then the local remote is added.
   const localSync =
-    localChannelPorts && syncManager
+    localChannelPorts &&
+    syncManager &&
+    info.syncChannels.includes(LOCAL_CHANNEL_TYPE)
       ? {
           adoptLocalSyncPeer: async (
             link: AdoptLocalSyncPeerLink,
           ): Promise<void> => {
-            // Checked here too, not only in linkLocalSync: adoptLocalSyncPeer
-            // is a public handle method, so a caller can reach it directly.
             assertCollectionIdParts(
               link.collectionId.driveId,
               link.collectionId.branch,
@@ -95,14 +106,17 @@ export async function provisionInProcess(
   return {
     name: descriptor.name,
     kind: "in-process",
-    capabilities: reactorCapabilities(descriptor, {
-      canSelfHeal: built.canSelfHeal,
-      syncChannelTypes: built.syncChannelTypes,
-    }),
+    reach: { hosting: "in-process", inspection: "direct" },
+    info,
     client: built.module.client,
-    inspector: built.inspector,
+    inspector: toMonitorInspector(built.inspector),
+    admin: built.inspector,
     dbQuery: built.dbQuery,
-    syncManager,
+    syncManager:
+      syncManager && syncInspector
+        ? toMonitorSyncManager(syncManager, syncInspector)
+        : undefined,
+    ...(syncAdmin ? { syncAdmin } : {}),
     events: built.module.eventBus,
     module,
     ...(built.attachments ? { attachments: built.attachments.managed } : {}),

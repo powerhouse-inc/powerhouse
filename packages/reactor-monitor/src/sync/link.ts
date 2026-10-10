@@ -8,7 +8,6 @@ import {
   linkLocalAttachments,
   type AttachmentLinkHandle,
 } from "../attachments/link.js";
-import { supportsSyncChannel } from "../capabilities.js";
 import type { ManagedReactor } from "../types.js";
 import {
   assertCollectionIdParts,
@@ -87,33 +86,17 @@ function resolveCollectionId(options: LinkLocalSyncOptions): DriveCollectionId {
   );
 }
 
-/**
- * Refuses a reactor whose capability contract does not include the `local`
- * sync channel (multi-reactor stage 2).
- *
- * The check is on {@link ReactorCapabilities.syncChannels} rather than on the
- * presence of the adopt/remove methods, so the declared contract -- what a
- * router would read -- is the thing enforced, in one place, and cannot drift
- * from what linking actually accepts. The method check stays behind it as an
- * invariant assertion: both are reads of the same field, so a disagreement is
- * a bug in provisioning, not a user error, and it is worth saying so before a
- * port is opened.
- *
- * Since W3.0 this admits a gql-scheme reactor too: it composes a local channel
- * factory onto its scheme, so the only reactor left that cannot be linked is a
- * `channelScheme: null` island.
- */
+/** The contract check first, then the invariant that provisioning agreed with it. */
 function requireLocalCapable(reactor: ManagedReactor): void {
-  if (!supportsSyncChannel(reactor.capabilities, LOCAL_CHANNEL_TYPE)) {
-    const declared =
-      reactor.capabilities.syncChannels.join(", ") || "none at all";
+  if (!reactor.info.syncChannels.includes(LOCAL_CHANNEL_TYPE)) {
+    const declared = reactor.info.syncChannels.join(", ") || "none at all";
     throw new Error(
-      `Reactor "${reactor.name}" has no local sync channel: its capabilities declare sync channels [${declared}], so it cannot adopt a brokered local peer`,
+      `Reactor "${reactor.name}" has no local sync channel: it routes sync channels [${declared}], so it cannot adopt a brokered local peer`,
     );
   }
   if (!reactor.adoptLocalSyncPeer || !reactor.removeLocalSyncPeer) {
     throw new Error(
-      `Reactor "${reactor.name}" declares the "local" sync channel but has no adoptLocalSyncPeer/removeLocalSyncPeer handle; its capabilities and its provisioning disagree`,
+      `Reactor "${reactor.name}" routes the "local" sync channel but has no adoptLocalSyncPeer/removeLocalSyncPeer handle; its info and its provisioning disagree`,
     );
   }
 }

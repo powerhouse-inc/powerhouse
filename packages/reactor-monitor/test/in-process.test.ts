@@ -1,4 +1,10 @@
-import { ChannelScheme, ReactorEventTypes } from "@powerhousedao/reactor";
+import {
+  ChannelScheme,
+  GQL_CHANNEL_TYPE,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  LOCAL_CHANNEL_TYPE,
+  ReactorEventTypes,
+} from "@powerhousedao/reactor";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   provision,
@@ -54,10 +60,26 @@ describe("provisionInProcess", () => {
     expect(typeof snapshot.totalExecuting).toBe("number");
     expect(Array.isArray(snapshot.pendingJobs)).toBe(true);
 
-    await reactor.inspector.pauseQueue();
+    await reactor.admin.pauseQueue();
     expect((await reactor.inspector.getQueueState()).isPaused).toBe(true);
-    await reactor.inspector.resumeQueue();
+    await reactor.admin.resumeQueue();
     expect((await reactor.inspector.getQueueState()).isPaused).toBe(false);
+  });
+
+  it("reports its storage facts, sync channels and admin access", async () => {
+    const reactor = await host("info");
+
+    expect(reactor.reach).toEqual({
+      hosting: "in-process",
+      inspection: "direct",
+    });
+    expect(reactor.info).toEqual({
+      storage: IN_MEMORY_PGLITE_STORAGE_FACTS,
+      workflows: false,
+      syncChannels: [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE],
+      access: { admin: true, sql: true },
+    });
+    expect(await reactor.inspector.info()).toEqual(reactor.info);
   });
 
   it("exposes the live event bus", async () => {

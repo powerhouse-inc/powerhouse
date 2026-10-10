@@ -1,18 +1,25 @@
 import type {
   ChannelScheme,
   IEventBus,
-  IInspector,
   IDocumentModelRegistry,
+  IInspector,
+  IInspectorAdmin,
   InProcessReactorClientModule,
   InProcessReactorModule,
+  InspectorAccess,
   IReactorClient,
   IReactorDbQuery,
+  ISyncAdmin,
+  ISyncInspector,
+  ISyncManager,
   JwtHandler,
   ReactorFeatureFlags,
+  ReactorInfo,
+  WireDeadLetterPage,
+  WireQueueState,
 } from "@powerhousedao/reactor";
 import type {
   IInspectorProxy,
-  InspectableSyncManager,
   IWorkerAdminClient,
   WorkerInspectorInfo,
   WorkerPackageSource,
@@ -27,11 +34,6 @@ import type {
   ManagedAttachments,
   ReactorAttachmentsConfig,
 } from "./attachments/types.js";
-import type { ReactorCapabilities } from "./capabilities.js";
-import type {
-  RemoteInspectionInfo,
-  RemoteInspectorClient,
-} from "./remote/client.js";
 import type { RemoteInspectionHeaders } from "./remote/transport.js";
 import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 
@@ -198,92 +200,87 @@ export interface MonitorInProcessClientModule extends InProcessReactorClientModu
   reactorModule: MonitorInProcessReactorModule | undefined;
 }
 
-/**
- * `WorkerReactorClientModule`-shaped: the tab-side view of a worker reactor.
- * Declared here rather than imported from `@powerhousedao/reactor-browser`'s
- * root barrel so this package depends only on the Connect-free `/rpc` entry.
- */
+/** Sync manager, reads and repair levers, local or proxied. */
+export type FullSyncManager = ISyncManager & ISyncInspector & ISyncAdmin;
+
+/** The tab-side view of a worker reactor, from the Connect-free `/rpc` entry. */
 export interface MonitorWorkerClientModule {
   kind: "worker";
   client: IReactorClient;
   adminClient: IWorkerAdminClient;
-  /** `IInspector` plus the proxy's `queryReactorDb` raw-SQL method. */
   inspector: IInspectorProxy;
   reactorModule: {
     documentModelRegistry: IDocumentModelRegistry;
-    syncModule: { syncManager: InspectableSyncManager };
+    syncModule: { syncManager: FullSyncManager };
     eventBus: IEventBus;
   };
   /** Loads (or replaces) URL-addressed packages in the worker's registry. */
   registerPackages: (sources: WorkerPackageSource[]) => Promise<void>;
 }
 
+/** Where a reactor runs and how the monitor reaches its inspection surface. */
+export type MonitorReach = {
+  readonly hosting: ReactorKind;
+  readonly inspection: "direct" | "rpc" | "none";
+};
+
+/** `ReactorInfo`; a remote serves `access: null` to a caller that is not an admin. */
+export type MonitorReactorInfo = Omit<ReactorInfo, "access"> & {
+  readonly access: InspectorAccess | null;
+};
+
+/** `IInspector` with the reads a remote can only serve as wire records. */
+export type MonitorInspector = Omit<IInspector, "info" | "getQueueState"> & {
+  info(): Promise<MonitorReactorInfo>;
+  getQueueState(): Promise<WireQueueState>;
+};
+
+/** `ISyncInspector` with dead letters as wire records. */
+export type MonitorSyncInspector = Omit<ISyncInspector, "listDeadLetters"> & {
+  listDeadLetters(
+    remoteName: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<WireDeadLetterPage>;
+};
+
+export type MonitorSyncManager = ISyncManager & MonitorSyncInspector;
+
 /** Shared surface of every provisioned reactor. */
 export interface ManagedReactorBase {
   readonly name: string;
   readonly kind: ReactorKind;
-  /**
-   * What this reactor can and cannot do, derived from its descriptor at
-   * provision time and static for the life of the handle (multi-reactor stage
-   * 2). The typed contract a router selects targets on; see
-   * {@link ReactorCapabilities}.
-   */
-  readonly capabilities: ReactorCapabilities;
+  readonly reach: MonitorReach;
+  /** Read once at provision; a remote re-reads it through `refreshInfo`. */
+  readonly info: MonitorReactorInfo;
   /** The reactor's client: direct in-process, an RPC proxy in a worker. */
   readonly client: IReactorClient;
-  /** Typed inspection surface (`IInspector`, W0.3). */
-  readonly inspector: IInspector;
-  /** Raw SQL against the reactor's own store; a capability, not inspection. */
-  readonly dbQuery: IReactorDbQuery;
-  /** The reactor's sync manager (with its W0.5 inspection surface), or a proxy to it. */
-  readonly syncManager: InspectableSyncManager | undefined;
+  readonly inspector: MonitorInspector;
+  /** Present when `info.access.admin`. */
+  readonly admin?: IInspectorAdmin;
+  /** Raw SQL against the reactor's own store; present when `info.access.sql`. */
+  readonly dbQuery?: IReactorDbQuery;
+  readonly syncManager: MonitorSyncManager | undefined;
+  /** Channel reset and dead-letter levers; absent for a remote reactor. */
+  readonly syncAdmin?: ISyncAdmin;
   /**
-   * The reactor's event bus: direct in-process, a forwarding proxy in a
-   * worker. A worker-hosted bus only relays the types in
-   * `FORWARDED_BUS_EVENT_TYPES` (`@powerhousedao/reactor-browser/rpc`) and
-   * throws synchronously on a `subscribe` for anything else; an in-process
-   * bus accepts any type. A consumer that wants the same code to work
-   * against both kinds should subscribe only to the forwarded set.
+   * Direct in-process, a forwarding proxy in a worker. A worker bus relays only
+   * `FORWARDED_BUS_EVENT_TYPES` and throws on a `subscribe` for anything else.
    */
   readonly events: IEventBus;
   /**
-   * Adopts one end of a monitor-brokered local-sync link: registers the port
-   * and adds the local remote. Present whenever
-   * {@link ReactorCapabilities.syncChannels} includes `"local"` -- the
-   * local-only `sync.local` mode and a gql scheme alike, since a gql-scheme
-   * reactor composes a local factory onto its scheme (W3.0). Prefer
-   * {@link ReactorMonitorRegistry.linkLocalSync}, which brokers both ends.
-   * Multi-reactor W1.2.
+   * Adopts one end of a monitor-brokered local-sync link. Present, with
+   * {@link removeLocalSyncPeer}, whenever `info.syncChannels` includes `"local"`.
+   * Prefer {@link ReactorMonitorRegistry.linkLocalSync}, which brokers both ends.
    */
   adoptLocalSyncPeer?: (link: AdoptLocalSyncPeerLink) => Promise<void>;
-  /**
-   * Removes a local remote added by {@link adoptLocalSyncPeer} (closing its
-   * port) and forgets its registration. `peerId`/`channelName` identify the
-   * registry entry to drop. Both halves happen in the realm that owns the
-   * registry -- directly in process, over the remove-sync-peer op in a worker
-   * -- because a registry entry outliving its closed port is exactly how a
-   * dead link reports itself healthy.
-   *
-   * Present, like {@link adoptLocalSyncPeer}, whenever the reactor declares
-   * the `"local"` sync channel. The two always appear and disappear together,
-   * so a caller that finds one can rely on the other.
-   */
+  /** Removes a local remote and releases its port, in the realm that owns both. */
   removeLocalSyncPeer?: (
     remoteName: string,
     peerId: string,
     channelName: string,
   ) => Promise<void>;
-  /**
-   * This reactor's attachment store, replicator status and peer links
-   * (multi-reactor W3.4).
-   *
-   * Present exactly when the descriptor asked for attachments AND this process
-   * built the reactor -- so `in-process` today. A `worker` reactor's store
-   * lives in the worker and its status would have to cross the RPC boundary; a
-   * `remote` reactor's attachment service is that deployment's, reached over
-   * its own HTTP routes rather than through this handle. Absence is the fact a
-   * UI reads: no store means this reactor neither holds nor serves bytes.
-   */
+  /** Attachment store and replicator; present when this process built them. */
   readonly attachments?: ManagedAttachments;
   /** Worker lifecycle info; worker-hosted reactors only. */
   adminInfo?: () => Promise<WorkerInspectorInfo>;
@@ -291,112 +288,51 @@ export interface ManagedReactorBase {
   restart?: () => Promise<void>;
   /** Shuts the reactor down and releases its store / worker port. */
   kill: () => Promise<void>;
-  /**
-   * Whether {@link kill} has been called on this handle. For `in-process`
-   * that means the reactor is stopping or stopped; for `worker` it means this
-   * client has released its connection — the worker itself goes away when its
-   * last client does, which this handle cannot observe.
-   */
+  /** For a worker, whether this client released its connection. */
   isShutdown: () => boolean;
 }
 
 export interface ManagedInProcessReactor extends ManagedReactorBase {
   readonly kind: "in-process";
+  readonly info: ReactorInfo;
+  readonly admin: IInspectorAdmin;
+  readonly dbQuery: IReactorDbQuery;
   readonly module: MonitorInProcessClientModule;
 }
 
 export interface ManagedWorkerReactor extends ManagedReactorBase {
   readonly kind: "worker";
+  readonly info: ReactorInfo;
   readonly module: MonitorWorkerClientModule;
   /** Always present: the proxy exists whether or not the worker built sync. */
-  readonly syncManager: InspectableSyncManager;
+  readonly syncManager: MonitorSyncManager;
+  readonly syncAdmin: ISyncAdmin;
   adminInfo: () => Promise<WorkerInspectorInfo>;
   restart: () => Promise<void>;
   /**
-   * True when this handle's connecting descriptor disagreed with the
-   * construct the worker actually built -- a later tab's hello whose
-   * construct `ReactorHost` silently dropped because the worker builds once
-   * (multi-reactor stage 2 review). `capabilities` always describes what was
-   * BUILT, never this handle's own request, so a caller that only reads
-   * `capabilities` cannot see the disagreement; this flag is the one place it
-   * surfaces. Always `false` for the tab whose descriptor won the build.
+   * The worker builds once: true when this handle asked for a different
+   * storage or local channel than the reactor the worker built. `info`
+   * describes what was built.
    */
   readonly descriptorMismatch: boolean;
 }
 
-/**
- * An already-running reactor the monitor attached to over HTTP (multi-reactor
- * W3.2): a Switchboard serving reactor-api's inspection subgraph.
- *
- * `inspector`, `dbQuery` and `syncManager` are the SAME typed surfaces the
- * local kinds expose -- that is the whole point, so every inspector view works
- * against a remote reactor unchanged. What is NOT wired is stated rather than
- * faked: `client` and `events` refuse by name (see `remote/unwired.ts`), and
- * the sync manager's reconfiguration half refuses too, because which peers a
- * Switchboard syncs with is that deployment's configuration.
- *
- * `descriptorMismatch` has no analog here: nothing was built from this
- * descriptor, so there is no construct for it to disagree with. The equivalent
- * question -- what is actually on the other end -- is answered by
- * {@link serverInfo}, which `capabilities` is derived from.
- */
+/** A running reactor reached over its host's inspection subgraph; read-only. */
 export interface ManagedRemoteReactor extends ManagedReactorBase {
   readonly kind: "remote";
-  /** Always present: the inspection surface is what a remote reactor is attached for. */
-  readonly syncManager: InspectableSyncManager;
+  readonly syncManager: MonitorSyncManager;
+  readonly admin?: undefined;
+  readonly dbQuery?: undefined;
+  readonly syncAdmin?: undefined;
   /** The inspection endpoint this handle talks to. */
   readonly endpoint: string;
-  /**
-   * The reactor's GraphQL base URL -- the descriptor's `remote.url`, e.g.
-   * `http://host/graphql`. The authoritative base a SIBLING subgraph endpoint
-   * derives from (the workflow-runtime subgraph the Workflows tab reads is
-   * `subgraphUrlFromGraphqlUrl(url, "workflow-runtime")`), rather than being
-   * reverse-engineered from {@link endpoint}, which is the inspection subgraph
-   * beneath this same base.
-   */
+  /** The descriptor's `remote.url`; sibling subgraphs derive from it. */
   readonly url: string;
-  /**
-   * The inspection auth this handle carries -- the descriptor's
-   * `remote.headers` / `remote.fetch`. Surfaced so a view that must reach a
-   * sibling subgraph of the same reactor (the Workflows tab's workflow-runtime
-   * reads) authenticates exactly as inspection does, over the same fetch,
-   * rather than reaching for an ambient browser token. Both are absent for a
-   * reactor reached unauthenticated, which is what a dev Switchboard under the
-   * OPEN policy serves.
-   */
+  /** The inspection auth, for sibling subgraph reads of the same reactor. */
   readonly headers?: RemoteInspectionHeaders;
   readonly fetch?: typeof fetch;
-  /**
-   * What the remote reactor reported about itself, including which admin tiers
-   * that deployment serves. A view that needs to disable a repair lever or the
-   * DB tab reads `adminEnabled` / `sqlEnabled` from here.
-   *
-   * A LIVE read, not a value frozen at provision time. The two tier flags are
-   * the one part of this record an operator changes under a running monitor --
-   * restart the host with `PH_INSPECTION_ADMIN=true` -- so the handle reports
-   * what the client last learned, and {@link refreshServerInfo} is how a UI
-   * asks for a fresh answer. Reading it twice can therefore give two answers;
-   * that is the feature.
-   *
-   * `capabilities` is still derived from the record as it stood at provision
-   * time and stays frozen, because the rest of this report describes how the
-   * far side was BUILT: a reactor whose channel factories or workflow engine
-   * changed is a different reactor, and the contract a router caches must not
-   * change under it. Re-provision to pick that up.
-   */
-  readonly serverInfo: RemoteInspectionInfo;
-  /**
-   * Re-reads the reported facts from the reactor now and updates
-   * {@link serverInfo}.
-   *
-   * The seam behind the monitor's "re-check server" affordance, and what makes
-   * the documented restart-with-the-flag flow work in both directions. The
-   * inspection client also calls it on its own refusal paths, so a lever that
-   * the far side rejects corrects the gate rather than merely failing.
-   */
-  refreshServerInfo(): Promise<RemoteInspectionInfo>;
-  /** The remote inspection client, for the ops beyond `IInspector`'s own surface. */
-  readonly remoteInspector: RemoteInspectorClient;
+  /** Re-reads `info` from the reactor and updates the handle's. */
+  refreshInfo(): Promise<MonitorReactorInfo>;
 }
 
 /** A reactor the monitor has provisioned and can inspect. */
