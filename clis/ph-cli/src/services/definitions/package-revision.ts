@@ -62,6 +62,21 @@ function fileEntries(
   }
 }
 
+export function filesDigest(
+  root: string,
+  paths: readonly string[],
+): `sha256:${string}` {
+  const entries = paths.map((path) => {
+    const file = resolve(root, path);
+    const stats = statSync(file, { throwIfNoEntry: false });
+    const digest = stats?.isFile()
+      ? createHash("sha256").update(readFileSync(file)).digest("hex")
+      : "absent";
+    return `${path} ${digest}`;
+  });
+  return `sha256:${createHash("sha256").update(entries.join("\n")).digest("hex")}`;
+}
+
 export function computePackageRevision(
   input: PackageRevisionInput,
 ): `sha256:${string}` {

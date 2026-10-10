@@ -595,6 +595,30 @@ describe("the retained release approval", () => {
     }
   }, 120_000);
 
+  it("is invalidated by an edit to an imported file git ignores", async () => {
+    const fixture = withPriorOutput("control");
+    try {
+      spawnSync("git", ["init", "--quiet"], { cwd: fixture.root });
+      writeFileSync(join(fixture.root, ".gitignore"), "src/helper.ts\n*.log\n");
+      await runBuild(buildArgsFor(fixture.root), {
+        steps: recorder().steps,
+        log: silent,
+      });
+      writeFileSync(join(fixture.root, "debug.log"), "noise\n");
+      expect(retained(fixture.root).ok).toBe(true);
+      writeFileSync(
+        join(fixture.root, "src", "helper.ts"),
+        "export const normalizeTitle = (t: string) => t.toUpperCase();\n",
+      );
+      expect(retained(fixture.root)).toEqual({
+        ok: false,
+        reason: "a compiled source changed since that check",
+      });
+    } finally {
+      fixture.dispose();
+    }
+  }, 60_000);
+
   it("keeps an approval when only local tool state under .ph changes", async () => {
     const fixture = withPriorOutput("control");
     const build = recorder();

@@ -25,7 +25,11 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { getVersion } from "../../get-version.js";
 import { defaultHostValidationFor } from "./host-validation.js";
 import { BuildGraphTypeScriptSourceImportAdapter } from "./import-adapters.js";
-import { computePackageRevision, toPosixPath } from "./package-revision.js";
+import {
+  computePackageRevision,
+  filesDigest,
+  toPosixPath,
+} from "./package-revision.js";
 
 export const GENERATION_DIRECTORY = join(".ph", "build");
 
@@ -94,6 +98,8 @@ export type ReleaseApproval = {
   readonly formatVersion: 1;
   readonly packageRevision: `sha256:${string}`;
   readonly sourceSetDigest: string;
+  readonly sources: readonly string[];
+  readonly sourcesDigest: string;
   readonly compilerVersion: string;
   readonly outputDigest: string;
   readonly warningsAsErrors: boolean;
@@ -339,6 +345,11 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     return await buildWithoutEvidence();
   }
 
+  const sources = [...typecheck.emittedModules.keys()]
+    .map((source) => toPosixPath(relative(request.packageRoot, source)))
+    .sort();
+  const sourcesDigest = filesDigest(request.packageRoot, sources);
+
   let report: DefinitionCheckReport;
   try {
     log("▶ Checking definitions\n");
@@ -381,7 +392,9 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
   }
 
   if (
-    packageRevisionOf(request.packageRoot, request.outDir) !== packageRevision
+    packageRevisionOf(request.packageRoot, request.outDir) !==
+      packageRevision ||
+    filesDigest(request.packageRoot, sources) !== sourcesDigest
   ) {
     log("✘ The package changed while it was being checked.\n");
     return failure("failed", report);
@@ -392,6 +405,8 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     formatVersion: 1,
     packageRevision,
     sourceSetDigest: report.sourceSet.digest,
+    sources,
+    sourcesDigest,
     compilerVersion: getVersion(),
     outputDigest: directoryDigest(candidateRoot),
     warningsAsErrors: request.warningsAsErrors,
@@ -424,6 +439,8 @@ function isReleaseApproval(value: unknown): value is ReleaseApproval {
     candidate.kind === "powerhouse.release-approval" &&
     candidate.formatVersion === 1 &&
     typeof candidate.packageRevision === "string" &&
+    Array.isArray(candidate.sources) &&
+    typeof candidate.sourcesDigest === "string" &&
     typeof candidate.compilerVersion === "string" &&
     typeof candidate.outputDigest === "string" &&
     typeof candidate.warningsAsErrors === "boolean" &&
@@ -480,6 +497,12 @@ export function readRetainedApproval(request: {
     packageRevisionOf(request.packageRoot, request.outDir)
   ) {
     return { ok: false, reason: "the package changed since that check" };
+  }
+  if (
+    approval.sourcesDigest !==
+    filesDigest(request.packageRoot, approval.sources)
+  ) {
+    return { ok: false, reason: "a compiled source changed since that check" };
   }
   if (
     approval.outputDigest !==
