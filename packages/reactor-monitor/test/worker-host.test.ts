@@ -2,6 +2,7 @@ import {
   GQL_CHANNEL_TYPE,
   IN_MEMORY_PGLITE_STORAGE_FACTS,
   LOCAL_CHANNEL_TYPE,
+  PGliteSessionPoisonedError,
   ReactorEventTypes,
   UNKNOWN_STORAGE_FACTS,
   type ReactorInspector,
@@ -15,6 +16,9 @@ import {
   linkLocalSync,
   provisionInProcess,
   provisionWorkerReactor,
+  ReactorMonitorRegistry,
+  type BuildWorkerReactorOptions,
+  type BuiltWorkerReactor,
   type ManagedInProcessReactor,
   type ManagedWorkerReactor,
   type MonitorWorkerHost,
@@ -412,6 +416,149 @@ describe("buildWorkerReactor", () => {
       expect(built.loader).toBeDefined();
     } finally {
       await built.shutdown();
+    }
+  });
+});
+
+/** A host whose builds hand back their poison trigger and built reactor. */
+function poisonableHost(workerName?: string) {
+  const builds: {
+    built: BuiltWorkerReactor;
+    poison: () => void;
+  }[] = [];
+  const worker = createMonitorWorkerHost({
+    ...(workerName ? { workerName } : {}),
+    build: async (
+      construct,
+      importers,
+      options?: BuildWorkerReactorOptions,
+    ) => {
+      const built = await buildWorkerReactor(construct, importers, options);
+      builds.push({
+        built,
+        poison: () =>
+          options?.onUnrecoverable?.(
+            new PGliteSessionPoisonedError(new Error("dead wasm call")),
+          ),
+      });
+      return built;
+    },
+  });
+  return { worker, builds };
+}
+
+describe("a worker reactor whose store is poisoned", () => {
+  it("retires the worker and fails every connected handle", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { worker, builds } = poisonableHost();
+    const channel = new MessageChannel();
+    const dispose = worker.host.connectPort(channel.port1);
+    const failures: Error[] = [];
+    const gens: (string | undefined)[] = [];
+    const tab = await connectManagedWorkerReactor(
+      descriptor("poison-host"),
+      createPortTransport(channel.port2),
+      {
+        buildId: "test-build",
+        onReload: (_reason, gen) => gens.push(gen),
+        onUnrecoverable: (cause) => failures.push(cause),
+      },
+    );
+    const late = new MessageChannel();
+    let lateDispose = (): void => undefined;
+    try {
+      builds[0].poison();
+      builds[0].poison();
+
+      await vi.waitFor(() => expect(failures).toHaveLength(1));
+      await vi.waitFor(() => expect(builds[0].built.pg.closed).toBe(true));
+      expect(worker.current()).toBeUndefined();
+      expect(gens[0]).toBeTruthy();
+      await expect(tab.client.get("any")).rejects.toThrow(/retired/);
+
+      // A tab reaching the retired worker later is sent to the same gen.
+      lateDispose = worker.host.connectPort(late.port1);
+      const lateGens: (string | undefined)[] = [];
+      const lateFailures: Error[] = [];
+      const lateTab = await connectManagedWorkerReactor(
+        descriptor("poison-host"),
+        createPortTransport(late.port2),
+        {
+          buildId: "test-build",
+          onReload: (_reason, gen) => lateGens.push(gen),
+          onUnrecoverable: (cause) => lateFailures.push(cause),
+        },
+      );
+      await vi.waitFor(() => expect(lateFailures).toHaveLength(1));
+      expect(lateGens).toEqual([gens[0]]);
+      await lateTab.kill();
+    } finally {
+      error.mockRestore();
+      await tab.kill();
+      dispose();
+      lateDispose();
+      channel.port1.close();
+      channel.port2.close();
+      late.port1.close();
+      late.port2.close();
+      await worker.release();
+    }
+  });
+
+  it("re-provisions onto a fresh worker under a gen-salted name", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const hosts = new Map<string, ReturnType<typeof poisonableHost>>();
+    const channels: MessageChannel[] = [];
+    const names: string[] = [];
+    const registry = new ReactorMonitorRegistry();
+    const workerDescriptor = descriptor("poison-registry", {
+      createWorker: (name) => {
+        names.push(name);
+        let host = hosts.get(name);
+        if (!host) {
+          host = poisonableHost(name);
+          hosts.set(name, host);
+        }
+        const channel = new MessageChannel();
+        channels.push(channel);
+        host.worker.host.connectPort(channel.port1);
+        return {
+          port: channel.port2,
+          addEventListener: () => undefined,
+        } as unknown as SharedWorker;
+      },
+    });
+    try {
+      await registry.provision(workerDescriptor);
+      const first = hosts.get(names[0])!;
+      first.builds[0].poison();
+
+      await vi.waitFor(() =>
+        expect(registry.get("poison-registry")?.status).toBe("failed"),
+      );
+      expect(registry.get("poison-registry")?.error?.message).toMatch(
+        /reactor store poisoned/,
+      );
+
+      const again = await registry.provision(workerDescriptor);
+      expect(names).toHaveLength(2);
+      expect(names[0]).toBe("ph-reactor-monitor:poison-registry");
+      expect(names[1]).toMatch(/^ph-reactor-monitor:poison-registry#.+/);
+      const created = await again.client.createEmpty(DRIVE_TYPE);
+      expect(created.header.id).toBeTruthy();
+      expect(hosts.get(names[1])!.worker.current()).toBeDefined();
+    } finally {
+      error.mockRestore();
+      warn.mockRestore();
+      await registry.killAll();
+      for (const channel of channels) {
+        channel.port1.close();
+        channel.port2.close();
+      }
+      for (const { worker } of hosts.values()) {
+        await worker.release();
+      }
     }
   });
 });

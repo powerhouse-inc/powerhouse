@@ -30,7 +30,8 @@ export function reactorStorageNamespace(name: string): string {
   return `${MONITOR_STORAGE_PREFIX}-${normalizeReactorName(name)}`;
 }
 
-/** SharedWorker name for `name`; one worker instance per reactor name. */
-export function reactorWorkerName(name: string): string {
-  return `${MONITOR_WORKER_PREFIX}:${normalizeReactorName(name)}`;
+/** SharedWorker name per reactor and gen; retiring hands tabs a new gen. */
+export function reactorWorkerName(name: string, gen?: string | null): string {
+  const base = `${MONITOR_WORKER_PREFIX}:${normalizeReactorName(name)}`;
+  return gen ? `${base}#${gen}` : base;
 }

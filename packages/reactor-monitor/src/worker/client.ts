@@ -37,6 +37,7 @@ import type {
 import { toWorkerConstruct } from "./construct.js";
 import { ReactorMonitorVersion } from "../version.js";
 import { reactorMonitorWorkerUrl } from "../worker-url.js";
+import { adoptWorkerGen, readWorkerGen } from "./worker-gen.js";
 
 /** Sorted so the same set always produces the same fingerprint. */
 function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
@@ -85,12 +86,10 @@ function describesDifferentBuild(
 }
 
 export type ProvisionWorkerOptions = {
-  /**
-   * Called when the host asks its clients to reload (a version-fingerprint
-   * mismatch, or an admin restart). The monitor's answer is to kill and
-   * re-provision this reactor; there is no page to reload.
-   */
+  /** Observes the host's reload (retirement); {@link onUnrecoverable} follows. */
   onReload?: (reason: string, workerGen?: string) => void;
+  /** The worker retired (poison, restart, version skew); the handle is dead. */
+  onUnrecoverable?: (cause: Error) => void;
   /**
    * Fingerprint the worker pins its build to. A tab whose id differs from
    * the worker's baseline is told to reload, which is how a stale worker is
@@ -148,14 +147,19 @@ export async function connectManagedWorkerReactor(
       construct: toWorkerConstruct(descriptor),
       packages: descriptor.packages?.specs ?? [],
     },
-    options.onReload ??
-      ((reason, workerGen) => {
-        console.warn(
-          `[reactor-monitor] host of "${descriptor.name}" asked its clients to reload: ${reason}${
-            workerGen ? ` (gen ${workerGen})` : ""
-          }. Kill and re-provision this reactor to pick it up.`,
-        );
-      }),
+    (reason, workerGen) => {
+      options.onReload?.(reason, workerGen);
+      const cause = new Error(
+        `The worker hosting "${descriptor.name}" retired: ${reason}`,
+      );
+      if (options.onUnrecoverable) {
+        options.onUnrecoverable(cause);
+        return;
+      }
+      console.warn(
+        `[reactor-monitor] ${cause.message}. Kill and re-provision this reactor.`,
+      );
+    },
     documentModelRegistry,
   );
 
@@ -290,7 +294,8 @@ export function provisionWorkerReactor(
   descriptor: ReactorDescriptor,
   options: ProvisionWorkerOptions = {},
 ): Promise<ManagedWorkerReactor> {
-  const name = reactorWorkerName(descriptor.name);
+  const gen = readWorkerGen(descriptor.name);
+  const name = reactorWorkerName(descriptor.name, gen);
   let worker: SharedWorker;
   let from: string;
   if (descriptor.createWorker) {
@@ -322,6 +327,15 @@ export function provisionWorkerReactor(
   return connectManagedWorkerReactor(
     descriptor,
     createPortTransport(worker.port),
-    options,
+    {
+      ...options,
+      onReload: (reason, workerGen) => {
+        // Before onUnrecoverable, so a re-provision lands on the new gen.
+        if (workerGen) {
+          adoptWorkerGen(descriptor.name, gen, workerGen);
+        }
+        options.onReload?.(reason, workerGen);
+      },
+    },
   );
 }
