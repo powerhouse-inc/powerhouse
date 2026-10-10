@@ -20,7 +20,6 @@ import {
   DRIVE_DOCUMENT_TYPES,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
-  getDrives,
   login,
   refreshReactorDataClient,
   RegistryClient,
@@ -60,9 +59,12 @@ import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { closeDeletedSelection } from "../utils/deleted-selection.js";
-import { bumpWorkerGen } from "../reactor-worker-name.js";
+import { closeWithin } from "../utils/close-within.js";
+import { reloadForWorker } from "../utils/poisoned-store-budget.js";
+import { startupOwningStores } from "../utils/worker-startup.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
+import { isMultiReactorEnabled } from "../utils/multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
@@ -78,6 +80,11 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
+import {
+  getAppDrives,
+  refreshAppDrives,
+  selectAppReactorClient,
+} from "./app-reactor-client.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -198,7 +205,9 @@ export async function clearReactorStorage() {
     return;
   }
   if (module?.kind === "browser") {
-    await module.reactorModule?.pg?.close();
+    // Flushes the group commit, then closes.
+    const reactorModule = module.reactorModule;
+    await closeWithin(reactorModule?.groupCommitStorage ?? reactorModule?.pg);
   }
 
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB
@@ -366,6 +375,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     renownUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
   };
+  const multiReactor = isMultiReactorEnabled();
 
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
@@ -435,6 +445,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      multiReactor,
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,
@@ -442,12 +453,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       upgradeManifests,
       documentModelLoader,
       renown,
-      onReload: (reason, workerGen) => {
+      onReload: (reason) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
-        if (workerGen) {
-          bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
-        }
-        window.location.reload();
+        reloadForWorker(reason, () => window.location.reload());
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
@@ -470,8 +478,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
+    // The worker boots only once it owns both stores.
     try {
-      await workerClient.syncManagerProxy.startup();
+      await startupOwningStores(
+        (options) => workerClient.syncManagerProxy.startup(options),
+        [REACTOR_INSTANCE_NAMESPACE, RELATIONAL_PGLITE_NAME],
+      );
     } catch (error) {
       window.ph.loading = false;
       logger.error("Reactor worker failed to start: @error", error);
@@ -487,15 +499,27 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       createSignaturePolicy,
       renownEndpoints,
       unsupportedStoredDocuments,
+      multiReactor,
     );
   }
 
-  const drives = await getDrives(reactorClientModule.client);
+  const appReactorClient = await selectAppReactorClient({
+    multiReactor,
+    module: reactorClientModule,
+    remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
+    signer: renown.signer,
+    documentModelModules,
+  });
+
+  const drives = await getAppDrives(
+    appReactorClient,
+    reactorClientModule.client,
+  );
 
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
 
-  const documentCache = new DocumentCache(reactorClientModule.client);
+  const documentCache = new DocumentCache(appReactorClient);
 
   const basePath = phGlobalConfig.basePath ?? "/";
   const routerBasename = phGlobalConfig.routerBasename ?? "/";
@@ -512,7 +536,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
-  setReactorClient(reactorClientModule.client);
+  setReactorClient(appReactorClient);
 
   const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
   if (_defaultDrivesUrl) {
@@ -565,11 +589,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // Refresh the drive list on any drive-type change so async-added
   // default/remote drives surface on first load without a manual reload.
-  const reactorClient = reactorClientModule.client;
+  const reactorClient = appReactorClient;
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
     reactorClient.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+      refreshReactorDataClient(appReactorClient).catch((e) =>
         logger.error("@error", e),
       );
     });
@@ -586,7 +610,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
   });
 
-  await refreshReactorDataClient(reactorClientModule.client);
+  await refreshAppDrives(appReactorClient, reactorClientModule.client);
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,

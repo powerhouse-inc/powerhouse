@@ -1,3 +1,4 @@
+import { cursorProtectedLoadMeta } from "../../../src/shared/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
 import type {
   Operation,
@@ -819,7 +820,7 @@ describe("SyncManager Integration", () => {
         "main",
         [operations[0].operation],
         expect.any(AbortSignal),
-        { sourceRemote: "remote1" },
+        cursorProtectedLoadMeta("remote1"),
       );
     });
 

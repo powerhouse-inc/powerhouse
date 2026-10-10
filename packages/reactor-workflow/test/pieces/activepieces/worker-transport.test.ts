@@ -165,9 +165,96 @@ describe("PieceWorker over a transport", () => {
     });
 
     await worker.runAction(runRequest());
-    worker.dispose();
+    built[0]!.kill();
     await worker.runAction(runRequest());
 
     expect(built).toHaveLength(2);
+  });
+
+  // Disposed is ended for good: a caller still holding it (a trigger lane
+  // draining after shutdown) must not fork a child nobody will dispose.
+  it("forks nothing once disposed", async () => {
+    let built = 0;
+    const worker = new PieceWorker({
+      transport: () => {
+        built += 1;
+        return fakeTransport((message, reply) =>
+          reply({
+            id: message.id,
+            type: "result",
+            output: null,
+            touched: [],
+            tlsPoisoned: false,
+          }),
+        );
+      },
+    });
+    await worker.runAction(runRequest());
+    const queued = worker.runAction(runRequest());
+
+    worker.dispose();
+
+    await expect(queued).rejects.toThrow("disposed");
+    await expect(
+      worker.runTriggerHook({
+        bundleDir: "/nowhere",
+        triggerName: "t",
+        hook: "run",
+      } as never),
+    ).rejects.toThrow("disposed");
+    expect(built).toBe(1);
+  });
+});
+
+// The operator's host-call cap reaches every request that can serve a piece,
+// not only action steps: a trigger hook or a design-time call made with no
+// cap of its own used to fall back to the child's hard 10s default.
+describe("the host-call cap on every request", () => {
+  const ENV = "PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS";
+  const previous = process.env[ENV];
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env[ENV];
+    else process.env[ENV] = previous;
+  });
+
+  function answering() {
+    return fakeTransport((message, reply) => {
+      reply({
+        id: message.id,
+        type: "result",
+        output: null,
+        touched: [],
+        tlsPoisoned: false,
+      });
+    });
+  }
+
+  const capOf = (message: Record<string, unknown>) =>
+    (message.request as { hostCallTimeoutMs?: number }).hostCallTimeoutMs;
+
+  it("carries the configured cap on a trigger hook", async () => {
+    process.env[ENV] = "45000";
+    const transport = answering();
+    const worker = new PieceWorker({ transport: () => transport });
+
+    await worker.runTriggerHook(
+      { bundleDir: "/nowhere", triggerName: "t", hook: "onEnable" } as never,
+      { timeoutMs: 5_000 },
+    );
+
+    expect(capOf(transport.sent[0])).toBe(45_000);
+  });
+
+  it("raises it to the request's own timeout on a design-time call", async () => {
+    process.env[ENV] = "1000";
+    const transport = answering();
+    const worker = new PieceWorker({ transport: () => transport });
+
+    await worker.resolveOptions({ bundleDir: "/nowhere" } as never, {
+      timeoutMs: 20_000,
+    });
+
+    expect(capOf(transport.sent[0])).toBe(20_000);
   });
 });

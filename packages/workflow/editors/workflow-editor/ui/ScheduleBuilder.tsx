@@ -77,18 +77,23 @@ function TimeField(props: { time: string; onChange: (time: string) => void }) {
   );
 }
 
-// Holds what's typed, so the field can be cleared and retyped; only a whole
-// number of at least 1 is saved, and leaving it empty puts the saved value back.
+function isEvery(text: string): boolean {
+  const every = Number(text);
+  return text !== "" && Number.isInteger(every) && every >= 1;
+}
+
+// A save echoing back late must not overwrite typing still in progress.
 function EveryInput(props: {
   id: string;
   every: number;
   onCommit: (every: number) => void;
 }) {
   const [text, setText] = useState(String(props.every));
-  const [saved, setSaved] = useState(props.every);
-  if (saved !== props.every) {
-    setSaved(props.every);
-    setText(String(props.every));
+  const [seen, setSeen] = useState(props.every);
+  const [typing, setTyping] = useState(false);
+  if (seen !== props.every) {
+    setSeen(props.every);
+    if (!typing) setText(String(props.every));
   }
   return (
     <input
@@ -99,18 +104,16 @@ function EveryInput(props: {
       className={`${textInputClass} w-24 tabular-nums`}
       value={text}
       onChange={(event) => {
+        setTyping(true);
         setText(event.target.value);
-        const every = Number(event.target.value);
-        if (
-          event.target.value !== "" &&
-          Number.isInteger(every) &&
-          every >= 1
-        ) {
-          setSaved(every);
-          props.onCommit(every);
+        if (isEvery(event.target.value)) {
+          props.onCommit(Number(event.target.value));
         }
       }}
-      onBlur={() => setText(String(props.every))}
+      onBlur={() => {
+        setTyping(false);
+        if (!isEvery(text)) setText(String(props.every));
+      }}
     />
   );
 }

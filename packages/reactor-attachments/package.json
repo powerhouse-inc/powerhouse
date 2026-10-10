@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-attachments",
-  "version": "6.2.3-dev.49",
+  "version": "6.2.3-dev.52",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -24,6 +24,11 @@
       "source": "./src/client.ts",
       "types": "./dist/client.d.ts",
       "import": "./dist/client.js"
+    },
+    "./replication": {
+      "source": "./src/replication-entry.ts",
+      "types": "./dist/replication.d.ts",
+      "import": "./dist/replication.js"
     }
   },
   "sideEffects": false,
@@ -47,6 +52,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@types/pg": "catalog:",
+    "fake-indexeddb": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "pg": "catalog:",
     "tsdown": "catalog:",

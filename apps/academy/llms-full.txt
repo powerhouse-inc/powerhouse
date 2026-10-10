@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-10T15:12:03.601Z
+> Generated: 2026-10-10T18:41:08.230Z
 > Total Documents: 124
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5228,7 +5228,7 @@ const sync = module.syncModule?.syncManager; // ISyncManager | undefined
 type JwtHandler = (url: string) => Promise<string | undefined>;
 ```
 
-If you set both `withChannelScheme` and `withSync`, only the scheme path runs and your custom `SyncBuilder` is discarded. The scheme path always constructs a fresh `SyncBuilder` with the scheme's factory.
+`withChannelScheme` and `withSync` are mutually exclusive: if you set both, `build()` and `buildModule()` throw. Use the scheme, or pass your own `SyncBuilder`, not both.
 
 ### Full control: `withSync`
 
@@ -32184,16 +32184,23 @@ To search across everything instead:
 ```graphql
 query {
   workflowRuntime {
-    searchBlocks(query: "invoice", limit: 20) {
+    searchPieces(query: "invoice", kind: "action", limit: 20) {
       status
-      hits { pieceName pieceVersion name kind displayName }
+      pieces {
+        pieceName
+        source
+        blocks { pieceName pieceVersion name kind displayName }
+      }
     }
   }
 }
 ```
 
-The search index builds lazily, so the first call may report a status of
-`indexing` — poll until it settles.
+Results come grouped by piece, best match first. `kind` is `action` or
+`trigger`. `sources` (`local`, `registry`, `activepieces`) and `categories`
+narrow the search, and `limit` caps the number of pieces. The search index
+builds lazily, so the first call may report a status of `indexing` — poll
+until it settles.
 
 Two more queries:
 

@@ -1,3 +1,71 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **shared:** add an optional connect.instance.multiReactor flag ([03c6ba0a3b](https://github.com/powerhouse-inc/powerhouse/commit/03c6ba0a3b))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+
+### 🩹 Fixes
+
+- **switchboard:** inline the default drive icon instead of fetching it ([7ca932d882](https://github.com/powerhouse-inc/powerhouse/commit/7ca932d882))
+- **shared:** keep @powerhousedao/reactor-router in lockstep with the other published packages ([d8df8a979c](https://github.com/powerhouse-inc/powerhouse/commit/d8df8a979c))
+- **reactor-api:** forget a webhook's dedupe key only when the handler says it did not process it ([f8422e50d3](https://github.com/powerhouse-inc/powerhouse/commit/f8422e50d3))
+
+### 🔥 Performance
+
+- **ph-cli:** leave subgraphs and switchboard processors out of the browser build ([b17df8c7a0](https://github.com/powerhouse-inc/powerhouse/commit/b17df8c7a0))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **shared:** add an optional connect.instance.multiReactor flag ([03c6ba0a3b](https://github.com/powerhouse-inc/powerhouse/commit/03c6ba0a3b))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+
+### 🩹 Fixes
+
+- **shared:** keep @powerhousedao/reactor-router in lockstep with the other published packages ([d8df8a979c](https://github.com/powerhouse-inc/powerhouse/commit/d8df8a979c))
+- **reactor-api:** forget a webhook's dedupe key only when the handler says it did not process it ([f8422e50d3](https://github.com/powerhouse-inc/powerhouse/commit/f8422e50d3))
+
+### 🔥 Performance
+
+- **ph-cli:** leave subgraphs and switchboard processors out of the browser build ([b17df8c7a0](https://github.com/powerhouse-inc/powerhouse/commit/b17df8c7a0))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+
+### 🔥 Performance
+
+- **reactor:** export the model registry from /rpc and load document-model helpers from dependency-free shared entries ([3ddd4c1889](https://github.com/powerhouse-inc/powerhouse/commit/3ddd4c1889))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

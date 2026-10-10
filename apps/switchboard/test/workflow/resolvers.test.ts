@@ -48,6 +48,9 @@ function fakeRuntime() {
     testStep: vi.fn(() => Promise.resolve({})),
     stepOutputTree: vi.fn(() => Promise.resolve({})),
     blockResolutions: vi.fn(() => Promise.resolve([])),
+    searchPieces: vi.fn(() =>
+      Promise.resolve({ status: "ready", pieces: [], indexedPieces: 0 }),
+    ),
     reactorAccessDenial: vi.fn((): string | undefined => undefined),
     testTrigger: vi.fn(() => Promise.resolve(null)),
     cancelTriggerTestFor: vi.fn(() => Promise.resolve(true)),
@@ -318,5 +321,37 @@ describe("the runs page", () => {
       extensions?: { code?: string };
     };
     expect(error.extensions?.code).toBe("BAD_USER_INPUT");
+  });
+});
+
+describe("piece search", () => {
+  it("passes a valid filter through", async () => {
+    const { runtime, queries } = build(false);
+    await queries.searchPieces(
+      {},
+      { query: "send", kind: "trigger", sources: ["registry", "local"] },
+      CTX,
+    );
+    expect(runtime.searchPieces).toHaveBeenCalledWith("send", {
+      kind: "trigger",
+      sources: ["registry", "local"],
+      categories: undefined,
+      limit: undefined,
+    });
+  });
+
+  it("refuses a kind or source it does not know, rather than widen", () => {
+    const { runtime, queries } = build(false);
+    expect(() =>
+      queries.searchPieces({}, { query: "send", kind: "triggers" }, CTX),
+    ).toThrow(/kind is "action" or "trigger"/);
+    expect(() =>
+      queries.searchPieces(
+        {},
+        { query: "send", kind: "action", sources: ["Registry"] },
+        CTX,
+      ),
+    ).toThrow(/got Registry/);
+    expect(runtime.searchPieces).not.toHaveBeenCalled();
   });
 });

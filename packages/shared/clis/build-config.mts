@@ -13,17 +13,22 @@ const entry = [
   "editors/index.ts",
   "editors/*/index.ts",
   "editors/*/module.ts",
-  "subgraphs/index.ts",
-  "subgraphs/*/index.ts",
   "processors/index.ts",
-  "processors/*/index.ts",
 ];
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
 // is loaded and run by a host process, never by the browser. Only the list of
 // pieces builds here; each piece is its own build (buildPieceBuildConfig), so
 // two pieces never share a chunk and each ships as one self-contained module.
-const nodeEntry = [...entry, "pieces/index.ts"];
+const nodeEntry = [
+  ...entry,
+  // Node-only: Connect reaches processors through processors/index.ts, and
+  // subgraphs only over GraphQL.
+  "processors/*/index.ts",
+  "subgraphs/index.ts",
+  "subgraphs/*/index.ts",
+  "pieces/index.ts",
+];
 
 // Where a package's pieces live, one directory per piece, as the node entry
 // glob spells it; `ph build` expands it against the project to find them.
@@ -109,6 +114,33 @@ const sharedNeverBundle = EXTERNALIZABLE_SHARED_SPECIFIERS.map(
   (s) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/.*)?$`),
 );
 
+type Plugin = NonNullable<InlineConfig["plugins"]>;
+
+const SWITCHBOARD_PROCESSORS_STUB = "\0powerhouse:switchboard-processors";
+
+// Connect runs processors with processorApp "connect", so the generated
+// factory's import of ./switchboard gets an empty list in the browser build.
+function switchboardProcessorsStub(): Plugin {
+  return {
+    name: "powerhouse:switchboard-processors-stub",
+    resolveId(source, importer) {
+      if (!importer || !/^\.\/switchboard(\.[cm]?[jt]s)?$/.test(source)) {
+        return null;
+      }
+      const path = importer.replaceAll("\\", "/");
+      const isFactory =
+        /(^|\/)processors\/factory\.[cm]?[jt]s$/.test(path) &&
+        !path.includes("/node_modules/");
+      return isFactory ? SWITCHBOARD_PROCESSORS_STUB : null;
+    },
+    load(id) {
+      return id === SWITCHBOARD_PROCESSORS_STUB
+        ? "export const processorFactoryBuilders = [];"
+        : null;
+    },
+  };
+}
+
 const baseBrowserConfig = {
   entry: browserEntry,
   platform: "browser" as const,
@@ -122,15 +154,21 @@ const baseBrowserConfig = {
       external: reactExternals,
       skipDuplicateCheck: true,
     }),
+    switchboardProcessorsStub(),
   ],
   inputOptions: {
     experimental: { resolveNewUrlToAsset: true },
   },
 };
 
+const pluginList = (plugins: InlineConfig["plugins"]) =>
+  plugins === undefined ? [] : Array.isArray(plugins) ? plugins : [plugins];
+
 export type BrowserBuildConfigOptions = {
   /** Externalize the shared dependency set (default: true). */
   sharedDeps?: boolean;
+  /** Extra bundler plugins, such as the external dependency guard. */
+  plugins?: InlineConfig["plugins"];
 };
 
 export function buildBrowserBuildConfig(
@@ -139,6 +177,7 @@ export function buildBrowserBuildConfig(
   const sharedDeps = options.sharedDeps ?? true;
   return {
     ...baseBrowserConfig,
+    plugins: [...baseBrowserConfig.plugins, ...pluginList(options.plugins)],
     deps: {
       alwaysBundle,
       neverBundle: [
@@ -170,6 +209,8 @@ export function findBundledSharedDeps(
 export type NodeBuildConfigOptions = {
   /** Externalize the shared dependency set (default: true). */
   sharedDeps?: boolean;
+  /** Extra bundler plugins, such as the external dependency detector. */
+  plugins?: InlineConfig["plugins"];
 };
 
 /**
@@ -196,6 +237,7 @@ export function buildNodeBuildConfig(
       ],
     },
     platform: "node",
+    ...(options.plugins ? { plugins: options.plugins } : {}),
     config,
     clean,
     dts,
@@ -211,6 +253,8 @@ export type PieceBuildConfigOptions = {
   entry: string;
   /** Where the piece lands: `<outDir>/node/pieces/<dir>`. */
   outDir: string;
+  /** Extra bundler plugins, such as the external dependency detector. */
+  plugins?: InlineConfig["plugins"];
 };
 
 /**
@@ -228,6 +272,7 @@ export function buildPieceBuildConfig(
     entry: { index: options.entry },
     outDir: options.outDir,
     platform: "node",
+    ...(options.plugins ? { plugins: options.plugins } : {}),
     deps: {
       alwaysBundle,
       neverBundle: [],

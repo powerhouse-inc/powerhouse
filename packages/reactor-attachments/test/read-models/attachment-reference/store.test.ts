@@ -146,6 +146,62 @@ describe("KyselyAttachmentReferenceStore", () => {
     ]);
   });
 
+  it("pages every reference in a stable keyset order", async () => {
+    await store.addReferences([
+      reference("document-b", REF_A),
+      reference("document-a", REF_B),
+      reference("document-a", REF_A),
+    ]);
+
+    const first = await store.listReferences(undefined, 2);
+    expect(first.references).toEqual([
+      { documentId: "document-a", ref: REF_A },
+      { documentId: "document-a", ref: REF_B },
+    ]);
+    expect(first.nextCursor).toBeDefined();
+
+    const second = await store.listReferences(first.nextCursor, 2);
+    expect(second.references).toEqual([
+      { documentId: "document-b", ref: REF_A },
+    ]);
+    expect(second.nextCursor).toBeUndefined();
+  });
+
+  it("does not revisit a page when rows are inserted behind the cursor", async () => {
+    await store.addReferences([
+      reference("document-b", REF_A),
+      reference("document-c", REF_A),
+    ]);
+
+    const first = await store.listReferences(undefined, 1);
+    expect(first.references).toEqual([
+      { documentId: "document-b", ref: REF_A },
+    ]);
+
+    // A still-indexing read model inserts a row the first page would have
+    // covered; keyset paging simply does not see it, where OFFSET would have
+    // skipped a different row instead.
+    await store.addReferences([reference("document-a", REF_A)]);
+
+    const second = await store.listReferences(first.nextCursor, 10);
+    expect(second.references).toEqual([
+      { documentId: "document-c", ref: REF_A },
+    ]);
+    expect(second.nextCursor).toBeUndefined();
+  });
+
+  it("reports an empty page and no cursor for an empty table", async () => {
+    const page = await store.listReferences(undefined, 10);
+    expect(page.references).toEqual([]);
+    expect(page.nextCursor).toBeUndefined();
+  });
+
+  it("refuses a malformed scan cursor by name", async () => {
+    await expect(store.listReferences("not-a-cursor", 10)).rejects.toThrow(
+      /Invalid attachment reference scan cursor|Unexpected token|JSON/,
+    );
+  });
+
   it("accepts an empty idempotent batch", async () => {
     await expect(store.addReferences([])).resolves.toBeUndefined();
   });

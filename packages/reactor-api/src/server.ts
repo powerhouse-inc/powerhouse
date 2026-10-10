@@ -5,6 +5,8 @@ import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
+  IInspectableAttachmentStore,
+  InspectorAttachmentInfo,
   IReadModel,
   IReactorClient,
   InProcessReactorModule,
@@ -71,6 +73,7 @@ import {
   createRequireAuthFetchMiddleware,
   type RequireAuthFetchMiddleware,
 } from "./graphql/gateway/require-auth-middleware.js";
+import type { DriveStore } from "./graphql/gateway/drive-ownership-cache.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import {
@@ -84,6 +87,12 @@ import {
   decodeExplorerUrlState,
   renderGraphqlPlayground,
 } from "./graphql/playground.js";
+import {
+  createReactorInspectionSource,
+  InspectionSubgraph,
+  type IReactorInspectionSource,
+  type ReactorInspectionOptions,
+} from "./graphql/inspection/index.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
@@ -207,6 +216,8 @@ type Options = {
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
+  /** Storage health and workflow facts for the inspection subgraph. */
+  inspection?: ReactorInspectionOptions;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
@@ -360,6 +371,30 @@ export function getExplorerPrefix(basePath: string): string {
   return path.posix.join(basePath, "explorer");
 }
 
+function attachmentInspectionStore(
+  attachments: AttachmentBuildResult,
+): IInspectableAttachmentStore {
+  return {
+    getAttachmentInfo: async (): Promise<InspectorAttachmentInfo> => ({
+      present: true,
+      storeKind: "kysely",
+      hasReplicator: false,
+      replicatorRunning: false,
+      backlogScanned: false,
+      refsSeen: 0,
+      held: 0,
+      bytesHeld: await attachments.store.storageUsed(),
+      queued: 0,
+      fetching: 0,
+      pendingFetches: 0,
+      waiting: 0,
+      notFound: 0,
+      failed: 0,
+      lastError: undefined,
+    }),
+  };
+}
+
 function resolveAttachmentStoragePath(options: Options): string {
   if (options.attachmentStoragePath) return options.attachmentStoragePath;
   if (options.dbPath && !options.dbPath.startsWith("postgres")) {
@@ -481,6 +516,8 @@ type SetupGraphQLManagerOptions = {
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
+  inspection?: IReactorInspectionSource;
+  driveStore?: DriveStore;
 };
 
 /**
@@ -507,6 +544,8 @@ async function setupGraphQLManager({
   syncServingGate,
   httpRoutes,
   attachments,
+  inspection,
+  driveStore,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -533,6 +572,8 @@ async function setupGraphQLManager({
     syncServingGate,
     httpRoutes,
     attachments,
+    inspection,
+    driveStore,
   });
 
   await graphqlManager.init(
@@ -1205,6 +1246,8 @@ async function _setupAPI(
   syncServingGate?: SyncScopeGate,
   httpRoutes?: HttpRouteService,
   attachmentReadsFollowDocumentPolicy = false,
+  inspection?: IReactorInspectionSource,
+  driveStore?: DriveStore,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1354,6 +1397,9 @@ async function _setupAPI(
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
+  if (inspection) {
+    coreSubgraphs.push(InspectionSubgraph);
+  }
 
   // Register Auth subgraph when document permission service is available
   if (documentPermissionService) {
@@ -1385,6 +1431,8 @@ async function _setupAPI(
     syncServingGate,
     httpRoutes,
     attachments: attachmentClientProvider,
+    inspection,
+    driveStore,
   });
 
   // Set up event listeners
@@ -1441,6 +1489,7 @@ async function _setupAPI(
     // stores in this database.
     authorizationService,
     relationalDb,
+    inspection,
     dispose,
   };
 }
@@ -1669,6 +1718,13 @@ export async function initializeAndStartAPI(
     ),
     httpRoutes,
     attachmentReadsFollowDocumentPolicy,
+    reactorClientModule.reactorModule
+      ? createReactorInspectionSource(reactorClientModule.reactorModule, {
+          ...options.inspection,
+          attachmentStore: attachmentInspectionStore(attachments),
+        })
+      : undefined,
+    reactorClientModule.reactorModule?.reactor,
   );
 
   return {

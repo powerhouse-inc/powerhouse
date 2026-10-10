@@ -1,19 +1,24 @@
 import {
   addDrive,
   addRemoteDrive,
-  ChannelScheme,
+  getFullReactorClient,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
   waitForDocumentReady,
   type BrowserReactorClientModule,
-  type Database,
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
 } from "@powerhousedao/reactor-browser";
-import type { UnsupportedStoredDocuments } from "@powerhousedao/reactor";
+import {
+  type GroupCommitPGliteInstance,
+  LocalChannelFactory,
+  LocalChannelPortRegistry,
+  PGLITE_IDB_STORAGE_FACTS,
+  type UnsupportedStoredDocuments,
+} from "@powerhousedao/reactor";
 import type {
   PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
@@ -27,9 +32,9 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
-import { getReactorPGlite } from "../pglite.db.js";
+import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
+import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
+import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -49,6 +54,7 @@ export async function createBrowserReactor(
   createSignaturePolicy?: SignaturePolicy,
   renownEndpoints: RenownTrustEndpoints = {},
   unsupportedStoredDocuments?: UnsupportedStoredDocuments,
+  multiReactor = false,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig = await createConnectSignerConfig(
     renown.signer,
@@ -70,14 +76,26 @@ export async function createBrowserReactor(
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(documentModelModules)
     .withUpgradeManifests(upgradeManifests)
-    .withChannelScheme(ChannelScheme.CONNECT)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
-    .withKysely(
-      new Kysely<Database>({
-        dialect: new PGliteDialect(pg),
-      }),
-    );
+    .withGroupCommitPGlite({
+      pg: pg as unknown as GroupCommitPGliteInstance,
+      // A poisoned session's unflushed writes, and every position built on
+      // them, are void: only a reload restarts them from the store.
+      onUnrecoverable: reloadPageForPoisonedStore,
+      onDiagnostic: (message, error) =>
+        console.error(`[reactor] pglite: ${message}`, error),
+    })
+    .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+  // No brokered-port seam on the main thread, so the registry stays empty.
+  configureConnectChannelScheme(reactorBuilder, {
+    multiReactor,
+    createLocalChannelFactory: () =>
+      new LocalChannelFactory(
+        logger,
+        new LocalChannelPortRegistry({ logger }).provider,
+      ),
+  });
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)
@@ -97,6 +115,8 @@ export async function createBrowserReactor(
   try {
     module = await builder.buildModule();
   } catch (error) {
+    // The build leaves pg open; a retry must not reuse it.
+    await discardReactorPGlite();
     throw toStoredDocumentsRefused(error);
   }
   return {
@@ -178,7 +198,7 @@ async function addRemoteDefaultDrive(
       // only exists once initial backfill delivers it — wait for it first
       // so the name/icon override isn't lost to a sync race.
       // waitForDocumentReady needs the full reactor client
-      const reactorClient = window.ph?.reactorClientModule?.client;
+      const reactorClient = getFullReactorClient();
       if (reactorClient) {
         await waitForDocumentReady(reactorClient, driveId, {
           timeoutMs: 15_000,
@@ -225,7 +245,7 @@ async function addLocalDefaultDrive(
     // path asks — is the id reserved, deleted or not — where find() reports
     // only live documents, so a deleted drive would look absent and be
     // re-created (and rejected) on every boot.
-    const reactorClient = window.ph?.reactorClientModule?.client;
+    const reactorClient = getFullReactorClient();
     if (reactorClient) {
       const taken = await reactorClient.isDocumentIdTaken(drive.id);
       if (taken) {

@@ -2,6 +2,7 @@ import type {
   IdentityOptions,
   StartServerOptions,
 } from "@powerhousedao/switchboard/server";
+import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
 import path from "node:path";
@@ -32,7 +33,7 @@ export const defaultSwitchboardOptions = {
     slug: "powerhouse",
     global: {
       name: "Powerhouse",
-      icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
+      icon: DEFAULT_DRIVE_ICON,
     },
     local: {
       availableOffline: true,

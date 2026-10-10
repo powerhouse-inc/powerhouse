@@ -90,6 +90,8 @@ async function buildHarness(
         new ReactorBuilder()
           .withDocumentModelSources([driveDocumentModelModule as never])
           .withExecutorConfig({ featureFlags })
+          // On demand only: a tick serves a pending echo ahead of A's next write.
+          .withCatchUp({ intervalMs: 3_600_000 })
           .withSync(new SyncBuilder().withChannelFactory(channelFactory())),
       )
       .withSigner(signer)
@@ -383,10 +385,11 @@ describe("a replica that lost a live operation of its own (#6)", () => {
     const { id, base, x } = await damaged(h);
 
     await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
-    await quiesce(h, id);
-
-    expect(await sourceRemoteOnB(h, id, x)).toContain("");
-    expect(await live(h.a, id)).toContain(x);
+    // The operation index lags the operation store, so poll what is asserted.
+    await eventually(async () =>
+      (await sourceRemoteOnB(h!, id, x)).includes(""),
+    );
+    await eventually(async () => (await live(h!.a, id)).includes(x));
   }, 30_000);
 
   // BUG (b): a trivial-append load keeps the sender's skip; z retracts A's y.
@@ -407,10 +410,31 @@ describe("a replica that lost a live operation of its own (#6)", () => {
 
     // A's next write serves the echo; B reshuffles on its matching action id.
     await executeOn(h.a, id, "w", new Date().toISOString());
+    await eventually(async () =>
+      (await sourceRemoteOnB(h!, id, x)).includes(""),
+    );
     await quiesce(h, id);
 
-    expect(await sourceRemoteOnB(h, id, x)).toContain("");
     expect(await live(h.a, id)).toEqual(await live(h.b, id));
+  }, 30_000);
+
+  // BUG: B already holds y, so an echo arriving alone moves nothing on B.
+  it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+    h = await buildHarness();
+    const { id, x } = await damaged(h, true);
+
+    hold(h, toB(id));
+    await h.a.module.catchUp.sweepNow();
+    await eventually(() =>
+      Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
+    );
+    release(h, toB(id));
+    await executeOn(h.a, id, "w", new Date().toISOString());
+
+    await eventually(
+      async () => (await sourceRemoteOnB(h!, id, x)).includes(""),
+      5_000,
+    );
   }, 30_000);
 });
 

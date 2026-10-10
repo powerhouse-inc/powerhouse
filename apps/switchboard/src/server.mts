@@ -11,6 +11,9 @@ import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumenta
 import {
   DriveCollectionId,
   EventBus,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_PATH_STORAGE_FACTS,
+  POSTGRES_STORAGE_FACTS,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -21,6 +24,7 @@ import {
   type InProcessReactorClientModule,
   type JwtHandler,
   type PoolInstrumentation,
+  type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
 } from "@powerhousedao/reactor";
 import {
@@ -101,11 +105,18 @@ import {
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
+  isWorkflowSingletonConflict,
   resolveWorkflowsEnabled,
+  retryWorkflowSingleton,
+  workflowSingletonLossHandler,
+  type WorkflowSingletonRetry,
   type ComposedWorkflowRuntime,
   type ModelManifestSource,
 } from "./workflow-runtime.mjs";
-import { ClosablePGliteDialect } from "./pglite-dialect.js";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "./pglite-dialect.js";
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   CURRENT_PG_MAJOR,
@@ -271,9 +282,10 @@ async function resolveServerPort(
 type ReactorStorage = {
   kysely: Kysely<Database>;
   poolInstrumentation: PoolInstrumentation | undefined;
+  storageFacts: ReactorStorageFacts;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
@@ -311,6 +323,7 @@ async function createReactorKysely(opts: {
     return {
       kysely: new Kysely<Database>({ dialect: new PostgresDialect({ pool }) }),
       poolInstrumentation,
+      storageFacts: POSTGRES_STORAGE_FACTS,
     };
   }
 
@@ -332,9 +345,15 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      dialect: new ClosablePGliteDialect(
+        pglite,
+        reactorPgliteDialectOptions(logger),
+      ),
     }),
     poolInstrumentation: undefined,
+    storageFacts: inMemory
+      ? IN_MEMORY_PGLITE_STORAGE_FACTS
+      : PGLITE_PATH_STORAGE_FACTS,
   };
 }
 
@@ -593,15 +612,18 @@ async function initServer(
       };
     }
 
-    const { kysely: baseKysely, poolInstrumentation } =
-      await createReactorKysely({
-        reactorDbUrl,
-        reactorPgliteDir,
-        reactorPgliteMajor,
-        inMemory: PGLITE_IN_MEMORY,
-        hostPoolSize: () => resolveHostPoolSize(process.env),
-        logger,
-      });
+    const {
+      kysely: baseKysely,
+      poolInstrumentation,
+      storageFacts,
+    } = await createReactorKysely({
+      reactorDbUrl,
+      reactorPgliteDir,
+      reactorPgliteMajor,
+      inMemory: PGLITE_IN_MEMORY,
+      hostPoolSize: () => resolveHostPoolSize(process.env),
+      logger,
+    });
 
     const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
     const hasSkipThreshold = !isNaN(maxSkipThreshold) && maxSkipThreshold > 0;
@@ -622,6 +644,7 @@ async function initServer(
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
       .withKysely(baseKysely)
+      .withStorageFacts(storageFacts)
       .withFeatures({
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
@@ -1015,13 +1038,20 @@ async function initServer(
   // The workflow runtime is a switchboard component: composed from what the
   // api handed back, registered like any other late subgraph.
   let workflows: ComposedWorkflowRuntime | undefined;
-  if (workflowsEnabled) {
-    workflows = await composeWorkflowRuntime({
+  let workflowsRetry: WorkflowSingletonRetry | undefined;
+  const composeWorkflows = () =>
+    composeWorkflowRuntime({
       reactorClient: client,
       clientModule: options.reactor ?? ownedReactorModule,
       relationalDb: api.relationalDb,
       // A Postgres read model outlives the pod; a key file beside it would not.
       secretsKeyFile: readModelPgliteDir === null ? false : undefined,
+      // The stable half of the default singleton owner name. Absolute, so
+      // two Switchboards in different working directories differ.
+      storageId:
+        readModelPgliteDir === null
+          ? readModelPath
+          : path.resolve(readModelPath),
       attachments: createAttachmentClient(api.attachments.service),
       attachmentAccess: api.attachmentAccess,
       // The workflow package's own HTTP namespace: its webhook endpoints live
@@ -1035,14 +1065,16 @@ async function initServer(
       pieceRegistryUrl: registryUrl,
       models: workerModels,
       logger: logger.child(["workflow-runtime"]),
+      exclusiveJournal: readModelPgliteDir !== null,
+      onSingletonLost: workflowSingletonLossHandler(logger),
       // The providers observability.mts registered before this module loaded.
       telemetry: {
         tracer: trace.getTracer(WORKFLOW_TELEMETRY_SCOPE),
         meter: metrics.getMeter(WORKFLOW_TELEMETRY_SCOPE),
       },
     });
-
-    const WorkflowRuntimeSubgraph = workflows.subgraph;
+  const registerWorkflowSubgraph = (composed: ComposedWorkflowRuntime) => {
+    const WorkflowRuntimeSubgraph = composed.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
       reactorClient: client,
       http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
@@ -1054,20 +1086,59 @@ async function initServer(
       path: graphqlManager.getBasePath(),
       attachments: api.attachmentClientProvider,
     });
-
-    lateSubgraphs.push(
-      graphqlManager
-        .registerSubgraphInstance(workflowSubgraph, "graphql", false)
-        .catch((error: unknown) => {
-          logger.error(
-            "Failed to register workflow-runtime subgraph: @error",
-            error,
-          );
-        }),
-    );
-
+    return graphqlManager
+      .registerSubgraphInstance(workflowSubgraph, "graphql", false)
+      .catch((error: unknown) => {
+        logger.error(
+          "Failed to register workflow-runtime subgraph: @error",
+          error,
+        );
+      });
+  };
+  if (workflowsEnabled) {
+    try {
+      workflows = await composeWorkflows();
+    } catch (error) {
+      // Without the claim this host must not run workflows, but everything
+      // else it serves still works, so it boots without the runtime.
+      if (!isWorkflowSingletonConflict(error)) throw error;
+      logger.warn(
+        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
+          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
+          "This Switchboard has booted WITHOUT the workflow runtime: no " +
+          "trigger of any kind fires here, and the workflow GraphQL face is " +
+          "absent. Everything else serves normally. Stop the other owner, or " +
+          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
+          "slot that owns workflows. This Switchboard retries the claim and " +
+          "starts workflows once the lease comes free.",
+      );
+      workflowsRetry = retryWorkflowSingleton({
+        compose: composeWorkflows,
+        onComposed: async (composed) => {
+          workflows = composed;
+          await registerWorkflowSubgraph(composed);
+          // Past boot nothing else rebuilds the router, so a subgraph
+          // registered now is not served until this runs.
+          try {
+            await graphqlManager.updateRouter();
+          } catch (error) {
+            logger.error(
+              "Mounting the late workflow-runtime subgraph failed: @error",
+              error,
+            );
+          }
+          await composed.start();
+          logger.info("Workflow runtime started");
+        },
+        logger,
+      });
+    }
+  }
+  if (workflows) {
+    lateSubgraphs.push(registerWorkflowSubgraph(workflows));
     await workflows.start();
     logger.info("Workflow runtime started");
+    api.inspection?.facts.setWorkflows(true);
   }
 
   let privacy: RunningPrivacy | undefined;
@@ -1088,6 +1159,7 @@ async function initServer(
         logger: logger.child(["privacy"]),
       });
     } catch (error) {
+      await workflowsRetry?.stop();
       await workflows?.stop();
       await abortBoot(api);
       throw error;
@@ -1098,6 +1170,7 @@ async function initServer(
   // that dispose closes, and its children outlive the reactor otherwise.
   const shutdown = async () => {
     await privacy?.stop();
+    await workflowsRetry?.stop();
     await workflows?.stop();
     await api.dispose();
   };
@@ -1268,7 +1341,10 @@ async function initServer(
     reactor: client,
     attachmentService,
     attachmentReferenceProjection: api.attachmentReferenceProjection,
-    workflowTriggers: workflows?.triggers,
+    // Read live: losing the singleton turns it unavailable.
+    get workflowTriggers() {
+      return workflows?.triggers;
+    },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: privacy ? { erasure: privacy.erasure } : undefined,

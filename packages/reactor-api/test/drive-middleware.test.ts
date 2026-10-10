@@ -19,10 +19,15 @@ import {
 import { DriveOwnershipCache } from "../src/graphql/gateway/drive-ownership-cache.js";
 import type { FetchHandler } from "../src/graphql/gateway/types.js";
 
-function makeCache(initialDrives: string[] = []): DriveOwnershipCache {
-  const cache = new DriveOwnershipCache(
-    {} as unknown as ConstructorParameters<typeof DriveOwnershipCache>[0],
-  );
+// A reactor that holds no drive beyond the ones seeded into the cache.
+function makeCache(
+  initialDrives: string[] = [],
+  find: () => Promise<unknown> = () =>
+    Promise.resolve({ results: [], options: { cursor: "", limit: 100 } }),
+): DriveOwnershipCache {
+  const cache = new DriveOwnershipCache({
+    find,
+  } as unknown as ConstructorParameters<typeof DriveOwnershipCache>[0]);
   for (const id of initialDrives) {
     cache.add(id);
   }
@@ -132,6 +137,86 @@ describe("createDriveFetchMiddleware", () => {
     expect(nextCalls).toHaveLength(1);
   });
 
+  const CREATE_DOCUMENT =
+    "mutation CreateDocument($d: JSONObject!, $p: String) { createDocument(document: $d, parentIdentifier: $p) { id } }";
+
+  const createRequest = (
+    driveId: string,
+    header: { id: string; documentType: string },
+    parent?: string,
+  ) =>
+    makeRequest({
+      driveId,
+      body: {
+        operationName: "CreateDocument",
+        query: CREATE_DOCUMENT,
+        variables: { d: { header }, p: parent },
+      },
+    });
+
+  it("passes through a cache-miss create of the drive the Drive-Id names, whatever its name", async () => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
+
+    const res = await handler(
+      createRequest("new-drive", {
+        id: "new-drive",
+        documentType: "powerhouse/document-drive",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(nextCalls).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      "a different drive",
+      { id: "other-drive", documentType: "powerhouse/document-drive" },
+      undefined,
+    ],
+    [
+      "a document that is not a drive",
+      { id: "new-drive", documentType: "powerhouse/document-model" },
+      undefined,
+    ],
+    [
+      "a child under the named drive",
+      { id: "child", documentType: "powerhouse/document-model" },
+      "new-drive",
+    ],
+    [
+      "the drive under a parent",
+      { id: "new-drive", documentType: "powerhouse/document-drive" },
+      "some-parent",
+    ],
+  ])("returns 421 for a cache-miss create of %s", async (_, header, parent) => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
+
+    const res = await handler(createRequest("new-drive", header, parent));
+
+    expect(res.status).toBe(421);
+    expect(nextCalls).toHaveLength(0);
+  });
+
+  it("returns 421 for a cache-miss mutation that does more than create", async () => {
+    const cache = makeCache([]);
+    const handler = createDriveFetchMiddleware(cache)(next);
+
+    const res = await handler(
+      makeRequest({
+        driveId: "drive-foreign",
+        body: {
+          operationName: "CreateAndMutate",
+          query:
+            'mutation CreateAndMutate { createDocument(document: {}) { id } mutateDocument(documentIdentifier: "x", actions: []) { id } }',
+        },
+      }),
+    );
+
+    expect(res.status).toBe(421);
+    expect(nextCalls).toHaveLength(0);
+  });
+
   it("returns 421 wrong-shard for cache-miss on a non-bypass operation", async () => {
     const cache = makeCache(["drive-a"]);
     const handler = createDriveFetchMiddleware(cache)(next);
@@ -193,6 +278,23 @@ describe("createDriveFetchMiddleware", () => {
 
     expect(res.status).toBe(421);
     expect(nextCalls).toHaveLength(0);
+  });
+
+  it("passes through when the reactor cannot say whether it holds the drive", async () => {
+    const cache = makeCache([], () =>
+      Promise.reject(new Error("storage unavailable")),
+    );
+    const handler = createDriveFetchMiddleware(cache)(next);
+
+    const res = await handler(
+      makeRequest({
+        driveId: "drive-x",
+        body: { operationName: "mutateDocument" },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(nextCalls).toHaveLength(1);
   });
 
   it("treats an empty Drive-Id header as missing (passes through)", async () => {

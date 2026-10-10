@@ -1,3 +1,5 @@
+import type { RemoteFilter } from "../sync/types.js";
+
 export type CorrelationId = string;
 
 export type ErrorInfo = {
@@ -156,6 +158,31 @@ export type RpcDbOp = MethodCallMessage<"db-op">;
 
 export type RpcInspectorOp = MethodCallMessage<"inspector-op">;
 
+/**
+ * Hands the host one end of a brokered `MessageChannel` and asks it to adopt
+ * the peer as a local remote. Post it with `port` in the transfer list.
+ */
+export type RpcAdoptSyncPeer = {
+  k: "adopt-sync-peer";
+  id: CorrelationId;
+  peerId: string;
+  channelName: string;
+  /** `DriveCollectionId.key`; the class does not survive structured clone. */
+  collectionIdKey: string;
+  remoteName: string;
+  filter: RemoteFilter;
+  port: MessagePort;
+};
+
+/** Removes an adopted local peer and closes its port in the host's registry. */
+export type RpcRemoveSyncPeer = {
+  k: "remove-sync-peer";
+  id: CorrelationId;
+  peerId: string;
+  channelName: string;
+  remoteName: string;
+};
+
 export type RpcLiveSubscribe = {
   k: "sub-live";
   id: CorrelationId;
@@ -197,6 +224,8 @@ export type ClientMessage =
   | RpcSyncOp
   | RpcDbOp
   | RpcInspectorOp
+  | RpcAdoptSyncPeer
+  | RpcRemoveSyncPeer
   | RpcLiveSubscribe
   | RpcLiveUnsub
   | RpcPing;

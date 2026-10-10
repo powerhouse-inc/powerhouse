@@ -15,6 +15,7 @@ import {
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
+  JOB_NOT_FOUND_ERROR_NAME,
   JobStatus,
   type OperationFilter,
   type PagedResults,
@@ -33,6 +34,7 @@ import type {
   Operation,
   PeerManifest,
   PHDocument,
+  ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import {
   readPeerManifest,
@@ -120,6 +122,18 @@ import type {
   PhDocumentResultPage,
   ReactorOperationResultPage,
 } from "./gen/graphql.js";
+
+/** The defaults `create` gives a new document; the parent must already be gated. */
+export async function createDefaults(
+  reactorClient: IReactorClient,
+  parentIdOrSlug: string | undefined,
+): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
+  const [signaturePolicy, protocolVersions] = await Promise.all([
+    reactorClient.getCreateSignaturePolicy(),
+    reactorClient.getCreateProtocolVersions(parentIdOrSlug),
+  ]);
+  return { signaturePolicy, protocolVersions };
+}
 
 export async function documentModels(
   reactorClient: IReactorClient,
@@ -541,7 +555,11 @@ function unknownJob(jobId: string): JobInfo {
     status: JobStatus.FAILED,
     createdAtUtcIso: now,
     completedAtUtcIso: now,
-    error: { name: "Error", message: "Job not found", stack: "" },
+    error: {
+      name: JOB_NOT_FOUND_ERROR_NAME,
+      message: "Job not found",
+      stack: "",
+    },
     consistencyToken: { version: 1, createdAtUtcIso: now, coordinates: [] },
     meta: { batchId: jobId, batchJobIds: [jobId] },
   };

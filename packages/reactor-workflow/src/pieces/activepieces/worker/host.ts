@@ -1,4 +1,7 @@
-import { configuredMaxFileBytes } from "../context/limits.js";
+import {
+  configuredMaxFileBytes,
+  hostCallTimeoutForStep,
+} from "../context/limits.js";
 import type { StagedFile } from "../context/files.js";
 import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
@@ -73,6 +76,13 @@ export class PieceWorkerExitError extends Error {
   }
 }
 
+export class PieceWorkerDisposedError extends Error {
+  constructor() {
+    super("This piece worker is disposed");
+    this.name = "PieceWorkerDisposedError";
+  }
+}
+
 export interface PieceWorkerResult {
   output: unknown;
   touched: string[];
@@ -99,6 +109,10 @@ export interface RequestTaps {
 // the taps the host offers while it runs.
 export interface RequestOptions extends RequestTaps {
   timeoutMs?: number;
+  // Cap on each call the child makes of its host, for THIS request. Per
+  // request rather than per worker because it follows the step's own timeout
+  // (`hostCallTimeoutForStep`), and one worker serves many steps.
+  hostCallTimeoutMs?: number;
 }
 
 /** @deprecated Named for the one request that had it; every request takes it
@@ -203,6 +217,7 @@ export class PieceWorker implements IPieceWorker {
   private forkedAt = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private nextId = 1;
+  private disposed = false;
 
   constructor(options: PieceWorkerOptions = {}) {
     const entryPath = options.entryPath;
@@ -263,7 +278,7 @@ export class PieceWorker implements IPieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs?: number,
-    taps: RequestTaps = {},
+    taps: RequestOptions = {},
   ): Promise<PieceWorkerResult> {
     const run = this.queue.then(() => {
       const execute = (onTimings?: OnWorkerTimings) =>
@@ -292,7 +307,9 @@ export class PieceWorker implements IPieceWorker {
     return run;
   }
 
+  // For good: a request still queued, or made later, forks nothing.
   dispose(): void {
+    this.disposed = true;
     this.worker?.kill();
     this.worker = undefined;
   }
@@ -352,11 +369,22 @@ export class PieceWorker implements IPieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs: number,
-    taps: RequestTaps,
+    taps: RequestOptions,
     onTimings?: OnWorkerTimings,
   ): Promise<PieceWorkerResult> {
+    if (this.disposed) return Promise.reject(new PieceWorkerDisposedError());
     const worker = this.spawn();
     const id = this.nextId++;
+    // An explicit per-worker cap is the host's own decision and wins. With
+    // none — which is how the pool builds them — each request carries the cap
+    // derived from its step (`hostCallTimeoutForStep`), because one worker
+    // serves many steps and the cap follows the step's own timeout.
+    // A request with no cap of its own (a trigger hook, a design-time call)
+    // takes the operator's, raised to its own timeout, as a step does.
+    const hostCallTimeoutMs =
+      this.hostCallTimeoutMs ??
+      taps.hostCallTimeoutMs ??
+      hostCallTimeoutForStep(timeoutMs);
 
     // When the request was handed to IPC, for the ipc.in span.
     let sentAt = 0;
@@ -457,9 +485,7 @@ export class PieceWorker implements IPieceWorker {
           request: {
             maxFileBytes: configuredMaxFileBytes(),
             deadline,
-            ...(this.hostCallTimeoutMs
-              ? { hostCallTimeoutMs: this.hostCallTimeoutMs }
-              : {}),
+            ...(hostCallTimeoutMs ? { hostCallTimeoutMs } : {}),
             ...request,
             ...(reactor ? { reactor: reactor.binding } : {}),
           },

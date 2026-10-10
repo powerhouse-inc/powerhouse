@@ -1,3 +1,6 @@
+/** Once `signal` aborts, settle promptly and stop mutating shared state. */
+export type PollDelegate = (signal: AbortSignal | undefined) => Promise<void>;
+
 /**
  * Timer that controls when polling occurs.
  * GqlChannel registers a delegate; the timer invokes it when appropriate.
@@ -5,7 +8,7 @@
  */
 export type IPollTimer = {
   /** Register the delegate to be called on each tick. Returns Promise that timer awaits. */
-  setDelegate: (delegate: () => Promise<void>) => void;
+  setDelegate: (delegate: PollDelegate) => void;
 
   /** Start the timer (begins calling delegate periodically) */
   start: () => void;
@@ -18,4 +21,7 @@ export type IPollTimer = {
    * Used by Manual polling mode to pull on demand without resuming the schedule.
    */
   triggerNow: () => void;
+
+  /** True while the timer polls only on demand (`triggerNow`). */
+  isPaused?: () => boolean;
 };

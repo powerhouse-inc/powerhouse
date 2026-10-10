@@ -319,6 +319,9 @@ async function harness(authEnforcement: boolean): Promise<Harness> {
     authorizationService: OPEN,
     pieces: { getPieces: () => pieces, onPiecesChange: () => undefined },
     logger,
+    // Two harnesses share one database on purpose; placement has its own
+    // suite.
+    singletonLease: false,
   });
   const subgraph = new runtime.subgraph({
     reactorClient: built.client,

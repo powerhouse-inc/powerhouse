@@ -480,6 +480,33 @@ describe("HybridProjectionCoordinator", () => {
       );
     });
 
+    it("holds the next job on a key until a slow sibling of a throwing model finishes", async () => {
+      const failing = new RecordingReadModel("host-failing", sequence, {
+        failOn: [0, 1],
+      });
+      const slow = new RecordingReadModel("host-slow", sequence);
+      const { transports, logger } = await setup({
+        postReady: [failing, slow],
+      });
+      vi.spyOn(logger, "error").mockImplementation(() => undefined);
+      slow.hold(0);
+
+      readReady(transports[0]!, "job-1", [operation("doc-1", 0)]);
+      readReady(transports[0]!, "job-2", [operation("doc-1", 1)]);
+      await within(slow.whenStarted(0), "job-1 slow post-ready start");
+      await within(failing.whenDone(0), "job-1 failing post-ready");
+
+      await expect(
+        within(slow.whenStarted(1), "job-2 slow post-ready start", 50),
+      ).rejects.toThrow("did not settle");
+
+      slow.release(0);
+      await within(slow.whenDone(1), "job-2 slow post-ready");
+      expect(sequence.indexOf("host-slow:done:0")).toBeLessThan(
+        sequence.indexOf("host-slow:start:1"),
+      );
+    });
+
     it("shuts down promptly after the worker has already exited", async () => {
       const { transports, coordinator } = await setup();
 
@@ -610,6 +637,27 @@ describe("HybridProjectionCoordinator", () => {
       expect(sequence.indexOf("added-post:start:0")).toBeGreaterThan(
         readReadyAt,
       );
+    });
+
+    it("removeReadModel stops indexing that instance and frees its name", async () => {
+      const { transports, coordinator, post } = await setup();
+      const captured = coordinator.readModels;
+      const added = new RecordingReadModel("added", sequence);
+      const namesake = new RecordingReadModel("added", sequence);
+      coordinator.addReadModel(added, "post_ready");
+
+      expect(coordinator.removeReadModel(namesake)).toBe(false);
+      expect(coordinator.removeReadModel(added)).toBe(true);
+      expect(captured).not.toContain(added);
+      coordinator.addReadModel(namesake, "post_ready");
+
+      readReady(transports[0]!, "job-1", [operation("doc-1", 0)]);
+      await within(
+        Promise.all([post.whenDone(0), namesake.whenDone(0)]),
+        "job-1 post-ready",
+      );
+      expect(added.indexed).toEqual([]);
+      expect(captured).toContain(namesake);
     });
 
     it("readModels lists host models and the lookup-only built-ins, which are never indexed", async () => {

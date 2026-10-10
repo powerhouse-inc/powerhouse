@@ -39,6 +39,7 @@ import {
   createSchema,
 } from "../utils/create-schema.js";
 import { callerSubject } from "./base-subgraph.js";
+import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import {
   getAuthContext,
@@ -49,7 +50,10 @@ import {
   getRequestDriveId,
   type DriveFetchMiddleware,
 } from "./gateway/drive-middleware.js";
-import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
+import {
+  DriveOwnershipCache,
+  type DriveStore,
+} from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
 import {
   WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
@@ -148,6 +152,12 @@ export type GraphQLManagerOptions = {
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
+  inspection?: IReactorInspectionSource;
+  /**
+   * Where drive ownership is looked up, past the read gate. Defaults to the
+   * reactor client, which withholds a drive the host's own key may not read.
+   */
+  driveStore?: DriveStore;
 };
 
 /**
@@ -307,6 +317,7 @@ export class GraphQLManager {
   private readonly syncServingGate?: SyncScopeGate;
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
+  private readonly inspection?: IReactorInspectionSource;
 
   constructor(options: GraphQLManagerOptions) {
     this.path = options.path;
@@ -328,8 +339,11 @@ export class GraphQLManager {
     this.syncServingGate = options.syncServingGate;
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
+    this.inspection = options.inspection;
 
-    this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
+    this.driveOwnershipCache = new DriveOwnershipCache(
+      options.driveStore ?? this.reactorClient,
+    );
 
     // Each subscription-enabled subgraph adds listeners to the shared wsServer
     // via graphql-ws's useServer(). The handler cache bounds the count, so
@@ -574,6 +588,7 @@ export class GraphQLManager {
           authorizationService: this.authorizationService,
           syncServingGate: this.syncServingGate,
           attachments: this.attachments,
+          inspection: this.inspection,
         });
 
         await this.#addSubgraphInstance(
@@ -817,6 +832,7 @@ export class GraphQLManager {
       authorizationService: this.authorizationService,
       syncServingGate: this.syncServingGate,
       attachments: this.attachments,
+      inspection: this.inspection,
     });
 
     return this.#addSubgraphInstance(

@@ -200,7 +200,11 @@ describe("unsupported piece features", () => {
     });
 
     it("flags the same blocks in search", async () => {
-      const { hits } = await runtime.searchBlocks("fixture", 20);
+      const search = async (kind: "action" | "trigger") =>
+        (await runtime.searchPieces("fixture", { kind })).pieces.flatMap(
+          (piece) => piece.blocks,
+        );
+      const hits = [...(await search("action")), ...(await search("trigger"))];
       expect(
         Object.fromEntries(
           hits.map((hit) => [`${hit.pieceName} ${hit.name}`, hit.unsupported]),

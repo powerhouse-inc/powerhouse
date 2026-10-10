@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { DriveCollectionId } from "../../../../src/cache/operation-index-types.js";
-import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
+import {
+  GqlRequestChannel,
+  MAX_REQUESTS_PER_POLL,
+} from "../../../../src/sync/channels/gql-req-channel.js";
 import { GqlRequestChannelFactory } from "../../../../src/sync/channels/gql-request-channel-factory.js";
 import type { ChannelConfig } from "../../../../src/sync/types.js";
 import {
@@ -142,6 +145,33 @@ describe("GqlRequestChannelFactory", () => {
   });
 
   describe("validation", () => {
+    it("bounds the poll tick above every request one tick can make", () => {
+      const channel = factory.instance(
+        "test-id",
+        "test-remote",
+        {
+          type: "gql",
+          parameters: {
+            url: "https://example.com/graphql",
+            requestTimeoutMs: 60_000,
+          },
+        },
+        createMockCursorStorage(),
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
+        createMockOperationIndex(),
+      );
+
+      const timer = (
+        channel as unknown as {
+          pollTimer: { config: { delegateTimeoutMs: number } };
+        }
+      ).pollTimer;
+      expect(timer.config.delegateTimeoutMs).toBeGreaterThan(
+        60_000 * MAX_REQUESTS_PER_POLL,
+      );
+    });
+
     it("should throw error if url is missing", () => {
       const cursorStorage = createMockCursorStorage();
 

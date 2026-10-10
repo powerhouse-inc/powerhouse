@@ -1,3 +1,228 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor:** let a host close every local sync port at once ([c18edb4d22](https://github.com/powerhouse-inc/powerhouse/commit/c18edb4d22))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor:** export bucketFor and the client option types ([5f0bbe397d](https://github.com/powerhouse-inc/powerhouse/commit/5f0bbe397d))
+- **reactor:** rpc messages to adopt and remove a local sync peer ([053ed60386](https://github.com/powerhouse-inc/powerhouse/commit/053ed60386))
+- **reactor:** channel factories declare the channel types they build ([b8cc754bb2](https://github.com/powerhouse-inc/powerhouse/commit/b8cc754bb2))
+- **reactor:** composite channel factory and a builder seam to compose it ([d18827eace](https://github.com/powerhouse-inc/powerhouse/commit/d18827eace))
+- **reactor:** keep the local peer registry next to LocalChannelFactory ([e77e7bde36](https://github.com/powerhouse-inc/powerhouse/commit/e77e7bde36))
+- **reactor:** make remotes session-scoped and guard rehydration ([a0502a3c0f](https://github.com/powerhouse-inc/powerhouse/commit/a0502a3c0f))
+- **reactor:** symmetric local sync channel over a message port ([06a8337369](https://github.com/powerhouse-inc/powerhouse/commit/06a8337369))
+- **reactor:** serve the read half of sync inspection from SyncManager ([d947d966b7](https://github.com/powerhouse-inc/powerhouse/commit/d947d966b7))
+- **reactor:** give SyncModule a syncInspector beside syncAdmin ([2ac573b57a](https://github.com/powerhouse-inc/powerhouse/commit/2ac573b57a))
+- **reactor:** typed IInspector, IInspectorAdmin and one op table with tiers ([cc951c4213](https://github.com/powerhouse-inc/powerhouse/commit/cc951c4213))
+- **reactor:** let channel factories declare the channel types they serve ([cce52f1def](https://github.com/powerhouse-inc/powerhouse/commit/cce52f1def))
+- **reactor:** assemble the group-commit pglite store in ReactorBuilder ([ae6bbd1aee](https://github.com/powerhouse-inc/powerhouse/commit/ae6bbd1aee))
+- **reactor:** flush before every sync cursor write ([1df72470c6](https://github.com/powerhouse-inc/powerhouse/commit/1df72470c6))
+- **reactor:** announce a job write-ready only once its commit is durable ([25af1d43d6](https://github.com/powerhouse-inc/powerhouse/commit/25af1d43d6))
+- **reactor:** group-commit the pglite filesystem sync behind a flusher ([8fa1ab8562](https://github.com/powerhouse-inc/powerhouse/commit/8fa1ab8562))
+
+### 🩹 Fixes
+
+- **reactor:** report a group-commit store's health to the inspector ([0e64a943e9](https://github.com/powerhouse-inc/powerhouse/commit/0e64a943e9))
+- **reactor:** name the inspector's storage-health types apart from slice 4's ([9d8d407539](https://github.com/powerhouse-inc/powerhouse/commit/9d8d407539))
+- **reactor:** report a group-commit PGlite store's facts as unknown unless declared ([863349cc5a](https://github.com/powerhouse-inc/powerhouse/commit/863349cc5a))
+- **reactor:** keep DriveClient accepting an IReactor as its batch submitter ([ace3a0ea5b](https://github.com/powerhouse-inc/powerhouse/commit/ace3a0ea5b))
+- **reactor,reactor-router:** name an unknown job so the router stops reporting real jobs as unknown ([34aadb3add](https://github.com/powerhouse-inc/powerhouse/commit/34aadb3add))
+- **reactor:** drop live local pushes after an overflow until the peer's hello ([b8e7901915](https://github.com/powerhouse-inc/powerhouse/commit/b8e7901915))
+- **reactor:** keep a dead or failed local channel off the attach queue ([ff78a2426c](https://github.com/powerhouse-inc/powerhouse/commit/ff78a2426c))
+- **reactor:** bound worker-transport and model-recovery retries by maxRetries ([1c47fb8a17](https://github.com/powerhouse-inc/powerhouse/commit/1c47fb8a17))
+- **reactor:** do not re-push the local outbox on a reply hello ([a9a9637c6d](https://github.com/powerhouse-inc/powerhouse/commit/a9a9637c6d))
+- **reactor:** discard queued local pushes on overflow instead of the oldest frame ([d9248aed98](https://github.com/powerhouse-inc/powerhouse/commit/d9248aed98))
+- **reactor:** put a retried or flushed job back at its original position ([1b9119b021](https://github.com/powerhouse-inc/powerhouse/commit/1b9119b021))
+- **reactor:** wait out a local remote's reset before removing it ([42ce6dd9a9](https://github.com/powerhouse-inc/powerhouse/commit/42ce6dd9a9))
+- **reactor:** purge session remotes before loading quarantine and holds ([540926779d](https://github.com/powerhouse-inc/powerhouse/commit/540926779d))
+- **reactor:** validate local push envelopes and guard their conversion ([547978503f](https://github.com/powerhouse-inc/powerhouse/commit/547978503f))
+- **reactor:** re-post the local inbox ack when a push is dropped as applied ([7f09691382](https://github.com/powerhouse-inc/powerhouse/commit/7f09691382))
+- **reactor:** clear a local push retry only when a push lands ([f600fcd073](https://github.com/powerhouse-inc/powerhouse/commit/f600fcd073))
+- **reactor:** answer an opening local hello and recover connected on good traffic ([4a5d071c2b](https://github.com/powerhouse-inc/powerhouse/commit/4a5d071c2b))
+- **reactor:** hold one listener per registered local port and replay across a reset ([046361d85b](https://github.com/powerhouse-inc/powerhouse/commit/046361d85b))
+- **reactor:** drop a resent marker already applied while the ack is held ([f6f5e7584f](https://github.com/powerhouse-inc/powerhouse/commit/f6f5e7584f))
+- **reactor:** re-enqueue a retried or flushed job ahead of its dependents ([54ff0ba138](https://github.com/powerhouse-inc/powerhouse/commit/54ff0ba138))
+- **reactor:** keep local sync alive across a channel reset ([4d089e6955](https://github.com/powerhouse-inc/powerhouse/commit/4d089e6955))
+- **reactor:** write session remotes and remove them at the next startup ([c921201836](https://github.com/powerhouse-inc/powerhouse/commit/c921201836))
+- **reactor:** free an inbox chunk's slot once it is enqueued ([955ea30a6d](https://github.com/powerhouse-inc/powerhouse/commit/955ea30a6d))
+- **reactor:** apply inbox chunks per document instead of on one chain ([d1fbd360c7](https://github.com/powerhouse-inc/powerhouse/commit/d1fbd360c7))
+- **reactor:** hold the inbox ack below every unapplied item, by default ([dd1d2b34cf](https://github.com/powerhouse-inc/powerhouse/commit/dd1d2b34cf))
+- **reactor:** post a local inbox ack only when it advances ([9864436305](https://github.com/powerhouse-inc/powerhouse/commit/9864436305))
+- **reactor:** classify local push transport failures ([9625ccd397](https://github.com/powerhouse-inc/powerhouse/commit/9625ccd397))
+- **reactor:** reject a malformed local push frame ([7251b0daf0](https://github.com/powerhouse-inc/powerhouse/commit/7251b0daf0))
+- **reactor:** establish local channel state before subscribing ([b410dcce6e](https://github.com/powerhouse-inc/powerhouse/commit/b410dcce6e))
+- **reactor,reactor-api:** read an empty dead-letter cursor as page one and refuse unsafe offsets ([1ac02bcceb](https://github.com/powerhouse-inc/powerhouse/commit/1ac02bcceb))
+- **switchboard,connect:** declare the reactor store's storage facts ([28d9d364a9](https://github.com/powerhouse-inc/powerhouse/commit/28d9d364a9))
+- **reactor-api:** serve queued jobs and dead letters without document content ([ab981bb044](https://github.com/powerhouse-inc/powerhouse/commit/ab981bb044))
+- **reactor:** clamp the dead-letter page limit and refuse a malformed cursor ([df6dafd12a](https://github.com/powerhouse-inc/powerhouse/commit/df6dafd12a))
+- **reactor:** start a statement's deadline once the group-commit gate admits it ([0c3c843d8b](https://github.com/powerhouse-inc/powerhouse/commit/0c3c843d8b))
+- **reactor:** refuse a negative or non-finite durability wait with group commit ([c574be0a46](https://github.com/powerhouse-inc/powerhouse/commit/c574be0a46))
+- **reactor:** disarm the job timer before COMMIT is issued ([69d9065f67](https://github.com/powerhouse-inc/powerhouse/commit/69d9065f67))
+- **reactor:** keep the job timer from holding the process open ([abebd19a23](https://github.com/powerhouse-inc/powerhouse/commit/abebd19a23))
+- **reactor:** leave a failed build's pg open for its owner ([b6bb4dccdf](https://github.com/powerhouse-inc/powerhouse/commit/b6bb4dccdf))
+- **reactor:** refuse an unbounded durability wait with group commit ([8fc2103a52](https://github.com/powerhouse-inc/powerhouse/commit/8fc2103a52))
+- **reactor:** stop timing out a job once its commit has landed ([5410b4118e](https://github.com/powerhouse-inc/powerhouse/commit/5410b4118e))
+- **reactor:** let the catch-up scheduler drop consumers no source lists ([4c3adfb645](https://github.com/powerhouse-inc/powerhouse/commit/4c3adfb645))
+- **reactor:** let a live read model be removed, and wait out every model of a stage ([14fe73aaf2](https://github.com/powerhouse-inc/powerhouse/commit/14fe73aaf2))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor:** let a host close every local sync port at once ([c18edb4d22](https://github.com/powerhouse-inc/powerhouse/commit/c18edb4d22))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor:** export bucketFor and the client option types ([5f0bbe397d](https://github.com/powerhouse-inc/powerhouse/commit/5f0bbe397d))
+- **reactor:** rpc messages to adopt and remove a local sync peer ([053ed60386](https://github.com/powerhouse-inc/powerhouse/commit/053ed60386))
+- **reactor:** channel factories declare the channel types they build ([b8cc754bb2](https://github.com/powerhouse-inc/powerhouse/commit/b8cc754bb2))
+- **reactor:** composite channel factory and a builder seam to compose it ([d18827eace](https://github.com/powerhouse-inc/powerhouse/commit/d18827eace))
+- **reactor:** keep the local peer registry next to LocalChannelFactory ([e77e7bde36](https://github.com/powerhouse-inc/powerhouse/commit/e77e7bde36))
+- **reactor:** make remotes session-scoped and guard rehydration ([a0502a3c0f](https://github.com/powerhouse-inc/powerhouse/commit/a0502a3c0f))
+- **reactor:** symmetric local sync channel over a message port ([06a8337369](https://github.com/powerhouse-inc/powerhouse/commit/06a8337369))
+- **reactor:** serve the read half of sync inspection from SyncManager ([d947d966b7](https://github.com/powerhouse-inc/powerhouse/commit/d947d966b7))
+- **reactor:** give SyncModule a syncInspector beside syncAdmin ([2ac573b57a](https://github.com/powerhouse-inc/powerhouse/commit/2ac573b57a))
+- **reactor:** typed IInspector, IInspectorAdmin and one op table with tiers ([cc951c4213](https://github.com/powerhouse-inc/powerhouse/commit/cc951c4213))
+- **reactor:** let channel factories declare the channel types they serve ([cce52f1def](https://github.com/powerhouse-inc/powerhouse/commit/cce52f1def))
+- **reactor:** assemble the group-commit pglite store in ReactorBuilder ([ae6bbd1aee](https://github.com/powerhouse-inc/powerhouse/commit/ae6bbd1aee))
+- **reactor:** flush before every sync cursor write ([1df72470c6](https://github.com/powerhouse-inc/powerhouse/commit/1df72470c6))
+- **reactor:** announce a job write-ready only once its commit is durable ([25af1d43d6](https://github.com/powerhouse-inc/powerhouse/commit/25af1d43d6))
+- **reactor:** group-commit the pglite filesystem sync behind a flusher ([8fa1ab8562](https://github.com/powerhouse-inc/powerhouse/commit/8fa1ab8562))
+
+### 🩹 Fixes
+
+- **reactor:** report a group-commit store's health to the inspector ([0e64a943e9](https://github.com/powerhouse-inc/powerhouse/commit/0e64a943e9))
+- **reactor:** name the inspector's storage-health types apart from slice 4's ([9d8d407539](https://github.com/powerhouse-inc/powerhouse/commit/9d8d407539))
+- **reactor:** report a group-commit PGlite store's facts as unknown unless declared ([863349cc5a](https://github.com/powerhouse-inc/powerhouse/commit/863349cc5a))
+- **reactor:** keep DriveClient accepting an IReactor as its batch submitter ([ace3a0ea5b](https://github.com/powerhouse-inc/powerhouse/commit/ace3a0ea5b))
+- **reactor,reactor-router:** name an unknown job so the router stops reporting real jobs as unknown ([34aadb3add](https://github.com/powerhouse-inc/powerhouse/commit/34aadb3add))
+- **reactor:** drop live local pushes after an overflow until the peer's hello ([b8e7901915](https://github.com/powerhouse-inc/powerhouse/commit/b8e7901915))
+- **reactor:** keep a dead or failed local channel off the attach queue ([ff78a2426c](https://github.com/powerhouse-inc/powerhouse/commit/ff78a2426c))
+- **reactor:** bound worker-transport and model-recovery retries by maxRetries ([1c47fb8a17](https://github.com/powerhouse-inc/powerhouse/commit/1c47fb8a17))
+- **reactor:** do not re-push the local outbox on a reply hello ([a9a9637c6d](https://github.com/powerhouse-inc/powerhouse/commit/a9a9637c6d))
+- **reactor:** discard queued local pushes on overflow instead of the oldest frame ([d9248aed98](https://github.com/powerhouse-inc/powerhouse/commit/d9248aed98))
+- **reactor:** put a retried or flushed job back at its original position ([1b9119b021](https://github.com/powerhouse-inc/powerhouse/commit/1b9119b021))
+- **reactor:** wait out a local remote's reset before removing it ([42ce6dd9a9](https://github.com/powerhouse-inc/powerhouse/commit/42ce6dd9a9))
+- **reactor:** purge session remotes before loading quarantine and holds ([540926779d](https://github.com/powerhouse-inc/powerhouse/commit/540926779d))
+- **reactor:** validate local push envelopes and guard their conversion ([547978503f](https://github.com/powerhouse-inc/powerhouse/commit/547978503f))
+- **reactor:** re-post the local inbox ack when a push is dropped as applied ([7f09691382](https://github.com/powerhouse-inc/powerhouse/commit/7f09691382))
+- **reactor:** clear a local push retry only when a push lands ([f600fcd073](https://github.com/powerhouse-inc/powerhouse/commit/f600fcd073))
+- **reactor:** answer an opening local hello and recover connected on good traffic ([4a5d071c2b](https://github.com/powerhouse-inc/powerhouse/commit/4a5d071c2b))
+- **reactor:** hold one listener per registered local port and replay across a reset ([046361d85b](https://github.com/powerhouse-inc/powerhouse/commit/046361d85b))
+- **reactor:** drop a resent marker already applied while the ack is held ([f6f5e7584f](https://github.com/powerhouse-inc/powerhouse/commit/f6f5e7584f))
+- **reactor:** re-enqueue a retried or flushed job ahead of its dependents ([54ff0ba138](https://github.com/powerhouse-inc/powerhouse/commit/54ff0ba138))
+- **reactor:** keep local sync alive across a channel reset ([4d089e6955](https://github.com/powerhouse-inc/powerhouse/commit/4d089e6955))
+- **reactor:** write session remotes and remove them at the next startup ([c921201836](https://github.com/powerhouse-inc/powerhouse/commit/c921201836))
+- **reactor:** free an inbox chunk's slot once it is enqueued ([955ea30a6d](https://github.com/powerhouse-inc/powerhouse/commit/955ea30a6d))
+- **reactor:** apply inbox chunks per document instead of on one chain ([d1fbd360c7](https://github.com/powerhouse-inc/powerhouse/commit/d1fbd360c7))
+- **reactor:** hold the inbox ack below every unapplied item, by default ([dd1d2b34cf](https://github.com/powerhouse-inc/powerhouse/commit/dd1d2b34cf))
+- **reactor:** post a local inbox ack only when it advances ([9864436305](https://github.com/powerhouse-inc/powerhouse/commit/9864436305))
+- **reactor:** classify local push transport failures ([9625ccd397](https://github.com/powerhouse-inc/powerhouse/commit/9625ccd397))
+- **reactor:** reject a malformed local push frame ([7251b0daf0](https://github.com/powerhouse-inc/powerhouse/commit/7251b0daf0))
+- **reactor:** establish local channel state before subscribing ([b410dcce6e](https://github.com/powerhouse-inc/powerhouse/commit/b410dcce6e))
+- **reactor,reactor-api:** read an empty dead-letter cursor as page one and refuse unsafe offsets ([1ac02bcceb](https://github.com/powerhouse-inc/powerhouse/commit/1ac02bcceb))
+- **switchboard,connect:** declare the reactor store's storage facts ([28d9d364a9](https://github.com/powerhouse-inc/powerhouse/commit/28d9d364a9))
+- **reactor-api:** serve queued jobs and dead letters without document content ([ab981bb044](https://github.com/powerhouse-inc/powerhouse/commit/ab981bb044))
+- **reactor:** clamp the dead-letter page limit and refuse a malformed cursor ([df6dafd12a](https://github.com/powerhouse-inc/powerhouse/commit/df6dafd12a))
+- **reactor:** start a statement's deadline once the group-commit gate admits it ([0c3c843d8b](https://github.com/powerhouse-inc/powerhouse/commit/0c3c843d8b))
+- **reactor:** refuse a negative or non-finite durability wait with group commit ([c574be0a46](https://github.com/powerhouse-inc/powerhouse/commit/c574be0a46))
+- **reactor:** disarm the job timer before COMMIT is issued ([69d9065f67](https://github.com/powerhouse-inc/powerhouse/commit/69d9065f67))
+- **reactor:** keep the job timer from holding the process open ([abebd19a23](https://github.com/powerhouse-inc/powerhouse/commit/abebd19a23))
+- **reactor:** leave a failed build's pg open for its owner ([b6bb4dccdf](https://github.com/powerhouse-inc/powerhouse/commit/b6bb4dccdf))
+- **reactor:** refuse an unbounded durability wait with group commit ([8fc2103a52](https://github.com/powerhouse-inc/powerhouse/commit/8fc2103a52))
+- **reactor:** stop timing out a job once its commit has landed ([5410b4118e](https://github.com/powerhouse-inc/powerhouse/commit/5410b4118e))
+- **reactor:** let the catch-up scheduler drop consumers no source lists ([4c3adfb645](https://github.com/powerhouse-inc/powerhouse/commit/4c3adfb645))
+- **reactor:** let a live read model be removed, and wait out every model of a stage ([14fe73aaf2](https://github.com/powerhouse-inc/powerhouse/commit/14fe73aaf2))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+- ⚠️  **reactor:** refuse withChannelScheme together with withSync ([1a4ae14508](https://github.com/powerhouse-inc/powerhouse/commit/1a4ae14508))
+- **reactor:** requeue a dead letter, dropping its row only after the retry lands ([16481bf37b](https://github.com/powerhouse-inc/powerhouse/commit/16481bf37b))
+- **reactor:** add ISyncAdmin with reset and clear levers ([1a786e26c4](https://github.com/powerhouse-inc/powerhouse/commit/1a786e26c4))
+- **reactor:** report a poisoned pglite session to its owner through onPoisoned ([de2915e76d](https://github.com/powerhouse-inc/powerhouse/commit/de2915e76d))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor:** never settle a pending requeue against a parked copy ([84c842d42e](https://github.com/powerhouse-inc/powerhouse/commit/84c842d42e))
+- **reactor:** keep one parked copy of an operation per inbox ([95b0c05df2](https://github.com/powerhouse-inc/powerhouse/commit/95b0c05df2))
+- **reactor:** drop a parked requeue when its dead letter is cleared ([50d2bab5dc](https://github.com/powerhouse-inc/powerhouse/commit/50d2bab5dc))
+- **reactor:** carry a reset channel's parked inbox items into its fresh inbox ([41fd68ab89](https://github.com/powerhouse-inc/powerhouse/commit/41fd68ab89))
+- **reactor:** release a held inbox item replaced under its id ([148aadfd99](https://github.com/powerhouse-inc/powerhouse/commit/148aadfd99))
+- **reactor:** drop a cleared dead letter that a reset reloaded meanwhile ([2e11b0cb33](https://github.com/powerhouse-inc/powerhouse/commit/2e11b0cb33))
+- **reactor:** leave a resetting channel's parked items to its fresh channel on a lift ([4a2ea5fa3f](https://github.com/powerhouse-inc/powerhouse/commit/4a2ea5fa3f))
+- **reactor:** refuse a requeue raced by a reset with SyncRepairRefusedError ([d67e3666f5](https://github.com/powerhouse-inc/powerhouse/commit/d67e3666f5))
+- **reactor:** release a parked requeue when its channel is reset ([fa9859722f](https://github.com/powerhouse-inc/powerhouse/commit/fa9859722f))
+- **reactor:** keep a remote's pending requeues across a reset ([7f417e2939](https://github.com/powerhouse-inc/powerhouse/commit/7f417e2939))
+- **reactor:** load a requeued op ahead of the ops its quarantine parked ([4bbbb219bb](https://github.com/powerhouse-inc/powerhouse/commit/4bbbb219bb))
+- **reactor:** check the dead-letter mailboxes again after the lift's storage read ([7e13a5da34](https://github.com/powerhouse-inc/powerhouse/commit/7e13a5da34))
+- **reactor:** fail a reset whose dead-letter or marker read fails ([3a4ee4afcf](https://github.com/powerhouse-inc/powerhouse/commit/3a4ee4afcf))
+- **reactor:** clear only a dead letter that belongs to the named remote ([795fc130f7](https://github.com/powerhouse-inc/powerhouse/commit/795fc130f7))
+- **reactor:** hold the inbox cursor below items parked by a quarantine ([9237a4d893](https://github.com/powerhouse-inc/powerhouse/commit/9237a4d893))
+- **reactor:** forget a remote's pending requeues when its channel goes ([fb3b397c6c](https://github.com/powerhouse-inc/powerhouse/commit/fb3b397c6c))
+- **reactor:** judge a quarantine lift by the restart rule alone ([2dedbe21cd](https://github.com/powerhouse-inc/powerhouse/commit/2dedbe21cd))
+- **reactor:** record a re-dead-lettered op's latest failure ([5ecdf7b106](https://github.com/powerhouse-inc/powerhouse/commit/5ecdf7b106))
+- **reactor:** claim a requeue before its first await ([675f6239d7](https://github.com/powerhouse-inc/powerhouse/commit/675f6239d7))
+- **reactor:** release a requeued dead letter dropped for a purged document ([27dcec913a](https://github.com/powerhouse-inc/powerhouse/commit/27dcec913a))
+- **reactor:** lift a quarantine only when no quarantining dead letter remains ([b66fae32b3](https://github.com/powerhouse-inc/powerhouse/commit/b66fae32b3))
+- **reactor:** dispatch inbox items parked by a quarantine when it lifts ([ada39c7fd1](https://github.com/powerhouse-inc/powerhouse/commit/ada39c7fd1))
+- **reactor:** make requeueing a pending dead letter a no-op ([7fb94b01cb](https://github.com/powerhouse-inc/powerhouse/commit/7fb94b01cb))
+- **reactor:** requeue only dead letters that failed while applying here ([ae83fbf80d](https://github.com/powerhouse-inc/powerhouse/commit/ae83fbf80d))
+- **reactor:** never let a reset join a rebuild that started before it ([84d2a59f4b](https://github.com/powerhouse-inc/powerhouse/commit/84d2a59f4b))
+- **reactor:** keep a reset's fresh channel from outliving a removal ([1b0e68e87e](https://github.com/powerhouse-inc/powerhouse/commit/1b0e68e87e))
+- **reactor:** backfill a reset channel from its outbox cursor ([dabaf5a76c](https://github.com/powerhouse-inc/powerhouse/commit/dabaf5a76c))
+- **reactor:** leave a remote unregistered, not half-dead, when its reset fails ([ad7ee575b6](https://github.com/powerhouse-inc/powerhouse/commit/ad7ee575b6))
+- **reactor:** leave a stopped poll loop's error in place on a recoverable push failure ([abf5452407](https://github.com/powerhouse-inc/powerhouse/commit/abf5452407))
+- **reactor:** keep a stopped poll loop's error through a successful push ([1eb1e8fcda](https://github.com/powerhouse-inc/powerhouse/commit/1eb1e8fcda))
+- **reactor:** earn "connected" with a poll since the loop last started ([74106c8648](https://github.com/powerhouse-inc/powerhouse/commit/74106c8648))
+- **reactor:** size the poll tick watchdog by the requests one tick makes ([26626937b6](https://github.com/powerhouse-inc/powerhouse/commit/26626937b6))
+- **reactor:** bound the sync request's token fetch by its deadline ([638f1e94c1](https://github.com/powerhouse-inc/powerhouse/commit/638f1e94c1))
+- **reactor:** fail a unique violation inside a job transaction without a replay lookup ([65d6bd82b0](https://github.com/powerhouse-inc/powerhouse/commit/65d6bd82b0))
+- **reactor:** always hand the pglite lease back when session recovery throws ([85d7072817](https://github.com/powerhouse-inc/powerhouse/commit/85d7072817))
+- **reactor:** refuse a pglite session at once after a call dies, instead of recovering it ([e6e27bdc8d](https://github.com/powerhouse-inc/powerhouse/commit/e6e27bdc8d))
+- **reactor:** stop bounding the pglite lease wait by default ([d31f333125](https://github.com/powerhouse-inc/powerhouse/commit/d31f333125))
+- **reactor:** retry a failed manifest refresh instead of stopping the poll loop ([72ebee56d7](https://github.com/powerhouse-inc/powerhouse/commit/72ebee56d7))
+- **reactor:** advance sync cursor watermarks only after the write lands ([0f0149e1f3](https://github.com/powerhouse-inc/powerhouse/commit/0f0149e1f3))
+- **reactor:** make the sync poll loop report the truth and survive a stall ([e216f6476f](https://github.com/powerhouse-inc/powerhouse/commit/e216f6476f))
+- **reactor:** classify a missing ancestor as MISSING_OPERATIONS ([5826f020a6](https://github.com/powerhouse-inc/powerhouse/commit/5826f020a6))
+- **reactor:** resolve a load with nothing to apply before costing its reshuffle ([0062e4171b](https://github.com/powerhouse-inc/powerhouse/commit/0062e4171b))
+- **reactor:** bound every pglite statement so a dead wasm call cannot wedge the reactor ([f3be072212](https://github.com/powerhouse-inc/powerhouse/commit/f3be072212))
+- **reactor:** harden the pglite kysely dialect against session poisoning ([a4b93e12de](https://github.com/powerhouse-inc/powerhouse/commit/a4b93e12de))
+- **reactor:** run the unique-constraint replay lookup on the job transaction ([124a6fba80](https://github.com/powerhouse-inc/powerhouse/commit/124a6fba80))
+
+### 🔥 Performance
+
+- **reactor:** export the model registry from /rpc and load document-model helpers from dependency-free shared entries ([3ddd4c1889](https://github.com/powerhouse-inc/powerhouse/commit/3ddd4c1889))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** refuse withChannelScheme together with withSync  ([1a4ae14508](https://github.com/powerhouse-inc/powerhouse/commit/1a4ae14508))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 ### 🚀 Features

@@ -1,3 +1,79 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** accessible, keyboard-complete block picker; ranked AI connector search ([2241f7e3ec](https://github.com/powerhouse-inc/powerhouse/commit/2241f7e3ec))
+- **workflow:** two-pane block picker with keyboard navigation, recent picks and on-screen placement ([79f9cfa795](https://github.com/powerhouse-inc/powerhouse/commit/79f9cfa795))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **workflow:** let an untouched interval field follow outside changes ([fef1916cb4](https://github.com/powerhouse-inc/powerhouse/commit/fef1916cb4))
+- **workflow:** keep typed interval while a slower save echoes back ([#3196](https://github.com/powerhouse-inc/powerhouse/issues/3196))
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **workflow:** close the block picker on canvas clicks and soften match highlights ([23286ceb9d](https://github.com/powerhouse-inc/powerhouse/commit/23286ceb9d))
+- **workflow:** label the cloud catalog tab Integrations ([8f14e04a71](https://github.com/powerhouse-inc/powerhouse/commit/8f14e04a71))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** accessible, keyboard-complete block picker; ranked AI connector search ([2241f7e3ec](https://github.com/powerhouse-inc/powerhouse/commit/2241f7e3ec))
+- **workflow:** two-pane block picker with keyboard navigation, recent picks and on-screen placement ([79f9cfa795](https://github.com/powerhouse-inc/powerhouse/commit/79f9cfa795))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **workflow:** let an untouched interval field follow outside changes ([fef1916cb4](https://github.com/powerhouse-inc/powerhouse/commit/fef1916cb4))
+- **workflow:** keep typed interval while a slower save echoes back ([#3196](https://github.com/powerhouse-inc/powerhouse/issues/3196))
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **workflow:** close the block picker on canvas clicks and soften match highlights ([23286ceb9d](https://github.com/powerhouse-inc/powerhouse/commit/23286ceb9d))
+- **workflow:** label the cloud catalog tab Integrations ([8f14e04a71](https://github.com/powerhouse-inc/powerhouse/commit/8f14e04a71))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** stream, cache and authorize step attachments ([2c33603d58](https://github.com/powerhouse-inc/powerhouse/commit/2c33603d58))
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+- **reactor-workflow:** enforce the policy knobs, or mark them unenforced ([ef311827ef](https://github.com/powerhouse-inc/powerhouse/commit/ef311827ef))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor-workflow:** let a run its deadline cancelled be rerun ([77196c4fb5](https://github.com/powerhouse-inc/powerhouse/commit/77196c4fb5))
+- **workflow:** show an INDETERMINATE step test as a warning, not a pass ([890c30ba59](https://github.com/powerhouse-inc/powerhouse/commit/890c30ba59))
+- **reactor-workflow:** bound the run journal, and stop rerun redoing a lost side effect ([4b898216b9](https://github.com/powerhouse-inc/powerhouse/commit/4b898216b9))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.

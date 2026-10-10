@@ -4,12 +4,21 @@ import {
   buildNodeBuildConfig,
   findBundledSharedDeps,
 } from "@powerhousedao/shared/build-config";
+import type {
+  ExternalDependency,
+  TraceFiles,
+} from "@powerhousedao/shared/build-pieces";
 import {
   buildPieces,
+  createDetectionCache,
   expandEntryGlobs,
+  externalDependencyVersions,
+  externalDepsPlugin,
   pieceListPath,
   planPieces,
+  projectPath,
   syncDistManifest,
+  undeclaredExternalDependencies,
 } from "@powerhousedao/shared/build-pieces";
 import {
   EXTERNALIZABLE_SHARED_SPECIFIERS,
@@ -32,6 +41,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { nodeFileTrace } from "@vercel/nft";
 import type { Agent } from "package-manager-detector";
 import { detect, resolveCommand } from "package-manager-detector";
 import {
@@ -43,6 +53,57 @@ import {
   pathWithin,
 } from "./generation.js";
 import { NON_INPUT_DIRECTORIES } from "./package-revision.js";
+
+// nft reports paths relative to its base; from "/" that is every path minus its root.
+// One cache per build: the traces of a project's packages share most files.
+export function createTraceFiles(): TraceFiles {
+  const cache = {};
+  return (file) => traceFile(file, cache);
+}
+
+export const traceFiles: TraceFiles = createTraceFiles();
+
+async function traceFile(file: string, cache: object) {
+  const { fileList, reasons } = await nodeFileTrace([file], {
+    base: "/",
+    cache,
+  });
+  const absolute = (p: string) => resolve("/", p);
+  return {
+    fileList: new Set([...fileList].map(absolute)),
+    reasons: new Map(
+      [...reasons].map(([p, reason]) => [
+        absolute(p),
+        { parents: new Set([...reason.parents].map(absolute)) },
+      ]),
+    ),
+  };
+}
+
+// A package with a native addon or WebAssembly module stays external, so the
+// package's consumers must install it: devDependencies are skipped by every install.
+export function assertExternalDependenciesDeclared(
+  projectRoot: string,
+  found: ExternalDependency[],
+  pkg: Parameters<typeof undeclaredExternalDependencies>[1],
+) {
+  for (const dep of found) {
+    console.log(
+      `${dep.name}@${dep.version} stays external, it needs ${projectPath(projectRoot, dep.file)}`,
+    );
+  }
+  const undeclared = undeclaredExternalDependencies(found, pkg);
+  if (undeclared.length === 0) return;
+  const lines = undeclared.map(
+    (dep) =>
+      `  ${dep.name}${dep.importer ? ` (imported by ${projectPath(projectRoot, dep.importer)})` : ""}`,
+  );
+  throw new Error(
+    `Packages with native addons or WebAssembly modules must be listed in package.json "dependencies", "optionalDependencies" or "peerDependencies":\n` +
+      `${lines.join("\n")}\n\n` +
+      `They stay external to the build, and installs of this package skip devDependencies.`,
+  );
+}
 
 type CommandResult = {
   readonly ok: boolean;
@@ -249,18 +310,49 @@ function createCandidateStep(
       ? [{ from: "powerhouse.manifest.json", to: candidateRoot }]
       : [];
     try {
+      // Shared by the browser, node and piece builds: nothing is traced twice.
+      const detection = createDetectionCache();
+      const trace = createTraceFiles();
+      // Everything in the browser build is code Connect can load: native fails it.
       await build({
-        ...buildBrowserBuildConfig({ sharedDeps: !options.noSharedDeps }),
+        ...buildBrowserBuildConfig({
+          sharedDeps: !options.noSharedDeps,
+          plugins: [
+            externalDepsPlugin(trace, new Map(), {
+              root: packageRoot,
+              browser: true,
+              cache: detection,
+            }),
+          ],
+        }),
         cwd: packageRoot,
         copy,
         outDir: join(candidateRoot, "browser"),
       });
+      const external = new Map<string, ExternalDependency>();
       await build({
-        ...buildNodeBuildConfig({ sharedDeps: !options.noSharedDeps }),
+        ...buildNodeBuildConfig({
+          sharedDeps: !options.noSharedDeps,
+          plugins: [
+            // Editors never run on a host; document models run in Connect too.
+            externalDepsPlugin(trace, external, {
+              root: packageRoot,
+              ignoreDirs: ["editors"],
+              forbidDirs: ["document-models"],
+              cache: detection,
+            }),
+          ],
+        }),
         cwd: packageRoot,
         copy,
         outDir: join(candidateRoot, "node"),
       });
+      const pkg = await readPackage({ cwd: packageRoot });
+      assertExternalDependenciesDeclared(
+        packageRoot,
+        [...external.values()],
+        pkg,
+      );
       if (!options.noSharedDeps) {
         const imported = [
           ...new Set(
@@ -300,7 +392,6 @@ function createCandidateStep(
           join(stageRoot, "dist"),
           process.platform === "win32" ? "junction" : "dir",
         );
-        const pkg = await readPackage({ cwd: packageRoot });
         built = await buildPieces(
           {
             projectRoot: stageRoot,
@@ -315,10 +406,18 @@ function createCandidateStep(
             version: pkg.version,
             license: typeof pkg.license === "string" ? pkg.license : undefined,
           },
-          { bundle: (config) => build({ ...config, cwd: packageRoot }) },
+          {
+            bundle: (config) => build({ ...config, cwd: packageRoot }),
+            trace,
+            cache: detection,
+          },
         );
       }
-      syncDistManifest(target, built);
+      syncDistManifest(
+        target,
+        built,
+        externalDependencyVersions(external.values()),
+      );
     } catch (error) {
       return {
         ok: false,

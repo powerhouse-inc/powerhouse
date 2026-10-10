@@ -8,6 +8,8 @@ import type {
 import type { Kysely } from "kysely";
 
 import type { IProcessorManager } from "@powerhousedao/shared/processors";
+import type { ReactorStorageFacts } from "../inspector/types.js";
+import type { ISyncInspector } from "../sync/sync-inspection.js";
 import type { DocumentPurgeService } from "../admin/document-purge-service.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -51,8 +53,13 @@ import type {
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
+import type { IGroupCommitStorage } from "../storage/kysely/group-commit-storage.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
-import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
+import type {
+  IChannelFactory,
+  ISyncAdmin,
+  ISyncManager,
+} from "../sync/interfaces.js";
 
 export class AbortError extends Error {
   constructor(message?: string) {
@@ -511,6 +518,10 @@ export type Database = StorageDatabase &
  */
 export interface SyncModule {
   syncManager: ISyncManager;
+  /** Absent where the host cannot reach the sync manager's repair levers. */
+  syncAdmin?: ISyncAdmin;
+  /** Absent where the host cannot read the sync manager's channel state. */
+  syncInspector?: ISyncInspector;
 }
 
 /**
@@ -605,6 +616,10 @@ export interface InProcessReactorModule extends ReactorModule {
   settledWatermark: ISettledWatermark;
   /** Enqueues purge jobs; the erasure scheduler is its only caller. */
   documentPurgeService: DocumentPurgeService;
+  /** What the builder knows about the store; see `withStorageFacts`. */
+  storageFacts: ReactorStorageFacts;
+  /** Set by `withGroupCommitPGlite`; the host closes the store through it. */
+  groupCommitStorage?: IGroupCommitStorage;
 }
 
 /**

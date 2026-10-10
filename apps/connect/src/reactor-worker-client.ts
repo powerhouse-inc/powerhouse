@@ -23,6 +23,7 @@ import {
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
   type ReactorIdentity,
+  type VersionFingerprint,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
@@ -35,7 +36,11 @@ import {
   getWorkerConnectionStatus,
   setWorkerConnectionStatus,
 } from "./connection-state.js";
-import { reactorWorkerName } from "./reactor-worker-name.js";
+import {
+  adoptWorkerGen,
+  readWorkerGen,
+  workerNameForGen,
+} from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 
@@ -58,6 +63,8 @@ export type WorkerReactorClientArgs = {
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
   featureFlags: Partial<ReactorFeatureFlags>;
+  /** The resolved multiReactor flag; the worker has no runtime config either. */
+  multiReactor: boolean;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
   /** Whether the worker boots over stored documents this build does not run. */
@@ -68,7 +75,8 @@ export type WorkerReactorClientArgs = {
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
-  onReload: (reason: string, workerGen?: string) => void;
+  /** The worker gen in localStorage is already updated when this runs. */
+  onReload: (reason: string) => void;
   /** Prebuilt bundle URL; absent only for the monorepo app, where Vite bundles the worker from source. */
   workerUrl?: string;
   /** The bundle's `sourceDigest`; a rebuilt bundle at the same URL then forces a fresh worker. */
@@ -87,12 +95,54 @@ export type WorkerReactorClient = {
 };
 
 /** Sorted so the same set always produces the same fingerprint. */
-function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
-  return Object.entries(flags)
+function enabledFlagList(
+  flags: Partial<ReactorFeatureFlags>,
+  multiReactor: boolean,
+): string {
+  return Object.entries({ ...flags, multiReactor })
     .filter(([, enabled]) => enabled)
     .map(([name]) => name)
     .sort()
     .join(",");
+}
+
+/** The hello fingerprint; a running worker with a different one retires. */
+export function buildWorkerVersion(
+  args: WorkerReactorClientArgs,
+): VersionFingerprint {
+  const gitSha = getGitSha();
+  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
+  return {
+    appBuildId: args.workerDigest
+      ? `${buildId}+w.${args.workerDigest}`
+      : buildId,
+    rpcProtocolVersion: RPC_PROTOCOL_VERSION,
+    models: args.documentModelModules.map((m) => ({
+      id: m.documentModel.global.id,
+      version: m.version ?? 1,
+    })),
+    featureFlags: enabledFlagList(args.featureFlags, args.multiReactor),
+  };
+}
+
+/** What the worker's build reads; flags arrive here because it has no config. */
+export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
+  return {
+    namespace: args.namespace,
+    relationalNamespace: args.relationalNamespace,
+    cdnUrl: args.cdnUrl,
+    packageSpecs: args.packageSpecs,
+    sharedImports: args.sharedImports,
+    studioMode: args.studioMode,
+    workflowsEnabled: args.workflowsEnabled,
+    renownChainId: args.renownChainId,
+    featureFlags: args.featureFlags,
+    multiReactor: args.multiReactor,
+    createSignaturePolicy: args.createSignaturePolicy,
+    unsupportedStoredDocuments: args.unsupportedStoredDocuments,
+    renownEndpoints: args.renownEndpoints,
+    packageSources: args.packageSources,
+  };
 }
 
 function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
@@ -112,13 +162,13 @@ export function createWorkerReactorClientModule(
   const workerUrl = args.workerUrl
     ? new URL(args.workerUrl)
     : new URL("./reactor.worker.js", import.meta.url);
+  const workerGen = readWorkerGen(args.namespace);
+  const workerName = workerNameForGen(args.namespace, workerGen);
   console.info(
-    `[reactor-worker] constructing SharedWorker ${reactorWorkerName(
-      args.namespace,
-    )} from ${workerUrl.href}`,
+    `[reactor-worker] constructing SharedWorker ${workerName} from ${workerUrl.href}`,
   );
   const worker = new SharedWorker(workerUrl, {
-    name: reactorWorkerName(args.namespace),
+    name: workerName,
     type: "module",
   });
   worker.addEventListener("error", (event) => {
@@ -144,40 +194,19 @@ export function createWorkerReactorClientModule(
   documentModelRegistry.registerModules(...args.documentModelModules);
   documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
-  const gitSha = getGitSha();
-  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
   const clientProxy = connectReactorClient(
     router,
     {
-      version: {
-        appBuildId: args.workerDigest
-          ? `${buildId}+w.${args.workerDigest}`
-          : buildId,
-        rpcProtocolVersion: RPC_PROTOCOL_VERSION,
-        models: args.documentModelModules.map((m) => ({
-          id: m.documentModel.global.id,
-          version: m.version ?? 1,
-        })),
-        featureFlags: enabledFlagList(args.featureFlags),
-      },
-      construct: {
-        namespace: args.namespace,
-        relationalNamespace: args.relationalNamespace,
-        cdnUrl: args.cdnUrl,
-        packageSpecs: args.packageSpecs,
-        sharedImports: args.sharedImports,
-        studioMode: args.studioMode,
-        workflowsEnabled: args.workflowsEnabled,
-        renownChainId: args.renownChainId,
-        featureFlags: args.featureFlags,
-        createSignaturePolicy: args.createSignaturePolicy,
-        unsupportedStoredDocuments: args.unsupportedStoredDocuments,
-        renownEndpoints: args.renownEndpoints,
-        packageSources: args.packageSources,
-      },
+      version: buildWorkerVersion(args),
+      construct: buildWorkerConstruct(args),
       packages: args.packageSpecs,
     },
-    args.onReload,
+    (reason, nextGen) => {
+      if (nextGen) {
+        adoptWorkerGen(args.namespace, workerGen, nextGen);
+      }
+      args.onReload(reason);
+    },
     documentModelRegistry,
   );
 

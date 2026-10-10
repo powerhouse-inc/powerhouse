@@ -1,3 +1,94 @@
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-browser:** let GraphQLReactorClient read its document models live ([8c2f843f39](https://github.com/powerhouse-inc/powerhouse/commit/8c2f843f39))
+- **reactor-browser:** let full-client actions use a client the app sets ([c8c038f02c](https://github.com/powerhouse-inc/powerhouse/commit/c8c038f02c))
+- **reactor-browser:** read a job's state over GraphQL without waiting ([60552fc779](https://github.com/powerhouse-inc/powerhouse/commit/60552fc779))
+- **reactor-browser:** proxy every inspection op now that the worker serves them ([11a0172db5](https://github.com/powerhouse-inc/powerhouse/commit/11a0172db5))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-browser:** host ops to adopt and remove a local sync peer ([a1a129ef92](https://github.com/powerhouse-inc/powerhouse/commit/a1a129ef92))
+- **reactor-browser:** derive the inspector and sync inspection RPC from the op tables ([d9c6677136](https://github.com/powerhouse-inc/powerhouse/commit/d9c6677136))
+- **reactor-browser:** let the caller name the drive a graphql call belongs to ([a056e2eeb0](https://github.com/powerhouse-inc/powerhouse/commit/a056e2eeb0))
+- **reactor-browser:** send Drive-Id on drive writes and type the 421 refusal ([f1628ef0fe](https://github.com/powerhouse-inc/powerhouse/commit/f1628ef0fe))
+- **reactor-browser:** answer graphql isServed from documentServed ([16f156b955](https://github.com/powerhouse-inc/powerhouse/commit/16f156b955))
+- **reactor-browser:** read graphql create defaults from createDefaults ([faf9c687d0](https://github.com/powerhouse-inc/powerhouse/commit/faf9c687d0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** proxy only the inspection ops a worker host serves ([1c135fbdab](https://github.com/powerhouse-inc/powerhouse/commit/1c135fbdab))
+- **reactor-browser:** do not route a drive created under a parent by its own id ([c99c37ae3a](https://github.com/powerhouse-inc/powerhouse/commit/c99c37ae3a))
+- **reactor-browser:** map the 421 in the transport middleware, not around the SDK ([dc39121d76](https://github.com/powerhouse-inc/powerhouse/commit/dc39121d76))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-browser:** let GraphQLReactorClient read its document models live ([8c2f843f39](https://github.com/powerhouse-inc/powerhouse/commit/8c2f843f39))
+- **reactor-browser:** let full-client actions use a client the app sets ([c8c038f02c](https://github.com/powerhouse-inc/powerhouse/commit/c8c038f02c))
+- **reactor-browser:** read a job's state over GraphQL without waiting ([60552fc779](https://github.com/powerhouse-inc/powerhouse/commit/60552fc779))
+- **reactor-browser:** proxy every inspection op now that the worker serves them ([11a0172db5](https://github.com/powerhouse-inc/powerhouse/commit/11a0172db5))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-browser:** host ops to adopt and remove a local sync peer ([a1a129ef92](https://github.com/powerhouse-inc/powerhouse/commit/a1a129ef92))
+- **reactor-browser:** derive the inspector and sync inspection RPC from the op tables ([d9c6677136](https://github.com/powerhouse-inc/powerhouse/commit/d9c6677136))
+- **reactor-browser:** let the caller name the drive a graphql call belongs to ([a056e2eeb0](https://github.com/powerhouse-inc/powerhouse/commit/a056e2eeb0))
+- **reactor-browser:** send Drive-Id on drive writes and type the 421 refusal ([f1628ef0fe](https://github.com/powerhouse-inc/powerhouse/commit/f1628ef0fe))
+- **reactor-browser:** answer graphql isServed from documentServed ([16f156b955](https://github.com/powerhouse-inc/powerhouse/commit/16f156b955))
+- **reactor-browser:** read graphql create defaults from createDefaults ([faf9c687d0](https://github.com/powerhouse-inc/powerhouse/commit/faf9c687d0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** proxy only the inspection ops a worker host serves ([1c135fbdab](https://github.com/powerhouse-inc/powerhouse/commit/1c135fbdab))
+- **reactor-browser:** do not route a drive created under a parent by its own id ([c99c37ae3a](https://github.com/powerhouse-inc/powerhouse/commit/c99c37ae3a))
+- **reactor-browser:** map the 421 in the transport middleware, not around the SDK ([dc39121d76](https://github.com/powerhouse-inc/powerhouse/commit/dc39121d76))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor-browser:** send a deploy's reload even when its drain throws ([3852510328](https://github.com/powerhouse-inc/powerhouse/commit/3852510328))
+- **reactor-browser:** send a deploy's reload only after the drain before it ([5259e10348](https://github.com/powerhouse-inc/powerhouse/commit/5259e10348))
+- **connect:** let a deploy's retirement finish accepted jobs first ([e1c881204c](https://github.com/powerhouse-inc/powerhouse/commit/e1c881204c))
+- **connect:** keep a store's lock while a retired worker's build opens it ([508ce445ef](https://github.com/powerhouse-inc/powerhouse/commit/508ce445ef))
+- **reactor-browser:** stop a retired worker again when its build finishes late ([00fb49a5e8](https://github.com/powerhouse-inc/powerhouse/commit/00fb49a5e8))
+- **connect:** stop reloading after repeated build-fingerprint mismatches ([7cd9d2bfb9](https://github.com/powerhouse-inc/powerhouse/commit/7cd9d2bfb9))
+- **reactor-browser:** retire the worker when a build fingerprint differs ([093af7c401](https://github.com/powerhouse-inc/powerhouse/commit/093af7c401))
+- **reactor-browser:** refuse a hello on a retired worker even once it has built ([8b2a65cd76](https://github.com/powerhouse-inc/powerhouse/commit/8b2a65cd76))
+- **reactor-browser:** keep the startup seed going while the worker waits on a store lock ([170db0ca53](https://github.com/powerhouse-inc/powerhouse/commit/170db0ca53))
+- **connect:** stop a retired worker's reactor and stores, and refuse its data calls ([7075d92701](https://github.com/powerhouse-inc/powerhouse/commit/7075d92701))
+- **reactor-browser:** call a hook's onPoisoned once, not on every render after the poison ([c0a69ad746](https://github.com/powerhouse-inc/powerhouse/commit/c0a69ad746))
+- **reactor-browser:** tell every useRelationalDb caller that the shared session is poisoned ([43b4f28b39](https://github.com/powerhouse-inc/powerhouse/commit/43b4f28b39))
+- **connect:** send admin calls on a retired worker to the current one ([6b45b3867a](https://github.com/powerhouse-inc/powerhouse/commit/6b45b3867a))
+- **connect:** reload the page, within budget, when an in-tab store's session is poisoned ([ae5d28ad4d](https://github.com/powerhouse-inc/powerhouse/commit/ae5d28ad4d))
+- **connect:** replay a poisoned-store reload to tabs that connect to the old worker ([4927cc2597](https://github.com/powerhouse-inc/powerhouse/commit/4927cc2597))
+- **reactor-browser:** share one relational kysely per pglite instance ([ec4184f39a](https://github.com/powerhouse-inc/powerhouse/commit/ec4184f39a))
+- **connect:** harden the in-tab relational store and the relational hook's dialect ([22a9d2ba6f](https://github.com/powerhouse-inc/powerhouse/commit/22a9d2ba6f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.49 (2026-10-08)
 
 ### 🚀 Features

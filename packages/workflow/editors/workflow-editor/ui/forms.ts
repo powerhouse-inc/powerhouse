@@ -187,7 +187,8 @@ export interface BlockResolutionView {
 export interface StepTestOutcome {
   // Null when nothing ran, e.g. `Test "fetch" first`.
   runId: string | null;
-  status: "SUCCEEDED" | "FAILED";
+  // INDETERMINATE: a write the step asked for may have landed.
+  status: "SUCCEEDED" | "FAILED" | "INDETERMINATE";
   output?: unknown;
   error: string | null;
   // The thrown error's name, e.g. ReactorAccessDeniedError.

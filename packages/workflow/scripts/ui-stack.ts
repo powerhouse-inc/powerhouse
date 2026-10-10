@@ -167,13 +167,34 @@ export async function ensureServers(): Promise<ChildProcess[]> {
   return started;
 }
 
-/** Builds Connect when it is missing or older than this package's dist. */
+const CONNECT_APP = join(ROOT, "apps/connect");
+
+const mtime = (path: string) => (existsSync(path) ? statSync(path).mtimeMs : 0);
+
+// Connect copies this package's stylesheet into its own when it builds, so a
+// stale copy leaves new classes unstyled. Its CSS step alone takes seconds.
+function buildConnectCssIfStale(): void {
+  const ours = join(PKG, "dist/style.css");
+  if (!existsSync(ours)) return;
+  if (mtime(join(CONNECT_APP, "dist/style.css")) >= mtime(ours)) return;
+  console.log("▶ rebuilding Connect's stylesheet");
+  execSync("pnpm run build:css", {
+    cwd: CONNECT_APP,
+    stdio: process.env.UI_SHOTS_VERBOSE ? "inherit" : "ignore",
+  });
+}
+
+/** Builds Connect when it is missing or older than what it is built from. */
 export function buildConnectIfStale(): void {
+  buildConnectCssIfStale();
   const built = join(CONNECT_BUILD, "index.html");
-  const dist = join(PKG, "dist/browser/index.js");
+  const inputs = [
+    join(PKG, "dist/browser/index.js"),
+    join(CONNECT_APP, "dist/style.css"),
+  ];
   if (
     existsSync(built) &&
-    (!existsSync(dist) || statSync(built).mtimeMs >= statSync(dist).mtimeMs)
+    inputs.every((input) => mtime(input) <= mtime(built))
   ) {
     return;
   }

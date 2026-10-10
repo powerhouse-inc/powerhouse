@@ -17,7 +17,7 @@ export type RuntimeQueryKind =
   | "form"
   | "pieceActions"
   | "pieceTriggers"
-  | "searchBlocks"
+  | "searchPieces"
   | "outputTree"
   | "options"
   | "dynamic"
@@ -67,8 +67,8 @@ export const runtimeKeys = {
     [scope, "pieceActions", packageName] as const,
   pieceTriggers: (scope: string, packageName: string) =>
     [scope, "pieceTriggers", packageName] as const,
-  searchBlocks: (scope: string, query: string, limit: number) =>
-    [scope, "searchBlocks", query, limit] as const,
+  searchPieces: (scope: string, query: string, filter: unknown) =>
+    [scope, "searchPieces", query, filter] as const,
   outputTrees: (scope: string) => [scope, "outputTree"] as const,
   outputTree: (scope: string, block: BlockRef, config: unknown) =>
     [scope, "outputTree", blockPart(block), config ?? {}] as const,

@@ -56,3 +56,11 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+/* The block picker opening from its button. */
+@keyframes wf-picker-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}

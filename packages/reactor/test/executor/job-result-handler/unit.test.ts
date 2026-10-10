@@ -209,10 +209,63 @@ describe("JobResultHandler", () => {
       expect(handle.fail).toHaveBeenCalledTimes(1);
     });
 
+    it("fails the job once retries are spent though the model loads", async () => {
+      const realEventBus = new EventBus();
+      const realQueue = new InMemoryQueue(
+        realEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const realHandler = new JobResultHandler(
+        realQueue,
+        jobTracker,
+        resolver,
+        createMockLogger(),
+      );
+      const failed: JobFailedEvent[] = [];
+      realEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type: number, data: JobFailedEvent) => {
+          failed.push(data);
+        },
+      );
+
+      await realQueue.enqueue(createTestJob({ id: "P", maxRetries: 3 }));
+      await realQueue.enqueue(createTestJob({ id: "L", maxRetries: 3 }));
+
+      const dispatched: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        const handle = await realQueue.dequeueNext();
+        if (!handle) {
+          break;
+        }
+        handle.start();
+        dispatched.push(handle.job.id);
+        if (handle.job.id === "L") {
+          handle.complete();
+          continue;
+        }
+        await realHandler.handleResult(
+          handle,
+          {
+            success: false,
+            job: handle.job,
+            error: new ModuleNotFoundError("test/type", 2),
+          },
+          callbacks(),
+        );
+      }
+
+      expect(dispatched).toEqual(["P", "P", "P", "P", "L"]);
+      await vi.waitFor(() => {
+        expect(failed.map((e) => e.jobId)).toEqual(["P"]);
+      });
+      expect(failed[0].error.name).toBe("ModuleNotFoundError");
+    });
+
     it("falls through to terminal failure when retryJob throws after model load", async () => {
       vi.mocked(queue.retryJob).mockRejectedValue(new Error("retry failed"));
       const error = new ModuleNotFoundError("test/type");
-      const job = createTestJob({ retryCount: 0, maxRetries: 0 });
+      const job = createTestJob({ retryCount: 0, maxRetries: 1 });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
 

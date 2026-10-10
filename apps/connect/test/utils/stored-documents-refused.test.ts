@@ -16,6 +16,7 @@ import {
 
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: () => Promise.resolve({}),
+  discardReactorPGlite: () => Promise.resolve(),
 }));
 
 const REFUSAL = new UnsupportedStoredProtocolError(
