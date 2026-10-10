@@ -1,13 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { ReactorStorageConfig } from "./types.js";
 
-/**
- * `openReactorStore`'s default, and the one place it is spelled out. A
- * provisioned reactor with no `storage` keeps a reload-surviving `idb://`
- * store, which is what `capabilities.ts` and `build-reactor.ts` must also
- * assume when a descriptor omits `storage` -- all three read this constant
- * rather than each repeating the `"idb"` literal.
- */
+/** A descriptor without `storage` keeps a reload-surviving `idb://` store. */
 export const DEFAULT_REACTOR_STORAGE: ReactorStorageConfig = { kind: "idb" };
 
 /**
@@ -51,11 +45,7 @@ export function openReactorStore(
   storage: ReactorStorageConfig = DEFAULT_REACTOR_STORAGE,
 ): Promise<PGlite> {
   return chained(async () => {
-    // This is the monitor reactor's authoritative operation store, and it
-    // self-heals by recreating the instance against this same store
-    // (build-reactor.ts). It therefore opens WITHOUT relaxedDurability: a COMMIT
-    // must be flushed before it is reported durable, so a recreate - which reads
-    // back only the last flushed snapshot - never loses an acknowledged write.
+    // Group commit needs relaxedDurability off, or its flush is no barrier.
     const pg =
       storage.kind === "memory"
         ? new PGlite()
