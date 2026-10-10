@@ -18,7 +18,13 @@ export type ManagedReactorEntry = {
 } & (
   | { status: "provisioning"; reactor?: undefined; error?: undefined }
   | { status: "ready"; reactor: ManagedReactor; error?: undefined }
-  | { status: "failed"; reactor?: undefined; error: Error }
+  | {
+      status: "failed";
+      reactor?: undefined;
+      error: Error;
+      /** A poisoned reactor's shutdown; its store is open until this settles. */
+      closing?: Promise<void>;
+    }
 );
 
 export type ReactorMonitorRegistryListener = () => void;
@@ -57,6 +63,8 @@ export class ReactorMonitorRegistry {
       );
     }
     this.set({ name: descriptor.name, descriptor, status: "provisioning" });
+    // Claimed first, so a concurrent provision of this name is refused.
+    await existing?.closing;
     let poisoned: Error | undefined;
     let ready: ManagedReactor | undefined;
     const onUnrecoverable = (cause: Error): void => {
@@ -164,20 +172,18 @@ export class ReactorMonitorRegistry {
     }
     this.entries.delete(name);
     this.publish();
-    await entry.reactor?.kill();
+    await (entry.reactor?.kill() ?? entry.closing);
   }
 
   /** Kills every reactor; the monitor's teardown. */
   async killAll(): Promise<void> {
-    const reactors = [...this.entries.values()].flatMap((entry) =>
-      entry.reactor ? [entry.reactor] : [],
-    );
+    const entries = [...this.entries.values()];
     this.entries.clear();
     this.publish();
     // Serially: each in-process kill closes a PGlite, and the stores share a
     // wasm instance per realm.
-    for (const reactor of reactors) {
-      await reactor.kill();
+    for (const entry of entries) {
+      await (entry.reactor?.kill() ?? entry.closing);
     }
   }
 
@@ -190,20 +196,20 @@ export class ReactorMonitorRegistry {
     if (this.entries.get(descriptor.name)?.reactor !== reactor) {
       return;
     }
+    const closing = reactor.kill().catch((error: unknown) => {
+      console.error(
+        `[reactor-monitor] killing poisoned reactor ${JSON.stringify(descriptor.name)} failed:`,
+        error,
+      );
+    });
     this.set({
       name: descriptor.name,
       descriptor,
       status: "failed",
       error: cause,
+      closing,
     });
-    try {
-      await reactor.kill();
-    } catch (error) {
-      console.error(
-        `[reactor-monitor] killing poisoned reactor ${JSON.stringify(descriptor.name)} failed:`,
-        error,
-      );
-    }
+    await closing;
   }
 
   private set(entry: ManagedReactorEntry): void {
