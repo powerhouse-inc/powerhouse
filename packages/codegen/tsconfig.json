@@ -18,6 +18,9 @@
       "path": "../document-model"
     },
     {
+      "path": "../reactor-api"
+    },
+    {
       "path": "../shared"
     }
   ]

@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@types/npm-registry-fetch": "^8.0.9",
     "graphql": "catalog:",
     "tsdown": "catalog:"
