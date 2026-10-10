@@ -66,6 +66,8 @@ export type BuildReactorOptions = {
   attachments?: ReactorAttachmentsConfig;
   /** The store's session is poisoned and never reused; the host restarts. */
   onUnrecoverable?: (cause: Error) => void;
+  /** Bound on stopping sync and the reactor at shutdown; the store closes after. */
+  stopTimeoutMs?: number;
 };
 
 /** A built reactor plus the handles a host needs to inspect and tear it down. */
@@ -87,6 +89,26 @@ export type BuiltReactor = {
 };
 
 const MONITOR_ACCESS: InspectorAccess = { admin: true, sql: true };
+
+/** As Connect's worker: a poisoned statement can hold up the reactor's stop. */
+const REACTOR_STOP_MS = 5_000;
+
+async function settleWithin(
+  work: Promise<unknown>,
+  timeoutMs: number,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `[reactor-monitor] reactor stop did not finish within ${timeoutMs}ms`,
+      );
+      resolve();
+    }, timeoutMs);
+  });
+  await Promise.race([work, expired]);
+  clearTimeout(timer);
+}
 
 function reportUnrecoverable(cause: Error): void {
   console.error("[reactor-monitor] reactor store poisoned:", cause);
@@ -244,21 +266,24 @@ export async function buildMonitorReactor(
           console.error("[reactor-monitor] attachment shutdown failed:", error);
         }
       }
-      // The reactor's kill() does not stop sync.
-      const sync = rm?.syncModule?.syncManager;
-      if (sync) {
-        try {
-          await sync.shutdown().completed;
-        } catch (error) {
-          console.error("[reactor-monitor] sync shutdown failed:", error);
+      const stopping = (async () => {
+        // The reactor's kill() does not stop sync.
+        const sync = rm?.syncModule?.syncManager;
+        if (sync) {
+          try {
+            await sync.shutdown().completed;
+          } catch (error) {
+            console.error("[reactor-monitor] sync shutdown failed:", error);
+          }
         }
-      }
-      localChannelPorts?.close();
-      try {
-        await module.reactor.kill().completed;
-      } catch (error) {
-        console.error("[reactor-monitor] reactor kill failed:", error);
-      }
+        localChannelPorts?.close();
+        try {
+          await module.reactor.kill().completed;
+        } catch (error) {
+          console.error("[reactor-monitor] reactor kill failed:", error);
+        }
+      })();
+      await settleWithin(stopping, options.stopTimeoutMs ?? REACTOR_STOP_MS);
       try {
         await database?.destroy();
       } catch (error) {

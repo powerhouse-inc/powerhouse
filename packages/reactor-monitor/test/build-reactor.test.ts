@@ -89,4 +89,23 @@ describe("buildMonitorReactor", () => {
     expect(reactor.pg.closed).toBe(true);
     await expect(reactor.dbQuery.queryDb("select 1")).rejects.toThrow();
   });
+
+  it("closes the store even when the reactor's stop hangs", async () => {
+    const reactor = await buildMonitorReactor({
+      namespace: "build-hung-stop",
+      storage: { kind: "idb" },
+      stopTimeoutMs: 50,
+    });
+    vi.spyOn(reactor.module.reactor, "kill").mockReturnValue({
+      completed: new Promise<void>(() => undefined),
+    } as ReturnType<typeof reactor.module.reactor.kill>);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    await reactor.shutdown();
+
+    expect(reactor.pg.closed).toBe(true);
+    error.mockRestore();
+  }, 5_000);
 });
