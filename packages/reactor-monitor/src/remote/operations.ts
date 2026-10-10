@@ -19,7 +19,7 @@ const fields = (type: keyof typeof INSPECTION_WIRE_FIELDS): string =>
   INSPECTION_WIRE_FIELDS[type].join("\n  ");
 
 /** Selection set of `ReactorInspectionInfo`; the reported capability facts. */
-const INFO_FIELDS = fields("ReactorInspectionInfo");
+const INFO_FIELDS = fields("ReactorInfo");
 
 const CURSOR_FIELDS = fields("InspectionCursor");
 
