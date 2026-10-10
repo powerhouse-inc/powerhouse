@@ -1,8 +1,9 @@
+import type { IAttachmentStore } from "@powerhousedao/reactor-attachments";
 import type {
   AttachmentReplicationEntry,
   AttachmentReplicatorStatus,
   AttachmentRetryPolicy,
-  IAttachmentStore,
+  AttachmentServedStats,
   IOperationAttachmentRefs,
 } from "@powerhousedao/reactor-attachments/replication";
 import type { MessagePortLike } from "@powerhousedao/reactor";
@@ -66,13 +67,6 @@ export type AdoptAttachmentPeerLink = {
   /** Channel label the broker derived; the registry key's second half. */
   channelName: string;
   port: MessagePortLike;
-};
-
-/** What a reactor has served to its linked peers. */
-export type AttachmentServedStats = {
-  served: number;
-  bytesServed: number;
-  refused: number;
 };
 
 /**
