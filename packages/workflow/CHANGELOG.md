@@ -1,3 +1,30 @@
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** accessible, keyboard-complete block picker; ranked AI connector search ([2241f7e3ec](https://github.com/powerhouse-inc/powerhouse/commit/2241f7e3ec))
+- **workflow:** two-pane block picker with keyboard navigation, recent picks and on-screen placement ([79f9cfa795](https://github.com/powerhouse-inc/powerhouse/commit/79f9cfa795))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **workflow:** let an untouched interval field follow outside changes ([fef1916cb4](https://github.com/powerhouse-inc/powerhouse/commit/fef1916cb4))
+- **workflow:** keep typed interval while a slower save echoes back ([#3196](https://github.com/powerhouse-inc/powerhouse/issues/3196))
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **workflow:** close the block picker on canvas clicks and soften match highlights ([23286ceb9d](https://github.com/powerhouse-inc/powerhouse/commit/23286ceb9d))
+- **workflow:** label the cloud catalog tab Integrations ([8f14e04a71](https://github.com/powerhouse-inc/powerhouse/commit/8f14e04a71))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.50 (2026-10-09)
 
 ### 🚀 Features

@@ -1,3 +1,35 @@
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **switchboard:** report the composed workflow runtime through the facts sink ([da552e5aee](https://github.com/powerhouse-inc/powerhouse/commit/da552e5aee))
+- **switchboard:** stop the workflow runtime when the singleton is lost ([3936e68b76](https://github.com/powerhouse-inc/powerhouse/commit/3936e68b76))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **switchboard,connect:** declare the reactor store's storage facts ([28d9d364a9](https://github.com/powerhouse-inc/powerhouse/commit/28d9d364a9))
+- **switchboard:** take the trigger read model off the coordinator with its runtime ([363772ed4e](https://github.com/powerhouse-inc/powerhouse/commit/363772ed4e))
+- **switchboard:** mount the workflow GraphQL API a late claim registers ([92e76a7207](https://github.com/powerhouse-inc/powerhouse/commit/92e76a7207))
+- **reactor-workflow:** tell a self-fence from a takeover, and restart on the former ([d237e1ac51](https://github.com/powerhouse-inc/powerhouse/commit/d237e1ac51))
+- **switchboard:** retry the workflow singleton after a refused boot ([62b41a8023](https://github.com/powerhouse-inc/powerhouse/commit/62b41a8023))
+- **switchboard:** stop the runtime a failed compose had already built ([fd4012b3d7](https://github.com/powerhouse-inc/powerhouse/commit/fd4012b3d7))
+- **reactor-workflow:** fence a singleton holder that cannot renew ([bc4b81edca](https://github.com/powerhouse-inc/powerhouse/commit/bc4b81edca))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+- **reactor-workflow:** renew the singleton lease from the claim ([7ef58a3585](https://github.com/powerhouse-inc/powerhouse/commit/7ef58a3585))
+- **switchboard:** boot without workflows when another process holds the singleton ([33f8dd3c53](https://github.com/powerhouse-inc/powerhouse/commit/33f8dd3c53))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.50 (2026-10-09)
 
 ### 🚀 Features

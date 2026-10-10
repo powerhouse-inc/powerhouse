@@ -1,3 +1,32 @@
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-browser:** let GraphQLReactorClient read its document models live ([8c2f843f39](https://github.com/powerhouse-inc/powerhouse/commit/8c2f843f39))
+- **reactor-browser:** let full-client actions use a client the app sets ([c8c038f02c](https://github.com/powerhouse-inc/powerhouse/commit/c8c038f02c))
+- **reactor-browser:** read a job's state over GraphQL without waiting ([60552fc779](https://github.com/powerhouse-inc/powerhouse/commit/60552fc779))
+- **reactor-browser:** proxy every inspection op now that the worker serves them ([11a0172db5](https://github.com/powerhouse-inc/powerhouse/commit/11a0172db5))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-browser:** host ops to adopt and remove a local sync peer ([a1a129ef92](https://github.com/powerhouse-inc/powerhouse/commit/a1a129ef92))
+- **reactor-browser:** derive the inspector and sync inspection RPC from the op tables ([d9c6677136](https://github.com/powerhouse-inc/powerhouse/commit/d9c6677136))
+- **reactor-browser:** let the caller name the drive a graphql call belongs to ([a056e2eeb0](https://github.com/powerhouse-inc/powerhouse/commit/a056e2eeb0))
+- **reactor-browser:** send Drive-Id on drive writes and type the 421 refusal ([f1628ef0fe](https://github.com/powerhouse-inc/powerhouse/commit/f1628ef0fe))
+- **reactor-browser:** answer graphql isServed from documentServed ([16f156b955](https://github.com/powerhouse-inc/powerhouse/commit/16f156b955))
+- **reactor-browser:** read graphql create defaults from createDefaults ([faf9c687d0](https://github.com/powerhouse-inc/powerhouse/commit/faf9c687d0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** proxy only the inspection ops a worker host serves ([1c135fbdab](https://github.com/powerhouse-inc/powerhouse/commit/1c135fbdab))
+- **reactor-browser:** do not route a drive created under a parent by its own id ([c99c37ae3a](https://github.com/powerhouse-inc/powerhouse/commit/c99c37ae3a))
+- **reactor-browser:** map the 421 in the transport middleware, not around the SDK ([dc39121d76](https://github.com/powerhouse-inc/powerhouse/commit/dc39121d76))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.50 (2026-10-09)
 
 ### 🚀 Features

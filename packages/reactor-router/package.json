@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-router",
-  "version": "6.2.3-dev.48",
+  "version": "6.2.3-dev.51",
   "description": "Routing reactor client: one IReactorClient over a set of reactor backends, placed by drive with advisory routing and misroute recovery.",
   "keywords": [
     "powerhouse",

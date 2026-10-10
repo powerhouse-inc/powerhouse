@@ -1,3 +1,35 @@
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-api:** refuse registry subgraphs and processors whose external dependencies are missing ([cd360d002c](https://github.com/powerhouse-inc/powerhouse/commit/cd360d002c))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-api:** serve the read half of reactor inspection over graphql ([8d9b143c57](https://github.com/powerhouse-inc/powerhouse/commit/8d9b143c57))
+- **reactor-api:** answer whether a document is served over graphql ([c9b2c1a6af](https://github.com/powerhouse-inc/powerhouse/commit/c9b2c1a6af))
+- **reactor-api:** serve a new document's create defaults over graphql ([849cec881b](https://github.com/powerhouse-inc/powerhouse/commit/849cec881b))
+
+### 🩹 Fixes
+
+- **reactor:** report a group-commit store's health to the inspector ([0e64a943e9](https://github.com/powerhouse-inc/powerhouse/commit/0e64a943e9))
+- **reactor:** name the inspector's storage-health types apart from slice 4's ([9d8d407539](https://github.com/powerhouse-inc/powerhouse/commit/9d8d407539))
+- **reactor,reactor-router:** name an unknown job so the router stops reporting real jobs as unknown ([34aadb3add](https://github.com/powerhouse-inc/powerhouse/commit/34aadb3add))
+- **reactor,reactor-api:** read an empty dead-letter cursor as page one and refuse unsafe offsets ([1ac02bcceb](https://github.com/powerhouse-inc/powerhouse/commit/1ac02bcceb))
+- **reactor-api:** serve queued jobs and dead letters without document content ([ab981bb044](https://github.com/powerhouse-inc/powerhouse/commit/ab981bb044))
+- **reactor-api:** decide drive ownership from storage, not through the read gate ([033ee0ab37](https://github.com/powerhouse-inc/powerhouse/commit/033ee0ab37))
+- **reactor-api:** gate the createDefaults parent through listsDocument ([c811f49be2](https://github.com/powerhouse-inc/powerhouse/commit/c811f49be2))
+- **reactor-api:** bypass a Drive-Id miss only for creating that very drive ([30235a9cad](https://github.com/powerhouse-inc/powerhouse/commit/30235a9cad))
+- **reactor-api:** ask the reactor before refusing a Drive-Id with 421 ([8b361da5ed](https://github.com/powerhouse-inc/powerhouse/commit/8b361da5ed))
+- **reactor-api:** let a drive be created under its own Drive-Id whatever the operation is named ([3d0863e9b2](https://github.com/powerhouse-inc/powerhouse/commit/3d0863e9b2))
+- **reactor-api:** forget a webhook's dedupe key only when the handler says it did not process it ([f8422e50d3](https://github.com/powerhouse-inc/powerhouse/commit/f8422e50d3))
+- **reactor-api:** let a webhook delivery answered 503 be delivered again ([df17e0a11b](https://github.com/powerhouse-inc/powerhouse/commit/df17e0a11b))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.50 (2026-10-09)
 
 ### 🚀 Features
