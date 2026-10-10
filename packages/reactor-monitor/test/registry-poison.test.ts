@@ -149,4 +149,30 @@ describe("ReactorMonitorRegistry with a poisoned store", () => {
     await killing;
     expect(store.closed).toBe(true);
   });
+
+  it("fails a provision whose store is poisoned while it boots", async () => {
+    // Called with the builder as `this` below.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const original = ReactorBuilder.prototype.withGroupCommitPGlite;
+    vi.spyOn(
+      ReactorBuilder.prototype,
+      "withGroupCommitPGlite",
+    ).mockImplementation(function (this: ReactorBuilder, options) {
+      // Before buildModule resolves: provision() is still running.
+      options.onUnrecoverable(
+        new PGliteSessionPoisonedError(new Error("poisoned at boot")),
+      );
+      return original.call(this, options);
+    });
+    const registry = new ReactorMonitorRegistry();
+    registries.push(registry);
+
+    await expect(
+      registry.provision(descriptor("boot", { storage: { kind: "idb" } })),
+    ).rejects.toThrow(/poisoned at boot/);
+
+    expect(registry.get("boot")?.status).toBe("failed");
+    expect(opened).toHaveLength(1);
+    expect(opened[0].closed).toBe(true);
+  });
 });
