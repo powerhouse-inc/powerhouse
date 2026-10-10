@@ -18,6 +18,7 @@ import {
   SYNC_STATUS_CHANGED_EVENT,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { PeerManifest } from "@powerhousedao/shared/document-model";
+import { createStoreLocks } from "../store-lock.js";
 import {
   buildWorkerReactor,
   type BuildWorkerReactorOptions,
@@ -47,6 +48,8 @@ export type MonitorWorkerHostOptions = {
 
 const ACCESS: InspectorAccess = { admin: true, sql: true };
 
+export const POISONED_STORE_RETIRE_REASON = "reactor store poisoned";
+
 /** Cloneable: meta (carries the channel config) and the connection snapshot. */
 function toWireRemote(remote: Remote) {
   return {
@@ -60,6 +63,8 @@ export function createMonitorWorkerHost(
   options: MonitorWorkerHostOptions = {},
 ): MonitorWorkerHost {
   const build = options.build ?? buildWorkerReactor;
+  // A re-provisioned worker waits here for this one's store to close.
+  const storeLocks = createStoreLocks();
   let built: BuiltWorkerReactor | undefined;
 
   // Per call: an op can arrive before the first hello has built anything.
@@ -102,8 +107,15 @@ export function createMonitorWorkerHost(
       let phase = "building reactor";
       try {
         const next = await build(raw, options.importers, {
-          onUnrecoverable: () =>
-            host.broadcastReload("reactor store poisoned", crypto.randomUUID()),
+          onUnrecoverable: (cause) => {
+            console.error("[reactor-monitor.worker] store poisoned:", cause);
+            // Retires once; later calls are no-ops.
+            host.retireAndReload(
+              POISONED_STORE_RETIRE_REASON,
+              crypto.randomUUID(),
+            );
+          },
+          storeLocks,
         });
         built = next;
         phase = "forwarding events";
@@ -202,7 +214,9 @@ export function createMonitorWorkerHost(
       requireLocalPeers().onAdoptSyncPeer(params, port),
     onRemoveSyncPeer: (params) => requireLocalPeers().onRemoveSyncPeer(params),
     onAdminRestart: () =>
-      host.broadcastReload("admin restart", crypto.randomUUID()),
+      host.retireAndReload("admin restart", crypto.randomUUID()),
+    // Called again when a build outlives the retirement; that call stops it.
+    onRetire: () => release(),
   });
 
   const release = async (): Promise<void> => {

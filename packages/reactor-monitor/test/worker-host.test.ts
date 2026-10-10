@@ -191,6 +191,9 @@ describe("monitor worker host over a MessageChannel", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(reloads).toContain("admin restart");
+    // Retired, not just reloaded: the reactor is released and data ops refused.
+    await vi.waitFor(() => expect(worker.current()).toBeUndefined());
+    await expect(otherTab.client.get("any")).rejects.toThrow(/retired/);
 
     await otherTab.kill();
     otherDispose();
