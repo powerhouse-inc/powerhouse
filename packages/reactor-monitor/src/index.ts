@@ -1,7 +1,4 @@
 /**
- * The reactor-monitor hosting library (W0.2 of the multi-reactor initiative —
- * see docs/plans/2026-10-03-multi-reactor.md).
- *
  * A clean, Renown-free, Connect-free way to provision and manage browser
  * reactors: `provision(descriptor)` returns a `ManagedReactor` whose client,
  * inspector, raw-SQL capability and sync manager are reached the same way
@@ -16,6 +13,7 @@
 export { ReactorMonitorVersion } from "./version.js";
 
 export type {
+  FullSyncManager,
   ManagedInProcessReactor,
   ManagedReactor,
   ManagedReactorBase,
@@ -23,6 +21,11 @@ export type {
   ManagedWorkerReactor,
   MonitorInProcessClientModule,
   MonitorInProcessReactorModule,
+  MonitorInspector,
+  MonitorReach,
+  MonitorReactorInfo,
+  MonitorSyncInspector,
+  MonitorSyncManager,
   MonitorWorkerClientModule,
   ReactorDescriptor,
   ReactorKind,
@@ -33,25 +36,12 @@ export type {
 } from "./types.js";
 
 export {
-  reactorCapabilities,
-  remoteReactorCapabilities,
-  supportsSyncChannel,
-  unverifiedReactorCapabilities,
-  type BuiltCapabilityFacts,
-  type ReactorCapabilities,
-  type ReactorHosting,
-  type ReactorInspectionTransport,
-  type ReactorStorageCapability,
-  type ReactorStorageKind,
-  type ReactorSyncChannel,
-  type ReportedCapabilityFacts,
-} from "./capabilities.js";
+  toMonitorInspector,
+  toMonitorSyncInspector,
+  toMonitorSyncManager,
+} from "./monitor-inspector.js";
 export { isLocalOnlySync } from "./sync-mode.js";
 
-// The channel-type constants, re-exported so a consumer of this package reads
-// `capabilities.syncChannels` against the SAME spellings the reactor routes on
-// and writes into a `ChannelConfig.type`, without importing
-// `@powerhousedao/reactor` for three strings.
 export {
   GQL_CHANNEL_TYPE,
   LOCAL_CHANNEL_TYPE,
@@ -59,30 +49,12 @@ export {
 } from "@powerhousedao/reactor";
 
 export { provision, type ProvisionOptions } from "./provision.js";
-export { provisionInProcess } from "./in-process.js";
-
-// Remote reactor attachment and its inspection client (multi-reactor W3.2).
 export {
-  createRemoteInspectorClient,
-  DEFAULT_INFO_TTL_MS,
-  DEFAULT_STORAGE_HEALTH_TTL_MS,
-  FORBIDDEN_CODE,
-  GraphqlInspectionTransport,
-  inspectionEndpoint,
-  INSPECTION_OPERATIONS,
-  InspectionRequestError,
-  provisionRemote,
-  RemoteInspectorClient,
-  RemoteSyncManagerClient,
-  unwiredRemoteClient,
-  unwiredRemoteEventBus,
-  type InspectionOperationName,
-  type RemoteInspectionHeaders,
-  type RemoteInspectionInfo,
-  type RemoteInspectionRemote,
-  type RemoteInspectionTransportOptions,
-  type RemoteInspectorClientOptions,
-} from "./remote/index.js";
+  provisionInProcess,
+  type ProvisionInProcessOptions,
+} from "./in-process.js";
+
+export * from "./remote/index.js";
 export {
   connectManagedWorkerReactor,
   provisionWorkerReactor,
@@ -109,31 +81,13 @@ export {
   type BuiltReactor,
 } from "./build-reactor.js";
 
-// Attachment byte movement (multi-reactor W3.4).
-export {
-  attachmentOriginOf,
-  buildAttachmentModule,
-  linkLocalAttachments,
-  MonitorAttachmentTransport,
-  type AdoptAttachmentPeerLink,
-  type AttachmentLinkHandle,
-  type AttachmentModule,
-  type AttachmentServedStats,
-  type BuildAttachmentModuleOptions,
-  type LinkAttachmentsOptions,
-  type ManagedAttachments,
-  type MonitorAttachmentTransportOptions,
-  type ReactorAttachmentsConfig,
-} from "./attachments/index.js";
-// Re-exported so a consumer of this library reads the replicator's reported
-// shapes without also taking a direct dependency on reactor-attachments: the
-// monitor handle is what hands them out.
+export * from "./attachments/index.js";
+export type { IAttachmentStore } from "@powerhousedao/reactor-attachments";
 export type {
   AttachmentReplicationEntry,
   AttachmentReplicationState,
   AttachmentReplicatorStatus,
   AttachmentRetryPolicy,
-  IAttachmentStore,
   IOperationAttachmentRefs,
 } from "@powerhousedao/reactor-attachments/replication";
 

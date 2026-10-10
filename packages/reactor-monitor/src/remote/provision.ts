@@ -1,4 +1,3 @@
-import { remoteReactorCapabilities } from "../capabilities.js";
 import type { ManagedRemoteReactor, ReactorDescriptor } from "../types.js";
 import { RemoteInspectorClient } from "./client.js";
 import { RemoteSyncManagerClient } from "./sync-manager.js";
@@ -80,10 +79,7 @@ export async function provisionRemote(
   return {
     name: descriptor.name,
     kind: "remote",
-    capabilities: remoteReactorCapabilities(descriptor, {
-      workflows: serverInfo.workflows,
-      syncChannelTypes: serverInfo.syncChannels,
-    }),
+    reach: { hosting: "remote", inspection: "rpc" },
     endpoint,
     url: remote.url,
     ...(remote.headers ? { headers: remote.headers } : {}),
