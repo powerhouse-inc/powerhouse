@@ -1,17 +1,22 @@
-import type {
-  AttachmentRef,
-  OperationWithContext,
+import {
+  messagePortTransport,
+  type AttachmentRef,
+  type OperationWithContext,
 } from "@powerhousedao/reactor";
 import {
+  AttachmentPeerLinks,
+  LocalAttachmentStore,
+  MemoryAttachmentBackend,
+  PeeredAttachmentTransport,
   sha256Hex,
   streamFromBytes,
   type IOperationAttachmentRefs,
-  type LocalAttachmentStore,
 } from "@powerhousedao/reactor-attachments/replication";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   linkLocalSync,
   provisionInProcess,
+  TRUST_OWN_PEERS,
   type ManagedInProcessReactor,
   type ReactorAttachmentsConfig,
 } from "../src/index.js";
@@ -342,4 +347,60 @@ describe("attachment byte replication over a brokered local link (W3.4)", () => 
     expect(a.attachments!.peers()).toEqual([]);
     expect(b.attachments!.peers()).toEqual([]);
   }, 60_000);
+
+  it("refuses peer reads on a link built without an authorizer", async () => {
+    async function side(payload: string) {
+      const transport = new PeeredAttachmentTransport();
+      const store = new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        transport,
+      );
+      const bytes = new TextEncoder().encode(payload);
+      const hash = await sha256Hex(bytes);
+      await store.putLocal(
+        hash,
+        {
+          mimeType: "text/plain",
+          fileName: "p.txt",
+          sizeBytes: bytes.byteLength,
+          extension: ".txt",
+          createdAtUtc: "2026-01-01T00:00:00.000Z",
+        },
+        streamFromBytes(bytes),
+      );
+      return { transport, store, hash };
+    }
+    const a = await side("held by the side with no authorizer");
+    const b = await side("held by the side that trusts its peers");
+    const linksA = new AttachmentPeerLinks({
+      store: a.store,
+      transport: a.transport,
+    });
+    const linksB = new AttachmentPeerLinks({
+      store: b.store,
+      transport: b.transport,
+      authorize: TRUST_OWN_PEERS,
+    });
+    const { port1, port2 } = nodeChannel();
+    linksA.addPeer("b", "attachments", messagePortTransport(port1));
+    linksB.addPeer("a", "attachments", messagePortTransport(port2));
+
+    try {
+      expect(await b.transport.fetch(a.hash, "doc")).toEqual({
+        kind: "not-found",
+      });
+      expect(linksA.servedStats()).toEqual({
+        served: 0,
+        bytesServed: 0,
+        refused: 1,
+      });
+      expect((await a.transport.fetch(b.hash, "doc")).kind).toBe("data");
+      expect(linksB.servedStats().served).toBe(1);
+    } finally {
+      linksA.close();
+      linksB.close();
+      await a.store.close();
+      await b.store.close();
+    }
+  });
 });
