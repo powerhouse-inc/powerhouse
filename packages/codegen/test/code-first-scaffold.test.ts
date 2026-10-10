@@ -345,7 +345,8 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
   it("leaves the config untouched when the model files cannot be written", async () => {
     writeFileSync(join(projectDir, "document-models", "todo"), "a file\n");
     const config = readFileSync(configPath(), "utf8");
-    await expect(generateModel()).rejects.toThrow(/definition\.ts/);
+    // POSIX names the file it could not open, Windows the file in its way.
+    await expect(generateModel()).rejects.toThrow(/document-models[\\/]todo/);
     expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
 
@@ -702,7 +703,8 @@ describe("generateCodeFirstSubgraph", () => {
   it("leaves the config untouched when the declaration cannot be written", async () => {
     writeFileSync(join(projectDir, "subgraphs"), "a file\n");
     const config = readFileSync(configPath(), "utf8");
-    await expect(generateSubgraph("widgets")).rejects.toThrow(/widgets\.ts/);
+    // POSIX names the file it could not open, Windows the file in its way.
+    await expect(generateSubgraph("widgets")).rejects.toThrow(/[\\/]subgraphs/);
     expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
 });
