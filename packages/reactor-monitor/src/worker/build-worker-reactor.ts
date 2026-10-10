@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/reactor-browser/rpc";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { buildMonitorReactor, type BuiltReactor } from "../build-reactor.js";
+import type { StoreLocks } from "../store-lock.js";
 import {
   parseWorkerConstruct,
   type MonitorWorkerConstruct,
@@ -24,8 +25,10 @@ export type WorkerPackageImporters = {
 };
 
 export type BuildWorkerReactorOptions = {
-  /** The store's session is poisoned; the host asks its tabs to reload. */
+  /** The store's session is poisoned; the host retires the worker. */
   onUnrecoverable?: (cause: Error) => void;
+  /** Serializes the store with a retired worker still closing it. */
+  storeLocks?: StoreLocks;
 };
 
 /** A reactor built inside the worker, plus its registry bookkeeping. */
@@ -101,6 +104,7 @@ export async function buildWorkerReactor(
     ...(options.onUnrecoverable
       ? { onUnrecoverable: options.onUnrecoverable }
       : {}),
+    ...(options.storeLocks ? { storeLocks: options.storeLocks } : {}),
   });
 
   const registry: IDocumentModelRegistry | undefined =

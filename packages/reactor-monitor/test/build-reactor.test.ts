@@ -6,7 +6,10 @@ import {
 import { sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildMonitorReactor, type BuiltReactor } from "../src/index.js";
+import { createStoreLocks } from "../src/store-lock.js";
 import type * as Store from "../src/store.js";
+
+const opens = vi.hoisted(() => [] as string[]);
 
 // Node has no IndexedDB; idb opens a memory PGlite so group commit runs for real.
 vi.mock("../src/store.js", async (importOriginal) => {
@@ -16,11 +19,13 @@ vi.mock("../src/store.js", async (importOriginal) => {
     openReactorStore: (
       namespace: string,
       storage?: Parameters<typeof original.openReactorStore>[1],
-    ) =>
-      original.openReactorStore(
+    ) => {
+      opens.push(namespace);
+      return original.openReactorStore(
         namespace,
         storage?.kind === "idb" ? { kind: "memory" } : storage,
-      ),
+      );
+    },
   };
 });
 
@@ -152,4 +157,28 @@ describe("buildMonitorReactor", () => {
     expect(reactor.pg.closed).toBe(true);
     error.mockRestore();
   }, 5_000);
+
+  it("opens a locked store only after the holder closed it", async () => {
+    const options = {
+      namespace: "build-locked",
+      storage: { kind: "idb" },
+    } as const;
+    const holder = await buildMonitorReactor({
+      ...options,
+      storeLocks: createStoreLocks(navigator.locks),
+    });
+
+    const next = buildMonitorReactor({
+      ...options,
+      storeLocks: createStoreLocks(navigator.locks),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(opens.filter((name) => name === options.namespace)).toHaveLength(1);
+
+    await holder.shutdown();
+    const reactor = await next;
+    built.push(reactor);
+    expect(opens.filter((name) => name === options.namespace)).toHaveLength(2);
+    expect(holder.pg.closed).toBe(true);
+  });
 });

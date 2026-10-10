@@ -36,6 +36,7 @@ import {
   type AttachmentModule,
 } from "./attachments/index.js";
 import { createLocalSigner } from "./signer.js";
+import type { StoreLocks } from "./store-lock.js";
 import { DEFAULT_REACTOR_STORAGE, openReactorStore } from "./store.js";
 import type { ReactorAttachmentsConfig } from "./attachments/types.js";
 import { isLocalOnlySync } from "./sync-mode.js";
@@ -68,6 +69,8 @@ export type BuildReactorOptions = {
   onUnrecoverable?: (cause: Error) => void;
   /** Bound on stopping sync and the reactor at shutdown; the store closes after. */
   stopTimeoutMs?: number;
+  /** Held on a persistent store from open to close, across realms. */
+  storeLocks?: StoreLocks;
 };
 
 /** A built reactor plus the handles a host needs to inspect and tear it down. */
@@ -138,7 +141,16 @@ export async function buildMonitorReactor(
 ): Promise<BuiltReactor> {
   const storage = options.storage ?? DEFAULT_REACTOR_STORAGE;
   const onUnrecoverable = options.onUnrecoverable ?? reportUnrecoverable;
-  const pg = await openReactorStore(options.namespace, storage);
+  const lock = storage.kind === "memory" ? undefined : options.storeLocks;
+  const unlock = () => lock?.release(options.namespace);
+  await lock?.acquire(options.namespace);
+  let pg: PGlite;
+  try {
+    pg = await openReactorStore(options.namespace, storage);
+  } catch (error) {
+    unlock();
+    throw error;
+  }
 
   const models = options.documentModelModules ?? baseDocumentModels;
   const localOnly = isLocalOnlySync(options.localSync);
@@ -220,6 +232,7 @@ export async function buildMonitorReactor(
     module = await clientBuilder.buildModule();
   } catch (error) {
     await pg.close().catch(() => undefined);
+    unlock();
     throw error;
   }
 
@@ -297,6 +310,7 @@ export async function buildMonitorReactor(
       } catch (error) {
         console.error("[reactor-monitor] store close failed:", error);
       }
+      unlock();
     })();
     return shuttingDown;
   };
