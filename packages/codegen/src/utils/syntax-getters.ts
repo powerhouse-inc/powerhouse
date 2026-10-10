@@ -18,7 +18,6 @@ import {
   isString,
   map,
   pipe,
-  when,
 } from "remeda";
 import type {
   ObjectLiteralExpression,
@@ -122,24 +121,38 @@ export function getBooleanPropertyValue(
   );
 }
 
+export type DocumentModelDiscovery =
+  | { kind: "absent" }
+  | { kind: "model"; state: DocumentModelGlobalState }
+  | { kind: "invalid"; error: unknown };
+
+/**
+ * Reads the schema-first model in a `document-models` entry, which lives in
+ * `<dir>/<dir>.json`.
+ */
+export function discoverDocumentModelInDir(
+  dirent: Dirent | undefined,
+): DocumentModelDiscovery {
+  if (!isDirectory(dirent)) return { kind: "absent" };
+  const stateFile = path.join(
+    dirent.parentPath,
+    `${dirent.name}/${dirent.name}.json`,
+  );
+  if (!fileExistsSync(stateFile)) return { kind: "absent" };
+  const parseResult = DocumentModelGlobalStateSchema().safeParse(
+    loadJsonFileSync(stateFile),
+  );
+  return parseResult.success
+    ? { kind: "model", state: parseResult.data }
+    : { kind: "invalid", error: parseResult.error };
+}
+
 export function loadDocumentModelInDir(
   dirent: Dirent | undefined,
 ): DocumentModelGlobalState | undefined {
-  if (!isDirectory(dirent)) return undefined;
-
-  const parseResult = pipe(
-    dirent,
-    (dir) => path.join(dir.parentPath, `${dir.name}/${dir.name}.json`),
-    when(fileExistsSync, loadJsonFileSync),
-    (stateFile) => DocumentModelGlobalStateSchema().safeParse(stateFile),
-  );
-
-  if (!parseResult.success) {
-    console.error(parseResult.error);
-    return undefined;
-  }
-
-  return parseResult.data;
+  const discovery = discoverDocumentModelInDir(dirent);
+  if (discovery.kind === "invalid") console.error(discovery.error);
+  return discovery.kind === "model" ? discovery.state : undefined;
 }
 
 export function getAllImportNames(sourceFile: SourceFile | undefined) {

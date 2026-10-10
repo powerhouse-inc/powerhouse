@@ -1,0 +1,12 @@
+{
+  "name": "ph-fixture-forged",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/node/index.js"
+  }
+}

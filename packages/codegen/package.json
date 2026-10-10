@@ -46,7 +46,6 @@
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
-    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",
     "arg": "^5.0.2",
@@ -60,6 +59,7 @@
     "read-pkg": "catalog:",
     "remeda": "catalog:",
     "ts-morph": "catalog:",
+    "vite": "catalog:",
     "write-json-file": "^7.0.0",
     "write-package": "catalog:",
     "zod": "catalog:"

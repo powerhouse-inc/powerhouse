@@ -1,0 +1,14 @@
+{
+  "name": "@powerhousedao/loader-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./document-models/index.ts",
+    "./document-models": "./document-models/index.ts",
+    "./browser/document-models": "./browser/document-models/index.ts",
+    "./node/document-models": "./node/document-models/index.mjs",
+    "./subgraphs": "./subgraphs/index.ts",
+    "./node/subgraphs": "./node/subgraphs/index.mjs"
+  }
+}

@@ -1,6 +1,7 @@
 import { camelCase, kebabCase } from "change-case";
 import {
   setName,
+  type Action,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError, Kind, parse } from "graphql";
@@ -11,6 +12,8 @@ import {
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
+import { mutationOperations } from "./structured-model-schema.js";
+import { structuredModelOf } from "./structured-projection.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
 import type {
   PhDocument,
@@ -138,6 +141,52 @@ export interface DocumentModelSubgraphResolvers<
     | DocumentModelMutationResolvers<TDocument>;
 }
 
+type MutationOperation = {
+  readonly storedName: string;
+  readonly creatorKey: string;
+  readonly operationType: string;
+  readonly authorizeBuiltActionType: boolean;
+};
+
+/**
+ * Resolves an abstract value by its typename or a field unique to a member,
+ * falling back to the first member when neither identifies it.
+ */
+function abstractTypeResolver(
+  documentName: string,
+  members: readonly string[],
+  fieldsByObject: ReadonlyMap<string, readonly string[]>,
+): DocumentModelResolverMap {
+  const uniqueFields = new Map(
+    members.map((member) => {
+      const others = new Set(
+        members
+          .filter((candidate) => candidate !== member)
+          .flatMap((candidate) => fieldsByObject.get(candidate) ?? []),
+      );
+      const own = fieldsByObject.get(member) ?? [];
+      return [member, own.filter((field) => !others.has(field))] as const;
+    }),
+  );
+  return {
+    __resolveType: (obj: Record<string, unknown>) => {
+      const declared = members.find(
+        (member) =>
+          obj.__typename === member ||
+          obj.__typename === `${documentName}_${member}`,
+      );
+      if (declared) return `${documentName}_${declared}`;
+      for (const member of members) {
+        const fields = uniqueFields.get(member) ?? [];
+        if (fields.length > 0 && fields.some((field) => field in obj)) {
+          return `${documentName}_${member}`;
+        }
+      }
+      return `${documentName}_${members[0]}`;
+    },
+  };
+}
+
 /**
  * New document model subgraph that uses reactorClient instead of legacy reactor.
  * This class auto-generates GraphQL queries and mutations for a document model.
@@ -150,10 +199,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     super(args);
     this.documentModel = documentModel;
     this.name = kebabCase(documentModel.documentModel.global.name);
-    this.typeDefs = generateDocumentModelSchema(
-      this.documentModel.documentModel.global,
-      { useNewApi: true },
-    );
+    this.typeDefs = generateDocumentModelSchema(this.documentModel, {
+      useNewApi: true,
+    });
     this.resolvers = this.generateResolvers();
   }
 
@@ -186,14 +234,52 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   }
 
   /**
-   * Generate __resolveType functions for union types found in the document model schema.
-   * Parses the state schema to find union definitions and their member types,
-   * then uses unique field presence to discriminate between member types at runtime.
+   * Builds `__resolveType` for each abstract type the model's state declares. A
+   * code-first model reads its structured types. A schema-first model parses
+   * its state schema. Both pick the member by the presence of a field unique
+   * to it.
    */
-  private generateUnionResolvers(): Record<string, DocumentModelResolverMap> {
+  private generateAbstractTypeResolvers(): Record<
+    string,
+    DocumentModelResolverMap
+  > {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
+    const structured = structuredModelOf(this.documentModel);
+    if (structured !== null) {
+      const stateTypes = [
+        ...structured.segments.global,
+        ...structured.segments.local,
+      ];
+      const fieldsByObject = new Map(
+        stateTypes.flatMap((type) =>
+          type.kind === "object"
+            ? [[type.name, type.fields.map((field) => field.name)] as const]
+            : [],
+        ),
+      );
+      const resolvers: Record<string, DocumentModelResolverMap> = {};
+      for (const type of stateTypes) {
+        if (type.kind !== "union" && type.kind !== "interface") continue;
+        const members =
+          type.kind === "union"
+            ? type.members
+            : stateTypes.flatMap((candidate) =>
+                candidate.kind === "object" &&
+                candidate.implements?.includes(type.name)
+                  ? [candidate.name]
+                  : [],
+              );
+        if (members.length === 0) continue;
+        resolvers[`${documentName}_${type.name}`] = abstractTypeResolver(
+          documentName,
+          members,
+          fieldsByObject,
+        );
+      }
+      return resolvers;
+    }
     const specification =
       this.documentModel.documentModel.global.specifications.at(-1);
     if (!specification) return {};
@@ -225,37 +311,29 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     const resolvers: Record<string, DocumentModelResolverMap> = {};
 
     for (const def of ast.definitions) {
-      if (def.kind !== Kind.UNION_TYPE_DEFINITION) continue;
-
-      const unionName = def.name.value;
-      const memberTypes = def.types?.map((t) => t.name.value) ?? [];
+      if (
+        def.kind !== Kind.UNION_TYPE_DEFINITION &&
+        def.kind !== Kind.INTERFACE_TYPE_DEFINITION
+      )
+        continue;
+      const memberTypes =
+        def.kind === Kind.UNION_TYPE_DEFINITION
+          ? (def.types?.map((t) => t.name.value) ?? [])
+          : ast.definitions.flatMap((candidate) =>
+              candidate.kind === Kind.OBJECT_TYPE_DEFINITION &&
+              candidate.interfaces?.some(
+                (interface_) => interface_.name.value === def.name.value,
+              )
+                ? [candidate.name.value]
+                : [],
+            );
       if (memberTypes.length === 0) continue;
 
-      // Compute unique fields per member type
-      const uniqueFields: Record<string, string[]> = {};
-      for (const memberType of memberTypes) {
-        const ownFields = objectFieldsMap.get(memberType) ?? [];
-        const otherFields = new Set(
-          memberTypes
-            .filter((t) => t !== memberType)
-            .flatMap((t) => objectFieldsMap.get(t) ?? []),
-        );
-        uniqueFields[memberType] = ownFields.filter((f) => !otherFields.has(f));
-      }
-
-      const prefixedUnionName = `${documentName}_${unionName}`;
-
-      resolvers[prefixedUnionName] = {
-        __resolveType: (obj: Record<string, unknown>) => {
-          for (const memberType of memberTypes) {
-            const fields = uniqueFields[memberType] ?? [];
-            if (fields.length > 0 && fields.some((f) => f in obj)) {
-              return `${documentName}_${memberType}`;
-            }
-          }
-          return `${documentName}_${memberTypes[0]}`;
-        },
-      };
+      resolvers[`${documentName}_${def.name.value}`] = abstractTypeResolver(
+        documentName,
+        memberTypes,
+        objectFieldsMap,
+      );
     }
 
     return resolvers;
@@ -270,15 +348,64 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
-    const operations =
-      this.documentModel.documentModel.global.specifications
-        .at(-1)
-        ?.modules.flatMap((module) =>
-          module.operations.filter((op) => op.name),
-        ) ?? [];
+    const structured = structuredModelOf(this.documentModel);
+    const hasUnreadableDefinition =
+      structured === null &&
+      (this.documentModel as { definition?: unknown }).definition !== undefined;
+    const operations: readonly MutationOperation[] =
+      structured !== null
+        ? mutationOperations(structured.specification).map((op) => ({
+            storedName: op.name,
+            creatorKey: op.creatorKey,
+            operationType: op.actionType,
+            authorizeBuiltActionType: false,
+          }))
+        : (this.documentModel.documentModel.global.specifications
+            .at(-1)
+            ?.modules.flatMap((module) =>
+              module.operations.flatMap((op) =>
+                op.name
+                  ? [
+                      {
+                        storedName: op.name,
+                        creatorKey: camelCase(op.name),
+                        operationType: op.name,
+                        authorizeBuiltActionType: hasUnreadableDefinition,
+                      },
+                    ]
+                  : [],
+              ),
+            ) ?? []);
+    const createAction = async (
+      op: MutationOperation,
+      input: unknown,
+      documentIdOrSlug: string,
+      ctx: Context,
+    ): Promise<Action> => {
+      const creator = this.documentModel.actions[op.creatorKey];
+      if (!creator) {
+        throw new GraphQLError(`Action ${op.storedName} not found`);
+      }
+      let action: Action;
+      try {
+        action = creator(input);
+      } catch (error) {
+        throw new GraphQLError(
+          error instanceof Error ? error.message : `Failed to ${op.storedName}`,
+        );
+      }
+      if (op.authorizeBuiltActionType && action.type !== op.operationType) {
+        await this.assertCanExecuteOperation(
+          documentIdOrSlug,
+          action.type,
+          ctx,
+        );
+      }
+      return action;
+    };
 
     return {
-      ...this.generateUnionResolvers(),
+      ...this.generateAbstractTypeResolvers(),
       Query: {
         // Namespace resolver: returns empty object so nested field resolvers can run
         [documentName]: () => ({}),
@@ -569,7 +696,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         // Generate sync and async mutations for each operation
         ...operations.reduce((mutations, op) => {
           // Sync mutation
-          mutations[camelCase(op.name!)] = async (
+          mutations[camelCase(op.storedName)] = async (
             _: unknown,
             args: {
               documentIdOrSlug?: string | null;
@@ -587,7 +714,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               documentIdOrSlug,
-              op.name!,
+              op.operationType,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -601,29 +728,28 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               );
             }
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
-            if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
-            }
+            const action = await createAction(op, input, documentIdOrSlug, ctx);
 
             try {
               const updatedDoc = await this.reactorClient.execute(
                 effectiveDocId,
                 "main",
-                [action(input)],
+                [action],
                 undefined,
                 this.viewSubject(ctx),
               );
               return toGqlPhDocument(updatedDoc);
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${op.storedName}`,
               );
             }
           };
 
           // Async mutation - returns job ID
-          mutations[`${camelCase(op.name!)}Async`] = async (
+          mutations[`${camelCase(op.storedName)}Async`] = async (
             _: unknown,
             args: {
               documentIdOrSlug?: string | null;
@@ -641,7 +767,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               documentIdOrSlug,
-              op.name!,
+              op.operationType,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -655,21 +781,20 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               );
             }
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
-            if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
-            }
+            const action = await createAction(op, input, documentIdOrSlug, ctx);
 
             try {
               const jobInfo = await this.reactorClient.executeAsync(
                 effectiveDocId,
                 "main",
-                [action(input)],
+                [action],
               );
               return jobInfo.id;
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${op.storedName}`,
               );
             }
           };

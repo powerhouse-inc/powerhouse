@@ -2,7 +2,16 @@ export * from "./app.js";
 export * from "./boilerplate/generated-project-files.js";
 export * from "./boilerplate/package.json.js";
 export * from "./clis/generate-cli-docs.js";
+export * from "./definition-sources.js";
 export * from "./document-editor.js";
+export {
+  findCodeFirstDocumentModelExport,
+  loadCodeFirstInventory,
+  warnUnregisteredCodeFirstDefinitions,
+  type CodeFirstDocumentModelExport,
+  type CodeFirstInventory,
+} from "./document-model/code-first-aggregates.js";
+export * from "./document-model/code-first-model.js";
 export * from "./document-model/document-model.js";
 export * from "./document-model/upgrade-migration.js";
 export * from "./document-model/utils.js";

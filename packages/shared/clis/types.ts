@@ -5,6 +5,7 @@ import type {
   LOG_LEVELS,
   SERVICE_ACTIONS,
 } from "./constants.js";
+import type { DefinitionSourcesConfig } from "./definition-sources.js";
 
 export type ServiceActions = typeof SERVICE_ACTIONS;
 export type ServiceAction = ServiceActions[number];
@@ -371,4 +372,5 @@ export type PowerhouseConfig = {
   };
   packageRegistryUrl?: string;
   connect?: PHConnectRuntimeConfig;
+  definitionSources?: DefinitionSourcesConfig;
 };

@@ -3,31 +3,28 @@ import { command } from "cmd-ts";
 
 export const build = command({
   name: "build",
-  description: `
-Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
-document models, editors, subgraphs and processors, type declarations, and its stylesheet.
+  description: `Compile, check, bundle, and verify this package, then replace its output.
 
-Pieces under pieces/ are built too, each into its own self-contained module under
-dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and
-the piece listed in dist/powerhouse.manifest.json. A piece takes the package's version: an
-entry in pieces/index.ts that declares version fails the build. A package that ships only
-pieces is an ordinary package: it carries the same boilerplate, and every step above runs
-for it too.
+A failed build leaves the published tree unchanged. TypeScript runs first; type errors require confirmation or --ignore-type-errors. For a
+code-first package, the definition check runs against that compilation, and a
+project that installs the packed tarball imports the bundles before the build
+promotes anything. Pieces are bundled as self-contained modules under dist/node/pieces,
+and shared browser dependencies are externalized unless --no-shared-deps is set.
 
-tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
-where it can't ask. --ignore-type-errors builds without asking; a package built that way
-can load and still fail at runtime, so don't publish it.`,
+Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.`,
   args: buildArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
     }
     try {
-      const { runBuild } = await import("../services/build.js");
-      await runBuild(args);
+      const { logRefusal, runBuild } = await import("../services/build.js");
+      const result = await runBuild(args);
+      await logRefusal(result);
+      process.exit(result.exitCode);
     } catch (error) {
       console.error(error);
-      process.exit(1);
+      process.exit(2);
     }
   },
 });

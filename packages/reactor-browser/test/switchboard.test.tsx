@@ -1,6 +1,10 @@
 // test suite for the switchboard hooks
 
-import type { DocumentModelModule } from "document-model";
+import {
+  defineDocumentModel,
+  ph,
+  type DocumentModelModule,
+} from "document-model";
 import lzString from "lz-string";
 import { describe, expect, it } from "vitest";
 import { GetDocumentWithOperationsDocument } from "../src/graphql/gen/schema.js";
@@ -59,6 +63,76 @@ const fakeInvoiceModel = {
 } as unknown as DocumentModelModule;
 
 describe("Switchboard hooks", () => {
+  it.each([false, true])(
+    "handles compiled code-first abstract state (union: %s)",
+    (union) => {
+      const Entry = ph.interface("Entry", {
+        fields: { label: ph.String({ required: true }) },
+      });
+      const Note = ph.object("Note", {
+        implements: [Entry],
+        fields: { label: ph.String({ required: true }), body: ph.String() },
+      });
+      const Link = ph.object("Link", {
+        implements: [Entry],
+        fields: { label: ph.String({ required: true }), href: ph.String() },
+      });
+      const Value = union
+        ? ph.union("Value", { members: [Note, Link] })
+        : Entry;
+      const context = defineDocumentModel({
+        id: "test/explorer",
+        name: "Explorer",
+        description: "",
+        extension: "explorer",
+        version: 1,
+        author: { name: "Test", website: null },
+        specifications: {
+          global: {
+            schema: ph.object("ExplorerState", {
+              fields: {
+                entries: ph.list(ph.ref(Value, { required: true })),
+                notes: ph.list(ph.ref(Note)),
+                links: ph.list(ph.ref(Link)),
+              },
+            }),
+            initialValue: { entries: null, notes: null, links: null },
+          },
+          local: { schema: null, initialValue: {} },
+        },
+      });
+      const model = context.finalize({
+        modules: [],
+      }) as unknown as DocumentModelModule;
+      const url = buildDocumentSubgraphUrl(
+        "http://localhost:4001/graphql/r",
+        "test/explorer",
+        "doc-1",
+        model,
+      );
+      expect(decodeExplorerState(url).document).toBe(
+        getDocumentGraphqlQuery().trim(),
+      );
+    },
+  );
+
+  it.each([
+    "type Note { body: String! } type Link { href: String! } union Entry = Note | Link",
+    "interface Entry { label: String! } type Note implements Entry { label: String! }",
+  ])("uses the generic query for abstract state types: %s", (declaration) => {
+    const model = structuredClone(fakeInvoiceModel);
+    model.documentModel.global.specifications[0].state.global.schema = `${declaration}\ntype PowerhouseInvoiceState { entries: [Entry!] }`;
+    const url = buildDocumentSubgraphUrl(
+      "http://localhost:4001/graphql/r",
+      "powerhouse/invoice",
+      "doc-1",
+      model,
+    );
+    expect(decodeExplorerState(url).document).toBe(
+      getDocumentGraphqlQuery().trim(),
+    );
+  });
+
   it("should return the proper switchboard url", () => {
     const url = getSwitchboardGatewayUrlFromDriveUrl(
       "https://example.com/d/123",

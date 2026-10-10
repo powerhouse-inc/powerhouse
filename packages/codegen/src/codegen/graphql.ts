@@ -1,14 +1,16 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 import { generate } from "@graphql-codegen/cli";
 import type { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import {
-  generatorTypeDefs,
-  validationSchema,
-} from "@powerhousedao/document-engineering/graphql";
 import type {
   DocumentSpecification,
   ModuleSpecification,
 } from "@powerhousedao/shared/document-model";
+import {
+  orderedScalarNames,
+  scalarCatalog,
+  scalarTypeScriptTypes,
+  scalarZodSources,
+} from "document-model/scalars";
 import type { DocumentModelFileMakerArgs } from "file-builders";
 import type { TypeNode } from "graphql";
 import { Kind, parse } from "graphql";
@@ -57,23 +59,47 @@ function makePluginLoader(): PluginLoader {
 
 const pluginLoader = makePluginLoader();
 
-export const scalars = {
-  Unknown: "unknown",
-  DateTime: "string",
-  Address: "`${string}:0x${string}`",
-  AttachmentRef: "`attachment://v${number}:${string}`",
-  ...(generatorTypeDefs as Record<string, string>),
-};
+const SCHEMA_GRAPHQL_SCALAR_ORDER = [
+  "Unknown",
+  "DateTime",
+  "Address",
+  "AttachmentRef",
+  "Amount_Tokens",
+  "EthereumAddress",
+  "EmailAddress",
+  "Amount_Percentage",
+  "Date",
+  "URL",
+  "Amount_Money",
+  "OLabel",
+  "Currency",
+  "PHID",
+  "OID",
+  "Amount_Fiat",
+  "Amount_Currency",
+  "Amount_Crypto",
+  "Amount",
+  "Upload",
+] as const;
 
-export const scalarsValidation = {
-  Unknown: "z.unknown()",
-  DateTime: "z.string().datetime()",
-  Address:
-    "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
-  AttachmentRef:
-    "z.custom<`attachment://v${number}:${string}`>((val) => /^attachment:\\/\\/v\\d+:.+$/.test(val as string))",
-  ...(validationSchema as Record<string, string>),
-};
+const UNSUPPORTED_SCALARS = ["JSONObject"] as const;
+
+const CODEGEN_SCALARS = orderedScalarNames(
+  scalarCatalog.names,
+  SCHEMA_GRAPHQL_SCALAR_ORDER,
+  UNSUPPORTED_SCALARS,
+);
+
+const typescriptTypes = scalarTypeScriptTypes(scalarCatalog);
+const zodSources = scalarZodSources(scalarCatalog);
+
+export const scalars: Record<string, string> = Object.fromEntries(
+  CODEGEN_SCALARS.map((name) => [name, typescriptTypes[name]]),
+);
+
+export const scalarsValidation: Record<string, string> = Object.fromEntries(
+  CODEGEN_SCALARS.map((name) => [name, zodSources[name]]),
+);
 
 // Scalars codegen validates with strict `z.iso.datetime()`.
 const DATE_LIKE_SCALARS = new Set(["Date", "DateTime"]);

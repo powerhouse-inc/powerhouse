@@ -41,6 +41,22 @@ export type UpgradeManifest<TVersions extends readonly number[]> = {
   };
 };
 
+type TupleLast<T extends readonly [number, ...number[]]> = T extends readonly [
+  ...number[],
+  infer Last extends number,
+]
+  ? Last
+  : T[number];
+
+/** The last entry of `supportedVersions`, which is the manifest's `latestVersion`. */
+export function latestVersionOf<
+  TVersions extends readonly [number, ...number[]],
+>(supportedVersions: TVersions): TupleLast<TVersions> {
+  return supportedVersions[
+    supportedVersions.length - 1
+  ] as TupleLast<TVersions>;
+}
+
 export { normalizeDocumentModelVersion } from "./version.js";
 
 function applyInitialState(

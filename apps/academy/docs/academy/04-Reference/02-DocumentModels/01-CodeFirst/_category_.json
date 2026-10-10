@@ -1,0 +1,7 @@
+{
+  "label": "Code-first authoring",
+  "link": {
+    "type": "generated-index",
+    "description": "Write a document model in TypeScript: choose an approach, build types with ph, run the tooling, and read the diagnostics."
+  }
+}

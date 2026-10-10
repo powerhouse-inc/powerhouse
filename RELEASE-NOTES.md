@@ -1,5 +1,31 @@
 # Release Changelog
 
+## 🚀 **Unreleased**
+
+### ⚠️ BREAKING CHANGES
+
+These apply to every package, including packages that never adopt code-first document models.
+
+**`ph build` checks TypeScript before building.** If TypeScript reports errors, an interactive build asks whether to continue. Without an interactive terminal it exits with code `2` and leaves `dist` unchanged unless `--ignore-type-errors` is set. This opt-in applies to code-first packages too; definition checks and packed-consumer validation still run before output is replaced. A build that bypasses type errors may fail at runtime. `ph connect build` uses the same interactive prompt.
+
+**`ph build` exit codes changed.** `0` means the output was replaced. `1` means a definition check found errors in the declarations. `2` means the build could not run, including TypeScript and bundler failures. Scripts that test for exit code `1` should test for any nonzero code.
+
+**`ph build` replaces the whole output directory.** Before, the build cleaned only `dist/browser` and `dist/node`. Now it builds into `.ph/build` and then replaces all of `dist` with the result, so other files you keep in `dist` are deleted. Move them out of the output directory.
+
+**`--out-dir` must be a directory inside the package.** A path outside the package, or one that reaches outside through a symlink, is refused before anything is written.
+
+**Declarations follow `declarationDir` inside the output directory.** The build reads `declarationDir` (or `outDir`) from `tsconfig.json` and copies the `.d.ts` files to that path inside the output directory. If `declarationDir` points outside the output directory, the build no longer writes declarations. The scaffolded `./dist/types` is unaffected.
+
+**TypeScript project references are not built.** The build now runs `tsc -p` instead of `tsc --build`. It reads the outputs of referenced projects but does not build them, so build those projects first, for example with `tsc --build` in a fresh clone.
+
+**`ph publish` builds before it publishes.** Before, `ph publish` uploaded what was already in `dist`. Now it runs the release gate first. The gate fails on the same errors as `ph build`, and no token is issued and no registry request is made when it fails. A package created by `ph init` also runs `ph-cli model prepack` from its `prepack` script, so a package without a code-first release check builds twice when you publish.
+
+**`definitionSources` is optional.** A package without the field, without a `powerhouse.config.json`, or with an empty `code-first` entry list builds like a schema-first package and needs no change.
+
+**Code-first definitions must be registered.** A code-first model or subgraph in the package that no `definitionSources` entry reaches fails `ph build`, `ph publish`, and the `prepack` check with `PH-CONFIG-SOURCE-UNREGISTERED`, and `ph generate` warns about it. The message names the entry to add.
+
+---
+
 ## 🚀 **Unreleased** — PGlite storage on NodeFS
 
 ### ✨ Highlights

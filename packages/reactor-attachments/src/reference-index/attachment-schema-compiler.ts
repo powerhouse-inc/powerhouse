@@ -1,5 +1,4 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
-import { generatorTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type {
   Action,
   DocumentModelModule,
@@ -7,6 +6,8 @@ import type {
   OperationSpecification,
 } from "@powerhousedao/shared/document-model";
 import { constantCase, pascalCase } from "change-case";
+import { inspectableDefinition, packageScalarNames } from "document-model";
+import { orderedScalarNames, scalarCatalog } from "document-model/scalars";
 import {
   buildASTSchema,
   getNamedType,
@@ -20,6 +21,7 @@ import {
   type GraphQLInputObjectType,
   type GraphQLInputType,
   type GraphQLSchema,
+  type ScalarTypeDefinitionNode,
 } from "graphql";
 import { parseRef } from "../ref.js";
 import type {
@@ -28,13 +30,10 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-const CODEGEN_SCALAR_NAMES = new Set([
-  "Unknown",
-  "DateTime",
-  "Address",
-  ATTACHMENT_REF_TYPE,
-  ...Object.keys(generatorTypeDefs as Record<string, string>),
-]);
+/** Catalog scalars used by generated and code-first schemas. */
+const CODEGEN_SCALAR_NAMES: ReadonlySet<string> = new Set(
+  orderedScalarNames(scalarCatalog.names, [], []),
+);
 
 type CompilerContext = {
   actionType: string;
@@ -150,14 +149,29 @@ function selectOperation(
   return matches[0];
 }
 
+/**
+ * The package scalars a code-first module's specification declares. Its
+ * stored SDL references them without declaring them, as it does catalog
+ * scalars, and only the structured definition names them. A module whose
+ * definition fails the wire-shape check declares none.
+ */
+function modulePackageScalars(
+  module: DocumentModelModule,
+  context: CompilerContext,
+): readonly string[] {
+  const specification = inspectableDefinition(
+    module,
+  )?.definition.specifications.find(
+    (candidate) => candidate.version === context.version,
+  );
+  return specification === undefined ? [] : packageScalarNames(specification);
+}
+
 function buildEffectiveSchema(
   specification: DocumentSpecification,
+  packageScalars: readonly string[],
   context: CompilerContext,
 ): GraphQLSchema {
-  const scalarSchemas = Array.from(
-    CODEGEN_SCALAR_NAMES,
-    (name) => `scalar ${name}`,
-  );
   const stateSchemas = Object.values(specification.state).map(
     (state) => state.schema,
   );
@@ -170,11 +184,31 @@ function buildEffectiveSchema(
 
   try {
     const document = parse(
-      [...scalarSchemas, ...stateSchemas, ...operationSchemas]
-        .filter(Boolean)
-        .join("\n\n"),
+      [...stateSchemas, ...operationSchemas].filter(Boolean).join("\n\n"),
     );
-    return buildASTSchema(dedupeTypeDefinitions(document));
+    const declaredScalars = new Set(
+      document.definitions.flatMap((definition) =>
+        definition.kind === Kind.SCALAR_TYPE_DEFINITION
+          ? [definition.name.value]
+          : [],
+      ),
+    );
+    const scalarDefinitions = [...CODEGEN_SCALAR_NAMES, ...packageScalars]
+      .filter((name) => name !== "JSONObject" || !declaredScalars.has(name))
+      .map(
+        (name) =>
+          ({
+            kind: Kind.SCALAR_TYPE_DEFINITION,
+            name: { kind: Kind.NAME, value: name },
+            directives: [],
+          }) satisfies ScalarTypeDefinitionNode,
+      );
+    return buildASTSchema(
+      dedupeTypeDefinitions({
+        ...document,
+        definitions: [...scalarDefinitions, ...document.definitions],
+      }),
+    );
   } catch {
     throw compilationError(context, "the effective GraphQL schema is invalid");
   }
@@ -460,7 +494,11 @@ function compileExtractor(
   if (selected === null || selected.operation.schema === null) {
     return new SchemaCompiledAttachmentExtractor(context, null);
   }
-  const effectiveSchema = buildEffectiveSchema(specification, context);
+  const effectiveSchema = buildEffectiveSchema(
+    specification,
+    modulePackageScalars(module, context),
+    context,
+  );
 
   const operationName = selected.operation.name;
   if (operationName === null) {

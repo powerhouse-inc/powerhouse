@@ -1,0 +1,10 @@
+{
+  "definitionSources": {
+    "formatVersion": 1,
+    "mode": "code-first",
+    "entries": [
+      { "specifier": "./src/first.ts" },
+      { "specifier": "./src/second.ts" }
+    ]
+  }
+}

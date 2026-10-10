@@ -1,4 +1,3 @@
-import { getPHCustomScalarByTypeName } from "@powerhousedao/document-engineering/graphql";
 import type { DocumentSpecification } from "@powerhousedao/shared/document-model";
 import type {
   DocumentNode,
@@ -194,11 +193,6 @@ function zeroValueForType(
 
   const definition = findTypeDefinition(schemaDoc, name);
   if (!definition) {
-    const scalar = getPHCustomScalarByTypeName(name);
-    const defaultValue = scalar?.getDefaultValue?.();
-    if (defaultValue !== undefined) {
-      return { ok: true, value: defaultValue };
-    }
     return { ok: false };
   }
 
@@ -221,16 +215,8 @@ function zeroValueForType(
     visitedTypes.delete(name);
     return { ok: true, value };
   }
-  if (definition.kind === Kind.SCALAR_TYPE_DEFINITION) {
-    const scalar = getPHCustomScalarByTypeName(name);
-    const defaultValue = scalar?.getDefaultValue?.();
-    if (defaultValue !== undefined) {
-      return { ok: true, value: defaultValue };
-    }
-    return { ok: false };
-  }
 
-  // unions, interfaces: no mechanical zero value
+  // custom scalars, unions, interfaces: no mechanical zero value
   return { ok: false };
 }
 

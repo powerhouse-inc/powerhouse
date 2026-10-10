@@ -54,7 +54,7 @@
     "vite": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "vite-plugin-html": "catalog:",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "description": ""
 }

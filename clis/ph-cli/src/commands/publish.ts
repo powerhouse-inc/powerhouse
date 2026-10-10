@@ -49,13 +49,16 @@ This command:
       console.log(args);
     }
 
-    const { getPowerhouseProjectInfo } =
-      await import("@powerhousedao/shared/clis");
-    const { projectPath } = await getPowerhouseProjectInfo();
-
-    if (!projectPath) {
-      throw new Error("Could not find project path.");
+    const { runPublishCheck } = await import("../services/build.js");
+    const check = await runPublishCheck(args).catch((error: unknown) => {
+      console.error(error);
+      return process.exit(2);
+    });
+    if (check.exitCode !== 0) {
+      console.error("✘ The release check failed; nothing was published.");
+      process.exit(check.exitCode);
     }
+    const projectPath = check.packageRoot;
 
     const { checkNpmAuth, npmPublish, resolveRegistryUrl } =
       await import("@powerhousedao/shared/registry");
@@ -149,6 +152,7 @@ This command:
     }
 
     console.log(`Publishing to ${registryUrl}...`);
+    Object.assign(process.env, check.prepackEnvironment);
     const result = await npmPublish({
       registryUrl,
       cwd: projectPath,

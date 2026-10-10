@@ -1,0 +1,70 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type ScalarsState {
+  fUnknown: Unknown
+  fDateTime: DateTime
+  fAddress: Address
+  fAttachmentRef: AttachmentRef
+  fAmount_Tokens: Amount_Tokens
+  fEthereumAddress: EthereumAddress
+  fEmailAddress: EmailAddress
+  fAmount_Percentage: Amount_Percentage
+  fDate: Date
+  fURL: URL
+  fAmount_Money: Amount_Money
+  fOLabel: OLabel
+  fCurrency: Currency
+  fPHID: PHID
+  fOID: OID
+  fAmount_Fiat: Amount_Fiat
+  fAmount_Currency: Amount_Currency
+  fAmount_Crypto: Amount_Crypto
+  fAmount: Amount
+  fUpload: Upload
+}
+
+# scalars
+
+input SetScalarsInput {
+  fUnknown: Unknown!
+  fDateTime: DateTime!
+  fAddress: Address!
+  fAttachmentRef: AttachmentRef!
+  fAmount_Tokens: Amount_Tokens!
+  fEthereumAddress: EthereumAddress!
+  fEmailAddress: EmailAddress!
+  fAmount_Percentage: Amount_Percentage!
+  fDate: Date!
+  fURL: URL!
+  fAmount_Money: Amount_Money!
+  fOLabel: OLabel!
+  fCurrency: Currency!
+  fPHID: PHID!
+  fOID: OID!
+  fAmount_Fiat: Amount_Fiat!
+  fAmount_Currency: Amount_Currency!
+  fAmount_Crypto: Amount_Crypto!
+  fAmount: Amount!
+  fUpload: Upload!
+  ids: [PHID!]!
+  note: String
+}

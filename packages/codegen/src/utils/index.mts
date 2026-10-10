@@ -1,6 +1,7 @@
 export * from "./cli.js";
 export * from "./constants.js";
 export * from "./document-type-metadata.js";
+export * from "./definition-source-importer.js";
 export * from "./format-with-prettier.js";
 export * from "./generate-mock-import.js";
 export * from "./get-editor-metadata.js";

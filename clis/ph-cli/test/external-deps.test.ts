@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { findRequiredFile } from "@powerhousedao/shared/build-pieces";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { traceFiles } from "../src/services/build.js";
+import { traceFiles } from "../src/services/definitions/build-steps.js";
 
 let root: string;
 const modules = () => join(root, "node_modules");

@@ -81,7 +81,6 @@
     "@powerhousedao/analytics-engine-graphql": "workspace:*",
     "@powerhousedao/analytics-engine-pg": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-drive": "workspace:*",
@@ -113,6 +112,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/document-engineering": "catalog:",
     "cross-env": "catalog:",
     "@fastify/cors": "^11.0.1",
     "@fastify/formbody": "^8.0.1",

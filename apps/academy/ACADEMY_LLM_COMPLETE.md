@@ -5395,7 +5395,7 @@ Declares all supported versions and their upgrade paths:
 ```typescript
 type UpgradeManifest<TVersions extends readonly number[]> = {
   documentType: string;
-  latestVersion: number;
+  latestVersion: TupleMember<TVersions>;
   supportedVersions: TVersions;
   upgrades: {
     // Keys are "v2", "v3", etc. (never "v1" - nothing to upgrade from)

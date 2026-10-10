@@ -1,0 +1,2 @@
+# Goldens are byte-exact generator output; a CRLF checkout would make them differ.
+**/test/**/goldens/** text eol=lf

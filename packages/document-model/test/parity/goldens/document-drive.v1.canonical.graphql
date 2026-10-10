@@ -1,0 +1,186 @@
+type DocumentDriveState {
+  name: String!
+  nodes: [Node!]! @deprecated(reason: "Use the reactor-drive subgraph (`reactorDrive.rootNodes`, `ReactorDriveFolderNode.children`) for paged listings.")
+  icon: String
+}
+
+union Node = FolderNode | FileNode
+
+type FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+type FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+type DocumentDriveLocalState {
+  sharingType: String
+  listeners: [Listener!]!
+  triggers: [Trigger!]!
+  availableOffline: Boolean!
+}
+
+type Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: ListenerFilter!
+  callInfo: ListenerCallInfo
+}
+
+type ListenerFilter {
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+type ListenerCallInfo {
+  transmitterType: TransmitterType
+  name: String
+  data: String
+}
+
+enum TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type Trigger {
+  id: ID!
+  type: TriggerType!
+  data: TriggerData
+}
+
+enum TriggerType {
+  PullResponder
+}
+
+union TriggerData = PullResponderTriggerData
+
+type PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input AddFileInput {
+  id: ID!
+  name: String!
+  documentType: String!
+  parentFolder: ID
+}
+
+input AddFolderInput {
+  id: ID!
+  name: String!
+  parentFolder: ID
+}
+
+input DeleteNodeInput {
+  id: ID!
+}
+
+input UpdateFileInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+  documentType: String
+}
+
+input UpdateNodeInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+}
+
+input CopyNodeInput {
+  srcId: ID!
+  targetId: ID!
+  targetName: String
+  targetParentFolder: ID
+}
+
+input MoveNodeInput {
+  srcFolder: ID!
+  targetParentFolder: ID
+}
+
+input SetDriveNameInput {
+  name: String!
+}
+
+input SetDriveIconInput {
+  icon: String
+}
+
+input SetSharingTypeInput {
+  type: String!
+}
+
+input SetAvailableOfflineInput {
+  availableOffline: Boolean!
+}
+
+input AddListenerInput {
+  listener: ListenerInput!
+}
+
+input ListenerInput {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: ListenerFilterInput!
+  callInfo: ListenerCallInfoInput
+}
+
+input ListenerFilterInput {
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input ListenerCallInfoInput {
+  transmitterType: TransmitterType
+  name: String
+  data: String
+}
+
+input RemoveListenerInput {
+  listenerId: String!
+}
+
+input AddTriggerInput {
+  trigger: TriggerInput!
+}
+
+input TriggerInput {
+  id: ID!
+  type: TriggerType!
+  data: PullResponderTriggerDataInput
+}
+
+input PullResponderTriggerDataInput {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input RemoveTriggerInput {
+  triggerId: String!
+}

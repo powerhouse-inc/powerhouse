@@ -1,0 +1,32 @@
+type TodoState {
+  title: String
+  todos: [TodoItem!]!
+}
+
+type TodoItem {
+  id: String!
+  title: String!
+  completed: Boolean!
+}
+
+# todo_operations
+
+input AddTodoInput {
+  id: String!
+  title: String!
+  completed: Boolean!
+}
+
+input RemoveTodoInput {
+  id: String!
+}
+
+input UpdateTodoInput {
+  id: String!
+  title: String
+  completed: Boolean
+}
+
+input EditTitleInput {
+  title: String
+}
