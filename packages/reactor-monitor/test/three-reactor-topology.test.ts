@@ -269,4 +269,52 @@ describe("three-reactor mixed topology (A <-> B <-> C on one drive)", () => {
     // A is isolated now, so it never hears about it.
     expect(await folderNames(a, driveId)).toEqual(["beforeCut"]);
   }, 120_000);
+  it("keeps syncing an arm reset after the other arm was removed", async () => {
+    const a = await registry.provision(
+      descriptor("reset-a", { sync: { local: true } }),
+    );
+    const b = await registry.provision(
+      descriptor("reset-b", { sync: { local: true } }),
+    );
+    const c = await registry.provision(
+      descriptor("reset-c", { sync: { local: true } }),
+    );
+
+    const drive = await a.client.drives.create({ global: { name: "Reset" } });
+    const driveId = drive.header.id;
+    const ab = await registry.linkLocalSync("reset-a", "reset-b", {
+      driveId,
+      createChannel: nodeChannel,
+    });
+    const bc = await registry.linkLocalSync("reset-b", "reset-c", {
+      driveId,
+      createChannel: nodeChannel,
+    });
+    links.push(bc);
+
+    await a.client.drives.addFolder(driveId, "beforeReset");
+    await vi.waitFor(
+      async () =>
+        expect(await folderNames(c, driveId)).toContain("beforeReset"),
+      { timeout: PROPAGATION_TIMEOUT_MS },
+    );
+
+    await b.removeLocalSyncPeer!(ab.remoteNameB, "reset-a", ab.channelName);
+    await b.syncAdmin!.resetChannel(bc.remoteNameA);
+
+    await c.client.drives.addFolder(driveId, "fromC");
+    await vi.waitFor(
+      async () => expect(await folderNames(b, driveId)).toContain("fromC"),
+      { timeout: PROPAGATION_TIMEOUT_MS },
+    );
+    await b.client.drives.addFolder(driveId, "fromB");
+    await vi.waitFor(
+      async () => expect(await folderNames(c, driveId)).toContain("fromB"),
+      { timeout: PROPAGATION_TIMEOUT_MS },
+    );
+    expect(
+      (await b.syncManager!.inspectRemote(bc.remoteNameA)).connection.snapshot
+        .state,
+    ).toBe("connected");
+  }, 120_000);
 });

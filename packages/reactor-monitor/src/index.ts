@@ -101,16 +101,6 @@ export {
   type LinkLocalSyncOptions,
   type LocalSyncHandle,
 } from "./sync/link.js";
-export {
-  assertCollectionIdParts,
-  collectionIdFromKey,
-  DEFAULT_LOCAL_FILTER,
-  LOCAL_REMOTE_OPTIONS,
-  localChannelConfig,
-  registerLocalPeer,
-  type LocalRemoteSpec,
-} from "./sync/adopt-sync-peer.js";
-export { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
 export type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 
 export {

@@ -1,6 +1,9 @@
 import {
+  assertCollectionIdParts,
   LOCAL_CHANNEL_TYPE,
   messagePortTransport,
+  registerLocalPeer,
+  removeLocalPeer,
 } from "@powerhousedao/reactor";
 import { buildMonitorReactor } from "./build-reactor.js";
 import {
@@ -8,10 +11,6 @@ import {
   toMonitorSyncManager,
 } from "./monitor-inspector.js";
 import { reactorStorageNamespace } from "./naming.js";
-import {
-  assertCollectionIdParts,
-  registerLocalPeer,
-} from "./sync/adopt-sync-peer.js";
 import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 import type {
   ManagedInProcessReactor,
@@ -89,10 +88,12 @@ export async function provisionInProcess(
             remoteName: string,
             peerId: string,
             channelName: string,
-          ): Promise<void> => {
-            await syncManager.remove(remoteName);
-            localChannelPorts.unregister(peerId, channelName);
-          },
+          ): Promise<void> =>
+            removeLocalPeer(syncManager, localChannelPorts, {
+              remoteName,
+              peerId,
+              channelName,
+            }),
         }
       : undefined;
   const module: MonitorInProcessClientModule = {

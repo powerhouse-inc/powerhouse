@@ -454,4 +454,29 @@ describe("brokered local sync between two in-process reactors", () => {
       }),
     ).rejects.toThrow(/Branch "feat\.x" contains a "\."/);
   }, 60_000);
+  it("removes a local peer whose channel reset is still running", async () => {
+    const a = await host("rr-a");
+    const b = await host("rr-b");
+
+    const drive = await a.client.drives.create({ global: { name: "Rr" } });
+    const handle = await linkLocalSync(a, b, {
+      driveId: drive.header.id,
+      createChannel: nodeChannel,
+    });
+
+    const reset = a.syncAdmin!.resetChannel(handle.remoteNameA);
+    await a.removeLocalSyncPeer!(
+      handle.remoteNameA,
+      "rr-b",
+      handle.channelName,
+    );
+    await reset;
+
+    expect(a.syncManager?.list()).toEqual([]);
+    await b.removeLocalSyncPeer!(
+      handle.remoteNameB,
+      "rr-a",
+      handle.channelName,
+    );
+  }, 60_000);
 });

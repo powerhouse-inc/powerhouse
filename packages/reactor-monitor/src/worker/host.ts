@@ -1,7 +1,6 @@
 import {
   DriveCollectionId,
   type ChannelConfig,
-  messagePortTransport,
   type InspectorAccess,
   type IReactorClient,
   type IReactorDbQuery,
@@ -14,14 +13,11 @@ import {
   dispatchSyncInspectionOp,
   FORWARDED_EVENT_TYPES,
   isSyncInspectionOp,
+  localSyncPeerHandlers,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { PeerManifest } from "@powerhousedao/shared/document-model";
-import {
-  collectionIdFromKey,
-  registerLocalPeer,
-} from "../sync/adopt-sync-peer.js";
 import {
   buildWorkerReactor,
   type BuildWorkerReactorOptions,
@@ -90,10 +86,10 @@ export function createMonitorWorkerHost(
         "Worker reactor has no local sync ports to adopt a peer into",
       );
     }
-    return {
-      syncManager: syncModule.syncManager,
-      registry: current.localChannelPorts,
-    };
+    return localSyncPeerHandlers(
+      syncModule.syncManager,
+      current.localChannelPorts,
+    );
   }
 
   const db: IReactorDbQuery = {
@@ -202,26 +198,9 @@ export function createMonitorWorkerHost(
         method,
         args,
       ),
-    onAdoptSyncPeer: async (params, port) => {
-      const { syncManager, registry } = requireLocalPeers();
-      await registerLocalPeer(
-        syncManager,
-        registry,
-        {
-          peerId: params.peerId,
-          channelName: params.channelName,
-          collectionId: collectionIdFromKey(params.collectionIdKey),
-          remoteName: params.remoteName,
-          filter: params.filter,
-        },
-        messagePortTransport(port),
-      );
-    },
-    onRemoveSyncPeer: async (params) => {
-      const { syncManager, registry } = requireLocalPeers();
-      await syncManager.remove(params.remoteName);
-      registry.unregister(params.peerId, params.channelName);
-    },
+    onAdoptSyncPeer: (params, port) =>
+      requireLocalPeers().onAdoptSyncPeer(params, port),
+    onRemoveSyncPeer: (params) => requireLocalPeers().onRemoveSyncPeer(params),
     onAdminRestart: () =>
       host.broadcastReload("admin restart", crypto.randomUUID()),
   });

@@ -6,6 +6,7 @@ import {
   IN_MEMORY_PGLITE_STORAGE_FACTS,
   LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
+  LocalChannelPortRegistry,
   PGLITE_IDB_STORAGE_FACTS,
   PGLITE_PATH_STORAGE_FACTS,
   queryThroughDialect,
@@ -36,7 +37,6 @@ import {
 } from "./attachments/index.js";
 import { createLocalSigner } from "./signer.js";
 import { DEFAULT_REACTOR_STORAGE, openReactorStore } from "./store.js";
-import { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
 import type { ReactorAttachmentsConfig } from "./attachments/types.js";
 import { isLocalOnlySync } from "./sync-mode.js";
 import type { ReactorStorageConfig } from "./types.js";
@@ -126,7 +126,11 @@ export async function buildMonitorReactor(
       ? ChannelScheme.CONNECT
       : options.channelScheme;
   const localChannelPorts =
-    localOnly || scheme !== null ? new LocalChannelPortRegistry() : undefined;
+    localOnly || scheme !== null
+      ? new LocalChannelPortRegistry({
+          logger: childLogger(["reactor-monitor", "local-sync"]),
+        })
+      : undefined;
 
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(models)
@@ -249,6 +253,7 @@ export async function buildMonitorReactor(
           console.error("[reactor-monitor] sync shutdown failed:", error);
         }
       }
+      localChannelPorts?.close();
       try {
         await module.reactor.kill().completed;
       } catch (error) {

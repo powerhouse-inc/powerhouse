@@ -1,4 +1,6 @@
 import {
+  assertCollectionIdParts,
+  DEFAULT_LOCAL_FILTER,
   DriveCollectionId,
   LOCAL_CHANNEL_TYPE,
   type MessagePortLike,
@@ -9,10 +11,6 @@ import {
   type AttachmentLinkHandle,
 } from "../attachments/link.js";
 import type { ManagedReactor } from "../types.js";
-import {
-  assertCollectionIdParts,
-  DEFAULT_LOCAL_FILTER,
-} from "./adopt-sync-peer.js";
 
 /** A live local-sync link between two reactors, and the lever that tears it down. */
 export type LocalSyncHandle = {
