@@ -126,6 +126,9 @@ export interface IAttachmentUpload {
   /**
    * Stream attachment data through this handle.
    *
+   * `data` may be a Blob: a remote handle sends it as the request body
+   * as-is, which a browser streams from disk instead of buffering.
+   *
    * The handle manages the full upload lifecycle internally:
    * writing bytes to the backing store, computing or verifying
    * the content hash, creating the attachment record, and
@@ -158,7 +161,7 @@ export interface IAttachmentUpload {
    * which requires its presigned target) has nothing to abort.
    */
   send(
-    data: ReadableStream<Uint8Array>,
+    data: ReadableStream<Uint8Array> | Blob,
     options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult>;
 }

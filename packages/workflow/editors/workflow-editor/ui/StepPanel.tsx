@@ -2,7 +2,6 @@ import {
   isCoreBlock,
   stepBlock,
   triggerBlock,
-  triggerFields,
   type BlockRef,
 } from "./blocks.js";
 import { useId, useRef, useState, type ReactNode } from "react";
@@ -1413,29 +1412,14 @@ export function TriggerPanel(props: {
   // Only a webhook trigger asks. The query mints on first ask, so opening
   // this panel on a schedule or document trigger must not create an endpoint.
   const endpoint = useWebhookEndpoint(isWebhookTrigger);
-  const setTrigger = (patch: {
-    config?: unknown;
-    connectionId?: string | null;
-    reactorConnectionId?: string | null;
-    settings?: PropertySettingModel[];
-  }) => {
-    const config = patch.config === undefined ? trigger.config : patch.config;
-    const connectionId =
-      patch.connectionId === undefined
-        ? trigger.connectionId
-        : patch.connectionId;
-    const reactorConnectionId =
-      patch.reactorConnectionId === undefined
-        ? trigger.reactorConnectionId
-        : patch.reactorConnectionId;
-    callbacks.setTrigger({
-      ...triggerFields(block),
+  const setTriggerConfig = (
+    config: unknown,
+    settings?: PropertySettingModel[],
+  ) =>
+    callbacks.setTriggerConfig(
       config,
-      connectionId,
-      reactorConnectionId,
-      ...(writes ? { propertySettings: patch.settings } : {}),
-    });
-  };
+      writes ? { propertySettings: settings } : undefined,
+    );
   return (
     <div className="flex min-h-full flex-col">
       <PanelHeader
@@ -1459,7 +1443,9 @@ export function TriggerPanel(props: {
             key={`${trigger.id}-conn`}
             block={block}
             value={trigger.connectionId ?? ""}
-            onChange={(connectionId) => setTrigger({ connectionId })}
+            onChange={(connectionId) =>
+              callbacks.setTriggerConnection({ connectionId })
+            }
           />
         ) : null}
         {isPieceTrigger ? (
@@ -1470,7 +1456,7 @@ export function TriggerPanel(props: {
             workflowId={designTime?.workflowId}
             publishedVersion={props.publishedVersion}
             onChange={(reactorConnectionId) =>
-              setTrigger({ reactorConnectionId })
+              callbacks.setTriggerConnection({ reactorConnectionId })
             }
           />
         ) : null}
@@ -1478,7 +1464,7 @@ export function TriggerPanel(props: {
           <ScheduleBuilder
             key={trigger.id}
             config={trigger.config}
-            onChange={(config) => setTrigger({ config })}
+            onChange={(config) => setTriggerConfig(config)}
           />
         ) : (
           <ConfigSection
@@ -1488,7 +1474,7 @@ export function TriggerPanel(props: {
             formError={formError}
             config={trigger.config}
             settings={trigger.propertySettings}
-            onChange={(config, settings) => setTrigger({ config, settings })}
+            onChange={(config, settings) => setTriggerConfig(config, settings)}
             writesSettings={writes}
             connectionId={trigger.connectionId ?? undefined}
             reactorConnectionId={trigger.reactorConnectionId ?? undefined}
@@ -1504,15 +1490,7 @@ export function TriggerPanel(props: {
           kind="trigger"
           onUpdate={
             writes
-              ? (pieceVersion) =>
-                  callbacks.setTrigger({
-                    ...triggerFields(block),
-                    pieceVersion,
-                    config: trigger.config,
-                    connectionId: trigger.connectionId,
-                    reactorConnectionId: trigger.reactorConnectionId,
-                    propertySettings: trigger.propertySettings ?? undefined,
-                  })
+              ? (pieceVersion) => callbacks.setTriggerPieceVersion(pieceVersion)
               : undefined
           }
         />

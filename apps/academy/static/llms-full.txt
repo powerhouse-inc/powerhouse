@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-09T16:28:41.755Z
+> Generated: 2026-10-12T08:40:25.492Z
 > Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -6990,19 +6990,20 @@ The handle is valid until its reservation expires (default 24h). Aborted uploads
 
 ### 2. Send the bytes
 
-`upload.send()` takes a `ReadableStream<Uint8Array>` and resolves to `{ hash, ref, header }`. Identical bytes always produce the same hash and ref — dedup is automatic.
+`upload.send()` takes a `Blob` or a `ReadableStream<Uint8Array>` and resolves to `{ hash, ref, header }`. Identical bytes always produce the same hash and ref — dedup is automatic.
+
+In a browser, pass the `File` itself: it goes out as the request body and the browser streams it from disk, so a file of any size uploads in bounded memory. A `ReadableStream` sent to a remote service is first collected into memory, because browsers do not portably accept a stream as a request body.
 
 Browser upload:
 
 ```typescript
-const resp = await fetch(file.url); // blob: or data: URL staged by the input
-if (!resp.body) throw new Error("Could not read staged file");
+const file = input.files[0]; // a File is a Blob
 
 const upload = await attachments.reserve({
-  mimeType: file.mediaType,
-  fileName: file.filename ?? "attachment",
+  mimeType: file.type,
+  fileName: file.name,
 });
-const { ref } = await upload.send(resp.body);
+const { ref } = await upload.send(file);
 ```
 
 Server upload from a data URI or remote URL:
@@ -7071,10 +7072,10 @@ const objectUrl = URL.createObjectURL(blob);
 const attachments = createAttachmentClient(service);
 
 const results = await attachments.preprocess(file);
-// results: { ref, hash, sizeBytes, options, data, stream }
+// results: { ref, hash, sizeBytes, options, data, stream, blob }
 ```
 
-Because it has to read the entire file to hash it, `preprocess` is async and buffers the bytes in memory — `file` is a `Blob`, not a stream.
+`preprocess` is async because it reads the entire file to hash it. In Node it hashes natively in 8 MiB slices at any size. In a browser, a file up to 256 MiB is read whole into one native WebCrypto call; a larger one is read in 8 MiB slices and hashed in JavaScript, which is slower but keeps memory bounded and works past the browser's ~2 GB limit on a single read. No copy is kept: `results.blob` is the file itself. `data` and `stream()` are deprecated; they read `blob` again as a stream. The file must not change before it is uploaded: the server rejects bytes that no longer match the hash with `HashMismatch`.
 
 With the ref in hand you can write it into document state through a normal action, then upload the bytes:
 
@@ -7084,11 +7085,11 @@ await client.execute(documentId, "main", [
 ]);
 
 await attachments.reserve(results.options, (handle) =>
-  handle.send(results.stream()),
+  handle.send(results.blob),
 );
 ```
 
-`client.reserve(options, send)` reserves the slot and hands the upload handle to your `send` callback. If an attachment with the same hash already exists it short-circuits and returns the existing ref without uploading. Pass `results.stream()` — which returns a fresh `ReadableStream` on each call — rather than the single-use `results.data` if the upload might be retried. `send()` accepts any `ReadableStream<Uint8Array>`, so on the server you can stream from the original source instead of the buffered copy.
+`client.reserve(options, send)` reserves the slot and hands the upload handle to your `send` callback. If an attachment with the same hash already exists it short-circuits and returns the existing ref without uploading. Pass `results.blob`: it can be sent again if the upload is retried, and a browser streams it from disk. A stream sent to a remote service is collected into memory first. `send()` also accepts any `ReadableStream<Uint8Array>`, so on the server you can stream from the original source.
 
 Execute and reserve are awaited separately so each failure is handled on its own — a failed upload does not roll back the action, and a failed action does not strand an upload. If you do not need that separation, run them concurrently:
 
@@ -7098,7 +7099,7 @@ await Promise.all([
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]),
   attachments.reserve(results.options, (handle) =>
-    handle.send(results.stream()),
+    handle.send(results.blob),
   ),
 ]);
 ```
@@ -7113,8 +7114,8 @@ const { preprocess, upload, cancel, reset, stage, progress, result, error } =
   useAttachmentUpload();
 
 const submit = useCallback(async () => {
-  // Buffers the file in memory and hands back the ref. Async because it has to
-  // read the whole file to hash it.
+  // Hashes the file and hands back the ref. Async because it has to read the
+  // whole file to hash it.
   const results = await preprocess(file);
 
   // Execute with the generated ref. `scan` is just a string here; the action
@@ -7144,7 +7145,7 @@ Progress is byte-level where the transport can report bytes:
 
 - **Downloads** always report bytes, against `header.sizeBytes`.
 - **Uploads** report bytes only through an upload transport that can observe them. `fetch` cannot — it has no upload-side progress event — so the default transport reports the `uploading` stage as indeterminate and stays silent until the request resolves. Pass `uploadTransport: createXhrUploadTransport()` in the `createRemoteAttachmentService` config to get real upload progress in a browser; Connect does this already.
-- **Hashing** has no byte progress and cannot: `preprocess` runs a single `crypto.subtle.digest` over the whole file and WebCrypto has no streaming digest. For a large file this is a visibly long indeterminate phase.
+- **Hashing** reports no byte progress: the stage stays indeterminate while `preprocess` reads the file. For a large file this is a visibly long phase.
 - **Deduplication** finishes an upload having sent nothing. The terminal event carries `deduped: true` with `loaded: 0, total: 0`, and the hook reports 100%.
 - **`upload.progress` measures bytes handed to the socket, not server acknowledgement.** For a small file you get one event at 100% immediately and then a wait for the response, so the stage stays `uploading` until `send()` resolves.
 
@@ -7191,13 +7192,13 @@ setAgentImageOperation(state, action) {
 | `reservationId` | `string`                                                          | Unique identifier for this reservation.                                                                           |
 | `ref`           | `AttachmentRef \| null`                                           | The ref this upload will produce. Set immediately in hash-first mode; `null` in upload-first until `send()` resolves. |
 | `expiresAtUtc`  | `string`                                                          | ISO 8601 UTC reservation expiry (readonly). Use it to bound retry windows.                                        |
-| `send(data)`    | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
+| `send(data)`    | `(ReadableStream<Uint8Array> \| Blob) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
 
 ### `IAttachmentClient`
 
 | Method                    | Returns                           | Description                                                                                                                                                                                                                                   |
 | ------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `preprocess(file, opts?)` | `Promise<PreprocessResult>`       | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the buffered bytes (as a single-use `data` stream and a re-readable `stream()` factory). `opts` may override `{ fileName, mimeType }`. |
+| `preprocess(file, opts?)` | `Promise<PreprocessResult>`       | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the file itself as `blob`. `opts` may override `{ fileName, mimeType }`. |
 | `reserve(options, send)`  | `Promise<AttachmentUploadResult>` | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                                                                         |
 
 ### Key types
@@ -7208,7 +7209,7 @@ setAgentImageOperation(state, action) {
 | `ReserveAttachmentOptions`            | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                                                                               |
 | `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`.                                                                    |
 | `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                          |
-| `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
+| `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; blob: Blob; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` — `data` and `stream` are deprecated aliases of `blob.stream()` |
 | `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                  |
 | `AttachmentStatus`                    | `"available" \| "evicted" \| "pending"` — `pending` is synthesized at query time from a live hash-first reservation; the bytes are not uploaded yet.                                       |
 | `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status: AttachmentStatus; source; createdAtUtc; lastAccessedAtUtc; expiresAtUtc: string \| null }` — `expiresAtUtc` is `null` for committed attachments and carries the reservation expiry while `pending`. |

@@ -1,3 +1,45 @@
+## 6.2.3-dev.54 (2026-10-12)
+
+This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.53 (2026-10-11)
+
+This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+
+### 🔥 Performance
+
+- **ph-cli:** leave subgraphs and switchboard processors out of the browser build ([b17df8c7a0](https://github.com/powerhouse-inc/powerhouse/commit/b17df8c7a0))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+
+### 🔥 Performance
+
+- **ph-cli:** leave subgraphs and switchboard processors out of the browser build ([b17df8c7a0](https://github.com/powerhouse-inc/powerhouse/commit/b17df8c7a0))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.50 (2026-10-09)
 
 ### 🚀 Features

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-workflow",
-  "version": "6.2.3-dev.50",
+  "version": "6.2.3-dev.54",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -54,6 +54,7 @@
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-metrics": "^2.7.1",
     "@opentelemetry/sdk-trace-base": "^2.7.1",
+    "@powerhousedao/reactor-attachments": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "knex": "catalog:",

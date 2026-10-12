@@ -119,6 +119,77 @@
               ],
               "examples": [],
               "scope": "global"
+            },
+            {
+              "id": "0a3d9845-efae-4044-b982-e7c653d1c40f",
+              "name": "SET_TRIGGER_CONFIG",
+              "description": "Replaces the trigger's block configuration, and optionally its property settings. The binding and connections stay as they are.",
+              "schema": "input SetTriggerConfigPropertySettingInput {\n    prop: String!\n    mode: PropertyMode!\n    schema: Unknown\n}\n\ninput SetTriggerConfigInput {\n    config: Unknown!\n    propertySettings: [SetTriggerConfigPropertySettingInput!]\n}",
+              "template": "Replaces the trigger's block configuration, and optionally its property settings. The binding and connections stay as they are.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "b7896214-5bca-45ce-ac86-81da570070e7",
+                  "name": "ConfigTriggerNotSetError",
+                  "code": "CONFIG_TRIGGER_NOT_SET",
+                  "description": "The workflow has no trigger to configure.",
+                  "template": ""
+                },
+                {
+                  "id": "ca5698b1-74c6-4abf-9712-db3010fa61cd",
+                  "name": "SetTriggerConfigNotObjectError",
+                  "code": "SET_TRIGGER_CONFIG_NOT_OBJECT",
+                  "description": "The trigger's config is not a JSON object.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "14cb5145-22b9-47b9-8356-1fc59b52bf4b",
+              "name": "SET_TRIGGER_CONNECTION",
+              "description": "Sets the trigger's connections. Null clears one; an omitted one stays as it is.",
+              "schema": "input SetTriggerConnectionInput {\n    connectionId: PHID\n    reactorConnectionId: PHID\n}",
+              "template": "Sets the trigger's connections. Null clears one; an omitted one stays as it is.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "dc9f0c47-5091-44ae-b3f9-c9f658a50ce3",
+                  "name": "ConnectionTriggerNotSetError",
+                  "code": "CONNECTION_TRIGGER_NOT_SET",
+                  "description": "The workflow has no trigger to connect.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "7ea44254-4aa1-4019-a2ce-0576418bcde0",
+              "name": "SET_TRIGGER_PIECE_VERSION",
+              "description": "Moves the trigger to another version of its piece, keeping its config, connections and property settings.",
+              "schema": "input SetTriggerPieceVersionInput {\n    pieceVersion: String!\n}",
+              "template": "Moves the trigger to another version of its piece, keeping its config, connections and property settings.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "f530e924-bfdd-4588-b7f5-73d087f162c2",
+                  "name": "VersionTriggerNotSetError",
+                  "code": "VERSION_TRIGGER_NOT_SET",
+                  "description": "The workflow has no trigger to update.",
+                  "template": ""
+                },
+                {
+                  "id": "2e0bb17c-418b-459a-96e7-c0fc341fea46",
+                  "name": "InvalidTriggerPieceVersionError",
+                  "code": "INVALID_TRIGGER_PIECE_VERSION",
+                  "description": "The piece version is not an exact semver.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
             }
           ]
         },

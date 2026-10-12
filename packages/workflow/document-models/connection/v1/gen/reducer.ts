@@ -10,9 +10,11 @@ import { connectionHealthOperations } from "../src/reducers/health.js";
 
 import {
   RecordCheckResultInputSchema,
+  RemoveConfigValueInputSchema,
   RemoveSecretRefInputSchema,
   SetAccountLabelInputSchema,
   SetConfigInputSchema,
+  SetConfigValueInputSchema,
   SetConnectionNameInputSchema,
   SetConnectorInputSchema,
   SetSecretRefInputSchema,
@@ -78,6 +80,30 @@ const stateReducer: StateReducer<ConnectionPHState> = (
       memoizedSchema(SetConfigInputSchema).parse(action.input);
 
       connectionConfigOperations.setConfigOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_CONFIG_VALUE": {
+      memoizedSchema(SetConfigValueInputSchema).parse(action.input);
+
+      connectionConfigOperations.setConfigValueOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "REMOVE_CONFIG_VALUE": {
+      memoizedSchema(RemoveConfigValueInputSchema).parse(action.input);
+
+      connectionConfigOperations.removeConfigValueOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

@@ -335,7 +335,11 @@ export async function buildHarnesses(): Promise<void> {
   const { build } = await import("rolldown");
   rmSync(HARNESS_DIR, { recursive: true, force: true });
   await build({
-    input: { "prop-controls": join(PKG, "test/ui/harness/prop-controls.tsx") },
+    input: {
+      "prop-controls": join(PKG, "test/ui/harness/prop-controls.tsx"),
+      "schedule-builder": join(PKG, "test/ui/harness/schedule-builder.tsx"),
+      "property-form-echo": join(PKG, "test/ui/harness/property-form-echo.tsx"),
+    },
     platform: "browser",
     transform: { define: { "process.env.NODE_ENV": '"production"' } },
     output: { dir: HARNESS_DIR, format: "esm" },

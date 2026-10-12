@@ -9,8 +9,10 @@ import {
   readdir,
   readFile,
   rm,
+  stat,
   writeFile,
 } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -427,6 +429,40 @@ const app = {
 module.exports = { app };
 `;
 
+// Reads a streaming FILE both ways: through its body, and in place at its path.
+const PATH_READER_FIXTURE = `
+const fs = require("node:fs");
+const path = require("node:path");
+const app = {
+  displayName: "Path Reader Fixture",
+  actions: {
+    consume: {
+      name: "consume",
+      displayName: "Consume",
+      props: {
+        attachment: { type: "FILE", required: true, displayName: "File", streaming: true },
+      },
+      run: async (ctx) => {
+        const file = ctx.propsValue.attachment;
+        const chunks = [];
+        for await (const chunk of file.body) chunks.push(chunk);
+        const streamed = Buffer.concat(chunks);
+        if (file.path === undefined) return { path: null, size: streamed.length };
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const inPlace = fs.readFileSync(file.path);
+        return {
+          path: file.path,
+          absolute: path.isAbsolute(file.path),
+          size: streamed.length,
+          same: inPlace.equals(streamed),
+        };
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
+
 const LAZY_READER_FIXTURE = `
 const app = {
   displayName: "Lazy Reader Fixture",
@@ -548,6 +584,69 @@ describe("Files and attachments", () => {
       text: "streamed-bytes",
       buffered: false,
     });
+  });
+
+  it("gives a staged streaming FILE a local path to read in place", async () => {
+    await writeFixture("@test/path-reader", PATH_READER_FIXTURE);
+    const port = attachmentPort();
+    const ref = `attachment://v1:${"d".repeat(64)}`;
+    const contents = randomBytes(2 * 1024 * 1024).toString("hex");
+    await port.seed(ref, contents, "big.csv");
+    let downloads = 0;
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: {
+        ...port,
+        read: (r, dest, signal) => {
+          downloads += 1;
+          return port.read(r, dest, signal);
+        },
+        authorize: () => Promise.resolve(),
+      },
+      attachmentCache: new AttachmentCache({
+        dir: join(storeDir, "path-cache"),
+        maxBytes: 16 * 1024 * 1024,
+      }),
+    });
+    const run = async () =>
+      (
+        await executor.execute(
+          execution("@test/path-reader", "consume", { attachment: ref }),
+        )
+      ).output as { path: string; absolute: boolean; same: boolean };
+
+    // A download, then a clone of the cached copy.
+    for (const output of [await run(), await run()]) {
+      expect(output).toEqual({
+        path: expect.stringContaining(stagingRoot) as string,
+        absolute: true,
+        size: contents.length,
+        same: true,
+      });
+      // Removed with the step's staging directory.
+      await expect(stat(output.path)).rejects.toThrow();
+    }
+    expect(downloads).toBe(1);
+  });
+
+  it("gives an inline streaming FILE no path", async () => {
+    await writeFixture("@test/path-reader", PATH_READER_FIXTURE);
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: attachmentPort(),
+    });
+
+    const result = await executor.execute(
+      execution("@test/path-reader", "consume", {
+        attachment: `data:text/csv;base64,${Buffer.from("a,b").toString("base64")}`,
+      }),
+    );
+
+    expect(result.output).toEqual({ path: null, size: 3 });
   });
 
   it("computes base64 only when a piece reads it", async () => {
