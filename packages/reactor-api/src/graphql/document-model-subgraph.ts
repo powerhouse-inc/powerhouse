@@ -157,6 +157,11 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     this.resolvers = this.generateResolvers();
   }
 
+  /** The model's schema name, which prefixes its generated types. */
+  get documentModelSchemaName(): string {
+    return getDocumentModelSchemaName(this.documentModel.documentModel.global);
+  }
+
   /** Returns the typed query resolvers for this document model. */
   get queryResolvers(): DocumentModelQueryResolvers {
     const documentName = getDocumentModelSchemaName(

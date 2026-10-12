@@ -246,10 +246,21 @@ function buildModuleSchemas(
   );
 }
 
+export type SubgraphSchemaOptions = {
+  /**
+   * Schema name of the model the subgraph is generated for. Only its own
+   * prefixed types may repeat a generated definition.
+   */
+  ownModelName?: string;
+  /** Generated types already built for `documentModels`. */
+  generated?: GeneratedDocumentModelTypes;
+};
+
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
+  options: SubgraphSchemaOptions = {},
 ): GraphQLSchemaModule => {
   const newResolvers = {
     ...resolvers,
@@ -258,7 +269,11 @@ export const buildSubgraphSchemaModule = (
   };
 
   return {
-    typeDefs: getDocumentModelTypeDefs(documentModels, typeDefs),
+    typeDefs: assembleSubgraphTypeDefs(
+      options.generated ?? getGeneratedDocumentModelTypes(documentModels),
+      typeDefs,
+      options.ownModelName,
+    ),
     resolvers: newResolvers,
   };
 };
@@ -266,10 +281,11 @@ export const createSchema = (
   documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
+  options: SubgraphSchemaOptions = {},
 ) => {
   // Array form: @apollo/subgraph 2.15 dropped the bare-module overload.
   return buildSubgraphSchema([
-    buildSubgraphSchemaModule(documentModels, resolvers, typeDefs),
+    buildSubgraphSchemaModule(documentModels, resolvers, typeDefs, options),
   ]);
 };
 
@@ -291,12 +307,28 @@ export function getDocumentModelSchemaName(
 /**
  * The generated document-model types followed by the subgraph's own. Throws
  * {@link SubgraphTypeCollisionError} when the subgraph defines a generated
- * name that is not model-prefixed.
+ * name other than one prefixed with `ownModelName`.
  */
 export const getDocumentModelTypeDefs = (
   documentModels: DocumentModelModule[],
   typeDefs: DocumentNode,
-): DocumentNode => {
+  ownModelName?: string,
+): DocumentNode =>
+  assembleSubgraphTypeDefs(
+    getGeneratedDocumentModelTypes(documentModels),
+    typeDefs,
+    ownModelName,
+  );
+
+/** The generated document-model schema every subgraph is assembled onto. */
+export type GeneratedDocumentModelTypes = {
+  definitions: readonly DefinitionNode[];
+  names: ReadonlySet<string>;
+};
+
+export function getGeneratedDocumentModelTypes(
+  documentModels: DocumentModelModule[],
+): GeneratedDocumentModelTypes {
   let dmSchema = "";
 
   const addedDocumentModels = new Set<string>();
@@ -417,36 +449,65 @@ export const getDocumentModelTypeDefs = (
     }
   `;
 
-  const generated = dedupeTypeDefinitions(schema.definitions);
-  const generatedNames = new Set(
-    generated.map(typeDefinitionName).filter((name) => name !== undefined),
+  const definitions = dedupeTypeDefinitions(schema.definitions);
+  const names = new Set(
+    definitions.map(typeDefinitionName).filter((name) => name !== undefined),
   );
-  const modelPrefixes = Array.from(addedDocumentModels, (name) => `${name}_`);
-  const isModelPrefixed = (name: string) =>
-    modelPrefixes.some((prefix) => name.startsWith(prefix));
+  return { definitions, names };
+}
 
+/**
+ * Names of the generated types `typeDefs` redefines, other than those a
+ * model's own subgraph may repeat. Scalars are dropped on assembly, so they
+ * never collide.
+ */
+export function findSubgraphTypeCollisions(
+  generated: GeneratedDocumentModelTypes,
+  typeDefs: DocumentNode,
+  ownModelName?: string,
+): string[] {
   const collisions: string[] = [];
-  const subgraphDefinitions = typeDefs.definitions.filter((def) => {
-    if (def.kind === Kind.SCALAR_TYPE_DEFINITION) return false;
+  for (const def of typeDefs.definitions) {
+    if (def.kind === Kind.SCALAR_TYPE_DEFINITION) continue;
     const name = typeDefinitionName(def);
-    if (name === undefined || !generatedNames.has(name)) return true;
-    // A model's own operation SDL may redefine its prefixed state types.
-    if (isModelPrefixed(name)) return true;
+    if (name === undefined || !generated.names.has(name)) continue;
+    if (isOwnPrefixed(name, ownModelName)) continue;
     collisions.push(name);
-    return false;
-  });
+  }
+  return collisions;
+}
+
+// A model's own operation SDL may redefine its prefixed state types.
+function isOwnPrefixed(name: string, ownModelName: string | undefined) {
+  return ownModelName !== undefined && name.startsWith(`${ownModelName}_`);
+}
+
+/** Throws {@link SubgraphTypeCollisionError}; see {@link getDocumentModelTypeDefs}. */
+export function assembleSubgraphTypeDefs(
+  generated: GeneratedDocumentModelTypes,
+  typeDefs: DocumentNode,
+  ownModelName?: string,
+): DocumentNode {
+  const collisions = findSubgraphTypeCollisions(
+    generated,
+    typeDefs,
+    ownModelName,
+  );
   if (collisions.length > 0) {
     throw new SubgraphTypeCollisionError(collisions);
   }
+  const subgraphDefinitions = typeDefs.definitions.filter(
+    (def) => def.kind !== Kind.SCALAR_TYPE_DEFINITION,
+  );
 
   return {
     kind: Kind.DOCUMENT,
     definitions: [
-      ...generated,
-      ...dedupeTypeDefinitions(subgraphDefinitions, generatedNames),
+      ...generated.definitions,
+      ...dedupeTypeDefinitions(subgraphDefinitions, new Set(generated.names)),
     ],
   };
-};
+}
 
 /**
  * Extract the names of types defined in a GraphQL schema.

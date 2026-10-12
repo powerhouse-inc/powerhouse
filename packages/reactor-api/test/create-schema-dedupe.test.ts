@@ -1,7 +1,10 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { type DocumentNode, Kind, parse, print } from "graphql";
 import { describe, expect, it } from "vitest";
-import { getDocumentModelTypeDefs } from "../src/utils/create-schema.js";
+import {
+  getDocumentModelTypeDefs,
+  SubgraphTypeCollisionError,
+} from "../src/utils/create-schema.js";
 
 /**
  * Regression tests for Sentry #917: a document model that defines the same
@@ -174,10 +177,37 @@ describe("getDocumentModelTypeDefs dedupe (Sentry #917)", () => {
     `);
 
     const names = typeDefNames(
-      getDocumentModelTypeDefs([model], operationTypeDefs),
+      getDocumentModelTypeDefs([model], operationTypeDefs, "EmploymentDetails"),
     );
 
     expect(duplicateNames(names)).toEqual([]);
     expect(countOf(names, "EmploymentDetails_ContractType")).toBe(1);
+  });
+
+  it("another subgraph redefining a model's prefixed type collides", () => {
+    const model = buildModel(
+      "EmploymentDetails",
+      `
+        type EmploymentDetailsState {
+          contractType: ContractType
+        }
+        enum ContractType {
+          FULL_TIME
+          PART_TIME
+        }
+      `,
+    );
+    const typeDefs = parse(`
+      enum EmploymentDetails_ContractType {
+        FULL_TIME
+      }
+    `);
+
+    expect(() => getDocumentModelTypeDefs([model], typeDefs)).toThrow(
+      SubgraphTypeCollisionError,
+    );
+    expect(() =>
+      getDocumentModelTypeDefs([model], typeDefs, "OtherModel"),
+    ).toThrow(SubgraphTypeCollisionError);
   });
 });
