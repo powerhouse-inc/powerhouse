@@ -8,6 +8,7 @@ import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
   generateDocumentModelSchema,
   getDocumentModelSchemaName,
+  typeDefinitionNames,
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -145,6 +146,8 @@ export interface DocumentModelSubgraphResolvers<
 export class DocumentModelSubgraph extends BaseSubgraph {
   declare resolvers: DocumentModelSubgraphResolvers;
   private documentModel: DocumentModelModule;
+  /** Names of the types its schema generator emits for the model. */
+  readonly generatedTypeNames: ReadonlySet<string>;
 
   constructor(documentModel: DocumentModelModule, args: SubgraphArgs) {
     super(args);
@@ -154,6 +157,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       this.documentModel.documentModel.global,
       { useNewApi: true },
     );
+    this.generatedTypeNames = typeDefinitionNames(this.typeDefs);
     this.resolvers = this.generateResolvers();
   }
 

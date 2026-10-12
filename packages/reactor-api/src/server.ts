@@ -582,17 +582,7 @@ async function setupGraphQLManager({
     requireAuthFetchMiddleware,
   );
 
-  for (const [packageName, collection] of subgraphs.extended.entries()) {
-    for (const subgraph of collection) {
-      await graphqlManager.registerSubgraph(
-        subgraph,
-        "graphql",
-        false,
-        packageName,
-      );
-    }
-  }
-
+  await graphqlManager.applyPackageSubgraphs(subgraphs.extended);
   await graphqlManager.updateRouter();
 
   return graphqlManager;
@@ -666,41 +656,12 @@ export function setupEventListeners(
       });
   });
 
-  let knownSubgraphPackages = new Set<string>();
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
-    void (async () => {
-      for (const [packageName, subgraphs] of packagedSubgraphs) {
-        const incomingNames = new Set<string>();
-        for (const subgraph of subgraphs) {
-          const instance = await graphqlManager.registerSubgraph(
-            subgraph,
-            "graphql",
-            false,
-            packageName,
-          );
-          // Registration returns undefined when the subgraph is rejected
-          // (e.g. its name is reserved by a core subgraph, issue #2972).
-          // Nothing was mounted, so the name is not provided and must not
-          // shield a stale same-named subgraph from being pruned below.
-          if (!instance) {
-            continue;
-          }
-          incomingNames.add(instance.name);
-        }
-        // The package is still loaded but dropped some (or all) of its
-        // subgraphs: tear down the ones it no longer provides.
-        await graphqlManager.prunePackageSubgraphs(packageName, incomingNames);
-      }
-      // A package that vanished from the map entirely (uninstalled or
-      // removed from the config) keeps none of its subgraphs.
-      for (const packageName of knownSubgraphPackages) {
-        if (!packagedSubgraphs.has(packageName)) {
-          await graphqlManager.unregisterPackage(packageName);
-        }
-      }
-      knownSubgraphPackages = new Set(packagedSubgraphs.keys());
-      await graphqlManager.updateRouter();
-    })();
+    void graphqlManager
+      .applyPackageSubgraphs(packagedSubgraphs)
+      .catch((error: unknown) => {
+        defaultLogger.error("Failed to apply package subgraphs: @error", error);
+      });
   });
 
   let knownProcessorPackages = new Set<string>();
