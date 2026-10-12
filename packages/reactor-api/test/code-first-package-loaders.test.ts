@@ -1,4 +1,7 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -27,39 +30,28 @@ import {
  * subpath, export filtering, and version choice, and this file pins those
  * differences. The fixture is a real package on disk because each loader
  * resolves files.
- *
- * A code-first subgraph loads through the same loaders. The Vite loader
- * indexes the inner namespace with the outer export name, and the import and
- * HTTP loaders flatten it. So `export * as ExampleSubgraph from "./example.js"`
- * must wrap `export const ExampleSubgraph`.
  */
 
 let fixture: MaterializedPackage;
+let vite: ViteDevServer;
 
-beforeAll(() => {
+beforeAll(async () => {
   fixture = materializeLoaderPackage();
+  vite = await createServer({
+    root: fixture.root,
+    logLevel: "silent",
+    server: { hmr: false, middlewareMode: true },
+    optimizeDeps: { noDiscovery: true, include: [] },
+  });
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await vite.close();
   fixture.dispose();
 });
 
 function models(loaded: readonly DocumentModelModule[]) {
   return loaded.filter((module) => module.documentModel !== null);
-}
-
-/** What a loader's caller can see about one subgraph class. */
-function observedSubgraphs(classes: readonly SubgraphClass[]) {
-  return classes
-    .map((value) => {
-      const { definition } = value as Partial<DefinedSubgraph>;
-      return {
-        name: definition?.name ?? null,
-        schemaKind: definition?.schemaKind ?? null,
-        isClass: typeof value === "function",
-      };
-    })
-    .sort((left, right) => String(left.name).localeCompare(String(right.name)));
 }
 
 describe("Node / server import", () => {
@@ -120,13 +112,6 @@ describe("Node / server import", () => {
       described(await loader.loadUpgradeManifests(fixture.schemaFirstRoot)),
     ).toEqual(described(manifests));
   });
-
-  it("flattens the subgraph namespace and finds the class", async () => {
-    const loaded = await loader.loadSubgraphs(fixture.root);
-    expect(observedSubgraphs(loaded)).toEqual([
-      { name: "example", schemaKind: "typed", isClass: true },
-    ]);
-  });
 });
 
 describe("HTTP / CDN", () => {
@@ -153,34 +138,9 @@ describe("HTTP / CDN", () => {
       "test/ledger",
     ]);
   });
-
-  it("flattens the subgraph namespace the same way", async () => {
-    const loader = new HttpPackageLoader({
-      registryUrl: fixture.registryUrl,
-    } as never);
-    const loaded = await loader.loadSubgraphs(FIXTURE_PACKAGE_NAME);
-    expect(observedSubgraphs(loaded)).toEqual([
-      { name: "example", schemaKind: "typed", isClass: true },
-    ]);
-  });
 });
 
 describe("Vite / local source", () => {
-  let vite: ViteDevServer;
-
-  beforeAll(async () => {
-    vite = await createServer({
-      root: fixture.root,
-      logLevel: "silent",
-      server: { hmr: false, middlewareMode: true },
-      optimizeDeps: { noDiscovery: true, include: [] },
-    });
-  });
-
-  afterAll(async () => {
-    await vite.close();
-  });
-
   it("reads model subpath exports and keeps only a non-null documentModel", async () => {
     const loader = VitePackageLoader.build(vite);
     const loaded = await loader.loadDocumentModels(fixture.root, true);
@@ -213,14 +173,169 @@ describe("Vite / local source", () => {
       ),
     ).toEqual(["test/ledger"]);
   });
+});
 
-  it("indexes the inner subgraph namespace with the outer export name", async () => {
-    const loaded = await VitePackageLoader.build(vite).loadSubgraphs(
-      fixture.root,
+type Observed = { className: string; definition: string | null };
+
+function observedSubgraphs(classes: readonly SubgraphClass[]): Observed[] {
+  return classes
+    .map((value) => ({
+      className: value.name,
+      definition: (value as Partial<DefinedSubgraph>).definition?.name ?? null,
+    }))
+    .sort(
+      (left, right) =>
+        left.className.localeCompare(right.className) ||
+        String(left.definition).localeCompare(String(right.definition)),
     );
-    expect(observedSubgraphs(loaded)).toEqual([
-      { name: "example", schemaKind: "typed", isClass: true },
-    ]);
+}
+
+const example: Observed = {
+  className: "CodeFirstSubgraph",
+  definition: "example",
+};
+const notes: Observed = { className: "NotesSubgraph", definition: null };
+
+type ExportForm = {
+  form: string;
+  variantIndex?: string;
+  expected: Observed[];
+};
+
+const forms: ExportForm[] = [
+  { form: "scaffold", expected: [example, notes] },
+  {
+    form: "namespace-alias",
+    variantIndex: [
+      'export * as tasks from "../../../subgraphs/example.js";',
+      'export * as legacy from "../../../subgraphs/notes.js";',
+    ].join("\n"),
+    expected: [example, notes],
+  },
+  {
+    form: "direct-renamed",
+    variantIndex: [
+      'export { ExampleSubgraph as TasksSubgraph } from "../../../subgraphs/example.js";',
+      'export { NotesSubgraph } from "../../../subgraphs/notes.js";',
+    ].join("\n"),
+    expected: [example, notes],
+  },
+  {
+    form: "default-class",
+    variantIndex: [
+      'export { ExampleSubgraph as default } from "../../../subgraphs/example.js";',
+      'export { NotesSubgraph } from "../../../subgraphs/notes.js";',
+    ].join("\n"),
+    expected: [example, notes],
+  },
+  {
+    form: "default-object",
+    variantIndex: [
+      'import { ExampleSubgraph } from "../../../subgraphs/example.js";',
+      'import { NotesSubgraph } from "../../../subgraphs/notes.js";',
+      "export default { ExampleSubgraph, NotesSubgraph };",
+    ].join("\n"),
+    expected: [example, notes],
+  },
+  {
+    form: "several-paths",
+    variantIndex: [
+      'import { ExampleSubgraph } from "../../../subgraphs/example.js";',
+      'import { NotesSubgraph } from "../../../subgraphs/notes.js";',
+      'export * as tasks from "../../../subgraphs/example.js";',
+      'export * as legacy from "../../../subgraphs/notes.js";',
+      "export { ExampleSubgraph, NotesSubgraph };",
+      "export default { ExampleSubgraph, NotesSubgraph };",
+    ].join("\n"),
+    expected: [example, notes],
+  },
+  {
+    form: "unrelated-exports",
+    variantIndex: [
+      'export * as tasks from "../../../subgraphs/example.js";',
+      'export const VERSION = "1.0.0";',
+      "export function helper() { return 1; }",
+      "export class Unrelated {}",
+      "export const config = { helper, Unrelated, retries: 3 };",
+      'export { BaseSubgraph, defineSubgraph } from "@powerhousedao/reactor-api";',
+    ].join("\n"),
+    expected: [example],
+  },
+];
+
+type Variant = { root: string; packageName: string };
+
+function variantOf({ form, variantIndex }: ExportForm): Variant {
+  return variantIndex === undefined
+    ? { root: fixture.root, packageName: FIXTURE_PACKAGE_NAME }
+    : {
+        root: join(fixture.root, "variants", form),
+        packageName: `${FIXTURE_PACKAGE_NAME}-${form}`,
+      };
+}
+
+const loaders: {
+  loader: string;
+  load(variant: Variant): Promise<SubgraphClass[]>;
+}[] = [
+  {
+    loader: "Node / server import",
+    load: ({ root }) => new ImportPackageLoader().loadSubgraphs(root),
+  },
+  {
+    loader: "HTTP / CDN",
+    load: ({ packageName }) =>
+      new HttpPackageLoader({
+        registryUrl: fixture.registryUrl,
+      } as never).loadSubgraphs(packageName),
+  },
+  {
+    loader: "Vite / local source",
+    load: ({ root }) => VitePackageLoader.build(vite).loadSubgraphs(root),
+  },
+];
+
+describe("subgraph export forms", () => {
+  beforeAll(() => {
+    for (const form of forms) {
+      if (form.variantIndex === undefined) continue;
+      const { root, packageName } = variantOf(form);
+      mkdirSync(join(root, "subgraphs"), { recursive: true });
+      mkdirSync(join(root, "node", "subgraphs"), { recursive: true });
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({
+          name: packageName,
+          type: "module",
+          exports: {
+            "./subgraphs": "./subgraphs/index.ts",
+            "./node/subgraphs": "./node/subgraphs/index.mjs",
+          },
+        }),
+      );
+      writeFileSync(join(root, "subgraphs", "index.ts"), form.variantIndex);
+      // `export *` drops the default export, which a real bundle keeps.
+      const bundle = ['export * from "../../subgraphs/index.ts";'];
+      if (/\bdefault\b/.test(form.variantIndex)) {
+        bundle.push('export { default } from "../../subgraphs/index.ts";');
+      }
+      writeFileSync(
+        join(root, "node", "subgraphs", "index.mjs"),
+        bundle.join("\n"),
+      );
+      symlinkSync(
+        root,
+        join(fileURLToPath(fixture.registryUrl), "-", "cdn", packageName),
+      );
+    }
+  });
+
+  describe.each(loaders)("$loader", ({ load }) => {
+    it.each(forms)("$form", async (form) => {
+      expect(observedSubgraphs(await load(variantOf(form)))).toEqual(
+        form.expected,
+      );
+    });
   });
 });
 

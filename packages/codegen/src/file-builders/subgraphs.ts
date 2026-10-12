@@ -11,7 +11,7 @@ import {
   subgraphIndexFileTemplate,
   subgraphLibFileTemplate,
 } from "templates";
-import type { Project, SourceFile } from "ts-morph";
+import type { ClassDeclaration, Project, SourceFile } from "ts-morph";
 import {
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
@@ -128,11 +128,7 @@ export async function makeSubgraphsIndexFile(args: {
     project.getDirectoryOrThrow(subgraphsDir).getDescendantSourceFiles(),
     filter((sourceFile) => sourceFile.getBaseName() === "index.ts"),
     uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      sourceFile
-        .getClasses()
-        .find((c) => c.getBaseClass()?.getText().includes("BaseSubgraph")),
-    ),
+    map((sourceFile) => sourceFile.getClasses().find(extendsBaseSubgraph)),
     filter(isTruthy),
     map((classDeclaration) => ({
       name: classDeclaration.getNameOrThrow(),
@@ -148,6 +144,17 @@ export async function makeSubgraphsIndexFile(args: {
   );
   addMissingNamespaceExports(sourceFile, exportDeclarations);
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+function extendsBaseSubgraph(classDeclaration: ClassDeclaration): boolean {
+  const baseAsWritten = classDeclaration
+    .getExtends()
+    ?.getExpression()
+    .getText();
+  const baseOnceInstalled = classDeclaration.getBaseClass()?.getText();
+  return [baseAsWritten, baseOnceInstalled].some(
+    (base) => base?.includes("BaseSubgraph") === true,
+  );
 }
 
 function addMissingNamespaceExports(

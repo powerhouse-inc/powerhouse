@@ -48,6 +48,7 @@ export async function startGenerateSubgraph(
     const project = buildTsMorphProject(projectDir);
     const result = await generateCodeFirstSubgraph(name.trim(), project);
     await project.save();
+    await installFeatureDependencies(projectDir, args.skipInstall);
     logCodeFirstResult(result, "subgraph");
     return;
   }
@@ -81,9 +82,16 @@ export async function startGenerateSubgraph(
     return;
   }
   await project.save();
+  await installFeatureDependencies(projectDir, args.skipInstall);
+}
+
+async function installFeatureDependencies(
+  projectDir: string,
+  skipInstall: boolean | undefined,
+) {
   const added = await syncFeatureDependencies(
     detectFeatures(projectDir),
     projectDir,
   );
-  await installAddedDependencies(added, projectDir, args.skipInstall);
+  await installAddedDependencies(added, projectDir, skipInstall);
 }

@@ -23,10 +23,13 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { ph } from "document-model";
 import type { ViteDevServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+import { defineSubgraph } from "../src/graphql/define-subgraph.js";
 import type { SubgraphClass } from "../src/graphql/types.js";
+import { isSubgraphClass } from "../src/graphql/utils.js";
 import { extractSubgraphsFromModule } from "../src/packages/http-loader.js";
 import { ImportPackageLoader } from "../src/packages/import-loader.js";
 import { extractSubgraphs } from "../src/packages/subgraph-extraction.js";
@@ -55,6 +58,17 @@ vi.mock("../src/packages/util.js", async (importOriginal) => {
 // Subgraph classes extending the host's own BaseSubgraph: the identity path.
 class StatementsSubgraph extends BaseSubgraph {}
 class LedgerSubgraph extends BaseSubgraph {}
+
+const TasksSubgraph = defineSubgraph({
+  name: "tasks",
+  schemaKind: "typed",
+  entries: (build) => [
+    build.query("ping", {
+      returns: ph.String({ required: true }),
+      resolve: () => "pong",
+    }),
+  ],
+});
 
 // A different copy of the base class with the same name: what a project
 // served by the vite dev server produces when it resolves reactor-api from
@@ -100,6 +114,21 @@ const fixtures: Fixture[] = [
     expected: [StatementsSubgraph],
   },
   {
+    name: "code-first namespace under an arbitrary alias",
+    module: { tasks: { TasksSubgraph } },
+    expected: [TasksSubgraph],
+  },
+  {
+    name: "code-first direct named export beside a schema-first one",
+    module: { TasksSubgraph, StatementsSubgraph },
+    expected: [TasksSubgraph, StatementsSubgraph],
+  },
+  {
+    name: "code-first direct export under a different key",
+    module: { Renamed: TasksSubgraph },
+    expected: [TasksSubgraph],
+  },
+  {
     name: "default export of the class",
     module: { default: StatementsSubgraph },
     expected: [StatementsSubgraph],
@@ -108,6 +137,16 @@ const fixtures: Fixture[] = [
     name: "default-exported object of classes",
     module: { default: { StatementsSubgraph, LedgerSubgraph } },
     expected: [StatementsSubgraph, LedgerSubgraph],
+  },
+  {
+    name: "code-first default export",
+    module: { default: TasksSubgraph },
+    expected: [TasksSubgraph],
+  },
+  {
+    name: "default-exported object mixing code-first and schema-first",
+    module: { default: { TasksSubgraph, StatementsSubgraph } },
+    expected: [TasksSubgraph, StatementsSubgraph],
   },
   {
     name: "class extending a package-local copy of BaseSubgraph",
@@ -123,14 +162,25 @@ const fixtures: Fixture[] = [
     expected: [StatementsSubgraph],
   },
   {
+    name: "code-first class as named export, in a namespace and in a default object: once",
+    module: {
+      TasksSubgraph,
+      tasks: { TasksSubgraph },
+      default: { TasksSubgraph },
+    },
+    expected: [TasksSubgraph],
+  },
+  {
     // What the banner-only template produces (the reported bug's input).
     name: "banner-only module: no exports",
     module: {},
     expected: [],
   },
   {
-    name: "junk exports: constants, helpers, unrelated classes",
+    name: "junk exports: constants, helpers, unrelated classes, the base class and the factory",
     module: {
+      BaseSubgraph,
+      defineSubgraph,
       VERSION: "1.0.0",
       config: { x: 1 },
       helper,
@@ -153,15 +203,22 @@ function names(subgraphs: readonly SubgraphClass[]): string[] {
   return subgraphs.map((s) => s.name).sort();
 }
 
-function expectedNames(fixture: Fixture): string[] {
-  return (fixture.expected as SubgraphClass[]).map((s) => s.name).sort();
+function classesSortedByName(subgraphs: readonly unknown[]): unknown[] {
+  return [...(subgraphs as SubgraphClass[])].sort((left, right) =>
+    left.name.localeCompare(right.name),
+  );
 }
 
 describe("the unified predicate (extractSubgraphs)", () => {
   it.each(fixtures)("$name", (fixture) => {
-    expect(names(extractSubgraphs(fixture.module))).toEqual(
-      expectedNames(fixture),
+    expect(classesSortedByName(extractSubgraphs(fixture.module))).toEqual(
+      classesSortedByName(fixture.expected),
     );
+  });
+
+  it("accepts a code-first class by ancestry, not by its class name", () => {
+    expect(TasksSubgraph.name).toBe("CodeFirstSubgraph");
+    expect(isSubgraphClass(TasksSubgraph)).toBe(true);
   });
 });
 
@@ -171,8 +228,8 @@ describe("the http loader's extraction (extractSubgraphsFromModule)", () => {
       string,
       Record<string, SubgraphClass>
     >;
-    expect(names(extractSubgraphsFromModule(module))).toEqual(
-      expectedNames(fixture),
+    expect(classesSortedByName(extractSubgraphsFromModule(module))).toEqual(
+      classesSortedByName(fixture.expected),
     );
   });
 });
@@ -183,9 +240,9 @@ describe("the import loader (ImportPackageLoader.loadSubgraphs)", () => {
       fixture.module as SubgraphsExport,
     );
     const loader = new ImportPackageLoader();
-    expect(names(await loader.loadSubgraphs("@acme/fixture"))).toEqual(
-      expectedNames(fixture),
-    );
+    expect(
+      classesSortedByName(await loader.loadSubgraphs("@acme/fixture")),
+    ).toEqual(classesSortedByName(fixture.expected));
   });
 });
 
@@ -211,7 +268,9 @@ describe("the vite loader (VitePackageLoader.loadSubgraphs)", () => {
   it.each(fixtures)("$name", async (fixture) => {
     const loader = VitePackageLoader.build(fakeVite(fixture.module));
     const loaded = await loader.loadSubgraphs(resolve("/acme-fixture"));
-    expect(names(loaded)).toEqual(expectedNames(fixture));
+    expect(classesSortedByName(loaded)).toEqual(
+      classesSortedByName(fixture.expected),
+    );
   });
 });
 

@@ -51,7 +51,13 @@ function materializeProject(): string {
   writeFileSync(
     join(root, "package.json"),
     `${JSON.stringify(
-      { name: "@acme/things", type: "module", private: true },
+      {
+        name: "@acme/things",
+        type: "module",
+        private: true,
+        peerDependencies: { "document-model": "*" },
+        devDependencies: { "document-model": "6.2.3-dev.54" },
+      },
       null,
       2,
     )}\n`,
@@ -475,6 +481,24 @@ describe("a scaffolded code-first subgraph", () => {
       "Registered the subgraph in powerhouse.config.json definitionSources (added)",
       "Next: ph model check",
     ]);
+  });
+
+  it("declares reactor-api, which the subgraph imports", () => {
+    expect(subgraphOutput).toContain(
+      "Added peer/dev dependencies: @powerhousedao/reactor-api",
+    );
+    const manifest = JSON.parse(
+      readFileSync(join(projectDir, "package.json"), "utf8"),
+    ) as {
+      peerDependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(manifest.peerDependencies["@powerhousedao/reactor-api"]).toBe(
+      manifest.peerDependencies["document-model"],
+    );
+    expect(manifest.devDependencies["@powerhousedao/reactor-api"]).toBe(
+      manifest.peerDependencies["document-model"],
+    );
   });
 
   it("registers beside the model, not instead of it", () => {
