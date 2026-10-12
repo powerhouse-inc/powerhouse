@@ -15,7 +15,9 @@ const DRIVE = "drive-1";
 
 type Page = Awaited<
   ReturnType<
-    ReturnType<typeof createReactorDriveResolvers>["ReactorDrive"]["rootNodes"]
+    ReturnType<
+      typeof createReactorDriveResolvers
+    >["ReactorDriveInfo"]["rootNodes"]
   >
 >;
 
@@ -91,7 +93,7 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
     cursor = "",
     kind?: "FILE" | "FOLDER" | null,
   ): Promise<Page> {
-    return resolvers.ReactorDrive.rootNodes(
+    return resolvers.ReactorDriveInfo.rootNodes(
       { id: DRIVE },
       { paging: { cursor, limit }, kind },
       ctx,
