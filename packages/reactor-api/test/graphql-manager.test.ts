@@ -2090,6 +2090,8 @@ describe("GraphQLManager", () => {
 
     const ORIGIN_REJECTION =
       "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing";
+    const EVICTION =
+      "Evicting subgraph @name from @existing: @origin outranks it";
 
     it("serves the listing beside the ReactorDrive document mutations", async () => {
       const { manager, gatewayAdapter } = makeHarness({
@@ -2157,7 +2159,7 @@ describe("GraphQLManager", () => {
       expectDocumentMutationsServed(gatewayAdapter);
     });
 
-    it("refuses a host subgraph that takes a document-model subgraph's name", async () => {
+    it("a host subgraph evicts a boot model's subgraph of its name", async () => {
       const logger = makeHarnessLogger();
       const { manager, gatewayAdapter } = makeHarness({
         logger,
@@ -2165,28 +2167,124 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      const documentModelSubgraph = manager.getSubgraphByName(
-        reactorDriveModelSubgraphName,
-      );
 
+      const host = makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName);
       const result = await manager.registerSubgraphInstance(
-        makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName),
+        host,
         "graphql",
         false,
       );
       await flush(manager.updateRouter());
 
-      expect(result).toBeUndefined();
+      expect(result).toBe(host);
+      expect(logger.error).toHaveBeenCalledWith(
+        EVICTION,
+        reactorDriveModelSubgraphName,
+        "document models",
+        "the host",
+      );
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        host,
+      );
+      expectListingServed(gatewayAdapter);
+      expect(servedFields(gatewayAdapter, "Mutation")).not.toContain(
+        "ReactorDrive",
+      );
+
+      // The model does not take it back when its subgraphs regenerate.
+      await flush(manager.regenerateDocumentModelSubgraphs());
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        host,
+      );
       expect(logger.error).toHaveBeenCalledWith(
         ORIGIN_REJECTION,
         reactorDriveModelSubgraphName,
-        "the host",
         "document models",
+        "the host",
       );
-      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
-        documentModelSubgraph,
+    });
+
+    it("a host subgraph evicts a package subgraph of its name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      class Privacy extends BaseSubgraph {
+        name = "privacy";
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Privacy]]]));
+
+      const host = makeWidgetSubgraph("privacy");
+      expect(await manager.registerSubgraphInstance(host, "graphql")).toBe(
+        host,
       );
-      expectDocumentMutationsServed(gatewayAdapter);
+      await flush(manager.updateRouter());
+
+      expect(manager.getSubgraphByName("privacy")).toBe(host);
+      expect(manager.hasSubgraphHandler("privacy")).toBe(true);
+      expect(logger.error).toHaveBeenCalledWith(
+        EVICTION,
+        "privacy",
+        "package pkg",
+        "the host",
+      );
+
+      // The package's next change is refused.
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Privacy]]]));
+      expect(manager.getSubgraphByName("privacy")).toBe(host);
+    });
+
+    it("serves a package subgraph a host evicted once the host subgraph goes", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class Shared extends BaseSubgraph {
+        name = "shared";
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
+      const host = makeWidgetSubgraph("shared");
+      await flush(manager.setSupergraph("extra", [host]));
+      expect(manager.getSubgraphByName("shared")).toBe(host);
+
+      await flush(manager.setSupergraph("extra", []));
+
+      expect(manager.getSubgraphByName("shared")).toBeInstanceOf(Shared);
+      expect(manager.hasSubgraphHandler("shared")).toBe(true);
+    });
+
+    it("serves a package's refused subgraph once the package holding its name is unregistered", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class FooA extends BaseSubgraph {
+        name = "foo";
+      }
+      class FooB extends BaseSubgraph {
+        name = "foo";
+      }
+      await manager.registerSubgraph(FooA, "graphql", false, "a");
+      expect(
+        await manager.registerSubgraph(FooB, "graphql", false, "b"),
+      ).toBeUndefined();
+
+      await flush(manager.unregisterPackage("a"));
+
+      expect(manager.getSubgraphByName("foo")).toBeInstanceOf(FooB);
+      expect(manager.hasSubgraphHandler("foo")).toBe(true);
+    });
+
+    it("serves a package's refused subgraph once the package holding its name drops it", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class FooA extends BaseSubgraph {
+        name = "foo";
+      }
+      class FooB extends BaseSubgraph {
+        name = "foo";
+      }
+      await manager.registerSubgraph(FooA, "graphql", false, "a");
+      await manager.registerSubgraph(FooB, "graphql", false, "b");
+
+      await flush(manager.prunePackageSubgraphs("a", new Set()));
+
+      expect(manager.getSubgraphByName("foo")).toBeInstanceOf(FooB);
     });
 
     it("refuses a document-model subgraph whose name a host subgraph holds", async () => {
@@ -2283,7 +2381,7 @@ describe("GraphQLManager", () => {
       );
     });
 
-    it("setSupergraph drops a subgraph that takes a document-model subgraph's name", async () => {
+    it("setSupergraph evicts a document-model subgraph of a subgraph's name", async () => {
       const logger = makeHarnessLogger();
       const { manager } = makeHarness({
         logger,
@@ -2291,24 +2389,21 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      const documentModelSubgraph = manager.getSubgraphByName(
-        reactorDriveModelSubgraphName,
-      );
+      const host = makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName);
 
-      await flush(
-        manager.setSupergraph("extra", [
-          makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName),
-        ]),
-      );
+      await flush(manager.setSupergraph("extra", [host]));
 
       expect(logger.error).toHaveBeenCalledWith(
-        ORIGIN_REJECTION,
+        EVICTION,
         reactorDriveModelSubgraphName,
-        "the host",
         "document models",
+        "the host",
       );
       expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
-        documentModelSubgraph,
+        host,
+      );
+      expect(registeredNamed(manager, reactorDriveModelSubgraphName)).toEqual(
+        new Set([host]),
       );
     });
 
@@ -2523,9 +2618,10 @@ describe("GraphQLManager", () => {
         manager.getSubgraphByName(reactorDriveModelSubgraphName),
       ).toBeInstanceOf(DocumentModelSubgraph);
       expect(logger.error).toHaveBeenCalledWith(
-        "Evicting subgraph @name from @existing: the document model of that name owns it",
+        EVICTION,
         reactorDriveModelSubgraphName,
         "package pkg",
+        "document models",
       );
 
       // The package's next change is refused, as at boot.
