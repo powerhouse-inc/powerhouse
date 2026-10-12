@@ -28,9 +28,9 @@
       "import": "./dist/react/index.js"
     },
     "./worker": {
-      "source": "./src/worker/reactor-monitor.worker.ts",
-      "types": "./dist/worker/reactor-monitor.worker.d.ts",
-      "import": "./dist/worker/reactor-monitor.worker.js"
+      "source": "./src/worker/start.ts",
+      "types": "./dist/worker/start.d.ts",
+      "import": "./dist/worker/start.js"
     }
   },
   "scripts": {

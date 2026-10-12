@@ -6,6 +6,7 @@ export default defineConfig({
     "src/index.ts",
     "src/react/index.ts",
     "src/worker/reactor-monitor.worker.ts",
+    "src/worker/start.ts",
   ],
   outDir: "dist",
   platform: "browser",

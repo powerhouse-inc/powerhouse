@@ -28,10 +28,11 @@
  *     }),
  * });
  *
- * // 2. Or point it at a URL you serve, and re-export the entry from a module
- * //    beside it so your bundler emits it:
+ * // 2. Or point it at a URL you serve, emitted from a worker entry of your own
+ * //    that starts the worker (a bare import is tree-shaken away):
  * //    app/src/reactor-monitor.worker.ts:
- * //      import "@powerhousedao/reactor-monitor/worker";
+ * //      import { startMonitorWorker } from "@powerhousedao/reactor-monitor/worker";
+ * //      startMonitorWorker();
  * provision({ kind: "worker", name: "alpha", workerUrl: "/reactor-monitor.worker.js" });
  * ```
  */
