@@ -48,7 +48,7 @@ function remoteReactor(
     name: "sb",
     kind: "remote",
     url: overrides.url ?? "http://host.example/graphql",
-    serverInfo: { workflows: overrides.workflows ?? true },
+    info: { workflows: overrides.workflows ?? true },
   } as unknown as ManagedReactor;
 }
 

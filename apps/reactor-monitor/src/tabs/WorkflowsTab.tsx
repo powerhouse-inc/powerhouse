@@ -9,7 +9,7 @@
  * Workflows run on a Node host, not in the browser, so there is a
  * workflow-runtime subgraph only for a remote reactor whose host composed the
  * engine. A local/in-process reactor, and a remote one that reports
- * `serverInfo.workflows` false, get an "unavailable here" panel instead.
+ * `info.workflows` false, get an "unavailable here" panel instead.
  *
  * Plain CSS and a manual load/paging loop, forked from the other inspector tabs
  * rather than pulling in the design system (see QueueTab's header note).
@@ -59,12 +59,12 @@ export function WorkflowsTab({
       </UnavailablePanel>
     );
   }
-  if (!reactor.serverInfo.workflows) {
+  if (!reactor.info.workflows) {
     return (
       <UnavailablePanel>
-        This reactor&apos;s host reports no workflow runtime
-        (serverInfo.workflows is false), so there are no workflow runs to show.
-        Re-check the server after composing a workflow engine on that host.
+        This reactor&apos;s host reports no workflow runtime (info.workflows is
+        false), so there are no workflow runs to show. Re-check the server after
+        composing a workflow engine on that host.
       </UnavailablePanel>
     );
   }
