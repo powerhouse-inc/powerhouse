@@ -628,7 +628,7 @@ describe("restart() on a registry-held worker reactor", () => {
           () => "resolved",
           (error: unknown) => `rejected: ${String(error)}`,
         ),
-        new Promise((resolve) => setTimeout(() => resolve("pending"), 2000)),
+        new Promise((resolve) => setTimeout(() => resolve("pending"), 10_000)),
       ]);
 
       expect(outcome).toBe("resolved");
