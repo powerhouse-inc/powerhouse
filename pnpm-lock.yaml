@@ -2590,6 +2590,9 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
       happy-dom:
         specifier: ^20.8.9
         version: 20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
