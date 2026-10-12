@@ -132,8 +132,6 @@ describe("makeSubgraphsIndexFile", () => {
   });
 
   it("exports a subgraph it just generated before reactor-api is installed", async () => {
-    // A fresh project: the scaffold imports BaseSubgraph from
-    // @powerhousedao/reactor-api, which no node_modules here provides.
     const root = makeProject([]);
     const project = buildTsMorphProject(root);
 

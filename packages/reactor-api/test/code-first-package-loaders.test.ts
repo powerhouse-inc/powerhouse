@@ -30,10 +30,6 @@ import {
  * subpath, export filtering, and version choice, and this file pins those
  * differences. The fixture is a real package on disk because each loader
  * resolves files.
- *
- * Subgraphs load through all three loaders under one acceptance rule
- * (`extractSubgraphs`). The export-form table below runs each shape a
- * package's `subgraphs/index.ts` may take through each real loader.
  */
 
 let fixture: MaterializedPackage;
@@ -181,7 +177,6 @@ describe("Vite / local source", () => {
 
 type Observed = { className: string; definition: string | null };
 
-/** What a loader's caller can see about each subgraph class. */
 function observedSubgraphs(classes: readonly SubgraphClass[]): Observed[] {
   return classes
     .map((value) => ({
@@ -203,8 +198,7 @@ const notes: Observed = { className: "NotesSubgraph", definition: null };
 
 type ExportForm = {
   form: string;
-  /** A variant package's `subgraphs/index.ts`; absent for the fixture's own. */
-  index?: string;
+  variantIndex?: string;
   expected: Observed[];
 };
 
@@ -212,7 +206,7 @@ const forms: ExportForm[] = [
   { form: "scaffold", expected: [example, notes] },
   {
     form: "namespace-alias",
-    index: [
+    variantIndex: [
       'export * as tasks from "../../../subgraphs/example.js";',
       'export * as legacy from "../../../subgraphs/notes.js";',
     ].join("\n"),
@@ -220,7 +214,7 @@ const forms: ExportForm[] = [
   },
   {
     form: "direct-renamed",
-    index: [
+    variantIndex: [
       'export { ExampleSubgraph as TasksSubgraph } from "../../../subgraphs/example.js";',
       'export { NotesSubgraph } from "../../../subgraphs/notes.js";',
     ].join("\n"),
@@ -228,7 +222,7 @@ const forms: ExportForm[] = [
   },
   {
     form: "default-class",
-    index: [
+    variantIndex: [
       'export { ExampleSubgraph as default } from "../../../subgraphs/example.js";',
       'export { NotesSubgraph } from "../../../subgraphs/notes.js";',
     ].join("\n"),
@@ -236,7 +230,7 @@ const forms: ExportForm[] = [
   },
   {
     form: "default-object",
-    index: [
+    variantIndex: [
       'import { ExampleSubgraph } from "../../../subgraphs/example.js";',
       'import { NotesSubgraph } from "../../../subgraphs/notes.js";',
       "export default { ExampleSubgraph, NotesSubgraph };",
@@ -245,7 +239,7 @@ const forms: ExportForm[] = [
   },
   {
     form: "several-paths",
-    index: [
+    variantIndex: [
       'import { ExampleSubgraph } from "../../../subgraphs/example.js";',
       'import { NotesSubgraph } from "../../../subgraphs/notes.js";',
       'export * as tasks from "../../../subgraphs/example.js";',
@@ -257,7 +251,7 @@ const forms: ExportForm[] = [
   },
   {
     form: "unrelated-exports",
-    index: [
+    variantIndex: [
       'export * as tasks from "../../../subgraphs/example.js";',
       'export const VERSION = "1.0.0";',
       "export function helper() { return 1; }",
@@ -271,8 +265,8 @@ const forms: ExportForm[] = [
 
 type Variant = { root: string; packageName: string };
 
-function variantOf({ form, index }: ExportForm): Variant {
-  return index === undefined
+function variantOf({ form, variantIndex }: ExportForm): Variant {
+  return variantIndex === undefined
     ? { root: fixture.root, packageName: FIXTURE_PACKAGE_NAME }
     : {
         root: join(fixture.root, "variants", form),
@@ -304,7 +298,7 @@ const loaders: {
 describe("subgraph export forms", () => {
   beforeAll(() => {
     for (const form of forms) {
-      if (form.index === undefined) continue;
+      if (form.variantIndex === undefined) continue;
       const { root, packageName } = variantOf(form);
       mkdirSync(join(root, "subgraphs"), { recursive: true });
       mkdirSync(join(root, "node", "subgraphs"), { recursive: true });
@@ -319,10 +313,10 @@ describe("subgraph export forms", () => {
           },
         }),
       );
-      writeFileSync(join(root, "subgraphs", "index.ts"), form.index);
+      writeFileSync(join(root, "subgraphs", "index.ts"), form.variantIndex);
       // `export *` drops the default export, which a real bundle keeps.
       const bundle = ['export * from "../../subgraphs/index.ts";'];
-      if (/\bdefault\b/.test(form.index)) {
+      if (/\bdefault\b/.test(form.variantIndex)) {
         bundle.push('export { default } from "../../subgraphs/index.ts";');
       }
       writeFileSync(

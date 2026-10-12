@@ -146,14 +146,14 @@ export async function makeSubgraphsIndexFile(args: {
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-// Read from the `extends` clause first: a subgraph generated a moment ago
-// imports BaseSubgraph from a package the project may not have installed yet,
-// and an unresolved base class would leave the subgraph out of the index.
 function extendsBaseSubgraph(classDeclaration: ClassDeclaration): boolean {
-  const named = classDeclaration.getExtends()?.getExpression().getText();
-  if (named?.includes("BaseSubgraph")) return true;
-  return (
-    classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph") ?? false
+  const baseAsWritten = classDeclaration
+    .getExtends()
+    ?.getExpression()
+    .getText();
+  const baseOnceInstalled = classDeclaration.getBaseClass()?.getText();
+  return [baseAsWritten, baseOnceInstalled].some(
+    (base) => base?.includes("BaseSubgraph") === true,
   );
 }
 

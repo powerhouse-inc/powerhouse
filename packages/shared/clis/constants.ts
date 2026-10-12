@@ -127,9 +127,6 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
 // Per-feature deps added dynamically by codegen when required. `devVersioned`
 // is for a workspace package the build inlines, which no consumer provides.
 export const FEATURE_DEPENDENCIES = {
-  // A subgraph imports reactor-api, which the build keeps external and the
-  // host provides. It reaches the project only transitively through ph-cli,
-  // where the project's own source cannot resolve it.
   subgraph: {
     peerVersioned: [REACTOR_API_PACKAGE],
     peerExternal: {},

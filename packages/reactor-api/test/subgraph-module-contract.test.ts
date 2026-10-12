@@ -59,8 +59,6 @@ vi.mock("../src/packages/util.js", async (importOriginal) => {
 class StatementsSubgraph extends BaseSubgraph {}
 class LedgerSubgraph extends BaseSubgraph {}
 
-// A code-first subgraph: its class is named CodeFirstSubgraph whatever key
-// exports it.
 const TasksSubgraph = defineSubgraph({
   name: "tasks",
   schemaKind: "typed",
@@ -205,9 +203,7 @@ function names(subgraphs: readonly SubgraphClass[]): string[] {
   return subgraphs.map((s) => s.name).sort();
 }
 
-// Classes, not names, are compared: every code-first class is named
-// CodeFirstSubgraph.
-function byName(subgraphs: readonly unknown[]): unknown[] {
+function classesSortedByName(subgraphs: readonly unknown[]): unknown[] {
   return [...(subgraphs as SubgraphClass[])].sort((left, right) =>
     left.name.localeCompare(right.name),
   );
@@ -215,8 +211,8 @@ function byName(subgraphs: readonly unknown[]): unknown[] {
 
 describe("the unified predicate (extractSubgraphs)", () => {
   it.each(fixtures)("$name", (fixture) => {
-    expect(byName(extractSubgraphs(fixture.module))).toEqual(
-      byName(fixture.expected),
+    expect(classesSortedByName(extractSubgraphs(fixture.module))).toEqual(
+      classesSortedByName(fixture.expected),
     );
   });
 
@@ -232,8 +228,8 @@ describe("the http loader's extraction (extractSubgraphsFromModule)", () => {
       string,
       Record<string, SubgraphClass>
     >;
-    expect(byName(extractSubgraphsFromModule(module))).toEqual(
-      byName(fixture.expected),
+    expect(classesSortedByName(extractSubgraphsFromModule(module))).toEqual(
+      classesSortedByName(fixture.expected),
     );
   });
 });
@@ -244,9 +240,9 @@ describe("the import loader (ImportPackageLoader.loadSubgraphs)", () => {
       fixture.module as SubgraphsExport,
     );
     const loader = new ImportPackageLoader();
-    expect(byName(await loader.loadSubgraphs("@acme/fixture"))).toEqual(
-      byName(fixture.expected),
-    );
+    expect(
+      classesSortedByName(await loader.loadSubgraphs("@acme/fixture")),
+    ).toEqual(classesSortedByName(fixture.expected));
   });
 });
 
@@ -272,7 +268,9 @@ describe("the vite loader (VitePackageLoader.loadSubgraphs)", () => {
   it.each(fixtures)("$name", async (fixture) => {
     const loader = VitePackageLoader.build(fakeVite(fixture.module));
     const loaded = await loader.loadSubgraphs(resolve("/acme-fixture"));
-    expect(byName(loaded)).toEqual(byName(fixture.expected));
+    expect(classesSortedByName(loaded)).toEqual(
+      classesSortedByName(fixture.expected),
+    );
   });
 });
 

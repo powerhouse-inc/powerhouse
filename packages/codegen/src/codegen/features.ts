@@ -38,8 +38,6 @@ function hasPiece(piecesDir: string): boolean {
   return false;
 }
 
-// A schema-first subgraph is a subgraphs/<name>/ directory, a code-first one
-// a subgraphs/<name>.ts beside the aggregate index.
 function hasSubgraph(subgraphsDir: string): boolean {
   return readdirSync(subgraphsDir, { withFileTypes: true }).some(
     (entry) =>
