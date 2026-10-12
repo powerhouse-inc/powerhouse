@@ -563,6 +563,45 @@ describe("a worker reactor whose store is poisoned", () => {
   });
 });
 
+describe("restart() on a registry-held worker reactor", () => {
+  it("resolves once the worker retires, though the retirement kills the handle", async () => {
+    const worker = createMonitorWorkerHost({
+      workerName: "ph-reactor-monitor:restart-registry",
+    });
+    const channel = new MessageChannel();
+    const registry = new ReactorMonitorRegistry();
+    try {
+      const handle = (await registry.provision(
+        descriptor("restart-registry", {
+          createWorker: () => {
+            worker.host.connectPort(channel.port1);
+            return {
+              port: channel.port2,
+              addEventListener: () => undefined,
+            } as unknown as SharedWorker;
+          },
+        }),
+      )) as ManagedWorkerReactor;
+
+      const outcome = await Promise.race([
+        handle.restart().then(
+          () => "resolved",
+          (error: unknown) => `rejected: ${String(error)}`,
+        ),
+        new Promise((resolve) => setTimeout(() => resolve("pending"), 2000)),
+      ]);
+
+      expect(outcome).toBe("resolved");
+      expect(registry.get("restart-registry")?.status).toBe("failed");
+    } finally {
+      await registry.killAll();
+      channel.port1.close();
+      channel.port2.close();
+      await worker.release();
+    }
+  });
+});
+
 describe("provisionWorkerReactor", () => {
   it("takes the worker from descriptor.createWorker", async () => {
     // The `createWorker` seam exists so a bundled app owns the one

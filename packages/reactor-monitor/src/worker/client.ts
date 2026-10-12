@@ -132,6 +132,8 @@ export async function connectManagedWorkerReactor(
   }
 
   const featureFlags = descriptor.featureFlags ?? {};
+  // The retirement kills the handle before the restart reply lands.
+  let onRetired: (() => void) | undefined;
   const client = connectReactorClient(
     router,
     {
@@ -148,6 +150,7 @@ export async function connectManagedWorkerReactor(
       packages: descriptor.packages?.specs ?? [],
     },
     (reason, workerGen) => {
+      onRetired?.();
       options.onReload?.(reason, workerGen);
       const cause = new Error(
         `The worker hosting "${descriptor.name}" retired: ${reason}`,
@@ -257,7 +260,11 @@ export async function connectManagedWorkerReactor(
     module,
     ...(localSync ?? {}),
     adminInfo: () => adminClient.info(),
-    restart: () => adminClient.restart(),
+    restart: () =>
+      new Promise<void>((resolve, reject) => {
+        onRetired = resolve;
+        adminClient.restart().then(resolve, reject);
+      }),
     /**
      * Releases this client's end of the connection. A SharedWorker cannot be
      * terminated by a client — the browser tears it down once no port is
