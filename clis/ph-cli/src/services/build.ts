@@ -15,6 +15,10 @@ import {
   runGeneration,
 } from "./definitions/generation.js";
 import {
+  canonicalConfigFile,
+  resolvePackagePaths,
+} from "./definitions/paths.js";
+import {
   selectedCliSources,
   selectedConfigFile,
   selectedPackageRoot,
@@ -96,21 +100,24 @@ export async function runBuild(
   args: BuildArgs,
   options: RunBuildOptions = {},
 ): Promise<GenerationResult> {
-  const packageRoot = selectedPackageRoot(args);
+  const { packageRoot, outDir } = resolvePackagePaths({
+    packageRoot: selectedPackageRoot(args),
+    outDir: args.outDir,
+  });
   await assertManifestNameMatchesPackage(packageRoot);
   assertPiecesOutDir({
-    outDir: args.outDir,
-    pieces: planPieces(packageRoot, args.outDir),
+    outDir,
+    pieces: planPieces(packageRoot, outDir),
   });
 
   return await runGeneration({
     packageRoot,
-    configFile: selectedConfigFile(args),
+    configFile: canonicalConfigFile(selectedConfigFile(args)),
     allowMissingConfig: args.configFile === undefined,
-    outDir: args.outDir,
+    outDir,
     cliSources: selectedCliSources(args),
     warningsAsErrors: args.warningsAsErrors,
-    steps: options.steps ?? (await createGenerationSteps(args.outDir, args)),
+    steps: options.steps ?? (await createGenerationSteps(args)),
     log: options.log ?? writeStderr,
     ...(options.promoteOutput !== undefined && {
       promoteOutput: options.promoteOutput,

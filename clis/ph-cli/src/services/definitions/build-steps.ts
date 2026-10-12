@@ -50,9 +50,9 @@ import {
   directoryDigest,
   GENERATION_DIRECTORY,
   type GenerationSteps,
-  pathWithin,
 } from "./generation.js";
 import { NON_INPUT_DIRECTORIES } from "./package-revision.js";
+import { canonicalPath, pathWithin } from "./paths.js";
 
 // nft reports paths relative to its base; from "/" that is every path minus its root.
 // One cache per build: the traces of a project's packages share most files.
@@ -190,10 +190,9 @@ async function confirmBuildDespiteTypeErrors(): Promise<boolean> {
 
 export function createTypecheckStep(
   agent: Agent,
-  outDir: string,
   options: BuildStepOptions = {},
 ): GenerationSteps["typecheck"] {
-  return async ({ packageRoot, emittedRoot }) => {
+  return async ({ packageRoot, emittedRoot, outDir }) => {
     const config = await runLocal(packageRoot, agent, [
       "tsc",
       "-p",
@@ -272,8 +271,8 @@ export function createTypecheckStep(
         );
         for (const source of map.sources) {
           emittedModules.set(
-            resolve(dirname(path), map.sourceRoot ?? "", source),
-            path.slice(0, -4),
+            canonicalPath(resolve(dirname(path), map.sourceRoot ?? "", source)),
+            canonicalPath(path.slice(0, -4)),
           );
         }
       }
@@ -284,8 +283,8 @@ export function createTypecheckStep(
           declared === undefined
             ? null
             : pathWithin(
-                join(packageRoot, outDir),
-                resolve(packageRoot, declared),
+                canonicalPath(resolve(packageRoot, outDir)),
+                canonicalPath(resolve(packageRoot, declared)),
               ),
       };
     } catch (error) {
@@ -578,13 +577,12 @@ export function promoteCandidate({
 }
 
 export async function createGenerationSteps(
-  outDir: string,
   options: BuildStepOptions = {},
 ): Promise<GenerationSteps> {
   const detected = await detect();
   const agent = detected?.agent ?? "npm";
   return {
-    typecheck: createTypecheckStep(agent, outDir, options),
+    typecheck: createTypecheckStep(agent, options),
     emitCandidate: createCandidateStep(agent, options),
     verifyPackedConsumers,
     promote: promoteCandidate,

@@ -12,16 +12,14 @@ import {
 import {
   cpSync,
   existsSync,
-  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { getVersion } from "../../get-version.js";
 import { defaultHostValidationFor } from "./host-validation.js";
 import { BuildGraphTypeScriptSourceImportAdapter } from "./import-adapters.js";
@@ -30,6 +28,12 @@ import {
   filesDigest,
   toPosixPath,
 } from "./package-revision.js";
+import {
+  canonicalConfigFile,
+  canonicalPath,
+  pathWithin,
+  resolvePackagePaths,
+} from "./paths.js";
 
 export const GENERATION_DIRECTORY = join(".ph", "build");
 
@@ -46,6 +50,7 @@ export type GenerationSteps = {
   readonly typecheck: (request: {
     readonly packageRoot: string;
     readonly emittedRoot: string;
+    readonly outDir: string;
   }) => Promise<
     | {
         readonly ok: false;
@@ -129,31 +134,18 @@ class CandidateBundleError extends Error {
   }
 }
 
-export function pathWithin(root: string, path: string): string | null {
-  const inside = relative(root, path);
-  return inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside)
-    ? null
-    : inside;
-}
-
 export function assertOutputDirectory(
   packageRoot: string,
   outDir: string,
 ): void {
-  const target = resolve(packageRoot, outDir);
+  const paths = resolvePackagePaths({ packageRoot, outDir });
+  const target = resolve(paths.packageRoot, paths.outDir);
   const isInside = (root: string, path: string): boolean =>
     (pathWithin(root, path) ?? "") !== "";
   let physicallyInside = false;
-  if (isInside(resolve(packageRoot), target)) {
-    let ancestor = target;
-    while (lstatSync(ancestor, { throwIfNoEntry: false }) === undefined) {
-      ancestor = dirname(ancestor);
-    }
+  if (isInside(paths.packageRoot, target)) {
     try {
-      physicallyInside = isInside(
-        realpathSync.native(packageRoot),
-        resolve(realpathSync.native(ancestor), relative(ancestor, target)),
-      );
+      physicallyInside = isInside(paths.packageRoot, canonicalPath(target));
     } catch {
       physicallyInside = false;
     }
@@ -169,9 +161,10 @@ export function packageRevisionOf(
   packageRoot: string,
   outDir: string,
 ): `sha256:${string}` {
+  const paths = resolvePackagePaths({ packageRoot, outDir });
   return computePackageRevision({
-    packageRoot,
-    excludedDirectories: [outDir],
+    packageRoot: paths.packageRoot,
+    excludedDirectories: [paths.outDir],
     respectGitignore: true,
     bindings: { compiler: getVersion() },
   });
@@ -182,11 +175,13 @@ const pendingGenerations = new Map<string, Promise<void>>();
 export async function runGeneration(
   request: GenerationRequest,
 ): Promise<GenerationResult> {
-  const packageRoot = realpathSync.native(request.packageRoot);
+  const paths = resolvePackagePaths(request);
+  const { packageRoot } = paths;
+  const configFile = canonicalConfigFile(request.configFile);
   const previous = pendingGenerations.get(packageRoot) ?? Promise.resolve();
   const pending = previous.then(async () => {
     try {
-      return await generate({ ...request, packageRoot });
+      return await generate({ ...request, ...paths, configFile });
     } finally {
       discardScratch(packageRoot);
     }
@@ -252,6 +247,7 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
   const typecheck = await request.steps.typecheck({
     packageRoot: request.packageRoot,
     emittedRoot,
+    outDir: request.outDir,
   });
   if (!typecheck.ok) {
     log("✘ TypeScript failed; no definition was evaluated.\n");
@@ -448,12 +444,13 @@ function isReleaseApproval(value: unknown): value is ReleaseApproval {
   );
 }
 
-export function readRetainedApproval(request: {
+export function readRetainedApproval(input: {
   readonly packageRoot: string;
   readonly outDir: string;
   readonly warningsAsErrors: boolean;
   readonly sourceSetDigest: string;
 }): ApprovalCheck {
+  const request = { ...input, ...resolvePackagePaths(input) };
   const path = approvalPath(request.packageRoot);
   if (!existsSync(path)) {
     return { ok: false, reason: "no completed release check was retained" };
@@ -570,14 +567,23 @@ function relocateSourceMap(
   servedFrom: string,
 ): string {
   const map = JSON.parse(text) as { sources?: unknown; sourceRoot?: unknown };
-  if (!Array.isArray(map.sources) || (map.sourceRoot ?? "") !== "") {
+  const sourceRoot = typeof map.sourceRoot === "string" ? map.sourceRoot : "";
+  const isUrl = (path: string): boolean =>
+    !isAbsolute(path) && /^[a-z][a-z\d+.-]*:/i.test(path);
+  if (!Array.isArray(map.sources) || isUrl(sourceRoot)) {
     return text;
   }
   return JSON.stringify({
     ...map,
+    sourceRoot: "",
     sources: map.sources.map((source: unknown) =>
-      typeof source === "string" && !/^[a-z][a-z\d+.-]*:/i.test(source)
-        ? toPosixPath(relative(servedFrom, resolve(writtenIn, source)))
+      typeof source === "string" && !isUrl(source)
+        ? toPosixPath(
+            relative(
+              servedFrom,
+              canonicalPath(resolve(writtenIn, sourceRoot, source)),
+            ),
+          )
         : source,
     ),
   });

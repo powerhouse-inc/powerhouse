@@ -106,7 +106,7 @@ describe("published source maps", () => {
         "export const foo = 1;\n",
       );
       const steps = {
-        ...(await createGenerationSteps("dist")),
+        ...(await createGenerationSteps()),
         typecheck: recorder().steps.typecheck,
       };
       const result = await runBuild(

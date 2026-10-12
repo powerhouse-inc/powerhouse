@@ -22,12 +22,12 @@ export function recorder(
   const calls: string[] = [];
   const state = { candidateWrites: 0, promotions: 0 };
   const steps: GenerationSteps = {
-    typecheck: async ({ packageRoot, emittedRoot }) => {
+    typecheck: async ({ packageRoot, emittedRoot, outDir }) => {
       calls.push("typecheck");
       if (options.typecheckOk === false) {
         return { ok: false, summary: "2 type errors" };
       }
-      return await emitFixture(packageRoot, emittedRoot);
+      return await emitFixture(packageRoot, emittedRoot, outDir);
     },
     emitCandidate: ({ candidateRoot }) => {
       calls.push("candidate");

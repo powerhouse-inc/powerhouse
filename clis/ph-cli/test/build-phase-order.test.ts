@@ -127,7 +127,7 @@ describe("opting into builds with type errors", () => {
             {
               steps: {
                 ...recording.steps,
-                typecheck: createTypecheckStep("npm", "dist", {
+                typecheck: createTypecheckStep("npm", {
                   ignoreTypeErrors,
                 }),
               },

@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { materializeFixturePackage } from "../../../packages/document-model/test/tooling/loader-contract.js";
-import { runBuild } from "../src/services/build.js";
+import { runBuild, runPrepack } from "../src/services/build.js";
 
 describe("building through a symlinked package root", () => {
   it.each([
@@ -20,6 +20,7 @@ describe("building through a symlinked package root", () => {
     "absolute declarations",
     "absolute compiler output",
     "absolute output",
+    "source directory symlink",
   ])(
     "publishes identical definitions, bundles and declarations with %s paths",
     async (layout) => {
@@ -33,9 +34,34 @@ describe("building through a symlinked package root", () => {
       );
       const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
       try {
+        const sources =
+          layout === "source directory symlink" ? "models" : "src";
+        if (sources === "models") {
+          symlinkSync(
+            join(fixture.root, "src"),
+            join(fixture.root, sources),
+            process.platform === "win32" ? "junction" : "dir",
+          );
+          writeFileSync(
+            join(fixture.root, "powerhouse.config.json"),
+            JSON.stringify({
+              definitionSources: {
+                formatVersion: 1,
+                mode: "code-first",
+                entries: [
+                  {
+                    specifier: "./models/invoice.ts",
+                    exportPath: ["invoiceFamily"],
+                  },
+                  { specifier: "./models/catalog.ts" },
+                ],
+              },
+            }),
+          );
+        }
         writeFileSync(
           join(fixture.root, "index.ts"),
-          'export { invoiceFamily } from "./src/invoice.js";\n',
+          `export { invoiceFamily } from "./${sources}/invoice.js";\n`,
         );
         writeFileSync(
           join(fixture.root, "package.json"),
@@ -75,7 +101,7 @@ describe("building through a symlinked package root", () => {
                 emitDeclarationOnly: true,
                 skipLibCheck: true,
               },
-              include: ["index.ts", "src/**/*.ts"],
+              include: ["index.ts", `${sources}/**/*.ts`],
             }),
           );
         };
@@ -99,15 +125,26 @@ describe("building through a symlinked package root", () => {
             result.exitCode,
             messages.join("") + JSON.stringify(result.report?.diagnostics),
           ).toBe(0);
+          expect(result.phases).toEqual([
+            "typecheck",
+            "definitions",
+            "candidate",
+            "packed",
+            "promote",
+          ]);
+          expect(result.report?.definitions).toMatchObject([
+            { kind: "document-model", key: "test/invoice", version: 1 },
+            { kind: "document-model", key: "test/invoice", version: 2 },
+          ]);
           const dist = join(fixture.root, "dist");
           const artifacts = Object.fromEntries(
             readdirSync(dist, { recursive: true, encoding: "utf8" })
               .filter((file) => statSync(join(dist, file)).isFile())
               .sort()
-              .map((file) => [file, readFileSync(join(dist, file), "utf8")]),
+              .map((file) => [file, readFileSync(join(dist, file))]),
           );
-          expect(artifacts).toHaveProperty("types/src/invoice.d.ts");
-          expect(artifacts).toHaveProperty("types/src/invoice.d.ts.map");
+          expect(artifacts).toHaveProperty(`types/${sources}/invoice.d.ts`);
+          expect(artifacts).toHaveProperty(`types/${sources}/invoice.d.ts.map`);
           expect(artifacts).toHaveProperty("node/index.mjs");
           expect(artifacts).toHaveProperty("browser/index.js");
           return {
@@ -119,6 +156,28 @@ describe("building through a symlinked package root", () => {
         rmSync(join(fixture.root, "dist"), { recursive: true, force: true });
         const linked = await build(alias);
         expect(linked).toEqual(direct);
+        for (const root of [fixture.root, alias]) {
+          const messages: string[] = [];
+          const retained = await runPrepack(
+            {
+              configFile: join(root, "powerhouse.config.json"),
+              outDir:
+                layout === "absolute output" ? join(root, "dist") : "dist",
+              source: [],
+              warningsAsErrors: false,
+              noSharedDeps: false,
+              ignoreTypeErrors: false,
+              debug: false,
+            },
+            { log: (text) => messages.push(text) },
+          );
+          expect(retained.exitCode).toBe(0);
+          expect(retained.phases).toEqual([]);
+          expect(retained.report).toEqual(linked.result.report);
+          expect(messages.join("")).toContain(
+            "Reusing the completed release check",
+          );
+        }
       } finally {
         log.mockRestore();
         rmSync(temporary, { recursive: true, force: true });

@@ -1,6 +1,7 @@
 import type { TypeScriptSourceImportInterface } from "document-model/tooling";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { canonicalPath } from "./paths.js";
 export { ViteTypeScriptSourceImportAdapter } from "@powerhousedao/codegen/utils";
 
 export class BuildGraphTypeScriptSourceImportAdapter implements TypeScriptSourceImportInterface {
@@ -19,7 +20,7 @@ export class BuildGraphTypeScriptSourceImportAdapter implements TypeScriptSource
     readonly specifier: `./${string}`;
   }): Promise<Readonly<Record<string, unknown>>> {
     const emitted = this.#emittedModules.get(
-      resolve(this.#packageRoot, request.specifier),
+      canonicalPath(resolve(this.#packageRoot, request.specifier)),
     );
     if (emitted === undefined) {
       throw new Error(`TypeScript emitted no module for ${request.specifier}.`);
