@@ -134,12 +134,18 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
 
   it("advances past a withheld run longer than the scan cap", async () => {
     const run = Array.from({ length: 12 }, (_, i) => `x${i}`);
-    await insert(files(...run, "a"));
+    await insert(files(...run, "a", ...run.map((id) => `${id}b`), "b"));
 
-    const page = await rootNodes(1);
+    const first = await rootNodes(1);
 
-    expect(page.results.map((n) => n.id)).toEqual(["a"]);
-    expect(page.hasMore).toBe(false);
+    expect(first.results.map((n) => n.id)).toEqual(["a"]);
+    expect(first.hasMore).toBe(true);
+    expect(cursorId(first.nextCursor!)).toBe("a");
+
+    const second = await rootNodes(1, first.nextCursor);
+
+    expect(second.results.map((n) => n.id)).toEqual(["b"]);
+    expect(second.hasMore).toBe(false);
   });
 
   it("returns a page anchored on its last served node when the scan cap is hit", async () => {
