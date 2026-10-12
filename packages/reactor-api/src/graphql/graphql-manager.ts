@@ -822,7 +822,7 @@ export class GraphQLManager {
   ):
     | { action: "skip"; existing: ISubgraph }
     | { action: "reject" }
-    | { action: "add"; replaces: ISubgraph[] } {
+    | { action: "add"; replaces: ISubgraph[]; evicts: ISubgraph[] } {
     // A package subgraph may not take a name a core subgraph has registered:
     // the in-process handler map is keyed by bare name, so a same-name
     // subgraph would shadow the core one (issue #2972).
@@ -863,15 +863,11 @@ export class GraphQLManager {
       return { action: "reject" };
     }
 
-    for (const holder of rivals) {
-      this.logger.error(
-        "Evicting subgraph @name from @existing: @origin outranks it",
-        instance.name,
-        describeOrigin(this.#originOf(holder)),
-        describeOrigin(origin),
-      );
-    }
-    return { action: "add", replaces: Array.from(holders) };
+    return {
+      action: "add",
+      replaces: Array.from(holders).filter((it) => !rivals.includes(it)),
+      evicts: rivals,
+    };
   }
 
   #originOf(instance: ISubgraph): SubgraphOrigin {
@@ -897,12 +893,23 @@ export class GraphQLManager {
       return admission.existing;
     }
 
-    const { replaces } = admission;
+    const { replaces, evicts } = admission;
     for (const replaced of replaces) {
       await this.#removeSubgraphInstance(replaced);
     }
 
     await this.#runHook(() => subgraphInstance.onSetup?.());
+
+    // After setup, so a subgraph that fails to set up leaves the holder.
+    for (const evicted of evicts) {
+      this.logger.error(
+        "Evicting subgraph @name from @existing: @origin outranks it",
+        subgraphInstance.name,
+        describeOrigin(this.#originOf(evicted)),
+        describeOrigin(origin),
+      );
+      await this.#removeSubgraphInstance(evicted);
+    }
 
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
     for (const bucket of this.#mountBuckets(supergraph)) {
@@ -924,7 +931,7 @@ export class GraphQLManager {
       instances.add(subgraphInstance);
     }
     this.logger.info(
-      `${replaces.length > 0 ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+      `${replaces.length + evicts.length > 0 ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
   }

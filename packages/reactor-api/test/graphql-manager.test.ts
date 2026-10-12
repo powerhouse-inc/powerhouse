@@ -3060,6 +3060,33 @@ describe("GraphQLManager", () => {
       expect(await detached).toBe(detachedSubgraph);
     });
 
+    it("keeps a lower-ranked holder when the subgraph evicting it fails to set up", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      class Shared extends BaseSubgraph {
+        name = "shared";
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
+      const held = manager.getSubgraphByName("shared");
+      const failing = {
+        ...makeWidgetSubgraph("shared"),
+        onSetup: () => Promise.reject(new Error("setup failed")),
+      };
+
+      await expect(
+        manager.registerSubgraphInstance(failing, "graphql"),
+      ).rejects.toThrow("setup failed");
+
+      expect(manager.getSubgraphByName("shared")).toBe(held);
+      expect(logger.error).not.toHaveBeenCalledWith(
+        EVICTION,
+        "shared",
+        "package pkg",
+        "the host",
+      );
+    });
+
     it("serves every model's subgraph when a model is named like a generated subgraph type", async () => {
       const logger = makeHarnessLogger();
       const { manager, gatewayAdapter } = makeHarness({
