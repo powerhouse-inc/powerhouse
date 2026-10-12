@@ -36,7 +36,7 @@ type Host = {
 const OPERATOR: WireInspectorAccess = { admin: false, sql: false };
 
 function fakeInspectionFetch(host: Host): typeof fetch {
-  const answers: Record<string, () => unknown> = {
+  const answers: Partial<Record<string, () => unknown>> = {
     ReactorInspectionInfo: () => {
       const info: WireReactorInfo = {
         storage: {
