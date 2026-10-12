@@ -10,6 +10,7 @@ import {
   Switch,
   textInputClass,
 } from "../../shared/controls.js";
+import { usePendingEcho } from "../../shared/pending-echo.js";
 import {
   configFromDraft,
   draftFromConfig,
@@ -115,36 +116,15 @@ function EveryInput(props: {
   );
 }
 
-// Sorted keys, so a config and its echo compare equal however each was built.
-function keyOf(config: unknown): string {
-  return JSON.stringify(config, (_, value: unknown) =>
-    value && typeof value === "object" && !Array.isArray(value)
-      ? Object.fromEntries(
-          Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
-        )
-      : value,
-  );
-}
-
 export function ScheduleBuilder(props: {
   config: unknown;
   onChange: (config: Record<string, unknown>) => void;
 }) {
   const everyId = useId();
   const cronId = useId();
-  // Saves echo back late and in order: each change builds on the newest config
-  // sent, and an echo of one still in flight changes nothing.
-  const savedKey = keyOf(props.config);
-  const [sent, setSent] = useState<Record<string, unknown>[]>([]);
-  const [seen, setSeen] = useState(savedKey);
-  let pending = sent;
-  if (seen !== savedKey) {
-    const echo = sent.findIndex((config) => keyOf(config) === savedKey);
-    pending = echo === -1 ? [] : sent.slice(echo + 1);
-    setSeen(savedKey);
-    setSent(pending);
-  }
-  const config: unknown = pending.at(-1) ?? props.config;
+  // Each change builds on the newest config sent; its echo changes nothing.
+  const echo = usePendingEcho(props.config, props.onChange);
+  const config = echo.value;
   const parsed = draftFromConfig(config);
   const timezone = timezoneOf(config);
   // Custom stays open while its cron is typed, even when it spells a preset.
@@ -153,27 +133,13 @@ export function ScheduleBuilder(props: {
     customPinned && parsed.kind !== "custom"
       ? switchKind(parsed, "custom")
       : parsed;
-  const commit = (next: ScheduleDraft, zone = timezone) => {
-    const nextConfig = configFromDraft(next, zone);
-    if (keyOf(nextConfig) === keyOf(config)) return;
-    setSent([...pending, nextConfig]);
-    props.onChange(nextConfig);
-  };
+  const commit = (next: ScheduleDraft, zone = timezone) =>
+    echo.commit(configFromDraft(next, zone));
   // The runtime's own parser: what it would refuse, said before it is armed.
   const issue = scheduleConfigIssue(config);
 
   return (
-    <div
-      className="flex flex-col gap-5"
-      onBlur={(event) => {
-        // Saves coalesced back to the saved config never echo one by one.
-        const inside = event.currentTarget.contains(
-          event.relatedTarget as Node | null,
-        );
-        const last = pending.at(-1);
-        if (!inside && last && keyOf(last) === savedKey) setSent([]);
-      }}
-    >
+    <div className="flex flex-col gap-5" onBlur={echo.onBlur}>
       <div>
         <FieldLabel label="Repeats" />
         <Segmented
