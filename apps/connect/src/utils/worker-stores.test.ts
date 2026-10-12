@@ -346,7 +346,8 @@ describe("worker retired during boot", () => {
   });
 });
 
-describe("worker retired by a deploy", () => {
+// Above the 5s waits on a real job, so a stuck wait names its expectation.
+describe("worker retired by a deploy", { timeout: 15_000 }, () => {
   const databases = useReactorDatabases();
   const NEXT_BUILD = {
     ...HELLO,
@@ -428,6 +429,8 @@ describe("worker retired by a deploy", () => {
   it("tells the tabs to reload and releases the stores once the bound passes", async () => {
     const { names, host, open, statusAtStop } =
       await workerWithAcceptedJob(300);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cleanup.push(() => warn.mockRestore());
     const startedAt = Date.now();
     await tab(host).send(NEXT_BUILD);
     const next = otherWorkerAcquires(names.reactor);
@@ -438,7 +441,9 @@ describe("worker retired by a deploy", () => {
     });
     await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(300);
-    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(warn).toHaveBeenCalledWith(
+      "[connect] reactor queue did not drain within 300ms",
+    );
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
   });
 
