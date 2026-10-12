@@ -113,6 +113,17 @@ async function settleWithin(
   clearTimeout(timer);
 }
 
+/** True only when the store is known closed; as Connect's `closeWithin`. */
+async function closeStore(close: () => Promise<void>): Promise<boolean> {
+  try {
+    await close();
+    return true;
+  } catch (error) {
+    console.error("[reactor-monitor] store close failed:", error);
+    return false;
+  }
+}
+
 function reportUnrecoverable(cause: Error): void {
   console.error("[reactor-monitor] reactor store poisoned:", cause);
 }
@@ -143,6 +154,17 @@ export async function buildMonitorReactor(
   const onUnrecoverable = options.onUnrecoverable ?? reportUnrecoverable;
   const lock = storage.kind === "memory" ? undefined : options.storeLocks;
   const unlock = () => lock?.release(options.namespace);
+  // A store that did not close may still be open: no other owner may open it.
+  const releaseAfterClose = (closed: boolean): void => {
+    if (closed) {
+      unlock();
+    } else if (lock) {
+      lock.keep(options.namespace);
+      console.error(
+        `[reactor-monitor] ${options.namespace} stays held until this realm ends`,
+      );
+    }
+  };
   await lock?.acquire(options.namespace);
   let pg: PGlite;
   try {
@@ -231,8 +253,7 @@ export async function buildMonitorReactor(
   try {
     module = await clientBuilder.buildModule();
   } catch (error) {
-    await pg.close().catch(() => undefined);
-    unlock();
+    releaseAfterClose(await closeStore(() => pg.close()));
     throw error;
   }
 
@@ -302,15 +323,9 @@ export async function buildMonitorReactor(
       } catch (error) {
         console.error("[reactor-monitor] database destroy failed:", error);
       }
-      try {
-        // Group commit flushes, then closes pg itself.
-        await (rm?.groupCommitStorage
-          ? rm.groupCommitStorage.close()
-          : pg.close());
-      } catch (error) {
-        console.error("[reactor-monitor] store close failed:", error);
-      }
-      unlock();
+      // Group commit flushes, then closes pg itself.
+      const store = rm?.groupCommitStorage ?? pg;
+      releaseAfterClose(await closeStore(() => store.close()));
     })();
     return shuttingDown;
   };

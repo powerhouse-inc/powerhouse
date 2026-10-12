@@ -181,4 +181,46 @@ describe("buildMonitorReactor", () => {
     expect(opens.filter((name) => name === options.namespace)).toHaveLength(2);
     expect(holder.pg.closed).toBe(true);
   });
+
+  it("keeps a store's lock when its close fails", async () => {
+    const storeLocks = {
+      acquire: vi.fn(() => Promise.resolve()),
+      release: vi.fn(),
+      keep: vi.fn(),
+    };
+    const reactor = await buildMonitorReactor({
+      namespace: "build-close-fails",
+      storage: { kind: "idb" },
+      storeLocks,
+    });
+    vi.spyOn(
+      reactor.module.reactorModule!.groupCommitStorage!,
+      "close",
+    ).mockRejectedValue(new Error("close refused"));
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    await reactor.shutdown();
+
+    expect(storeLocks.release).not.toHaveBeenCalled();
+    expect(storeLocks.keep).toHaveBeenCalledWith("build-close-fails");
+    expect(error).toHaveBeenCalledWith(
+      expect.stringMatching(/build-close-fails stays held/),
+    );
+    error.mockRestore();
+    await reactor.pg.close();
+  });
+
+  it("refuses this realm a namespace kept after a failed close", async () => {
+    const locks = createStoreLocks({
+      request: ((_name: string, _options: unknown, grant: () => unknown) =>
+        Promise.resolve(grant())) as LockManager["request"],
+    });
+    await locks.acquire("kept");
+
+    locks.keep("kept");
+
+    await expect(locks.acquire("kept")).rejects.toThrow(/kept.*stays held/);
+  });
 });
