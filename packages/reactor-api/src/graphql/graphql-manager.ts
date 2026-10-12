@@ -309,8 +309,9 @@ export class GraphQLManager {
 
   /**
    * Origin → the subgraph instances registered from it. Core and host
-   * subgraphs are not tracked. Tracks the package association so that removed packages can
-   * be torn down (see unregisterPackage / prunePackageSubgraphs).
+   * subgraphs are not tracked. Tracks the package association so that
+   * removed packages can be torn down (see unregisterPackage /
+   * prunePackageSubgraphs).
    */
   private readonly packageSubgraphs = new Map<TrackedOrigin, Set<ISubgraph>>();
 
@@ -834,10 +835,10 @@ export class GraphQLManager {
     const holders = this.#holdersOf(instance.name);
     if (holders.has(instance)) return { action: "skip", existing: instance };
 
-    const evicted = Array.from(holders).filter(
+    const rivals = Array.from(holders).filter(
       (holder) => this.#originOf(holder) !== origin,
     );
-    for (const holder of evicted) {
+    for (const holder of rivals) {
       const holderOrigin = this.#originOf(holder);
       if (rank(origin) <= rank(holderOrigin)) {
         this.logger.error(
@@ -860,7 +861,7 @@ export class GraphQLManager {
       return { action: "reject" };
     }
 
-    for (const holder of evicted) {
+    for (const holder of rivals) {
       this.logger.error(
         "Evicting subgraph @name from @existing: @origin outranks it",
         instance.name,
