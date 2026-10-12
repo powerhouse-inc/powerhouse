@@ -12,8 +12,12 @@
  *
  * Plain CSS and a poll loop, forked from QueueTab/SyncTab (see QueueTab's
  * header note); large drives are paged the way SyncTab pages dead letters.
+ *
+ * Creates a drive through `client.drives.create`, the path the dev handle
+ * uses; a remote reactor's client is unwired, so it gets no form.
  */
 import type {
+  IDriveClient,
   InspectorDriveInfo,
   InspectorDriveIntegrity,
   Remote,
@@ -27,6 +31,8 @@ import { useCallback, useEffect, useState } from "react";
 export type DrivesTabProps = {
   readonly inspector: MonitorInspector;
   readonly syncManager: MonitorSyncManager | undefined;
+  /** Absent for a remote reactor. */
+  readonly drives?: Pick<IDriveClient, "create">;
 };
 
 const POLL_INTERVAL_MS = 2000;
@@ -68,7 +74,11 @@ function IntegrityResult({ result }: { result: InspectorDriveIntegrity }) {
   );
 }
 
-export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
+export function DrivesTab({
+  inspector,
+  syncManager,
+  drives: driveClient,
+}: DrivesTabProps) {
   const [drives, setDrives] = useState<InspectorDriveInfo[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [paged, setPaged] = useState(false);
@@ -83,6 +93,9 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
   const [integrityError, setIntegrityError] = useState<Map<string, string>>(
     new Map(),
   );
+  const [newDriveName, setNewDriveName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const refreshRemotes = useCallback(() => {
     if (!syncManager) {
@@ -152,6 +165,25 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
     return () => clearInterval(interval);
   }, [loadFirst, paged]);
 
+  const createDrive = useCallback(async () => {
+    const name = newDriveName.trim();
+    if (!driveClient || !name) {
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await driveClient.create({ global: { name } });
+      setNewDriveName("");
+      setPaged(false);
+      await loadFirst();
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCreating(false);
+    }
+  }, [driveClient, newDriveName, loadFirst]);
+
   const runIntegrity = useCallback(
     async (driveId: string, branch: string) => {
       try {
@@ -199,6 +231,44 @@ export function DrivesTab({ inspector, syncManager }: DrivesTabProps) {
           </button>
         </div>
       </div>
+
+      {driveClient ? (
+        <form
+          className="rm-form rm-form-inline"
+          data-testid="drives-create-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void createDrive();
+          }}
+        >
+          <label>
+            Drive name
+            <input
+              onChange={(e) => setNewDriveName(e.target.value)}
+              placeholder="my-drive"
+              type="text"
+              value={newDriveName}
+            />
+          </label>
+          <button
+            className="rm-btn"
+            disabled={creating || newDriveName.trim() === ""}
+            type="submit"
+          >
+            Create drive
+          </button>
+        </form>
+      ) : (
+        <p className="rm-note" data-testid="drives-create-unavailable">
+          This reactor runs on another host; its inspection subgraph serves
+          reads only, so drives cannot be created from here.
+        </p>
+      )}
+      {createError ? (
+        <p className="rm-error" role="alert">
+          Failed to create drive: {createError}
+        </p>
+      ) : null}
 
       {error ? <p className="rm-error">{error}</p> : null}
 

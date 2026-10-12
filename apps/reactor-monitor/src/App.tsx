@@ -125,6 +125,7 @@ function ReadyPanel({
     case "Drives":
       return (
         <DrivesTab
+          drives={reactor.kind === "remote" ? undefined : reactor.client.drives}
           inspector={reactor.inspector}
           syncManager={reactor.syncManager}
         />
