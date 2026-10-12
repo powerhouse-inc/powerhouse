@@ -1,9 +1,5 @@
 // The whole workflow, left to right: the trigger as a labelled pill, then
 // every step it reaches, branches included, coloured by the latest run.
-import {
-  ConnectTooltip,
-  ConnectTooltipProvider,
-} from "@powerhousedao/design-system/connect";
 import type { WorkflowState } from "document-models/workflow";
 import {
   useLayoutEffect,
@@ -13,27 +9,13 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import type {
-  RunRecord,
-  RunStepRecord,
-} from "../../workflow-editor/runtime-client.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { blockMeta } from "../../workflow-editor/ui/block-meta.js";
 import { BlockLogo } from "../../workflow-editor/ui/BlockSelector.js";
 import { stepBlock, triggerBlock } from "../../workflow-editor/ui/blocks.js";
-import {
-  graphLayout,
-  TRIGGER_NODE,
-  type GraphEdge,
-  type GraphNode,
-} from "./graph-layout.js";
-import {
-  formatDuration,
-  formatWhen,
-  statusLabel,
-  STEP_TONE,
-  toneOf,
-  type Tone,
-} from "./run-format.js";
+import { graphLayout, TRIGGER_NODE, type GraphEdge } from "./graph-layout.js";
+import { STEP_TONE, toneOf, type Tone } from "./run-format.js";
+import { StepTip, Tip, TipProvider, TriggerTip } from "./tips.js";
 
 // Sizes: compact for the overview, larger for a workflow's own page; both
 // name each step under its circle.
@@ -178,12 +160,6 @@ const PORT_PILL: Record<string, string> = {
   true: "bg-wf-ok/10 text-wf-ok ring-wf-ok/30",
   false: "bg-foreground/5 text-muted-foreground ring-foreground/15",
   error: "bg-wf-fail/10 text-wf-fail ring-wf-fail/30",
-};
-
-const PORT_TEXT: Record<string, string> = {
-  true: "Runs when the condition is true",
-  false: "Runs when the condition is false",
-  error: "Runs when the step before it fails",
 };
 
 export type Point = [number, number];
@@ -342,55 +318,6 @@ function Mark({
   );
 }
 
-function Tip(props: { content: ReactNode; children: ReactNode }) {
-  return (
-    <ConnectTooltip
-      content={props.content}
-      side="bottom"
-      delayDuration={100}
-      className="max-w-64 rounded-md border-solid border-foreground/10 bg-card px-2.5 py-1.5 text-foreground shadow-lg"
-    >
-      {props.children}
-    </ConnectTooltip>
-  );
-}
-
-function stepSummary(record: RunStepRecord | undefined, ran: boolean): string {
-  if (!ran) return "Not run yet";
-  if (!record) return "Not reached in the latest run";
-  const took =
-    record.startedAt && record.endedAt
-      ? ` · ${formatDuration(record.startedAt, record.endedAt)}`
-      : "";
-  return `${statusLabel(record.status)} in the latest run${took}`;
-}
-
-function StepTip(props: {
-  node: GraphNode;
-  record?: RunStepRecord;
-  ran: boolean;
-}) {
-  const { step } = props.node;
-  const meta = blockMeta(stepBlock(step));
-  return (
-    <span className="flex flex-col gap-0.5">
-      <span className="font-medium">{step.name || step.key}</span>
-      <span className="text-muted-foreground">
-        {meta.displayName} · {meta.subtitle}
-      </span>
-      {props.node.port ? (
-        <span className="text-muted-foreground">
-          {PORT_TEXT[props.node.port] ?? `Runs on "${props.node.port}"`}
-        </span>
-      ) : null}
-      <span className="mt-1">{stepSummary(props.record, props.ran)}</span>
-      {props.record?.error ? (
-        <span className="line-clamp-3 text-wf-fail">{props.record.error}</span>
-      ) : null}
-    </span>
-  );
-}
-
 export function WorkflowGraph(props: {
   state: WorkflowState;
   // How the trigger reads, e.g. "Manual" or "Every day at 08:00 UTC".
@@ -514,35 +441,15 @@ export function WorkflowGraph(props: {
     return { left, width: w };
   };
   const trigger = state.trigger ? triggerBlock(state.trigger) : null;
-  const triggerMeta = trigger ? blockMeta(trigger) : null;
 
   return (
-    // Read-only tips: close on leave, so the next step's tip can open.
-    <ConnectTooltipProvider disableHoverableContent>
+    <TipProvider>
       <div
         ref={frame}
         className={stacked ? "flex flex-col items-start" : "flex items-start"}
       >
         <span ref={pill} className="flex shrink-0">
-          <Tip
-            content={
-              <span className="flex flex-col gap-0.5">
-                <span className="font-medium">
-                  {triggerMeta?.displayName ?? "No trigger"}
-                </span>
-                {triggerMeta ? (
-                  <span className="text-muted-foreground">
-                    {triggerMeta.subtitle}
-                  </span>
-                ) : null}
-                <span className="mt-1">
-                  {latest
-                    ? `Last fired ${formatWhen(latest.startedAt)}`
-                    : "Not fired yet"}
-                </span>
-              </span>
-            }
-          >
+          <Tip content={<TriggerTip trigger={trigger} latest={latest} />}>
             <Mark
               label={`Trigger: ${props.triggerText}`}
               onOpen={props.onOpen}
@@ -613,7 +520,12 @@ export function WorkflowGraph(props: {
               const name = node.step.name || node.step.key;
               const { x, y } = spot(node.col, node.lane);
               const tip = (
-                <StepTip node={node} record={record} ran={Boolean(latest)} />
+                <StepTip
+                  step={node.step}
+                  port={node.port}
+                  record={record}
+                  ran={Boolean(latest)}
+                />
               );
               return (
                 <li key={node.step.id}>
@@ -673,6 +585,6 @@ export function WorkflowGraph(props: {
           </ol>
         ) : null}
       </div>
-    </ConnectTooltipProvider>
+    </TipProvider>
   );
 }

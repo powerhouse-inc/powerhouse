@@ -38,6 +38,7 @@ import {
   type LocalReactorModule,
 } from "../../src/store/multi-reactor.js";
 import { configureConnectChannelScheme } from "../../src/utils/reactor-channel-scheme.js";
+import { useReactorDatabases } from "../reactor-database.js";
 import {
   DRIVE_TYPE,
   serve,
@@ -211,6 +212,7 @@ describe("local facts", () => {
 
   describe("on the main thread, syncChannels come from the built channel factory", () => {
     const built: InProcessReactorModule[] = [];
+    const databases = useReactorDatabases();
 
     afterEach(async () => {
       for (const module of built.splice(0)) {
@@ -220,7 +222,7 @@ describe("local facts", () => {
     });
 
     async function browserModule(multiReactor: boolean) {
-      const builder = new ReactorBuilder();
+      const builder = new ReactorBuilder().withKysely(databases.kysely());
       configureConnectChannelScheme(builder, {
         multiReactor,
         createLocalChannelFactory: () =>
