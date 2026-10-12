@@ -17,7 +17,7 @@ export interface ReactorDriveResolverContext {
 }
 
 type PagingInput = { cursor?: string; limit?: number };
-type NodeKindFilter = "FILE" | "FOLDER" | undefined;
+type NodeKindFilter = "FILE" | "FOLDER" | null | undefined;
 
 const DEFAULT_LIMIT = 100;
 
@@ -126,8 +126,7 @@ async function listServedChildren(
 ) {
   const limit = paging?.limit ?? DEFAULT_LIMIT;
   const cap = limit * LIST_SCAN_CAP_MULTIPLIER;
-  const wanted =
-    kind === undefined ? undefined : kind === "FILE" ? "file" : "folder";
+  const wanted = !kind ? undefined : kind === "FILE" ? "file" : "folder";
   const results: ReactorDriveNode[] = [];
   let anchor = paging?.cursor ?? "";
   let scanFrom = anchor;

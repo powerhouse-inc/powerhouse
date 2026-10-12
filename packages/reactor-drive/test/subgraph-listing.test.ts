@@ -89,7 +89,7 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
   function rootNodes(
     limit: number,
     cursor = "",
-    kind?: "FILE" | "FOLDER",
+    kind?: "FILE" | "FOLDER" | null,
   ): Promise<Page> {
     return resolvers.ReactorDrive.rootNodes(
       { id: DRIVE },
@@ -202,6 +202,17 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
     const page = await rootNodes(1, "", "FILE");
 
     expect(page.results.map((n) => n.id)).toEqual(["a"]);
+  });
+
+  it("serves every kind when kind is null", async () => {
+    await insert([
+      { id: "d1", kind: "folder" },
+      { id: "a", kind: "file" },
+    ]);
+
+    const page = await rootNodes(10, "", null);
+
+    expect(page.results.map((n) => n.id)).toEqual(["d1", "a"]);
   });
 
   it("serves a FOLDER page without consulting the read gate", async () => {
