@@ -7,13 +7,15 @@ import {
   resolvers as packageResolvers,
   typeDefs as scalarsTypeDefs,
 } from "@powerhousedao/document-engineering/graphql";
-import { scalarCatalog } from "document-model";
+import { buildScalarCatalog, scalarCatalog } from "document-model";
 import { readFileSync } from "node:fs";
-import { type DocumentNode, Kind, print } from "graphql";
+import { type DocumentNode, Kind, parseValue, print } from "graphql";
 import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   HOST_SCALAR_RESOLVERS,
+  hostScalarResolvers,
   forgetReportedScalarBindings,
   reportScalarBindings,
 } from "../src/graphql/scalar-bindings.js";
@@ -106,6 +108,46 @@ describe("the host's scalar bindings", () => {
       ...measured.declared,
     ]);
     expect(measured.bound).toEqual(["JSONObject", "Unknown"]);
+  });
+});
+
+describe("hostScalarResolvers", () => {
+  it("binds the built-in catalog to exactly the two legacy coercers", () => {
+    const resolvers = hostScalarResolvers(scalarCatalog);
+    expect(Object.keys(resolvers)).toEqual(["JSONObject", "Unknown"]);
+    expect(resolvers.JSONObject).toBe(GraphQLJSONObject);
+    expect(resolvers.Unknown).toBe(GraphQLJSON);
+  });
+
+  it("binds an internal scalar of an extended catalog to its own coercion", () => {
+    const { catalog } = buildScalarCatalog(
+      [
+        {
+          name: "HostCount",
+          description: "A count only the host serves.",
+          representation: "number",
+          validator: z.number().int().nonnegative(),
+          zodSource: "z.number().int().nonnegative()",
+          visibility: "internal",
+        },
+      ],
+      { base: scalarCatalog },
+    );
+    const resolvers = hostScalarResolvers(catalog!);
+    expect(Object.keys(resolvers)).toEqual([
+      "JSONObject",
+      "HostCount",
+      "Unknown",
+    ]);
+    expect(resolvers.JSONObject).toBe(GraphQLJSONObject);
+    const hostCount = resolvers.HostCount;
+    expect(hostCount.name).toBe("HostCount");
+    expect(hostCount.parseValue(3)).toBe(3);
+    expect(() => hostCount.parseValue(-1)).toThrow(/^HostCount /);
+    expect(hostCount.parseLiteral(parseValue("4"))).toBe(4);
+    expect(() => hostCount.parseLiteral(parseValue('"4"'))).toThrow(
+      /^HostCount /,
+    );
   });
 });
 

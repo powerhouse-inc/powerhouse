@@ -51,7 +51,9 @@ export const SCALAR_FACTORIES: ReadonlyMap<
   ),
 );
 
-export const CATALOG_SCALARS: readonly string[] = [...scalarCatalog.names];
+export const CATALOG_SCALARS: readonly string[] = [
+  ...scalarCatalog.authorNames,
+];
 
 /** The state field, and the input field, each scalar is carried by. */
 export function fieldNameFor(name: string): string {

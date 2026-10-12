@@ -5,6 +5,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ph } from "../../src/definition/field.js";
+import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
 import type { AnyDescriptor } from "../../src/definition/types.js";
 import { resolveReference } from "../../src/definition/zod.js";
 
@@ -82,6 +83,13 @@ describe("validators are predicates over the raw input", () => {
   });
 
   it("contains no defaults, catches, transforms, pipes, preprocessing, or coercion", () => {
+    const JsonRecord = defineScalar({
+      name: "JsonRecord",
+      description: "A JSON object with string keys.",
+      representation: "json-object",
+      validator: z.record(z.string(), z.unknown()),
+      zodSource: "z.record(z.string(), z.unknown())",
+    });
     const Status = ph.enum("Status", { values: ["A", "B"] });
     const Leaf = ph.object("Leaf", { fields: { n: ph.Int() } });
     const Big = ph.object("Big", {
@@ -90,7 +98,7 @@ describe("validators are predicates over the raw input", () => {
         money: ph.Money(),
         amount: ph.Amount({ required: true }),
         address: ph.Address(),
-        json: ph.JSONObject(),
+        json: JsonRecord(),
         unknown: ph.Unknown(),
         status: ph.ref(Status),
         tags: ph.list(ph.list(ph.String({ required: true }))),

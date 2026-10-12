@@ -273,6 +273,12 @@ const catalog = {
     meaning:
       "A scalar field-use factory is used as a field without being called",
   },
+  "PH-SCALAR-INTERNAL": {
+    severity: "error",
+    phase: "definition",
+    meaning:
+      "A definition reaches for a catalog scalar that only the reactor host declares",
+  },
   "PH-PKG-LOGICAL-COLLISION": {
     severity: "error",
     phase: "package",

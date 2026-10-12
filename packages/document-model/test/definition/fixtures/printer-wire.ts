@@ -240,7 +240,7 @@ export const PRINTER_FIXTURE: readonly NamedGraphQLTypeDefinition[] = [
         name: "metadata",
         description: null,
         deprecated: null,
-        type: { kind: "scalar", name: "JSONObject", required: false },
+        type: { kind: "scalar", name: "JsonRecord", required: false },
         defaultValue: { nested: { count: 1 }, flag: true },
       },
     ],
@@ -286,7 +286,7 @@ export const PRINTER_FIXTURE: readonly NamedGraphQLTypeDefinition[] = [
 /** The scalar prelude a segment deliberately leaves out. */
 export const FIXTURE_SCALAR_PRELUDE = [
   "scalar DateTime",
-  "scalar JSONObject",
+  "scalar JsonRecord",
   "directive @audit(level: Int, tags: [String!]) on FIELD_DEFINITION",
   "directive @internal on FIELD_DEFINITION",
 ].join("\n");

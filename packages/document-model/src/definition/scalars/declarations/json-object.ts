@@ -8,4 +8,5 @@ export const jsonObjectScalar = defineScalar({
   validator: z.record(z.string(), z.unknown()),
   zodSource: "z.record(z.string(), z.unknown())",
   zero: { kind: "value", value: {} },
+  visibility: "internal",
 });

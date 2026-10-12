@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalJson } from "../../src/definition/primitives.js";
-import {
-  SCALAR_CATALOG_NAMES,
-  scalarCatalog,
-} from "../../src/definition/scalars/catalog.js";
+import { scalarCatalog } from "../../src/definition/scalars/catalog.js";
 import { literalFromJson } from "../../src/definition/scalars/scalar-literal.js";
 import {
   type ConformancePath,
@@ -70,7 +67,7 @@ function citations(entry: ScalarCase) {
   return Object.values(entry.recordedDifferences ?? {});
 }
 
-describe.each(SCALAR_CATALOG_NAMES)("%s", (name) => {
+describe.each(scalarCatalog.names)("%s", (name) => {
   const { accepts, rejects } = SCALAR_CASES[name];
   const cases = [
     ...accepts.map((entry) => ["accepts", entry.id, entry] as const),
@@ -116,7 +113,7 @@ it("records a closed list of differences", () => {
 
 it("cites every recorded difference but the documentation-only ones", () => {
   const cited = new Set(
-    SCALAR_CATALOG_NAMES.flatMap((name) =>
+    scalarCatalog.names.flatMap((name) =>
       [...SCALAR_CASES[name].accepts, ...SCALAR_CASES[name].rejects].flatMap(
         citations,
       ),

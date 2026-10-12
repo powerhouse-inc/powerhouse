@@ -154,11 +154,12 @@ export {
 } from "./printer.js";
 export {
   buildScalarCatalog,
-  SCALAR_CATALOG_NAMES,
   scalarCatalog,
   scalarCatalogReport,
 } from "./scalars/catalog.js";
 export type {
+  CatalogScalar,
+  InternalScalar,
   ScalarBinding,
   ScalarCatalogInterface,
   ScalarCatalogReport,

@@ -1,4 +1,5 @@
 import type {
+  CatalogScalarReferenceDefinition,
   DefinitionDiagnostic,
   DocumentModelDefinition,
   PackageScalarReferenceDefinition,
@@ -16,6 +17,8 @@ import {
 } from "../../src/definition/model.js";
 import {
   buildScalarCatalog,
+  isHostScalarName,
+  isReferenceableScalarName,
   scalarCatalog,
 } from "../../src/definition/scalars/catalog.js";
 import { phidScalar } from "../../src/definition/scalars/declarations/phid.js";
@@ -158,9 +161,9 @@ describe("a package scalar", () => {
     expect(scalarZodSources(catalog!).PhoneNumber).toBe(
       "z.string().regex(/^\\+[1-9]\\d{1,14}$/)",
     );
-    expect(
-      orderedScalarNames(catalog!.names, ["Unknown"], ["JSONObject"]).at(-1),
-    ).toBe("PhoneNumber");
+    expect(orderedScalarNames(catalog!.authorNames, ["Unknown"]).at(-1)).toBe(
+      "PhoneNumber",
+    );
   });
 
   it("refuses a name the catalog already has", () => {
@@ -300,9 +303,14 @@ describe("a package scalar the compiler refuses", () => {
       ...phoneNumberDeclaration,
       name: "String",
     });
+    const FakeJsonObject = defineScalar({
+      ...phoneNumberDeclaration,
+      name: "JSONObject",
+    });
     for (const [factory, name] of [
       [FakePhid, "PHID"],
       [FakeString, "String"],
+      [FakeJsonObject, "JSONObject"],
     ] as const) {
       const diagnostics = diagnosticsOf(() =>
         contacts({ id: factory() }).finalize({ modules: [] }),
@@ -423,6 +431,18 @@ describe("the wire shape of a package scalar reference", () => {
     ).toContain("specifications/0/scalars/0/name");
     expect(
       tampered((reference) => {
+        reference.name = "JSONObject";
+      }),
+    ).toContain("specifications/0/scalars/0/name");
+    expect(
+      tampered((reference) => {
+        delete reference.definition;
+        reference.name = "JSONObject";
+        reference.implementation = "powerhouse.catalog#JSONObject";
+      }),
+    ).toContain("specifications/0/scalars/0/name");
+    expect(
+      tampered((reference) => {
         reference.name = "Fax";
         reference.implementation = "package#Fax";
         (reference.definition as Record<string, unknown>).name = "Fax";
@@ -430,6 +450,93 @@ describe("the wire shape of a package scalar reference", () => {
     ).toEqual([
       "specifications/0/modules/0/operations/0/input/fields/0/type/name",
       "specifications/0/types/0/fields/0/type/name",
+    ]);
+  });
+});
+
+describe("an internal scalar", () => {
+  const hostOnlyDeclaration = {
+    name: "HostOnly",
+    description: "A value only the reactor host declares.",
+    representation: "json-object",
+    validator: z.record(z.string(), z.unknown()),
+    zodSource: "z.record(z.string(), z.unknown())",
+    visibility: "internal",
+  } as const;
+
+  it("compiles to a record no field can call", () => {
+    const HostOnly = defineScalar(hostOnlyDeclaration);
+    expect(HostOnly.kind).toBe("internal-scalar");
+    expect(HostOnly.declaration.visibility).toBe("internal");
+    expect(HostOnly.binding.typedef).toBe("scalar HostOnly");
+    const call = (): unknown =>
+      // @ts-expect-error an internal scalar has no call signature
+      HostOnly();
+    expect(call).toThrow(TypeError);
+  });
+
+  it("joins an extended catalog's names but not its author names", () => {
+    const { catalog, report } = buildScalarCatalog([hostOnlyDeclaration], {
+      base: scalarCatalog,
+    });
+    expect(report.diagnostics).toEqual([]);
+    expect(catalog?.names).toEqual([...scalarCatalog.names, "HostOnly"]);
+    expect(catalog?.authorNames).toEqual(scalarCatalog.authorNames);
+    expect(catalog?.authorNames).not.toContain("JSONObject");
+
+    const extendedAgain = buildScalarCatalog([phoneNumberDeclaration], {
+      base: catalog,
+    }).catalog;
+    expect(extendedAgain?.names.slice(-2)).toEqual(["HostOnly", "PhoneNumber"]);
+    expect(extendedAgain?.authorNames).toEqual([
+      ...scalarCatalog.authorNames,
+      "PhoneNumber",
+    ]);
+  });
+
+  it("refuses a visibility it does not know", () => {
+    const diagnostics = diagnosticsOf(() =>
+      defineScalar({
+        ...phoneNumberDeclaration,
+        visibility: "public" as "author",
+      }),
+    );
+    expect(
+      diagnostics.map((entry) => [entry.code, entry.path, entry.received]),
+    ).toEqual([["PH-SCALAR-DECLARATION-INVALID", ["visibility"], "public"]]);
+  });
+
+  it("is a host scalar a definition cannot reference", () => {
+    expect(
+      ["JSONObject", "Unknown", "String", "Fax"].map((name) => [
+        name,
+        isReferenceableScalarName(name),
+        isHostScalarName(name),
+      ]),
+    ).toEqual([
+      ["JSONObject", false, true],
+      ["Unknown", true, true],
+      ["String", true, true],
+      ["Fax", false, false],
+    ]);
+  });
+
+  it("has no wire catalog reference, in the type or in the shape check", () => {
+    const reference: CatalogScalarReferenceDefinition = {
+      // @ts-expect-error JSONObject is internal, so no catalog reference names it
+      name: "JSONObject",
+      // @ts-expect-error JSONObject is internal, so no catalog implementation names it
+      implementation: "powerhouse.catalog#JSONObject",
+      coercionProfile: "document-engineering-1.40",
+    };
+    const definition = structuredClone(
+      contactsModel().definition,
+    ) as DocumentModelDefinition;
+    (definition.specifications.at(-1)!.scalars as unknown[]).push(reference);
+    const collector = new DefinitionDiagnosticCollector();
+    checkDocumentModelDefinitionShape(collector, definition);
+    expect(collector.diagnostics.map((entry) => entry.path.join("/"))).toEqual([
+      "specifications/0/scalars/1/name",
     ]);
   });
 });

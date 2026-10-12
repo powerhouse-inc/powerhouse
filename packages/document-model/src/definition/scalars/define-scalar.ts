@@ -9,12 +9,14 @@ import { createScalarField } from "../field-options.js";
 import type { ScalarBuilderOptions } from "../types.js";
 import { deriveCoercion } from "./coercion.js";
 import {
+  type AnyScalarDeclaration,
   PROFILE,
-  type ResolvedScalarDeclaration,
   type ScalarDeclaration,
   parseScalarDeclaration,
 } from "./declaration.js";
 import type {
+  CatalogScalar,
+  InternalScalar,
   ScalarBinding,
   ScalarFactory,
   ScalarFieldFactory,
@@ -24,6 +26,8 @@ import type {
  * Compiles one scalar declaration into its field factory. Every catalog
  * scalar is declared with it, and so is a package scalar: a scalar the catalog
  * does not hold, which a code-first model or subgraph may still reference.
+ * A declaration with `visibility: "internal"` compiles to an `InternalScalar`
+ * instead, which no field can use.
  */
 export function defineScalar<
   const TName extends string,
@@ -32,11 +36,35 @@ export function defineScalar<
   TBase = unknown,
   TInput = TBase,
 >(
-  input: ScalarDeclaration<TName, TBuilderName, TRepresentation, TBase, TInput>,
-): ScalarFactory<TName, TBuilderName, TBase, TBuilderName, TInput> {
-  const declaration = parseScalarDeclaration(
-    input,
-  ) as ResolvedScalarDeclaration<TName, TBuilderName, TBase, TInput>;
+  input: ScalarDeclaration<
+    TName,
+    TBuilderName,
+    TRepresentation,
+    TBase,
+    TInput
+  > & { readonly visibility: "internal" },
+): InternalScalar<TName, TBuilderName, TBase, TInput>;
+export function defineScalar<
+  const TName extends string,
+  const TBuilderName extends string = TName,
+  const TRepresentation extends ScalarRepresentation = ScalarRepresentation,
+  TBase = unknown,
+  TInput = TBase,
+>(
+  input: ScalarDeclaration<
+    TName,
+    TBuilderName,
+    TRepresentation,
+    TBase,
+    TInput
+  > & { readonly visibility?: "author" },
+): ScalarFactory<TName, TBuilderName, TBase, TBuilderName, TInput>;
+export function defineScalar(input: AnyScalarDeclaration): CatalogScalar {
+  return compileScalar(input);
+}
+
+export function compileScalar(input: AnyScalarDeclaration): CatalogScalar {
+  const declaration = parseScalarDeclaration(input);
   // Every field use carries the binding, so nothing in it may be the
   // author's own mutable object.
   const { parseValue, parseLiteral, serialize } =
@@ -55,7 +83,7 @@ export function defineScalar<
       source: declaration.coercion === undefined ? "derived" : "explicit",
     }),
     coercionProfile: PROFILE,
-  }) satisfies ScalarDefinition & { readonly name: TName };
+  }) satisfies ScalarDefinition;
 
   const binding: ScalarBinding = Object.freeze({
     definition,
@@ -67,14 +95,22 @@ export function defineScalar<
     typedef: `scalar ${declaration.name}` as const,
   });
 
+  if (declaration.visibility === "internal") {
+    return Object.freeze({
+      kind: "internal-scalar",
+      declaration,
+      definition,
+      binding,
+    });
+  }
   return withRole(
     ((options?: ScalarBuilderOptions) =>
-      createScalarField<TBase, boolean, boolean, TInput>(
+      createScalarField(
         declaration.name,
         declaration.validator,
         options,
         binding,
-      )) as ScalarFieldFactory<TBase, TInput>,
+      )) as ScalarFieldFactory<unknown>,
     { declaration, definition, binding },
     declaration.builderName,
   );

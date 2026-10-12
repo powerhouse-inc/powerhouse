@@ -8,7 +8,7 @@ import { snapshotArray, snapshotRecord } from "./data-properties.js";
 import type { DefinitionDiagnosticCollector } from "./diagnostics.js";
 import { validateLocationFreeDocument } from "./graphql-ast.js";
 import { canonicalJson, isGraphQLName } from "./primitives.js";
-import { SCALAR_CATALOG_NAMES } from "./scalars/catalog.js";
+import { isHostScalarName, scalarCatalog } from "./scalars/catalog.js";
 import { scalarDefinitionIssues } from "./scalars/definition-shape.js";
 
 /**
@@ -24,7 +24,7 @@ import { scalarDefinitionIssues } from "./scalars/definition-shape.js";
 const BUILT_IN_SCALARS = ["ID", "String", "Boolean", "Int", "Float"] as const;
 const SCALAR_NAMES: ReadonlySet<string> = new Set<string>([
   ...BUILT_IN_SCALARS,
-  ...SCALAR_CATALOG_NAMES,
+  ...scalarCatalog.authorNames,
 ]);
 
 type Record_ = { readonly [key: string]: unknown };
@@ -607,7 +607,7 @@ function specification(
       "coercionProfile",
     ]);
     if (!declared) {
-      const name = check.oneOf(scalar.name, SCALAR_CATALOG_NAMES, [
+      const name = check.oneOf(scalar.name, scalarCatalog.authorNames, [
         ...scalarPath,
         "name",
       ]);
@@ -621,7 +621,7 @@ function specification(
     }
     const name = check.graphQLName(scalar.name, [...scalarPath, "name"]);
     if (name === undefined) return;
-    if (SCALAR_NAMES.has(name) || packageScalars.has(name)) {
+    if (isHostScalarName(name) || packageScalars.has(name)) {
       check.fail(
         [...scalarPath, "name"],
         "A package scalar has a name no catalog scalar, GraphQL built-in, or other package scalar uses.",

@@ -1,4 +1,5 @@
 import type {
+  CatalogScalarName,
   DefinitionCheckProfile,
   DefinitionCheckSkipReason,
   DefinitionCheckReport,
@@ -7,7 +8,6 @@ import type {
   DefinitionPath,
   DefinitionSource,
   DocumentModelModule,
-  PowerhouseScalarName,
   Sha256Digest,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
@@ -21,8 +21,8 @@ import {
 import { compilationReportOf } from "../materialize.js";
 import {
   isCatalogBinding,
-  isReferenceableScalarName,
-  SCALAR_CATALOG_NAMES,
+  isHostScalarName,
+  scalarCatalog,
 } from "../scalars/catalog.js";
 import { checkSubgraphDefinitionShape } from "../subgraph/wire-shape.js";
 import {
@@ -412,7 +412,7 @@ function checkExportedScalar(
       }),
     };
   }
-  if (isReferenceableScalarName(name)) {
+  if (isHostScalarName(name)) {
     const reexported = isCatalogBinding(binding);
     return {
       kind: "diagnostic",
@@ -427,7 +427,7 @@ function checkExportedScalar(
         : createDiagnostic({
             ...at,
             code: "PH-SCALAR-DUPLICATE-NAME",
-            message: `A package scalar is named ${name}, which is a ${SCALAR_CATALOG_NAMES.includes(name as PowerhouseScalarName) ? "catalog scalar" : "GraphQL built-in"}.`,
+            message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.includes(name as CatalogScalarName) ? "catalog scalar" : "GraphQL built-in"}.`,
             repair: `Rename the scalar passed to defineScalar; the name ${name} is taken.`,
           }),
     };

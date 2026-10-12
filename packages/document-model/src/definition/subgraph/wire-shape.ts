@@ -8,10 +8,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { createDiagnostic } from "../diagnostics.js";
 import { isGraphQLName } from "../primitives.js";
-import {
-  isReferenceableScalarName,
-  SCALAR_CATALOG_NAMES,
-} from "../scalars/catalog.js";
+import { isHostScalarName, scalarCatalog } from "../scalars/catalog.js";
 import { scalarDefinitionIssues } from "../scalars/definition-shape.js";
 
 /**
@@ -216,7 +213,7 @@ function checkTyped(
     );
   }
 
-  const catalog = new Set<string>(SCALAR_CATALOG_NAMES);
+  const catalog = new Set<string>(scalarCatalog.authorNames);
   const declared = new Set<string>();
   (typed.scalars ?? []).forEach(
     (scalar: SubgraphScalarReferenceDefinition, index: number) => {
@@ -294,7 +291,7 @@ function packageScalarIssues(
   const rebuild = "Rebuild the package with a matching compiler.";
   if (
     !isGraphQLName(scalar.name) ||
-    isReferenceableScalarName(scalar.name) ||
+    isHostScalarName(scalar.name) ||
     declared.has(scalar.name)
   ) {
     return [

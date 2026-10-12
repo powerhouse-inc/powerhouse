@@ -61,7 +61,7 @@ The declarations below fail as soon as the module runs. Each failure reports a d
 
 ## Declare a scalar for your package
 
-`ph` includes the catalog scalars, such as `ph.PHID`. To add a scalar of your own, call `defineScalar`. The catalog scalars use the same function. `defineScalar` returns a builder that you call in a field the same way you call `ph.PHID`.
+`ph` includes the catalog scalars, such as `ph.PHID`. It leaves out `JSONObject`, which only the reactor host declares, so `ph.JSONObject` fails with `PH-SCALAR-INTERNAL`. To add a scalar of your own, call `defineScalar`. The catalog scalars use the same function. `defineScalar` returns a builder that you call in a field the same way you call `ph.PHID`.
 
 ```ts
 import { defineScalar, ph } from "document-model";

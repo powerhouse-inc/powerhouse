@@ -20,7 +20,10 @@ import {
   snapshotFieldMap,
 } from "./field-options.js";
 import { isEnumValueName } from "./primitives.js";
-import { scalarFactories } from "./scalars/catalog.js";
+import {
+  withInternalScalarGuards,
+  scalarFactories,
+} from "./scalars/catalog.js";
 import {
   computedField,
   computedTokens,
@@ -344,7 +347,7 @@ function implementedInterfaces(config: {
   return Object.freeze([...implemented]) as readonly InterfaceDescriptor[];
 }
 
-export const ph = Object.freeze({
+export const ph = withInternalScalarGuards({
   ID: builtInFactory("ID", stringValidator),
   String: builtInFactory("String", stringValidator),
   Boolean: builtInFactory("Boolean", booleanValidator),

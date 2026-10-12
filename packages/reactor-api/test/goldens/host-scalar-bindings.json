@@ -258,12 +258,6 @@
     },
     "Unknown": {
       "accepts/json-object": "accepted/accepted"
-    },
-    "JSONObject": {
-      "accepts/empty-object": "accepted/accepted",
-      "accepts/nested-object": "accepted/accepted",
-      "rejects/array": "rejected/rejected",
-      "rejects/null": "rejected/rejected"
     }
   }
 }

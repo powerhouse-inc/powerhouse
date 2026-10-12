@@ -1,5 +1,6 @@
 import type {
   Action,
+  CatalogScalarName,
   CompiledErrorDefinition,
   DefinitionDiagnostic,
   DefinitionExample,
@@ -51,8 +52,8 @@ import { assignStoredSegments } from "./segments.js";
 import { namedTypeInventory, printSchemaSegment } from "./printer.js";
 import {
   isCatalogBinding,
+  isHostScalarName,
   isReferenceableScalarName,
-  SCALAR_CATALOG_NAMES,
   scalarCatalog,
 } from "./scalars/catalog.js";
 import type { ScalarBinding } from "./scalars/types.js";
@@ -804,19 +805,19 @@ export class DescriptorWalk {
         code: "PH-DM-DECLARATION-INVALID",
         path,
         message: `Scalar ${name} is neither in the compiler catalog nor compiled by defineScalar.`,
-        expected: [...SCALAR_CATALOG_NAMES].join(" | "),
+        expected: [...scalarCatalog.authorNames].join(" | "),
         received: name,
         repair: `Declare ${name} with defineScalar and use the factory it returns, or use a catalog scalar.`,
       });
       throw new WalkAbort();
     }
-    if (isReferenceableScalarName(name)) {
+    if (isHostScalarName(name)) {
       if (isCatalogBinding(binding)) return name;
       this.#collector.add({
         code: "PH-SCALAR-DUPLICATE-NAME",
         definition: { kind: "scalar", key: name },
         path,
-        message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.includes(name as PowerhouseScalarName) ? "catalog scalar" : "GraphQL built-in"}.`,
+        message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.includes(name as CatalogScalarName) ? "catalog scalar" : "GraphQL built-in"}.`,
         received: name,
         repair: `Rename the scalar passed to defineScalar; the name ${name} is taken.`,
       });
@@ -1008,7 +1009,7 @@ function scalarReferences(
   // Fixed catalog order, so one reached set produces one array on every host.
   // Only the reference is recorded: copying a member's coercion contract would
   // churn every model digest whenever a catalog description changed.
-  const catalog = scalarCatalog.names
+  const catalog = scalarCatalog.authorNames
     .filter((name) => names.has(name))
     .map(
       (name: PowerhouseScalarName) =>

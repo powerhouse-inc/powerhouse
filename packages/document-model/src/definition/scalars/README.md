@@ -2,13 +2,15 @@
 
 This directory holds the 21 catalog scalars, such as `PHID`, `Amount_Money`, and `DateTime`, and the `defineScalar` that declares them. Each catalog scalar is declared once, in `declarations/`. `defineScalar` is also part of the author API: a package declares its own scalars with it, and a code-first model or subgraph references one through the factory it returns. See [Package scalars](#package-scalars).
 
+20 of the catalog scalars are author scalars, which a document model or subgraph may reference. `JSONObject` is an internal scalar, which only the reactor host declares. See [Internal scalars](#internal-scalars).
+
 ## Where each part lives
 
 - `declarations/` has one file per built-in scalar. `declarations/index.ts` lists them in catalog order, and `declarations/amounts.ts` holds what several amount scalars share.
 - `declaration.ts` defines `ScalarDeclaration`, the object a declaration file writes. The TSDoc on each field states what it means and its default. `withDefaults` fills every default except `coercion`. When a declaration omits `coercion`, `defineScalar` derives one with `deriveCoercion` from `coercion.ts`.
 - `define-scalar.ts` compiles one declaration into its field factory. The factory carries the resolved declaration, the wire definition, and the binding.
 - `coercion.ts` builds GraphQL coercions, and `scalar-literal.ts` defines the literal grammar that `parseLiteral` reads.
-- `catalog.ts` assembles the built-in catalog, extends it with package declarations, and exposes each catalog factory on `ph` with a `ph.` role. `emit.ts` turns a catalog into the strings codegen writes.
+- `catalog.ts` assembles the built-in catalog, extends it with package declarations, and exposes each author factory on `ph` with a `ph.` role. `emit.ts` turns a catalog into the strings codegen writes.
 - `definition-shape.ts` checks the wire definition a package scalar reference carries, for both wire-shape validators.
 - `package-scalars.ts` keeps the bindings of the package scalars each compiled model declares, for the GraphQL host.
 
@@ -27,6 +29,8 @@ export const phidScalar = defineScalar({
 });
 ```
 
+`visibility` defaults to `"author"`. Set it to `"internal"` for a scalar only the reactor host declares. See [Internal scalars](#internal-scalars).
+
 `validator` and `zodSource` state one rule twice. The first validates `ph` fields at runtime, and the second is the source text generated packages validate with. Nothing compares the two, so change them together.
 
 ## What happens at import
@@ -34,20 +38,31 @@ export const phidScalar = defineScalar({
 `defineScalar` runs when its declaration file is imported, once per process:
 
 1. `parseScalarDeclaration` copies the object, applies the defaults, and checks every field. A malformed declaration throws `PH-SCALAR-DECLARATION-INVALID` or `PH-SCALAR-ZERO-VALUE-INVALID`.
-2. `defineScalar` builds the definition, the binding, and the factory. The definition's digest is part of the catalog digest.
+2. `defineScalar` builds the definition, the binding, and the factory. An internal declaration gets an `InternalScalar` instead of a factory. The definition's digest is part of the catalog digest. Visibility is not part of the definition, so it does not change the digest.
 
 Every field use the factory makes carries the binding. That is how the compiler tells a package scalar from a catalog one without a registry.
 
 ## Add a built-in scalar
 
-1. Create `declarations/<name>.ts` and declare the scalar with `defineScalar`.
+1. Create `declarations/<name>.ts` and declare the scalar with `defineScalar`. For an internal scalar, set `visibility: "internal"`.
 2. Append it to `builtInScalars` in `declarations/index.ts`. The order is part of the catalog digest, so a new scalar goes at the end.
-3. Add the name to `PowerhouseScalarName` in `packages/shared/document-model/definition-types.ts`.
+3. Add the name to `PowerhouseScalarName` in `packages/shared/document-model/definition-types.ts`. For an internal scalar, add it to `InternalScalarName` instead. A type test in `scalar-catalog.test.ts` fails when a name is in the wrong one.
 4. Add the scalar's cases to `SCALAR_CASES` in `test/definition/scalar-cases.ts`. The package does not typecheck until you do.
 5. From `packages/document-model`, run `pnpm exec tsx --conditions=source test/definition/regenerate-scalar-inventory.ts` to regenerate the digest golden.
 6. Run the tests under `test/definition/` whose names start with `scalar`. The ones that pin the list of names fail until you add the new name to them.
 
-Codegen and the GraphQL host read the catalog, so neither needs a change.
+Codegen, attachments, and the GraphQL host read the catalog, so none of them needs a change.
+
+## Internal scalars
+
+An internal scalar is a catalog scalar that only the reactor host declares. No document model or subgraph can reference it. Everything that treats it differently reads `visibility` through the catalog:
+
+- `defineScalar` returns an `InternalScalar`, a frozen record with the declaration, definition, and binding, and no call signature. No field can use it.
+- `scalarCatalog.names` lists every catalog scalar. `scalarCatalog.authorNames` lists the author scalars only, in the same order. A catalog extended with `buildScalarCatalog` keeps the visibility of every base entry.
+- `ph` has no property for an internal scalar in its type, so `ph.JSONObject()` does not compile. At runtime the property is a non-enumerable getter that throws `PH-SCALAR-INTERNAL` and names `ph.Unknown()` and `ph.object(...)` as the repair.
+- `isReferenceableScalarName` accepts the GraphQL built-ins and `authorNames`. `isHostScalarName` also accepts every internal name. A package scalar cannot take either kind of name.
+- Codegen maps `authorNames` only, so a schema that references `JSONObject` fails to generate. Attachments declares `authorNames` only, so stored schema-first SDL that declares `scalar JSONObject` still parses.
+- The reactor host declares every name. `hostScalarResolvers` binds an internal scalar to its own coercion, except `JSONObject`, which keeps `GraphQLJSONObject`.
 
 ## Package scalars
 

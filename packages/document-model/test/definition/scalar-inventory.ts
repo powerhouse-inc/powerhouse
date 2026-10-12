@@ -1,6 +1,5 @@
 import type { Sha256Digest } from "@powerhousedao/shared/document-model";
 import {
-  SCALAR_CATALOG_NAMES,
   scalarCatalog,
   scalarCatalogReport,
 } from "../../src/definition/scalars/catalog.js";
@@ -27,7 +26,7 @@ export function scalarInventory(): ScalarInventory {
     formatVersion: scalarCatalogReport.formatVersion,
     catalogDigest: scalarCatalogReport.catalogDigest,
     validationProfiles: [...scalarCatalog.validationProfiles],
-    names: [...SCALAR_CATALOG_NAMES],
+    names: [...scalarCatalog.names],
     entries: scalarCatalogReport.entries.map((entry) => ({ ...entry })),
     diagnostics: [...scalarCatalogReport.diagnostics],
   };

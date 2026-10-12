@@ -1,4 +1,5 @@
 import type {
+  CatalogScalarName,
   DefinitionDiagnostic,
   JsonValue,
   ScalarValidationProfile,
@@ -7,6 +8,7 @@ import {
   createDiagnostic,
   literalFromJson,
   type ScalarBinding,
+  type ScalarCatalogInterface,
   type ScalarLiteralNode,
   scalarCatalog,
 } from "document-model";
@@ -30,18 +32,6 @@ import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 /** The profile document creation, reducer input, and replay resolve through. */
 const DOCUMENT_VALIDATION_PROFILE: ScalarValidationProfile =
   "document-engineering-1.40";
-
-/**
- * The two scalar coercers the host installs. Callers spread them after the
- * authored resolvers, so they override an authored resolver of the same name.
- * Every other catalog scalar uses GraphQL's default pass-through. Existing
- * clients depend on both behaviors, and `test/goldens/host-scalar-bindings.json`
- * pins them.
- */
-export const HOST_SCALAR_RESOLVERS = Object.freeze({
-  JSONObject: GraphQLJSONObject,
-  Unknown: GraphQLJSON,
-});
 
 /**
  * Builds the GraphQL scalar for a package scalar, served under `name` with the
@@ -97,6 +87,33 @@ export function packageScalarResolvers(
     ]),
   );
 }
+
+/**
+ * Resolvers existing clients depend on, pinned by
+ * `test/goldens/host-scalar-bindings.json`. They win over the catalog's own
+ * coercion for the same name.
+ */
+const PINNED_SCALAR_RESOLVERS = {
+  JSONObject: GraphQLJSONObject,
+  Unknown: GraphQLJSON,
+} as const satisfies Partial<Record<CatalogScalarName, GraphQLScalarType>>;
+
+export function hostScalarResolvers(
+  catalog: ScalarCatalogInterface<string>,
+): Readonly<Record<string, GraphQLScalarType>> {
+  const authorNames = new Set<string>(catalog.authorNames);
+  const internal = catalog.names.flatMap((name) => {
+    if (authorNames.has(name)) return [];
+    const binding = catalog.resolve(name, DOCUMENT_VALIDATION_PROFILE);
+    return binding === undefined ? [] : [{ name, binding }];
+  });
+  return Object.freeze({
+    ...packageScalarResolvers(internal),
+    ...PINNED_SCALAR_RESOLVERS,
+  });
+}
+
+export const HOST_SCALAR_RESOLVERS = hostScalarResolvers(scalarCatalog);
 
 function reason(error: unknown): string {
   const issues = (error as { issues?: unknown }).issues;

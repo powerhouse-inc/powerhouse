@@ -1,6 +1,7 @@
 import type {
+  CatalogScalarName,
   DefinitionDiagnostic,
-  PowerhouseScalarName,
+  InternalScalarName,
   ScalarDefinition,
   ScalarValidationProfile,
   Sha256Digest,
@@ -54,11 +55,38 @@ export type ScalarFactory<
     TName,
     TBuilderName,
     TBase,
-    TInput
+    TInput,
+    "author"
   >;
   readonly definition: ScalarDefinition & { readonly name: TName };
   readonly binding: ScalarBinding;
 };
+
+/**
+ * A compiled scalar declared `visibility: "internal"`. It has no call
+ * signature, so no field can use it; the catalog and the reactor host read its
+ * properties.
+ */
+export type InternalScalar<
+  TName extends string = string,
+  TBuilderName extends string = string,
+  TBase = unknown,
+  TInput = TBase,
+> = {
+  readonly kind: "internal-scalar";
+  readonly declaration: ResolvedScalarDeclaration<
+    TName,
+    TBuilderName,
+    TBase,
+    TInput,
+    "internal"
+  >;
+  readonly definition: ScalarDefinition & { readonly name: TName };
+  readonly binding: ScalarBinding;
+};
+
+/** What `defineScalar` returns: a field factory, or an internal scalar. */
+export type CatalogScalar = ScalarFactory | InternalScalar;
 
 /** The factory `ph` exposes for a catalog scalar. */
 export type PhScalarFactory<TScalar> =
@@ -73,13 +101,16 @@ export type PhScalarFactory<TScalar> =
     : never;
 
 export interface ScalarCatalogInterface<
-  TName extends string = PowerhouseScalarName,
+  TName extends string = CatalogScalarName,
 > {
   resolve(
     name: string,
     validationProfile: ScalarValidationProfile,
   ): ScalarBinding | undefined;
+  /** Every scalar in catalog order. The reactor host declares all of them. */
   readonly names: readonly TName[];
+  /** The scalars a document model or subgraph may reference: `names` without the internal ones, in catalog order. */
+  readonly authorNames: readonly Exclude<TName, InternalScalarName>[];
   readonly validationProfiles: readonly ScalarValidationProfile[];
   readonly digest: Sha256Digest;
 }

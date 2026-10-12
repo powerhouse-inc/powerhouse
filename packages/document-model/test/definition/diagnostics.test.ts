@@ -36,7 +36,7 @@ const reportOnlyCodes: readonly DefinitionDiagnosticCode[] = [
 describe("DEFINITION_DIAGNOSTIC_CODES", () => {
   it("is frozen and every code carries the PH- prefix", () => {
     expect(Object.isFrozen(DEFINITION_DIAGNOSTIC_CODES)).toBe(true);
-    expect(codes.length).toBe(52);
+    expect(codes.length).toBe(53);
     for (const code of codes) {
       expect(code).toMatch(/^PH-[A-Z0-9-]+$/);
     }
@@ -108,6 +108,7 @@ describe("DEFINITION_DIAGNOSTIC_CODES", () => {
         "PH-SCALAR-ZERO-VALUE-INVALID": "definition",
         "PH-SCALAR-POSITION-UNSUPPORTED": "definition",
         "PH-SCALAR-FACTORY-AS-FIELD": "definition",
+        "PH-SCALAR-INTERNAL": "definition",
         "PH-PKG-LOGICAL-COLLISION": "package",
         "PH-PKG-DEFINITION-UNRECOGNIZED": "package",
         "PH-PKG-DEFINITION-UNINSPECTABLE": "package",

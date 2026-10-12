@@ -82,12 +82,9 @@ const SCHEMA_GRAPHQL_SCALAR_ORDER = [
   "Upload",
 ] as const;
 
-const UNSUPPORTED_SCALARS = ["JSONObject"] as const;
-
 const CODEGEN_SCALARS = orderedScalarNames(
-  scalarCatalog.names,
+  scalarCatalog.authorNames,
   SCHEMA_GRAPHQL_SCALAR_ORDER,
-  UNSUPPORTED_SCALARS,
 );
 
 const typescriptTypes = scalarTypeScriptTypes(scalarCatalog);

@@ -1,19 +1,28 @@
 import type {
+  CatalogScalarName,
   DefinitionDiagnostic,
   GraphQLBuiltInScalarName,
+  InternalScalarName,
   ScalarName,
   ScalarValidationProfile,
 } from "@powerhousedao/shared/document-model";
 import {
+  DocumentModelDefinitionError,
   createDiagnostic,
   formatDefinitionDiagnostic,
   sortDefinitionDiagnostics,
 } from "../diagnostics.js";
 import { canonicalDigest } from "../primitives.js";
-import { type AnyScalarDeclaration, PROFILE } from "./declaration.js";
-import { builtInScalars, scalarDeclarations } from "./declarations/index.js";
-import { defineScalar, scalarDiagnostics, withRole } from "./define-scalar.js";
+import {
+  type AnyScalarDeclaration,
+  PROFILE,
+  type ScalarVisibility,
+} from "./declaration.js";
+import { builtInScalars } from "./declarations/index.js";
+import { compileScalar, scalarDiagnostics, withRole } from "./define-scalar.js";
 import type {
+  CatalogScalar,
+  InternalScalar,
   PhScalarFactory,
   ScalarBinding,
   ScalarCatalogBuildResult,
@@ -23,10 +32,6 @@ import type {
 
 export { scalarDeclarations } from "./declarations/index.js";
 
-export const SCALAR_CATALOG_NAMES = Object.freeze(
-  scalarDeclarations.map((declaration) => declaration.name),
-);
-
 const GRAPHQL_BUILT_IN_SCALARS: readonly GraphQLBuiltInScalarName[] = [
   "ID",
   "String",
@@ -34,49 +39,44 @@ const GRAPHQL_BUILT_IN_SCALARS: readonly GraphQLBuiltInScalarName[] = [
   "Int",
   "Float",
 ];
-const REFERENCEABLE_SCALARS: ReadonlySet<string> = new Set<string>([
-  ...GRAPHQL_BUILT_IN_SCALARS,
-  ...SCALAR_CATALOG_NAMES,
-]);
-
-/**
- * Whether `name` is a GraphQL built-in or a catalog scalar. A definition
- * references any other scalar only through a factory `defineScalar` returned,
- * which carries the binding the catalog would otherwise supply.
- */
-export function isReferenceableScalarName(name: string): name is ScalarName {
-  return REFERENCEABLE_SCALARS.has(name);
-}
 
 function bindingKey(name: string, profile: ScalarValidationProfile): string {
   return JSON.stringify([name, profile]);
 }
 
 type CompiledDeclarations = {
-  readonly entries: readonly ScalarFactory[];
+  readonly entries: readonly CatalogScalar[];
   readonly diagnostics: readonly DefinitionDiagnostic[];
 };
 
 /** One binding a catalog holds, under the name it answers to. */
 type CatalogEntry<TName extends string> = {
   readonly name: TName;
+  readonly visibility: ScalarVisibility;
   readonly binding: ScalarBinding;
 };
 
 function entryOf<TName extends string>(
-  scalar: ScalarFactory<TName>,
+  scalar: ScalarFactory<TName> | InternalScalar<TName>,
 ): CatalogEntry<TName> {
-  return { name: scalar.definition.name, binding: scalar.binding };
+  return {
+    name: scalar.definition.name,
+    visibility: scalar.declaration.visibility,
+    binding: scalar.binding,
+  };
 }
 
 /** Every binding an assembled catalog holds, in the order it was assembled. */
 function catalogEntries<TName extends string>(
   catalog: ScalarCatalogInterface<TName>,
 ): readonly CatalogEntry<TName>[] {
+  const authorNames = new Set<string>(catalog.authorNames);
   return catalog.names.flatMap((name) =>
     catalog.validationProfiles.flatMap((profile) => {
       const binding = catalog.resolve(name, profile);
-      return binding === undefined ? [] : [{ name, binding }];
+      if (binding === undefined) return [];
+      const visibility = authorNames.has(name) ? "author" : "internal";
+      return [{ name, visibility, binding }];
     }),
   );
 }
@@ -85,10 +85,10 @@ function compileDeclarations(
   declarations: readonly AnyScalarDeclaration[],
 ): CompiledDeclarations {
   const diagnostics: DefinitionDiagnostic[] = [];
-  const entries: ScalarFactory[] = [];
+  const entries: CatalogScalar[] = [];
   for (const declaration of declarations) {
     try {
-      entries.push(defineScalar(declaration));
+      entries.push(compileScalar(declaration));
     } catch (error) {
       diagnostics.push(...scalarDiagnostics(error));
     }
@@ -103,7 +103,8 @@ function assembleCatalog<TName extends string>(
   const collected = [...diagnostics];
   const bindings = new Map<string, ScalarBinding>();
   const names: TName[] = [];
-  for (const { name, binding } of entries) {
+  const authorNames: Exclude<TName, InternalScalarName>[] = [];
+  for (const { name, visibility, binding } of entries) {
     const profile = binding.validationProfile;
     const key = bindingKey(name, profile);
     if (bindings.has(key)) {
@@ -120,7 +121,11 @@ function assembleCatalog<TName extends string>(
       continue;
     }
     bindings.set(key, binding);
-    if (!names.includes(name)) names.push(name);
+    if (names.includes(name)) continue;
+    names.push(name);
+    if (visibility === "author") {
+      authorNames.push(name as Exclude<TName, InternalScalarName>);
+    }
   }
 
   const definitions = entries.map((entry) => entry.binding.definition);
@@ -140,6 +145,7 @@ function assembleCatalog<TName extends string>(
   if (collected.length > 0) return { report };
   const catalog: ScalarCatalogInterface<TName> = Object.freeze({
     names: Object.freeze(names),
+    authorNames: Object.freeze(authorNames),
     validationProfiles: Object.freeze([PROFILE]),
     digest: catalogDigest,
     resolve: (name: string, profile: ScalarValidationProfile) =>
@@ -175,6 +181,36 @@ if (built.catalog === undefined) {
 
 export const scalarCatalog: ScalarCatalogInterface = built.catalog;
 
+const REFERENCEABLE_SCALARS: ReadonlySet<string> = new Set<string>([
+  ...GRAPHQL_BUILT_IN_SCALARS,
+  ...scalarCatalog.authorNames,
+]);
+
+const HOST_SCALARS: ReadonlySet<string> = new Set<string>([
+  ...GRAPHQL_BUILT_IN_SCALARS,
+  ...scalarCatalog.names,
+]);
+
+/**
+ * Whether a document model or subgraph may reference `name`: a GraphQL
+ * built-in or an author-facing catalog scalar. A definition references any
+ * other scalar only through a factory `defineScalar` returned, which carries
+ * the binding the catalog would otherwise supply.
+ */
+export function isReferenceableScalarName(name: string): name is ScalarName {
+  return REFERENCEABLE_SCALARS.has(name);
+}
+
+/**
+ * Whether the reactor host declares `name` itself: a GraphQL built-in or any
+ * catalog scalar, internal ones included.
+ */
+export function isHostScalarName(
+  name: string,
+): name is GraphQLBuiltInScalarName | CatalogScalarName {
+  return HOST_SCALARS.has(name);
+}
+
 /**
  * Every catalog binding, from every copy of this package in the process.
  *
@@ -200,16 +236,51 @@ export const scalarEntries = Object.freeze(builtInScalars);
 
 type FactoryByBuilder = {
   readonly [
-    S in (typeof builtInScalars)[number] as S["declaration"]["builderName"]
+    S in Extract<
+      (typeof builtInScalars)[number],
+      { readonly kind: "scalar-factory" }
+    > as S["declaration"]["builderName"]
   ]: PhScalarFactory<S>;
 };
 
-/** Every catalog scalar as `ph` exposes it: the same binding, a `ph.` role. */
+function isScalarFactory<TScalar extends CatalogScalar>(
+  scalar: TScalar,
+): scalar is Extract<TScalar, { readonly kind: "scalar-factory" }> {
+  return scalar.kind === "scalar-factory";
+}
+
 export const scalarFactories: FactoryByBuilder = Object.freeze(
   Object.fromEntries(
-    scalarEntries.map((entry) => [
-      entry.declaration.builderName,
-      withRole(entry, entry, `ph.${entry.declaration.builderName}`),
-    ]),
+    scalarEntries
+      .filter(isScalarFactory)
+      .map((entry) => [
+        entry.declaration.builderName,
+        withRole(entry, entry, `ph.${entry.declaration.builderName}`),
+      ]),
   ),
 ) as FactoryByBuilder;
+
+export function withInternalScalarGuards<T extends object>(
+  builders: T,
+): Readonly<T> {
+  for (const scalar of scalarEntries) {
+    if (isScalarFactory(scalar)) continue;
+    const { name, builderName } = scalar.declaration;
+    Object.defineProperty(builders, builderName, {
+      enumerable: false,
+      get(): never {
+        throw new DocumentModelDefinitionError([
+          createDiagnostic({
+            code: "PH-SCALAR-INTERNAL",
+            definition: { kind: "scalar", key: name },
+            path: [builderName],
+            message: `${name} is internal to the reactor host. A document model or subgraph cannot use it.`,
+            repair:
+              "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+          }),
+        ]);
+      },
+    });
+  }
+  return Object.freeze(builders);
+}

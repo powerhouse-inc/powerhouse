@@ -22,7 +22,7 @@ import {
   foldTypeExtensions,
 } from "../graphql-ast.js";
 import { canonicalJson } from "../primitives.js";
-import { SCALAR_CATALOG_NAMES } from "../scalars/catalog.js";
+import { isHostScalarName, scalarCatalog } from "../scalars/catalog.js";
 
 /**
  * Turns a parsed schema-first document into V1 structured types.
@@ -38,7 +38,7 @@ const BUILT_IN_SCALARS = ["ID", "String", "Boolean", "Int", "Float"] as const;
 
 const SCALARS: ReadonlySet<string> = new Set<string>([
   ...BUILT_IN_SCALARS,
-  ...SCALAR_CATALOG_NAMES,
+  ...scalarCatalog.authorNames,
 ]);
 
 export type UnrepresentableNode = {
@@ -387,13 +387,18 @@ export function checkScalarReferences(
     // `PH-SCALAR-UNREGISTERED` is report-only and belongs to the host's
     // binding check in `reactor-api`. Here normalization stops, so the adapter
     // reports the failure that actually happened.
+    const internal = isHostScalarName(reference.name);
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
       path: at,
-      message: `Scalar ${reference.name} is not in the compiler catalog, so its coercion is unknown.`,
+      message: internal
+        ? `Scalar ${reference.name} is internal to the reactor host, so a document model cannot reference it.`
+        : `Scalar ${reference.name} is not in the compiler catalog, so its coercion is unknown.`,
       expected: [...SCALARS].join(" | "),
       received: reference.name,
-      repair: `Declare ${reference.name} as a named type in the model, or replace it with a catalog scalar.`,
+      repair: internal
+        ? "Replace it with Unknown for an unconstrained value, or with an object type for a structured one."
+        : `Declare ${reference.name} as a named type in the model, or replace it with a catalog scalar.`,
     });
   };
   types.forEach((type, index) => {

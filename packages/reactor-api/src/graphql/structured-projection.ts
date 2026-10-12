@@ -20,7 +20,7 @@ import {
   printSchemaSegment,
   type StoredSegments,
 } from "document-model";
-import { isReferenceableScalarName } from "document-model/scalars";
+import { isHostScalarName } from "document-model/scalars";
 import {
   type DefinitionNode,
   type DirectiveDefinitionNode,
@@ -550,7 +550,7 @@ export function printCompatibilityDocument(
   const rename = (name: string): string =>
     !packageScalars.has(name) &&
     !declaredTypes.has(name) &&
-    (declaredScalars.has(name) || isReferenceableScalarName(name))
+    (declaredScalars.has(name) || isHostScalarName(name))
       ? name
       : `${prefix}_${name}`;
   const walk = (node: unknown): unknown => {

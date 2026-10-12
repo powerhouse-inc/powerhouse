@@ -21,6 +21,13 @@ export type ScalarCoercion<TBase> = {
   readonly serialize: (value: unknown) => unknown;
 };
 
+/**
+ * Who may reference a catalog scalar. An `author` scalar is a `ph` factory a
+ * document model or subgraph uses. An `internal` scalar is declared by the
+ * reactor host only, so neither `ph`, codegen, nor attachments offer it.
+ */
+export type ScalarVisibility = "author" | "internal";
+
 export type ScalarDeclaration<
   TName extends string = string,
   TBuilderName extends string = string,
@@ -47,6 +54,8 @@ export type ScalarDeclaration<
   readonly persistable?: boolean;
   /** The empty value of a field. Default: `{ kind: "none", reason: "<name> has no meaningful empty value" }`. */
   readonly zero?: ScalarZero;
+  /** Who may reference the scalar. Default: `"author"`. */
+  readonly visibility?: ScalarVisibility;
 };
 
 export type AnyScalarDeclaration = ScalarDeclaration;
@@ -56,6 +65,7 @@ export type ResolvedScalarDeclaration<
   TBuilderName extends string = string,
   TBase = unknown,
   TInput = TBase,
+  TVisibility extends ScalarVisibility = ScalarVisibility,
 > = {
   readonly name: TName;
   readonly builderName: TBuilderName;
@@ -67,7 +77,18 @@ export type ResolvedScalarDeclaration<
   readonly coercion?: ScalarCoercion<TBase>;
   readonly persistable: boolean;
   readonly zero: ScalarZero;
+  readonly visibility: TVisibility;
 };
+
+export type ParsedScalarDeclaration = {
+  readonly [V in ScalarVisibility]: ResolvedScalarDeclaration<
+    string,
+    string,
+    unknown,
+    unknown,
+    V
+  >;
+}[ScalarVisibility];
 
 const DEFAULT_TYPESCRIPT_TYPE = {
   string: "string",
@@ -89,6 +110,7 @@ const DECLARATION_KEYS = Object.keys({
   coercion: true,
   persistable: true,
   zero: true,
+  visibility: true,
 } satisfies Record<keyof ResolvedScalarDeclaration, true>);
 
 type ScalarFailure = Omit<DefinitionDiagnosticInput, "code"> & {
@@ -108,7 +130,7 @@ function fail(name: string, input: ScalarFailure): never {
 
 export function parseScalarDeclaration(
   input: AnyScalarDeclaration,
-): ResolvedScalarDeclaration {
+): ParsedScalarDeclaration {
   const snapshot = snapshotRecord(input, DECLARATION_KEYS, []);
   if (!snapshot.ok) {
     fail(String((input as { readonly name?: unknown }).name), {
@@ -147,6 +169,7 @@ function withDefaults(
       kind: "none",
       reason: `${declaration.name} has no meaningful empty value`,
     },
+    visibility: declaration.visibility ?? "author",
   };
 }
 
@@ -225,6 +248,18 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
       path: ["coercion"],
       message: `Scalar ${name} must either omit coercion or provide parseValue, parseLiteral, and serialize.`,
       repair: "Omit coercion to derive it, or provide all three functions.",
+    });
+  }
+  const visibility: unknown = declaration.visibility;
+  if (visibility !== "author" && visibility !== "internal") {
+    fail(name, {
+      code: "PH-SCALAR-DECLARATION-INVALID",
+      path: ["visibility"],
+      message: `Scalar ${name} has no known visibility.`,
+      expected: "author, internal",
+      received: String(visibility),
+      repair:
+        'Omit visibility for a scalar authors use, or set it to "internal".',
     });
   }
   for (const key of ["typescriptType", "zodSource"] as const) {
