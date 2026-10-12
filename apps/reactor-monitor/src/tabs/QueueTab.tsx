@@ -15,7 +15,12 @@
  * (poll every 2s, pause/resume, sortable columns) in plain CSS, and replaces
  * the "View" modal with an inline expandable row.
  */
-import type { IInspector, Job } from "@powerhousedao/reactor";
+import type {
+  IInspectorAdmin,
+  WireQueueJob,
+  WireQueueState,
+} from "@powerhousedao/reactor";
+import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   ADMIN_ALLOWED,
@@ -24,23 +29,13 @@ import {
 } from "../components/AdminGate.js";
 
 export type QueueTabProps = {
-  readonly inspector: IInspector;
-  /**
-   * Whether pause/resume is served for this reactor. Defaults to allowed,
-   * which is every locally hosted reactor; a remote one reports it.
-   */
+  readonly inspector: MonitorInspector;
+  /** Pause/resume; absent where the reactor serves no levers. */
+  readonly levers?: IInspectorAdmin;
   readonly admin?: AdminGate;
 };
 
-type JobWithStatus = Job & { status: "pending" | "executing" };
-
-type SortColumn =
-  | "id"
-  | "kind"
-  | "documentId"
-  | "scope"
-  | "branch"
-  | "createdAt";
+type SortColumn = "id" | "kind" | "documentId" | "scope" | "branch";
 type SortDirection = "asc" | "desc";
 
 const COLUMNS: { key: SortColumn; label: string }[] = [
@@ -49,15 +44,14 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: "documentId", label: "Document ID" },
   { key: "scope", label: "Scope" },
   { key: "branch", label: "Branch" },
-  { key: "createdAt", label: "Created At" },
 ];
 
 const POLL_INTERVAL_MS = 2000;
 
 function sortJobs(
-  jobs: JobWithStatus[],
+  jobs: WireQueueJob[],
   sort: { column: SortColumn; direction: SortDirection } | undefined,
-): JobWithStatus[] {
+): WireQueueJob[] {
   if (!sort) {
     return jobs;
   }
@@ -66,14 +60,12 @@ function sortJobs(
   return direction === "asc" ? sorted : sorted.reverse();
 }
 
-export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
-  const [state, setState] = useState<{
-    isPaused: boolean;
-    pendingJobs: Job[];
-    executingJobs: Job[];
-    totalPending: number;
-    totalExecuting: number;
-  }>({
+export function QueueTab({
+  inspector,
+  levers,
+  admin = ADMIN_ALLOWED,
+}: QueueTabProps) {
+  const [state, setState] = useState<WireQueueState>({
     isPaused: false,
     pendingJobs: [],
     executingJobs: [],
@@ -86,11 +78,19 @@ export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
   >();
   const [actionInProgress, setActionInProgress] = useState(false);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadState = useCallback(async () => {
-    const snapshot = await inspector.getQueueState();
-    setState(snapshot);
-    setLoading(false);
+    try {
+      setState(await inspector.getQueueState());
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
   }, [inspector]);
 
   useEffect(() => {
@@ -101,15 +101,24 @@ export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
   }, [loadState]);
 
   const handlePauseResume = useCallback(async () => {
+    if (!levers) {
+      return;
+    }
     setActionInProgress(true);
-    if (state.isPaused) {
-      await inspector.resumeQueue();
-    } else {
-      await inspector.pauseQueue();
+    try {
+      if (state.isPaused) {
+        await levers.resumeQueue();
+      } else {
+        await levers.pauseQueue();
+      }
+      setActionError(null);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setActionInProgress(false);
     }
     await loadState();
-    setActionInProgress(false);
-  }, [state.isPaused, inspector, loadState]);
+  }, [state.isPaused, levers, loadState]);
 
   const handleSort = (column: SortColumn) => {
     setSort((previous) => ({
@@ -121,13 +130,7 @@ export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
     }));
   };
 
-  const allJobs: JobWithStatus[] = [
-    ...state.executingJobs.map((job) => ({
-      ...job,
-      status: "executing" as const,
-    })),
-    ...state.pendingJobs.map((job) => ({ ...job, status: "pending" as const })),
-  ];
+  const allJobs = [...state.executingJobs, ...state.pendingJobs];
   const sortedJobs = sortJobs(allJobs, sort);
 
   return (
@@ -138,7 +141,7 @@ export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
         <div className="rm-actions">
           <button
             className={state.isPaused ? "rm-btn rm-btn-warn" : "rm-btn"}
-            disabled={actionInProgress || !admin.enabled}
+            disabled={actionInProgress || !admin.enabled || !levers}
             onClick={() => void handlePauseResume()}
             type="button"
           >
@@ -157,6 +160,15 @@ export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
           </button>
         </div>
       </div>
+
+      {loadError ? (
+        <p className="rm-error">Failed to load the queue: {loadError}</p>
+      ) : null}
+      {actionError ? (
+        <p className="rm-error" role="alert">
+          Pause/resume failed: {actionError}
+        </p>
+      ) : null}
 
       <div className="rm-stat-bar">
         <span
@@ -215,7 +227,6 @@ export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
                     <td title={job.documentId}>{job.documentId}</td>
                     <td>{job.scope}</td>
                     <td>{job.branch}</td>
-                    <td>{new Date(job.createdAt).toLocaleString()}</td>
                     <td>
                       <span
                         className={
