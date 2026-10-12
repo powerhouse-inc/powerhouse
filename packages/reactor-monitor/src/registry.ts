@@ -196,13 +196,13 @@ export class ReactorMonitorRegistry {
   };
 
   /** Kills the reactor under `name` (if any) and forgets it. */
-  kill(name: string): Promise<void> {
+  async kill(name: string): Promise<void> {
     const entry = this.entries.get(name);
     if (entry) {
       this.entries.delete(name);
       this.publish();
     }
-    return this.enqueue(name, async () => {
+    await this.enqueue(name, async () => {
       await entry?.reactor?.kill();
     });
   }
