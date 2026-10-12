@@ -53,7 +53,10 @@ export {
 } from "./schema/migrations/migrator.js";
 export { resolveCollision } from "./processors/utils/collisions.js";
 export { NodeProcessor } from "./processors/node-processor.js";
-export type { IDriveReadModel } from "./read-model/interfaces.js";
+export type {
+  DriveNodePage,
+  IDriveReadModel,
+} from "./read-model/interfaces.js";
 export { DriveNodeView } from "./read-model/drive-node-view.js";
 export {
   ReactorDriveClient,

@@ -39,6 +39,8 @@ describe("reactor-drive subgraph", () => {
     ctx = {
       reactorClient: {
         isServed: () => Promise.resolve(true),
+        find: ({ ids }: { ids: string[] }) =>
+          Promise.resolve({ results: ids.map((id) => ({ header: { id } })) }),
       } as unknown as IReactorClient,
       readModel: view,
     };
