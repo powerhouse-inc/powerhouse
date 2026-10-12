@@ -17,6 +17,7 @@ import type {
 } from "@powerhousedao/reactor";
 import {
   createReactorDriveResolvers,
+  REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveDocumentModelModule,
   reactorDriveSubgraphTypeDefs,
 } from "@powerhousedao/reactor-drive";
@@ -28,6 +29,7 @@ import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 
 import {
   createAuthFetchMiddleware,
@@ -1979,14 +1981,22 @@ describe("GraphQLManager", () => {
 
   // ── same-name subgraphs of different origin ────────────────────────────────
 
-  describe("host subgraph named like a document-model subgraph", () => {
+  describe("same-name subgraphs of different origin", () => {
     const reactorDriveModel =
       reactorDriveDocumentModelModule as unknown as DocumentModelModule;
 
-    /** The reactor-drive subgraph as switchboard registers it. */
-    function makeHostReactorDriveSubgraph(): ISubgraph {
+    /** The name the generated subgraph for the ReactorDrive model takes. */
+    const reactorDriveModelSubgraphName = new DocumentModelSubgraph(
+      reactorDriveModel,
+      { reactorClient: {} as IReactorClient } as SubgraphArgs,
+    ).name;
+
+    /** The reactor-drive listing subgraph as switchboard registers it. */
+    function makeHostReactorDriveSubgraph(
+      name = REACTOR_DRIVE_SUBGRAPH_NAME,
+    ): ISubgraph {
       return {
-        name: "reactor-drive",
+        name,
         path: "/",
         resolvers: createReactorDriveResolvers({
           hostCanRead: () => Promise.resolve(true),
@@ -1997,9 +2007,34 @@ describe("GraphQLManager", () => {
       };
     }
 
+    function makeWidgetSubgraph(name = "widget-stock"): ISubgraph {
+      return {
+        name,
+        typeDefs: gql`
+          type Widget {
+            inventory: Int!
+          }
+          type Query {
+            widgetStock: Widget
+          }
+        `,
+        resolvers: {},
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+      };
+    }
+
     async function flush<T>(pending: Promise<T>): Promise<T> {
       await vi.runAllTimersAsync();
       return pending;
+    }
+
+    function supergraphDefinitions(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): { name: string; typeDefs: DocumentNode }[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { name: string; typeDefs: DocumentNode }[];
+      return getDefinitions();
     }
 
     /** Field names of `typeName` across every subgraph the supergraph serves. */
@@ -2007,10 +2042,8 @@ describe("GraphQLManager", () => {
       gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
       typeName: string,
     ): string[] {
-      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
-        .calls[0][0] as () => { typeDefs: DocumentNode }[];
       const fields: string[] = [];
-      for (const { typeDefs } of getDefinitions()) {
+      for (const { typeDefs } of supergraphDefinitions(gatewayAdapter)) {
         for (const def of typeDefs.definitions) {
           if (
             (def.kind === Kind.OBJECT_TYPE_DEFINITION ||
@@ -2024,10 +2057,18 @@ describe("GraphQLManager", () => {
       return fields;
     }
 
-    function expectBothServed(
+    function expectListingServed(
       gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
     ) {
       expect(servedFields(gatewayAdapter, "Query")).toContain("reactorDrive");
+      expect(servedFields(gatewayAdapter, "ReactorDriveInfo")).toContain(
+        "rootNodes",
+      );
+    }
+
+    function expectDocumentMutationsServed(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ) {
       expect(servedFields(gatewayAdapter, "Mutation")).toContain(
         "ReactorDrive",
       );
@@ -2042,20 +2083,18 @@ describe("GraphQLManager", () => {
       });
     }
 
-    it("keeps the ReactorDrive document mutations when the host registers reactor-drive", async () => {
+    const ORIGIN_REJECTION =
+      "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing";
+
+    it("serves the listing beside the ReactorDrive document mutations", async () => {
       const { manager, gatewayAdapter } = makeHarness({
         reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-
-      // Precondition: the generated subgraph is kebabCase("ReactorDrive").
-      expect(manager.getSubgraphByName("reactor-drive")?.constructor.name).toBe(
-        "DocumentModelSubgraph",
-      );
-      expect(servedFields(gatewayAdapter, "ReactorDriveMutations")).toEqual(
-        expect.arrayContaining(["addFolder", "setDriveName"]),
-      );
+      expect(
+        manager.getSubgraphByName(reactorDriveModelSubgraphName),
+      ).toBeInstanceOf(DocumentModelSubgraph);
 
       await manager.registerSubgraphInstance(
         makeHostReactorDriveSubgraph(),
@@ -2064,10 +2103,11 @@ describe("GraphQLManager", () => {
       );
       await flush(manager.updateRouter());
 
-      expectBothServed(gatewayAdapter);
+      expectListingServed(gatewayAdapter);
+      expectDocumentMutationsServed(gatewayAdapter);
     });
 
-    it("keeps the host reactor-drive subgraph when document-model subgraphs regenerate", async () => {
+    it("keeps both when document-model subgraphs regenerate", async () => {
       const { manager, gatewayAdapter } = makeHarness({
         reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
         enableDocumentModelSubgraphs: true,
@@ -2083,20 +2123,24 @@ describe("GraphQLManager", () => {
       // As a package install does.
       await flush(manager.regenerateDocumentModelSubgraphs());
 
-      expectBothServed(gatewayAdapter);
+      expectListingServed(gatewayAdapter);
+      expectDocumentMutationsServed(gatewayAdapter);
     });
 
-    it("keeps the host reactor-drive subgraph when the ReactorDrive model arrives later", async () => {
+    it("keeps both when the ReactorDrive model arrives later", async () => {
       const reactorClient = makeModelsClient([makeDriveModule()]);
       const { manager, gatewayAdapter } = makeHarness({
         reactorClient,
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      const host = makeHostReactorDriveSubgraph();
-      await manager.registerSubgraphInstance(host, "graphql", false);
+      await manager.registerSubgraphInstance(
+        makeHostReactorDriveSubgraph(),
+        "graphql",
+        false,
+      );
       await flush(manager.updateRouter());
-      expect(servedFields(gatewayAdapter, "Query")).toContain("reactorDrive");
+      expectListingServed(gatewayAdapter);
 
       vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
         results: [makeDriveModule(), reactorDriveModel],
@@ -2104,7 +2148,218 @@ describe("GraphQLManager", () => {
       });
       await flush(manager.regenerateDocumentModelSubgraphs());
 
-      expectBothServed(gatewayAdapter);
+      expectListingServed(gatewayAdapter);
+      expectDocumentMutationsServed(gatewayAdapter);
+    });
+
+    it("refuses a host subgraph that takes a document-model subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, gatewayAdapter } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const documentModelSubgraph = manager.getSubgraphByName(
+        reactorDriveModelSubgraphName,
+      );
+
+      const result = await manager.registerSubgraphInstance(
+        makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName),
+        "graphql",
+        false,
+      );
+      await flush(manager.updateRouter());
+
+      expect(result).toBeUndefined();
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        reactorDriveModelSubgraphName,
+        "the host",
+        "document models",
+      );
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        documentModelSubgraph,
+      );
+      expectDocumentMutationsServed(gatewayAdapter);
+    });
+
+    it("refuses a document-model subgraph whose name a host subgraph holds", async () => {
+      const logger = makeHarnessLogger();
+      const reactorClient = makeModelsClient([makeDriveModule()]);
+      const { manager, gatewayAdapter } = makeHarness({
+        logger,
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const host = makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName);
+      await manager.registerSubgraphInstance(host, "graphql", false);
+      await flush(manager.updateRouter());
+
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule(), reactorDriveModel],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(manager.regenerateDocumentModelSubgraphs());
+      await flush(manager.regenerateDocumentModelSubgraphs());
+
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        reactorDriveModelSubgraphName,
+        "document models",
+        "the host",
+      );
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        host,
+      );
+      expectListingServed(gatewayAdapter);
+    });
+
+    it("a package re-registering its own subgraph name replaces it; another package is refused", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+
+      class V1 extends BaseSubgraph {
+        name = "shared-name";
+      }
+      class V2 extends BaseSubgraph {
+        name = "shared-name";
+      }
+      const first = await manager.registerSubgraph(V1, "graphql", false, "a");
+      const second = await manager.registerSubgraph(V2, "graphql", false, "a");
+      expect(second).toBeInstanceOf(V2);
+      expect(second).not.toBe(first);
+      expect(manager.getSubgraphByName("shared-name")).toBe(second);
+
+      const other = await manager.registerSubgraph(V1, "graphql", false, "b");
+      expect(other).toBeUndefined();
+      expect(manager.getSubgraphByName("shared-name")).toBe(second);
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        "shared-name",
+        "package b",
+        "package a",
+      );
+    });
+
+    it("refuses a package subgraph that takes a document-model subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const documentModelSubgraph = manager.getSubgraphByName(
+        reactorDriveModelSubgraphName,
+      );
+
+      class Squatter extends BaseSubgraph {
+        name = reactorDriveModelSubgraphName;
+      }
+      const result = await manager.registerSubgraph(
+        Squatter,
+        "graphql",
+        false,
+        "squatter-pkg",
+      );
+
+      expect(result).toBeUndefined();
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        reactorDriveModelSubgraphName,
+        "package squatter-pkg",
+        "document models",
+      );
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        documentModelSubgraph,
+      );
+    });
+
+    it("setSupergraph drops a subgraph that takes a document-model subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const documentModelSubgraph = manager.getSubgraphByName(
+        reactorDriveModelSubgraphName,
+      );
+
+      await flush(
+        manager.setSupergraph("extra", [
+          makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName),
+        ]),
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        reactorDriveModelSubgraphName,
+        "the host",
+        "document models",
+      );
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        documentModelSubgraph,
+      );
+    });
+
+    it("refuses a subgraph whose types collide with a loaded document model", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([
+          makeDriveModule(),
+          makeModelModule("Widget", "test/widget"),
+        ]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+
+      const result = await manager.registerSubgraphInstance(
+        makeWidgetSubgraph(),
+        "graphql",
+      );
+
+      expect(result).toBeUndefined();
+      expect(manager.getSubgraphByName("widget-stock")).toBeUndefined();
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: @error",
+        "widget-stock",
+        expect.stringContaining("Widget"),
+      );
+    });
+
+    it("excludes a subgraph from the supergraph when a later model collides with its types", async () => {
+      const logger = makeHarnessLogger();
+      const reactorClient = makeModelsClient([makeDriveModule()]);
+      const { manager, gatewayAdapter } = makeHarness({
+        logger,
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      await manager.registerSubgraphInstance(makeWidgetSubgraph(), "graphql");
+      await flush(manager.updateRouter());
+      expect(servedFields(gatewayAdapter, "Query")).toContain("widgetStock");
+
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule(), makeModelModule("Widget", "test/widget")],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(manager.regenerateDocumentModelSubgraphs());
+
+      const names = supergraphDefinitions(gatewayAdapter).map((d) => d.name);
+      expect(names).not.toContain(":graphql/widget-stock");
+      expect(names).toContain(":graphql/widget");
+      expect(logger.error).toHaveBeenCalledWith(
+        "Excluding subgraph @name from the supergraph: @error",
+        "widget-stock",
+        expect.stringContaining("Widget"),
+      );
     });
   });
 });

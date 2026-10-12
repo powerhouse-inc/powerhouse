@@ -12,7 +12,10 @@ import type * as GraphQL from "graphql";
 import type { GraphQLObjectType, GraphQLSchema } from "graphql";
 import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
-import { createSchema } from "../src/utils/create-schema.js";
+import {
+  createSchema,
+  SubgraphTypeCollisionError,
+} from "../src/utils/create-schema.js";
 
 // The CommonJS build @apollo/subgraph uses; vite would hand this file the ESM one.
 const { execute, parse, validate } = createRequire(import.meta.url)(
@@ -190,28 +193,34 @@ describe("a subgraph type named like a generated document-model type", () => {
     );
   }
 
-  function fieldsOf(schema: GraphQLSchema, typeName: string): string[] {
-    const type = schema.getType(typeName) as GraphQLObjectType | undefined;
-    return Object.keys(type?.getFields() ?? {});
-  }
-
-  // Characterization of main: documents the silent drop; passes today.
-  it("CURRENT BEHAVIOR: the subgraph's definitions are dropped without an error", () => {
-    const schema = buildWidgetSchema();
-    expect(fieldsOf(schema, "Widget")).not.toContain("inventory");
-    expect(fieldsOf(schema, "Widget")).toContain("documentType");
-    expect(fieldsOf(schema, "Operation")).not.toContain("custom");
+  it("refuses the schema, naming the subgraph's types that collide", () => {
+    let caught: unknown;
+    try {
+      buildWidgetSchema();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(SubgraphTypeCollisionError);
+    expect((caught as SubgraphTypeCollisionError).typeNames).toEqual([
+      "Widget",
+      "Operation",
+    ]);
   });
 
-  it("never drops the subgraph's own type silently (keeps it or refuses the schema)", () => {
-    let schema: GraphQLSchema | undefined;
-    try {
-      schema = buildWidgetSchema();
-    } catch {
-      // Refusing the colliding schema is an acceptable fix.
-      return;
-    }
-    expect(fieldsOf(schema, "Widget")).toContain("inventory");
-    expect(fieldsOf(schema, "Operation")).toContain("custom");
+  it("keeps a subgraph type no generated type is named like", () => {
+    const schema = createSchema(
+      [...baseModels, widgetModel()],
+      { Query: { widgetStock: () => ({ inventory: 3 }) } },
+      gql`
+        type WidgetStock {
+          inventory: Int!
+        }
+        type Query {
+          widgetStock: WidgetStock
+        }
+      `,
+    );
+    const type = schema.getType("WidgetStock") as GraphQLObjectType;
+    expect(Object.keys(type.getFields())).toEqual(["inventory"]);
   });
 });
