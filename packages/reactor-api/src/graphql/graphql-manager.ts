@@ -700,9 +700,9 @@ export class GraphQLManager {
   #schemaOptions(subgraph: ISubgraph): SubgraphSchemaOptions {
     return {
       generated: this.#generated(),
-      ownModelName:
+      ownTypeNames:
         subgraph instanceof DocumentModelSubgraph
-          ? subgraph.documentModelSchemaName
+          ? subgraph.generatedTypeNames
           : undefined,
     };
   }
@@ -713,7 +713,7 @@ export class GraphQLManager {
       return findSubgraphTypeCollisions(
         this.#generated(),
         subgraph.typeDefs,
-        this.#schemaOptions(subgraph).ownModelName,
+        this.#schemaOptions(subgraph).ownTypeNames,
       );
     } catch {
       // Malformed typeDefs fail where the schema is built, and are logged there.

@@ -2746,5 +2746,31 @@ describe("GraphQLManager", () => {
         manager.getSubgraphByName(reactorDriveModelSubgraphName),
       ).toBeInstanceOf(Squatter);
     });
+
+    it("serves every model's subgraph when a model is named like a generated subgraph type", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, gatewayAdapter } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([
+          makeDriveModule(),
+          makeModelModule("Revision", "test/revision"),
+          makeModelModule("Gadget", "test/gadget"),
+        ]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+
+      for (const name of ["revision", "gadget"]) {
+        expect(manager.getSubgraphByName(name)).toBeInstanceOf(
+          DocumentModelSubgraph,
+        );
+        expect(manager.hasSubgraphHandler(name)).toBe(true);
+      }
+      const names = supergraphDefinitions(gatewayAdapter).map((d) => d.name);
+      expect(names).toEqual(
+        expect.arrayContaining([":graphql/revision", ":graphql/gadget"]),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+    });
   });
 });

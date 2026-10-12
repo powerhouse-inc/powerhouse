@@ -248,10 +248,10 @@ function buildModuleSchemas(
 
 export type SubgraphSchemaOptions = {
   /**
-   * Schema name of the model the subgraph is generated for. Only its own
-   * prefixed types may repeat a generated definition.
+   * Types the subgraph's own schema generator emits, as a document model's
+   * subgraph has. These may repeat a generated definition, which is kept.
    */
-  ownModelName?: string;
+  ownTypeNames?: ReadonlySet<string>;
   /** Generated types already built for `documentModels`. */
   generated?: GeneratedDocumentModelTypes;
 };
@@ -272,7 +272,7 @@ export const buildSubgraphSchemaModule = (
     typeDefs: assembleSubgraphTypeDefs(
       options.generated ?? getGeneratedDocumentModelTypes(documentModels),
       typeDefs,
-      options.ownModelName,
+      options.ownTypeNames,
     ),
     resolvers: newResolvers,
   };
@@ -307,18 +307,27 @@ export function getDocumentModelSchemaName(
 /**
  * The generated document-model types followed by the subgraph's own. Throws
  * {@link SubgraphTypeCollisionError} when the subgraph defines a generated
- * name other than one prefixed with `ownModelName`.
+ * name not in `ownTypeNames`.
  */
 export const getDocumentModelTypeDefs = (
   documentModels: DocumentModelModule[],
   typeDefs: DocumentNode,
-  ownModelName?: string,
+  ownTypeNames?: ReadonlySet<string>,
 ): DocumentNode =>
   assembleSubgraphTypeDefs(
     getGeneratedDocumentModelTypes(documentModels),
     typeDefs,
-    ownModelName,
+    ownTypeNames,
   );
+
+/** Names of the type definitions in `doc`. */
+export function typeDefinitionNames(doc: DocumentNode): Set<string> {
+  return new Set(
+    doc.definitions
+      .map(typeDefinitionName)
+      .filter((name) => name !== undefined),
+  );
+}
 
 /** The generated document-model schema every subgraph is assembled onto. */
 export type GeneratedDocumentModelTypes = {
@@ -464,34 +473,29 @@ export function getGeneratedDocumentModelTypes(
 export function findSubgraphTypeCollisions(
   generated: GeneratedDocumentModelTypes,
   typeDefs: DocumentNode,
-  ownModelName?: string,
+  ownTypeNames?: ReadonlySet<string>,
 ): string[] {
   const collisions: string[] = [];
   for (const def of typeDefs.definitions) {
     if (def.kind === Kind.SCALAR_TYPE_DEFINITION) continue;
     const name = typeDefinitionName(def);
     if (name === undefined || !generated.names.has(name)) continue;
-    if (isOwnPrefixed(name, ownModelName)) continue;
+    if (ownTypeNames?.has(name)) continue;
     collisions.push(name);
   }
   return collisions;
-}
-
-// A model's own operation SDL may redefine its prefixed state types.
-function isOwnPrefixed(name: string, ownModelName: string | undefined) {
-  return ownModelName !== undefined && name.startsWith(`${ownModelName}_`);
 }
 
 /** Throws {@link SubgraphTypeCollisionError}; see {@link getDocumentModelTypeDefs}. */
 export function assembleSubgraphTypeDefs(
   generated: GeneratedDocumentModelTypes,
   typeDefs: DocumentNode,
-  ownModelName?: string,
+  ownTypeNames?: ReadonlySet<string>,
 ): DocumentNode {
   const collisions = findSubgraphTypeCollisions(
     generated,
     typeDefs,
-    ownModelName,
+    ownTypeNames,
   );
   if (collisions.length > 0) {
     throw new SubgraphTypeCollisionError(collisions);

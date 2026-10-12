@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   getDocumentModelTypeDefs,
   SubgraphTypeCollisionError,
+  typeDefinitionNames,
 } from "../src/utils/create-schema.js";
 
 /**
@@ -177,7 +178,12 @@ describe("getDocumentModelTypeDefs dedupe (Sentry #917)", () => {
     `);
 
     const names = typeDefNames(
-      getDocumentModelTypeDefs([model], operationTypeDefs, "EmploymentDetails"),
+      // As the model's own subgraph, whose generator emitted these types.
+      getDocumentModelTypeDefs(
+        [model],
+        operationTypeDefs,
+        typeDefinitionNames(operationTypeDefs),
+      ),
     );
 
     expect(duplicateNames(names)).toEqual([]);
@@ -207,7 +213,11 @@ describe("getDocumentModelTypeDefs dedupe (Sentry #917)", () => {
       SubgraphTypeCollisionError,
     );
     expect(() =>
-      getDocumentModelTypeDefs([model], typeDefs, "OtherModel"),
+      getDocumentModelTypeDefs(
+        [model],
+        typeDefs,
+        new Set(["OtherModel_ContractType"]),
+      ),
     ).toThrow(SubgraphTypeCollisionError);
   });
 });
