@@ -11,7 +11,7 @@ import {
   subgraphIndexFileTemplate,
   subgraphLibFileTemplate,
 } from "templates";
-import type { Project, SourceFile } from "ts-morph";
+import type { ClassDeclaration, Project, SourceFile } from "ts-morph";
 import {
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
@@ -128,11 +128,7 @@ export async function makeSubgraphsIndexFile(args: {
     project.getDirectoryOrThrow(subgraphsDir).getDescendantSourceFiles(),
     filter((sourceFile) => sourceFile.getBaseName() === "index.ts"),
     uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      sourceFile
-        .getClasses()
-        .find((c) => c.getBaseClass()?.getText().includes("BaseSubgraph")),
-    ),
+    map((sourceFile) => sourceFile.getClasses().find(extendsBaseSubgraph)),
     filter(isTruthy),
     map((classDeclaration) => ({
       name: classDeclaration.getNameOrThrow(),
@@ -148,6 +144,17 @@ export async function makeSubgraphsIndexFile(args: {
   );
   addMissingNamespaceExports(sourceFile, exportDeclarations);
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+// Read from the `extends` clause first: a subgraph generated a moment ago
+// imports BaseSubgraph from a package the project may not have installed yet,
+// and an unresolved base class would leave the subgraph out of the index.
+function extendsBaseSubgraph(classDeclaration: ClassDeclaration): boolean {
+  const named = classDeclaration.getExtends()?.getExpression().getText();
+  if (named?.includes("BaseSubgraph")) return true;
+  return (
+    classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph") ?? false
+  );
 }
 
 function addMissingNamespaceExports(

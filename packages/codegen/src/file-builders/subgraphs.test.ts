@@ -23,7 +23,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
-import { makeSubgraphsIndexFile } from "./subgraphs.js";
+import {
+  makeSubgraphsIndexFile,
+  tsMorphGenerateSubgraph,
+} from "./subgraphs.js";
 
 const originalCwd = process.cwd();
 const temporary: string[] = [];
@@ -126,5 +129,20 @@ describe("makeSubgraphsIndexFile", () => {
       'export * as StatementsSubgraph from "./statements/index.js";',
     );
     expect(index.match(/LedgerSubgraph/g)).toHaveLength(1);
+  });
+
+  it("exports a subgraph it just generated before reactor-api is installed", async () => {
+    // A fresh project: the scaffold imports BaseSubgraph from
+    // @powerhousedao/reactor-api, which no node_modules here provides.
+    const root = makeProject([]);
+    const project = buildTsMorphProject(root);
+
+    await tsMorphGenerateSubgraph({ subgraphName: "greeter", project });
+    await project.save();
+
+    const index = readFileSync(join(root, "subgraphs", "index.ts"), "utf-8");
+    expect(index).toContain(
+      'export * as GreeterSubgraph from "./greeter/index.js";',
+    );
   });
 });
