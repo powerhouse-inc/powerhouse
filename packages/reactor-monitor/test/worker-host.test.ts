@@ -678,6 +678,67 @@ describe("restart() on a registry-held worker reactor", () => {
       await worker.release();
     }
   });
+
+  it("registry.restart() provisions the reactor again on a fresh worker", async () => {
+    const workers: MonitorWorkerHost[] = [];
+    const channels: MessageChannel[] = [];
+    const names: string[] = [];
+    const registry = new ReactorMonitorRegistry();
+    const name = `restart-reprovision-${crypto.randomUUID()}`;
+    try {
+      const first = await registry.provision(
+        descriptor(name, {
+          createWorker: (workerName) => {
+            names.push(workerName);
+            const worker = createMonitorWorkerHost({ workerName });
+            const channel = new MessageChannel();
+            workers.push(worker);
+            channels.push(channel);
+            worker.host.connectPort(channel.port1);
+            return {
+              port: channel.port2,
+              addEventListener: () => undefined,
+            } as unknown as SharedWorker;
+          },
+        }),
+      );
+
+      const second = await registry.restart(name);
+
+      expect(registry.get(name)?.status).toBe("ready");
+      expect(registry.reactor(name)).toBe(second);
+      expect(second).not.toBe(first);
+      expect(first.isShutdown()).toBe(true);
+      expect(names).toHaveLength(2);
+      expect(names[1]).not.toBe(names[0]);
+      const created = await second.client.createEmpty(DRIVE_TYPE);
+      expect(created.header.id).toBeTruthy();
+    } finally {
+      await registry.killAll();
+      for (const channel of channels) {
+        channel.port1.close();
+        channel.port2.close();
+      }
+      for (const worker of workers) {
+        await worker.release();
+      }
+    }
+  });
+
+  it("registry.restart() refuses a reactor that is not a ready worker", async () => {
+    const registry = new ReactorMonitorRegistry();
+    try {
+      await registry.provision(inProcessDescriptor("restart-in-process"));
+      await expect(registry.restart("restart-in-process")).rejects.toThrow(
+        /No ready worker reactor/,
+      );
+      await expect(registry.restart("absent")).rejects.toThrow(
+        /No ready worker reactor/,
+      );
+    } finally {
+      await registry.killAll();
+    }
+  });
 });
 
 describe("provisionWorkerReactor", () => {
