@@ -1,9 +1,7 @@
 /**
- * Reactor Monitor app shell (W0.4 of the multi-reactor initiative — see
- * docs/plans/2026-10-03-multi-reactor.md). A sidebar provisions and lists
- * reactors from `@powerhousedao/reactor-monitor`; the main panel hosts the
- * inspector tabs, wired to the selected reactor's `IInspector`, `dbQuery`,
- * `syncManager` and `events`.
+ * Reactor Monitor app shell. A sidebar provisions and lists reactors from
+ * `@powerhousedao/reactor-monitor`; the main panel hosts the inspector tabs for
+ * the selected one.
  */
 import {
   ReactorMonitorProvider,
@@ -13,13 +11,17 @@ import {
 } from "@powerhousedao/reactor-monitor/react";
 import {
   GQL_CHANNEL_TYPE,
-  supportsSyncChannel,
   type ManagedReactor,
   type ManagedReactorEntry,
   type ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useServerTierGates } from "./components/AdminGate.js";
+import {
+  AdminGateNote,
+  adminGateFor,
+  operatorGateFor,
+  sqlGateFor,
+} from "./components/AdminGate.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
 import { MonitoringSetsPanel } from "./components/MonitoringSetsPanel.js";
 import {
@@ -62,24 +64,36 @@ export const INSPECTOR_TABS = [
 
 export type InspectorTab = (typeof INSPECTOR_TABS)[number];
 
-/**
- * The two top-level surfaces. "Inspect" is the per-reactor tab strip; "Router"
- * is the reactor-SPANNING topology view, which does not belong on the per-
- * reactor strip because it is about the set of reactors, not any one of them
- * (multi-reactor router, stages 1-3).
- */
+/** "Inspect" is the per-reactor tab strip; "Router" spans the set of reactors. */
 export const APP_VIEWS = ["Inspect", "Router"] as const;
 
 export type AppView = (typeof APP_VIEWS)[number];
 
-/**
- * The inspector panel for a READY reactor.
- *
- * Its own component, keyed per reactor by the caller, because the gates it
- * reads are not static: a remote reactor's admin tiers are its host's posture,
- * an operator changes them with a restart, and {@link useServerTierGates} keeps
- * this panel's reading of them current (multi-reactor W3.2 review).
- */
+/** Re-reads a remote reactor's info; the panel re-renders its gates from it. */
+function useInfoRecheck(reactor: ManagedReactor) {
+  const [, setChecks] = useState(0);
+  const [rechecking, setRechecking] = useState(false);
+  const [recheckError, setRecheckError] = useState("");
+
+  const recheck = useCallback(async () => {
+    if (reactor.kind !== "remote") {
+      return;
+    }
+    setRechecking(true);
+    setRecheckError("");
+    try {
+      await reactor.refreshInfo();
+    } catch (error) {
+      setRecheckError(error instanceof Error ? error.message : String(error));
+    }
+    setRechecking(false);
+    setChecks((count) => count + 1);
+  }, [reactor]);
+
+  return { recheck, rechecking, recheckError };
+}
+
+/** The inspector panel for a READY reactor, keyed per reactor by the caller. */
 function ReadyPanel({
   reactor,
   tab,
@@ -87,17 +101,20 @@ function ReadyPanel({
   readonly reactor: ManagedReactor;
   readonly tab: InspectorTab;
 }): ReactNode {
-  // What this reactor serves beyond reads. Every locally hosted reactor serves
-  // everything -- it is this process's own; a REMOTE one reports which tiers
-  // its host opted into, and the levers are disabled with that reason rather
-  // than offered and refused (multi-reactor W3.2).
-  const { admin, sql, recheck, rechecking, recheckError } =
-    useServerTierGates(reactor);
+  const { recheck, rechecking, recheckError } = useInfoRecheck(reactor);
+  const admin = adminGateFor(reactor);
+  const sql = sqlGateFor(reactor);
+  const operator = operatorGateFor(reactor);
+  const operational = (body: ReactNode): ReactNode =>
+    operator.enabled ? body : <AdminGateNote gate={operator} />;
+
   switch (tab) {
     case "Overview":
       return (
         <OverviewTab
-          onRecheckServer={recheck}
+          onRecheckServer={
+            reactor.kind === "remote" ? () => void recheck() : undefined
+          }
           recheckError={recheckError}
           rechecking={rechecking}
           reactor={reactor}
@@ -113,78 +130,63 @@ function ReadyPanel({
         />
       );
     case "Queue":
-      return <QueueTab admin={admin} inspector={reactor.inspector} />;
+      return operational(
+        <QueueTab
+          admin={admin}
+          inspector={reactor.inspector}
+          levers={reactor.admin}
+        />,
+      );
     case "Processors":
-      return <ProcessorsTab admin={admin} inspector={reactor.inspector} />;
+      return operational(
+        <ProcessorsTab
+          admin={admin}
+          inspector={reactor.inspector}
+          levers={reactor.admin}
+        />,
+      );
     case "Catch-up":
-      return <CatchUpTab admin={admin} inspector={reactor.inspector} />;
+      return operational(
+        <CatchUpTab
+          admin={admin}
+          inspector={reactor.inspector}
+          levers={reactor.admin}
+        />,
+      );
     case "Integrity":
-      return <IntegrityTab admin={admin} inspector={reactor.inspector} />;
+      return (
+        <IntegrityTab
+          admin={admin}
+          inspector={reactor.inspector}
+          levers={reactor.admin}
+        />
+      );
     case "DB":
       return <DbTab dbQuery={reactor.dbQuery} sql={sql} />;
     case "Attachments":
-      // Reads the handle's own attachment surface rather than the inspector:
-      // byte movement is a capability of the reactor this process BUILT, so a
-      // reactor without a store says so instead of rendering empty counts
-      // (multi-reactor W3.4).
-      return <AttachmentsTab reactor={reactor} />;
+      return operational(<AttachmentsTab reactor={reactor} />);
     case "Workflows":
-      // Reuses Workflow Studio's standalone runtime client against the
-      // reactor's workflow-runtime subgraph. The tab itself gates on kind and
-      // `serverInfo.workflows`, showing an "unavailable here" panel for a local
-      // reactor or a host with no workflow engine (multi-reactor §3).
       return <WorkflowsTab reactor={reactor} />;
     case "Sync":
-      return (
+      // A remote reactor cannot be handed a MessagePort, and its remotes are
+      // its host's configuration, so neither link panel nor add-remote is live.
+      return operational(
         <>
-          {/*
-            Both panels gate on the capability contract, which is what a router
-            reads too, and which carries the channel types the reactor actually
-            routes -- a worker's `adoptLocalSyncPeer` presence alone can
-            disagree with a descriptor when a later tab's loses the race to the
-            construct that actually built (multi-reactor stage 2 review). Since
-            W3.0 the channels are independent: a connect-mode reactor declares
-            `gql` and `local`, a local-only reactor only `local`, a
-            switchboard-scheme reactor `polling` and `local` (so no add-remote
-            form, since a polling channel is created by the peer that polls
-            this reactor), and an island none. The link panel reads its own end
-            from the registry, so only the gql gate is passed in.
-          */}
-          {/*
-            A remote reactor cannot be given a MessagePort, so the brokered
-            link panel has nothing to offer it -- `syncChannels` never contains
-            `local` for one, but the panel is also about THIS monitor's own
-            reactors, so it is left out entirely rather than rendered inert.
-          */}
           {reactor.kind === "remote" ? null : (
             <LinkLocalSyncPanel reactorName={reactor.name} />
           )}
-          {/*
-            The add-remote form gets the SAME rule the link panel just got, for
-            the same reason: a remote reactor's remotes are not this monitor's
-            to change. `RemoteSyncManagerClient.add()` refuses by name because
-            which peers a Switchboard syncs with is that deployment's
-            configuration, and the inspection subgraph does not serve it -- so a
-            live form whose every submit is refused is a form that cannot work,
-            whatever channel types that reactor reports routing (a CONNECT-scheme
-            Switchboard reports `gql` and would have rendered one).
-          */}
           <SyncTab
             admin={admin}
-            gqlRemotes={supportsSyncChannel(
-              reactor.capabilities,
-              GQL_CHANNEL_TYPE,
-            )}
+            gqlRemotes={reactor.info.syncChannels.includes(GQL_CHANNEL_TYPE)}
             inspector={reactor.inspector}
             reconfigurable={reactor.kind !== "remote"}
+            syncAdmin={reactor.syncAdmin}
             syncManager={reactor.syncManager}
           />
-        </>
+        </>,
       );
     case "Events":
-      // The remote inspection surface is request/response GraphQL: nothing
-      // streams the far side's bus events, and `reactor.events` says so by
-      // throwing. Say it here instead of letting the tab hit that.
+      // Nothing streams a remote host's bus events over request/response GraphQL.
       return reactor.kind === "remote" ? (
         <p className="rm-placeholder" data-testid="events-unavailable">
           A remote reactor&apos;s event bus is not forwarded over the inspection
@@ -226,8 +228,7 @@ function InspectorPanel({
       </p>
     );
   }
-  // Keyed per reactor, so the panel's tier-polling state belongs to the handle
-  // it was read from rather than surviving a switch to another reactor.
+  // Keyed so re-check state belongs to one handle.
   return <ReadyPanel key={entry.name} reactor={entry.reactor} tab={tab} />;
 }
 
@@ -370,7 +371,7 @@ export type AppProps = {
   readonly buildDescriptor?: (request: ProvisionRequest) => ReactorDescriptor;
   /**
    * The monitoring-sets store that persists provisioned reactors across a
-   * refresh (multi-reactor §6). Defaults to a localStorage-backed one;
+   * refresh. Defaults to a localStorage-backed one;
    * overridable so a test can inject a fresh, isolated store.
    */
   readonly store?: MonitoringSetsStore;

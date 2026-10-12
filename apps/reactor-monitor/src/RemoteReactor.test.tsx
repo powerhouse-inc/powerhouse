@@ -1,117 +1,124 @@
 // @vitest-environment happy-dom
+import type {
+  WireInspectorAccess,
+  WireReactorInfo,
+} from "@powerhousedao/reactor";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App.js";
-
-/**
- * The monitor app against a REMOTE reactor (multi-reactor W3.2): provisioning
- * one from the form, rendering the inspector tabs against it, and -- the point
- * of the admin tiers -- disabling exactly the levers that reactor's host does
- * not serve, with the reason on screen instead of a click that fails.
- *
- * The far side is a stubbed `fetch` over the inspection subgraph's documents.
- * That the real subgraph answers them is
- * `packages/reactor-api/test/inspection-subgraph.test.ts`; that the client
- * speaks them correctly is
- * `packages/reactor-monitor/test/remote-inspection.test.ts`. What is under test
- * here is the UI's reading of the reported facts.
- */
+import {
+  NOT_AN_OPERATOR_REASON,
+  READS_ONLY_REASON,
+} from "./components/AdminGate.js";
+import type { ProvisionRequest } from "./components/ProvisionPanel.js";
+import { buildDescriptor as buildFormDescriptor } from "./provisioning.js";
 
 const WAIT = { timeout: 10_000 } as const;
 
-/**
- * The far side's posture, as a MUTABLE record: the two tier flags are what an
- * operator changes by restarting that host, and the monitor is supposed to pick
- * that up under the same handle (multi-reactor W3.2 review).
- */
-type ServerTiers = {
-  admin: boolean;
-  sql: boolean;
-  /** What that reactor reports routing; a connect-scheme host says "gql". */
+const OPEN_READS = new Set([
+  "ReactorInspectionInfo",
+  "ReactorInspectionDocumentModels",
+  "ReactorInspectionDrives",
+  "ReactorInspectionDriveIntegrity",
+  "ReactorInspectionValidateDocument",
+]);
+
+/** The far side's posture; mutable so a re-check can pick a change up. */
+type Host = {
+  access: WireInspectorAccess | null;
+  workflows?: boolean;
   syncChannels?: readonly string[];
 };
 
-function fakeInspectionFetch(tiers: ServerTiers): typeof fetch {
-  const answers = (name: string): unknown => {
-    switch (name) {
-      case "ReactorInspectionInfo":
-        return {
-          inspection: {
-            info: {
-              hosting: "remote",
-              inspection: "rpc",
-              storageKind: "postgres",
-              processors: true,
-              workflows: true,
-              syncChannels: tiers.syncChannels ?? ["polling"],
-              adminEnabled: tiers.admin,
-              sqlEnabled: tiers.sql,
-            },
-          },
-        };
-      case "ReactorInspectionRemotes":
-        return { inspection: { remotes: [] } };
-      case "ReactorInspectionStorageHealth":
-        return {
-          inspection: {
-            storageHealth: {
-              healthy: true,
-              everRecreated: false,
-              recreateCount: 0,
-              lastRecreated: null,
-            },
-          },
-        };
-      case "ReactorInspectionQueueState":
-        return {
-          inspection: {
-            queueState: {
-              isPaused: false,
-              totalPending: 0,
-              totalExecuting: 0,
-              pendingJobs: [],
-              executingJobs: [],
-            },
-          },
-        };
-      case "ReactorInspectionProcessors":
-        return { inspection: { processors: [] } };
-      case "ReactorInspectionCatchUp":
-        return { inspection: { catchUpStatus: { consumers: [] } } };
-      default:
-        return undefined;
-    }
+const OPERATOR: WireInspectorAccess = { admin: false, sql: false };
+
+function fakeInspectionFetch(host: Host): typeof fetch {
+  const answers: Record<string, () => unknown> = {
+    ReactorInspectionInfo: () => {
+      const info: WireReactorInfo = {
+        storage: {
+          engine: "postgres",
+          persistence: "server",
+          durable: true,
+          selfHeal: false,
+        },
+        workflows: host.workflows ?? false,
+        syncChannels: host.syncChannels ?? ["polling"],
+        access: host.access,
+      };
+      return { inspection: { info } };
+    },
+    ReactorInspectionDocumentModels: () => ({
+      inspection: { documentModels: [] },
+    }),
+    ReactorInspectionRemotes: () => ({ inspection: { remotes: [] } }),
+    ReactorInspectionStorageHealth: () => ({
+      inspection: {
+        storageHealth: {
+          tracked: true,
+          healthy: true,
+          everRecreated: false,
+          recreateCount: 0,
+        },
+      },
+    }),
+    ReactorInspectionQueueState: () => ({
+      inspection: {
+        queueState: {
+          isPaused: false,
+          totalPending: 0,
+          totalExecuting: 0,
+          pendingJobs: [],
+          executingJobs: [],
+        },
+      },
+    }),
+    ReactorInspectionProcessors: () => ({ inspection: { processors: [] } }),
+    ReactorInspectionCatchUp: () => ({
+      inspection: { catchUpStatus: { consumers: [], watermark: null } },
+    }),
   };
 
   return (_input, init) => {
     const body = JSON.parse((init?.body as string | undefined) ?? "{}") as {
       query: string;
     };
-    const name = /(?:query|mutation)\s+(\w+)/.exec(body.query)?.[1] ?? "";
-    const data = answers(name);
+    const name = /query\s+(\w+)/.exec(body.query)?.[1] ?? "";
+    if (host.access === null && !OPEN_READS.has(name)) {
+      return Promise.resolve(
+        Response.json({
+          errors: [
+            {
+              message: "Forbidden: insufficient permissions",
+              extensions: { code: "FORBIDDEN" },
+            },
+          ],
+          data: null,
+        }),
+      );
+    }
+    const answer = answers[name];
     return Promise.resolve(
-      data === undefined
+      answer === undefined
         ? Response.json({ errors: [{ message: `no stub for ${name}` }] })
-        : Response.json({ data }),
+        : Response.json({ data: answer() }),
     );
   };
 }
 
-function remoteApp(tiers: ServerTiers): ReturnType<typeof render> {
-  const buildDescriptor = ({
-    name,
-    kind,
-    remoteUrl,
-  }: {
-    name: string;
-    kind: ReactorDescriptor["kind"];
-    remoteUrl?: string;
-  }): ReactorDescriptor => ({
-    kind,
-    name,
-    remote: { url: remoteUrl ?? "", fetch: fakeInspectionFetch(tiers) },
-  });
+function remoteApp(host: Host): ReturnType<typeof render> {
+  const buildDescriptor = (request: ProvisionRequest): ReactorDescriptor => {
+    const built = buildFormDescriptor(request);
+    return {
+      ...built,
+      remote: {
+        url: built.remote?.url ?? "",
+        ...built.remote,
+        fetch: fakeInspectionFetch(host),
+      },
+    };
+  };
   return render(<App buildDescriptor={buildDescriptor} />);
 }
 
@@ -132,17 +139,24 @@ async function provisionRemoteReactor(
   await waitFor(() => expect(view.getByTitle("ready")).toBeTruthy(), WAIT);
 }
 
+function badgeFor(view: ReturnType<typeof render>, label: string): string {
+  const cell = [...view.container.querySelectorAll(".rm-cap")].find(
+    (node) => node.querySelector(".rm-cap-label")?.textContent === label,
+  );
+  return cell?.querySelector(".rm-badge")?.textContent ?? "";
+}
+
 describe("remote reactor in the monitor app", () => {
   beforeEach(() => {
     try {
       window.localStorage.clear();
     } catch {
-      // No storage to clear in this environment; nothing leaks between tests.
+      // No storage in this environment.
     }
   });
 
   it("requires a URL, because a remote reactor IS its URL", () => {
-    const view = remoteApp({ admin: false, sql: false });
+    const view = remoteApp({ access: null });
 
     fireEvent.change(view.getByDisplayValue("in-process"), {
       target: { value: "remote" },
@@ -159,7 +173,7 @@ describe("remote reactor in the monitor app", () => {
   });
 
   it("swaps the sync-mode select for the URL field: nothing is built here", () => {
-    const view = remoteApp({ admin: false, sql: false });
+    const view = remoteApp({ access: null });
 
     expect(view.queryByDisplayValue("local only (brokered)")).toBeTruthy();
     fireEvent.change(view.getByDisplayValue("in-process"), {
@@ -175,148 +189,116 @@ describe("remote reactor in the monitor app", () => {
     );
   });
 
-  it("renders the capability grid from the reactor's own report", async () => {
-    const view = remoteApp({ admin: false, sql: false });
+  it("renders the capability grid from the reactor's own info", async () => {
+    const view = remoteApp({ access: null });
     await provisionRemoteReactor(view, "switchboard");
 
     const grid = view.getByLabelText("Reactor capabilities");
     expect(grid.textContent).toContain("remote");
-    // W3.2 raised this from "none": the subgraph is a real transport.
     expect(grid.textContent).toContain("rpc");
-    // The far side's real channel type, not the "gql" a URL would suggest.
     expect(grid.textContent).toContain("polling");
-
-    // And the two facts that are the DEPLOYMENT's rather than the reactor's.
-    expect(view.getByTestId("remote-admin-enabled").textContent).toMatch(
-      /disabled: reads only/,
-    );
-    expect(view.getByTestId("remote-sql-enabled").textContent).toMatch(
-      /disabled: the DB tab is unavailable/,
+    expect(badgeFor(view, "Storage")).toBe("postgres / server");
+    expect(badgeFor(view, "Access")).toBe("reads only");
+    expect(view.getByTestId("remote-levers").textContent).toContain(
+      READS_ONLY_REASON,
     );
   }, 20_000);
 
-  it("disables the repair levers and the DB tab on a read-only host, with the reason", async () => {
-    const view = remoteApp({ admin: false, sql: false });
-    await provisionRemoteReactor(view, "readonly-switchboard");
+  it("shows the non-operator note in place of every operational tab", async () => {
+    const view = remoteApp({ access: null });
+    await provisionRemoteReactor(view, "public-switchboard");
 
-    fireEvent.click(view.getByRole("button", { name: "Queue" }));
-    await waitFor(
-      () =>
-        expect(view.getByTestId("admin-gate-note").textContent).toMatch(
-          /has not set PH_INSPECTION_ADMIN=true/,
-        ),
-      WAIT,
-    );
-    expect(
-      view.getByRole("button", { name: "Pause" }).getAttribute("disabled"),
-    ).not.toBeNull();
-
-    fireEvent.click(view.getByRole("button", { name: "DB" }));
-    await waitFor(
-      () =>
-        expect(view.getByTestId("admin-gate-note").textContent).toMatch(
-          /does not serve raw SQL against its store/,
-        ),
-      WAIT,
-    );
-    // Nothing of the explorer is rendered: there is no part of it that works
-    // without SQL.
-    expect(view.queryByLabelText("Schema tree")).toBeNull();
-
-    fireEvent.click(view.getByRole("button", { name: "Sync" }));
-    await waitFor(
-      () =>
-        expect(view.getByTestId("admin-gate-note").textContent).toMatch(
-          /every sync repair lever/,
-        ),
-      WAIT,
-    );
-    // A remote reactor cannot be handed a MessagePort, so the brokered link
-    // panel is absent rather than rendered inert.
-    expect(view.queryByTestId("link-local-sync")).toBeNull();
+    for (const tab of [
+      "Queue",
+      "Processors",
+      "Catch-up",
+      "Sync",
+      "Attachments",
+    ]) {
+      fireEvent.click(view.getByRole("button", { name: tab }));
+      expect(view.getByTestId("admin-gate-note").textContent).toBe(
+        NOT_AN_OPERATOR_REASON,
+      );
+    }
+    expect(view.queryByRole("button", { name: "Pause" })).toBeNull();
   }, 20_000);
 
-  it("leaves the levers live on a host that opted in, and serves the DB tab", async () => {
-    const view = remoteApp({ admin: true, sql: true });
-    await provisionRemoteReactor(view, "admin-switchboard");
-
-    expect(view.getByTestId("remote-admin-enabled").textContent).toMatch(
-      /enabled: pause\/resume/,
-    );
+  it("disables the levers and the DB tab for an operator, with the reason", async () => {
+    const view = remoteApp({ access: OPERATOR });
+    await provisionRemoteReactor(view, "operator-switchboard");
+    expect(badgeFor(view, "Access")).toBe("operator");
 
     fireEvent.click(view.getByRole("button", { name: "Queue" }));
     await waitFor(
       () => expect(view.getByText(/Showing \d+ job\(s\)/)).toBeTruthy(),
       WAIT,
     );
-    expect(view.queryByTestId("admin-gate-note")).toBeNull();
+    expect(view.getByTestId("admin-gate-note").textContent).toBe(
+      READS_ONLY_REASON,
+    );
     expect(
       view.getByRole("button", { name: "Pause" }).getAttribute("disabled"),
-    ).toBeNull();
+    ).not.toBeNull();
+
+    fireEvent.click(view.getByRole("button", { name: "DB" }));
+    expect(view.getByTestId("admin-gate-note").textContent).toBe(
+      READS_ONLY_REASON,
+    );
+    expect(view.queryByLabelText("Schema tree")).toBeNull();
+
+    fireEvent.click(view.getByRole("button", { name: "Sync" }));
+    await waitFor(
+      () =>
+        expect(view.getByTestId("admin-gate-note").textContent).toBe(
+          READS_ONLY_REASON,
+        ),
+      WAIT,
+    );
+    expect(view.queryByTestId("link-local-sync")).toBeNull();
   }, 20_000);
 
-  // The form could not work for ANY remote reactor: every submit calls
-  // `RemoteSyncManagerClient.add()`, which refuses because that deployment's
-  // peers are its own configuration. A connect-scheme Switchboard reports the
-  // "gql" channel the form writes, so the channel gate alone left a live form
-  // in front of the operator whose every submit was refused.
-  it("hides the add-remote form on a remote host that DOES route gql, with the reason", async () => {
-    const view = remoteApp({ admin: true, sql: true, syncChannels: ["gql"] });
+  it("hides the add-remote form on a remote host that routes gql", async () => {
+    const view = remoteApp({ access: OPERATOR, syncChannels: ["gql"] });
     await provisionRemoteReactor(view, "connect-switchboard");
 
     fireEvent.click(view.getByRole("button", { name: "Sync" }));
     await waitFor(
       () =>
-        expect(
-          view.getByTestId("sync-add-remote-remote-host").textContent,
-        ).toMatch(
-          /not served over the remote inspection surface|runs on another host/,
-        ),
+        expect(view.getByTestId("sync-add-remote-remote-host")).toBeTruthy(),
       WAIT,
     );
     expect(view.queryByRole("button", { name: "Add remote" })).toBeNull();
-    expect(view.queryByPlaceholderText("my-remote")).toBeNull();
-    // The reactor DOES route gql, so the channel-gate note is not the reason
-    // shown -- the reason is that this reactor is not ours to reconfigure.
     expect(view.queryByTestId("sync-add-remote-unavailable")).toBeNull();
   }, 20_000);
 
-  // The documented operator flow, end to end in the UI: restart that host with
-  // PH_INSPECTION_ADMIN=true, re-check it, and the levers go live under the
-  // same handle. Gates computed once at provision time dead-ended this.
-  it("picks up a host restarted with the admin flag when asked to re-check", async () => {
-    const tiers: ServerTiers = { admin: false, sql: false };
-    const view = remoteApp(tiers);
-    await provisionRemoteReactor(view, "restarted-switchboard");
+  it("re-reads the host's info on re-check and re-gates the tabs", async () => {
+    const host: Host = { access: null };
+    const view = remoteApp(host);
+    await provisionRemoteReactor(view, "recheck-switchboard");
+    expect(badgeFor(view, "Workflows")).toBe("no");
 
-    expect(view.getByTestId("remote-admin-enabled").textContent).toMatch(
-      /disabled: reads only/,
-    );
-
-    tiers.admin = true;
+    host.access = OPERATOR;
+    host.workflows = true;
     fireEvent.click(view.getByTestId("remote-recheck"));
 
     await waitFor(
-      () =>
-        expect(view.getByTestId("remote-admin-enabled").textContent).toMatch(
-          /enabled: pause\/resume/,
-        ),
+      () => expect(badgeFor(view, "Access")).toBe("operator"),
       WAIT,
     );
+    expect(badgeFor(view, "Workflows")).toBe("yes");
 
-    // And the gate the other tabs read agrees: no reason note, live button.
     fireEvent.click(view.getByRole("button", { name: "Queue" }));
     await waitFor(
-      () => expect(view.queryByTestId("admin-gate-note")).toBeNull(),
+      () => expect(view.getByText(/Showing \d+ job\(s\)/)).toBeTruthy(),
       WAIT,
     );
-    expect(
-      view.getByRole("button", { name: "Pause" }).getAttribute("disabled"),
-    ).toBeNull();
+    expect(view.getByTestId("admin-gate-note").textContent).toBe(
+      READS_ONLY_REASON,
+    );
   }, 20_000);
 
   it("says why the Events tab is empty rather than hitting a bus that is not there", async () => {
-    const view = remoteApp({ admin: true, sql: true });
+    const view = remoteApp({ access: OPERATOR });
     await provisionRemoteReactor(view, "events-switchboard");
 
     fireEvent.click(view.getByRole("button", { name: "Events" }));
@@ -324,5 +306,17 @@ describe("remote reactor in the monitor app", () => {
     expect(view.getByTestId("events-unavailable").textContent).toMatch(
       /not forwarded over the\s+inspection surface/,
     );
+  }, 20_000);
+
+  it("never offers a remote reactor as a router backend", async () => {
+    const view = remoteApp({ access: OPERATOR });
+    await provisionRemoteReactor(view, "router-switchboard");
+
+    fireEvent.click(view.getByRole("button", { name: "Router" }));
+
+    expect(view.getByTestId("router-needs-reactors")).toBeTruthy();
+    expect(
+      view.queryByTestId("router-backend-option-router-switchboard"),
+    ).toBeNull();
   }, 20_000);
 });
