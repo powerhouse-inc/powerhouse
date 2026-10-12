@@ -1,9 +1,7 @@
 export {
   createRemoteInspectorClient,
-  DEFAULT_INFO_TTL_MS,
   DEFAULT_STORAGE_HEALTH_TTL_MS,
   RemoteInspectorClient,
-  type RemoteInspectionInfo,
   type RemoteInspectionRemote,
   type RemoteInspectorClientOptions,
 } from "./client.js";
