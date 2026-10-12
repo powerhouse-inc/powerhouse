@@ -213,18 +213,21 @@ export class ReactorMonitorRegistry {
     this.entries.clear();
     this.publish();
     const names = new Set([...entries.keys(), ...this.tails.keys()]);
-    // Serially: each in-process kill closes a PGlite, and the stores share a
-    // wasm instance per realm. Queued now, so a later op on a name waits.
-    let previous: Promise<unknown> = Promise.resolve();
-    const kills = [...names].map((name) => {
-      const after = previous;
-      const killed = this.enqueue(name, async () => {
-        await after;
-        await entries.get(name)?.reactor?.kill();
-      });
-      previous = killed.catch(() => undefined);
-      return killed;
-    });
+    // Each name waits only on its own queue; the kills themselves run one at
+    // a time, since each in-process kill closes a PGlite and the stores share
+    // a wasm instance per realm.
+    let gate: Promise<unknown> = Promise.resolve();
+    const kills = [...names].map((name) =>
+      this.enqueue(name, async () => {
+        const reactor = entries.get(name)?.reactor;
+        if (!reactor) {
+          return;
+        }
+        const killed = gate.then(() => reactor.kill());
+        gate = killed.catch(() => undefined);
+        await killed;
+      }),
+    );
     await Promise.all(kills);
   }
 
