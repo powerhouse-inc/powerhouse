@@ -166,21 +166,36 @@ export type GraphQLManagerOptions = {
 };
 
 /**
- * Where a subgraph came from: a package name, the generated document-model
- * subgraphs, or the host. A name belongs to its first origin; only that origin
- * may replace it.
+ * Where a subgraph came from: a core subgraph, the host, the generated
+ * document-model subgraphs, or a package name. A name belongs to one origin:
+ * the same origin replaces it, a higher-ranked one evicts it, and any other is
+ * refused.
  */
+const CORE_ORIGIN = Symbol("core");
 const DOCUMENT_MODEL_ORIGIN = Symbol("document-models");
 const HOST_ORIGIN = Symbol("host");
 type SubgraphOrigin =
   | string
+  | typeof CORE_ORIGIN
   | typeof DOCUMENT_MODEL_ORIGIN
   | typeof HOST_ORIGIN;
+type TrackedOrigin = Exclude<
+  SubgraphOrigin,
+  typeof CORE_ORIGIN | typeof HOST_ORIGIN
+>;
 
 function describeOrigin(origin: SubgraphOrigin): string {
+  if (origin === CORE_ORIGIN) return "core";
   if (origin === DOCUMENT_MODEL_ORIGIN) return "document models";
   if (origin === HOST_ORIGIN) return "the host";
   return `package ${origin}`;
+}
+
+function rank(origin: SubgraphOrigin): number {
+  if (origin === CORE_ORIGIN) return 3;
+  if (origin === HOST_ORIGIN) return 2;
+  if (origin === DOCUMENT_MODEL_ORIGIN) return 1;
+  return 0;
 }
 
 // Returning `false` closes 4403 with the reason `Forbidden`, so every refusal
@@ -293,34 +308,41 @@ export class GraphQLManager {
   private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
 
   /**
-   * Origin → the subgraph instances registered from it. Host subgraphs are
-   * not tracked. Tracks the package association so that removed packages can
-   * be torn down (see unregisterPackage / prunePackageSubgraphs).
+   * Origin → the subgraph instances registered from it. Core and host
+   * subgraphs are not tracked. Tracks the package association so that
+   * removed packages can be torn down (see unregisterPackage /
+   * prunePackageSubgraphs).
    */
-  private readonly packageSubgraphs = new Map<
-    Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
-    Set<ISubgraph>
-  >();
+  private readonly packageSubgraphs = new Map<TrackedOrigin, Set<ISubgraph>>();
 
   readonly #origins = new WeakMap<ISubgraph, SubgraphOrigin>();
 
   /**
    * Package → the supergraph and subgraph classes (by subgraph name) it last
    * provided, so a subgraph refused or evicted for its name can register once
-   * the name is free.
+   * the name is free. `refused` keeps each one's instance until it is set
+   * up, so the next attempt reuses it and a refusal that still holds logs
+   * once.
    */
   #packageClasses = new Map<
     string,
-    { supergraph: string; classes: Map<string, SubgraphClass> }
+    {
+      supergraph: string;
+      classes: Map<string, SubgraphClass>;
+      refused: Map<string, ISubgraph>;
+    }
   >();
 
   /** Registry changes run one at a time: a registration is admitted before
    * the awaits that complete it. */
   #registryChanges: Promise<unknown> = Promise.resolve();
 
-  /** Set inside a running registry change, so a subgraph hook that makes
-   * another runs it inline instead of waiting on itself. */
-  readonly #inRegistryChange = new AsyncLocalStorage<true>();
+  /** Active while a subgraph hook runs, so a registry change the hook makes
+   * runs inline instead of waiting on the change that called the hook. Work
+   * the hook detaches, such as a timer, enqueues as usual once the hook has
+   * settled; while the hook is pending it cannot be told from awaited work
+   * and runs inline too. */
+  readonly #inHook = new AsyncLocalStorage<{ active: boolean }>();
 
   #generatedTypes:
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
@@ -696,33 +718,37 @@ export class GraphQLManager {
       }
     }
 
-    // Document model subgraph instances are added to this.subgraphs above.
-    // Their handlers are wired in _updateRouter() → #setupSubgraphs(this.subgraphs),
-    // which is called at the end of init() via updateRouter(). We intentionally do
-    // NOT call #setupSubgraphs(this.coreSubgraphsMap) here - doing so would
-    // create duplicate Apollo servers for the same core-subgraph schemas, which
-    // in the new IGatewayAdapter architecture hangs #waitForServer and blocks init().
-
+    // Mounted by the next router update.
     return registeredNames;
   }
 
-  /** The first subgraph named `name` in `subgraphsMap`, searching `buckets`
-   * (every bucket when omitted). */
+  /** The first subgraph named `name` in `subgraphsMap`. */
   #findByName(
     subgraphsMap: Map<string, ISubgraph[]>,
     name: string,
-    buckets?: readonly string[],
   ): ISubgraph | undefined {
-    for (const [bucket, subgraphs] of subgraphsMap) {
-      if (buckets && !buckets.includes(bucket)) continue;
+    for (const subgraphs of subgraphsMap.values()) {
       const found = subgraphs.find((it) => it.name === name);
       if (found) return found;
     }
     return undefined;
   }
 
-  /** Core subgraph names are reserved: they register with core=true during
-   * init() and no package subgraph may take one of their names. */
+  /** Every registered subgraph named `name`, core or not, in any bucket: the
+   * in-process handler map is keyed by bare name, so a name has one owner. */
+  #holdersOf(name: string): Set<ISubgraph> {
+    const holders = new Set<ISubgraph>();
+    for (const subgraphsMap of [this.coreSubgraphsMap, this.subgraphs]) {
+      for (const subgraphs of subgraphsMap.values()) {
+        for (const subgraph of subgraphs) {
+          if (subgraph.name === name) holders.add(subgraph);
+        }
+      }
+    }
+    return holders;
+  }
+
+  /** Core subgraph names are reserved: no other subgraph may take one. */
   #isCoreNameReserved(name: string): boolean {
     return this.#findByName(this.coreSubgraphsMap, name) !== undefined;
   }
@@ -790,20 +816,19 @@ export class GraphQLManager {
   }
 
   /**
-   * Whether `instance` may register into `supergraph`, and what it replaces.
-   * A mount path belongs to its first registration; only the same origin may
-   * replace it, except that a model's generated subgraph takes its name back
-   * from a package, as it would have at boot.
+   * Whether `instance` may register, and what it replaces. A name has one
+   * holder across every bucket: the same origin replaces it, a higher rank
+   * (core > host > document models > package) evicts it, and anything else is
+   * refused.
    */
   #admit(
     instance: ISubgraph,
-    supergraph: string,
     core: boolean,
     origin: SubgraphOrigin,
   ):
     | { action: "skip"; existing: ISubgraph }
     | { action: "reject" }
-    | { action: "add"; replaces?: ISubgraph } {
+    | { action: "add"; replaces: ISubgraph[]; evicts: ISubgraph[] } {
     // A package subgraph may not take a name a core subgraph has registered:
     // the in-process handler map is keyed by bare name, so a same-name
     // subgraph would shadow the core one (issue #2972).
@@ -815,23 +840,20 @@ export class GraphQLManager {
       return { action: "reject" };
     }
 
-    const existing = this.#findByName(
-      core ? this.coreSubgraphsMap : this.subgraphs,
-      instance.name,
-      this.#mountBuckets(supergraph),
-    );
-    if (existing === instance) return { action: "skip", existing };
+    const holders = this.#holdersOf(instance.name);
+    if (holders.has(instance)) return { action: "skip", existing: instance };
 
-    if (existing) {
-      const existingOrigin = this.#origins.get(existing) ?? HOST_ORIGIN;
-      const reclaims =
-        origin === DOCUMENT_MODEL_ORIGIN && typeof existingOrigin === "string";
-      if (existingOrigin !== origin && !reclaims) {
+    const rivals = Array.from(holders).filter(
+      (holder) => this.#originOf(holder) !== origin,
+    );
+    for (const holder of rivals) {
+      const holderOrigin = this.#originOf(holder);
+      if (rank(origin) <= rank(holderOrigin)) {
         this.logger.error(
           "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
           instance.name,
           describeOrigin(origin),
-          describeOrigin(existingOrigin),
+          describeOrigin(holderOrigin),
         );
         return { action: "reject" };
       }
@@ -839,22 +861,27 @@ export class GraphQLManager {
 
     const collisions = core ? [] : this.#typeCollisions(instance);
     if (collisions.length > 0) {
-      this.logger.error(
-        "Rejecting subgraph @name: @error",
-        instance.name,
-        new SubgraphTypeCollisionError(collisions).message,
-      );
+      const reason = new SubgraphTypeCollisionError(collisions).message;
+      if (this.#loggedCollisions.get(instance) !== reason) {
+        this.#loggedCollisions.set(instance, reason);
+        this.logger.error(
+          "Rejecting subgraph @name: @error",
+          instance.name,
+          reason,
+        );
+      }
       return { action: "reject" };
     }
 
-    if (existing && (this.#origins.get(existing) ?? HOST_ORIGIN) !== origin) {
-      this.logger.error(
-        "Evicting subgraph @name from @existing: the document model of that name owns it",
-        instance.name,
-        describeOrigin(this.#origins.get(existing) ?? HOST_ORIGIN),
-      );
-    }
-    return { action: "add", replaces: existing };
+    return {
+      action: "add",
+      replaces: Array.from(holders).filter((it) => !rivals.includes(it)),
+      evicts: rivals,
+    };
+  }
+
+  #originOf(instance: ISubgraph): SubgraphOrigin {
+    return this.#origins.get(instance) ?? HOST_ORIGIN;
   }
 
   async #addSubgraphInstance(
@@ -863,10 +890,11 @@ export class GraphQLManager {
     core = false,
     origin: SubgraphOrigin = HOST_ORIGIN,
   ) {
+    if (core) origin = CORE_ORIGIN;
     // Rejections log rather than throw - package registration runs from a
     // detached async closure in server.ts, where a throw is an unhandled
     // rejection that takes the host down.
-    const admission = this.#admit(subgraphInstance, supergraph, core, origin);
+    const admission = this.#admit(subgraphInstance, core, origin);
     if (admission.action === "reject") return undefined;
     if (admission.action === "skip") {
       this.logger.debug(
@@ -875,12 +903,29 @@ export class GraphQLManager {
       return admission.existing;
     }
 
-    const { replaces } = admission;
-    if (replaces) {
-      await this.#detachSubgraph(replaces, this.#mountBuckets(supergraph));
+    const { replaces, evicts } = admission;
+    for (const replaced of replaces) {
+      await this.#removeSubgraphInstance(replaced);
+    }
+    if (typeof origin === "string") {
+      const refused = this.#packageClasses.get(origin)?.refused;
+      if (refused?.get(subgraphInstance.name) === subgraphInstance) {
+        refused.delete(subgraphInstance.name);
+      }
     }
 
-    await subgraphInstance.onSetup?.();
+    await this.#runHook(() => subgraphInstance.onSetup?.());
+
+    // After setup, so a subgraph that fails to set up leaves the holder.
+    for (const evicted of evicts) {
+      this.logger.error(
+        "Evicting subgraph @name from @existing: @origin outranks it",
+        subgraphInstance.name,
+        describeOrigin(this.#originOf(evicted)),
+        describeOrigin(origin),
+      );
+      await this.#removeSubgraphInstance(evicted);
+    }
 
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
     for (const bucket of this.#mountBuckets(supergraph)) {
@@ -893,7 +938,7 @@ export class GraphQLManager {
     }
 
     this.#origins.set(subgraphInstance, origin);
-    if (origin !== HOST_ORIGIN) {
+    if (origin !== HOST_ORIGIN && origin !== CORE_ORIGIN) {
       let instances = this.packageSubgraphs.get(origin);
       if (!instances) {
         instances = new Set();
@@ -902,7 +947,7 @@ export class GraphQLManager {
       instances.add(subgraphInstance);
     }
     this.logger.info(
-      `${replaces ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+      `${replaces.length + evicts.length > 0 ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
   }
@@ -978,7 +1023,7 @@ export class GraphQLManager {
    */
   async #removeSubgraphInstance(instance: ISubgraph) {
     try {
-      await instance.onDisconnect?.();
+      await this.#runHook(() => instance.onDisconnect?.());
     } catch (error) {
       this.logger.error(
         "Error disconnecting subgraph @name: @error",
@@ -1007,7 +1052,13 @@ export class GraphQLManager {
 
     const origin = this.#origins.get(instance);
     this.#origins.delete(instance);
-    if (origin === undefined || origin === HOST_ORIGIN) return;
+    if (
+      origin === undefined ||
+      origin === HOST_ORIGIN ||
+      origin === CORE_ORIGIN
+    ) {
+      return;
+    }
     const instances = this.packageSubgraphs.get(origin);
     instances?.delete(instance);
     if (instances?.size === 0) {
@@ -1030,18 +1081,25 @@ export class GraphQLManager {
   }
 
   #serialize<T>(task: () => Promise<T>): Promise<T> {
-    if (this.#inRegistryChange.getStore()) return task();
-    const run = this.#registryChanges.then(() =>
-      this.#inRegistryChange.run(true, task),
-    );
+    if (this.#inHook.getStore()?.active) return task();
+    const run = this.#registryChanges.then(() => this.#inHook.exit(task));
     this.#registryChanges = run.catch(() => undefined);
     return run;
+  }
+
+  async #runHook(hook: () => Promise<void> | undefined): Promise<void> {
+    const scope = { active: true };
+    try {
+      await this.#inHook.run(scope, hook);
+    } finally {
+      scope.active = false;
+    }
   }
 
   /** Refresh the router after a registry change; scheduled rather than
    * awaited when called from inside one. */
   async #refreshRouter(): Promise<void> {
-    if (this.#inRegistryChange.getStore()) {
+    if (this.#inHook.getStore()?.active) {
       this.#scheduleRouterUpdate();
       return;
     }
@@ -1053,7 +1111,7 @@ export class GraphQLManager {
    * queue. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
-    this.#inRegistryChange.exit(() => {
+    this.#inHook.exit(() => {
       this.updateRouter().catch((error: unknown) => {
         this.logger.error("Failed to update router: @error", error);
       });
@@ -1129,31 +1187,34 @@ export class GraphQLManager {
   ): void {
     let entry = this.#packageClasses.get(packageName);
     if (!entry) {
-      entry = { supergraph, classes: new Map() };
+      entry = { supergraph, classes: new Map(), refused: new Map() };
       this.#packageClasses.set(packageName, entry);
     }
     entry.classes.set(instance.name, subgraph);
+    entry.refused.set(instance.name, instance);
   }
 
   /** Register package subgraphs that are missing because their name was
    * taken when they last tried, now that the name may be free. */
   async #restorePackageSubgraphs(): Promise<void> {
-    for (const [packageName, { supergraph, classes }] of this.#packageClasses) {
+    for (const [
+      packageName,
+      { supergraph, classes, refused },
+    ] of this.#packageClasses) {
       const registered = Array.from(
         this.packageSubgraphs.get(packageName) ?? [],
         (it) => it.name,
       );
       for (const [name, subgraph] of classes) {
         if (registered.includes(name)) continue;
-        if (
-          this.#isCoreNameReserved(name) ||
-          this.#findByName(this.subgraphs, name, this.#mountBuckets(supergraph))
-        ) {
-          continue;
-        }
+        if (this.#holdersOf(name).size > 0) continue;
         try {
+          const instance =
+            refused.get(name) ??
+            this.#createSubgraphInstance(subgraph, packageName);
+          refused.set(name, instance);
           await this.#addSubgraphInstance(
-            this.#createSubgraphInstance(subgraph, packageName),
+            instance,
             supergraph,
             false,
             packageName,
@@ -1290,9 +1351,11 @@ export class GraphQLManager {
     // runs before the early return below: a package may contribute a processor
     // that registers routes and no subgraph at all, and its routes still have
     // to go. A route that outlives its package answers against unloaded code.
-    const removed = await this.#serialize(() =>
-      this.#teardownPackage(packageName),
-    );
+    const removed = await this.#serialize(async () => {
+      if (!(await this.#teardownPackage(packageName))) return false;
+      await this.#restorePackageSubgraphs();
+      return true;
+    });
     if (removed) {
       await this.#refreshRouter();
     }
@@ -1339,12 +1402,14 @@ export class GraphQLManager {
     packageName: string,
     keepNames: ReadonlySet<string>,
   ): Promise<void> {
-    const removed = await this.#serialize(() => {
+    const removed = await this.#serialize(async () => {
       const classes = this.#packageClasses.get(packageName)?.classes;
       for (const name of Array.from(classes?.keys() ?? [])) {
         if (!keepNames.has(name)) classes?.delete(name);
       }
-      return this.#pruneOrigin(packageName, keepNames);
+      const pruned = await this.#pruneOrigin(packageName, keepNames);
+      if (pruned > 0) await this.#restorePackageSubgraphs();
+      return pruned;
     });
     if (removed > 0) {
       await this.#refreshRouter();
@@ -1353,7 +1418,7 @@ export class GraphQLManager {
 
   /** Remove the origin's subgraphs not named in `keepNames`; how many went. */
   async #pruneOrigin(
-    origin: Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
+    origin: TrackedOrigin,
     keepNames: ReadonlySet<string>,
   ): Promise<number> {
     const instances = this.packageSubgraphs.get(origin);
@@ -1440,6 +1505,7 @@ export class GraphQLManager {
   private async _updateRouter() {
     this.logger.debug("Updating router");
 
+    await this.#setupSubgraphs(this.coreSubgraphsMap);
     await this.#setupSubgraphs(this.subgraphs);
 
     try {
@@ -1510,9 +1576,11 @@ export class GraphQLManager {
       if (supergraph !== "" && !this.subgraphs.has("graphql")) {
         this.subgraphs.set("graphql", []);
       }
+      let detached = false;
       for (const previous of [...(this.subgraphs.get(supergraph) ?? [])]) {
         if (!subgraphs.includes(previous)) {
           await this.#detachSubgraph(previous, this.#mountBuckets(supergraph));
+          detached = true;
         }
       }
       for (const subgraph of subgraphs) {
@@ -1523,6 +1591,7 @@ export class GraphQLManager {
           HOST_ORIGIN,
         );
       }
+      if (detached) await this.#restorePackageSubgraphs();
     });
     return this.#refreshRouter();
   }
@@ -1696,7 +1765,10 @@ export class GraphQLManager {
 
       for (const subgraph of subgraphs) {
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
-        subgraphsMap.set(subgraphPath, subgraph);
+        // Core comes first and keeps its path.
+        if (!subgraphsMap.has(subgraphPath)) {
+          subgraphsMap.set(subgraphPath, subgraph);
+        }
       }
     }
     return subgraphsMap;

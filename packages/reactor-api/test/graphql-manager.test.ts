@@ -1959,27 +1959,89 @@ describe("GraphQLManager", () => {
       expect(manager.getSubgraphByName("system")).toBe(core);
     });
 
-    it("warns when two different subgraphs resolve to the same mount path", async () => {
+    it("a core subgraph evicts a same-named subgraph registered before init", async () => {
       const logger = makeHarnessLogger();
-      const { manager } = makeHarness({ logger });
-
-      // A plain subgraph named "early" registered before init.
+      const { manager, gatewayAdapter } = makeHarness({ logger });
       const plain = makePlainSub("early");
       await manager.registerSubgraphInstance(plain, "graphql");
 
-      // A core subgraph with the same name: init() mounts the core one
-      // first, so the router pass that reaches the plain subgraph at the
-      // same path must warn instead of skipping silently.
       class CoreSubgraph extends BaseSubgraph {
         name = "early";
       }
       await initAndFlush(manager, [CoreSubgraph]);
 
-      expect(logger.warn).toHaveBeenCalledWith(
-        "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
-        "/graphql/early",
+      expect(manager.getSubgraphByName("early")).toBeInstanceOf(CoreSubgraph);
+      const { subgraphs } = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      for (const bucket of subgraphs.values()) {
+        expect(bucket).not.toContain(plain);
+      }
+      expect(manager.hasSubgraphHandler("early")).toBe(true);
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { name: string; typeDefs: DocumentNode }[];
+      const served = getDefinitions().find((d) => d.name === ":graphql/early");
+      const queryFields = served!.typeDefs.definitions.flatMap((def) =>
+        (def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          def.kind === Kind.OBJECT_TYPE_EXTENSION) &&
+        def.name.value === "Query"
+          ? (def.fields ?? []).map((field) => field.name.value)
+          : [],
+      );
+      // The core subgraph's `Query.hello`, not the plain one's `Query.hi`.
+      expect(queryFields).toContain("hello");
+      expect(queryFields).not.toContain("hi");
+      expect(logger.error).toHaveBeenCalledWith(
+        "Evicting subgraph @name from @existing: @origin outranks it",
         "early",
-        "early",
+        "the host",
+        "core",
+      );
+    });
+
+    class LateCore extends BaseSubgraph {
+      name = "late";
+    }
+
+    async function registerLateCore(manager: GraphQLManager) {
+      const core = await manager.registerSubgraph(LateCore, "graphql", true);
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+      return core;
+    }
+
+    it("mounts a core subgraph registered after init", async () => {
+      const { manager, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      await registerLateCore(manager);
+
+      expect(manager.hasSubgraphHandler("late")).toBe(true);
+      expect(handles.get("/graphql/late")).toBeDefined();
+    });
+
+    it("a core subgraph registered after init evicts a same-named subgraph", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      const plain = makePlainSub("late");
+      await manager.registerSubgraphInstance(plain, "graphql");
+
+      const core = await registerLateCore(manager);
+
+      expect(manager.getSubgraphByName("late")).toBe(core);
+      const { subgraphs } = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      for (const bucket of subgraphs.values()) {
+        expect(bucket).not.toContain(plain);
+      }
+      expect(logger.error).toHaveBeenCalledWith(
+        "Evicting subgraph @name from @existing: @origin outranks it",
+        "late",
+        "the host",
+        "core",
       );
     });
   });
@@ -2090,6 +2152,8 @@ describe("GraphQLManager", () => {
 
     const ORIGIN_REJECTION =
       "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing";
+    const EVICTION =
+      "Evicting subgraph @name from @existing: @origin outranks it";
 
     it("serves the listing beside the ReactorDrive document mutations", async () => {
       const { manager, gatewayAdapter } = makeHarness({
@@ -2157,7 +2221,7 @@ describe("GraphQLManager", () => {
       expectDocumentMutationsServed(gatewayAdapter);
     });
 
-    it("refuses a host subgraph that takes a document-model subgraph's name", async () => {
+    it("a host subgraph evicts a boot model's subgraph of its name", async () => {
       const logger = makeHarnessLogger();
       const { manager, gatewayAdapter } = makeHarness({
         logger,
@@ -2165,28 +2229,124 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      const documentModelSubgraph = manager.getSubgraphByName(
-        reactorDriveModelSubgraphName,
-      );
 
+      const host = makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName);
       const result = await manager.registerSubgraphInstance(
-        makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName),
+        host,
         "graphql",
         false,
       );
       await flush(manager.updateRouter());
 
-      expect(result).toBeUndefined();
+      expect(result).toBe(host);
+      expect(logger.error).toHaveBeenCalledWith(
+        EVICTION,
+        reactorDriveModelSubgraphName,
+        "document models",
+        "the host",
+      );
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        host,
+      );
+      expectListingServed(gatewayAdapter);
+      expect(servedFields(gatewayAdapter, "Mutation")).not.toContain(
+        "ReactorDrive",
+      );
+
+      // The model does not take it back when its subgraphs regenerate.
+      await flush(manager.regenerateDocumentModelSubgraphs());
+      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
+        host,
+      );
       expect(logger.error).toHaveBeenCalledWith(
         ORIGIN_REJECTION,
         reactorDriveModelSubgraphName,
-        "the host",
         "document models",
+        "the host",
       );
-      expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
-        documentModelSubgraph,
+    });
+
+    it("a host subgraph evicts a package subgraph of its name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      class Privacy extends BaseSubgraph {
+        name = "privacy";
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Privacy]]]));
+
+      const host = makeWidgetSubgraph("privacy");
+      expect(await manager.registerSubgraphInstance(host, "graphql")).toBe(
+        host,
       );
-      expectDocumentMutationsServed(gatewayAdapter);
+      await flush(manager.updateRouter());
+
+      expect(manager.getSubgraphByName("privacy")).toBe(host);
+      expect(manager.hasSubgraphHandler("privacy")).toBe(true);
+      expect(logger.error).toHaveBeenCalledWith(
+        EVICTION,
+        "privacy",
+        "package pkg",
+        "the host",
+      );
+
+      // The package's next change is refused.
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Privacy]]]));
+      expect(manager.getSubgraphByName("privacy")).toBe(host);
+    });
+
+    it("serves a package subgraph a host evicted once the host subgraph goes", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class Shared extends BaseSubgraph {
+        name = "shared";
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
+      const host = makeWidgetSubgraph("shared");
+      await flush(manager.setSupergraph("extra", [host]));
+      expect(manager.getSubgraphByName("shared")).toBe(host);
+
+      await flush(manager.setSupergraph("extra", []));
+
+      expect(manager.getSubgraphByName("shared")).toBeInstanceOf(Shared);
+      expect(manager.hasSubgraphHandler("shared")).toBe(true);
+    });
+
+    it("serves a package's refused subgraph once the package holding its name is unregistered", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class FooA extends BaseSubgraph {
+        name = "foo";
+      }
+      class FooB extends BaseSubgraph {
+        name = "foo";
+      }
+      await manager.registerSubgraph(FooA, "graphql", false, "a");
+      expect(
+        await manager.registerSubgraph(FooB, "graphql", false, "b"),
+      ).toBeUndefined();
+
+      await flush(manager.unregisterPackage("a"));
+
+      expect(manager.getSubgraphByName("foo")).toBeInstanceOf(FooB);
+      expect(manager.hasSubgraphHandler("foo")).toBe(true);
+    });
+
+    it("serves a package's refused subgraph once the package holding its name drops it", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class FooA extends BaseSubgraph {
+        name = "foo";
+      }
+      class FooB extends BaseSubgraph {
+        name = "foo";
+      }
+      await manager.registerSubgraph(FooA, "graphql", false, "a");
+      await manager.registerSubgraph(FooB, "graphql", false, "b");
+
+      await flush(manager.prunePackageSubgraphs("a", new Set()));
+
+      expect(manager.getSubgraphByName("foo")).toBeInstanceOf(FooB);
     });
 
     it("refuses a document-model subgraph whose name a host subgraph holds", async () => {
@@ -2283,7 +2443,7 @@ describe("GraphQLManager", () => {
       );
     });
 
-    it("setSupergraph drops a subgraph that takes a document-model subgraph's name", async () => {
+    it("setSupergraph evicts a document-model subgraph of a subgraph's name", async () => {
       const logger = makeHarnessLogger();
       const { manager } = makeHarness({
         logger,
@@ -2291,24 +2451,21 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      const documentModelSubgraph = manager.getSubgraphByName(
-        reactorDriveModelSubgraphName,
-      );
+      const host = makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName);
 
-      await flush(
-        manager.setSupergraph("extra", [
-          makeHostReactorDriveSubgraph(reactorDriveModelSubgraphName),
-        ]),
-      );
+      await flush(manager.setSupergraph("extra", [host]));
 
       expect(logger.error).toHaveBeenCalledWith(
-        ORIGIN_REJECTION,
+        EVICTION,
         reactorDriveModelSubgraphName,
-        "the host",
         "document models",
+        "the host",
       );
       expect(manager.getSubgraphByName(reactorDriveModelSubgraphName)).toBe(
-        documentModelSubgraph,
+        host,
+      );
+      expect(registeredNamed(manager, reactorDriveModelSubgraphName)).toEqual(
+        new Set([host]),
       );
     });
 
@@ -2383,6 +2540,55 @@ describe("GraphQLManager", () => {
 
       expect(manager.hasSubgraphHandler("widget-stock")).toBe(true);
       expect(servedFields(gatewayAdapter, "Query")).toContain("widgetStock");
+    });
+
+    it("logs a package subgraph's type collision once across restores", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([
+          makeDriveModule(),
+          makeModelModule("Widget", "test/widget"),
+        ]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const created = vi.fn();
+      class Collider extends BaseSubgraph {
+        name = "collider";
+        typeDefs = makeWidgetSubgraph().typeDefs;
+        constructor(...args: ConstructorParameters<typeof BaseSubgraph>) {
+          super(...args);
+          created();
+        }
+      }
+      class Foo extends BaseSubgraph {
+        name = "foo";
+      }
+      class Bar extends BaseSubgraph {
+        name = "bar";
+      }
+      await manager.applyPackageSubgraphs(
+        new Map<string, (typeof BaseSubgraph)[]>([
+          ["pkg", [Collider]],
+          ["other", [Foo, Bar]],
+        ]),
+      );
+
+      // Each frees a name, so each restores.
+      await flush(manager.prunePackageSubgraphs("other", new Set(["foo"])));
+      await flush(manager.prunePackageSubgraphs("other", new Set()));
+
+      expect(manager.getSubgraphByName("collider")).toBeUndefined();
+      const refusals = vi
+        .mocked(logger.error)
+        .mock.calls.filter(
+          ([message, name]) =>
+            message === "Rejecting subgraph @name: @error" &&
+            name === "collider",
+        );
+      expect(refusals).toHaveLength(1);
+      expect(created).toHaveBeenCalledTimes(1);
     });
 
     it("heals a model whose own operation schema repeats its prefixed state type", async () => {
@@ -2523,9 +2729,10 @@ describe("GraphQLManager", () => {
         manager.getSubgraphByName(reactorDriveModelSubgraphName),
       ).toBeInstanceOf(DocumentModelSubgraph);
       expect(logger.error).toHaveBeenCalledWith(
-        "Evicting subgraph @name from @existing: the document model of that name owns it",
+        EVICTION,
         reactorDriveModelSubgraphName,
         "package pkg",
+        "document models",
       );
 
       // The package's next change is refused, as at boot.
@@ -2572,29 +2779,47 @@ describe("GraphQLManager", () => {
       );
     });
 
-    it("same-named subgraphs in supergraphs mounted apart do not displace each other", async () => {
-      const { manager, mounts } = makeHarness();
+    it("a name in the root supergraph has one holder with graphql", async () => {
+      const { manager } = makeHarness();
       await initAndFlush(manager);
       const rootDisconnect = vi.fn().mockResolvedValue(undefined);
       const root = {
         ...makeWidgetSubgraph("twin"),
         onDisconnect: rootDisconnect,
       };
-      const first = makeWidgetSubgraph("twin");
-      const second = makeWidgetSubgraph("twin");
+      const replacement = makeWidgetSubgraph("twin");
 
       expect(await manager.registerSubgraphInstance(root, "")).toBe(root);
-      expect(await manager.registerSubgraphInstance(first, "graphql")).toBe(
-        first,
-      );
-      expect(await manager.registerSubgraphInstance(second, "graphql")).toBe(
-        second,
-      );
+      expect(
+        await manager.registerSubgraphInstance(replacement, "graphql"),
+      ).toBe(replacement);
       await flush(manager.updateRouter());
 
-      expect(rootDisconnect).not.toHaveBeenCalled();
-      expect(mounts.has("/twin")).toBe(true);
-      expect(mounts.has("/graphql/twin")).toBe(true);
+      expect(rootDisconnect).toHaveBeenCalled();
+      expect(registeredNamed(manager, "twin")).toEqual(new Set([replacement]));
+      expect(manager.hasSubgraphHandler("twin")).toBe(true);
+    });
+
+    it("refuses a package subgraph whose name a host holds in the root supergraph", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      const root = makeWidgetSubgraph("twin");
+      await manager.registerSubgraphInstance(root, "");
+      class Twin extends BaseSubgraph {
+        name = "twin";
+      }
+
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Twin]]]));
+      await flush(manager.updateRouter());
+
+      expect(registeredNamed(manager, "twin")).toEqual(new Set([root]));
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        "twin",
+        "package pkg",
+        "the host",
+      );
     });
 
     /** Registered instances named `name`, across every non-core bucket. */
@@ -2777,6 +3002,137 @@ describe("GraphQLManager", () => {
       const later = makeWidgetSubgraph("later");
       expect(await manager.registerSubgraphInstance(later, "graphql")).toBe(
         later,
+      );
+    });
+
+    it("queues a registration a hook's timer makes once its change is over", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      // Faked timers fire in the caller's async context and would hide the leak.
+      vi.useRealTimers();
+
+      const late = makeWidgetSubgraph("late");
+      let detached: Promise<ISubgraph | undefined> | undefined;
+      let timerFired!: () => void;
+      const fired = new Promise<void>((resolve) => {
+        timerFired = resolve;
+      });
+      class Starter extends BaseSubgraph {
+        name = "starter";
+        onSetup = () => {
+          setTimeout(() => {
+            detached = this.graphqlManager.registerSubgraphInstance(
+              late,
+              "graphql",
+            );
+            timerFired();
+          }, 5);
+          return Promise.resolve();
+        };
+      }
+      await manager.registerSubgraph(Starter, "graphql", false, "pkg");
+
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      class Blocker extends BaseSubgraph {
+        name = "blocker";
+        onSetup = () => gate;
+      }
+      const blocking = manager.registerSubgraph(
+        Blocker,
+        "graphql",
+        false,
+        "pkg",
+      );
+      await fired;
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(detached).toBeDefined();
+      expect(manager.getSubgraphByName("late")).toBeUndefined();
+
+      release();
+      await blocking;
+      expect(await detached).toBe(late);
+      expect(manager.getSubgraphByName("late")).toBe(late);
+    });
+
+    it("queues a registration a hook's timer makes while a later hook of the same change runs", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      // Faked timers fire in the caller's async context and would hide the leak.
+      vi.useRealTimers();
+
+      const detachedSubgraph = makeWidgetSubgraph("detached");
+      let detached: Promise<ISubgraph | undefined> | undefined;
+      let timerFired!: () => void;
+      const fired = new Promise<void>((resolve) => {
+        timerFired = resolve;
+      });
+      class Starter extends BaseSubgraph {
+        name = "starter";
+        onSetup = () => {
+          setTimeout(() => {
+            detached = this.graphqlManager.registerSubgraphInstance(
+              detachedSubgraph,
+              "graphql",
+            );
+            timerFired();
+          }, 0);
+          return Promise.resolve();
+        };
+      }
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      class Blocker extends BaseSubgraph {
+        name = "blocker";
+        onSetup = () => gate;
+      }
+
+      const change = manager.applyPackageSubgraphs(
+        new Map<string, (typeof BaseSubgraph)[]>([
+          ["a", [Starter]],
+          ["b", [Blocker]],
+        ]),
+      );
+      await fired;
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(detached).toBeDefined();
+      expect(manager.getSubgraphByName("detached")).toBeUndefined();
+
+      release();
+      await change;
+      expect(await detached).toBe(detachedSubgraph);
+    });
+
+    it("keeps a lower-ranked holder when the subgraph evicting it fails to set up", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      class Shared extends BaseSubgraph {
+        name = "shared";
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
+      const held = manager.getSubgraphByName("shared");
+      const failing = {
+        ...makeWidgetSubgraph("shared"),
+        onSetup: () => Promise.reject(new Error("setup failed")),
+      };
+
+      await expect(
+        manager.registerSubgraphInstance(failing, "graphql"),
+      ).rejects.toThrow("setup failed");
+
+      expect(manager.getSubgraphByName("shared")).toBe(held);
+      expect(logger.error).not.toHaveBeenCalledWith(
+        EVICTION,
+        "shared",
+        "package pkg",
+        "the host",
       );
     });
 
