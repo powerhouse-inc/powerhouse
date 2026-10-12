@@ -301,9 +301,19 @@ export class GraphQLManager {
 
   readonly #origins = new WeakMap<ISubgraph, SubgraphOrigin>();
 
-  /** Packages the last {@link applyPackageSubgraphs} call held. */
-  #appliedPackages = new Set<string>();
-  #packageChanges: Promise<void> = Promise.resolve();
+  /**
+   * Package → the supergraph and subgraph classes (by subgraph name) it last
+   * provided, so a subgraph refused or evicted for its name can register once
+   * the name is free.
+   */
+  #packageClasses = new Map<
+    string,
+    { supergraph: string; classes: Map<string, SubgraphClass> }
+  >();
+
+  /** Registry changes run one at a time: a registration is admitted before
+   * the awaits that complete it. */
+  #registryChanges: Promise<unknown> = Promise.resolve();
 
   #generatedTypes:
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
@@ -534,7 +544,10 @@ export class GraphQLManager {
     if (!this.featureFlags.enableDocumentModelSubgraphs) {
       return;
     }
+    await this.#serialize(() => this.#regenerateDocumentModelSubgraphs());
+  }
 
+  async #regenerateDocumentModelSubgraphs(): Promise<void> {
     try {
       const modulesResult = await this.reactorClient.getDocumentModelModules();
       const models = modulesResult.results;
@@ -549,7 +562,8 @@ export class GraphQLManager {
       // A model removed since the last regeneration (e.g. its package was
       // uninstalled) must lose its subgraph; replacing alone would keep it.
       await this.#pruneOrigin(DOCUMENT_MODEL_ORIGIN, registeredNames);
-      await this.updateRouter();
+      await this.#restorePackageSubgraphs();
+      this.#scheduleRouterUpdate();
       this.logger.info(
         "Regenerated document model subgraphs with @count models",
         models.length,
@@ -962,7 +976,24 @@ export class GraphQLManager {
     supergraph = "",
     core = false,
   ) {
-    return this.#addSubgraphInstance(subgraphInstance, supergraph, core);
+    return this.#serialize(() =>
+      this.#addSubgraphInstance(subgraphInstance, supergraph, core),
+    );
+  }
+
+  #serialize<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.#registryChanges.then(task);
+    this.#registryChanges = run.catch(() => undefined);
+    return run;
+  }
+
+  /** Not awaited: the debounced call never settles a promise whose timer a
+   * later call replaced, so awaiting it in a registry change could wedge the
+   * queue. */
+  #scheduleRouterUpdate(): void {
+    this.updateRouter().catch((error: unknown) => {
+      this.logger.error("Failed to update router: @error", error);
+    });
   }
 
   /**
@@ -1012,12 +1043,67 @@ export class GraphQLManager {
     core = false,
     packageName?: string,
   ) {
-    return this.#addSubgraphInstance(
-      this.#createSubgraphInstance(subgraph, packageName),
-      supergraph,
-      core,
-      packageName ?? HOST_ORIGIN,
-    );
+    return this.#serialize(() => {
+      const instance = this.#createSubgraphInstance(subgraph, packageName);
+      if (packageName !== undefined && !core) {
+        this.#recordPackageClass(packageName, supergraph, instance, subgraph);
+      }
+      return this.#addSubgraphInstance(
+        instance,
+        supergraph,
+        core,
+        packageName ?? HOST_ORIGIN,
+      );
+    });
+  }
+
+  #recordPackageClass(
+    packageName: string,
+    supergraph: string,
+    instance: ISubgraph,
+    subgraph: SubgraphClass,
+  ): void {
+    let entry = this.#packageClasses.get(packageName);
+    if (!entry) {
+      entry = { supergraph, classes: new Map() };
+      this.#packageClasses.set(packageName, entry);
+    }
+    entry.classes.set(instance.name, subgraph);
+  }
+
+  /** Register package subgraphs that are missing because their name was
+   * taken when they last tried, now that the name may be free. */
+  async #restorePackageSubgraphs(): Promise<void> {
+    for (const [packageName, { supergraph, classes }] of this.#packageClasses) {
+      const registered = Array.from(
+        this.packageSubgraphs.get(packageName) ?? [],
+        (it) => it.name,
+      );
+      for (const [name, subgraph] of classes) {
+        if (registered.includes(name)) continue;
+        if (
+          this.#isCoreNameReserved(name) ||
+          this.#findByName(this.subgraphs, name, this.#mountBuckets(supergraph))
+        ) {
+          continue;
+        }
+        try {
+          await this.#addSubgraphInstance(
+            this.#createSubgraphInstance(subgraph, packageName),
+            supergraph,
+            false,
+            packageName,
+          );
+        } catch (error) {
+          this.logger.error(
+            "Failed to restore subgraph @name from @package: @error",
+            name,
+            packageName,
+            error,
+          );
+        }
+      }
+    }
   }
 
   #createSubgraphInstance(
@@ -1054,30 +1140,37 @@ export class GraphQLManager {
     packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
     supergraph = "graphql",
   ): Promise<void> {
-    const run = this.#packageChanges.then(() =>
+    return this.#serialize(() =>
       this.#applyPackageSubgraphs(packaged, supergraph),
     );
-    this.#packageChanges = run.catch(() => undefined);
-    return run;
   }
 
   async #applyPackageSubgraphs(
     packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
     supergraph: string,
   ): Promise<void> {
-    for (const packageName of this.#appliedPackages) {
+    // Includes packages registered through registerSubgraph, e.g. at boot.
+    const known = new Set([
+      ...this.#packageClasses.keys(),
+      ...Array.from(this.packageSubgraphs.keys()).filter(
+        (origin) => typeof origin === "string",
+      ),
+    ]);
+    for (const packageName of known) {
       if (!packaged.has(packageName)) {
         await this.#teardownPackage(packageName);
       }
     }
-    this.#appliedPackages = new Set(packaged.keys());
+    this.#packageClasses = new Map();
 
     const incoming = new Map<string, ISubgraph[]>();
     for (const [packageName, classes] of packaged) {
       const instances: ISubgraph[] = [];
       for (const subgraph of classes) {
         try {
-          instances.push(this.#createSubgraphInstance(subgraph, packageName));
+          const instance = this.#createSubgraphInstance(subgraph, packageName);
+          this.#recordPackageClass(packageName, supergraph, instance, subgraph);
+          instances.push(instance);
         } catch (error) {
           this.logger.error(
             "Failed to create subgraph @subgraph from @package: @error",
@@ -1118,10 +1211,7 @@ export class GraphQLManager {
       await this.#pruneOrigin(packageName, registered);
     }
 
-    // Not awaited: a later debounced call supersedes this one's promise.
-    this.updateRouter().catch((error: unknown) => {
-      this.logger.error("Failed to update router: @error", error);
-    });
+    this.#scheduleRouterUpdate();
   }
 
   /**
@@ -1136,7 +1226,10 @@ export class GraphQLManager {
     // runs before the early return below: a package may contribute a processor
     // that registers routes and no subgraph at all, and its routes still have
     // to go. A route that outlives its package answers against unloaded code.
-    if (await this.#teardownPackage(packageName)) {
+    const removed = await this.#serialize(() =>
+      this.#teardownPackage(packageName),
+    );
+    if (removed) {
       await this.updateRouter();
     }
   }
@@ -1144,6 +1237,7 @@ export class GraphQLManager {
   /** Release the package's routes and subgraphs; whether any subgraph went. */
   async #teardownPackage(packageName: string): Promise<boolean> {
     this.#disposeHttpScope(packageName);
+    this.#packageClasses.delete(packageName);
 
     const instances = this.packageSubgraphs.get(packageName);
     if (!instances || instances.size === 0) return false;
@@ -1181,7 +1275,14 @@ export class GraphQLManager {
     packageName: string,
     keepNames: ReadonlySet<string>,
   ): Promise<void> {
-    if ((await this.#pruneOrigin(packageName, keepNames)) > 0) {
+    const removed = await this.#serialize(() => {
+      const classes = this.#packageClasses.get(packageName)?.classes;
+      for (const name of Array.from(classes?.keys() ?? [])) {
+        if (!keepNames.has(name)) classes?.delete(name);
+      }
+      return this.#pruneOrigin(packageName, keepNames);
+    });
+    if (removed > 0) {
       await this.updateRouter();
     }
   }
@@ -1340,14 +1441,21 @@ export class GraphQLManager {
   /** Replace the subgraphs of `supergraph` with `subgraphs`, under the same
    * name and type guards as any registration. */
   async setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
-    for (const previous of [...(this.subgraphs.get(supergraph) ?? [])]) {
-      if (!subgraphs.includes(previous)) {
-        await this.#detachSubgraph(previous, this.#mountBuckets(supergraph));
+    await this.#serialize(async () => {
+      for (const previous of [...(this.subgraphs.get(supergraph) ?? [])]) {
+        if (!subgraphs.includes(previous)) {
+          await this.#detachSubgraph(previous, this.#mountBuckets(supergraph));
+        }
       }
-    }
-    for (const subgraph of subgraphs) {
-      await this.#addSubgraphInstance(subgraph, supergraph, false, HOST_ORIGIN);
-    }
+      for (const subgraph of subgraphs) {
+        await this.#addSubgraphInstance(
+          subgraph,
+          supergraph,
+          false,
+          HOST_ORIGIN,
+        );
+      }
+    });
     return this.updateRouter();
   }
 

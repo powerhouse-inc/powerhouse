@@ -2592,5 +2592,159 @@ describe("GraphQLManager", () => {
       expect(mounts.has("/twin")).toBe(true);
       expect(mounts.has("/graphql/twin")).toBe(true);
     });
+
+    /** Registered instances named `name`, across every non-core bucket. */
+    function registeredNamed(manager: GraphQLManager, name: string) {
+      const { subgraphs } = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      return new Set(
+        Array.from(subgraphs.values())
+          .flat()
+          .filter((it) => it.name === name),
+      );
+    }
+
+    it("tears down a package registered at boot when a change no longer holds it", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      const [AlphaA, alphaDisconnected] = (() => {
+        const disconnected: string[] = [];
+        class Alpha extends BaseSubgraph {
+          name = "alpha";
+          onDisconnect = () => {
+            disconnected.push("alpha");
+            return Promise.resolve();
+          };
+        }
+        return [Alpha, disconnected] as const;
+      })();
+      class BetaB extends BaseSubgraph {
+        name = "beta";
+      }
+      await manager.registerSubgraph(AlphaA, "graphql", false, "a");
+      await manager.registerSubgraph(BetaB, "graphql", false, "b");
+
+      await manager.applyPackageSubgraphs(new Map([["b", [BetaB]]]));
+
+      expect(manager.getSubgraphByName("alpha")).toBeUndefined();
+      expect(alphaDisconnected).toEqual(["alpha"]);
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(BetaB);
+    });
+
+    it("admits one owner when a model and a package subgraph of its name arrive together", async () => {
+      const reactorClient = makeModelsClient([makeDriveModule()]);
+      const { manager } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      class Squatter extends BaseSubgraph {
+        name = reactorDriveModelSubgraphName;
+        onSetup = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
+      }
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule(), reactorDriveModel],
+        options: { cursor: "", limit: 100 },
+      });
+
+      // As loadPackages emits both events back to back.
+      const changes = Promise.all([
+        manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]])),
+        manager.regenerateDocumentModelSubgraphs(),
+      ]);
+      await flush(changes);
+
+      const owners = registeredNamed(manager, reactorDriveModelSubgraphName);
+      expect(owners.size).toBe(1);
+      expect([...owners][0]).toBeInstanceOf(DocumentModelSubgraph);
+    });
+
+    it("overlapping regenerations leave one subgraph per model", async () => {
+      const { manager } = makeHarness({
+        reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const initial = manager.getSubgraphByName(reactorDriveModelSubgraphName);
+      const disconnect = vi.spyOn(initial as BaseSubgraph, "onDisconnect");
+
+      await flush(
+        Promise.all([
+          manager.regenerateDocumentModelSubgraphs(),
+          manager.regenerateDocumentModelSubgraphs(),
+        ]),
+      );
+
+      expect(registeredNamed(manager, reactorDriveModelSubgraphName).size).toBe(
+        1,
+      );
+      expect(disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it("serves a package's subgraph again once the model that took its name is removed", async () => {
+      const reactorClient = makeModelsClient([makeDriveModule()]);
+      const { manager } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      class Squatter extends BaseSubgraph {
+        name = reactorDriveModelSubgraphName;
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
+
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule(), reactorDriveModel],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(manager.regenerateDocumentModelSubgraphs());
+      expect(
+        manager.getSubgraphByName(reactorDriveModelSubgraphName),
+      ).toBeInstanceOf(DocumentModelSubgraph);
+
+      // A document-model-only update: no package change follows.
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule()],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(manager.regenerateDocumentModelSubgraphs());
+
+      expect(
+        manager.getSubgraphByName(reactorDriveModelSubgraphName),
+      ).toBeInstanceOf(Squatter);
+      expect(manager.hasSubgraphHandler(reactorDriveModelSubgraphName)).toBe(
+        true,
+      );
+    });
+
+    it("serves a package's refused subgraph once the model holding its name is removed", async () => {
+      const reactorClient = makeModelsClient([
+        makeDriveModule(),
+        reactorDriveModel,
+      ]);
+      const { manager } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      class Squatter extends BaseSubgraph {
+        name = reactorDriveModelSubgraphName;
+      }
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
+      expect(
+        manager.getSubgraphByName(reactorDriveModelSubgraphName),
+      ).toBeInstanceOf(DocumentModelSubgraph);
+
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule()],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(manager.regenerateDocumentModelSubgraphs());
+
+      expect(
+        manager.getSubgraphByName(reactorDriveModelSubgraphName),
+      ).toBeInstanceOf(Squatter);
+    });
   });
 });

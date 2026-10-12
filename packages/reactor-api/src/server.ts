@@ -582,17 +582,7 @@ async function setupGraphQLManager({
     requireAuthFetchMiddleware,
   );
 
-  for (const [packageName, collection] of subgraphs.extended.entries()) {
-    for (const subgraph of collection) {
-      await graphqlManager.registerSubgraph(
-        subgraph,
-        "graphql",
-        false,
-        packageName,
-      );
-    }
-  }
-
+  await graphqlManager.applyPackageSubgraphs(subgraphs.extended);
   await graphqlManager.updateRouter();
 
   return graphqlManager;
