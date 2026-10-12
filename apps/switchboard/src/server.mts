@@ -1115,6 +1115,21 @@ async function initServer(
       workflowsRetry = retryWorkflowSingleton({
         compose: composeWorkflows,
         onComposed: async (composed) => {
+          try {
+            await composed.start();
+          } catch (error) {
+            // Hands the lease back so a retry or another replica can claim it.
+            try {
+              await composed.stop();
+            } catch (stopError) {
+              logger.error(
+                "Stopping the late workflow runtime failed: @error",
+                stopError,
+              );
+            }
+            throw error;
+          }
+          logger.info("Workflow runtime started");
           workflows = composed;
           await registerWorkflowSubgraph(composed);
           // Past boot nothing else rebuilds the router, so a subgraph
@@ -1124,15 +1139,6 @@ async function initServer(
           } catch (error) {
             logger.error(
               "Mounting the late workflow-runtime subgraph failed: @error",
-              error,
-            );
-          }
-          try {
-            await composed.start();
-            logger.info("Workflow runtime started");
-          } catch (error) {
-            logger.error(
-              "Starting the late workflow runtime failed: @error",
               error,
             );
           }
