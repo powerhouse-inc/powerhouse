@@ -64,14 +64,15 @@ async function servedIds(
   let asked = ids;
   if (ctx.hostCanRead) {
     const hostCanRead = ctx.hostCanRead;
-    let allowed: boolean[];
-    try {
-      allowed = await Promise.all(
-        ids.map((id) => hostCanRead(id, ctx.user?.address)),
-      );
-    } catch {
-      return new Set();
-    }
+    const allowed = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          return await hostCanRead(id, ctx.user?.address);
+        } catch {
+          return false;
+        }
+      }),
+    );
     asked = ids.filter((_, i) => allowed[i]);
   }
   if (asked.length === 0) {

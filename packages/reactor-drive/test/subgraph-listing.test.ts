@@ -193,6 +193,23 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
     expect(isServed).not.toHaveBeenCalled();
   });
 
+  it("withholds a file node the host refuses or fails to decide", async () => {
+    await insert(files("a", "b", "c"));
+    ctx.hostCanRead = (id) =>
+      id === "c"
+        ? Promise.reject(new Error("down"))
+        : Promise.resolve(id !== "a");
+
+    const page = await rootNodes(10);
+
+    expect(page.results.map((n) => n.id)).toEqual(["b"]);
+    expect(find).toHaveBeenCalledWith(
+      { ids: ["b"] },
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
   it("gates a page's file nodes in one batch", async () => {
     await insert(files("a", "x1", "b"));
 
