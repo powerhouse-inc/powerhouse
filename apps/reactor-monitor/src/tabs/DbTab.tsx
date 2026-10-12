@@ -14,14 +14,9 @@ import {
 } from "../components/AdminGate.js";
 
 export type DbTabProps = {
-  readonly dbQuery: IReactorDbQuery;
-  /**
-   * Whether raw SQL against this reactor's store is served. Defaults to
-   * allowed, which is every locally hosted reactor -- its store is this
-   * process's own. A remote reactor's host has to opt in separately
-   * (PH_INSPECTION_SQL), and the whole tab is replaced by the reason when it
-   * has not: there is no part of a schema browser that works without SQL.
-   */
+  /** Absent where the reactor serves no raw SQL. */
+  readonly dbQuery?: IReactorDbQuery;
+  /** The whole tab is replaced by the reason when closed. */
   readonly sql?: AdminGate;
 };
 
@@ -47,6 +42,16 @@ export function DbTab({ dbQuery, sql = ADMIN_ALLOWED }: DbTabProps) {
       <div className="rm-tab rm-db-tab">
         <h2>DB</h2>
         <AdminGateNote gate={sql} />
+      </div>
+    );
+  }
+  if (!dbQuery) {
+    return (
+      <div className="rm-tab rm-db-tab">
+        <h2>DB</h2>
+        <p className="rm-note" data-testid="db-unavailable">
+          This reactor serves no raw SQL against its store.
+        </p>
       </div>
     );
   }
