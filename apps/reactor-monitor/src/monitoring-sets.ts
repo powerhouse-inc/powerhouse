@@ -1,6 +1,6 @@
 /**
- * localStorage-backed persistence for the monitor's provisioned reactors
- * (multi-reactor §6). `App.tsx` otherwise holds its descriptors in React
+ * localStorage-backed persistence for the monitor's provisioned reactors.
+ * `App.tsx` otherwise holds its descriptors in React
  * state, so a refresh wipes them and every reactor has to be re-added; this
  * store remembers them across a reload, grouped into named monitoring SETS
  * with one active set.
@@ -8,9 +8,9 @@
  * A {@link ReactorDescriptor} is plain serializable config -- a remote's
  * `{name, kind, remote.url}`, a built reactor's storage/sync config -- so a set
  * JSON round-trips cleanly. Live handles never do: a worker descriptor's
- * `createWorker` function and a remote descriptor's test `fetch` seam are
- * dropped on save (JSON omits functions) and re-attached by the caller on
- * hydrate. This store deals only in the serializable half.
+ * `createWorker` is dropped on save and re-attached by the caller on hydrate,
+ * and a remote's `headers` (its bearer) and `fetch` are stripped and never
+ * come back.
  *
  * Every localStorage touch is wrapped so a private-mode or storage-blocked
  * browser degrades to an in-memory default instead of throwing at boot -- the

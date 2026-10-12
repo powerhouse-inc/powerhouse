@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 /**
- * The monitoring-sets bar above the provision form (multi-reactor §6): switch
+ * The monitoring-sets bar above the provision form: switch
  * the active set, create a new one, or delete the current one. A set is a named
  * group of provisioned reactors that survives a refresh; switching reloads that
  * set's reactors into the monitor.

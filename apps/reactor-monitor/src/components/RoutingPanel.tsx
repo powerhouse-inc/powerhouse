@@ -424,9 +424,9 @@ export function RoutingPanel() {
       <p className="rm-note">
         Build one routing client over two or more ready reactors. Placement is
         keyed on the drive/collection id; routing is advisory, so a write aimed
-        at the wrong backend is refused, re-aimed, and the table corrected
-        (multi-reactor decision 4). Overrides and requirements reconfigure the
-        topology, which rebuilds the client over the same backends.
+        at the wrong backend is refused, re-aimed, and the table corrected.
+        Overrides and requirements reconfigure the topology, which rebuilds the
+        client over the same backends.
       </p>
 
       <div className="rm-router-build">

@@ -164,7 +164,7 @@ describe("LinkLocalSyncPanel", () => {
     ).toBeTruthy();
   });
 
-  // A connect-mode reactor is a valid end of a local link since W3.0, so the
+  // A connect-mode reactor is a valid end of a local link, so the
   // panel must offer it; only a reactor that does not declare the channel is
   // refused.
   it("offers a connect-mode peer as a target but not an island", () => {

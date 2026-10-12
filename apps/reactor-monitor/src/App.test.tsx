@@ -23,7 +23,7 @@ function testDescriptor({ name, kind }: ProvisionRequest): ReactorDescriptor {
 /**
  * A store over a non-persisting in-memory map, so each test starts from an
  * empty default set rather than inheriting what a sibling test provisioned
- * into the shared happy-dom localStorage (multi-reactor §6).
+ * into the shared happy-dom localStorage.
  */
 function freshStore(): MonitoringSetsStore {
   const cells = new Map<string, string>();
