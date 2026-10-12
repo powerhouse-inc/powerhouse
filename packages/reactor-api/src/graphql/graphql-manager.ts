@@ -37,7 +37,10 @@ import {
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
-  getDocumentModelTypeDefs,
+  findSubgraphTypeCollisions,
+  type GeneratedDocumentModelTypes,
+  getGeneratedDocumentModelTypes,
+  type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
 } from "../utils/create-schema.js";
 import { callerSubject } from "./base-subgraph.js";
@@ -287,15 +290,27 @@ export class GraphQLManager {
   private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
 
   /**
-   * Origin → the subgraph instances registered from it, keyed by subgraph
-   * name. Host subgraphs are not tracked. Tracks the package association so
-   * that removed packages can be torn down (see unregisterPackage /
-   * prunePackageSubgraphs).
+   * Origin → the subgraph instances registered from it. Host subgraphs are
+   * not tracked. Tracks the package association so that removed packages can
+   * be torn down (see unregisterPackage / prunePackageSubgraphs).
    */
   private readonly packageSubgraphs = new Map<
     Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
-    Map<string, ISubgraph>
+    Set<ISubgraph>
   >();
+
+  readonly #origins = new WeakMap<ISubgraph, SubgraphOrigin>();
+
+  /** Packages the last {@link applyPackageSubgraphs} call held. */
+  #appliedPackages = new Set<string>();
+  #packageChanges: Promise<void> = Promise.resolve();
+
+  #generatedTypes:
+    | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
+    | undefined;
+
+  /** Subgraphs excluded for a type collision, with the reason last logged. */
+  readonly #loggedCollisions = new WeakMap<ISubgraph, string>();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -629,41 +644,155 @@ export class GraphQLManager {
     return registeredNames;
   }
 
-  /** Core subgraph names are reserved: they register with core=true during
-   * init() and no package subgraph may take one of their names. */
-  #isCoreNameReserved(name: string): boolean {
-    for (const subgraphs of this.coreSubgraphsMap.values()) {
-      if (subgraphs.some((it) => it.name === name)) return true;
-    }
-    return false;
-  }
-
-  #originOf(instance: ISubgraph): SubgraphOrigin {
-    for (const [origin, byName] of this.packageSubgraphs) {
-      if (byName.get(instance.name) === instance) return origin;
-    }
-    return HOST_ORIGIN;
-  }
-
-  #findSubgraph(
+  /** The first subgraph named `name` in `subgraphsMap`, searching `buckets`
+   * (every bucket when omitted). */
+  #findByName(
     subgraphsMap: Map<string, ISubgraph[]>,
     name: string,
+    buckets?: readonly string[],
   ): ISubgraph | undefined {
-    for (const subgraphs of subgraphsMap.values()) {
+    for (const [bucket, subgraphs] of subgraphsMap) {
+      if (buckets && !buckets.includes(bucket)) continue;
       const found = subgraphs.find((it) => it.name === name);
       if (found) return found;
     }
     return undefined;
   }
 
-  /** The type-collision error for `subgraph` against the current models, if any. */
-  #typeCollision(subgraph: ISubgraph): SubgraphTypeCollisionError | undefined {
-    try {
-      getDocumentModelTypeDefs(this.cachedDocumentModels, subgraph.typeDefs);
-    } catch (error) {
-      if (error instanceof SubgraphTypeCollisionError) return error;
+  /** Core subgraph names are reserved: they register with core=true during
+   * init() and no package subgraph may take one of their names. */
+  #isCoreNameReserved(name: string): boolean {
+    return this.#findByName(this.coreSubgraphsMap, name) !== undefined;
+  }
+
+  /** Buckets whose mount paths a registration into `supergraph` occupies: a
+   * named supergraph's subgraphs are mounted under `graphql` as well. */
+  #mountBuckets(supergraph: string): string[] {
+    return supergraph === "" || supergraph === "graphql"
+      ? [supergraph]
+      : [supergraph, "graphql"];
+  }
+
+  #generated(): GeneratedDocumentModelTypes {
+    if (this.#generatedTypes?.models !== this.cachedDocumentModels) {
+      this.#generatedTypes = {
+        models: this.cachedDocumentModels,
+        types: getGeneratedDocumentModelTypes(this.cachedDocumentModels),
+      };
     }
-    return undefined;
+    return this.#generatedTypes.types;
+  }
+
+  #schemaOptions(subgraph: ISubgraph): SubgraphSchemaOptions {
+    return {
+      generated: this.#generated(),
+      ownModelName:
+        subgraph instanceof DocumentModelSubgraph
+          ? subgraph.documentModelSchemaName
+          : undefined,
+    };
+  }
+
+  /** The generated type names `subgraph` redefines under the current models. */
+  #typeCollisions(subgraph: ISubgraph): string[] {
+    try {
+      return findSubgraphTypeCollisions(
+        this.#generated(),
+        subgraph.typeDefs,
+        this.#schemaOptions(subgraph).ownModelName,
+      );
+    } catch {
+      // Malformed typeDefs fail where the schema is built, and are logged there.
+      return [];
+    }
+  }
+
+  /** Whether a model loaded since registration collides with `subgraph`'s
+   * types. Each new collision is logged once. */
+  #isExcludedForTypes(subgraph: ISubgraph): boolean {
+    const collisions = this.#typeCollisions(subgraph);
+    if (collisions.length === 0) {
+      this.#loggedCollisions.delete(subgraph);
+      return false;
+    }
+    const reason = new SubgraphTypeCollisionError(collisions).message;
+    if (this.#loggedCollisions.get(subgraph) !== reason) {
+      this.#loggedCollisions.set(subgraph, reason);
+      this.logger.error(
+        "Excluding subgraph @name: @error",
+        subgraph.name,
+        reason,
+      );
+    }
+    return true;
+  }
+
+  /**
+   * Whether `instance` may register into `supergraph`, and what it replaces.
+   * A mount path belongs to its first registration; only the same origin may
+   * replace it, except that a model's generated subgraph takes its name back
+   * from a package, as it would have at boot.
+   */
+  #admit(
+    instance: ISubgraph,
+    supergraph: string,
+    core: boolean,
+    origin: SubgraphOrigin,
+  ):
+    | { action: "skip"; existing: ISubgraph }
+    | { action: "reject" }
+    | { action: "add"; replaces?: ISubgraph } {
+    // A package subgraph may not take a name a core subgraph has registered:
+    // the in-process handler map is keyed by bare name, so a same-name
+    // subgraph would shadow the core one (issue #2972).
+    if (!core && this.#isCoreNameReserved(instance.name)) {
+      this.logger.error(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        instance.name,
+      );
+      return { action: "reject" };
+    }
+
+    const existing = this.#findByName(
+      core ? this.coreSubgraphsMap : this.subgraphs,
+      instance.name,
+      this.#mountBuckets(supergraph),
+    );
+    if (existing === instance) return { action: "skip", existing };
+
+    if (existing) {
+      const existingOrigin = this.#origins.get(existing) ?? HOST_ORIGIN;
+      const reclaims =
+        origin === DOCUMENT_MODEL_ORIGIN && typeof existingOrigin === "string";
+      if (existingOrigin !== origin && !reclaims) {
+        this.logger.error(
+          "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
+          instance.name,
+          describeOrigin(origin),
+          describeOrigin(existingOrigin),
+        );
+        return { action: "reject" };
+      }
+    }
+
+    const collisions = this.#typeCollisions(instance);
+    if (collisions.length > 0) {
+      this.logger.error(
+        "Rejecting subgraph @name: @error",
+        instance.name,
+        new SubgraphTypeCollisionError(collisions).message,
+      );
+      return { action: "reject" };
+    }
+
+    if (existing && (this.#origins.get(existing) ?? HOST_ORIGIN) !== origin) {
+      this.logger.error(
+        "Evicting subgraph @name from @existing: the document model of that name owns it",
+        instance.name,
+        describeOrigin(this.#origins.get(existing) ?? HOST_ORIGIN),
+      );
+    }
+    return { action: "add", replaces: existing };
   }
 
   async #addSubgraphInstance(
@@ -672,87 +801,111 @@ export class GraphQLManager {
     core = false,
     origin: SubgraphOrigin = HOST_ORIGIN,
   ) {
-    // A package subgraph may not take a name a core subgraph has registered:
-    // the in-process handler map is keyed by bare name, so a same-name
-    // subgraph would shadow the core one (issue #2972). Reject rather than
-    // throw - package registration runs from a detached async closure in
-    // server.ts, where a throw is an unhandled rejection that takes the
-    // host down.
-    if (!core && this.#isCoreNameReserved(subgraphInstance.name)) {
-      this.logger.error(
-        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
-        subgraphInstance.name,
-      );
-      return undefined;
-    }
-
-    const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
-
-    const existingSubgraph = this.#findSubgraph(
-      subgraphsMap,
-      subgraphInstance.name,
-    );
-
-    // Re-registering the same instance is a no-op.
-    if (existingSubgraph === subgraphInstance) {
+    // Rejections log rather than throw - package registration runs from a
+    // detached async closure in server.ts, where a throw is an unhandled
+    // rejection that takes the host down.
+    const admission = this.#admit(subgraphInstance, supergraph, core, origin);
+    if (admission.action === "reject") return undefined;
+    if (admission.action === "skip") {
       this.logger.debug(
         `Skipping duplicate subgraph: ${subgraphInstance.name}`,
       );
-      return existingSubgraph;
+      return admission.existing;
     }
 
-    // The first registration owns the name; a different origin would evict
-    // an unrelated subgraph.
-    if (existingSubgraph) {
-      const existingOrigin = this.#originOf(existingSubgraph);
-      if (existingOrigin !== origin) {
-        this.logger.error(
-          "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
-          subgraphInstance.name,
-          describeOrigin(origin),
-          describeOrigin(existingOrigin),
-        );
-        return undefined;
-      }
-    }
-
-    const collision = this.#typeCollision(subgraphInstance);
-    if (collision) {
-      this.logger.error(
-        "Rejecting subgraph @name: @error",
-        subgraphInstance.name,
-        collision.message,
-      );
-      return undefined;
-    }
-
-    // Same name and origin: replace (e.g. package hot-reload).
-    if (existingSubgraph) {
-      await this.#removeSubgraphInstance(existingSubgraph);
+    const { replaces } = admission;
+    if (replaces) {
+      await this.#detachSubgraph(replaces, this.#mountBuckets(supergraph));
     }
 
     await subgraphInstance.onSetup?.();
 
-    const subgraphs = subgraphsMap.get(supergraph) ?? [];
-    subgraphs.push(subgraphInstance);
-    subgraphsMap.set(supergraph, subgraphs);
-
-    if (supergraph !== "" && supergraph !== "graphql") {
-      subgraphsMap.get("graphql")?.push(subgraphInstance);
+    const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
+    for (const bucket of this.#mountBuckets(supergraph)) {
+      const subgraphs = subgraphsMap.get(bucket);
+      if (subgraphs) {
+        subgraphs.push(subgraphInstance);
+      } else if (bucket === supergraph) {
+        subgraphsMap.set(bucket, [subgraphInstance]);
+      }
     }
 
+    this.#origins.set(subgraphInstance, origin);
     if (origin !== HOST_ORIGIN) {
-      let byName = this.packageSubgraphs.get(origin);
-      if (!byName) {
-        byName = new Map();
-        this.packageSubgraphs.set(origin, byName);
+      let instances = this.packageSubgraphs.get(origin);
+      if (!instances) {
+        instances = new Set();
+        this.packageSubgraphs.set(origin, instances);
       }
-      byName.set(subgraphInstance.name, subgraphInstance);
+      instances.add(subgraphInstance);
     }
     this.logger.info(
-      `${existingSubgraph ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+      `${replaces ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
+  }
+
+  /**
+   * Take `instance` off the mount paths of `buckets`. It is torn down
+   * entirely unless it is still registered in another bucket.
+   */
+  async #detachSubgraph(instance: ISubgraph, buckets: readonly string[]) {
+    const elsewhere = [this.coreSubgraphsMap, this.subgraphs].some((map) =>
+      Array.from(map).some(
+        ([bucket, subgraphs]) =>
+          !buckets.includes(bucket) && subgraphs.includes(instance),
+      ),
+    );
+    if (!elsewhere) {
+      return this.#removeSubgraphInstance(instance);
+    }
+    for (const subgraphsMap of [this.coreSubgraphsMap, this.subgraphs]) {
+      for (const bucket of buckets) {
+        const subgraphs = subgraphsMap.get(bucket);
+        if (!subgraphs?.includes(instance)) continue;
+        subgraphsMap.set(
+          bucket,
+          subgraphs.filter((it) => it !== instance),
+        );
+        await this.#unmountSubgraph(instance, bucket);
+      }
+    }
+  }
+
+  /** Unmount what `instance` serves at its path in `bucket`: route, handler
+   * cache, SSE route, WebSocket handler and in-process handler. */
+  async #unmountSubgraph(instance: ISubgraph, bucket: string) {
+    const subgraphPath = this.#getSubgraphPath(instance, bucket);
+    if (this.subgraphHandlerCache.get(subgraphPath)?.subgraph !== instance) {
+      return;
+    }
+    this.subgraphHandlerCache.delete(subgraphPath);
+
+    const routeHandle = this.subgraphRouteHandles.get(subgraphPath);
+    if (routeHandle !== undefined) {
+      routeHandle.dispose();
+      this.subgraphRouteHandles.delete(subgraphPath);
+    }
+    this.#disposeSSERoute(subgraphPath);
+
+    const internalHandler = this.#internalSubgraphHandlers.get(instance.name);
+    if (internalHandler?.path === subgraphPath) {
+      this.#internalSubgraphHandlers.delete(instance.name);
+    }
+
+    const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
+    if (wsDisposer) {
+      this.subgraphWsDisposers.delete(subgraphPath);
+      try {
+        await wsDisposer.dispose();
+      } catch (error) {
+        this.logger.error(
+          "Error disposing subgraph websocket @name: @error",
+          instance.name,
+          error,
+        );
+      }
+    }
   }
 
   /**
@@ -781,30 +934,7 @@ export class GraphQLManager {
           bucket,
           subgraphs.filter((it) => it !== instance),
         );
-
-        const subgraphPath = this.#getSubgraphPath(instance, bucket);
-        this.subgraphHandlerCache.delete(subgraphPath);
-
-        const routeHandle = this.subgraphRouteHandles.get(subgraphPath);
-        if (routeHandle !== undefined) {
-          routeHandle.dispose();
-          this.subgraphRouteHandles.delete(subgraphPath);
-        }
-        this.#disposeSSERoute(subgraphPath);
-
-        const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
-        if (wsDisposer) {
-          this.subgraphWsDisposers.delete(subgraphPath);
-          try {
-            await wsDisposer.dispose();
-          } catch (error) {
-            this.logger.error(
-              "Error disposing subgraph websocket @name: @error",
-              instance.name,
-              error,
-            );
-          }
-        }
+        await this.#unmountSubgraph(instance, bucket);
       }
     }
 
@@ -813,12 +943,13 @@ export class GraphQLManager {
       this.#internalSubgraphHandlers.delete(instance.name);
     }
 
-    for (const [origin, byName] of this.packageSubgraphs) {
-      if (byName.get(instance.name) !== instance) continue;
-      byName.delete(instance.name);
-      if (byName.size === 0) {
-        this.packageSubgraphs.delete(origin);
-      }
+    const origin = this.#origins.get(instance);
+    this.#origins.delete(instance);
+    if (origin === undefined || origin === HOST_ORIGIN) return;
+    const instances = this.packageSubgraphs.get(origin);
+    instances?.delete(instance);
+    if (instances?.size === 0) {
+      this.packageSubgraphs.delete(origin);
     }
   }
 
@@ -881,7 +1012,19 @@ export class GraphQLManager {
     core = false,
     packageName?: string,
   ) {
-    const subgraphInstance = new subgraph({
+    return this.#addSubgraphInstance(
+      this.#createSubgraphInstance(subgraph, packageName),
+      supergraph,
+      core,
+      packageName ?? HOST_ORIGIN,
+    );
+  }
+
+  #createSubgraphInstance(
+    subgraph: SubgraphClass,
+    packageName?: string,
+  ): ISubgraph {
+    return new subgraph({
       // Left undefined, the subgraph is core rather than contributed, and its
       // routes hang off reactor-api's own namespace. Not defaulted in the
       // parameter, because `undefined` is what keeps a core subgraph out of
@@ -899,13 +1042,86 @@ export class GraphQLManager {
       attachments: this.attachments,
       inspection: this.inspection,
     });
+  }
 
-    return this.#addSubgraphInstance(
-      subgraphInstance,
-      supergraph,
-      core,
-      packageName ?? HOST_ORIGIN,
+  /**
+   * Apply a package change: `packaged` holds every loaded package's subgraph
+   * classes. Removals run before additions, so a name one package gives up
+   * can be taken by another in the same change. Changes apply one at a time;
+   * the router refresh is scheduled, not awaited.
+   */
+  applyPackageSubgraphs(
+    packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
+    supergraph = "graphql",
+  ): Promise<void> {
+    const run = this.#packageChanges.then(() =>
+      this.#applyPackageSubgraphs(packaged, supergraph),
     );
+    this.#packageChanges = run.catch(() => undefined);
+    return run;
+  }
+
+  async #applyPackageSubgraphs(
+    packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
+    supergraph: string,
+  ): Promise<void> {
+    for (const packageName of this.#appliedPackages) {
+      if (!packaged.has(packageName)) {
+        await this.#teardownPackage(packageName);
+      }
+    }
+    this.#appliedPackages = new Set(packaged.keys());
+
+    const incoming = new Map<string, ISubgraph[]>();
+    for (const [packageName, classes] of packaged) {
+      const instances: ISubgraph[] = [];
+      for (const subgraph of classes) {
+        try {
+          instances.push(this.#createSubgraphInstance(subgraph, packageName));
+        } catch (error) {
+          this.logger.error(
+            "Failed to create subgraph @subgraph from @package: @error",
+            subgraph.name,
+            packageName,
+            error,
+          );
+        }
+      }
+      incoming.set(packageName, instances);
+      await this.#pruneOrigin(
+        packageName,
+        new Set(instances.map((it) => it.name)),
+      );
+    }
+
+    for (const [packageName, instances] of incoming) {
+      const registered = new Set<string>();
+      for (const instance of instances) {
+        try {
+          const result = await this.#addSubgraphInstance(
+            instance,
+            supergraph,
+            false,
+            packageName,
+          );
+          if (result) registered.add(result.name);
+        } catch (error) {
+          this.logger.error(
+            "Failed to register subgraph @name from @package: @error",
+            instance.name,
+            packageName,
+            error,
+          );
+        }
+      }
+      // A refused subgraph must not shield a stale same-named one.
+      await this.#pruneOrigin(packageName, registered);
+    }
+
+    // Not awaited: a later debounced call supersedes this one's promise.
+    this.updateRouter().catch((error: unknown) => {
+      this.logger.error("Failed to update router: @error", error);
+    });
   }
 
   /**
@@ -920,14 +1136,21 @@ export class GraphQLManager {
     // runs before the early return below: a package may contribute a processor
     // that registers routes and no subgraph at all, and its routes still have
     // to go. A route that outlives its package answers against unloaded code.
+    if (await this.#teardownPackage(packageName)) {
+      await this.updateRouter();
+    }
+  }
+
+  /** Release the package's routes and subgraphs; whether any subgraph went. */
+  async #teardownPackage(packageName: string): Promise<boolean> {
     this.#disposeHttpScope(packageName);
 
-    const byName = this.packageSubgraphs.get(packageName);
-    if (!byName || byName.size === 0) return;
-    for (const instance of Array.from(byName.values())) {
+    const instances = this.packageSubgraphs.get(packageName);
+    if (!instances || instances.size === 0) return false;
+    for (const instance of Array.from(instances)) {
       await this.#removeSubgraphInstance(instance);
     }
-    await this.updateRouter();
+    return true;
   }
 
   /**
@@ -958,39 +1181,34 @@ export class GraphQLManager {
     packageName: string,
     keepNames: ReadonlySet<string>,
   ): Promise<void> {
-    return this.#pruneOrigin(packageName, keepNames);
-  }
-
-  async #pruneOrigin(
-    origin: Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
-    keepNames: ReadonlySet<string>,
-  ): Promise<void> {
-    const byName = this.packageSubgraphs.get(origin);
-    if (!byName) return;
-    let removed = 0;
-    for (const [name, instance] of Array.from(byName.entries())) {
-      if (!keepNames.has(name)) {
-        await this.#removeSubgraphInstance(instance);
-        removed++;
-      }
-    }
-    if (removed > 0) {
+    if ((await this.#pruneOrigin(packageName, keepNames)) > 0) {
       await this.updateRouter();
     }
   }
 
-  /** Find a registered subgraph by name, core or package-contributed. */
-  getSubgraphByName(name: string): ISubgraph | undefined {
-    for (const subgraphs of [
-      ...this.coreSubgraphsMap.values(),
-      ...this.subgraphs.values(),
-    ]) {
-      const found = subgraphs.find((subgraph) => subgraph.name === name);
-      if (found) {
-        return found;
+  /** Remove the origin's subgraphs not named in `keepNames`; how many went. */
+  async #pruneOrigin(
+    origin: Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
+    keepNames: ReadonlySet<string>,
+  ): Promise<number> {
+    const instances = this.packageSubgraphs.get(origin);
+    if (!instances) return 0;
+    let removed = 0;
+    for (const instance of Array.from(instances)) {
+      if (!keepNames.has(instance.name)) {
+        await this.#removeSubgraphInstance(instance);
+        removed++;
       }
     }
-    return undefined;
+    return removed;
+  }
+
+  /** Find a registered subgraph by name, core or package-contributed. */
+  getSubgraphByName(name: string): ISubgraph | undefined {
+    return (
+      this.#findByName(this.coreSubgraphsMap, name) ??
+      this.#findByName(this.subgraphs, name)
+    );
   }
 
   /** Whether a registered subgraph has a live handler, i.e. whether
@@ -1119,37 +1337,16 @@ export class GraphQLManager {
     });
   }
 
-  setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
-    // setSupergraph bypasses #addSubgraphInstance, so apply the same
-    // name guards here: drop incoming subgraphs that would shadow a
-    // registered core subgraph or one from another origin, keep the rest.
-    const accepted: ISubgraph[] = [];
-    for (const subgraph of subgraphs) {
-      if (this.#isCoreNameReserved(subgraph.name)) {
-        this.logger.error(
-          "Rejecting subgraph @name: name is reserved by a registered core subgraph",
-          subgraph.name,
-        );
-        continue;
+  /** Replace the subgraphs of `supergraph` with `subgraphs`, under the same
+   * name and type guards as any registration. */
+  async setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
+    for (const previous of [...(this.subgraphs.get(supergraph) ?? [])]) {
+      if (!subgraphs.includes(previous)) {
+        await this.#detachSubgraph(previous, this.#mountBuckets(supergraph));
       }
-      const existing = this.#findSubgraph(this.subgraphs, subgraph.name);
-      if (existing && this.#originOf(existing) !== HOST_ORIGIN) {
-        this.logger.error(
-          "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
-          subgraph.name,
-          describeOrigin(HOST_ORIGIN),
-          describeOrigin(this.#originOf(existing)),
-        );
-        continue;
-      }
-      accepted.push(subgraph);
     }
-    this.subgraphs.set(supergraph, accepted);
-    const globalSubgraphs = this.subgraphs.get("graphql");
-    if (globalSubgraphs) {
-      this.subgraphs.set("graphql", [...globalSubgraphs, ...accepted]);
-    } else {
-      this.subgraphs.set("graphql", accepted);
+    for (const subgraph of subgraphs) {
+      await this.#addSubgraphInstance(subgraph, supergraph, false, HOST_ORIGIN);
     }
     return this.updateRouter();
   }
@@ -1210,6 +1407,10 @@ export class GraphQLManager {
       for (const subgraph of subgraphs) {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
+        if (this.#isExcludedForTypes(subgraph)) {
+          await this.#unmountSubgraph(subgraph, supergraph);
+          continue;
+        }
         try {
           // Skip if handler already cached and mounted — a replaced subgraph
           // invalidates its entries, so a cached path is current. Two
@@ -1232,6 +1433,7 @@ export class GraphQLManager {
             this.cachedDocumentModels,
             subgraph.resolvers,
             subgraph.typeDefs,
+            this.#schemaOptions(subgraph),
           );
 
           const rawHandler = await this.gatewayAdapter.createHandler(
@@ -1329,6 +1531,7 @@ export class GraphQLManager {
       this.cachedDocumentModels,
       subgraph.resolvers,
       subgraph.typeDefs,
+      this.#schemaOptions(subgraph),
     );
   }
 
@@ -1341,6 +1544,7 @@ export class GraphQLManager {
 
     const definitions: SubgraphDefinition[] = [];
     for (const [subgraphPath, subgraph] of subgraphs) {
+      if (this.#isExcludedForTypes(subgraph)) continue;
       // One subgraph whose schema cannot be built must not take the
       // supergraph down with it.
       let module: ReturnType<typeof buildSubgraphSchemaModule>;
@@ -1400,6 +1604,7 @@ export class GraphQLManager {
     const modules: ReturnType<typeof buildSubgraphSchemaModule>[] = [];
     for (const subgraph of allSubgraphs.values()) {
       if (!subgraph.hasSubscriptions) continue;
+      if (this.#isExcludedForTypes(subgraph)) continue;
       try {
         modules.push(this.#buildSubgraphSchemaModule(subgraph));
       } catch (error) {
