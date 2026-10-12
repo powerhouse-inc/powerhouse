@@ -330,6 +330,57 @@ describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
     expect(second.results.map((n) => n.id)).toEqual(["c"]);
   });
 
+  it("filters by kind across keyset pages", async () => {
+    const driveId = "drive-1";
+    const base = new Date("2024-01-01T00:00:00.000Z");
+    for (let i = 0; i < 6; i++) {
+      const createdAt = new Date(base.getTime() + i * 1000);
+      if (i % 2 === 0) {
+        await insertFolderAt(driveId, `d${i}`, null, `D${i}`, createdAt);
+      } else {
+        await db
+          .insertInto("DriveNode")
+          .values({
+            driveId,
+            id: `f${i}`,
+            kind: "file",
+            name: `F${i}`,
+            requestedName: `F${i}`,
+            parentFolder: null,
+            documentType: "powerhouse/document-model",
+            createdAt,
+            updatedAt: createdAt,
+          })
+          .execute();
+      }
+    }
+
+    const files: string[] = [];
+    let cursor = "";
+    do {
+      const page = await view.listChildren(
+        driveId,
+        null,
+        { cursor, limit: 1 },
+        undefined,
+        "file",
+      );
+      files.push(...page.results.map((n) => n.id));
+      expect(page.cursors).toHaveLength(page.results.length);
+      cursor = page.nextCursor ?? "";
+    } while (cursor !== "");
+    expect(files).toEqual(["f1", "f3", "f5"]);
+
+    const folders = await view.listChildren(
+      driveId,
+      null,
+      { cursor: "", limit: 10 },
+      undefined,
+      "folder",
+    );
+    expect(folders.results.map((n) => n.id)).toEqual(["d0", "d2", "d4"]);
+  });
+
   it("rejects a malformed cursor", async () => {
     await expect(
       view.listChildren("drive-1", null, {

@@ -1,4 +1,4 @@
-import { type PagedResults, type PagingOptions } from "@powerhousedao/reactor";
+import { type PagingOptions } from "@powerhousedao/reactor";
 import type { Kysely } from "kysely";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
 import type {
@@ -6,7 +6,7 @@ import type {
   ReactorDriveFolderNode,
   ReactorDriveNode,
 } from "../types.js";
-import type { IDriveReadModel } from "./interfaces.js";
+import type { DriveNodePage, IDriveReadModel } from "./interfaces.js";
 
 const DEFAULT_LIMIT = 100;
 
@@ -96,7 +96,9 @@ export class DriveNodeView implements IDriveReadModel {
     driveId: string,
     parentFolder: string | null | undefined,
     paging?: PagingOptions,
-  ): Promise<PagedResults<ReactorDriveNode>> {
+    _signal?: AbortSignal,
+    kind?: ReactorDriveNode["kind"],
+  ): Promise<DriveNodePage> {
     const { limit, cursor } = parseListChildrenPaging(paging);
 
     let query = this.db
@@ -108,6 +110,10 @@ export class DriveNodeView implements IDriveReadModel {
       query = query.where("parentFolder", "is", null);
     } else if (parentFolder !== undefined) {
       query = query.where("parentFolder", "=", parentFolder);
+    }
+
+    if (kind !== undefined) {
+      query = query.where("kind", "=", kind);
     }
 
     if (cursor !== null) {
@@ -128,14 +134,15 @@ export class DriveNodeView implements IDriveReadModel {
 
     const hasMore = rows.length > limit;
     const sliced = hasMore ? rows.slice(0, limit) : rows;
-    const last = sliced[sliced.length - 1];
+    const cursors = sliced.map((row) =>
+      encodeKeysetCursor(row.createdAt, row.id),
+    );
 
     return {
       results: sliced.map(rowToNode),
+      cursors,
       options: { cursor: paging?.cursor ?? "", limit },
-      nextCursor: hasMore
-        ? encodeKeysetCursor(last.createdAt, last.id)
-        : undefined,
+      nextCursor: hasMore ? cursors[cursors.length - 1] : undefined,
     };
   }
 

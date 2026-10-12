@@ -1,6 +1,11 @@
 import type { PagedResults, PagingOptions } from "@powerhousedao/reactor";
 import type { ReactorDriveNode } from "../types.js";
 
+/** A page of nodes with, for each node, the cursor that resumes after it. */
+export type DriveNodePage = PagedResults<ReactorDriveNode> & {
+  cursors: string[];
+};
+
 /**
  * Drive-specific projection of the relationship graph. Reads from the
  * `DriveNode` and `DocumentName` tables maintained by `NodeProcessor`.
@@ -23,13 +28,15 @@ export interface IDriveReadModel {
    * - `parentFolder === undefined` returns every node in the drive.
    * - `parentFolder === null` returns only root-level nodes.
    * - `parentFolder === <id>` returns only direct children of that folder.
+   * - `kind` keeps only nodes of that kind.
    */
   listChildren(
     driveId: string,
     parentFolder: string | null | undefined,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<ReactorDriveNode>>;
+    kind?: ReactorDriveNode["kind"],
+  ): Promise<DriveNodePage>;
 
   /**
    * Returns every node reachable from `root` (inclusive) within the same
