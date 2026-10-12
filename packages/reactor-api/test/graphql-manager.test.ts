@@ -21,8 +21,9 @@ import {
   reactorDriveDocumentModelModule,
   reactorDriveSubgraphTypeDefs,
 } from "@powerhousedao/reactor-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { ILogger } from "document-model";
+import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import { type DocumentNode, Kind } from "graphql";
 import { gql } from "graphql-tag";
 import type http from "node:http";
@@ -30,6 +31,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
+import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
+import { SystemSubgraph } from "../src/graphql/system/subgraph.js";
 import { getGeneratedDocumentModelTypes } from "../src/utils/create-schema.js";
 
 import {
@@ -2813,6 +2817,171 @@ describe("GraphQLManager", () => {
       };
       expect(subgraphs.get("extra")).toEqual([sub]);
       expect(subgraphs.get("graphql")).toEqual([sub]);
+    });
+  });
+
+  describe("core types take precedence over document models", () => {
+    const CORE = ["r", "system"];
+    const REFUSAL =
+      "Refusing document model @documentType from the GraphQL schema: @reason";
+
+    async function flush<T>(pending: Promise<T>): Promise<T> {
+      await vi.runAllTimersAsync();
+      return pending;
+    }
+
+    function supergraphNames(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): string[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { name: string }[];
+      return getDefinitions().map((d) => d.name);
+    }
+
+    function modelSubgraphName(model: DocumentModelModule): string {
+      return new DocumentModelSubgraph(model, {
+        reactorClient: {} as IReactorClient,
+      } as SubgraphArgs).name;
+    }
+
+    function makeModelsHarness(
+      models: DocumentModelModule[],
+      enableDocumentModelSubgraphs = true,
+    ) {
+      const logger = makeHarnessLogger();
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({ results: models }),
+      });
+      return {
+        logger,
+        ...makeHarness({
+          logger,
+          reactorClient,
+          enableDocumentModelSubgraphs,
+        }),
+      };
+    }
+
+    function expectCoreServed(harness: ReturnType<typeof makeModelsHarness>) {
+      const { manager, handles, gatewayAdapter } = harness;
+      for (const name of CORE) {
+        const route = handles.get(`/graphql/${name}`);
+        expect(route).toBeDefined();
+        expect(route?.dispose).not.toHaveBeenCalled();
+        expect(manager.hasSubgraphHandler(name)).toBe(true);
+      }
+      expect(supergraphNames(gatewayAdapter)).toEqual(
+        expect.arrayContaining(CORE.map((name) => `:graphql/${name}`)),
+      );
+    }
+
+    async function expectModelRefused(
+      harness: ReturnType<typeof makeModelsHarness>,
+      model: DocumentModelModule,
+      typeName: string,
+    ) {
+      const { manager, gatewayAdapter, logger, reactorClient } = harness;
+      const name = modelSubgraphName(model);
+      expect(manager.getSubgraphByName(name)).toBeUndefined();
+      expect(supergraphNames(gatewayAdapter)).not.toContain(`:graphql/${name}`);
+      expect(logger.error).toHaveBeenCalledWith(
+        REFUSAL,
+        model.documentModel.global.id,
+        expect.stringContaining(typeName),
+      );
+      // Refused from the schema only: the reactor keeps serving the model.
+      const { results } = await reactorClient.getDocumentModelModules();
+      expect(results).toContain(model);
+    }
+
+    // A core type, a root type, a fixed generated type, a core type.
+    const NAMES = ["Revision", "Query", "Signer", "SystemInfo"];
+
+    it.each(NAMES)("refuses a boot model named %s", async (typeName) => {
+      const model = makeModelModule(typeName, `test/${typeName}`);
+      const gadget = makeModelModule("Gadget", "test/gadget");
+      const harness = makeModelsHarness([makeDriveModule(), model, gadget]);
+
+      await initAndFlush(harness.manager, [ReactorSubgraph, SystemSubgraph]);
+
+      expectCoreServed(harness);
+      await expectModelRefused(harness, model, typeName);
+      expect(harness.manager.hasSubgraphHandler("gadget")).toBe(true);
+    });
+
+    it.each(NAMES)("refuses a hot-loaded model named %s", async (typeName) => {
+      const model = makeModelModule(typeName, `test/${typeName}`);
+      const harness = makeModelsHarness([makeDriveModule()]);
+      await initAndFlush(harness.manager, [ReactorSubgraph, SystemSubgraph]);
+
+      vi.mocked(
+        harness.reactorClient.getDocumentModelModules,
+      ).mockResolvedValue({
+        results: [makeDriveModule(), model],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(harness.manager.regenerateDocumentModelSubgraphs());
+      await flush(harness.manager.updateRouter());
+
+      expectCoreServed(harness);
+      await expectModelRefused(harness, model, typeName);
+    });
+
+    it("refuses a boot model when document-model subgraphs are off", async () => {
+      const model = makeModelModule("Revision", "test/revision");
+      const { manager, gatewayAdapter, logger } = makeModelsHarness(
+        [makeDriveModule(), model],
+        false,
+      );
+
+      await initAndFlush(manager, [ReactorSubgraph, SystemSubgraph]);
+
+      expect(manager.hasSubgraphHandler("r")).toBe(true);
+      expect(supergraphNames(gatewayAdapter)).toContain(":graphql/r");
+      expect(logger.error).toHaveBeenCalledWith(
+        REFUSAL,
+        "test/revision",
+        expect.stringContaining("Revision"),
+      );
+    });
+
+    it("logs a refused model once across regenerations", async () => {
+      const model = makeModelModule("Revision", "test/revision");
+      const harness = makeModelsHarness([makeDriveModule(), model]);
+      await initAndFlush(harness.manager, [ReactorSubgraph, SystemSubgraph]);
+
+      await flush(harness.manager.regenerateDocumentModelSubgraphs());
+
+      const refusals = vi
+        .mocked(harness.logger.error)
+        .mock.calls.filter(([message]) => message === REFUSAL);
+      expect(refusals).toHaveLength(1);
+    });
+
+    it("admits the base models against the real core subgraphs", async () => {
+      const models = [
+        driveDocumentModelModule,
+        documentModelDocumentModelModule,
+        reactorDriveDocumentModelModule,
+      ] as unknown as DocumentModelModule[];
+      const harness = makeModelsHarness(models);
+
+      await initAndFlush(harness.manager, [
+        AnalyticsSubgraph,
+        ReactorSubgraph,
+        SystemSubgraph,
+      ]);
+
+      expect(
+        vi
+          .mocked(harness.logger.error)
+          .mock.calls.filter(([message]) => message === REFUSAL),
+      ).toEqual([]);
+      for (const model of models) {
+        expect(
+          harness.manager.hasSubgraphHandler(modelSubgraphName(model)),
+        ).toBe(true);
+      }
     });
   });
 });

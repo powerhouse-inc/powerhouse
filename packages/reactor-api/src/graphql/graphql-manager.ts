@@ -38,9 +38,11 @@ import {
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
+  documentModelGeneratedTypeNames,
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
+  reservedTypeNames,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
 } from "../utils/create-schema.js";
@@ -324,6 +326,9 @@ export class GraphQLManager {
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
     | undefined;
 
+  /** Document models refused from the schema, by id, with the reason logged. */
+  #refusedModels = new Map<string, string>();
+
   /** Subgraphs excluded for a type collision, with the reason last logged. */
   readonly #loggedCollisions = new WeakMap<ISubgraph, string>();
 
@@ -415,9 +420,6 @@ export class GraphQLManager {
     // check if Document Drive model is available
     const modulesResult = await this.reactorClient.getDocumentModelModules();
     const models = modulesResult.results;
-
-    // Cache models for schema generation
-    this.cachedDocumentModels = models;
 
     const driveModel = models.find(
       (it: DocumentModelModule) =>
@@ -530,10 +532,13 @@ export class GraphQLManager {
     );
     this.logger.info(`Registered REST endpoint: GET ${driveRoutePath}`);
 
-    await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
+    await this.#setupCoreSubgraphs("graphql", coreSubgraphs, models);
 
     if (this.featureFlags.enableDocumentModelSubgraphs) {
-      await this.#setupDocumentModelSubgraphs("graphql", models);
+      await this.#setupDocumentModelSubgraphs(
+        "graphql",
+        this.cachedDocumentModels,
+      );
     }
 
     await this.#createSupergraphGateway();
@@ -556,13 +561,11 @@ export class GraphQLManager {
     try {
       const modulesResult = await this.reactorClient.getDocumentModelModules();
       const models = modulesResult.results;
-
-      // Update cached models for schema generation
-      this.cachedDocumentModels = models;
+      this.cachedDocumentModels = this.#admitModels(models);
 
       const registeredNames = await this.#setupDocumentModelSubgraphs(
         "graphql",
-        models,
+        this.cachedDocumentModels,
       );
       // A model removed since the last regeneration (e.g. its package was
       // uninstalled) must lose its subgraph; replacing alone would keep it.
@@ -585,6 +588,7 @@ export class GraphQLManager {
   async #setupCoreSubgraphs(
     supergraph: string,
     coreSubgraphs: SubgraphClass[],
+    models: DocumentModelModule[],
   ) {
     for (const subgraph of coreSubgraphs) {
       try {
@@ -598,7 +602,47 @@ export class GraphQLManager {
       }
     }
 
+    // Core types take precedence: models are admitted against them once they
+    // are registered, before any schema is built.
+    this.cachedDocumentModels = this.#admitModels(models);
     return this.#setupSubgraphs(this.coreSubgraphsMap);
+  }
+
+  /**
+   * The models whose generated types take no reserved name. The others stay
+   * in the reactor but are left out of the schema.
+   */
+  #admitModels(models: DocumentModelModule[]): DocumentModelModule[] {
+    const reserved = reservedTypeNames(
+      Array.from(this.coreSubgraphsMap.values(), (subgraphs) =>
+        subgraphs.map((subgraph) => subgraph.typeDefs),
+      ).flat(),
+    );
+    const refused = new Map<string, string>();
+    const admitted = models.filter((model) => {
+      let names: Set<string>;
+      try {
+        names = documentModelGeneratedTypeNames(model);
+      } catch {
+        // An unparseable model fails where the schema is built, as before.
+        return true;
+      }
+      const taken = Array.from(names).filter((name) => reserved.has(name));
+      if (taken.length === 0) return true;
+      const id = model.documentModel.global.id;
+      const reason = `generates reserved type names: ${taken.join(", ")}`;
+      refused.set(id, reason);
+      if (this.#refusedModels.get(id) !== reason) {
+        this.logger.error(
+          "Refusing document model @documentType from the GraphQL schema: @reason",
+          id,
+          reason,
+        );
+      }
+      return false;
+    });
+    this.#refusedModels = refused;
+    return admitted;
   }
 
   async #setupDocumentModelSubgraphs(
@@ -794,7 +838,7 @@ export class GraphQLManager {
       }
     }
 
-    const collisions = this.#typeCollisions(instance);
+    const collisions = core ? [] : this.#typeCollisions(instance);
     if (collisions.length > 0) {
       this.logger.error(
         "Rejecting subgraph @name: @error",
