@@ -1,7 +1,7 @@
 /**
- * Per-workflow run history for a reactor whose host runs a workflow engine
- * (multi-reactor §3). Rather than bridging workflow data onto the inspection
- * plane, this REUSES Workflow Studio's standalone runtime client
+ * Per-workflow run history for a reactor whose host runs a workflow engine.
+ * Rather than bridging workflow data onto the inspection plane, this REUSES
+ * Workflow Studio's standalone runtime client
  * (`@powerhousedao/workflow/editors/runtime`) against the reactor's
  * `/graphql/workflow-runtime` subgraph -- the same data layer the studio reads,
  * so there is one journal, not two.

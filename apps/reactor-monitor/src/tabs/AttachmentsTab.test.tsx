@@ -51,8 +51,7 @@ function remoteReactor(info: InspectorAttachmentInfo | Error): ManagedReactor {
  * The tab's job is to keep the two honest failure modes apart -- bytes nobody
  * has, versus a peer whose reference index has not caught up -- so these
  * assert that both counts are rendered and that a reactor WITHOUT a store says
- * so instead of rendering zeroes that look like a healthy empty state
- * (multi-reactor W3.4).
+ * so instead of rendering zeroes that look like a healthy empty state.
  */
 function status(
   overrides: Partial<AttachmentReplicatorStatus> = {},

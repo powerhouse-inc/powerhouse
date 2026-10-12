@@ -1,8 +1,8 @@
 /**
  * The drives (collections) a reactor holds, with their remote URL, drive-state
- * summary and node counts, plus an on-demand integrity check (multi-reactor
- * §1). Reads the inspection surface's `listDrives` / `checkDriveIntegrity`, so
- * it works for local, worker and remote reactors alike.
+ * summary and node counts, plus an on-demand integrity check. Reads the
+ * inspection surface's `listDrives` / `checkDriveIntegrity`, so it works for
+ * local, worker and remote reactors alike.
  *
  * The remote URLs are JOINED from the sync manager's already-served remote list
  * rather than re-fetched: a remote's `meta.collectionId` names the drive and

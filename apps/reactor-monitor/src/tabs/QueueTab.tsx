@@ -3,15 +3,14 @@
  * packages/design-system/src/connect/components/queue-inspector/queue-inspector.tsx.
  *
  * The design-system component is prop-driven and would otherwise be a clean
- * deep import (`@powerhousedao/design-system/connect/components/queue-inspector`),
- * but it imports `Icon` from the package's private `#design-system` import
- * alias (only resolvable inside that package's own package.json, not from
- * here), renders with Tailwind utility classes against the design-system
- * theme tokens, and opens a shared `ObjectInspectorModal`. Pulling any of
- * that in would mean adding Tailwind and the design-system's theme CSS to
- * this app for one tab, which W0.4 explicitly avoids ("no tailwind unless
- * the deep-imported components require their CSS" — this one does, so it is
- * forked instead). This port keeps the same prop contract and behavior
+ * deep import
+ * (`@powerhousedao/design-system/connect/components/queue-inspector`), but it
+ * imports `Icon` from the package's private `#design-system` import alias (only
+ * resolvable inside that package's own package.json, not from here), renders
+ * with Tailwind utility classes against the design-system theme tokens, and
+ * opens a shared `ObjectInspectorModal`. Pulling any of that in would mean
+ * adding Tailwind and the design-system's theme CSS to this app for one tab, so
+ * it is forked instead. This port keeps the same prop contract and behavior
  * (poll every 2s, pause/resume, sortable columns) in plain CSS, and replaces
  * the "View" modal with an inline expandable row.
  */

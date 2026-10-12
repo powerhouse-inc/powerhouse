@@ -70,7 +70,7 @@ type Topology = {
   readonly requirements: Readonly<Record<string, CollectionRequirementsInput>>;
 };
 
-/** The one requirement toggle the plan calls out (workflows), plus two cheap siblings. */
+/** Collection requirements the panel can toggle. */
 type RequirementInput = {
   readonly workflows: boolean;
   readonly durableStorage: boolean;

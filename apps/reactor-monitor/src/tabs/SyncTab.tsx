@@ -30,7 +30,7 @@ export type SyncTabProps = {
    * `info.syncChannels` includes `"gql"` -- the exact
    * `ChannelConfig.type` the "Add remote" form below writes.
    *
-   * True for a connect-mode reactor, which since W3.0 serves gql remotes AND
+   * True for a connect-mode reactor, which serves gql remotes AND
    * brokered local peers, so both this form and the link panel above are live
    * on it. False for the two reactors whose factory would only refuse the
    * form's config: a local-ONLY one (`sync.local`, a single

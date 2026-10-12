@@ -14,9 +14,9 @@ import { DrivesTab } from "./DrivesTab.js";
 
 /**
  * The Drives tab lists a reactor's collections with their remote URL, state
- * summary and node counts, and runs an on-demand integrity check (multi-reactor
- * §1). It reads the shared inspection surface, so these stub the inspector and
- * the sync manager directly.
+ * summary and node counts, and runs an on-demand integrity check. It reads the
+ * shared inspection surface, so these stub the inspector and the sync manager
+ * directly.
  */
 const DRIVE: InspectorDriveInfo = {
   driveId: "drive-a",

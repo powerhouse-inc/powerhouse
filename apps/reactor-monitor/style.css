@@ -1,5 +1,5 @@
 /* Plain-CSS styling for the reactor-monitor shell. No design-system/Tailwind
-   dependency (W0.4): this app is a lab bench outside Connect, and the
+   dependency: this app is a lab bench outside Connect, and the
    inspector tabs ported from packages/design-system are restyled here rather
    than pulling in Tailwind + the design-system theme for one app. */
 
@@ -434,7 +434,7 @@ body {
   font-size: 0.8rem;
 }
 
-/* Capability grid (Overview tab, multi-reactor stage 2) */
+/* Capability grid (Overview tab) */
 
 .rm-cap-grid {
   display: grid;
@@ -635,7 +635,7 @@ body {
   font-weight: 600;
 }
 
-/* Sync repair levers + dead letters + storage health (W0.5) */
+/* Sync repair levers + dead letters + storage health */
 
 .rm-storage-health,
 .rm-link-local-sync {
@@ -731,7 +731,7 @@ body {
   font-family: monospace;
 }
 
-/* Router topology view (multi-reactor router, stages 1-3) */
+/* Router topology view */
 
 .rm-router-build {
   display: flex;

@@ -1,8 +1,8 @@
 /**
- * The document models a reactor has registered, with versions (multi-reactor
- * §2). Reads the inspection surface's `listDocumentModels`, so it works
- * uniformly for local, worker and remote reactors — a remote one answers over
- * the inspection subgraph through `RemoteInspectorClient`.
+ * The document models a reactor has registered, with versions. Reads the
+ * inspection surface's `listDocumentModels`, so it works uniformly for local,
+ * worker and remote reactors — a remote one answers over the inspection
+ * subgraph through `RemoteInspectorClient`.
  *
  * Plain CSS and a 2s poll loop, forked from QueueTab rather than pulling in the
  * design system (see that file's header note).

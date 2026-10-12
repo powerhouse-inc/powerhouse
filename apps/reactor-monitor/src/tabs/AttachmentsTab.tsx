@@ -1,17 +1,17 @@
 /**
- * Attachment byte movement for the selected reactor (multi-reactor W3.4, §4b).
+ * Attachment byte movement for the selected reactor.
  *
  * The counts are the whole point: a lazy fetch-on-reference model has two
  * failure modes that look identical at the moment they happen -- a peer that
  * never had the bytes, and a peer whose attachment reference index has not
  * caught up with its own sync -- and they are only separable over time. So
- * `waiting` and `not found` are shown side by side rather than folded into one
+ * `waiting` and `not found` are shown side by side rather than merged into one
  * "missing" number, and the retry lever is here because an operator who can
  * see that a peer caught up should not have to wait for a reboot.
  *
  * An in-process reactor is read through its own built attachment handle. A
  * REMOTE reactor has no such handle, so its store is read over the inspection
- * surface instead (§4b): a Switchboard serves bytes directly with no
+ * surface instead: a Switchboard serves bytes directly with no
  * fetch-on-reference replicator, so it reports store presence and bytes held
  * and says the replicator counters do not apply.
  */

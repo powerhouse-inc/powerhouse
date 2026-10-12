@@ -434,9 +434,8 @@ describe("SyncTab", () => {
     }
   });
 
-  // Connect mode now ALSO serves brokered local peers (W3.0), so the gating
-  // is on the gql channel alone: the form stays live on a reactor that can do
-  // both, which the earlier "local means no gql form" reading got backwards.
+  // Connect mode also serves brokered local peers, so the gating is on the
+  // gql channel alone: the form stays live on a reactor that can do both.
   it("leaves the add-remote form usable on a connect reactor", () => {
     const view = render(
       <SyncTab gqlRemotes syncManager={fakeSyncManager([])} />,

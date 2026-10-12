@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-monitor-app",
   "version": "6.2.3-dev.50",
-  "description": "Observable lab bench SPA for provisioning and inspecting reactors outside Connect (multi-reactor initiative, stage 0).",
+  "description": "Observable lab bench SPA for provisioning and inspecting reactors outside Connect.",
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-only",

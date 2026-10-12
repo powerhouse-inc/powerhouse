@@ -12,7 +12,7 @@ import { WorkflowsTab, type CreateRuntimeClient } from "./WorkflowsTab.js";
 
 /**
  * The Workflows tab reuses Workflow Studio's standalone runtime client against
- * the reactor's workflow-runtime subgraph (multi-reactor §3). These inject a
+ * the reactor's workflow-runtime subgraph. These inject a
  * stub `createClient`, so the tab is driven off a mocked runtime and the
  * derived URL and auth are asserted at the seam, with no network.
  */

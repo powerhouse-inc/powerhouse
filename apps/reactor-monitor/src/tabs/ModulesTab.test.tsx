@@ -6,8 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 import { ModulesTab } from "./ModulesTab.js";
 
 /**
- * The Modules tab lists a reactor's registered document models with versions
- * (multi-reactor §2). It reads the same `IInspector.listDocumentModels`
+ * The Modules tab lists a reactor's registered document models with versions.
+ * It reads the same `IInspector.listDocumentModels`
  * surface for every hosting kind, so these stub the inspector directly.
  */
 function stubInspector(models: InspectorDocumentModelInfo[]): MonitorInspector {

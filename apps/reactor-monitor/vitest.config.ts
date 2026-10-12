@@ -15,7 +15,7 @@ const REACTOR_BOOT_TIMEOUT_MS = 60_000;
 // requiring `dist/` to exist first. This has to be set on `ssr.resolve` as
 // well as `resolve`: vitest's node pool resolves through the SSR
 // environment, and `resolve.conditions` alone leaves it on "import" -> a
-// stale `dist` (the finding behind packages/reactor-monitor's W0.2 report).
+// stale `dist`.
 const SOURCE_FIRST = ["source", "import", "module", "browser", "default"];
 
 export default defineConfig({
