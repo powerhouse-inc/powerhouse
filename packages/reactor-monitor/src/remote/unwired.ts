@@ -1,55 +1,19 @@
 import type { IEventBus, IReactorClient } from "@powerhousedao/reactor";
 
-/**
- * The two handle fields a REMOTE reactor cannot honour, and the one honest way
- * to present them: refuse by name.
- *
- * `ManagedReactorBase` requires a `client` and an `events` bus because every
- * locally hosted reactor has both. A remote reactor's are on the far side of
- * HTTP, and W3.2 serves its INSPECTION surfaces, not its document plane or its
- * event bus. The alternatives were both worse: widening the handle type would
- * force every existing consumer to branch on hosting kind, and a silently inert
- * stub (a client that resolves nothing, a bus that never fires) is exactly the
- * kind of thing that reads green while nothing works -- the failure mode this
- * whole initiative exists to stamp out.
- *
- * So these throw, and the message says what is missing and what to use
- * instead. A monitor view that must not hit them gates on
- * `capabilities.hosting === "remote"`.
- */
+// A remote handle serves inspection only, so its client and event bus refuse by name.
 
 function refuse(endpoint: string, what: string, instead: string): never {
   throw new Error(
-    `${what} is not wired for the remote reactor at ${endpoint}: provision({kind:"remote"}) attaches a reactor's INSPECTION surfaces only (multi-reactor W3.2). ${instead}`,
+    `${what} is not wired for the remote reactor at ${endpoint}: provision({kind:"remote"}) attaches a reactor's inspection surfaces only. ${instead}`,
   );
 }
 
-/**
- * An `IReactorClient` that refuses every call, naming the path that was
- * reached (`client.drives.create`, not just "client").
- *
- * A proxy rather than twenty throwing methods: `IReactorClient` has nested
- * namespaces (`drives`, `relationships`, `jobs`) and gains members over time,
- * and a hand-written stub that falls behind the interface would start
- * returning `undefined` instead of refusing.
- */
+/** Refuses every call, naming the path reached (`client.drives.create`). */
 export function unwiredRemoteClient(endpoint: string): IReactorClient {
   return makeRefusingProxy(endpoint, "client") as IReactorClient;
 }
 
-/**
- * The members that must NOT refuse: the ones a runtime or a logger calls on a
- * value it was merely handed.
- *
- * `JSON.stringify` calls `toJSON`, `String(x)` and template interpolation call
- * `Symbol.toPrimitive` then `toString`, `console.log` in Node reaches for
- * `util.inspect.custom`, and `+x` calls `valueOf`. Routed through the throwing
- * trap, every one of those turns an attempt to DESCRIBE the handle into an
- * exception -- so an error report, a log line or a devtools expansion that
- * happens to include a remote reactor handle dies while trying to say what it
- * is. Refusing a document operation is the point; refusing to be printed is
- * just a trap for whoever is diagnosing something else.
- */
+// Describing the handle (logging, JSON, string coercion) must not throw.
 const DESCRIBABLE: ReadonlySet<string> = new Set([
   "toJSON",
   "toString",
@@ -66,11 +30,7 @@ function makeRefusingProxy(endpoint: string, path: string): unknown {
     );
   return new Proxy(target, {
     get: (_target, property) => {
-      // Never pretend to be a thenable: awaiting the handle (or any field of
-      // it) must not call into this. Every symbol-keyed protocol member --
-      // `Symbol.toPrimitive`, `Symbol.toStringTag`, `util.inspect.custom`,
-      // iteration -- is absent for the same reason, which leaves the string
-      // fallbacks below to answer.
+      // Not a thenable, and no symbol protocols: the string fallbacks answer.
       if (property === "then" || typeof property === "symbol") {
         return undefined;
       }
@@ -83,15 +43,7 @@ function makeRefusingProxy(endpoint: string, path: string): unknown {
   });
 }
 
-/**
- * An `IEventBus` that refuses both halves.
- *
- * The remote reactor's bus events are not forwarded over the inspection
- * surface -- it is a request/response GraphQL plane, with no stream -- so a
- * subscriber would wait forever. It throws synchronously on `subscribe`, which
- * is what the worker-hosted bus proxy does for an event type it does not
- * forward, so a caller meets the same failure in the same place.
- */
+/** Throws on `subscribe` as the worker bus proxy does for an unforwarded type. */
 export function unwiredRemoteEventBus(endpoint: string): IEventBus {
   return {
     subscribe: () =>
