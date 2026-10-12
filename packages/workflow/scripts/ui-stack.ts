@@ -338,6 +338,7 @@ export async function buildHarnesses(): Promise<void> {
     input: {
       "prop-controls": join(PKG, "test/ui/harness/prop-controls.tsx"),
       "schedule-builder": join(PKG, "test/ui/harness/schedule-builder.tsx"),
+      "property-form-echo": join(PKG, "test/ui/harness/property-form-echo.tsx"),
     },
     platform: "browser",
     transform: { define: { "process.env.NODE_ENV": '"production"' } },
