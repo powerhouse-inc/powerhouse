@@ -563,6 +563,46 @@ describe("a worker reactor whose store is poisoned", () => {
   });
 });
 
+describe("a local sync link into a worker reactor", () => {
+  it("shows up in, and leaves, the worker tab's remote list", async () => {
+    const worker = createMonitorWorkerHost({
+      workerName: "ph-reactor-monitor:linked",
+    });
+    const channel = new MessageChannel();
+    const dispose = worker.host.connectPort(channel.port1);
+    const tab = await connectManagedWorkerReactor(
+      descriptor("linked", { sync: { local: true } }),
+      createPortTransport(channel.port2),
+      { buildId: "test-build" },
+    );
+    const peer = await provisionInProcess(
+      inProcessDescriptor("linked-peer", { sync: { local: true } }),
+    );
+    try {
+      const drive = await peer.client.drives.create({
+        global: { name: "Linked" },
+      });
+      const link = await linkLocalSync(peer, tab, {
+        driveId: drive.header.id,
+        createChannel: nodeChannel,
+      });
+      const names = () => tab.syncManager.list().map((r) => r.meta.name);
+
+      expect(names()).toContain(link.remoteNameB);
+
+      await link.unlink();
+      expect(names()).not.toContain(link.remoteNameB);
+    } finally {
+      await peer.kill();
+      await tab.kill();
+      dispose();
+      channel.port1.close();
+      channel.port2.close();
+      await worker.release();
+    }
+  }, 60_000);
+});
+
 describe("restart() on a registry-held worker reactor", () => {
   it("resolves once the worker retires, though the retirement kills the handle", async () => {
     const worker = createMonitorWorkerHost({

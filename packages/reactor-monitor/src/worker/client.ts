@@ -215,8 +215,8 @@ export async function connectManagedWorkerReactor(
   const localSync = info.syncChannels.includes(LOCAL_CHANNEL_TYPE)
     ? {
         /** Moves (not clones) one end of the broker's channel into the worker. */
-        adoptLocalSyncPeer: (link: AdoptLocalSyncPeerLink): Promise<void> =>
-          sendAdoptSyncPeer(
+        adoptLocalSyncPeer: async (link: AdoptLocalSyncPeerLink) => {
+          await sendAdoptSyncPeer(
             router,
             {
               peerId: link.peerId,
@@ -226,13 +226,17 @@ export async function connectManagedWorkerReactor(
               filter: link.filter,
             },
             link.port as unknown as MessagePort,
-          ),
-        removeLocalSyncPeer: (
+          );
+          await syncManager.refresh();
+        },
+        removeLocalSyncPeer: async (
           remoteName: string,
           peerId: string,
           channelName: string,
-        ): Promise<void> =>
-          sendRemoveSyncPeer(router, { peerId, channelName, remoteName }),
+        ) => {
+          await sendRemoveSyncPeer(router, { peerId, channelName, remoteName });
+          await syncManager.refresh();
+        },
       }
     : undefined;
 
