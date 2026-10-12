@@ -241,6 +241,7 @@ export async function connectManagedWorkerReactor(
     : undefined;
 
   let killed = false;
+  let restarting: Promise<void> | undefined;
   return {
     name: descriptor.name,
     kind: "worker",
@@ -265,10 +266,12 @@ export async function connectManagedWorkerReactor(
     ...(localSync ?? {}),
     adminInfo: () => adminClient.info(),
     restart: () =>
-      new Promise<void>((resolve, reject) => {
+      (restarting ??= new Promise<void>((resolve, reject) => {
         onRetired = resolve;
         adminClient.restart().then(resolve, reject);
-      }),
+      }).finally(() => {
+        restarting = undefined;
+      })),
     /**
      * Releases this client's end of the connection. A SharedWorker cannot be
      * terminated by a client — the browser tears it down once no port is

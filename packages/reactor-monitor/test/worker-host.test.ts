@@ -640,6 +640,44 @@ describe("restart() on a registry-held worker reactor", () => {
       await worker.release();
     }
   });
+
+  it("resolves two overlapping restart() calls once the worker retires", async () => {
+    const worker = createMonitorWorkerHost({
+      workerName: "ph-reactor-monitor:restart-overlap",
+    });
+    const channel = new MessageChannel();
+    const registry = new ReactorMonitorRegistry();
+    try {
+      const handle = (await registry.provision(
+        descriptor("restart-overlap", {
+          createWorker: () => {
+            worker.host.connectPort(channel.port1);
+            return {
+              port: channel.port2,
+              addEventListener: () => undefined,
+            } as unknown as SharedWorker;
+          },
+        }),
+      )) as ManagedWorkerReactor;
+
+      const settle = (p: Promise<void>) =>
+        p.then(
+          () => "resolved",
+          (error: unknown) => `rejected: ${String(error)}`,
+        );
+      const outcome = await Promise.race([
+        Promise.all([settle(handle.restart()), settle(handle.restart())]),
+        new Promise((resolve) => setTimeout(() => resolve("pending"), 10_000)),
+      ]);
+
+      expect(outcome).toEqual(["resolved", "resolved"]);
+    } finally {
+      await registry.killAll();
+      channel.port1.close();
+      channel.port2.close();
+      await worker.release();
+    }
+  });
 });
 
 describe("provisionWorkerReactor", () => {
