@@ -36,6 +36,7 @@ export function ProcessorsTab({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -63,8 +64,9 @@ export function ProcessorsTab({
       setRetryingId(processorId);
       try {
         await levers.retryProcessor(processorId);
+        setRetryError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setRetryError(e instanceof Error ? e.message : String(e));
       } finally {
         setRetryingId(null);
       }
@@ -110,6 +112,11 @@ export function ProcessorsTab({
 
       {error ? (
         <p className="rm-error">Failed to load processors: {error}</p>
+      ) : null}
+      {retryError ? (
+        <p className="rm-error" role="alert">
+          Retry failed: {retryError}
+        </p>
       ) : null}
 
       <div className="rm-table-wrap">
