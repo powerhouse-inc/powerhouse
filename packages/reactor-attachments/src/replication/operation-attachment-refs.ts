@@ -6,6 +6,7 @@ import {
   isPurgeMarker,
   type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
+import { logger } from "document-model";
 import { AttachmentSchemaCompiler } from "../reference-index/attachment-schema-compiler.js";
 import type { IAttachmentSchemaCompiler } from "../reference-index/types.js";
 import type { IOperationAttachmentRefs } from "./types.js";
@@ -31,10 +32,13 @@ export class SchemaCompiledOperationRefs implements IOperationAttachmentRefs {
   constructor(
     private readonly registry: IDocumentModelRegistry,
     private readonly compiler: IAttachmentSchemaCompiler = new AttachmentSchemaCompiler(),
-    private readonly onDiagnostic: (
-      message: string,
-      error: unknown,
-    ) => void = () => undefined,
+    private readonly onDiagnostic: (message: string, error: unknown) => void = (
+      message,
+      error,
+    ) =>
+      logger
+        .child(["reactor", "attachments", "replication"])
+        .error("@message: @error", message, error),
   ) {}
 
   refsOf(item: OperationWithContext): readonly AttachmentRef[] {
