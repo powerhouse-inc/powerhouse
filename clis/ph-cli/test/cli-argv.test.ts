@@ -25,7 +25,11 @@ function project(): string {
   roots.push(root);
   writeFileSync(
     join(root, "package.json"),
-    `${JSON.stringify({ name: "@acme/things", type: "module" })}\n`,
+    `${JSON.stringify({
+      name: "@acme/things",
+      type: "module",
+      peerDependencies: { "document-model": "*" },
+    })}\n`,
   );
   writeFileSync(join(root, "powerhouse.config.json"), "{}\n");
   writeFileSync(join(root, "tsconfig.json"), "{}\n");
@@ -89,6 +93,7 @@ describe("a flag that shares its name with another command's option", () => {
       "--code-first",
       "--name",
       "widgets",
+      "--skip-install",
     );
     expect(run.stdout).toContain("Wrote subgraphs/widgets.ts\n");
     expect(run.status).toBe(0);
