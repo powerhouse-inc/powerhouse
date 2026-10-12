@@ -121,13 +121,24 @@ export function createReactorDriveResolvers(
         context: ReactorDriveResolverContext,
       ) {
         const ctx = withBound(context);
-        const document = await ctx.reactorClient.get<
-          PHDocument<ReactorDrivePHState>
-        >(args.id, { subject: subjectOf(ctx) });
+        if (!(await serves(ctx, args.id))) {
+          return null;
+        }
+        let document: PHDocument<ReactorDrivePHState>;
+        try {
+          document = await ctx.reactorClient.get<
+            PHDocument<ReactorDrivePHState>
+          >(args.id, { subject: subjectOf(ctx) });
+        } catch {
+          return null;
+        }
         if (document.header.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
           return null;
         }
-        if (!(await serves(ctx, document.header.id))) {
+        if (
+          document.header.id !== args.id &&
+          !(await serves(ctx, document.header.id))
+        ) {
           return null;
         }
         const { global, local } = document.state as Partial<
