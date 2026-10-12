@@ -54,6 +54,8 @@ function toError(value: unknown): Error {
 export class ReactorMonitorRegistry {
   private readonly entries = new Map<string, ManagedReactorEntry>();
   private readonly listeners = new Set<ReactorMonitorRegistryListener>();
+  /** Per name, the last queued op; outlives the entry. */
+  private readonly tails = new Map<string, Promise<void>>();
   private snapshot: readonly ManagedReactorEntry[] = [];
 
   /**
@@ -72,9 +74,30 @@ export class ReactorMonitorRegistry {
         `A reactor named ${JSON.stringify(descriptor.name)} is already ${existing.status} in this monitor; kill it before provisioning again`,
       );
     }
-    this.set({ name: descriptor.name, descriptor, status: "provisioning" });
     // Claimed first, so a concurrent provision of this name is refused.
-    await existing?.closing;
+    const placeholder: ManagedReactorEntry = {
+      name: descriptor.name,
+      descriptor,
+      status: "provisioning",
+    };
+    this.set(placeholder);
+    return this.enqueue(descriptor.name, () =>
+      this.build(placeholder, descriptor, options),
+    );
+  }
+
+  private async build(
+    placeholder: ManagedReactorEntry,
+    descriptor: ReactorDescriptor,
+    options: ProvisionOptions | undefined,
+  ): Promise<ManagedReactor> {
+    const removed = () =>
+      new Error(
+        `Reactor ${JSON.stringify(descriptor.name)} was removed while it was provisioning`,
+      );
+    if (this.entries.get(descriptor.name) !== placeholder) {
+      throw removed();
+    }
     let poisoned: Error | undefined;
     let ready: ManagedReactor | undefined;
     const onUnrecoverable = (cause: Error): void => {
@@ -93,11 +116,9 @@ export class ReactorMonitorRegistry {
         onUnrecoverable,
       });
       // Killed while it was booting: do not resurrect the entry.
-      if (this.entries.get(descriptor.name)?.status !== "provisioning") {
+      if (this.entries.get(descriptor.name) !== placeholder) {
         await reactor.kill();
-        throw new Error(
-          `Reactor ${JSON.stringify(descriptor.name)} was removed while it was provisioning`,
-        );
+        throw removed();
       }
       if (poisoned) {
         await reactor.kill();
@@ -112,7 +133,7 @@ export class ReactorMonitorRegistry {
       });
       return reactor;
     } catch (error) {
-      if (this.entries.get(descriptor.name)?.status === "provisioning") {
+      if (this.entries.get(descriptor.name) === placeholder) {
         this.set({
           name: descriptor.name,
           descriptor,
@@ -175,26 +196,36 @@ export class ReactorMonitorRegistry {
   };
 
   /** Kills the reactor under `name` (if any) and forgets it. */
-  async kill(name: string): Promise<void> {
+  kill(name: string): Promise<void> {
     const entry = this.entries.get(name);
-    if (!entry) {
-      return;
+    if (entry) {
+      this.entries.delete(name);
+      this.publish();
     }
-    this.entries.delete(name);
-    this.publish();
-    await (entry.reactor?.kill() ?? entry.closing);
+    return this.enqueue(name, async () => {
+      await entry?.reactor?.kill();
+    });
   }
 
   /** Kills every reactor; the monitor's teardown. */
   async killAll(): Promise<void> {
-    const entries = [...this.entries.values()];
+    const entries = new Map(this.entries);
     this.entries.clear();
     this.publish();
+    const names = new Set([...entries.keys(), ...this.tails.keys()]);
     // Serially: each in-process kill closes a PGlite, and the stores share a
-    // wasm instance per realm.
-    for (const entry of entries) {
-      await (entry.reactor?.kill() ?? entry.closing);
-    }
+    // wasm instance per realm. Queued now, so a later op on a name waits.
+    let previous: Promise<unknown> = Promise.resolve();
+    const kills = [...names].map((name) => {
+      const after = previous;
+      const killed = this.enqueue(name, async () => {
+        await after;
+        await entries.get(name)?.reactor?.kill();
+      });
+      previous = killed.catch(() => undefined);
+      return killed;
+    });
+    await Promise.all(kills);
   }
 
   /** A ready reactor whose store was poisoned: failed, and its handle killed. */
@@ -219,7 +250,26 @@ export class ReactorMonitorRegistry {
       error: cause,
       closing,
     });
-    await closing;
+    await this.enqueue(descriptor.name, () => closing);
+  }
+
+  /**
+   * Runs `work` after every earlier op on `name`, entry or not: a store a
+   * forgotten entry is still closing must close before the name opens again.
+   */
+  private enqueue<T>(name: string, work: () => Promise<T>): Promise<T> {
+    const run = (this.tails.get(name) ?? Promise.resolve()).then(work);
+    const tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.tails.set(name, tail);
+    void tail.then(() => {
+      if (this.tails.get(name) === tail) {
+        this.tails.delete(name);
+      }
+    });
+    return run;
   }
 
   private set(entry: ManagedReactorEntry): void {
