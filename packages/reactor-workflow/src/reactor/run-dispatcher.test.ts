@@ -65,13 +65,15 @@ describe("RunDispatcher", () => {
     expect(admitted).toBe(true);
   });
 
-  it("says a run would wait exactly when admit would hold it back", async () => {
+  it("calls onQueue only for a run it holds back", async () => {
     const { loop } = fakeLoop();
     const dispatcher = new RunDispatcher({ maxInFlight: 1, loop });
+    const queued: string[] = [];
 
-    expect(dispatcher.wouldWait()).toBe(false);
-    await dispatcher.admit("a");
-    expect(dispatcher.wouldWait()).toBe(true);
+    await dispatcher.admit("a", () => queued.push("a"));
+    void dispatcher.admit("b", () => queued.push("b"));
+
+    expect(queued).toEqual(["b"]);
   });
 
   it("refuses waiting and later runs once closed", async () => {

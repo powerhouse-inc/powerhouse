@@ -594,6 +594,14 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .on("trigger_dedupe")
     .column("created_at")
     .execute();
+  // The PENDING sweep, every minute: only the rows still waiting to start.
+  await db.schema
+    .createIndex("run_pending")
+    .ifNotExists()
+    .on("run")
+    .columns(["enqueued_at", "id"])
+    .where(sql.ref("status"), "=", PENDING_RUN_STATUS)
+    .execute();
   // The supervisor's due-trigger query on every tick.
   await db.schema
     .createIndex("trigger_state_due")
@@ -1452,7 +1460,9 @@ export class WorkflowRunStore {
 
   // Past the crash budget a run is failed: a fire that takes the reactor down
   // before it starts is not replayed on every boot.
-  async admitAbandonedRuns(): Promise<AdmittedRun[]> {
+  async admitAbandonedRuns(
+    options: { enqueuedBefore?: Date } = {},
+  ): Promise<AdmittedRun[]> {
     const admitted = await this.db.transaction().execute(async (trx) => {
       let query = trx
         .selectFrom("run")
@@ -1468,6 +1478,13 @@ export class WorkflowRunStore {
         .orderBy("id", "asc");
       if (this.runsInFlight.size > 0) {
         query = query.where("id", "not in", [...this.runsInFlight]);
+      }
+      if (options.enqueuedBefore) {
+        query = query.where(
+          "enqueued_at",
+          "<",
+          options.enqueuedBefore.toISOString(),
+        );
       }
       const rows = await query.execute();
       const runs: AdmittedRun[] = [];

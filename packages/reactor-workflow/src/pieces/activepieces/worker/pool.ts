@@ -273,7 +273,8 @@ export class PieceWorkerPool {
   /** @internal */
   readonly telemetry: WorkflowTelemetry | undefined;
   private readonly maxQueueDepth: number;
-  private readonly triggerSlots: number;
+  // Children reserved for trigger hooks; the supervisor runs as many at once.
+  readonly triggerSlots: number;
   private readonly designSlots: number;
   private readonly minWarm: number;
   private readonly maxRequests: number;

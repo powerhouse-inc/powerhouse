@@ -361,7 +361,8 @@ describe("composeWorkflowRuntime", () => {
     const webhooks = memoryWebhooks();
     const clientModule = await buildReactorModule();
     // Intervals only, from here on: the singleton lease's heartbeat and the
-    // run-retention sweep from compose, then the supervisor's tick.
+    // run-retention sweep from compose, then the supervisor's tick and the
+    // PENDING-run sweep.
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     try {
       const workflows = await compose(clientModule, {
@@ -376,7 +377,7 @@ describe("composeWorkflowRuntime", () => {
       await expect(
         webhooks.families[0]!.policyFor?.("wf-unknown"),
       ).resolves.toBeUndefined();
-      expect(vi.getTimerCount()).toBe(3);
+      expect(vi.getTimerCount()).toBe(4);
 
       await workflows.stop();
       await workflows.stop();
