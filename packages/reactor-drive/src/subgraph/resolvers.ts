@@ -1,8 +1,4 @@
-import type {
-  IReactorClient,
-  PagedResults,
-  PagingOptions,
-} from "@powerhousedao/reactor";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   AuthSubject,
   PHDocument,
@@ -25,33 +21,8 @@ type NodeKindFilter = "FILE" | "FOLDER" | undefined;
 
 const DEFAULT_LIMIT = 100;
 
-function toPaging(input: PagingInput | undefined): PagingOptions | undefined {
-  if (!input) return undefined;
-  return {
-    cursor: input.cursor ?? "",
-    limit: input.limit ?? DEFAULT_LIMIT,
-  };
-}
-
-function filterByKind(
-  page: PagedResults<ReactorDriveNode>,
-  kind: NodeKindFilter,
-): PagedResults<ReactorDriveNode> {
-  if (!kind) return page;
-  const wanted = kind === "FILE" ? "file" : "folder";
-  return {
-    ...page,
-    results: page.results.filter((node) => node.kind === wanted),
-  };
-}
-
-function shapePage(page: PagedResults<ReactorDriveNode>) {
-  return {
-    results: page.results,
-    nextCursor: page.nextCursor,
-    hasMore: page.nextCursor !== undefined,
-  };
-}
+/** A listing page stops scanning past this many times its limit once it serves a node. */
+const LIST_SCAN_CAP_MULTIPLIER = 4;
 
 function subjectOf(ctx: ReactorDriveResolverContext): AuthSubject {
   return { address: ctx.user?.address, key: ctx.user?.appKey };
@@ -85,19 +56,111 @@ async function servesNode(
   return node.kind === "folder" || serves(ctx, node.id);
 }
 
+/** The documents among `ids` a listing would serve; fails closed. */
+async function servedIds(
+  ctx: ReactorDriveResolverContext,
+  ids: string[],
+): Promise<Set<string>> {
+  let asked = ids;
+  if (ctx.hostCanRead) {
+    const hostCanRead = ctx.hostCanRead;
+    let allowed: boolean[];
+    try {
+      allowed = await Promise.all(
+        ids.map((id) => hostCanRead(id, ctx.user?.address)),
+      );
+    } catch {
+      return new Set();
+    }
+    asked = ids.filter((_, i) => allowed[i]);
+  }
+  if (asked.length === 0) {
+    return new Set();
+  }
+  try {
+    const documents = await ctx.reactorClient.find(
+      { ids: asked },
+      { subject: subjectOf(ctx) },
+      { cursor: "0", limit: asked.length },
+    );
+    return new Set(documents.results.map((document) => document.header.id));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Whether each node is served, deciding every file node in one batch. */
+async function servesNodes(
+  ctx: ReactorDriveResolverContext,
+  nodes: ReactorDriveNode[],
+): Promise<boolean[]> {
+  const ids = [
+    ...new Set(
+      nodes.filter((node) => node.kind === "file").map((node) => node.id),
+    ),
+  ];
+  const served = ids.length > 0 ? await servedIds(ctx, ids) : new Set();
+  return nodes.map((node) => node.kind === "folder" || served.has(node.id));
+}
+
 async function servedNodes(
   ctx: ReactorDriveResolverContext,
   nodes: ReactorDriveNode[],
 ): Promise<ReactorDriveNode[]> {
-  const served = await Promise.all(nodes.map((node) => servesNode(ctx, node)));
+  const served = await servesNodes(ctx, nodes);
   return nodes.filter((_, i) => served[i]);
 }
 
-async function servedPage(
+/**
+ * One page of served children. It scans until the page is full, the listing
+ * ends, or the scan cap is reached with something served, and resumes after
+ * the last served node so a withheld node never names the cursor.
+ */
+async function listServedChildren(
   ctx: ReactorDriveResolverContext,
-  page: PagedResults<ReactorDriveNode>,
-): Promise<PagedResults<ReactorDriveNode>> {
-  return { ...page, results: await servedNodes(ctx, page.results) };
+  driveId: string,
+  parentFolder: string | null,
+  paging: PagingInput | undefined,
+  kind: NodeKindFilter,
+) {
+  const limit = paging?.limit ?? DEFAULT_LIMIT;
+  const cap = limit * LIST_SCAN_CAP_MULTIPLIER;
+  const wanted =
+    kind === undefined ? undefined : kind === "FILE" ? "file" : "folder";
+  const results: ReactorDriveNode[] = [];
+  let anchor = paging?.cursor ?? "";
+  let scanFrom = anchor;
+  let scanned = 0;
+  let hasMore: boolean;
+  do {
+    const page = await ctx.readModel.listChildren(
+      driveId,
+      parentFolder,
+      { cursor: scanFrom, limit },
+      undefined,
+      wanted,
+    );
+    const served = await servesNodes(ctx, page.results);
+    let i = 0;
+    for (; i < page.results.length && results.length < limit; i++) {
+      scanned++;
+      scanFrom = page.cursors[i];
+      if (served[i]) {
+        results.push(page.results[i]);
+        anchor = page.cursors[i];
+      }
+    }
+    hasMore = i < page.results.length || page.nextCursor !== undefined;
+  } while (
+    hasMore &&
+    results.length < limit &&
+    (scanned < cap || results.length === 0)
+  );
+  return {
+    results,
+    nextCursor: hasMore ? anchor : undefined,
+    hasMore,
+  };
 }
 
 /**
@@ -181,12 +244,7 @@ export function createReactorDriveResolvers(
         context: ReactorDriveResolverContext,
       ) {
         const ctx = withBound(context);
-        const page = await ctx.readModel.listChildren(
-          parent.id,
-          null,
-          toPaging(args.paging),
-        );
-        return shapePage(await servedPage(ctx, filterByKind(page, args.kind)));
+        return listServedChildren(ctx, parent.id, null, args.paging, args.kind);
       },
     },
     ReactorDriveFolderNode: {
@@ -196,12 +254,13 @@ export function createReactorDriveResolvers(
         context: ReactorDriveResolverContext,
       ) {
         const ctx = withBound(context);
-        const page = await ctx.readModel.listChildren(
+        return listServedChildren(
+          ctx,
           parent.driveId,
           parent.id,
-          toPaging(args.paging),
+          args.paging,
+          args.kind,
         );
-        return shapePage(await servedPage(ctx, filterByKind(page, args.kind)));
       },
     },
     ReactorDriveNode: {
