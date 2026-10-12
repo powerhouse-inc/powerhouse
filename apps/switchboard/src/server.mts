@@ -1120,7 +1120,7 @@ async function initServer(
           // Past boot nothing else rebuilds the router, so a subgraph
           // registered now is not served until this runs.
           try {
-            await graphqlManager.updateRouter();
+            await graphqlManager.updateRouter(true);
           } catch (error) {
             logger.error(
               "Mounting the late workflow-runtime subgraph failed: @error",
