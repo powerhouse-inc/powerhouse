@@ -146,6 +146,73 @@ describe("package listeners do not leak rejections", () => {
     expect(unhandled).toEqual([]);
   });
 
+  it("registers a package's healthy builder when its sibling throws", async () => {
+    const processorManager = makeProcessorManager();
+    const { pkgManager, handlers } = makePackageManager();
+    const throwing = (() => {
+      throw new Error("builder failed");
+    }) as unknown as ProcessorFactoryBuilder;
+    const healthyRecord = { processor: {}, filter: {} };
+    const healthyFactory: ProcessorFactory = () =>
+      Promise.resolve([healthyRecord] as never);
+    const healthy = (() =>
+      healthyFactory) as unknown as ProcessorFactoryBuilder;
+
+    setupEventListeners(
+      pkgManager,
+      makeGraphQLManager({} as IReactorClient),
+      processorManager,
+      moduleFor,
+    );
+    handlers.processors!(
+      new Map<string, Processor>([["mixed-pkg", [throwing, healthy]]]),
+    );
+    await nextMacrotask();
+
+    expect(processorManager.registerFactory).toHaveBeenCalledOnce();
+    const [packageName, factory] = processorManager.registerFactory.mock
+      .calls[0] as [string, ProcessorFactory];
+    expect(packageName).toBe("mixed-pkg");
+    await expect(factory({ id: "drive-1" } as never)).resolves.toEqual([
+      healthyRecord,
+    ]);
+    expect(unhandled).toEqual([]);
+  });
+
+  it("awaits async builders, skipping the ones that reject", async () => {
+    const processorManager = makeProcessorManager();
+    const { pkgManager, handlers } = makePackageManager();
+    const rejecting = (() =>
+      Promise.reject(
+        new Error("async builder failed"),
+      )) as unknown as ProcessorFactoryBuilder;
+    const healthyRecord = { processor: {}, filter: {} };
+    const healthyFactory: ProcessorFactory = () =>
+      Promise.resolve([healthyRecord] as never);
+    const healthy = (() =>
+      Promise.resolve(healthyFactory)) as unknown as ProcessorFactoryBuilder;
+
+    setupEventListeners(
+      pkgManager,
+      makeGraphQLManager({} as IReactorClient),
+      processorManager,
+      moduleFor,
+    );
+    handlers.processors!(
+      new Map<string, Processor>([["async-pkg", [rejecting, healthy]]]),
+    );
+    await nextMacrotask();
+
+    expect(processorManager.registerFactory).toHaveBeenCalledOnce();
+    const [packageName, factory] = processorManager.registerFactory.mock
+      .calls[0] as [string, ProcessorFactory];
+    expect(packageName).toBe("async-pkg");
+    await expect(factory({ id: "drive-1" } as never)).resolves.toEqual([
+      healthyRecord,
+    ]);
+    expect(unhandled).toEqual([]);
+  });
+
   it("keeps going when the processor manager rejects", async () => {
     const processorManager = makeProcessorManager();
     processorManager.unregisterFactory.mockRejectedValue(

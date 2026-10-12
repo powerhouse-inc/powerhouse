@@ -734,23 +734,22 @@ export function setupEventListeners(
           );
         }
 
-        const factories = fns.flatMap((fn) => {
-          try {
-            return [fn(moduleFor(packageName))];
-          } catch (error) {
-            defaultLogger.error(
-              "Processor factory builder of @package threw: @error",
-              packageName,
-              error,
-            );
-            return [];
-          }
-        });
-
-        const validBuilders = factories.filter(
-          (factory): factory is ProcessorFactory =>
-            typeof factory === "function",
+        const factories = await Promise.allSettled(
+          fns.map(async (fn) => fn(moduleFor(packageName))),
         );
+
+        const validBuilders: ProcessorFactory[] = [];
+        for (const factory of factories) {
+          if (factory.status === "rejected") {
+            defaultLogger.error(
+              "Processor factory builder of @package failed: @error",
+              packageName,
+              factory.reason,
+            );
+          } else if (typeof factory.value === "function") {
+            validBuilders.push(factory.value);
+          }
+        }
 
         if (!validBuilders.length) {
           continue;
