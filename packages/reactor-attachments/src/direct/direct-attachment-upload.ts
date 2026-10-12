@@ -20,6 +20,7 @@ import {
   streamHashAndWrite,
 } from "../storage/fs/attachment-fs.js";
 import type { AttachmentStatus } from "../types.js";
+import { isBlob } from "../blob.js";
 
 function rowToHeader(row: AttachmentRow): AttachmentHeader {
   return {
@@ -55,7 +56,7 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
   }
 
   async send(
-    data: ReadableStream<Uint8Array>,
+    data: ReadableStream<Uint8Array> | Blob,
     options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult> {
     if (
@@ -77,7 +78,7 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
     // send that can run long: a cancel there rejects and commits nothing.
     const { tempPath, hash, sizeBytes } = await streamHashAndWrite(
       this.basePath,
-      data,
+      isBlob(data) ? data.stream() : data,
       {
         maxBytes: this.maxBytes,
         declaredSizeBytes,
