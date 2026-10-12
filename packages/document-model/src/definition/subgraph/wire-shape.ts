@@ -8,7 +8,12 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { createDiagnostic } from "../diagnostics.js";
 import { isGraphQLName } from "../primitives.js";
-import { isHostScalarName, scalarCatalog } from "../scalars/catalog.js";
+import {
+  internalScalarDiagnostic,
+  isHostScalarName,
+  isInternalScalarName,
+  scalarCatalog,
+} from "../scalars/catalog.js";
 import { scalarDefinitionIssues } from "../scalars/definition-shape.js";
 
 /**
@@ -100,7 +105,7 @@ export function checkSubgraphDefinitionShape(
   }
 
   if (definition.schemaKind === "typed") {
-    diagnostics.push(...checkTyped(definition, fail));
+    diagnostics.push(...checkTyped(definition, fail, at));
   } else if (definition.schemaKind === "graphql-ast-compat") {
     diagnostics.push(...checkCompat(definition, fail));
   } else {
@@ -127,6 +132,7 @@ type Fail = (
 function checkTyped(
   definition: Partial<SubgraphDefinition>,
   fail: Fail,
+  at: (...where: (string | number)[]) => string[],
 ): readonly DefinitionDiagnostic[] {
   const typed = definition as Extract<
     SubgraphDefinition,
@@ -222,7 +228,13 @@ function checkTyped(
         declared.add(scalar.name);
         return;
       }
-      if (!catalog.has(scalar.name)) {
+      if (isInternalScalarName(scalar.name)) {
+        diagnostics.push(
+          createDiagnostic(
+            internalScalarDiagnostic(scalar.name, at("scalars", index, "name")),
+          ),
+        );
+      } else if (!catalog.has(scalar.name)) {
         diagnostics.push(
           fail(
             ["scalars", index, "name"],

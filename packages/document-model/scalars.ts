@@ -21,6 +21,5 @@ export type {
   AnyScalarDeclaration,
   ScalarCoercion,
   ScalarDeclaration,
-  ScalarVisibility,
 } from "./src/definition/scalars/declaration.js";
 export type { ScalarCatalogInterface } from "./src/definition/scalars/types.js";

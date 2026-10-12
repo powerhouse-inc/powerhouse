@@ -103,7 +103,7 @@ Compiles each declaration into a structured definition.
 | `PH-SCALAR-AUTHOR-DECLARATION-UNSUPPORTED` | error | A definition source exports a scalar that `defineScalar` did not create, or exports a catalog scalar as its own. |
 | `PH-SCALAR-DECLARATION-INVALID` | error | A scalar declaration has an invalid name, description, validator, or coercion. |
 | `PH-SCALAR-FACTORY-AS-FIELD` | error | A scalar builder is used as a field without being called. |
-| `PH-SCALAR-INTERNAL` | error | A definition reads a catalog scalar that only the reactor host declares, such as `ph.JSONObject`. Use `ph.Unknown()` or `ph.object(...)` instead. |
+| `PH-SCALAR-INTERNAL` | error | A definition, a stored schema, or `ph scalar inspect` names a catalog scalar that only the reactor host declares, such as `JSONObject`. Use `ph.Unknown()` or `ph.object(...)` instead. |
 | `PH-SCALAR-ZERO-VALUE-INVALID` | error | A scalar has no zero value, or its own coercion rejects its zero value. |
 | `PH-SG-COMPUTED-FIELD-INVALID` | error | A computed field is malformed, has no subgraph entry, has two entries, or has an entry but no type declares the field. |
 | `PH-SG-DEFINITION-INVALID` | error | A published subgraph definition does not have the expected shape. |

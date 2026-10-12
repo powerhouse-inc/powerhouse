@@ -119,7 +119,7 @@ describe("hostScalarResolvers", () => {
     expect(resolvers.Unknown).toBe(GraphQLJSON);
   });
 
-  it("binds an internal scalar of an extended catalog to its own coercion", () => {
+  it("binds an unpinned internal scalar to its own coercion", () => {
     const { catalog } = buildScalarCatalog(
       [
         {
@@ -128,15 +128,18 @@ describe("hostScalarResolvers", () => {
           representation: "number",
           validator: z.number().int().nonnegative(),
           zodSource: "z.number().int().nonnegative()",
-          visibility: "internal",
         },
       ],
       { base: scalarCatalog },
     );
-    const resolvers = hostScalarResolvers(catalog!);
+    const resolvers = hostScalarResolvers({
+      ...catalog!,
+      authorNames: catalog!.authorNames.filter((name) => name !== "HostCount"),
+      internalNames: [...catalog!.internalNames, "HostCount"],
+    });
     expect(Object.keys(resolvers)).toEqual([
-      "JSONObject",
       "HostCount",
+      "JSONObject",
       "Unknown",
     ]);
     expect(resolvers.JSONObject).toBe(GraphQLJSONObject);
@@ -218,7 +221,7 @@ describe("every catalog scalar behaves the same on both projections", () => {
     expect(measured).toEqual(GOLDEN.caseOutcomes);
   });
 
-  for (const name of CATALOG_SCALARS) {
+  for (const name of [...CATALOG_SCALARS, ...scalarCatalog.internalNames]) {
     it(`${name} answers over GraphQL the way the catalog partitions it`, () => {
       const row = measured[name];
       expect(Object.keys(row).length, name).toBeGreaterThan(0);
@@ -226,9 +229,6 @@ describe("every catalog scalar behaves the same on both projections", () => {
         const expected = caseKey.startsWith("accepts/")
           ? "accepted/accepted"
           : "rejected/rejected";
-        // Only JSONObject and Unknown have a host coercer, so these verdicts
-        // come from the catalog's document validator. The variable and literal
-        // forms agree.
         expect(outcome, `${name} ${caseKey}`).toBe(expected);
       }
     });
@@ -346,7 +346,7 @@ describe("report-only scalar diagnostics", () => {
 
   it("reads the authored map, not the one the host installed over it", () => {
     // The call site passes the authored `resolvers`. Passing the installed map
-    // would report the host's own two bindings as shadowed on every boot,
+    // would report the host's own bindings as shadowed on every boot,
     // which this case reproduces.
     const asInstalled = reportScalarBindings(
       hostTypeDefs,

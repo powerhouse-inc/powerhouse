@@ -455,6 +455,41 @@ describe("a package scalar", () => {
       checkSubgraphDefinitionShape(renamed).map((entry) => entry.path),
     ).toContainEqual(["definition", "scalars", "1", "name"]);
   });
+
+  it("refuses a catalog reference to an internal scalar", () => {
+    const compiled = compile();
+    const definition = {
+      kind: "powerhouse.subgraph",
+      formatVersion: 1,
+      name: "swatches",
+      compositionPolicy: "host-current",
+      federationProfile: "host-current",
+      schemaKind: "typed",
+      hasSubscriptions: false,
+      types: compiled.types,
+      entries: compiled.entries,
+      scalars: [
+        {
+          name: "JSONObject",
+          implementation: "powerhouse.catalog#JSONObject",
+          graphQLProfile: "legacy-graphql-default-v1",
+        },
+      ],
+      definitionOrder: ["JSONObject", "Swatch", "Query"],
+    };
+    expect(
+      checkSubgraphDefinitionShape(definition).map(
+        ({ code, path, message }) => ({ code, path, message }),
+      ),
+    ).toEqual([
+      {
+        code: "PH-SCALAR-INTERNAL",
+        path: ["definition", "scalars", "0", "name"],
+        message:
+          "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+      },
+    ]);
+  });
 });
 
 describe("an interface that implements an interface", () => {

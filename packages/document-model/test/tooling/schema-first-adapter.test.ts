@@ -530,6 +530,34 @@ describe("schema-first module adapter", () => {
       ]);
     });
 
+    it.each([
+      ["undeclared", "type TodoState { x: JSONObject }"],
+      ["declared", "scalar JSONObject\ntype TodoState { x: JSONObject }"],
+    ])("refuses the internal JSONObject, %s", (_, schema) => {
+      const result = adapt(
+        storedTodo(
+          { schema, initialValue: '{"x":null}' },
+          { SET_X: "input SetXInput { x: Int! }" },
+        ),
+      );
+      expect(result.artifacts).toStrictEqual([]);
+      expect(
+        result.diagnostics.map(({ code, message, repair }) => ({
+          code,
+          message,
+          repair,
+        })),
+      ).toStrictEqual([
+        {
+          code: "PH-SCALAR-INTERNAL",
+          message:
+            "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+          repair:
+            "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+        },
+      ]);
+    });
+
     it("reads a state enum an operation segment declares", () => {
       const result = adapt(
         storedTodo(

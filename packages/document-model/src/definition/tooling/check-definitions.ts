@@ -1,5 +1,4 @@
 import type {
-  CatalogScalarName,
   DefinitionCheckProfile,
   DefinitionCheckSkipReason,
   DefinitionCheckReport,
@@ -427,7 +426,7 @@ function checkExportedScalar(
         : createDiagnostic({
             ...at,
             code: "PH-SCALAR-DUPLICATE-NAME",
-            message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.includes(name as CatalogScalarName) ? "catalog scalar" : "GraphQL built-in"}.`,
+            message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.some((entry) => entry === name) ? "catalog scalar" : "GraphQL built-in"}.`,
             repair: `Rename the scalar passed to defineScalar; the name ${name} is taken.`,
           }),
     };

@@ -12,10 +12,7 @@ import type { DocumentModelFileMakerArgs } from "../src/file-builders/index.mts"
 
 const MAPPED_SCALARS = Object.keys(scalars);
 
-const AUTHOR_SCALARS = new Set<string>(scalarCatalog.authorNames);
-const INTERNAL_SCALARS = scalarCatalog.names.filter(
-  (name) => !AUTHOR_SCALARS.has(name),
-);
+const INTERNAL_SCALARS = scalarCatalog.internalNames;
 
 function specification(
   stateSchema: string,

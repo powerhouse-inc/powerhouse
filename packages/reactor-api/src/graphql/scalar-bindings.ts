@@ -24,9 +24,9 @@ import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 /**
  * Document validation resolves scalars through the catalog under
  * `document-engineering-1.40`. Widening that profile changes replay. GraphQL
- * resolves the same names through the resolvers the host installs, which cover
- * two names. The rest use GraphQL's default pass-through. The diagnostics here
- * only report. They never change admission or the installed resolvers.
+ * resolves the same names through `HOST_SCALAR_RESOLVERS` where it has one, and
+ * through GraphQL's default pass-through otherwise. The diagnostics here only
+ * report. They never change admission or the installed resolvers.
  */
 
 /** The profile document creation, reducer input, and replay resolve through. */
@@ -88,11 +88,6 @@ export function packageScalarResolvers(
   );
 }
 
-/**
- * Resolvers existing clients depend on, pinned by
- * `test/goldens/host-scalar-bindings.json`. They win over the catalog's own
- * coercion for the same name.
- */
 const PINNED_SCALAR_RESOLVERS = {
   JSONObject: GraphQLJSONObject,
   Unknown: GraphQLJSON,
@@ -101,9 +96,8 @@ const PINNED_SCALAR_RESOLVERS = {
 export function hostScalarResolvers(
   catalog: ScalarCatalogInterface<string>,
 ): Readonly<Record<string, GraphQLScalarType>> {
-  const authorNames = new Set<string>(catalog.authorNames);
-  const internal = catalog.names.flatMap((name) => {
-    if (authorNames.has(name)) return [];
+  const internal = catalog.internalNames.flatMap((name) => {
+    if (Object.hasOwn(PINNED_SCALAR_RESOLVERS, name)) return [];
     const binding = catalog.resolve(name, DOCUMENT_VALIDATION_PROFILE);
     return binding === undefined ? [] : [{ name, binding }];
   });
@@ -113,6 +107,10 @@ export function hostScalarResolvers(
   });
 }
 
+/**
+ * The scalar resolvers the host installs. Callers spread them after the
+ * authored resolvers, so they override an authored resolver of the same name.
+ */
 export const HOST_SCALAR_RESOLVERS = hostScalarResolvers(scalarCatalog);
 
 function reason(error: unknown): string {
@@ -202,7 +200,7 @@ function scalarNames(typeDefs: DocumentNode): readonly string[] {
 
 /**
  * Report-only diagnostics for an assembled subgraph module. `authoredResolvers`
- * is the author's map before the host spreads its own two resolvers over it.
+ * is the author's map before the host spreads `HOST_SCALAR_RESOLVERS` over it.
  * Passing the merged map would report the host's bindings as shadowed on every
  * boot. `packageScalars` names the package scalars bound to their own
  * coercion.

@@ -8,7 +8,14 @@ import { snapshotArray, snapshotRecord } from "./data-properties.js";
 import type { DefinitionDiagnosticCollector } from "./diagnostics.js";
 import { validateLocationFreeDocument } from "./graphql-ast.js";
 import { canonicalJson, isGraphQLName } from "./primitives.js";
-import { isHostScalarName, scalarCatalog } from "./scalars/catalog.js";
+import {
+  REFERENCEABLE_SCALAR_NAMES,
+  internalScalarDiagnostic,
+  isHostScalarName,
+  isInternalScalarName,
+  isReferenceableScalarName,
+  scalarCatalog,
+} from "./scalars/catalog.js";
 import { scalarDefinitionIssues } from "./scalars/definition-shape.js";
 
 /**
@@ -20,12 +27,6 @@ import { scalarDefinitionIssues } from "./scalars/definition-shape.js";
  * relationships between a specification's version, its state roots, and the
  * named types it declares.
  */
-
-const BUILT_IN_SCALARS = ["ID", "String", "Boolean", "Int", "Float"] as const;
-const SCALAR_NAMES: ReadonlySet<string> = new Set<string>([
-  ...BUILT_IN_SCALARS,
-  ...scalarCatalog.authorNames,
-]);
 
 type Record_ = { readonly [key: string]: unknown };
 
@@ -78,6 +79,12 @@ class ShapeChecker {
       keys.join(", "),
       value,
     );
+  }
+
+  rejectInternalScalar(value: unknown, path: DefinitionPath): boolean {
+    if (typeof value !== "string" || !isInternalScalarName(value)) return false;
+    this.#collector.add(internalScalarDiagnostic(value, path));
+    return true;
   }
 
   array(value: unknown, path: DefinitionPath): readonly unknown[] | undefined {
@@ -207,11 +214,12 @@ function typeReference(
   if (node === undefined) return;
   if (kind === "scalar") {
     const name = node.name as string;
-    if (!SCALAR_NAMES.has(name) && !check.packageScalars.has(name)) {
+    if (check.rejectInternalScalar(name, [...path, "name"])) return;
+    if (!isReferenceableScalarName(name) && !check.packageScalars.has(name)) {
       check.fail(
         [...path, "name"],
         "A scalar reference must name a catalog scalar, a GraphQL built-in, or a package scalar the specification declares.",
-        [...SCALAR_NAMES, ...check.packageScalars].join(" | "),
+        [...REFERENCEABLE_SCALAR_NAMES, ...check.packageScalars].join(" | "),
         node.name,
       );
     }
@@ -607,6 +615,8 @@ function specification(
       "coercionProfile",
     ]);
     if (!declared) {
+      if (check.rejectInternalScalar(scalar.name, [...scalarPath, "name"]))
+        return;
       const name = check.oneOf(scalar.name, scalarCatalog.authorNames, [
         ...scalarPath,
         "name",

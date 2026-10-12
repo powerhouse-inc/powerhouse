@@ -2,6 +2,7 @@ import type {
   CatalogScalarName,
   DefinitionDiagnostic,
   InternalScalarName,
+  PowerhouseScalarName,
   ScalarDefinition,
   ScalarValidationProfile,
   Sha256Digest,
@@ -55,16 +56,15 @@ export type ScalarFactory<
     TName,
     TBuilderName,
     TBase,
-    TInput,
-    "author"
+    TInput
   >;
   readonly definition: ScalarDefinition & { readonly name: TName };
   readonly binding: ScalarBinding;
 };
 
 /**
- * A compiled scalar declared `visibility: "internal"`. It has no call
- * signature, so no field can use it; the catalog and the reactor host read its
+ * A catalog scalar only the reactor host declares. It has no call signature,
+ * so no field can use it; the catalog and the reactor host read its
  * properties.
  */
 export type InternalScalar<
@@ -78,14 +78,13 @@ export type InternalScalar<
     TName,
     TBuilderName,
     TBase,
-    TInput,
-    "internal"
+    TInput
   >;
   readonly definition: ScalarDefinition & { readonly name: TName };
   readonly binding: ScalarBinding;
 };
 
-/** What `defineScalar` returns: a field factory, or an internal scalar. */
+/** One entry of the compiler-owned catalog: a field factory, or an internal scalar. */
 export type CatalogScalar = ScalarFactory | InternalScalar;
 
 /** The factory `ph` exposes for a catalog scalar. */
@@ -109,8 +108,10 @@ export interface ScalarCatalogInterface<
   ): ScalarBinding | undefined;
   /** Every scalar in catalog order. The reactor host declares all of them. */
   readonly names: readonly TName[];
-  /** The scalars a document model or subgraph may reference: `names` without the internal ones, in catalog order. */
+  /** The scalars a document model or subgraph may reference, in catalog order. */
   readonly authorNames: readonly Exclude<TName, InternalScalarName>[];
+  /** The scalars only the reactor host declares, in catalog order. `names` is `authorNames` and these, interleaved. */
+  readonly internalNames: readonly Exclude<TName, PowerhouseScalarName>[];
   readonly validationProfiles: readonly ScalarValidationProfile[];
   readonly digest: Sha256Digest;
 }

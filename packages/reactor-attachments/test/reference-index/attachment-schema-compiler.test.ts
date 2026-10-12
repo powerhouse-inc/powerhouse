@@ -18,10 +18,7 @@ const REF_A = `attachment://v1:${"a".repeat(64)}` as const;
 const REF_B = `attachment://v1:${"b".repeat(64)}` as const;
 const REF_C = `attachment://v2:${"c".repeat(64)}` as const;
 
-const AUTHOR_SCALARS = new Set<string>(scalarCatalog.authorNames);
-const INTERNAL_SCALARS = scalarCatalog.names.filter(
-  (name) => !AUTHOR_SCALARS.has(name),
-);
+const INTERNAL_SCALARS = scalarCatalog.internalNames;
 
 function operation(
   name: string | null,

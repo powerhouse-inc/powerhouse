@@ -1,6 +1,5 @@
 import type {
   Action,
-  CatalogScalarName,
   CompiledErrorDefinition,
   DefinitionDiagnostic,
   DefinitionExample,
@@ -51,8 +50,10 @@ import { canonicalDigest, compareCodeUnits } from "./primitives.js";
 import { assignStoredSegments } from "./segments.js";
 import { namedTypeInventory, printSchemaSegment } from "./printer.js";
 import {
+  internalScalarDiagnostic,
   isCatalogBinding,
   isHostScalarName,
+  isInternalScalarName,
   isReferenceableScalarName,
   scalarCatalog,
 } from "./scalars/catalog.js";
@@ -790,8 +791,9 @@ export class DescriptorWalk {
   /**
    * The name a scalar field use references. A GraphQL built-in carries no
    * binding. A catalog scalar carries a catalog binding, possibly from
-   * another copy of this package. Any other binding is a package scalar,
-   * which the definition then declares itself.
+   * another copy of this package, which may still offer an internal scalar as
+   * a factory. Any other binding is a package scalar, which the definition
+   * then declares itself.
    */
   #requireScalarName(
     scalar: ScalarDescriptor<any, any>,
@@ -799,6 +801,13 @@ export class DescriptorWalk {
   ): string {
     const name = scalar.scalarName;
     const binding = scalar.binding;
+    if (
+      isInternalScalarName(name) &&
+      (binding === undefined || isCatalogBinding(binding))
+    ) {
+      this.#collector.add(internalScalarDiagnostic(name, path));
+      throw new WalkAbort();
+    }
     if (binding === undefined) {
       if (isReferenceableScalarName(name)) return name;
       this.#collector.add({
@@ -817,7 +826,7 @@ export class DescriptorWalk {
         code: "PH-SCALAR-DUPLICATE-NAME",
         definition: { kind: "scalar", key: name },
         path,
-        message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.includes(name as CatalogScalarName) ? "catalog scalar" : "GraphQL built-in"}.`,
+        message: `A package scalar is named ${name}, which is a ${scalarCatalog.names.some((entry) => entry === name) ? "catalog scalar" : "GraphQL built-in"}.`,
         received: name,
         repair: `Rename the scalar passed to defineScalar; the name ${name} is taken.`,
       });
