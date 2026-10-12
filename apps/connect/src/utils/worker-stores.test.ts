@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
 import type { InMemoryQueue } from "@powerhousedao/reactor";
 import {
   type Database,
@@ -15,9 +14,9 @@ import {
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { Kysely } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useReactorDatabases } from "../../test/reactor-database.js";
 import { closeWithin } from "./close-within.js";
 import { createStoreLocks } from "./store-lock.js";
 import { createWorkerStores } from "./worker-stores.js";
@@ -348,6 +347,7 @@ describe("worker retired during boot", () => {
 });
 
 describe("worker retired by a deploy", () => {
+  const databases = useReactorDatabases();
   const NEXT_BUILD = {
     ...HELLO,
     version: { ...HELLO.version, appBuildId: "next-build" },
@@ -367,9 +367,9 @@ describe("worker retired by a deploy", () => {
   async function workerWithAcceptedJob(
     drainMs?: number,
     paused = false,
-    pg = new PGlite(),
+    pg = databases.pglite(),
   ) {
-    database = new Kysely<Database>({ dialect: new PGliteDialect(pg) });
+    database = databases.kysely(pg);
     const built = await new ReactorBuilder()
       .withKysely(database)
       .withDocumentModelSources([
@@ -458,7 +458,7 @@ describe("worker retired by a deploy", () => {
   });
 
   it("waits on a paused queue's executing job, not its pending ones", async () => {
-    const pg = new PGlite();
+    const pg = databases.pglite();
     const query = pg.query.bind(pg);
     const writing = deferred();
     const release = deferred();
