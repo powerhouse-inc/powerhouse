@@ -14,6 +14,8 @@ import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
 import {
   createSchema,
+  documentModelGeneratedTypeNames,
+  reservedTypeNames,
   SubgraphTypeCollisionError,
 } from "../src/utils/create-schema.js";
 
@@ -222,5 +224,55 @@ describe("a subgraph type named like a generated document-model type", () => {
     );
     const type = schema.getType("WidgetStock") as GraphQLObjectType;
     expect(Object.keys(type.getFields())).toEqual(["inventory"]);
+  });
+});
+
+describe("type names reserved from document models", () => {
+  function namedModel(name: string): DocumentModelModule {
+    return {
+      documentModel: {
+        global: {
+          id: `test/${name}`,
+          name,
+          specifications: [
+            {
+              version: 1,
+              modules: [],
+              state: {
+                global: { schema: `type ${name}State { label: String }` },
+                local: { schema: "" },
+              },
+            },
+          ],
+        },
+      },
+    } as unknown as DocumentModelModule;
+  }
+
+  it("reserves the root types, the fixed generated types and the core types", () => {
+    const reserved = reservedTypeNames([
+      gql`
+        type SystemInfo {
+          version: String!
+        }
+        type Query {
+          system: SystemInfo!
+        }
+      `,
+    ]);
+    for (const name of ["Query", "Mutation", "Subscription"]) {
+      expect(reserved).toContain(name);
+    }
+    for (const name of ["Signer", "Operation", "IDocument", "DriveDocument"]) {
+      expect(reserved).toContain(name);
+    }
+    expect(reserved).toContain("SystemInfo");
+    expect(reserved).not.toContain("Widget");
+  });
+
+  it("names every type a model generates, including one a fixed type shadows", () => {
+    expect(documentModelGeneratedTypeNames(namedModel("Signer"))).toEqual(
+      new Set(["Signer", "Signer_SignerState"]),
+    );
   });
 });

@@ -335,6 +335,75 @@ export type GeneratedDocumentModelTypes = {
   names: ReadonlySet<string>;
 };
 
+/** The SDL `documentModel` adds to the generated schema, under `dmSchemaName`. */
+function documentModelTypesSdl(
+  documentModel: DocumentModelGlobalState,
+  dmSchemaName: string,
+): string {
+  // Use only the latest specification to avoid duplicate type definitions
+  // when a document model has multiple versions (e.g. v1, v2).
+  const latestSpec = documentModel.specifications.at(-1);
+  const globalSchema = latestSpec?.state.global.schema ?? "";
+  const localSchema = latestSpec?.state.local.schema ?? "";
+  const definitions = [
+    ...stateTypeDefinitions(globalSchema),
+    ...stateTypeDefinitions(localSchema, LOCAL_STATE_STUBS),
+  ];
+  const stateDoc: DocumentNode = { kind: Kind.DOCUMENT, definitions };
+  const prefixed = prefixTypeNames(
+    stateDoc,
+    dmSchemaName,
+    new Set(definedTypeNames(stateDoc, STATE_PREFIX_KINDS)),
+  );
+  let sdl = definitions.length > 0 ? `${print(prefixed)}\n` : "";
+  sdl += `
+    type ${dmSchemaName} implements IDocument {
+              id: String!
+              name: String!
+              documentType: String!
+              operations(skip: Int, first: Int): [Operation!]!
+              revision: Int!
+              createdAtUtcIso: DateTime!
+              lastModifiedAtUtcIso: DateTime!
+              ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
+              ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
+              stateJSON: JSONObject
+          }\n`;
+  return sdl;
+}
+
+/** Names of the types `documentModel` adds to the generated schema. */
+export function documentModelGeneratedTypeNames(
+  documentModel: DocumentModelModule,
+): Set<string> {
+  const global = documentModel.documentModel.global;
+  return typeDefinitionNames(
+    parseSdl(documentModelTypesSdl(global, getDocumentModelSchemaName(global))),
+  );
+}
+
+let fixedGeneratedTypeNames: ReadonlySet<string> | undefined;
+
+/**
+ * Type names no document model may generate: the root types, the generated
+ * types every schema carries, and the types of `coreTypeDefs`.
+ */
+export function reservedTypeNames(
+  coreTypeDefs: Iterable<DocumentNode>,
+): Set<string> {
+  fixedGeneratedTypeNames ??= getGeneratedDocumentModelTypes([]).names;
+  const reserved = new Set([
+    "Query",
+    "Mutation",
+    "Subscription",
+    ...fixedGeneratedTypeNames,
+  ]);
+  for (const typeDefs of coreTypeDefs) {
+    for (const name of typeDefinitionNames(typeDefs)) reserved.add(name);
+  }
+  return reserved;
+}
+
 export function getGeneratedDocumentModelTypes(
   documentModels: DocumentModelModule[],
 ): GeneratedDocumentModelTypes {
@@ -350,35 +419,7 @@ export function getGeneratedDocumentModelTypes(
       return;
     }
     addedDocumentModels.add(dmSchemaName);
-    // Use only the latest specification to avoid duplicate type definitions
-    // when a document model has multiple versions (e.g. v1, v2).
-    const latestSpec = documentModel.global.specifications.at(-1);
-    const globalSchema = latestSpec?.state.global.schema ?? "";
-    const localSchema = latestSpec?.state.local.schema ?? "";
-    const definitions = [
-      ...stateTypeDefinitions(globalSchema),
-      ...stateTypeDefinitions(localSchema, LOCAL_STATE_STUBS),
-    ];
-    const stateDoc: DocumentNode = { kind: Kind.DOCUMENT, definitions };
-    const prefixed = prefixTypeNames(
-      stateDoc,
-      dmSchemaName,
-      new Set(definedTypeNames(stateDoc, STATE_PREFIX_KINDS)),
-    );
-    if (definitions.length > 0) dmSchema += `${print(prefixed)}\n`;
-    dmSchema += `
-    type ${dmSchemaName} implements IDocument {
-              id: String!
-              name: String!
-              documentType: String!
-              operations(skip: Int, first: Int): [Operation!]!
-              revision: Int!
-              createdAtUtcIso: DateTime!
-              lastModifiedAtUtcIso: DateTime!
-              ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
-              ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
-              stateJSON: JSONObject
-          }\n`;
+    dmSchema += documentModelTypesSdl(documentModel.global, dmSchemaName);
   });
 
   // add the mutation and query types
