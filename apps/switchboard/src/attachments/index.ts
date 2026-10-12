@@ -59,6 +59,8 @@ export function registerAttachmentRoutes(
     "PUT",
     "/attachments/reservations/:reservationId",
     makeUploadHandler(attachments),
+    // Streams to storage; no parser may buffer or drain the body first.
+    { rawBody: true },
   );
 
   // Anonymous-capable: authorization is purely the document's (or a signed

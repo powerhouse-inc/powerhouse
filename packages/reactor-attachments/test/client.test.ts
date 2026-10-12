@@ -153,6 +153,35 @@ describe("createAttachmentClient", () => {
       const chunks2 = await drain(s2);
       expect(chunks1).toEqual(chunks2);
     });
+
+    it("hashes in slices, never reading the whole file into one buffer", async () => {
+      const client = createAttachmentClient(makeMockService());
+      const file = new Blob([BYTES]);
+      const whole = vi.spyOn(file, "arrayBuffer");
+      const slice = vi.spyOn(file, "slice");
+
+      const result = await client.preprocess(file);
+
+      expect(result.hash).toBe(EXPECTED_HASH);
+      expect(whole).not.toHaveBeenCalled();
+      expect(slice).toHaveBeenCalled();
+      expect(result.blob).toBe(file);
+    });
+  });
+
+  describe("upload", () => {
+    it("hands the source Blob to send() rather than a buffered copy", async () => {
+      const send = vi.fn().mockResolvedValue(UPLOAD_RESULT);
+      const handle = { ...makeMockHandle(), send };
+      const client = createAttachmentClient(
+        makeMockService({ reserve: vi.fn().mockResolvedValue(handle) }),
+      );
+      const file = new Blob([BYTES], { type: "text/plain" });
+
+      await client.upload({ file });
+
+      expect(send.mock.calls[0][0]).toBe(file);
+    });
   });
 
   describe("reserve", () => {

@@ -11,6 +11,7 @@ type Captured = {
     res: ServerResponse,
     body?: unknown,
   ) => void | Promise<void>;
+  options?: unknown;
 };
 
 type FakeApi = Pick<
@@ -32,8 +33,9 @@ function makeFakeApi(
         method: string,
         path: string,
         handler: Captured["handler"],
+        options?: unknown,
       ) => {
-        captured.push({ method, path, handler });
+        captured.push({ method, path, handler, options });
       },
     },
     authService,
@@ -185,5 +187,15 @@ describe("mountAuthenticatedNodeRoute", () => {
       user: undefined,
       authEnabled: false,
     });
+  });
+
+  it("forwards rawBody to the adapter and keeps it out of the auth options", () => {
+    const { api, captured } = makeFakeApi(undefined);
+
+    mountAuthenticatedNodeRoute(api, "PUT", "/x", vi.fn(), { rawBody: true });
+    mountAuthenticatedNodeRoute(api, "GET", "/y", vi.fn());
+
+    expect(captured[0].options).toEqual({ rawBody: true });
+    expect(captured[1].options).toEqual({ rawBody: false });
   });
 });

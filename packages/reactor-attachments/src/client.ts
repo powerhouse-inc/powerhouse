@@ -19,7 +19,7 @@ import {
   type AttachmentProgressOptions,
 } from "./progress.js";
 import { createRef } from "./ref.js";
-import { sha256Hex } from "./replication/hash.js";
+import { sha256HexOfBlob } from "./replication/hash.js";
 import type {
   AttachmentHeader,
   AttachmentResponse,
@@ -112,8 +112,12 @@ export type PreprocessResult = {
   hash: AttachmentHash;
   sizeBytes: number;
   options: HashFirstReserveAttachmentOptions;
+  /** @deprecated Read `blob`; this is `blob.stream()`. */
   data: ReadableStream<Uint8Array>;
+  /** @deprecated Read `blob`; this is `() => blob.stream()`. */
   stream: () => ReadableStream<Uint8Array>;
+  /** The file itself; uploads send it as-is, so a browser streams it from disk. */
+  blob: Blob;
 };
 
 export type AttachmentUploadInput = {
@@ -337,15 +341,6 @@ function dedupedHeader(
   };
 }
 
-function streamFromBuffer(buf: Uint8Array): ReadableStream<Uint8Array> {
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(buf);
-      controller.close();
-    },
-  });
-}
-
 /** Stamps an item's index onto its progress events. */
 function itemProgress(
   options: AttachmentBatchOptions | undefined,
@@ -394,13 +389,19 @@ function batchRunOptions<R>(
 class AttachmentClientImpl implements IAttachmentClient {
   constructor(private readonly service: IAttachmentService) {}
 
-  async preprocess(
+  preprocess(
     file: Blob,
     opts?: { fileName?: string; mimeType?: string },
   ): Promise<PreprocessResult> {
-    const buf = await file.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    const hash = await sha256Hex(bytes);
+    return this.hashFile(file, opts);
+  }
+
+  private async hashFile(
+    file: Blob,
+    opts?: { fileName?: string; mimeType?: string },
+    signal?: AbortSignal,
+  ): Promise<PreprocessResult> {
+    const hash = await sha256HexOfBlob(file, signal ? { signal } : undefined);
     const ref = createRef(hash);
     const sizeBytes = file.size;
     const mimeType = opts?.mimeType ?? file.type;
@@ -412,9 +413,9 @@ class AttachmentClientImpl implements IAttachmentClient {
       clientHash: hash,
       sizeBytes,
     };
-    const data = streamFromBuffer(bytes);
-    const stream = (): ReadableStream<Uint8Array> => streamFromBuffer(bytes);
-    return { ref, hash, sizeBytes, options, data, stream };
+    const data = file.stream();
+    const stream = (): ReadableStream<Uint8Array> => file.stream();
+    return { ref, hash, sizeBytes, options, data, stream, blob: file };
   }
 
   /**
@@ -465,15 +466,21 @@ class AttachmentClientImpl implements IAttachmentClient {
       if ("preprocessed" in input) {
         preprocessed = input.preprocessed;
       } else {
-        // Hashing is genuinely unobservable: preprocess() runs one
-        // crypto.subtle.digest over the whole buffer and WebCrypto has no
-        // streaming digest. The stage is still reported, with a denominator
-        // and indeterminate never cleared, so a UI can name what it waits on.
+        // Hashing reports no bytes, so the stage stays indeterminate; a UI
+        // can still name the wait. The signal stops it between slices.
         emitter.stage("hashing", { total: input.file.size });
-        preprocessed = await this.preprocess(input.file, {
-          ...(input.fileName !== undefined ? { fileName: input.fileName } : {}),
-          ...(input.mimeType !== undefined ? { mimeType: input.mimeType } : {}),
-        });
+        preprocessed = await this.hashFile(
+          input.file,
+          {
+            ...(input.fileName !== undefined
+              ? { fileName: input.fileName }
+              : {}),
+            ...(input.mimeType !== undefined
+              ? { mimeType: input.mimeType }
+              : {}),
+          },
+          signal,
+        );
       }
       const sizeBytes = preprocessed.sizeBytes;
 
@@ -505,10 +512,7 @@ class AttachmentClientImpl implements IAttachmentClient {
           : {}),
         ...(signal ? { signal } : {}),
       };
-      const result = await outcome.handle.send(
-        preprocessed.stream(),
-        sendOptions,
-      );
+      const result = await outcome.handle.send(preprocessed.blob, sendOptions);
       emitter.finish();
       return result;
     } catch (err) {

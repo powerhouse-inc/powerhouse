@@ -42,6 +42,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "catalog:",
     "@aws-sdk/s3-request-presigner": "catalog:",
+    "@noble/hashes": "^1.8.0",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
