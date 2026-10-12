@@ -121,7 +121,15 @@ export function createReactorDriveResolvers(
         context: ReactorDriveResolverContext,
       ) {
         const ctx = withBound(context);
-        if (!(await serves(ctx, args.id))) {
+        try {
+          if (
+            !(await ctx.reactorClient.isServed(args.id, {
+              subject: subjectOf(ctx),
+            }))
+          ) {
+            return null;
+          }
+        } catch {
           return null;
         }
         let document: PHDocument<ReactorDrivePHState>;
@@ -135,10 +143,7 @@ export function createReactorDriveResolvers(
         if (document.header.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
           return null;
         }
-        if (
-          document.header.id !== args.id &&
-          !(await serves(ctx, document.header.id))
-        ) {
+        if (!(await serves(ctx, document.header.id))) {
           return null;
         }
         const { global, local } = document.state as Partial<

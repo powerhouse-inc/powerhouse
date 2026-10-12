@@ -299,22 +299,33 @@ describe("reactor-drive subgraph reads as the caller", () => {
   });
 
   it("applies the host's check to the drive a slug names", async () => {
-    const { client, resolvers, as, drive } = await fixture();
+    const { client, as, drive } = await fixture();
+    // The host's check is keyed by document id; anything else reads as refused.
+    const asked: string[] = [];
+    const admitsDrive = createReactorDriveResolvers({
+      reactorClient: client,
+      readModel: new DriveNodeView(db!),
+      hostCanRead: (documentId) => {
+        asked.push(documentId);
+        return Promise.resolve(documentId === drive);
+      },
+    });
     const refusesDrive = createReactorDriveResolvers({
       reactorClient: client,
       readModel: new DriveNodeView(db!),
-      hostCanRead: (documentId) => Promise.resolve(documentId !== drive),
+      hostCanRead: () => Promise.resolve(false),
     });
 
     expect(
       (
-        await resolvers.Query.reactorDrive(
+        await admitsDrive.Query.reactorDrive(
           undefined,
           { id: "rd-drive-slug" },
           as(READER),
         )
       )?.id,
     ).toBe(drive);
+    expect(asked).toEqual([drive]);
     expect(
       await refusesDrive.Query.reactorDrive(
         undefined,
