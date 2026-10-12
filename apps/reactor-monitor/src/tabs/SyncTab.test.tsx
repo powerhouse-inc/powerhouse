@@ -1,20 +1,19 @@
 // @vitest-environment happy-dom
 import type {
   ConnectionStateSnapshot,
-  DeadLetterPage,
-  DeadLetterRecord,
   IChannel,
-  IInspector,
-  InspectableSyncManager,
+  InspectorStorageHealth,
+  ISyncAdmin,
   Remote,
   RemoteSyncInspection,
-  StorageHealth,
+  WireDeadLetter,
+  WireDeadLetterPage,
 } from "@powerhousedao/reactor";
-import {
-  ChannelErrorSource,
-  DriveCollectionId,
-  GQL_CHANNEL_TYPE,
-} from "@powerhousedao/reactor";
+import { DriveCollectionId, GQL_CHANNEL_TYPE } from "@powerhousedao/reactor";
+import type {
+  MonitorInspector,
+  MonitorSyncManager,
+} from "@powerhousedao/reactor-monitor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SyncTab } from "./SyncTab.js";
@@ -93,20 +92,17 @@ function inspectionFor(
   };
 }
 
-type FakeSyncManager = InspectableSyncManager & {
+type FakeSyncManager = MonitorSyncManager & {
   add: ReturnType<typeof vi.fn>;
+  triggerPull: ReturnType<typeof vi.fn>;
   inspectRemotes: ReturnType<typeof vi.fn>;
   listDeadLetters: ReturnType<typeof vi.fn>;
-  requeueDeadLetter: ReturnType<typeof vi.fn>;
-  clearDeadLetter: ReturnType<typeof vi.fn>;
-  rewindInboxCursor: ReturnType<typeof vi.fn>;
-  resetChannel: ReturnType<typeof vi.fn>;
 };
 
 function fakeSyncManager(
   remotes: Remote[],
   inspections: RemoteSyncInspection[] = [],
-  deadLetters: Record<string, DeadLetterRecord[]> = {},
+  deadLetters: Record<string, WireDeadLetter[]> = {},
 ): FakeSyncManager {
   const partial = {
     list: () => remotes,
@@ -117,21 +113,43 @@ function fakeSyncManager(
       Promise.resolve({
         remoteName,
         results: deadLetters[remoteName] ?? [],
-        nextCursor: undefined,
-      } satisfies DeadLetterPage),
+        nextCursor: null,
+      } satisfies WireDeadLetterPage),
     ),
-    rewindInboxCursor: vi.fn(() => Promise.resolve()),
-    resetChannel: vi.fn(() => Promise.resolve()),
-    requeueDeadLetter: vi.fn(() => Promise.resolve()),
-    clearDeadLetter: vi.fn(() => Promise.resolve()),
   };
   return partial as unknown as FakeSyncManager;
 }
 
-function fakeInspector(health: StorageHealth): IInspector {
+type FakeSyncAdmin = ISyncAdmin & {
+  resetChannel: ReturnType<typeof vi.fn>;
+  requeueDeadLetter: ReturnType<typeof vi.fn>;
+  clearDeadLetter: ReturnType<typeof vi.fn>;
+};
+
+function fakeSyncAdmin(): FakeSyncAdmin {
+  return {
+    resetChannel: vi.fn(() => Promise.resolve()),
+    requeueDeadLetter: vi.fn(() => Promise.resolve()),
+    clearDeadLetter: vi.fn(() => Promise.resolve()),
+  };
+}
+
+function fakeInspector(health: InspectorStorageHealth): MonitorInspector {
   return {
     getStorageHealth: () => Promise.resolve(health),
-  } as unknown as IInspector;
+  } as unknown as MonitorInspector;
+}
+
+function storageHealth(
+  overrides: Partial<InspectorStorageHealth>,
+): InspectorStorageHealth {
+  return {
+    tracked: true,
+    healthy: true,
+    everRecreated: false,
+    recreateCount: 0,
+    ...overrides,
+  };
 }
 
 describe("SyncTab", () => {
@@ -202,12 +220,7 @@ describe("SyncTab", () => {
   it("renders storage health and warns when the session is unhealthy", async () => {
     const view = render(
       <SyncTab
-        inspector={fakeInspector({
-          healthy: false,
-          everRecreated: true,
-          recreateCount: 1,
-          lastRecreated: { reason: "portal", timestampUtcMs: 1, attempt: 1 },
-        })}
+        inspector={fakeInspector(storageHealth({ healthy: false }))}
         gqlRemotes
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
@@ -218,64 +231,146 @@ describe("SyncTab", () => {
 
     const alert = await view.findByText(/session was reported poisoned/);
     expect(alert).toBeTruthy();
+    expect(view.getByTestId("sync-storage-session").textContent).toBe(
+      "unhealthy",
+    );
+  });
+
+  it("shows an untracked store as untracked, without a warning", async () => {
+    const view = render(
+      <SyncTab
+        inspector={fakeInspector(
+          storageHealth({ tracked: false, healthy: true }),
+        )}
+        gqlRemotes
+        syncManager={fakeSyncManager([])}
+      />,
+    );
+
+    const session = await view.findByTestId("sync-storage-session");
+    expect(session.textContent).toBe("untracked");
+    expect(view.queryByRole("alert")).toBeNull();
   });
 
   it("requeues and clears dead letters via the repair ops", async () => {
-    const deadLetter: DeadLetterRecord = {
+    const deadLetter: WireDeadLetter = {
       id: "dl-1",
       jobId: "job-1",
-      jobDependencies: [],
-      remoteName: "accounts",
       documentId: "doc-1",
       scopes: ["global"],
       branch: "main",
-      operations: [],
-      errorSource: ChannelErrorSource.Inbox,
       errorMessage: "Document not found",
       errorType: "MISSING_OPERATIONS",
+      operationCount: 1,
     };
     const manager = fakeSyncManager(
       [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
       [inspectionFor("accounts")],
       { accounts: [deadLetter] },
     );
-    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
+    const admin = fakeSyncAdmin();
+    const view = render(
+      <SyncTab gqlRemotes syncAdmin={admin} syncManager={manager} />,
+    );
 
     const row = await view.findByTestId("sync-dead-letter");
     expect(row.textContent).toMatch(/MISSING_OPERATIONS/);
 
     fireEvent.click(view.getByText("Requeue"));
     await waitFor(() =>
-      expect(manager.requeueDeadLetter).toHaveBeenCalledWith(
-        "accounts",
-        "dl-1",
-      ),
+      expect(admin.requeueDeadLetter).toHaveBeenCalledWith("accounts", "dl-1"),
     );
 
     fireEvent.click(view.getByText("Clear"));
     await waitFor(() =>
-      expect(manager.clearDeadLetter).toHaveBeenCalledWith("accounts", "dl-1"),
+      expect(admin.clearDeadLetter).toHaveBeenCalledWith("accounts", "dl-1"),
     );
   });
 
-  it("rewinds the inbox cursor and resets the channel via repair levers", async () => {
+  it("resets the channel through the sync admin and re-pulls through the manager", async () => {
     const manager = fakeSyncManager(
       [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
       [inspectionFor("accounts")],
     );
-    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
+    const admin = fakeSyncAdmin();
+    const view = render(
+      <SyncTab gqlRemotes syncAdmin={admin} syncManager={manager} />,
+    );
 
     await view.findByTestId("sync-mailbox-depths");
-
-    fireEvent.click(view.getByText("Rewind + re-pull"));
-    await waitFor(() =>
-      expect(manager.rewindInboxCursor).toHaveBeenCalledWith("accounts", 0),
-    );
+    expect(view.queryByText(/Rewind/)).toBeNull();
 
     fireEvent.click(view.getByText("Reset channel"));
     await waitFor(() =>
-      expect(manager.resetChannel).toHaveBeenCalledWith("accounts"),
+      expect(admin.resetChannel).toHaveBeenCalledWith("accounts"),
     );
+
+    fireEvent.click(view.getByText("Re-pull"));
+    expect(manager.triggerPull).toHaveBeenCalledWith("accounts");
+  });
+
+  it("disables the repair levers when the reactor serves no sync admin", async () => {
+    const deadLetter: WireDeadLetter = {
+      id: "dl-1",
+      jobId: "job-1",
+      documentId: "doc-1",
+      scopes: ["global"],
+      branch: "main",
+      errorMessage: "Document not found",
+      errorType: "MISSING_OPERATIONS",
+      operationCount: 1,
+    };
+    const view = render(
+      <SyncTab
+        gqlRemotes
+        syncManager={fakeSyncManager(
+          [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
+          [inspectionFor("accounts")],
+          { accounts: [deadLetter] },
+        )}
+      />,
+    );
+
+    await view.findByTestId("sync-dead-letter");
+    expect(view.getByTestId("sync-admin-unavailable")).toBeTruthy();
+    for (const name of ["Reset channel", "Requeue", "Clear"]) {
+      expect(view.getByRole("button", { name }).hasAttribute("disabled")).toBe(
+        true,
+      );
+    }
+    expect(
+      view.getByRole("button", { name: "Re-pull" }).hasAttribute("disabled"),
+    ).toBe(false);
+  });
+
+  it("offers no lever on a reactor this monitor does not host", async () => {
+    const manager = fakeSyncManager(
+      [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
+      [inspectionFor("accounts")],
+    );
+    const view = render(
+      <SyncTab
+        admin={{
+          enabled: false,
+          reason: "this host's inspection subgraph serves reads only",
+        }}
+        gqlRemotes
+        reconfigurable={false}
+        syncManager={manager}
+      />,
+    );
+
+    await view.findByTestId("sync-mailbox-depths");
+    expect(view.getByTestId("admin-gate-note").textContent).toMatch(
+      /serves reads only/,
+    );
+    expect(view.queryByTestId("sync-admin-unavailable")).toBeNull();
+    for (const name of ["Reset channel", "Re-pull"]) {
+      expect(view.getByRole("button", { name }).hasAttribute("disabled")).toBe(
+        true,
+      );
+    }
+    expect(manager.triggerPull).not.toHaveBeenCalled();
   });
 
   it("surfaces a repair failure instead of swallowing it", async () => {
@@ -283,8 +378,11 @@ describe("SyncTab", () => {
       [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
       [inspectionFor("accounts")],
     );
-    manager.resetChannel.mockRejectedValue(new Error("reset exploded"));
-    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
+    const admin = fakeSyncAdmin();
+    admin.resetChannel.mockRejectedValue(new Error("reset exploded"));
+    const view = render(
+      <SyncTab gqlRemotes syncAdmin={admin} syncManager={manager} />,
+    );
 
     await view.findByTestId("sync-mailbox-depths");
     fireEvent.click(view.getByText("Reset channel"));

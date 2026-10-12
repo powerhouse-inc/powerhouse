@@ -1,13 +1,16 @@
 import {
   DriveCollectionId,
   GQL_CHANNEL_TYPE,
-  type DeadLetterRecord,
-  type IInspector,
-  type InspectableSyncManager,
+  type InspectorStorageHealth,
+  type ISyncAdmin,
   type Remote,
   type RemoteSyncInspection,
-  type StorageHealth,
+  type WireDeadLetter,
 } from "@powerhousedao/reactor";
+import type {
+  MonitorInspector,
+  MonitorSyncManager,
+} from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 import {
   ADMIN_ALLOWED,
@@ -18,8 +21,10 @@ import { isConnectionLying } from "../lib/sync-health.js";
 import { timeSince } from "../lib/time.js";
 
 export type SyncTabProps = {
-  readonly syncManager: InspectableSyncManager | undefined;
-  readonly inspector?: IInspector;
+  readonly syncManager: MonitorSyncManager | undefined;
+  readonly inspector?: MonitorInspector;
+  /** Reset channel and dead-letter levers; absent where none are served. */
+  readonly syncAdmin?: ISyncAdmin;
   /**
    * Whether this reactor can form gql remotes, i.e. whether its capability
    * contract declares the `"gql"` sync channel -- the exact
@@ -45,7 +50,7 @@ export type SyncTabProps = {
    * surface serves observation only, `RemoteSyncManagerClient.add()` refuses by
    * name because that deployment's peers are its own configuration, and a form
    * whose every submit is refused is worse than no form. The same rule the
-   * brokered link panel above it follows.
+   * brokered link panel above it follows. Re-pull is local-only too.
    *
    * Independent of {@link gqlRemotes}: that is about which channel types the
    * reactor ROUTES, this about whether anything here may reconfigure it. A
@@ -53,18 +58,7 @@ export type SyncTabProps = {
    * from here.
    */
   readonly reconfigurable?: boolean;
-  /**
-   * Whether this reactor serves the repair levers -- trigger pull, reset
-   * channel, rewind cursor, requeue/clear a dead letter. Defaults to allowed,
-   * which is every locally hosted reactor. A REMOTE reactor serves them only
-   * when its host opted in (PH_INSPECTION_ADMIN), and the levers are then
-   * disabled with the reason rather than offered and refused: the facts came
-   * back with that reactor own info at provision time, so the click could
-   * only teach the operator less.
-   *
-   * Independent of {@link gqlRemotes}: that gates CREATING a remote on this
-   * reactor own channel types, this gates REPAIRING the remotes it has.
-   */
+  /** Gates reset channel and requeue/clear, together with {@link syncAdmin}. */
   readonly admin?: AdminGate;
 };
 
@@ -76,38 +70,40 @@ function channelUrl(remote: Remote): string | undefined {
   return typeof url === "string" ? url : undefined;
 }
 
-function StorageHealthPanel({ health }: { health: StorageHealth | undefined }) {
+function StorageHealthPanel({
+  health,
+}: {
+  health: InspectorStorageHealth | undefined;
+}) {
   if (!health) {
     return null;
   }
-  const className = health.healthy
-    ? "rm-kv rm-kv-compact"
-    : "rm-kv rm-kv-compact rm-remote-warning";
+  const poisoned = health.tracked && !health.healthy;
   return (
     <section className="rm-storage-health">
       <h3>Storage health</h3>
-      {!health.healthy ? (
+      {poisoned ? (
         <p className="rm-warning-banner" role="alert">
-          The reactor&apos;s PGlite session was reported poisoned and has not
-          recovered. Reads and sync ingestion are dead until it recreates.
+          The reactor&apos;s PGlite session was reported poisoned. It is never
+          reused: reads and sync ingestion fail until the reactor is
+          re-provisioned.
         </p>
       ) : null}
-      <dl className={className}>
+      <dl
+        className={
+          poisoned
+            ? "rm-kv rm-kv-compact rm-remote-warning"
+            : "rm-kv rm-kv-compact"
+        }
+      >
         <dt>Session</dt>
-        <dd>{health.healthy ? "healthy" : "unhealthy"}</dd>
-        <dt>Ever recreated</dt>
-        <dd>
-          {health.everRecreated ? `yes (${health.recreateCount}x)` : "no"}
+        <dd data-testid="sync-storage-session">
+          {!health.tracked
+            ? "untracked"
+            : health.healthy
+              ? "healthy"
+              : "unhealthy"}
         </dd>
-        {health.lastRecreated ? (
-          <>
-            <dt>Last recreate</dt>
-            <dd>
-              {timeSince(health.lastRecreated.timestampUtcMs)} — attempt{" "}
-              {health.lastRecreated.attempt}: {health.lastRecreated.reason}
-            </dd>
-          </>
-        ) : null}
       </dl>
     </section>
   );
@@ -121,7 +117,7 @@ function DeadLetterRow({
   onClear,
 }: {
   remoteName: string;
-  record: DeadLetterRecord;
+  record: WireDeadLetter;
   repairable: boolean;
   onRequeue: (remoteName: string, id: string) => void;
   onClear: (remoteName: string, id: string) => void;
@@ -130,7 +126,6 @@ function DeadLetterRow({
     <li className="rm-dead-letter" data-testid="sync-dead-letter">
       <div className="rm-dead-letter-header">
         <span className="rm-badge rm-badge-error">{record.errorType}</span>
-        <span className="rm-badge">{record.errorSource}</span>
         <code>{record.documentId}</code>
         <button
           className="rm-btn"
@@ -160,20 +155,20 @@ function RemoteRow({
   deadLetters,
   repairError,
   repairable,
+  pullable,
   onTriggerPull,
   onResetChannel,
-  onRewindInbox,
   onRequeue,
   onClear,
 }: {
   remote: Remote;
   inspection: RemoteSyncInspection | undefined;
-  deadLetters: DeadLetterRecord[];
+  deadLetters: WireDeadLetter[];
   repairError: string | undefined;
   repairable: boolean;
+  pullable: boolean;
   onTriggerPull: (name: string) => void;
   onResetChannel: (name: string) => void;
-  onRewindInbox: (name: string, toOrdinal: number) => void;
   onRequeue: (name: string, id: string) => void;
   onClear: (name: string, id: string) => void;
 }) {
@@ -183,15 +178,6 @@ function RemoteRow({
   // staleness still comes from the shared helper on the raw snapshot.
   const neverSucceeded = inspection?.connection.neverSucceeded ?? false;
   const lying = neverSucceeded || isConnectionLying(snapshot);
-  const [rewindTo, setRewindTo] = useState("0");
-  // A rewind only ever moves the cursor backward, so the input is capped at the
-  // furthest-ahead inbox position the manager will accept.
-  const maxRewind = inspection
-    ? Math.max(
-        inspection.inboxCursor.cursorOrdinal,
-        inspection.inboxCursor.liveAckOrdinal,
-      )
-    : undefined;
 
   return (
     <li className={lying ? "rm-remote rm-remote-warning" : "rm-remote"}>
@@ -212,18 +198,18 @@ function RemoteRow({
         <button
           className="rm-btn"
           disabled={!repairable}
-          onClick={() => onTriggerPull(remote.meta.name)}
-          type="button"
-        >
-          Trigger pull
-        </button>
-        <button
-          className="rm-btn"
-          disabled={!repairable}
           onClick={() => onResetChannel(remote.meta.name)}
           type="button"
         >
           Reset channel
+        </button>
+        <button
+          className="rm-btn"
+          disabled={!pullable}
+          onClick={() => onTriggerPull(remote.meta.name)}
+          type="button"
+        >
+          Re-pull
         </button>
       </div>
 
@@ -285,30 +271,6 @@ function RemoteRow({
         ) : null}
       </dl>
 
-      <div className="rm-repair rm-form-inline">
-        <label>
-          Rewind inbox to ordinal
-          <input
-            disabled={!repairable}
-            max={maxRewind}
-            min={0}
-            onChange={(e) => setRewindTo(e.target.value)}
-            type="number"
-            value={rewindTo}
-          />
-        </label>
-        <button
-          className="rm-btn"
-          disabled={!repairable}
-          onClick={() =>
-            onRewindInbox(remote.meta.name, Number.parseInt(rewindTo, 10) || 0)
-          }
-          type="button"
-        >
-          Rewind + re-pull
-        </button>
-      </div>
-
       {repairError ? (
         <p className="rm-error" data-testid="sync-repair-error" role="alert">
           Repair failed: {repairError}
@@ -339,6 +301,7 @@ function RemoteRow({
 export function SyncTab({
   syncManager,
   inspector,
+  syncAdmin,
   gqlRemotes,
   reconfigurable = true,
   admin = ADMIN_ALLOWED,
@@ -347,16 +310,17 @@ export function SyncTab({
   // reactor must route the channel type the form writes, AND its remotes must
   // be this monitor's to change.
   const canAddRemote = gqlRemotes && reconfigurable;
+  const repairable = admin.enabled && syncAdmin !== undefined;
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [inspections, setInspections] = useState<
     Map<string, RemoteSyncInspection>
   >(new Map());
-  const [deadLetters, setDeadLetters] = useState<
-    Map<string, DeadLetterRecord[]>
-  >(new Map());
-  const [storageHealth, setStorageHealth] = useState<StorageHealth | undefined>(
-    undefined,
+  const [deadLetters, setDeadLetters] = useState<Map<string, WireDeadLetter[]>>(
+    new Map(),
   );
+  const [storageHealth, setStorageHealth] = useState<
+    InspectorStorageHealth | undefined
+  >(undefined);
   const [name, setName] = useState("");
   const [driveId, setDriveId] = useState("");
   const [url, setUrl] = useState("");
@@ -394,7 +358,7 @@ export function SyncTab({
     try {
       const inspected = await syncManager.inspectRemotes();
       setInspections(new Map(inspected.map((i) => [i.remoteName, i])));
-      const nextDeadLetters = new Map<string, DeadLetterRecord[]>();
+      const nextDeadLetters = new Map<string, WireDeadLetter[]>();
       // Skip the per-remote dead-letter fetch when the inspection already
       // reports an empty dead-letter mailbox, and run the rest concurrently
       // rather than awaiting each in series every poll.
@@ -474,9 +438,16 @@ export function SyncTab({
 
   const handleTriggerPull = useCallback(
     (remoteName: string) => {
-      syncManager?.triggerPull(remoteName);
+      if (!reconfigurable) {
+        return;
+      }
+      try {
+        syncManager?.triggerPull(remoteName);
+      } catch (e) {
+        setRepairError(remoteName, e instanceof Error ? e.message : String(e));
+      }
     },
-    [syncManager],
+    [syncManager, reconfigurable, setRepairError],
   );
 
   // Every repair lever surfaces its failure per remote rather than dropping it
@@ -497,36 +468,27 @@ export function SyncTab({
 
   const handleResetChannel = useCallback(
     (remoteName: string) => {
-      void runRepair(remoteName, () => syncManager?.resetChannel(remoteName));
+      void runRepair(remoteName, () => syncAdmin?.resetChannel(remoteName));
     },
-    [syncManager, runRepair],
-  );
-
-  const handleRewindInbox = useCallback(
-    (remoteName: string, toOrdinal: number) => {
-      void runRepair(remoteName, () =>
-        syncManager?.rewindInboxCursor(remoteName, toOrdinal),
-      );
-    },
-    [syncManager, runRepair],
+    [syncAdmin, runRepair],
   );
 
   const handleRequeue = useCallback(
     (remoteName: string, id: string) => {
       void runRepair(remoteName, () =>
-        syncManager?.requeueDeadLetter(remoteName, id),
+        syncAdmin?.requeueDeadLetter(remoteName, id),
       );
     },
-    [syncManager, runRepair],
+    [syncAdmin, runRepair],
   );
 
   const handleClear = useCallback(
     (remoteName: string, id: string) => {
       void runRepair(remoteName, () =>
-        syncManager?.clearDeadLetter(remoteName, id),
+        syncAdmin?.clearDeadLetter(remoteName, id),
       );
     },
-    [syncManager, runRepair],
+    [syncAdmin, runRepair],
   );
 
   if (!syncManager) {
@@ -545,18 +507,22 @@ export function SyncTab({
       <h2>Sync / Remotes</h2>
 
       <AdminGateNote gate={admin} />
+      {admin.enabled && !syncAdmin ? (
+        <p className="rm-note" data-testid="sync-admin-unavailable">
+          This reactor serves no sync repair levers here: reset channel and
+          dead-letter requeue/clear are disabled.
+        </p>
+      ) : null}
 
       <StorageHealthPanel health={storageHealth} />
 
       {reconfigurable ? null : (
         <p className="rm-note" data-testid="sync-add-remote-remote-host">
           This reactor runs on another host, and which peers it syncs with is
-          that deployment&apos;s own configuration: the inspection surface
-          serves observation and repair, not reconfiguration, so adding or
-          removing a remote is refused there whatever channel types it reports
-          routing. Change its remotes where it is configured. Everything below
-          is live: cursors, mailbox depths, connection health and dead letters
-          are read from that reactor&apos;s own sync manager.
+          that deployment&apos;s own configuration: its inspection subgraph
+          serves reads only, so remotes cannot be added, pulled or repaired from
+          here. Cursors, mailbox depths, connection health and dead letters
+          below are read from that reactor&apos;s own sync manager.
         </p>
       )}
       {!reconfigurable || gqlRemotes ? null : (
@@ -643,11 +609,11 @@ export function SyncTab({
               onClear={handleClear}
               onRequeue={handleRequeue}
               onResetChannel={handleResetChannel}
-              onRewindInbox={handleRewindInbox}
               onTriggerPull={handleTriggerPull}
+              pullable={reconfigurable}
               remote={remote}
               repairError={repairErrors.get(remote.meta.name)}
-              repairable={admin.enabled}
+              repairable={repairable}
             />
           ))}
         </ul>
