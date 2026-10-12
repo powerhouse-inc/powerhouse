@@ -66,18 +66,33 @@ function fakeReadModel() {
 }
 
 /** The reactor-drive subgraph schema as GraphQLManager builds it. */
-function buildReactorDriveSubgraphSchema(): GraphQLSchema {
+function buildReactorDriveSubgraphSchema(
+  models: DocumentModelModule[] = baseModels,
+): GraphQLSchema {
   const resolvers = createReactorDriveResolvers({
     reactorClient: fakeReactorClient(),
     readModel: fakeReadModel(),
     hostCanRead: () => Promise.resolve(true),
   });
   return createSchema(
-    baseModels,
+    models,
     resolvers as unknown as Parameters<typeof createSchema>[1],
     reactorDriveSubgraphTypeDefs,
   );
 }
+
+const EXPECTED_ROOT_NODES = {
+  reactorDrive: {
+    id: DRIVE_ID,
+    name: "My Drive",
+    rootNodes: {
+      hasMore: false,
+      results: [
+        { __typename: "ReactorDriveFileNode", id: "file-1", name: "a.txt" },
+      ],
+    },
+  },
+};
 
 const ROOT_NODES_QUERY = `{
   reactorDrive(id: "${DRIVE_ID}") {
@@ -112,18 +127,18 @@ describe("reactor-drive subgraph assembled with the document-model typedefs", ()
 
     const result = await execute({ schema, document, contextValue: {} });
     expect(result.errors).toBeUndefined();
-    expect(result.data).toEqual({
-      reactorDrive: {
-        id: DRIVE_ID,
-        name: "My Drive",
-        rootNodes: {
-          hasMore: false,
-          results: [
-            { __typename: "ReactorDriveFileNode", id: "file-1", name: "a.txt" },
-          ],
-        },
-      },
-    });
+    expect(result.data).toEqual(EXPECTED_ROOT_NODES);
+  });
+
+  // Control: proves the fakes resolve when no model shadows ReactorDrive.
+  it("control: resolves reactorDrive { rootNodes } with no document models", async () => {
+    const schema = buildReactorDriveSubgraphSchema([]);
+    const document = parse(ROOT_NODES_QUERY);
+    expect(validate(schema, document).map((e) => e.message)).toEqual([]);
+
+    const result = await execute({ schema, document, contextValue: {} });
+    expect(result.errors).toBeUndefined();
+    expect(result.data).toEqual(EXPECTED_ROOT_NODES);
   });
 });
 
