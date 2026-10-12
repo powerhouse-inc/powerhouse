@@ -1,8 +1,14 @@
 // Reading an attachment into a step's workspace: the workflow document has to
 // vouch for the ref, and the bytes are capped as they arrive.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createHash } from "node:crypto";
-import { createAttachmentPort } from "./attachment-port.js";
+import {
+  createAttachmentClient,
+  type IAttachmentService,
+} from "@powerhousedao/reactor-attachments/client";
+import {
+  type AttachmentClientLike,
+  createAttachmentPort,
+} from "./attachment-port.js";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -127,26 +133,17 @@ describe("the attachment port's read", () => {
 });
 
 describe("the attachment port's write", () => {
-  it("uploads the staged file as a stream with its hash, and reports the ref", async () => {
+  it("uploads the staged file as a file-backed Blob, and reports the ref", async () => {
     const path = await destPath();
     const bytes = Buffer.from("date,amount\n2026-01-01,1\n");
     await writeFile(path, bytes);
-    const hash = createHash("sha256").update(bytes).digest("hex");
     let sent: Buffer | undefined;
-    let options: unknown;
+    let named: unknown;
     const upload = vi.fn(
-      async (input: {
-        preprocessed: {
-          ref: string;
-          options: unknown;
-          data: ReadableStream<Uint8Array>;
-        };
-      }) => {
-        options = input.preprocessed.options;
-        const chunks: Uint8Array[] = [];
-        for await (const chunk of input.preprocessed.data) chunks.push(chunk);
-        sent = Buffer.concat(chunks);
-        return { ref: input.preprocessed.ref };
+      async (input: { file: Blob; fileName?: string; mimeType?: string }) => {
+        named = { fileName: input.fileName, mimeType: input.mimeType };
+        sent = Buffer.from(await input.file.arrayBuffer());
+        return { ref: "attachment://v1:abc" };
       },
     );
     const written: string[] = [];
@@ -162,16 +159,19 @@ describe("the attachment port's write", () => {
       contentType: "text/csv",
     });
 
-    expect(ref).toBe(`attachment://v1:${hash}`);
+    expect(ref).toBe("attachment://v1:abc");
     expect(sent?.equals(bytes)).toBe(true);
-    expect(options).toEqual({
-      mimeType: "text/csv",
-      fileName: "report.csv",
-      extension: "csv",
-      clientHash: hash,
-      sizeBytes: bytes.byteLength,
-    });
+    expect(named).toEqual({ fileName: "report.csv", mimeType: "text/csv" });
     // The run may read back what it wrote.
     expect(written).toEqual([ref]);
+  });
+});
+
+describe("AttachmentClientLike", () => {
+  it("is satisfied by the attachment client", () => {
+    // Compile-time: fails to typecheck if the client drifts from the port's slice.
+    const client = createAttachmentClient({} as IAttachmentService);
+    const slice: AttachmentClientLike = client;
+    expect(slice).toBe(client);
   });
 });
