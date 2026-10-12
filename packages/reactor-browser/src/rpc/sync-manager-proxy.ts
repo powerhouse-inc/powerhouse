@@ -39,6 +39,8 @@ import { opChannel, type IOpChannel } from "./op-channel.js";
 
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
 export const SYNC_STATUS_CHANGED_EVENT = 90001;
+// Carries the worker's remotes after a local peer is adopted or removed.
+export const SYNC_REMOTES_CHANGED_EVENT = 90002;
 
 export type SyncStatusChangedBusEvent = {
   documentId: string;
@@ -63,6 +65,7 @@ type WireRemote = {
   meta: WireRemoteMeta;
   connectionState: ConnectionStateSnapshot;
 };
+type SyncRemotesChangedBusEvent = { remotes: WireRemote[] };
 
 const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
   state: "connecting",
@@ -157,6 +160,10 @@ export class SyncManagerProxy
       const e = event as SyncStatusChangedBusEvent;
       this.syncStatuses.set(e.documentId, e.status);
       this.syncStatusListeners.emit(e.documentId, e.status);
+    });
+
+    busProxy.subscribe(SYNC_REMOTES_CHANGED_EVENT, (_type, event) => {
+      this.applyRemotes((event as SyncRemotesChangedBusEvent).remotes);
     });
 
     void this.ensureSeeded();
@@ -377,7 +384,10 @@ export class SyncManagerProxy
   }
 
   private async refreshRemotes(): Promise<void> {
-    const wire = (await this.callSyncOp("list", [])) as WireRemote[];
+    this.applyRemotes((await this.callSyncOp("list", [])) as WireRemote[]);
+  }
+
+  private applyRemotes(wire: WireRemote[]): void {
     const names = new Set<string>();
     this.remotes = wire.map((w) => {
       const meta = rehydrateMeta(w.meta);
