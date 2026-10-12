@@ -1127,8 +1127,15 @@ async function initServer(
               error,
             );
           }
-          await composed.start();
-          logger.info("Workflow runtime started");
+          try {
+            await composed.start();
+            logger.info("Workflow runtime started");
+          } catch (error) {
+            logger.error(
+              "Starting the late workflow runtime failed: @error",
+              error,
+            );
+          }
         },
         logger,
       });
