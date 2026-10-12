@@ -6,7 +6,7 @@ import type {
   DocumentModelModule,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AttachmentSchemaCompiler } from "../../src/reference-index/attachment-schema-compiler.js";
 import { SchemaCompiledOperationRefs } from "../../src/replication/operation-attachment-refs.js";
 
@@ -135,6 +135,52 @@ describe("SchemaCompiledOperationRefs", () => {
     expect(refs.refsOf(item({ ref: "not-a-ref" }))).toEqual([]);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toContain("ATTACH_FILE");
+  });
+
+  it("reports an unresolved model action instead of silently dropping its refs", () => {
+    const diagnostics: { message: string; error: unknown }[] = [];
+    const refs = new SchemaCompiledOperationRefs(
+      registry(module),
+      new AttachmentSchemaCompiler(),
+      (message, error) => diagnostics.push({ message, error }),
+    );
+    expect(
+      refs.refsOf(item({ ref: REF_A }, { actionType: "UNKNOWN_ACTION" })),
+    ).toEqual([]);
+    expect(diagnostics).toEqual([
+      {
+        message:
+          "extracting attachment refs from example/attachment-document/UNKNOWN_ACTION failed",
+        error: new Error(
+          'Attachment schema compilation failed for document type "example/attachment-document", version 1, action "UNKNOWN_ACTION": no operation maps to the action',
+        ),
+      },
+    ]);
+  });
+
+  it("logs an unresolved model action when no diagnostic callback is supplied", () => {
+    const messages: unknown[] = [];
+    const errorLog = vi
+      .spyOn(console, "error")
+      .mockImplementation((message) => {
+        messages.push(message);
+      });
+    try {
+      const refs = new SchemaCompiledOperationRefs(
+        registry(module),
+        new AttachmentSchemaCompiler(),
+      );
+      expect(
+        refs.refsOf(item({ ref: REF_A }, { actionType: "UNKNOWN_ACTION" })),
+      ).toEqual([]);
+      expect(messages).toEqual([
+        expect.stringContaining(
+          'Attachment schema compilation failed for document type "example/attachment-document", version 1, action "UNKNOWN_ACTION": no operation maps to the action',
+        ),
+      ]);
+    } finally {
+      errorLog.mockRestore();
+    }
   });
 
   it("reports and swallows an unregistered document type", () => {
