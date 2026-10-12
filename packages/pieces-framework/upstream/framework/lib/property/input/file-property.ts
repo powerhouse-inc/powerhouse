@@ -28,6 +28,9 @@ export type ApStreamingFile = {
   extension?: string;
   size?: number;
   body: Readable;
+  /** Absolute path of the staged file, set only when its bytes are on local
+   * disk. Do not modify the file or use the path after the step ends. */
+  path?: string;
 };
 
 export type FileProperty<

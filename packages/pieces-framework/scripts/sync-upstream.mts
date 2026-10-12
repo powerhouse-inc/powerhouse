@@ -295,6 +295,18 @@ const PATCHES: Patch[] = [
       "});\n",
   },
   {
+    file: "upstream/framework/lib/property/input/file-property.ts",
+    why: "a streaming FILE staged on local disk exposes its path, for pieces that read files in place",
+    find: "  size?: number;\n  body: Readable;\n};\n",
+    replace:
+      "  size?: number;\n" +
+      "  body: Readable;\n" +
+      "  /** Absolute path of the staged file, set only when its bytes are on local\n" +
+      "   * disk. Do not modify the file or use the path after the step ends. */\n" +
+      "  path?: string;\n" +
+      "};\n",
+  },
+  {
     file: "upstream/framework/index.ts",
     why: "rolldown-plugin-dts drops `type` on a re-export of a merged const+type; export the value too",
     find: 'export type { SeekPage } from "../core-utils/index.js";\n',

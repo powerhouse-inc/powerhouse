@@ -2,6 +2,7 @@
 // engine's own property processors, with our file hydration in front of theirs.
 import type { PieceProperty } from "@powerhousedao/pieces-framework";
 import { createReadStream } from "node:fs";
+import { resolve } from "node:path";
 import { Readable } from "node:stream";
 import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import {
@@ -33,6 +34,18 @@ export interface ApStreamingFileValue {
   extension?: string;
   size?: number;
   body: Readable;
+  // Set only when the bytes are a staged file on local disk.
+  path?: string;
+}
+
+// Opens the file on first read: a piece that reads `path` never opens a descriptor.
+function lazyFileStream(filePath: string): Readable {
+  return Readable.from(
+    (async function* () {
+      yield* createReadStream(filePath);
+    })(),
+    { objectMode: false },
+  );
 }
 
 // A staged attachment on disk, for a streaming FILE prop.
@@ -317,12 +330,14 @@ function streamingValue(
   extension: string | undefined,
   size: number | undefined,
   body: Readable,
+  path?: string,
 ): ApStreamingFileValue {
   return {
     filename: name,
     ...(extension ? { extension } : {}),
     ...(size !== undefined ? { size } : {}),
     body,
+    ...(path ? { path } : {}),
   };
 }
 
@@ -366,11 +381,13 @@ export async function toApStreamingFile(
     const opened = await options.openRef(trimmed);
     assertWithinLimit(opened.size);
     const { name, extension } = fileName(opened.filename, opened.contentType);
+    const filePath = resolve(opened.path);
     return streamingValue(
       name,
       extension,
       opened.size,
-      createReadStream(opened.path),
+      lazyFileStream(filePath),
+      filePath,
     );
   }
   if (/^https?:\/\//i.test(trimmed)) {
