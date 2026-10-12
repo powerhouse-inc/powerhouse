@@ -107,7 +107,12 @@ export class ReactorMonitorRegistry {
       }
       poisoned = cause;
       if (ready) {
-        void this.fail(descriptor, ready, cause);
+        this.fail(descriptor, ready, cause).catch((error: unknown) => {
+          console.error(
+            `[reactor-monitor] moving poisoned reactor ${JSON.stringify(descriptor.name)} to failed threw:`,
+            error,
+          );
+        });
       }
     };
     try {
@@ -198,20 +203,21 @@ export class ReactorMonitorRegistry {
   /** Kills the reactor under `name` (if any) and forgets it. */
   async kill(name: string): Promise<void> {
     const entry = this.entries.get(name);
-    if (entry) {
-      this.entries.delete(name);
-      this.publish();
-    }
-    await this.enqueue(name, async () => {
+    this.entries.delete(name);
+    // Queued before the publish, so a listener's re-provision waits for it.
+    const killed = this.enqueue(name, async () => {
       await entry?.reactor?.kill();
     });
+    if (entry) {
+      this.publish();
+    }
+    await killed;
   }
 
   /** Kills every reactor; the monitor's teardown. */
   async killAll(): Promise<void> {
     const entries = new Map(this.entries);
     this.entries.clear();
-    this.publish();
     const names = new Set([...entries.keys(), ...this.tails.keys()]);
     // Each name waits only on its own queue; the kills themselves run one at
     // a time, since each in-process kill closes a PGlite and the stores share
@@ -228,6 +234,7 @@ export class ReactorMonitorRegistry {
         await killed;
       }),
     );
+    this.publish();
     await Promise.all(kills);
   }
 
@@ -246,6 +253,7 @@ export class ReactorMonitorRegistry {
         error,
       );
     });
+    const closed = this.enqueue(descriptor.name, () => closing);
     this.set({
       name: descriptor.name,
       descriptor,
@@ -253,7 +261,7 @@ export class ReactorMonitorRegistry {
       error: cause,
       closing,
     });
-    await this.enqueue(descriptor.name, () => closing);
+    await closed;
   }
 
   /**
