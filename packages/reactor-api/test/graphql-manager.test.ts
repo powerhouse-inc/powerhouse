@@ -15,8 +15,14 @@ import type {
   IRelationalDb,
   ISyncManager,
 } from "@powerhousedao/reactor";
+import {
+  createReactorDriveResolvers,
+  reactorDriveDocumentModelModule,
+  reactorDriveSubgraphTypeDefs,
+} from "@powerhousedao/reactor-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import { type DocumentNode, Kind } from "graphql";
 import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1968,6 +1974,137 @@ describe("GraphQLManager", () => {
         "early",
         "early",
       );
+    });
+  });
+
+  // ── same-name subgraphs of different origin ────────────────────────────────
+
+  describe("host subgraph named like a document-model subgraph", () => {
+    const reactorDriveModel =
+      reactorDriveDocumentModelModule as unknown as DocumentModelModule;
+
+    /** The reactor-drive subgraph as switchboard registers it. */
+    function makeHostReactorDriveSubgraph(): ISubgraph {
+      return {
+        name: "reactor-drive",
+        path: "/",
+        resolvers: createReactorDriveResolvers({
+          hostCanRead: () => Promise.resolve(true),
+        }),
+        typeDefs: reactorDriveSubgraphTypeDefs,
+        reactorClient: {} as IReactorClient,
+        relationalDb: undefined as never,
+      };
+    }
+
+    async function flush<T>(pending: Promise<T>): Promise<T> {
+      await vi.runAllTimersAsync();
+      return pending;
+    }
+
+    /** Field names of `typeName` across every subgraph the supergraph serves. */
+    function servedFields(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+      typeName: string,
+    ): string[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { typeDefs: DocumentNode }[];
+      const fields: string[] = [];
+      for (const { typeDefs } of getDefinitions()) {
+        for (const def of typeDefs.definitions) {
+          if (
+            (def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+              def.kind === Kind.OBJECT_TYPE_EXTENSION) &&
+            def.name.value === typeName
+          ) {
+            fields.push(...(def.fields ?? []).map((f) => f.name.value));
+          }
+        }
+      }
+      return fields;
+    }
+
+    function expectBothServed(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ) {
+      expect(servedFields(gatewayAdapter, "Query")).toContain("reactorDrive");
+      expect(servedFields(gatewayAdapter, "Mutation")).toContain(
+        "ReactorDrive",
+      );
+      expect(servedFields(gatewayAdapter, "ReactorDriveMutations")).toEqual(
+        expect.arrayContaining(["addFolder", "setDriveName"]),
+      );
+    }
+
+    function makeModelsClient(models: DocumentModelModule[]) {
+      return makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({ results: models }),
+      });
+    }
+
+    it("keeps the ReactorDrive document mutations when the host registers reactor-drive", async () => {
+      const { manager, gatewayAdapter } = makeHarness({
+        reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+
+      // Precondition: the generated subgraph is kebabCase("ReactorDrive").
+      expect(manager.getSubgraphByName("reactor-drive")?.constructor.name).toBe(
+        "DocumentModelSubgraph",
+      );
+      expect(servedFields(gatewayAdapter, "ReactorDriveMutations")).toEqual(
+        expect.arrayContaining(["addFolder", "setDriveName"]),
+      );
+
+      await manager.registerSubgraphInstance(
+        makeHostReactorDriveSubgraph(),
+        "graphql",
+        false,
+      );
+      await flush(manager.updateRouter());
+
+      expectBothServed(gatewayAdapter);
+    });
+
+    it("keeps the host reactor-drive subgraph when document-model subgraphs regenerate", async () => {
+      const { manager, gatewayAdapter } = makeHarness({
+        reactorClient: makeModelsClient([makeDriveModule(), reactorDriveModel]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      await manager.registerSubgraphInstance(
+        makeHostReactorDriveSubgraph(),
+        "graphql",
+        false,
+      );
+      await flush(manager.updateRouter());
+
+      // As a package install does.
+      await flush(manager.regenerateDocumentModelSubgraphs());
+
+      expectBothServed(gatewayAdapter);
+    });
+
+    it("keeps the host reactor-drive subgraph when the ReactorDrive model arrives later", async () => {
+      const reactorClient = makeModelsClient([makeDriveModule()]);
+      const { manager, gatewayAdapter } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const host = makeHostReactorDriveSubgraph();
+      await manager.registerSubgraphInstance(host, "graphql", false);
+      await flush(manager.updateRouter());
+      expect(servedFields(gatewayAdapter, "Query")).toContain("reactorDrive");
+
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule(), reactorDriveModel],
+        options: { cursor: "", limit: 100 },
+      });
+      await flush(manager.regenerateDocumentModelSubgraphs());
+
+      expectBothServed(gatewayAdapter);
     });
   });
 });
