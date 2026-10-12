@@ -7,7 +7,6 @@ import {
   type ConnectionAuthType,
   type ConnectionState,
   type ConnectionStatus,
-  type ReactorConnectionConfigValue,
 } from "document-models/connection";
 import type {
   PieceSummary,
@@ -60,7 +59,7 @@ export interface ConnectionCallbacks {
   setStatus: (status: ConnectionStatus) => void;
   // Makes this a REACTOR connection, reaching documents rather than a service.
   pickReactor: () => void;
-  setReactorConfig: (config: ReactorConnectionConfigValue) => void;
+  setReactorAccess: (access: "read" | "write") => void;
 }
 
 const inputClass = textInputClass;
