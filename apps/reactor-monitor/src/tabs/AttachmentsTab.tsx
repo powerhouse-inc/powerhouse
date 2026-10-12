@@ -140,7 +140,9 @@ function LocalAttachmentsPanel({
 
       {entries.length === 0 ? (
         <p className="reactor-monitor__placeholder">
-          No attachment references seen yet.
+          {status && status.refsSeen > 0
+            ? "Every referenced hash is held."
+            : "No attachment references seen yet."}
         </p>
       ) : (
         <div className="rm-table-wrap">

@@ -164,6 +164,30 @@ describe("AttachmentsTab", () => {
     expect(row.textContent).toContain("aaaaaaaaaaaa");
   });
 
+  it("says every seen hash is held when none is still pending", async () => {
+    const view = render(
+      <AttachmentsTab
+        reactor={stubReactor(
+          stubAttachments({
+            status: () =>
+              Promise.resolve(
+                status({ refsSeen: 1, held: 1, waiting: 0, notFound: 0 }),
+              ),
+            report: () => [],
+          }),
+        )}
+      />,
+    );
+    await waitFor(() => {
+      expect(view.container.textContent).toContain(
+        "Every referenced hash is held.",
+      );
+    });
+    expect(view.container.textContent).not.toContain(
+      "No attachment references seen yet.",
+    );
+  });
+
   it("pulls the retry lever", async () => {
     const retry = vi.fn();
     const view = render(
