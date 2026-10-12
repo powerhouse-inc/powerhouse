@@ -798,6 +798,43 @@ describe("composeWorkflowRuntime", () => {
     expect(onComposed).not.toHaveBeenCalled();
   });
 
+  it("claims again when starting the composed runtime fails", async () => {
+    const unhandled: unknown[] = [];
+    const capture = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", capture);
+    const runtimes = [
+      { stop: vi.fn() } as unknown as ComposedWorkflowRuntime,
+      { stop: vi.fn() } as unknown as ComposedWorkflowRuntime,
+    ];
+    const compose = vi
+      .fn<() => Promise<ComposedWorkflowRuntime>>()
+      .mockResolvedValueOnce(runtimes[0]!)
+      .mockResolvedValueOnce(runtimes[1]!);
+    const onComposed = vi
+      .fn<(workflows: ComposedWorkflowRuntime) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("start failed"))
+      .mockResolvedValueOnce(undefined);
+    const logger = stubLogger();
+    const retry = retryWorkflowSingleton({
+      compose,
+      onComposed,
+      logger,
+      intervalMs: 20,
+    });
+    try {
+      await vi.waitFor(() => expect(onComposed).toHaveBeenCalledTimes(2));
+      expect(onComposed).toHaveBeenLastCalledWith(runtimes[1]);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(unhandled).toEqual([]);
+      expect(logger.error).toHaveBeenCalled();
+    } finally {
+      await retry.stop();
+      process.off("unhandledRejection", capture);
+    }
+  });
+
   it("composes without a claim only when the host opts out", async () => {
     const clientModule = await buildReactorModule();
     const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
