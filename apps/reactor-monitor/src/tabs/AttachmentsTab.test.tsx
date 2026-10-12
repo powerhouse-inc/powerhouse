@@ -1,13 +1,11 @@
 // @vitest-environment happy-dom
-import type {
-  IInspector,
-  InspectorAttachmentInfo,
-} from "@powerhousedao/reactor";
+import type { InspectorAttachmentInfo } from "@powerhousedao/reactor";
 import type {
   AttachmentReplicationEntry,
   AttachmentReplicatorStatus,
   ManagedAttachments,
   ManagedReactor,
+  MonitorInspector,
   ReactorKind,
 } from "@powerhousedao/reactor-monitor";
 import { render, waitFor } from "@testing-library/react";
@@ -37,14 +35,15 @@ function attachmentInfo(
   };
 }
 
-function remoteReactor(info: InspectorAttachmentInfo): ManagedReactor {
+function remoteReactor(info: InspectorAttachmentInfo | Error): ManagedReactor {
   return {
     name: "sb",
     kind: "remote",
     attachments: undefined,
     inspector: {
-      getAttachmentInfo: () => Promise.resolve(info),
-    } as unknown as IInspector,
+      getAttachmentInfo: () =>
+        info instanceof Error ? Promise.reject(info) : Promise.resolve(info),
+    } as unknown as MonitorInspector,
   } as unknown as ManagedReactor;
 }
 
@@ -266,5 +265,18 @@ describe("AttachmentsTab", () => {
       view.getByTestId("attachments-unavailable"),
     );
     expect(panel.textContent).toContain("no attachment byte store");
+  });
+
+  it("shows a remote's refusal of attachment info to a non-operator", async () => {
+    const view = render(
+      <AttachmentsTab
+        reactor={remoteReactor(
+          new Error("FORBIDDEN: requires an admin caller"),
+        )}
+      />,
+    );
+
+    const panel = await waitFor(() => view.getByTestId("attachments-panel"));
+    await waitFor(() => expect(panel.textContent).toContain("FORBIDDEN"));
   });
 });
