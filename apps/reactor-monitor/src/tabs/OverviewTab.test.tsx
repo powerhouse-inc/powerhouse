@@ -1,35 +1,54 @@
 // @vitest-environment happy-dom
-import { ChannelScheme } from "@powerhousedao/reactor";
+import {
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_IDB_STORAGE_FACTS,
+  POSTGRES_STORAGE_FACTS,
+  UNKNOWN_STORAGE_FACTS,
+  type ReactorStorageFacts,
+} from "@powerhousedao/reactor";
+import {
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+  type ManagedReactor,
+  type MonitorReach,
+  type MonitorReactorInfo,
+} from "@powerhousedao/reactor-monitor";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  reactorCapabilities,
-  type ManagedReactor,
-  type ReactorCapabilities,
-  type ReactorDescriptor,
-} from "@powerhousedao/reactor-monitor";
 import { OverviewTab } from "./OverviewTab.js";
 
-/**
- * The Overview tab renders the stage-2 capability contract
- * (docs/plans/2026-10-03-multi-reactor.md), so this asserts that the
- * worker/in-process variance is visible at a glance rather than buried in
- * prose. The reactor is a stub around real `reactorCapabilities` output: the
- * grid reads nothing else off the handle, and provisioning a PGlite here
- * would test the store, not the view.
- */
-function stubReactor(descriptor: ReactorDescriptor): ManagedReactor {
+const LOCAL_ACCESS = { admin: true, sql: true } as const;
+
+function info(
+  storage: ReactorStorageFacts,
+  syncChannels: readonly string[],
+  overrides: Partial<MonitorReactorInfo> = {},
+): MonitorReactorInfo {
   return {
-    name: descriptor.name,
-    kind: descriptor.kind,
-    capabilities: reactorCapabilities(descriptor),
-    // Worker reactors render AdminInfo, which calls this; a rejection
-    // exercises its error branch without a worker.
+    storage,
+    workflows: false,
+    syncChannels,
+    access: LOCAL_ACCESS,
+    ...overrides,
+  };
+}
+
+function stubReactor(
+  kind: ManagedReactor["kind"],
+  reach: MonitorReach,
+  reactorInfo: MonitorReactorInfo,
+): ManagedReactor {
+  return {
+    name: `overview-${kind}`,
+    kind,
+    reach,
+    info: reactorInfo,
+    endpoint: "http://switchboard.test/graphql/inspection",
     adminInfo: () => Promise.reject(new Error("no worker in this test")),
   } as unknown as ManagedReactor;
 }
 
-/** The badge value rendered next to a capability label. */
 function badgeFor(container: HTMLElement, label: string): string {
   const cell = [...container.querySelectorAll(".rm-cap")].find(
     (node) => node.querySelector(".rm-cap-label")?.textContent === label,
@@ -41,14 +60,14 @@ function badgeFor(container: HTMLElement, label: string): string {
 }
 
 describe("OverviewTab capability grid", () => {
-  it("renders every capability field for an in-process local-sync reactor", () => {
+  it("renders reach and info for an in-process idb reactor", () => {
     const view = render(
       <OverviewTab
-        reactor={stubReactor({
-          kind: "in-process",
-          name: "overview-in-process",
-          sync: { local: true },
-        })}
+        reactor={stubReactor(
+          "in-process",
+          { hosting: "in-process", inspection: "direct" },
+          info(PGLITE_IDB_STORAGE_FACTS, [LOCAL_CHANNEL_TYPE]),
+        )}
       />,
     );
 
@@ -56,174 +75,118 @@ describe("OverviewTab capability grid", () => {
     expect(grid.querySelectorAll(".rm-cap")).toHaveLength(7);
     const container = view.container as HTMLElement;
     expect(badgeFor(container, "Hosting")).toBe("in-process");
-    expect(badgeFor(container, "Storage")).toBe("idb");
-    expect(badgeFor(container, "Processors")).toBe("yes");
-    expect(badgeFor(container, "Workflows")).toBe("no");
     expect(badgeFor(container, "Inspection")).toBe("direct");
+    expect(badgeFor(container, "Storage")).toBe("pglite / idb");
+    expect(badgeFor(container, "Durable")).toBe("yes");
+    expect(badgeFor(container, "Workflows")).toBe("no");
     expect(badgeFor(container, "Sync channels")).toBe("local");
-    expect(badgeFor(container, "Self-heal")).toBe("yes");
-    // The engine is Node-only, and the grid says why.
+    expect(badgeFor(container, "Access")).toBe("admin, sql");
     expect(view.getByText(/engine forks child processes/)).toBeTruthy();
+    expect(view.queryByText(/Processors|Self-heal/)).toBeNull();
   });
 
-  it("shows the worker reactor's two capability differences", () => {
+  it("shows a worker reactor over rpc with its host block", () => {
     const view = render(
       <OverviewTab
-        reactor={stubReactor({
-          kind: "worker",
-          name: "overview-worker",
-          sync: { local: true },
-        })}
+        reactor={stubReactor(
+          "worker",
+          { hosting: "worker", inspection: "rpc" },
+          info(PGLITE_IDB_STORAGE_FACTS, [
+            GQL_CHANNEL_TYPE,
+            LOCAL_CHANNEL_TYPE,
+          ]),
+        )}
       />,
     );
 
     const container = view.container as HTMLElement;
     expect(badgeFor(container, "Hosting")).toBe("worker");
-    // The two realm-forced differences from the in-process case above.
-    expect(badgeFor(container, "Processors")).toBe("no");
     expect(badgeFor(container, "Inspection")).toBe("rpc");
-    expect(view.getByText(/does not survive postMessage/)).toBeTruthy();
-    // Worker-only section; the in-process case renders no admin block.
-    expect(view.getByRole("heading", { name: "Worker host" })).toBeTruthy();
-  });
-
-  it("marks an ephemeral store undurable and unhealable", () => {
-    const view = render(
-      <OverviewTab
-        reactor={stubReactor({
-          kind: "in-process",
-          name: "overview-memory",
-          storage: { kind: "memory" },
-        })}
-      />,
-    );
-
-    const container = view.container as HTMLElement;
-    expect(badgeFor(container, "Storage")).toBe("memory");
-    expect(badgeFor(container, "Self-heal")).toBe("no");
-    // A gql-scheme reactor, which since W3.0 also composes a local channel
-    // factory, so the cell reports both and the note names both rather than
-    // reporting one capability and hiding the other.
     expect(badgeFor(container, "Sync channels")).toBe("gql, local");
     expect(
       view.getByText(
         /gql: Switchboard GraphQL remotes.*local: brokered-MessagePort/,
       ),
     ).toBeTruthy();
-    expect(view.getByText(/no durable store to reopen/)).toBeTruthy();
+    expect(view.getByRole("heading", { name: "Worker host" })).toBeTruthy();
   });
 
-  // The literal channel types reach the grid, so a switchboard-scheme reactor
-  // is described as serving `polling` -- resolver-driven, created by the peer
-  // that polls it -- instead of being folded into the `gql` row whose
-  // add-remote form it could never serve.
-  it("names the switchboard scheme's polling channel in the sync cell", () => {
+  it("tones an ephemeral store and an island's channels off, never as an error", () => {
     const view = render(
       <OverviewTab
-        reactor={stubReactor({
-          kind: "in-process",
-          name: "overview-switchboard",
-          sync: { channelScheme: ChannelScheme.SWITCHBOARD },
-        })}
+        reactor={stubReactor(
+          "in-process",
+          { hosting: "in-process", inspection: "direct" },
+          info(IN_MEMORY_PGLITE_STORAGE_FACTS, []),
+        )}
       />,
     );
 
-    expect(badgeFor(view.container as HTMLElement, "Sync channels")).toBe(
-      "polling, local",
+    const container = view.container as HTMLElement;
+    expect(badgeFor(container, "Storage")).toBe("pglite / memory");
+    expect(badgeFor(container, "Durable")).toBe("no");
+    expect(badgeFor(container, "Sync channels")).toBe("none");
+    expect(view.getByText(/this reactor is an island/)).toBeTruthy();
+    const durable = [...container.querySelectorAll(".rm-cap")].find(
+      (cell) => cell.querySelector(".rm-cap-label")?.textContent === "Durable",
     );
+    expect(
+      durable?.querySelector(".rm-badge")?.classList.contains("rm-badge-off"),
+    ).toBe(true);
+    expect(container.querySelectorAll(".rm-cap .rm-badge-error")).toHaveLength(
+      0,
+    );
+  });
+
+  it("says a worker whose info could not be read reports an unknown store", () => {
+    const view = render(
+      <OverviewTab
+        reactor={stubReactor(
+          "worker",
+          { hosting: "worker", inspection: "rpc" },
+          info(UNKNOWN_STORAGE_FACTS, [], {
+            access: { admin: false, sql: false },
+          }),
+        )}
+      />,
+    );
+
+    const container = view.container as HTMLElement;
+    expect(badgeFor(container, "Storage")).toBe("unknown / unknown");
+    expect(view.getByText(/could not report its store/)).toBeTruthy();
+    expect(badgeFor(container, "Access")).toBe("operator");
+  });
+
+  it("describes a remote non-operator and its polling channel", () => {
+    const view = render(
+      <OverviewTab
+        reactor={stubReactor(
+          "remote",
+          { hosting: "remote", inspection: "rpc" },
+          info(POSTGRES_STORAGE_FACTS, [POLLING_CHANNEL_TYPE], {
+            workflows: true,
+            access: null,
+          }),
+        )}
+      />,
+    );
+
+    const container = view.container as HTMLElement;
+    expect(badgeFor(container, "Hosting")).toBe("remote");
+    expect(badgeFor(container, "Storage")).toBe("postgres / server");
+    expect(badgeFor(container, "Workflows")).toBe("yes");
+    expect(badgeFor(container, "Access")).toBe("reads only");
     expect(
       view.getByText(/created by the peer that polls this reactor/),
     ).toBeTruthy();
-  });
-
-  // The capability grid is frozen at provision time, EXCEPT the Workflows cell
-  // for a remote reactor, which reads the live serverInfo so a host that
-  // composed its workflow runtime after the monitor attached stops showing
-  // "no" forever (multi-reactor §4a).
-  it("reads a remote reactor's LIVE serverInfo.workflows over the stale frozen capability", () => {
-    const frozenCapabilities: ReactorCapabilities = {
-      hosting: "remote",
-      storage: { kind: "remote", durable: true },
-      processors: true,
-      // Stale: the host reported no workflow engine at provision time.
-      workflows: false,
-      inspection: "rpc",
-      syncChannels: ["polling"],
-      selfHeal: false,
-    };
-    const reactor = {
-      name: "live-workflows",
-      kind: "remote",
-      endpoint: "http://switchboard.test/inspection",
-      capabilities: frozenCapabilities,
-      serverInfo: {
-        hosting: "remote",
-        inspection: "rpc",
-        storageKind: "postgres",
-        processors: true,
-        // The host has since composed its workflow runtime.
-        workflows: true,
-        syncChannels: ["polling"],
-        adminEnabled: false,
-        sqlEnabled: false,
-      },
-    } as unknown as ManagedReactor;
-
-    const view = render(<OverviewTab reactor={reactor} />);
-
-    expect(badgeFor(view.container as HTMLElement, "Workflows")).toBe("yes");
-    expect(
-      view.getByText(/currently reports the workflow engine composed into it/),
-    ).toBeTruthy();
-  });
-
-  // A non-remote reactor's grid stays authoritative: its Workflows cell reads
-  // the frozen capability, not any live report (it has none).
-  it("keeps reading the frozen capability for a non-remote reactor", () => {
-    const frozenCapabilities: ReactorCapabilities = {
-      hosting: "in-process",
-      storage: { kind: "memory", durable: false },
-      processors: true,
-      workflows: true,
-      inspection: "direct",
-      syncChannels: ["local"],
-      selfHeal: false,
-    };
-    const reactor = {
-      name: "frozen-workflows",
-      kind: "in-process",
-      capabilities: frozenCapabilities,
-    } as unknown as ManagedReactor;
-
-    const view = render(<OverviewTab reactor={reactor} />);
-
-    expect(badgeFor(view.container as HTMLElement, "Workflows")).toBe("yes");
-  });
-
-  it("tones a lacked capability as off rather than as an error", () => {
-    const view = render(
-      <OverviewTab
-        reactor={stubReactor({
-          kind: "worker",
-          name: "overview-tone",
-          sync: { local: true },
-        })}
-      />,
+    expect(view.getByTestId("remote-operator").textContent).toMatch(
+      /requires an admin caller \(ADMINS\); add a bearer/,
     );
-
-    const cells = [...view.container.querySelectorAll(".rm-cap")];
-    const processors = cells.find(
-      (cell) =>
-        cell.querySelector(".rm-cap-label")?.textContent === "Processors",
+    expect(view.getByTestId("remote-levers").textContent).toMatch(
+      /this host's inspection subgraph serves reads only/,
     );
     expect(
-      processors
-        ?.querySelector(".rm-badge")
-        ?.classList.contains("rm-badge-off"),
-    ).toBe(true);
-    // Nothing in the grid is painted as a failure.
-    expect(
-      view.container.querySelectorAll(".rm-cap .rm-badge-error"),
-    ).toHaveLength(0);
+      view.getByTestId("remote-recheck").getAttribute("disabled"),
+    ).not.toBeNull();
   });
 });

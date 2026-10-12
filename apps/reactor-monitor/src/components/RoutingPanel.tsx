@@ -1,12 +1,10 @@
 /**
- * The Router topology surface (multi-reactor router, stages 1-3 — see
- * docs/plans/2026-10-03-multi-reactor.md, "Router client").
+ * The Router topology surface.
  *
  * A reactor-spanning view rather than a per-reactor tab: the operator picks two
- * or more READY reactors as backends, builds one {@link RoutingReactorClient}
- * over them (a `ManagedReactor` handle IS a router backend — see
- * `lib/router.ts`), and then sees and drives the whole topology through the
- * single client:
+ * or more READY local reactors as backends (a remote one is never offered),
+ * builds one {@link RoutingReactorClient} over them (see `lib/router.ts`), and
+ * then sees and drives the whole topology through the single client:
  *
  * - {@link RoutingReactorClient.describeRouting} is rendered as a table, each
  *   collection tagged with the {@link RouteSource} evidence behind it
@@ -30,23 +28,25 @@
  * the same advisory machinery, which is the whole point of it being advisory.
  */
 import type { BatchExecutionRequest } from "@powerhousedao/reactor";
-import type {
-  ManagedReactor,
-  ManagedReactorEntry,
-} from "@powerhousedao/reactor-monitor";
+import type { ManagedReactorEntry } from "@powerhousedao/reactor-monitor";
 import { useManagedReactors } from "@powerhousedao/reactor-monitor/react";
 import {
   collectionRequirements,
   eligibleBackends,
   ineligibleReason,
+  RouterBackend,
   type CollectionRequirementsInput,
-  type ReactorBackend,
   type RouterTableSnapshot,
   type RouteSource,
   type RoutingReactorClient,
 } from "@powerhousedao/reactor-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildRoutingClient } from "../lib/router.js";
+import {
+  buildRoutingClient,
+  isRoutable,
+  routableBackend,
+  type RoutableReactor,
+} from "../lib/router.js";
 import { capabilityCells } from "../tabs/OverviewTab.js";
 
 /** One line the router reported through `onDiagnostic`, newest last. */
@@ -65,7 +65,7 @@ type NamedError = { readonly name: string; readonly message: string };
 
 /** The topology a built client was constructed from, kept so a reconfigure can rebuild it. */
 type Topology = {
-  readonly reactors: readonly ManagedReactor[];
+  readonly reactors: readonly RoutableReactor[];
   readonly overrides: Readonly<Record<string, string>>;
   readonly requirements: Readonly<Record<string, CollectionRequirementsInput>>;
 };
@@ -81,9 +81,11 @@ const DRIVE_TYPE = "powerhouse/document-drive";
 
 function readyReactors(
   entries: readonly ManagedReactorEntry[],
-): readonly ManagedReactor[] {
+): readonly RoutableReactor[] {
   return entries.flatMap((entry) =>
-    entry.status === "ready" ? [entry.reactor] : [],
+    entry.status === "ready" && isRoutable(entry.reactor)
+      ? [entry.reactor]
+      : [],
   );
 }
 
@@ -135,10 +137,10 @@ function SourceBadge({ source }: { readonly source: RouteSource }) {
 }
 
 /** A compact reuse of the Overview tab's capability rendering: one badge per field. */
-function CapabilitySummary({ reactor }: { readonly reactor: ManagedReactor }) {
+function CapabilitySummary({ reactor }: { readonly reactor: RoutableReactor }) {
   return (
     <ul className="rm-router-caps" aria-label={`${reactor.name} capabilities`}>
-      {capabilityCells(reactor.capabilities).map((cell) => (
+      {capabilityCells(reactor.reach, reactor.info).map((cell) => (
         <li key={cell.label}>
           <span className="rm-cap-label">{cell.label}</span>
           <span className={`rm-badge rm-badge-${cell.tone}`} title={cell.note}>
@@ -874,7 +876,7 @@ export function RoutingPanel() {
 
 /**
  * Which backends can hold a collection with this requirement, and why the rest
- * cannot -- read straight off the capability contract with the router's own
+ * cannot -- read off each backend's facts with the router's own
  * `eligibleBackends` / `ineligibleReason`, so the panel agrees with placement
  * by construction.
  */
@@ -883,14 +885,12 @@ function EligibilityNote({
   reactors,
 }: {
   readonly input: CollectionRequirementsInput;
-  readonly reactors: readonly ManagedReactor[];
+  readonly reactors: readonly RoutableReactor[];
 }) {
   const requirements = collectionRequirements(input);
-  const backends: readonly ReactorBackend[] = reactors.map((reactor) => ({
-    name: reactor.name,
-    capabilities: reactor.capabilities,
-    client: reactor.client,
-  }));
+  const backends = reactors.map(
+    (reactor) => new RouterBackend(routableBackend(reactor)),
+  );
   const eligible = eligibleBackends(backends, requirements);
   const eligibleNames = eligible.map((backend) => backend.name);
   const ineligible = backends.filter(
@@ -909,8 +909,7 @@ function EligibilityNote({
         <ul>
           {ineligible.map((backend) => (
             <li key={backend.name}>
-              {backend.name}:{" "}
-              {ineligibleReason(backend.capabilities, requirements)}
+              {backend.name}: {ineligibleReason(backend.facts, requirements)}
             </li>
           ))}
         </ul>

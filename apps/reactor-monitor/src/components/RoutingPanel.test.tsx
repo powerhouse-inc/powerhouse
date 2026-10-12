@@ -138,6 +138,44 @@ describe("RoutingPanel over two in-process backends", () => {
     expect(within(row).getByText(ALPHA)).toBeTruthy();
   }, 60_000);
 
+  it("corrects a stale override through the ownership guard on a write", async () => {
+    const view = renderPanel();
+    await build(view);
+
+    fireEvent.change(view.getByTestId("router-override-key"), {
+      target: { value: driveA },
+    });
+    fireEvent.change(view.getByTestId("router-override-backend"), {
+      target: { value: BETA },
+    });
+    fireEvent.click(view.getByTestId("router-override-set"));
+    await waitFor(() =>
+      expect(view.getByTestId("router-log-empty")).toBeTruthy(),
+    );
+
+    const router = routerHandle() as {
+      drives?: {
+        addFolder: (driveId: string, name: string) => Promise<unknown>;
+      };
+      describeRouting?: () => RouterTableSnapshot;
+    };
+    await router.drives?.addFolder(driveA, "Via a stale override");
+
+    const route = router
+      .describeRouting?.()
+      .collections.find(
+        (entry) => entry.collectionId === `drive.main.${driveA}`,
+      );
+    expect(route).toMatchObject({ backend: ALPHA, source: "corrected" });
+    await waitFor(
+      () =>
+        expect(view.getByTestId("router-log").textContent).toMatch(
+          /override is stale/,
+        ),
+      WAIT,
+    );
+  }, 60_000);
+
   it("merges a find across both backends and names which one answered", async () => {
     const view = renderPanel();
     await build(view);
