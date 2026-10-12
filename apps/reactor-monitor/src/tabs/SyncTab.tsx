@@ -321,6 +321,8 @@ export function SyncTab({
   const [storageHealth, setStorageHealth] = useState<
     InspectorStorageHealth | undefined
   >(undefined);
+  const [readError, setReadError] = useState<string | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [driveId, setDriveId] = useState("");
   const [url, setUrl] = useState("");
@@ -377,15 +379,17 @@ export function SyncTab({
         }),
       );
       setDeadLetters(nextDeadLetters);
+      setReadError(null);
     } catch (e) {
-      console.error("[reactor-monitor] sync inspection failed:", e);
+      setReadError(e instanceof Error ? e.message : String(e));
     }
 
     if (inspector) {
       try {
         setStorageHealth(await inspector.getStorageHealth());
+        setHealthError(null);
       } catch (e) {
-        console.error("[reactor-monitor] storage health read failed:", e);
+        setHealthError(e instanceof Error ? e.message : String(e));
       }
     }
   }, [syncManager, inspector]);
@@ -514,7 +518,21 @@ export function SyncTab({
         </p>
       ) : null}
 
+      {healthError ? (
+        <p className="rm-error" data-testid="sync-storage-health-error">
+          Failed to read storage health: {healthError}
+          {storageHealth ? " Below is the last successful read." : null}
+        </p>
+      ) : null}
       <StorageHealthPanel health={storageHealth} />
+      {readError ? (
+        <p className="rm-error" data-testid="sync-read-error" role="alert">
+          Sync inspection failed: {readError}
+          {inspections.size > 0
+            ? " Cursors, mailbox depths and dead letters below are the last successful read, not live."
+            : null}
+        </p>
+      ) : null}
 
       {reconfigurable ? null : (
         <p className="rm-note" data-testid="sync-add-remote-remote-host">

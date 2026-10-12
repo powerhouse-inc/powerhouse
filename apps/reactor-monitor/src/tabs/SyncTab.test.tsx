@@ -391,6 +391,54 @@ describe("SyncTab", () => {
     expect(error.textContent).toMatch(/reset exploded/);
   });
 
+  // A remote host stops serving sync reads to a caller that lost admin; the
+  // last good read must not keep passing for live state.
+  it("shows a failed sync inspection and marks the last read stale", async () => {
+    const manager = fakeSyncManager(
+      [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
+      [inspectionFor("accounts")],
+    );
+    const admin = fakeSyncAdmin();
+    const view = render(
+      <SyncTab gqlRemotes syncAdmin={admin} syncManager={manager} />,
+    );
+
+    await view.findByTestId("sync-mailbox-depths");
+    expect(view.queryByTestId("sync-read-error")).toBeNull();
+
+    manager.inspectRemotes.mockRejectedValue(
+      new Error("inspectRemotes: FORBIDDEN"),
+    );
+    fireEvent.click(view.getByText("Reset channel"));
+
+    const error = await view.findByTestId("sync-read-error");
+    expect(error.textContent).toMatch(/inspectRemotes: FORBIDDEN/);
+    expect(error.textContent).toMatch(/last successful read/);
+
+    manager.inspectRemotes.mockResolvedValue([inspectionFor("accounts")]);
+    fireEvent.click(view.getByText("Reset channel"));
+    await waitFor(() =>
+      expect(view.queryByTestId("sync-read-error")).toBeNull(),
+    );
+  });
+
+  it("shows a failed storage health read", async () => {
+    const inspector = {
+      getStorageHealth: () =>
+        Promise.reject(new Error("getStorageHealth: FORBIDDEN")),
+    } as unknown as MonitorInspector;
+    const view = render(
+      <SyncTab
+        gqlRemotes
+        inspector={inspector}
+        syncManager={fakeSyncManager([])}
+      />,
+    );
+
+    const error = await view.findByTestId("sync-storage-health-error");
+    expect(error.textContent).toMatch(/getStorageHealth: FORBIDDEN/);
+  });
+
   it("skips the dead-letter fetch when the mailbox depth is zero", async () => {
     const manager = fakeSyncManager(
       [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
