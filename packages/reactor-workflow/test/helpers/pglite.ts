@@ -7,7 +7,7 @@ import {
 } from "@powerhousedao/shared/processors";
 import knex from "knex";
 import ClientPgLite from "knex-pglite";
-import { Kysely } from "kysely";
+import { Kysely, type KyselyPlugin } from "kysely";
 import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 
 // 1114 = timestamp without time zone. Columns hold UTC; PGlite would otherwise
@@ -19,7 +19,9 @@ const UTC_PARSERS = {
 let shared: IRelationalDb | undefined;
 
 // A database of its own, for a suite that needs one nobody else has touched.
-export function createFreshRelationalDb(): IRelationalDb {
+export function createFreshRelationalDb(
+  plugins: KyselyPlugin[] = [],
+): IRelationalDb {
   const client = knex({
     client: ClientPgLite as typeof knex.Client,
     connection: { pglite: new PGlite({ parsers: UTC_PARSERS }) } as never,
@@ -29,6 +31,7 @@ export function createFreshRelationalDb(): IRelationalDb {
       knex: client,
       kyselySubDialect: new PGColdDialect(),
     }),
+    plugins,
   });
   return createRelationalDb(kysely);
 }

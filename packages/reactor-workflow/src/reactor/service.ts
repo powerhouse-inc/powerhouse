@@ -739,6 +739,24 @@ function configRecord(config: unknown): Record<string, unknown> {
 // time rather than being looked up when a row is displayed \u2014 and why the
 // document's name is a fallback for an unset state.name, not a replacement for
 // it.
+// Workflows whose latest state trigger runs read without a reactor load.
+const WORKFLOW_CACHE_MAX = 1_000;
+
+interface CachedWorkflow {
+  state: WorkflowState;
+  name: string | undefined;
+  // The global scope's operation count the state reflects.
+  revision: number;
+}
+
+// A partial header (test doubles, old snapshots) reads as revision 0.
+function globalRevision(document: WorkflowDocument): number {
+  const revision = document.header.revision as
+    | Partial<Record<string, number>>
+    | undefined;
+  return revision?.global ?? 0;
+}
+
 function runJournalName(
   stateName: string | undefined,
   documentName: string | undefined,
@@ -1653,8 +1671,12 @@ export class WorkflowRuntimeService {
       await this.updateRegistration(workflowId, carried, onlyIfChanged);
       return;
     }
+    const generation = this.workflowGeneration(workflowId);
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+    if (document.header.documentType === WORKFLOW_DOCUMENT_TYPE) {
+      this.cacheLoaded(workflowId, generation, document);
+    }
     await this.updateRegistration(
       workflowId,
       document.state.global,
@@ -1665,6 +1687,41 @@ export class WorkflowRuntimeService {
   // The manager routes by filter only, so every per-drive processor instance
   // delivers every matching operation; dedup keeps fires once-per-operation.
   private readonly seenOps = new Set<string>();
+  // Filled by loads and kept current by onOperations, the feed the trigger
+  // registry is built from; manual fires always load.
+  private readonly workflowCache = new Map<string, CachedWorkflow>();
+  // Bumped by every operation on a workflow: a load that saw a bump while in
+  // flight may have read the state before it, so it does not cache.
+  private readonly workflowGenerations = new Map<string, number>();
+
+  private workflowGeneration(workflowId: string): number {
+    return this.workflowGenerations.get(workflowId) ?? 0;
+  }
+
+  // Caches what a load returned, unless an operation landed during the load.
+  private cacheLoaded(
+    workflowId: string,
+    generation: number,
+    document: WorkflowDocument,
+  ): void {
+    if (this.workflowGeneration(workflowId) !== generation) return;
+    this.cacheWorkflow(workflowId, {
+      state: document.state.global,
+      name: document.header.name,
+      revision: globalRevision(document),
+    });
+  }
+
+  private cacheWorkflow(workflowId: string, entry: CachedWorkflow): void {
+    const held = this.workflowCache.get(workflowId);
+    if (held && held.revision > entry.revision) return;
+    this.workflowCache.delete(workflowId);
+    this.workflowCache.set(workflowId, entry);
+    if (this.workflowCache.size > WORKFLOW_CACHE_MAX) {
+      const oldest = this.workflowCache.keys().next().value;
+      if (oldest !== undefined) this.workflowCache.delete(oldest);
+    }
+  }
   private readonly seenOpsQueue: string[] = [];
 
   private alreadySeen(key: string): boolean {
@@ -1728,7 +1785,15 @@ export class WorkflowRuntimeService {
       }
       const opKey = operationKey({ operation, context });
       if (this.alreadySeen(opKey)) continue;
+      if (context.documentType === WORKFLOW_DOCUMENT_TYPE) {
+        this.workflowGenerations.set(
+          context.documentId,
+          this.workflowGeneration(context.documentId) + 1,
+        );
+      }
       if (context.scope === DOCUMENT_SCOPE) {
+        // Renames, deletes and upgrades: the next run reloads.
+        this.workflowCache.delete(context.documentId);
         await this.matchDocumentLifecycle(operation, context, hints);
         await this.forgetDeletedWorkflow(operation, context);
         continue;
@@ -1736,6 +1801,21 @@ export class WorkflowRuntimeService {
       // A workflow edit updates the registry, then falls through: workflow docs are
       // also a document-event source, so a workflow can watch its own type.
       if (context.documentType === "powerhouse/workflow") {
+        const cached = this.workflowCache.get(context.documentId);
+        const carried =
+          cached && operation.error === undefined
+            ? parseWorkflowState(operation.resultingState)
+            : undefined;
+        if (cached && carried) {
+          this.cacheWorkflow(context.documentId, {
+            state: carried,
+            name: cached.name,
+            revision: operation.index + 1,
+          });
+        } else if (cached) {
+          // No state to apply: refreshRegistration's load refills the entry.
+          this.workflowCache.delete(context.documentId);
+        }
         // Publish and enable re-check reactor access first.
         const rechecked = await this.recheckReactorAccess(
           context.documentId,
@@ -2086,6 +2166,7 @@ export class WorkflowRuntimeService {
       stringField(inputRecord(operation.action.input), "documentId") ??
       context.documentId;
     this.disarmDeleted(workflowId);
+    this.workflowCache.delete(workflowId);
     try {
       const store = await this.store();
       await store?.deleteDedupe(workflowId);
@@ -4363,17 +4444,29 @@ export class WorkflowRuntimeService {
           throw error;
         });
       }
-      const document = await this.telemetry.phase("load", {}, () =>
-        this.host.reactorClient.get<WorkflowDocument>(workflowId),
-      );
-      if (document.header.documentType !== "powerhouse/workflow") {
-        run.refused = true;
-        throw new Error(
-          `Document "${workflowId}" is not a powerhouse/workflow`,
+      // A caller's fire or rerun reads fresh; a trigger's run reads the cache.
+      const cached =
+        triggerKind === "manual" || resume
+          ? undefined
+          : this.workflowCache.get(workflowId);
+      if (cached) {
+        state = cached.state;
+        documentName = cached.name;
+      } else {
+        const generation = this.workflowGeneration(workflowId);
+        const document = await this.telemetry.phase("load", {}, () =>
+          this.host.reactorClient.get<WorkflowDocument>(workflowId),
         );
+        if (document.header.documentType !== "powerhouse/workflow") {
+          run.refused = true;
+          throw new Error(
+            `Document "${workflowId}" is not a powerhouse/workflow`,
+          );
+        }
+        state = document.state.global;
+        documentName = document.header.name;
+        this.cacheLoaded(workflowId, generation, document);
       }
-      state = document.state.global;
-      documentName = document.header.name;
       if (state.status !== "ENABLED") {
         run.refused = true;
         throw new Error(

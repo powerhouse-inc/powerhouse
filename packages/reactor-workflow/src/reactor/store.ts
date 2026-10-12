@@ -16,7 +16,7 @@ import {
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import { sql, type ColumnType, type Kysely } from "kysely";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { CORE_PIECE_NAME } from "../pieces/index.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
@@ -1122,6 +1122,11 @@ function cappedPayload(value: unknown): string | null {
 
 // A document in an output is journaled as a reference marker, before
 // redaction and the cap: whoever needs its state reads the document.
+// What the closing sweep compares, kept instead of the row's payloads.
+function rowHash(values: ReturnType<typeof stepValues>): string {
+  return createHash("sha1").update(JSON.stringify(values)).digest("base64");
+}
+
 function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
   return {
     run_id: runId,
@@ -1379,6 +1384,12 @@ export class WorkflowRunStore {
   // Runtime-local on purpose. A second reactor over the same journal would
   // need a lease, and one that can block startup costs more than a sweep.
   private readonly runsInFlight = new Set<string>();
+  // Rows this process wrote for each run it began, so finishRun can skip a
+  // closing sweep that would rewrite them unchanged.
+  private readonly journaledSteps = new Map<
+    string,
+    Map<string, { ordinal: number; hash: string }>
+  >();
 
   private constructor(
     private readonly db: IRelationalDb<WorkflowRuntimeDB>,
@@ -1538,6 +1549,7 @@ export class WorkflowRunStore {
    */
   async cancelRun(runId: string, reason: string): Promise<void> {
     this.runsInFlight.delete(runId);
+    this.journaledSteps.delete(runId);
     if (erasedRuns.delete(runId)) return;
     await this.db
       .updateTable("run")
@@ -1569,7 +1581,10 @@ export class WorkflowRunStore {
     try {
       return await write();
     } catch (error) {
-      for (const id of ids) this.runsInFlight.delete(id);
+      for (const id of ids) {
+        this.runsInFlight.delete(id);
+        this.journaledSteps.delete(id);
+      }
       throw error;
     }
   }
@@ -1767,6 +1782,7 @@ export class WorkflowRunStore {
     });
     for (const runId of redelivered.runIds) {
       this.runsInFlight.delete(runId);
+      this.journaledSteps.delete(runId);
       erasedRuns.delete(runId);
     }
   }
@@ -1888,6 +1904,7 @@ export class WorkflowRunStore {
     details: { workflowName: string; workflowVersion: number },
   ): Promise<void> {
     this.runsInFlight.add(runId);
+    this.journaledSteps.set(runId, new Map());
     await this.db
       .updateTable("run")
       .set({
@@ -1925,6 +1942,7 @@ export class WorkflowRunStore {
       })
       .execute();
     this.runsInFlight.add(id);
+    this.journaledSteps.set(id, new Map());
     return id;
   }
 
@@ -1947,6 +1965,20 @@ export class WorkflowRunStore {
         oc.columns(["run_id", "step_id"]).doUpdateSet(mutable),
       )
       .execute();
+    this.journaledSteps
+      .get(runId)
+      ?.set(step.stepId, { ordinal, hash: rowHash(values) });
+  }
+
+  // True when every step already has the row the sweep would write.
+  private sweepIsNoop(runId: string, result: WorkflowRunResult): boolean {
+    const journaled = this.journaledSteps.get(runId);
+    if (!journaled) return false;
+    return result.steps.every((step) => {
+      const row = journaled.get(step.stepId);
+      if (row === undefined) return false;
+      return row.hash === rowHash(stepValues(runId, row.ordinal, step));
+    });
   }
 
   // Closes the run out. `executionOrder` maps step id to the ordinal the step
@@ -1959,8 +1991,10 @@ export class WorkflowRunStore {
     // Terminal from here whatever the writes below do: if we leave the run
     // RUNNING, a later sweep should be free to reach it.
     this.runsInFlight.delete(runId);
+    const sweep = !this.sweepIsNoop(runId, result);
+    this.journaledSteps.delete(runId);
     if (erasedRuns.delete(runId)) return;
-    if (result.steps.length > 0) {
+    if (sweep && result.steps.length > 0) {
       try {
         await this.sweepSteps(runId, result, executionOrder);
       } catch (error) {
@@ -2058,6 +2092,7 @@ export class WorkflowRunStore {
     errorName?: string,
   ): Promise<void> {
     this.runsInFlight.delete(runId);
+    this.journaledSteps.delete(runId);
     if (erasedRuns.delete(runId)) return;
     await this.db
       .updateTable("run")
