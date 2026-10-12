@@ -253,6 +253,24 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
     await rootNodes(10);
 
     expect(find).toHaveBeenCalledTimes(1);
+    expect(find).toHaveBeenCalledWith(
+      { ids: ["a", "x1", "b"] },
+      expect.anything(),
+      { cursor: "", limit: 3 },
+    );
     expect(isServed).not.toHaveBeenCalled();
+  });
+
+  it("gates a large batch of file nodes in bounded chunks", async () => {
+    const ids = Array.from({ length: 1001 }, (_, i) => `f${i}`);
+    await insert(files(...ids));
+
+    const page = await rootNodes(1001);
+
+    expect(page.results).toHaveLength(1001);
+    const sizes = find.mock.calls.map(
+      ([search]) => (search as { ids: string[] }).ids.length,
+    );
+    expect(sizes).toEqual([1000, 1]);
   });
 });

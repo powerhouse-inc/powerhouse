@@ -24,6 +24,9 @@ const DEFAULT_LIMIT = 100;
 /** A listing page stops scanning past this many times its limit once it serves a node. */
 const LIST_SCAN_CAP_MULTIPLIER = 4;
 
+/** Documents per read-gate call, keeping each `find` well under the bind limit. */
+const SERVED_IDS_CHUNK = 1000;
+
 function subjectOf(ctx: ReactorDriveResolverContext): AuthSubject {
   return { address: ctx.user?.address, key: ctx.user?.appKey };
 }
@@ -75,22 +78,26 @@ async function servedIds(
     );
     asked = ids.filter((_, i) => allowed[i]);
   }
-  if (asked.length === 0) {
-    return new Set();
+  const served = new Set<string>();
+  for (let start = 0; start < asked.length; start += SERVED_IDS_CHUNK) {
+    const chunk = asked.slice(start, start + SERVED_IDS_CHUNK);
+    try {
+      const documents = await ctx.reactorClient.find(
+        { ids: chunk },
+        { subject: subjectOf(ctx) },
+        { cursor: "", limit: chunk.length },
+      );
+      for (const document of documents.results) {
+        served.add(document.header.id);
+      }
+    } catch {
+      continue;
+    }
   }
-  try {
-    const documents = await ctx.reactorClient.find(
-      { ids: asked },
-      { subject: subjectOf(ctx) },
-      { cursor: "0", limit: asked.length },
-    );
-    return new Set(documents.results.map((document) => document.header.id));
-  } catch {
-    return new Set();
-  }
+  return served;
 }
 
-/** Whether each node is served, deciding every file node in one batch. */
+/** Whether each node is served, deciding file nodes in batched read-gate calls. */
 async function servesNodes(
   ctx: ReactorDriveResolverContext,
   nodes: ReactorDriveNode[],
