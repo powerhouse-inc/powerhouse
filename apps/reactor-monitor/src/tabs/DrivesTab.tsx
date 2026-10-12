@@ -14,17 +14,19 @@
  * header note); large drives are paged the way SyncTab pages dead letters.
  */
 import type {
-  IInspector,
-  InspectableSyncManager,
   InspectorDriveInfo,
   InspectorDriveIntegrity,
   Remote,
 } from "@powerhousedao/reactor";
+import type {
+  MonitorInspector,
+  MonitorSyncManager,
+} from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 
 export type DrivesTabProps = {
-  readonly inspector: IInspector;
-  readonly syncManager: InspectableSyncManager | undefined;
+  readonly inspector: MonitorInspector;
+  readonly syncManager: MonitorSyncManager | undefined;
 };
 
 const POLL_INTERVAL_MS = 2000;

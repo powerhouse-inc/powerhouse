@@ -7,14 +7,12 @@
  * Plain CSS and a 2s poll loop, forked from QueueTab rather than pulling in the
  * design system (see that file's header note).
  */
-import type {
-  IInspector,
-  InspectorDocumentModelInfo,
-} from "@powerhousedao/reactor";
+import type { InspectorDocumentModelInfo } from "@powerhousedao/reactor";
+import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 
 export type ModulesTabProps = {
-  readonly inspector: IInspector;
+  readonly inspector: MonitorInspector;
 };
 
 const POLL_INTERVAL_MS = 2000;

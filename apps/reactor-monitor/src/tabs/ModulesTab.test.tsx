@@ -1,8 +1,6 @@
 // @vitest-environment happy-dom
-import type {
-  IInspector,
-  InspectorDocumentModelInfo,
-} from "@powerhousedao/reactor";
+import type { InspectorDocumentModelInfo } from "@powerhousedao/reactor";
+import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ModulesTab } from "./ModulesTab.js";
@@ -12,10 +10,10 @@ import { ModulesTab } from "./ModulesTab.js";
  * (multi-reactor §2). It reads the same `IInspector.listDocumentModels`
  * surface for every hosting kind, so these stub the inspector directly.
  */
-function stubInspector(models: InspectorDocumentModelInfo[]): IInspector {
+function stubInspector(models: InspectorDocumentModelInfo[]): MonitorInspector {
   return {
     listDocumentModels: () => Promise.resolve(models),
-  } as unknown as IInspector;
+  } as unknown as MonitorInspector;
 }
 
 const MODELS: InspectorDocumentModelInfo[] = [
@@ -64,7 +62,7 @@ describe("ModulesTab", () => {
   it("surfaces a read failure instead of a silent blank", async () => {
     const inspector = {
       listDocumentModels: vi.fn(() => Promise.reject(new Error("boom"))),
-    } as unknown as IInspector;
+    } as unknown as MonitorInspector;
     const view = render(<ModulesTab inspector={inspector} />);
 
     await waitFor(() => {

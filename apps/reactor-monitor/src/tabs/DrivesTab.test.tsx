@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
 import type {
-  IInspector,
-  InspectableSyncManager,
   InspectorDriveInfo,
   InspectorDriveIntegrity,
   Remote,
 } from "@powerhousedao/reactor";
+import type {
+  MonitorInspector,
+  MonitorSyncManager,
+} from "@powerhousedao/reactor-monitor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DrivesTab } from "./DrivesTab.js";
@@ -31,8 +33,10 @@ const DRIVE: InspectorDriveInfo = {
 };
 
 function stubInspector(
-  overrides: Partial<Pick<IInspector, "listDrives" | "checkDriveIntegrity">>,
-): IInspector {
+  overrides: Partial<
+    Pick<MonitorInspector, "listDrives" | "checkDriveIntegrity">
+  >,
+): MonitorInspector {
   return {
     listDrives: () =>
       Promise.resolve({ results: [DRIVE], nextCursor: undefined }),
@@ -45,12 +49,12 @@ function stubInspector(
         unsupportedTypes: [],
       }),
     ...overrides,
-  } as unknown as IInspector;
+  } as unknown as MonitorInspector;
 }
 
 function stubSyncManager(
   urls: string | readonly string[] | undefined,
-): InspectableSyncManager {
+): MonitorSyncManager {
   const list = urls === undefined ? [] : [urls].flat();
   const remotes: Remote[] = list.map(
     (url, index) =>
@@ -62,7 +66,7 @@ function stubSyncManager(
         },
       }) as unknown as Remote,
   );
-  return { list: () => remotes } as unknown as InspectableSyncManager;
+  return { list: () => remotes } as unknown as MonitorSyncManager;
 }
 
 describe("DrivesTab", () => {
