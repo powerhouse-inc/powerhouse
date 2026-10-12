@@ -82,7 +82,7 @@ function isEvery(text: string): boolean {
   return text !== "" && Number.isInteger(every) && every >= 1;
 }
 
-// A save echoing back late must not overwrite typing still in progress.
+// Keeps text that is not an interval yet; any other new value replaces it.
 function EveryInput(props: {
   id: string;
   every: number;
@@ -90,10 +90,9 @@ function EveryInput(props: {
 }) {
   const [text, setText] = useState(String(props.every));
   const [seen, setSeen] = useState(props.every);
-  const [typing, setTyping] = useState(false);
   if (seen !== props.every) {
     setSeen(props.every);
-    if (!typing) setText(String(props.every));
+    if (Number(text) !== props.every) setText(String(props.every));
   }
   return (
     <input
@@ -104,17 +103,26 @@ function EveryInput(props: {
       className={`${textInputClass} w-24 tabular-nums`}
       value={text}
       onChange={(event) => {
-        setTyping(true);
         setText(event.target.value);
-        if (isEvery(event.target.value)) {
-          props.onCommit(Number(event.target.value));
-        }
+        if (!isEvery(event.target.value)) return;
+        const every = Number(event.target.value);
+        if (every !== props.every) props.onCommit(every);
       }}
       onBlur={() => {
-        setTyping(false);
         if (!isEvery(text)) setText(String(props.every));
       }}
     />
+  );
+}
+
+// Sorted keys, so a config and its echo compare equal however each was built.
+function keyOf(config: unknown): string {
+  return JSON.stringify(config, (_, value: unknown) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+        )
+      : value,
   );
 }
 
@@ -124,21 +132,48 @@ export function ScheduleBuilder(props: {
 }) {
   const everyId = useId();
   const cronId = useId();
-  const parsed = draftFromConfig(props.config);
-  const timezone = timezoneOf(props.config);
+  // Saves echo back late and in order: each change builds on the newest config
+  // sent, and an echo of one still in flight changes nothing.
+  const savedKey = keyOf(props.config);
+  const [sent, setSent] = useState<Record<string, unknown>[]>([]);
+  const [seen, setSeen] = useState(savedKey);
+  let pending = sent;
+  if (seen !== savedKey) {
+    const echo = sent.findIndex((config) => keyOf(config) === savedKey);
+    pending = echo === -1 ? [] : sent.slice(echo + 1);
+    setSeen(savedKey);
+    setSent(pending);
+  }
+  const config: unknown = pending.at(-1) ?? props.config;
+  const parsed = draftFromConfig(config);
+  const timezone = timezoneOf(config);
   // Custom stays open while its cron is typed, even when it spells a preset.
   const [customPinned, setCustomPinned] = useState(parsed.kind === "custom");
   const draft: ScheduleDraft =
     customPinned && parsed.kind !== "custom"
       ? switchKind(parsed, "custom")
       : parsed;
-  const commit = (next: ScheduleDraft, zone = timezone) =>
-    props.onChange(configFromDraft(next, zone));
+  const commit = (next: ScheduleDraft, zone = timezone) => {
+    const nextConfig = configFromDraft(next, zone);
+    if (keyOf(nextConfig) === keyOf(config)) return;
+    setSent([...pending, nextConfig]);
+    props.onChange(nextConfig);
+  };
   // The runtime's own parser: what it would refuse, said before it is armed.
-  const issue = scheduleConfigIssue(props.config);
+  const issue = scheduleConfigIssue(config);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div
+      className="flex flex-col gap-5"
+      onBlur={(event) => {
+        // Saves coalesced back to the saved config never echo one by one.
+        const inside = event.currentTarget.contains(
+          event.relatedTarget as Node | null,
+        );
+        const last = pending.at(-1);
+        if (!inside && last && keyOf(last) === savedKey) setSent([]);
+      }}
+    >
       <div>
         <FieldLabel label="Repeats" />
         <Segmented
@@ -270,9 +305,7 @@ export function ScheduleBuilder(props: {
       <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
         Runs{" "}
         <span className="font-medium text-foreground">
-          {describeSchedule(props.config).replace(/^\w/, (c) =>
-            c.toLowerCase(),
-          )}
+          {describeSchedule(config).replace(/^\w/, (c) => c.toLowerCase())}
         </span>
       </p>
     </div>
