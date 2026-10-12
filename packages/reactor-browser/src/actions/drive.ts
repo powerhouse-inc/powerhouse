@@ -27,6 +27,7 @@ import {
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
+import { getFullReactorClient } from "../hooks/reactor.js";
 
 const DEFAULT_INITIAL_SYNC_TIMEOUT_MS = 30_000;
 
@@ -124,13 +125,13 @@ export async function waitForDocumentReady(
 
 /** The full client's creation default, else the library's. */
 async function createSignaturePolicy(): Promise<SignaturePolicy> {
-  const client = window.ph?.reactorClientModule?.client;
+  const client = getFullReactorClient();
   return client ? client.getCreateSignaturePolicy() : DEFAULT_SIGNATURE_POLICY;
 }
 
 /** What the full client selects for a drive, which has no parent. */
 async function createProtocolVersions(): Promise<ProtocolVersions> {
-  const client = window.ph?.reactorClientModule?.client;
+  const client = getFullReactorClient();
   return client ? client.getCreateProtocolVersions() : {};
 }
 
@@ -182,7 +183,7 @@ export async function addRemoteDrive(
   options?: AddRemoteDriveOptions,
 ) {
   // remote drives are a full reactor client feature (sync manager + find)
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -303,7 +304,7 @@ export async function renameDrive(
   }
 
   // drive renaming is only available on the full reactor client
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

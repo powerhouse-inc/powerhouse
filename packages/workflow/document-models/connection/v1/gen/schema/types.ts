@@ -105,6 +105,10 @@ export type RecordCheckResultInput = {
   status: ConnectionStatus;
 };
 
+export type RemoveConfigValueInput = {
+  name: Scalars["String"]["input"];
+};
+
 export type RemoveSecretRefInput = {
   id: Scalars["OID"]["input"];
 };
@@ -123,6 +127,11 @@ export type SetAccountLabelInput = {
 
 export type SetConfigInput = {
   config: Scalars["Unknown"]["input"];
+};
+
+export type SetConfigValueInput = {
+  name: Scalars["String"]["input"];
+  value: Scalars["Unknown"]["input"];
 };
 
 export type SetConnectionNameInput = {

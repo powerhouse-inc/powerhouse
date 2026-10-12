@@ -132,6 +132,7 @@ export type LocalChannelPortRegistryOptions = {
 export class LocalChannelPortRegistry {
   private readonly ports = new Map<string, RegisteredPort>();
   private readonly closedKeys = new Set<string>();
+  private closed = false;
   private readonly logger: ILogger;
   private readonly maxQueuedFrames: number;
 
@@ -157,6 +158,11 @@ export class LocalChannelPortRegistry {
 
   /** Refuses a live key; a closed key may be registered again (a re-link). */
   register(peerId: string, channelName: string, port: LocalChannelPort): void {
+    if (this.closed) {
+      throw new Error(
+        `This reactor's local sync ports are closed; peer '${peerId}' channel '${channelName}' cannot be brokered here`,
+      );
+    }
     const key = this.key(peerId, channelName);
     if (this.ports.has(key)) {
       throw new Error(
@@ -185,6 +191,24 @@ export class LocalChannelPortRegistry {
     this.ports.delete(key);
     this.closedKeys.add(key);
     port?.release();
+  }
+
+  /** Closes every port and refuses later registrations; the host is going away. */
+  close(): void {
+    this.closed = true;
+    for (const [key, port] of [...this.ports]) {
+      this.ports.delete(key);
+      this.closedKeys.add(key);
+      try {
+        port.release();
+      } catch (error) {
+        this.logger.error(
+          "Closing local sync port @Label failed: @Error",
+          key,
+          error,
+        );
+      }
+    }
   }
 
   private key(peerId: string, channelName: string): string {

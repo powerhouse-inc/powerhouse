@@ -23,6 +23,7 @@ import {
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
   type ReactorIdentity,
+  type VersionFingerprint,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
@@ -62,6 +63,8 @@ export type WorkerReactorClientArgs = {
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
   featureFlags: Partial<ReactorFeatureFlags>;
+  /** The resolved multiReactor flag; the worker has no runtime config either. */
+  multiReactor: boolean;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
   /** Whether the worker boots over stored documents this build does not run. */
@@ -92,12 +95,54 @@ export type WorkerReactorClient = {
 };
 
 /** Sorted so the same set always produces the same fingerprint. */
-function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
-  return Object.entries(flags)
+function enabledFlagList(
+  flags: Partial<ReactorFeatureFlags>,
+  multiReactor: boolean,
+): string {
+  return Object.entries({ ...flags, multiReactor })
     .filter(([, enabled]) => enabled)
     .map(([name]) => name)
     .sort()
     .join(",");
+}
+
+/** The hello fingerprint; a running worker with a different one retires. */
+export function buildWorkerVersion(
+  args: WorkerReactorClientArgs,
+): VersionFingerprint {
+  const gitSha = getGitSha();
+  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
+  return {
+    appBuildId: args.workerDigest
+      ? `${buildId}+w.${args.workerDigest}`
+      : buildId,
+    rpcProtocolVersion: RPC_PROTOCOL_VERSION,
+    models: args.documentModelModules.map((m) => ({
+      id: m.documentModel.global.id,
+      version: m.version ?? 1,
+    })),
+    featureFlags: enabledFlagList(args.featureFlags, args.multiReactor),
+  };
+}
+
+/** What the worker's build reads; flags arrive here because it has no config. */
+export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
+  return {
+    namespace: args.namespace,
+    relationalNamespace: args.relationalNamespace,
+    cdnUrl: args.cdnUrl,
+    packageSpecs: args.packageSpecs,
+    sharedImports: args.sharedImports,
+    studioMode: args.studioMode,
+    workflowsEnabled: args.workflowsEnabled,
+    renownChainId: args.renownChainId,
+    featureFlags: args.featureFlags,
+    multiReactor: args.multiReactor,
+    createSignaturePolicy: args.createSignaturePolicy,
+    unsupportedStoredDocuments: args.unsupportedStoredDocuments,
+    renownEndpoints: args.renownEndpoints,
+    packageSources: args.packageSources,
+  };
 }
 
 function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
@@ -149,37 +194,11 @@ export function createWorkerReactorClientModule(
   documentModelRegistry.registerModules(...args.documentModelModules);
   documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
-  const gitSha = getGitSha();
-  const buildId = gitSha !== "unknown" ? gitSha : getVersion();
   const clientProxy = connectReactorClient(
     router,
     {
-      version: {
-        appBuildId: args.workerDigest
-          ? `${buildId}+w.${args.workerDigest}`
-          : buildId,
-        rpcProtocolVersion: RPC_PROTOCOL_VERSION,
-        models: args.documentModelModules.map((m) => ({
-          id: m.documentModel.global.id,
-          version: m.version ?? 1,
-        })),
-        featureFlags: enabledFlagList(args.featureFlags),
-      },
-      construct: {
-        namespace: args.namespace,
-        relationalNamespace: args.relationalNamespace,
-        cdnUrl: args.cdnUrl,
-        packageSpecs: args.packageSpecs,
-        sharedImports: args.sharedImports,
-        studioMode: args.studioMode,
-        workflowsEnabled: args.workflowsEnabled,
-        renownChainId: args.renownChainId,
-        featureFlags: args.featureFlags,
-        createSignaturePolicy: args.createSignaturePolicy,
-        unsupportedStoredDocuments: args.unsupportedStoredDocuments,
-        renownEndpoints: args.renownEndpoints,
-        packageSources: args.packageSources,
-      },
+      version: buildWorkerVersion(args),
+      construct: buildWorkerConstruct(args),
       packages: args.packageSpecs,
     },
     (reason, nextGen) => {

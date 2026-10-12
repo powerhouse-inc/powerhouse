@@ -4,18 +4,24 @@
  */
 import { createAction } from "document-model";
 import {
+  RemoveConfigValueInputSchema,
   RemoveSecretRefInputSchema,
   SetConfigInputSchema,
+  SetConfigValueInputSchema,
   SetSecretRefInputSchema,
 } from "../schema/zod.js";
 import type {
+  RemoveConfigValueInput,
   RemoveSecretRefInput,
   SetConfigInput,
+  SetConfigValueInput,
   SetSecretRefInput,
 } from "../types.js";
 import type {
+  RemoveConfigValueAction,
   RemoveSecretRefAction,
   SetConfigAction,
+  SetConfigValueAction,
   SetSecretRefAction,
 } from "./actions.js";
 
@@ -25,6 +31,24 @@ export const setConfig = (input: SetConfigInput) =>
     { ...input },
     undefined,
     SetConfigInputSchema,
+    "global",
+  );
+
+export const setConfigValue = (input: SetConfigValueInput) =>
+  createAction<SetConfigValueAction>(
+    "SET_CONFIG_VALUE",
+    { ...input },
+    undefined,
+    SetConfigValueInputSchema,
+    "global",
+  );
+
+export const removeConfigValue = (input: RemoveConfigValueInput) =>
+  createAction<RemoveConfigValueAction>(
+    "REMOVE_CONFIG_VALUE",
+    { ...input },
+    undefined,
+    RemoveConfigValueInputSchema,
     "global",
   );
 

@@ -91,6 +91,15 @@ input SetConfigInput {
     config: Unknown!
 }
 
+input SetConfigValueInput {
+    name: String!
+    value: Unknown!
+}
+
+input RemoveConfigValueInput {
+    name: String!
+}
+
 input SetSecretRefInput {
     id: OID!
     name: String!

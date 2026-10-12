@@ -668,6 +668,36 @@ describe("GraphQLReactorClient.waitForJob", () => {
   });
 });
 
+describe("GraphQLReactorClient.getJob", () => {
+  it("answers the job's current state without polling", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi.fn().mockResolvedValue({
+        jobStatus: serverJob("job-x", "doc-1", {
+          status: "RUNNING",
+          completedAt: null,
+        }),
+      }),
+    });
+
+    const job = await createClientWith(sdk).getJob("job-x");
+
+    expect(sdk.GetJobStatus).toHaveBeenCalledTimes(1);
+    expect(job).toMatchObject({
+      id: "job-x",
+      documentId: "doc-1",
+      status: "RUNNING",
+    });
+  });
+
+  it("answers undefined when the server reports no job", async () => {
+    const sdk = createMockSdk({
+      GetJobStatus: vi.fn().mockResolvedValue({ jobStatus: null }),
+    });
+
+    expect(await createClientWith(sdk).getJob("missing")).toBeUndefined();
+  });
+});
+
 describe("GraphQLReactorClient create defaults and preferred editor", () => {
   const defaults = (
     signaturePolicy: string,

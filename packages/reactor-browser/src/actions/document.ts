@@ -56,6 +56,7 @@ import {
   UnsupportedDocumentTypeError,
 } from "../errors.js";
 import { showPHModal } from "../hooks/modals.js";
+import { getFullReactorClient } from "../hooks/reactor.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
@@ -171,7 +172,7 @@ export async function getDocumentExtension(
     rawExtension = globalState?.extension;
   } else {
     // document model modules are only available on the full reactor client
-    const reactorClient = window.ph?.reactorClientModule?.client;
+    const reactorClient = getFullReactorClient();
     if (reactorClient) {
       const { results: documentModelModules } =
         await reactorClient.getDocumentModelModules();
@@ -404,7 +405,7 @@ export async function loadFile(path: string | File) {
   );
 
   // document model modules are only available on the full reactor client
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -456,7 +457,7 @@ export async function addDocument(
 
   // document model modules and drive operations are only available on the full
   // reactor client
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -646,7 +647,7 @@ export async function addFileWithProgress(
     `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
   );
   // importing a file into a drive is a full reactor client feature
-  const reactor = window.ph?.reactorClientModule?.client;
+  const reactor = getFullReactorClient();
   if (!reactor) {
     // Reported before it is thrown: a caller watching progress settles on a
     // terminal stage, and returning quietly here left it waiting forever.
@@ -947,7 +948,7 @@ export async function deleteNode(driveId: string, nodeId: string) {
   }
 
   // drive operations are only available on the full reactor client
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -1171,7 +1172,7 @@ export async function copyNode(
 ) {
   // copying nodes duplicates documents and adds drive files, both of which are
   // only available on the full reactor client
-  const reactor = window.ph?.reactorClientModule?.client;
+  const reactor = getFullReactorClient();
   if (!reactor) {
     return;
   }
@@ -1255,7 +1256,7 @@ export async function copyNode(
  * latest registered version for the document's type.
  */
 export async function upgradeDocument(documentId: string, toVersion?: number) {
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

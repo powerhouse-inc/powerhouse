@@ -7,10 +7,12 @@ import type {
   ConnectionStatus,
   ReactorConnectionConfig,
   RecordCheckResultInput,
+  RemoveConfigValueInput,
   RemoveSecretRefInput,
   SecretRef,
   SetAccountLabelInput,
   SetConfigInput,
+  SetConfigValueInput,
   SetConnectionNameInput,
   SetConnectorInput,
   SetSecretRefInput,
@@ -83,6 +85,14 @@ export function RecordCheckResultInputSchema(): z.ZodObject<
   });
 }
 
+export function RemoveConfigValueInputSchema(): z.ZodObject<
+  Properties<RemoveConfigValueInput>
+> {
+  return z.object({
+    name: z.string(),
+  });
+}
+
 export function RemoveSecretRefInputSchema(): z.ZodObject<
   Properties<RemoveSecretRefInput>
 > {
@@ -113,6 +123,15 @@ export function SetConfigInputSchema(): z.ZodObject<
 > {
   return z.object({
     config: z.unknown(),
+  });
+}
+
+export function SetConfigValueInputSchema(): z.ZodObject<
+  Properties<SetConfigValueInput>
+> {
+  return z.object({
+    name: z.string(),
+    value: z.unknown(),
   });
 }
 

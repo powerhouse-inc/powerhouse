@@ -190,6 +190,19 @@ export function useWorkflowModel(): {
         );
         return { id, group, block: triggerBlock(input) };
       },
+      setTriggerConfig: (config, extras) =>
+        dispatch(
+          actions.setTriggerConfig({
+            config,
+            ...(extras?.propertySettings
+              ? { propertySettings: settingsInput(extras.propertySettings) }
+              : {}),
+          }),
+        ),
+      setTriggerConnection: (input) =>
+        dispatch(actions.setTriggerConnection(input)),
+      setTriggerPieceVersion: (pieceVersion) =>
+        dispatch(actions.setTriggerPieceVersion({ pieceVersion })),
       clearTrigger: () => dispatch(actions.clearTrigger({})),
       addStep: (input) => {
         const id = generateId();
@@ -386,17 +399,7 @@ export function useWorkflowModel(): {
           const trigger = current.trigger;
           const followUps = [
             ...(plan.config && trigger?.id === added.id
-              ? [
-                  actions.setTrigger({
-                    id: trigger.id,
-                    pieceName: trigger.pieceName,
-                    pieceVersion: trigger.pieceVersion,
-                    triggerName: trigger.triggerName,
-                    config: plan.config,
-                    connectionId: trigger.connectionId,
-                    reactorConnectionId: trigger.reactorConnectionId,
-                  }),
-                ]
+              ? [actions.setTriggerConfig({ config: plan.config })]
               : plan.config
                 ? [actions.setStepConfig({ id: added.id, config: plan.config })]
                 : []),

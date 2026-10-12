@@ -16,6 +16,8 @@ import {
 vi.mock("@powerhousedao/reactor-browser", () => ({
   addDrive: vi.fn(),
   addRemoteDrive: vi.fn(),
+  getFullReactorClient: () =>
+    window.ph?.fullReactorClient ?? window.ph?.reactorClientModule?.client,
   ChannelScheme: class {},
   isDriveAuthError: vi.fn(() => false),
   ReactorBuilder: class {},

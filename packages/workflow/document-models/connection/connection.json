@@ -95,6 +95,44 @@
               "scope": "global"
             },
             {
+              "id": "32f1c6e9-1bba-4c99-bd20-311b16f95fa9",
+              "name": "SET_CONFIG_VALUE",
+              "description": "Sets one non-secret config field, leaving the others as they are.",
+              "schema": "input SetConfigValueInput {\n    name: String!\n    value: Unknown!\n}",
+              "template": "Sets one non-secret config field, leaving the others as they are.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "6db3a25a-a3b2-4751-9470-3c122ff9abcd",
+                  "name": "InvalidReactorConfigValueError",
+                  "code": "INVALID_REACTOR_CONFIG_VALUE",
+                  "description": "The field would leave a REACTOR connection's config invalid.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "bcb390f6-f8fc-4a09-99e6-1d84b272d7b6",
+              "name": "REMOVE_CONFIG_VALUE",
+              "description": "Removes one non-secret config field. Removing an absent field changes nothing.",
+              "schema": "input RemoveConfigValueInput {\n    name: String!\n}",
+              "template": "Removes one non-secret config field. Removing an absent field changes nothing.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "24496230-4088-4994-a6d5-b7651c718f63",
+                  "name": "InvalidReactorConfigRemovalError",
+                  "code": "INVALID_REACTOR_CONFIG_REMOVAL",
+                  "description": "The removal would leave a REACTOR connection's config invalid.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
               "id": "1a90e020-6dc5-49e0-9be1-732028dd10d3",
               "name": "SET_SECRET_REF",
               "description": "Creates or updates a secret handle, keyed by its auth property name.",

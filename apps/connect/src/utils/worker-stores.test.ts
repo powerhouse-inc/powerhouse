@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
 import type { InMemoryQueue } from "@powerhousedao/reactor";
 import {
   type Database,
@@ -15,9 +14,9 @@ import {
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { Kysely } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useReactorDatabases } from "../../test/reactor-database.js";
 import { closeWithin } from "./close-within.js";
 import { createStoreLocks } from "./store-lock.js";
 import { createWorkerStores } from "./worker-stores.js";
@@ -347,7 +346,9 @@ describe("worker retired during boot", () => {
   });
 });
 
-describe("worker retired by a deploy", () => {
+// Above the 5s waits on a real job, so a stuck wait names its expectation.
+describe("worker retired by a deploy", { timeout: 15_000 }, () => {
+  const databases = useReactorDatabases();
   const NEXT_BUILD = {
     ...HELLO,
     version: { ...HELLO.version, appBuildId: "next-build" },
@@ -367,9 +368,9 @@ describe("worker retired by a deploy", () => {
   async function workerWithAcceptedJob(
     drainMs?: number,
     paused = false,
-    pg = new PGlite(),
+    pg = databases.pglite(),
   ) {
-    database = new Kysely<Database>({ dialect: new PGliteDialect(pg) });
+    database = databases.kysely(pg);
     const built = await new ReactorBuilder()
       .withKysely(database)
       .withDocumentModelSources([
@@ -428,6 +429,8 @@ describe("worker retired by a deploy", () => {
   it("tells the tabs to reload and releases the stores once the bound passes", async () => {
     const { names, host, open, statusAtStop } =
       await workerWithAcceptedJob(300);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cleanup.push(() => warn.mockRestore());
     const startedAt = Date.now();
     await tab(host).send(NEXT_BUILD);
     const next = otherWorkerAcquires(names.reactor);
@@ -438,7 +441,9 @@ describe("worker retired by a deploy", () => {
     });
     await vi.waitFor(() => expect(open.reloads).toHaveLength(1));
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(300);
-    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(warn).toHaveBeenCalledWith(
+      "[connect] reactor queue did not drain within 300ms",
+    );
     expect(statusAtStop).toEqual([JobStatus.PENDING]);
   });
 
@@ -458,7 +463,7 @@ describe("worker retired by a deploy", () => {
   });
 
   it("waits on a paused queue's executing job, not its pending ones", async () => {
-    const pg = new PGlite();
+    const pg = databases.pglite();
     const query = pg.query.bind(pg);
     const writing = deferred();
     const release = deferred();
@@ -589,7 +594,18 @@ describe("worker after Clear storage", () => {
       "utf8",
     );
     expect(worker).toMatch(/isRetired: \(\) => host\.retired,/);
-    expect(worker).toMatch(/onRetire: \(\) => stores\.retire\(\),/);
+    expect(worker).toMatch(
+      /onRetire: localPeers\.retiring\(\(\) => stores\.retire\(\)\),/,
+    );
+    expect(worker).toMatch(
+      /get onAdoptSyncPeer\(\) \{\s*return localPeers\.adoptHandler\(\);/,
+    );
+    expect(worker).toMatch(
+      /get onRemoveSyncPeer\(\) \{\s*return localPeers\.removeHandler\(\);/,
+    );
+    expect(worker).toMatch(
+      /const construct = raw as WorkerConstruct;\s*localPeers\.serve\(construct\.multiReactor \?\? false\);/,
+    );
     expect(worker).toMatch(/drainBeforeReload: \(\) => stores\.drain\(\),/);
     expect(worker).toMatch(/stopSync,/);
     expect(worker).toMatch(

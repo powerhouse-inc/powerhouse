@@ -156,10 +156,14 @@ export type GraphQLReactorClientOptions = {
    * `state.document.version` is here. One action needs no prediction and is
    * signed without any of this.
    *
-   * Read once, when the client is built. Below `GraphQLReactorProvider` this
-   * is its `documentModels` prop; a client constructed directly passes its own.
+   * An array is read once, when the client is built; a function is called at
+   * every batch, for a registry that gains models later. Below
+   * `GraphQLReactorProvider` this is its `documentModels` prop; a client
+   * constructed directly passes its own.
    */
-  documentModels?: readonly DocumentModelModule<any>[];
+  documentModels?:
+    | readonly DocumentModelModule<any>[]
+    | (() => readonly DocumentModelModule<any>[]);
 
   /**
    * Signs the actions this client pushes, instead of the logged-in Renown user.
@@ -217,7 +221,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly listeners: ChangeListener[] = [];
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
-  private readonly documentModels: readonly DocumentModelModule<any>[];
+  private readonly documentModels: () => readonly DocumentModelModule<any>[];
   private readonly signer: ISigner | undefined;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private stopRealtime: (() => void) | undefined;
@@ -229,9 +233,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
-    // Copied, not held: the caller's array must not be able to change which
-    // reducer a later batch is signed with.
-    this.documentModels = [...(options.documentModels ?? [])];
+    // An array is copied, not held: the caller's array must not be able to
+    // change which reducer a later batch is signed with.
+    const models = options.documentModels;
+    if (typeof models === "function") {
+      this.documentModels = models;
+    } else {
+      const copied = [...(models ?? [])];
+      this.documentModels = () => copied;
+    }
     this.signer = options.signer;
     this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
@@ -594,7 +604,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const preparedActions = await prepareActionsForPush(
       actions,
       document,
-      this.documentModels,
+      this.documentModels(),
       this.signer,
       signal,
     );
@@ -706,6 +716,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       throw new BatchJobFailedError(failed.key, jobs);
     }
     return { jobs };
+  }
+
+  /** The job as `jobStatus` reports it now; `undefined` when it reports none. */
+  async getJob(
+    jobId: string,
+    signal?: AbortSignal,
+  ): Promise<JobInfo | undefined> {
+    const result = await this.sdk.GetJobStatus({ jobId }, undefined, signal);
+    return result.jobStatus ? jobInfoFromGql(result.jobStatus) : undefined;
   }
 
   /** Polls `jobStatus` until the job is READ_READY or FAILED. */

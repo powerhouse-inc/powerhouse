@@ -509,6 +509,21 @@ describe("GraphQLReactorClient.execute", () => {
     expect(JSON.stringify(batch)).toBe(before);
   });
 
+  it("reads a documentModels getter at every batch", async () => {
+    installSigner();
+    const sdk = createMockSdk();
+    const models: DocumentModelModule[] = [];
+    const client = createClientWith(sdk, { documentModels: () => models });
+
+    await expect(client.execute("doc-1", "main", batch)).rejects.toThrow(
+      "Unknown document model version: powerhouse/test v1",
+    );
+    models.push(createTestModule(1));
+    await client.execute("doc-1", "main", batch);
+
+    expect(sdk.RunDocument).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses a batch when no models were given, instead of sending it unsigned", async () => {
     installSigner();
     const sdk = createMockSdk();

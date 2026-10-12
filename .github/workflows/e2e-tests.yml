@@ -57,7 +57,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 12.5.1
+          version: 12.10.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -129,7 +129,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 12.5.1
+          version: 12.10.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -219,7 +219,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 12.5.1
+          version: 12.10.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -321,7 +321,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 12.5.1
+          version: 12.10.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -409,7 +409,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 12.5.1
+          version: 12.10.1
 
       - name: Install Node.js
         uses: actions/setup-node@v6

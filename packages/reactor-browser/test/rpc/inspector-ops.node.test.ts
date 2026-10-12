@@ -9,7 +9,6 @@ import {
   type ISyncInspector,
 } from "@powerhousedao/reactor";
 import {
-  fromErrorInfo,
   MessageRouter,
   toErrorInfo,
   type IRpcTransport,
@@ -85,46 +84,28 @@ function inspectorHost(access: InspectorAccess, queryDb = vi.fn()) {
   };
 }
 
-// The rows Connect's worker serves today; the rest wait for its dispatch.
-const WORKER_SERVED = [
-  "getQueueState",
-  "getProcessors",
-  "getCatchUpStatus",
-  "validateDocument",
-  "pauseQueue",
-  "resumeQueue",
-  "retryProcessor",
-  "sweepCatchUp",
-  "rebuildKeyframes",
-  "rebuildSnapshots",
-  "queryDb",
-];
-
 describe("inspector RPC", () => {
-  it("proxies only the rows a worker host serves", () => {
+  it("proxies every op in the table", () => {
     const proxy = createInspectorProxy(loopback({})) as unknown as Record<
       string,
       unknown
     >;
     for (const key of Object.keys(INSPECTOR_OPS)) {
-      expect(typeof proxy[key], key).toBe(
-        WORKER_SERVED.includes(key) ? "function" : "undefined",
-      );
+      expect(typeof proxy[key], key).toBe("function");
     }
     expect(typeof proxy.queryReactorDb).toBe("function");
   });
 
   it("serves reads to a read-only host", async () => {
     const host = inspectorHost(READ_ONLY_ACCESS);
-    await expect(
-      host.handler(INSPECTOR_OPS.info.rpc, []),
-    ).resolves.toMatchObject({
+    const proxy = createInspectorProxy(loopback({ inspector: host.handler }));
+    await expect(proxy.info()).resolves.toMatchObject({
       syncChannels: ["gql"],
       access: { admin: false, sql: false },
     });
-    await expect(
-      host.handler(INSPECTOR_OPS.getStorageHealth.rpc, []),
-    ).resolves.toMatchObject({ tracked: false });
+    await expect(proxy.getStorageHealth()).resolves.toMatchObject({
+      tracked: false,
+    });
   });
 
   it("refuses admin ops unless the host grants admin", async () => {
@@ -202,37 +183,40 @@ describe("sync inspection RPC", () => {
     return { listDeadLetters, resetChannel, handler };
   }
 
-  it("keeps the sync manager proxy to the ops a worker host serves", () => {
-    const router = loopback({});
-    const proxy = new SyncManagerProxy(
-      router,
-      createReactorEventBusProxy(router),
+  function proxyFor(handler: Handler) {
+    const router = loopback({ sync: handler });
+    return new SyncManagerProxy(router, createReactorEventBusProxy(router));
+  }
+
+  it("proxies every sync inspection op in the table", () => {
+    const proxy = proxyFor(
+      syncHost(READ_ONLY_ACCESS).handler,
     ) as unknown as Record<string, unknown>;
     for (const key of Object.keys(SYNC_INSPECTION_OPS)) {
-      expect(proxy[key], key).toBeUndefined();
+      expect(typeof proxy[key], key).toBe("function");
     }
   });
 
-  it("serves the read half to a read-only host", async () => {
+  it("carries the read half to a read-only host", async () => {
     const host = syncHost(READ_ONLY_ACCESS);
-    await expect(
-      host.handler(SYNC_INSPECTION_OPS.inspectRemotes.rpc, []),
-    ).resolves.toEqual([inspection]);
-    await expect(
-      host.handler(SYNC_INSPECTION_OPS.listDeadLetters.rpc, ["r", "5", 10]),
-    ).resolves.toEqual({ remoteName: "r", results: [] });
+    const proxy = proxyFor(host.handler);
+    await expect(proxy.inspectRemotes()).resolves.toEqual([inspection]);
+    await expect(proxy.listDeadLetters("r", "5", 10)).resolves.toEqual({
+      remoteName: "r",
+      results: [],
+    });
     expect(host.listDeadLetters).toHaveBeenCalledWith("r", "5", 10);
   });
 
   it("refuses repair levers unless the host grants admin", async () => {
     const readOnly = syncHost(READ_ONLY_ACCESS);
-    await expect(
-      readOnly.handler(SYNC_INSPECTION_OPS.resetChannel.rpc, ["r"]),
-    ).rejects.toThrow(/admin-tier/);
+    await expect(proxyFor(readOnly.handler).resetChannel("r")).rejects.toThrow(
+      /admin-tier/,
+    );
     expect(readOnly.resetChannel).not.toHaveBeenCalled();
 
     const admin = syncHost({ admin: true, sql: false });
-    await admin.handler(SYNC_INSPECTION_OPS.resetChannel.rpc, ["r"]);
+    await proxyFor(admin.handler).resetChannel("r");
     expect(admin.resetChannel).toHaveBeenCalledWith("r");
   });
 
@@ -240,11 +224,11 @@ describe("sync inspection RPC", () => {
     const host = syncHost({ admin: true, sql: false }, () =>
       Promise.reject(new SyncRepairRefusedError("not an inbox failure")),
     );
-    const error = await host
-      .handler(SYNC_INSPECTION_OPS.requeueDeadLetter.rpc, ["r", "dl-1"])
+    const error = await proxyFor(host.handler)
+      .requeueDeadLetter("r", "dl-1")
       .then(
         () => undefined,
-        (e: unknown) => fromErrorInfo(toErrorInfo(e)),
+        (e: unknown) => e,
       );
     expect(error).toMatchObject({
       name: "SyncRepairRefusedError",
