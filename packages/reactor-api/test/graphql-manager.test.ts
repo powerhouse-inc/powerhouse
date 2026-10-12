@@ -2542,6 +2542,55 @@ describe("GraphQLManager", () => {
       expect(servedFields(gatewayAdapter, "Query")).toContain("widgetStock");
     });
 
+    it("logs a package subgraph's type collision once across restores", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({
+        logger,
+        reactorClient: makeModelsClient([
+          makeDriveModule(),
+          makeModelModule("Widget", "test/widget"),
+        ]),
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+      const created = vi.fn();
+      class Collider extends BaseSubgraph {
+        name = "collider";
+        typeDefs = makeWidgetSubgraph().typeDefs;
+        constructor(...args: ConstructorParameters<typeof BaseSubgraph>) {
+          super(...args);
+          created();
+        }
+      }
+      class Foo extends BaseSubgraph {
+        name = "foo";
+      }
+      class Bar extends BaseSubgraph {
+        name = "bar";
+      }
+      await manager.applyPackageSubgraphs(
+        new Map<string, (typeof BaseSubgraph)[]>([
+          ["pkg", [Collider]],
+          ["other", [Foo, Bar]],
+        ]),
+      );
+
+      // Each frees a name, so each restores.
+      await flush(manager.prunePackageSubgraphs("other", new Set(["foo"])));
+      await flush(manager.prunePackageSubgraphs("other", new Set()));
+
+      expect(manager.getSubgraphByName("collider")).toBeUndefined();
+      const refusals = vi
+        .mocked(logger.error)
+        .mock.calls.filter(
+          ([message, name]) =>
+            message === "Rejecting subgraph @name: @error" &&
+            name === "collider",
+        );
+      expect(refusals).toHaveLength(1);
+      expect(created).toHaveBeenCalledTimes(1);
+    });
+
     it("heals a model whose own operation schema repeats its prefixed state type", async () => {
       const logger = makeHarnessLogger();
       const gizmo = makeModelModule("Gizmo", "test/gizmo");

@@ -320,11 +320,17 @@ export class GraphQLManager {
   /**
    * Package → the supergraph and subgraph classes (by subgraph name) it last
    * provided, so a subgraph refused or evicted for its name can register once
-   * the name is free.
+   * the name is free. `refused` keeps each one's instance until it is set
+   * up, so the next attempt reuses it and a refusal that still holds logs
+   * once.
    */
   #packageClasses = new Map<
     string,
-    { supergraph: string; classes: Map<string, SubgraphClass> }
+    {
+      supergraph: string;
+      classes: Map<string, SubgraphClass>;
+      refused: Map<string, ISubgraph>;
+    }
   >();
 
   /** Registry changes run one at a time: a registration is admitted before
@@ -855,11 +861,15 @@ export class GraphQLManager {
 
     const collisions = core ? [] : this.#typeCollisions(instance);
     if (collisions.length > 0) {
-      this.logger.error(
-        "Rejecting subgraph @name: @error",
-        instance.name,
-        new SubgraphTypeCollisionError(collisions).message,
-      );
+      const reason = new SubgraphTypeCollisionError(collisions).message;
+      if (this.#loggedCollisions.get(instance) !== reason) {
+        this.#loggedCollisions.set(instance, reason);
+        this.logger.error(
+          "Rejecting subgraph @name: @error",
+          instance.name,
+          reason,
+        );
+      }
       return { action: "reject" };
     }
 
@@ -896,6 +906,12 @@ export class GraphQLManager {
     const { replaces, evicts } = admission;
     for (const replaced of replaces) {
       await this.#removeSubgraphInstance(replaced);
+    }
+    if (typeof origin === "string") {
+      const refused = this.#packageClasses.get(origin)?.refused;
+      if (refused?.get(subgraphInstance.name) === subgraphInstance) {
+        refused.delete(subgraphInstance.name);
+      }
     }
 
     await this.#runHook(() => subgraphInstance.onSetup?.());
@@ -1171,16 +1187,20 @@ export class GraphQLManager {
   ): void {
     let entry = this.#packageClasses.get(packageName);
     if (!entry) {
-      entry = { supergraph, classes: new Map() };
+      entry = { supergraph, classes: new Map(), refused: new Map() };
       this.#packageClasses.set(packageName, entry);
     }
     entry.classes.set(instance.name, subgraph);
+    entry.refused.set(instance.name, instance);
   }
 
   /** Register package subgraphs that are missing because their name was
    * taken when they last tried, now that the name may be free. */
   async #restorePackageSubgraphs(): Promise<void> {
-    for (const [packageName, { supergraph, classes }] of this.#packageClasses) {
+    for (const [
+      packageName,
+      { supergraph, classes, refused },
+    ] of this.#packageClasses) {
       const registered = Array.from(
         this.packageSubgraphs.get(packageName) ?? [],
         (it) => it.name,
@@ -1189,8 +1209,12 @@ export class GraphQLManager {
         if (registered.includes(name)) continue;
         if (this.#holdersOf(name).size > 0) continue;
         try {
+          const instance =
+            refused.get(name) ??
+            this.#createSubgraphInstance(subgraph, packageName);
+          refused.set(name, instance);
           await this.#addSubgraphInstance(
-            this.#createSubgraphInstance(subgraph, packageName),
+            instance,
             supergraph,
             false,
             packageName,
