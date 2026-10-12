@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
-import { DriveCollectionId } from "@powerhousedao/reactor";
+import {
+  DriveCollectionId,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+} from "@powerhousedao/reactor";
 import {
   GQL_CHANNEL_TYPE,
   LOCAL_CHANNEL_TYPE,
-  reactorCapabilities,
   type ManagedInProcessReactor,
   type ManagedReactorEntry,
   type ReactorMonitorRegistry,
@@ -26,10 +28,8 @@ function unused(member: string): never {
 }
 
 /**
- * A reactor handle with the runtime shape of the real one: the two members the
- * panel reads carry real values (the capability contract comes from
- * `reactorCapabilities` itself, derived from the built channel types), and
- * every other member is present and loud.
+ * A reactor handle with the runtime shape of the real one: the members the
+ * panel reads carry real values, and every other member is present and loud.
  */
 function readyReactor(
   name: string,
@@ -38,11 +38,17 @@ function readyReactor(
   return {
     name,
     kind: "in-process",
-    capabilities: reactorCapabilities(
-      { kind: "in-process", name, storage: { kind: "memory" } },
-      { canSelfHeal: false, syncChannelTypes },
-    ),
+    reach: { hosting: "in-process", inspection: "direct" },
+    info: {
+      storage: IN_MEMORY_PGLITE_STORAGE_FACTS,
+      workflows: false,
+      syncChannels: syncChannelTypes,
+      access: { admin: true, sql: true },
+    },
     syncManager: undefined,
+    get admin() {
+      return unused("admin");
+    },
     get client() {
       return unused("client");
     },
@@ -80,7 +86,7 @@ function readyEntry(
   };
 }
 
-/** An entry that is still booting, so there is no contract to read yet. */
+/** An entry that is still booting, so there is no info to read yet. */
 function provisioningEntry(name: string): ManagedReactorEntry {
   return {
     name,
@@ -222,7 +228,7 @@ describe("LinkLocalSyncPanel", () => {
     expect(message).not.toMatch(/built with no sync module/);
   });
 
-  it("says a booting reactor has no contract to read yet", () => {
+  it("says a booting reactor has no info to read yet", () => {
     const { registry } = fakeRegistry([
       provisioningEntry("a"),
       readyEntry("b"),

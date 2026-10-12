@@ -1,6 +1,6 @@
 import {
   LOCAL_CHANNEL_TYPE,
-  supportsSyncChannel,
+  type ManagedReactor,
   type ManagedReactorEntry,
 } from "@powerhousedao/reactor-monitor";
 import {
@@ -14,23 +14,16 @@ export type LinkLocalSyncPanelProps = {
   readonly reactorName: string;
 };
 
-/**
- * Why this reactor cannot be an end of a brokered local link, diagnosed from
- * its capability contract.
- *
- * The three reasons are genuinely different, and the earlier single
- * hard-coded island message mis-told two of them: a reactor that declares
- * channels but not `"local"` has a sync module and is syncing, it just cannot
- * be handed a `MessagePort` (a `remote` reactor is on the far side of a wire,
- * and a worker whose built configuration could not be read is not taken to
- * serve local peers on a guess) -- telling its operator to pick a sync mode
- * would be advice for a problem they do not have.
- */
+function servesLocal(reactor: ManagedReactor): boolean {
+  return reactor.info.syncChannels.includes(LOCAL_CHANNEL_TYPE);
+}
+
+/** Why this reactor cannot be an end of a brokered local link. */
 function noLocalChannelReason(entry: ManagedReactorEntry | undefined): string {
   if (!entry || entry.status !== "ready") {
-    return "This reactor is not ready, so there is no capability contract to read yet; the link panel appears once it is.";
+    return "This reactor is not ready, so there is no info to read yet; the link panel appears once it is.";
   }
-  const channels = entry.reactor.capabilities.syncChannels;
+  const channels = entry.reactor.info.syncChannels;
   if (channels.length === 0) {
     return 'This reactor was built with no sync module (sync.channelScheme: null), so it has nothing to adopt a brokered local peer into. Provision it with sync mode "local" or "connect" to link it.';
   }
@@ -39,16 +32,8 @@ function noLocalChannelReason(entry: ManagedReactorEntry | undefined): string {
 
 /**
  * Brokers a direct `LocalChannel` sync link from this reactor to another
- * monitor-owned reactor for a chosen drive -- no Switchboard, no GraphQL
- * (multi-reactor W1.2). The resulting `local` remote then shows up in each
- * reactor's Sync tab below, with its connection state and cursors.
- *
- * Both ends are gated on the capability contract, not on how they were
- * spelled: a connect-mode reactor is a valid end of a local link since W3.0,
- * and only a reactor that does not declare the channel is not. THIS end is
- * read from the registry here rather than passed in -- the panel already
- * subscribes to it for the target list, so a prop would be a second path to
- * the same fact, and the two could disagree.
+ * monitor-owned reactor for a chosen drive. Both ends are gated on
+ * `info.syncChannels`, read from the same registry subscription.
  */
 export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
   const registry = useReactorMonitorRegistry();
@@ -59,14 +44,11 @@ export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [linked, setLinked] = useState<string | null>(null);
 
-  // This end's own contract, from the same subscription the target list reads.
   const self = useMemo(
     () => entries.find((entry) => entry.name === reactorName),
     [entries, reactorName],
   );
-  const localLinks =
-    self?.status === "ready" &&
-    supportsSyncChannel(self.reactor.capabilities, LOCAL_CHANNEL_TYPE);
+  const localLinks = self?.status === "ready" && servesLocal(self.reactor);
 
   // Only local-capable peers are offered: linkLocalSync refuses the others,
   // and it refuses them before opening a port, so listing them would only
@@ -77,7 +59,7 @@ export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
         (entry) =>
           entry.status === "ready" &&
           entry.name !== reactorName &&
-          supportsSyncChannel(entry.reactor.capabilities, LOCAL_CHANNEL_TYPE),
+          servesLocal(entry.reactor),
       ),
     [entries, reactorName],
   );
