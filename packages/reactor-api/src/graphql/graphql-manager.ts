@@ -330,9 +330,10 @@ export class GraphQLManager {
    * the awaits that complete it. */
   #registryChanges: Promise<unknown> = Promise.resolve();
 
-  /** Set inside a running registry change, so a subgraph hook that makes
-   * another runs it inline instead of waiting on itself. */
-  readonly #inRegistryChange = new AsyncLocalStorage<true>();
+  /** Active while a registry change runs, so a subgraph hook that makes
+   * another runs it inline instead of waiting on itself. Work the change
+   * detaches, such as a timer, outlives it and enqueues as usual. */
+  readonly #inRegistryChange = new AsyncLocalStorage<{ active: boolean }>();
 
   #generatedTypes:
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
@@ -1054,10 +1055,17 @@ export class GraphQLManager {
   }
 
   #serialize<T>(task: () => Promise<T>): Promise<T> {
-    if (this.#inRegistryChange.getStore()) return task();
-    const run = this.#registryChanges.then(() =>
-      this.#inRegistryChange.run(true, task),
-    );
+    if (this.#inRegistryChange.getStore()?.active) return task();
+    const run = this.#registryChanges.then(() => {
+      const change = { active: true };
+      return this.#inRegistryChange.run(change, async () => {
+        try {
+          return await task();
+        } finally {
+          change.active = false;
+        }
+      });
+    });
     this.#registryChanges = run.catch(() => undefined);
     return run;
   }
@@ -1065,7 +1073,7 @@ export class GraphQLManager {
   /** Refresh the router after a registry change; scheduled rather than
    * awaited when called from inside one. */
   async #refreshRouter(): Promise<void> {
-    if (this.#inRegistryChange.getStore()) {
+    if (this.#inRegistryChange.getStore()?.active) {
       this.#scheduleRouterUpdate();
       return;
     }
