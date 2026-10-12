@@ -3,6 +3,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   type InProcessReactorClientModule,
+  type IReactorClient,
 } from "@powerhousedao/reactor";
 import {
   initializeAuth,
@@ -46,13 +47,12 @@ describe("reactor-drive subgraph reads as the caller", () => {
     client: Client,
     source: { utils: { createDocument: () => PHDocument } },
     id: string,
+    slug?: string,
   ) {
+    const created = source.utils.createDocument();
+    if (slug) created.header.slug = slug;
     // A fixed id cannot be content-addressed, so the document is legacy.
-    const document = withSignaturePolicy(
-      source.utils.createDocument(),
-      "legacy",
-      { id },
-    );
+    const document = withSignaturePolicy(created, "legacy", { id });
     await client.create(document);
     return id;
   }
@@ -99,6 +99,7 @@ describe("reactor-drive subgraph reads as the caller", () => {
       client,
       reactorDriveDocumentModelModule,
       "rd-drive",
+      "rd-drive-slug",
     );
     const policedDrive = await create(
       client,
@@ -166,7 +167,16 @@ describe("reactor-drive subgraph reads as the caller", () => {
       readModel: new DriveNodeView(db),
       hostCanRead: () => Promise.resolve(false),
     });
-    return { resolvers, refusedByHost, as, drive, policedDrive, secret, open };
+    return {
+      client,
+      resolvers,
+      refusedByHost,
+      as,
+      drive,
+      policedDrive,
+      secret,
+      open,
+    };
   }
 
   it("serves a policed drive and its nodes only to a caller who may read it", async () => {
@@ -235,6 +245,91 @@ describe("reactor-drive subgraph reads as the caller", () => {
       await refusedByHost.Query.reactorDrive(
         undefined,
         { id: drive },
+        as(READER),
+      ),
+    ).toBeNull();
+  });
+
+  it("answers missing, denied, host-refused and outage alike with null", async () => {
+    const { client, resolvers, refusedByHost, as, drive, policedDrive } =
+      await fixture();
+    const missing = "rd-missing";
+    const outage = createReactorDriveResolvers({
+      reactorClient: {
+        isServed: client.isServed.bind(client),
+        get: () => Promise.reject(new Error("reactor unavailable")),
+      } as unknown as IReactorClient,
+      readModel: new DriveNodeView(db!),
+    });
+    const drives = {
+      missing: await resolvers.Query.reactorDrive(
+        undefined,
+        { id: missing },
+        as(READER),
+      ),
+      denied: await resolvers.Query.reactorDrive(
+        undefined,
+        { id: policedDrive },
+        as(OUTSIDER),
+      ),
+      hostRefused: await refusedByHost.Query.reactorDrive(
+        undefined,
+        { id: drive },
+        as(READER),
+      ),
+      missingAndHostRefused: await refusedByHost.Query.reactorDrive(
+        undefined,
+        { id: missing },
+        as(READER),
+      ),
+      outage: await outage.Query.reactorDrive(
+        undefined,
+        { id: drive },
+        as(READER),
+      ),
+    };
+
+    expect(drives).toEqual({
+      missing: null,
+      denied: null,
+      hostRefused: null,
+      missingAndHostRefused: null,
+      outage: null,
+    });
+  });
+
+  it("applies the host's check to the drive a slug names", async () => {
+    const { client, as, drive } = await fixture();
+    // The host's check is keyed by document id; anything else reads as refused.
+    const asked: string[] = [];
+    const admitsDrive = createReactorDriveResolvers({
+      reactorClient: client,
+      readModel: new DriveNodeView(db!),
+      hostCanRead: (documentId) => {
+        asked.push(documentId);
+        return Promise.resolve(documentId === drive);
+      },
+    });
+    const refusesDrive = createReactorDriveResolvers({
+      reactorClient: client,
+      readModel: new DriveNodeView(db!),
+      hostCanRead: () => Promise.resolve(false),
+    });
+
+    expect(
+      (
+        await admitsDrive.Query.reactorDrive(
+          undefined,
+          { id: "rd-drive-slug" },
+          as(READER),
+        )
+      )?.id,
+    ).toBe(drive);
+    expect(asked).toEqual([drive]);
+    expect(
+      await refusesDrive.Query.reactorDrive(
+        undefined,
+        { id: "rd-drive-slug" },
         as(READER),
       ),
     ).toBeNull();
