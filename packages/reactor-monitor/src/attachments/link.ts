@@ -28,8 +28,7 @@ function defaultCreateChannel(): {
 }
 
 /**
- * Brokers an attachment-byte link between two monitor-owned reactors
- * (multi-reactor W3.4).
+ * Brokers an attachment-byte link between two monitor-owned reactors.
  *
  * Exactly the shape `linkLocalSync` already has -- the monitor opens one
  * `MessageChannel` and hands each reactor an end -- on a SEPARATE channel from

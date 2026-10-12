@@ -21,47 +21,20 @@ export type {
 } from "./types.js";
 
 /**
- * Multi-reactor Stage-1 load harness (W1.3,
- * docs/plans/2026-10-03-multi-reactor.md): `runLocalSyncLoad` generates
- * `documentCount * opsPerDocument` operations on reactor A over the brokered
- * `LocalChannel` two-in-process-reactor link proven by
- * `test/local-sync.test.ts`, waits for reactor B to hold all of them, and
- * returns a stable, JSON-serializable report -- the Stage-P baseline record.
+ * Generates `documentCount * opsPerDocument` operations on reactor A over a
+ * brokered `LocalChannel` link, waits for reactor B to hold all of them, and
+ * returns a JSON-serializable report.
  *
- * Sync streams ops from A to B concurrently with generation -- B does not
- * wait for A to finish before applying what has already arrived. That means
- * a clock started only after generation resolves measures nothing but a
- * residual tail plus a poll quantum, not real propagation latency: most of
- * it already elapsed, unmeasured, while A was still generating. This harness
- * instead polls B from before generation starts, so `durationsMs.endToEndMs`
- * -- generation start to B holding every op -- is the honest headline
- * number; `durationsMs.residualTailMs` keeps the old post-generation-only
- * measurement around under a name that says what it is.
+ * Sync streams ops to B while A is still generating, so B is polled from
+ * before generation starts: `durationsMs.endToEndMs` is generation start to
+ * B holding every op. `durationsMs.residualTailMs` is the post-generation
+ * tail only.
  *
- * Live-measured reference points (2026-10-04, two browser SharedWorker
- * reactors, Stage-P baselines -- see the plan's "W1.3 milestone achieved"
- * note): alpha->beta first-op propagation 105ms; beta->alpha first-op
- * propagation 87ms; a 50-op burst created on A in 4.9s (~10 ops/s durable
- * local write -- the flush cost, a Stage-P item) arrived on B 625ms after
- * creation finished. A small CI-sized run of this harness (20 docs x 5 ops
- * = 100 ops, in-process/memory storage, no browser/worker overhead) is
- * expected to clear these numbers by a wide margin; it is not a substitute
- * for the browser-measured baseline, only a regression guard that runs in
- * every suite.
- *
- * Load is generated as `drives.addFolder` calls on one shared drive, the
- * same primitive `local-sync.test.ts` already proved travels the link: each
- * call is one operation on the drive document, named
- * `load:<runId>:<doc>:<op>:<payload>` so propagation can be measured by
- * counting matching nodes on B without a bespoke document model. The run id
- * is salted per call so a second run against an already-linked pair passed
- * via `options.reactors` (the documented reuse case) never counts a prior
- * run's nodes as its own; the pre-run count of nodes already matching the
- * (fresh, so normally zero) prefix is also snapshotted and added to the
- * target, belt-and-suspenders against the same contamination. This
- * deliberately does not exercise separate per-document storage; see
- * docs/plans/2026-10-03-multi-reactor.md Stage P for the memory/DB-size axes
- * this harness seeds but does not itself fix.
+ * Load is `drives.addFolder` calls on one shared drive, named
+ * `load:<runId>:<doc>:<op>:<payload>` so B can be counted by prefix. The run
+ * id is salted per call, and the pre-run count of matching nodes is added to
+ * the target, so a reused pair (`options.reactors`) never counts a prior
+ * run's nodes.
  */
 export async function runLocalSyncLoad(
   options: LoadHarnessOptions,
@@ -281,7 +254,7 @@ function loadNodeName(
   return `${nodePrefix}${doc}:${op}${payload}`;
 }
 
-/** Sequential, matching the measurement method the milestone baseline used. */
+/** Sequential: one write at a time. */
 async function generateLoad(
   a: ManagedInProcessReactor,
   driveId: string,

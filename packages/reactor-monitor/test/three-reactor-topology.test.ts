@@ -15,12 +15,11 @@ import {
 } from "./helpers.js";
 
 /**
- * Stage-2 mixed topology (docs/plans/2026-10-03-multi-reactor.md): three
- * reactors, A <-> B <-> C, linked on ONE drive, with C standing in for the
- * no-worker-support fallback actor. The hosting kinds are all `in-process`
+ * Mixed topology: three reactors, A <-> B <-> C, linked on ONE drive, with C
+ * standing in for the no-worker-support fallback actor. The hosting kinds are all `in-process`
  * here because a SharedWorker does not exist outside a browser; what this file
  * proves is that `linkLocalSync` COMPOSES -- a reactor holding two brokered
- * local remotes is not a case the stage-1 pair ever exercised -- and what the
+ * local remotes is not a case a two-reactor pair exercises -- and what the
  * sync layer does with an operation that arrived from one peer when a second
  * peer is attached.
  *
@@ -115,8 +114,7 @@ describe("three-reactor mixed topology (A <-> B <-> C on one drive)", () => {
     const drive = await a.client.drives.create({ global: { name: "Trio" } });
     const driveId = drive.header.id;
 
-    // B is the hub: two brokered local remotes on one reactor, which is the
-    // composition stage 1 never exercised.
+    // B is the hub: two brokered local remotes on one reactor.
     links.push(
       await registry.linkLocalSync("trio-a", "trio-b", {
         driveId,
@@ -206,8 +204,8 @@ describe("three-reactor mixed topology (A <-> B <-> C on one drive)", () => {
     await sleep(2_000);
     expect(await countAll(trio, driveId)).toEqual(settled);
 
-    // All three are inspectable, which is the other half of stage 2: the
-    // topology grew without the lab bench losing sight of any member.
+    // All three are inspectable: the topology grew without the lab bench
+    // losing sight of any member.
     for (const reactor of trio) {
       const queue = await reactor.inspector.getQueueState();
       expect(queue.isPaused).toBe(false);

@@ -8,11 +8,9 @@ import { descriptor, nodeChannel } from "./helpers.js";
 import type { AttachmentRef } from "@powerhousedao/reactor";
 
 /**
- * W1.4 (docs/plans/2026-10-03-multi-reactor.md, Stage 1 decision 1): Stage 1
- * is refs-only -- prove an `AttachmentRef` STRING survives the local-sync
- * path byte-identical. No byte transfer, no attachment service, no
- * dedup/resolve: those need a configured attachment service and land in
- * Stage 3 (W3.4).
+ * Proves an `AttachmentRef` STRING survives the local-sync path
+ * byte-identical. No byte transfer: `local-attachment-sync.test.ts` covers
+ * the bytes.
  *
  * `baseDocumentModels` (DocumentModel, DocumentDrive, ReactorDrive -- the
  * monitor's in-process default set) has no document model with a field
@@ -42,7 +40,7 @@ async function findNodeByName(
   }
 }
 
-describe("attachment ref fidelity over local sync (W1.4, refs-only)", () => {
+describe("attachment ref fidelity over local sync (refs only)", () => {
   const provisioned: ManagedInProcessReactor[] = [];
 
   async function host(name: string): Promise<ManagedInProcessReactor> {

@@ -67,7 +67,7 @@ describe("runLocalSyncLoad", () => {
     expect(report.throughput.e2eOpsPerSec).toBeGreaterThan(0);
     expect(Number.isFinite(report.throughput.e2eOpsPerSec)).toBe(true);
 
-    // The report is the Stage-P baseline record: JSON-serializable, stable
+    // The report is JSON-serializable, stable
     // field names, no live handles leaked into it.
     expect(() => JSON.stringify(report)).not.toThrow();
     // In-process/node, so every sample is a real process.memoryUsage()
@@ -78,15 +78,13 @@ describe("runLocalSyncLoad", () => {
     }
   }, 60_000);
 
-  // Manual Stage-P profile: 500 ops (documentCount x opsPerDocument), the
-  // order of magnitude the plan's Stage-P chapter sizes its memory/DB-size/
-  // speed axes against. Left `describe.skip`'d because it is sized for a
+  // Manual profile: 500 ops (documentCount x opsPerDocument). Left `describe.skip`'d because it is sized for a
   // deliberate profiling run (watch memory/dbQuery results by hand, maybe
   // against `storage: { kind: "path" }` reactors passed via `options.reactors`
   // for realistic durability costs), not for every `pnpm test`. Un-skip and
-  // run directly (`pnpm vitest run test/load-harness.test.ts -t "Stage-P"`)
+  // run directly (`pnpm vitest run test/load-harness.test.ts -t "manual profile"`)
   // to record a baseline.
-  describe.skip("Stage-P manual profile", () => {
+  describe.skip("manual profile", () => {
     it("500-op in-process profile", async () => {
       const report = await runLocalSyncLoad({
         documentCount: 50,

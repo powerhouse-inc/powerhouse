@@ -28,9 +28,9 @@ export type MonitorWorkerConstruct = {
   channelScheme?: ChannelScheme | null;
   /**
    * Builds the sync module on a lone `LocalChannelFactory`: local-ONLY, no gql
-   * factory (multi-reactor W1.2). A gql `channelScheme` reactor adopts brokered
-   * local peers without this, by composing a local factory onto its scheme
-   * (W3.0); `channelScheme` is ignored when this is set.
+   * factory. A gql `channelScheme` reactor adopts brokered local peers
+   * without this, by composing a local factory onto its scheme;
+   * `channelScheme` is ignored when this is set.
    */
   localSync?: boolean;
 };

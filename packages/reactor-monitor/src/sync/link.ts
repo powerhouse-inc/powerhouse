@@ -22,7 +22,7 @@ export type LocalSyncHandle = {
   readonly remoteNameB: string;
   /**
    * The attachment-byte link brokered alongside this one, when both reactors
-   * hold an attachment store (multi-reactor W3.4). Absent when either does
+   * hold an attachment store. Absent when either does
    * not, which is not a failure: a pair can sync operations while only one
    * side holds bytes.
    */
@@ -122,7 +122,7 @@ function refuseIfAlreadyLinked(
 
 /**
  * Wires a direct `LocalChannel` sync link between two monitor-owned reactors
- * for one collection -- no Switchboard, no GraphQL (multi-reactor W1.2).
+ * for one collection -- no Switchboard, no GraphQL.
  *
  * The monitor is the broker: it opens one `MessageChannel`, hands `a` port1 and
  * `b` port2 (transferred into a worker, wrapped in-process), and each reactor
@@ -189,7 +189,7 @@ export async function linkLocalSync(
   }
 
   // Byte movement rides a SECOND brokered channel, so a large chunked transfer
-  // cannot delay operation delivery on the sync wire (multi-reactor W3.4). A
+  // cannot delay operation delivery on the sync wire. A
   // failure here does not undo the sync link: operations syncing without their
   // attachment bytes is the documented lazy model's own fallback, and tearing
   // down a healthy sync link over it would be the worse outcome. It is loud in

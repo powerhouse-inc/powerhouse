@@ -75,11 +75,11 @@ export type ReactorSyncConfig = {
   channelScheme?: ChannelScheme | null;
   /**
    * Builds the sync module on a lone `LocalChannelFactory`: a local-ONLY
-   * reactor, deliberately Switchboard- and GraphQL-free (multi-reactor W1.2).
+   * reactor, deliberately Switchboard- and GraphQL-free.
    * When set, `channelScheme` is ignored.
    *
    * Not needed to adopt brokered `LocalChannel` peers any more. A gql-scheme
-   * reactor composes a local factory onto its scheme (W3.0), so it declares
+   * reactor composes a local factory onto its scheme, so it declares
    * `syncChannels: ["gql", "local"]` and accepts both kinds of remote. Use
    * this only for a reactor that must have no gql factory at all.
    */
@@ -94,7 +94,7 @@ export type ReactorSyncConfig = {
 
 /**
  * Where an already-running reactor lives and how to reach its inspection
- * surface (multi-reactor W3.2). `remote` kind only.
+ * surface. `remote` kind only.
  */
 export type ReactorRemoteConfig = {
   /**
@@ -148,12 +148,11 @@ export interface ReactorDescriptor {
   storage?: ReactorStorageConfig;
   /**
    * Attachment byte movement: a local byte store plus a fetch-on-reference
-   * replicator (multi-reactor W3.4). Absent, the reactor holds no attachment
+   * replicator. Absent, the reactor holds no attachment
    * bytes and {@link ManagedReactorBase.attachments} is absent too.
    *
    * In-process only for now. A worker reactor would need the store config to
-   * ride the construct and the status/peer ops to cross the RPC boundary; see
-   * the W3.4 section of docs/plans/2026-10-03-multi-reactor.md.
+   * ride the construct and the status/peer ops to cross the RPC boundary.
    */
   attachments?: ReactorAttachmentsConfig;
   /**
@@ -181,7 +180,7 @@ export interface ReactorDescriptor {
   /**
    * `remote` only, and required for it: the already-running reactor to attach
    * to. Nothing is built in this process; the handle's inspection surfaces
-   * speak to that reactor over HTTP (multi-reactor W3.2).
+   * speak to that reactor over HTTP.
    */
   remote?: ReactorRemoteConfig;
 }

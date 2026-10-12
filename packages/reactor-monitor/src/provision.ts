@@ -23,7 +23,7 @@ export type ProvisionOptions = ProvisionWorkerOptions &
  *
  * `remote` attaches an already-running reactor (a Switchboard) over HTTP: it
  * builds nothing and namespaces nothing, and its inspection surfaces speak to
- * reactor-api's inspection subgraph (multi-reactor W3.2). `descriptor.name`
+ * reactor-api's inspection subgraph. `descriptor.name`
  * is then only this monitor session's label for it.
  */
 export function provision(

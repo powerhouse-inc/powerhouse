@@ -4,7 +4,7 @@ import type { ManagedInProcessReactor } from "../types.js";
 /**
  * A pre-provisioned, already-linked pair of in-process reactors, for a caller
  * that wants to drive {@link runLocalSyncLoad} against reactors it owns (a
- * durable storage kind, a larger Stage-P profile, a reactor already carrying
+ * durable storage kind, a larger profile, a reactor already carrying
  * other data). Owning the pair also means owning its teardown:
  * {@link runLocalSyncLoad} never unlinks or kills a caller-supplied pair.
  */
@@ -30,7 +30,7 @@ export type LoadHarnessOptions = {
   /**
    * Drives the load against an already-linked pair instead of provisioning
    * and linking a fresh one. Omit for a self-contained small-load test; pass
-   * this for a Stage-P profile run against reactors built with realistic
+   * this for a profile run against reactors built with realistic
    * storage.
    */
   reactors?: LoadHarnessReactors;
@@ -96,7 +96,7 @@ export type LoadHarnessThroughput = {
 /**
  * `process.memoryUsage()` snapshots at phase boundaries. One process hosts
  * both reactors in-process, so this is whole-process memory, not a
- * per-reactor split -- the Stage-P memory axis's starting instrument.
+ * per-reactor split.
  *
  * Optional: this harness module is part of a browser-targeted barrel, and
  * `process.memoryUsage` does not exist there. A browser run leaves every
@@ -120,7 +120,7 @@ export type LoadHarnessOperationCounts = {
 };
 
 /**
- * The Stage-P baseline record: stable field names, plain data, JSON-
+ * Stable field names, plain data, JSON-
  * serializable, so a run can be dumped to disk and diffed against a later one.
  */
 export type LoadHarnessReport = {

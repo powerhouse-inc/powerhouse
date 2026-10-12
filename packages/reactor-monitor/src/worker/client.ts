@@ -94,7 +94,7 @@ export type ProvisionWorkerOptions = {
    * Fingerprint the worker pins its build to. A tab whose id differs from
    * the worker's baseline is told to reload, which is how a stale worker is
    * replaced. Defaults to the library version, which does NOT vary per dev
-   * build — see W0.6 in the multi-reactor plan.
+   * build.
    */
   buildId?: string;
   /** Run when `kill()` releases the connection; the worker path has none. */

@@ -9,12 +9,11 @@ import type {
 import type { MessagePortLike } from "@powerhousedao/reactor";
 
 /**
- * Attachment byte movement for one provisioned reactor (multi-reactor W3.4).
+ * Attachment byte movement for one provisioned reactor.
  *
  * Absent from a descriptor, the reactor gets no attachment store and no
- * replicator at all -- which is the pre-W3.4 behaviour and stays the default,
- * because a reactor that holds no bytes is a legitimate (and cheap) thing to
- * provision.
+ * replicator at all. That is the default: a reactor that holds no bytes is
+ * a legitimate (and cheap) thing to provision.
  */
 export type ReactorAttachmentsConfig = {
   /**

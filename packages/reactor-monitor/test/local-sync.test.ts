@@ -129,10 +129,8 @@ describe("brokered local sync between two in-process reactors", () => {
     await handle.unlink();
   }, 60_000);
 
-  // W3.0: connect mode gained local capability. A connect-mode reactor now
-  // composes a LocalChannelFactory onto its gql scheme, so it is a valid end
-  // of a brokered link -- which is what the mixed topologies in stage 3 rest
-  // on, and what this suite previously asserted was impossible.
+  // A connect-mode reactor composes a LocalChannelFactory onto its gql
+  // scheme, so it is a valid end of a brokered link.
   it("links a connect-mode reactor to a local-only one and syncs over it", async () => {
     const local = await host("mixed-local");
     const connect = await provisionInProcess(descriptor("mixed-connect"));

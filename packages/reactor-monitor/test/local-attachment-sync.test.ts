@@ -23,11 +23,11 @@ import {
 import { descriptor, folderNames, nodeChannel } from "./helpers.js";
 
 /**
- * W3.4 end to end (docs/plans/2026-10-03-multi-reactor.md): two real
- * in-process reactors, linked over brokered MessagePorts, where A holds
+ * Two real in-process reactors, linked over brokered MessagePorts, where A holds
  * attachment BYTES and B ends up holding them too -- pulled on reference, with
- * no Switchboard, no GraphQL and no HTTP anywhere in the path. W1.4 proved the
- * ref STRING travels; this proves the bytes follow it.
+ * no Switchboard, no GraphQL and no HTTP anywhere in the path.
+ * `attachment-ref-fidelity.test.ts` proves the ref STRING travels; this
+ * proves the bytes follow it.
  *
  * `baseDocumentModels` (the monitor's in-process default set) declares no
  * `AttachmentRef` field on any model, so there is nothing for the schema
@@ -79,7 +79,7 @@ async function readAll(
   return out;
 }
 
-describe("attachment byte replication over a brokered local link (W3.4)", () => {
+describe("attachment byte replication over a brokered local link", () => {
   const provisioned: ManagedInProcessReactor[] = [];
 
   async function host(
@@ -280,7 +280,7 @@ describe("attachment byte replication over a brokered local link (W3.4)", () => 
     expect((await b.attachments!.status()).held).toBe(1);
   }, 60_000);
 
-  it("keeps a second collection's attachment link serving when the first is unlinked (W3.4 finding 5)", async () => {
+  it("keeps a second collection's attachment link serving when the first is unlinked", async () => {
     const a = await host("multi-a", attachments());
     const b = await host("multi-b", attachments());
 
@@ -332,7 +332,7 @@ describe("attachment byte replication over a brokered local link (W3.4)", () => 
     );
   }, 60_000);
 
-  it("unlink is idempotent: a second call is a safe no-op (W3.4 finding 7)", async () => {
+  it("unlink is idempotent: a second call is a safe no-op", async () => {
     const a = await host("idem-a", attachments());
     const b = await host("idem-b", attachments());
     const drive = await a.client.drives.create({ global: { name: "Idem" } });

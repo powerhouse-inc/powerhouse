@@ -25,8 +25,7 @@ const workflowDocumentModelModule =
   WorkflowV1 as unknown as DocumentModelModule;
 
 /**
- * W1.5 (docs/plans/2026-10-03-multi-reactor.md, Stage 1 decision 3): workflow
- * EXECUTION is a singleton pinned to one designated Node reactor, and a
+ * Workflow EXECUTION is a singleton pinned to one designated Node reactor, and a
  * browser/in-process reactor must never register the workflow trigger read
  * model. Two assertions:
  *
@@ -58,7 +57,7 @@ function workflowDescriptor(name: string): ReactorDescriptor {
   });
 }
 
-describe("workflow documents sync as documents; no trigger execution (W1.5)", () => {
+describe("workflow documents sync as documents; no trigger execution", () => {
   const provisioned: ManagedInProcessReactor[] = [];
 
   async function host(name: string): Promise<ManagedInProcessReactor> {
