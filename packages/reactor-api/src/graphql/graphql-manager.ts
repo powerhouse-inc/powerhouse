@@ -38,11 +38,11 @@ import {
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
-  documentModelGeneratedTypeNames,
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
   reservedTypeNames,
+  reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
 } from "../utils/create-schema.js";
@@ -620,14 +620,13 @@ export class GraphQLManager {
     );
     const refused = new Map<string, string>();
     const admitted = models.filter((model) => {
-      let names: Set<string>;
+      let taken: string[];
       try {
-        names = documentModelGeneratedTypeNames(model);
+        taken = reservedTypeNamesTaken(model, reserved);
       } catch {
         // An unparseable model fails where the schema is built, as before.
         return true;
       }
-      const taken = Array.from(names).filter((name) => reserved.has(name));
       if (taken.length === 0) return true;
       const id = model.documentModel.global.id;
       const reason = `generates reserved type names: ${taken.join(", ")}`;

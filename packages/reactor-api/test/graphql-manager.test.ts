@@ -2958,6 +2958,45 @@ describe("GraphQLManager", () => {
       expect(refusals).toHaveLength(1);
     });
 
+    function withStateScalars(
+      model: DocumentModelModule,
+      scalars: string[],
+    ): DocumentModelModule {
+      const spec = model.documentModel.global.specifications[0];
+      spec.state.global.schema = `${scalars.map((n) => `scalar ${n}`).join("\n")}\n${spec.state.global.schema}`;
+      return model;
+    }
+
+    it("admits a model that redeclares standard scalars", async () => {
+      const model = withStateScalars(makeModelModule("Gadget", "test/gadget"), [
+        "AttachmentRef",
+        "Amount",
+      ]);
+      const harness = makeModelsHarness([makeDriveModule(), model]);
+
+      await initAndFlush(harness.manager, [ReactorSubgraph, SystemSubgraph]);
+
+      expectCoreServed(harness);
+      expect(harness.manager.hasSubgraphHandler("gadget")).toBe(true);
+      expect(harness.logger.error).not.toHaveBeenCalledWith(
+        REFUSAL,
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it("refuses a model that declares a core type as a scalar", async () => {
+      const model = withStateScalars(makeModelModule("Gadget", "test/gadget"), [
+        "Revision",
+      ]);
+      const harness = makeModelsHarness([makeDriveModule(), model]);
+
+      await initAndFlush(harness.manager, [ReactorSubgraph, SystemSubgraph]);
+
+      expectCoreServed(harness);
+      await expectModelRefused(harness, model, "Revision");
+    });
+
     it("admits the base models against the real core subgraphs", async () => {
       const models = [
         driveDocumentModelModule,

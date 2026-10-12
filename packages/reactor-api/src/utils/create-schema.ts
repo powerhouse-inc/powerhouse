@@ -372,17 +372,23 @@ function documentModelTypesSdl(
   return sdl;
 }
 
-/** Names of the types `documentModel` adds to the generated schema. */
-export function documentModelGeneratedTypeNames(
-  documentModel: DocumentModelModule,
-): Set<string> {
-  const global = documentModel.documentModel.global;
-  return typeDefinitionNames(
-    parseSdl(documentModelTypesSdl(global, getDocumentModelSchemaName(global))),
-  );
+/** Type name → whether every definition of that name is a scalar. */
+export type ReservedTypeNames = ReadonlyMap<string, boolean>;
+
+function addScalarFlags(
+  definitions: readonly DefinitionNode[],
+  into: Map<string, boolean>,
+): Map<string, boolean> {
+  for (const def of definitions) {
+    const name = typeDefinitionName(def);
+    if (name === undefined) continue;
+    const scalar = def.kind === Kind.SCALAR_TYPE_DEFINITION;
+    into.set(name, scalar && (into.get(name) ?? true));
+  }
+  return into;
 }
 
-let fixedGeneratedTypeNames: ReadonlySet<string> | undefined;
+let fixedGeneratedTypes: ReservedTypeNames | undefined;
 
 /**
  * Type names no document model may generate: the root types, the generated
@@ -390,18 +396,42 @@ let fixedGeneratedTypeNames: ReadonlySet<string> | undefined;
  */
 export function reservedTypeNames(
   coreTypeDefs: Iterable<DocumentNode>,
-): Set<string> {
-  fixedGeneratedTypeNames ??= getGeneratedDocumentModelTypes([]).names;
-  const reserved = new Set([
-    "Query",
-    "Mutation",
-    "Subscription",
-    ...fixedGeneratedTypeNames,
+): ReservedTypeNames {
+  fixedGeneratedTypes ??= addScalarFlags(
+    getGeneratedDocumentModelTypes([]).definitions,
+    new Map(),
+  );
+  const reserved = new Map([
+    ["Query", false],
+    ["Mutation", false],
+    ["Subscription", false],
+    ...fixedGeneratedTypes,
   ]);
   for (const typeDefs of coreTypeDefs) {
-    for (const name of typeDefinitionNames(typeDefs)) reserved.add(name);
+    addScalarFlags(typeDefs.definitions, reserved);
   }
   return reserved;
+}
+
+/**
+ * The reserved names `documentModel`'s generated types take. A scalar may
+ * repeat a reserved scalar: the duplicate is dropped on assembly.
+ */
+export function reservedTypeNamesTaken(
+  documentModel: DocumentModelModule,
+  reserved: ReservedTypeNames,
+): string[] {
+  const global = documentModel.documentModel.global;
+  const generated = addScalarFlags(
+    parseSdl(documentModelTypesSdl(global, getDocumentModelSchemaName(global)))
+      .definitions,
+    new Map(),
+  );
+  return Array.from(generated)
+    .filter(
+      ([name, scalar]) => reserved.has(name) && !(scalar && reserved.get(name)),
+    )
+    .map(([name]) => name);
 }
 
 export function getGeneratedDocumentModelTypes(

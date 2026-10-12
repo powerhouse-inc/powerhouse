@@ -14,8 +14,8 @@ import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
 import {
   createSchema,
-  documentModelGeneratedTypeNames,
   reservedTypeNames,
+  reservedTypeNamesTaken,
   SubgraphTypeCollisionError,
 } from "../src/utils/create-schema.js";
 
@@ -228,7 +228,7 @@ describe("a subgraph type named like a generated document-model type", () => {
 });
 
 describe("type names reserved from document models", () => {
-  function namedModel(name: string): DocumentModelModule {
+  function namedModel(name: string, extraState = ""): DocumentModelModule {
     return {
       documentModel: {
         global: {
@@ -239,7 +239,9 @@ describe("type names reserved from document models", () => {
               version: 1,
               modules: [],
               state: {
-                global: { schema: `type ${name}State { label: String }` },
+                global: {
+                  schema: `${extraState}\ntype ${name}State { label: String }`,
+                },
                 local: { schema: "" },
               },
             },
@@ -261,18 +263,41 @@ describe("type names reserved from document models", () => {
       `,
     ]);
     for (const name of ["Query", "Mutation", "Subscription"]) {
-      expect(reserved).toContain(name);
+      expect(reserved.get(name)).toBe(false);
     }
     for (const name of ["Signer", "Operation", "IDocument", "DriveDocument"]) {
-      expect(reserved).toContain(name);
+      expect(reserved.get(name)).toBe(false);
     }
-    expect(reserved).toContain("SystemInfo");
-    expect(reserved).not.toContain("Widget");
+    expect(reserved.get("SystemInfo")).toBe(false);
+    expect(reserved.get("AttachmentRef")).toBe(true);
+    expect(reserved.has("Widget")).toBe(false);
   });
 
-  it("names every type a model generates, including one a fixed type shadows", () => {
-    expect(documentModelGeneratedTypeNames(namedModel("Signer"))).toEqual(
-      new Set(["Signer", "Signer_SignerState"]),
-    );
+  it("finds a model type a fixed type would shadow", () => {
+    expect(
+      reservedTypeNamesTaken(namedModel("Signer"), reservedTypeNames([])),
+    ).toEqual(["Signer"]);
+  });
+
+  it("lets a model repeat a reserved scalar, but not as another kind", () => {
+    const reserved = reservedTypeNames([
+      gql`
+        type Revision {
+          scope: String!
+        }
+      `,
+    ]);
+    expect(
+      reservedTypeNamesTaken(
+        namedModel("Widget", "scalar AttachmentRef\nscalar Amount"),
+        reserved,
+      ),
+    ).toEqual([]);
+    expect(
+      reservedTypeNamesTaken(namedModel("Widget", "scalar Revision"), reserved),
+    ).toEqual(["Revision"]);
+    expect(reservedTypeNamesTaken(namedModel("Unknown"), reserved)).toEqual([
+      "Unknown",
+    ]);
   });
 });
