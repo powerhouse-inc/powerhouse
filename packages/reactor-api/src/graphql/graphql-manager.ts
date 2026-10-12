@@ -16,6 +16,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type { IncomingHttpHeaders } from "http";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
 import path from "node:path";
 import { match } from "path-to-regexp";
@@ -314,6 +315,10 @@ export class GraphQLManager {
   /** Registry changes run one at a time: a registration is admitted before
    * the awaits that complete it. */
   #registryChanges: Promise<unknown> = Promise.resolve();
+
+  /** Set inside a running registry change, so a subgraph hook that makes
+   * another runs it inline instead of waiting on itself. */
+  readonly #inRegistryChange = new AsyncLocalStorage<true>();
 
   #generatedTypes:
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
@@ -982,17 +987,33 @@ export class GraphQLManager {
   }
 
   #serialize<T>(task: () => Promise<T>): Promise<T> {
-    const run = this.#registryChanges.then(task);
+    if (this.#inRegistryChange.getStore()) return task();
+    const run = this.#registryChanges.then(() =>
+      this.#inRegistryChange.run(true, task),
+    );
     this.#registryChanges = run.catch(() => undefined);
     return run;
+  }
+
+  /** Refresh the router after a registry change; scheduled rather than
+   * awaited when called from inside one. */
+  async #refreshRouter(): Promise<void> {
+    if (this.#inRegistryChange.getStore()) {
+      this.#scheduleRouterUpdate();
+      return;
+    }
+    await this.updateRouter();
   }
 
   /** Not awaited: the debounced call never settles a promise whose timer a
    * later call replaced, so awaiting it in a registry change could wedge the
    * queue. */
   #scheduleRouterUpdate(): void {
-    this.updateRouter().catch((error: unknown) => {
-      this.logger.error("Failed to update router: @error", error);
+    // Outside the registry change: the update runs after it has finished.
+    this.#inRegistryChange.exit(() => {
+      this.updateRouter().catch((error: unknown) => {
+        this.logger.error("Failed to update router: @error", error);
+      });
     });
   }
 
@@ -1230,7 +1251,7 @@ export class GraphQLManager {
       this.#teardownPackage(packageName),
     );
     if (removed) {
-      await this.updateRouter();
+      await this.#refreshRouter();
     }
   }
 
@@ -1283,7 +1304,7 @@ export class GraphQLManager {
       return this.#pruneOrigin(packageName, keepNames);
     });
     if (removed > 0) {
-      await this.updateRouter();
+      await this.#refreshRouter();
     }
   }
 
@@ -1442,6 +1463,10 @@ export class GraphQLManager {
    * name and type guards as any registration. */
   async setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
     await this.#serialize(async () => {
+      // Its subgraphs are served under `graphql` too, as they always were.
+      if (supergraph !== "" && !this.subgraphs.has("graphql")) {
+        this.subgraphs.set("graphql", []);
+      }
       for (const previous of [...(this.subgraphs.get(supergraph) ?? [])]) {
         if (!subgraphs.includes(previous)) {
           await this.#detachSubgraph(previous, this.#mountBuckets(supergraph));
@@ -1456,7 +1481,7 @@ export class GraphQLManager {
         );
       }
     });
-    return this.updateRouter();
+    return this.#refreshRouter();
   }
 
   async shutdown(): Promise<void> {

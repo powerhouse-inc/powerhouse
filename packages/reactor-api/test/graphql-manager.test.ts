@@ -2747,6 +2747,35 @@ describe("GraphQLManager", () => {
       ).toBeInstanceOf(Squatter);
     });
 
+    it("runs a registration a subgraph's onSetup makes inline", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      class Inner extends BaseSubgraph {
+        name = "inner";
+      }
+      class Outer extends BaseSubgraph {
+        name = "outer";
+        onSetup = async () => {
+          await this.graphqlManager.registerSubgraph(
+            Inner,
+            "graphql",
+            false,
+            "inner-pkg",
+          );
+        };
+      }
+
+      await manager.registerSubgraph(Outer, "graphql", false, "pkg");
+      expect(manager.getSubgraphByName("outer")).toBeInstanceOf(Outer);
+      expect(manager.getSubgraphByName("inner")).toBeInstanceOf(Inner);
+
+      // The queue is not wedged: a later change still runs.
+      const later = makeWidgetSubgraph("later");
+      expect(await manager.registerSubgraphInstance(later, "graphql")).toBe(
+        later,
+      );
+    });
+
     it("serves every model's subgraph when a model is named like a generated subgraph type", async () => {
       const logger = makeHarnessLogger();
       const { manager, gatewayAdapter } = makeHarness({
@@ -2771,6 +2800,19 @@ describe("GraphQLManager", () => {
         expect.arrayContaining([":graphql/revision", ":graphql/gadget"]),
       );
       expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("setSupergraph mirrors its subgraphs under graphql when that bucket is missing", async () => {
+      const { manager } = makeHarness();
+      const sub = makeWidgetSubgraph("mirrored");
+
+      await flush(manager.setSupergraph("extra", [sub]));
+
+      const { subgraphs } = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      expect(subgraphs.get("extra")).toEqual([sub]);
+      expect(subgraphs.get("graphql")).toEqual([sub]);
     });
   });
 });
