@@ -161,6 +161,32 @@ describe("ReactorMonitorRegistry op queue", () => {
     builds[1].reject(new Error("done"));
   });
 
+  it("killAll kills one reactor at a time", async () => {
+    const log: string[] = [];
+    const registry = new ReactorMonitorRegistry();
+    const heldX = deferred();
+    const heldY = deferred();
+    await ready(registry, "x", log, heldX.promise);
+    await ready(registry, "y", log, heldY.promise);
+
+    const all = registry.killAll();
+    await tick();
+    expect(log).toEqual(["kill-start x"]);
+
+    heldX.resolve();
+    await vi.waitFor(() => expect(log).toContain("kill-start y"));
+    expect(log).toEqual(["kill-start x", "kill-done x", "kill-start y"]);
+
+    heldY.resolve();
+    await all;
+    expect(log).toEqual([
+      "kill-start x",
+      "kill-done x",
+      "kill-start y",
+      "kill-done y",
+    ]);
+  });
+
   it("kills a ready reactor even when a listener throws on kill's publish", async () => {
     const log: string[] = [];
     const registry = new ReactorMonitorRegistry();
