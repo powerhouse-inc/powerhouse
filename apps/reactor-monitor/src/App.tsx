@@ -102,6 +102,7 @@ function ReadyPanel({
   readonly tab: InspectorTab;
 }): ReactNode {
   const { recheck, rechecking, recheckError } = useInfoRecheck(reactor);
+  const registry = useReactorMonitorRegistry();
   const admin = adminGateFor(reactor);
   const sql = sqlGateFor(reactor);
   const operator = operatorGateFor(reactor);
@@ -114,6 +115,11 @@ function ReadyPanel({
         <OverviewTab
           onRecheckServer={
             reactor.kind === "remote" ? () => void recheck() : undefined
+          }
+          onRestartWorker={
+            reactor.kind === "worker"
+              ? () => registry.restart(reactor.name)
+              : undefined
           }
           recheckError={recheckError}
           rechecking={rechecking}
