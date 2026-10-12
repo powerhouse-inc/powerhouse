@@ -15,13 +15,19 @@ export type LinkLocalSyncPanelProps = {
 };
 
 function servesLocal(reactor: ManagedReactor): boolean {
-  return reactor.info.syncChannels.includes(LOCAL_CHANNEL_TYPE);
+  return (
+    reactor.kind !== "remote" &&
+    reactor.info.syncChannels.includes(LOCAL_CHANNEL_TYPE)
+  );
 }
 
 /** Why this reactor cannot be an end of a brokered local link. */
 function noLocalChannelReason(entry: ManagedReactorEntry | undefined): string {
   if (!entry || entry.status !== "ready") {
     return "This reactor is not ready, so there is no info to read yet; the link panel appears once it is.";
+  }
+  if (entry.reactor.kind === "remote") {
+    return "This reactor is remote: the monitor reaches it only over its host's inspection subgraph, which cannot hand it a MessagePort.";
   }
   const channels = entry.reactor.info.syncChannels;
   if (channels.length === 0) {

@@ -8,6 +8,7 @@ import {
   LOCAL_CHANNEL_TYPE,
   type ManagedInProcessReactor,
   type ManagedReactorEntry,
+  type ManagedRemoteReactor,
   type ReactorMonitorRegistry,
 } from "@powerhousedao/reactor-monitor";
 import { ReactorMonitorProvider } from "@powerhousedao/reactor-monitor/react";
@@ -83,6 +84,47 @@ function readyEntry(
     descriptor: { kind: "in-process", name },
     status: "ready",
     reactor: readyReactor(name, syncChannelTypes),
+  };
+}
+
+/**
+ * A ready remote entry whose host reports a local channel. A remote handle has
+ * no adoptLocalSyncPeer, so it can never be an end of a brokered link.
+ */
+function remoteEntry(name: string): ManagedReactorEntry {
+  const reactor = {
+    name,
+    kind: "remote",
+    reach: { hosting: "remote", inspection: "rpc" },
+    info: {
+      storage: IN_MEMORY_PGLITE_STORAGE_FACTS,
+      workflows: false,
+      syncChannels: [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE],
+      access: null,
+    },
+    endpoint: `http://${name}/graphql/inspection`,
+    url: `http://${name}/graphql`,
+    get syncManager() {
+      return unused("syncManager");
+    },
+    get client() {
+      return unused("client");
+    },
+    get inspector() {
+      return unused("inspector");
+    },
+    get events() {
+      return unused("events");
+    },
+    refreshInfo: () => unused("refreshInfo"),
+    kill: () => Promise.resolve(),
+    isShutdown: () => false,
+  } as unknown as ManagedRemoteReactor;
+  return {
+    name,
+    descriptor: { kind: "remote", name, remote: { url: reactor.url } },
+    status: "ready",
+    reactor,
   };
 }
 
@@ -195,6 +237,38 @@ describe("LinkLocalSyncPanel", () => {
     );
 
     expect(view.getByTestId("link-local-sync-unavailable")).toBeTruthy();
+    expect(view.queryByRole("combobox")).toBeNull();
+  });
+
+  // A remote host may compose a local channel factory, but no MessagePort
+  // reaches across its wire.
+  it("never offers a remote reactor as a target, even one reporting local", () => {
+    const { registry } = fakeRegistry([
+      readyEntry("a"),
+      readyEntry("b"),
+      remoteEntry("far"),
+    ]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+    );
+
+    const options = view
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+    expect(options).toEqual(["", "b"]);
+  });
+
+  it("says a remote reactor cannot be an end of a local link", () => {
+    const { registry } = fakeRegistry([remoteEntry("far"), readyEntry("b")]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { reactorName: "far" }),
+    );
+
+    expect(view.getByTestId("link-local-sync-unavailable").textContent).toMatch(
+      /remote/,
+    );
     expect(view.queryByRole("combobox")).toBeNull();
   });
 
