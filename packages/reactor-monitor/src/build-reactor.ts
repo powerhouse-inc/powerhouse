@@ -152,6 +152,8 @@ export async function buildMonitorReactor(
 ): Promise<BuiltReactor> {
   const storage = options.storage ?? DEFAULT_REACTOR_STORAGE;
   const onUnrecoverable = options.onUnrecoverable ?? reportUnrecoverable;
+  // Before the lock: a throw here must not leave the store held.
+  const signer = options.signer ?? (await createLocalSigner());
   const lock = storage.kind === "memory" ? undefined : options.storeLocks;
   const unlock = () => lock?.release(options.namespace);
   // A store that did not close may still be open: no other owner may open it.
@@ -174,83 +176,86 @@ export async function buildMonitorReactor(
     throw error;
   }
 
-  const models = options.documentModelModules ?? baseDocumentModels;
-  const localOnly = isLocalOnlySync(options.localSync);
-  const scheme = localOnly
-    ? null
-    : options.channelScheme === undefined
-      ? ChannelScheme.CONNECT
-      : options.channelScheme;
-  const localChannelPorts =
-    localOnly || scheme !== null
-      ? new LocalChannelPortRegistry({
-          logger: childLogger(["reactor-monitor", "local-sync"]),
-        })
-      : undefined;
-
-  const reactorBuilder = new ReactorBuilder()
-    .withDocumentModelSources(models)
-    .withExecutorConfig({ featureFlags: options.featureFlags ?? {} });
-
   let storageHealth: IInspectorStorageHealthProvider | undefined;
   let db: Kysely<Database> | undefined;
-  if (storage.kind === "idb") {
-    reactorBuilder.withGroupCommitPGlite({
-      pg,
-      onUnrecoverable,
-      onDiagnostic: (message, error) =>
-        console.error(`[reactor-monitor] pglite: ${message}`, error),
-    });
-    reactorBuilder.withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
-  } else {
-    const health = dialectHealth();
-    storageHealth = health;
-    db = new Kysely<Database>({
-      dialect: new HardenedPGliteDialect(pg, {
-        onPoisoned: (cause) => {
-          health.markPoisoned();
-          onUnrecoverable(cause);
-        },
-      }),
-    });
-    reactorBuilder
-      .withKysely(db)
-      .withStorageFacts(
-        storage.kind === "memory"
-          ? IN_MEMORY_PGLITE_STORAGE_FACTS
-          : PGLITE_PATH_STORAGE_FACTS,
-      );
-  }
-
-  if (options.upgradeManifests && options.upgradeManifests.length > 0) {
-    reactorBuilder.withUpgradeManifests(options.upgradeManifests);
-  }
-  const localFactory = localChannelPorts
-    ? new LocalChannelFactory(
-        childLogger(["reactor-monitor", "local-channel"]),
-        localChannelPorts.provider,
-      )
-    : undefined;
-  if (localOnly && localFactory) {
-    reactorBuilder.withSync(new SyncBuilder().withChannelFactory(localFactory));
-  } else if (scheme !== null && localFactory) {
-    reactorBuilder
-      .withChannelScheme(scheme)
-      .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory);
-  }
-  if (options.jwtHandler) {
-    reactorBuilder.withJwtHandler(options.jwtHandler);
-  }
-
-  const clientBuilder = new ReactorClientBuilder()
-    .withReactorBuilder(reactorBuilder)
-    .withSigner(options.signer ?? (await createLocalSigner()));
-  if (options.documentModelLoader) {
-    clientBuilder.withDocumentModelLoader(options.documentModelLoader);
-  }
-
+  let localChannelPorts: LocalChannelPortRegistry | undefined;
   let module: InProcessReactorClientModule;
   try {
+    const models = options.documentModelModules ?? baseDocumentModels;
+    const localOnly = isLocalOnlySync(options.localSync);
+    const scheme = localOnly
+      ? null
+      : options.channelScheme === undefined
+        ? ChannelScheme.CONNECT
+        : options.channelScheme;
+    localChannelPorts =
+      localOnly || scheme !== null
+        ? new LocalChannelPortRegistry({
+            logger: childLogger(["reactor-monitor", "local-sync"]),
+          })
+        : undefined;
+
+    const reactorBuilder = new ReactorBuilder()
+      .withDocumentModelSources(models)
+      .withExecutorConfig({ featureFlags: options.featureFlags ?? {} });
+
+    if (storage.kind === "idb") {
+      reactorBuilder.withGroupCommitPGlite({
+        pg,
+        onUnrecoverable,
+        onDiagnostic: (message, error) =>
+          console.error(`[reactor-monitor] pglite: ${message}`, error),
+      });
+      reactorBuilder.withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+    } else {
+      const health = dialectHealth();
+      storageHealth = health;
+      db = new Kysely<Database>({
+        dialect: new HardenedPGliteDialect(pg, {
+          onPoisoned: (cause) => {
+            health.markPoisoned();
+            onUnrecoverable(cause);
+          },
+        }),
+      });
+      reactorBuilder
+        .withKysely(db)
+        .withStorageFacts(
+          storage.kind === "memory"
+            ? IN_MEMORY_PGLITE_STORAGE_FACTS
+            : PGLITE_PATH_STORAGE_FACTS,
+        );
+    }
+
+    if (options.upgradeManifests && options.upgradeManifests.length > 0) {
+      reactorBuilder.withUpgradeManifests(options.upgradeManifests);
+    }
+    const localFactory = localChannelPorts
+      ? new LocalChannelFactory(
+          childLogger(["reactor-monitor", "local-channel"]),
+          localChannelPorts.provider,
+        )
+      : undefined;
+    if (localOnly && localFactory) {
+      reactorBuilder.withSync(
+        new SyncBuilder().withChannelFactory(localFactory),
+      );
+    } else if (scheme !== null && localFactory) {
+      reactorBuilder
+        .withChannelScheme(scheme)
+        .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory);
+    }
+    if (options.jwtHandler) {
+      reactorBuilder.withJwtHandler(options.jwtHandler);
+    }
+
+    const clientBuilder = new ReactorClientBuilder()
+      .withReactorBuilder(reactorBuilder)
+      .withSigner(signer);
+    if (options.documentModelLoader) {
+      clientBuilder.withDocumentModelLoader(options.documentModelLoader);
+    }
+
     module = await clientBuilder.buildModule();
   } catch (error) {
     releaseAfterClose(await closeStore(() => pg.close()));
@@ -258,10 +263,6 @@ export async function buildMonitorReactor(
   }
 
   const rm = module.reactorModule;
-  const inspector = rm
-    ? createReactorInspector(rm, { storageHealth, access: MONITOR_ACCESS })
-    : new ReactorInspector({});
-
   const database = rm?.database ?? db;
   const dbQuery: IReactorDbQuery = {
     queryDb: (sql, params) => {
@@ -271,25 +272,7 @@ export async function buildMonitorReactor(
       return queryThroughDialect(database, sql, params);
     },
   };
-
   let attachments: AttachmentModule | undefined;
-  if (options.attachments) {
-    if (!rm) {
-      throw new Error(
-        "attachments were requested but this reactor build has no reactor module to attach a byte store to; attachment byte movement is in-process only",
-      );
-    }
-    attachments = buildAttachmentModule({
-      config: options.attachments,
-      namespace: options.namespace,
-      eventBus: module.eventBus,
-      documentModelRegistry: rm.documentModelRegistry,
-      ...(rm.syncModule ? { syncManager: rm.syncModule.syncManager } : {}),
-      ...(options.jwtHandler ? { jwtHandler: options.jwtHandler } : {}),
-    });
-    attachments.replicator.start();
-  }
-
   let shuttingDown: Promise<void> | undefined;
   const shutdown = (): Promise<void> => {
     shuttingDown ??= (async () => {
@@ -329,6 +312,33 @@ export async function buildMonitorReactor(
     })();
     return shuttingDown;
   };
+
+  let inspector: ReactorInspector;
+  try {
+    inspector = rm
+      ? createReactorInspector(rm, { storageHealth, access: MONITOR_ACCESS })
+      : new ReactorInspector({});
+
+    if (options.attachments) {
+      if (!rm) {
+        throw new Error(
+          "attachments were requested but this reactor build has no reactor module to attach a byte store to; attachment byte movement is in-process only",
+        );
+      }
+      attachments = buildAttachmentModule({
+        config: options.attachments,
+        namespace: options.namespace,
+        eventBus: module.eventBus,
+        documentModelRegistry: rm.documentModelRegistry,
+        ...(rm.syncModule ? { syncManager: rm.syncModule.syncManager } : {}),
+        ...(options.jwtHandler ? { jwtHandler: options.jwtHandler } : {}),
+      });
+      attachments.replicator.start();
+    }
+  } catch (error) {
+    await shutdown();
+    throw error;
+  }
 
   return {
     module,

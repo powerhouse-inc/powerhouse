@@ -3,28 +3,63 @@ import {
   PGLITE_IDB_STORAGE_FACTS,
   PGliteSessionPoisonedError,
 } from "@powerhousedao/reactor";
+import type { PGlite } from "@electric-sql/pglite";
 import { sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildMonitorReactor, type BuiltReactor } from "../src/index.js";
 import { createStoreLocks } from "../src/store-lock.js";
+import type * as Attachments from "../src/attachments/index.js";
+import type * as Signer from "../src/signer.js";
 import type * as Store from "../src/store.js";
 
 const opens = vi.hoisted(() => [] as string[]);
+const stores = vi.hoisted(() => [] as PGlite[]);
+const refusing = vi.hoisted(() => ({ signer: false, attachments: false }));
+
+vi.mock("../src/signer.js", async (importOriginal) => {
+  const original = await importOriginal<typeof Signer>();
+  return {
+    ...original,
+    createLocalSigner: (
+      ...args: Parameters<typeof original.createLocalSigner>
+    ) =>
+      refusing.signer
+        ? Promise.reject(new Error("no subtle crypto"))
+        : original.createLocalSigner(...args),
+  };
+});
+
+vi.mock("../src/attachments/index.js", async (importOriginal) => {
+  const original = await importOriginal<typeof Attachments>();
+  return {
+    ...original,
+    buildAttachmentModule: (
+      ...args: Parameters<typeof original.buildAttachmentModule>
+    ) => {
+      if (refusing.attachments) {
+        throw new Error("attachment store refused");
+      }
+      return original.buildAttachmentModule(...args);
+    },
+  };
+});
 
 // Node has no IndexedDB; idb opens a memory PGlite so group commit runs for real.
 vi.mock("../src/store.js", async (importOriginal) => {
   const original = await importOriginal<typeof Store>();
   return {
     ...original,
-    openReactorStore: (
+    openReactorStore: async (
       namespace: string,
       storage?: Parameters<typeof original.openReactorStore>[1],
     ) => {
       opens.push(namespace);
-      return original.openReactorStore(
+      const pg = await original.openReactorStore(
         namespace,
         storage?.kind === "idb" ? { kind: "memory" } : storage,
       );
+      stores.push(pg);
+      return pg;
     },
   };
 });
@@ -46,6 +81,8 @@ describe("buildMonitorReactor", () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    refusing.signer = false;
+    refusing.attachments = false;
     for (const reactor of built.splice(0)) {
       await reactor.shutdown();
     }
@@ -222,5 +259,46 @@ describe("buildMonitorReactor", () => {
     locks.keep("kept");
 
     await expect(locks.acquire("kept")).rejects.toThrow(/kept.*stays held/);
+  });
+
+  function fakeLocks() {
+    return {
+      acquire: vi.fn(() => Promise.resolve()),
+      release: vi.fn(),
+      keep: vi.fn(),
+    };
+  }
+
+  it("takes no lock and opens no store when the signer cannot be made", async () => {
+    refusing.signer = true;
+    const storeLocks = fakeLocks();
+
+    await expect(
+      buildMonitorReactor({
+        namespace: "build-no-signer",
+        storage: { kind: "idb" },
+        storeLocks,
+      }),
+    ).rejects.toThrow(/no subtle crypto/);
+
+    expect(storeLocks.acquire).not.toHaveBeenCalled();
+    expect(opens).not.toContain("build-no-signer");
+  });
+
+  it("closes the store and releases its lock when attachments fail to start", async () => {
+    refusing.attachments = true;
+    const storeLocks = fakeLocks();
+
+    await expect(
+      buildMonitorReactor({
+        namespace: "build-no-attachments",
+        storage: { kind: "idb" },
+        attachments: { store: "memory" },
+        storeLocks,
+      }),
+    ).rejects.toThrow(/attachment store refused/);
+
+    expect(stores.at(-1)?.closed).toBe(true);
+    expect(storeLocks.release).toHaveBeenCalledWith("build-no-attachments");
   });
 });

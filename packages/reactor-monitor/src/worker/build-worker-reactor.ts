@@ -134,7 +134,12 @@ export async function buildWorkerReactor(
       }
     }
   };
-  registerLoaderManifests();
+  try {
+    registerLoaderManifests();
+  } catch (error) {
+    await built.shutdown();
+    throw error;
+  }
 
   const registerPackages = async (
     specs: string[],
