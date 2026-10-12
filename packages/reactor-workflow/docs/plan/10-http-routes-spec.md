@@ -775,7 +775,7 @@ BasePath-prefixed: `${basePath}/explorer/:endpoint?` (`server.ts:733-743`);
 `${basePath}/graphql/<subgraph-name>/stream` (`:785`).
 
 Core subgraph names already occupying that last namespace: `analytics`, `system`,
-`r`, `auth`, `packages`, `reactor-drive` — plus one kebab-case name per loaded
+`r`, `auth`, `packages`, `reactor-drive-nodes` — plus one kebab-case name per loaded
 document model when `enableDocumentModelSubgraphs`
 (`document-model-subgraph.ts:144`). That last set is open-ended, so it is itself a
 collision surface for package namespaces and an argument for keeping package

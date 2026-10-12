@@ -190,7 +190,7 @@ export function createReactorDriveResolvers(
         );
       },
     },
-    ReactorDrive: {
+    ReactorDriveInfo: {
       async rootNodes(
         parent: { id: string },
         args: { paging?: PagingInput; kind?: NodeKindFilter },
