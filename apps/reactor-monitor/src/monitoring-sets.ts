@@ -97,15 +97,25 @@ function asSnapshot(value: unknown): MonitoringSetsSnapshot | undefined {
   };
 }
 
+/** A remote's `headers` carry its bearer, which is never persisted. */
+function withoutSecrets(descriptor: ReactorDescriptor): ReactorDescriptor {
+  if (!descriptor.remote) {
+    return descriptor;
+  }
+  const { headers: _headers, fetch: _fetch, ...remote } = descriptor.remote;
+  return { ...descriptor, remote };
+}
+
 /**
  * Deep-copies descriptors through JSON so what the store holds matches what a
- * reload would yield: functions (a worker's `createWorker`, a remote's test
- * `fetch`) are dropped, leaving only the serializable config.
+ * reload would yield: functions (a worker's `createWorker`) are dropped.
  */
 function serializableCopy(
   descriptors: readonly ReactorDescriptor[],
 ): ReactorDescriptor[] {
-  return JSON.parse(JSON.stringify(descriptors)) as ReactorDescriptor[];
+  return JSON.parse(
+    JSON.stringify(descriptors.map(withoutSecrets)),
+  ) as ReactorDescriptor[];
 }
 
 /**

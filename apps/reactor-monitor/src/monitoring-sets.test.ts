@@ -6,6 +6,7 @@ import {
   MonitoringSetsStore,
   type WebStorageLike,
 } from "./monitoring-sets.js";
+import { buildDescriptor } from "./provisioning.js";
 
 /** A Map-backed storage plus the raw cells, so a test can read what persisted. */
 function fakeStorage(): {
@@ -41,6 +42,38 @@ const remoteDescriptor: ReactorDescriptor = {
 };
 
 describe("MonitoringSetsStore", () => {
+  it("never persists a remote's bearer token", () => {
+    const token = "bearer-secret-7f3a";
+    const { storage, cells } = fakeStorage();
+    const store = new MonitoringSetsStore(storage);
+    const fromForm = buildDescriptor({
+      kind: "remote",
+      name: "authed",
+      syncMode: "local",
+      remoteUrl: "http://localhost:4001/graphql",
+      bearer: token,
+    });
+    const staticHeaders = {
+      kind: "remote",
+      name: "static",
+      remote: {
+        url: "http://localhost:4002/graphql",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    } as unknown as ReactorDescriptor;
+
+    store.setActiveDescriptors([fromForm, staticHeaders]);
+
+    for (const value of cells.values()) {
+      expect(value).not.toContain(token);
+    }
+    const reloaded = new MonitoringSetsStore(storage).getActiveDescriptors();
+    expect(reloaded.map((d) => d.remote)).toEqual([
+      { url: "http://localhost:4001/graphql" },
+      { url: "http://localhost:4002/graphql" },
+    ]);
+  });
+
   it("seeds a single empty default set when storage is empty", () => {
     const { storage } = fakeStorage();
     const store = new MonitoringSetsStore(storage);

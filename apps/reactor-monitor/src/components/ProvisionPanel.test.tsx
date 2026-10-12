@@ -58,13 +58,53 @@ describe("ProvisionPanel", () => {
 
     // Sync mode defaults to "local" (brokered); kind was switched to worker.
     // The attachment store defaults to "none": a reactor that holds no
-    // attachment bytes is the cheapest one and stays the default (W3.4).
+    // attachment bytes is the cheapest one and stays the default.
     expect(onProvision).toHaveBeenCalledWith({
       name: "alpha",
       kind: "worker",
       syncMode: "local",
       attachmentStore: "none",
     });
+  });
+
+  it("offers a bearer field for a remote only, submits it trimmed and clears it", () => {
+    const onProvision = vi.fn();
+    const view = render(
+      <ProvisionPanel
+        entries={[]}
+        onKill={() => {}}
+        onProvision={onProvision}
+        onSelect={() => {}}
+        selected={undefined}
+      />,
+    );
+    expect(view.queryByLabelText("Bearer token")).toBeNull();
+
+    fireEvent.change(view.getByDisplayValue("in-process"), {
+      target: { value: "remote" },
+    });
+    const bearer = view.getByLabelText("Bearer token") as HTMLInputElement;
+    expect(bearer.type).toBe("password");
+    fireEvent.change(view.getByPlaceholderText("alpha"), {
+      target: { value: "authed" },
+    });
+    fireEvent.change(
+      view.getByPlaceholderText("http://localhost:4001/graphql"),
+      {
+        target: { value: "http://localhost:4001/graphql" },
+      },
+    );
+    fireEvent.change(bearer, { target: { value: "  tok-1  " } });
+    fireEvent.click(view.getByRole("button", { name: "Provision" }));
+
+    expect(onProvision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "remote",
+        remoteUrl: "http://localhost:4001/graphql",
+        bearer: "tok-1",
+      }),
+    );
+    expect(bearer.value).toBe("");
   });
 
   it("rejects a name that already exists among the entries", () => {

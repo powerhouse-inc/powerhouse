@@ -25,20 +25,9 @@ export function createMonitorWorker(name: string): SharedWorker {
 /**
  * Builds the descriptor the provision form submits.
  *
- * `syncMode: "local"` wires the reactor local-ONLY: a lone `LocalChannelFactory`
- * and no gql one, so it can be linked peer-to-peer from the Sync tab but has no
- * "Add remote" flow (multi-reactor W1.2).
- *
- * `"connect"` keeps the default gql channel scheme, which since W3.0 ALSO
- * composes a local factory: such a reactor serves the Sync tab's "Add remote"
- * flow AND can be linked to a sibling, which is what the mixed topologies of
- * stage 3 need. Prefer it unless the point is a reactor with no gql factory at
- * all.
- *
- * `attachmentStore` gives a BUILT reactor a byte store plus a
- * fetch-on-reference replicator (multi-reactor W3.4); `none` leaves it without
- * one, which is the default and a legitimate reactor. It is dropped for the
- * worker kind, which is not wired yet.
+ * `syncMode: "local"` builds a lone `LocalChannelFactory` (no "Add remote");
+ * `"connect"` keeps the gql scheme, which also composes a local factory.
+ * A remote's bearer rides `remote.headers`, a function, so it is never persisted.
  */
 export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
   const {
@@ -46,18 +35,24 @@ export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
     kind,
     syncMode = "local",
     remoteUrl,
+    bearer,
     attachmentStore = "none",
   } = request;
-  // A remote reactor was built by someone else: `sync` describes what this
-  // monitor would BUILD, so it has no meaning here, and the handle reads the
-  // far side's real channel types off its own report (multi-reactor W3.2).
   if (kind === "remote") {
-    return { kind, name, remote: { url: remoteUrl ?? "" } };
+    return {
+      kind,
+      name,
+      remote: {
+        url: remoteUrl ?? "",
+        ...(bearer
+          ? { headers: () => ({ Authorization: `Bearer ${bearer}` }) }
+          : {}),
+      },
+    };
   }
   const sync = syncMode === "local" ? { local: true } : undefined;
   if (kind === "worker") {
-    // No `attachments`: byte movement is in-process only for now (W3.4). The
-    // form says so rather than the descriptor silently dropping it.
+    // No `attachments`: byte movement is in-process only; the form says so.
     return {
       kind,
       name,

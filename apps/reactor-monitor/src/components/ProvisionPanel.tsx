@@ -6,16 +6,16 @@ import { useState, type FormEvent } from "react";
 
 /**
  * `local` is local-ONLY: brokered peer links and no gql factory. `connect`
- * polls gql AND can be linked to a sibling, because W3.0 composes a local
- * factory onto the gql scheme.
+ * polls gql AND can be linked to a sibling: the gql scheme composes a local
+ * factory.
  *
  * Irrelevant to a `remote` reactor: its channels were chosen by whoever built
- * it, and the monitor reads them off its own report (multi-reactor W3.2).
+ * it, and the monitor reads them off its own info.
  */
 export type ProvisionSyncMode = "local" | "connect";
 
 /**
- * Which attachment byte store a built reactor gets (multi-reactor W3.4).
+ * Which attachment byte store a built reactor gets.
  *
  * `none` is the default and means the reactor holds no attachment bytes at
  * all, which is a legitimate reactor and the cheapest one. `idb` survives a
@@ -34,6 +34,8 @@ export type ProvisionRequest = {
   readonly syncMode: ProvisionSyncMode;
   /** Required for `remote`: the reactor's GraphQL endpoint. */
   readonly remoteUrl?: string;
+  /** `remote` only; held in memory, never persisted. */
+  readonly bearer?: string;
   /**
    * Built reactors only; `none` leaves the reactor without a byte store, and is
    * also the default `buildDescriptor` applies when this is absent. Optional
@@ -68,6 +70,7 @@ export function ProvisionPanel({
   const [kind, setKind] = useState<ReactorKind>("in-process");
   const [syncMode, setSyncMode] = useState<ProvisionSyncMode>("local");
   const [remoteUrl, setRemoteUrl] = useState("");
+  const [bearer, setBearer] = useState("");
   const [attachmentStore, setAttachmentStore] =
     useState<ProvisionAttachmentStore>("none");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -78,6 +81,7 @@ export function ProvisionPanel({
     e.preventDefault();
     const trimmed = name.trim();
     const trimmedUrl = remoteUrl.trim();
+    const trimmedBearer = bearer.trim();
     if (!trimmed) {
       setValidationError("Name is required");
       return;
@@ -99,8 +103,10 @@ export function ProvisionPanel({
       syncMode,
       attachmentStore,
       ...(isRemote ? { remoteUrl: trimmedUrl } : {}),
+      ...(isRemote && trimmedBearer ? { bearer: trimmedBearer } : {}),
     });
     setName("");
+    setBearer("");
   };
 
   return (
@@ -129,15 +135,27 @@ export function ProvisionPanel({
           </select>
         </label>
         {isRemote ? (
-          <label>
-            GraphQL URL
-            <input
-              onChange={(e) => setRemoteUrl(e.target.value)}
-              placeholder="http://localhost:4001/graphql"
-              type="text"
-              value={remoteUrl}
-            />
-          </label>
+          <>
+            <label>
+              GraphQL URL
+              <input
+                onChange={(e) => setRemoteUrl(e.target.value)}
+                placeholder="http://localhost:4001/graphql"
+                type="text"
+                value={remoteUrl}
+              />
+            </label>
+            <label>
+              Bearer token
+              <input
+                autoComplete="off"
+                onChange={(e) => setBearer(e.target.value)}
+                placeholder="optional; kept in memory only"
+                type="password"
+                value={bearer}
+              />
+            </label>
+          </>
         ) : (
           <label>
             Sync mode
@@ -187,8 +205,10 @@ export function ProvisionPanel({
           <p className="rm-note" data-testid="provision-remote-note">
             Nothing is built here: the monitor attaches to that reactor and
             inspects it over reactor-api&apos;s inspection subgraph
-            (&lt;url&gt;/inspection). Its repair levers and DB tab are served
-            only if that host enabled them.
+            (&lt;url&gt;/inspection), which serves reads only. Its operational
+            reads need an admin caller: give a bearer token of an address in
+            that host&apos;s ADMINS. The token is not saved; re-enter it after a
+            reload.
           </p>
         ) : null}
         <button className="rm-btn" type="submit">

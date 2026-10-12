@@ -27,6 +27,8 @@ const OPEN_READS = new Set([
 /** The far side's posture; mutable so a re-check can pick a change up. */
 type Host = {
   access: WireInspectorAccess | null;
+  /** When set, only a caller presenting it is an operator. */
+  adminBearer?: string;
   workflows?: boolean;
   syncChannels?: readonly string[];
 };
@@ -85,6 +87,10 @@ function fakeInspectionFetch(host: Host): typeof fetch {
       query: string;
     };
     const name = /query\s+(\w+)/.exec(body.query)?.[1] ?? "";
+    if (host.adminBearer !== undefined) {
+      const auth = new Headers(init?.headers).get("authorization");
+      host.access = auth === `Bearer ${host.adminBearer}` ? OPERATOR : null;
+    }
     if (host.access === null && !OPEN_READS.has(name)) {
       return Promise.resolve(
         Response.json({
@@ -125,6 +131,7 @@ function remoteApp(host: Host): ReturnType<typeof render> {
 async function provisionRemoteReactor(
   view: ReturnType<typeof remoteApp>,
   name: string,
+  bearer?: string,
 ) {
   fireEvent.change(view.getByDisplayValue("in-process"), {
     target: { value: "remote" },
@@ -135,6 +142,11 @@ async function provisionRemoteReactor(
   fireEvent.change(view.getByPlaceholderText("http://localhost:4001/graphql"), {
     target: { value: "http://switchboard.test/graphql" },
   });
+  if (bearer !== undefined) {
+    fireEvent.change(view.getByLabelText("Bearer token"), {
+      target: { value: bearer },
+    });
+  }
   fireEvent.click(view.getByRole("button", { name: "Provision" }));
   await waitFor(() => expect(view.getByTitle("ready")).toBeTruthy(), WAIT);
 }
@@ -221,6 +233,21 @@ describe("remote reactor in the monitor app", () => {
       );
     }
     expect(view.queryByRole("button", { name: "Pause" })).toBeNull();
+  }, 20_000);
+
+  it("sends the bearer so an admin caller reads the operational tabs", async () => {
+    const view = remoteApp({ access: null, adminBearer: "admin-token" });
+    await provisionRemoteReactor(view, "authed-switchboard", "admin-token");
+    expect(badgeFor(view, "Access")).toBe("operator");
+
+    fireEvent.click(view.getByRole("button", { name: "Queue" }));
+    await waitFor(
+      () => expect(view.getByText(/Showing \d+ job\(s\)/)).toBeTruthy(),
+      WAIT,
+    );
+    expect(view.getByTestId("admin-gate-note").textContent).toBe(
+      READS_ONLY_REASON,
+    );
   }, 20_000);
 
   it("disables the levers and the DB tab for an operator, with the reason", async () => {
