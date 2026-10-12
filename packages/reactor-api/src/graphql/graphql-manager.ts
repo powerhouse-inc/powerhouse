@@ -37,6 +37,8 @@ import {
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
+  getDocumentModelTypeDefs,
+  SubgraphTypeCollisionError,
 } from "../utils/create-schema.js";
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
@@ -624,6 +626,16 @@ export class GraphQLManager {
     return false;
   }
 
+  /** The type-collision error for `subgraph` against the current models, if any. */
+  #typeCollision(subgraph: ISubgraph): SubgraphTypeCollisionError | undefined {
+    try {
+      getDocumentModelTypeDefs(this.cachedDocumentModels, subgraph.typeDefs);
+    } catch (error) {
+      if (error instanceof SubgraphTypeCollisionError) return error;
+    }
+    return undefined;
+  }
+
   async #addSubgraphInstance(
     subgraphInstance: ISubgraph,
     supergraph = "",
@@ -656,6 +668,16 @@ export class GraphQLManager {
         `Skipping duplicate subgraph: ${subgraphInstance.name}`,
       );
       return existingSubgraph;
+    }
+
+    const collision = this.#typeCollision(subgraphInstance);
+    if (collision) {
+      this.logger.error(
+        "Rejecting subgraph @name: @error",
+        subgraphInstance.name,
+        collision.message,
+      );
+      return undefined;
     }
 
     // Same name, different instance: replace (e.g. package hot-reload).
@@ -1254,17 +1276,31 @@ export class GraphQLManager {
       ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
       : `http://localhost:${this.port}`;
 
-    return Array.from(subgraphs.entries()).map(([subgraphPath, subgraph]) => {
-      const module = this.#buildSubgraphSchemaModule(subgraph);
-      return {
+    const definitions: SubgraphDefinition[] = [];
+    for (const [subgraphPath, subgraph] of subgraphs) {
+      // One subgraph whose schema cannot be built must not take the
+      // supergraph down with it.
+      let module: ReturnType<typeof buildSubgraphSchemaModule>;
+      try {
+        module = this.#buildSubgraphSchemaModule(subgraph);
+      } catch (error) {
+        this.logger.error(
+          "Excluding subgraph @name from the supergraph: @error",
+          subgraph.name,
+          error instanceof Error ? error.message : error,
+        );
+        continue;
+      }
+      definitions.push({
         name: subgraphPath.replace("/", ":"),
         typeDefs: module.typeDefs,
         // In-process form: the stitching adapter merges these resolvers into
         // the supergraph; federation adapters ignore the field.
         resolvers: module.resolvers,
         url: `${herokuOrLocal}${subgraphPath}`,
-      };
-    });
+      });
+    }
+    return definitions;
   }
 
   async #createSupergraphGateway() {
@@ -1298,9 +1334,19 @@ export class GraphQLManager {
   #setupSupergraphSSE(superGraphPath: string) {
     const allSubgraphs = this.#getAllSubgraphs();
 
-    const modules = Array.from(allSubgraphs.values())
-      .filter((subgraph) => subgraph.hasSubscriptions)
-      .map((subgraph) => this.#buildSubgraphSchemaModule(subgraph));
+    const modules: ReturnType<typeof buildSubgraphSchemaModule>[] = [];
+    for (const subgraph of allSubgraphs.values()) {
+      if (!subgraph.hasSubscriptions) continue;
+      try {
+        modules.push(this.#buildSubgraphSchemaModule(subgraph));
+      } catch (error) {
+        this.logger.error(
+          "Excluding subgraph @name from supergraph SSE: @error",
+          subgraph.name,
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
 
     if (modules.length === 0) {
       // No subscription-capable subgraphs left: drop the SSE route rather

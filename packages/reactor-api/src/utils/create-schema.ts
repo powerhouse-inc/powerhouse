@@ -41,15 +41,20 @@ const RevisionType = `
 `;
 
 /**
- * Strip scalar definitions from a DocumentNode to avoid duplicates
- * when combining with other schemas that define the same scalars.
+ * A subgraph defines a type whose name the generated document-model schema
+ * owns, so one of the two definitions would be lost.
  */
-const stripScalarDefinitions = (doc: DocumentNode): string => {
-  const filteredDefinitions = doc.definitions.filter(
-    (def) => def.kind !== Kind.SCALAR_TYPE_DEFINITION,
-  );
-  return print({ kind: Kind.DOCUMENT, definitions: filteredDefinitions });
-};
+export class SubgraphTypeCollisionError extends Error {
+  readonly typeNames: string[];
+
+  constructor(typeNames: string[]) {
+    super(
+      `Subgraph defines types reserved by the document-model schema: ${typeNames.join(", ")}`,
+    );
+    this.name = "SubgraphTypeCollisionError";
+    this.typeNames = typeNames;
+  }
+}
 
 /**
  * Type-system definition kinds that GraphQL requires to be uniquely named.
@@ -77,12 +82,13 @@ const TYPE_DEFINITION_KINDS = new Set<Kind>([
  * twice in one scope) so the assembled subgraph SDL composes instead of crashing
  * the gateway (Sentry #917).
  */
-const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
-  const seen = new Set<string>();
-  const definitions = doc.definitions.filter((def) => {
-    if (!TYPE_DEFINITION_KINDS.has(def.kind)) return true;
-    const name = (def as { name?: { value: string } }).name?.value;
-    if (!name) return true;
+const dedupeTypeDefinitions = (
+  definitions: readonly DefinitionNode[],
+  seen = new Set<string>(),
+): DefinitionNode[] =>
+  definitions.filter((def) => {
+    const name = typeDefinitionName(def);
+    if (name === undefined) return true;
     if (seen.has(name)) {
       // A duplicate here would otherwise crash supergraph composition; log it so
       // production has a breadcrumb of which model shipped a duplicate name.
@@ -92,8 +98,11 @@ const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
     seen.add(name);
     return true;
   });
-  return { kind: Kind.DOCUMENT, definitions };
-};
+
+function typeDefinitionName(def: DefinitionNode): string | undefined {
+  if (!TYPE_DEFINITION_KINDS.has(def.kind)) return undefined;
+  return (def as { name?: { value: string } }).name?.value;
+}
 
 const EMPTY_DOCUMENT: DocumentNode = { kind: Kind.DOCUMENT, definitions: [] };
 
@@ -279,10 +288,15 @@ export function getDocumentModelSchemaName(
   return pascalCase(documentModel.name.replaceAll("/", " "));
 }
 
+/**
+ * The generated document-model types followed by the subgraph's own. Throws
+ * {@link SubgraphTypeCollisionError} when the subgraph defines a generated
+ * name that is not model-prefixed.
+ */
 export const getDocumentModelTypeDefs = (
   documentModels: DocumentModelModule[],
   typeDefs: DocumentNode,
-) => {
+): DocumentNode => {
   let dmSchema = "";
 
   const addedDocumentModels = new Set<string>();
@@ -401,11 +415,37 @@ export const getDocumentModelTypeDefs = (
       operations(first: Int, skip: Int): [Operation!]!
       stateJSON: JSONObject
     }
-
-    ${stripScalarDefinitions(typeDefs)}
   `;
 
-  return dedupeTypeDefinitions(schema);
+  const generated = dedupeTypeDefinitions(schema.definitions);
+  const generatedNames = new Set(
+    generated.map(typeDefinitionName).filter((name) => name !== undefined),
+  );
+  const modelPrefixes = Array.from(addedDocumentModels, (name) => `${name}_`);
+  const isModelPrefixed = (name: string) =>
+    modelPrefixes.some((prefix) => name.startsWith(prefix));
+
+  const collisions: string[] = [];
+  const subgraphDefinitions = typeDefs.definitions.filter((def) => {
+    if (def.kind === Kind.SCALAR_TYPE_DEFINITION) return false;
+    const name = typeDefinitionName(def);
+    if (name === undefined || !generatedNames.has(name)) return true;
+    // A model's own operation SDL may redefine its prefixed state types.
+    if (isModelPrefixed(name)) return true;
+    collisions.push(name);
+    return false;
+  });
+  if (collisions.length > 0) {
+    throw new SubgraphTypeCollisionError(collisions);
+  }
+
+  return {
+    kind: Kind.DOCUMENT,
+    definitions: [
+      ...generated,
+      ...dedupeTypeDefinitions(subgraphDefinitions, generatedNames),
+    ],
+  };
 };
 
 /**
