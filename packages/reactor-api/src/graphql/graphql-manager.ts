@@ -160,11 +160,22 @@ export type GraphQLManagerOptions = {
 };
 
 /**
- * The registration-source label for document-model-generated subgraphs, so
- * they can be pruned like package-contributed ones (see
- * regenerateDocumentModelSubgraphs).
+ * Where a subgraph came from: a package name, the generated document-model
+ * subgraphs, or the host. A name belongs to its first origin; only that origin
+ * may replace it.
  */
-const DOCUMENT_MODEL_SUBGRAPH_SOURCE = "document-models";
+const DOCUMENT_MODEL_ORIGIN = Symbol("document-models");
+const HOST_ORIGIN = Symbol("host");
+type SubgraphOrigin =
+  | string
+  | typeof DOCUMENT_MODEL_ORIGIN
+  | typeof HOST_ORIGIN;
+
+function describeOrigin(origin: SubgraphOrigin): string {
+  if (origin === DOCUMENT_MODEL_ORIGIN) return "document models";
+  if (origin === HOST_ORIGIN) return "the host";
+  return `package ${origin}`;
+}
 
 // Returning `false` closes 4403 with the reason `Forbidden`, so every refusal
 // looks alike and a client cannot tell "sign in" from "that token is no good".
@@ -276,11 +287,15 @@ export class GraphQLManager {
   private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
 
   /**
-   * Package name → the subgraph instances registered from it, keyed by
-   * subgraph name. Tracks the package association so that removed packages
-   * can be torn down (see unregisterPackage / prunePackageSubgraphs).
+   * Origin → the subgraph instances registered from it, keyed by subgraph
+   * name. Host subgraphs are not tracked. Tracks the package association so
+   * that removed packages can be torn down (see unregisterPackage /
+   * prunePackageSubgraphs).
    */
-  private readonly packageSubgraphs = new Map<string, Map<string, ISubgraph>>();
+  private readonly packageSubgraphs = new Map<
+    Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
+    Map<string, ISubgraph>
+  >();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -518,10 +533,7 @@ export class GraphQLManager {
       );
       // A model removed since the last regeneration (e.g. its package was
       // uninstalled) must lose its subgraph; replacing alone would keep it.
-      await this.prunePackageSubgraphs(
-        DOCUMENT_MODEL_SUBGRAPH_SOURCE,
-        registeredNames,
-      );
+      await this.#pruneOrigin(DOCUMENT_MODEL_ORIGIN, registeredNames);
       await this.updateRouter();
       this.logger.info(
         "Regenerated document model subgraphs with @count models",
@@ -590,13 +602,13 @@ export class GraphQLManager {
           inspection: this.inspection,
         });
 
-        await this.#addSubgraphInstance(
+        const registered = await this.#addSubgraphInstance(
           subgraphInstance,
           supergraph,
           false,
-          DOCUMENT_MODEL_SUBGRAPH_SOURCE,
+          DOCUMENT_MODEL_ORIGIN,
         );
-        registeredNames.add(subgraphInstance.name);
+        if (registered) registeredNames.add(registered.name);
       } catch (error) {
         this.logger.error(
           "Failed to setup document model subgraph for @documentType: @error",
@@ -626,6 +638,24 @@ export class GraphQLManager {
     return false;
   }
 
+  #originOf(instance: ISubgraph): SubgraphOrigin {
+    for (const [origin, byName] of this.packageSubgraphs) {
+      if (byName.get(instance.name) === instance) return origin;
+    }
+    return HOST_ORIGIN;
+  }
+
+  #findSubgraph(
+    subgraphsMap: Map<string, ISubgraph[]>,
+    name: string,
+  ): ISubgraph | undefined {
+    for (const subgraphs of subgraphsMap.values()) {
+      const found = subgraphs.find((it) => it.name === name);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
   /** The type-collision error for `subgraph` against the current models, if any. */
   #typeCollision(subgraph: ISubgraph): SubgraphTypeCollisionError | undefined {
     try {
@@ -640,7 +670,7 @@ export class GraphQLManager {
     subgraphInstance: ISubgraph,
     supergraph = "",
     core = false,
-    packageName?: string,
+    origin: SubgraphOrigin = HOST_ORIGIN,
   ) {
     // A package subgraph may not take a name a core subgraph has registered:
     // the in-process handler map is keyed by bare name, so a same-name
@@ -658,9 +688,10 @@ export class GraphQLManager {
 
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
-    const existingSubgraph = subgraphsMap
-      .get(supergraph)
-      ?.find((it) => it.name === subgraphInstance.name);
+    const existingSubgraph = this.#findSubgraph(
+      subgraphsMap,
+      subgraphInstance.name,
+    );
 
     // Re-registering the same instance is a no-op.
     if (existingSubgraph === subgraphInstance) {
@@ -668,6 +699,21 @@ export class GraphQLManager {
         `Skipping duplicate subgraph: ${subgraphInstance.name}`,
       );
       return existingSubgraph;
+    }
+
+    // The first registration owns the name; a different origin would evict
+    // an unrelated subgraph.
+    if (existingSubgraph) {
+      const existingOrigin = this.#originOf(existingSubgraph);
+      if (existingOrigin !== origin) {
+        this.logger.error(
+          "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
+          subgraphInstance.name,
+          describeOrigin(origin),
+          describeOrigin(existingOrigin),
+        );
+        return undefined;
+      }
     }
 
     const collision = this.#typeCollision(subgraphInstance);
@@ -680,7 +726,7 @@ export class GraphQLManager {
       return undefined;
     }
 
-    // Same name, different instance: replace (e.g. package hot-reload).
+    // Same name and origin: replace (e.g. package hot-reload).
     if (existingSubgraph) {
       await this.#removeSubgraphInstance(existingSubgraph);
     }
@@ -695,11 +741,11 @@ export class GraphQLManager {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
-    if (packageName !== undefined) {
-      let byName = this.packageSubgraphs.get(packageName);
+    if (origin !== HOST_ORIGIN) {
+      let byName = this.packageSubgraphs.get(origin);
       if (!byName) {
         byName = new Map();
-        this.packageSubgraphs.set(packageName, byName);
+        this.packageSubgraphs.set(origin, byName);
       }
       byName.set(subgraphInstance.name, subgraphInstance);
     }
@@ -767,11 +813,11 @@ export class GraphQLManager {
       this.#internalSubgraphHandlers.delete(instance.name);
     }
 
-    for (const [packageName, byName] of this.packageSubgraphs) {
+    for (const [origin, byName] of this.packageSubgraphs) {
       if (byName.get(instance.name) !== instance) continue;
       byName.delete(instance.name);
       if (byName.size === 0) {
-        this.packageSubgraphs.delete(packageName);
+        this.packageSubgraphs.delete(origin);
       }
     }
   }
@@ -858,7 +904,7 @@ export class GraphQLManager {
       subgraphInstance,
       supergraph,
       core,
-      packageName,
+      packageName ?? HOST_ORIGIN,
     );
   }
 
@@ -912,7 +958,14 @@ export class GraphQLManager {
     packageName: string,
     keepNames: ReadonlySet<string>,
   ): Promise<void> {
-    const byName = this.packageSubgraphs.get(packageName);
+    return this.#pruneOrigin(packageName, keepNames);
+  }
+
+  async #pruneOrigin(
+    origin: Exclude<SubgraphOrigin, typeof HOST_ORIGIN>,
+    keepNames: ReadonlySet<string>,
+  ): Promise<void> {
+    const byName = this.packageSubgraphs.get(origin);
     if (!byName) return;
     let removed = 0;
     for (const [name, instance] of Array.from(byName.entries())) {
@@ -1068,14 +1121,24 @@ export class GraphQLManager {
 
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
     // setSupergraph bypasses #addSubgraphInstance, so apply the same
-    // reserved-name guard here: drop incoming subgraphs that would shadow a
-    // registered core subgraph, keep the rest.
+    // name guards here: drop incoming subgraphs that would shadow a
+    // registered core subgraph or one from another origin, keep the rest.
     const accepted: ISubgraph[] = [];
     for (const subgraph of subgraphs) {
       if (this.#isCoreNameReserved(subgraph.name)) {
         this.logger.error(
           "Rejecting subgraph @name: name is reserved by a registered core subgraph",
           subgraph.name,
+        );
+        continue;
+      }
+      const existing = this.#findSubgraph(this.subgraphs, subgraph.name);
+      if (existing && this.#originOf(existing) !== HOST_ORIGIN) {
+        this.logger.error(
+          "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
+          subgraph.name,
+          describeOrigin(HOST_ORIGIN),
+          describeOrigin(this.#originOf(existing)),
         );
         continue;
       }
