@@ -1959,27 +1959,89 @@ describe("GraphQLManager", () => {
       expect(manager.getSubgraphByName("system")).toBe(core);
     });
 
-    it("warns when two different subgraphs resolve to the same mount path", async () => {
+    it("a core subgraph evicts a same-named subgraph registered before init", async () => {
       const logger = makeHarnessLogger();
-      const { manager } = makeHarness({ logger });
-
-      // A plain subgraph named "early" registered before init.
+      const { manager, gatewayAdapter } = makeHarness({ logger });
       const plain = makePlainSub("early");
       await manager.registerSubgraphInstance(plain, "graphql");
 
-      // A core subgraph with the same name: init() mounts the core one
-      // first, so the router pass that reaches the plain subgraph at the
-      // same path must warn instead of skipping silently.
       class CoreSubgraph extends BaseSubgraph {
         name = "early";
       }
       await initAndFlush(manager, [CoreSubgraph]);
 
-      expect(logger.warn).toHaveBeenCalledWith(
-        "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
-        "/graphql/early",
+      expect(manager.getSubgraphByName("early")).toBeInstanceOf(CoreSubgraph);
+      const { subgraphs } = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      for (const bucket of subgraphs.values()) {
+        expect(bucket).not.toContain(plain);
+      }
+      expect(manager.hasSubgraphHandler("early")).toBe(true);
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { name: string; typeDefs: DocumentNode }[];
+      const served = getDefinitions().find((d) => d.name === ":graphql/early");
+      const queryFields = served!.typeDefs.definitions.flatMap((def) =>
+        (def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          def.kind === Kind.OBJECT_TYPE_EXTENSION) &&
+        def.name.value === "Query"
+          ? (def.fields ?? []).map((field) => field.name.value)
+          : [],
+      );
+      // The core subgraph's `Query.hello`, not the plain one's `Query.hi`.
+      expect(queryFields).toContain("hello");
+      expect(queryFields).not.toContain("hi");
+      expect(logger.error).toHaveBeenCalledWith(
+        "Evicting subgraph @name from @existing: @origin outranks it",
         "early",
-        "early",
+        "the host",
+        "core",
+      );
+    });
+
+    class LateCore extends BaseSubgraph {
+      name = "late";
+    }
+
+    async function registerLateCore(manager: GraphQLManager) {
+      const core = await manager.registerSubgraph(LateCore, "graphql", true);
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+      return core;
+    }
+
+    it("mounts a core subgraph registered after init", async () => {
+      const { manager, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      await registerLateCore(manager);
+
+      expect(manager.hasSubgraphHandler("late")).toBe(true);
+      expect(handles.get("/graphql/late")).toBeDefined();
+    });
+
+    it("a core subgraph registered after init evicts a same-named subgraph", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      const plain = makePlainSub("late");
+      await manager.registerSubgraphInstance(plain, "graphql");
+
+      const core = await registerLateCore(manager);
+
+      expect(manager.getSubgraphByName("late")).toBe(core);
+      const { subgraphs } = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      for (const bucket of subgraphs.values()) {
+        expect(bucket).not.toContain(plain);
+      }
+      expect(logger.error).toHaveBeenCalledWith(
+        "Evicting subgraph @name from @existing: @origin outranks it",
+        "late",
+        "the host",
+        "core",
       );
     });
   });
@@ -2668,29 +2730,47 @@ describe("GraphQLManager", () => {
       );
     });
 
-    it("same-named subgraphs in supergraphs mounted apart do not displace each other", async () => {
-      const { manager, mounts } = makeHarness();
+    it("a name in the root supergraph has one holder with graphql", async () => {
+      const { manager } = makeHarness();
       await initAndFlush(manager);
       const rootDisconnect = vi.fn().mockResolvedValue(undefined);
       const root = {
         ...makeWidgetSubgraph("twin"),
         onDisconnect: rootDisconnect,
       };
-      const first = makeWidgetSubgraph("twin");
-      const second = makeWidgetSubgraph("twin");
+      const replacement = makeWidgetSubgraph("twin");
 
       expect(await manager.registerSubgraphInstance(root, "")).toBe(root);
-      expect(await manager.registerSubgraphInstance(first, "graphql")).toBe(
-        first,
-      );
-      expect(await manager.registerSubgraphInstance(second, "graphql")).toBe(
-        second,
-      );
+      expect(
+        await manager.registerSubgraphInstance(replacement, "graphql"),
+      ).toBe(replacement);
       await flush(manager.updateRouter());
 
-      expect(rootDisconnect).not.toHaveBeenCalled();
-      expect(mounts.has("/twin")).toBe(true);
-      expect(mounts.has("/graphql/twin")).toBe(true);
+      expect(rootDisconnect).toHaveBeenCalled();
+      expect(registeredNamed(manager, "twin")).toEqual(new Set([replacement]));
+      expect(manager.hasSubgraphHandler("twin")).toBe(true);
+    });
+
+    it("refuses a package subgraph whose name a host holds in the root supergraph", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager);
+      const root = makeWidgetSubgraph("twin");
+      await manager.registerSubgraphInstance(root, "");
+      class Twin extends BaseSubgraph {
+        name = "twin";
+      }
+
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Twin]]]));
+      await flush(manager.updateRouter());
+
+      expect(registeredNamed(manager, "twin")).toEqual(new Set([root]));
+      expect(logger.error).toHaveBeenCalledWith(
+        ORIGIN_REJECTION,
+        "twin",
+        "package pkg",
+        "the host",
+      );
     });
 
     /** Registered instances named `name`, across every non-core bucket. */
