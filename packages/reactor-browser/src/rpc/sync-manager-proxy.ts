@@ -282,11 +282,6 @@ export class SyncManagerProxy
     return [...this.remotes];
   }
 
-  /** Re-reads the worker's remotes after a change made outside this proxy. */
-  refresh(): Promise<void> {
-    return this.refreshRemotes();
-  }
-
   waitForSync(): Promise<never> {
     return Promise.reject(
       new Error("waitForSync is not supported over the worker RPC boundary"),
