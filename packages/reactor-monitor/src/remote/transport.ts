@@ -11,7 +11,11 @@ export type RemoteInspectionTransportOptions = {
   headers?: RemoteInspectionHeaders;
   /** Defaults to the global `fetch`. */
   fetch?: typeof fetch;
+  /** Bound on one request, headers through body; defaults to 30s. */
+  timeoutMs?: number;
 };
+
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 type GraphqlResponse<T> = {
   data?: T;
@@ -38,11 +42,13 @@ export class GraphqlInspectionTransport {
   private readonly url: string;
   private readonly headers: RemoteInspectionHeaders | undefined;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(options: RemoteInspectionTransportOptions) {
     this.url = options.url;
     this.headers = options.headers;
     this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   get endpoint(): string {
@@ -53,6 +59,34 @@ export class GraphqlInspectionTransport {
     operationName: string,
     query: string,
     variables: Record<string, unknown> = {},
+  ): Promise<T> {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Raced as well as signalled: a `fetch` seam may ignore the signal.
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        const error = new Error(
+          `Reactor inspection "${operationName}" timed out after ${this.timeoutMs}ms at ${this.url}`,
+        );
+        reject(error);
+        controller.abort(error);
+      }, this.timeoutMs);
+    });
+    try {
+      return await Promise.race([
+        this.send<T>(operationName, query, variables, controller.signal),
+        deadline,
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private async send<T>(
+    operationName: string,
+    query: string,
+    variables: Record<string, unknown>,
+    signal: AbortSignal,
   ): Promise<T> {
     const extra = this.headers ? await this.headers() : {};
 
@@ -71,6 +105,7 @@ export class GraphqlInspectionTransport {
         method: "POST",
         headers,
         body: JSON.stringify({ query, variables }),
+        signal,
       });
     } catch (error) {
       throw new Error(
