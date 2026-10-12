@@ -3,7 +3,8 @@
  * packages/design-system/src/connect/components/catch-up-inspector/catch-up-inspector.tsx
  * for the same reason as QueueTab.tsx (see its header comment).
  */
-import type { CatchUpStatus, IInspector } from "@powerhousedao/reactor";
+import type { CatchUpStatus, IInspectorAdmin } from "@powerhousedao/reactor";
+import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 import {
   ADMIN_ALLOWED,
@@ -12,8 +13,9 @@ import {
 } from "../components/AdminGate.js";
 
 export type CatchUpTabProps = {
-  readonly inspector: IInspector;
-  /** Whether an on-demand sweep is served for this reactor. */
+  readonly inspector: MonitorInspector;
+  /** On-demand sweep; absent where the reactor serves no levers. */
+  readonly levers?: IInspectorAdmin;
   readonly admin?: AdminGate;
 };
 
@@ -35,6 +37,7 @@ function formatDuration(ms: number): string {
 
 export function CatchUpTab({
   inspector,
+  levers,
   admin = ADMIN_ALLOWED,
 }: CatchUpTabProps) {
   const [status, setStatus] = useState<CatchUpStatus | undefined>();
@@ -63,9 +66,12 @@ export function CatchUpTab({
   }, [load]);
 
   const handleSweepNow = useCallback(async () => {
+    if (!levers) {
+      return;
+    }
     setSweeping(true);
     try {
-      await inspector.sweepCatchUp();
+      await levers.sweepCatchUp();
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -73,7 +79,7 @@ export function CatchUpTab({
       setSweeping(false);
     }
     await load();
-  }, [inspector, load]);
+  }, [levers, load]);
 
   const watermark = status?.watermark;
   const consumers = status?.consumers ?? [];
@@ -88,7 +94,7 @@ export function CatchUpTab({
         <div className="rm-actions">
           <button
             className="rm-btn"
-            disabled={sweeping || !admin.enabled}
+            disabled={sweeping || !admin.enabled || !levers}
             onClick={() => void handleSweepNow()}
             type="button"
           >

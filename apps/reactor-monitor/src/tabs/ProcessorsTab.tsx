@@ -7,9 +7,10 @@
  * plain CSS.
  */
 import type {
-  IInspector,
+  IInspectorAdmin,
   InspectorProcessorInfo,
 } from "@powerhousedao/reactor";
+import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 import {
   ADMIN_ALLOWED,
@@ -18,8 +19,9 @@ import {
 } from "../components/AdminGate.js";
 
 export type ProcessorsTabProps = {
-  readonly inspector: IInspector;
-  /** Whether a processor retry is served for this reactor. */
+  readonly inspector: MonitorInspector;
+  /** Processor retry; absent where the reactor serves no levers. */
+  readonly levers?: IInspectorAdmin;
   readonly admin?: AdminGate;
 };
 
@@ -27,6 +29,7 @@ const POLL_INTERVAL_MS = 2000;
 
 export function ProcessorsTab({
   inspector,
+  levers,
   admin = ADMIN_ALLOWED,
 }: ProcessorsTabProps) {
   const [processors, setProcessors] = useState<InspectorProcessorInfo[]>([]);
@@ -54,15 +57,20 @@ export function ProcessorsTab({
 
   const handleRetry = useCallback(
     async (processorId: string) => {
+      if (!levers) {
+        return;
+      }
       setRetryingId(processorId);
       try {
-        await inspector.retryProcessor(processorId);
-        await load();
+        await levers.retryProcessor(processorId);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
       } finally {
         setRetryingId(null);
       }
+      await load();
     },
-    [inspector, load],
+    [levers, load],
   );
 
   const activeCount = processors.filter((p) => p.status === "active").length;
@@ -163,7 +171,9 @@ export function ProcessorsTab({
                       <button
                         className="rm-btn rm-btn-warn"
                         disabled={
-                          retryingId === processor.processorId || !admin.enabled
+                          retryingId === processor.processorId ||
+                          !admin.enabled ||
+                          !levers
                         }
                         onClick={() => void handleRetry(processor.processorId)}
                         type="button"

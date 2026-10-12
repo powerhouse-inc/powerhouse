@@ -4,10 +4,11 @@
  * for the same reason as QueueTab.tsx (see its header comment).
  */
 import type {
-  IInspector,
+  IInspectorAdmin,
   RebuildResult,
   ValidationResult,
 } from "@powerhousedao/reactor";
+import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
 import { useCallback, useState } from "react";
 import {
   ADMIN_ALLOWED,
@@ -16,13 +17,9 @@ import {
 } from "../components/AdminGate.js";
 
 export type IntegrityTabProps = {
-  readonly inspector: IInspector;
-  /**
-   * Whether the integrity ops are served for this reactor. Validation sits
-   * behind the same gate as the rebuilds: it walks a document's whole
-   * operation history, which is an operator-weight read, and the remote
-   * surface serves the three together.
-   */
+  readonly inspector: MonitorInspector;
+  /** Keyframe and snapshot rebuilds; validation is a read and needs neither. */
+  readonly levers?: IInspectorAdmin;
   readonly admin?: AdminGate;
 };
 
@@ -90,6 +87,7 @@ function RebuildResultView({ result }: { result: RebuildResult }) {
 
 export function IntegrityTab({
   inspector,
+  levers,
   admin = ADMIN_ALLOWED,
 }: IntegrityTabProps) {
   const [documentId, setDocumentId] = useState("");
@@ -135,11 +133,8 @@ export function IntegrityTab({
 
   const trimmedId = documentId.trim();
   const trimmedBranch = branch.trim() || undefined;
-  const disabled =
-    !admin.enabled ||
-    !trimmedId ||
-    status === "running" ||
-    confirmAction !== null;
+  const busy = !trimmedId || status === "running" || confirmAction !== null;
+  const rebuildDisabled = busy || !admin.enabled || !levers;
 
   return (
     <div className="rm-tab">
@@ -167,7 +162,7 @@ export function IntegrityTab({
         <div className="rm-actions">
           <button
             className="rm-btn"
-            disabled={disabled}
+            disabled={busy}
             onClick={() =>
               void run(
                 () => inspector.validateDocument(trimmedId, trimmedBranch),
@@ -180,7 +175,7 @@ export function IntegrityTab({
           </button>
           <button
             className="rm-btn rm-btn-warn"
-            disabled={disabled}
+            disabled={rebuildDisabled}
             onClick={() => setConfirmAction("keyframes")}
             type="button"
           >
@@ -188,7 +183,7 @@ export function IntegrityTab({
           </button>
           <button
             className="rm-btn rm-btn-warn"
-            disabled={disabled}
+            disabled={rebuildDisabled}
             onClick={() => setConfirmAction("snapshots")}
             type="button"
           >
@@ -206,15 +201,19 @@ export function IntegrityTab({
           </span>
           <button
             className="rm-btn rm-btn-warn"
-            onClick={() =>
+            disabled={!levers}
+            onClick={() => {
+              if (!levers) {
+                return;
+              }
               void run(
                 () =>
                   confirmAction === "keyframes"
-                    ? inspector.rebuildKeyframes(trimmedId, trimmedBranch)
-                    : inspector.rebuildSnapshots(trimmedId, trimmedBranch),
+                    ? levers.rebuildKeyframes(trimmedId, trimmedBranch)
+                    : levers.rebuildSnapshots(trimmedId, trimmedBranch),
                 "rebuild",
-              )
-            }
+              );
+            }}
             type="button"
           >
             Confirm
