@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSchema,
   generateDocumentModelSchema,
+  getGeneratedDocumentModelTypes,
 } from "../src/utils/create-schema.js";
 import { printSchema } from "./utils/graphql-host.js";
 
@@ -287,6 +288,28 @@ describe.each([
       expect(structured).toContain(proof);
     },
   );
+
+  it("keeps template descriptions when generated types are cached", () => {
+    const generated = getGeneratedDocumentModelTypes([codeFirst]);
+    const schema = printSchema(
+      createSchema(
+        [codeFirst],
+        {},
+        generateDocumentModelSchema(codeFirst, { useNewApi: true }),
+        { generated },
+      ),
+    );
+    expect(schema).toBe(servedSchema(schemaFirst, true));
+    expect(schema).toContain(proof);
+
+    const foreign = printSchema(
+      createSchema([codeFirst], {}, parse("type Query { hello: String }"), {
+        generated,
+      }),
+    );
+    expect(foreign).not.toContain('"""Module:');
+    expect(foreign).not.toContain('"""Input Types from State Schema"""');
+  });
 
   it("leaves the template descriptions out of another subgraph", () => {
     const foreign = printSchema(

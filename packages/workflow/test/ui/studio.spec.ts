@@ -54,6 +54,11 @@ test.describe("Workflow Studio", () => {
     await expect(row().getByRole("list")).toHaveAccessibleName(
       /Ping host: failed/,
     );
+    // The graph's step card, not the browser's title.
+    await row().getByRole("listitem").first().hover();
+    await expect(app.getByRole("tooltip")).toContainText(
+      "Succeeded in the latest run",
+    );
 
     await app.reload();
     await expect(

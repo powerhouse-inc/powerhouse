@@ -227,6 +227,7 @@ describe("streaming FILE props and size caps", () => {
       size: 3,
     });
     expect("data" in fromUri).toBe(false);
+    expect(fromUri.path).toBeUndefined();
     expect(await text(fromUri.body)).toBe("x,y");
 
     const fromUrl = (await normalizeValue(
@@ -234,6 +235,7 @@ describe("streaming FILE props and size caps", () => {
       `${base}/known`,
     )) as ApStreamingFileValue;
     expect(fromUrl).toMatchObject({ filename: "known", size: 6 });
+    expect(fromUrl.path).toBeUndefined();
     expect(await text(fromUrl.body)).toBe("a,b\n1\n");
   });
 
@@ -251,9 +253,23 @@ describe("streaming FILE props and size caps", () => {
       filename: "s.csv",
       extension: "csv",
       size: 6,
+      path,
     });
     expect(await text(file.body)).toBe("staged");
     await rm(dir, { recursive: true, force: true });
+  });
+
+  it("opens a staged file only when its body is read", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ap-open-ref-"));
+    const path = join(dir, "in-0");
+    await writeFile(path, "staged");
+    const file = (await normalizeValue(streaming, "attachment://v1:abc", {
+      openRef: () => Promise.resolve({ path, size: 6, filename: "s.csv" }),
+    })) as ApStreamingFileValue;
+    await new Promise((resolve) => setImmediate(resolve));
+    // An open descriptor would still read the bytes after the unlink.
+    await rm(dir, { recursive: true, force: true });
+    await expect(text(file.body)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("caps a URL body with no declared length as it arrives", async () => {

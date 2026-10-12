@@ -38,7 +38,7 @@ export const typeDefs = gql`
     hasMore: Boolean!
   }
 
-  type ReactorDrive {
+  type ReactorDriveInfo {
     id: ID!
     name: String!
     icon: String
@@ -53,7 +53,7 @@ export const typeDefs = gql`
   }
 
   type Query {
-    reactorDrive(id: ID!): ReactorDrive
+    reactorDrive(id: ID!): ReactorDriveInfo
     reactorDriveNode(driveId: ID!, id: ID!): ReactorDriveNode
     reactorDriveDescendants(driveId: ID!, root: ID!): [ReactorDriveNode!]!
   }

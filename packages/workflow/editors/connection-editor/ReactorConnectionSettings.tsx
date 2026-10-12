@@ -6,7 +6,6 @@ import {
 } from "document-models/connection";
 import { useState } from "react";
 import { FieldError, FieldLabel, Hint, Segmented } from "../shared/controls.js";
-import { withReactorConfig } from "../workflow-editor/ui/reactor-access.js";
 import { SwitchboardGrants } from "../workflow-editor/ui/SwitchboardGrants.js";
 import type { ConnectionCallbacks } from "./connection-form.js";
 
@@ -19,15 +18,9 @@ export function ReactorConnectionSettings(props: {
   const [error, setError] = useState<string | null>(
     parsed.ok ? null : parsed.error,
   );
-  const save = (patch: Parameters<typeof withReactorConfig>[1]) => {
-    const next = withReactorConfig(current, patch);
-    const check = parseReactorConnectionConfig(next);
-    if (!check.ok) {
-      setError(check.error);
-      return;
-    }
+  const save = (access: "read" | "write") => {
     setError(null);
-    props.callbacks.setReactorConfig(check.config);
+    props.callbacks.setReactorAccess(access);
   };
   return (
     <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-5">
@@ -48,9 +41,7 @@ export function ReactorConnectionSettings(props: {
             { value: "write", label: "Read and write" },
             { value: "read", label: "Read only" },
           ]}
-          onChange={(value) =>
-            save({ access: value === "read" ? "read" : "write" })
-          }
+          onChange={(value) => save(value === "read" ? "read" : "write")}
         />
         <Hint text="Read only refuses every write, whatever the step declares." />
       </div>

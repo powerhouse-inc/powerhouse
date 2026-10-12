@@ -1,3 +1,5 @@
+export const REACTOR_DRIVE_SUBGRAPH_NAME = "reactor-drive-nodes";
+
 export { typeDefs as reactorDriveSubgraphTypeDefs } from "./schema.js";
 export {
   createReactorDriveResolvers,

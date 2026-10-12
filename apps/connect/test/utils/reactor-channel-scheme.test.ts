@@ -10,14 +10,16 @@ import {
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { configureConnectChannelScheme } from "../../src/utils/reactor-channel-scheme.js";
+import { useReactorDatabases } from "../reactor-database.js";
 
 const logger = new ConsoleLogger(["reactor-channel-scheme-test"]);
+const databases = useReactorDatabases();
 
 async function buildWith(multiReactor: boolean): Promise<{
   module: InProcessReactorModule;
   createLocalChannelFactory: ReturnType<typeof vi.fn>;
 }> {
-  const builder = new ReactorBuilder();
+  const builder = new ReactorBuilder().withKysely(databases.kysely());
   const createLocalChannelFactory = vi.fn(
     () => new LocalChannelFactory(logger, () => undefined),
   );

@@ -230,6 +230,22 @@ export type SetStepConfigPropertySettingInput = {
   schema?: InputMaybe<Scalars["Unknown"]["input"]>;
 };
 
+export type SetTriggerConfigInput = {
+  config: Scalars["Unknown"]["input"];
+  propertySettings?: InputMaybe<Array<SetTriggerConfigPropertySettingInput>>;
+};
+
+export type SetTriggerConfigPropertySettingInput = {
+  mode: PropertyMode;
+  prop: Scalars["String"]["input"];
+  schema?: InputMaybe<Scalars["Unknown"]["input"]>;
+};
+
+export type SetTriggerConnectionInput = {
+  connectionId?: InputMaybe<Scalars["PHID"]["input"]>;
+  reactorConnectionId?: InputMaybe<Scalars["PHID"]["input"]>;
+};
+
 export type SetTriggerInput = {
   config: Scalars["Unknown"]["input"];
   connectionId?: InputMaybe<Scalars["PHID"]["input"]>;
@@ -239,6 +255,10 @@ export type SetTriggerInput = {
   propertySettings?: InputMaybe<Array<SetTriggerPropertySettingInput>>;
   reactorConnectionId?: InputMaybe<Scalars["PHID"]["input"]>;
   triggerName: Scalars["String"]["input"];
+};
+
+export type SetTriggerPieceVersionInput = {
+  pieceVersion: Scalars["String"]["input"];
 };
 
 export type SetTriggerPropertySettingInput = {

@@ -26,6 +26,7 @@ import {
   createSchema,
   generateDocumentModelSchema,
   getDocumentModelTypeDefs,
+  reservedTypeNamesTaken,
 } from "../src/utils/create-schema.js";
 import { asSchemaFirst, hostFor, printSchema } from "./utils/graphql-host.js";
 
@@ -212,6 +213,19 @@ function stateFields(schema: GraphQLSchema): readonly string[] {
 
 describe("the host projects a code-first model from its definition", () => {
   const CONTRADICTING = withStoredOnlyField(INVOICE);
+
+  it("checks reserved names against the definition instead of stale stored SDL", () => {
+    const documentModel = structuredClone(INVOICE.documentModel);
+    documentModel.global.specifications.at(-1)!.state.global.schema +=
+      "\ntype CoreState { count: Int }";
+    const module = { ...INVOICE, documentModel };
+    const reserved = new Map([["Invoice_CoreState", false]]);
+
+    expect(reservedTypeNamesTaken(module, reserved)).toEqual([]);
+    expect(reservedTypeNamesTaken(asSchemaFirst(module), reserved)).toEqual([
+      "Invoice_CoreState",
+    ]);
+  });
 
   it("serves the definition when the stored SDL disagrees with it", () => {
     const schema = servedSchema(CONTRADICTING);

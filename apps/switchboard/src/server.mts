@@ -50,6 +50,7 @@ import {
   NodeProcessor,
   ReactorDriveClient,
   createReactorDriveResolvers,
+  REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveSubgraphTypeDefs,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
@@ -1115,20 +1116,33 @@ async function initServer(
       workflowsRetry = retryWorkflowSingleton({
         compose: composeWorkflows,
         onComposed: async (composed) => {
+          try {
+            await composed.start();
+          } catch (error) {
+            // Hands the lease back so a retry or another replica can claim it.
+            try {
+              await composed.stop();
+            } catch (stopError) {
+              logger.error(
+                "Stopping the late workflow runtime failed: @error",
+                stopError,
+              );
+            }
+            throw error;
+          }
+          logger.info("Workflow runtime started");
           workflows = composed;
           await registerWorkflowSubgraph(composed);
           // Past boot nothing else rebuilds the router, so a subgraph
           // registered now is not served until this runs.
           try {
-            await graphqlManager.updateRouter();
+            await graphqlManager.updateRouter(true);
           } catch (error) {
             logger.error(
               "Mounting the late workflow-runtime subgraph failed: @error",
               error,
             );
           }
-          await composed.start();
-          logger.info("Workflow runtime started");
         },
         logger,
       });
@@ -1225,7 +1239,7 @@ async function initServer(
 
     const authorizationService = graphqlManager.getAuthorizationService();
     const reactorDriveSubgraph = {
-      name: "reactor-drive",
+      name: REACTOR_DRIVE_SUBGRAPH_NAME,
       path: graphqlManager.getBasePath(),
       resolvers: createReactorDriveResolvers({
         reactorClient: client,

@@ -28,6 +28,7 @@ import {
   Lexer,
   type NameNode,
   Source,
+  type StringValueNode,
   TokenKind,
   visit,
 } from "graphql";
@@ -61,20 +62,20 @@ export {
 const logger = childLogger(["reactor-api", "create-schema"]);
 
 /**
- * Strip the scalar definitions the host declares itself from a DocumentNode,
- * so combining it with the host's prelude does not declare one twice. A
- * scalar only the subgraph declares, such as a package scalar, stays.
+ * A subgraph defines a type whose name the generated document-model schema
+ * owns, so one of the two definitions would be lost.
  */
-const stripScalarDefinitions = (
-  doc: DocumentNode,
-  declared: ReadonlySet<string>,
-): string => {
-  const filteredDefinitions = doc.definitions.filter(
-    (def) =>
-      def.kind !== Kind.SCALAR_TYPE_DEFINITION || !declared.has(def.name.value),
-  );
-  return print({ kind: Kind.DOCUMENT, definitions: filteredDefinitions });
-};
+export class SubgraphTypeCollisionError extends Error {
+  readonly typeNames: string[];
+
+  constructor(typeNames: string[]) {
+    super(
+      `Subgraph defines types reserved by the document-model schema: ${typeNames.join(", ")}`,
+    );
+    this.name = "SubgraphTypeCollisionError";
+    this.typeNames = typeNames;
+  }
+}
 
 /** A model's package scalar, under the name the host serves it by. */
 type HostPackageScalar = {
@@ -172,12 +173,13 @@ const TYPE_DEFINITION_KINDS = new Set<Kind>([
  * twice in one scope) so the assembled subgraph SDL composes instead of crashing
  * the gateway (Sentry #917).
  */
-const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
-  const seen = new Set<string>();
-  const definitions = doc.definitions.filter((def) => {
-    if (!TYPE_DEFINITION_KINDS.has(def.kind)) return true;
-    const name = (def as { name?: { value: string } }).name?.value;
-    if (!name) return true;
+const dedupeTypeDefinitions = (
+  definitions: readonly DefinitionNode[],
+  seen = new Set<string>(),
+): DefinitionNode[] =>
+  definitions.filter((def) => {
+    const name = typeDefinitionName(def);
+    if (name === undefined) return true;
     if (seen.has(name)) {
       // A duplicate here would otherwise crash supergraph composition; log it so
       // production has a breadcrumb of which model shipped a duplicate name.
@@ -187,8 +189,11 @@ const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
     seen.add(name);
     return true;
   });
-  return { kind: Kind.DOCUMENT, definitions };
-};
+
+function typeDefinitionName(def: DefinitionNode): string | undefined {
+  if (!TYPE_DEFINITION_KINDS.has(def.kind)) return undefined;
+  return (def as { name?: { value: string } }).name?.value;
+}
 
 const EMPTY_DOCUMENT: DocumentNode = { kind: Kind.DOCUMENT, definitions: [] };
 
@@ -285,10 +290,21 @@ function stateTypeDefinitions(
   );
 }
 
+export type SubgraphSchemaOptions = {
+  /**
+   * Types the subgraph's own schema generator emits, as a document model's
+   * subgraph has. These may repeat a generated definition, which is kept.
+   */
+  ownTypeNames?: ReadonlySet<string>;
+  /** Generated types already built for `documentModels`. */
+  generated?: GeneratedDocumentModelTypes;
+};
+
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
+  options: SubgraphSchemaOptions = {},
 ): GraphQLSchemaModule => {
   // Later spreads win. A model's package scalars override an authored
   // resolver of the same name, and the host's two coercers override both.
@@ -301,7 +317,11 @@ export const buildSubgraphSchemaModule = (
     ...packageScalarResolvers(packageScalars),
     ...HOST_SCALAR_RESOLVERS,
   };
-  const moduleTypeDefs = getDocumentModelTypeDefs(documentModels, typeDefs);
+  const moduleTypeDefs = assembleSubgraphTypeDefs(
+    options.generated ?? getGeneratedDocumentModelTypes(documentModels),
+    typeDefs,
+    options.ownTypeNames,
+  );
   const boundPackageScalars = new Set([
     ...packageScalars.map(({ name }) => name),
     ...authoredScalarNames(resolvers),
@@ -330,10 +350,11 @@ export const createSchema = (
   documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
+  options: SubgraphSchemaOptions = {},
 ) => {
   // Array form: @apollo/subgraph 2.15 dropped the bare-module overload.
   return buildSubgraphSchema([
-    buildSubgraphSchemaModule(documentModels, resolvers, typeDefs),
+    buildSubgraphSchemaModule(documentModels, resolvers, typeDefs, options),
   ]);
 };
 
@@ -467,16 +488,117 @@ const SUBGRAPH_SCALAR_TYPE_DEFS = orderedScalarNames(scalarCatalog.names, [
   .map((name) => `scalar ${name}`)
   .join("\n");
 
+/**
+ * The generated document-model types followed by the subgraph's own. Throws
+ * {@link SubgraphTypeCollisionError} when the subgraph defines a generated
+ * name not in `ownTypeNames`.
+ */
 export const getDocumentModelTypeDefs = (
   documentModels: DocumentModelModule[],
   typeDefs: DocumentNode,
-) => {
+  ownTypeNames?: ReadonlySet<string>,
+): DocumentNode =>
+  assembleSubgraphTypeDefs(
+    getGeneratedDocumentModelTypes(documentModels),
+    typeDefs,
+    ownTypeNames,
+  );
+
+/** Names of the type definitions in `doc`. */
+export function typeDefinitionNames(doc: DocumentNode): Set<string> {
+  return new Set(
+    doc.definitions
+      .map(typeDefinitionName)
+      .filter((name) => name !== undefined),
+  );
+}
+
+/** The generated document-model schema every subgraph is assembled onto. */
+export type GeneratedDocumentModelTypes = {
+  definitions: readonly DefinitionNode[];
+  names: ReadonlySet<string>;
+};
+
+function documentModelTypesSdl(
+  module: DocumentModelModule,
+  schemaName: string,
+): string {
+  const structured = structuredModelOf(module);
+  return structured === null
+    ? storedModelStateTypes(module.documentModel.global, schemaName)
+    : structuredModelStateTypes(structured, schemaName, new Map());
+}
+
+/** Type name → whether every definition of that name is a scalar. */
+export type ReservedTypeNames = ReadonlyMap<string, boolean>;
+
+function addScalarFlags(
+  definitions: readonly DefinitionNode[],
+  into: Map<string, boolean>,
+): Map<string, boolean> {
+  for (const def of definitions) {
+    const name = typeDefinitionName(def);
+    if (name === undefined) continue;
+    const scalar = def.kind === Kind.SCALAR_TYPE_DEFINITION;
+    into.set(name, scalar && (into.get(name) ?? true));
+  }
+  return into;
+}
+
+let fixedGeneratedTypes: ReservedTypeNames | undefined;
+
+/**
+ * Type names no document model may generate: the root types, the generated
+ * types every schema carries, and the types of `coreTypeDefs`.
+ */
+export function reservedTypeNames(
+  coreTypeDefs: Iterable<DocumentNode>,
+): ReservedTypeNames {
+  fixedGeneratedTypes ??= addScalarFlags(
+    getGeneratedDocumentModelTypes([]).definitions,
+    new Map(),
+  );
+  const reserved = new Map([
+    ["Query", false],
+    ["Mutation", false],
+    ["Subscription", false],
+    ...fixedGeneratedTypes,
+  ]);
+  for (const typeDefs of coreTypeDefs) {
+    addScalarFlags(typeDefs.definitions, reserved);
+  }
+  return reserved;
+}
+
+/**
+ * The reserved names `documentModel`'s generated types take. A scalar may
+ * repeat a reserved scalar: the duplicate is dropped on assembly.
+ */
+export function reservedTypeNamesTaken(
+  documentModel: DocumentModelModule,
+  reserved: ReservedTypeNames,
+): string[] {
+  const generated = addScalarFlags(
+    parseSdl(
+      documentModelTypesSdl(
+        documentModel,
+        getDocumentModelSchemaName(documentModel.documentModel.global),
+      ),
+    ).definitions,
+    new Map(),
+  );
+  return Array.from(generated)
+    .filter(
+      ([name, scalar]) => reserved.has(name) && !(scalar && reserved.get(name)),
+    )
+    .map(([name]) => name);
+}
+
+export function getGeneratedDocumentModelTypes(
+  documentModels: DocumentModelModule[],
+): GeneratedDocumentModelTypes {
   let dmSchema = "";
   const packageScalars = modelPackageScalars(documentModels);
-  const hostScalars = new Set<string>([
-    ...scalarCatalog.names,
-    ...packageScalars.map(({ name }) => name),
-  ]);
 
   const addedDocumentModels = new Set<string>();
   documentModels.forEach((module) => {
@@ -489,19 +611,7 @@ export const getDocumentModelTypeDefs = (
       return;
     }
     addedDocumentModels.add(dmSchemaName);
-    const structured = structuredModelOf(module);
-    dmSchema +=
-      structured === null
-        ? storedModelStateTypes(documentModel.global, dmSchemaName)
-        : structuredModelStateTypes(
-            structured,
-            dmSchemaName,
-            // The stored-SDL host serves the template's descriptions only in
-            // the model's own subgraph.
-            templateOwners.get(typeDefs) === dmSchemaName
-              ? structured.hostDescriptions
-              : new Map(),
-          );
+    dmSchema += documentModelTypesSdl(module, dmSchemaName);
   });
 
   // add the mutation and query types
@@ -580,12 +690,79 @@ export const getDocumentModelTypeDefs = (
       operations(first: Int, skip: Int): [Operation!]!
       stateJSON: JSONObject
     }
-
-    ${stripScalarDefinitions(typeDefs, hostScalars)}
   `;
 
-  return dedupeTypeDefinitions(schema);
-};
+  const definitions = dedupeTypeDefinitions(schema.definitions);
+  const names = typeDefinitionNames({ kind: Kind.DOCUMENT, definitions });
+  return { definitions, names };
+}
+
+/**
+ * Names of the generated types `typeDefs` redefines, other than those a
+ * model's own subgraph may repeat. Scalars are dropped on assembly, so they
+ * never collide.
+ */
+export function findSubgraphTypeCollisions(
+  generated: GeneratedDocumentModelTypes,
+  typeDefs: DocumentNode,
+  ownTypeNames?: ReadonlySet<string>,
+): string[] {
+  ownTypeNames ??= templateOwners.has(typeDefs)
+    ? typeDefinitionNames(typeDefs)
+    : undefined;
+  const collisions: string[] = [];
+  for (const def of typeDefs.definitions) {
+    if (def.kind === Kind.SCALAR_TYPE_DEFINITION) continue;
+    const name = typeDefinitionName(def);
+    if (name === undefined || !generated.names.has(name)) continue;
+    if (ownTypeNames?.has(name)) continue;
+    collisions.push(name);
+  }
+  return collisions;
+}
+
+/** Throws {@link SubgraphTypeCollisionError}; see {@link getDocumentModelTypeDefs}. */
+export function assembleSubgraphTypeDefs(
+  generated: GeneratedDocumentModelTypes,
+  typeDefs: DocumentNode,
+  ownTypeNames?: ReadonlySet<string>,
+): DocumentNode {
+  const collisions = findSubgraphTypeCollisions(
+    generated,
+    typeDefs,
+    ownTypeNames,
+  );
+  if (collisions.length > 0) {
+    throw new SubgraphTypeCollisionError(collisions);
+  }
+  const subgraphDefinitions = typeDefs.definitions.filter(
+    (def) =>
+      def.kind !== Kind.SCALAR_TYPE_DEFINITION ||
+      !generated.names.has(def.name.value),
+  );
+
+  const ownDescriptions = templateOwners.get(typeDefs);
+  const definitions = generated.definitions.map((def) => {
+    if (
+      !("name" in def) ||
+      def.name === undefined ||
+      !("description" in def) ||
+      def.description
+    ) {
+      return def;
+    }
+    const description = ownDescriptions?.get(`${def.kind}:${def.name.value}`);
+    return description === undefined ? def : { ...def, description };
+  });
+
+  return {
+    kind: Kind.DOCUMENT,
+    definitions: [
+      ...definitions,
+      ...dedupeTypeDefinitions(subgraphDefinitions, new Set(generated.names)),
+    ],
+  };
+}
 
 /**
  * Extract the names of types defined in a GraphQL schema.
@@ -933,11 +1110,14 @@ function storedInitialState(
  * schema-first caller may pass the stored global state instead.
  */
 /**
- * The code-first template output each model generated, so the host can tell
+ * The template output each model generated, so the host can tell
  * a model's own subgraph from a foreign one by identity. SDL content cannot
  * prove it, because any subgraph may declare the same type names.
  */
-const templateOwners = new WeakMap<DocumentNode, string>();
+const templateOwners = new WeakMap<
+  DocumentNode,
+  ReadonlyMap<string, StringValueNode>
+>();
 
 export function generateDocumentModelSchema(
   source: DocumentModelModule | DocumentModelGlobalState,
@@ -954,6 +1134,29 @@ export function generateDocumentModelSchema(
       : structuredModelProjection(structured, documentName),
     options,
   );
-  if (structured !== null) templateOwners.set(document, documentName);
+  const descriptions = new Map<string, StringValueNode>();
+  if (structured !== null) {
+    const stateTypes = parseSdl(
+      structuredModelStateTypes(
+        structured,
+        documentName,
+        structured.hostDescriptions,
+      ),
+    );
+    for (const def of stateTypes.definitions) {
+      if (
+        !("name" in def) ||
+        def.name === undefined ||
+        !("description" in def)
+      ) {
+        continue;
+      }
+      const key = `${def.kind}:${def.name.value}`;
+      if (!descriptions.has(key) && def.description) {
+        descriptions.set(key, def.description);
+      }
+    }
+  }
+  templateOwners.set(document, descriptions);
   return document;
 }

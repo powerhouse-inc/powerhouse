@@ -121,9 +121,25 @@ export function createReactorDriveResolvers(
         context: ReactorDriveResolverContext,
       ) {
         const ctx = withBound(context);
-        const document = await ctx.reactorClient.get<
-          PHDocument<ReactorDrivePHState>
-        >(args.id, { subject: subjectOf(ctx) });
+        try {
+          if (
+            !(await ctx.reactorClient.isServed(args.id, {
+              subject: subjectOf(ctx),
+            }))
+          ) {
+            return null;
+          }
+        } catch {
+          return null;
+        }
+        let document: PHDocument<ReactorDrivePHState>;
+        try {
+          document = await ctx.reactorClient.get<
+            PHDocument<ReactorDrivePHState>
+          >(args.id, { subject: subjectOf(ctx) });
+        } catch {
+          return null;
+        }
         if (document.header.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
           return null;
         }
@@ -174,7 +190,7 @@ export function createReactorDriveResolvers(
         );
       },
     },
-    ReactorDrive: {
+    ReactorDriveInfo: {
       async rootNodes(
         parent: { id: string },
         args: { paging?: PagingInput; kind?: NodeKindFilter },

@@ -197,7 +197,15 @@ export function retryWorkflowSingleton(options: {
     options.logger.info(
       "Claimed the workflow singleton after boot; starting the workflow runtime",
     );
-    await options.onComposed(workflows);
+    try {
+      await options.onComposed(workflows);
+    } catch (error) {
+      options.logger.error(
+        "Starting the workflow runtime after the singleton came free failed: @error",
+        error,
+      );
+      schedule();
+    }
   };
 
   const schedule = () => {

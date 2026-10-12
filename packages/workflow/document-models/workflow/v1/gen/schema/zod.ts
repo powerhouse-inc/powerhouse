@@ -28,7 +28,11 @@ import type {
   SetPolicyRetryPolicyInput,
   SetStepConfigInput,
   SetStepConfigPropertySettingInput,
+  SetTriggerConfigInput,
+  SetTriggerConfigPropertySettingInput,
+  SetTriggerConnectionInput,
   SetTriggerInput,
+  SetTriggerPieceVersionInput,
   SetTriggerPropertySettingInput,
   SetVariableInput,
   SetWorkflowDescriptionInput,
@@ -318,6 +322,36 @@ export function SetStepConfigPropertySettingInputSchema(): z.ZodObject<
   });
 }
 
+export function SetTriggerConfigInputSchema(): z.ZodObject<
+  Properties<SetTriggerConfigInput>
+> {
+  return z.object({
+    config: z.unknown(),
+    propertySettings: z
+      .array(z.lazy(() => SetTriggerConfigPropertySettingInputSchema()))
+      .nullish(),
+  });
+}
+
+export function SetTriggerConfigPropertySettingInputSchema(): z.ZodObject<
+  Properties<SetTriggerConfigPropertySettingInput>
+> {
+  return z.object({
+    mode: PropertyModeSchema,
+    prop: z.string(),
+    schema: z.unknown().nullish(),
+  });
+}
+
+export function SetTriggerConnectionInputSchema(): z.ZodObject<
+  Properties<SetTriggerConnectionInput>
+> {
+  return z.object({
+    connectionId: z.string().nullish(),
+    reactorConnectionId: z.string().nullish(),
+  });
+}
+
 export function SetTriggerInputSchema(): z.ZodObject<
   Properties<SetTriggerInput>
 > {
@@ -332,6 +366,14 @@ export function SetTriggerInputSchema(): z.ZodObject<
       .nullish(),
     reactorConnectionId: z.string().nullish(),
     triggerName: z.string(),
+  });
+}
+
+export function SetTriggerPieceVersionInputSchema(): z.ZodObject<
+  Properties<SetTriggerPieceVersionInput>
+> {
+  return z.object({
+    pieceVersion: z.string(),
   });
 }
 

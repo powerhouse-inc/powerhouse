@@ -1,8 +1,13 @@
 import type { WorkflowTriggerOperations } from "document-models/workflow/v1";
 import {
+  ConfigTriggerNotSetError,
+  ConnectionTriggerNotSetError,
   InvalidTriggerBlockError,
+  InvalidTriggerPieceVersionError,
+  SetTriggerConfigNotObjectError,
   TriggerConfigNotObjectError,
   TriggerNotSetError,
+  VersionTriggerNotSetError,
 } from "../../gen/trigger/error.js";
 import {
   invalidBlock,
@@ -60,6 +65,65 @@ export const workflowTriggerOperations: WorkflowTriggerOperations = {
     const triggerId = state.trigger.id;
     state.trigger = null;
     state.edges = state.edges.filter((edge) => edge.from !== triggerId);
+    state.version += 1;
+  },
+  setTriggerConfigOperation(state, action) {
+    const trigger = state.trigger;
+    if (!trigger) {
+      throw new ConfigTriggerNotSetError(
+        "Workflow has no trigger to configure",
+      );
+    }
+    if (!isConfigObject(action.input.config)) {
+      throw new SetTriggerConfigNotObjectError(
+        "The trigger config must be an object",
+      );
+    }
+    if (
+      JSON.stringify(trigger.config) !== JSON.stringify(action.input.config)
+    ) {
+      trigger.updatedAt = action.timestampUtcMs;
+    }
+    trigger.config = action.input.config;
+    // Undefined leaves the settings unchanged; null clears them.
+    if (action.input.propertySettings !== undefined) {
+      trigger.propertySettings = action.input.propertySettings
+        ? toPropertySettings(action.input.propertySettings)
+        : null;
+    }
+    state.version += 1;
+  },
+  setTriggerConnectionOperation(state, action) {
+    const trigger = state.trigger;
+    if (!trigger) {
+      throw new ConnectionTriggerNotSetError(
+        "Workflow has no trigger to connect",
+      );
+    }
+    // null clears a connection; undefined leaves it unchanged.
+    if (action.input.connectionId !== undefined)
+      trigger.connectionId = action.input.connectionId || null;
+    if (action.input.reactorConnectionId !== undefined)
+      trigger.reactorConnectionId = action.input.reactorConnectionId || null;
+    trigger.updatedAt = action.timestampUtcMs;
+    state.version += 1;
+  },
+  setTriggerPieceVersionOperation(state, action) {
+    const trigger = state.trigger;
+    if (!trigger) {
+      throw new VersionTriggerNotSetError("Workflow has no trigger to update");
+    }
+    const invalid = invalidBlock("trigger", {
+      pieceName: trigger.pieceName,
+      pieceVersion: action.input.pieceVersion,
+      name: trigger.triggerName,
+    });
+    if (invalid) throw new InvalidTriggerPieceVersionError(invalid);
+    if (trigger.pieceVersion === action.input.pieceVersion) return;
+    trigger.pieceVersion = action.input.pieceVersion;
+    // A test of the old version says nothing about the new one.
+    trigger.lastTest = null;
+    trigger.updatedAt = action.timestampUtcMs;
     state.version += 1;
   },
 };

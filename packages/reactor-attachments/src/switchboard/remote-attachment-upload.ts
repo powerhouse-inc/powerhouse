@@ -22,9 +22,18 @@ import {
   createFetchUploadTransport,
   type AttachmentUploadTransport,
 } from "./upload-transport.js";
+import { isBlob } from "../blob.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A Blob goes out untouched, so a File streams from disk. A stream is
+ * buffered: browsers don't portably accept a ReadableStream request body.
+ */
+async function toBody(data: ReadableStream<Uint8Array> | Blob): Promise<Blob> {
+  return isBlob(data) ? data : new Response(data).blob();
 }
 
 export class RemoteAttachmentUpload implements IAttachmentUpload {
@@ -58,7 +67,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
   }
 
   async send(
-    data: ReadableStream<Uint8Array>,
+    data: ReadableStream<Uint8Array> | Blob,
     options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult> {
     // Presigned targets bypass Switchboard entirely: bytes go straight to the
@@ -70,11 +79,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     const url = `${this.remoteUrl}/attachments/reservations/${this.reservationId}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
 
-    // Buffer the stream to a Blob. Streaming request bodies aren't universally
-    // supported in browsers (Firefox stringifies the stream to "[object
-    // ReadableStream]" even with duplex: "half"); buffering is the only
-    // portable option for attachment uploads.
-    const body = await new Response(data).blob();
+    const body = await toBody(data);
 
     // Always upload as octet-stream. The server reads the real mime type from
     // the reservation row; sending the user's mime type here (e.g. application/json)
@@ -142,7 +147,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
    */
   private async sendPresigned(
     target: AttachmentUploadTarget,
-    data: ReadableStream<Uint8Array>,
+    data: ReadableStream<Uint8Array> | Blob,
     options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult> {
     if (this.reservation.clientHash === null || this.ref === null) {
@@ -151,8 +156,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
       );
     }
 
-    // Buffer for the same browser-compatibility reasons as the proxy path.
-    const body = await new Response(data).blob();
+    const body = await toBody(data);
     const response = await this.uploadTransport({
       url: target.url,
       method: target.method,
