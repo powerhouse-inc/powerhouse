@@ -43,6 +43,8 @@ function fakeReactorClient(): IReactorClient {
         },
       }),
     isServed: () => Promise.resolve(true),
+    find: ({ ids }: { ids: string[] }) =>
+      Promise.resolve({ results: ids.map((id) => ({ header: { id } })) }),
   } as unknown as IReactorClient;
 }
 
@@ -60,6 +62,7 @@ function fakeReadModel() {
             documentType: "powerhouse/text",
           },
         ],
+        cursors: ["cursor-file-1"],
         options: { cursor: "", limit: 100 },
         nextCursor: undefined,
       }),
