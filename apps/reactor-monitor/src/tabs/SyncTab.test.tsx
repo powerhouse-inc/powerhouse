@@ -449,8 +449,8 @@ describe("SyncTab", () => {
   });
 
   // The config this form writes has to be the type the reactor actually
-  // routes, and `gqlRemotes` is a read of that same spelling in the
-  // capability contract -- a literal here could drift from the gate that
+  // routes, and `gqlRemotes` is a read of that same spelling in
+  // `info.syncChannels` -- a literal here could drift from the gate that
   // enabled the form, which is exactly the drift the constant removes.
   it("adds the remote under the reactor's own gql channel type", async () => {
     const manager = fakeSyncManager([]);

@@ -26,8 +26,8 @@ export type SyncTabProps = {
   /** Reset channel and dead-letter levers; absent where none are served. */
   readonly syncAdmin?: ISyncAdmin;
   /**
-   * Whether this reactor can form gql remotes, i.e. whether its capability
-   * contract declares the `"gql"` sync channel -- the exact
+   * Whether this reactor can form gql remotes, i.e. whether its
+   * `info.syncChannels` includes `"gql"` -- the exact
    * `ChannelConfig.type` the "Add remote" form below writes.
    *
    * True for a connect-mode reactor, which since W3.0 serves gql remotes AND
@@ -420,7 +420,7 @@ export function SyncTab({
         {
           // The reactor's own constant, not a literal: this form's config has
           // to be the type the reactor actually routes, and `gqlRemotes` is a
-          // read of that same spelling in the capability contract.
+          // read of that same spelling in `info.syncChannels`.
           type: GQL_CHANNEL_TYPE,
           parameters: { url: trimmedUrl },
         },
