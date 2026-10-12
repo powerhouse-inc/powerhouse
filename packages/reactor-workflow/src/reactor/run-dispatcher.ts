@@ -41,21 +41,18 @@ export class RunDispatcher {
   }
 
   // Resolves with the release once the run may start, in arrival order.
-  admit(workflowId: string): Promise<() => void> {
+  // `onQueue` runs synchronously when the run has to wait.
+  admit(workflowId: string, onQueue?: () => void): Promise<() => void> {
     if (this.closed) {
       return Promise.reject(new WorkflowRuntimeClosedError(workflowId));
     }
     if (this.waiters.length === 0 && this.room()) {
       return Promise.resolve(this.take());
     }
+    onQueue?.();
     return new Promise((resolve, reject) => {
       this.waiters.push({ workflowId, resolve, reject });
     });
-  }
-
-  // Whether admit() would hold a run back now, rather than admit it.
-  wouldWait(): boolean {
-    return !this.closed && (this.waiters.length > 0 || !this.room());
   }
 
   stats(): RunDispatcherStats {

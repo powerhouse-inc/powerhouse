@@ -16,8 +16,11 @@ import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
 import { packagePieces } from "./piece-registry.js";
-import type { WorkflowRuntimeService } from "./service.js";
-import { WorkflowRunStore } from "./store.js";
+import {
+  PENDING_SWEEP_INTERVAL_MS,
+  type WorkflowRuntimeService,
+} from "./service.js";
+import { WorkflowRunStore, type WorkflowRuntimeDB } from "./store.js";
 
 const PIECE = "@acme/piece-pids";
 const WORKFLOW_ID = "wf-workers";
@@ -81,6 +84,27 @@ export const pids = {
   triggers: {},
 };
 `;
+
+// A workflow edit as the read model delivers it.
+let ordinal = 0;
+function workflowOp(document: { state: { global: unknown } }) {
+  ordinal += 1;
+  return {
+    operation: {
+      index: ordinal,
+      timestampUtcMs: `${ordinal}`,
+      action: { type: "EDIT", input: {} },
+      resultingState: JSON.stringify(document.state.global),
+    },
+    context: {
+      documentId: WORKFLOW_ID,
+      documentType: "powerhouse/workflow",
+      scope: "global",
+      branch: "main",
+      ordinal,
+    },
+  } as never;
+}
 
 function workflowDocument(actions: string[]) {
   const steps = actions.map((actionName, i) => ({
@@ -158,6 +182,7 @@ describe("fire() and the worker pool", () => {
     service?.shutdown();
     service = undefined;
     vi.unstubAllEnvs();
+    vi.useRealTimers();
     // The hold action's markers, so the next hold waits again.
     await rm(join(dir, "held"), { force: true });
     await rm(join(dir, "release"), { force: true });
@@ -243,6 +268,52 @@ describe("fire() and the worker pool", () => {
     await expect(waiting).resolves.toMatchObject({ status: "SUCCEEDED" });
   });
 
+  it("re-reads the workflow after a run waits past the in-flight cap", async () => {
+    vi.stubEnv("PH_WORKFLOWS_RUNS_IN_FLIGHT", "1");
+    let actions = ["hold"];
+    let status = "ENABLED";
+    service = serviceFor(() => {
+      const document = workflowDocument(actions);
+      document.state.global.status = status;
+      return Promise.resolve(document);
+    });
+    const holding = fireManually(service);
+    await vi.waitFor(() => access(join(dir, "held")), { timeout: 10_000 });
+
+    actions = ["pid"];
+    const waiting = fireManually(service);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Disabled while the second run waits at the dispatcher.
+    status = "DISABLED";
+    await service.onOperations([workflowOp(workflowDocument(actions))]);
+    await writeFile(join(dir, "release"), "");
+
+    await expect(holding).resolves.toMatchObject({ status: "SUCCEEDED" });
+    await expect(waiting).resolves.toMatchObject({
+      status: "CANCELLED",
+      refusal: "stale",
+    });
+  });
+
+  it("re-reads nothing after a wait no operation landed in", async () => {
+    vi.stubEnv("PH_WORKFLOWS_RUNS_IN_FLIGHT", "1");
+    let actions = ["hold"];
+    const get = vi.fn(() => Promise.resolve(workflowDocument(actions)));
+    service = serviceFor(get);
+    const holding = fireManually(service);
+    await vi.waitFor(() => access(join(dir, "held")), { timeout: 10_000 });
+
+    actions = ["pid"];
+    const waiting = fireManually(service);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await writeFile(join(dir, "release"), "");
+
+    await expect(holding).resolves.toMatchObject({ status: "SUCCEEDED" });
+    await expect(waiting).resolves.toMatchObject({ status: "SUCCEEDED" });
+    // One load per manual fire, none after the wait.
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
   it("starts the runs a stopped reactor journaled once it starts", async () => {
     const relationalDb = createFreshRelationalDb();
     const stopped = await WorkflowRunStore.create(relationalDb);
@@ -260,6 +331,43 @@ describe("fire() and the worker pool", () => {
     service.startTriggerSupervisor();
 
     const store = await service.store();
+    await vi.waitFor(
+      async () =>
+        expect((await store!.getRun(runId))?.status).toBe("SUCCEEDED"),
+      { timeout: 10_000 },
+    );
+  });
+
+  it("starts a run a peer leaves PENDING after the boot pass", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval"] });
+    const relationalDb = createFreshRelationalDb();
+    service = testRuntime({
+      relationalDb,
+      reactorClient: {
+        get: () => Promise.resolve(workflowDocument(["pid"])),
+      } as never,
+    });
+    service.startTriggerSupervisor();
+    const store = await service.store();
+
+    // A draining owner's row, journaled once this boot had already looked.
+    const peer = await WorkflowRunStore.create(relationalDb);
+    const runId = await peer.enqueueRun({
+      workflowId: WORKFLOW_ID,
+      triggerKind: "schedule",
+    });
+    const db =
+      await relationalDb.createNamespace<WorkflowRuntimeDB>("workflow_runtime");
+    await db
+      .updateTable("run")
+      .set({ enqueued_at: new Date(Date.now() - 120_000).toISOString() })
+      .where("id", "=", runId)
+      .execute();
+    expect((await store!.getRun(runId))?.status).toBe("PENDING");
+
+    await vi.advanceTimersByTimeAsync(PENDING_SWEEP_INTERVAL_MS);
+    vi.useRealTimers();
+
     await vi.waitFor(
       async () =>
         expect((await store!.getRun(runId))?.status).toBe("SUCCEEDED"),

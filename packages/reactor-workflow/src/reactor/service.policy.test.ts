@@ -268,6 +268,60 @@ describe("policy.concurrency", () => {
     ).toHaveLength(0);
   }, 60_000);
 
+  it("journals the manual fire that queued, however close the fires land", async () => {
+    workflow("wf-queue-journal", {
+      action: "slow",
+      policy: { concurrency: "QUEUE", onFailure: "IGNORE" },
+    });
+    const enqueueRun = vi.spyOn(WorkflowRunStore.prototype, "enqueueRun");
+
+    const fired = await Promise.all([
+      service.fire("wf-queue-journal", undefined, "manual", undefined, CTX),
+      service.fire("wf-queue-journal", undefined, "manual", undefined, CTX),
+    ]);
+    const calls = enqueueRun.mock.calls.length;
+    enqueueRun.mockRestore();
+
+    expect(fired.map((run) => run.status)).toEqual(["SUCCEEDED", "SUCCEEDED"]);
+    // One waited for the other's slot: it, and only it, was journaled first.
+    expect(calls).toBe(1);
+  }, 60_000);
+
+  it("gives the slot back when journaling a queued fire fails", async () => {
+    workflow("wf-queue-journal-fails", {
+      action: "slow",
+      policy: { concurrency: "QUEUE", onFailure: "IGNORE" },
+    });
+    const gate = (service as unknown as { runGate: WorkflowRunGate }).runGate;
+    const enqueueRun = vi
+      .spyOn(WorkflowRunStore.prototype, "enqueueRun")
+      .mockRejectedValueOnce(new Error("the journal is gone"));
+
+    const fired = await Promise.allSettled([
+      service.fire(
+        "wf-queue-journal-fails",
+        undefined,
+        "manual",
+        undefined,
+        CTX,
+      ),
+      service.fire(
+        "wf-queue-journal-fails",
+        undefined,
+        "manual",
+        undefined,
+        CTX,
+      ),
+    ]);
+    enqueueRun.mockRestore();
+
+    expect(fired.map((outcome) => outcome.status).sort()).toEqual([
+      "fulfilled",
+      "rejected",
+    ]);
+    expect(gate.active("wf-queue-journal-fails")).toBe(0);
+  }, 60_000);
+
   // A throw between admit() and the try whose finally releases would leak the
   // slot for the life of the process: SINGLETON would refuse every later
   // firing of this workflow, and nothing would ever free it.
@@ -721,7 +775,11 @@ describe("a firing that waited for its slot", () => {
     const first = service.fire(id, undefined, "schedule");
     const second = service.fire(id, undefined, "schedule");
     await vi.waitFor(() => expect(gate().waiting(id)).toBe(1));
-    documents.apply(id, actions.setWorkflowStatus({ status: "DISABLED" }));
+    const disabled = documents.apply(
+      id,
+      actions.setWorkflowStatus({ status: "DISABLED" }),
+    );
+    await service.onOperations([workflowOp(id, disabled)]);
 
     expect((await first).status).toBe("SUCCEEDED");
     const queued = await second;

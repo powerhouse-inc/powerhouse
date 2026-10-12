@@ -101,6 +101,24 @@ describe("pending runs in the journal", () => {
     expect(admitted.map((run) => run.runId)).not.toContain(runId);
   });
 
+  it("is left to its owner until it is older than the sweep's cutoff", async () => {
+    const runId = await store.enqueueRun({
+      workflowId: "wf-pending-fresh",
+      triggerKind: "document-event",
+    });
+    const peer = await WorkflowRunStore.create(relationalDb);
+
+    const fresh = await peer.admitAbandonedRuns({
+      enqueuedBefore: new Date(Date.now() - 60_000),
+    });
+    expect(fresh.map((run) => run.runId)).not.toContain(runId);
+
+    const settled = await peer.admitAbandonedRuns({
+      enqueuedBefore: new Date(Date.now() + 1000),
+    });
+    expect(settled.map((run) => run.runId)).toContain(runId);
+  });
+
   it("is admitted once a new journal opens over it", async () => {
     const runId = await store.enqueueRun({
       workflowId: "wf-pending-abandoned",

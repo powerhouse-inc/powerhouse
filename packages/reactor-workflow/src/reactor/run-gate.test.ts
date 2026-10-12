@@ -1,7 +1,11 @@
 // The concurrency gate in isolation: the modes, the bound, and that a slot is
 // handed to the next waiter rather than left for a later arrival.
 import { describe, expect, it } from "vitest";
-import { effectiveRunPolicy, UNENFORCED_POLICY } from "./policy.js";
+import {
+  effectiveRunPolicy,
+  type EffectiveRunPolicy,
+  UNENFORCED_POLICY,
+} from "./policy.js";
 import {
   DEFAULT_MAX_QUEUED_FIRINGS,
   maxQueuedFirings,
@@ -91,18 +95,21 @@ describe("the workflow run gate", () => {
     expect(third).toBe(true);
   });
 
-  it("says a firing would wait only when it would queue, not be refused", async () => {
+  it("calls onQueue only for a firing it queues, not one it refuses", async () => {
     const gate = new WorkflowRunGate();
     const queue = policyOf({ concurrency: "QUEUE" });
     const singleton = policyOf({ concurrency: "SINGLETON" });
+    const queued: string[] = [];
+    const admit = (id: string, policy: EffectiveRunPolicy) =>
+      gate.admit(id, policy, () => queued.push(id));
 
-    expect(gate.wouldWait("q", queue)).toBe(false);
-    await gate.admit("q", queue);
-    expect(gate.wouldWait("q", queue)).toBe(true);
+    await admit("q", queue);
+    void admit("q", queue);
+    await admit("s", singleton);
+    await admit("s", singleton);
+    await admit("u", UNENFORCED_POLICY);
 
-    await gate.admit("s", singleton);
-    expect(gate.wouldWait("s", singleton)).toBe(false);
-    expect(gate.wouldWait("u", UNENFORCED_POLICY)).toBe(false);
+    expect(queued).toEqual(["q"]);
   });
 
   it("keeps lanes per workflow", async () => {

@@ -407,6 +407,9 @@ export interface TriggerTestOptions extends WorkflowAccessOptions {
 
 const WEBHOOK_TEST_TIMEOUT_MS = 5 * 60_000;
 
+// How often PENDING rows another owner left are swept up, and their minimum age.
+export const PENDING_SWEEP_INTERVAL_MS = 60_000;
+
 interface WebhookTest {
   config: WebhookConfig;
   resolve: (payload: WebhookPayload) => void;
@@ -733,12 +736,6 @@ function configRecord(config: unknown): Record<string, unknown> {
   return {};
 }
 
-// The name a run is stamped with. A run record is a journal: it snapshots the
-// name alongside the version so a workflow that is later renamed or deleted
-// still reads correctly in its own history. That is why this resolves at run
-// time rather than being looked up when a row is displayed \u2014 and why the
-// document's name is a fallback for an unset state.name, not a replacement for
-// it.
 // Workflows whose latest state trigger runs read without a reactor load.
 const WORKFLOW_CACHE_MAX = 1_000;
 
@@ -757,6 +754,12 @@ function globalRevision(document: WorkflowDocument): number {
   return revision?.global ?? 0;
 }
 
+// The name a run is stamped with. A run record is a journal: it snapshots the
+// name alongside the version so a workflow that is later renamed or deleted
+// still reads correctly in its own history. That is why this resolves at run
+// time rather than being looked up when a row is displayed \u2014 and why the
+// document's name is a fallback for an unset state.name, not a replacement for
+// it.
 function runJournalName(
   stateName: string | undefined,
   documentName: string | undefined,
@@ -2336,7 +2339,7 @@ export class WorkflowRuntimeService {
       models: this.models,
       // Hooks lease the pool's trigger children; the pool owns their lifetime.
       worker: this.workers().session("trigger"),
-      hookConcurrency: Number(process.env.PH_WORKFLOWS_TRIGGER_SLOTS) || 1,
+      hookConcurrency: this.workers().triggerSlots,
       telemetry: this.telemetry,
       cacheDir: bundleCacheDir(),
       resolver: pieceResolver(),
@@ -2365,18 +2368,30 @@ export class WorkflowRuntimeService {
   startTriggerSupervisor(): void {
     this.supervisor().start();
     void this.admitAbandonedRuns();
+    // Then rows left after that pass, by a draining owner or a failed pass;
+    // only settled ones, so an owner still draining keeps its own.
+    this.pendingSweepTimer ??= setInterval(() => {
+      void this.admitAbandonedRuns(PENDING_SWEEP_INTERVAL_MS);
+    }, PENDING_SWEEP_INTERVAL_MS);
+    this.pendingSweepTimer.unref();
   }
 
-  private admittedAbandoned = false;
+  private pendingSweepTimer?: ReturnType<typeof setInterval>;
+  private admittingAbandoned = false;
 
-  // PENDING runs a stopped owner journaled start here, once, oldest first and
-  // through the same gates as any fire. RUNNING ones were failed at open.
-  private async admitAbandonedRuns(): Promise<void> {
-    if (this.admittedAbandoned || this.closed) return;
-    this.admittedAbandoned = true;
+  // PENDING runs another owner journaled start here, oldest first and through
+  // the same gates as any fire. RUNNING ones were failed at open.
+  private async admitAbandonedRuns(minAgeMs?: number): Promise<void> {
+    if (this.admittingAbandoned || this.closed) return;
+    this.admittingAbandoned = true;
     try {
       const store = await this.store();
-      for (const run of (await store?.admitAbandonedRuns()) ?? []) {
+      const admitted = await store?.admitAbandonedRuns(
+        minAgeMs === undefined
+          ? {}
+          : { enqueuedBefore: new Date(Date.now() - minAgeMs) },
+      );
+      for (const run of admitted ?? []) {
         this.startFiring(
           run.workflowId,
           run.triggerPayload,
@@ -2389,10 +2404,14 @@ export class WorkflowRuntimeService {
         "Could not admit the runs a stopped reactor journaled: @error",
         error,
       );
+    } finally {
+      this.admittingAbandoned = false;
     }
   }
 
   stopTriggerSupervisor(): void {
+    clearInterval(this.pendingSweepTimer);
+    this.pendingSweepTimer = undefined;
     this.triggerSupervisor?.stop();
   }
 
@@ -4435,6 +4454,8 @@ export class WorkflowRuntimeService {
     let documentName: string | undefined;
     let definition: ReturnType<typeof toWorkflowDefinition>;
     let runUser: RunUser | null | undefined;
+    // The workflow's generation as read: a wait it outlasts re-reads nothing.
+    let readGeneration: number;
     try {
       // "manual" is the only kind a caller can ask for; every other one is
       // system-initiated. An adopted manual row passed this check when journaled.
@@ -4452,8 +4473,10 @@ export class WorkflowRuntimeService {
       if (cached) {
         state = cached.state;
         documentName = cached.name;
+        readGeneration = this.workflowGeneration(workflowId);
       } else {
         const generation = this.workflowGeneration(workflowId);
+        readGeneration = generation;
         const document = await this.telemetry.phase("load", {}, () =>
           this.host.reactorClient.get<WorkflowDocument>(workflowId),
         );
@@ -4503,16 +4526,21 @@ export class WorkflowRuntimeService {
       }
       throw error;
     }
-    // A manual fire about to wait is journaled first, so a crash while it waits
+    // A manual fire is journaled as it queues, so a crash while it waits
     // leaves it for the next boot; one admitted at once is written as before.
-    const journalBeforeWaiting = async (waits: boolean) => {
-      if (!waits || triggerKind !== "manual" || enqueuedRunId || resume) return;
+    let journaling: Promise<void> | undefined;
+    const journalOnQueue = () => {
+      if (triggerKind !== "manual" || enqueuedRunId || resume || journaling) {
+        return;
+      }
       if (!store) return;
-      enqueuedRunId = await store.enqueueRun({
-        workflowId,
-        triggerKind,
-        triggerPayload,
-      });
+      journaling = store
+        .enqueueRun({ workflowId, triggerKind, triggerPayload })
+        .then((runId) => {
+          enqueuedRunId = runId;
+        });
+      // Awaited once admitted; until then nothing else may observe it.
+      journaling.catch(() => undefined);
     };
     // Bound once, to the connections this definition names: an edit landing
     // mid-run cannot widen what the run may resolve.
@@ -4560,8 +4588,17 @@ export class WorkflowRuntimeService {
       throw error;
     }
     if (parked) return skipped(parked, "parked");
-    await journalBeforeWaiting(this.runGate.wouldWait(workflowId, policy));
-    const admission = await this.runGate.admit(workflowId, policy);
+    const admission = await this.runGate.admit(
+      workflowId,
+      policy,
+      journalOnQueue,
+    );
+    try {
+      await journaling;
+    } catch (error) {
+      if (admission.admitted) admission.release();
+      throw error;
+    }
     // Shut down while it waited, or as it was handed the slot: refused, not
     // journaled as a fresh CANCELLED run.
     if (this.closed) {
@@ -4576,19 +4613,23 @@ export class WorkflowRuntimeService {
     }
     // A firing that queued read the workflow before it waited: disabled,
     // re-published or parked meanwhile, it must not run on that old read.
-    if (admission.waited) {
-      let stale: string | undefined;
+    const staleAfter = async (): Promise<string | undefined> => {
       try {
-        stale = await this.staleAfterWait(
+        return await this.staleAfterWait(
           workflowId,
           triggerKind,
           runnable.version,
+          readGeneration,
         );
       } catch (error) {
-        stale =
+        return (
           "Skipped: the workflow could not be read again after this firing " +
-          `waited for its slot: ${error instanceof Error ? error.message : String(error)}`;
+          `waited for its slot: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
+    };
+    if (admission.waited) {
+      const stale = await staleAfter();
       if (stale) {
         admission.release();
         return skipped(stale, "stale");
@@ -4611,13 +4652,25 @@ export class WorkflowRuntimeService {
     }
     // Then the cap across workflows: runs in flight, and a busy main thread.
     let dispatched: () => void;
+    let dispatcherWaited = false;
     try {
-      await journalBeforeWaiting(this.dispatcher().wouldWait());
-      dispatched = await this.dispatcher().admit(workflowId);
+      dispatched = await this.dispatcher().admit(workflowId, () => {
+        dispatcherWaited = true;
+        journalOnQueue();
+      });
     } catch (error) {
+      // The refusal below closes out the row this fire journaled while queued.
+      await journaling?.catch(() => undefined);
       admission.release();
       if (this.closed)
         return this.refuseClosed(store, workflowId, enqueuedRunId, triggerKind);
+      throw error;
+    }
+    try {
+      await journaling;
+    } catch (error) {
+      dispatched();
+      admission.release();
       throw error;
     }
     if (this.closed || (deadline !== undefined && Date.now() >= deadline)) {
@@ -4626,6 +4679,14 @@ export class WorkflowRuntimeService {
       return this.closed
         ? this.refuseClosed(store, workflowId, enqueuedRunId, triggerKind)
         : expired();
+    }
+    if (dispatcherWaited) {
+      const stale = await staleAfter();
+      if (stale) {
+        dispatched();
+        admission.release();
+        return skipped(stale, "stale");
+      }
     }
 
     let runId: string | null = enqueuedRunId ?? null;
@@ -4814,7 +4875,11 @@ export class WorkflowRuntimeService {
     workflowId: string,
     triggerKind: string,
     publishedVersion: number,
+    readGeneration: number,
   ): Promise<string | undefined> {
+    if (this.workflowGeneration(workflowId) === readGeneration) {
+      return this.parkedFiring(workflowId, triggerKind, publishedVersion);
+    }
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     const state = document.state.global;
