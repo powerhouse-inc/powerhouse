@@ -17,6 +17,9 @@ function tabRouter(port: MessagePort): MessageRouter {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+// Ports are FIFO: a round trip lands after all either side posted before it
+const roundTrip = (proxy: IReactorClient) => proxy.resolveIdOrSlug("barrier");
+
 function makeFakeClient() {
   let subscriber: ((change: DocumentChangeEvent) => void) | undefined;
   const calls: string[] = [];
@@ -195,20 +198,20 @@ describe("reactor RPC proxy <-> host", () => {
       { type: "todo" } as SearchFilter,
       (change) => received.push(change),
     );
-    await tick();
+    await roundTrip(proxy);
 
     const change = {
       type: "updated",
       documents: [],
     } as unknown as DocumentChangeEvent;
     fake.emit(change);
-    await tick();
+    await roundTrip(proxy);
     expect(received).toHaveLength(1);
 
     unsubscribe();
-    await tick();
+    await roundTrip(proxy);
     fake.emit(change);
-    await tick();
+    await roundTrip(proxy);
     expect(received).toHaveLength(1);
     expect(fake.calls).toContain("unsub");
   });
@@ -276,14 +279,14 @@ describe("reactor RPC proxy <-> host", () => {
     cleanup = close;
     const received: DocumentChangeEvent[] = [];
     proxy.subscribe({} as SearchFilter, (change) => received.push(change));
-    await tick();
+    await roundTrip(proxy);
 
     fake.emit({
       type: "deleted",
       documents: [],
       context: { childId: "doc-1", purged: true },
     } as unknown as DocumentChangeEvent);
-    await tick();
+    await roundTrip(proxy);
 
     expect(received).toEqual([
       {
@@ -315,7 +318,7 @@ describe("reactor RPC proxy <-> host", () => {
       { type: "todo" } as SearchFilter,
       () => undefined,
     );
-    await tick();
+    await roundTrip(proxy);
     expect(typeof unsubscribe).toBe("function");
   });
 });

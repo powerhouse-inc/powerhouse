@@ -139,9 +139,9 @@ describe("registry auth plugin — accounts (integration, verdaccio + PGlite)", 
     );
   }, 30000);
 
-  afterAll(async () => {
+  // close() returns while the PGlite in workDir shuts down; beforeAll clears it
+  afterAll(() => {
     server.close();
-    await rm(workDir, { recursive: true, force: true });
   });
 
   it("adduser goes through the plugin (Postgres), then wrong-password re-register is rejected", async () => {
@@ -171,9 +171,8 @@ describe("registry auth plugin — ownership + persistence (integration, verdacc
     server = await bootRegistry(PORT, workDir, sharedStore);
   }, 30000);
 
-  afterAll(async () => {
+  afterAll(() => {
     server.close();
-    await rm(workDir, { recursive: true, force: true });
   });
 
   it("first publisher claims a name; a different user gets 403; free names claimable", async () => {
@@ -234,7 +233,6 @@ describe("registry auth plugin — ownership + persistence (integration, verdacc
       expect(await publish(URL2, bob.token!, "owned-pkg", "2.0.0")).toBe(403);
     } finally {
       server2.close();
-      await rm(workDir2, { recursive: true, force: true });
     }
   }, 30000);
 });
