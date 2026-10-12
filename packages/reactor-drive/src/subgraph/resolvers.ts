@@ -133,7 +133,9 @@ async function listServedChildren(
   let scanFrom = anchor;
   let scanned = 0;
   let hasMore: boolean;
+  let advanced: boolean;
   do {
+    const from = scanFrom;
     const page = await ctx.readModel.listChildren(
       driveId,
       parentFolder,
@@ -152,7 +154,9 @@ async function listServedChildren(
       }
     }
     hasMore = i < page.results.length || page.nextCursor !== undefined;
+    advanced = scanFrom !== from;
   } while (
+    advanced &&
     hasMore &&
     results.length < limit &&
     (scanned < cap || results.length === 0)

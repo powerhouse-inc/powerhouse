@@ -1,6 +1,6 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
@@ -155,6 +155,32 @@ describe("reactor-drive subgraph listing with withheld nodes", () => {
     const second = await rootNodes(2, first.nextCursor);
     expect(second.results.map((n) => n.id)).toEqual(["b"]);
     expect(second.hasMore).toBe(false);
+  });
+
+  it("advances past a withheld node whose createdAt has sub-millisecond precision", async () => {
+    for (const [id, at] of [
+      ["x1", "2024-01-01T00:00:00.000100Z"],
+      ["a", "2024-01-01T00:00:00.000200Z"],
+    ]) {
+      await db
+        .insertInto("DriveNode")
+        .values({
+          driveId: DRIVE,
+          id,
+          kind: "file",
+          name: id,
+          requestedName: id,
+          parentFolder: null,
+          documentType: "powerhouse/document-model",
+          createdAt: sql<Date>`${at}::timestamptz`,
+        })
+        .execute();
+    }
+    withheld.add("x1");
+
+    const page = await rootNodes(1);
+
+    expect(page.results.map((n) => n.id)).toEqual(["a"]);
   });
 
   it("may end with an empty page when only withheld nodes follow", async () => {
