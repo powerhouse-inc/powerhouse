@@ -3009,6 +3009,57 @@ describe("GraphQLManager", () => {
       expect(manager.getSubgraphByName("late")).toBe(late);
     });
 
+    it("queues a registration a hook's timer makes while a later hook of the same change runs", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+      // Faked timers fire in the caller's async context and would hide the leak.
+      vi.useRealTimers();
+
+      const detachedSubgraph = makeWidgetSubgraph("detached");
+      let detached: Promise<ISubgraph | undefined> | undefined;
+      let timerFired!: () => void;
+      const fired = new Promise<void>((resolve) => {
+        timerFired = resolve;
+      });
+      class Starter extends BaseSubgraph {
+        name = "starter";
+        onSetup = () => {
+          setTimeout(() => {
+            detached = this.graphqlManager.registerSubgraphInstance(
+              detachedSubgraph,
+              "graphql",
+            );
+            timerFired();
+          }, 0);
+          return Promise.resolve();
+        };
+      }
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      class Blocker extends BaseSubgraph {
+        name = "blocker";
+        onSetup = () => gate;
+      }
+
+      const change = manager.applyPackageSubgraphs(
+        new Map<string, (typeof BaseSubgraph)[]>([
+          ["a", [Starter]],
+          ["b", [Blocker]],
+        ]),
+      );
+      await fired;
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(detached).toBeDefined();
+      expect(manager.getSubgraphByName("detached")).toBeUndefined();
+
+      release();
+      await change;
+      expect(await detached).toBe(detachedSubgraph);
+    });
+
     it("serves every model's subgraph when a model is named like a generated subgraph type", async () => {
       const logger = makeHarnessLogger();
       const { manager, gatewayAdapter } = makeHarness({

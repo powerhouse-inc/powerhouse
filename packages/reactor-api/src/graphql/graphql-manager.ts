@@ -331,10 +331,12 @@ export class GraphQLManager {
    * the awaits that complete it. */
   #registryChanges: Promise<unknown> = Promise.resolve();
 
-  /** Active while a registry change runs, so a subgraph hook that makes
-   * another runs it inline instead of waiting on itself. Work the change
-   * detaches, such as a timer, outlives it and enqueues as usual. */
-  readonly #inRegistryChange = new AsyncLocalStorage<{ active: boolean }>();
+  /** Active while a subgraph hook runs, so a registry change the hook makes
+   * runs inline instead of waiting on the change that called the hook. Work
+   * the hook detaches, such as a timer, enqueues as usual once the hook has
+   * settled; while the hook is pending it cannot be told from awaited work
+   * and runs inline too. */
+  readonly #inHook = new AsyncLocalStorage<{ active: boolean }>();
 
   #generatedTypes:
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
@@ -900,7 +902,7 @@ export class GraphQLManager {
       await this.#removeSubgraphInstance(replaced);
     }
 
-    await subgraphInstance.onSetup?.();
+    await this.#runHook(() => subgraphInstance.onSetup?.());
 
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
     for (const bucket of this.#mountBuckets(supergraph)) {
@@ -998,7 +1000,7 @@ export class GraphQLManager {
    */
   async #removeSubgraphInstance(instance: ISubgraph) {
     try {
-      await instance.onDisconnect?.();
+      await this.#runHook(() => instance.onDisconnect?.());
     } catch (error) {
       this.logger.error(
         "Error disconnecting subgraph @name: @error",
@@ -1056,25 +1058,25 @@ export class GraphQLManager {
   }
 
   #serialize<T>(task: () => Promise<T>): Promise<T> {
-    if (this.#inRegistryChange.getStore()?.active) return task();
-    const run = this.#registryChanges.then(() => {
-      const change = { active: true };
-      return this.#inRegistryChange.run(change, async () => {
-        try {
-          return await task();
-        } finally {
-          change.active = false;
-        }
-      });
-    });
+    if (this.#inHook.getStore()?.active) return task();
+    const run = this.#registryChanges.then(() => this.#inHook.exit(task));
     this.#registryChanges = run.catch(() => undefined);
     return run;
+  }
+
+  async #runHook(hook: () => Promise<void> | undefined): Promise<void> {
+    const scope = { active: true };
+    try {
+      await this.#inHook.run(scope, hook);
+    } finally {
+      scope.active = false;
+    }
   }
 
   /** Refresh the router after a registry change; scheduled rather than
    * awaited when called from inside one. */
   async #refreshRouter(): Promise<void> {
-    if (this.#inRegistryChange.getStore()?.active) {
+    if (this.#inHook.getStore()?.active) {
       this.#scheduleRouterUpdate();
       return;
     }
@@ -1086,7 +1088,7 @@ export class GraphQLManager {
    * queue. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
-    this.#inRegistryChange.exit(() => {
+    this.#inHook.exit(() => {
       this.updateRouter().catch((error: unknown) => {
         this.logger.error("Failed to update router: @error", error);
       });
