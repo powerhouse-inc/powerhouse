@@ -152,7 +152,7 @@ export class ReactorMonitorRegistry {
 
   /**
    * Brokers a direct `LocalChannel` sync link between two ready reactors for
-   * one collection -- no Switchboard, no GraphQL (multi-reactor W1.2). Both
+   * one collection -- no Switchboard, no GraphQL. Both
    * reactors must have been provisioned with `sync.local`. Returns a handle
    * whose `unlink()` removes both remotes and closes both ports.
    */
