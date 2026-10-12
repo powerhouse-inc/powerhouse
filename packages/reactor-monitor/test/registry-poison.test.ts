@@ -150,6 +150,51 @@ describe("ReactorMonitorRegistry with a poisoned store", () => {
     expect(store.closed).toBe(true);
   });
 
+  it("killAll waits for a failed store a pending re-provision waits on", async () => {
+    const { registry, stop, store } = await failWithHungStop("drop");
+
+    const again = registry.provision(
+      descriptor("drop", { storage: { kind: "idb" } }),
+    );
+    let done = false;
+    const killing = registry.killAll().then(() => {
+      done = true;
+    });
+    await tick();
+    expect(done).toBe(false);
+    expect(store.closed).toBe(false);
+
+    stop.resolve();
+    await expect(again).rejects.toThrow(/removed while it was provisioning/);
+    await killing;
+    expect(store.closed).toBe(true);
+    expect(opened).toHaveLength(1);
+    expect(registry.get("drop")).toBeUndefined();
+  });
+
+  it("opens a failed name once at a time across provision, kill, provision", async () => {
+    const { registry, stop, store } = await failWithHungStop("churn");
+
+    const first = registry.provision(
+      descriptor("churn", { storage: { kind: "idb" } }),
+    );
+    void registry.kill("churn");
+    const second = registry.provision(
+      descriptor("churn", { storage: { kind: "idb" } }),
+    );
+    await tick();
+    expect(opened).toHaveLength(1);
+    expect(store.closed).toBe(false);
+
+    stop.resolve();
+    await expect(first).rejects.toThrow(/removed while it was provisioning/);
+    const reactor = await second;
+    expect(store.closed).toBe(true);
+    expect(opened).toHaveLength(2);
+    expect(registry.get("churn")?.status).toBe("ready");
+    expect(registry.reactor("churn")).toBe(reactor);
+  });
+
   it("fails a provision whose store is poisoned while it boots", async () => {
     // Called with the builder as `this` below.
     // eslint-disable-next-line @typescript-eslint/unbound-method
