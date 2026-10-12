@@ -186,6 +186,14 @@ export interface WorkflowEditorCallbacks {
       reactorConnectionId?: string | null;
     } & ConfigExtras,
   ) => AddedBlock;
+  // Field-level trigger edits: each leaves the trigger's other fields alone.
+  setTriggerConfig: (config: unknown, extras?: ConfigExtras) => void;
+  // null clears a connection; undefined leaves it unchanged.
+  setTriggerConnection: (input: {
+    connectionId?: string | null;
+    reactorConnectionId?: string | null;
+  }) => void;
+  setTriggerPieceVersion: (pieceVersion: string) => void;
   clearTrigger: () => void;
   addStep: (input: AddStepInputModel) => AddedBlock;
   updateStep: (input: UpdateStepInputModel) => void;

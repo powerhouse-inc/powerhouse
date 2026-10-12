@@ -257,6 +257,26 @@ input ClearTriggerInput {
     _: Boolean
 }
 
+input SetTriggerConfigPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
+input SetTriggerConfigInput {
+    config: Unknown!
+    propertySettings: [SetTriggerConfigPropertySettingInput!]
+}
+
+input SetTriggerConnectionInput {
+    connectionId: PHID
+    reactorConnectionId: PHID
+}
+
+input SetTriggerPieceVersionInput {
+    pieceVersion: String!
+}
+
 # steps
 
 input AddStepRetryPolicyInput {

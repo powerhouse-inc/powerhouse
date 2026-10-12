@@ -26,7 +26,10 @@ import {
   SetLastTestInputSchema,
   SetPolicyInputSchema,
   SetStepConfigInputSchema,
+  SetTriggerConfigInputSchema,
+  SetTriggerConnectionInputSchema,
   SetTriggerInputSchema,
+  SetTriggerPieceVersionInputSchema,
   SetVariableInputSchema,
   SetWorkflowDescriptionInputSchema,
   SetWorkflowNameInputSchema,
@@ -106,6 +109,42 @@ const stateReducer: StateReducer<WorkflowPHState> = (
       memoizedSchema(ClearTriggerInputSchema).parse(action.input);
 
       workflowTriggerOperations.clearTriggerOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_TRIGGER_CONFIG": {
+      memoizedSchema(SetTriggerConfigInputSchema).parse(action.input);
+
+      workflowTriggerOperations.setTriggerConfigOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_TRIGGER_CONNECTION": {
+      memoizedSchema(SetTriggerConnectionInputSchema).parse(action.input);
+
+      workflowTriggerOperations.setTriggerConnectionOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_TRIGGER_PIECE_VERSION": {
+      memoizedSchema(SetTriggerPieceVersionInputSchema).parse(action.input);
+
+      workflowTriggerOperations.setTriggerPieceVersionOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
