@@ -591,7 +591,7 @@ async function setupGraphQLManager({
 /**
  * Sets up event listeners for package manager changes
  */
-function setupEventListeners(
+export function setupEventListeners(
   pkgManager: PackageManager,
   graphqlManager: GraphQLManager,
   reactorProcessorManager: IReactorProcessorManager,
@@ -646,7 +646,14 @@ function setupEventListeners(
         }
       }
     }
-    void graphqlManager.regenerateDocumentModelSubgraphs();
+    void graphqlManager
+      .regenerateDocumentModelSubgraphs()
+      .catch((error: unknown) => {
+        defaultLogger.error(
+          "Document model change left subgraphs stale: @error",
+          error,
+        );
+      });
   });
 
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
@@ -664,46 +671,80 @@ function setupEventListeners(
       // factories: unregister the leftovers.
       for (const packageName of knownProcessorPackages) {
         if (!processors.has(packageName)) {
-          await reactorProcessorManager.unregisterFactory(packageName);
+          try {
+            await reactorProcessorManager.unregisterFactory(packageName);
+          } catch (error) {
+            defaultLogger.error(
+              "Failed to unregister processors of @package: @error",
+              packageName,
+              error,
+            );
+          }
         }
       }
       knownProcessorPackages = new Set(processors.keys());
 
       for (const [packageName, fns] of processors) {
-        await reactorProcessorManager.unregisterFactory(packageName);
+        try {
+          await reactorProcessorManager.unregisterFactory(packageName);
+        } catch (error) {
+          defaultLogger.error(
+            "Failed to unregister processors of @package: @error",
+            packageName,
+            error,
+          );
+        }
 
-        const factories = fns.map((fn) => fn(moduleFor(packageName)));
-
-        const validBuilders = factories.filter(
-          (factory): factory is ProcessorFactory =>
-            typeof factory === "function",
+        const factories = await Promise.allSettled(
+          fns.map(async (fn) => fn(moduleFor(packageName))),
         );
+
+        const validBuilders: ProcessorFactory[] = [];
+        for (const factory of factories) {
+          if (factory.status === "rejected") {
+            defaultLogger.error(
+              "Processor factory builder of @package failed: @error",
+              packageName,
+              factory.reason,
+            );
+          } else if (typeof factory.value === "function") {
+            validBuilders.push(factory.value);
+          }
+        }
 
         if (!validBuilders.length) {
           continue;
         }
 
-        await reactorProcessorManager.registerFactory(
-          packageName,
-          async (driveHeader) =>
-            (
-              await Promise.all(
-                validBuilders.map(async (driveFactory) => {
-                  try {
-                    const result = await driveFactory(driveHeader);
-                    return result as unknown as ReactorProcessorRecord[];
-                  } catch (e) {
-                    const logger = defaultLogger;
-                    logger.error(
-                      `Error creating processor for drive ${driveHeader.id}:`,
-                      e,
-                    );
-                    return [];
-                  }
-                }),
-              )
-            ).flat(),
-        );
+        try {
+          await reactorProcessorManager.registerFactory(
+            packageName,
+            async (driveHeader) =>
+              (
+                await Promise.all(
+                  validBuilders.map(async (driveFactory) => {
+                    try {
+                      const result = await driveFactory(driveHeader);
+                      return result as unknown as ReactorProcessorRecord[];
+                    } catch (e) {
+                      const logger = defaultLogger;
+                      logger.error(
+                        `Error creating processor for drive ${driveHeader.id}:`,
+                        e,
+                      );
+                      return [];
+                    }
+                  }),
+                )
+              ).flat(),
+          );
+        } catch (error) {
+          defaultLogger.error(
+            "Failed to register processors of @package: @error",
+            packageName,
+            error,
+          );
+        }
       }
     })();
   });
