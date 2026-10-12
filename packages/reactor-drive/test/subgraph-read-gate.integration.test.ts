@@ -206,7 +206,7 @@ describe("reactor-drive subgraph reads as the caller", () => {
     const { resolvers, as, drive, secret, open } = await fixture();
     const roots = async (address?: string) =>
       (
-        await resolvers.ReactorDrive.rootNodes(
+        await resolvers.ReactorDriveInfo.rootNodes(
           { id: drive },
           { paging: { cursor: "", limit: 10 } },
           as(address),
