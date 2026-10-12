@@ -10,7 +10,7 @@ import type { ProvisionRequest } from "./components/ProvisionPanel.js";
  * bundler emits a worker chunk only when it can see this exact pattern at
  * a construction site, which is why it is written here rather than inside
  * the library. `./reactor-monitor.worker.js` resolves to the sibling
- * `reactor-monitor.worker.ts`, which only imports
+ * `reactor-monitor.worker.ts`, which calls `startMonitorWorker()` from
  * `@powerhousedao/reactor-monitor/worker` — the `.js` specifier resolving to
  * a `.ts` sibling is the same Vite/TypeScript resolution the library's own
  * worker entry relies on.

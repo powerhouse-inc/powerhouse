@@ -21,7 +21,7 @@
     "tsc": "tsc",
     "lint": "cd ../.. && oxlint apps/reactor-monitor",
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/assert-worker-chunk.mjs",
     "preview": "vite preview",
     "test": "vitest --run"
   },
