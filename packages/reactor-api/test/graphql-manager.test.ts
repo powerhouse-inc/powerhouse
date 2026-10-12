@@ -2964,6 +2964,10 @@ describe("GraphQLManager", () => {
 
       const late = makeWidgetSubgraph("late");
       let detached: Promise<ISubgraph | undefined> | undefined;
+      let timerFired!: () => void;
+      const fired = new Promise<void>((resolve) => {
+        timerFired = resolve;
+      });
       class Starter extends BaseSubgraph {
         name = "starter";
         onSetup = () => {
@@ -2972,6 +2976,7 @@ describe("GraphQLManager", () => {
               late,
               "graphql",
             );
+            timerFired();
           }, 5);
           return Promise.resolve();
         };
@@ -2992,7 +2997,8 @@ describe("GraphQLManager", () => {
         false,
         "pkg",
       );
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await fired;
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(detached).toBeDefined();
       expect(manager.getSubgraphByName("late")).toBeUndefined();
