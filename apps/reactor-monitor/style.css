@@ -505,6 +505,11 @@ body {
   min-width: 160px;
 }
 
+/* Masked without type="password", which password managers offer to save. */
+.rm-secret {
+  -webkit-text-security: disc;
+}
+
 .rm-confirm {
   display: flex;
   align-items: center;

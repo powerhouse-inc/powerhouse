@@ -149,9 +149,11 @@ export function ProvisionPanel({
               Bearer token
               <input
                 autoComplete="off"
+                className="rm-secret"
                 onChange={(e) => setBearer(e.target.value)}
                 placeholder="optional; kept in memory only"
-                type="password"
+                spellCheck={false}
+                type="text"
                 value={bearer}
               />
             </label>

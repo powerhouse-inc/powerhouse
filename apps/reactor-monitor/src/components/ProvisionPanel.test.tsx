@@ -84,7 +84,12 @@ describe("ProvisionPanel", () => {
       target: { value: "remote" },
     });
     const bearer = view.getByLabelText("Bearer token") as HTMLInputElement;
-    expect(bearer.type).toBe("password");
+    // A password field in a submitted form is a login form to a password
+    // manager, which would offer to persist the token; mask it with CSS.
+    expect(bearer.type).toBe("text");
+    expect(bearer.getAttribute("autocomplete")).toBe("off");
+    expect(bearer.classList.contains("rm-secret")).toBe(true);
+    expect(view.container.querySelector('input[type="password"]')).toBeNull();
     fireEvent.change(view.getByPlaceholderText("alpha"), {
       target: { value: "authed" },
     });
