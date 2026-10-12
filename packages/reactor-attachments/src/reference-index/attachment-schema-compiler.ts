@@ -16,7 +16,7 @@ import {
   inspectableDefinition,
   packageScalarNames,
 } from "document-model";
-import { orderedScalarNames, scalarCatalog } from "document-model/scalars";
+import { scalarCatalog } from "document-model/scalars";
 import {
   buildASTSchema,
   getNamedType,
@@ -39,10 +39,6 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-/** Catalog scalars used by generated and code-first schemas. */
-const CODEGEN_SCALAR_NAMES: ReadonlySet<string> = new Set(
-  orderedScalarNames(scalarCatalog.names, [], []),
-);
 const SYSTEM_ACTION_TYPES: ReadonlySet<string> = new Set([
   ...RESERVED_OPERATION_NAMES,
   ...DOCUMENT_SCOPE_ACTION_TYPES,
@@ -227,23 +223,17 @@ function buildEffectiveSchema(
     const document = parse(
       [...stateSchemas, ...operationSchemas].filter(Boolean).join("\n\n"),
     );
-    const declaredScalars = new Set(
-      document.definitions.flatMap((definition) =>
-        definition.kind === Kind.SCALAR_TYPE_DEFINITION
-          ? [definition.name.value]
-          : [],
-      ),
+    const scalarDefinitions = [
+      ...scalarCatalog.authorNames,
+      ...packageScalars,
+    ].map(
+      (name) =>
+        ({
+          kind: Kind.SCALAR_TYPE_DEFINITION,
+          name: { kind: Kind.NAME, value: name },
+          directives: [],
+        }) satisfies ScalarTypeDefinitionNode,
     );
-    const scalarDefinitions = [...CODEGEN_SCALAR_NAMES, ...packageScalars]
-      .filter((name) => name !== "JSONObject" || !declaredScalars.has(name))
-      .map(
-        (name) =>
-          ({
-            kind: Kind.SCALAR_TYPE_DEFINITION,
-            name: { kind: Kind.NAME, value: name },
-            directives: [],
-          }) satisfies ScalarTypeDefinitionNode,
-      );
     return buildASTSchema(
       dedupeTypeDefinitions({
         ...document,

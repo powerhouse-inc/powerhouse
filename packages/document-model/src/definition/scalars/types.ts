@@ -1,5 +1,7 @@
 import type {
+  CatalogScalarName,
   DefinitionDiagnostic,
+  InternalScalarName,
   PowerhouseScalarName,
   ScalarDefinition,
   ScalarValidationProfile,
@@ -60,6 +62,31 @@ export type ScalarFactory<
   readonly binding: ScalarBinding;
 };
 
+/**
+ * A catalog scalar only the reactor host declares. It has no call signature,
+ * so no field can use it; the catalog and the reactor host read its
+ * properties.
+ */
+export type InternalScalar<
+  TName extends string = string,
+  TBuilderName extends string = string,
+  TBase = unknown,
+  TInput = TBase,
+> = {
+  readonly kind: "internal-scalar";
+  readonly declaration: ResolvedScalarDeclaration<
+    TName,
+    TBuilderName,
+    TBase,
+    TInput
+  >;
+  readonly definition: ScalarDefinition & { readonly name: TName };
+  readonly binding: ScalarBinding;
+};
+
+/** One entry of the compiler-owned catalog: a field factory, or an internal scalar. */
+export type CatalogScalar = ScalarFactory | InternalScalar;
+
 /** The factory `ph` exposes for a catalog scalar. */
 export type PhScalarFactory<TScalar> =
   TScalar extends ScalarFactory<
@@ -73,13 +100,18 @@ export type PhScalarFactory<TScalar> =
     : never;
 
 export interface ScalarCatalogInterface<
-  TName extends string = PowerhouseScalarName,
+  TName extends string = CatalogScalarName,
 > {
   resolve(
     name: string,
     validationProfile: ScalarValidationProfile,
   ): ScalarBinding | undefined;
+  /** Every scalar in catalog order. The reactor host declares all of them. */
   readonly names: readonly TName[];
+  /** The scalars a document model or subgraph may reference, in catalog order. */
+  readonly authorNames: readonly Exclude<TName, InternalScalarName>[];
+  /** The scalars only the reactor host declares, in catalog order. `names` is `authorNames` and these, interleaved. */
+  readonly internalNames: readonly Exclude<TName, PowerhouseScalarName>[];
   readonly validationProfiles: readonly ScalarValidationProfile[];
   readonly digest: Sha256Digest;
 }

@@ -10,12 +10,15 @@ import {
   ph,
   schemaFirstSpecification,
 } from "document-model";
+import { scalarCatalog } from "document-model/scalars";
 import { describe, expect, it } from "vitest";
 import { AttachmentSchemaCompiler } from "../../index.js";
 
 const REF_A = `attachment://v1:${"a".repeat(64)}` as const;
 const REF_B = `attachment://v1:${"b".repeat(64)}` as const;
 const REF_C = `attachment://v2:${"c".repeat(64)}` as const;
+
+const INTERNAL_SCALARS = scalarCatalog.internalNames;
 
 function operation(
   name: string | null,
@@ -633,28 +636,69 @@ describe("AttachmentSchemaCompiler", () => {
     ).toEqual([REF_C]);
   });
 
-  it("keeps an explicit JSONObject declaration in schema-first SDL", () => {
-    const module = documentModule([
-      specification(1, [
-        operation(
-          "ATTACH_FILE",
-          "scalar JSONObject\ninput AttachFileInput { ref: AttachmentRef metadata: JSONObject }",
-        ),
-      ]),
-    ]);
-    const extractor = new AttachmentSchemaCompiler().forModuleAction(
-      module,
-      "ATTACH_FILE",
-    );
-    expect(
-      extractor.extract(
-        action("ATTACH_FILE", {
-          ref: REF_A,
-          metadata: { label: "attachment" },
-        }),
-      ),
-    ).toEqual([REF_A]);
+  it("treats JSONObject as the only internal scalar", () => {
+    expect(INTERNAL_SCALARS).toEqual(["JSONObject"]);
   });
+
+  it.each(INTERNAL_SCALARS)(
+    "keeps an explicit %s declaration in stored schema-first SDL",
+    (name) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            `scalar ${name}\ninput AttachFileInput { ref: AttachmentRef metadata: ${name} }`,
+          ),
+        ]),
+      ]);
+      const extractor = new AttachmentSchemaCompiler().forModuleAction(
+        module,
+        "ATTACH_FILE",
+      );
+      expect(
+        extractor.extract(
+          action("ATTACH_FILE", {
+            ref: REF_A,
+            metadata: { label: "attachment" },
+          }),
+        ),
+      ).toEqual([REF_A]);
+    },
+  );
+
+  it.each(INTERNAL_SCALARS)(
+    "rejects an undeclared reference to the internal scalar %s",
+    (name) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            `input AttachFileInput { ref: AttachmentRef metadata: ${name} }`,
+          ),
+        ]),
+      ]);
+      expect(() =>
+        new AttachmentSchemaCompiler().forModuleAction(module, "ATTACH_FILE"),
+      ).toThrow("the effective GraphQL schema is invalid");
+    },
+  );
+
+  it.each(scalarCatalog.authorNames)(
+    "rejects operation SDL that declares the catalog scalar %s again",
+    (name) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            `scalar ${name}\ninput AttachFileInput { ref: AttachmentRef value: ${name} }`,
+          ),
+        ]),
+      ]);
+      expect(() =>
+        new AttachmentSchemaCompiler().forModuleAction(module, "ATTACH_FILE"),
+      ).toThrow("the effective GraphQL schema is invalid");
+    },
+  );
 
   it("declares package and catalog scalars referenced by code-first SDL", () => {
     const { validator, zodSource } = ph.EmailAddress.binding;
@@ -678,7 +722,7 @@ describe("AttachmentSchemaCompiler", () => {
             fields: {
               email: ContactEmail(),
               card: ph.AttachmentRef(),
-              metadata: ph.JSONObject(),
+              metadata: ph.Unknown(),
             },
           }),
           initialValue: { email: null, card: null, metadata: null },
@@ -693,7 +737,7 @@ describe("AttachmentSchemaCompiler", () => {
             fields: {
               email: ContactEmail({ required: true }),
               card: ph.AttachmentRef(),
-              metadata: ph.JSONObject(),
+              metadata: ph.Unknown(),
             },
           }),
           reduce(state, input) {

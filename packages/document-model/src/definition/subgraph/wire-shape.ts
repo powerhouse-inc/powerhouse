@@ -9,8 +9,10 @@ import type {
 import { createDiagnostic } from "../diagnostics.js";
 import { isGraphQLName } from "../primitives.js";
 import {
-  isReferenceableScalarName,
-  SCALAR_CATALOG_NAMES,
+  internalScalarDiagnostic,
+  isHostScalarName,
+  isInternalScalarName,
+  scalarCatalog,
 } from "../scalars/catalog.js";
 import { scalarDefinitionIssues } from "../scalars/definition-shape.js";
 
@@ -103,7 +105,7 @@ export function checkSubgraphDefinitionShape(
   }
 
   if (definition.schemaKind === "typed") {
-    diagnostics.push(...checkTyped(definition, fail));
+    diagnostics.push(...checkTyped(definition, fail, at));
   } else if (definition.schemaKind === "graphql-ast-compat") {
     diagnostics.push(...checkCompat(definition, fail));
   } else {
@@ -130,6 +132,7 @@ type Fail = (
 function checkTyped(
   definition: Partial<SubgraphDefinition>,
   fail: Fail,
+  at: (...where: (string | number)[]) => string[],
 ): readonly DefinitionDiagnostic[] {
   const typed = definition as Extract<
     SubgraphDefinition,
@@ -216,7 +219,7 @@ function checkTyped(
     );
   }
 
-  const catalog = new Set<string>(SCALAR_CATALOG_NAMES);
+  const catalog = new Set<string>(scalarCatalog.authorNames);
   const declared = new Set<string>();
   (typed.scalars ?? []).forEach(
     (scalar: SubgraphScalarReferenceDefinition, index: number) => {
@@ -225,7 +228,13 @@ function checkTyped(
         declared.add(scalar.name);
         return;
       }
-      if (!catalog.has(scalar.name)) {
+      if (isInternalScalarName(scalar.name)) {
+        diagnostics.push(
+          createDiagnostic(
+            internalScalarDiagnostic(scalar.name, at("scalars", index, "name")),
+          ),
+        );
+      } else if (!catalog.has(scalar.name)) {
         diagnostics.push(
           fail(
             ["scalars", index, "name"],
@@ -294,7 +303,7 @@ function packageScalarIssues(
   const rebuild = "Rebuild the package with a matching compiler.";
   if (
     !isGraphQLName(scalar.name) ||
-    isReferenceableScalarName(scalar.name) ||
+    isHostScalarName(scalar.name) ||
     declared.has(scalar.name)
   ) {
     return [

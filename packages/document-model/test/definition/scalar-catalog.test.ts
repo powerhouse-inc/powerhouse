@@ -1,4 +1,6 @@
 import type {
+  CatalogScalarName,
+  InternalScalarName,
   JsonValue,
   PowerhouseScalarName,
 } from "@powerhousedao/shared/document-model";
@@ -9,7 +11,6 @@ import * as fieldModule from "../../src/definition/field.js";
 import { ph } from "../../src/definition/field.js";
 import { canonicalDigest } from "../../src/definition/primitives.js";
 import {
-  SCALAR_CATALOG_NAMES,
   buildScalarCatalog,
   scalarCatalog,
   scalarCatalogReport,
@@ -107,7 +108,7 @@ function binding(name: string) {
 }
 
 function casesOf(name: string): readonly ScalarCase[] {
-  const { accepts, rejects } = SCALAR_CASES[name as PowerhouseScalarName];
+  const { accepts, rejects } = SCALAR_CASES[name as CatalogScalarName];
   return [...accepts, ...rejects];
 }
 
@@ -199,16 +200,22 @@ function coercionOutcomes(
 describe("catalog inventory", () => {
   it("has exactly the 21 expected names in fixed order", () => {
     expect([...scalarCatalog.names]).toStrictEqual(EXPECTED_NAMES);
-    expect([...SCALAR_CATALOG_NAMES]).toStrictEqual(EXPECTED_NAMES);
+    expect([...scalarCatalog.authorNames]).toStrictEqual(
+      EXPECTED_NAMES.filter((name) => name !== "JSONObject"),
+    );
     expect(scalarCatalog.validationProfiles).toStrictEqual([PROFILE]);
     expect(scalarCatalog.resolve("PHID", "catalog-v1")).toBeUndefined();
     expect(scalarCatalog.resolve("String", PROFILE)).toBeUndefined();
   });
 
-  it("declares every PowerhouseScalarName and no other name", () => {
+  it("declares every author scalar as a PowerhouseScalarName and every internal one as an InternalScalarName", () => {
+    type Entry = (typeof scalarEntries)[number];
     expectTypeOf<
-      (typeof scalarDeclarations)[number]["name"]
+      Extract<Entry, { kind: "scalar-factory" }>["declaration"]["name"]
     >().toEqualTypeOf<PowerhouseScalarName>();
+    expectTypeOf<
+      Extract<Entry, { kind: "internal-scalar" }>["declaration"]["name"]
+    >().toEqualTypeOf<InternalScalarName>();
   });
 
   it("builds a stable digest across two cold imports", async () => {

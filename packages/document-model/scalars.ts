@@ -1,4 +1,5 @@
 export {
+  isHostScalarName,
   isReferenceableScalarName,
   scalarCatalog,
 } from "./src/definition/scalars/catalog.js";

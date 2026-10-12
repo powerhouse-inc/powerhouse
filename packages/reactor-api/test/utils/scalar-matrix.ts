@@ -1,9 +1,11 @@
 import type {
   DocumentModelModule,
+  DocumentModelPHState,
   ScalarGraphQLProfile,
   ScalarValidationProfile,
 } from "@powerhousedao/shared/document-model";
-import { scalarCatalog } from "document-model";
+import { camelCase, pascalCase } from "change-case";
+import { defineDocumentModel, ph, scalarCatalog } from "document-model";
 import { type DocumentNode, Kind } from "graphql";
 import { vi } from "vitest";
 import {
@@ -76,10 +78,96 @@ function assertEqual(left: unknown, right: unknown, where: string): void {
   }
 }
 
-/**
- * Measures every catalog scalar case through both projections and throws on
- * the first disagreement, so the table records one behavior.
- */
+function caseRuns(name: string, field: string, selection: string) {
+  return jsonCases(name).map(({ id, value, partition }) => ({
+    key: `${partition}/${id}`,
+    runs: [
+      {
+        label: "variable",
+        source: `mutation ($v: ${name}!) {
+            Scalars { ${field}(docId: "doc-1", input: { value: $v }) ${selection} }
+          }`,
+        variables: { v: value } as Record<string, unknown> | undefined,
+      },
+      {
+        label: "literal",
+        source: `mutation {
+            Scalars { ${field}(docId: "doc-1", input: { value: ${literalSource(value)} }) ${selection} }
+          }`,
+        variables: undefined,
+      },
+    ] as const,
+  }));
+}
+
+function legacyInternalScalarModule(name: string): DocumentModelModule {
+  const field = camelCase(name);
+  const context = defineDocumentModel({
+    id: "test/scalars",
+    name: "Scalars",
+    description: `A stored model that references ${name}.`,
+    extension: "scalars",
+    version: 1,
+    author: { name: "Powerhouse", website: null },
+    specifications: {
+      global: {
+        schema: ph.object("ScalarsState", {
+          fields: { [field]: ph.Unknown() },
+        }),
+        initialValue: { [field]: null },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  });
+  const setters = context.module("setters", {
+    operations: ({ global }) => ({
+      [`set${pascalCase(name)}`]: global({
+        input: ph.input(`Set${pascalCase(name)}Input`, {
+          fields: { value: ph.Unknown({ required: true }) },
+        }),
+        reduce(state: Record<string, unknown>, input: { value: unknown }) {
+          state[field] = input.value;
+        },
+      }),
+    }),
+  });
+  const module = asSchemaFirst(
+    context.finalize({ modules: [setters] }) as unknown as DocumentModelModule,
+  );
+  const documentModel = structuredClone(
+    module.documentModel,
+  ) as DocumentModelPHState;
+  const rename = (schema: string) => schema.replaceAll(/\bUnknown\b/g, name);
+  for (const specification of documentModel.global.specifications) {
+    specification.state.global.schema = rename(
+      specification.state.global.schema,
+    );
+    for (const operation of specification.modules.flatMap(
+      (module_) => module_.operations,
+    )) {
+      operation.schema = rename(operation.schema ?? "");
+    }
+  }
+  return { ...module, documentModel } as DocumentModelModule;
+}
+
+async function measureInternalScalar(name: string): Promise<ScalarRow> {
+  const host = hostFor(legacyInternalScalarModule(name));
+  const field = `set${pascalCase(name)}`;
+  const selection = `{ state { global { ${camelCase(name)} } } }`;
+  const row: Record<string, string> = {};
+  for (const { key, runs } of caseRuns(name, field, selection)) {
+    const verdicts: Verdict[] = [];
+    for (const run of runs) {
+      verdicts.push(
+        verdict(messages(await host.run(run.source, run.variables))),
+      );
+    }
+    row[key] = verdicts.join("/");
+  }
+  return row;
+}
+
 export async function measureCaseOutcomes(): Promise<
   Readonly<Record<string, ScalarRow>>
 > {
@@ -97,29 +185,12 @@ export async function measureCaseOutcomes(): Promise<
     const selection = `{ state { global { ${stateField} } } }`;
     const row: Record<string, string> = {};
 
-    for (const { id, value, partition } of jsonCases(name)) {
-      const runs = [
-        {
-          label: "variable",
-          source: `mutation ($v: ${name}!) {
-            Scalars { ${field}(docId: "doc-1", input: { value: $v }) ${selection} }
-          }`,
-          variables: { v: value } as Record<string, unknown> | undefined,
-        },
-        {
-          label: "literal",
-          source: `mutation {
-            Scalars { ${field}(docId: "doc-1", input: { value: ${literalSource(value)} }) ${selection} }
-          }`,
-          variables: undefined,
-        },
-      ] as const;
-
+    for (const { key, runs } of caseRuns(name, field, selection)) {
       const verdicts: Verdict[] = [];
       for (const run of runs) {
         const left = await structured.run(run.source, run.variables);
         const right = await stored.run(run.source, run.variables);
-        const where = `${name} ${partition}/${id} ${run.label}`;
+        const where = `${name} ${key} ${run.label}`;
         assertEqual(messages(left), messages(right), `${where}: errors`);
         assertEqual(
           served(left, field),
@@ -133,9 +204,12 @@ export async function measureCaseOutcomes(): Promise<
         );
         verdicts.push(verdict(messages(left)));
       }
-      row[`${partition}/${id}`] = verdicts.join("/");
+      row[key] = verdicts.join("/");
     }
     table[name] = row;
+  }
+  for (const name of scalarCatalog.internalNames) {
+    table[name] = await measureInternalScalar(name);
   }
   return table;
 }

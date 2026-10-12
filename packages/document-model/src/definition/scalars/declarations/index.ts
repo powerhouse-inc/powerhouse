@@ -26,11 +26,6 @@ export type { Amount } from "./amount.js";
 export type { AmountWithStringValue } from "./amounts.js";
 export type { AttachmentRef } from "./attachment-ref.js";
 
-/**
- * Every scalar the compiler-owned catalog declares, one file each, written
- * with the same `defineScalar` a package scalar would use. The order is part
- * of the catalog digest, so a new scalar goes at the end.
- */
 export const builtInScalars = [
   phidScalar,
   oidScalar,

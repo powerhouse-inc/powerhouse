@@ -1,4 +1,5 @@
 import type { DocumentSpecification } from "@powerhousedao/shared/document-model";
+import { scalarCatalog } from "document-model/scalars";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +11,8 @@ import {
 import type { DocumentModelFileMakerArgs } from "../src/file-builders/index.mts";
 
 const MAPPED_SCALARS = Object.keys(scalars);
+
+const INTERNAL_SCALARS = scalarCatalog.internalNames;
 
 function specification(
   stateSchema: string,
@@ -78,12 +81,19 @@ describe("scalar codegen", () => {
     }
   });
 
-  it("rejects a model that uses JSONObject", async () => {
-    await expect(
-      generate(
-        "json-object",
-        specification("type ScalarsState {\n  value: JSONObject\n}"),
-      ),
-    ).rejects.toThrow(/Unknown type: "JSONObject"/);
+  it("lists JSONObject as the only internal scalar", () => {
+    expect(INTERNAL_SCALARS).toEqual(["JSONObject"]);
   });
+
+  it.each(INTERNAL_SCALARS)(
+    "rejects a model that uses the internal scalar %s",
+    async (name) => {
+      await expect(
+        generate(
+          `internal-${name}`,
+          specification(`type ScalarsState {\n  value: ${name}\n}`),
+        ),
+      ).rejects.toThrow(`Unknown type: "${name}"`);
+    },
+  );
 });

@@ -15,15 +15,17 @@ import {
   parseScalarDeclaration,
 } from "./declaration.js";
 import type {
+  InternalScalar,
   ScalarBinding,
   ScalarFactory,
   ScalarFieldFactory,
 } from "./types.js";
 
 /**
- * Compiles one scalar declaration into its field factory. Every catalog
- * scalar is declared with it, and so is a package scalar: a scalar the catalog
- * does not hold, which a code-first model or subgraph may still reference.
+ * Compiles one scalar declaration into its field factory. Every author-facing
+ * catalog scalar is declared with it, and so is a package scalar: a scalar
+ * the catalog does not hold, which a code-first model or subgraph may still
+ * reference.
  */
 export function defineScalar<
   const TName extends string,
@@ -34,6 +36,48 @@ export function defineScalar<
 >(
   input: ScalarDeclaration<TName, TBuilderName, TRepresentation, TBase, TInput>,
 ): ScalarFactory<TName, TBuilderName, TBase, TBuilderName, TInput> {
+  const scalar = compileDeclaration(input);
+  const { declaration, binding } = scalar;
+  return withRole(
+    ((options?: ScalarBuilderOptions) =>
+      createScalarField<TBase, boolean, boolean, TInput>(
+        declaration.name,
+        declaration.validator,
+        options,
+        binding,
+      )) as ScalarFieldFactory<TBase, TInput>,
+    scalar,
+    declaration.builderName,
+  );
+}
+
+export function defineInternalScalar<
+  const TName extends string,
+  const TBuilderName extends string = TName,
+  const TRepresentation extends ScalarRepresentation = ScalarRepresentation,
+  TBase = unknown,
+  TInput = TBase,
+>(
+  input: ScalarDeclaration<TName, TBuilderName, TRepresentation, TBase, TInput>,
+): InternalScalar<TName, TBuilderName, TBase, TInput> {
+  return Object.freeze({
+    kind: "internal-scalar",
+    ...compileDeclaration(input),
+  });
+}
+
+function compileDeclaration<
+  TName extends string,
+  TBuilderName extends string,
+  TRepresentation extends ScalarRepresentation,
+  TBase,
+  TInput,
+>(
+  input: ScalarDeclaration<TName, TBuilderName, TRepresentation, TBase, TInput>,
+): Pick<
+  InternalScalar<TName, TBuilderName, TBase, TInput>,
+  "declaration" | "definition" | "binding"
+> {
   const declaration = parseScalarDeclaration(
     input,
   ) as ResolvedScalarDeclaration<TName, TBuilderName, TBase, TInput>;
@@ -67,17 +111,7 @@ export function defineScalar<
     typedef: `scalar ${declaration.name}` as const,
   });
 
-  return withRole(
-    ((options?: ScalarBuilderOptions) =>
-      createScalarField<TBase, boolean, boolean, TInput>(
-        declaration.name,
-        declaration.validator,
-        options,
-        binding,
-      )) as ScalarFieldFactory<TBase, TInput>,
-    { declaration, definition, binding },
-    declaration.builderName,
-  );
+  return { declaration, definition, binding };
 }
 
 /**

@@ -9,7 +9,11 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { createDiagnostic } from "../diagnostics.js";
 import { canonicalDigest, compareCodeUnits } from "../primitives.js";
-import { scalarCatalog } from "../scalars/catalog.js";
+import {
+  internalScalarDiagnostic,
+  isInternalScalarName,
+  scalarCatalog,
+} from "../scalars/catalog.js";
 import {
   checkDefinitionsWithArtifacts,
   type DefinitionCheckRequest,
@@ -205,6 +209,15 @@ export function inspectScalar(request: {
     compilerVersion: request.compilerVersion,
     selection: { kind: "scalar", key: request.name },
   } as const;
+  if (isInternalScalarName(request.name)) {
+    return {
+      ...base,
+      status: "invalid",
+      diagnostics: [
+        createDiagnostic(internalScalarDiagnostic(request.name, ["selection"])),
+      ],
+    };
+  }
   const profile = scalarCatalog.validationProfiles[0];
   const binding = scalarCatalog.resolve(request.name, profile);
   if (binding === undefined) {
@@ -216,7 +229,9 @@ export function inspectScalar(request: {
           code: "PH-SCALAR-UNREGISTERED",
           path: ["selection"],
           message: `The catalog has no scalar named ${request.name}.`,
-          expected: [...scalarCatalog.names].sort(compareCodeUnits).join(", "),
+          expected: [...scalarCatalog.authorNames]
+            .sort(compareCodeUnits)
+            .join(", "),
           received: request.name,
           repair:
             "Inspect one of the catalog's scalars. A package scalar's definition is part of the model or subgraph that uses it: see ph model inspect or ph subgraph inspect.",

@@ -10,7 +10,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { DefinitionDiagnosticCollector } from "../diagnostics.js";
 import { compareCodeUnits } from "../primitives.js";
-import { SCALAR_CATALOG_NAMES } from "../scalars/catalog.js";
+import { scalarCatalog } from "../scalars/catalog.js";
 import type { ScalarBinding } from "../scalars/types.js";
 import { DescriptorWalk, orderedPackageScalars } from "../structured.js";
 import type { AnyFieldDescriptor, ObjectFields } from "../types.js";
@@ -284,17 +284,19 @@ function scalarReferences(
 ): readonly SubgraphScalarReferenceDefinition[] {
   // Catalog order, so the declaration block, which is part of the published
   // schema text, does not move when an author reorders fields.
-  const catalog = SCALAR_CATALOG_NAMES.filter((entry) => used.has(entry)).map(
-    (name) =>
-      ({
-        name,
-        implementation: `powerhouse.catalog#${name}`,
-        graphQLProfile: "legacy-graphql-default-v1",
-      }) as Extract<
-        SubgraphScalarReferenceDefinition,
-        { graphQLProfile: "legacy-graphql-default-v1" }
-      >,
-  );
+  const catalog = scalarCatalog.authorNames
+    .filter((entry) => used.has(entry))
+    .map(
+      (name) =>
+        ({
+          name,
+          implementation: `powerhouse.catalog#${name}`,
+          graphQLProfile: "legacy-graphql-default-v1",
+        }) as Extract<
+          SubgraphScalarReferenceDefinition,
+          { graphQLProfile: "legacy-graphql-default-v1" }
+        >,
+    );
   const declared = packageScalars.map(({ definition }) => ({
     name: definition.name,
     implementation: `package#${definition.name}` as const,

@@ -19,7 +19,12 @@ type Envelope = {
   readonly selection: Record<string, unknown>;
   readonly compilerVersion: string;
   readonly source?: Record<string, unknown>;
-  readonly diagnostics: { readonly code: string; readonly message: string }[];
+  readonly diagnostics: {
+    readonly code: string;
+    readonly path: readonly string[];
+    readonly message: string;
+    readonly expected?: string;
+  }[];
 };
 
 function treeDigest(root: string): string {
@@ -268,5 +273,31 @@ describe("ph scalar inspect", () => {
     const envelope = JSON.parse(io.stdout) as Envelope;
     expect(envelope.status).toBe("invalid");
     expect(envelope.diagnostics[0].message).toContain("Money");
+    expect(envelope.diagnostics[0].expected).not.toContain("JSONObject");
+    expect(envelope.diagnostics[0].expected).toContain("Unknown");
+  });
+
+  it("refuses the internal JSONObject", () => {
+    const io = recordStreams();
+    const code = runScalarInspect(scalarArgs("JSONObject", true), {
+      streams: io.streams,
+    });
+    expect(code).toBe(1);
+    const envelope = JSON.parse(io.stdout) as Envelope;
+    expect(envelope.status).toBe("invalid");
+    expect(
+      envelope.diagnostics.map(({ code, path, message }) => ({
+        code,
+        path,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-SCALAR-INTERNAL",
+        path: ["selection"],
+        message:
+          "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+      },
+    ]);
   });
 });

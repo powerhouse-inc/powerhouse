@@ -1,8 +1,10 @@
 import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
+import { z } from "zod";
 import { ph } from "../../src/definition/field.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
+import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
 import { emitDeclaration } from "./helpers/declaration-emit.js";
 
 const GoodState = ph.object("SampleState", {
@@ -210,13 +212,20 @@ describe("defineDocumentModel initial values", () => {
   });
 
   it("materializes with the platform's JSON.stringify behavior", () => {
+    const JsonRecord = defineScalar({
+      name: "JsonRecord",
+      description: "A JSON object with string keys.",
+      representation: "json-object",
+      validator: z.record(z.string(), z.unknown()),
+      zodSource: "z.record(z.string(), z.unknown())",
+    });
     const State = ph.object("JsonState", {
       fields: {
         // `Unknown` is the one document position that accepts an absent key,
         // in both the generated and the compiled validator.
         dropped: ph.Unknown(),
         nonFinite: ph.Float(),
-        serialized: ph.JSONObject(),
+        serialized: JsonRecord(),
         nested: ph.list(ph.String()),
       },
     });

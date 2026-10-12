@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { defineScalar } from "../define-scalar.js";
+import { defineInternalScalar } from "../define-scalar.js";
 
-export const jsonObjectScalar = defineScalar({
+export const jsonObjectScalar = defineInternalScalar({
   name: "JSONObject",
   description: "A JSON object with string keys.",
   representation: "json-object",

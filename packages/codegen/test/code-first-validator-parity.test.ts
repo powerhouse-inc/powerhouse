@@ -524,7 +524,7 @@ describe("@equals on every scalar against the schema-first generator", () => {
   it("accepts equals exactly where the generated validator can carry it", async () => {
     const values = ["abc", "a-c", "abcd", "a@b.co"];
     const verdicts: Record<string, readonly unknown[]> = {};
-    for (const name of [...BUILT_INS, ...scalarCatalog.names]) {
+    for (const name of [...BUILT_INS, ...scalarCatalog.authorNames]) {
       const generatedValidator = await generatedField(name);
       let codeFirst: z.ZodType | null;
       try {

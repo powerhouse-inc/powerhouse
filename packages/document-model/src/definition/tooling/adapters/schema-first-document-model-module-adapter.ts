@@ -827,7 +827,7 @@ function normalizeSpecification(
   return {
     specification: {
       version: specification.version,
-      scalars: scalarCatalog.names
+      scalars: scalarCatalog.authorNames
         .filter((name) => scalars.has(name))
         .map((name) => ({
           name,

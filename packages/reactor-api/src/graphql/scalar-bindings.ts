@@ -1,4 +1,5 @@
 import type {
+  CatalogScalarName,
   DefinitionDiagnostic,
   JsonValue,
   ScalarValidationProfile,
@@ -7,6 +8,7 @@ import {
   createDiagnostic,
   literalFromJson,
   type ScalarBinding,
+  type ScalarCatalogInterface,
   type ScalarLiteralNode,
   scalarCatalog,
 } from "document-model";
@@ -22,26 +24,14 @@ import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 /**
  * Document validation resolves scalars through the catalog under
  * `document-engineering-1.40`. Widening that profile changes replay. GraphQL
- * resolves the same names through the resolvers the host installs, which cover
- * two names. The rest use GraphQL's default pass-through. The diagnostics here
- * only report. They never change admission or the installed resolvers.
+ * resolves the same names through `HOST_SCALAR_RESOLVERS` where it has one, and
+ * through GraphQL's default pass-through otherwise. The diagnostics here only
+ * report. They never change admission or the installed resolvers.
  */
 
 /** The profile document creation, reducer input, and replay resolve through. */
 const DOCUMENT_VALIDATION_PROFILE: ScalarValidationProfile =
   "document-engineering-1.40";
-
-/**
- * The two scalar coercers the host installs. Callers spread them after the
- * authored resolvers, so they override an authored resolver of the same name.
- * Every other catalog scalar uses GraphQL's default pass-through. Existing
- * clients depend on both behaviors, and `test/goldens/host-scalar-bindings.json`
- * pins them.
- */
-export const HOST_SCALAR_RESOLVERS = Object.freeze({
-  JSONObject: GraphQLJSONObject,
-  Unknown: GraphQLJSON,
-});
 
 /**
  * Builds the GraphQL scalar for a package scalar, served under `name` with the
@@ -97,6 +87,31 @@ export function packageScalarResolvers(
     ]),
   );
 }
+
+const PINNED_SCALAR_RESOLVERS = {
+  JSONObject: GraphQLJSONObject,
+  Unknown: GraphQLJSON,
+} as const satisfies Partial<Record<CatalogScalarName, GraphQLScalarType>>;
+
+export function hostScalarResolvers(
+  catalog: ScalarCatalogInterface<string>,
+): Readonly<Record<string, GraphQLScalarType>> {
+  const internal = catalog.internalNames.flatMap((name) => {
+    if (Object.hasOwn(PINNED_SCALAR_RESOLVERS, name)) return [];
+    const binding = catalog.resolve(name, DOCUMENT_VALIDATION_PROFILE);
+    return binding === undefined ? [] : [{ name, binding }];
+  });
+  return Object.freeze({
+    ...packageScalarResolvers(internal),
+    ...PINNED_SCALAR_RESOLVERS,
+  });
+}
+
+/**
+ * The scalar resolvers the host installs. Callers spread them after the
+ * authored resolvers, so they override an authored resolver of the same name.
+ */
+export const HOST_SCALAR_RESOLVERS = hostScalarResolvers(scalarCatalog);
 
 function reason(error: unknown): string {
   const issues = (error as { issues?: unknown }).issues;
@@ -185,7 +200,7 @@ function scalarNames(typeDefs: DocumentNode): readonly string[] {
 
 /**
  * Report-only diagnostics for an assembled subgraph module. `authoredResolvers`
- * is the author's map before the host spreads its own two resolvers over it.
+ * is the author's map before the host spreads `HOST_SCALAR_RESOLVERS` over it.
  * Passing the merged map would report the host's bindings as shadowed on every
  * boot. `packageScalars` names the package scalars bound to their own
  * coercion.

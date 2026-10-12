@@ -45,7 +45,7 @@ export function scalarZodSources<TName extends string>(
 
 /**
  * `names` with `first` leading in its own order, then every other name in
- * catalog order, minus `exclude`.
+ * catalog order.
  *
  * A consumer whose output lists scalars (a generated `schema.graphql`, a
  * subgraph's introspection) pins the order it has always printed in `first`,
@@ -54,9 +54,6 @@ export function scalarZodSources<TName extends string>(
 export function orderedScalarNames<const TName extends string>(
   names: readonly TName[],
   first: readonly NoInfer<TName>[],
-  exclude: readonly NoInfer<TName>[] = [],
 ): readonly TName[] {
-  const skipped = new Set<string>(exclude);
-  const rest = names.filter((name) => !first.includes(name));
-  return [...first, ...rest].filter((name) => !skipped.has(name));
+  return [...first, ...names.filter((name) => !first.includes(name))];
 }

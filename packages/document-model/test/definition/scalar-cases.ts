@@ -1,6 +1,6 @@
 import type {
   JsonValue,
-  PowerhouseScalarName,
+  CatalogScalarName,
 } from "@powerhousedao/shared/document-model";
 import type { RecordedDifferenceId } from "./scalar-recorded-differences.js";
 
@@ -90,7 +90,7 @@ export const STRING_KIND_REJECTS: ScalarCases = [
 ];
 
 export const SCALAR_CASES: {
-  readonly [N in PowerhouseScalarName]: {
+  readonly [N in CatalogScalarName]: {
     readonly accepts: ScalarCases;
     readonly rejects: ScalarCases;
   };

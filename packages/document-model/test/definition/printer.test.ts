@@ -112,7 +112,7 @@ describe("the deterministic SDL printer", () => {
     expect(printed).toContain('titles: [String!] = ["a", "b"]');
     expect(printed).toContain("note: String = null");
     expect(printed).toContain(
-      "metadata: JSONObject = {nested: {count: 1}, flag: true}",
+      "metadata: JsonRecord = {nested: {count: 1}, flag: true}",
     );
     // An enum token is not a string literal, and the parsed AST agrees.
     const parsed = parse(`${printed}`).definitions[0];

@@ -111,7 +111,17 @@ export function parseScalarDeclaration(
 ): ResolvedScalarDeclaration {
   const snapshot = snapshotRecord(input, DECLARATION_KEYS, []);
   if (!snapshot.ok) {
-    fail(String((input as { readonly name?: unknown }).name), {
+    const name = String((input as { readonly name?: unknown }).name);
+    if (snapshot.reason === "unknown-key" && snapshot.key === "visibility") {
+      fail(name, {
+        code: "PH-SCALAR-DECLARATION-INVALID",
+        path: ["visibility"],
+        message: `Scalar ${name} sets visibility, which defineScalar does not take.`,
+        repair:
+          "Remove visibility. Only the compiler catalog declares internal scalars, so every scalar defineScalar returns is one authors use.",
+      });
+    }
+    fail(name, {
       code: "PH-SCALAR-DECLARATION-INVALID",
       path: snapshot.path,
       message: `The declaration could not be snapshotted (${snapshot.reason}).`,

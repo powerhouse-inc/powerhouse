@@ -261,6 +261,7 @@ export type GraphQLBuiltInScalarName =
   | "Int"
   | "Float";
 
+/** The catalog scalars a document model or subgraph may reference. */
 export type PowerhouseScalarName =
   | "PHID"
   | "OID"
@@ -281,8 +282,13 @@ export type PowerhouseScalarName =
   | "Address"
   | "AttachmentRef"
   | "Unknown"
-  | "Upload"
-  | "JSONObject";
+  | "Upload";
+
+/** Catalog scalars only the reactor host declares. No document model or subgraph can reference one. */
+export type InternalScalarName = "JSONObject";
+
+/** Every catalog scalar, author-facing and internal. */
+export type CatalogScalarName = PowerhouseScalarName | InternalScalarName;
 
 export type ScalarName = GraphQLBuiltInScalarName | PowerhouseScalarName;
 

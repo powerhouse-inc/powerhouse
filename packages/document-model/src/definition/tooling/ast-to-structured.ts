@@ -22,7 +22,12 @@ import {
   foldTypeExtensions,
 } from "../graphql-ast.js";
 import { canonicalJson } from "../primitives.js";
-import { SCALAR_CATALOG_NAMES } from "../scalars/catalog.js";
+import {
+  REFERENCEABLE_SCALAR_NAMES,
+  internalScalarDiagnostic,
+  isInternalScalarName,
+  isReferenceableScalarName,
+} from "../scalars/catalog.js";
 
 /**
  * Turns a parsed schema-first document into V1 structured types.
@@ -33,13 +38,6 @@ import { SCALAR_CATALOG_NAMES } from "../scalars/catalog.js";
  * answers that by retaining the complete AST as the GraphQL projection
  * instead of printing the reachable descriptor graph.
  */
-
-const BUILT_IN_SCALARS = ["ID", "String", "Boolean", "Int", "Float"] as const;
-
-const SCALARS: ReadonlySet<string> = new Set<string>([
-  ...BUILT_IN_SCALARS,
-  ...SCALAR_CATALOG_NAMES,
-]);
 
 export type UnrepresentableNode = {
   readonly path: DefinitionPath;
@@ -382,8 +380,12 @@ export function checkScalarReferences(
       return;
     }
     if (reference.kind !== "scalar") return;
-    if (SCALARS.has(reference.name)) return;
+    if (isReferenceableScalarName(reference.name)) return;
     resolved = false;
+    if (isInternalScalarName(reference.name)) {
+      collector.add(internalScalarDiagnostic(reference.name, at));
+      return;
+    }
     // `PH-SCALAR-UNREGISTERED` is report-only and belongs to the host's
     // binding check in `reactor-api`. Here normalization stops, so the adapter
     // reports the failure that actually happened.
@@ -391,7 +393,7 @@ export function checkScalarReferences(
       code: "PH-DM-DECLARATION-INVALID",
       path: at,
       message: `Scalar ${reference.name} is not in the compiler catalog, so its coercion is unknown.`,
-      expected: [...SCALARS].join(" | "),
+      expected: REFERENCEABLE_SCALAR_NAMES.join(" | "),
       received: reference.name,
       repair: `Declare ${reference.name} as a named type in the model, or replace it with a catalog scalar.`,
     });

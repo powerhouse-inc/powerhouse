@@ -5,7 +5,7 @@ import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.j
 import { ph } from "../../src/definition/field.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
 import { canonicalJson } from "../../src/definition/primitives.js";
-import { SCALAR_CATALOG_NAMES } from "../../src/definition/scalars/catalog.js";
+import { scalarCatalog } from "../../src/definition/scalars/catalog.js";
 import { checkRetainedSerialization } from "../../src/definition/tooling/retained-serialization.js";
 import { loadParityRoots, type ParityRoot } from "./corpus.js";
 import {
@@ -26,9 +26,9 @@ import {
  * every comparison.
  */
 
-const SCALAR_PRELUDE = SCALAR_CATALOG_NAMES.map(
-  (name) => `scalar ${name}`,
-).join("\n");
+const SCALAR_PRELUDE = scalarCatalog.names
+  .map((name) => `scalar ${name}`)
+  .join("\n");
 
 const roots: readonly ParityRoot[] = loadParityRoots();
 

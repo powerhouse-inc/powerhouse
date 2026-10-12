@@ -61,7 +61,7 @@ describe("scalar factories", () => {
     >();
   });
 
-  it("exposes every catalog member and built-in under its builder name", () => {
+  it("exposes every author-facing catalog member and built-in under its builder name", () => {
     const builders = [
       "ID",
       "String",
@@ -88,7 +88,6 @@ describe("scalar factories", () => {
       "Address",
       "AttachmentRef",
       "Unknown",
-      "JSONObject",
     ] as const;
     for (const builder of builders) {
       expect(typeof ph[builder], builder).toBe("function");
@@ -97,6 +96,22 @@ describe("scalar factories", () => {
     expect(ph.Money().scalarName).toBe("Amount_Money");
     expect(ph.AmountFiat().scalarName).toBe("Amount_Fiat");
     expect(Object.isFrozen(ph)).toBe(true);
+  });
+
+  it("refuses the internal JSONObject at compile time and at the call site", () => {
+    expect(Object.keys(ph)).not.toContain("JSONObject");
+    const read = (): unknown =>
+      // @ts-expect-error JSONObject is internal to the reactor host
+      ph.JSONObject;
+    expect(rejection(read)).toMatchObject({
+      code: "PH-SCALAR-INTERNAL",
+      definition: { kind: "scalar", key: "JSONObject" },
+      path: ["JSONObject"],
+      message:
+        "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+      repair:
+        "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+    });
   });
 
   it("keeps built-in validators aligned with generated Zod", () => {

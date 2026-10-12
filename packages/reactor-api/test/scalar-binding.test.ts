@@ -7,13 +7,15 @@ import {
   resolvers as packageResolvers,
   typeDefs as scalarsTypeDefs,
 } from "@powerhousedao/document-engineering/graphql";
-import { scalarCatalog } from "document-model";
+import { buildScalarCatalog, scalarCatalog } from "document-model";
 import { readFileSync } from "node:fs";
-import { type DocumentNode, Kind, print } from "graphql";
+import { type DocumentNode, Kind, parseValue, print } from "graphql";
 import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   HOST_SCALAR_RESOLVERS,
+  hostScalarResolvers,
   forgetReportedScalarBindings,
   reportScalarBindings,
 } from "../src/graphql/scalar-bindings.js";
@@ -109,6 +111,49 @@ describe("the host's scalar bindings", () => {
   });
 });
 
+describe("hostScalarResolvers", () => {
+  it("binds the built-in catalog to exactly the two legacy coercers", () => {
+    const resolvers = hostScalarResolvers(scalarCatalog);
+    expect(Object.keys(resolvers)).toEqual(["JSONObject", "Unknown"]);
+    expect(resolvers.JSONObject).toBe(GraphQLJSONObject);
+    expect(resolvers.Unknown).toBe(GraphQLJSON);
+  });
+
+  it("binds an unpinned internal scalar to its own coercion", () => {
+    const { catalog } = buildScalarCatalog(
+      [
+        {
+          name: "HostCount",
+          description: "A count only the host serves.",
+          representation: "number",
+          validator: z.number().int().nonnegative(),
+          zodSource: "z.number().int().nonnegative()",
+        },
+      ],
+      { base: scalarCatalog },
+    );
+    const resolvers = hostScalarResolvers({
+      ...catalog!,
+      authorNames: catalog!.authorNames.filter((name) => name !== "HostCount"),
+      internalNames: [...catalog!.internalNames, "HostCount"],
+    });
+    expect(Object.keys(resolvers)).toEqual([
+      "HostCount",
+      "JSONObject",
+      "Unknown",
+    ]);
+    expect(resolvers.JSONObject).toBe(GraphQLJSONObject);
+    const hostCount = resolvers.HostCount;
+    expect(hostCount.name).toBe("HostCount");
+    expect(hostCount.parseValue(3)).toBe(3);
+    expect(() => hostCount.parseValue(-1)).toThrow(/^HostCount /);
+    expect(hostCount.parseLiteral(parseValue("4"))).toBe(4);
+    expect(() => hostCount.parseLiteral(parseValue('"4"'))).toThrow(
+      /^HostCount /,
+    );
+  });
+});
+
 describe("the two profiles are keyed apart", () => {
   it("resolves document validation only under its own profile", () => {
     expect(scalarCatalog.validationProfiles).toEqual([
@@ -176,7 +221,7 @@ describe("every catalog scalar behaves the same on both projections", () => {
     expect(measured).toEqual(GOLDEN.caseOutcomes);
   });
 
-  for (const name of CATALOG_SCALARS) {
+  for (const name of [...CATALOG_SCALARS, ...scalarCatalog.internalNames]) {
     it(`${name} answers over GraphQL the way the catalog partitions it`, () => {
       const row = measured[name];
       expect(Object.keys(row).length, name).toBeGreaterThan(0);
@@ -184,9 +229,6 @@ describe("every catalog scalar behaves the same on both projections", () => {
         const expected = caseKey.startsWith("accepts/")
           ? "accepted/accepted"
           : "rejected/rejected";
-        // Only JSONObject and Unknown have a host coercer, so these verdicts
-        // come from the catalog's document validator. The variable and literal
-        // forms agree.
         expect(outcome, `${name} ${caseKey}`).toBe(expected);
       }
     });
@@ -304,7 +346,7 @@ describe("report-only scalar diagnostics", () => {
 
   it("reads the authored map, not the one the host installed over it", () => {
     // The call site passes the authored `resolvers`. Passing the installed map
-    // would report the host's own two bindings as shadowed on every boot,
+    // would report the host's own bindings as shadowed on every boot,
     // which this case reproduces.
     const asInstalled = reportScalarBindings(
       hostTypeDefs,
