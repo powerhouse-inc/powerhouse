@@ -120,7 +120,7 @@ const STREAM_ROOTS = ["Query", "Mutation", "Subscription"];
 
 /**
  * Merges subscription subgraphs into one stream schema, or `undefined` when no
- * subgraph contributes a Query or a Subscription root. A root the subgraphs
+ * subgraph contributes the Query root a schema requires. A root the subgraphs
  * only extend gets an empty definition to extend.
  */
 export function mergeStreamSubgraphs(
@@ -137,8 +137,7 @@ export function mergeStreamSubgraphs(
       }
     }
   }
-  const contributes = (root: string) => defined.has(root) || extended.has(root);
-  if (!contributes("Query") || !contributes("Subscription")) {
+  if (!defined.has("Query") && !extended.has("Query")) {
     return undefined;
   }
   const placeholders: DefinitionNode[] = STREAM_ROOTS.filter(
