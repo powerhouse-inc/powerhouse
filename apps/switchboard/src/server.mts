@@ -97,6 +97,7 @@ import {
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { inspectionThrottleFromEnv } from "./inspection-throttle.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
@@ -986,6 +987,7 @@ async function initServer(
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
       renown: renownConfig,
       verifyCredential,
+      inspection: { throttle: inspectionThrottleFromEnv(process.env, logger) },
     },
     "switchboard",
   );
