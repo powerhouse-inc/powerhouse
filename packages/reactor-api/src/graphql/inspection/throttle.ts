@@ -9,7 +9,7 @@ export const DEFAULT_INSPECTION_THROTTLE: InspectionThrottleConfig = {
   callsPerMinute: 6,
 };
 
-const PRUNE_ABOVE = 10_000;
+const MAX_TRACKED_CALLERS = 10_000;
 
 export class InspectionThrottledError extends GraphQLError {
   constructor(retryAfterMs: number) {
@@ -35,7 +35,7 @@ export class InspectionThrottle {
     this.#cap = cap;
   }
 
-  /** Callers with a bucket still refilling. */
+  /** Callers with a bucket, at most the 10,000 most recently seen. */
   get trackedCallers(): number {
     return this.#buckets.size;
   }
@@ -49,17 +49,16 @@ export class InspectionThrottle {
     const tokens = bucket
       ? Math.min(cap, bucket.tokens + (now - bucket.at) * perMs)
       : cap;
+    // Re-inserted so the map's first key is the least recently seen caller.
+    this.#buckets.delete(caller);
     if (tokens < 1) {
+      this.#buckets.set(caller, { tokens, at: now });
       throw new InspectionThrottledError(Math.ceil((1 - tokens) / perMs));
     }
     this.#buckets.set(caller, { tokens: tokens - 1, at: now });
-    if (this.#buckets.size > PRUNE_ABOVE) this.#prune(now, cap, perMs);
-  }
-
-  // A bucket refilled to capacity is the same as no bucket.
-  #prune(now: number, cap: number, perMs: number): void {
-    for (const [key, b] of this.#buckets) {
-      if (b.tokens + (now - b.at) * perMs >= cap) this.#buckets.delete(key);
+    if (this.#buckets.size > MAX_TRACKED_CALLERS) {
+      // Evicting resets that caller to a full bucket.
+      this.#buckets.delete(this.#buckets.keys().next().value!);
     }
   }
 }

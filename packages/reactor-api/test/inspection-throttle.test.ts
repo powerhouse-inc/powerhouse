@@ -66,16 +66,16 @@ describe("InspectionThrottle", () => {
     }
   });
 
-  it("prunes refilled buckets once it tracks too many callers", () => {
-    const throttle = new InspectionThrottle();
-    for (let i = 0; i < 10_000; i++) throttle.charge(`old-${i}`);
-    for (let i = 0; i < 6; i++) throttle.charge("hot");
-    expect(throttle.trackedCallers).toBe(10_001);
-
-    vi.setSystemTime(10_000);
-    throttle.charge("new");
-    expect(throttle.trackedCallers).toBe(2);
+  it("tracks at most 10,000 callers, evicting the least recently seen", () => {
+    const throttle = new InspectionThrottle({ callsPerMinute: 1 });
     throttle.charge("hot");
+    for (let i = 0; i < 9_999; i++) throttle.charge(`old-${i}`);
+    expect(throttle.trackedCallers).toBe(10_000);
+
     expect(() => throttle.charge("hot")).toThrow(GraphQLError);
+    throttle.charge("new");
+    expect(throttle.trackedCallers).toBe(10_000);
+    expect(() => throttle.charge("hot")).toThrow(GraphQLError);
+    throttle.charge("old-0");
   });
 });
