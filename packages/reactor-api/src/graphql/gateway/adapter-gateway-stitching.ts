@@ -349,7 +349,8 @@ function filterResolversToSchema(
     const kept: Record<string, unknown> = {};
     const dropped: string[] = [];
     for (const [key, value] of Object.entries(map)) {
-      if (key === "__resolveReference" || fields[key] !== undefined) {
+      // `__resolveType`, `__isTypeOf` and `__resolveReference` are type-level.
+      if (key.startsWith("__") || fields[key] !== undefined) {
         kept[key] = value;
       } else {
         dropped.push(key);

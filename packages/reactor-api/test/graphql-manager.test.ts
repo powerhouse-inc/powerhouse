@@ -10,10 +10,12 @@
  */
 
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  IReactorClient,
-  IRelationalDb,
-  ISyncManager,
+import {
+  type IReactorClient,
+  type IRelationalDb,
+  type ISyncManager,
+  type JobInfo,
+  JobStatus,
 } from "@powerhousedao/reactor";
 import {
   createReactorDriveResolvers,
@@ -856,6 +858,36 @@ describe("GraphQLManager", () => {
     return res.text();
   }
 
+  /** Subscribe over the SSE handler and read events until one carries `needle`. */
+  async function streamUntil(
+    handler: FetchHandler,
+    query: string,
+    needle: string,
+  ) {
+    const res = await handler(
+      new Request("http://localhost/graphql/stream", {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ query }),
+      }),
+    );
+    const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+    let events = "";
+    try {
+      while (!events.includes(needle)) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        events += value;
+      }
+    } finally {
+      await reader.cancel();
+    }
+    return events;
+  }
+
   describe("SSE handler", () => {
     it("mounts the SSE handler at {basePath}/graphql/stream", async () => {
       const { manager, httpAdapter } = makeHarness({ path: "/" });
@@ -1026,7 +1058,27 @@ describe("GraphQLManager", () => {
 
     it("merges the reactor subgraph's subscriptions with another subgraph's", async () => {
       const logger = makeHarnessLogger();
-      const { manager, mounts } = makeHarness({ logger });
+      const reactorClient = makeMockReactorClient({
+        isServed: vi.fn().mockResolvedValue(true),
+        // Answers after the subscriber listens: earlier events are not replayed.
+        getJobStatus: vi.fn(
+          () =>
+            new Promise<JobInfo>((resolve) =>
+              setTimeout(
+                () =>
+                  resolve({
+                    id: "job-1",
+                    status: JobStatus.READ_READY,
+                    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+                    completedAtUtcIso: "2026-01-01T00:00:01.000Z",
+                    documentId: "doc-1",
+                  } as JobInfo),
+                50,
+              ),
+            ),
+        ),
+      });
+      const { manager, mounts } = makeHarness({ logger, reactorClient });
       await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
       await initAndFlush(manager, [ReactorSubgraph]);
       vi.useRealTimers();
@@ -1045,6 +1097,246 @@ describe("GraphQLManager", () => {
       for (const field of ["alpha", "documentChanges", "jobChanges"]) {
         expect(events).toContain(`{"name":"${field}"}`);
       }
+      const jobEvent =
+        '{"data":{"jobChanges":{"jobId":"job-1","status":"READ_READY"}}}';
+      expect(
+        await streamUntil(
+          handler!,
+          'subscription { jobChanges(jobId: "job-1") { jobId status } }',
+          jobEvent,
+        ),
+      ).toContain(jobEvent);
+    });
+
+    it("streams a subscription subgraph that uses federation directives", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-federated",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            extend schema
+              @link(
+                url: "https://specs.apollo.dev/federation/v2.3"
+                import: ["@key", "@shareable"]
+              )
+            type StreamThing @key(fields: "id") {
+              id: ID!
+            }
+            type Query {
+              streamThing: StreamThing @shareable
+            }
+            type Subscription {
+              thingAdded: StreamThing
+            }
+          `,
+          resolvers: {
+            Query: { streamThing: () => ({ id: "t-1" }) },
+            Subscription: {
+              thingAdded: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { thingAdded: { id: "t-2" } };
+                },
+              },
+            },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(
+        await streamOver(handler!, "subscription { thingAdded { id } }"),
+      ).toContain('{"data":{"thingAdded":{"id":"t-2"}}}');
+      expect(
+        await streamOver(handler!, "{ alphaInfo streamThing { id } }"),
+      ).toContain('{"data":{"alphaInfo":"from-a","streamThing":{"id":"t-1"}}}');
+    });
+
+    it("streams subgraphs that only extend the root types", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-extends",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            extend type Query {
+              extInfo: String
+            }
+            extend type Subscription {
+              extTick: String
+            }
+          `,
+          resolvers: {
+            Query: { extInfo: () => "info" },
+            Subscription: {
+              extTick: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { extTick: "tick" };
+                },
+              },
+            },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { extTick }")).toContain(
+        '{"data":{"extTick":"tick"}}',
+      );
+      expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
+        "Failed to setup supergraph SSE: @error",
+        expect.anything(),
+      );
+    });
+
+    it("mounts no stream when no subgraph contributes a Query root", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-no-query",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            type Subscription {
+              lonely: String
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+
+      expect(mounts.has("/graphql/stream")).toBe(false);
+      expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
+        "Failed to setup supergraph SSE: @error",
+        expect.anything(),
+      );
+    });
+
+    it("logs an exclusion again when the subgraph breaks after recovering", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      const brokenTypeDefs = gql`
+        type Subscription {
+          broken: NoSuchType
+        }
+      `;
+      const register = (typeDefs: DocumentNode) =>
+        manager.registerSubgraphInstance(
+          {
+            name: "stream-flaky",
+            hasSubscriptions: true,
+            typeDefs,
+            resolvers: {},
+            relationalDb: {} as IRelationalDb,
+            reactorClient: {} as IReactorClient,
+          },
+          "graphql",
+        );
+      const sseExclusions = () =>
+        vi
+          .mocked(logger.error)
+          .mock.calls.map((call) => String(call[0]))
+          .filter((message) => message.includes('"stream-flaky"'));
+      const flushRouter = async () => {
+        const update = manager.updateRouter();
+        await vi.runAllTimersAsync();
+        await update;
+      };
+
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await register(brokenTypeDefs);
+      await initAndFlush(manager);
+      expect(sseExclusions()).toHaveLength(1);
+
+      await register(gql`
+        type Subscription {
+          flaky: String
+        }
+      `);
+      await flushRouter();
+      expect(sseExclusions()).toHaveLength(1);
+
+      await register(brokenTypeDefs);
+      await flushRouter();
+      expect(sseExclusions()).toHaveLength(2);
+    });
+
+    it("resolves interface-typed fields over the supergraph stream", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-nodes",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            interface StreamNode {
+              id: ID!
+            }
+            type StreamItem implements StreamNode {
+              id: ID!
+            }
+            type Query {
+              streamNode: StreamNode
+            }
+            type Subscription {
+              nodeAdded: StreamNode
+            }
+          `,
+          resolvers: {
+            Query: { streamNode: () => ({ id: "n-1" }) },
+            Subscription: {
+              nodeAdded: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { nodeAdded: { id: "n-2" } };
+                },
+              },
+            },
+            StreamNode: { __resolveType: () => "StreamItem" },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(
+        await streamOver(
+          handler!,
+          "subscription { nodeAdded { __typename id } }",
+        ),
+      ).toContain(
+        '{"data":{"nodeAdded":{"__typename":"StreamItem","id":"n-2"}}}',
+      );
+      expect(
+        await streamOver(handler!, "{ streamNode { __typename id } }"),
+      ).toContain(
+        '{"data":{"streamNode":{"__typename":"StreamItem","id":"n-1"}}}',
+      );
     });
 
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
