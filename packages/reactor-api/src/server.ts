@@ -47,7 +47,7 @@ import {
   type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
-import { config, DefaultCoreSubgraphs } from "./config.js";
+import { config, coreSubgraphClasses } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import {
   AttachmentAccessService,
@@ -59,7 +59,6 @@ import {
   type IAttachmentClientProvider,
 } from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
-import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -89,11 +88,9 @@ import {
 } from "./graphql/playground.js";
 import {
   createReactorInspectionSource,
-  InspectionSubgraph,
   type IReactorInspectionSource,
   type ReactorInspectionOptions,
 } from "./graphql/inspection/index.js";
-import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
@@ -1241,15 +1238,11 @@ async function _setupAPI(
   );
 
   // set up subgraph manager
-  const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
-  coreSubgraphs.push(ReactorSubgraph);
-  if (inspection) {
-    coreSubgraphs.push(InspectionSubgraph);
-  }
-
-  // Register Auth subgraph when document permission service is available
+  const coreSubgraphs = coreSubgraphClasses({
+    inspection: !!inspection,
+    documentPermissions: !!documentPermissionService,
+  });
   if (documentPermissionService) {
-    coreSubgraphs.push(AuthSubgraph);
     logger.info("Auth subgraph registered (document permissions enabled)");
   }
 

@@ -1,4 +1,4 @@
-import { camelCase, kebabCase } from "change-case";
+import { camelCase } from "change-case";
 import {
   setName,
   type DocumentModelModule,
@@ -8,6 +8,7 @@ import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
   documentModelSubgraphTypes,
   getDocumentModelSchemaName,
+  getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -156,7 +157,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   ) {
     super(args);
     this.documentModel = documentModel;
-    this.name = kebabCase(documentModel.documentModel.global.name);
+    this.name = getDocumentModelSubgraphName(
+      documentModel.documentModel.global,
+    );
     this.typeDefs = types.typeDefs;
     this.generatedTypeNames = types.typeNames;
     this.resolvers = this.generateResolvers();

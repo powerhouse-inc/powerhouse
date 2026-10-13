@@ -9,7 +9,7 @@ import type {
   DocumentModelGlobalState,
   DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import { camelCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import { childLogger } from "document-model";
 import {
   type ASTNode,
@@ -305,6 +305,13 @@ export function getDocumentModelSchemaName(
   return pascalCase(documentModel.name.replaceAll("/", " "));
 }
 
+/** The name the model's own subgraph registers under. */
+export function getDocumentModelSubgraphName(
+  documentModel: DocumentModelGlobalState,
+): string {
+  return kebabCase(documentModel.name);
+}
+
 /**
  * The generated document-model types followed by the subgraph's own. Throws
  * {@link SubgraphTypeCollisionError} when the subgraph defines a generated
@@ -518,10 +525,30 @@ export function getGeneratedDocumentModelTypes(
   documentModels: DocumentModelModule[],
   schemas?: ReadonlyMap<DocumentModelModule, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
+  return generatedTypesFrom(
+    documentModels.map((model) => ({
+      global: model.documentModel.global,
+      generated: schemas?.get(model)?.generated,
+    })),
+  );
+}
+
+/** {@link getGeneratedDocumentModelTypes} from the models' global states. */
+export function generatedTypesOf(
+  documentModels: readonly DocumentModelGlobalState[],
+): GeneratedDocumentModelTypes {
+  return generatedTypesFrom(documentModels.map((global) => ({ global })));
+}
+
+function generatedTypesFrom(
+  documentModels: readonly {
+    global: DocumentModelGlobalState;
+    generated?: readonly DefinitionNode[];
+  }[],
+): GeneratedDocumentModelTypes {
   const modelDefinitions: DefinitionNode[] = [];
   const addedDocumentModels = new Set<string>();
-  documentModels.forEach((model) => {
-    const global = model.documentModel.global;
+  documentModels.forEach(({ global, generated }) => {
     const dmSchemaName = getDocumentModelSchemaName(global);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
@@ -530,9 +557,7 @@ export function getGeneratedDocumentModelTypes(
       return;
     }
     addedDocumentModels.add(dmSchemaName);
-    modelDefinitions.push(
-      ...(schemas?.get(model)?.generated ?? documentModelDefinitions(global)),
-    );
+    modelDefinitions.push(...(generated ?? documentModelDefinitions(global)));
   });
 
   const definitions = dedupeTypeDefinitions([
@@ -560,9 +585,8 @@ const hasValidSchema = (schema: string | null | undefined): boolean =>
   !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
 
 /** Whether any operation of the latest specification has a schema. */
-export function hasOperationSchemas(documentModel: DocumentModelModule) {
-  const specification =
-    documentModel.documentModel.global.specifications.at(-1);
+export function hasOperationSchemas(documentModel: DocumentModelGlobalState) {
+  const specification = documentModel.specifications.at(-1);
   if (!specification) return false;
   return specification.modules.some((module) =>
     module.operations.some((op) => hasValidSchema(op.schema)),
@@ -610,7 +634,10 @@ export function buildDocumentModelSchema(
   const generated = documentModelDefinitions(
     documentModel.documentModel.global,
   );
-  if (options.subgraph === false || !hasOperationSchemas(documentModel)) {
+  if (
+    options.subgraph === false ||
+    !hasOperationSchemas(documentModel.documentModel.global)
+  ) {
     checkBuilds(documentModel, generated);
     return { generated };
   }

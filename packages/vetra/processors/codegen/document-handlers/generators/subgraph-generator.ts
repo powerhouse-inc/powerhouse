@@ -6,7 +6,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument } from "./utils.js";
+import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
 
 /**
  * Generator for subgraph documents
@@ -74,6 +74,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
         logger.info(
           `✅ Subgraph generation completed successfully for: ${state.name}`,
         );
+        warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
 
         // Backup the document
         const fullState = input.state as SubgraphModulePHState;
