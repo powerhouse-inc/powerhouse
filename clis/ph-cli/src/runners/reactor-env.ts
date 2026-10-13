@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import {
   assertProtocolConsistency,
+  primaryBackend,
   projectReactorToSwitchboard,
   type ReactorConfig,
 } from "@powerhousedao/host-core";
@@ -23,6 +25,12 @@ export function applyReactorEnvProjection(
   assertProtocolConsistency(reactor?.protocol, process.env, hostFileLabel);
   for (const [name, value] of Object.entries(env)) {
     if (process.env[name] === undefined) process.env[name] = value;
+  }
+  // A path-storage data dir must exist before the server boots — its own
+  // mkdir is not recursive (the ph-win sidecar did this too).
+  const storage = primaryBackend(reactor)?.storage;
+  if (storage?.kind === "path" && storage.dataDir) {
+    fs.mkdirSync(storage.dataDir, { recursive: true });
   }
   return options;
 }

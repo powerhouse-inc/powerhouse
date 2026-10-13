@@ -1,5 +1,5 @@
 import { isPostgresUrl } from "./utils.mjs";
-import { parseNonNegativeInt } from "./worker-pool.mjs";
+import { parseNonNegativeInt } from "./env.mjs";
 
 export type SwitchboardProjectionWorkerOptions = {
   dbPoolSize: number;

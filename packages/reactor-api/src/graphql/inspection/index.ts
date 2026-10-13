@@ -10,3 +10,9 @@ export {
   type ReactorInspectionOptions,
 } from "./source.js";
 export { InspectionSubgraph, isListedAdmin } from "./subgraph.js";
+export {
+  DEFAULT_INSPECTION_THROTTLE,
+  InspectionThrottle,
+  InspectionThrottledError,
+  type InspectionThrottleConfig,
+} from "./throttle.js";

@@ -5,6 +5,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/common",
   "@powerhousedao/config",
   "@powerhousedao/design-system",
+  "@powerhousedao/host-core",
   "document-drive",
   "document-model",
   "@powerhousedao/opentelemetry-instrumentation-reactor",

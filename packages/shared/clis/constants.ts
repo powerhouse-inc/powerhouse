@@ -187,6 +187,10 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/shared",
   "@powerhousedao/connect",
   "@powerhousedao/design-system",
+  // uniform-runners: the generic compound runner the scaffolded
+  // hosts/desktop/host.js names; dormant in classic projects until the
+  // feature flag defaults on.
+  "@powerhousedao/host-core",
 ];
 
 export const packageJsonExports = {
