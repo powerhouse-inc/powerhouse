@@ -33,9 +33,16 @@ describe("applyRunSugar", () => {
     });
   });
 
-  it("built-in commands win collisions", () => {
-    const project = makeProject("vetra"); // a host shadowing a built-in
-    expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual(["vetra"]);
+  it("built-in commands win collisions (non-alias built-ins)", () => {
+    const project = makeProject("connect"); // a host shadowing a built-in
+    expect(applyRunSugar(["connect"], KNOWN, project).args).toEqual([
+      "connect",
+    ]);
+    // ...even with arguments:
+    expect(applyRunSugar(["init", "x"], KNOWN, project).args).toEqual([
+      "init",
+      "x",
+    ]);
   });
 
   it("leaves flags and empty args untouched", () => {
