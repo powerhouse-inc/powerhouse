@@ -29,6 +29,7 @@ import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
+import { DocumentModelRegistry } from "@powerhousedao/reactor";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
@@ -68,6 +69,9 @@ import type {
   SubgraphClass,
 } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
+import type { PackageManager } from "../src/packages/package-manager.js";
+import { setupEventListeners } from "../src/server.js";
+import type { IProcessorHostModule } from "../src/types.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
 
@@ -1640,6 +1644,124 @@ describe("GraphQLManager", () => {
       expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
       // Uses no model type, so its handler is kept.
       expect(mounts.get("/graphql/plain")).toBe(plainHandler);
+    });
+  });
+
+  describe("document models a package stops providing", () => {
+    function setup(initial: DocumentModelModule[]) {
+      const registry = new DocumentModelRegistry();
+      registry.registerModules(makeDriveModule(), ...initial);
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn(() =>
+          Promise.resolve({
+            results: registry.getAllModules(),
+            options: { cursor: "", limit: 100 },
+          }),
+        ),
+      });
+      const harness = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      let emit!: (models: Record<string, DocumentModelModule[]>) => void;
+      const pkgManager = {
+        getDocumentModels: () => new Map([["pkg", initial]]),
+        getUniqueUpgradeManifests: () => [],
+        onDocumentModelsChange: (handler: typeof emit) => {
+          emit = handler;
+        },
+        onSubgraphsChange: vi.fn(),
+        onProcessorsChange: vi.fn(),
+      } as unknown as PackageManager;
+      setupEventListeners(
+        pkgManager,
+        harness.manager,
+        {} as Parameters<typeof setupEventListeners>[2],
+        () => ({}) as IProcessorHostModule,
+        registry,
+      );
+      const modelsChange = async (
+        models: Record<string, DocumentModelModule[]>,
+      ) => {
+        emit(models);
+        await vi.runAllTimersAsync();
+      };
+      const registeredTypes = () =>
+        registry.getAllModules().map((m) => m.documentModel.global.id);
+      return { ...harness, registry, modelsChange, registeredTypes };
+    }
+
+    function supergraphTypeNames(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): (string | undefined)[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { typeDefs: DocumentNode }[];
+      return getDefinitions().flatMap(({ typeDefs }) =>
+        typeDefs.definitions.map((def) =>
+          "name" in def ? def.name?.value : undefined,
+        ),
+      );
+    }
+
+    const alpha = makeModelModule("Alpha", "test/alpha");
+    const beta = makeModelModule("Beta", "test/beta");
+
+    it("unregisters a removed model and frees its subgraph name", async () => {
+      const {
+        manager,
+        handles,
+        disposed,
+        gatewayAdapter,
+        modelsChange,
+        registeredTypes,
+      } = setup([alpha, beta]);
+      await initAndFlush(manager);
+      class BetaStandIn extends BaseSubgraph {
+        name = "beta";
+        typeDefs = parse("type Query { betaStandIn: String }");
+        resolvers = {};
+      }
+      await manager.applyPackageSubgraphs(new Map([["other", [BetaStandIn]]]));
+      await vi.runAllTimersAsync();
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(
+        DocumentModelSubgraph,
+      );
+      const modelRoute = handles.get("/graphql/beta");
+
+      await modelsChange({ pkg: [alpha] });
+
+      expect(registeredTypes()).not.toContain("test/beta");
+      expect(registeredTypes()).toContain("test/alpha");
+      expect(disposed).toContain(modelRoute);
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(BetaStandIn);
+      expect(manager.hasSubgraphHandler("beta")).toBe(true);
+      const typeNames = supergraphTypeNames(gatewayAdapter);
+      expect(typeNames).toContain("Alpha");
+      expect(typeNames).not.toContain("Beta");
+    });
+
+    it("unregisters a model whose id changed", async () => {
+      const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+      await initAndFlush(manager);
+
+      await modelsChange({
+        pkg: [alpha, makeModelModule("Beta", "test/beta-renamed")],
+      });
+
+      expect(registeredTypes()).not.toContain("test/beta");
+      expect(registeredTypes()).toContain("test/beta-renamed");
+    });
+
+    it("keeps the models of a package missing from the event", async () => {
+      // A failed load drops the package from the event too.
+      const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+      await initAndFlush(manager);
+
+      await modelsChange({});
+
+      expect(registeredTypes()).toEqual(
+        expect.arrayContaining(["test/alpha", "test/beta"]),
+      );
     });
   });
 

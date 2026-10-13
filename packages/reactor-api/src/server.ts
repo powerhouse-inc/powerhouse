@@ -598,6 +598,14 @@ export function setupEventListeners(
   moduleFor: (packageName: string) => IProcessorHostModule,
   documentModelRegistry?: IDocumentModelRegistry,
 ): void {
+  const typesOf = (models: readonly DocumentModelModule[]) =>
+    new Set(models.map((m) => m.documentModel.global.id));
+  const packagedTypes = new Map(
+    Array.from(pkgManager.getDocumentModels(), ([pkg, models]) => [
+      pkg,
+      typesOf(models),
+    ]),
+  );
   pkgManager.onDocumentModelsChange((packagedModels) => {
     if (documentModelRegistry) {
       // Replace each incoming type's whole version family: skipping types
@@ -608,9 +616,26 @@ export function setupEventListeners(
       const newModules = getUniqueDocumentModels(
         Object.values(packagedModels).flat(),
       );
-      const incomingTypes = new Set(
-        newModules.map((m) => m.documentModel.global.id),
-      );
+      const incomingTypes = typesOf(newModules);
+
+      // Only packages still present: a failed load drops its package from
+      // the event just as removing its last model does.
+      const removedTypes = new Set<string>();
+      for (const [pkg, models] of Object.entries(packagedModels)) {
+        for (const type of packagedTypes.get(pkg) ?? []) {
+          if (!incomingTypes.has(type)) removedTypes.add(type);
+        }
+        packagedTypes.set(pkg, typesOf(models));
+      }
+      if (removedTypes.size > 0) {
+        documentModelRegistry.unregisterModules(...removedTypes);
+        documentModelRegistry.unregisterUpgradeManifests(...removedTypes);
+        defaultLogger.info(
+          "Unregistered document models: @types",
+          Array.from(removedTypes).join(", "),
+        );
+      }
+
       if (incomingTypes.size > 0) {
         documentModelRegistry.unregisterModules(...incomingTypes);
         const results = documentModelRegistry.registerModules(...newModules);
