@@ -1,0 +1,211 @@
+// A model whose schema does not parse or build is refused from GraphQL alone.
+import {
+  ChannelScheme,
+  EventBus,
+  ReactorBuilder,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
+import type { DocumentModelModule, ILogger } from "document-model";
+import { createServer, type AddressInfo } from "node:net";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { initializeAndStartAPI } from "../src/server.js";
+
+type API = Awaited<ReturnType<typeof initializeAndStartAPI>>;
+
+function makeModel(name: string, stateSchema?: string): DocumentModelModule {
+  return {
+    reducer: (document: unknown) => document,
+    documentModel: {
+      global: {
+        name,
+        id: `test/${name.toLowerCase()}`,
+        specifications: [
+          {
+            version: 1,
+            modules: [
+              {
+                name: "core",
+                operations: [
+                  {
+                    name: "doThing",
+                    schema: "input DoThingInput { x: String }",
+                  },
+                ],
+              },
+            ],
+            state: {
+              global: {
+                schema: stateSchema ?? `type ${name}State { name: String }`,
+              },
+              local: { schema: "" },
+            },
+          },
+        ],
+      },
+    },
+  } as unknown as DocumentModelModule;
+}
+
+const UNPARSEABLE = makeModel("Broken", "type BrokenState { name: String");
+const UNBUILDABLE = makeModel("Dangling", "type DanglingState { other: Gone }");
+
+function recordingLogger(): ILogger {
+  const logger: ILogger = {
+    level: "error",
+    verbose: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    errorHandler: vi.fn(),
+    child: () => logger,
+  };
+  return logger;
+}
+
+/** Refusal logs naming `id`. */
+function refusals(logger: ILogger, id: string): unknown[][] {
+  return vi
+    .mocked(logger.error)
+    .mock.calls.filter(
+      ([message, documentType]) =>
+        String(message).startsWith("Refusing document model") &&
+        documentType === id,
+    );
+}
+
+async function freePort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  return port;
+}
+
+let dispose: (() => Promise<void>) | undefined;
+afterEach(async () => {
+  await dispose?.();
+  dispose = undefined;
+});
+
+async function boot(models: DocumentModelModule[]) {
+  const port = await freePort();
+  const logger = recordingLogger();
+  const api = await initializeAndStartAPI(
+    async (documentModels) => {
+      const builder = new ReactorBuilder()
+        .withEventBus(new EventBus())
+        .withDocumentModelSources([...documentModels, ...models])
+        .withChannelScheme(ChannelScheme.SWITCHBOARD);
+      const module = await new ReactorClientBuilder()
+        .withReactorBuilder(builder)
+        .buildModule();
+      return { module };
+    },
+    {
+      port,
+      dbPath: undefined,
+      mcp: false,
+      logger,
+      enableDocumentModelSubgraphs: true,
+    },
+    "switchboard",
+  );
+  dispose = api.dispose;
+  return { api, port, logger };
+}
+
+type Result = { data?: Record<string, unknown>; errors?: unknown[] };
+
+async function querySupergraph(port: number, query: string): Promise<Result> {
+  const response = await fetch(`http://localhost:${port}/graphql`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  return (await response.json()) as Result;
+}
+
+const stateFieldsQuery = (name: string) =>
+  `{ __type(name: "${name}_${name}State") { fields { name } } }`;
+
+async function stateFields(api: API, name: string): Promise<string[]> {
+  const { __type } = await api.graphqlManager.executeSubgraphQuery<{
+    __type: { fields: { name: string }[] } | null;
+  }>(name.toLowerCase(), stateFieldsQuery(name), {});
+  return __type?.fields.map((field) => field.name) ?? [];
+}
+
+/** Core, `name`'s subgraph and the supergraph all answer, once routed. */
+async function expectServing(api: API, port: number, name: string) {
+  await vi.waitFor(
+    async () => {
+      const { system } = await api.graphqlManager.executeSubgraphQuery<{
+        system: { version: string };
+      }>("system", "{ system { version } }", {});
+      expect(system.version).toEqual(expect.any(String));
+
+      expect(await stateFields(api, name)).toEqual(["name"]);
+
+      const result = await querySupergraph(
+        port,
+        `{ system { version } __type(name: "${name}Queries") { name } }`,
+      );
+      expect(result.errors).toBeUndefined();
+      expect(result.data).toEqual({
+        system: { version: expect.any(String) },
+        __type: { name: `${name}Queries` },
+      });
+    },
+    { timeout: 10_000, interval: 100 },
+  );
+}
+
+async function registeredIds(api: API): Promise<string[]> {
+  const { results } = await api.client.getDocumentModelModules();
+  return results.map((model) => model.documentModel.global.id);
+}
+
+describe("a document model whose schema is unusable", () => {
+  it("is refused at boot while core, other models and the supergraph serve", async () => {
+    const { api, port, logger } = await boot([
+      UNPARSEABLE,
+      UNBUILDABLE,
+      makeModel("Good"),
+    ]);
+
+    await expectServing(api, port, "Good");
+    expect(api.graphqlManager.getSubgraphByName("broken")).toBeUndefined();
+    expect(api.graphqlManager.getSubgraphByName("dangling")).toBeUndefined();
+    expect(await registeredIds(api)).toEqual(
+      expect.arrayContaining(["test/broken", "test/dangling", "test/good"]),
+    );
+
+    const [parseLog] = refusals(logger, "test/broken");
+    expect(parseLog[2]).toMatch(/Syntax Error/);
+    const [buildLog] = refusals(logger, "test/dangling");
+    expect(buildLog[2]).toMatch(/Gone/);
+  });
+
+  it("is refused on hot load while core, other models and the supergraph serve", async () => {
+    const { api, port, logger } = await boot([makeModel("Good")]);
+    await expectServing(api, port, "Good");
+
+    api.documentModelRegistry.registerModules(
+      UNPARSEABLE,
+      UNBUILDABLE,
+      makeModel("Fresh"),
+    );
+    await api.graphqlManager.regenerateDocumentModelSubgraphs();
+
+    await expectServing(api, port, "Good");
+    await expectServing(api, port, "Fresh");
+    expect(api.graphqlManager.getSubgraphByName("broken")).toBeUndefined();
+    expect(api.graphqlManager.getSubgraphByName("dangling")).toBeUndefined();
+    expect(await registeredIds(api)).toEqual(
+      expect.arrayContaining(["test/broken", "test/dangling", "test/fresh"]),
+    );
+    expect(refusals(logger, "test/broken")).toHaveLength(1);
+    expect(refusals(logger, "test/dangling")).toHaveLength(1);
+  });
+});
