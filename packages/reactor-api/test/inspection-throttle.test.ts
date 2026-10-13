@@ -21,7 +21,7 @@ function thrown(run: () => void): unknown {
 
 describe("InspectionThrottle", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.useFakeTimers({ toFake: ["Date", "performance"] });
     vi.setSystemTime(0);
   });
 
@@ -36,9 +36,26 @@ describe("InspectionThrottle", () => {
       code: "TOO_MANY_REQUESTS",
       retryAfterMs: 10_000,
     });
-    vi.setSystemTime(10_000);
+    vi.advanceTimersByTime(10_000);
     throttle.charge("a");
     expect(() => throttle.charge("a")).toThrow(GraphQLError);
+  });
+
+  it("admits a caller that waits exactly retryAfterMs", () => {
+    const throttle = new InspectionThrottle({ callsPerMinute: 5 });
+    for (let i = 0; i < 5; i++) throttle.charge("a");
+    vi.advanceTimersByTime(3);
+    const { retryAfterMs } = extensionsOf(thrown(() => throttle.charge("a")));
+    vi.advanceTimersByTime(retryAfterMs as number);
+    expect(() => throttle.charge("a")).not.toThrow();
+  });
+
+  it("does not drain buckets when the wall clock steps back", () => {
+    const throttle = new InspectionThrottle({ callsPerMinute: 1 });
+    throttle.charge("a");
+    vi.setSystemTime(-1_000_000);
+    vi.advanceTimersByTime(60_000);
+    expect(() => throttle.charge("a")).not.toThrow();
   });
 
   it("keeps one bucket per caller", () => {
