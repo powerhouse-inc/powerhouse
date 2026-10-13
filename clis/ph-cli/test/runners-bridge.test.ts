@@ -91,4 +91,92 @@ describe("switchboard bridge runner", () => {
     const runner = await import("../src/runners/switchboard.js");
     expect("build" in runner).toBe(false);
   });
+
+  it("projects reactor.protocol + storage into env, and dbPath into args (P2.4)", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    const saved = {
+      REACTOR_DOCUMENT_DECISIONS: process.env.REACTOR_DOCUMENT_DECISIONS,
+      PH_REACTOR_DATABASE_URL: process.env.PH_REACTOR_DATABASE_URL,
+    };
+    delete process.env.REACTOR_DOCUMENT_DECISIONS;
+    delete process.env.PH_REACTOR_DATABASE_URL;
+    try {
+      await runner.run(
+        {
+          name: "lab-switchboard",
+          runner: { module: "m", port: 7599 },
+          reactor: {
+            backends: {
+              main: {
+                storage: { kind: "path", dataDir: "/data/pg" },
+                readModel: { url: "dev.db" },
+              },
+            },
+            protocol: { featureFlags: { documentDecisions: true } },
+          },
+        },
+        ctx,
+      );
+      expect(process.env.REACTOR_DOCUMENT_DECISIONS).toBe("true");
+      expect(process.env.PH_REACTOR_DATABASE_URL).toBe("/data/pg");
+      expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toMatchObject({
+        dbPath: "dev.db",
+      });
+    } finally {
+      process.env.REACTOR_DOCUMENT_DECISIONS = saved.REACTOR_DOCUMENT_DECISIONS;
+      process.env.PH_REACTOR_DATABASE_URL = saved.PH_REACTOR_DATABASE_URL;
+    }
+  });
+
+  it("fails loudly when a pre-set env contradicts reactor.protocol (P2.6)", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    process.env.REACTOR_AUTH_ENFORCEMENT = "true";
+    try {
+      await expect(
+        runner.run(
+          {
+            name: "lab-switchboard",
+            runner: { module: "m" },
+            reactor: { protocol: { featureFlags: { authEnforcement: false } } },
+          },
+          ctx,
+        ),
+      ).rejects.toThrow(
+        /reactor\.protocol conflict.*REACTOR_AUTH_ENFORCEMENT/s,
+      );
+    } finally {
+      delete process.env.REACTOR_AUTH_ENFORCEMENT;
+    }
+  });
+});
+
+describe("connect bridge runner — reactor projection (P2.5)", () => {
+  it("merges protocol → connect.reactor and workflows into the caller override", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      {
+        name: "lab-connect",
+        runner: { module: "m", port: 6599 },
+        config: { branding: { appName: "Lab" } },
+        reactor: {
+          backends: { local: { kind: "worker" } },
+          workflows: true,
+          protocol: { createSignaturePolicy: "legacy" },
+        },
+      },
+      ctx,
+    );
+    const override = vi.mocked(runConnectStudio).mock.calls[0][2];
+    expect(override).toMatchObject({
+      branding: { appName: "Lab" },
+      reactor: { createSignaturePolicy: "legacy" },
+      instance: { reactorWorker: true },
+      app: { workflowsEnabled: true },
+    });
+  });
 });

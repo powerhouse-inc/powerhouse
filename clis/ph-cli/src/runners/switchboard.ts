@@ -2,8 +2,14 @@ import {
   DEFAULT_SWITCHBOARD_PORT,
   DEFAULT_VETRA_DRIVE_ID,
 } from "@powerhousedao/shared/clis";
+import {
+  assertProtocolConsistency,
+  projectReactorToSwitchboard,
+  type HostDefinition,
+  type ReactorConfig,
+  type RunnerContext,
+} from "@powerhousedao/host-core";
 import { z } from "zod";
-import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
 import type { SwitchboardArgs } from "../types.js";
 
 /**
@@ -29,11 +35,10 @@ export const hostSchema = z.looseObject({
   reactor: z.looseObject({}).optional(),
 });
 
-let warnedReactorBlock = false;
-
 function toSwitchboardArgs(
   host: HostDefinition,
   devMode: boolean,
+  dbPath: string | undefined,
 ): SwitchboardArgs {
   const runner = host.runner;
   const args: Partial<SwitchboardArgs> = {
@@ -44,21 +49,30 @@ function toSwitchboardArgs(
     useVetraDrive: false,
     remoteDrives: [],
     dev: devMode || runner.dev === true,
+    ...(dbPath ? { dbPath } : {}),
   };
   return args as SwitchboardArgs;
 }
 
 async function start(host: HostDefinition, devMode: boolean): Promise<void> {
-  if (host.reactor && !warnedReactorBlock) {
-    warnedReactorBlock = true;
-    console.warn(
-      "[ph run] the host's `reactor` block is not applied yet (phase 0 bridge); " +
-        "projection lands with the reactor-config phase. `auth` is read from " +
-        "powerhouse.config.json by the server itself, as before.",
-    );
+  const reactor = host.reactor as ReactorConfig | undefined;
+  const { env, options } = projectReactorToSwitchboard(reactor);
+
+  // Single-sourcing teeth: a pre-set env contradicting the protocol block
+  // fails loudly before anything boots.
+  assertProtocolConsistency(
+    reactor?.protocol,
+    process.env,
+    `hosts/${host.name}/host.js`,
+  );
+  // Transition precedence: set only what the env does not already carry, so an
+  // operator's explicit override still wins (contradictions already rejected).
+  for (const [name, value] of Object.entries(env)) {
+    if (process.env[name] === undefined) process.env[name] = value;
   }
+
   const { startSwitchboard } = await import("../services/switchboard.js");
-  await startSwitchboard(toSwitchboardArgs(host, devMode));
+  await startSwitchboard(toSwitchboardArgs(host, devMode, options.dbPath));
 }
 
 export async function run(

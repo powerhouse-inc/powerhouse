@@ -2,8 +2,13 @@ import {
   DEFAULT_CONNECT_STUDIO_PORT,
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
+import {
+  projectReactorToConnect,
+  type HostDefinition,
+  type ReactorConfig,
+  type RunnerContext,
+} from "@powerhousedao/host-core";
 import { z } from "zod";
-import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
 import type { ConnectStudioArgs } from "../types.js";
 
 /**
@@ -32,8 +37,6 @@ export const hostSchema = z.looseObject({
   reactor: z.looseObject({}).optional(),
 });
 
-let warnedReactorBlock = false;
-
 /** The studio arg surface is wide (commonArgs + server args); the service only
  * reads a known subset, and the repo's own tests build these objects the same
  * way (Partial + cast — see connect-build.test.ts `mk()`). */
@@ -52,23 +55,32 @@ function toStudioArgs(host: HostDefinition): ConnectStudioArgs {
   return args as ConnectStudioArgs;
 }
 
+/** Merge the reactor-block projection (protocol → connect.reactor,
+ * backend kind → instance.reactorWorker, workflows → app.workflowsEnabled)
+ * into the host's connect config, which rides the studio caller-override.
+ * The host config wins on conflict (an explicit connect.* value is intent). */
+function callerOverride(
+  host: HostDefinition,
+): PHConnectRuntimeConfig | undefined {
+  const base = (host.config ?? {}) as PHConnectRuntimeConfig;
+  const { connect } = projectReactorToConnect(host.reactor as ReactorConfig);
+  if (!connect.reactor && !connect.instance && !connect.app) {
+    return host.config as PHConnectRuntimeConfig | undefined;
+  }
+  return {
+    ...base,
+    reactor: { ...connect.reactor, ...base.reactor },
+    instance: { ...connect.instance, ...base.instance } as never,
+    app: { ...connect.app, ...base.app },
+  };
+}
+
 export async function dev(
   host: HostDefinition,
   _ctx: RunnerContext,
 ): Promise<void> {
-  if (host.reactor && !warnedReactorBlock) {
-    warnedReactorBlock = true;
-    console.warn(
-      "[ph run] the host's `reactor` block is not applied yet (phase 0 bridge); " +
-        "projection lands with the reactor-config phase.",
-    );
-  }
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  await runConnectStudio(
-    toStudioArgs(host),
-    undefined,
-    host.config as PHConnectRuntimeConfig | undefined,
-  );
+  await runConnectStudio(toStudioArgs(host), undefined, callerOverride(host));
 }
 
 /** Phase 0: `run` is dev-studio — the only mode the bridge covers. */
