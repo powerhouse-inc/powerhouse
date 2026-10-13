@@ -4253,6 +4253,35 @@ describe("GraphQLManager", () => {
       expect(await res.text()).toContain('{"data":{"document":"doc-host"}}');
     });
 
+    it("lets a subgraph whose schema cannot build claim nothing", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        [
+          "pkg-a",
+          [
+            subgraphClass(
+              "widget-broken",
+              gql`
+                type Widget {
+                  id: ID!
+                  part: NoSuchType
+                }
+                type Query {
+                  brokenWidget: Widget
+                }
+              `,
+            ),
+          ],
+        ],
+        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+      ]);
+
+      expect(harness.manager.hasSubgraphHandler("widget-broken")).toBe(false);
+      expect(supergraphNames(harness.gatewayAdapter)).toContain("widget-b");
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
     it("excludes nothing among the real core subgraphs and base models", async () => {
       const harness = makeOwnershipHarness([
         driveDocumentModelModule,

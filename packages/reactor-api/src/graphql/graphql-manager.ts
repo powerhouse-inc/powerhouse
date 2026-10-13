@@ -1820,7 +1820,16 @@ export class GraphQLManager {
         members.set(subgraphPath, subgraph);
       }
     }
-    const losers = this.#claimLosers(new Set(members.values()));
+    // A subgraph whose schema failed to build claims nothing.
+    const built = new Set(
+      Array.from(members)
+        .filter(
+          ([subgraphPath, subgraph]) =>
+            this.subgraphHandlerCache.get(subgraphPath)?.subgraph === subgraph,
+        )
+        .map(([, subgraph]) => subgraph),
+    );
+    const losers = this.#claimLosers(built);
     for (const [subgraphPath, subgraph] of members) {
       if (losers.has(subgraph)) members.delete(subgraphPath);
     }
