@@ -294,6 +294,25 @@ describe("document model schemas across regenerations", () => {
     );
   });
 
+  it("refuses a model whose specification cannot be keyed", async () => {
+    const { api, port, logger } = await boot([makeModel("Good")]);
+    await expectServing(api, port, "Good");
+
+    const cyclic = makeModel("Cyclic");
+    const [spec] = cyclic.documentModel.global.specifications as unknown as {
+      self?: unknown;
+    }[];
+    spec.self = spec;
+    await reload(api, cyclic);
+    await api.graphqlManager.regenerateDocumentModelSubgraphs();
+
+    const logged = refusals(logger, "test/cyclic");
+    expect(logged).toHaveLength(1);
+    expect(logged[0][2]).toMatch(/circular/i);
+    expect(api.graphqlManager.getSubgraphByName("cyclic")).toBeUndefined();
+    await expectServing(api, port, "Good");
+  });
+
   it("logs a broken model once per schema text", async () => {
     const { api, port, logger } = await boot([makeModel("Good")]);
     await expectServing(api, port, "Good");

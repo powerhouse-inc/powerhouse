@@ -94,6 +94,21 @@ describe("DocumentModelSchemaCache", () => {
     expect(again.key).toBe(first.key);
   });
 
+  it("holds the failure of a model it cannot key, and resolves the rest", () => {
+    const { cache } = countingCache();
+    const cyclic = makeModel("Cyclic");
+    const [spec] = cyclic.documentModel.global.specifications as unknown as {
+      self?: unknown;
+    }[];
+    spec.self = spec;
+
+    const [unkeyed, alpha] = cache.resolve([cyclic, makeModel("Alpha")]);
+
+    expect(unkeyed.key).toBe("unkeyed:test/cyclic");
+    expect(unkeyed.error?.message).toMatch(/circular/i);
+    expect(alpha.schema).toBeDefined();
+  });
+
   it("keeps a model's generated types when only its subgraph fails", () => {
     const opsOnly = makeModel("Ops");
     const [module] = opsOnly.documentModel.global.specifications[0].modules;

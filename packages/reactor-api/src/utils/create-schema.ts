@@ -658,8 +658,15 @@ export class DocumentModelSchemaCache {
     const entries = new Map<string, DocumentModelSchema | Error>();
     const resolved = documentModels.map(
       (model): ResolvedDocumentModelSchema => {
-        const key = schemaSourceKey(model);
-        let entry = entries.get(key) ?? this.#entries.get(key);
+        let key: string;
+        let entry: DocumentModelSchema | Error | undefined;
+        try {
+          key = schemaSourceKey(model);
+          entry = entries.get(key) ?? this.#entries.get(key);
+        } catch (error) {
+          key = `unkeyed:${model.documentModel.global.id}`;
+          entry = toError(error);
+        }
         if (entry === undefined) {
           try {
             entry = this.#build(model);
