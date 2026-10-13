@@ -1460,7 +1460,7 @@ describe("GraphQLManager", () => {
     });
   });
 
-  describe("subgraph replaced while its handler is built", () => {
+  describe("stale subgraph handlers", () => {
     type Gateway = ReturnType<typeof makeHarness>["gatewayAdapter"];
 
     // Field names, not printSchema: the schema comes from another graphql realm.
@@ -1597,6 +1597,49 @@ describe("GraphQLManager", () => {
       expect(served).toContain("rev3");
       expect(served).not.toContain("rev2");
       expect(await internalSdl(manager, "alpha")).toContain("rev3");
+    });
+    it("rebuilds a subgraph using a model's types after the model changes", async () => {
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({
+          results: [makeDriveModule(), alphaWith("rev1")],
+        }),
+      });
+      const { manager, mounts, gatewayAdapter } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      class AlphaTools extends BaseSubgraph {
+        name = "alpha-tools";
+        typeDefs = parse("type Query { alphaDoc: Alpha }");
+        resolvers = {};
+      }
+      class Plain extends BaseSubgraph {
+        name = "plain";
+        typeDefs = parse("type Query { ping: String }");
+        resolvers = {};
+      }
+      await manager.applyPackageSubgraphs(
+        new Map([["pkg", [AlphaTools, Plain]]]),
+      );
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/alpha-tools")).toContain("rev1");
+      const plainHandler = mounts.get("/graphql/plain");
+
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [makeDriveModule(), alphaWith("rev2")],
+        options: { cursor: "", limit: 100 },
+      });
+      await manager.regenerateDocumentModelSubgraphs();
+      await vi.runAllTimersAsync();
+
+      const served = await servedSdl(mounts, "/graphql/alpha-tools");
+      expect(served).toContain("rev2");
+      expect(served).not.toContain("rev1");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
+      // Uses no model type, so its handler is kept.
+      expect(mounts.get("/graphql/plain")).toBe(plainHandler);
     });
   });
 
