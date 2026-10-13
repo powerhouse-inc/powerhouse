@@ -1662,6 +1662,16 @@ describe("GraphQLManager", () => {
       expect(mounts.get("/graphql/plain")).toBe(plainHandler);
     });
 
+    it("keeps the handler when a regeneration leaves the model types alone", async () => {
+      const { mounts, regenerate } = await setupAlphaTools();
+      const handler = mounts.get("/graphql/alpha-tools");
+
+      await regenerate("rev1");
+      await vi.runAllTimersAsync();
+
+      expect(mounts.get("/graphql/alpha-tools")).toBe(handler);
+    });
+
     it("serves the old handler until its rebuild succeeds", async () => {
       const { manager, handles, disposed, gatewayAdapter, logger, ...rest } =
         await setupAlphaTools();

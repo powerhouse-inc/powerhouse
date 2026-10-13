@@ -14,7 +14,7 @@ import type {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import { type GraphQLSchema, visit } from "graphql";
+import { type GraphQLSchema, Kind, print, visit } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
@@ -352,7 +352,11 @@ export class GraphQLManager {
   readonly #inHook = new AsyncLocalStorage<{ active: boolean }>();
 
   #generatedTypes:
-    | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
+    | {
+        models: DocumentModelModule[];
+        types: GeneratedDocumentModelTypes;
+        sdl: string;
+      }
     | undefined;
 
   /** Generated types no document model contributes, but `IDocument`. */
@@ -775,9 +779,19 @@ export class GraphQLManager {
 
   #generated(): GeneratedDocumentModelTypes {
     if (this.#generatedTypes?.models !== this.cachedDocumentModels) {
+      const types = getGeneratedDocumentModelTypes(this.cachedDocumentModels);
+      const sdl = print({
+        kind: Kind.DOCUMENT,
+        definitions: types.definitions,
+      });
+      // Unchanged types keep their identity, so handlers built on them stay.
       this.#generatedTypes = {
         models: this.cachedDocumentModels,
-        types: getGeneratedDocumentModelTypes(this.cachedDocumentModels),
+        types:
+          sdl === this.#generatedTypes?.sdl
+            ? this.#generatedTypes.types
+            : types,
+        sdl,
       };
     }
     return this.#generatedTypes.types;
