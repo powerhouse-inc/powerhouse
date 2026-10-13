@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
 
@@ -109,6 +112,9 @@ describe("switchboard bridge runner", () => {
     };
     delete process.env.REACTOR_DOCUMENT_DECISIONS;
     delete process.env.PH_REACTOR_DATABASE_URL;
+    // a real, writable path: the projection mkdirs a path-storage dataDir
+    // before boot ("/data/pg" EACCESed on Linux CI)
+    const dataDir = mkdtempSync(join(tmpdir(), "ph-bridge-datadir-"));
     try {
       await runner.run(
         {
@@ -117,7 +123,7 @@ describe("switchboard bridge runner", () => {
           reactor: {
             backends: {
               main: {
-                storage: { kind: "path", dataDir: "/data/pg" },
+                storage: { kind: "path", dataDir },
                 readModel: { url: "dev.db" },
               },
             },
@@ -127,13 +133,14 @@ describe("switchboard bridge runner", () => {
         ctx,
       );
       expect(process.env.REACTOR_DOCUMENT_DECISIONS).toBe("true");
-      expect(process.env.PH_REACTOR_DATABASE_URL).toBe("/data/pg");
+      expect(process.env.PH_REACTOR_DATABASE_URL).toBe(dataDir);
       expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toMatchObject({
         dbPath: "dev.db",
       });
     } finally {
       process.env.REACTOR_DOCUMENT_DECISIONS = saved.REACTOR_DOCUMENT_DECISIONS;
       process.env.PH_REACTOR_DATABASE_URL = saved.PH_REACTOR_DATABASE_URL;
+      rmSync(dataDir, { recursive: true, force: true });
     }
   });
 
