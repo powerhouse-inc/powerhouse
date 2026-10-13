@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render } from "ink-testing-library";
 import { z } from "zod";
 import { defineCommand, defineCli, createReplSession } from "../src/index.js";
@@ -461,10 +461,16 @@ describe("Repl component", () => {
       stdin.write("/exit");
       await delay();
       stdin.write(KEYS.ENTER);
-      await delay(100);
-      // App exits — frame may show the exit entry or be the last pre-exit state
-      const frame = stripAnsi(lastFrame()!);
-      expect(frame).toContain("/exit");
+      // NOTE(port): a fixed 100ms delay raced ink's render on a loaded CI
+      // runner (the frame was still empty). Wait for the paint instead; the
+      // assertion is unchanged — the frame shows the exit entry or the last
+      // pre-exit state, both of which carry the echoed /exit.
+      await vi.waitFor(
+        () => {
+          expect(stripAnsi(lastFrame()!)).toContain("/exit");
+        },
+        { timeout: 10_000 },
+      );
     });
   });
 
