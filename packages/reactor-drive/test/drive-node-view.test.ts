@@ -506,14 +506,19 @@ describe("DriveNodeView.listChildren query plans (PGlite)", () => {
   });
 
   it.each([
-    ["a parent", "parent", undefined],
-    ["a parent by kind", "parent", "folder"],
-    ["the root", null, undefined],
-    ["the root by kind", null, "folder"],
-    ["a whole drive", undefined, undefined],
+    ["a parent", "parent", undefined, "idx_drive_node_parent_created_id"],
+    [
+      "a parent by kind",
+      "parent",
+      "folder",
+      "idx_drive_node_parent_kind_created_id",
+    ],
+    ["the root", null, undefined, "idx_drive_node_root_created_id"],
+    ["the root by kind", null, "folder", "idx_drive_node_root_kind_created_id"],
+    ["a whole drive", undefined, undefined, "idx_drive_node_created_id"],
   ] as const)(
     "reads %s in index order, first and later pages",
-    async (_label, parentFolder, kind) => {
+    async (_label, parentFolder, kind, index) => {
       const first = await view.listChildren(
         "drive-1",
         parentFolder,
@@ -539,8 +544,9 @@ describe("DriveNodeView.listChildren query plans (PGlite)", () => {
           ]),
         );
         const text = plan.rows.map((row) => row["QUERY PLAN"]).join("\n");
-        expect(text).toMatch(/Index Scan using idx_drive_node_/);
+        expect(text).toContain(`Index Scan using ${index} on`);
         expect(text).not.toMatch(/\bSort\b/);
+        expect(text).not.toMatch(/\bFilter:/);
       }
     },
   );
