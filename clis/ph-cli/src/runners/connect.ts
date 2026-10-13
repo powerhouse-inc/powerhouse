@@ -160,6 +160,10 @@ export async function serve(
     cors: true,
     printUrls: true,
     bindCLIShortcuts: false,
+    // Explicit IPv4 loopback (runner.host overrides): vite's default
+    // "localhost" can bind ::1 only on Windows, and a supervising shell
+    // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
+    host: typeof runner.host === "string" ? runner.host : "127.0.0.1",
   };
   const override = callerOverride(host);
   await runConnectPreview(args as ConnectPreviewArgs, {
