@@ -52,6 +52,15 @@ describe("writeGeneratedHostsFiles", () => {
     expect(vetra).toContain(`defaultVerb: "dev"`);
     expect(vetra).toContain(`host: "connect"`);
     expect(vetra).toContain("config.vetra?.connectPort");
+
+    // P2.8: single-sourced protocol — the switchboard host references the
+    // SAME connect.reactor block the connect host receives via its config.
+    const switchboard = readFileSync(
+      join(dir, "hosts/switchboard/host.js"),
+      "utf-8",
+    );
+    expect(switchboard).toContain("protocol: config.connect?.reactor ?? {}");
+    expect(connect).toContain(`appId: "inc.powerhouse.connect.my-project"`);
   });
 
   it("is preserve-on-migrate: never clobbers an existing host file", async () => {
