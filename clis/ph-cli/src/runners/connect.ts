@@ -11,7 +11,11 @@ import {
   type RunnerContext,
 } from "@powerhousedao/host-core";
 import { z } from "zod";
-import type { ConnectStudioArgs } from "../types.js";
+import type {
+  ConnectBuildArgs,
+  ConnectPreviewArgs,
+  ConnectStudioArgs,
+} from "../types.js";
 
 /**
  * BRIDGE runner for Connect hosts (uniform-runners phase 0): maps a
@@ -86,5 +90,42 @@ export async function dev(
   await runConnectStudio(toStudioArgs(host), undefined, callerOverride(host));
 }
 
-/** Phase 0: `run` is dev-studio — the only mode the bridge covers. */
+/** `run` is dev-studio until the plugin phases give hosts a production
+ * runtime; `serve` (below) is the static production server. */
 export const run = dev;
+
+/** P3.3 — `build`: the SAME service as classic `ph connect build`. */
+export async function build(
+  host: HostDefinition,
+  _ctx: RunnerContext,
+): Promise<void> {
+  const { runConnectBuild } = await import("../services/connect-build.js");
+  const runner = host.runner;
+  const args: Partial<ConnectBuildArgs> = {
+    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+  };
+  await runConnectBuild(args as ConnectBuildArgs);
+}
+
+/** P3.3 — `serve`: the SAME vite preview server as classic
+ * `ph connect preview` (static serve of a built Connect; run `build` first). */
+export async function serve(
+  host: HostDefinition,
+  _ctx: RunnerContext,
+): Promise<void> {
+  const { runConnectPreview } = await import("../services/connect-preview.js");
+  const runner = host.runner;
+  const args: Partial<ConnectPreviewArgs> = {
+    port:
+      typeof runner.port === "number"
+        ? runner.port
+        : DEFAULT_CONNECT_STUDIO_PORT,
+    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+    open: runner.openBrowser === true,
+    strictPort: runner.strictPort === true,
+    cors: true,
+    printUrls: true,
+    bindCLIShortcuts: false,
+  };
+  await runConnectPreview(args as ConnectPreviewArgs);
+}

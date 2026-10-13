@@ -87,3 +87,38 @@ export const childrenSchema = z.record(
     reactor: reactorSchema.optional(),
   }),
 );
+
+/** Composed generic host shapes — the basis for the emitted editor schemas
+ * (D2.a). Runner packages extend these with their own runner options; `config`
+ * stays loose by design. */
+export const reactorHostSchema = z.looseObject({
+  name: z.string().min(1),
+  runner: runnerBaseSchema,
+  config: z.looseObject({}).optional(),
+  profile: profileSchema,
+  reactor: reactorSchema.optional(),
+});
+
+export const compoundHostSchema = z.looseObject({
+  name: z.string().min(1),
+  runner: runnerBaseSchema,
+  children: childrenSchema,
+  config: z.looseObject({}).optional(),
+  profile: profileSchema,
+});
+
+const SCHEMA_BASE = "https://powerhouse.inc/schemas";
+
+/** The emitted-schema set, keyed by published filename. Pure — the
+ * emit-schemas script writes these to disk and the drift test re-derives
+ * them, per the runtime-config-schema pattern. */
+export function emittedHostSchemas(): Record<string, unknown> {
+  const emit = (name: string, schema: z.ZodType) => ({
+    $id: `${SCHEMA_BASE}/${name}.schema.json`,
+    ...z.toJSONSchema(schema, { io: "input" }),
+  });
+  return {
+    "host-reactor.schema.json": emit("host-reactor", reactorHostSchema),
+    "host-compound.schema.json": emit("host-compound", compoundHostSchema),
+  };
+}

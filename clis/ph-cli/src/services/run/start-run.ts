@@ -21,6 +21,8 @@ export interface StartRunArgs {
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   const projectRoot = args.projectRoot ?? process.cwd();
   const loaded = await loadHost(projectRoot, args.host);
+  const { warnSupersededConfigKeys } = await import("./superseded-config.js");
+  warnSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
   validateHost(runner, specifier, loaded.host, loaded.file);

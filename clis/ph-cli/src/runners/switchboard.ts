@@ -3,14 +3,13 @@ import {
   DEFAULT_VETRA_DRIVE_ID,
 } from "@powerhousedao/shared/clis";
 import {
-  assertProtocolConsistency,
   profileSchema,
-  projectReactorToSwitchboard,
   reactorSchema,
   type HostDefinition,
   type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
 import type { SwitchboardArgs } from "../types.js";
 
@@ -58,22 +57,10 @@ function toSwitchboardArgs(
 }
 
 async function start(host: HostDefinition, devMode: boolean): Promise<void> {
-  const reactor = host.reactor as ReactorConfig | undefined;
-  const { env, options } = projectReactorToSwitchboard(reactor);
-
-  // Single-sourcing teeth: a pre-set env contradicting the protocol block
-  // fails loudly before anything boots.
-  assertProtocolConsistency(
-    reactor?.protocol,
-    process.env,
+  const options = applyReactorEnvProjection(
+    host.reactor as ReactorConfig | undefined,
     `hosts/${host.name}/host.js`,
   );
-  // Transition precedence: set only what the env does not already carry, so an
-  // operator's explicit override still wins (contradictions already rejected).
-  for (const [name, value] of Object.entries(env)) {
-    if (process.env[name] === undefined) process.env[name] = value;
-  }
-
   const { startSwitchboard } = await import("../services/switchboard.js");
   await startSwitchboard(toSwitchboardArgs(host, devMode, options.dbPath));
 }

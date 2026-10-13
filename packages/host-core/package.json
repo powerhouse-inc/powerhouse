@@ -20,13 +20,20 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
       "default": "./dist/index.mjs"
+    },
+    "./runners/compound": {
+      "source": "./src/runners/compound.ts",
+      "types": "./dist/runners/compound.d.mts",
+      "import": "./dist/runners/compound.mjs",
+      "default": "./dist/runners/compound.mjs"
     }
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "cd ../.. && oxlint packages/host-core",
     "build": "tsdown",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "emit-schemas": "tsx scripts/emit-schemas.ts"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",

@@ -662,6 +662,28 @@ describe("inspection subgraph: host wiring", () => {
       access: null,
     });
   }, 120_000);
+
+  it("leaves the subgraph unmounted under inspection: false", async () => {
+    const api = await initializeAndStartAPI(
+      async (documentModels) => ({
+        module: await new ReactorClientBuilder()
+          .withReactorBuilder(
+            new ReactorBuilder()
+              .withEventBus(new EventBus())
+              .withDocumentModelSources(documentModels)
+              .withChannelScheme(ChannelScheme.SWITCHBOARD),
+          )
+          .buildModule(),
+      }),
+      { port: 0, dbPath: undefined, mcp: false, inspection: false },
+      "switchboard",
+    );
+    dispose = api.dispose;
+
+    expect(api.graphqlManager.getSubgraphByName("inspection")).toBeUndefined();
+    expect(api.inspection).toBeUndefined();
+    expect(api.graphqlManager.getSubgraphByName("r")).toBeDefined();
+  }, 120_000);
 });
 
 describe("inspection subgraph: throttling", () => {
