@@ -1,35 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { inspectionThrottleFromEnv } from "../src/inspection-throttle.mjs";
 
 describe("inspectionThrottleFromEnv", () => {
-  it("keeps every default when nothing is set", () => {
-    const warn = vi.fn();
-    expect(inspectionThrottleFromEnv({}, { warn })).toEqual({});
-    expect(warn).not.toHaveBeenCalled();
+  it("keeps the default when unset or blank", () => {
+    expect(inspectionThrottleFromEnv({})).toEqual({});
+    expect(
+      inspectionThrottleFromEnv({ PH_INSPECTION_CALLS_PER_MINUTE: " " }),
+    ).toEqual({});
   });
 
-  it("reads each variable", () => {
+  it("reads PH_INSPECTION_CALLS_PER_MINUTE", () => {
     expect(
-      inspectionThrottleFromEnv(
-        { PH_INSPECTION_CALLS_PER_MINUTE: " 30 " },
-        { warn: vi.fn() },
-      ),
+      inspectionThrottleFromEnv({ PH_INSPECTION_CALLS_PER_MINUTE: " 30 " }),
     ).toEqual({ callsPerMinute: 30 });
   });
 
-  it.each(["abc", "-1", "1.5", "0"])(
-    "warns about and drops %s for a field that must be positive",
-    (raw) => {
-      const warn = vi.fn();
-      expect(
-        inspectionThrottleFromEnv(
-          { PH_INSPECTION_CALLS_PER_MINUTE: raw },
-          { warn },
-        ),
-      ).toEqual({});
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("PH_INSPECTION_CALLS_PER_MINUTE"),
-      );
-    },
-  );
+  it.each(["abc", "-1", "1.5", "0", "1O"])("throws on %s", (raw) => {
+    expect(() =>
+      inspectionThrottleFromEnv({ PH_INSPECTION_CALLS_PER_MINUTE: raw }),
+    ).toThrow(/PH_INSPECTION_CALLS_PER_MINUTE/);
+  });
 });

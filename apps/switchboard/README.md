@@ -100,17 +100,18 @@ pnpm add -g @powerhousedao/switchboard
 
 ### Environment Variables
 
-| Variable                    | Description                        | Default               |
-| --------------------------- | ---------------------------------- | --------------------- |
-| `PORT`                      | Server port                        | `4001`                |
-| `DATABASE_URL`              | Database connection string         | `./.ph/drive-storage` |
-| `PH_REACTOR_DATABASE_URL`   | PostgreSQL URL (takes precedence)  | -                     |
-| `REACTOR_DB_POOL_SIZE_HOST` | Reactor host Postgres pool size     | `16`                  |
-| `REDIS_URL`                 | Redis connection URL               | -                     |
-| `REDIS_TLS_URL`             | Redis TLS connection URL           | -                     |
-| `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
-| `FEATURE_REACTORV2_ENABLED` | Enable Reactor v2 subgraph feature | `false`               |
-| `MCP_ENABLED`               | `false` keeps `/mcp` unmounted     | `true`                |
+| Variable                         | Description                                                                    | Default               |
+| -------------------------------- | ------------------------------------------------------------------------------ | --------------------- |
+| `PORT`                           | Server port                                                                    | `4001`                |
+| `DATABASE_URL`                   | Database connection string                                                     | `./.ph/drive-storage` |
+| `PH_REACTOR_DATABASE_URL`        | PostgreSQL URL (takes precedence)                                              | -                     |
+| `REACTOR_DB_POOL_SIZE_HOST`      | Reactor host Postgres pool size                                                | `16`                  |
+| `REDIS_URL`                      | Redis connection URL                                                           | -                     |
+| `REDIS_TLS_URL`                  | Redis TLS connection URL                                                       | -                     |
+| `PYROSCOPE_SERVER_ADDRESS`       | Pyroscope server address                                                       | -                     |
+| `FEATURE_REACTORV2_ENABLED`      | Enable Reactor v2 subgraph feature                                             | `false`               |
+| `MCP_ENABLED`                    | `false` keeps `/mcp` unmounted                                                 | `true`                |
+| `PH_INSPECTION_CALLS_PER_MINUTE` | `validateDocument`/`driveIntegrity` calls per caller per minute; admins exempt | `6`                   |
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 

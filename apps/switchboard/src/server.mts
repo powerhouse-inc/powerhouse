@@ -450,6 +450,7 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  const inspectionThrottle = inspectionThrottleFromEnv(process.env);
   let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
   if (workerPool && options.reactor) {
     logger.warn(
@@ -987,7 +988,7 @@ async function initServer(
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
       renown: renownConfig,
       verifyCredential,
-      inspection: { throttle: inspectionThrottleFromEnv(process.env, logger) },
+      inspection: { throttle: inspectionThrottle },
     },
     "switchboard",
   );

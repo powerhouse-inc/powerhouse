@@ -1,30 +1,18 @@
 import type { InspectionThrottleConfig } from "@powerhousedao/reactor-api";
-import type { ILogger } from "document-model";
+import { parseNonNegativeInt } from "./worker-pool.mjs";
 
-const VARS = {
-  callsPerMinute: "PH_INSPECTION_CALLS_PER_MINUTE",
-} as const satisfies Record<keyof InspectionThrottleConfig, string>;
+const NAME = "PH_INSPECTION_CALLS_PER_MINUTE";
 
-/** Unset or invalid values keep reactor-api's default; invalid ones warn. */
+/** Unset keeps reactor-api's default; an invalid value fails boot. */
 export function inspectionThrottleFromEnv(
   env: NodeJS.ProcessEnv,
-  logger: Pick<ILogger, "warn">,
 ): Partial<InspectionThrottleConfig> {
-  const out: Partial<InspectionThrottleConfig> = {};
-  for (const [field, name] of Object.entries(VARS) as [
-    keyof InspectionThrottleConfig,
-    string,
-  ][]) {
-    const raw = env[name]?.trim();
-    if (!raw) continue;
-    const n = Number(raw);
-    if (!Number.isInteger(n) || n < 1) {
-      logger.warn(
-        `Ignoring invalid ${name}="${raw}" (expected an integer >= 1)`,
-      );
-      continue;
-    }
-    out[field] = n;
+  const callsPerMinute = parseNonNegativeInt(env[NAME], NAME);
+  if (callsPerMinute === undefined) {
+    return {};
   }
-  return out;
+  if (callsPerMinute < 1) {
+    throw new Error(`${NAME} must be at least 1, got "${env[NAME]}"`);
+  }
+  return { callsPerMinute };
 }
