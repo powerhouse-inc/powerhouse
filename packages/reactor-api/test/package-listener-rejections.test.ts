@@ -12,7 +12,7 @@ import {
   type GraphQLManagerOptions,
 } from "../src/graphql/graphql-manager.js";
 import type { PackageManager } from "../src/packages/package-manager.js";
-import { setupEventListeners } from "../src/server.js";
+import { setupEventListeners } from "../src/packages/package-listeners.js";
 import type {
   IProcessorHostModule,
   Processor,
@@ -113,6 +113,65 @@ describe("package listeners do not leak rejections", () => {
 
     expect(reactorClient.getDocumentModelModules).toHaveBeenCalledOnce();
     expect(unhandled).toEqual([]);
+  });
+
+  it("reports what it catches through reportError", async () => {
+    const failure = new Error("getDocumentModelModules failed");
+    const reactorClient = {
+      getDocumentModelModules: vi.fn().mockRejectedValue(failure),
+    } as unknown as IReactorClient;
+    const processorManager = makeProcessorManager();
+    const registerFailure = new Error("register failed");
+    processorManager.registerFactory.mockRejectedValueOnce(registerFailure);
+    const { pkgManager, handlers } = makePackageManager();
+    const reportError = vi.fn();
+    const healthyFactory: ProcessorFactory = () => Promise.resolve([]);
+    const healthy = (() =>
+      healthyFactory) as unknown as ProcessorFactoryBuilder;
+
+    setupEventListeners(
+      pkgManager,
+      makeGraphQLManager(reactorClient),
+      processorManager,
+      moduleFor,
+      undefined,
+      { logger: silentLogger, reportError },
+    );
+    handlers.documentModels!({});
+    handlers.processors!(new Map<string, Processor>([["pkg", [healthy]]]));
+    await nextMacrotask();
+
+    expect(reportError).toHaveBeenCalledWith(failure);
+    expect(reportError).toHaveBeenCalledWith(registerFailure);
+    expect(unhandled).toEqual([]);
+  });
+
+  it("reports a processor factory that fails for a drive", async () => {
+    const processorManager = makeProcessorManager();
+    const { pkgManager, handlers } = makePackageManager();
+    const reportError = vi.fn();
+    const failure = new Error("factory failed");
+    const failingFactory: ProcessorFactory = () => Promise.reject(failure);
+    const builder = (() =>
+      failingFactory) as unknown as ProcessorFactoryBuilder;
+
+    setupEventListeners(
+      pkgManager,
+      makeGraphQLManager({} as IReactorClient),
+      processorManager,
+      moduleFor,
+      undefined,
+      { logger: silentLogger, reportError },
+    );
+    handlers.processors!(new Map<string, Processor>([["pkg", [builder]]]));
+    await nextMacrotask();
+    const [, factory] = processorManager.registerFactory.mock.calls[0] as [
+      string,
+      ProcessorFactory,
+    ];
+
+    await expect(factory({ id: "drive-1" } as never)).resolves.toEqual([]);
+    expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
   });
 
   it("registers the remaining packages when a processor factory builder throws", async () => {

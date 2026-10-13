@@ -22,8 +22,7 @@ export interface IReactorInspectionSource {
   readonly documentModelRegistry: IDocumentModelRegistry;
   /** Facts the host learns after boot, e.g. a composed workflow runtime. */
   readonly facts: IReactorFactsSink;
-  /** Absent: the resolvers make their own with the defaults. */
-  readonly throttle?: InspectionThrottle;
+  readonly throttle: InspectionThrottle;
 }
 
 export type ReactorInspectionOptions = {

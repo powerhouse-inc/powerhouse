@@ -35,7 +35,6 @@ import { GraphQLError } from "graphql";
 import { ForbiddenError } from "../errors.js";
 import type { Context } from "../types.js";
 import type { IReactorInspectionSource } from "./source.js";
-import { InspectionThrottle } from "./throttle.js";
 
 /** How the subgraph decides for one request's caller. */
 export interface InspectionCallerGate {
@@ -185,7 +184,7 @@ export function createInspectionResolvers(
   const accessFor = (ctx: Context, access: InspectorAccess) =>
     gate.isOperator(ctx) ? access : null;
 
-  const throttle = source.throttle ?? new InspectionThrottle();
+  const throttle = source.throttle;
 
   // Charged before any read, so it also throttles probing the gate.
   const admit = (ctx: Context): void => {

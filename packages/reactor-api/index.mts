@@ -11,6 +11,7 @@ export type {
   CanonicalDocumentId,
   IAuthorizationService,
 } from "./src/services/authorization.service.js";
+export * from "./src/packages/base-document-models.js";
 export * from "./src/packages/http-loader.js";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";

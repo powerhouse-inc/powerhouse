@@ -161,21 +161,38 @@ function memoryWebhooks() {
 
 describe("composeWorkflowRuntime", () => {
   let databases: Kysely<unknown>[] = [];
+  let stores: PGlite[] = [];
   let module: InProcessReactorClientModule | undefined;
   let composed: ComposedWorkflowRuntime | undefined;
+  // initdb is most of a store's cost (seconds on Windows): once, then copies.
+  let template: Blob | undefined;
+
+  beforeAll(async () => {
+    const pg = new PGlite();
+    try {
+      template = await pg.dumpDataDir("none");
+    } finally {
+      await pg.close();
+    }
+  }, 30_000);
 
   afterEach(async () => {
     await composed?.stop();
     await module?.reactor.kill().completed;
     for (const database of databases) await database.destroy();
+    // Kysely's destroy leaves the PGlite open.
+    for (const store of stores) if (!store.closed) await store.close();
     composed = undefined;
     module = undefined;
     databases = [];
+    stores = [];
   });
 
   function pglite(): Kysely<unknown> {
+    const store = new PGlite({ loadDataDir: template });
+    stores.push(store);
     const database = new Kysely<unknown>({
-      dialect: new PGliteDialect(new PGlite()),
+      dialect: new PGliteDialect(store),
     });
     databases.push(database);
     return database;

@@ -100,7 +100,8 @@ describe("VitePackageLoader.loadPieces", () => {
           { timeout: 15_000 },
         )
         .toEqual([PIECE, "@acme/piece-late"]);
-      expect(reported).toBeGreaterThan(0);
+      // Reported once the burst of file events settles.
+      await expect.poll(() => reported).toBeGreaterThan(0);
     } finally {
       unsubscribe();
     }

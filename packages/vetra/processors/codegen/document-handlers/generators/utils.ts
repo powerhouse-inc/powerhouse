@@ -7,6 +7,7 @@ import type {
 import { baseMinimalSaveToFile, baseSaveToFile } from "document-model/node";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { lintSubgraphTypes } from "../../../../codegen/subgraph-type-lint.js";
 import { logger } from "../../logger.js";
 
 const BACKUP_FOLDER = "backup-documents";
@@ -83,4 +84,17 @@ export async function minimalBackupDocument(
     logger.warn(`Failed to backup document "${data.name}":`, error);
     return undefined;
   }
+}
+
+export function warnSubgraphTypeConflicts(workingDir: string): void {
+  let warnings: string[];
+  try {
+    warnings = lintSubgraphTypes(workingDir);
+  } catch (error) {
+    logger.warn(
+      `Failed to check subgraph type names: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return;
+  }
+  for (const warning of warnings) logger.warn(`⚠️ ${warning}`);
 }

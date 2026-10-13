@@ -1,4 +1,4 @@
-import { camelCase, kebabCase } from "change-case";
+import { camelCase } from "change-case";
 import {
   setName,
   type DocumentModelModule,
@@ -6,9 +6,9 @@ import {
 import { GraphQLError, Kind, parse } from "graphql";
 import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
-  generateDocumentModelSchema,
+  documentModelSubgraphTypes,
   getDocumentModelSchemaName,
-  typeDefinitionNames,
+  getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -149,15 +149,19 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   /** Names of the types its schema generator emits for the model. */
   readonly generatedTypeNames: ReadonlySet<string>;
 
-  constructor(documentModel: DocumentModelModule, args: SubgraphArgs) {
+  /** `types` are the model's subgraph types, when already built. */
+  constructor(
+    documentModel: DocumentModelModule,
+    args: SubgraphArgs,
+    types = documentModelSubgraphTypes(documentModel.documentModel.global),
+  ) {
     super(args);
     this.documentModel = documentModel;
-    this.name = kebabCase(documentModel.documentModel.global.name);
-    this.typeDefs = generateDocumentModelSchema(
-      this.documentModel.documentModel.global,
-      { useNewApi: true },
+    this.name = getDocumentModelSubgraphName(
+      documentModel.documentModel.global,
     );
-    this.generatedTypeNames = typeDefinitionNames(this.typeDefs);
+    this.typeDefs = types.typeDefs;
+    this.generatedTypeNames = types.typeNames;
     this.resolvers = this.generateResolvers();
   }
 

@@ -162,18 +162,19 @@ describe("workflow cache", () => {
     get.mockClear();
     let release!: () => void;
     const released = new Promise<void>((resolve) => (release = resolve));
+    let loaded!: () => void;
+    const read = new Promise<void>((resolve) => (loaded = resolve));
     get.mockImplementationOnce(async (...args) => {
       const document = await realGet(...args);
+      loaded();
       await released;
       return document;
     });
 
     const racing = service.fire(workflowId, {}, "schedule");
-    // NOTE(to author): waitFor's default 1s timeout flaked on a loaded CI
-    // shard (expected 1 load, saw 0 — run 38423325035); the fire path can
-    // take longer than 1s to reach the gated load there. Generous timeout,
-    // same assertion.
-    await vi.waitFor(() => expect(loads()).toBe(1), { timeout: 15_000 });
+    // A signal, not a poll: a stalled event loop outlasts a polling deadline.
+    await read;
+    expect(loads()).toBe(1);
     // A newer operation lands while that read is in flight.
     await service.onOperations([
       {

@@ -14,14 +14,14 @@ import type { DocumentNode } from "${GRAPHQL_PACKAGE}";
 
 export const schema: DocumentNode = gql\`
 """
-${v.pascalCaseName} Queries
+${v.pascalCaseName} Subgraph Queries
 """
-type ${v.pascalCaseName}Queries {
+type ${v.pascalCaseName}SubgraphQueries {
     example(driveId: String!): String
 }
 
 type Query {
-    ${v.camelCaseName}: ${v.pascalCaseName}Queries!
+    ${v.camelCaseName}: ${v.pascalCaseName}SubgraphQueries!
 }
 
 \`
