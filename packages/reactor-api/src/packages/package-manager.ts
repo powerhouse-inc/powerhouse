@@ -711,6 +711,11 @@ export class PackageManager implements IPackageManager {
     this.eventEmitter.emit("piecesChange", piecesMap);
   }
 
+  /** The document models every loaded package ships, keyed by the package. */
+  getDocumentModels(): Map<string, DocumentModelModule[]> {
+    return new Map(this.docModelsMap);
+  }
+
   /** The pieces every loaded package ships, keyed by the package. */
   getPieces(): Map<string, PackagePieceEntry[]> {
     return new Map(this.piecesMap);

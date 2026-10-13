@@ -19,7 +19,7 @@ import type {
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import { deepMerge } from "@powerhousedao/shared/connect";
-import { mergeDefaultDrives } from "./merge-default-drives.js";
+import { mergeDefaultDrives } from "@powerhousedao/host-core";
 import type { ConnectBuildArgs, ConnectStudioArgs } from "../types.js";
 import {
   normalizeKey,

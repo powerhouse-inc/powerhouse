@@ -36,6 +36,7 @@ function makePackageManager() {
     processors?: (processors: Map<string, Processor>) => void;
   } = {};
   const pkgManager = {
+    getDocumentModels: vi.fn(() => new Map()),
     onDocumentModelsChange: vi.fn(
       (handler: (models: Record<string, unknown[]>) => void) => {
         handlers.documentModels = handler;

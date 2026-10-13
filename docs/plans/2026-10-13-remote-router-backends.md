@@ -14,7 +14,7 @@ What it does not do yet:
 - A hung Switchboard stalls local writes.
 - It is Connect-only code, and only one remote is supported.
 
-This plan makes the Switchboard a real home for collections. Two settings, both explicit, describe each collection: where it lives, and whether the local reactor also syncs it. Routing follows the collection's home, not the backend order. The plan also adds deadlines, capability facts, fresh routes, and end-to-end tests against a real Switchboard. Connect and the reactor monitor are the hosts. v1 targets single-instance Switchboards.
+This plan makes the Switchboard a real home for collections. Two explicit settings describe each collection: whether the local reactor syncs it, and which remote it lives on. A synced collection is read and written locally, and sync carries the writes to its remote. A collection that is not synced is read and written on its remote directly. The plan also adds deadlines, capability facts, fresh routes, and end-to-end tests against a real Switchboard. Connect and the reactor monitor are the hosts. v1 targets single-instance Switchboards.
 
 ## Current state
 
@@ -41,7 +41,7 @@ This plan makes the Switchboard a real home for collections. Two settings, both 
 | # | Gap | Anchor |
 |---|---|---|
 | G1 | Nothing is ever placed on the remote. `PLACE_ON_LOCAL` requires `inspectable`, and the remote's reach is `inspection: "none"`. | `multi-reactor.ts:36-44,166-167`; `placement.ts:30` |
-| G2 | Default drives are synced locally under `multiReactor`, so both backends hold them. The router picks the first backend in its order, and the local reactor shadows the remote. | `apps/connect/src/store/reactor.ts:575,582`; `packages/reactor-browser/src/actions/drive.ts:180-245`; `dispatcher.ts:454-468`; `multi-reactor.ts:150` |
+| G2 | Default drives are synced locally under `multiReactor`, so both backends hold them, and the router picks whichever backend comes first in its order. No collection can live on the remote without a local copy. | `apps/connect/src/store/reactor.ts:575,582`; `packages/reactor-browser/src/actions/drive.ts:180-245`; `dispatcher.ts:454-468`; `multi-reactor.ts:150` |
 | G3 | `GraphQLReactorClient` has no request deadline. `owns()` probes every backend, and `assertNotHeldElsewhere` runs on every create, so a hung Switchboard stalls local creates and uncached reads. | `dispatcher.ts:454-468,524-541`; `guard.ts:61-82` |
 | G4 | The ownership probe is `documentServed`, which runs through the read gate, so a document withheld from the caller answers "no". | `packages/reactor-api/src/graphql/reactor/subgraph.ts:477-487` |
 | G5 | Learned document routes never refresh except on a refusal. `KnownDrives` never forgets a drive after a 421. | `table.ts:275-288`; `graphql-routable-backend.ts:40-63` |
@@ -127,14 +127,14 @@ readonly documentTypes?: () => Promise<readonly string[]>;
 - The local backend declares no `documentTypes`, because Connect loads models on demand.
 - Drives are not enumerated. A drive the remote holds is found from config, or by a probe the first time it is touched.
 
-### 3. Collection config: home and sync
+### 3. Collection config: sync and backend
 
-Two settings describe each collection, and they are independent:
+Each collection has two settings:
 
-- **`backend`**: the collection's home. Absent means the local reactor. Only explicit config places a collection on a remote.
-- **`sync`**: whether the local reactor syncs the collection over gql. Absent means `true`.
+- **`sync`**: whether the local reactor holds the collection and syncs it over gql. Absent means `true`.
+- **`backend`**: the remote it lives on. For a synced collection, this is the sync target. For a collection with `sync: false`, it is where routed calls go. Only explicit config places a collection on a remote.
 
-With `sync` unset and no `backend`, a default drive behaves exactly as it does today.
+With neither setting, a default drive behaves exactly as it does today.
 
 ```jsonc
 // powerhouse.config.json (connect)
@@ -150,35 +150,23 @@ With `sync` unset and no `backend`, a default drive behaves exactly as it does t
 },
 "drives": {
   "defaultDrives": [
-    { "url": "https://sb.example/d/team", "backend": "sb", "sync": true }
+    { "url": "https://sb.example/d/team", "backend": "sb" }
   ]
 }
 ```
 
-| `backend` | `sync` | Writes | Reads | Sync remote registered |
+| `sync` | `backend` | Reads and writes | Sync remote registered | Offline |
 |---|---|---|---|---|
-| local (absent) | true (absent) | local | local | yes, to the drive's own Switchboard (today's default drives) |
-| local | false | local | local | no |
-| remote | false | remote | remote | no; an existing one is removed at boot, and its local data is ignored |
-| remote | true | remote | local replica if it is fresh, else remote | yes, to the home remote |
+| true (absent) | absent | local | the drive's own Switchboard for a default drive, else none | reads and writes |
+| true | remote | local | the named remote | reads and writes |
+| false | absent | local | none | reads and writes |
+| false | remote | remote | none; an existing one is removed at boot, and its local data is ignored | none |
 
-The `remote` + `sync: true` row is new. It settles how a synced remote collection is routed:
+- **Synced collections.** Writes land on the local copy, and sync carries them to the remote, the way synced default drives work today.
+- **Collections with `sync: false` and a `backend`.** Every routed call goes to that remote. These collections are online-only.
+- **How Connect tells the router.** Connect turns the config into `collections` overrides: the local backend for every synced collection, and the named remote for each `sync: false` collection with a `backend`.
 
-- **Writes go to the home.** The remote is authoritative: its authz, signature checks and workflows run when the write is made, and a write never lands only locally. Writes do not fail over, so a remote-home collection takes no writes while its Switchboard is down. If you need offline writes, give the collection a local home with `sync: true`.
-- **Reads go to the local replica when it is fresh.** After every write to the home, the router keeps a freshness floor for each `(documentId, branch, scope)` it wrote, taken from the job's consistency token. A read from the replica that is below the floor is repeated on the home. Once the replica catches up, the floor is dropped. A document the replica does not hold yet is read from the home.
-- **No shadowing.** The router routes by the collection's home, not by its backend order. `collections` overrides pin the home. A new `replicas` option names the backend that holds a synced read replica:
-
-```ts
-// reactor-router/src/types.ts, RoutingOptions gains
-/** Collection or drive id -> backend holding a synced read replica. */
-readonly replicas?: Readonly<Record<string, string>>;
-readonly freshnessFloorSize?: number; // default 10_000
-
-// reactor-router: RoutingReactorClient gains
-setReplica(collection: string, backend: string | undefined): void;
-```
-
-When more than one backend serves a document id, the router resolves the document's home:
+When both backends serve a document id, the router resolves the document's collection, so a stale local copy of a `sync: false` collection never wins:
 
 ```ts
 // dispatcher.ts
@@ -192,7 +180,9 @@ async homeOf(id: string, serving: readonly RouterBackend[]): Promise<RouterBacke
 
 The result is cached in the document table. The backend order now only breaks ties for documents that no configured collection holds.
 
-`replicas` stays truthful at runtime. Connect sets a replica only while the worker's remote list (`SyncManagerProxy.list()`) holds a gql remote for that collection. It calls `setReplica` again whenever that list changes, which every tab now learns through `SYNC_REMOTES_CHANGED_EVENT`. R7 extends the broadcast to the sync ops `add` and `remove` (`reactor-host.ts:235-237`), not just local-peer adopt and remove. A sync remote that a user removes in one tab therefore stops being read as a replica in every tab.
+During initial sync, a document of a synced collection that the remote holds but the local copy does not is served by the remote: only the remote answers the probe. Its route is provisional (section 6). Once the local copy holds the document, the next probe moves the route to local.
+
+At boot, Connect adds or removes gql sync remotes to match the config. Today `SYNC_REMOTES_CHANGED_EVENT` fires only after a local peer is adopted or removed. R7 extends it to the sync ops `add` and `remove` (`reactor-host.ts:235-237`), so every tab's `SyncManagerProxy.list()` sees those changes.
 
 ### 4. Ownership across the network
 
@@ -200,15 +190,15 @@ The result is cached in the document table. The backend order now only breaks ti
 - **Probe.** The probe is `documentServed`, bounded by `probeTimeoutMs`. A timeout, a transport failure or an open breaker answers `"unknown"`. With `"unknown"`, `assertOwned` refuses (`guard.ts:47`), and `assertNotHeldElsewhere` lets the create proceed (`guard.ts:73`).
 - **Withheld documents.** The probe stays read-gated. "Withheld" and "absent" both answer "no".
 - **421 path.** A request with a `Drive-Id` gets a 421, which becomes `GraphQLWrongBackendError`, which becomes a misroute with `documentId = driveId`. The dispatcher excludes the remote for that id, forgets its routes, logs a diagnostic naming the stale override, and probes again. New: `KnownDrives.forget(driveId)` runs on the 421, so the next request stops sending the stale header.
-- **Explicit placement.** A 421 can still correct a configured home, as overrides are advisory today. The diagnostic says the config is stale.
+- **Explicit placement.** A 421 can still correct a configured route, as overrides are advisory today. The diagnostic says the config is stale.
 
 ### 5. Reads, writes and subscriptions
 
 - **Transport.** All calls go over the reactor GraphQL subgraph, and change events over its graphql-ws socket. The sync channel only replicates collections and never carries routed calls.
-- **Writes.** `execute` is the `MutateDocumentWithOperations` mutation. `executeBatch` is synchronous on the server, so the jobs it returns are already settled and carry the consistency tokens the freshness floor needs. There is no `submit` member, so the router's async variants wait through `executeBatch` (`backend.ts:66`).
+- **Writes.** `execute` is the `MutateDocumentWithOperations` mutation. `executeBatch` is synchronous on the server, so the jobs it returns are already settled. There is no `submit` member, so the router's async variants wait through `executeBatch` (`backend.ts:66`).
 - **Write failures.** Writes are never retried on another backend (`dispatcher.ts:50-53`). A timeout on a write surfaces to the caller with the job id when one is known.
 - **Reads.** A read that fails on its target is retried once on a backend that proves it holds the document (`dispatcher.ts:682-696`).
-- **Subscriptions.** There is one socket per remote, filtered on the client. When a replica and its home both report a change at the same revision, `changeKey` drops the second (`subscribe-mux.ts:11`). Intermediate revisions that differ produce extra `Updated` events; they only invalidate a cache, and no operation is duplicated. `find` dedups by id (`routing-client.ts:184,596`).
+- **Subscriptions.** There is one socket per remote, filtered on the client. When two backends both report a change at the same revision, `changeKey` drops the second (`subscribe-mux.ts:11`). Intermediate revisions that differ produce extra `Updated` events; they only invalidate a cache, and no operation is duplicated. `find` dedups by id (`routing-client.ts:184,596`).
 - **Socket outages.** Events missed while the socket is down are not replayed. That needs the rewind/replay protocol, which is out of scope.
 
 ### 6. Auth, signing and failure modes
@@ -222,7 +212,7 @@ The result is cached in the document table. The backend order now only breaks ti
 
 | Failure | Behaviour |
 |---|---|
-| Remote down | After 3 consecutive transport failures the breaker opens for 30 s. A transport failure is a network error, a timeout or a 5xx; a GraphQL error with a body is an answer. While the breaker is open, every member throws without sending a request, probes answer `"unknown"`, and facts are `known: false`. Reads of a synced collection still succeed from its replica, though a read under a freshness floor fails. Strict `find` throws `FanInPartialFailureError`, and Connect's drive list falls back to local. |
+| Remote down | After 3 consecutive transport failures the breaker opens for 30 s. A transport failure is a network error, a timeout or a 5xx; a GraphQL error with a body is an answer. While the breaker is open, every member throws without sending a request, probes answer `"unknown"`, and facts are `known: false`. Synced collections keep reading and writing locally, and sync catches up when the remote returns. Collections with `sync: false` fail until the breaker closes. Strict `find` throws `FanInPartialFailureError`, and Connect's drive list falls back to local. |
 | Remote hangs | Each request rejects at `requestTimeoutMs` (30 s). Probes answer `"unknown"` at `probeTimeoutMs` (3 s), so local creates finish within that bound. |
 | Partition mid-write | The write may have landed. It is not retried. `getJob` and `waitForJob` route to the recorded backend (`routing-client.ts:1046-1061`). |
 | Stale routing table | A route learned from a backend later in the order, while an earlier one answered "no", stays `provisional` for 30 s and is probed again after that. Corrected and configured routes never expire. A 421 forgets both the route and `KnownDrives`. |
@@ -252,7 +242,7 @@ export class RoutingAttachmentService implements IAttachmentService {
   // reserve: ReserveAttachmentOptions gains optional documentId; same rule.
 }
 // RoutingReactorClient gains:
-locate(identifier: string, signal?: AbortSignal): Promise<string>; // the home backend
+locate(identifier: string, signal?: AbortSignal): Promise<string>; // the routed backend
 ```
 
 - Each remote gets its own `createRemoteAttachmentService`, built from its origin.
@@ -269,14 +259,14 @@ locate(identifier: string, signal?: AbortSignal): Promise<string>; // the home b
 | R3 | Deadlines, probe timeout, breaker | reactor-browser, reactor-router | R1 |
 | R4 | Capability facts: document types, schema skew | reactor-router, reactor-browser | R1 |
 | R5 | Provisional routes | reactor-router | R3 |
-| R6 | Home routing: `homeOf`, `replicas`, freshness floors | reactor-router | R5 |
+| R6 | `homeOf`: route a multiply-held id by its collection | reactor-router | R5 |
 | R7 | Connect config: remotes, collection `backend` and `sync`, remote-list broadcast | connect, reactor-browser, builder-tools schema | R4, R6 |
 | R8 | Routing attachment service | reactor-attachments, connect | R7 |
 | R10 | Monitor routes to remote handles | apps/reactor-monitor | R4 |
 
 R3 and R4 can run in parallel after R1. R10 is independent of R5 to R8.
 
-Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decomposition.md`: review until clean, verify with the repo's real commands, and a two-sentence PR description.
+Every stage runs the per-PR loop under Delivery.
 
 **R1.**
 - Changes:
@@ -334,34 +324,26 @@ Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decom
 
 **R6.**
 - Changes:
-  - `homeOf` for an id that several backends serve.
-  - The `replicas` option and `setReplica`.
-  - Replica-first reads under freshness floors.
-  - Writes go to the home only.
+  - `homeOf` for an id that several backends serve, with the result cached in the document table.
 - Exit (unit, with local and remote stubs that both hold a drive and a file):
-  - A file in a remote-home drive is written on the remote even though local comes first in the backend order.
-  - A read right after that write is served by the remote while the replica lags, and by the replica once it catches up.
-  - With no replica declared, reads go to the home.
-  - `setReplica(undefined)` sends reads back to the home.
-- e2e (R2 suite):
-  - The local reactor syncs a Switchboard drive whose home is the remote.
-  - A routed write followed by an immediate read returns the write.
+  - A file in a synced drive routes to local, even with the remote first in the backend order.
+  - A file in a `sync: false` drive with a stale local copy routes to the remote.
+  - A file that only the remote holds routes there, and moves to local once local holds it (R5).
 
 **R7.**
 - Changes:
   - Runtime-config schema: `instance.remoteBackends[]`, `instance.collections`, and `backend`/`sync` on `drives.defaultDrives[]`.
-  - Connect builds the backends, the `collections` overrides and the `replicas` from config.
-  - `addDefaultDrivesForNewReactor` and `addRemoteDrive` honour `sync`.
+  - Connect builds the backends and the `collections` overrides from config.
+  - `addDefaultDrivesForNewReactor` and `addRemoteDrive` honour `sync`, and sync to `backend` when one is named.
   - The boot step removes the sync remote of any collection with `sync: false`.
   - `ReactorHost` broadcasts `SYNC_REMOTES_CHANGED_EVENT` after the sync ops `add` and `remove`.
-  - Connect calls `setReplica` from `SyncManagerProxy` list changes.
 - Exit:
   - The fingerprint test pins that remote config does not change the worker fingerprint.
   - Unit: with no new config, the router table and the sync remotes match today's.
   - `reactor-browser` RPC test: a gql remote added in one tab reaches the others' `list()`.
   - New Playwright spec `test/vetra-e2e/tests/multi-reactor.spec.ts` (Connect plus Switchboard at 4002, `multiReactor: true`, in worker mode). It checks:
-    - a remote-home, `sync: false` drive opens and edits, and the change shows in a second tab;
-    - a remote-home, `sync: true` drive is readable with the Switchboard stopped;
+    - a `sync: false` drive with a `backend` opens and edits on the Switchboard, and the change shows in a second tab;
+    - a `sync: true` drive with a `backend` stays readable and writable with the Switchboard stopped, and its offline edits reach the Switchboard once it restarts;
     - a default drive with no config behaves as it does today.
 
 **R8.**
@@ -369,9 +351,9 @@ Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decom
   - `RoutingAttachmentService`, `RoutingReactorClient.locate`, and optional `documentId` on `reserve`.
   - Connect installs the service when there is more than one remote.
 - Exit:
-  - Unit: a download routes by its document's home.
+  - Unit: a download routes by the backend that serves its document.
   - Unit: a reservation without a document goes to the fallback.
-  - e2e (R2 suite, two Switchboard endpoints): upload and download on a document whose home is the second one.
+  - e2e (R2 suite, two Switchboard endpoints): upload and download on a `sync: false` document held by the second one.
 
 **R10.**
 - Changes:
@@ -379,6 +361,54 @@ Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decom
   - The monitor's existing `timeoutMs` (`packages/reactor-monitor/src/types.ts:123`) maps onto `requestTimeoutMs`.
 - Exit:
   - `RoutingPanel.test.tsx` covers a remote row and its health.
+
+## Delivery
+
+### Parallel lanes
+
+| Wave | Lane A: router | Lane B: facts and monitor | Lane C: e2e and Connect |
+|---|---|---|---|
+| 1 | R1 | | |
+| 2 | R3 | R4 | R2 |
+| 3 | R5, then R6 (stacked) | R10 | |
+| 4 | | | R7, then R8 (stacked) |
+
+- **Stacking:**
+  - A stage that follows another in the same lane stacks on that stage's unmerged branch: R5 on R3, R6 on R5, and R8 on R7.
+  - A stage that depends on another lane waits for that lane's work to merge to main: R2, R3 and R4 wait for R1; R10 waits for R4; R7 waits for R4 and R6.
+- **File overlap in wave 2:**
+  - R3 and R4 both edit `reactor-browser/src/graphql-client/switchboard-backend.ts`, and `reactor-router/src/backend.ts` and `types.ts`. Whichever merges second merges main and resolves the conflicts. Neither reshapes the other's members.
+  - R3 and R4 add their e2e cases to R2's suite only after R2 has merged, in a follow-up commit on their own branch.
+- **File overlap in wave 3:** R5 and R6 both edit `dispatcher.ts` and `table.ts`, which is why they stack. R10 touches only `apps/reactor-monitor`.
+
+### Execution model
+
+- **Coordinator.** A coordinator subagent drives the waves. It works from scratchpad files: `handoff.md`, `rules.md` (the setup rules below), `tracker.md` (stage, branch, worktree, PR, status) and `reports/R<n>.md`. It keeps no state in its own context that is not also in those files.
+- **Implementers.**
+  - One implementer subagent per stage, each in its own git worktree off main, or off its base stage's branch when stacked.
+  - At most 3 implementers run at once.
+  - Implementers commit at each logical step, and write their outcome, any deviations, and the commands they ran with exit codes to `reports/R<n>.md`. They do not report through context.
+- **Main session.** It answers escalations and pushes, opens and merges PRs. Nothing else goes through it.
+
+### Per-PR loop
+
+1. Implement the stage, with the tests its exit criteria name.
+2. Run `/code-review` rounds. Fix the confirmed findings as separate commits, and stop when a round comes back clean.
+3. The `verify` subagent runs the real CI commands for every touched package (build, lint, `pnpm test`) and records the commands and exit codes in the report.
+4. Push and open the PR. A stage based on main opens a ready PR against main. A stacked stage opens a draft PR against its base stage's branch, and is retargeted to main once that base merges. The description is two or three sentences.
+5. Merge with a merge commit (`gh pr merge --merge`), never a squash. Then merge main into every open stacked branch and into the next wave's worktrees.
+
+### Agent setup rules
+
+- In a fresh worktree, run `pnpm install`, then `pnpm build` in `packages/shared`, then build the dists of the packages under test, before any test run. Rebuild stale dists after every merge of main.
+- In `reactor-browser`, run `pnpm test`. `vitest run <file>` false-greens there.
+- No `git stash`, and no history rewrites (rebase, reset, amend, force-push).
+- Never write "fold" in code; reducers apply or derive state.
+- R2's real-Switchboard harness needs its own ports in each worktree: a free Switchboard port through `SWITCHBOARD_URL` (the default is 4001), and a free Postgres port when it runs against Postgres. R2 makes both configurable.
+
+### Escalation
+
+The coordinator escalates to the user, through the main session, any deviation from the design in this plan and any change of scope. It stops that stage until it gets an answer. Everything else is decided in the lane and recorded in the stage's report.
 
 ## Deferred
 
@@ -391,8 +421,7 @@ Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decom
 
 User decisions (2026-10-13):
 
-- **Sync is a per-collection flag (`sync`), independent of the collection's home.** Unset means `true`, so today's default drives keep working offline, unchanged. Remote-home collections that set it get a local read replica.
-- **A synced remote collection writes to its home and reads from a fresh replica.** The router routes by the collection's home (`collections` overrides and `homeOf`), so the local copy never shadows the remote. Freshness floors from consistency tokens give read-your-writes. Offline writes need a local home.
+- **`sync` is a per-collection flag; unset means `true`.** A synced collection is read and written on its local copy, and sync carries the writes to its `backend`. Only a `sync: false` collection is routed to its remote. Auth-scope checks and signature verification run the same code locally and on the remote, so a local write is checked at write time too.
 - **Hosts: Connect and the reactor monitor.**
 - **Remotes come from `instance.remoteBackends[]`.** An empty list falls back to the first default drive's Switchboard. R8 routes attachments across remotes.
 - **Only explicit config places a collection on a remote.** Requirement-based placement is future work.
@@ -408,5 +437,5 @@ Design decisions:
 - **Writes never fail over, and neither do 401 or 403.** A write may have landed, and an authz refusal is an answer.
 - **Deadlines: 30 s per request, 3 s per probe.** A probe gates local writes, so it is the tighter bound.
 - **The breaker lives in the backend, not the router.** Only the backend sees HTTP statuses.
-- **Replicas follow the worker's remote list.** That list reaches every tab through `SYNC_REMOTES_CHANGED_EVENT`, so the router never reads a replica that is no longer synced.
+- **Sync remotes changed at boot reach every tab.** `SYNC_REMOTES_CHANGED_EVENT` is extended to the sync ops `add` and `remove`.
 - **Remote config is tab-side and outside the worker fingerprint.** The worker never reaches a router remote.

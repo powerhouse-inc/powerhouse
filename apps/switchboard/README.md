@@ -111,6 +111,7 @@ pnpm add -g @powerhousedao/switchboard
 | `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
 | `FEATURE_REACTORV2_ENABLED` | Enable Reactor v2 subgraph feature | `false`               |
 | `MCP_ENABLED`               | `false` keeps `/mcp` unmounted     | `true`                |
+| `INSPECTION_ENABLED`        | `false` keeps inspection unmounted | `true`                |
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 

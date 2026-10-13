@@ -7,6 +7,7 @@ import { runOxfmt } from "utils";
 import {
   applyProjectCustomizations,
   writeAllGeneratedProjectFiles,
+  writeGeneratedHostsFiles,
   writeProjectRootFiles,
 } from "file-builders";
 
@@ -41,6 +42,9 @@ type CreateProjectArgs = {
    * packageManager === "pnpm".
    */
   clone?: string;
+  /** uniform-runners: scaffold the hosts/ folder + agents/ stub. The caller
+   * (ph-cli) resolves the feature flag; codegen never sniffs env itself. */
+  uniformRunners?: boolean;
 };
 export async function createProject({
   name,
@@ -51,6 +55,7 @@ export async function createProject({
   skipGitInit,
   skipInstall,
   clone,
+  uniformRunners,
 }: CreateProjectArgs) {
   const appPath = path.join(process.cwd(), name);
 
@@ -69,6 +74,7 @@ export async function createProject({
       skipGitInit,
       skipInstall,
       remoteDrive,
+      uniformRunners,
     });
     return;
   }
@@ -100,6 +106,9 @@ export async function createProject({
   // Must run last: it rewrites `.mcp.json` / `.cursor/mcp.json`, which
   // `writeAllGeneratedProjectFiles` has only just created.
   await applyProjectCustomizations({ name, projectDir: appPath, remoteDrive });
+  if (uniformRunners) {
+    await writeGeneratedHostsFiles(appPath, name);
+  }
   console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
   if (!skipInstall) {
@@ -143,6 +152,7 @@ async function createProjectFromClone(args: {
   skipGitInit?: boolean;
   skipInstall?: boolean;
   remoteDrive?: string;
+  uniformRunners?: boolean;
 }) {
   const {
     name,
@@ -152,6 +162,7 @@ async function createProjectFromClone(args: {
     skipGitInit,
     skipInstall,
     remoteDrive,
+    uniformRunners,
   } = args;
   // --clone needs a package manager with a hard-offline install mode that
   // refuses to hit the network on a cache miss. pnpm and npm qualify; yarn
@@ -202,6 +213,11 @@ async function createProjectFromClone(args: {
 
   console.log(chalk.blue(`▶️ Applying project customizations...\n`));
   await applyProjectCustomizations({ name, projectDir: appPath, remoteDrive });
+  if (uniformRunners) {
+    // seedUserOwnedFile semantics: adds hosts/ to clones that lack it,
+    // preserves it where the clone source already carried one.
+    await writeGeneratedHostsFiles(appPath, name);
+  }
   console.log(chalk.green(`✅ Project customizations applied\n`));
 
   if (!skipInstall) {

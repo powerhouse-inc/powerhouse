@@ -116,6 +116,9 @@ export type StartServerOptions = {
   /** Mount the MCP server at `/mcp`. On by default; `false` wins over
    * MCP_ENABLED, which can turn it off but never on. */
   mcp?: boolean;
+  /** Mount the read-only inspection subgraph at `/graphql/inspection`. On by
+   * default; `false` wins over INSPECTION_ENABLED, which can turn it off. */
+  inspection?: boolean;
   /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
    * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
   workflows?: {
@@ -207,6 +210,8 @@ export type SwitchboardReactor = {
   privacy?: { erasure: IErasureService };
   /** Whether `/mcp` is mounted, after the option and MCP_ENABLED. */
   mcpEnabled: boolean;
+  /** Whether `/graphql/inspection` is mounted, after the option and INSPECTION_ENABLED. */
+  inspectionEnabled: boolean;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

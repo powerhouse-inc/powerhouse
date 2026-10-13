@@ -24,11 +24,12 @@ import {
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
-import { type DocumentNode, Kind } from "graphql";
+import { type DocumentNode, type GraphQLSchema, Kind, parse } from "graphql";
 import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
+import { DocumentModelRegistry } from "@powerhousedao/reactor";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
@@ -68,6 +69,9 @@ import type {
   SubgraphClass,
 } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
+import type { PackageManager } from "../src/packages/package-manager.js";
+import { setupEventListeners } from "../src/packages/package-listeners.js";
+import type { IProcessorHostModule } from "../src/types.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
 
@@ -1460,6 +1464,409 @@ describe("GraphQLManager", () => {
         firstCallCount,
       );
     });
+  });
+
+  describe("stale subgraph handlers", () => {
+    type Gateway = ReturnType<typeof makeHarness>["gatewayAdapter"];
+
+    // Field names, not printSchema: the schema comes from another graphql realm.
+    const fieldNames = (schema: GraphQLSchema) =>
+      Object.values(schema.getTypeMap())
+        .flatMap((type) =>
+          "getFields" in type ? Object.keys(type.getFields()) : [],
+        )
+        .join(" ");
+
+    const servingSdl =
+      (schema: GraphQLSchema): FetchHandler =>
+      () =>
+        Promise.resolve(Response.json({ data: { sdl: fieldNames(schema) } }));
+
+    const createHandlerOf = (gatewayAdapter: Gateway) =>
+      vi.mocked(
+        gatewayAdapter.createHandler as IGatewayAdapter<Context>["createHandler"],
+      );
+
+    function serveSdl(gatewayAdapter: Gateway) {
+      createHandlerOf(gatewayAdapter).mockImplementation((schema) =>
+        Promise.resolve(servingSdl(schema)),
+      );
+    }
+
+    function holdNextHandler(gatewayAdapter: Gateway) {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const started = vi.fn();
+      createHandlerOf(gatewayAdapter).mockImplementationOnce(async (schema) => {
+        started();
+        await held;
+        return servingSdl(schema);
+      });
+      return { release, started };
+    }
+
+    async function servedSdl(
+      mounts: Map<string, FetchHandler>,
+      path: string,
+    ): Promise<string> {
+      const response = await mounts.get(path)!(
+        new Request(`http://localhost${path}`, { method: "POST" }),
+      );
+      const body = (await response.json()) as { data: { sdl: string } };
+      return body.data.sdl;
+    }
+
+    async function internalSdl(manager: GraphQLManager, name: string) {
+      const data = await manager.executeSubgraphQuery<{ sdl: string }>(
+        name,
+        "{ __typename }",
+        {},
+      );
+      return data.sdl;
+    }
+
+    function racer(field: string) {
+      return class extends BaseSubgraph {
+        name = "racer";
+        typeDefs = parse(`type Query { ${field}: String }`);
+        resolvers = {};
+      };
+    }
+
+    function alphaWith(field: string): DocumentModelModule {
+      const alpha = makeModelModule("Alpha", "test/alpha");
+      alpha.documentModel.global.specifications[0].state.global.schema = `type AlphaState { ${field}: String }`;
+      return alpha;
+    }
+
+    it("mounts the package subgraph that replaced it", async () => {
+      const { manager, mounts, gatewayAdapter } = makeHarness();
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      const apply = (field: string) =>
+        manager.applyPackageSubgraphs(new Map([["pkg", [racer(field)]]]));
+
+      await apply("rev1");
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev1");
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await apply("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+
+      await apply("rev3");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
+
+      // A later update must not take the stale handler for the current one.
+      await manager.updateRouter(true);
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
+      expect(await internalSdl(manager, "racer")).toContain("rev3");
+    });
+
+    it("mounts the document model subgraph that replaced it", async () => {
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({
+          results: [makeDriveModule(), alphaWith("rev1")],
+        }),
+      });
+      const { manager, mounts, gatewayAdapter } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      expect(await servedSdl(mounts, "/graphql/alpha")).toContain("rev1");
+
+      const regenerate = async (field: string) => {
+        vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+          results: [makeDriveModule(), alphaWith(field)],
+          options: { cursor: "", limit: 100 },
+        });
+        await manager.regenerateDocumentModelSubgraphs();
+      };
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+
+      await regenerate("rev3");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/alpha")).toContain("rev3");
+
+      await manager.updateRouter(true);
+      const served = await servedSdl(mounts, "/graphql/alpha");
+      expect(served).toContain("rev3");
+      expect(served).not.toContain("rev2");
+      expect(await internalSdl(manager, "alpha")).toContain("rev3");
+    });
+    async function setupAlphaTools(
+      typeDefs = "type Query { alphaDoc: Alpha }",
+    ) {
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({
+          results: [makeDriveModule(), alphaWith("rev1")],
+        }),
+      });
+      const logger = makeHarnessLogger();
+      const harness = makeHarness({
+        reactorClient,
+        logger,
+        enableDocumentModelSubgraphs: true,
+      });
+      serveSdl(harness.gatewayAdapter);
+      await initAndFlush(harness.manager);
+      class AlphaTools extends BaseSubgraph {
+        name = "alpha-tools";
+        typeDefs = parse(typeDefs);
+        resolvers = {};
+      }
+      class Plain extends BaseSubgraph {
+        name = "plain";
+        typeDefs = parse("type Query { ping: String }");
+        resolvers = {};
+      }
+      await harness.manager.applyPackageSubgraphs(
+        new Map([["pkg", [AlphaTools, Plain]]]),
+      );
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(harness.mounts, "/graphql/alpha-tools")).toContain(
+        "rev1",
+      );
+      const regenerate = async (field: string) => {
+        vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+          results: [makeDriveModule(), alphaWith(field)],
+          options: { cursor: "", limit: 100 },
+        });
+        await harness.manager.regenerateDocumentModelSubgraphs();
+      };
+      const served = () => servedSdl(harness.mounts, "/graphql/alpha-tools");
+      return { ...harness, logger, regenerate, served };
+    }
+
+    it("rebuilds a subgraph using a model's types after the model changes", async () => {
+      const { manager, mounts, regenerate, served } = await setupAlphaTools();
+      const plainHandler = mounts.get("/graphql/plain");
+
+      await regenerate("rev2");
+      await vi.runAllTimersAsync();
+
+      expect(await served()).toContain("rev2");
+      expect(await served()).not.toContain("rev1");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
+      // Uses no model type, so its handler is kept.
+      expect(mounts.get("/graphql/plain")).toBe(plainHandler);
+    });
+
+    it("rebuilds a subgraph that only extends a model's type", async () => {
+      const { regenerate, served } = await setupAlphaTools(
+        "type Query { ping: String } extend type Alpha_AlphaState { extra: String }",
+      );
+
+      await regenerate("rev2");
+      await vi.runAllTimersAsync();
+
+      expect(await served()).toContain("rev2");
+    });
+
+    it("keeps the handler when a regeneration leaves the model types alone", async () => {
+      const { mounts, regenerate } = await setupAlphaTools();
+      const handler = mounts.get("/graphql/alpha-tools");
+
+      await regenerate("rev1");
+      await vi.runAllTimersAsync();
+
+      expect(mounts.get("/graphql/alpha-tools")).toBe(handler);
+    });
+
+    it("serves the old handler until its rebuild succeeds", async () => {
+      const { manager, handles, disposed, gatewayAdapter, logger, ...rest } =
+        await setupAlphaTools();
+      let route = handles.get("/graphql/alpha-tools");
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await rest.regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+      expect(disposed).not.toContain(route);
+      expect(await rest.served()).toContain("rev1");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await rest.served()).toContain("rev2");
+
+      route = handles.get("/graphql/alpha-tools");
+      createHandlerOf(gatewayAdapter).mockImplementation((schema) =>
+        schema.getQueryType()?.getFields().alphaDoc
+          ? Promise.reject(new Error("boom"))
+          : Promise.resolve(servingSdl(schema)),
+      );
+      await rest.regenerate("rev3");
+      await vi.runAllTimersAsync();
+
+      expect(disposed).not.toContain(route);
+      expect(await rest.served()).toContain("rev2");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to setup subgraph @name at path @path: @error",
+        "alpha-tools",
+        "/graphql/alpha-tools",
+        expect.any(Error),
+      );
+    });
+
+    it("keeps the newest build when an older one finishes last", async () => {
+      const { manager, gatewayAdapter, regenerate, served } =
+        await setupAlphaTools();
+
+      const older = holdNextHandler(gatewayAdapter);
+      await regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(older.started).toHaveBeenCalled();
+
+      const newer = holdNextHandler(gatewayAdapter);
+      await regenerate("rev3");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(newer.started).toHaveBeenCalled();
+
+      newer.release();
+      await vi.runAllTimersAsync();
+      expect(await served()).toContain("rev3");
+
+      older.release();
+      await vi.runAllTimersAsync();
+      expect(await served()).toContain("rev3");
+      expect(await served()).not.toContain("rev2");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev3");
+    });
+  });
+
+  describe("document models a package stops providing", () => {
+    function setup(initial: DocumentModelModule[]) {
+      const registry = new DocumentModelRegistry();
+      registry.registerModules(makeDriveModule(), ...initial);
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn(() =>
+          Promise.resolve({
+            results: registry.getAllModules(),
+            options: { cursor: "", limit: 100 },
+          }),
+        ),
+      });
+      const harness = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      let emit!: (models: Record<string, DocumentModelModule[]>) => void;
+      const pkgManager = {
+        getDocumentModels: () => new Map([["pkg", initial]]),
+        getUniqueUpgradeManifests: () => [],
+        onDocumentModelsChange: (handler: typeof emit) => {
+          emit = handler;
+        },
+        onSubgraphsChange: vi.fn(),
+        onProcessorsChange: vi.fn(),
+      } as unknown as PackageManager;
+      setupEventListeners(
+        pkgManager,
+        harness.manager,
+        {} as Parameters<typeof setupEventListeners>[2],
+        () => ({}) as IProcessorHostModule,
+        registry,
+      );
+      const modelsChange = async (
+        models: Record<string, DocumentModelModule[]>,
+      ) => {
+        emit(models);
+        await vi.runAllTimersAsync();
+      };
+      const registeredTypes = () =>
+        registry.getAllModules().map((m) => m.documentModel.global.id);
+      return { ...harness, registry, modelsChange, registeredTypes };
+    }
+
+    function supergraphTypeNames(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): (string | undefined)[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { typeDefs: DocumentNode }[];
+      return getDefinitions().flatMap(({ typeDefs }) =>
+        typeDefs.definitions.map((def) =>
+          "name" in def ? def.name?.value : undefined,
+        ),
+      );
+    }
+
+    const alpha = makeModelModule("Alpha", "test/alpha");
+    const beta = makeModelModule("Beta", "test/beta");
+
+    it("unregisters a removed model and frees its subgraph name", async () => {
+      const {
+        manager,
+        handles,
+        disposed,
+        gatewayAdapter,
+        modelsChange,
+        registeredTypes,
+      } = setup([alpha, beta]);
+      await initAndFlush(manager);
+      class BetaStandIn extends BaseSubgraph {
+        name = "beta";
+        typeDefs = parse("type Query { betaStandIn: String }");
+        resolvers = {};
+      }
+      await manager.applyPackageSubgraphs(new Map([["other", [BetaStandIn]]]));
+      await vi.runAllTimersAsync();
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(
+        DocumentModelSubgraph,
+      );
+      const modelRoute = handles.get("/graphql/beta");
+
+      await modelsChange({ pkg: [alpha] });
+
+      expect(registeredTypes()).not.toContain("test/beta");
+      expect(registeredTypes()).toContain("test/alpha");
+      expect(disposed).toContain(modelRoute);
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(BetaStandIn);
+      expect(manager.hasSubgraphHandler("beta")).toBe(true);
+      const typeNames = supergraphTypeNames(gatewayAdapter);
+      expect(typeNames).toContain("Alpha");
+      expect(typeNames).not.toContain("Beta");
+    });
+
+    it("unregisters a model whose id changed", async () => {
+      const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+      await initAndFlush(manager);
+
+      await modelsChange({
+        pkg: [alpha, makeModelModule("Beta", "test/beta-renamed")],
+      });
+
+      expect(registeredTypes()).not.toContain("test/beta");
+      expect(registeredTypes()).toContain("test/beta-renamed");
+    });
+
+    it.each([
+      ["missing from the event", {}],
+      ["with no models", { pkg: [] }],
+    ])(
+      "keeps the models of a package %s, as a failed load sends",
+      async (_, event: Record<string, DocumentModelModule[]>) => {
+        const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+        await initAndFlush(manager);
+
+        await modelsChange(event);
+
+        expect(registeredTypes()).toEqual(
+          expect.arrayContaining(["test/alpha", "test/beta"]),
+        );
+      },
+    );
   });
 
   // ── shutdown() ─────────────────────────────────────────────────────────────

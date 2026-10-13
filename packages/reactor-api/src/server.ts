@@ -217,8 +217,9 @@ type Options = {
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
-  /** Storage health and workflow facts for the inspection subgraph. */
-  inspection?: ReactorInspectionOptions;
+  /** Storage health and workflow facts for the inspection subgraph; `false`
+   * leaves it unmounted and `api.inspection` undefined. On by default. */
+  inspection?: ReactorInspectionOptions | false;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
@@ -1565,7 +1566,7 @@ export async function initializeAndStartAPI(
     ),
     httpRoutes,
     attachmentReadsFollowDocumentPolicy,
-    reactorClientModule.reactorModule
+    reactorClientModule.reactorModule && options.inspection !== false
       ? createReactorInspectionSource(reactorClientModule.reactorModule, {
           ...options.inspection,
           attachmentStore: attachmentInspectionStore(attachments),
