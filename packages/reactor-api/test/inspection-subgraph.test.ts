@@ -25,7 +25,7 @@ import { ConsoleLogger } from "document-model";
 import type * as GraphQL from "graphql";
 import type { GraphQLSchema } from "graphql";
 import { createRequire } from "node:module";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   createInspectionResolvers,
   createReactorInspectionSource,
@@ -670,55 +670,25 @@ describe("inspection subgraph: throttling", () => {
     args: unknown,
     ctx: Context,
   ) => Promise<unknown>;
-  type Served = { isConsistent: boolean; keyframeIssues: { scope: string }[] };
 
-  function deferred<T>() {
-    let resolve!: (value: T) => void;
-    const promise = new Promise<T>((res) => {
-      resolve = res;
-    });
-    return { promise, resolve };
-  }
-
-  const issue = (scope: string) => ({
-    scope,
-    branch: "main",
-    revision: 1,
-    keyframeHash: "a",
-    replayedHash: "b",
-  });
-
-  function resultFor(id: string, scopes: string[]): ValidationResult {
-    return {
-      documentId: id,
-      isConsistent: scopes.length === 0,
-      keyframeIssues: scopes.map(issue),
-      snapshotIssues: [],
-      streamOrderIssues: [],
-    };
-  }
-
-  // Each validateDocument waits on `release`, so concurrent calls overlap.
-  function heldInspector(scopes: string[] = []) {
-    const release = deferred<void>();
-    const calls: { id: string; branch?: string }[] = [];
+  function countingInspector() {
+    const calls: string[] = [];
     const inspector = {
-      validateDocument: async (
-        id: string,
-        branch?: string,
-      ): Promise<ValidationResult> => {
-        calls.push({ id, branch });
-        await release.promise;
-        return resultFor(id, scopes);
+      validateDocument: (id: string): Promise<ValidationResult> => {
+        calls.push(id);
+        return Promise.resolve({
+          documentId: id,
+          isConsistent: true,
+          keyframeIssues: [],
+          snapshotIssues: [],
+          streamOrderIssues: [],
+        });
       },
     } as unknown as IReactorInspectionSource["inspector"];
-    return { inspector, calls, release: () => release.resolve() };
+    return { inspector, calls };
   }
 
-  function stubGate(
-    scopesOf: (ctx: Context) => string[] = () => ["global"],
-    operators: string[] = [],
-  ): InspectionCallerGate {
+  function stubGate(operators: string[] = []): InspectionCallerGate {
     return {
       isOperator: (ctx) => operators.includes(ctx.user?.address ?? ""),
       readerFor: () => {
@@ -726,8 +696,8 @@ describe("inspection subgraph: throttling", () => {
       },
       assertCanRead: (identifier) => Promise.resolve(identifier),
       readableIds: (ids) => Promise.resolve(new Set(ids)),
-      servedDocument: (identifier, _branch, ctx) =>
-        Promise.resolve({ id: identifier, scopes: new Set(scopesOf(ctx)) }),
+      servedDocument: (identifier) =>
+        Promise.resolve({ id: identifier, scopes: new Set(["global"]) }),
     };
   }
 
@@ -764,100 +734,14 @@ describe("inspection subgraph: throttling", () => {
   const validate = `query ($id: String!) { inspection {
     validateDocument(documentId: $id) { documentId isConsistent } } }`;
 
-  async function policedDocument(): Promise<string> {
+  it("refuses a caller past its calls per minute, but not an operator", async () => {
     module = await buildReadGateReactor();
     const id = await createFixture(module.client, "ins-throttle");
     await police(module.client, id);
-    return id;
-  }
-
-  it("runs one replay for concurrent callers of one document", async () => {
-    const id = await policedDocument();
-    const held = heldInspector();
-    const throttle = new InspectionThrottle();
-    const shared = vi.spyOn(throttle, "shared");
-    const real = createReactorInspectionSource(module!.reactorModule!);
-    const { schema } = buildSchema(module!, openHost(), {
-      ...real,
-      inspector: held.inspector,
-      throttle,
-    });
-
-    const a = run(schema, validate, contextFor(READER), { id });
-    const b = run(schema, validate, contextFor(READER), { id });
-    await vi.waitFor(() => expect(shared).toHaveBeenCalledTimes(2));
-    held.release();
-    const [first, second] = await Promise.all([a, b]);
-
-    expect(held.calls).toHaveLength(1);
-    expect(first.errors).toBeUndefined();
-    expect(second.data).toEqual(first.data);
-  });
-
-  it("filters a shared replay for each joiner's scopes", async () => {
-    const held = heldInspector(["global", "local"]);
-    const throttle = new InspectionThrottle();
-    const shared = vi.spyOn(throttle, "shared");
-    const fields = stubFields(
-      held.inspector,
-      throttle,
-      stubGate((ctx) =>
-        ctx.user?.address === "0xa" ? ["global", "local"] : ["global"],
-      ),
-    );
-
-    const a = fields.validateDocument(
-      undefined,
-      { documentId: "doc" },
-      contextFor("0xa"),
-    );
-    const b = fields.validateDocument(
-      undefined,
-      { documentId: "doc" },
-      contextFor("0xb"),
-    );
-    await vi.waitFor(() => expect(shared).toHaveBeenCalledTimes(2));
-    held.release();
-    const [servedA, servedB] = (await Promise.all([a, b])) as Served[];
-
-    expect(held.calls).toHaveLength(1);
-    expect(servedA.keyframeIssues.map((i) => i.scope)).toEqual([
-      "global",
-      "local",
-    ]);
-    expect(servedB.keyframeIssues.map((i) => i.scope)).toEqual(["global"]);
-    expect(servedB.isConsistent).toBe(false);
-  });
-
-  it("refuses a withheld caller before it joins a replay in flight", async () => {
-    const id = await policedDocument();
-    const held = heldInspector();
-    const throttle = new InspectionThrottle();
-    const shared = vi.spyOn(throttle, "shared");
-    const real = createReactorInspectionSource(module!.reactorModule!);
-    const { schema } = buildSchema(module!, openHost(), {
-      ...real,
-      inspector: held.inspector,
-      throttle,
-    });
-
-    const reader = run(schema, validate, contextFor(READER), { id });
-    await vi.waitFor(() => expect(shared).toHaveBeenCalledTimes(1));
-    const outsider = await run(schema, validate, contextFor(OUTSIDER), { id });
-
-    expect(codeOf(outsider)).toBe("FORBIDDEN");
-    expect(shared).toHaveBeenCalledTimes(1);
-    held.release();
-    expect((await reader).errors).toBeUndefined();
-    expect(held.calls).toHaveLength(1);
-  });
-
-  it("refuses a caller past its calls per minute, but not an operator", async () => {
-    const id = await policedDocument();
     const { schema } = buildSchema(
-      module!,
+      module,
       openHost(),
-      createReactorInspectionSource(module!.reactorModule!, {
+      createReactorInspectionSource(module.reactorModule!, {
         throttle: { callsPerMinute: 2 },
       }),
     );
@@ -869,12 +753,11 @@ describe("inspection subgraph: throttling", () => {
     expect(codeOf(refused)).toBe("TOO_MANY_REQUESTS");
     expect(typeof refused.errors?.[0]?.extensions.retryAfterMs).toBe("number");
 
-    const held = heldInspector();
-    held.release();
+    const counted = countingInspector();
     const fields = stubFields(
-      held.inspector,
+      counted.inspector,
       new InspectionThrottle({ callsPerMinute: 2 }),
-      stubGate(undefined, [OPERATOR]),
+      stubGate([OPERATOR]),
     );
     for (let i = 0; i < 5; i++) {
       await fields.validateDocument(
@@ -883,14 +766,12 @@ describe("inspection subgraph: throttling", () => {
         contextFor(OPERATOR),
       );
     }
-    expect(held.calls).toHaveLength(5);
+    expect(counted.calls).toHaveLength(5);
   });
 
   it("puts every anonymous caller in one bucket", async () => {
-    const held = heldInspector();
-    held.release();
     const fields = stubFields(
-      held.inspector,
+      countingInspector().inspector,
       new InspectionThrottle({ callsPerMinute: 2 }),
       stubGate(),
     );
@@ -902,21 +783,19 @@ describe("inspection subgraph: throttling", () => {
     expect(await codeOfRejection(call())).toBe("TOO_MANY_REQUESTS");
   });
 
-  it("shares the slot cap across fields, and an operator still queues", async () => {
-    const held = heldInspector();
+  it("charges driveIntegrity from the same bucket, before any read", async () => {
+    const counted = countingInspector();
     const fields = stubFields(
-      held.inspector,
-      new InspectionThrottle({ maxConcurrent: 1, maxQueued: 0 }),
-      stubGate(undefined, [OPERATOR]),
+      counted.inspector,
+      new InspectionThrottle({ callsPerMinute: 1 }),
+      stubGate(),
     );
 
-    const holder = fields.validateDocument(
+    await fields.validateDocument(
       undefined,
-      { documentId: "x" },
+      { documentId: "doc" },
       contextFor(READER),
     );
-    await vi.waitFor(() => expect(held.calls).toHaveLength(1));
-
     expect(
       await codeOfRejection(
         fields.driveIntegrity(
@@ -926,35 +805,6 @@ describe("inspection subgraph: throttling", () => {
         ),
       ),
     ).toBe("TOO_MANY_REQUESTS");
-
-    const operator = fields.validateDocument(
-      undefined,
-      { documentId: "y" },
-      contextFor(OPERATOR),
-    );
-    held.release();
-    await holder;
-    expect(await operator).toMatchObject({ documentId: "y" });
-    expect(held.calls.map((c) => c.id)).toEqual(["x", "y"]);
-  });
-
-  it("shares a replay per branch, with main as the default", async () => {
-    const held = heldInspector();
-    const throttle = new InspectionThrottle();
-    const shared = vi.spyOn(throttle, "shared");
-    const fields = stubFields(held.inspector, throttle, stubGate());
-    const call = (branch?: string) =>
-      fields.validateDocument(
-        undefined,
-        { documentId: "doc", branch },
-        contextFor(READER),
-      );
-
-    const calls = [call("main"), call(), call("other")];
-    await vi.waitFor(() => expect(shared).toHaveBeenCalledTimes(3));
-    held.release();
-    await Promise.all(calls);
-
-    expect(held.calls.map((c) => c.branch)).toEqual(["main", "other"]);
+    expect(counted.calls).toEqual(["doc"]);
   });
 });

@@ -11,23 +11,10 @@ describe("inspectionThrottleFromEnv", () => {
   it("reads each variable", () => {
     expect(
       inspectionThrottleFromEnv(
-        {
-          PH_INSPECTION_MAX_CONCURRENT: "4",
-          PH_INSPECTION_MAX_QUEUED: " 16 ",
-          PH_INSPECTION_CALLS_PER_MINUTE: "30",
-        },
+        { PH_INSPECTION_CALLS_PER_MINUTE: " 30 " },
         { warn: vi.fn() },
       ),
-    ).toEqual({ maxConcurrent: 4, maxQueued: 16, callsPerMinute: 30 });
-  });
-
-  it("accepts a queue of zero", () => {
-    expect(
-      inspectionThrottleFromEnv(
-        { PH_INSPECTION_MAX_QUEUED: "0" },
-        { warn: vi.fn() },
-      ),
-    ).toEqual({ maxQueued: 0 });
+    ).toEqual({ callsPerMinute: 30 });
   });
 
   it.each(["abc", "-1", "1.5", "0"])(
@@ -43,17 +30,6 @@ describe("inspectionThrottleFromEnv", () => {
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining("PH_INSPECTION_CALLS_PER_MINUTE"),
       );
-    },
-  );
-
-  it.each(["abc", "-1", "1.5"])(
-    "warns about and drops a queue of %s",
-    (raw) => {
-      const warn = vi.fn();
-      expect(
-        inspectionThrottleFromEnv({ PH_INSPECTION_MAX_QUEUED: raw }, { warn }),
-      ).toEqual({});
-      expect(warn).toHaveBeenCalledOnce();
     },
   );
 });

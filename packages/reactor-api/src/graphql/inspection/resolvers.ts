@@ -188,12 +188,10 @@ export function createInspectionResolvers(
   const throttle = source.throttle ?? new InspectionThrottle();
 
   // Charged before any read, so it also throttles probing the gate.
-  const admit = (ctx: Context): { unbounded: boolean } => {
-    if (gate.isOperator(ctx)) {
-      return { unbounded: true };
+  const admit = (ctx: Context): void => {
+    if (!gate.isOperator(ctx)) {
+      throttle.charge(ctx.user?.address.toLowerCase() ?? "anonymous");
     }
-    throttle.charge(ctx.user?.address.toLowerCase() ?? "anonymous");
-    return { unbounded: false };
   };
 
   const fields: Record<InspectionReadField, FieldResolver> = {
@@ -235,21 +233,16 @@ export function createInspectionResolvers(
       args: { driveId: string; branch: string },
       ctx: Context,
     ): Promise<WireInspectorDriveIntegrity> => {
-      const slot = admit(ctx);
+      admit(ctx);
       const identifier = await gate.assertCanRead(args.driveId, ctx);
       const served = await gate.servedDocument(identifier, args.branch, ctx);
       if (!served) {
         throw new ForbiddenError("to read this document");
       }
-      // Reads as the caller, so the result is not shared across callers.
-      return throttle.limited(
-        () =>
-          new DriveInspection(
-            gate.readerFor(ctx),
-            source.documentModelRegistry,
-          ).checkDriveIntegrity(served.id, args.branch),
-        slot,
-      );
+      return new DriveInspection(
+        gate.readerFor(ctx),
+        source.documentModelRegistry,
+      ).checkDriveIntegrity(served.id, args.branch);
     },
 
     attachmentInfo: operator(async (): Promise<WireInspectorAttachmentInfo> => {
@@ -276,19 +269,14 @@ export function createInspectionResolvers(
       args: { documentId: string; branch?: string | null },
       ctx: Context,
     ): Promise<WireValidationResult> => {
-      const slot = admit(ctx);
+      admit(ctx);
       const branch = args.branch ?? undefined;
       const identifier = await gate.assertCanRead(args.documentId, ctx);
       const served = await gate.servedDocument(identifier, branch, ctx);
       if (!served) {
         throw new ForbiddenError("to read this document");
       }
-      // Caller-independent; each joiner filters the shared result itself.
-      const result = await throttle.shared(
-        `${served.id}\u0000${branch ?? "main"}`,
-        () => inspector.validateDocument(served.id, branch),
-        slot,
-      );
+      const result = await inspector.validateDocument(served.id, branch);
       return servedIssues(result, served.scopes);
     },
 

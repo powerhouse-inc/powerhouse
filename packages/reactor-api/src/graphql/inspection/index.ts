@@ -14,6 +14,5 @@ export {
   DEFAULT_INSPECTION_THROTTLE,
   InspectionThrottle,
   InspectionThrottledError,
-  type InspectionSlotOptions,
   type InspectionThrottleConfig,
 } from "./throttle.js";
