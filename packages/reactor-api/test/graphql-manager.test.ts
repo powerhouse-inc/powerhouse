@@ -32,6 +32,7 @@ import type { WebSocketServer } from "ws";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
+import { AuthSubgraph } from "../src/graphql/auth/subgraph.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "../src/graphql/system/subgraph.js";
 import { getGeneratedDocumentModelTypes } from "../src/utils/create-schema.js";
@@ -3512,6 +3513,422 @@ describe("GraphQLManager", () => {
           harness.manager.hasSubgraphHandler(modelSubgraphName(model)),
         ).toBe(true);
       }
+    });
+  });
+
+  describe("type and root-field ownership", () => {
+    const CLAIM_EXCLUSION =
+      "Excluding subgraph @name from the supergraph: @error";
+
+    async function flush<T>(pending: Promise<T>): Promise<T> {
+      await vi.runAllTimersAsync();
+      return pending;
+    }
+
+    function supergraphNames(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): string[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { name: string }[];
+      return getDefinitions().map((d) => d.name.replace(":graphql/", ""));
+    }
+
+    /** The subgraphs logged as losing a claim, once per log line. */
+    function claimExclusions(logger: ILogger): string[] {
+      return vi
+        .mocked(logger.error)
+        .mock.calls.filter(
+          ([message, , reason]) =>
+            message === CLAIM_EXCLUSION &&
+            String(reason).includes("claims owned by another subgraph"),
+        )
+        .map(([, name]) => String(name));
+    }
+
+    function subgraphClass(
+      subgraphName: string,
+      subgraphTypeDefs: DocumentNode,
+    ): SubgraphClass {
+      return class extends BaseSubgraph {
+        name = subgraphName;
+        typeDefs = subgraphTypeDefs;
+        resolvers = {};
+      };
+    }
+
+    const widget = gql`
+      type Widget {
+        id: ID!
+        name: String
+      }
+      type Query {
+        widget: Widget
+      }
+    `;
+    const widgetSubset = gql`
+      type Widget {
+        id: ID!
+      }
+      type Query {
+        widgetById: Widget
+      }
+    `;
+
+    function makeOwnershipHarness(models?: DocumentModelModule[]) {
+      const logger = makeHarnessLogger();
+      return {
+        logger,
+        ...makeHarness({
+          logger,
+          enableDocumentModelSubgraphs: models !== undefined,
+          reactorClient: models
+            ? makeMockReactorClient({
+                getDocumentModelModules: vi
+                  .fn()
+                  .mockResolvedValue({ results: models }),
+              })
+            : undefined,
+        }),
+      };
+    }
+
+    async function applyPackages(
+      manager: GraphQLManager,
+      packages: [string, SubgraphClass[]][],
+    ) {
+      await flush(manager.applyPackageSubgraphs(new Map(packages)));
+      await flush(manager.updateRouter());
+    }
+
+    function expectRouteKept(
+      harness: ReturnType<typeof makeOwnershipHarness>,
+      name: string,
+    ) {
+      const route = harness.handles.get(`/graphql/${name}`);
+      expect(route).toBeDefined();
+      expect(route?.dispose).not.toHaveBeenCalled();
+      expect(harness.manager.hasSubgraphHandler(name)).toBe(true);
+    }
+
+    it("serves every model subgraph's Revision beside the reactor subgraph's", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("TodoList", "test/todo-list"),
+        makeModelModule("Invoice", "test/invoice"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+
+      expect(supergraphNames(harness.gatewayAdapter)).toEqual(
+        expect.arrayContaining(["r", "todo-list", "invoice"]),
+      );
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
+    it("excludes a subgraph defining a subset of an owned type, keeping its route", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+      ]);
+      await flush(harness.manager.updateRouter());
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-a");
+      expect(names).not.toContain("widget-b");
+      expectRouteKept(harness, "widget-b");
+      expect(claimExclusions(harness.logger)).toEqual(["widget-b"]);
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "widget-b",
+        expect.stringContaining('Widget (owned by "widget-a")'),
+      );
+    });
+
+    it("gives Query.documents to the first package claiming it", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        [
+          "pkg-a",
+          [
+            subgraphClass(
+              "docs-a",
+              gql`
+                type Query {
+                  documents(limit: Int): [String!]!
+                }
+              `,
+            ),
+          ],
+        ],
+        [
+          "pkg-b",
+          [
+            subgraphClass(
+              "docs-b",
+              gql`
+                type Query {
+                  documents: [String!]!
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("docs-a");
+      expect(names).not.toContain("docs-b");
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "docs-b",
+        expect.stringContaining('Query.documents (owned by "docs-a")'),
+      );
+    });
+
+    it("excludes a subgraph extending a type another subgraph defines", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        [
+          "pkg-b",
+          [
+            subgraphClass(
+              "widget-extra",
+              gql`
+                extend type Widget {
+                  extra: String
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-a");
+      expect(names).not.toContain("widget-extra");
+    });
+
+    it("keeps the reactor subgraph's PagingInput over a package's", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "paging",
+              gql`
+                input PagingInput {
+                  limit: Int
+                  offset: Int
+                }
+                type Query {
+                  things(paging: PagingInput): [String!]!
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("r");
+      expect(names).not.toContain("paging");
+      expectRouteKept(harness, "paging");
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "paging",
+        expect.stringContaining('PagingInput (owned by "r")'),
+      );
+    });
+
+    it("ranks the host over a package registered before it", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg", [subgraphClass("widget-pkg", widgetSubset)]],
+      ]);
+      await harness.manager.registerSubgraph(
+        subgraphClass("widget-host", widget),
+        "graphql",
+      );
+      await flush(harness.manager.updateRouter());
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-host");
+      expect(names).not.toContain("widget-pkg");
+    });
+
+    it("keeps the owner when the packages reload in another order", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      const packageA: [string, SubgraphClass[]] = [
+        "pkg-a",
+        [subgraphClass("widget-a", widget)],
+      ];
+      const packageB: [string, SubgraphClass[]] = [
+        "pkg-b",
+        [subgraphClass("widget-b", widgetSubset)],
+      ];
+      await applyPackages(harness.manager, [packageA, packageB]);
+
+      // As an HMR reload does: new instances, the loser registered first.
+      await applyPackages(harness.manager, [packageB, packageA]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-a");
+      expect(names).not.toContain("widget-b");
+      expect(new Set(claimExclusions(harness.logger))).toEqual(
+        new Set(["widget-b"]),
+      );
+    });
+
+    it("serves the loser once the owner's package is removed", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+      ]);
+      expect(supergraphNames(harness.gatewayAdapter)).not.toContain("widget-b");
+
+      await flush(harness.manager.unregisterPackage("pkg-a"));
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).not.toContain("widget-a");
+      expect(names).toContain("widget-b");
+    });
+
+    it("excludes the loser from the supergraph stream", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      const streamed = (
+        subgraphName: string,
+        field: string,
+        widgetSdl: string,
+      ): SubgraphClass =>
+        class extends BaseSubgraph {
+          name = subgraphName;
+          hasSubscriptions = true;
+          typeDefs = gql(`${widgetSdl}
+            type Query { ${field}Info: String }
+            type Subscription { ${field}: Widget }`);
+          resolvers = {
+            Subscription: {
+              [field]: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { [field]: { id: subgraphName } };
+                },
+              },
+            },
+          };
+        };
+      await applyPackages(harness.manager, [
+        [
+          "pkg-a",
+          [
+            streamed(
+              "stream-a",
+              "widgetA",
+              "type Widget { id: ID! name: String }",
+            ),
+          ],
+        ],
+        ["pkg-b", [streamed("stream-b", "widgetB", "type Widget { id: ID! }")]],
+      ]);
+      vi.useRealTimers();
+
+      const handler = harness.mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const res = await handler!(
+        new Request("http://localhost/graphql/stream", {
+          method: "POST",
+          headers: {
+            accept: "text/event-stream",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            query: '{ __type(name: "Subscription") { fields { name } } }',
+          }),
+        }),
+      );
+      const events = await res.text();
+      expect(events).toContain('{"name":"widgetA"}');
+      expect(events).not.toContain('{"name":"widgetB"}');
+      expectRouteKept(harness, "stream-b");
+    });
+
+    it("keeps a model's Queries type for its own subgraph over a codegen custom subgraph", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("TodoList", "test/todo-list"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      // The `ph generate --subgraph` template.
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "todo-list-custom",
+              gql`
+                """
+                TodoList Queries
+                """
+                type TodoListQueries {
+                  example(driveId: String!): String
+                }
+
+                type Query {
+                  todoList: TodoListQueries!
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("todo-list");
+      expect(names).not.toContain("todo-list-custom");
+      expectRouteKept(harness, "todo-list-custom");
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "todo-list-custom",
+        expect.stringContaining('TodoListQueries (owned by "todo-list")'),
+      );
+
+      // As editing the model in Vetra does.
+      await flush(harness.manager.regenerateDocumentModelSubgraphs());
+      await flush(harness.manager.updateRouter());
+
+      const reloaded = supergraphNames(harness.gatewayAdapter);
+      expect(reloaded).toContain("todo-list");
+      expect(reloaded).not.toContain("todo-list-custom");
+    });
+
+    it("excludes nothing among the real core subgraphs and base models", async () => {
+      const harness = makeOwnershipHarness([
+        driveDocumentModelModule,
+        documentModelDocumentModelModule,
+        reactorDriveDocumentModelModule,
+      ] as unknown as DocumentModelModule[]);
+      await initAndFlush(harness.manager, [
+        AnalyticsSubgraph,
+        ReactorSubgraph,
+        SystemSubgraph,
+        AuthSubgraph,
+      ]);
+
+      expect(claimExclusions(harness.logger)).toEqual([]);
+      expect(supergraphNames(harness.gatewayAdapter)).toEqual(
+        expect.arrayContaining(["analytics", "r", "system", "auth"]),
+      );
     });
   });
 });

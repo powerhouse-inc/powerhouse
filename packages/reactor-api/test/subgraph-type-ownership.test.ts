@@ -1,6 +1,7 @@
 import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { inspectionTypeDefs } from "../src/graphql/inspection/schema.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import {
   collectSubgraphClaims,
@@ -136,6 +137,12 @@ describe("resolveClaimOwnership", () => {
         "todo-list": modelTypeDefs("TodoList"),
         invoice: modelTypeDefs("Invoice"),
       }),
+    ).toEqual({});
+  });
+
+  it("finds no conflict between the reactor and inspection subgraphs", () => {
+    expect(
+      losers({ r: reactorTypeDefs, inspection: inspectionTypeDefs }),
     ).toEqual({});
   });
 
