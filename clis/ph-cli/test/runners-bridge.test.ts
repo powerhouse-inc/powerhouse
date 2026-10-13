@@ -10,6 +10,12 @@ vi.mock("../src/services/connect-studio.js", () => ({
 vi.mock("../src/services/switchboard.js", () => ({
   startSwitchboard: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../src/services/connect-preview.js", () => ({
+  runConnectPreview: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../src/services/connect-build.js", () => ({
+  runConnectBuild: vi.fn().mockResolvedValue(undefined),
+}));
 
 const ctx: RunnerContext = { projectRoot: "/lab", verb: "run", env: {} };
 
@@ -149,6 +155,37 @@ describe("switchboard bridge runner", () => {
     } finally {
       delete process.env.REACTOR_AUTH_ENFORCEMENT;
     }
+  });
+});
+
+describe("connect bridge runner — serve/build verbs (P3.3)", () => {
+  it("serve maps to the classic preview service with runner options", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectPreview } =
+      await import("../src/services/connect-preview.js");
+    await runner.serve(
+      {
+        name: "lab-connect",
+        runner: { module: "m", port: 8099, outDir: "build-out" },
+      },
+      ctx,
+    );
+    expect(vi.mocked(runConnectPreview).mock.calls[0][0]).toMatchObject({
+      port: 8099,
+      outDir: "build-out",
+      cors: true,
+      printUrls: true,
+    });
+  });
+
+  it("build maps to the classic build service (outDir default dist)", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    await runner.build({ name: "lab-connect", runner: { module: "m" } }, ctx);
+    expect(vi.mocked(runConnectBuild).mock.calls[0][0]).toMatchObject({
+      outDir: "dist",
+    });
   });
 });
 
