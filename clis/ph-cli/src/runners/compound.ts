@@ -4,6 +4,7 @@ import {
   loadHost,
   profileSchema,
   type HostDefinition,
+  type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
 import type { VetraArgs } from "../types.js";
@@ -97,6 +98,21 @@ export async function run(
         `Set runner.port in the member host files or override it in the compound's wrappers.`,
     );
   }
+
+  // The switchboard member's reactor block applies on this path too: startVetra
+  // boots the switchboard in-process without going through the switchboard
+  // runner's verbs, so project the block onto env HERE (P2.4 via the vetra
+  // path). Wrapper override wins over the member host file, as everywhere.
+  const sbMember = await loadHost(ctx.projectRoot, switchboardRef.host);
+  const sbWrapper = (host.children ?? {})[switchboardRef.name] as
+    | { reactor?: Record<string, unknown> }
+    | undefined;
+  const sbReactor = {
+    ...((sbMember.host.reactor as Record<string, unknown> | undefined) ?? {}),
+    ...(sbWrapper?.reactor ?? {}),
+  } as ReactorConfig;
+  const { applyReactorEnvProjection } = await import("./switchboard.js");
+  applyReactorEnvProjection(sbReactor, `hosts/${switchboardRef.host}/host.js`);
 
   // Classic `ph vetra` resolves these through flag>env>.env>config>constant;
   // a hosts project carries the values in its host files (the projection

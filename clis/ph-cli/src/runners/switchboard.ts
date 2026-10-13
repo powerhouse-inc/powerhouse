@@ -57,23 +57,33 @@ function toSwitchboardArgs(
   return args as SwitchboardArgs;
 }
 
-async function start(host: HostDefinition, devMode: boolean): Promise<void> {
-  const reactor = host.reactor as ReactorConfig | undefined;
+/**
+ * Apply a host's reactor block to the CURRENT process env, the way the
+ * in-process switchboard server reads it at boot (D2.c: env derivation
+ * immediately before the member starts; sequential boots make this safe).
+ * Single-sourcing teeth first: a pre-set env contradicting the protocol block
+ * fails loudly. Then set-if-absent, so an operator's explicit (agreeing) env
+ * still wins during the transition. Returns the non-env options (dbPath).
+ * Also called by the compound bridge for its switchboard member — the vetra
+ * path boots the switchboard via startVetra, not via this runner's verbs.
+ */
+export function applyReactorEnvProjection(
+  reactor: ReactorConfig | undefined,
+  hostFileLabel: string,
+): { dbPath?: string } {
   const { env, options } = projectReactorToSwitchboard(reactor);
-
-  // Single-sourcing teeth: a pre-set env contradicting the protocol block
-  // fails loudly before anything boots.
-  assertProtocolConsistency(
-    reactor?.protocol,
-    process.env,
-    `hosts/${host.name}/host.js`,
-  );
-  // Transition precedence: set only what the env does not already carry, so an
-  // operator's explicit override still wins (contradictions already rejected).
+  assertProtocolConsistency(reactor?.protocol, process.env, hostFileLabel);
   for (const [name, value] of Object.entries(env)) {
     if (process.env[name] === undefined) process.env[name] = value;
   }
+  return options;
+}
 
+async function start(host: HostDefinition, devMode: boolean): Promise<void> {
+  const options = applyReactorEnvProjection(
+    host.reactor as ReactorConfig | undefined,
+    `hosts/${host.name}/host.js`,
+  );
   const { startSwitchboard } = await import("../services/switchboard.js");
   await startSwitchboard(toSwitchboardArgs(host, devMode, options.dbPath));
 }
