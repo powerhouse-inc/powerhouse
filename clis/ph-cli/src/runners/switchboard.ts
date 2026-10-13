@@ -101,20 +101,30 @@ async function start(
   );
   const { startSwitchboard } = await import("../services/switchboard.js");
   const args = toSwitchboardArgs(host, devMode, options.dbPath);
-  await startSwitchboard(args);
+  const switchboard = await startSwitchboard(args);
   const port = args.port;
   const slug =
     typeof host.runner.driveSlug === "string"
       ? host.runner.driveSlug
       : DEFAULT_DRIVE_SLUG;
   const driveUrl = `http://localhost:${port}/d/${slug}`;
+  const driveUrls = [driveUrl];
+
+  // Workflows on → seed the SAME project-hashed workflows drive the vetra
+  // path seeds (opens in Workflow Studio); it rides the handle so a
+  // supervising compound projects it into the connect member's drives.
+  if (switchboard?.workflowsEnabled) {
+    const { seedWorkflowsDrive } = await import("../services/vetra.js");
+    driveUrls.push(await seedWorkflowsDrive(switchboard.reactor, port));
+  }
+
   const ready = waitForDrive(driveUrl, 180_000);
   // A supervisor awaits `ready` and sees the rejection; an unsupervised caller
   // (or a test with the service mocked) must not die of an unhandled one.
   ready.catch(() => undefined);
   return {
     port,
-    driveUrls: [driveUrl],
+    driveUrls,
     endpoints: { graphql: `http://localhost:${port}/graphql` },
     ready,
   };

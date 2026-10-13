@@ -93,7 +93,10 @@ async function startVetraPreviewDrive(
 }
 
 // Opens in Workflow Studio; only seeded when the switchboard runs workflows.
-async function startVetraWorkflowsDrive(
+// Exported for the switchboard bridge runner: a hosts project with
+// reactor.workflows enabled seeds the SAME project-hashed drive this vetra
+// path does, until drive provisioning becomes a plugin contribution.
+export async function seedWorkflowsDrive(
   reactor: IReactorClient,
   port: number,
   verbose?: boolean,
@@ -208,7 +211,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
     let workflowsDriveUrl: string | null = null;
     if (switchboard.workflowsEnabled) {
       try {
-        workflowsDriveUrl = await startVetraWorkflowsDrive(
+        workflowsDriveUrl = await seedWorkflowsDrive(
           switchboard.reactor,
           actualSwitchboardPort,
           verbose,

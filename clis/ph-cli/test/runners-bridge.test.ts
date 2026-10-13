@@ -8,7 +8,8 @@ vi.mock("../src/services/connect-studio.js", () => ({
   runConnectStudio: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../src/services/switchboard.js", () => ({
-  startSwitchboard: vi.fn().mockResolvedValue(undefined),
+  // the real service returns the server handle; workflows off in these tests
+  startSwitchboard: vi.fn().mockResolvedValue({ workflowsEnabled: false }),
 }));
 vi.mock("../src/services/connect-preview.js", () => ({
   runConnectPreview: vi.fn().mockResolvedValue(undefined),
