@@ -2,10 +2,12 @@ import type { Kysely, MigrationProvider } from "kysely";
 import { Migrator, sql } from "kysely";
 import * as migration0001 from "./0001_drive_node.js";
 import * as migration0002 from "./0002_document_name.js";
+import * as migration0003 from "./0003_drive_node_listing_indexes.js";
 
 const migrations = {
   "0001_drive_node": migration0001,
   "0002_document_name": migration0002,
+  "0003_drive_node_listing_indexes": migration0003,
 };
 
 const REACTOR_DRIVE_MIGRATION_TABLE = "kysely_migration_reactor_drive";
