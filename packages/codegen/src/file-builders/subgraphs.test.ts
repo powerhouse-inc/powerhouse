@@ -21,6 +21,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Kind, parse } from "graphql";
+import {
+  customSubgraphResolversTemplate,
+  customSubgraphSchemaTemplate,
+} from "templates";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { makeSubgraphsIndexFile } from "./subgraphs.js";
@@ -126,5 +131,36 @@ describe("makeSubgraphsIndexFile", () => {
       'export * as StatementsSubgraph from "./statements/index.js";',
     );
     expect(index.match(/LedgerSubgraph/g)).toHaveLength(1);
+  });
+});
+
+describe("custom subgraph templates", () => {
+  const names = { pascalCaseName: "TodoList", camelCaseName: "todoList" };
+
+  it("names the query type apart from the model subgraph's <Model>Queries", () => {
+    const source = customSubgraphSchemaTemplate(names);
+    const sdl = source.slice(
+      source.indexOf("gql`") + 4,
+      source.lastIndexOf("`"),
+    );
+    const definitions = parse(sdl).definitions.flatMap((def) =>
+      def.kind === Kind.OBJECT_TYPE_DEFINITION ? [def] : [],
+    );
+
+    expect(definitions.map((def) => def.name.value)).toEqual([
+      "TodoListSubgraphQueries",
+      "Query",
+    ]);
+    const query = definitions.find((def) => def.name.value === "Query");
+    expect(query?.fields?.map((field) => field.name.value)).toEqual([
+      "todoList",
+    ]);
+  });
+
+  it("resolves the renamed query type", () => {
+    const source = customSubgraphResolversTemplate(names);
+
+    expect(source).toContain("TodoListSubgraphQueries: {");
+    expect(source).not.toMatch(/\bTodoListQueries\b/);
   });
 });
