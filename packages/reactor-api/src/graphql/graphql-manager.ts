@@ -27,6 +27,12 @@ import {
   type IHttpScope,
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
+import {
+  reportFailure,
+  runDetached,
+  type ReportError,
+  type RunDetachedOptions,
+} from "../utils/detached.js";
 import type { AuthService, User } from "../services/auth.service.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type {
@@ -175,6 +181,7 @@ export type GraphQLManagerOptions = {
    * reactor client, which withholds a drive the host's own key may not read.
    */
   driveStore?: DriveStore;
+  reportError?: ReportError;
 };
 
 /**
@@ -414,6 +421,7 @@ export class GraphQLManager {
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
   private readonly inspection?: IReactorInspectionSource;
+  readonly #reporting: RunDetachedOptions;
 
   constructor(options: GraphQLManagerOptions) {
     this.path = options.path;
@@ -436,6 +444,7 @@ export class GraphQLManager {
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
     this.inspection = options.inspection;
+    this.#reporting = { logger: options.logger, report: options.reportError };
 
     this.driveOwnershipCache = new DriveOwnershipCache(
       options.driveStore ?? this.reactorClient,
@@ -1175,15 +1184,15 @@ export class GraphQLManager {
     await this.updateRouter();
   }
 
-  /** Not awaited: the debounced call never settles a promise whose timer a
-   * later call replaced, so awaiting it in a registry change could wedge the
-   * queue. */
+  /** Not awaited: a registry change does not wait out the debounce. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
     this.#inHook.exit(() => {
-      this.updateRouter().catch((error: unknown) => {
-        this.logger.error("Failed to update router: @error", error);
-      });
+      void runDetached(
+        "Router update",
+        () => this.updateRouter(),
+        this.#reporting,
+      );
     });
   }
 
@@ -1581,9 +1590,10 @@ export class GraphQLManager {
       await this.gatewayAdapter.updateSupergraph();
       this.logger.debug("Updated Apollo Gateway supergraph");
     } catch (error) {
-      this.logger.error(
-        "Failed to update Apollo Gateway supergraph: @error",
+      reportFailure(
+        this.#reporting,
         error,
+        "Failed to update Apollo Gateway supergraph: @error",
       );
     }
 

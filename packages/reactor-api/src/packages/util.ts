@@ -176,26 +176,34 @@ export function extractUpgradeManifests(
   return Array.from(manifests.values());
 }
 
-export function debounce<T extends unknown[], R>(
-  func: (...args: T) => Promise<R>,
-  delay = 250,
-) {
-  let timer: number;
-  return (immediate = false, ...args: T) => {
-    if (timer) {
-      clearTimeout(timer);
+/** Calls superseded before the timer fires settle with the run that follows. */
+export function debounce<R>(func: () => Promise<R>, delay = 250) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let waiting: {
+    resolve: (value: R) => void;
+    reject: (error: unknown) => void;
+  }[] = [];
+
+  const run = async () => {
+    timer = undefined;
+    const callers = waiting;
+    waiting = [];
+    try {
+      const value = await func();
+      callers.forEach((caller) => caller.resolve(value));
+    } catch (error) {
+      callers.forEach((caller) => caller.reject(error));
     }
+  };
+
+  return (immediate = false): Promise<R> => {
+    clearTimeout(timer);
     return new Promise<R>((resolve, reject) => {
+      waiting.push({ resolve, reject });
       if (immediate) {
-        func(...args)
-          .then(resolve)
-          .catch(reject);
+        void run();
       } else {
-        timer = setTimeout(() => {
-          func(...args)
-            .then(resolve)
-            .catch(reject);
-        }, delay) as unknown as number;
+        timer = setTimeout(() => void run(), delay);
       }
     });
   };
