@@ -169,7 +169,11 @@ describe("workflow cache", () => {
     });
 
     const racing = service.fire(workflowId, {}, "schedule");
-    await vi.waitFor(() => expect(loads()).toBe(1));
+    // NOTE(to author): waitFor's default 1s timeout flaked on a loaded CI
+    // shard (expected 1 load, saw 0 — run 38423325035); the fire path can
+    // take longer than 1s to reach the gated load there. Generous timeout,
+    // same assertion.
+    await vi.waitFor(() => expect(loads()).toBe(1), { timeout: 15_000 });
     // A newer operation lands while that read is in flight.
     await service.onOperations([
       {

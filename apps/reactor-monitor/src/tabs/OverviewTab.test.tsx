@@ -14,8 +14,8 @@ import {
   type MonitorReach,
   type MonitorReactorInfo,
 } from "@powerhousedao/reactor-monitor";
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { OverviewTab } from "./OverviewTab.js";
 
 const LOCAL_ACCESS = { admin: true, sql: true } as const;
@@ -187,6 +187,51 @@ describe("OverviewTab capability grid", () => {
     );
     expect(
       view.getByTestId("remote-recheck").getAttribute("disabled"),
+    ).not.toBeNull();
+  });
+});
+
+describe("OverviewTab worker restart", () => {
+  const worker = () =>
+    stubReactor(
+      "worker",
+      { hosting: "worker", inspection: "rpc" },
+      info(PGLITE_IDB_STORAGE_FACTS, [LOCAL_CHANNEL_TYPE]),
+    );
+
+  it("restarts a worker through onRestartWorker", async () => {
+    const onRestartWorker = vi.fn(() => Promise.resolve());
+    const view = render(
+      <OverviewTab onRestartWorker={onRestartWorker} reactor={worker()} />,
+    );
+
+    fireEvent.click(view.getByTestId("worker-restart"));
+
+    await waitFor(() => {
+      expect(onRestartWorker).toHaveBeenCalledTimes(1);
+    });
+    expect(view.queryByTestId("worker-restart-error")).toBeNull();
+  });
+
+  it("shows why a restart failed", async () => {
+    const view = render(
+      <OverviewTab
+        onRestartWorker={() => Promise.reject(new Error("host refused"))}
+        reactor={worker()}
+      />,
+    );
+
+    fireEvent.click(view.getByTestId("worker-restart"));
+
+    const error = await waitFor(() => view.getByTestId("worker-restart-error"));
+    expect(error.textContent).toContain("host refused");
+  });
+
+  it("disables restart without a handler", () => {
+    const view = render(<OverviewTab reactor={worker()} />);
+
+    expect(
+      view.getByTestId("worker-restart").getAttribute("disabled"),
     ).not.toBeNull();
   });
 });

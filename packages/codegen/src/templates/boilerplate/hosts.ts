@@ -1,0 +1,115 @@
+/**
+ * uniform-runners scaffold: the hosts/ folder (host definitions) and the
+ * agents/ stub. Host files are static PROJECTIONS of powerhouse.config.json —
+ * every port is referenced, not copied, so powerhouse.config.json stays the
+ * single value store and `ph install` & friends keep one file to edit.
+ * Templates take the project name only for display identity; names never seed
+ * storage identity, so renaming a host is always safe.
+ */
+
+export interface HostsTemplates {
+  readme: string;
+  connectHost: string;
+  switchboardHost: string;
+  vetraHost: string;
+  agentsIndex: string;
+}
+
+export function buildHostsTemplates(projectName: string): HostsTemplates {
+  const readme = `# hosts/
+
+Each subfolder defines one host: an application this project can run via
+\`ph run <host-name> [verb]\`. A host.js is a static projection of
+powerhouse.config.json — plain data, default-exported:
+
+\`\`\`js
+export default {
+  name,     // display identity (never seeds storage identity — renaming is safe)
+  runner,   // { module, ...process options } — ph run imports and calls runner.module
+  config,   // handed to the runner's runtime whole
+  reactor,  // reactor runners only (projection arrives in a later phase)
+  children, // compound runners only — reactor XOR children
+};
+\`\`\`
+
+Rules: the only legal import is the project's powerhouse.config.json; the
+export must survive a JSON round trip (no functions); \`ph <host-name>\` is
+sugar for \`ph run <host-name>\` (built-in commands win name collisions).
+
+Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
+server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs).
+`;
+
+  const connectHost = `// @ts-check
+// Static projection of powerhouse.config.json — only that import is allowed;
+// runtime behavior lives in the runner module named below.
+import config from "../../powerhouse.config.json" with { type: "json" };
+
+export default {
+  name: "${projectName}-connect",
+
+  // \`ph run connect\` (sugar: \`ph connect\` once hosts are active) imports
+  // and calls this module. Options here are consumed by the runner and never
+  // emitted into the runtime config.
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/connect",
+    port: config.studio?.port ?? 3000, // referenced — the value stays in powerhouse.config.json
+  },
+
+  // handed to the runtime whole: the connect.* block, projected unchanged
+  config: config.connect ?? {},
+};
+`;
+
+  const switchboardHost = `// @ts-check
+import config from "../../powerhouse.config.json" with { type: "json" };
+
+export default {
+  name: "${projectName}-switchboard",
+
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/switchboard",
+    port: config.reactor?.port ?? 4001, // referenced — single value store
+  },
+  // \`auth\` is read from powerhouse.config.json by the server itself; the
+  // reactor block (storage, protocol, backends) arrives in a later phase.
+};
+`;
+
+  const vetraHost = `// @ts-check
+import config from "../../powerhouse.config.json" with { type: "json" };
+
+export default {
+  name: "vetra",
+
+  // The compound starts each member via that member's own declared runner at
+  // defaultVerb. "dev" is what makes vetra vetra: Vite package loader on the
+  // switchboard, HMR studio on connect, codegen hot-reload.
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/compound",
+    defaultVerb: "dev",
+  },
+
+  // Member wrappers reference sibling hosts by folder name; a wrapper
+  // overrides the member's sections by the same names (wrapper wins).
+  children: {
+    "vetra-studio": {
+      host: "connect",
+      runner: { port: config.vetra?.connectPort ?? 3001 },
+    },
+    "vetra-switchboard": {
+      host: "switchboard",
+    },
+  },
+};
+`;
+
+  const agentsIndex = `/**
+ * agents/ — agent definitions (profiles, skills, commands, triggers).
+ * Scaffolded empty; the agent-host phases of uniform-runners populate it.
+ */
+export {};
+`;
+
+  return { readme, connectHost, switchboardHost, vetraHost, agentsIndex };
+}

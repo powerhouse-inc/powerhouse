@@ -27,6 +27,7 @@ export async function provisionRemote(
     url: endpoint,
     ...(remote.headers ? { headers: remote.headers } : {}),
     ...(remote.fetch ? { fetch: remote.fetch } : {}),
+    ...(remote.timeoutMs !== undefined ? { timeoutMs: remote.timeoutMs } : {}),
   });
 
   const info = await client.info();

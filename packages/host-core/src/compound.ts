@@ -1,0 +1,252 @@
+import type { HostDefinition } from "./host-loader.js";
+import { loadHost } from "./host-loader.js";
+import { projectDrivesIntoConnect } from "./connect-projection.js";
+import {
+  clearRunRecord,
+  probeRun,
+  writeRunRecord,
+  type RunRecordMember,
+} from "./run-record.js";
+import {
+  getVerb,
+  resolveRunnerModule,
+  validateHost,
+  type RunnerContext,
+} from "./runner-resolver.js";
+
+/**
+ * The generic compound runner: supervises the members a compound host
+ * declares, each started via its OWN declared runner at the compound's member
+ * verb. It projects a reactor member's created drives into a connect member's
+ * config, writes a .ph/run/<host>.json record, holds a per-project lock, and
+ * tears members down in reverse order on shutdown.
+ *
+ * Phase-1 model is ATTACHED and in-process: member runner verbs start their
+ * servers (which hold the event loop) and return a handle of facts; the
+ * compound stays alive as long as they do. Detached supervision is phase 5.
+ */
+
+/** Facts a member runner verb returns so the compound can project and tear
+ * down. All optional: a void-returning verb is treated as "started, no facts,
+ * self-sustaining" (the phase-0 bridges). */
+export interface RunnerHandle {
+  /** Port the member bound. */
+  port?: number;
+  /** Drive URLs a reactor member created, in display order — projected into a
+   * connect member's defaultDrives. */
+  driveUrls?: (string | null | undefined)[];
+  /** Named endpoints (graphql, mcp, …) for the run record / diagnostics. */
+  endpoints?: Record<string, string>;
+  /** Resolves when the member is serving; the compound awaits it before the
+   * next member when ordering requires readiness. */
+  ready?: Promise<void>;
+  /** Reverse-order teardown. */
+  shutdown?: () => void | Promise<void>;
+}
+
+export interface CompoundMember {
+  host: string;
+  plugins?: string[];
+  runner?: { port?: number } & Record<string, unknown>;
+  config?: Record<string, unknown>;
+  reactor?: Record<string, unknown>;
+}
+
+export interface CompoundWiring {
+  /** Project the reactor member's created drives into the connect member. */
+  projectDrivesIntoConnect?: boolean;
+  /** --drives-public-base equivalent. */
+  drivesPublicBase?: string | null;
+  /** Member start order; defaults to declaration order. */
+  startOrder?: string[];
+  /** Write .ph/run/<host>.json (default true). */
+  runtimeRecord?: boolean;
+}
+
+interface StartedMember {
+  name: string;
+  handle: RunnerHandle;
+}
+
+function memberEntries(host: HostDefinition): [string, CompoundMember][] {
+  const children = (host.children ?? {}) as Record<string, CompoundMember>;
+  return Object.entries(children);
+}
+
+function orderedMembers(
+  host: HostDefinition,
+  wiring: CompoundWiring,
+): [string, CompoundMember][] {
+  const entries = memberEntries(host);
+  if (!wiring.startOrder) return entries;
+  const byName = new Map(entries);
+  const out: [string, CompoundMember][] = [];
+  for (const name of wiring.startOrder) {
+    const m = byName.get(name);
+    if (m) {
+      out.push([name, m]);
+      byName.delete(name);
+    }
+  }
+  // any not named in startOrder keep declaration order, after the named ones
+  for (const [name, m] of entries) if (byName.has(name)) out.push([name, m]);
+  return out;
+}
+
+/** Build the member host object the member runner sees: the member's own
+ * host.js, with the wrapper's runner/config/reactor overrides applied
+ * (wrapper wins), and any compound-computed config patch merged in. */
+async function resolveMemberHost(
+  projectRoot: string,
+  member: CompoundMember,
+  configPatch?: Record<string, unknown>,
+): Promise<HostDefinition> {
+  const loaded = await loadHost(projectRoot, member.host);
+  const base = loaded.host;
+  return {
+    ...base,
+    runner: { ...base.runner, ...(member.runner ?? {}) },
+    config: {
+      ...(base.config ?? {}),
+      ...(member.config ?? {}),
+      ...(configPatch ?? {}),
+    },
+    reactor: { ...(base.reactor ?? {}), ...(member.reactor ?? {}) } as
+      | Record<string, unknown>
+      | undefined,
+  };
+}
+
+function isConnectMember(member: CompoundMember): boolean {
+  return member.host === "connect";
+}
+function isReactorFactMember(member: CompoundMember): boolean {
+  return member.host === "switchboard";
+}
+
+export interface RunCompoundOptions {
+  /** Project identity for the lock (defaults read from package.json by the CLI). */
+  projectName: string;
+  /** Extra record fields (e.g. mcpUrl). */
+  recordExtra?: Record<string, unknown>;
+  /** Registers signal handlers for teardown (default true; tests pass false). */
+  installSignalHandlers?: boolean;
+}
+
+export interface RunCompoundResult {
+  started: StartedMember[];
+  shutdown: () => Promise<void>;
+}
+
+export async function runCompound(
+  host: HostDefinition,
+  ctx: RunnerContext,
+  options: RunCompoundOptions,
+): Promise<RunCompoundResult> {
+  const projectRoot = ctx.projectRoot;
+  const wiring = (host.config ?? {}) as CompoundWiring;
+  const verb = (host.runner.defaultVerb as string | undefined) ?? ctx.verb;
+
+  // Lock: one live instance per project per host (storage-root contention).
+  const probe = probeRun(projectRoot, host.name, options.projectName);
+  if (probe.status === "live") {
+    throw new Error(
+      `${host.name} is already running for this project (pid ${probe.record.pid}). ` +
+        `Stop it before starting another.`,
+    );
+  }
+  if (probe.status === "foreign") {
+    throw new Error(
+      `.ph/run/${host.name}.json describes a live "${probe.record.projectName}", ` +
+        `but this project is "${options.projectName}". Refusing to start a second instance.`,
+    );
+  }
+  // stale record: proceed (a dead pid does not hold the lock)
+
+  const started: StartedMember[] = [];
+  const reactorFacts: { driveUrls: (string | null | undefined)[] } = {
+    driveUrls: [],
+  };
+
+  const shutdown = async () => {
+    for (const m of [...started].reverse()) {
+      try {
+        await m.handle.shutdown?.();
+      } catch {
+        // best effort — keep tearing down the rest
+      }
+    }
+    if (wiring.runtimeRecord !== false) {
+      clearRunRecord(projectRoot, host.name);
+    }
+  };
+
+  for (const [name, member] of orderedMembers(host, wiring)) {
+    // Compute a config patch for the connect member from reactor facts.
+    let configPatch: Record<string, unknown> | undefined;
+    if (
+      isConnectMember(member) &&
+      wiring.projectDrivesIntoConnect &&
+      reactorFacts.driveUrls.length > 0
+    ) {
+      const configuredDefaultDrives = (
+        (member.config as { drives?: { defaultDrives?: unknown } } | undefined)
+          ?.drives as { defaultDrives?: unknown } | undefined
+      )?.defaultDrives as never;
+      configPatch = projectDrivesIntoConnect({
+        createdDriveUrls: reactorFacts.driveUrls,
+        configuredDefaultDrives,
+        publicBase: wiring.drivesPublicBase,
+      });
+    }
+
+    const memberHost = await resolveMemberHost(
+      projectRoot,
+      member,
+      configPatch,
+    );
+    const specifier = memberHost.runner.module;
+    const runner = await resolveRunnerModule(projectRoot, specifier);
+    validateHost(runner, specifier, memberHost, `hosts/${member.host}/host.js`);
+    const fn = getVerb(runner, specifier, verb);
+    const handle = ((await fn(memberHost, ctx)) ?? {}) as RunnerHandle;
+    if (handle.ready) await handle.ready;
+    started.push({ name, handle });
+
+    if (isReactorFactMember(member) && handle.driveUrls) {
+      reactorFacts.driveUrls.push(...handle.driveUrls);
+    }
+  }
+
+  if (wiring.runtimeRecord !== false) {
+    const members: Record<string, RunRecordMember> = {};
+    for (const m of started) {
+      members[m.name] = {
+        port: m.handle.port,
+        url: m.handle.endpoints?.graphql ?? m.handle.endpoints?.connect,
+      };
+    }
+    writeRunRecord(projectRoot, {
+      pid: process.pid,
+      hostName: host.name,
+      projectName: options.projectName,
+      startedAt: new Date().toISOString(),
+      members,
+      extra: options.recordExtra,
+    });
+  }
+
+  if (options.installSignalHandlers !== false) {
+    const onSignal = (code: number) => {
+      void shutdown().finally(() => process.exit(code));
+    };
+    process.on("exit", () => {
+      if (wiring.runtimeRecord !== false)
+        clearRunRecord(projectRoot, host.name);
+    });
+    process.on("SIGINT", () => onSignal(130));
+    process.on("SIGTERM", () => onSignal(143));
+  }
+
+  return { started, shutdown };
+}
