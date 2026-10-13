@@ -73,7 +73,7 @@ import type {
 } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 import type { PackageManager } from "../src/packages/package-manager.js";
-import { setupEventListeners } from "../src/server.js";
+import { setupEventListeners } from "../src/packages/package-listeners.js";
 import type { IProcessorHostModule } from "../src/types.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
@@ -244,6 +244,7 @@ type HarnessOptions = {
   logger?: ILogger;
   authorizationService?: IAuthorizationService;
   attachments?: IAttachmentClientProvider;
+  reportError?: (error: unknown) => void;
 };
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -285,6 +286,7 @@ function makeHarness(options: HarnessOptions = {}) {
         policy: AuthorizationPolicy.OPEN,
       }),
     attachments: options.attachments,
+    reportError: options.reportError,
   });
 
   return {
@@ -2314,6 +2316,38 @@ describe("GraphQLManager", () => {
       await manager.shutdown();
 
       expect(wsServer.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("reportError", () => {
+    it("receives a failed supergraph update", async () => {
+      const reportError = vi.fn();
+      const { manager, gatewayAdapter } = makeHarness({ reportError });
+      await initAndFlush(manager);
+      const failure = new Error("composition failed");
+      gatewayAdapter.updateSupergraph.mockRejectedValueOnce(failure);
+
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
+    });
+
+    it("receives a failed router update scheduled by a package change", async () => {
+      const reportError = vi.fn();
+      const { manager } = makeHarness({ reportError });
+      await initAndFlush(manager);
+      const failure = new Error("router update failed");
+      manager.updateRouter = vi.fn(() => Promise.reject(failure));
+      class Widget extends BaseSubgraph {
+        name = "widget";
+      }
+
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Widget]]]));
+      await vi.runAllTimersAsync();
+
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
     });
   });
 
@@ -4686,6 +4720,38 @@ describe("GraphQLManager", () => {
 
       expect(harness.manager.hasSubgraphHandler("widget-broken")).toBe(false);
       expect(supergraphNames(harness.gatewayAdapter)).toContain("widget-b");
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
+    it("lets a refused model's subgraph claim nothing", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("Revision", "test/revision"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "revision-custom",
+              gql`
+                type RevisionQueries {
+                  example: String
+                }
+                type Query {
+                  Revision: RevisionQueries
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      expect(harness.manager.getSubgraphByName("revision")).toBeUndefined();
+      expect(supergraphNames(harness.gatewayAdapter)).toContain(
+        "revision-custom",
+      );
       expect(claimExclusions(harness.logger)).toEqual([]);
     });
 

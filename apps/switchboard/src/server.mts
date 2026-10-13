@@ -34,7 +34,9 @@ import {
   PackagesSubgraph,
   PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
+  reportFailure,
   resolveRenownConfig,
+  runDetached,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
@@ -97,6 +99,7 @@ import {
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { inspectionThrottleFromEnv } from "./inspection-throttle.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { resolveInspectionEnabled } from "./inspection-flag.mjs";
@@ -450,6 +453,7 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  const inspectionThrottle = inspectionThrottleFromEnv(process.env);
   let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
   if (workerPool && options.reactor) {
     logger.warn(
@@ -903,6 +907,11 @@ async function initServer(
   // TODO get path from powerhouse config
   const basePath = process.cwd();
 
+  const reportError = (error: unknown) => {
+    Sentry.captureException(error);
+  };
+  const reporting = { logger, report: reportError };
+
   // import Vite loader only if dev mode is enabled
   let vite: ViteDevServer | undefined;
   let viteLoader: VitePackageLoader | undefined;
@@ -914,6 +923,7 @@ async function initServer(
     // here when the project does not install them itself.
     viteLoader = VitePackageLoader.build(vite, {
       resolveFrom: [import.meta.url],
+      reportError,
     });
   }
 
@@ -981,8 +991,10 @@ async function initServer(
         : {},
       configFile: configPath,
       mcp: options.mcp ?? true,
-      inspection: options.inspection === false ? false : undefined,
+      inspection:
+        options.inspection === false ? false : { throttle: inspectionThrottle },
       logger: apiLogger,
+      reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
       // Already resolved for this reactor's own identity; reuse it so an
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
@@ -1095,9 +1107,10 @@ async function initServer(
     return graphqlManager
       .registerSubgraphInstance(workflowSubgraph, "graphql", false)
       .catch((error: unknown) => {
-        logger.error(
-          "Failed to register workflow-runtime subgraph: @error",
+        reportFailure(
+          reporting,
           error,
+          "Failed to register workflow-runtime subgraph: @error",
         );
       });
   };
@@ -1143,9 +1156,10 @@ async function initServer(
           try {
             await graphqlManager.updateRouter(true);
           } catch (error) {
-            logger.error(
-              "Mounting the late workflow-runtime subgraph failed: @error",
+            reportFailure(
+              reporting,
               error,
+              "Mounting the late workflow-runtime subgraph failed: @error",
             );
           }
         },
@@ -1208,9 +1222,10 @@ async function initServer(
       graphqlManager
         .regenerateDocumentModelSubgraphs()
         .catch((error: unknown) => {
-          logger.error(
-            "Failed to regenerate document model subgraphs: @error",
+          reportFailure(
+            reporting,
             error,
+            "Failed to regenerate document model subgraphs: @error",
           );
         });
     });
@@ -1232,7 +1247,11 @@ async function initServer(
       graphqlManager
         .registerSubgraphInstance(packagesSubgraph, "graphql", false)
         .catch((error: unknown) => {
-          logger.error("Failed to register packages subgraph: @error", error);
+          reportFailure(
+            reporting,
+            error,
+            "Failed to register packages subgraph: @error",
+          );
         }),
     );
   }
@@ -1264,26 +1283,32 @@ async function initServer(
       graphqlManager
         .registerSubgraphInstance(reactorDriveSubgraph, "graphql", false)
         .catch((error: unknown) => {
-          logger.error(
-            "Failed to register reactor-drive subgraph: @error",
+          reportFailure(
+            reporting,
             error,
+            "Failed to register reactor-drive subgraph: @error",
           );
         }),
     );
   }
 
-  void (async () => {
-    await Promise.all(lateSubgraphs);
-    try {
-      await graphqlManager.updateRouter(true);
-    } catch (error) {
-      logger.error(
-        "Final router update before readiness failed: @error",
-        error,
-      );
-    }
-    api.readiness.markReady();
-  })();
+  void runDetached(
+    "Marking the API ready",
+    async () => {
+      await Promise.allSettled(lateSubgraphs);
+      try {
+        await graphqlManager.updateRouter(true);
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Final router update before readiness failed: @error",
+        );
+      }
+      api.readiness.markReady();
+    },
+    reporting,
+  );
 
   // Create default drive if provided
   if (options.drive) {

@@ -200,6 +200,9 @@ export const inspectionTypeDefs = gql`
     info: ReactorInfo!
     documentModels: [InspectionDocumentModel!]!
     drives(cursor: String, limit: Int): InspectionDrivePage!
+    """
+    Reads every file node's document. Throttled per caller.
+    """
     driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
     attachmentInfo: InspectionAttachmentInfo!
     queueState: InspectionQueueState!
@@ -207,7 +210,7 @@ export const inspectionTypeDefs = gql`
     catchUpStatus: JSONObject!
     storageHealth: InspectionStorageHealth!
     """
-    Replays the whole document; expensive.
+    Replays the whole document; expensive. Throttled per caller.
     """
     validateDocument(documentId: String!, branch: String): InspectionValidation!
     remotes: [InspectionRemote!]!

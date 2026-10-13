@@ -5,7 +5,7 @@ import { gql } from "graphql-tag";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import {
   findSubgraphTypeCollisions,
-  generateDocumentModelSchema,
+  documentModelSubgraphTypes,
   generatedTypesOf,
   getDocumentModelSubgraphName,
   hasOperationSchemas,
@@ -84,7 +84,7 @@ export function findPackageSubgraphConflicts(
     try {
       generatedTypesOf([model]);
       if (hasOperationSchemas(model)) {
-        typeDefs = generateDocumentModelSchema(model, { useNewApi: true });
+        typeDefs = documentModelSubgraphTypes(model).typeDefs;
       }
     } catch {
       skippedModels.push(model.name);

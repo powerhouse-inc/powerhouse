@@ -33,6 +33,12 @@ import {
   type IHttpScope,
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
+import {
+  reportFailure,
+  runDetached,
+  type ReportError,
+  type RunDetachedOptions,
+} from "../utils/detached.js";
 import type { AuthService, User } from "../services/auth.service.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type {
@@ -41,12 +47,15 @@ import type {
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
+  buildDocumentModelSchema,
   buildSubgraphSchemaModule,
   createSchema,
+  type DocumentModelSchema,
+  DocumentModelSchemaCache,
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
-  hasOperationSchemas,
+  type ReservedTypeNames,
   reservedTypeNames,
   reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
@@ -177,6 +186,7 @@ export type GraphQLManagerOptions = {
    * reactor client, which withholds a drive the host's own key may not read.
    */
   driveStore?: DriveStore;
+  reportError?: ReportError;
 };
 
 /**
@@ -375,8 +385,13 @@ export class GraphQLManager {
 
   readonly #usesModelTypesMemo = new WeakMap<ISubgraph, boolean>();
 
-  /** Document models refused from the schema, by id, with the reason logged. */
-  #refusedModels = new Map<string, string>();
+  /** Refusals logged: model id, source key and reason. */
+  #refusals = new Set<string>();
+
+  readonly #schemaCache: DocumentModelSchemaCache;
+
+  /** The schemas of the admitted document models. */
+  #modelSchemas = new Map<DocumentModelModule, DocumentModelSchema>();
 
   /** Subgraphs excluded for a type collision, with the reason last logged. */
   readonly #loggedCollisions = new WeakMap<ISubgraph, string>();
@@ -434,6 +449,7 @@ export class GraphQLManager {
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
   private readonly inspection?: IReactorInspectionSource;
+  readonly #reporting: RunDetachedOptions;
 
   constructor(options: GraphQLManagerOptions) {
     this.path = options.path;
@@ -449,6 +465,10 @@ export class GraphQLManager {
     this.authService = options.authService;
     this.documentPermissionService = options.documentPermissionService;
     this.featureFlags = options.featureFlags ?? DefaultFeatureFlags;
+    const subgraph = !!this.featureFlags.enableDocumentModelSubgraphs;
+    this.#schemaCache = new DocumentModelSchemaCache((model) =>
+      buildDocumentModelSchema(model, { subgraph }),
+    );
     this.port = options.port ?? 4001;
     this.authorizationService = options.authorizationService;
     this.reactorDriveClient = options.reactorDriveClient;
@@ -456,6 +476,7 @@ export class GraphQLManager {
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
     this.inspection = options.inspection;
+    this.#reporting = { logger: options.logger, report: options.reportError };
 
     this.driveOwnershipCache = new DriveOwnershipCache(
       options.driveStore ?? this.reactorClient,
@@ -675,40 +696,64 @@ export class GraphQLManager {
     return this.#setupSubgraphs(this.coreSubgraphsMap);
   }
 
-  /**
-   * The models whose generated types take no reserved name. The others stay
-   * in the reactor but are left out of the schema.
-   */
+  /** Models whose schemas build and take no reserved name. */
   #admitModels(models: DocumentModelModule[]): DocumentModelModule[] {
     const reserved = reservedTypeNames(
       Array.from(this.coreSubgraphsMap.values(), (subgraphs) =>
         subgraphs.map((subgraph) => subgraph.typeDefs),
       ).flat(),
     );
-    const refused = new Map<string, string>();
-    const admitted = models.filter((model) => {
-      let taken: string[];
-      try {
-        taken = reservedTypeNamesTaken(model, reserved);
-      } catch {
-        // An unparseable model fails where the schema is built, as before.
-        return true;
-      }
-      if (taken.length === 0) return true;
+    const refusals = new Set<string>();
+    const schemas = new Map<DocumentModelModule, DocumentModelSchema>();
+    const admitted: DocumentModelModule[] = [];
+    for (const { model, key, schema, error } of this.#schemaCache.resolve(
+      models,
+    )) {
       const id = model.documentModel.global.id;
-      const reason = `generates reserved type names: ${taken.join(", ")}`;
-      refused.set(id, reason);
-      if (this.#refusedModels.get(id) !== reason) {
-        this.logger.error(
+      const refuse = (message: string, reason: string) => {
+        const refusal = `${id}\n${key}\n${reason}`;
+        refusals.add(refusal);
+        if (!this.#refusals.has(refusal)) {
+          this.logger.error(message, id, reason);
+        }
+      };
+      const refuseModel = (reason: string) =>
+        refuse(
           "Refusing document model @documentType from the GraphQL schema: @reason",
-          id,
           reason,
         );
+      if (!schema) {
+        refuseModel(`has an unusable schema: ${error.message}`);
+        continue;
       }
-      return false;
-    });
-    this.#refusedModels = refused;
+      const taken = this.#reservedNamesReason(model, schema, reserved);
+      if (taken !== undefined) {
+        refuseModel(taken);
+        continue;
+      }
+      if (schema.subgraphError) {
+        refuse(
+          "Refusing the subgraph of document model @documentType: @reason",
+          `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+        );
+      }
+      schemas.set(model, schema);
+      admitted.push(model);
+    }
+    this.#refusals = refusals;
+    this.#modelSchemas = schemas;
     return admitted;
+  }
+
+  #reservedNamesReason(
+    model: DocumentModelModule,
+    schema: DocumentModelSchema,
+    reserved: ReservedTypeNames,
+  ): string | undefined {
+    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
+    return taken.length > 0
+      ? `generates reserved type names: ${taken.join(", ")}`
+      : undefined;
   }
 
   async #setupDocumentModelSubgraphs(
@@ -727,24 +772,27 @@ export class GraphQLManager {
       ) {
         continue;
       }
-      if (!hasOperationSchemas(documentModel.documentModel.global)) {
-        continue;
-      }
+      const types = this.#modelSchemas.get(documentModel)?.subgraph;
+      if (!types) continue;
       try {
-        const subgraphInstance = new DocumentModelSubgraph(documentModel, {
-          http: this.scopeForPackage(CORE_PACKAGE_NAME),
-          relationalDb: this.relationalDb,
-          analyticsStore: this.analyticsStore,
-          reactorClient: this.reactorClient,
-          graphqlManager: this,
-          syncManager: this.syncManager,
-          path: this.path,
-          documentPermissionService: this.documentPermissionService,
-          authorizationService: this.authorizationService,
-          syncServingGate: this.syncServingGate,
-          attachments: this.attachments,
-          inspection: this.inspection,
-        });
+        const subgraphInstance = new DocumentModelSubgraph(
+          documentModel,
+          {
+            http: this.scopeForPackage(CORE_PACKAGE_NAME),
+            relationalDb: this.relationalDb,
+            analyticsStore: this.analyticsStore,
+            reactorClient: this.reactorClient,
+            graphqlManager: this,
+            syncManager: this.syncManager,
+            path: this.path,
+            documentPermissionService: this.documentPermissionService,
+            authorizationService: this.authorizationService,
+            syncServingGate: this.syncServingGate,
+            attachments: this.attachments,
+            inspection: this.inspection,
+          },
+          types,
+        );
 
         const registered = await this.#addSubgraphInstance(
           subgraphInstance,
@@ -808,7 +856,10 @@ export class GraphQLManager {
 
   #generated(): GeneratedDocumentModelTypes {
     if (this.#generatedTypes?.models !== this.cachedDocumentModels) {
-      const types = getGeneratedDocumentModelTypes(this.cachedDocumentModels);
+      const types = getGeneratedDocumentModelTypes(
+        this.cachedDocumentModels,
+        this.#modelSchemas,
+      );
       const sdl = print({
         kind: Kind.DOCUMENT,
         definitions: types.definitions,
@@ -1205,15 +1256,15 @@ export class GraphQLManager {
     await this.updateRouter();
   }
 
-  /** Not awaited: the debounced call never settles a promise whose timer a
-   * later call replaced, so awaiting it in a registry change could wedge the
-   * queue. */
+  /** Not awaited: a registry change does not wait out the debounce. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
     this.#inHook.exit(() => {
-      this.updateRouter().catch((error: unknown) => {
-        this.logger.error("Failed to update router: @error", error);
-      });
+      void runDetached(
+        "Router update",
+        () => this.updateRouter(),
+        this.#reporting,
+      );
     });
   }
 
@@ -1611,9 +1662,10 @@ export class GraphQLManager {
       await this.gatewayAdapter.updateSupergraph();
       this.logger.debug("Updated Apollo Gateway supergraph");
     } catch (error) {
-      this.logger.error(
-        "Failed to update Apollo Gateway supergraph: @error",
+      reportFailure(
+        this.#reporting,
         error,
+        "Failed to update Apollo Gateway supergraph: @error",
       );
     }
 
