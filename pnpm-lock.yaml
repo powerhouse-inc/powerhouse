@@ -1429,6 +1429,9 @@ importers:
       '@powerhousedao/reactor-attachments':
         specifier: workspace:*
         version: link:../reactor-attachments
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../reactor-browser
       '@powerhousedao/switchboard':
         specifier: workspace:*
         version: link:../../apps/switchboard

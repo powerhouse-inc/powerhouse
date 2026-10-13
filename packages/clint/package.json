@@ -58,7 +58,8 @@
     "@powerhousedao/reactor": "workspace:>=6.2.0-dev.0",
     "@powerhousedao/reactor-api": "workspace:>=6.2.0-dev.0",
     "@powerhousedao/switchboard": "workspace:>=6.2.0-dev.0",
-    "document-model": "workspace:>=6.2.0-dev.0"
+    "document-model": "workspace:>=6.2.0-dev.0",
+    "@powerhousedao/reactor-browser": "workspace:>=6.2.0-dev.0"
   },
   "peerDependenciesMeta": {
     "@electric-sql/pglite": {
@@ -91,6 +92,7 @@
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "tsdown": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@powerhousedao/reactor-browser": "workspace:*"
   }
 }

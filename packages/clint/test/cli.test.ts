@@ -1492,8 +1492,8 @@ describe("defineCli", () => {
             id: "cmd",
             description: "Throws a string",
             inputSchema: z.object({}),
-            // eslint-disable-next-line only-throw-error -- non-Error throw is the case under test
             execute: async () => {
+              // eslint-disable-next-line only-throw-error -- non-Error throw is the case under test
               throw "string error";
             },
           }),
