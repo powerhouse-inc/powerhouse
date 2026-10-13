@@ -1,3 +1,24 @@
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+
+### 🩹 Fixes
+
+- **switchboard:** release the lease and retry when the late runtime fails to start ([ef83820e0f](https://github.com/powerhouse-inc/powerhouse/commit/ef83820e0f))
+- **switchboard:** log a failed start of the late workflow runtime ([82e9b88f48](https://github.com/powerhouse-inc/powerhouse/commit/82e9b88f48))
+- **switchboard:** mount the late workflow subgraph without the debounce ([ed64d75da4](https://github.com/powerhouse-inc/powerhouse/commit/ed64d75da4))
+- **switchboard:** register the reactor-drive listing subgraph as reactor-drive-nodes ([8beff0a01f](https://github.com/powerhouse-inc/powerhouse/commit/8beff0a01f))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.54 (2026-10-12)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

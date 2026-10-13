@@ -1,3 +1,29 @@
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **reactor-drive:** filter listChildren by kind in SQL and return per-row cursors ([d9d7faae2a](https://github.com/powerhouse-inc/powerhouse/commit/d9d7faae2a))
+- **reactor-drive:** name the listing subgraph apart from the ReactorDrive model ([dbdce210d7](https://github.com/powerhouse-inc/powerhouse/commit/dbdce210d7))
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+
+### 🩹 Fixes
+
+- **reactor-drive:** gate listed file nodes in chunks from an empty cursor ([a853089a99](https://github.com/powerhouse-inc/powerhouse/commit/a853089a99))
+- **reactor-drive:** read an explicit null kind as no kind filter ([3c22b189c0](https://github.com/powerhouse-inc/powerhouse/commit/3c22b189c0))
+- **reactor-drive:** keep microseconds in the drive listing cursor ([ce76dd34a7](https://github.com/powerhouse-inc/powerhouse/commit/ce76dd34a7))
+- **reactor-drive:** keep the host's check on canonical drive ids ([9525d18135](https://github.com/powerhouse-inc/powerhouse/commit/9525d18135))
+- **reactor-drive:** fail a listing's host read check per node ([adbabf3417](https://github.com/powerhouse-inc/powerhouse/commit/adbabf3417))
+- **reactor-drive:** answer reactorDrive with null for missing, denied and outage ([7cd5732825](https://github.com/powerhouse-inc/powerhouse/commit/7cd5732825))
+- **reactor-drive:** anchor drive listings on the last served node ([f914d852a4](https://github.com/powerhouse-inc/powerhouse/commit/f914d852a4))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.54 (2026-10-12)
 
 This was a version bump only for @powerhousedao/reactor-drive to align it with other projects, there were no code changes.

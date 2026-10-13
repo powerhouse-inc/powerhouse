@@ -1,3 +1,25 @@
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **workflow:** field-level operations for connection config and the trigger's config, connection and version ([d81c181fb8](https://github.com/powerhouse-inc/powerhouse/commit/d81c181fb8))
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+- **workflow:** re-add the React-free ./editors/runtime entry ([de46721dd5](https://github.com/powerhouse-inc/powerhouse/commit/de46721dd5))
+
+### 🩹 Fixes
+
+- **workflow:** show the graph's hover cards on folded rows, keep their steps on narrow screens, and lift the open hint over the graph ([0dd86dde1b](https://github.com/powerhouse-inc/powerhouse/commit/0dd86dde1b))
+- **workflow:** keep the property form's edits while earlier saves echo back ([3409ac21ec](https://github.com/powerhouse-inc/powerhouse/commit/3409ac21ec))
+- **workflow:** build each schedule change on the newest config sent, not the last one echoed ([d7a5f55075](https://github.com/powerhouse-inc/powerhouse/commit/d7a5f55075))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.54 (2026-10-12)
 
 This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.

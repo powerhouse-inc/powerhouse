@@ -1,3 +1,38 @@
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **reactor-api:** name the type names a document model may not generate ([37d812ac6a](https://github.com/powerhouse-inc/powerhouse/commit/37d812ac6a))
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+
+### 🩹 Fixes
+
+- **reactor-api:** log a package subgraph's type collision once across restores ([3987ec7c2d](https://github.com/powerhouse-inc/powerhouse/commit/3987ec7c2d))
+- **reactor-api:** evict a lower-ranked holder only once the newcomer is set up ([e405f270ad](https://github.com/powerhouse-inc/powerhouse/commit/e405f270ad))
+- **reactor-api:** scope the inline registry escape to each subgraph hook ([310067fd18](https://github.com/powerhouse-inc/powerhouse/commit/310067fd18))
+- **reactor-api:** end a registry change's inline escape when the change ends ([8a7aa948fe](https://github.com/powerhouse-inc/powerhouse/commit/8a7aa948fe))
+- **reactor-api:** give a subgraph name one holder across core and every bucket ([9853df4aab](https://github.com/powerhouse-inc/powerhouse/commit/9853df4aab))
+- **reactor-api:** rank subgraph name owners core > host > model > package ([0c140a82fc](https://github.com/powerhouse-inc/powerhouse/commit/0c140a82fc))
+- **reactor-api:** let a document model redeclare a reserved scalar ([85c6064384](https://github.com/powerhouse-inc/powerhouse/commit/85c6064384))
+- **reactor-api:** await async processor factory builders on reload ([24c38e9508](https://github.com/powerhouse-inc/powerhouse/commit/24c38e9508))
+- **reactor-api:** keep core subgraphs when a document model takes a core type name ([adb87faee4](https://github.com/powerhouse-inc/powerhouse/commit/adb87faee4))
+- **reactor-api:** catch rejections from package change listeners ([4d14f62ce8](https://github.com/powerhouse-inc/powerhouse/commit/4d14f62ce8))
+- **reactor-api:** run a registry change made from a subgraph hook inline ([7510a51b20](https://github.com/powerhouse-inc/powerhouse/commit/7510a51b20))
+- **reactor-api:** let a model's subgraph repeat every type its generator emits ([e79e11590b](https://github.com/powerhouse-inc/powerhouse/commit/e79e11590b))
+- **reactor-api:** serialize subgraph registry changes and restore freed package names ([89da792c3a](https://github.com/powerhouse-inc/powerhouse/commit/89da792c3a))
+- **reactor-api:** make subgraph ownership per mount path and order-independent ([11cc5b6215](https://github.com/powerhouse-inc/powerhouse/commit/11cc5b6215))
+- **reactor-api:** heal only a model's own prefixed types, and build generated types once ([9a3f464a54](https://github.com/powerhouse-inc/powerhouse/commit/9a3f464a54))
+- **reactor-api:** first registration of a subgraph name wins ([c0fa5e3b4a](https://github.com/powerhouse-inc/powerhouse/commit/c0fa5e3b4a))
+- **reactor-api:** refuse subgraph types that collide with generated document-model types ([#917](https://github.com/powerhouse-inc/powerhouse/issues/917))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.54 (2026-10-12)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
