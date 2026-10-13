@@ -855,6 +855,36 @@ describe("GraphQLManager", () => {
     return res.text();
   }
 
+  /** Subscribe over the SSE handler and read events until one carries `needle`. */
+  async function streamUntil(
+    handler: FetchHandler,
+    query: string,
+    needle: string,
+  ) {
+    const res = await handler(
+      new Request("http://localhost/graphql/stream", {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ query }),
+      }),
+    );
+    const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+    let events = "";
+    try {
+      while (!events.includes(needle)) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        events += value;
+      }
+    } finally {
+      await reader.cancel();
+    }
+    return events;
+  }
+
   describe("SSE handler", () => {
     it("mounts the SSE handler at {basePath}/graphql/stream", async () => {
       const { manager, httpAdapter } = makeHarness({ path: "/" });
@@ -1025,7 +1055,27 @@ describe("GraphQLManager", () => {
 
     it("merges the reactor subgraph's subscriptions with another subgraph's", async () => {
       const logger = makeHarnessLogger();
-      const { manager, mounts } = makeHarness({ logger });
+      const reactorClient = makeMockReactorClient({
+        isServed: vi.fn().mockResolvedValue(true),
+        // Answers after the subscriber listens: earlier events are not replayed.
+        getJobStatus: vi.fn(
+          () =>
+            new Promise((resolve) =>
+              setTimeout(
+                () =>
+                  resolve({
+                    id: "job-1",
+                    status: "READ_MODELS_READY",
+                    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+                    completedAtUtcIso: "2026-01-01T00:00:01.000Z",
+                    documentId: "doc-1",
+                  }),
+                50,
+              ),
+            ),
+        ),
+      });
+      const { manager, mounts } = makeHarness({ logger, reactorClient });
       await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
       await initAndFlush(manager, [ReactorSubgraph]);
       vi.useRealTimers();
@@ -1044,6 +1094,15 @@ describe("GraphQLManager", () => {
       for (const field of ["alpha", "documentChanges", "jobChanges"]) {
         expect(events).toContain(`{"name":"${field}"}`);
       }
+      const jobEvent =
+        '{"data":{"jobChanges":{"jobId":"job-1","status":"READ_MODELS_READY"}}}';
+      expect(
+        await streamUntil(
+          handler!,
+          'subscription { jobChanges(jobId: "job-1") { jobId status } }',
+          jobEvent,
+        ),
+      ).toContain(jobEvent);
     });
 
     it("streams a subscription subgraph that uses federation directives", async () => {
@@ -1168,6 +1227,55 @@ describe("GraphQLManager", () => {
         "Failed to setup supergraph SSE: @error",
         expect.anything(),
       );
+    });
+
+    it("logs an exclusion again when the subgraph breaks after recovering", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      const brokenTypeDefs = gql`
+        type Subscription {
+          broken: NoSuchType
+        }
+      `;
+      const register = (typeDefs: DocumentNode) =>
+        manager.registerSubgraphInstance(
+          {
+            name: "stream-flaky",
+            hasSubscriptions: true,
+            typeDefs,
+            resolvers: {},
+            relationalDb: {} as IRelationalDb,
+            reactorClient: {} as IReactorClient,
+          },
+          "graphql",
+        );
+      const sseExclusions = () =>
+        vi
+          .mocked(logger.error)
+          .mock.calls.map((call) => String(call[0]))
+          .filter((message) => message.includes('"stream-flaky"'));
+      const flushRouter = async () => {
+        const update = manager.updateRouter();
+        await vi.runAllTimersAsync();
+        await update;
+      };
+
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await register(brokenTypeDefs);
+      await initAndFlush(manager);
+      expect(sseExclusions()).toHaveLength(1);
+
+      await register(gql`
+        type Subscription {
+          flaky: String
+        }
+      `);
+      await flushRouter();
+      expect(sseExclusions()).toHaveLength(1);
+
+      await register(brokenTypeDefs);
+      await flushRouter();
+      expect(sseExclusions()).toHaveLength(2);
     });
 
     it("resolves interface-typed fields over the supergraph stream", async () => {
