@@ -4204,6 +4204,55 @@ describe("GraphQLManager", () => {
       expect(reloaded).not.toContain("todo-list-custom");
     });
 
+    it("serves an identical root field from its owner only", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      const documentSubgraph = (subgraphName: string): SubgraphClass =>
+        class extends BaseSubgraph {
+          name = subgraphName;
+          hasSubscriptions = true;
+          typeDefs = gql`
+            type Query {
+              document(id: String!): String
+            }
+            type Subscription {
+              ${subgraphName.replace("-", "")}: String
+            }
+          `;
+          resolvers = {
+            Query: { document: () => subgraphName },
+            Subscription: {},
+          };
+        };
+      await harness.manager.registerSubgraph(
+        documentSubgraph("doc-host"),
+        "graphql",
+      );
+      // Lower-ranked and registered last, so a last-wins merge would pick it.
+      await applyPackages(harness.manager, [
+        ["pkg", [documentSubgraph("doc-pkg")]],
+      ]);
+      vi.useRealTimers();
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("doc-host");
+      expect(names).not.toContain("doc-pkg");
+      expectRouteKept(harness, "doc-pkg");
+      const handler = harness.mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const res = await handler!(
+        new Request("http://localhost/graphql/stream", {
+          method: "POST",
+          headers: {
+            accept: "text/event-stream",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ query: '{ document(id: "x") }' }),
+        }),
+      );
+      expect(await res.text()).toContain('{"data":{"document":"doc-host"}}');
+    });
+
     it("excludes nothing among the real core subgraphs and base models", async () => {
       const harness = makeOwnershipHarness([
         driveDocumentModelModule,

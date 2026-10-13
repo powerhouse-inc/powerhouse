@@ -101,6 +101,44 @@ describe("collectSubgraphClaims", () => {
     expect(collected.get("Operation")).toContain("extend type Operation");
   });
 
+  it("ignores how a string default is quoted", () => {
+    expect(
+      claims(gql`
+        input Filter {
+          kind: String = "x"
+        }
+      `),
+    ).toEqual(
+      claims(gql`
+        input Filter {
+          kind: String = """
+          x
+          """
+        }
+      `),
+    );
+  });
+
+  it("reads a type split across a definition and an extension as one", () => {
+    expect(
+      claims(gql`
+        type Widget {
+          id: ID!
+        }
+        extend type Widget {
+          name: String
+        }
+      `),
+    ).toEqual(
+      claims(gql`
+        type Widget {
+          id: ID!
+          name: String
+        }
+      `),
+    );
+  });
+
   it("ignores descriptions and the order of fields and arguments", () => {
     const a = claims(gql`
       """
@@ -182,13 +220,15 @@ describe("resolveClaimOwnership", () => {
     ).toEqual({ b: [{ claim: "Query.documents", owner: "a" }] });
   });
 
-  it("allows an identical root field", () => {
+  it("gives an identical root field to its first claimant only", () => {
     const typeDefs = gql`
       type Query {
         hello: String
       }
     `;
-    expect(losers({ a: typeDefs, b: typeDefs })).toEqual({});
+    expect(losers({ a: typeDefs, b: typeDefs })).toEqual({
+      b: [{ claim: "Query.hello", owner: "a" }],
+    });
   });
 
   it("refuses an extension of a type another subgraph defines", () => {
