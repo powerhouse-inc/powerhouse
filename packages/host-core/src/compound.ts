@@ -211,7 +211,15 @@ export async function runCompound(
     const specifier = memberHost.runner.module;
     const runner = await resolveRunnerModule(projectRoot, specifier);
     validateHost(runner, specifier, memberHost, `hosts/${member.host}/host.js`);
-    const fn = getVerb(runner, specifier, verb);
+    // At compound verb "run", each member runs its own (merged) defaultVerb —
+    // "each member's default mode" — which is what lets a desktop compound
+    // pair a switchboard at `run` with a connect at `serve`. An explicit
+    // forwarded verb (dev/build/serve) stays uniform across members.
+    const memberVerb =
+      verb === "run"
+        ? ((memberHost.runner.defaultVerb as string | undefined) ?? "run")
+        : verb;
+    const fn = getVerb(runner, specifier, memberVerb);
     const handle = ((await fn(memberHost, ctx)) ?? {}) as RunnerHandle;
     if (handle.ready) await handle.ready;
     started.push({ name, handle });

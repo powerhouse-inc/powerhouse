@@ -122,4 +122,21 @@ describe("host-core compound runner module (P3.1/P3.2)", () => {
       compound.build(await appHost(dir), ctx(dir, "build")),
     ).rejects.toThrow(/build.*(run, dev, serve|verbs)/is);
   });
+
+  it("at compound run, a member wrapper's defaultVerb picks that member's mode (desktop shape)", async () => {
+    const { dir, sink } = makeProject();
+    // override the app host: the web member's wrapper sets defaultVerb serve
+    const appFile = path.join(dir, "hosts", "app", "host.js");
+    writeFileSync(
+      appFile,
+      `export default {
+        name: "app",
+        runner: { module: "@powerhousedao/host-core/runners/compound" },
+        children: { "app-web": { host: "web", runner: { defaultVerb: "serve" } } },
+        config: { runtimeRecord: false },
+      };`,
+    );
+    await compound.run(await appHost(dir), ctx(dir, "run"));
+    expect(verbs(sink)).toEqual(["serve"]);
+  });
 });
