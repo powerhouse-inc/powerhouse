@@ -6,7 +6,8 @@
 # A job is flagged only when it exceeds BOTH gates — median * RELATIVE_THRESHOLD
 # and median + ABSOLUTE_FLOOR_SECONDS — because observed runner variance on
 # this repo swings +/- 90s on unchanged code. Warn-only by design: annotations,
-# a step-summary table, and a sticky PR comment.
+# a step-summary table, and a sticky PR comment. An API failure warns and
+# exits 0 rather than failing the job.
 set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:?}"
@@ -20,26 +21,33 @@ MIN_SAMPLES=3
 PR_NUMBER="${PR_NUMBER:-}"
 COMMENT_MARKER="<!-- ci-duration-watch -->"
 
-epoch() { date -u -d "$1" +%s; }
+gh_err=$(mktemp)
+
+# Called at each gh call site, never inside $(...), so its exit leaves the script.
+api_unavailable() {
+  echo "::warning title=CI duration watch::$1 unavailable, skipping the comparison: $(tr '\n' ' ' < "$gh_err")"
+  exit 0
+}
 
 fmt() {
   local s=$1
   printf '%dm%02ds' $((s / 60)) $((s % 60))
 }
 
-# Emits "name<TAB>seconds" for every succeeded job of a run. The watch job
-# itself is still in progress when this runs, so filtering on a success
-# conclusion also excludes it.
-run_jobs() {
-  gh api "repos/$REPO/actions/runs/$1/jobs?per_page=100" --paginate \
-    --jq '.jobs[] | select(.conclusion == "success") | [.name, .started_at, .completed_at] | @tsv' |
-    while IFS=$'\t' read -r name started completed; do
-      printf '%s\t%s\n' "$name" "$(($(epoch "$completed") - $(epoch "$started")))"
-    done
-}
+# Job timings come from the run's check suite, not actions/runs/{id}/jobs: that
+# endpoint 502s on about one call in four after a 10s server timeout, and the
+# check runs carry the same names and timestamps. The watch job itself is
+# still in progress when this runs, so the success filter also excludes it.
+CHECK_RUNS_JQ='.check_runs[] | select(.conclusion == "success")
+  | [.name, ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601))] | @tsv'
+
+current_suite=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.check_suite_id' 2> "$gh_err") ||
+  api_unavailable "this run"
 
 current_file=$(mktemp)
-run_jobs "$RUN_ID" > "$current_file"
+gh api "repos/$REPO/check-suites/$current_suite/check-runs?per_page=100" --paginate \
+  --jq "$CHECK_RUNS_JQ" > "$current_file" 2> "$gh_err" ||
+  api_unavailable "this run's jobs"
 if [ ! -s "$current_file" ]; then
   echo "no completed successful jobs in this run to compare"
   exit 0
@@ -50,18 +58,21 @@ fi
 # the suites were half their current size. Page wide and filter client-side.
 # Sliced in jq, not piped through head: head exits early, gh takes SIGPIPE and
 # pipefail turns that into a 141 for the whole script.
-baseline_ids=$(gh api \
+baseline_suites=$(gh api \
   "repos/$REPO/actions/workflows/$WORKFLOW_FILE/runs?per_page=100" \
   --jq "[ .workflow_runs[]
           | select(.head_branch == \"$BASELINE_BRANCH\")
           | select(.conclusion == \"success\")
           | select(.id != $RUN_ID)
-          | .id ][:$SAMPLES] | .[]")
+          | .check_suite_id ][:$SAMPLES] | .[]" 2> "$gh_err") ||
+  api_unavailable "baseline run list"
 
 baseline_file=$(mktemp)
-for id in $baseline_ids; do
-  run_jobs "$id"
-done > "$baseline_file"
+for suite in $baseline_suites; do
+  gh api "repos/$REPO/check-suites/$suite/check-runs?per_page=100" --paginate \
+    --jq "$CHECK_RUNS_JQ" >> "$baseline_file" 2> "$gh_err" ||
+    api_unavailable "baseline check suite $suite"
+done
 
 summary_rows=""
 comment_rows=""
@@ -129,12 +140,15 @@ ${comment_rows}
 This is a warning, not a failure — but a slow creep here is how jobs walk into their timeouts. If the slowdown is expected, say so in the PR; if not, it is worth a look before merging."
 
   existing=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" --paginate \
-    --jq "[.[] | select(.body | startswith(\"$COMMENT_MARKER\"))][0].id // empty")
+    --jq "[.[] | select(.body | startswith(\"$COMMENT_MARKER\"))][0].id // empty" 2> "$gh_err") ||
+    api_unavailable "PR comment list"
 
   if [ -n "$existing" ]; then
-    gh api --method PATCH "repos/$REPO/issues/comments/$existing" -f body="$body" > /dev/null
+    gh api --method PATCH "repos/$REPO/issues/comments/$existing" -f body="$body" > /dev/null 2> "$gh_err" ||
+      api_unavailable "PR comment update"
   else
-    gh api --method POST "repos/$REPO/issues/$PR_NUMBER/comments" -f body="$body" > /dev/null
+    gh api --method POST "repos/$REPO/issues/$PR_NUMBER/comments" -f body="$body" > /dev/null 2> "$gh_err" ||
+      api_unavailable "PR comment creation"
   fi
   echo "posted sticky PR comment on #$PR_NUMBER"
 fi
