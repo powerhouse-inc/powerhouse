@@ -6,11 +6,14 @@ import {
   compoundHostSchema,
   defaultUserDataDir,
   loadHost,
+  probeRun,
   resolveUserDataPlaceholders,
   type HostDefinition,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import fs from "node:fs";
 import { createEventBus } from "../core/events.js";
+import { isPortFree } from "../core/preflight.js";
 import {
   createServiceManager,
   defineService,
@@ -59,8 +62,10 @@ interface CliHostConfig {
   startOrder?: string[];
 }
 
-const DEFAULT_READINESS =
-  "listening|ready|running on|agent API|Local:|Drive URL";
+// A URL in stdout is the universal "I am serving" signal across member kinds
+// (switchboard prints "MCP server available at http://…", preview "Local:",
+// the agent "agent API … http://…").
+const DEFAULT_READINESS = "https?://|listening|ready";
 
 /** Resolve the project's ph-cli entry the same way host-core resolves runner
  * modules: from the PROJECT's dependency tree. */
@@ -116,6 +121,20 @@ async function resolveAgentEndpoint(
   throw new Error("agents entries need { host } or { url }");
 }
 
+function readProjectName(projectRoot: string, fallback: string): string {
+  try {
+    return (
+      (
+        JSON.parse(
+          fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"),
+        ) as { name?: string }
+      ).name ?? fallback
+    );
+  } catch {
+    return fallback;
+  }
+}
+
 export interface CliRunHandle {
   services: ServiceManager;
   agents: Record<string, string>;
@@ -133,6 +152,8 @@ async function startShell(
     (resolved.runner.lifecycle as string | undefined) ?? "detached";
 
   const phCliEntry = resolvePhCliEntry(ctx.projectRoot);
+  const children = (resolved.children ?? {}) as Record<string, ChildWrapper>;
+  const projectName = readProjectName(ctx.projectRoot, resolved.name);
   const definitions = childServices(resolved, ctx, phCliEntry);
   const eventBus = createEventBus();
   const servicesDir = path.join(ctx.projectRoot, ".ph", "services");
@@ -149,6 +170,32 @@ async function startShell(
     ...names.filter((n) => !(config.startOrder ?? []).includes(n)),
   ];
   for (const id of ordered) {
+    // Re-attach checks, strongest first. (1) The member's OWN run record —
+    // written with the member process's real pid (mastra-runner, the generic
+    // compound). (2) Port occupancy for record-less bridge members. (3) The
+    // service state file — weakest on Windows, where it records the cmd shim
+    // pid, which dies on console teardown while the node grandchild survives.
+    const wrapper = children[id];
+    const member = await loadHost(ctx.projectRoot, wrapper.host);
+    const record = probeRun(ctx.projectRoot, member.host.name, projectName);
+    if (record.status === "live") {
+      console.log(
+        `[${resolved.name}] ${id}: already running (pid ${record.record.pid}) — re-attached`,
+      );
+      continue;
+    }
+    const memberPort =
+      typeof wrapper.runner?.port === "number"
+        ? wrapper.runner.port
+        : typeof member.host.runner.port === "number"
+          ? member.host.runner.port
+          : undefined;
+    if (memberPort !== undefined && !(await isPortFree(memberPort))) {
+      console.log(
+        `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
+      );
+      continue;
+    }
     const already = services
       .list(id)
       .some((s) => s.status === "ready" || s.status === "starting");

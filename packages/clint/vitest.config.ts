@@ -10,5 +10,7 @@ export default defineConfig({
     // run then never exits (hangs CI). Forked workers can be reaped.
     pool: "forks",
     teardownTimeout: 15_000,
+    // sweeps fixture children orphaned by killed workers (see the file)
+    globalSetup: ["./test/global-teardown.ts"],
   },
 });
