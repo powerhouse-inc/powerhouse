@@ -92,8 +92,7 @@ describe("runDetached", () => {
     await nextMacrotask();
 
     expect(logger.error).toHaveBeenCalledWith(
-      "Reporting @label failed: @error",
-      "Task",
+      "Reporting a failure failed: @error",
       reportFailure,
     );
     expect(unhandled).toEqual([]);

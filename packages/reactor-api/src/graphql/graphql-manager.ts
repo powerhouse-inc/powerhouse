@@ -27,6 +27,7 @@ import {
   type IHttpScope,
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
+import { runDetached } from "../utils/detached.js";
 import type { AuthService, User } from "../services/auth.service.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type {
@@ -1106,13 +1107,12 @@ export class GraphQLManager {
     await this.updateRouter();
   }
 
-  /** Not awaited: a registry change does not wait out the router's
-   * debounce. */
+  /** Not awaited: a registry change does not wait out the debounce. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
     this.#inHook.exit(() => {
-      this.updateRouter().catch((error: unknown) => {
-        this.logger.error("Failed to update router: @error", error);
+      void runDetached("Router update", () => this.updateRouter(), {
+        logger: this.logger,
       });
     });
   }

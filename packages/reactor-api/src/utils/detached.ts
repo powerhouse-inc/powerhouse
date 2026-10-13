@@ -7,20 +7,30 @@ export type RunDetachedOptions = {
   report?: ReportError;
 };
 
+/** Logs `error` as the message's last replacement and reports it. */
+export function reportFailure(
+  { logger, report }: RunDetachedOptions,
+  error: unknown,
+  message: string,
+  ...args: unknown[]
+): void {
+  logger.error(message, ...args, error);
+  try {
+    report?.(error);
+  } catch (reportError) {
+    logger.error("Reporting a failure failed: @error", reportError);
+  }
+}
+
 /** Runs work nobody awaits: a failure is logged and reported, never thrown. */
 export async function runDetached(
   label: string,
   task: () => unknown,
-  { logger, report }: RunDetachedOptions,
+  options: RunDetachedOptions,
 ): Promise<void> {
   try {
     await task();
   } catch (error) {
-    logger.error("@label failed: @error", label, error);
-    try {
-      report?.(error);
-    } catch (reportError) {
-      logger.error("Reporting @label failed: @error", label, reportError);
-    }
+    reportFailure(options, error, "@label failed: @error", label);
   }
 }

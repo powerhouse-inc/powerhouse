@@ -12,7 +12,7 @@ import {
   type GraphQLManagerOptions,
 } from "../src/graphql/graphql-manager.js";
 import type { PackageManager } from "../src/packages/package-manager.js";
-import { setupEventListeners } from "../src/server.js";
+import { setupEventListeners } from "../src/packages/package-listeners.js";
 import type {
   IProcessorHostModule,
   Processor,
