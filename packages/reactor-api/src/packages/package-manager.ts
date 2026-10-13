@@ -136,6 +136,7 @@ export class PackageManager implements IPackageManager {
   private piecesMap = new Map<string, PackagePieceEntry[]>();
   private configWatcher: StatWatcher | undefined;
   private unsubscribePackages: (() => void) | undefined;
+  private subscribedPackages = new Set<string>();
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
@@ -183,6 +184,7 @@ export class PackageManager implements IPackageManager {
 
     this.unsubscribePackages?.();
     this.unsubscribePackages = undefined;
+    this.subscribedPackages = new Set(packages);
     try {
       this.unsubscribePackages = this.subscribePackages(packages);
     } catch (error) {
@@ -554,12 +556,17 @@ export class PackageManager implements IPackageManager {
 
   /** Debounced per key so repeated subscribePackages calls reuse one timer. */
   private getDebouncedUpdateCallback(
-    key: string,
+    pkg: string,
+    kind: string,
     update: () => Promise<void>,
   ): () => void {
+    const key = `${pkg}:${kind}`;
     if (!this.debouncedUpdateCallbacks.has(key)) {
+      // A timer still pending for a package dropped since does nothing.
+      const updateIfSubscribed = () =>
+        this.subscribedPackages.has(pkg) ? update() : undefined;
       const debouncedFn = debounce(
-        () => runDetached(`Updating ${key}`, update, this.detached),
+        () => runDetached(`Updating ${key}`, updateIfSubscribed, this.detached),
         1000,
       );
       this.debouncedUpdateCallbacks.set(key, () => {
@@ -573,18 +580,21 @@ export class PackageManager implements IPackageManager {
     const unsubs: (() => void)[] = [];
     for (const pkg of packages) {
       const onDocumentModels = this.getDebouncedUpdateCallback(
-        `${pkg}:document-models`,
+        pkg,
+        "document-models",
         () => this.updateDocumentModelsForPackage(pkg),
       );
       const onSubgraphs = this.getDebouncedUpdateCallback(
-        `${pkg}:subgraphs`,
+        pkg,
+        "subgraphs",
         () => this.updateSubgraphsForPackage(pkg),
       );
       const onProcessors = this.getDebouncedUpdateCallback(
-        `${pkg}:processors`,
+        pkg,
+        "processors",
         () => this.updateProcessorsForPackage(pkg),
       );
-      const onPieces = this.getDebouncedUpdateCallback(`${pkg}:pieces`, () =>
+      const onPieces = this.getDebouncedUpdateCallback(pkg, "pieces", () =>
         this.updatePiecesForPackage(pkg),
       );
 
@@ -634,7 +644,7 @@ export class PackageManager implements IPackageManager {
         configFile,
         { interval: 100 },
         (curr, prev) => {
-          if (curr.mtime === prev.mtime) {
+          if (curr.mtimeMs === prev.mtimeMs) {
             return;
           }
 
@@ -714,6 +724,7 @@ export class PackageManager implements IPackageManager {
    */
   removePackage(pkg: string): void {
     this.logger.info(`Removing package: ${pkg}`);
+    this.subscribedPackages.delete(pkg);
     const dropKey = <T>(map: Map<string, T>): Map<string, T> => {
       if (!map.has(pkg)) return map;
       const next = new Map(map);
