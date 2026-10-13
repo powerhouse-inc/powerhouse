@@ -803,6 +803,58 @@ describe("GraphQLManager", () => {
     );
   }
 
+  /** A subscription subgraph whose `<field>` subscription yields `value`. */
+  async function registerStreamSubgraph(
+    manager: GraphQLManager,
+    name: string,
+    field: string,
+    value: string,
+  ) {
+    await manager.registerSubgraphInstance(
+      {
+        name,
+        hasSubscriptions: true,
+        typeDefs: gql(`
+          type Query {
+            ${field}Info: String
+          }
+          type Subscription {
+            ${field}: String
+          }
+        `),
+        resolvers: {
+          Query: { [`${field}Info`]: () => value },
+          Subscription: {
+            [field]: {
+              subscribe: async function* () {
+                await Promise.resolve();
+                yield { [field]: value };
+              },
+            },
+          },
+        },
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+      },
+      "graphql",
+    );
+  }
+
+  /** Run `query` over the SSE handler and return the raw event stream. */
+  async function streamOver(handler: FetchHandler, query: string) {
+    const res = await handler(
+      new Request("http://localhost/graphql/stream", {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ query }),
+      }),
+    );
+    return res.text();
+  }
+
   describe("SSE handler", () => {
     it("mounts the SSE handler at {basePath}/graphql/stream", async () => {
       const { manager, httpAdapter } = makeHarness({ path: "/" });
@@ -909,6 +961,66 @@ describe("GraphQLManager", () => {
       await unregistering;
 
       expect(disposed).toContain(route);
+    });
+
+    it("merges every subscription subgraph into the supergraph stream", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await registerStreamSubgraph(manager, "stream-b", "beta", "from-b");
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { alpha }")).toContain(
+        '{"data":{"alpha":"from-a"}}',
+      );
+      expect(await streamOver(handler!, "subscription { beta }")).toContain(
+        '{"data":{"beta":"from-b"}}',
+      );
+      expect(await streamOver(handler!, "{ alphaInfo betaInfo }")).toContain(
+        '{"data":{"alphaInfo":"from-a","betaInfo":"from-b"}}',
+      );
+    });
+
+    it("excludes a broken subscription subgraph from the stream and keeps the rest", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-broken",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            type Subscription {
+              broken: NoSuchType
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await registerStreamSubgraph(manager, "stream-b", "beta", "from-b");
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { alpha }")).toContain(
+        '{"data":{"alpha":"from-a"}}',
+      );
+      expect(await streamOver(handler!, "subscription { beta }")).toContain(
+        '{"data":{"beta":"from-b"}}',
+      );
+      const sseExclusions = vi
+        .mocked(logger.error)
+        .mock.calls.map((call) => String(call[0]))
+        .filter((message) => message.startsWith("Supergraph SSE:"));
+      expect(sseExclusions).toHaveLength(1);
+      expect(sseExclusions[0]).toContain('"stream-broken"');
+      expect(sseExclusions[0]).toContain("NoSuchType");
     });
 
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
