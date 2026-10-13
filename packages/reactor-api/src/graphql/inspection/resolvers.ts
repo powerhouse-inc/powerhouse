@@ -35,6 +35,7 @@ import { GraphQLError } from "graphql";
 import { ForbiddenError } from "../errors.js";
 import type { Context } from "../types.js";
 import type { IReactorInspectionSource } from "./source.js";
+import { InspectionThrottle } from "./throttle.js";
 
 /** How the subgraph decides for one request's caller. */
 export interface InspectionCallerGate {
@@ -184,6 +185,15 @@ export function createInspectionResolvers(
   const accessFor = (ctx: Context, access: InspectorAccess) =>
     gate.isOperator(ctx) ? access : null;
 
+  const throttle = source.throttle ?? new InspectionThrottle();
+
+  // Charged before any read, so it also throttles probing the gate.
+  const admit = (ctx: Context): void => {
+    if (!gate.isOperator(ctx)) {
+      throttle.charge(ctx.user?.address.toLowerCase() ?? "anonymous");
+    }
+  };
+
   const fields: Record<InspectionReadField, FieldResolver> = {
     info: async (
       _parent: unknown,
@@ -223,6 +233,7 @@ export function createInspectionResolvers(
       args: { driveId: string; branch: string },
       ctx: Context,
     ): Promise<WireInspectorDriveIntegrity> => {
+      admit(ctx);
       const identifier = await gate.assertCanRead(args.driveId, ctx);
       const served = await gate.servedDocument(identifier, args.branch, ctx);
       if (!served) {
@@ -258,6 +269,7 @@ export function createInspectionResolvers(
       args: { documentId: string; branch?: string | null },
       ctx: Context,
     ): Promise<WireValidationResult> => {
+      admit(ctx);
       const branch = args.branch ?? undefined;
       const identifier = await gate.assertCanRead(args.documentId, ctx);
       const served = await gate.servedDocument(identifier, branch, ctx);

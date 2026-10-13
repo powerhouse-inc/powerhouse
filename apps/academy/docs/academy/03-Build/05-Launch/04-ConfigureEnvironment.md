@@ -330,6 +330,8 @@ Switchboard mounts a read-only `inspection` subgraph at `/graphql/inspection`. I
 - `drives`, `driveIntegrity` and `validateDocument` answer any caller the document read policy lets read that drive or document.
 - The operational reads (`queueState`, `processors`, `remotes`, `remote`, `deadLetters`, `catchUpStatus`, `storageHealth`, `attachmentInfo`) need an address in `ADMINS`.
 
+`validateDocument` and `driveIntegrity` are limited per caller to `PH_INSPECTION_CALLS_PER_MINUTE` calls a minute (default `6`); addresses in `ADMINS` are exempt.
+
 Set `INSPECTION_ENABLED=false` to unmount it. reactor-monitor can then no longer attach, and Connect places the Switchboard with unknown reactor facts and reports a diagnostic each time it refreshes them:
 
 ```bash
