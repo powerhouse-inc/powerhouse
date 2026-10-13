@@ -81,7 +81,16 @@ import { createGraphQLSSEHandler } from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
-const BUILT_IN_SCALARS = new Set(["String", "Int", "Float", "Boolean", "ID"]);
+const NON_MODEL_TYPE_NAMES = new Set([
+  "String",
+  "Int",
+  "Float",
+  "Boolean",
+  "ID",
+  "Query",
+  "Mutation",
+  "Subscription",
+]);
 
 /**
  * Check if a document model has any operations with valid schemas.
@@ -819,14 +828,23 @@ export class GraphQLManager {
     const modelFree = this.#modelFreeTypeNames;
     const own = typeDefinitionNames(subgraph.typeDefs);
     const referenced: string[] = [];
+    const collect = (node: { name: { value: string } }) => {
+      referenced.push(node.name.value);
+    };
     visit(subgraph.typeDefs, {
-      NamedType(node) {
-        referenced.push(node.name.value);
-      },
+      NamedType: collect,
+      ScalarTypeExtension: collect,
+      ObjectTypeExtension: collect,
+      InterfaceTypeExtension: collect,
+      UnionTypeExtension: collect,
+      EnumTypeExtension: collect,
+      InputObjectTypeExtension: collect,
     });
     const uses = referenced.some(
       (name) =>
-        !own.has(name) && !modelFree.has(name) && !BUILT_IN_SCALARS.has(name),
+        !own.has(name) &&
+        !modelFree.has(name) &&
+        !NON_MODEL_TYPE_NAMES.has(name),
     );
     this.#usesModelTypesMemo.set(subgraph, uses);
     return uses;

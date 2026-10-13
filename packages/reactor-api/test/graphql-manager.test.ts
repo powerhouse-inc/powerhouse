@@ -1662,6 +1662,17 @@ describe("GraphQLManager", () => {
       expect(mounts.get("/graphql/plain")).toBe(plainHandler);
     });
 
+    it("rebuilds a subgraph that only extends a model's type", async () => {
+      const { regenerate, served } = await setupAlphaTools(
+        "type Query { ping: String } extend type Alpha_AlphaState { extra: String }",
+      );
+
+      await regenerate("rev2");
+      await vi.runAllTimersAsync();
+
+      expect(await served()).toContain("rev2");
+    });
+
     it("keeps the handler when a regeneration leaves the model types alone", async () => {
       const { mounts, regenerate } = await setupAlphaTools();
       const handler = mounts.get("/graphql/alpha-tools");
