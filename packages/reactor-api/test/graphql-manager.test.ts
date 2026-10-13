@@ -10,10 +10,12 @@
  */
 
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  IReactorClient,
-  IRelationalDb,
-  ISyncManager,
+import {
+  type IReactorClient,
+  type IRelationalDb,
+  type ISyncManager,
+  type JobInfo,
+  JobStatus,
 } from "@powerhousedao/reactor";
 import {
   createReactorDriveResolvers,
@@ -1060,16 +1062,16 @@ describe("GraphQLManager", () => {
         // Answers after the subscriber listens: earlier events are not replayed.
         getJobStatus: vi.fn(
           () =>
-            new Promise((resolve) =>
+            new Promise<JobInfo>((resolve) =>
               setTimeout(
                 () =>
                   resolve({
                     id: "job-1",
-                    status: "READ_MODELS_READY",
+                    status: JobStatus.READ_READY,
                     createdAtUtcIso: "2026-01-01T00:00:00.000Z",
                     completedAtUtcIso: "2026-01-01T00:00:01.000Z",
                     documentId: "doc-1",
-                  }),
+                  } as JobInfo),
                 50,
               ),
             ),
@@ -1095,7 +1097,7 @@ describe("GraphQLManager", () => {
         expect(events).toContain(`{"name":"${field}"}`);
       }
       const jobEvent =
-        '{"data":{"jobChanges":{"jobId":"job-1","status":"READ_MODELS_READY"}}}';
+        '{"data":{"jobChanges":{"jobId":"job-1","status":"READ_READY"}}}';
       expect(
         await streamUntil(
           handler!,
