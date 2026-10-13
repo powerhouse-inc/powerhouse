@@ -13,6 +13,7 @@ export default defineConfig({
     // and resolve them from its own node_modules (ph-cli is a devDependency).
     "runners/connect": "src/runners/connect.ts",
     "runners/switchboard": "src/runners/switchboard.ts",
+    "runners/compound": "src/runners/compound.ts",
   },
   outDir: "dist",
   clean: true,

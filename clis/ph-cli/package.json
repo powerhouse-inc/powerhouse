@@ -27,6 +27,11 @@
       "source": "./src/runners/switchboard.ts",
       "types": "./dist/runners/switchboard.d.mts",
       "import": "./dist/runners/switchboard.mjs"
+    },
+    "./runners/compound": {
+      "source": "./src/runners/compound.ts",
+      "types": "./dist/runners/compound.d.mts",
+      "import": "./dist/runners/compound.mjs"
     }
   },
   "files": [
