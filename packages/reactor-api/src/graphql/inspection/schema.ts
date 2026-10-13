@@ -207,7 +207,7 @@ export const inspectionTypeDefs = gql`
     catchUpStatus: JSONObject!
     storageHealth: InspectionStorageHealth!
     """
-    Replays the whole document; expensive.
+    Replays the whole document; expensive. Throttled per caller.
     """
     validateDocument(documentId: String!, branch: String): InspectionValidation!
     remotes: [InspectionRemote!]!
