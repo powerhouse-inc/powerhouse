@@ -28,7 +28,7 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
 const INTEGRITY_FIND_BATCH_SIZE = 500;
 
-const DEFAULT_DRIVE_PAGE_SIZE = 100;
+const MAX_DRIVE_PAGE_SIZE = 100;
 
 type DriveNode = {
   id: string;
@@ -131,7 +131,13 @@ export class DriveInspection {
     const page = await this.reader.find(
       { type: DRIVE_DOCUMENT_TYPE },
       this.view,
-      { cursor: cursor ?? "", limit: limit ?? DEFAULT_DRIVE_PAGE_SIZE },
+      {
+        cursor: cursor ?? "",
+        limit:
+          limit === undefined || !Number.isFinite(limit)
+            ? MAX_DRIVE_PAGE_SIZE
+            : Math.min(Math.max(Math.trunc(limit), 1), MAX_DRIVE_PAGE_SIZE),
+      },
     );
     return {
       results: page.results.map(toDriveInfo),

@@ -49,3 +49,28 @@ describe("DriveInspection integrity", () => {
     ]);
   });
 });
+
+describe("DriveInspection listing", () => {
+  it.each([
+    [undefined, 100],
+    [25, 25],
+    [1_000_000, 100],
+    [0, 1],
+    [-5, 1],
+    [2.7, 2],
+    [Number.NaN, 100],
+  ])("pages limit %s as %s", async (limit, expected) => {
+    const limits: number[] = [];
+    const reader: InspectorDocumentReader = {
+      get: () => Promise.reject(new Error("unused")),
+      find: (_search, _view, paging) => {
+        limits.push(paging!.limit);
+        return Promise.resolve({ results: [], options: paging! });
+      },
+    };
+
+    await new DriveInspection(reader).listDrives(undefined, limit);
+
+    expect(limits).toEqual([expected]);
+  });
+});
