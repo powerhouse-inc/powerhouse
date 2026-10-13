@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
+  childrenSchema,
   loadHost,
+  profileSchema,
   type HostDefinition,
   type RunnerContext,
 } from "@powerhousedao/host-core";
@@ -18,25 +20,17 @@ import type { VetraArgs } from "../types.js";
 
 export const kind = "compound";
 
-const memberSchema = z.looseObject({
-  host: z.string().min(1),
-  plugins: z.array(z.string()).optional(),
-  runner: z
-    .looseObject({ port: z.number().int().positive().optional() })
-    .optional(),
-  config: z.looseObject({}).optional(),
-  reactor: z.looseObject({}).optional(),
-});
-
+/** Phase-2 schema (D2.d): children member shapes + profile come from
+ * host-core — member reactor overrides now validate strictly. */
 export const hostSchema = z.looseObject({
   name: z.string().min(1),
   runner: z.looseObject({
     module: z.string(),
     defaultVerb: z.string().optional(),
   }),
-  children: z.record(z.string(), memberSchema),
+  children: childrenSchema,
   config: z.looseObject({}).optional(),
-  profile: z.looseObject({}).optional(),
+  profile: profileSchema,
 });
 
 interface MemberRef {

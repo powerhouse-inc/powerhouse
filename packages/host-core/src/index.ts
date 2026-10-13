@@ -53,6 +53,14 @@ export {
   type RunnerHandle,
 } from "./compound.js";
 export {
+  childrenSchema,
+  profileSchema,
+  reactorBackendSchema,
+  reactorProtocolSchema,
+  reactorSchema,
+  runnerBaseSchema,
+} from "./host-schemas.js";
+export {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,

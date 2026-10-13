@@ -4,7 +4,9 @@ import {
 } from "@powerhousedao/shared/clis";
 import {
   assertProtocolConsistency,
+  profileSchema,
   projectReactorToSwitchboard,
+  reactorSchema,
   type HostDefinition,
   type ReactorConfig,
   type RunnerContext,
@@ -22,6 +24,7 @@ import type { SwitchboardArgs } from "../types.js";
 
 export const kind = "reactor";
 
+/** Phase-2 schema (D2.d): `reactor`/`profile` strict via host-core. */
 export const hostSchema = z.looseObject({
   name: z.string().min(1),
   runner: z.looseObject({
@@ -31,8 +34,8 @@ export const hostSchema = z.looseObject({
     plugins: z.string().optional(),
   }),
   config: z.looseObject({}).optional(),
-  profile: z.looseObject({}).optional(),
-  reactor: z.looseObject({}).optional(),
+  profile: profileSchema,
+  reactor: reactorSchema.optional(),
 });
 
 function toSwitchboardArgs(

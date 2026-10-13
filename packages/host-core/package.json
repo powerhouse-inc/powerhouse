@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/host-core",
   "version": "6.2.3-dev.55",
-  "description": "uniform-runners host framework: host.js loading, runner resolution, and the generic compound runner. EXPERIMENTAL — private while under development; published when the ph init scaffold references it (see docs/plans/2026-10-13-uniform-runners.md).",
+  "description": "uniform-runners host framework: host.js loading, runner resolution, and the generic compound runner. EXPERIMENTAL \u00e2\u20ac\u201d private while under development; published when the ph init scaffold references it (see docs/plans/2026-10-13-uniform-runners.md).",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -29,7 +29,8 @@
     "test": "vitest --run"
   },
   "dependencies": {
-    "@powerhousedao/shared": "workspace:*"
+    "@powerhousedao/shared": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "tsdown": "catalog:",

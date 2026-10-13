@@ -3,7 +3,9 @@ import {
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import {
+  profileSchema,
   projectReactorToConnect,
+  reactorSchema,
   type HostDefinition,
   type ReactorConfig,
   type RunnerContext,
@@ -21,8 +23,9 @@ import type { ConnectStudioArgs } from "../types.js";
 
 export const kind = "reactor";
 
-/** Phase-0 schema: known fields typed, unknown keys tolerated (loose) —
- * strictness lands with the shared reactor/profile schemas in phase 2. */
+/** Phase-2 schema (D2.d): `reactor` and `profile` validate strictly via the
+ * shared host-core schemas — a typo'd protocol key fails instead of silently
+ * not applying. `config` stays loose: it is runner-defined by design. */
 export const hostSchema = z.looseObject({
   name: z.string().min(1),
   runner: z.looseObject({
@@ -33,8 +36,8 @@ export const hostSchema = z.looseObject({
     plugins: z.string().optional(),
   }),
   config: z.looseObject({}).optional(),
-  profile: z.looseObject({}).optional(),
-  reactor: z.looseObject({}).optional(),
+  profile: profileSchema,
+  reactor: reactorSchema.optional(),
 });
 
 /** The studio arg surface is wide (commonArgs + server args); the service only
