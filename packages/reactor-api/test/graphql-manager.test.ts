@@ -1046,6 +1046,64 @@ describe("GraphQLManager", () => {
       }
     });
 
+    it("resolves interface-typed fields over the supergraph stream", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-nodes",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            interface StreamNode {
+              id: ID!
+            }
+            type StreamItem implements StreamNode {
+              id: ID!
+            }
+            type Query {
+              streamNode: StreamNode
+            }
+            type Subscription {
+              nodeAdded: StreamNode
+            }
+          `,
+          resolvers: {
+            Query: { streamNode: () => ({ id: "n-1" }) },
+            Subscription: {
+              nodeAdded: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { nodeAdded: { id: "n-2" } };
+                },
+              },
+            },
+            StreamNode: { __resolveType: () => "StreamItem" },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(
+        await streamOver(
+          handler!,
+          "subscription { nodeAdded { __typename id } }",
+        ),
+      ).toContain(
+        '{"data":{"nodeAdded":{"__typename":"StreamItem","id":"n-2"}}}',
+      );
+      expect(
+        await streamOver(handler!, "{ streamNode { __typename id } }"),
+      ).toContain(
+        '{"data":{"streamNode":{"__typename":"StreamItem","id":"n-1"}}}',
+      );
+    });
+
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
       const { manager, mounts } = makeHarness();
       await registerSubscriptionSubgraph(manager);
