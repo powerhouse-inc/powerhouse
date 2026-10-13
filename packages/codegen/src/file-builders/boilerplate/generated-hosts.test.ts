@@ -34,6 +34,7 @@ describe("writeGeneratedHostsFiles", () => {
       "hosts/connect/host.js",
       "hosts/switchboard/host.js",
       "hosts/vetra/host.js",
+      "hosts/desktop/host.js",
       "agents/index.ts",
     ]) {
       expect(existsSync(join(dir, file)), file).toBe(true);
@@ -52,6 +53,23 @@ describe("writeGeneratedHostsFiles", () => {
     expect(vetra).toContain(`defaultVerb: "dev"`);
     expect(vetra).toContain(`host: "connect"`);
     expect(vetra).toContain("config.vetra?.connectPort");
+
+    // P2.8: single-sourced protocol — the switchboard host references the
+    // SAME connect.reactor block the connect host receives via its config.
+    const switchboard = readFileSync(
+      join(dir, "hosts/switchboard/host.js"),
+      "utf-8",
+    );
+    expect(switchboard).toContain("protocol: config.connect?.reactor ?? {}");
+    expect(connect).toContain(`appId: "inc.powerhouse.connect.my-project"`);
+
+    // the desktop host runs on the PUBLISHED generic compound; ${userData}
+    // must survive as a literal placeholder (resolved by the runner, not here)
+    const desktop = readFileSync(join(dir, "hosts/desktop/host.js"), "utf-8");
+    expect(desktop).toContain("@powerhousedao/host-core/runners/compound");
+    expect(desktop).toContain('dataDir: "${userData}/pglite"');
+    expect(desktop).toContain(`defaultVerb: "serve"`);
+    expect(desktop).toContain("cspRegistrySync: true");
   });
 
   it("is preserve-on-migrate: never clobbers an existing host file", async () => {

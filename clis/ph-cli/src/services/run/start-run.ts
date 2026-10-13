@@ -1,9 +1,9 @@
-import { loadHost } from "./host-loader.js";
+import { loadHost } from "@powerhousedao/host-core";
 import {
   getVerb,
   resolveRunnerModule,
   validateHost,
-} from "./runner-resolver.js";
+} from "@powerhousedao/host-core";
 
 export interface StartRunArgs {
   host: string;
@@ -21,6 +21,8 @@ export interface StartRunArgs {
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   const projectRoot = args.projectRoot ?? process.cwd();
   const loaded = await loadHost(projectRoot, args.host);
+  const { warnSupersededConfigKeys } = await import("./superseded-config.js");
+  warnSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
   validateHost(runner, specifier, loaded.host, loaded.file);

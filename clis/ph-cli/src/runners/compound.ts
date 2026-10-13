@@ -1,6 +1,12 @@
 import { z } from "zod";
-import { loadHost, type HostDefinition } from "../services/run/host-loader.js";
-import type { RunnerContext } from "../services/run/runner-resolver.js";
+import {
+  childrenSchema,
+  loadHost,
+  profileSchema,
+  type HostDefinition,
+  type ReactorConfig,
+  type RunnerContext,
+} from "@powerhousedao/host-core";
 import type { VetraArgs } from "../types.js";
 
 /**
@@ -15,25 +21,17 @@ import type { VetraArgs } from "../types.js";
 
 export const kind = "compound";
 
-const memberSchema = z.looseObject({
-  host: z.string().min(1),
-  plugins: z.array(z.string()).optional(),
-  runner: z
-    .looseObject({ port: z.number().int().positive().optional() })
-    .optional(),
-  config: z.looseObject({}).optional(),
-  reactor: z.looseObject({}).optional(),
-});
-
+/** Phase-2 schema (D2.d): children member shapes + profile come from
+ * host-core — member reactor overrides now validate strictly. */
 export const hostSchema = z.looseObject({
   name: z.string().min(1),
   runner: z.looseObject({
     module: z.string(),
     defaultVerb: z.string().optional(),
   }),
-  children: z.record(z.string(), memberSchema),
+  children: childrenSchema,
   config: z.looseObject({}).optional(),
-  profile: z.looseObject({}).optional(),
+  profile: profileSchema,
 });
 
 interface MemberRef {
@@ -100,6 +98,21 @@ export async function run(
         `Set runner.port in the member host files or override it in the compound's wrappers.`,
     );
   }
+
+  // The switchboard member's reactor block applies on this path too: startVetra
+  // boots the switchboard in-process without going through the switchboard
+  // runner's verbs, so project the block onto env HERE (P2.4 via the vetra
+  // path). Wrapper override wins over the member host file, as everywhere.
+  const sbMember = await loadHost(ctx.projectRoot, switchboardRef.host);
+  const sbWrapper = (host.children ?? {})[switchboardRef.name] as
+    | { reactor?: Record<string, unknown> }
+    | undefined;
+  const sbReactor = {
+    ...((sbMember.host.reactor as Record<string, unknown> | undefined) ?? {}),
+    ...(sbWrapper?.reactor ?? {}),
+  } as ReactorConfig;
+  const { applyReactorEnvProjection } = await import("./reactor-env.js");
+  applyReactorEnvProjection(sbReactor, `hosts/${switchboardRef.host}/host.js`);
 
   // Classic `ph vetra` resolves these through flag>env>.env>config>constant;
   // a hosts project carries the values in its host files (the projection

@@ -27,8 +27,11 @@ import type { GraphQLSchema } from "graphql";
 import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  createInspectionResolvers,
   createReactorInspectionSource,
   InspectionSubgraph,
+  InspectionThrottle,
+  type InspectionCallerGate,
   type IReactorInspectionSource,
 } from "../src/graphql/inspection/index.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
@@ -659,4 +662,171 @@ describe("inspection subgraph: host wiring", () => {
       access: null,
     });
   }, 120_000);
+
+  it("leaves the subgraph unmounted under inspection: false", async () => {
+    const api = await initializeAndStartAPI(
+      async (documentModels) => ({
+        module: await new ReactorClientBuilder()
+          .withReactorBuilder(
+            new ReactorBuilder()
+              .withEventBus(new EventBus())
+              .withDocumentModelSources(documentModels)
+              .withChannelScheme(ChannelScheme.SWITCHBOARD),
+          )
+          .buildModule(),
+      }),
+      { port: 0, dbPath: undefined, mcp: false, inspection: false },
+      "switchboard",
+    );
+    dispose = api.dispose;
+
+    expect(api.graphqlManager.getSubgraphByName("inspection")).toBeUndefined();
+    expect(api.inspection).toBeUndefined();
+    expect(api.graphqlManager.getSubgraphByName("r")).toBeDefined();
+  }, 120_000);
+});
+
+describe("inspection subgraph: throttling", () => {
+  type Field = (
+    parent: unknown,
+    args: unknown,
+    ctx: Context,
+  ) => Promise<unknown>;
+
+  function countingInspector() {
+    const calls: string[] = [];
+    const inspector = {
+      validateDocument: (id: string): Promise<ValidationResult> => {
+        calls.push(id);
+        return Promise.resolve({
+          documentId: id,
+          isConsistent: true,
+          keyframeIssues: [],
+          snapshotIssues: [],
+          streamOrderIssues: [],
+        });
+      },
+    } as unknown as IReactorInspectionSource["inspector"];
+    return { inspector, calls };
+  }
+
+  function stubGate(operators: string[] = []): InspectionCallerGate {
+    return {
+      isOperator: (ctx) => operators.includes(ctx.user?.address ?? ""),
+      readerFor: () => {
+        throw new Error("unused");
+      },
+      assertCanRead: (identifier) => Promise.resolve(identifier),
+      readableIds: (ids) => Promise.resolve(new Set(ids)),
+      servedDocument: (identifier) =>
+        Promise.resolve({ id: identifier, scopes: new Set(["global"]) }),
+    };
+  }
+
+  function stubFields(
+    inspector: IReactorInspectionSource["inspector"],
+    throttle: InspectionThrottle,
+    gate: InspectionCallerGate,
+  ): Record<string, Field> {
+    const source = {
+      inspector,
+      syncInspector: undefined,
+      documentModelRegistry: {},
+      facts: {},
+      throttle,
+    } as unknown as IReactorInspectionSource;
+    const resolvers = createInspectionResolvers(
+      source,
+      { list: () => [] },
+      gate,
+    );
+    return (resolvers as { ReactorInspection: Record<string, Field> })
+      .ReactorInspection;
+  }
+
+  async function codeOfRejection(call: Promise<unknown>): Promise<unknown> {
+    try {
+      await call;
+    } catch (error) {
+      return (error as GraphQL.GraphQLError).extensions.code;
+    }
+    throw new Error("expected a refusal");
+  }
+
+  const validate = `query ($id: String!) { inspection {
+    validateDocument(documentId: $id) { documentId isConsistent } } }`;
+
+  it("refuses a caller past its calls per minute, but not an operator", async () => {
+    module = await buildReadGateReactor();
+    const id = await createFixture(module.client, "ins-throttle");
+    await police(module.client, id);
+    const { schema } = buildSchema(
+      module,
+      openHost(),
+      createReactorInspectionSource(module.reactorModule!, {
+        throttle: { callsPerMinute: 2 },
+      }),
+    );
+    for (let i = 0; i < 2; i++) {
+      const served = await run(schema, validate, contextFor(READER), { id });
+      expect(served.errors).toBeUndefined();
+    }
+    const refused = await run(schema, validate, contextFor(READER), { id });
+    expect(codeOf(refused)).toBe("TOO_MANY_REQUESTS");
+    expect(typeof refused.errors?.[0]?.extensions.retryAfterMs).toBe("number");
+
+    const counted = countingInspector();
+    const fields = stubFields(
+      counted.inspector,
+      new InspectionThrottle({ callsPerMinute: 2 }),
+      stubGate([OPERATOR]),
+    );
+    for (let i = 0; i < 5; i++) {
+      await fields.validateDocument(
+        undefined,
+        { documentId: "doc" },
+        contextFor(OPERATOR),
+      );
+    }
+    expect(counted.calls).toHaveLength(5);
+  });
+
+  it("puts every anonymous caller in one bucket", async () => {
+    const fields = stubFields(
+      countingInspector().inspector,
+      new InspectionThrottle({ callsPerMinute: 2 }),
+      stubGate(),
+    );
+    const call = () =>
+      fields.validateDocument(undefined, { documentId: "doc" }, contextFor());
+
+    await call();
+    await call();
+    expect(await codeOfRejection(call())).toBe("TOO_MANY_REQUESTS");
+  });
+
+  it("charges driveIntegrity from the same bucket, before any read", async () => {
+    const counted = countingInspector();
+    const fields = stubFields(
+      counted.inspector,
+      new InspectionThrottle({ callsPerMinute: 1 }),
+      stubGate(),
+    );
+
+    await fields.validateDocument(
+      undefined,
+      { documentId: "doc" },
+      contextFor(READER),
+    );
+    expect(
+      await codeOfRejection(
+        fields.driveIntegrity(
+          undefined,
+          { driveId: "drive", branch: "main" },
+          contextFor(READER),
+        ),
+      ),
+    ).toBe("TOO_MANY_REQUESTS");
+    expect(counted.calls).toEqual(["doc"]);
+  });
 });

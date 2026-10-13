@@ -12,6 +12,7 @@ export interface HostsTemplates {
   connectHost: string;
   switchboardHost: string;
   vetraHost: string;
+  desktopHost: string;
   agentsIndex: string;
 }
 
@@ -58,6 +59,15 @@ export default {
 
   // handed to the runtime whole: the connect.* block, projected unchanged
   config: config.connect ?? {},
+
+  profile: {
+    appId: "inc.powerhouse.connect.${projectName}",
+    name: "${projectName}",
+  },
+
+  // The replay/admission protocol reaches this host through \`config\` above:
+  // the connect.reactor block of powerhouse.config.json. The switchboard host
+  // references the SAME block, so client and server cannot diverge.
 };
 `;
 
@@ -71,8 +81,16 @@ export default {
     module: "@powerhousedao/ph-cli/runners/switchboard",
     port: config.reactor?.port ?? 4001, // referenced — single value store
   },
-  // \`auth\` is read from powerhouse.config.json by the server itself; the
-  // reactor block (storage, protocol, backends) arrives in a later phase.
+
+  // \`auth\` is read from powerhouse.config.json by the server itself.
+  // \`protocol\` is SINGLE-SOURCED: this references the same connect.reactor
+  // block of powerhouse.config.json that the connect host receives via its
+  // config — one store for the replay/admission consensus, projected here
+  // onto the server's REACTOR_* / CREATE_SIGNATURE_POLICY env. A pre-set env
+  // var contradicting it fails boot by name.
+  reactor: {
+    protocol: config.connect?.reactor ?? {},
+  },
 };
 `;
 
@@ -104,6 +122,59 @@ export default {
 };
 `;
 
+  const desktopHost = `// @ts-check
+// The desktop shape: a production switchboard next to the BUILT Connect,
+// supervised by the GENERIC compound (@powerhousedao/host-core). Run
+// \`ph run connect build\` once, then \`ph run desktop\`. A desktop shell
+// (ph-win) supervises exactly this command. At \`run\`, each member uses its
+// own default mode below; \`ph run desktop <verb>\` forwards uniformly.
+import config from "../../powerhouse.config.json" with { type: "json" };
+
+export default {
+  name: "desktop",
+
+  runner: {
+    module: "@powerhousedao/host-core/runners/compound",
+  },
+
+  profile: {
+    appId: "inc.powerhouse.desktop.${projectName}",
+    name: "${projectName} Desktop",
+  },
+
+  children: {
+    "desktop-switchboard": {
+      host: "switchboard",
+      reactor: {
+        backends: {
+          main: {
+            // Per-user data dir; \${userData} resolves at the runner (a shell
+            // points it at the OS profile via PH_USER_DATA_DIR).
+            storage: { kind: "path", dataDir: "\${userData}/pglite" },
+            readModel: { url: "\${userData}/pglite" },
+            // the reactor can fetch models Connect installs at runtime
+            packages: { dynamic: true },
+          },
+        },
+      },
+    },
+    "desktop-connect": {
+      host: "connect",
+      // serve the BUILT Connect; the loopback port doubles as a shell's
+      // readiness probe
+      runner: { defaultVerb: "serve", port: config.studio?.port ?? 3000 },
+    },
+  },
+
+  config: {
+    startOrder: ["desktop-switchboard", "desktop-connect"],
+    projectDrivesIntoConnect: true, // defaultDrives -> this switchboard's drives
+    cspRegistrySync: true, // patch the baked CSP for the runtime registry
+    runtimeRecord: true, // single-instance record under .ph/run/
+  },
+};
+`;
+
   const agentsIndex = `/**
  * agents/ — agent definitions (profiles, skills, commands, triggers).
  * Scaffolded empty; the agent-host phases of uniform-runners populate it.
@@ -111,5 +182,12 @@ export default {
 export {};
 `;
 
-  return { readme, connectHost, switchboardHost, vetraHost, agentsIndex };
+  return {
+    readme,
+    connectHost,
+    switchboardHost,
+    vetraHost,
+    desktopHost,
+    agentsIndex,
+  };
 }

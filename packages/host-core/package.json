@@ -1,0 +1,49 @@
+{
+  "name": "@powerhousedao/host-core",
+  "version": "6.2.3-dev.55",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "uniform-runners host framework: host.js loading, runner resolution, and the generic compound runner. EXPERIMENTAL \u00e2\u20ac\u201d private while under development; published when the ph init scaffold references it (see docs/plans/2026-10-13-uniform-runners.md).",
+  "type": "module",
+  "sideEffects": false,
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/host-core"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "./runners/compound": {
+      "source": "./src/runners/compound.ts",
+      "types": "./dist/runners/compound.d.mts",
+      "import": "./dist/runners/compound.mjs",
+      "default": "./dist/runners/compound.mjs"
+    }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/host-core",
+    "build": "tsdown",
+    "test": "vitest --run",
+    "emit-schemas": "tsx scripts/emit-schemas.ts"
+  },
+  "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "vitest": "catalog:",
+    "@powerhousedao/reactor-monitor": "workspace:*"
+  }
+}

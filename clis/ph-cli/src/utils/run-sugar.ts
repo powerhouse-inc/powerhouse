@@ -1,4 +1,4 @@
-import { probeHostsFolder } from "../services/run/host-loader.js";
+import { probeHostsFolder } from "@powerhousedao/host-core";
 
 export interface RunSugarResult {
   args: string[];

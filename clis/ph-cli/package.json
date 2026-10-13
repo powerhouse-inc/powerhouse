@@ -18,6 +18,7 @@
     "ph-cli": "./dist/cli.mjs"
   },
   "exports": {
+    "./package.json": "./package.json",
     "./runners/connect": {
       "source": "./src/runners/connect.ts",
       "types": "./dist/runners/connect.d.mts",
@@ -90,6 +91,7 @@
     "copyfiles": "catalog:",
     "ts-morph": "catalog:",
     "write-package": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@powerhousedao/host-core": "workspace:*"
   }
 }

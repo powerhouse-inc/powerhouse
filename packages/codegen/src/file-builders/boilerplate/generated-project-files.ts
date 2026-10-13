@@ -221,6 +221,10 @@ export async function writeGeneratedHostsFiles(
     templates.vetraHost,
   );
   await seedUserOwnedFile(
+    join(projectDir, "hosts/desktop/host.js"),
+    templates.desktopHost,
+  );
+  await seedUserOwnedFile(
     join(projectDir, "agents/index.ts"),
     templates.agentsIndex,
   );

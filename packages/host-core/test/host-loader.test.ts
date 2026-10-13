@@ -8,7 +8,7 @@ import {
   lintHostImports,
   loadHost,
   probeHostsFolder,
-} from "../src/services/run/host-loader.js";
+} from "../src/host-loader.js";
 
 const temporary: string[] = [];
 
