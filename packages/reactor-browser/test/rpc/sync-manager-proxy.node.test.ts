@@ -16,6 +16,7 @@ import {
 import { RPC_DEFAULT_TIMEOUT_MS } from "../../src/rpc/op-channel.js";
 import {
   createSyncManagerProxy,
+  SYNC_REMOTES_CHANGED_EVENT,
   SYNC_STATUS_CHANGED_EVENT,
   SyncManagerProxy,
 } from "../../src/rpc/sync-manager-proxy.js";
@@ -244,6 +245,38 @@ describe("createSyncManagerProxy", () => {
       event: { documentId: "doc-1", status: SyncStatus.Synced },
     });
     expect(manager.getSyncStatus("doc-1")).toBe(SyncStatus.Synced);
+  });
+
+  it("replaces its remotes from the remotes-changed bus channel", async () => {
+    const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
+    const manager = createSyncManagerProxy(
+      router,
+      createReactorEventBusProxy(router),
+    );
+    deliver({
+      k: "res",
+      id: lastSyncOp(posted, "list").id,
+      value: [wireRemote("r1", "remote-a", "drive-1", "connected")],
+    });
+    await vi.waitFor(() => expect(manager.list()).toHaveLength(1));
+    const listener = vi.fn();
+    manager.getByName("remote-a").channel.onConnectionStateChange(listener);
+
+    deliver({
+      k: "bus-event",
+      eventType: SYNC_REMOTES_CHANGED_EVENT,
+      event: {
+        remotes: [wireRemote("r2", "local:b", "drive-1", "connecting")],
+      },
+    });
+
+    expect(manager.list().map((r) => r.meta.name)).toEqual(["local:b"]);
+    expect(
+      manager.getByName("local:b").channel.getConnectionState().state,
+    ).toBe("connecting");
+    expect(listener).toHaveBeenCalled();
   });
 
   it("add() sends a sync-op with collectionId.key and carries config.url", async () => {

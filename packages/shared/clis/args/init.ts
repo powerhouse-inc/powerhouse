@@ -60,6 +60,12 @@ export const initArgs = {
     short: "r",
     description: "Remote drive identifier.",
   }),
+  uniformRunners: flag({
+    type: optional(boolean),
+    long: "uniform-runners",
+    description:
+      "Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED.",
+  }),
   clone: option({
     type: optional(string),
     long: "clone",

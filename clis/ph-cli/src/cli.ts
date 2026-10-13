@@ -12,6 +12,7 @@ import {
   isUnrecoverableDbError,
   printDbRecoveryHint,
 } from "./utils/db-error-hint.js";
+import { isUniformRunnersEnabled } from "./utils/feature-flags.js";
 
 let sentryClient: TelemetryClient | undefined = undefined;
 
@@ -38,7 +39,21 @@ async function main() {
     cliName: "ph-cli",
     release: getVersion(),
   });
-  const args = process.argv.slice(2);
+  let args = process.argv.slice(2);
+  // uniform-runners sugar: `ph <host-name> [verb]` → `ph run <host-name> [verb]`
+  // when the first arg names a host in this project's hosts/ folder. Flag-off
+  // leaves the args pipeline untouched; built-in commands always win.
+  if (isUniformRunnersEnabled()) {
+    const { applyRunSugar } = await import("./utils/run-sugar.js");
+    const { phCliCommands } = await import("./commands/ph-cli-commands.js");
+    const sugar = applyRunSugar(
+      args,
+      new Set(Object.keys(phCliCommands)),
+      process.cwd(),
+    );
+    if (sugar.warning) console.warn(sugar.warning);
+    args = sugar.args;
+  }
   const command = args[0];
   const subcommand =
     command &&

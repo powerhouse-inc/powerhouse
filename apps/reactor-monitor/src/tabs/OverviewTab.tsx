@@ -18,7 +18,52 @@ export type OverviewTabProps = {
   readonly rechecking?: boolean;
   /** Why the last re-check failed; empty when it did not. */
   readonly recheckError?: string;
+  /** Restarts a worker's host and provisions it again; worker only. */
+  readonly onRestartWorker?: () => Promise<unknown>;
 };
+
+function RestartWorker({ onRestart }: { onRestart?: () => Promise<unknown> }) {
+  const [restarting, setRestarting] = useState(false);
+  const [error, setError] = useState("");
+
+  const restart = useCallback(async () => {
+    if (!onRestart) {
+      return;
+    }
+    setRestarting(true);
+    setError("");
+    try {
+      await onRestart();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+    setRestarting(false);
+  }, [onRestart]);
+
+  return (
+    <>
+      <div className="rm-form-inline">
+        <button
+          className="rm-btn"
+          data-testid="worker-restart"
+          disabled={restarting || !onRestart}
+          onClick={() => void restart()}
+          type="button"
+        >
+          {restarting ? "Restarting..." : "Restart worker"}
+        </button>
+        <span className="rm-cap-note">
+          Retires the worker and provisions this reactor on a fresh one.
+        </span>
+      </div>
+      {error ? (
+        <p className="rm-error" data-testid="worker-restart-error" role="alert">
+          Restart failed: {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 /** Worker-only lifecycle info, fetched once and refreshable. */
 function AdminInfo({ reactor }: { reactor: ManagedWorkerReactor }) {
@@ -270,6 +315,7 @@ export function OverviewTab({
   onRecheckServer,
   rechecking = false,
   recheckError = "",
+  onRestartWorker,
 }: OverviewTabProps) {
   return (
     <div className="rm-tab">
@@ -291,6 +337,7 @@ export function OverviewTab({
       {reactor.kind === "worker" ? (
         <>
           <h3>Worker host</h3>
+          <RestartWorker onRestart={onRestartWorker} />
           <AdminInfo reactor={reactor} />
         </>
       ) : reactor.kind === "remote" ? (

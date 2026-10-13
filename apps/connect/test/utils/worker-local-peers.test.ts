@@ -5,7 +5,11 @@ import {
   type Remote,
 } from "@powerhousedao/reactor";
 import {
+  createPortTransport,
+  createReactorEventBusProxy,
+  MessageRouter,
   ReactorHost,
+  SyncManagerProxy,
   type IRpcTransport,
   type OwnerMessage,
   type RpcMessage,
@@ -61,12 +65,24 @@ function syncManager(): LocalPeerSyncManager {
   const remotes: Remote[] = [];
   return {
     list: () => remotes,
-    add: (name: string) => {
-      const remote = { meta: { name } } as unknown as Remote;
+    add: (
+      name: string,
+      collectionId: DriveCollectionId,
+      channelConfig: unknown,
+      filter: unknown,
+    ) => {
+      const remote = {
+        meta: { id: name, name, collectionId, channelConfig, filter },
+        channel: { getConnectionState: () => ({ state: "connected" }) },
+      } as unknown as Remote;
       remotes.push(remote);
       return Promise.resolve(remote);
     },
-    remove: () => Promise.resolve(),
+    remove: (name: string) => {
+      const index = remotes.findIndex((r) => r.meta.name === name);
+      if (index >= 0) remotes.splice(index, 1);
+      return Promise.resolve();
+    },
   } as unknown as LocalPeerSyncManager;
 }
 
@@ -96,6 +112,7 @@ function workerHost(
   options: { built?: () => Promise<void>; attaches?: boolean } = {},
 ) {
   const peers = createWorkerLocalPeers(new ConsoleLogger(["test"]));
+  const manager = syncManager();
   const retired = vi.fn(() => Promise.resolve());
   const host = new ReactorHost({
     build: async (construct) => {
@@ -107,7 +124,7 @@ function workerHost(
       if (multiReactor) {
         peers.createChannelFactory();
         if (options.attaches ?? true) {
-          peers.attach(syncManager());
+          peers.attach(manager);
         }
       }
       return {} as IReactorClient;
@@ -119,13 +136,69 @@ function workerHost(
       return peers.removeHandler();
     },
     onRetire: peers.retiring(retired),
+    onSyncOp: (method) => {
+      if (method !== "list") return Promise.resolve(undefined);
+      return Promise.resolve(
+        manager.list().map((remote) => ({
+          meta: remote.meta,
+          connectionState: remote.channel.getConnectionState(),
+        })),
+      );
+    },
   });
   const tab = injectableTransport();
   host.connect(tab.transport);
   return { host, tab, retired };
 }
 
+function connectTab(host: ReactorHost) {
+  const channel = new MessageChannel();
+  const dispose = host.connectPort(channel.port1);
+  const router = new MessageRouter();
+  router.attach(createPortTransport(channel.port2));
+  const proxy = new SyncManagerProxy(
+    router,
+    createReactorEventBusProxy(router),
+  );
+  return {
+    proxy,
+    close: () => {
+      dispose();
+      channel.port1.close();
+      channel.port2.close();
+    },
+  };
+}
+
 describe("worker local sync peers", () => {
+  it("lists a peer another client adopts, and drops it on remove", async () => {
+    const { host, tab: broker } = workerHost();
+    broker.receive(hello(true));
+    await broker.reply("h");
+    const connect = connectTab(host);
+    try {
+      await connect.proxy.startup();
+      const names = () => connect.proxy.list().map((r) => r.meta.name);
+      expect(names()).toEqual([]);
+
+      broker.receive(adopt("a", "reactor-a", fakePort()));
+      expect(await broker.reply("a")).toMatchObject({ k: "res" });
+      await vi.waitFor(() => expect(names()).toEqual(["local:reactor-a"]));
+
+      broker.receive({
+        k: "remove-sync-peer",
+        id: "r",
+        peerId: "reactor-a",
+        channelName: "drive-1:main",
+        remoteName: "local:reactor-a",
+      } as RpcMessage);
+      expect(await broker.reply("r")).toMatchObject({ k: "res" });
+      await vi.waitFor(() => expect(names()).toEqual([]));
+    } finally {
+      connect.close();
+    }
+  });
+
   it("closes every adopted port when the host retires", async () => {
     const { host, tab, retired } = workerHost();
     tab.receive(hello(true));
