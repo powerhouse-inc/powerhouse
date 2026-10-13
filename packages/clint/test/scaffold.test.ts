@@ -11,10 +11,11 @@ describe("@powerhousedao/clint scaffold (P5.1)", () => {
     expect(mastraRunner.hostSchema).toBeDefined();
   });
 
-  it("clint-runner refuses honestly until P5.4 lands", () => {
-    const host = { name: "x", runner: { module: "m" } };
-    const ctx = { projectRoot: ".", verb: "run", env: {} };
-    expect(() => clintRunner.run(host, ctx)).toThrow(/P5\.4.*in progress/s);
+  it("clint-runner exposes its real verbs (P5.4 landed)", () => {
+    expect(typeof clintRunner.run).toBe("function");
+    expect(typeof clintRunner.dev).toBe("function");
+    expect(typeof clintRunner.build).toBe("function");
+    expect(clintRunner.serve).toBe(clintRunner.run);
   });
 
   it("mastra-runner exposes its real verbs (P5.6 landed)", () => {
