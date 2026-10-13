@@ -64,6 +64,38 @@ describe("resolveRunnerModule", () => {
     expect(listVerbs(runner)).toEqual(["dev", "run"]);
   });
 
+  it("resolves subpath exports that carry a `default` condition (regression)", async () => {
+    // createRequire().resolve applies REQUIRE conditions — an exports entry
+    // with only source/types/import is invisible to it. Runner subpaths must
+    // therefore always declare `default` (see ph-cli's own exports map).
+    const project = mkdtempSync(path.join(tmpdir(), "ph-runner-exports-"));
+    temporary.push(project);
+    writeFileSync(
+      path.join(project, "package.json"),
+      JSON.stringify({ name: "lab", type: "module" }),
+    );
+    const pkgDir = path.join(project, "node_modules", "mapped-runner");
+    mkdirSync(pkgDir, { recursive: true });
+    writeFileSync(
+      path.join(pkgDir, "package.json"),
+      JSON.stringify({
+        name: "mapped-runner",
+        type: "module",
+        exports: {
+          "./runner": { import: "./runner.js", default: "./runner.js" },
+          "./import-only": { import: "./runner.js" },
+        },
+      }),
+    );
+    writeFileSync(path.join(pkgDir, "runner.js"), GOOD_RUNNER);
+
+    const runner = await resolveRunnerModule(project, "mapped-runner/runner");
+    expect(runner.kind).toBe("reactor");
+    await expect(
+      resolveRunnerModule(project, "mapped-runner/import-only"),
+    ).rejects.toThrow(/Cannot resolve runner module/);
+  });
+
   it("errors with an install hint for an unresolvable specifier", async () => {
     const project = makeProjectWithRunner(GOOD_RUNNER);
     await expect(resolveRunnerModule(project, "no-such-pkg")).rejects.toThrow(
