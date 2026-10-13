@@ -160,10 +160,13 @@ export function setupEventListeners(
                   try {
                     const result = await driveFactory(driveHeader);
                     return result as unknown as ReactorProcessorRecord[];
-                  } catch (e) {
-                    logger.error(
-                      `Error creating processor for drive ${driveHeader.id}:`,
-                      e,
+                  } catch (error) {
+                    reportFailure(
+                      reporting,
+                      error,
+                      "Creating a processor of @package for drive @drive failed: @error",
+                      packageName,
+                      driveHeader.id,
                     );
                     return [];
                   }
