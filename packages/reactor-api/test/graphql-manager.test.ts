@@ -1662,6 +1662,41 @@ describe("GraphQLManager", () => {
       expect(mounts.get("/graphql/plain")).toBe(plainHandler);
     });
 
+    it("serves the old handler until its rebuild succeeds", async () => {
+      const { manager, handles, disposed, gatewayAdapter, logger, ...rest } =
+        await setupAlphaTools();
+      let route = handles.get("/graphql/alpha-tools");
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await rest.regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+      expect(disposed).not.toContain(route);
+      expect(await rest.served()).toContain("rev1");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await rest.served()).toContain("rev2");
+
+      route = handles.get("/graphql/alpha-tools");
+      createHandlerOf(gatewayAdapter).mockImplementation((schema) =>
+        schema.getQueryType()?.getFields().alphaDoc
+          ? Promise.reject(new Error("boom"))
+          : Promise.resolve(servingSdl(schema)),
+      );
+      await rest.regenerate("rev3");
+      await vi.runAllTimersAsync();
+
+      expect(disposed).not.toContain(route);
+      expect(await rest.served()).toContain("rev2");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to setup subgraph @name at path @path: @error",
+        "alpha-tools",
+        "/graphql/alpha-tools",
+        expect.any(Error),
+      );
+    });
+
     it("keeps the newest build when an older one finishes last", async () => {
       const { manager, gatewayAdapter, regenerate, served } =
         await setupAlphaTools();

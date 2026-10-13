@@ -1710,8 +1710,9 @@ export class GraphQLManager {
                 subgraph.name,
               );
               continue;
+            } else {
+              await this.#unmountSubgraph(cached.subgraph, supergraph);
             }
-            await this.#unmountSubgraph(cached.subgraph, supergraph);
           }
 
           const generated = this.#generated();
