@@ -56,6 +56,7 @@ export class ReactorMonitorRegistry {
   private readonly listeners = new Set<ReactorMonitorRegistryListener>();
   /** Per name, the last queued op; outlives the entry. */
   private readonly tails = new Map<string, Promise<void>>();
+  private readonly options = new Map<string, ProvisionOptions | undefined>();
   private snapshot: readonly ManagedReactorEntry[] = [];
 
   /**
@@ -80,6 +81,7 @@ export class ReactorMonitorRegistry {
       descriptor,
       status: "provisioning",
     };
+    this.options.set(descriptor.name, options);
     this.set(placeholder);
     return this.enqueue(descriptor.name, () =>
       this.build(placeholder, descriptor, options),
@@ -151,6 +153,19 @@ export class ReactorMonitorRegistry {
   }
 
   /**
+   * Restarts a worker reactor's host and provisions it again. The restart
+   * retires the worker, which kills the old handle and fails the entry.
+   */
+  async restart(name: string): Promise<ManagedReactor> {
+    const entry = this.entries.get(name);
+    if (entry?.status !== "ready" || !entry.reactor.restart) {
+      throw new Error(`No ready worker reactor named ${JSON.stringify(name)}`);
+    }
+    await entry.reactor.restart();
+    return this.provision(entry.descriptor, this.options.get(name));
+  }
+
+  /**
    * Brokers a direct `LocalChannel` sync link between two ready reactors for
    * one collection -- no Switchboard, no GraphQL. Both
    * reactors must have been provisioned with `sync.local`. Returns a handle
@@ -204,6 +219,7 @@ export class ReactorMonitorRegistry {
   async kill(name: string): Promise<void> {
     const entry = this.entries.get(name);
     this.entries.delete(name);
+    this.options.delete(name);
     // Queued before the publish, so a listener's re-provision waits for it.
     const killed = this.enqueue(name, async () => {
       await entry?.reactor?.kill();
@@ -218,6 +234,7 @@ export class ReactorMonitorRegistry {
   async killAll(): Promise<void> {
     const entries = new Map(this.entries);
     this.entries.clear();
+    this.options.clear();
     const names = new Set([...entries.keys(), ...this.tails.keys()]);
     // Each name waits only on its own queue; the kills themselves run one at
     // a time, since each in-process kill closes a PGlite and the stores share

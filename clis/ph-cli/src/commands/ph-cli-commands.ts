@@ -11,12 +11,14 @@ import { logout } from "./logout.js";
 import { migrate } from "./migrate.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
+import { runHost } from "./run.js";
 import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
 import { vetra } from "./vetra.js";
+import { isUniformRunnersEnabled } from "../utils/feature-flags.js";
 
-export const phCliCommands = {
+const baseCommands = {
   init,
   generate,
   vetra,
@@ -35,3 +37,11 @@ export const phCliCommands = {
   install,
   uninstall,
 } as const;
+
+/** Exported for tests; the flag decides whether `run` is registered at all,
+ * so flag-off keeps the command surface byte-identical to before. */
+export function buildPhCliCommands(uniformRunners: boolean) {
+  return uniformRunners ? { ...baseCommands, run: runHost } : baseCommands;
+}
+
+export const phCliCommands = buildPhCliCommands(isUniformRunnersEnabled());

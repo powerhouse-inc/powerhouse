@@ -29,6 +29,7 @@ import {
   createPortTransport,
   type IRpcTransport,
 } from "@powerhousedao/reactor/rpc";
+import { SYNC_REMOTES_CHANGED_EVENT } from "./sync-manager-proxy.js";
 
 function isDataMessage(
   msg: ClientMessage,
@@ -588,6 +589,7 @@ export class ReactorHost {
         closeTransferredPort(message);
         throw error;
       }
+      await this.broadcastRemotes();
     });
   }
 
@@ -606,7 +608,21 @@ export class ReactorHost {
         channelName: message.channelName,
         remoteName: message.remoteName,
       });
+      await this.broadcastRemotes();
     });
+  }
+
+  // Sent before the adopt/remove reply, so the sender's own tab is current when it resolves.
+  private async broadcastRemotes(): Promise<void> {
+    const list = this.options.onSyncOp;
+    if (!list) return;
+    try {
+      this.broadcastBusEvent(SYNC_REMOTES_CHANGED_EVENT, {
+        remotes: await list("list", []),
+      });
+    } catch (error) {
+      console.error("ReactorHost could not list remotes for its tabs", error);
+    }
   }
 
   private async handleLiveSubscribe(
