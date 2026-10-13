@@ -519,6 +519,7 @@ type SetupGraphQLManagerOptions = {
   attachments?: IAttachmentClientProvider;
   inspection?: IReactorInspectionSource;
   driveStore?: DriveStore;
+  reportError?: ReportError;
 };
 
 /**
@@ -547,6 +548,7 @@ async function setupGraphQLManager({
   attachments,
   inspection,
   driveStore,
+  reportError,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -575,6 +577,7 @@ async function setupGraphQLManager({
     attachments,
     inspection,
     driveStore,
+    reportError,
   });
 
   await graphqlManager.init(
@@ -1275,6 +1278,7 @@ async function _setupAPI(
     attachments: attachmentClientProvider,
     inspection,
     driveStore,
+    reportError: options.reportError,
   });
 
   // Set up event listeners

@@ -237,6 +237,7 @@ type HarnessOptions = {
   logger?: ILogger;
   authorizationService?: IAuthorizationService;
   attachments?: IAttachmentClientProvider;
+  reportError?: (error: unknown) => void;
 };
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -278,6 +279,7 @@ function makeHarness(options: HarnessOptions = {}) {
         policy: AuthorizationPolicy.OPEN,
       }),
     attachments: options.attachments,
+    reportError: options.reportError,
   });
 
   return {
@@ -1479,6 +1481,38 @@ describe("GraphQLManager", () => {
       await manager.shutdown();
 
       expect(wsServer.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("reportError", () => {
+    it("receives a failed supergraph update", async () => {
+      const reportError = vi.fn();
+      const { manager, gatewayAdapter } = makeHarness({ reportError });
+      await initAndFlush(manager);
+      const failure = new Error("composition failed");
+      gatewayAdapter.updateSupergraph.mockRejectedValueOnce(failure);
+
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
+    });
+
+    it("receives a failed router update scheduled by a package change", async () => {
+      const reportError = vi.fn();
+      const { manager } = makeHarness({ reportError });
+      await initAndFlush(manager);
+      const failure = new Error("router update failed");
+      manager.updateRouter = vi.fn(() => Promise.reject(failure));
+      class Widget extends BaseSubgraph {
+        name = "widget";
+      }
+
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Widget]]]));
+      await vi.runAllTimersAsync();
+
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
     });
   });
 
