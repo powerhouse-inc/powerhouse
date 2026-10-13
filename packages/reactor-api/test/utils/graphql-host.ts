@@ -1,4 +1,4 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
 import type {
   DocumentModelModule,
   PHDocument,
@@ -23,7 +23,6 @@ const {
   printSchema: printGraphQLSchema,
 } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
 
-/** Prints a schema, or SDL, with its types and fields in lexicographic order. */
 export function printSchema(schema: GraphQLSchema | string): string {
   return printGraphQLSchema(
     lexicographicSortSchema(
@@ -32,7 +31,6 @@ export function printSchema(schema: GraphQLSchema | string): string {
   );
 }
 
-/** The same module with its structured definition removed. */
 export function asSchemaFirst(
   module: DocumentModelModule,
 ): DocumentModelModule {
@@ -48,11 +46,6 @@ function operationsByScope(document: PHDocument): ScopedOperations {
   return document.operations as unknown as ScopedOperations;
 }
 
-/**
- * Returns the operations one call appended, per scope. A flattened slice could
- * return an older local operation when a new global one fails, and the call
- * would report success. A scope that shrank contributes nothing.
- */
 function appendedSince(
   document: PHDocument,
   before: Readonly<Record<string, number>>,
@@ -72,10 +65,6 @@ function operationCounts(
   );
 }
 
-/**
- * A reactor client that runs the module's reducer, so cases observe real
- * reducer effects and domain errors.
- */
 export function reactorClientFor(module: DocumentModelModule): {
   readonly client: IReactorClient;
   current: () => PHDocument;
@@ -96,8 +85,6 @@ export function reactorClientFor(module: DocumentModelModule): {
         reducer: (doc: PHDocument, action: unknown) => PHDocument;
       }
     ).reducer;
-    // Report only the operations this call appended. A reactor does not fail
-    // later requests because an earlier operation in the history failed.
     const before = operationCounts(document);
     for (const action of actions) document = reducer(document, action);
     const failure = appendedSince(document, before).find(
@@ -109,6 +96,11 @@ export function reactorClientFor(module: DocumentModelModule): {
   const client = {
     resolveIdOrSlug: (identifier: string) => Promise.resolve(identifier),
     get: () => Promise.resolve(document),
+    getOutgoingRelationships: () =>
+      Promise.resolve({
+        results: [],
+        options: { cursor: "", limit: 0 },
+      } satisfies PagedResults<PHDocument>),
     execute,
     executeAsync: async (
       id: string,
@@ -126,8 +118,6 @@ export function subgraphArgs(
   client: IReactorClient,
   authorization: Partial<IAuthorizationService> = {},
 ): SubgraphArgs {
-  // The golden regenerator runs this harness outside vitest, so these are
-  // plain functions.
   const authorizationService: Partial<IAuthorizationService> = {
     config: { admins: [], defaultProtection: false } as never,
     isSupremeAdmin: () => true,
