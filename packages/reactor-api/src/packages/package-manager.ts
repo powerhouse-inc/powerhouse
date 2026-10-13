@@ -24,6 +24,7 @@ import type {
   PackagePieceEntry,
 } from "./types.js";
 import { debounce, manifestDeclaredSubgraphs } from "./util.js";
+import { runDetached } from "../utils/detached.js";
 import {
   REGISTRY_ENTRY_ABSENT,
   REGISTRY_EXTERNAL_DEPS_MISSING,
@@ -141,6 +142,10 @@ export class PackageManager implements IPackageManager {
     processorsChange: [Map<string, Processor>];
     piecesChange: [Map<string, PackagePieceEntry[]>];
   }>();
+
+  private get detached() {
+    return { logger: this.logger, report: this.options.reportError };
+  }
 
   constructor(
     loaders: IPackageLoader[],
@@ -550,11 +555,12 @@ export class PackageManager implements IPackageManager {
     update: () => Promise<void>,
   ): () => void {
     if (!this.debouncedUpdateCallbacks.has(key)) {
-      const debouncedFn = debounce(update, 1000);
+      const debouncedFn = debounce(
+        () => runDetached(`Updating ${key}`, update, this.detached),
+        1000,
+      );
       this.debouncedUpdateCallbacks.set(key, () => {
-        debouncedFn().catch((error: unknown) => {
-          this.logger.error("Failed to update package: @error", error);
-        });
+        void debouncedFn();
       });
     }
     return this.debouncedUpdateCallbacks.get(key)!;
@@ -627,7 +633,11 @@ export class PackageManager implements IPackageManager {
             return;
           }
 
-          void this.loadPackages(this.getAllPackageNames());
+          void runDetached(
+            "Reloading packages from the config file",
+            () => this.loadPackages(this.getAllPackageNames()),
+            this.detached,
+          );
         },
       );
     }
@@ -719,26 +729,50 @@ export class PackageManager implements IPackageManager {
   }
 
   onDocumentModelsChange(
-    handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
+    handler: (documentModels: Record<string, DocumentModelModule[]>) => unknown,
   ): void {
-    this.eventEmitter.on("documentModelsChange", handler);
+    this.eventEmitter.on("documentModelsChange", (documentModels) => {
+      void runDetached(
+        "Document models change listener",
+        () => handler(documentModels),
+        this.detached,
+      );
+    });
   }
 
   onSubgraphsChange(
-    handler: (subgraphs: Map<string, SubgraphClass[]>) => void,
+    handler: (subgraphs: Map<string, SubgraphClass[]>) => unknown,
   ): void {
-    this.eventEmitter.on("subgraphsChange", handler);
+    this.eventEmitter.on("subgraphsChange", (subgraphs) => {
+      void runDetached(
+        "Subgraphs change listener",
+        () => handler(subgraphs),
+        this.detached,
+      );
+    });
   }
 
   onProcessorsChange(
-    handler: (processors: Map<string, Processor>) => void,
+    handler: (processors: Map<string, Processor>) => unknown,
   ): void {
-    this.eventEmitter.on("processorsChange", handler);
+    this.eventEmitter.on("processorsChange", (processors) => {
+      void runDetached(
+        "Processors change listener",
+        () => handler(processors),
+        this.detached,
+      );
+    });
   }
 
   onPiecesChange(
-    handler: (pieces: Map<string, PackagePieceEntry[]>) => void,
+    handler: (pieces: Map<string, PackagePieceEntry[]>) => unknown,
   ): void {
-    this.eventEmitter.on("piecesChange", handler);
+    this.eventEmitter.on("piecesChange", (pieces) => {
+      void runDetached(
+        "Pieces change listener",
+        () => handler(pieces),
+        this.detached,
+      );
+    });
   }
 }
