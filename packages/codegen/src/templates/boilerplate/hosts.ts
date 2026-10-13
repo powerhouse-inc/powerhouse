@@ -13,6 +13,12 @@ export interface HostsTemplates {
   switchboardHost: string;
   vetraHost: string;
   desktopHost: string;
+  assistantHost: string;
+  cliHost: string;
+  agentsReadme: string;
+  agentsProfiles: string;
+  agentsBaseProfile: string;
+  agentsExampleSkill: string;
   agentsIndex: string;
 }
 
@@ -38,7 +44,10 @@ export must survive a JSON round trip (no functions); \`ph <host-name>\` is
 sugar for \`ph run <host-name>\` (built-in commands win name collisions).
 
 Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
-server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs).
+server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs),
+\`desktop\` (production switchboard + built Connect on the generic compound),
+\`assistant\` (headless agent API on the project switchboard) and \`cli\`
+(the clint shell scheduling the others as services).
 `;
 
   const connectHost = `// @ts-check
@@ -175,9 +184,125 @@ export default {
 };
 `;
 
+  const assistantHost = `// @ts-check
+// The agent host: a headless Mastra agent whose REACTOR IS THE PROJECT'S
+// SWITCHBOARD, attached as a remote client — no reactor embedded in the agent
+// and glued to its lifetime; the switchboard outlives agent sessions, and N
+// agents attach to ONE reactor. Serves an OpenAI-compatible chat-completions
+// API; without a model configured it answers as the demo agent.
+// Requires @powerhousedao/clint in devDependencies (private until its first
+// publish — link the workspace package meanwhile).
+import config from "../../powerhouse.config.json" with { type: "json" };
+
+export default {
+  name: "${projectName}-assistant",
+
+  runner: {
+    module: "@powerhousedao/clint/mastra-runner",
+    port: 4910,
+    workdir: "\${userData}/assistant",
+  },
+
+  profile: {
+    appId: "inc.powerhouse.assistant.${projectName}",
+    name: "${projectName} Assistant",
+  },
+
+  // A reactor host — hosting "remote": the runner attaches a reactor CLIENT
+  // to a RUNNING switchboard (start it first: \`ph run switchboard\`, vetra,
+  // or a compound that members it; an unreachable remote fails the attach
+  // loudly, never auto-starts).
+  reactor: {
+    backends: {
+      switchboard: {
+        kind: "remote",
+        remote: { host: "switchboard" }, // sibling host reference; use
+                                         // { url: "https://…/graphql" } for
+                                         // an external switchboard
+      },
+    },
+    protocol: config.connect?.reactor ?? {},
+  },
+
+  config: {
+    // model: "anthropic/claude-sonnet-4-5", // enable for real LLM responses
+    //                                        (provider API key via env)
+    prompts: { skillsDir: "agents", outDir: "dist/skills" },
+  },
+};
+`;
+
+  const cliHost = `// @ts-check
+// The compound CLI: the clint shell — children below are SCHEDULED by its
+// services manager (start/stop/ps/logs, per-run log files, re-attach), not
+// merely started. \`ph run cli\` brings the stack up; \`ph run cli dev\` adds
+// a chat shell against the agents below.
+// Requires @powerhousedao/clint in devDependencies (private until its first
+// publish — link the workspace package meanwhile).
+export default {
+  name: "cli",
+
+  runner: {
+    module: "@powerhousedao/clint/clint-runner",
+    // "detached": children survive CLI exit and re-attach on the next run
+    // (clint's own posture); "attached" tears them down on Ctrl+C.
+    lifecycle: "detached",
+  },
+
+  children: {
+    switchboard: { host: "switchboard" },
+    assistant: { host: "assistant" },
+  },
+
+  config: {
+    startOrder: ["switchboard", "assistant"],
+    // THE AGENTS MANAGER — named OpenAI-compatible endpoints; a sibling-host
+    // reference resolves through that host's runner.port.
+    agents: {
+      assistant: { host: "assistant" },
+    },
+  },
+};
+`;
+
+  const agentsReadme = `# agents/
+
+Prompt sources for this project's agent hosts (compiled by
+\`ph run assistant build\`):
+
+- \`agent-profiles/\` — profile sections, concatenated per profiles.json
+- \`skills-tpl/<skill>/\` — Handlebars skill templates → SKILL.md + references
+- \`skills-ext/<skill>/\` — external skills copied as-is
+- \`profiles.json\` — which profiles to build: [{ "name", "sections": [...] }]
+
+Output lands in \`dist/skills/\`.
+`;
+
+  const agentsProfiles = `[
+  { "name": "${projectName}Agent", "sections": ["AgentBase.md"] }
+]
+`;
+
+  const agentsBaseProfile = `# ${projectName} Agent
+
+You are the ${projectName} project agent. You operate on this project's
+Powerhouse documents through the project switchboard.
+
+Be concrete: name documents, drives and operations explicitly. When asked to
+change a document, state which operation you apply and why.
+`;
+
+  const agentsExampleSkill = `# Getting started
+
+Describe this project to a newcomer: what document models it defines, what
+drives exist, and where the interesting documents live.
+
+Built at: {{builtAt}}
+`;
+
   const agentsIndex = `/**
- * agents/ — agent definitions (profiles, skills, commands, triggers).
- * Scaffolded empty; the agent-host phases of uniform-runners populate it.
+ * agents/ — prompt sources for the project's agent hosts. See README.md;
+ * compiled by \`ph run assistant build\` into dist/skills/.
  */
 export {};
 `;
@@ -188,6 +313,12 @@ export {};
     switchboardHost,
     vetraHost,
     desktopHost,
+    assistantHost,
+    cliHost,
+    agentsReadme,
+    agentsProfiles,
+    agentsBaseProfile,
+    agentsExampleSkill,
     agentsIndex,
   };
 }

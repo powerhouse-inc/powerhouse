@@ -35,6 +35,12 @@ describe("writeGeneratedHostsFiles", () => {
       "hosts/switchboard/host.js",
       "hosts/vetra/host.js",
       "hosts/desktop/host.js",
+      "hosts/assistant/host.js",
+      "hosts/cli/host.js",
+      "agents/README.md",
+      "agents/profiles.json",
+      "agents/agent-profiles/AgentBase.md",
+      "agents/skills-tpl/getting-started/00.describe-the-project.md",
       "agents/index.ts",
     ]) {
       expect(existsSync(join(dir, file)), file).toBe(true);
@@ -70,6 +76,20 @@ describe("writeGeneratedHostsFiles", () => {
     expect(desktop).toContain('dataDir: "${userData}/pglite"');
     expect(desktop).toContain(`defaultVerb: "serve"`);
     expect(desktop).toContain("cspRegistrySync: true");
+
+    // P5.8: the agent + cli hosts ride the clint runners; ${userData} stays
+    // a literal placeholder; the agents manager references the sibling host.
+    const assistant = readFileSync(
+      join(dir, "hosts/assistant/host.js"),
+      "utf-8",
+    );
+    expect(assistant).toContain("@powerhousedao/clint/mastra-runner");
+    expect(assistant).toContain('remote: { host: "switchboard" }');
+    expect(assistant).toContain('workdir: "${userData}/assistant"');
+    const cli = readFileSync(join(dir, "hosts/cli/host.js"), "utf-8");
+    expect(cli).toContain("@powerhousedao/clint/clint-runner");
+    expect(cli).toContain('lifecycle: "detached"');
+    expect(cli).toContain('assistant: { host: "assistant" }');
   });
 
   it("is preserve-on-migrate: never clobbers an existing host file", async () => {

@@ -225,6 +225,33 @@ export async function writeGeneratedHostsFiles(
     templates.desktopHost,
   );
   await seedUserOwnedFile(
+    join(projectDir, "hosts/assistant/host.js"),
+    templates.assistantHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/cli/host.js"),
+    templates.cliHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/README.md"),
+    templates.agentsReadme,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/profiles.json"),
+    templates.agentsProfiles,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/agent-profiles/AgentBase.md"),
+    templates.agentsBaseProfile,
+  );
+  await seedUserOwnedFile(
+    join(
+      projectDir,
+      "agents/skills-tpl/getting-started/00.describe-the-project.md",
+    ),
+    templates.agentsExampleSkill,
+  );
+  await seedUserOwnedFile(
     join(projectDir, "agents/index.ts"),
     templates.agentsIndex,
   );
