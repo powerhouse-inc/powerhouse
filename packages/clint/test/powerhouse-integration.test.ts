@@ -154,7 +154,7 @@ describe("connectServiceDefinition", () => {
     expect(svc.restart?.enabled).toBe(false);
   });
 
-  it("static mode uses connect-server.js with assetsDir", () => {
+  it("static mode converges on ph-cli connect preview (P5.7)", () => {
     const svc = connectServiceDefinition({
       enabled: true,
       port: 3000,
@@ -169,12 +169,11 @@ describe("connectServiceDefinition", () => {
             params: { port: 3000 },
           })
         : svc.command;
-    expect(cmd).toContain("node ");
-    expect(cmd).toContain("connect-server.js");
-    expect(cmd).toContain('--dir "/path/to/assets"');
+    // One static-serve implementation: the hand-rolled connect-server is gone.
+    expect(cmd).toContain("ph-cli connect preview");
+    expect(cmd).toContain('--outDir "/path/to/assets"');
     expect(cmd).toContain("--port 3000");
-    // Static mode should NOT include ph connect or driveUrl
-    expect(cmd).not.toContain("ph connect");
+    expect(cmd).not.toContain("connect-server.js");
   });
 
   it("static mode has no checkCommand preflight", () => {
