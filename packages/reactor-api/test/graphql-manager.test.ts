@@ -1046,6 +1046,130 @@ describe("GraphQLManager", () => {
       }
     });
 
+    it("streams a subscription subgraph that uses federation directives", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-federated",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            extend schema
+              @link(
+                url: "https://specs.apollo.dev/federation/v2.3"
+                import: ["@key", "@shareable"]
+              )
+            type StreamThing @key(fields: "id") {
+              id: ID!
+            }
+            type Query {
+              streamThing: StreamThing @shareable
+            }
+            type Subscription {
+              thingAdded: StreamThing
+            }
+          `,
+          resolvers: {
+            Query: { streamThing: () => ({ id: "t-1" }) },
+            Subscription: {
+              thingAdded: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { thingAdded: { id: "t-2" } };
+                },
+              },
+            },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(
+        await streamOver(handler!, "subscription { thingAdded { id } }"),
+      ).toContain('{"data":{"thingAdded":{"id":"t-2"}}}');
+      expect(
+        await streamOver(handler!, "{ alphaInfo streamThing { id } }"),
+      ).toContain('{"data":{"alphaInfo":"from-a","streamThing":{"id":"t-1"}}}');
+    });
+
+    it("streams subgraphs that only extend the root types", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-extends",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            extend type Query {
+              extInfo: String
+            }
+            extend type Subscription {
+              extTick: String
+            }
+          `,
+          resolvers: {
+            Query: { extInfo: () => "info" },
+            Subscription: {
+              extTick: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { extTick: "tick" };
+                },
+              },
+            },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { extTick }")).toContain(
+        '{"data":{"extTick":"tick"}}',
+      );
+      expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
+        "Failed to setup supergraph SSE: @error",
+        expect.anything(),
+      );
+    });
+
+    it("mounts no stream when no subgraph contributes a Query root", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-no-query",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            type Subscription {
+              lonely: String
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+
+      expect(mounts.has("/graphql/stream")).toBe(false);
+      expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
+        "Failed to setup supergraph SSE: @error",
+        expect.anything(),
+      );
+    });
+
     it("resolves interface-typed fields over the supergraph stream", async () => {
       const { manager, mounts } = makeHarness();
       await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
