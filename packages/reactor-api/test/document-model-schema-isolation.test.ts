@@ -8,6 +8,7 @@ import {
 import type { DocumentModelModule, ILogger } from "document-model";
 import { createServer, type AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { initializeAndStartAPI } from "../src/server.js";
 
 type API = Awaited<ReturnType<typeof initializeAndStartAPI>>;
@@ -207,5 +208,64 @@ describe("a document model whose schema is unusable", () => {
     );
     expect(refusals(logger, "test/broken")).toHaveLength(1);
     expect(refusals(logger, "test/dangling")).toHaveLength(1);
+  });
+});
+
+describe("document model schemas across regenerations", () => {
+  function reload(api: API, model: DocumentModelModule) {
+    api.documentModelRegistry.unregisterModules(model.documentModel.global.id);
+    api.documentModelRegistry.registerModules(model);
+    return api.graphqlManager.regenerateDocumentModelSubgraphs();
+  }
+
+  // A new object on every build of the model's subgraph types.
+  const typeNamesOf = (api: API) =>
+    (api.graphqlManager.getSubgraphByName("good") as DocumentModelSubgraph)
+      .generatedTypeNames;
+
+  it("reuses an unchanged model's types and serves a changed model's", async () => {
+    const { api, port } = await boot([makeModel("Good")]);
+    await expectServing(api, port, "Good");
+    const typeNames = typeNamesOf(api);
+
+    await api.graphqlManager.regenerateDocumentModelSubgraphs();
+    expect(typeNamesOf(api)).toBe(typeNames);
+    await reload(api, makeModel("Good"));
+    expect(typeNamesOf(api)).toBe(typeNames);
+
+    await reload(
+      api,
+      makeModel("Good", "type GoodState { name: String extra: Int }"),
+    );
+    expect(typeNamesOf(api)).not.toBe(typeNames);
+    await vi.waitFor(
+      async () => {
+        expect(await stateFields(api, "Good")).toEqual(["name", "extra"]);
+        const result = await querySupergraph(port, stateFieldsQuery("Good"));
+        expect(result.data).toEqual({
+          __type: { fields: [{ name: "name" }, { name: "extra" }] },
+        });
+      },
+      { timeout: 10_000, interval: 100 },
+    );
+  });
+
+  it("logs a broken model once per schema text", async () => {
+    const { api, port, logger } = await boot([makeModel("Good")]);
+    await expectServing(api, port, "Good");
+
+    await reload(api, makeModel("Broken", "type BrokenState { name: String"));
+    await api.graphqlManager.regenerateDocumentModelSubgraphs();
+    await reload(api, makeModel("Broken", "type BrokenState { name: String"));
+    expect(refusals(logger, "test/broken")).toHaveLength(1);
+
+    // Same syntax error, different text.
+    await reload(api, makeModel("Broken", "type BrokenState { label: String"));
+    await api.graphqlManager.regenerateDocumentModelSubgraphs();
+    const logged = refusals(logger, "test/broken");
+    expect(logged).toHaveLength(2);
+    expect(logged[1][2]).toBe(logged[0][2]);
+
+    await expectServing(api, port, "Good");
   });
 });

@@ -26,6 +26,7 @@ import {
 } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
+import { createHash } from "node:crypto";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
 
@@ -603,6 +604,58 @@ export function buildDocumentModelSchema(
     },
   ]);
   return schema;
+}
+
+/** A document model's schema, or why it is unusable, under its source key. */
+export type ResolvedDocumentModelSchema = {
+  model: DocumentModelModule;
+  key: string;
+} & (
+  | { schema: DocumentModelSchema; error?: undefined }
+  | { schema?: undefined; error: Error }
+);
+
+/** Hash of everything {@link buildDocumentModelSchema} reads. */
+function schemaSourceKey(documentModel: DocumentModelModule): string {
+  const { name, specifications } = documentModel.documentModel.global;
+  return createHash("sha256")
+    .update(JSON.stringify([name, specifications.at(-1)]))
+    .digest("base64");
+}
+
+/** Schemas and failures by source hash, for the last resolve's models only. */
+export class DocumentModelSchemaCache {
+  #entries = new Map<string, DocumentModelSchema | Error>();
+  readonly #build: (documentModel: DocumentModelModule) => DocumentModelSchema;
+
+  constructor(build = buildDocumentModelSchema) {
+    this.#build = build;
+  }
+
+  resolve(
+    documentModels: readonly DocumentModelModule[],
+  ): ResolvedDocumentModelSchema[] {
+    const entries = new Map<string, DocumentModelSchema | Error>();
+    const resolved = documentModels.map(
+      (model): ResolvedDocumentModelSchema => {
+        const key = schemaSourceKey(model);
+        let entry = entries.get(key) ?? this.#entries.get(key);
+        if (entry === undefined) {
+          try {
+            entry = this.#build(model);
+          } catch (error) {
+            entry = error instanceof Error ? error : new Error(String(error));
+          }
+        }
+        entries.set(key, entry);
+        return entry instanceof Error
+          ? { model, key, error: entry }
+          : { model, key, schema: entry };
+      },
+    );
+    this.#entries = entries;
+    return resolved;
+  }
 }
 
 /**

@@ -35,11 +35,11 @@ import type {
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
-  buildDocumentModelSchema,
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
   type DocumentModelSchema,
+  DocumentModelSchemaCache,
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
@@ -336,8 +336,10 @@ export class GraphQLManager {
     | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
     | undefined;
 
-  /** Document models refused from the schema, by id, with the reason logged. */
-  #refusedModels = new Map<string, string>();
+  /** Refusals logged: model id, source key and reason. */
+  #refusals = new Set<string>();
+
+  readonly #schemaCache = new DocumentModelSchemaCache();
 
   /** The schemas of the admitted document models. */
   #modelSchemas = new Map<DocumentModelModule, DocumentModelSchema>();
@@ -621,52 +623,52 @@ export class GraphQLManager {
     return this.#setupSubgraphs(this.coreSubgraphsMap);
   }
 
-  /** Models that pass {@link #refusalReason}; refused ones stay in the reactor. */
+  /** Models whose schemas build and take no reserved name. */
   #admitModels(models: DocumentModelModule[]): DocumentModelModule[] {
     const reserved = reservedTypeNames(
       Array.from(this.coreSubgraphsMap.values(), (subgraphs) =>
         subgraphs.map((subgraph) => subgraph.typeDefs),
       ).flat(),
     );
-    const refused = new Map<string, string>();
+    const refusals = new Set<string>();
     const schemas = new Map<DocumentModelModule, DocumentModelSchema>();
-    const admitted = models.filter((model) => {
-      const reason = this.#refusalReason(model, reserved, schemas);
-      if (reason === undefined) return true;
+    const admitted: DocumentModelModule[] = [];
+    for (const { model, key, schema, error } of this.#schemaCache.resolve(
+      models,
+    )) {
+      const reason = schema
+        ? this.#reservedNamesReason(model, schema, reserved)
+        : `has an unusable schema: ${error.message}`;
+      if (schema && reason === undefined) {
+        schemas.set(model, schema);
+        admitted.push(model);
+        continue;
+      }
       const id = model.documentModel.global.id;
-      refused.set(id, reason);
-      if (this.#refusedModels.get(id) !== reason) {
+      const refusal = `${id}\n${key}\n${reason}`;
+      refusals.add(refusal);
+      if (!this.#refusals.has(refusal)) {
         this.logger.error(
           "Refusing document model @documentType from the GraphQL schema: @reason",
           id,
           reason,
         );
       }
-      return false;
-    });
-    this.#refusedModels = refused;
+    }
+    this.#refusals = refusals;
     this.#modelSchemas = schemas;
     return admitted;
   }
 
-  /** Why `model` is left out of the schema; else its schema joins `schemas`. */
-  #refusalReason(
+  #reservedNamesReason(
     model: DocumentModelModule,
+    schema: DocumentModelSchema,
     reserved: ReservedTypeNames,
-    schemas: Map<DocumentModelModule, DocumentModelSchema>,
   ): string | undefined {
-    let schema: DocumentModelSchema;
-    try {
-      schema = buildDocumentModelSchema(model);
-    } catch (error) {
-      return `has an unusable schema: ${error instanceof Error ? error.message : String(error)}`;
-    }
     const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
-    if (taken.length > 0) {
-      return `generates reserved type names: ${taken.join(", ")}`;
-    }
-    schemas.set(model, schema);
-    return undefined;
+    return taken.length > 0
+      ? `generates reserved type names: ${taken.join(", ")}`
+      : undefined;
   }
 
   async #setupDocumentModelSubgraphs(
