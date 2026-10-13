@@ -1106,9 +1106,8 @@ export class GraphQLManager {
     await this.updateRouter();
   }
 
-  /** Not awaited: the debounced call never settles a promise whose timer a
-   * later call replaced, so awaiting it in a registry change could wedge the
-   * queue. */
+  /** Not awaited: a registry change does not wait out the router's
+   * debounce. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
     this.#inHook.exit(() => {
