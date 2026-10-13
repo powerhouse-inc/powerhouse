@@ -65,6 +65,27 @@ describe("applyRunSugar", () => {
       args: ["desktop"],
     });
   });
+
+  it("routes bare `ph vetra` through run in a hosts project (P0.9)", () => {
+    const project = makeProject("vetra");
+    expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual([
+      "run",
+      "vetra",
+    ]);
+  });
+
+  it("keeps flagged `ph vetra --watch` classic (not representable on run yet)", () => {
+    const project = makeProject("vetra");
+    expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual([
+      "vetra",
+      "--watch",
+    ]);
+  });
+
+  it("keeps bare `ph vetra` classic in a legacy project", () => {
+    const project = makeProject();
+    expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual(["vetra"]);
+  });
 });
 
 describe("buildPhCliCommands", () => {
