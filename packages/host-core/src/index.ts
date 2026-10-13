@@ -34,3 +34,13 @@ export {
   type RunnerModule,
   type RunnerVerb,
 } from "./runner-resolver.js";
+export {
+  clearRunRecord,
+  isPidAlive,
+  probeRun,
+  readRunRecord,
+  writeRunRecord,
+  type RunProbe,
+  type RunRecord,
+  type RunRecordMember,
+} from "./run-record.js";
