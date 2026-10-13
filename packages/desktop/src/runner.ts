@@ -42,6 +42,9 @@ interface DesktopRunnerOptions {
   vendorStack?: boolean;
   /** build: the ph-cli version/tag to vendor (default "dev"). */
   phCliVersion?: string;
+  /** build: full install spec override (e.g. a pnpm-pack tarball path) for a
+   * ph-cli not yet on the registry. */
+  phCliSpec?: string;
 }
 
 interface ChildWrapper {
@@ -162,6 +165,8 @@ export async function build(
     shellProjectDir: shell.projectDir,
     vendor: runnerOptions.vendorStack,
     phCliVersion: runnerOptions.phCliVersion,
+    phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
+    connectPort: await connectPort(host, ctx),
   });
   console.log(
     `[${host.name}] stack staged at ${result.stackDir}` +

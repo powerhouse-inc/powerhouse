@@ -22,11 +22,20 @@ import path from "node:path";
 export interface BundleStackOptions {
   projectRoot: string;
   shellProjectDir: string;
-  /** Vendor @powerhousedao/ph-cli@<tag/version> from the registry (slow).
-   * Skipped when false — an existing vendored tree is left in place. */
+  /** Vendor the runtime packages (slow). Skipped when false — an existing
+   * vendored tree is left in place. */
   vendor?: boolean;
-  /** The ph-cli version/tag to vendor. Default: "dev". */
+  /** The ph-cli version/tag to vendor. Default: "dev". NOTE: the vendored
+   * ph-cli must carry the `run` command — registry tags published before
+   * uniform-runners landed cannot run a stack; until a nightly catches up,
+   * pass `phCliSpec` with a locally packed tarball instead. */
   phCliVersion?: string;
+  /** Overrides the ph-cli install spec entirely (e.g. a `pnpm pack` tarball
+   * path for a not-yet-published build). */
+  phCliSpec?: string;
+  /** The connect member's port — written into the stack's shell.json so the
+   * shell knows where to probe/navigate with no environment at all. */
+  connectPort?: number;
   logger?: (message: string) => void;
 }
 
@@ -65,10 +74,43 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     );
     log(`  ${dir}/ ${copied ? "staged" : "absent — skipped"}`);
   }
+
+  // Inside the package there is no nested shell — the shell IS the window —
+  // so the staged desktop host runs on the generic compound. Rewrite the
+  // runner.module projection in the STAGED copy only.
+  const stagedDesktopHost = path.join(stackDir, "hosts", "desktop", "host.js");
+  if (fs.existsSync(stagedDesktopHost)) {
+    const source = fs.readFileSync(stagedDesktopHost, "utf8");
+    if (source.includes("@powerhousedao/desktop/runner")) {
+      fs.writeFileSync(
+        stagedDesktopHost,
+        "// STAGED COPY (bundle-stack): runner.module rewritten to the generic\n" +
+          "// compound — the packaged shell is the window; there is no nested shell.\n" +
+          source.replace(
+            /@powerhousedao\/desktop\/runner/g,
+            "@powerhousedao/host-core/runners/compound",
+          ),
+      );
+      log(
+        "  hosts/desktop/host.js: runner rewritten to the generic compound (staged copy)",
+      );
+    }
+  }
   copyIfExists(
     path.join(options.projectRoot, "powerhouse.config.json"),
     path.join(stackDir, "powerhouse.config.json"),
   );
+
+  // shell.json: the stack's contract with the shell. The no-env (packaged)
+  // path has nobody to set PH_WIN_CONNECT_PORT, so the shell reads the probe
+  // and window port from here.
+  if (typeof options.connectPort === "number") {
+    fs.writeFileSync(
+      path.join(stackDir, "shell.json"),
+      `${JSON.stringify({ connectPort: options.connectPort }, null, 2)}\n`,
+    );
+    log(`  shell.json: connectPort ${options.connectPort}`);
+  }
 
   // A minimal manifest: names the project (lock identity) and depends on
   // ph-cli so the vendored tree resolves exactly like a real install.
@@ -92,17 +134,15 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
 
   let vendored = false;
   if (options.vendor !== false) {
-    log(`  vendoring @powerhousedao/ph-cli@${version} (hoisted, real files)…`);
+    const phCliSpec = options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`;
+    // host-core rides along: host files resolve runner modules (the generic
+    // compound) from the STACK's own node_modules.
+    const specs = `"${phCliSpec}" "@powerhousedao/host-core@${version}"`;
+    log(`  vendoring ${specs} (hoisted, real files)…`);
+    // One command string: shell:true with an args ARRAY concatenates without
+    // escaping (DEP0190 warns); the spec values are our own constants/paths.
     const result = spawnSync(
-      "npm",
-      [
-        "install",
-        `@powerhousedao/ph-cli@${version}`,
-        "--install-strategy=hoisted",
-        "--omit=dev",
-        "--no-audit",
-        "--no-fund",
-      ],
+      `npm install ${specs} --install-strategy=hoisted --omit=dev --no-audit --no-fund`,
       { cwd: stackDir, stdio: "pipe", shell: true, windowsHide: true },
     );
     if (result.status !== 0) {

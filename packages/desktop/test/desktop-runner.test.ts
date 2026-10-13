@@ -211,10 +211,25 @@ describe("bundle-stack staging", () => {
       projectRoot: dir,
       shellProjectDir: shell,
       vendor: false,
+      connectPort: 6123,
       logger: () => undefined,
     });
 
     expect(result.vendored).toBe(false);
+    // shell.json carries the probe/window port for the no-env packaged path.
+    expect(
+      JSON.parse(
+        readFileSync(path.join(result.stackDir, "shell.json"), "utf8"),
+      ),
+    ).toEqual({ connectPort: 6123 });
+    // The staged desktop host must run on the generic compound: inside the
+    // package the shell IS the window — no nested shell runner.
+    const stagedHost = readFileSync(
+      path.join(result.stackDir, "hosts", "desktop", "host.js"),
+      "utf8",
+    );
+    expect(stagedHost).not.toContain("@powerhousedao/desktop/runner");
+    expect(stagedHost).toContain("@powerhousedao/host-core/runners/compound");
     expect(
       existsSync(path.join(result.stackDir, "hosts", "desktop", "host.js")),
     ).toBe(true);
