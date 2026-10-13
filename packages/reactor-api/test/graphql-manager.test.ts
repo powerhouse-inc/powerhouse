@@ -1558,9 +1558,10 @@ describe("GraphQLManager", () => {
       await apply("rev3");
       hold.release();
       await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
+
       // A later update must not take the stale handler for the current one.
       await manager.updateRouter(true);
-
       expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
       expect(await internalSdl(manager, "racer")).toContain("rev3");
     });
@@ -1595,28 +1596,33 @@ describe("GraphQLManager", () => {
       await regenerate("rev3");
       hold.release();
       await vi.runAllTimersAsync();
-      await manager.updateRouter(true);
+      expect(await servedSdl(mounts, "/graphql/alpha")).toContain("rev3");
 
+      await manager.updateRouter(true);
       const served = await servedSdl(mounts, "/graphql/alpha");
       expect(served).toContain("rev3");
       expect(served).not.toContain("rev2");
       expect(await internalSdl(manager, "alpha")).toContain("rev3");
     });
-    it("rebuilds a subgraph using a model's types after the model changes", async () => {
+    async function setupAlphaTools(
+      typeDefs = "type Query { alphaDoc: Alpha }",
+    ) {
       const reactorClient = makeMockReactorClient({
         getDocumentModelModules: vi.fn().mockResolvedValue({
           results: [makeDriveModule(), alphaWith("rev1")],
         }),
       });
-      const { manager, mounts, gatewayAdapter } = makeHarness({
+      const logger = makeHarnessLogger();
+      const harness = makeHarness({
         reactorClient,
+        logger,
         enableDocumentModelSubgraphs: true,
       });
-      serveSdl(gatewayAdapter);
-      await initAndFlush(manager);
+      serveSdl(harness.gatewayAdapter);
+      await initAndFlush(harness.manager);
       class AlphaTools extends BaseSubgraph {
         name = "alpha-tools";
-        typeDefs = parse("type Query { alphaDoc: Alpha }");
+        typeDefs = parse(typeDefs);
         resolvers = {};
       }
       class Plain extends BaseSubgraph {
@@ -1624,26 +1630,61 @@ describe("GraphQLManager", () => {
         typeDefs = parse("type Query { ping: String }");
         resolvers = {};
       }
-      await manager.applyPackageSubgraphs(
+      await harness.manager.applyPackageSubgraphs(
         new Map([["pkg", [AlphaTools, Plain]]]),
       );
       await vi.runAllTimersAsync();
-      expect(await servedSdl(mounts, "/graphql/alpha-tools")).toContain("rev1");
+      expect(await servedSdl(harness.mounts, "/graphql/alpha-tools")).toContain(
+        "rev1",
+      );
+      const regenerate = async (field: string) => {
+        vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+          results: [makeDriveModule(), alphaWith(field)],
+          options: { cursor: "", limit: 100 },
+        });
+        await harness.manager.regenerateDocumentModelSubgraphs();
+      };
+      const served = () => servedSdl(harness.mounts, "/graphql/alpha-tools");
+      return { ...harness, logger, regenerate, served };
+    }
+
+    it("rebuilds a subgraph using a model's types after the model changes", async () => {
+      const { manager, mounts, regenerate, served } = await setupAlphaTools();
       const plainHandler = mounts.get("/graphql/plain");
 
-      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
-        results: [makeDriveModule(), alphaWith("rev2")],
-        options: { cursor: "", limit: 100 },
-      });
-      await manager.regenerateDocumentModelSubgraphs();
+      await regenerate("rev2");
       await vi.runAllTimersAsync();
 
-      const served = await servedSdl(mounts, "/graphql/alpha-tools");
-      expect(served).toContain("rev2");
-      expect(served).not.toContain("rev1");
+      expect(await served()).toContain("rev2");
+      expect(await served()).not.toContain("rev1");
       expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
       // Uses no model type, so its handler is kept.
       expect(mounts.get("/graphql/plain")).toBe(plainHandler);
+    });
+
+    it("keeps the newest build when an older one finishes last", async () => {
+      const { manager, gatewayAdapter, regenerate, served } =
+        await setupAlphaTools();
+
+      const older = holdNextHandler(gatewayAdapter);
+      await regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(older.started).toHaveBeenCalled();
+
+      const newer = holdNextHandler(gatewayAdapter);
+      await regenerate("rev3");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(newer.started).toHaveBeenCalled();
+
+      newer.release();
+      await vi.runAllTimersAsync();
+      expect(await served()).toContain("rev3");
+
+      older.release();
+      await vi.runAllTimersAsync();
+      expect(await served()).toContain("rev3");
+      expect(await served()).not.toContain("rev2");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev3");
     });
   });
 

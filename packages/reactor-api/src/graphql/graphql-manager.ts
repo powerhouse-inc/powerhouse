@@ -1726,9 +1726,16 @@ export class GraphQLManager {
             schema,
             this.#makeContextFactory(),
           );
-          // Replaced meanwhile: the next update mounts its successor.
+          // Superseded meanwhile: the update that change scheduled mounts it.
           if (!subgraphsMap.get(supergraph)?.includes(subgraph)) continue;
+          if (generated !== this.#generated()) continue;
           const previous = this.subgraphHandlerCache.get(subgraphPath);
+          if (
+            previous?.subgraph === subgraph &&
+            previous.generated === generated
+          ) {
+            continue;
+          }
           if (previous) {
             await this.#unmountSubgraph(previous.subgraph, supergraph);
           }
