@@ -52,3 +52,15 @@ export {
   type RunCompoundResult,
   type RunnerHandle,
 } from "./compound.js";
+export {
+  assertProtocolConsistency,
+  primaryBackend,
+  projectReactorToConnect,
+  projectReactorToSwitchboard,
+  protocolEnv,
+  type ConnectReactorProjection,
+  type ReactorBackend,
+  type ReactorConfig,
+  type ReactorProtocol,
+  type SwitchboardReactorProjection,
+} from "./reactor-config.js";
