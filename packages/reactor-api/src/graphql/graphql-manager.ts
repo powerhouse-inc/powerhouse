@@ -14,7 +14,7 @@ import type {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { GraphQLSchema } from "graphql";
+import type { DocumentNode, GraphQLSchema } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
@@ -48,6 +48,12 @@ import {
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
+import {
+  collectSubgraphClaims,
+  describeOwnershipConflicts,
+  resolveClaimOwnership,
+  type SubgraphClaims,
+} from "./subgraph-type-ownership.js";
 import {
   filterBuildableSubgraphs,
   mergeSubgraphSchemas,
@@ -356,6 +362,24 @@ export class GraphQLManager {
 
   /** Subgraphs excluded for a type collision, with the reason last logged. */
   readonly #loggedCollisions = new WeakMap<ISubgraph, string>();
+
+  /** Supergraph exclusions for a lost claim, with the reason last logged. */
+  readonly #loggedOwnershipExclusions = new WeakMap<ISubgraph, string>();
+
+  readonly #claims = new WeakMap<
+    ISubgraph,
+    {
+      typeDefs: DocumentNode;
+      generated: GeneratedDocumentModelTypes;
+      claims: SubgraphClaims;
+    }
+  >();
+
+  /** Claim tie-break: kept across re-registration, so HMR keeps the owner. */
+  readonly #registrationOrder = new Map<
+    SubgraphOrigin,
+    { order: number; names: Map<string, number> }
+  >();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -941,6 +965,7 @@ export class GraphQLManager {
     }
 
     this.#origins.set(subgraphInstance, origin);
+    this.#recordRegistrationOrder(origin, subgraphInstance.name);
     if (origin !== HOST_ORIGIN && origin !== CORE_ORIGIN) {
       let instances = this.packageSubgraphs.get(origin);
       if (!instances) {
@@ -953,6 +978,15 @@ export class GraphQLManager {
       `${replaces.length + evicts.length > 0 ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
+  }
+
+  #recordRegistrationOrder(origin: SubgraphOrigin, name: string) {
+    let entry = this.#registrationOrder.get(origin);
+    if (!entry) {
+      entry = { order: this.#registrationOrder.size, names: new Map() };
+      this.#registrationOrder.set(origin, entry);
+    }
+    if (!entry.names.has(name)) entry.names.set(name, entry.names.size);
   }
 
   /**
@@ -1777,6 +1811,90 @@ export class GraphQLManager {
     return subgraphsMap;
   }
 
+  /** Excluded subgraphs leave the supergraph only: their routes stay. */
+  #getSupergraphSubgraphs(): Map<string, ISubgraph> {
+    const members = new Map<string, ISubgraph>();
+    for (const [subgraphPath, subgraph] of this.#getAllSubgraphs()) {
+      if (!this.#isExcludedForTypes(subgraph)) {
+        members.set(subgraphPath, subgraph);
+      }
+    }
+    const losers = this.#claimLosers(new Set(members.values()));
+    for (const [subgraphPath, subgraph] of members) {
+      if (losers.has(subgraph)) members.delete(subgraphPath);
+    }
+    return members;
+  }
+
+  /** Claims go by rank, then first registration; each exclusion logs once. */
+  #claimLosers(subgraphs: ReadonlySet<ISubgraph>): Set<ISubgraph> {
+    const priority = (subgraph: ISubgraph): number[] => {
+      const origin = this.#originOf(subgraph);
+      const order = this.#registrationOrder.get(origin);
+      return [
+        -rank(origin),
+        order?.order ?? Infinity,
+        order?.names.get(subgraph.name) ?? Infinity,
+      ];
+    };
+    const ranked = Array.from(subgraphs, (subgraph) => ({
+      subgraph,
+      priority: priority(subgraph),
+    })).sort((a, b) => {
+      const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
+      return i === -1 ? 0 : a.priority[i] - b.priority[i];
+    });
+    const excluded = resolveClaimOwnership(
+      ranked.map(({ subgraph }) => ({
+        candidate: subgraph,
+        name: subgraph.name,
+        claims: this.#claimsOf(subgraph),
+      })),
+    );
+
+    for (const subgraph of subgraphs) {
+      const conflicts = excluded.get(subgraph);
+      if (!conflicts) {
+        this.#loggedOwnershipExclusions.delete(subgraph);
+        continue;
+      }
+      const reason = describeOwnershipConflicts(conflicts);
+      if (this.#loggedOwnershipExclusions.get(subgraph) !== reason) {
+        this.#loggedOwnershipExclusions.set(subgraph, reason);
+        this.logger.error(
+          "Excluding subgraph @name from the supergraph: @error",
+          subgraph.name,
+          reason,
+        );
+      }
+    }
+    return new Set(excluded.keys());
+  }
+
+  #claimsOf(subgraph: ISubgraph): SubgraphClaims {
+    const generated = this.#generated();
+    const cached = this.#claims.get(subgraph);
+    if (
+      cached?.typeDefs === subgraph.typeDefs &&
+      cached.generated === generated
+    ) {
+      return cached.claims;
+    }
+    let claims: SubgraphClaims;
+    try {
+      claims = collectSubgraphClaims(subgraph.typeDefs, generated.names);
+    } catch {
+      // Malformed typeDefs fail where the schema is built, and are logged there.
+      claims = new Map();
+    }
+    this.#claims.set(subgraph, {
+      typeDefs: subgraph.typeDefs,
+      generated,
+      claims,
+    });
+    return claims;
+  }
+
   #buildSubgraphSchemaModule(subgraph: ISubgraph) {
     return buildSubgraphSchemaModule(
       this.cachedDocumentModels,
@@ -1787,7 +1905,7 @@ export class GraphQLManager {
   }
 
   #getSubgraphDefinitions(): SubgraphDefinition[] {
-    const subgraphs = this.#getAllSubgraphs();
+    const subgraphs = this.#getSupergraphSubgraphs();
 
     const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
       ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
@@ -1795,7 +1913,6 @@ export class GraphQLManager {
 
     const definitions: SubgraphDefinition[] = [];
     for (const [subgraphPath, subgraph] of subgraphs) {
-      if (this.#isExcludedForTypes(subgraph)) continue;
       // One subgraph whose schema cannot be built must not take the
       // supergraph down with it.
       let module: ReturnType<typeof buildSubgraphSchemaModule>;
@@ -1852,12 +1969,9 @@ export class GraphQLManager {
    * subgraph paths.
    */
   #setupSupergraphSSE(superGraphPath: string) {
-    const allSubgraphs = this.#getAllSubgraphs();
-
     const definitions: SubgraphDefinition[] = [];
-    for (const [subgraphPath, subgraph] of allSubgraphs) {
+    for (const [subgraphPath, subgraph] of this.#getSupergraphSubgraphs()) {
       if (!subgraph.hasSubscriptions) continue;
-      if (this.#isExcludedForTypes(subgraph)) continue;
       try {
         const module = this.#buildSubgraphSchemaModule(subgraph);
         definitions.push({
