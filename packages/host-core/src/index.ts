@@ -44,3 +44,11 @@ export {
   type RunRecord,
   type RunRecordMember,
 } from "./run-record.js";
+export {
+  runCompound,
+  type CompoundMember,
+  type CompoundWiring,
+  type RunCompoundOptions,
+  type RunCompoundResult,
+  type RunnerHandle,
+} from "./compound.js";
