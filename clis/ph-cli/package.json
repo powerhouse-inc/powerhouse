@@ -17,6 +17,18 @@
   "bin": {
     "ph-cli": "./dist/cli.mjs"
   },
+  "exports": {
+    "./runners/connect": {
+      "source": "./src/runners/connect.ts",
+      "types": "./dist/runners/connect.d.mts",
+      "import": "./dist/runners/connect.mjs"
+    },
+    "./runners/switchboard": {
+      "source": "./src/runners/switchboard.ts",
+      "types": "./dist/runners/switchboard.d.mts",
+      "import": "./dist/runners/switchboard.mjs"
+    }
+  },
   "files": [
     "dist"
   ],
