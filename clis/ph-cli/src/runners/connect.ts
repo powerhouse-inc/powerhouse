@@ -136,7 +136,13 @@ export async function build(
 }
 
 /** P3.3 — `serve`: the SAME vite preview server as classic
- * `ph connect preview` (static serve of a built Connect; run `build` first). */
+ * `ph connect preview` (static serve of a built Connect; run `build` first).
+ * The host's connect config (including a supervising compound's projected
+ * drives and the reactor projection) rides a serve override: the baked
+ * powerhouse.config.json merges with it at request time, and
+ * `runner.cspRegistrySync` (set by the compound's wiring) patches the baked
+ * CSP's script-src for the runtime registry — together these replace the
+ * ph-win-desktop sidecar's hand-rolled static server (desktop shape). */
 export async function serve(
   host: HostDefinition,
   _ctx: RunnerContext,
@@ -155,5 +161,9 @@ export async function serve(
     printUrls: true,
     bindCLIShortcuts: false,
   };
-  await runConnectPreview(args as ConnectPreviewArgs);
+  const override = callerOverride(host);
+  await runConnectPreview(args as ConnectPreviewArgs, {
+    connect: override,
+    cspRegistrySync: runner.cspRegistrySync === true,
+  });
 }

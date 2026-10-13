@@ -2,6 +2,10 @@ import type { HostDefinition } from "./host-loader.js";
 import { loadHost } from "./host-loader.js";
 import { projectDrivesIntoConnect } from "./connect-projection.js";
 import {
+  defaultUserDataDir,
+  resolveUserDataPlaceholders,
+} from "./placeholders.js";
+import {
   clearRunRecord,
   probeRun,
   writeRunRecord,
@@ -61,6 +65,9 @@ export interface CompoundWiring {
   startOrder?: string[];
   /** Write .ph/run/<host>.json (default true). */
   runtimeRecord?: boolean;
+  /** Patch the baked CSP for the runtime registry on a served connect member
+   * (forwarded to the connect runner as a runner option). */
+  cspRegistrySync?: boolean;
 }
 
 interface StartedMember {
@@ -99,11 +106,12 @@ function orderedMembers(
 async function resolveMemberHost(
   projectRoot: string,
   member: CompoundMember,
+  userData: string,
   configPatch?: Record<string, unknown>,
 ): Promise<HostDefinition> {
   const loaded = await loadHost(projectRoot, member.host);
   const base = loaded.host;
-  return {
+  const merged: HostDefinition = {
     ...base,
     runner: { ...base.runner, ...(member.runner ?? {}) },
     config: {
@@ -115,6 +123,9 @@ async function resolveMemberHost(
       | Record<string, unknown>
       | undefined,
   };
+  // ${userData} in the merged host (storage dirs etc.) resolves here — at the
+  // runner, never derived from the instance name, so renames stay safe.
+  return resolveUserDataPlaceholders(merged, userData);
 }
 
 function isConnectMember(member: CompoundMember): boolean {
@@ -166,6 +177,7 @@ export async function runCompound(
   }
   // stale record: proceed (a dead pid does not hold the lock)
 
+  const userData = defaultUserDataDir(projectRoot, ctx.env);
   const started: StartedMember[] = [];
   const reactorFacts: { driveUrls: (string | null | undefined)[] } = {
     driveUrls: [],
@@ -206,8 +218,12 @@ export async function runCompound(
     const memberHost = await resolveMemberHost(
       projectRoot,
       member,
+      userData,
       configPatch,
     );
+    if (isConnectMember(member) && wiring.cspRegistrySync) {
+      memberHost.runner = { ...memberHost.runner, cspRegistrySync: true };
+    }
     const specifier = memberHost.runner.module;
     const runner = await resolveRunnerModule(projectRoot, specifier);
     validateHost(runner, specifier, memberHost, `hosts/${member.host}/host.js`);

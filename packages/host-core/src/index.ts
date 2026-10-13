@@ -53,6 +53,10 @@ export {
   type RunnerHandle,
 } from "./compound.js";
 export {
+  defaultUserDataDir,
+  resolveUserDataPlaceholders,
+} from "./placeholders.js";
+export {
   backendsToDescriptors,
   backendToDescriptor,
   isStructuralMultiReactor,
