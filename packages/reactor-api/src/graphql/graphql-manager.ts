@@ -54,10 +54,7 @@ import {
   resolveClaimOwnership,
   type SubgraphClaims,
 } from "./subgraph-type-ownership.js";
-import {
-  filterBuildableSubgraphs,
-  mergeSubgraphSchemas,
-} from "./gateway/adapter-gateway-stitching.js";
+import { filterBuildableSubgraphs } from "./gateway/adapter-gateway-stitching.js";
 import {
   getAuthContext,
   type AuthFetchMiddleware,
@@ -85,7 +82,11 @@ import {
   type WsDisposer,
   type WsHandlers,
 } from "./gateway/types.js";
-import { createGraphQLSSEHandler } from "./sse.js";
+import {
+  createGraphQLSSEHandler,
+  mergeStreamSubgraphs,
+  withoutFederationDirectives,
+} from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
@@ -1819,7 +1820,16 @@ export class GraphQLManager {
         members.set(subgraphPath, subgraph);
       }
     }
-    const losers = this.#claimLosers(new Set(members.values()));
+    // A subgraph whose schema failed to build claims nothing.
+    const built = new Set(
+      Array.from(members)
+        .filter(
+          ([subgraphPath, subgraph]) =>
+            this.subgraphHandlerCache.get(subgraphPath)?.subgraph === subgraph,
+        )
+        .map(([, subgraph]) => subgraph),
+    );
+    const losers = this.#claimLosers(built);
     for (const [subgraphPath, subgraph] of members) {
       if (losers.has(subgraph)) members.delete(subgraphPath);
     }
@@ -1993,7 +2003,7 @@ export class GraphQLManager {
     // Each exclusion is logged once, not on every router update.
     const excluded = new Set<string>();
     const buildable = filterBuildableSubgraphs(
-      definitions,
+      withoutFederationDirectives(definitions),
       {
         error: (message: string) => {
           excluded.add(message);
@@ -2005,15 +2015,15 @@ export class GraphQLManager {
       "Supergraph SSE",
     );
     this.#loggedSSEExclusions = excluded;
-    if (buildable.length === 0) {
-      // No subscription-capable subgraphs left: drop the SSE route rather
-      // than keep serving an empty merged schema.
-      this.#disposeSSERoute(superGraphPath);
-      return;
-    }
 
     try {
-      const mergedSchema = mergeSubgraphSchemas(buildable, "last");
+      const mergedSchema = mergeStreamSubgraphs(buildable);
+      if (mergedSchema === undefined) {
+        // Nothing left contributes a Query root: drop the SSE route rather
+        // than serve an empty or invalid schema.
+        this.#disposeSSERoute(superGraphPath);
+        return;
+      }
       this.#setupSSEHandler(mergedSchema, superGraphPath);
       this.logger.debug(
         `SSE subscriptions enabled at supergraph level (merged from ${buildable.length} subgraph(s))`,

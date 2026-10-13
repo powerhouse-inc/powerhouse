@@ -32,6 +32,7 @@ export function normalizeDefinition(node: ASTNode): string {
       const copy: Record<string, unknown> = { ...current };
       delete copy.loc;
       if ("description" in copy) copy.description = undefined;
+      if (current.kind === Kind.STRING) copy.block = false;
       for (const key of ["fields", "arguments", "interfaces"]) {
         if (Array.isArray(copy[key])) {
           copy[key] = byName(copy[key] as Named[]);
@@ -67,7 +68,7 @@ export function collectSubgraphClaims(
   typeDefs: DocumentNode,
   generatedNames: ReadonlySet<string>,
 ): SubgraphClaims {
-  const types = new Map<string, string[]>();
+  const types = new Map<string, (TypeDefinitionNode | TypeExtensionNode)[]>();
   const claims = new Map<string, string>();
   for (const def of typeDefs.definitions) {
     if (!isTypeDefinitionNode(def) && !isTypeExtensionNode(def)) continue;
@@ -89,18 +90,66 @@ export function collectSubgraphClaims(
     }
     if (isTypeDefinitionNode(node) && generatedNames.has(name)) continue;
     const nodes = types.get(name) ?? [];
-    nodes.push(normalizeDefinition(node));
+    nodes.push(node);
     types.set(name, nodes);
   }
   for (const [name, nodes] of types) {
-    claims.set(name, nodes.sort().join("\n"));
+    const merged = mergeTypeNodes(nodes);
+    claims.set(
+      name,
+      merged
+        ? normalizeDefinition(merged)
+        : nodes.map(normalizeDefinition).sort().join("\n"),
+    );
   }
   return claims;
 }
 
+const EXTENSION_KINDS: Partial<Record<Kind, Kind>> = {
+  [Kind.OBJECT_TYPE_DEFINITION]: Kind.OBJECT_TYPE_EXTENSION,
+  [Kind.INTERFACE_TYPE_DEFINITION]: Kind.INTERFACE_TYPE_EXTENSION,
+  [Kind.UNION_TYPE_DEFINITION]: Kind.UNION_TYPE_EXTENSION,
+  [Kind.ENUM_TYPE_DEFINITION]: Kind.ENUM_TYPE_EXTENSION,
+  [Kind.INPUT_OBJECT_TYPE_DEFINITION]: Kind.INPUT_OBJECT_TYPE_EXTENSION,
+};
+
+/** One definition plus its same-kind extensions, as a single definition. */
+function mergeTypeNodes(
+  nodes: readonly (TypeDefinitionNode | TypeExtensionNode)[],
+): ASTNode | undefined {
+  if (nodes.length === 1) return nodes[0];
+  const definitions = nodes.filter(isTypeDefinitionNode);
+  if (definitions.length !== 1) return undefined;
+  const [definition] = definitions;
+  const extensionKind = EXTENSION_KINDS[definition.kind];
+  const merged: Record<string, readonly unknown[] | undefined> = {
+    ...(definition as unknown as Record<string, readonly unknown[]>),
+  };
+  for (const node of nodes) {
+    if (node === definition) continue;
+    if (node.kind !== extensionKind) return undefined;
+    const members = node as unknown as Record<string, readonly unknown[]>;
+    for (const key of [
+      "fields",
+      "interfaces",
+      "values",
+      "types",
+      "directives",
+    ]) {
+      const extra = members[key] as readonly unknown[] | undefined;
+      if (extra) merged[key] = [...(merged[key] ?? []), ...extra];
+    }
+  }
+  return merged as unknown as ASTNode;
+}
+
+function isRootFieldClaim(claim: string): boolean {
+  return claim.includes(".");
+}
+
 export type OwnershipConflict = { claim: string; owner: string };
 
-/** Candidates, in priority order, that lose a claim to an earlier definition. */
+/** Candidates, in priority order, that lose a claim to an earlier one. */
 export function resolveClaimOwnership<T>(
   candidates: Iterable<{ candidate: T; name: string; claims: SubgraphClaims }>,
 ): Map<T, OwnershipConflict[]> {
@@ -110,7 +159,11 @@ export function resolveClaimOwnership<T>(
     const conflicts: OwnershipConflict[] = [];
     for (const [claim, definition] of claims) {
       const owned = owners.get(claim);
-      if (owned && owned.definition !== definition) {
+      // A root field has one resolver, so only its owner may serve it.
+      if (
+        owned &&
+        (isRootFieldClaim(claim) || owned.definition !== definition)
+      ) {
         conflicts.push({ claim, owner: owned.owner });
       }
     }
