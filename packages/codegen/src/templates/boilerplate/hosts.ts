@@ -181,6 +181,23 @@ export default {
     cspRegistrySync: true, // patch the baked CSP for the runtime registry
     runtimeRecord: true, // single-instance record under .ph/run/
   },
+
+  // NATIVE WINDOW (optional): switch runner.module to
+  // "@powerhousedao/desktop/runner" (private until its first publish — link
+  // the workspace package meanwhile) and point it at a ph-win-desktop
+  // checkout; \`ph run desktop dev\` then opens the shell around this stack
+  // with no environment wiring, and \`ph run desktop build\` stages the
+  // shippable stack (hosts + config + built Connect + vendored ph-cli) into
+  // the shell for a no-env installed app.
+  // runner: {
+  //   module: "@powerhousedao/desktop/runner",
+  //   shell: {
+  //     project: "../ph-win-desktop",
+  //     window: { title: "${projectName}", width: 1440, height: 900 },
+  //     tray: true,
+  //     fileAssociations: [".phd"],
+  //   },
+  // },
 };
 `;
 
