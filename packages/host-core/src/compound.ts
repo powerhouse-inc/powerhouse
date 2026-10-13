@@ -145,7 +145,10 @@ export async function runCompound(
 ): Promise<RunCompoundResult> {
   const projectRoot = ctx.projectRoot;
   const wiring = (host.config ?? {}) as CompoundWiring;
-  const verb = (host.runner.defaultVerb as string | undefined) ?? ctx.verb;
+  // The member verb is ctx.verb, resolved by the CALLING runner module (its
+  // `run` maps to defaultVerb; its dev/build/serve forward themselves) — the
+  // engine never consults defaultVerb, so an explicit verb always wins.
+  const verb = ctx.verb;
 
   // Lock: one live instance per project per host (storage-root contention).
   const probe = probeRun(projectRoot, host.name, options.projectName);
