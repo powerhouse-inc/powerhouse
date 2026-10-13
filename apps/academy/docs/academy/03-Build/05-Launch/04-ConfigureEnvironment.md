@@ -324,7 +324,13 @@ authoritative for the version you actually have.
 
 ## Configuring inspection (Switchboard)
 
-Switchboard mounts a read-only `inspection` subgraph at `/graphql/inspection`, which reactor-monitor attaches to. It is on by default. Its `info` and `documentModels` queries answer any caller that reaches the endpoint, and its operational reads need an address in `ADMINS`. Set `INSPECTION_ENABLED=false` to unmount it, or keep it mounted and set `REQUIRE_AUTHENTICATED_CALLER=true` to turn anonymous callers away:
+Switchboard mounts a read-only `inspection` subgraph at `/graphql/inspection`. It is on by default. reactor-monitor attaches to it, and Connect's remote backend reads its `info` for the remote's placement facts. Its reads come in three tiers:
+
+- `info` and `documentModels` answer any caller that reaches the endpoint.
+- `drives`, `driveIntegrity` and `validateDocument` answer any caller the document read policy lets read that drive or document.
+- The operational reads (`queueState`, `processors`, `remotes`, `remote`, `deadLetters`, `catchUpStatus`, `storageHealth`, `attachmentInfo`) need an address in `ADMINS`.
+
+Set `INSPECTION_ENABLED=false` to unmount it. reactor-monitor can then no longer attach, and Connect places the Switchboard with unknown reactor facts and reports a diagnostic each time it refreshes them:
 
 ```bash
 INSPECTION_ENABLED=false
