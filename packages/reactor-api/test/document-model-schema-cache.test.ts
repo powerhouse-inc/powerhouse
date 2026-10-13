@@ -94,6 +94,22 @@ describe("DocumentModelSchemaCache", () => {
     expect(again.key).toBe(first.key);
   });
 
+  it("keeps a model's generated types when only its subgraph fails", () => {
+    const opsOnly = makeModel("Ops");
+    const [module] = opsOnly.documentModel.global.specifications[0].modules;
+    module.operations[0].schema = "input DoThingInput { x: Missing }";
+
+    const schema = buildDocumentModelSchema(opsOnly);
+    expect(schema.generated.length).toBeGreaterThan(0);
+    expect(schema.subgraph).toBeUndefined();
+    expect(schema.subgraphError?.message).toMatch(/Missing/);
+
+    const withoutSubgraph = buildDocumentModelSchema(opsOnly, {
+      subgraph: false,
+    });
+    expect(withoutSubgraph.subgraphError).toBeUndefined();
+  });
+
   it("keeps only the models of the last resolve", () => {
     const { cache, build } = countingCache();
     const alpha = makeModel("Alpha");

@@ -35,6 +35,7 @@ import type {
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
+  buildDocumentModelSchema,
   buildSubgraphSchemaModule,
   createMergedSchema,
   createSchema,
@@ -339,7 +340,7 @@ export class GraphQLManager {
   /** Refusals logged: model id, source key and reason. */
   #refusals = new Set<string>();
 
-  readonly #schemaCache = new DocumentModelSchemaCache();
+  readonly #schemaCache: DocumentModelSchemaCache;
 
   /** The schemas of the admitted document models. */
   #modelSchemas = new Map<DocumentModelModule, DocumentModelSchema>();
@@ -397,6 +398,10 @@ export class GraphQLManager {
     this.authService = options.authService;
     this.documentPermissionService = options.documentPermissionService;
     this.featureFlags = options.featureFlags ?? DefaultFeatureFlags;
+    const subgraph = !!this.featureFlags.enableDocumentModelSubgraphs;
+    this.#schemaCache = new DocumentModelSchemaCache((model) =>
+      buildDocumentModelSchema(model, { subgraph }),
+    );
     this.port = options.port ?? 4001;
     this.authorizationService = options.authorizationService;
     this.reactorDriveClient = options.reactorDriveClient;
@@ -636,24 +641,36 @@ export class GraphQLManager {
     for (const { model, key, schema, error } of this.#schemaCache.resolve(
       models,
     )) {
-      const reason = schema
-        ? this.#reservedNamesReason(model, schema, reserved)
-        : `has an unusable schema: ${error.message}`;
-      if (schema && reason === undefined) {
-        schemas.set(model, schema);
-        admitted.push(model);
-        continue;
-      }
       const id = model.documentModel.global.id;
-      const refusal = `${id}\n${key}\n${reason}`;
-      refusals.add(refusal);
-      if (!this.#refusals.has(refusal)) {
-        this.logger.error(
+      const refuse = (message: string, reason: string) => {
+        const refusal = `${id}\n${key}\n${reason}`;
+        refusals.add(refusal);
+        if (!this.#refusals.has(refusal)) {
+          this.logger.error(message, id, reason);
+        }
+      };
+      const refuseModel = (reason: string) =>
+        refuse(
           "Refusing document model @documentType from the GraphQL schema: @reason",
-          id,
           reason,
         );
+      if (!schema) {
+        refuseModel(`has an unusable schema: ${error.message}`);
+        continue;
       }
+      const taken = this.#reservedNamesReason(model, schema, reserved);
+      if (taken !== undefined) {
+        refuseModel(taken);
+        continue;
+      }
+      if (schema.subgraphError) {
+        refuse(
+          "Refusing the subgraph of document model @documentType: @reason",
+          `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+        );
+      }
+      schemas.set(model, schema);
+      admitted.push(model);
     }
     this.#refusals = refusals;
     this.#modelSchemas = schemas;

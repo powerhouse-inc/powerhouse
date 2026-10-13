@@ -13,7 +13,11 @@ import { initializeAndStartAPI } from "../src/server.js";
 
 type API = Awaited<ReturnType<typeof initializeAndStartAPI>>;
 
-function makeModel(name: string, stateSchema?: string): DocumentModelModule {
+function makeModel(
+  name: string,
+  stateSchema?: string,
+  opSchema = "input DoThingInput { x: String }",
+): DocumentModelModule {
   return {
     reducer: (document: unknown) => document,
     documentModel: {
@@ -29,7 +33,7 @@ function makeModel(name: string, stateSchema?: string): DocumentModelModule {
                 operations: [
                   {
                     name: "doThing",
-                    schema: "input DoThingInput { x: String }",
+                    schema: opSchema,
                   },
                 ],
               },
@@ -89,7 +93,7 @@ afterEach(async () => {
   dispose = undefined;
 });
 
-async function boot(models: DocumentModelModule[]) {
+async function boot(models: DocumentModelModule[], subgraphs = true) {
   const port = await freePort();
   const logger = recordingLogger();
   const api = await initializeAndStartAPI(
@@ -108,7 +112,7 @@ async function boot(models: DocumentModelModule[]) {
       dbPath: undefined,
       mcp: false,
       logger,
-      enableDocumentModelSubgraphs: true,
+      enableDocumentModelSubgraphs: subgraphs,
     },
     "switchboard",
   );
@@ -130,10 +134,14 @@ async function querySupergraph(port: number, query: string): Promise<Result> {
 const stateFieldsQuery = (name: string) =>
   `{ __type(name: "${name}_${name}State") { fields { name } } }`;
 
-async function stateFields(api: API, name: string): Promise<string[]> {
+async function stateFields(
+  api: API,
+  name: string,
+  subgraph = name.toLowerCase(),
+): Promise<string[]> {
   const { __type } = await api.graphqlManager.executeSubgraphQuery<{
     __type: { fields: { name: string }[] } | null;
-  }>(name.toLowerCase(), stateFieldsQuery(name), {});
+  }>(subgraph, stateFieldsQuery(name), {});
   return __type?.fields.map((field) => field.name) ?? [];
 }
 
@@ -208,6 +216,42 @@ describe("a document model whose schema is unusable", () => {
     );
     expect(refusals(logger, "test/broken")).toHaveLength(1);
     expect(refusals(logger, "test/dangling")).toHaveLength(1);
+  });
+});
+
+describe("a document model whose operation schema is unusable", () => {
+  const opsOnly = () =>
+    makeModel("Ops", undefined, "input DoThingInput { x: Missing }");
+
+  /** Logs refusing only the model's subgraph. */
+  const subgraphRefusals = (logger: ILogger) =>
+    vi
+      .mocked(logger.error)
+      .mock.calls.filter(
+        ([message, documentType]) =>
+          String(message).startsWith("Refusing the subgraph") &&
+          documentType === "test/ops",
+      );
+
+  it("loses only its own subgraph, logged once", async () => {
+    const { api, port, logger } = await boot([opsOnly(), makeModel("Good")]);
+    await api.graphqlManager.regenerateDocumentModelSubgraphs();
+
+    await expectServing(api, port, "Good");
+    expect(await stateFields(api, "Ops", "system")).toEqual(["name"]);
+    expect(api.graphqlManager.getSubgraphByName("ops")).toBeUndefined();
+    expect(refusals(logger, "test/ops")).toEqual([]);
+    const [logged, ...more] = subgraphRefusals(logger);
+    expect(more).toEqual([]);
+    expect(logged[2]).toMatch(/Missing/);
+  });
+
+  it("keeps its types and logs nothing when model subgraphs are off", async () => {
+    const { api, logger } = await boot([opsOnly()], false);
+
+    expect(await stateFields(api, "Ops", "system")).toEqual(["name"]);
+    expect(refusals(logger, "test/ops")).toEqual([]);
+    expect(subgraphRefusals(logger)).toEqual([]);
   });
 });
 

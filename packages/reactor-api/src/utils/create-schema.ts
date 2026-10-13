@@ -552,6 +552,8 @@ export type DocumentModelSchema = {
   generated: readonly DefinitionNode[];
   /** Its own subgraph's types, when it has operations to serve. */
   subgraph?: { typeDefs: DocumentNode; typeNames: ReadonlySet<string> };
+  /** Why its own subgraph cannot be served; its generated types still can. */
+  subgraphError?: Error;
 };
 
 const hasValidSchema = (schema: string | null | undefined): boolean =>
@@ -577,33 +579,51 @@ export function documentModelSubgraphTypes(
   return { typeDefs, typeNames: typeDefinitionNames(typeDefs) };
 }
 
-/**
- * Parse `documentModel`'s schemas and check that they build. Throws when
- * they do not, as every subgraph carries its generated types.
- */
-export function buildDocumentModelSchema(
+const toError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
+
+/** Build `subgraph` over the generated types of `documentModel` alone. */
+function checkBuilds(
   documentModel: DocumentModelModule,
-): DocumentModelSchema {
-  const global = documentModel.documentModel.global;
-  const schema: DocumentModelSchema = {
-    generated: documentModelDefinitions(global),
-    subgraph: hasOperationSchemas(documentModel)
-      ? documentModelSubgraphTypes(global)
-      : undefined,
-  };
+  generated: readonly DefinitionNode[],
+  subgraph?: DocumentModelSchema["subgraph"],
+): void {
   buildSubgraphSchema([
     {
       typeDefs: assembleSubgraphTypeDefs(
         getGeneratedDocumentModelTypes(
           [documentModel],
-          new Map([[documentModel, schema]]),
+          new Map([[documentModel, { generated }]]),
         ),
-        schema.subgraph?.typeDefs ?? EMPTY_DOCUMENT,
-        schema.subgraph?.typeNames,
+        subgraph?.typeDefs ?? EMPTY_DOCUMENT,
+        subgraph?.typeNames,
       ),
     },
   ]);
-  return schema;
+}
+
+/** Throws when the generated types every subgraph carries do not build. */
+export function buildDocumentModelSchema(
+  documentModel: DocumentModelModule,
+  options: { subgraph?: boolean } = {},
+): DocumentModelSchema {
+  const generated = documentModelDefinitions(
+    documentModel.documentModel.global,
+  );
+  if (options.subgraph === false || !hasOperationSchemas(documentModel)) {
+    checkBuilds(documentModel, generated);
+    return { generated };
+  }
+  try {
+    const subgraph = documentModelSubgraphTypes(
+      documentModel.documentModel.global,
+    );
+    checkBuilds(documentModel, generated, subgraph);
+    return { generated, subgraph };
+  } catch (error) {
+    checkBuilds(documentModel, generated);
+    return { generated, subgraphError: toError(error) };
+  }
 }
 
 /** A document model's schema, or why it is unusable, under its source key. */
@@ -644,7 +664,7 @@ export class DocumentModelSchemaCache {
           try {
             entry = this.#build(model);
           } catch (error) {
-            entry = error instanceof Error ? error : new Error(String(error));
+            entry = toError(error);
           }
         }
         entries.set(key, entry);
