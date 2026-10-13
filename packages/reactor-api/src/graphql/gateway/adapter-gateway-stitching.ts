@@ -114,6 +114,7 @@ function stubDeclaration(
 export function filterBuildableSubgraphs(
   subgraphs: SubgraphDefinition[],
   logger?: Pick<ILogger, "error">,
+  label = "Stitching gateway",
 ): SubgraphDefinition[] {
   // First declaration of each type name across the whole set, for stub kinds.
   const owners = new Map<string, TypeDefinitionNode>();
@@ -170,7 +171,7 @@ export function filterBuildableSubgraphs(
       return true;
     } catch (error) {
       logger?.error(
-        `Stitching gateway: excluding subgraph "${subgraph.name}" from the supergraph: ${
+        `${label}: excluding subgraph "${subgraph.name}" from the supergraph: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
