@@ -23,9 +23,6 @@
       "path": "packages/document-model"
     },
     {
-      "path": "packages/host-core"
-    },
-    {
       "path": "packages/reactor-browser"
     },
     {
