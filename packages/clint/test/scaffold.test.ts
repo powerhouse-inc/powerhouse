@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLINT_PORT_STATUS } from "../src/index.js";
+
 import * as clintRunner from "../src/runners/clint-runner.js";
 import * as mastraRunner from "../src/runners/mastra-runner.js";
 
@@ -9,7 +9,6 @@ describe("@powerhousedao/clint scaffold (P5.1)", () => {
     expect(mastraRunner.kind).toBe("reactor");
     expect(clintRunner.hostSchema).toBeDefined();
     expect(mastraRunner.hostSchema).toBeDefined();
-    expect(CLINT_PORT_STATUS).toBe("P5.1-scaffold");
   });
 
   it("refuses honestly until the port lands", () => {

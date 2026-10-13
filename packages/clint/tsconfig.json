@@ -24,6 +24,9 @@
       "path": "../reactor-api"
     },
     {
+      "path": "../reactor-attachments"
+    },
+    {
       "path": "../shared"
     }
   ]

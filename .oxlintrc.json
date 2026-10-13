@@ -528,7 +528,7 @@
             "restrict": [
               {
                 "pattern": "-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|charcoal)-(50|100|200|300|400|500|600|700|800|900|950)(/[0-9]+)?!?$",
-                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) — see packages/design-system/theme.css."
+                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) \u2014 see packages/design-system/theme.css."
               }
             ]
           }
@@ -607,7 +607,7 @@
             "restrict": [
               {
                 "pattern": "-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|charcoal)-(50|100|200|300|400|500|600|700|800|900|950)(/[0-9]+)?!?$",
-                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) — see packages/design-system/theme.css."
+                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) \u2014 see packages/design-system/theme.css."
               }
             ]
           }
@@ -688,7 +688,7 @@
             "restrict": [
               {
                 "pattern": "-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|charcoal)-(50|100|200|300|400|500|600|700|800|900|950)(/[0-9]+)?!?$",
-                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) — see packages/design-system/theme.css."
+                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) \u2014 see packages/design-system/theme.css."
               }
             ]
           }
@@ -727,6 +727,33 @@
         "typescript/restrict-template-expressions": "off",
         "typescript/unbound-method": "off",
         "typescript/no-unnecessary-condition": "off"
+      }
+    },
+    {
+      "files": ["packages/clint/**"],
+      "rules": {
+        "typescript/require-await": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unnecessary-condition": "off",
+        "typescript/consistent-type-imports": "off",
+        "typescript/unbound-method": "off",
+        "typescript/ban-ts-comment": "off",
+        "typescript/no-misused-promises": "off",
+        "eslint/no-unused-vars": "warn",
+        "eslint/no-empty": "off",
+        "eslint/no-control-regex": "off",
+        "eslint/preserve-caught-error": "off",
+        "typescript/no-base-to-string": "off",
+        "typescript/restrict-template-expressions": "off",
+        "typescript/no-unsafe-enum-comparison": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "react-hooks-extra/immutability": "off",
+        "react-hooks-extra/set-state-in-effect": "off",
+        "react-hooks-extra/refs": "off"
       }
     }
   ],

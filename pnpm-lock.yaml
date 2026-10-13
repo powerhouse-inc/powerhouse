@@ -58,8 +58,8 @@ catalogs:
       specifier: 1.23.0
       version: 1.23.0
     '@mastra/memory':
-      specifier: 1.37.0
-      version: 1.37.0
+      specifier: 1.30.0
+      version: 1.30.0
     '@modelcontextprotocol/sdk':
       specifier: 1.29.0
       version: 1.29.0
@@ -1398,6 +1398,12 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.2.6
+      sirv:
+        specifier: ^3.0.2
+        version: 3.0.2
+      totalist:
+        specifier: ^3.0.1
+        version: 3.0.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1413,13 +1419,16 @@ importers:
         version: 1.23.0(@mastra/core@1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1(supports-color@8.1.1))(rxjs@7.8.2)(supports-color@8.1.1)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       '@mastra/memory':
         specifier: 'catalog:'
-        version: 1.37.0(@mastra/core@1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1(supports-color@8.1.1))(rxjs@7.8.2)(supports-color@8.1.1)(utf-8-validate@5.0.10)(zod@4.3.6))(supports-color@8.1.1)
+        version: 1.30.0(@mastra/core@1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1(supports-color@8.1.1))(rxjs@7.8.2)(supports-color@8.1.1)(utf-8-validate@5.0.10)(zod@4.3.6))(supports-color@8.1.1)
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../reactor-api
+      '@powerhousedao/reactor-attachments':
+        specifier: workspace:*
+        version: link:../reactor-attachments
       '@powerhousedao/switchboard':
         specifier: workspace:*
         version: link:../../apps/switchboard
@@ -1432,6 +1441,18 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      expect-type:
+        specifier: ^1.2.0
+        version: 1.4.0
+      ink-testing-library:
+        specifier: ^4.0.0
+        version: 4.0.0(@types/react@19.2.14)
+      kysely:
+        specifier: 'catalog:'
+        version: 0.28.16
+      kysely-pglite-dialect:
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.16)
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
@@ -7061,20 +7082,14 @@ packages:
     peerDependencies:
       '@mastra/core': '>=1.0.0-0 <2.0.0-0'
 
-  '@mastra/memory@1.37.0':
-    resolution: {integrity: sha512-IyQgv1LB8nMKjnq0VGBf4gO78D1JVQ0mHT+BnEQFTbjPe9qIewheftrSGcUCaq9VgTTIu8T/Zlk+U+NaRpwvrw==}
+  '@mastra/memory@1.30.0':
+    resolution: {integrity: sha512-rzl1tQLorwvHU6Ayi9T0ZiEiE/zKJGgPIpxmnZXTTJ9mn+Bs5FQ7tB4DHPidHNy1SVHRUwg3HRtqMX+nAeREaQ==}
     engines: {node: '>=22.13.0'}
     peerDependencies:
       '@mastra/core': '>=1.4.1-0 <2.0.0-0'
 
   '@mastra/schema-compat@1.3.10':
     resolution: {integrity: sha512-ZrjvutWy3QJoJROA5PeSFdeFwDgyfGN1sOOObFirex9h9c/R4ReqRllCojNHSN0cKsKxkRlH6zBbWVTiybamUw==}
-    engines: {node: '>=22.13.0'}
-    peerDependencies:
-      zod: ^3.25.0 || ^4.0.0
-
-  '@mastra/schema-compat@1.3.13':
-    resolution: {integrity: sha512-L3AkWcujcCC9qKYiGOxjRN0NrNMIxLAwn/ayjNlD3zhFSUBDI45LmlFxAYHLeAz315uogKb+9tZA/TjHnjb95w==}
     engines: {node: '>=22.13.0'}
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -15136,6 +15151,15 @@ packages:
     peerDependencies:
       ink: '>=4.0.0'
       react: '>=18.0.0'
+
+  ink-testing-library@4.0.0:
+    resolution: {integrity: sha512-yF92kj3pmBvk7oKbSq5vEALO//o7Z9Ck/OaLNlkzXNeYdwfpxMQkSowGTFUCS5MSu9bWfSZMewGpp7bFc66D7Q==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   ink-text-input@6.0.0:
     resolution: {integrity: sha512-Fw64n7Yha5deb1rHY137zHTAbSTNelUKuB5Kkk2HACXEtwIHBCf9OH2tP/LQ9fRYTl1F0dZgbW0zPnZk6FA9Lw==}
@@ -24470,15 +24494,16 @@ snapshots:
       pino: 10.3.1
       pino-pretty: 13.1.3
 
-  '@mastra/memory@1.37.0(@mastra/core@1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1(supports-color@8.1.1))(rxjs@7.8.2)(supports-color@8.1.1)(utf-8-validate@5.0.10)(zod@4.3.6))(supports-color@8.1.1)':
+  '@mastra/memory@1.30.0(@mastra/core@1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1(supports-color@8.1.1))(rxjs@7.8.2)(supports-color@8.1.1)(utf-8-validate@5.0.10)(zod@4.3.6))(supports-color@8.1.1)':
     dependencies:
       '@mastra/core': 1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1(supports-color@8.1.1))(rxjs@7.8.2)(supports-color@8.1.1)(utf-8-validate@5.0.10)(zod@4.3.6)
-      '@mastra/schema-compat': 1.3.13(zod@4.6.5)
+      '@mastra/schema-compat': 1.3.10(zod@4.6.5)
       async-mutex: 0.5.0
       diff: 8.0.3
       json-schema: 0.4.0
       lru-cache: 11.5.0
       probe-image-size: 7.4.0(supports-color@8.1.1)
+      tokenx: 1.6.0
       xxhash-wasm: 1.1.0
       zod: 4.6.5
     transitivePeerDependencies:
@@ -24490,7 +24515,7 @@ snapshots:
       zod: 4.3.6
       zod-from-json-schema: 0.5.6
 
-  '@mastra/schema-compat@1.3.13(zod@4.6.5)':
+  '@mastra/schema-compat@1.3.10(zod@4.6.5)':
     dependencies:
       json-schema-to-zod: 2.8.1
       zod: 4.6.5
@@ -36733,6 +36758,10 @@ snapshots:
       cli-spinners: 2.9.2
       ink: 6.8.0(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(utf-8-validate@5.0.10)
       react: 19.2.6
+
+  ink-testing-library@4.0.0(@types/react@19.2.14):
+    optionalDependencies:
+      '@types/react': 19.2.14
 
   ink-text-input@6.0.0(ink@6.8.0(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(utf-8-validate@5.0.10))(react@19.2.6):
     dependencies:
