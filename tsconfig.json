@@ -23,6 +23,9 @@
       "path": "packages/clint"
     },
     {
+      "path": "packages/desktop"
+    },
+    {
       "path": "packages/document-model"
     },
     {

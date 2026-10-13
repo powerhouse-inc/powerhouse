@@ -108,7 +108,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     if (result.status !== 0) {
       throw new Error(
         `bundle-stack: vendoring failed (${result.status}):\n` +
-          `${result.stderr?.toString().slice(-800)}`,
+          `${result.stderr.toString().slice(-800)}`,
       );
     }
     vendored = true;
