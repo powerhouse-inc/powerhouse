@@ -200,6 +200,9 @@ export const inspectionTypeDefs = gql`
     info: ReactorInfo!
     documentModels: [InspectionDocumentModel!]!
     drives(cursor: String, limit: Int): InspectionDrivePage!
+    """
+    Reads every file node's document. Throttled per caller.
+    """
     driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
     attachmentInfo: InspectionAttachmentInfo!
     queueState: InspectionQueueState!
