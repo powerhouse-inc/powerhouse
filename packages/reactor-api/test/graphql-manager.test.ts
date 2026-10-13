@@ -1849,17 +1849,22 @@ describe("GraphQLManager", () => {
       expect(registeredTypes()).toContain("test/beta-renamed");
     });
 
-    it("keeps the models of a package missing from the event", async () => {
-      // A failed load drops the package from the event too.
-      const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
-      await initAndFlush(manager);
+    it.each([
+      ["missing from the event", {}],
+      ["with no models", { pkg: [] }],
+    ])(
+      "keeps the models of a package %s, as a failed load sends",
+      async (_, event: Record<string, DocumentModelModule[]>) => {
+        const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+        await initAndFlush(manager);
 
-      await modelsChange({});
+        await modelsChange(event);
 
-      expect(registeredTypes()).toEqual(
-        expect.arrayContaining(["test/alpha", "test/beta"]),
-      );
-    });
+        expect(registeredTypes()).toEqual(
+          expect.arrayContaining(["test/alpha", "test/beta"]),
+        );
+      },
+    );
   });
 
   // ── shutdown() ─────────────────────────────────────────────────────────────

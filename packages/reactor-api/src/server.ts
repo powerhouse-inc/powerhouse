@@ -618,10 +618,10 @@ export function setupEventListeners(
       );
       const incomingTypes = typesOf(newModules);
 
-      // Only packages still present: a failed load drops its package from
-      // the event just as removing its last model does.
+      // A failed load arrives as no models or no package: neither removes any.
       const removedTypes = new Set<string>();
       for (const [pkg, models] of Object.entries(packagedModels)) {
+        if (models.length === 0) continue;
         for (const type of packagedTypes.get(pkg) ?? []) {
           if (!incomingTypes.has(type)) removedTypes.add(type);
         }
