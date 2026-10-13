@@ -743,7 +743,7 @@ describe("attachment routes", () => {
     for (const f of blobs) await rm(join(f.parentPath, f.name));
 
     const res = makeRes();
-    await makeDownloadHandler(attachments)(
+    await grantedDownload(attachments)(
       makeReq({ method: "GET", params: { hash } }),
       res,
     );
@@ -785,7 +785,7 @@ describe("attachment routes", () => {
     try {
       const res = makeRes();
       const closed = new Promise<void>((resolve) => res.once("close", resolve));
-      await makeDownloadHandler(attachments)(
+      await grantedDownload(attachments)(
         makeReq({ method: "GET", params: { hash } }),
         res,
       );
