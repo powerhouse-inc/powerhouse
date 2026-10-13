@@ -20,8 +20,12 @@ export default defineConfig({
       "src/name-builders/derive-piece-id.test.ts",
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
+      "test/**/*.test.ts",
       "src/file-builders/boilerplate/generated-project-files.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
+    // The code-first scaffold tests generate and type-check whole projects;
+    // they run in ~0.5s locally but past the default 5s on shared CI runners.
+    testTimeout: 30_000,
   },
 });

@@ -20,13 +20,13 @@ type GetDocumentTypeMetadataArgs = {
   project: Project;
   documentModelId: string;
 };
-/** Gets the document model metadata for the --document-type argument
- * passed to the `generate --editor` and `generate --app` commands.
+/** The schema-first document model metadata for `documentModelId`, or
+ * `undefined` when no `<dir>/<dir>.json` in `document-models` declares it.
  */
-export function getDocumentTypeMetadata({
+export function findDocumentTypeMetadata({
   project,
   documentModelId,
-}: GetDocumentTypeMetadataArgs) {
+}: GetDocumentTypeMetadataArgs): DocumentModelDocumentTypeMetadata | undefined {
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
     "document-models",
@@ -43,16 +43,12 @@ export function getDocumentTypeMetadata({
     when(isString, getDocumentModelVariableNames),
   );
 
-  if (!documentModelVariableNames) {
-    throw new Error(
-      `Failed to get document type metadata for document type: ${documentModelId}.`,
-    );
-  }
+  if (!documentModelVariableNames) return undefined;
 
   const { kebabCaseDocumentType, phDocumentTypeName } =
     documentModelVariableNames;
 
-  const documentTypeMetadata: DocumentModelDocumentTypeMetadata = {
+  return {
     documentModelId,
     documentModelDocumentTypeName: phDocumentTypeName,
     documentModelDirName: kebabCaseDocumentType,
@@ -61,6 +57,17 @@ export function getDocumentTypeMetadata({
       kebabCaseDocumentType,
     ),
   };
+}
 
+/** Gets the document model metadata for the --document-type argument
+ * passed to the `generate --editor` and `generate --app` commands.
+ */
+export function getDocumentTypeMetadata(args: GetDocumentTypeMetadataArgs) {
+  const documentTypeMetadata = findDocumentTypeMetadata(args);
+  if (!documentTypeMetadata) {
+    throw new Error(
+      `Failed to get document type metadata for document type: ${args.documentModelId}.`,
+    );
+  }
   return documentTypeMetadata;
 }

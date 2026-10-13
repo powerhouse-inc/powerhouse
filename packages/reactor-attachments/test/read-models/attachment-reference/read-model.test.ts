@@ -400,6 +400,24 @@ describe("AttachmentReferenceReadModel", () => {
     expect(db.cursor).toBeUndefined();
   });
 
+  it("rejects unresolved model actions during reference indexing", async () => {
+    const { model } = dependencies();
+    await expect(
+      model.indexOperations([op(1, "UNKNOWN_ACTION", { ref: REF_A })]),
+    ).rejects.toThrow(
+      'Attachment schema compilation failed for document type "example/attachments", version 1, action "UNKNOWN_ACTION": no operation maps to the action',
+    );
+  });
+
+  it("advances the reference cursor past legacy system operations", async () => {
+    const { db, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [op(1, "LOAD_STATE", {}), op(2, "PRUNE", {})],
+    });
+    await sweep();
+    expect(db.cursor).toBe(2);
+  });
+
   it("initializes from a persisted cursor and backfills later operations", async () => {
     const { addReferences, db, index, model } = dependencies({
       cursor: 1,

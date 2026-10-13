@@ -12,10 +12,13 @@
     }
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"],
+  "exclude": ["dist", "node_modules", "test/goldens"],
   "references": [
     {
       "path": "../document-model"
+    },
+    {
+      "path": "../reactor-api"
     },
     {
       "path": "../shared"

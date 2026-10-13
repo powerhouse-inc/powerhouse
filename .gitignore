@@ -38,6 +38,8 @@ __pycache__/
 hotseat.json
 .hotseat
 # Local agent-workflow scratch (plans' ledgers, briefs, review packages)
+/.audit/
+/.tasks/
 .superpowers/
 .mcp.json
 HOTSEAT.md

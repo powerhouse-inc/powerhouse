@@ -1,12 +1,22 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
-import { generatorTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type {
   Action,
   DocumentModelModule,
+  DocumentModelSpecificationDefinition,
   DocumentSpecification,
   OperationSpecification,
 } from "@powerhousedao/shared/document-model";
-import { constantCase, pascalCase } from "change-case";
+import {
+  AUTH_ACTION_TYPES,
+  DOCUMENT_SCOPE_ACTION_TYPES,
+  RESERVED_OPERATION_NAMES,
+} from "@powerhousedao/shared/document-model";
+import {
+  deriveDocumentModelOperationNames,
+  inspectableDefinition,
+  packageScalarNames,
+} from "document-model";
+import { scalarCatalog } from "document-model/scalars";
 import {
   buildASTSchema,
   getNamedType,
@@ -20,6 +30,7 @@ import {
   type GraphQLInputObjectType,
   type GraphQLInputType,
   type GraphQLSchema,
+  type ScalarTypeDefinitionNode,
 } from "graphql";
 import { parseRef } from "../ref.js";
 import type {
@@ -28,13 +39,15 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-const CODEGEN_SCALAR_NAMES = new Set([
-  "Unknown",
-  "DateTime",
-  "Address",
-  ATTACHMENT_REF_TYPE,
-  ...Object.keys(generatorTypeDefs as Record<string, string>),
+const SYSTEM_ACTION_TYPES: ReadonlySet<string> = new Set([
+  ...RESERVED_OPERATION_NAMES,
+  ...DOCUMENT_SCOPE_ACTION_TYPES,
+  ...AUTH_ACTION_TYPES,
+  "LOAD_STATE",
+  "PRUNE",
 ]);
+
+type CompilerModule = Pick<DocumentModelModule, "documentModel" | "version">;
 
 type CompilerContext = {
   actionType: string;
@@ -46,6 +59,10 @@ type ParsedOperation = {
   document: DocumentNode | null;
   operation: OperationSpecification;
 };
+
+type ResolvedOperation =
+  | { kind: "no-input" }
+  | { kind: "input"; document: DocumentNode; rootName: string };
 
 type ObjectPlan = {
   fields: FieldPlan[];
@@ -98,7 +115,7 @@ function extractionError(
 }
 
 function applicableSpecification(
-  module: DocumentModelModule,
+  module: CompilerModule,
   context: CompilerContext,
 ): DocumentSpecification {
   const matches = module.documentModel.global.specifications.filter(
@@ -133,31 +150,65 @@ function parseOperations(
 
 function selectOperation(
   operations: ParsedOperation[],
+  specification: DocumentModelSpecificationDefinition | undefined,
   context: CompilerContext,
-): ParsedOperation | null {
-  const matches = operations.filter(
-    ({ operation }) =>
-      operation.name !== null &&
-      constantCase(operation.name) === context.actionType,
-  );
-  if (matches.length > 1) {
-    throw compilationError(context, "multiple operations map to the action");
+): ResolvedOperation {
+  if (specification !== undefined) {
+    const matches = specification.modules.flatMap((module) =>
+      module.operations.filter(
+        (operation) => operation.actionType === context.actionType,
+      ),
+    );
+    if (matches.length > 1) {
+      throw compilationError(context, "multiple operations map to the action");
+    }
+    const declared = matches[0];
+    if (declared !== undefined) {
+      const stored = operations.filter(
+        ({ operation }) => operation.id === declared.id,
+      );
+      if (stored.length !== 1) {
+        throw compilationError(
+          context,
+          `the declared operation "${declared.id}" (creator "${declared.creatorKey}") has ${stored.length === 0 ? "no" : "multiple"} matching stored operations`,
+        );
+      }
+      if (declared.input === null) return { kind: "no-input" };
+      const document = stored[0].document;
+      if (document === null) {
+        throw compilationError(
+          context,
+          `the declared operation "${declared.id}" (creator "${declared.creatorKey}") has input "${declared.input.name}" but no stored GraphQL SDL`,
+        );
+      }
+      return { kind: "input", document, rootName: declared.input.name };
+    }
+  } else {
+    const matches = operations.flatMap(({ operation, document }) => {
+      if (operation.name === null) return [];
+      const names = deriveDocumentModelOperationNames(operation.name);
+      return names.actionType === context.actionType
+        ? [{ document, rootName: names.inputTypeName }]
+        : [];
+    });
+    if (matches.length > 1) {
+      throw compilationError(context, "multiple operations map to the action");
+    }
+    const selected = matches[0];
+    if (selected !== undefined) {
+      if (selected.document === null) return { kind: "no-input" };
+      return { kind: "input", ...selected, document: selected.document };
+    }
   }
-  // Base/system actions (document creation, renames, undo) are not part of a
-  // model's specification, so they cannot declare AttachmentRef fields.
-  // They compile to the no-reference fast path instead of failing the stream.
-  if (matches.length === 0) return null;
-  return matches[0];
+  if (SYSTEM_ACTION_TYPES.has(context.actionType)) return { kind: "no-input" };
+  throw compilationError(context, "no operation maps to the action");
 }
 
 function buildEffectiveSchema(
   specification: DocumentSpecification,
+  packageScalars: readonly string[],
   context: CompilerContext,
 ): GraphQLSchema {
-  const scalarSchemas = Array.from(
-    CODEGEN_SCALAR_NAMES,
-    (name) => `scalar ${name}`,
-  );
   const stateSchemas = Object.values(specification.state).map(
     (state) => state.schema,
   );
@@ -170,11 +221,25 @@ function buildEffectiveSchema(
 
   try {
     const document = parse(
-      [...scalarSchemas, ...stateSchemas, ...operationSchemas]
-        .filter(Boolean)
-        .join("\n\n"),
+      [...stateSchemas, ...operationSchemas].filter(Boolean).join("\n\n"),
     );
-    return buildASTSchema(dedupeTypeDefinitions(document));
+    const scalarDefinitions = [
+      ...scalarCatalog.authorNames,
+      ...packageScalars,
+    ].map(
+      (name) =>
+        ({
+          kind: Kind.SCALAR_TYPE_DEFINITION,
+          name: { kind: Kind.NAME, value: name },
+          directives: [],
+        }) satisfies ScalarTypeDefinitionNode,
+    );
+    return buildASTSchema(
+      dedupeTypeDefinitions({
+        ...document,
+        definitions: [...scalarDefinitions, ...document.definitions],
+      }),
+    );
   } catch {
     throw compilationError(context, "the effective GraphQL schema is invalid");
   }
@@ -446,7 +511,7 @@ class SchemaCompiledAttachmentExtractor implements CompiledAttachmentExtractor {
 }
 
 function compileExtractor(
-  module: DocumentModelModule,
+  module: CompilerModule,
   actionType: string,
 ): CompiledAttachmentExtractor {
   const context: CompilerContext = {
@@ -455,31 +520,42 @@ function compileExtractor(
     version: module.version ?? 1,
   };
   const specification = applicableSpecification(module, context);
+  const structuredSpecification = inspectableDefinition(
+    module,
+  )?.definition.specifications.find(
+    (candidate) => candidate.version === context.version,
+  );
   const operations = parseOperations(specification, context);
-  const selected = selectOperation(operations, context);
-  if (selected === null || selected.operation.schema === null) {
+  const selected = selectOperation(
+    operations,
+    structuredSpecification,
+    context,
+  );
+  if (selected.kind === "no-input") {
     return new SchemaCompiledAttachmentExtractor(context, null);
   }
-  const effectiveSchema = buildEffectiveSchema(specification, context);
+  const effectiveSchema = buildEffectiveSchema(
+    specification,
+    structuredSpecification === undefined
+      ? []
+      : packageScalarNames(structuredSpecification),
+    context,
+  );
 
-  const operationName = selected.operation.name;
-  if (operationName === null) {
-    throw compilationError(context, "the operation has no name");
-  }
-  const rootName = `${pascalCase(operationName)}Input`;
+  const rootName = selected.rootName;
   const definitions = new Map<string, GraphQLInputObjectType>();
   for (const type of Object.values(effectiveSchema.getTypeMap())) {
     if (isInputObjectType(type) && !type.name.startsWith("__")) {
       definitions.set(type.name, type);
     }
   }
-  const rootDefinitions = selected.document?.definitions.filter(
+  const rootDefinitions = selected.document.definitions.filter(
     (definition) =>
       (definition.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
         definition.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION) &&
       definition.name.value === rootName,
   );
-  if (!rootDefinitions?.length || !definitions.has(rootName)) {
+  if (!rootDefinitions.length || !definitions.has(rootName)) {
     throw compilationError(
       context,
       `the operation does not declare its expected root input "${rootName}"`,
@@ -494,12 +570,12 @@ function compileExtractor(
 
 export class AttachmentSchemaCompiler implements IAttachmentSchemaCompiler {
   private readonly cache = new WeakMap<
-    DocumentModelModule,
+    CompilerModule,
     Map<string, CompiledAttachmentExtractor>
   >();
 
   forModuleAction(
-    module: DocumentModelModule,
+    module: CompilerModule,
     actionType: string,
   ): CompiledAttachmentExtractor {
     let moduleCache = this.cache.get(module);

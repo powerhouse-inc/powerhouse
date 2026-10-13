@@ -4,7 +4,9 @@ import {
   type TelemetryClient,
 } from "@powerhousedao/shared/clis/telemetry";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
-import { run } from "cmd-ts";
+import { run, subcommands } from "cmd-ts";
+import { generate, generateCommands } from "./commands/generate.js";
+import { phCliCommands } from "./commands/ph-cli-commands.js";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";
 import { getVersion } from "./get-version.js";
@@ -18,7 +20,48 @@ let sentryClient: TelemetryClient | undefined = undefined;
 // Commands whose second positional is itself a subcommand (vs. a project
 // name / file path). Keeping this explicit avoids high-cardinality tag
 // values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra"]);
+const COMMANDS_WITH_SUBCOMMANDS = new Set([
+  "connect",
+  "vetra",
+  "model",
+  "subgraph",
+  "scalar",
+]);
+
+function invokedOnly<C extends { name: string; aliases?: string[] }>(
+  cmds: Record<string, C>,
+  name: string | undefined,
+): Record<string, C> {
+  const match = Object.entries(cmds).find(
+    ([key, cmd]) =>
+      key === name || (name !== undefined && cmd.aliases?.includes(name)),
+  );
+  return match ? { [match[0]]: match[1] } : cmds;
+}
+
+/**
+ * cmd-ts reads a long name as an option everywhere once any command in the
+ * tree declares it as one, so `model check --json` would take the next
+ * argument as the value of connect's `--json`. Parsing against the invoked
+ * command alone keeps each command's own declarations.
+ */
+function phCliFor(argv: string[]) {
+  const [command, subcommand] = argv;
+  const generateBranch = subcommands({
+    name: generate.name,
+    description: generate.description,
+    cmds: invokedOnly(
+      generateCommands,
+      command === "generate" ? subcommand : undefined,
+    ),
+  });
+  return subcommands({
+    name: phCli.name,
+    description: phCli.description,
+    version: phCli.version,
+    cmds: invokedOnly({ ...phCliCommands, generate: generateBranch }, command),
+  });
+}
 
 function detectPackageManager(): string | undefined {
   // npm, pnpm, yarn and bun all set npm_config_user_agent like
@@ -58,18 +101,13 @@ async function main() {
   const isHelp = args.some((arg) => arg === "--help" || arg === "-h");
   const isTopLevelHelp = isHelp && args.length === 1;
   const showTopLevelHelp = hasNoArgs || isTopLevelHelp;
-  const cli = showTopLevelHelp ? phCliHelp : phCli;
-  const restArgs = args.slice(1);
-  if (
+  const argv =
     command === "connect" &&
     !["studio", "build", "preview", "config"].includes(args[1]) &&
     !isHelp
-  ) {
-    const argsWithDefaultConnectSubCommand = ["connect", "studio", ...restArgs];
-    await run(cli, argsWithDefaultConnectSubCommand);
-  } else {
-    await run(cli, args);
-  }
+      ? ["connect", "studio", ...args.slice(1)]
+      : args;
+  await run(showTopLevelHelp ? phCliHelp : phCliFor(argv), argv);
 }
 
 await main().catch(async (error) => {

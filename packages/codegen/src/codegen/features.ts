@@ -38,8 +38,23 @@ function hasPiece(piecesDir: string): boolean {
   return false;
 }
 
+function hasSubgraph(subgraphsDir: string): boolean {
+  return readdirSync(subgraphsDir, { withFileTypes: true }).some(
+    (entry) =>
+      entry.isDirectory() ||
+      (entry.isFile() &&
+        entry.name.endsWith(".ts") &&
+        entry.name !== "index.ts"),
+  );
+}
+
 export function detectFeatures(projectDir: string): Feature[] {
   const features: Feature[] = [];
+  const subgraphsDir = join(projectDir, "subgraphs");
+  const subgraphsStat = statSync(subgraphsDir, { throwIfNoEntry: false });
+  if (subgraphsStat?.isDirectory() && hasSubgraph(subgraphsDir)) {
+    features.push("subgraph");
+  }
   const processorsDir = join(projectDir, "processors");
   const processorsStat = statSync(processorsDir, { throwIfNoEntry: false });
   if (processorsStat?.isDirectory() && hasAnalyticsProcessor(processorsDir)) {

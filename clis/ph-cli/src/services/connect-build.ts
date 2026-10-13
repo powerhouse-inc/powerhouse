@@ -24,7 +24,7 @@ import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
-import { runBuild } from "./build.js";
+import { logRefusal, runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
   const { outDir, debug, dynamicBase, favicon } = args;
@@ -52,14 +52,19 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // precedence ladder.
   const { connectOverride, packageRegistryUrl } = buildCliConnectOverride(args);
 
-  await runBuild({
+  const result = await runBuild({
     outDir: "dist",
     debug,
-    // Local packages built for Connect share deps with the app vendor, same
-    // as a plain `ph build`.
+    configFile: undefined,
+    source: [],
+    warningsAsErrors: false,
     noSharedDeps: false,
     ignoreTypeErrors: false,
   });
+  if (result.exitCode !== 0) {
+    await logRefusal(result);
+    throw new Error("The package build failed, so Connect was not built.");
+  }
 
   // Production shared-dependency vendor: prebuilt into <outDir>/__vendor__
   // before the app build. On by default; PH_CONNECT_VENDOR=0|false disables

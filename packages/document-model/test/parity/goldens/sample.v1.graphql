@@ -1,0 +1,11 @@
+type SampleState {
+    label: OLabel
+    entries: [String!]!
+}
+
+# entries
+
+input AddEntryInput {
+    entry: String!
+    at: DateTime
+}

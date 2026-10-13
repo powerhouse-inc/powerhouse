@@ -5,7 +5,7 @@ import { kebabCase } from "change-case";
 import { createOrUpdateManifest } from "file-builders";
 import { getDocumentModelVariableNames } from "name-builders";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, posix, relative } from "node:path";
+import { dirname, join, posix, relative } from "node:path";
 import {
   capitalize,
   filter,
@@ -31,6 +31,13 @@ import {
   getVariableDeclarationByTypeName,
 } from "utils";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
+import {
+  addCodeFirstCollections,
+  addCodeFirstExports,
+  codeFirstAggregateSources,
+  unregisteredCodeFirstDefinitions,
+  type CodeFirstAggregateSource,
+} from "./code-first-aggregates.js";
 import {
   makeDocumentModelDocumentTypeFile,
   makeDocumentModelGenActionsFile,
@@ -235,18 +242,7 @@ export async function tsMorphGenerateDocumentModel(
     documentModelDirPath,
     latestVersion,
   });
-  // skipAddingFilesFromTsConfig leaves other models out of the project; add
-  // the files the aggregates scan so every model is included, not just the new one.
-  project.addSourceFilesAtPaths([
-    join(documentModelsDirPath, "**", "module.ts"),
-    join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
-  ]);
-  // /document-models/document-models.ts
-  await makeDocumentModelsFile({ project, documentModelsDirPath });
-  // /document-models/index.ts
-  await makeDocumentModelsIndexFile({ project, documentModelsDirPath });
-  // /document-models/upgrade-manifests.ts
-  await makeUpgradeManifestsFile({ project, documentModelsDirPath });
+  await refreshDocumentModelAggregates(project);
   await createOrUpdateManifest(
     {
       documentModels: [
@@ -260,11 +256,53 @@ export async function tsMorphGenerateDocumentModel(
   );
 }
 
+/**
+ * Rewrites the three package-level aggregates from what the package now holds.
+ */
+export async function refreshDocumentModelAggregates(
+  project: Project,
+): Promise<void> {
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
+  );
+  const documentModelsDirPath = documentModelsDir.getPath();
+  const projectDir = documentModelsDir.getParentOrThrow().getPath();
+  // skipAddingFilesFromTsConfig leaves other models out of the project; add
+  // the files the aggregates scan so every model is included, not just the new one.
+  project.addSourceFilesAtPaths([
+    join(documentModelsDirPath, "**", "module.ts"),
+    join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
+  ]);
+  const codeFirst = await codeFirstAggregateSources(projectDir);
+  const unregisteredDirs = unregisteredCodeFirstDefinitions(projectDir)
+    .filter(({ kind }) => kind === "document-model")
+    .map(({ unit }) => unit);
+  // /document-models/document-models.ts
+  await makeDocumentModelsFile({ project, documentModelsDirPath, codeFirst });
+  // /document-models/index.ts
+  await makeDocumentModelsIndexFile({
+    project,
+    documentModelsDirPath,
+    codeFirst,
+  });
+  // /document-models/upgrade-manifests.ts
+  await makeUpgradeManifestsFile({
+    project,
+    documentModelsDirPath,
+    codeFirst,
+    unregisteredDirs,
+  });
+}
+
 async function makeUpgradeManifestsFile(args: {
   project: Project;
   documentModelsDirPath: string;
+  codeFirst: CodeFirstAggregateSource[];
+  unregisteredDirs: string[];
 }) {
-  const { project, documentModelsDirPath } = args;
+  const { project, documentModelsDirPath, codeFirst, unregisteredDirs } = args;
+  const projectDir = dirname(documentModelsDirPath);
   const sourceFile = project.createSourceFile(
     join(documentModelsDirPath, "upgrade-manifests.ts"),
     upgradeManifestsTemplate,
@@ -274,16 +312,39 @@ async function makeUpgradeManifestsFile(args: {
   const upgradeManifestsArray = sourceFile
     .getVariableDeclarationOrThrow("upgradeManifests")
     .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+  const manifestsListedByCodeFirst = new Set(
+    codeFirst.flatMap((source) => source.manifestDocumentTypes),
+  );
 
   pipe(
     project.getSourceFiles(),
     // find the upgrade manifest files for each document model
     filter((sourceFile) => sourceFile.getBaseName() === "upgrade-manifest.ts"),
+    filter(
+      (sourceFile) =>
+        !unregisteredDirs.some((dir) =>
+          `./${relative(projectDir, sourceFile.getFilePath()).replaceAll("\\", "/")}`.startsWith(
+            dir,
+          ),
+        ),
+    ),
     // get the upgrade manifest objects
     map((sourceFile) =>
       getVariableDeclarationByTypeName(sourceFile, "UpgradeManifest"),
     ),
     filter(isTruthy),
+    filter((declaration) => {
+      const documentType = declaration
+        .getInitializerIfKind(SyntaxKind.ObjectLiteralExpression)
+        ?.getProperty("documentType")
+        ?.asKind(SyntaxKind.PropertyAssignment)
+        ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue();
+      return (
+        documentType === undefined ||
+        !manifestsListedByCodeFirst.has(documentType)
+      );
+    }),
     // get name and dir for adding to upgradeManifests array and making import specifier
     map((variableDeclaration) => ({
       name: variableDeclaration.getName(),
@@ -312,14 +373,17 @@ async function makeUpgradeManifestsFile(args: {
     }),
   );
 
+  addCodeFirstCollections(upgradeManifestsArray, "upgradeManifests", codeFirst);
+
   await formatSourceFileWithPrettier(sourceFile);
 }
 
 async function makeDocumentModelsFile(args: {
   project: Project;
   documentModelsDirPath: string;
+  codeFirst: CodeFirstAggregateSource[];
 }) {
-  const { project, documentModelsDirPath } = args;
+  const { project, documentModelsDirPath, codeFirst } = args;
   const sourceFile = project.createSourceFile(
     join(documentModelsDirPath, "document-models.ts"),
     documentModelsTemplate,
@@ -364,14 +428,18 @@ async function makeDocumentModelsFile(args: {
       documentModelsArray.addElement(name);
     }),
   );
+
+  addCodeFirstCollections(documentModelsArray, "documentModels", codeFirst);
+
   await formatSourceFileWithPrettier(sourceFile);
 }
 
 async function makeDocumentModelsIndexFile(args: {
   project: Project;
   documentModelsDirPath: string;
+  codeFirst: CodeFirstAggregateSource[];
 }) {
-  const { project, documentModelsDirPath } = args;
+  const { project, documentModelsDirPath, codeFirst } = args;
   const sourceFile = project.createSourceFile(
     join(documentModelsDirPath, "index.ts"),
     "",
@@ -409,6 +477,7 @@ async function makeDocumentModelsIndexFile(args: {
       });
     }),
   );
+  addCodeFirstExports(sourceFile, codeFirst);
   // Upgrade manifests ride the same subpath so node-side package loaders
   // (reactor-api) can pick them up without importing the package root, which
   // would pull editors into a node process.

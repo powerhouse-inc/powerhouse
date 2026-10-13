@@ -728,6 +728,12 @@
         "typescript/unbound-method": "off",
         "typescript/no-unnecessary-condition": "off"
       }
+    },
+    {
+      "files": ["packages/document-model/src/definition/**/*.ts"],
+      "rules": {
+        "typescript/no-deprecated": "error"
+      }
     }
   ],
   "ignorePatterns": [
@@ -785,6 +791,8 @@
     "packages/reactor-api/src/packages/vite-loader.mts",
     "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
     "packages/reactor/test/integration/projection-worker-bootstrap.mjs",
-    "packages/reactor/test/core/fixtures/model-barrel.mjs"
+    "packages/reactor/test/core/fixtures/model-barrel.mjs",
+    "packages/document-model/test/tooling/fixtures/**",
+    "packages/document-model/test/fixtures/loaders/loader-package/**"
   ]
 }

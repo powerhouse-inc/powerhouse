@@ -76,6 +76,7 @@ import {
   type WsDisposer,
   type WsHandlers,
 } from "./gateway/types.js";
+import { hasValidSchema } from "./model-schema-templates.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
@@ -88,8 +89,6 @@ function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
   const specification =
     documentModel.documentModel.global.specifications.at(-1);
   if (!specification) return false;
-  const hasValidSchema = (schema: string | null | undefined) =>
-    schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
   return specification.modules.some((module) =>
     module.operations.some((op) => hasValidSchema(op.schema)),
   );
@@ -113,9 +112,13 @@ function filterLatestDocumentModelVersions(
     }
 
     const currentVersion =
-      documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
+      documentModel.version ??
+      documentModel.documentModel.global.specifications.at(-1)?.version ??
+      0;
     const existingVersion =
-      existing.documentModel.global.specifications.at(-1)?.version ?? 0;
+      existing.version ??
+      existing.documentModel.global.specifications.at(-1)?.version ??
+      0;
 
     if (currentVersion > existingVersion) {
       latestByName.set(name, documentModel);

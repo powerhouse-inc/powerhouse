@@ -1,0 +1,123 @@
+import type {
+  DocumentModelOperationDefinition,
+  DocumentModelSpecificationDefinition,
+  InputTypeDefinition,
+  NamedGraphQLTypeDefinition,
+} from "@powerhousedao/shared/document-model";
+import { camelCase } from "change-case";
+import type { ModelProjection } from "./model-schema-templates.js";
+import {
+  definesObjectType,
+  initialStateInputTypes,
+  printNamespacedTypes,
+  type StructuredModel,
+  asStoredStateObjects,
+} from "./structured-projection.js";
+
+/** Reads the template inputs out of a code-first model's structured definition. */
+export function structuredModelProjection(
+  model: StructuredModel,
+  documentName: string,
+): ModelProjection {
+  const { specification, segments, layout } = model;
+  const namespaced = (types: readonly NamedGraphQLTypeDefinition[]) =>
+    printNamespacedTypes(model, types, documentName);
+
+  const localRoot = specification.state.local.root;
+  const localStateTypeName =
+    localRoot === null ||
+    !segments.local.some(
+      (type) => type.kind === "object" && type.name === localRoot.name,
+    )
+      ? null
+      : `${documentName}_${localRoot.name}`;
+
+  return {
+    documentName,
+    operations: mutationOperations(specification).map(({ name, input }) => ({
+      camelName: camelCase(name),
+      inputTypeName: `${documentName}_${input.name}`,
+    })),
+    modules: layout.modules.map(({ name, types }) => ({
+      name,
+      sdl: namespaced(types),
+    })),
+    stateInputTypes: namespaced(layout.stateInputs),
+    globalStateTypeName: `${documentName}_${specification.state.global.root.name}`,
+    localStateTypeName,
+    initialState: structuredInitialState(model, documentName, namespaced),
+  };
+}
+
+type MutationOperationDefinition = DocumentModelOperationDefinition & {
+  readonly name: string;
+  readonly input: InputTypeDefinition;
+};
+
+/**
+ * Returns the operations with a stored name and an input type, which are the
+ * ones that get a mutation. The stored-SDL path's `hasValidSchema(op.schema)`
+ * check selects the same operations.
+ */
+export function mutationOperations(
+  specification: DocumentModelSpecificationDefinition,
+): readonly MutationOperationDefinition[] {
+  return specification.modules.flatMap((module) =>
+    module.operations.flatMap((operation) =>
+      operation.name === null || operation.input === null
+        ? []
+        : [{ ...operation, name: operation.name, input: operation.input }],
+    ),
+  );
+}
+
+/**
+ * Every type name the specification declares, including operation inputs. A
+ * state object gets a generated `XInput` only when no declared type has that
+ * name, so an operation's named input is never defined twice.
+ */
+function declaredTypeNames(
+  specification: DocumentModelSpecificationDefinition,
+): ReadonlySet<string> {
+  const names = new Set(specification.types.map((type) => type.name));
+  for (const module of specification.modules) {
+    for (const operation of module.operations) {
+      if (operation.input !== null) names.add(operation.input.name);
+    }
+  }
+  return names;
+}
+
+/**
+ * Builds the new API's initial-state input, with one input type per state
+ * object and every field optional. A scope with no root, or no convertible
+ * object, falls back to `JSONObject`, as the stored-SDL path does when it
+ * cannot find a root type.
+ */
+function structuredInitialState(
+  { specification, layout }: StructuredModel,
+  documentName: string,
+  namespaced: (types: readonly NamedGraphQLTypeDefinition[]) => string,
+): ModelProjection["initialState"] {
+  const declared = declaredTypeNames(specification);
+  const inputTypes: string[] = [];
+  const scopes = (["global", "local"] as const).map((name) => {
+    const root = specification.state[name].root;
+    const types = layout.scopes[name];
+    if (
+      root === null ||
+      types.length === 0 ||
+      !definesObjectType(specification.graphQLCompatibility, root.name)
+    ) {
+      return { name, type: "JSONObject" };
+    }
+    const inputs = initialStateInputTypes(
+      asStoredStateObjects(types, specification.graphQLCompatibility),
+      declared,
+    );
+    if (inputs.length === 0) return { name, type: "JSONObject" };
+    inputTypes.push(namespaced(inputs));
+    return { name, type: `${documentName}_${root.name}Input` };
+  });
+  return { inputTypes: inputTypes.join("\n\n"), scopes };
+}

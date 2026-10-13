@@ -2,11 +2,14 @@ import type { ConfigEntry, Manifest } from "@powerhousedao/shared";
 import { defaultManifest, fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
 import { loadJsonFile } from "load-json-file";
-import { join } from "path";
+import { dirname, join } from "path";
+import { readPackage } from "read-pkg";
 import {
   concat,
   filter,
   isIncludedIn,
+  isPlainObject,
+  isString,
   map,
   merge,
   pipe,
@@ -15,15 +18,70 @@ import {
 } from "remeda";
 import { writeJsonFile } from "write-json-file";
 
+const MANIFEST_FILE = "powerhouse.manifest.json";
+
+export type ManifestFile = {
+  raw: unknown;
+  manifest: Manifest;
+};
+
+async function parseManifestFile(manifestPath: string): Promise<ManifestFile> {
+  const raw = await loadJsonFile(manifestPath);
+  const manifest = ManifestSchema.parse(raw);
+  return { raw, manifest };
+}
+
+/**
+ * Reads and validates the project's `powerhouse.manifest.json`. Returns
+ * `undefined` when there is none. Throws `load-json-file`'s error when it is
+ * not JSON, and the schema's `ZodError` when it is not a valid manifest.
+ */
+export async function readManifest(
+  projectDir: string,
+): Promise<ManifestFile | undefined> {
+  const manifestPath = join(projectDir, MANIFEST_FILE);
+  if (!(await fileExists(manifestPath))) return undefined;
+  return await parseManifestFile(manifestPath);
+}
+
+async function newManifest(projectDir: string): Promise<Manifest> {
+  const name = await readPackage({ cwd: projectDir, normalize: false }).then(
+    (packageJson) => (isString(packageJson.name) ? packageJson.name : ""),
+    () => "",
+  );
+  return { ...defaultManifest, name };
+}
+
+function keepUnknownKeys(parsed: unknown, raw: unknown): unknown {
+  if (Array.isArray(parsed) && Array.isArray(raw)) {
+    return parsed.map((value, index) => keepUnknownKeys(value, raw[index]));
+  }
+  if (isPlainObject(parsed) && isPlainObject(raw)) {
+    return Object.fromEntries([
+      ...Object.entries(parsed).map(([key, value]) => [
+        key,
+        keepUnknownKeys(value, raw[key]),
+      ]),
+      ...Object.entries(raw).filter(([key]) => !Object.hasOwn(parsed, key)),
+    ]);
+  }
+  return parsed;
+}
+
+function withUnknownKeys({ raw, manifest }: ManifestFile): Manifest {
+  return keepUnknownKeys(manifest, raw) as Manifest;
+}
+
 export async function getOrCreateManifestFile(
   manifestPath: string,
 ): Promise<Manifest> {
   const hasManifestFile = await fileExists(manifestPath);
   if (!hasManifestFile) {
-    await writeJsonFile(manifestPath, defaultManifest, { indent: 2 });
+    const seed = await newManifest(dirname(manifestPath));
+    await writeJsonFile(manifestPath, seed, { indent: 2 });
   }
-  const manifestFile = await loadJsonFile(manifestPath);
-  return ManifestSchema.parse(manifestFile);
+  const { manifest } = await parseManifestFile(manifestPath);
+  return manifest;
 }
 
 // Generic over the entry: a `pieces` entry carries fields `PowerhouseModule`
@@ -67,9 +125,9 @@ export async function pruneManifestSection(
     | "pieces",
   validIds: readonly string[],
 ): Promise<void> {
-  const manifestPath = join(projectDir, "powerhouse.manifest.json");
-  if (!(await fileExists(manifestPath))) return;
-  const manifest = await getOrCreateManifestFile(manifestPath);
+  const manifestFile = await readManifest(projectDir);
+  if (manifestFile === undefined) return;
+  const manifest = withUnknownKeys(manifestFile);
   const existing = manifest[kind];
   // Nothing to prune if the section was never present.
   if (existing === undefined) return;
@@ -78,9 +136,9 @@ export async function pruneManifestSection(
   // Skip the write when nothing changed.
   if (filtered.length === existing.length) return;
   await writeJsonFile(
-    manifestPath,
+    join(projectDir, MANIFEST_FILE),
     { ...manifest, [kind]: filtered },
-    { indent: 2 },
+    { indent: 2, detectIndent: true },
   );
 }
 
@@ -89,8 +147,10 @@ export async function createOrUpdateManifest(
   manifestData: Partial<Manifest>,
   projectDir: string,
 ) {
-  const manifestPath = join(projectDir, "powerhouse.manifest.json");
-  const existingManifest = await getOrCreateManifestFile(manifestPath);
+  const manifestFile = await readManifest(projectDir);
+  const existingManifest = manifestFile
+    ? withUnknownKeys(manifestFile)
+    : await getOrCreateManifestFile(join(projectDir, MANIFEST_FILE));
 
   const updatedManifest: Manifest = {
     ...existingManifest,
@@ -126,6 +186,9 @@ export async function createOrUpdateManifest(
       : {}),
     config: makeUpdatedConfig(existingManifest.config, manifestData.config),
   };
-  await writeJsonFile(manifestPath, updatedManifest, { indent: 2 });
+  await writeJsonFile(join(projectDir, MANIFEST_FILE), updatedManifest, {
+    indent: 2,
+    detectIndent: true,
+  });
   return updatedManifest;
 }

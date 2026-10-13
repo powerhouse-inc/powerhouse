@@ -1,0 +1,30 @@
+enum ExtensionsStatus {
+  OPEN
+}
+
+extend enum ExtensionsStatus {
+  CLOSED
+}
+
+type ExtensionsState {
+  title: String!
+  status: ExtensionsStatus!
+}
+
+extend type ExtensionsState {
+  note: String
+}
+
+# statuses
+
+input SetStatusInput {
+  status: ExtensionsStatus!
+}
+
+extend input SetStatusInput {
+  reason: String
+}
+
+extend type ExtensionsState {
+  flagged: Boolean
+}

@@ -9,6 +9,7 @@ export * from "./install.js";
 export * from "./list.js";
 export * from "./login.js";
 export * from "./migrate.js";
+export * from "./model.js";
 export * from "./publish.js";
 export * from "./registry.js";
 export * from "./service.js";
