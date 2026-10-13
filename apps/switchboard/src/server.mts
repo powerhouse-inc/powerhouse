@@ -99,6 +99,7 @@ import {
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { inspectionThrottleFromEnv } from "./inspection-throttle.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { resolveInspectionEnabled } from "./inspection-flag.mjs";
@@ -452,6 +453,7 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  const inspectionThrottle = inspectionThrottleFromEnv(process.env);
   let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
   if (workerPool && options.reactor) {
     logger.warn(
@@ -989,7 +991,8 @@ async function initServer(
         : {},
       configFile: configPath,
       mcp: options.mcp ?? true,
-      inspection: options.inspection === false ? false : undefined,
+      inspection:
+        options.inspection === false ? false : { throttle: inspectionThrottle },
       logger: apiLogger,
       reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
