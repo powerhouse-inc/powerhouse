@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { loadHost, type HostDefinition } from "../services/run/host-loader.js";
-import type { RunnerContext } from "../services/run/runner-resolver.js";
+import {
+  loadHost,
+  type HostDefinition,
+  type RunnerContext,
+} from "@powerhousedao/host-core";
 import type { VetraArgs } from "../types.js";
 
 /**

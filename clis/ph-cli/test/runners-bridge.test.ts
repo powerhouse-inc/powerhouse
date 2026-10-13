@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { HostDefinition } from "../src/services/run/host-loader.js";
-import type { RunnerContext } from "../src/services/run/runner-resolver.js";
+import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
 
 /** The bridges must call the SAME services the classic commands call — these
  * tests pin the host→args mapping, not the services themselves. */

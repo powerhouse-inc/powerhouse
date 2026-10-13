@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { HostDefinition } from "../src/services/run/host-loader.js";
+import type { HostDefinition } from "../src/host-loader.js";
 import {
   getVerb,
   listVerbs,
@@ -10,7 +10,7 @@ import {
   RunnerError,
   validateHost,
   type RunnerModule,
-} from "../src/services/run/runner-resolver.js";
+} from "../src/runner-resolver.js";
 
 const temporary: string[] = [];
 
@@ -83,7 +83,9 @@ describe("resolveRunnerModule", () => {
         type: "module",
         exports: {
           "./runner": { import: "./runner.js", default: "./runner.js" },
-          "./import-only": { import: "./runner.js" },
+          // no runtime target under any condition — unreachable to require
+          // resolution regardless of the test runner's --conditions:
+          "./types-only": { types: "./runner.d.ts" },
         },
       }),
     );
@@ -92,7 +94,7 @@ describe("resolveRunnerModule", () => {
     const runner = await resolveRunnerModule(project, "mapped-runner/runner");
     expect(runner.kind).toBe("reactor");
     await expect(
-      resolveRunnerModule(project, "mapped-runner/import-only"),
+      resolveRunnerModule(project, "mapped-runner/types-only"),
     ).rejects.toThrow(/Cannot resolve runner module/);
   });
 

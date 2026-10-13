@@ -13,3 +13,24 @@ export {
   rebaseDriveUrl,
   type DriveProjectionInput,
 } from "./connect-projection.js";
+export {
+  findNonStaticValue,
+  HostLoadError,
+  lintHostImports,
+  loadHost,
+  probeHostsFolder,
+  type HostDefinition,
+  type HostsFolderStatus,
+  type LoadedHost,
+} from "./host-loader.js";
+export {
+  getVerb,
+  listVerbs,
+  resolveRunnerModule,
+  RunnerError,
+  validateHost,
+  type HostSchemaLike,
+  type RunnerContext,
+  type RunnerModule,
+  type RunnerVerb,
+} from "./runner-resolver.js";

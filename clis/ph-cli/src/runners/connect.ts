@@ -3,8 +3,7 @@ import {
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import type { HostDefinition } from "../services/run/host-loader.js";
-import type { RunnerContext } from "../services/run/runner-resolver.js";
+import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
 import type { ConnectStudioArgs } from "../types.js";
 
 /**

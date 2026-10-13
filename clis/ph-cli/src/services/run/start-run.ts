@@ -1,9 +1,9 @@
-import { loadHost } from "./host-loader.js";
+import { loadHost } from "@powerhousedao/host-core";
 import {
   getVerb,
   resolveRunnerModule,
   validateHost,
-} from "./runner-resolver.js";
+} from "@powerhousedao/host-core";
 
 export interface StartRunArgs {
   host: string;

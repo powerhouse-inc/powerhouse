@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RunnerContext } from "../src/services/run/runner-resolver.js";
+import type { RunnerContext } from "@powerhousedao/host-core";
 
 vi.mock("../src/services/vetra.js", () => ({
   startVetra: vi.fn().mockResolvedValue(undefined),
@@ -63,7 +63,7 @@ function ctx(projectRoot: string): RunnerContext {
 }
 
 async function vetraHost(projectRoot: string) {
-  const { loadHost } = await import("../src/services/run/host-loader.js");
+  const { loadHost } = await import("@powerhousedao/host-core");
   return (await loadHost(projectRoot, "vetra")).host;
 }
 
