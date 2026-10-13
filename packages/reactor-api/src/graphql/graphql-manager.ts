@@ -40,6 +40,7 @@ import {
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
+  hasOperationSchemas,
   reservedTypeNames,
   reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
@@ -89,21 +90,6 @@ import {
 } from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
-
-/**
- * Check if a document model has any operations with valid schemas.
- * Document models without valid operation schemas cannot generate valid subgraph schemas.
- */
-function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
-  const specification =
-    documentModel.documentModel.global.specifications.at(-1);
-  if (!specification) return false;
-  const hasValidSchema = (schema: string | null | undefined) =>
-    schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
-  return specification.modules.some((module) =>
-    module.operations.some((op) => hasValidSchema(op.schema)),
-  );
-}
 
 /**
  * Filter document models to keep only the latest version of each unique document model.
@@ -710,7 +696,7 @@ export class GraphQLManager {
       ) {
         continue;
       }
-      if (!hasOperationSchemas(documentModel)) {
+      if (!hasOperationSchemas(documentModel.documentModel.global)) {
         continue;
       }
       try {

@@ -9,7 +9,7 @@ import type {
   DocumentModelGlobalState,
   DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import { camelCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import { childLogger } from "document-model";
 import {
   type ASTNode,
@@ -302,6 +302,28 @@ export function getDocumentModelSchemaName(
   documentModel: DocumentModelGlobalState,
 ) {
   return pascalCase(documentModel.name.replaceAll("/", " "));
+}
+
+/** The name the model's own subgraph registers under. */
+export function getDocumentModelSubgraphName(
+  documentModel: DocumentModelGlobalState,
+): string {
+  return kebabCase(documentModel.name);
+}
+
+/** Whether the model gets a subgraph: only one with an operation schema does. */
+export function hasOperationSchemas(
+  documentModel: DocumentModelGlobalState,
+): boolean {
+  const specification = documentModel.specifications.at(-1);
+  if (!specification) return false;
+  return specification.modules.some((module) =>
+    module.operations.some(
+      (op) =>
+        !!op.schema &&
+        /\b(input|type|enum|union|interface)\s+\w+/.test(op.schema),
+    ),
+  );
 }
 
 /**
