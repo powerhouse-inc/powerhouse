@@ -59,6 +59,40 @@ describe("VitePackageLoader change listeners", () => {
     expect(onB).toHaveBeenCalledExactlyOnceWith([]);
   });
 
+  it("loads once for a burst of file events", async () => {
+    vi.useFakeTimers();
+    const { vite, watcher } = fakeVite();
+    const ssrLoadModule = vi.spyOn(vite, "ssrLoadModule");
+    const loader = VitePackageLoader.build(vite);
+    const handler = vi.fn();
+    loader.onSubgraphsChange(PKG_A, handler);
+
+    for (const file of ["a.ts", "b.ts", "c.ts", "d.ts"]) {
+      watcher.emit("change", resolve(PKG_A, "subgraphs", file));
+      await vi.advanceTimersByTimeAsync(20);
+    }
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(ssrLoadModule).toHaveBeenCalledOnce();
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("reports a failed reload through reportError", async () => {
+    const { vite, watcher } = fakeVite();
+    const reportError = vi.fn();
+    const loader = VitePackageLoader.build(vite, { reportError });
+    const failure = new Error("handler failed");
+    loader.onSubgraphsChange(PKG_A, () => {
+      throw failure;
+    });
+
+    watcher.emit("change", resolve(PKG_A, "subgraphs", "index.ts"));
+
+    await vi.waitFor(() =>
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure),
+    );
+  });
+
   it("contains a handler that throws", async () => {
     const { vite, watcher } = fakeVite();
     const loader = VitePackageLoader.build(vite);
