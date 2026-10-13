@@ -8,7 +8,7 @@ import {
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** Accepts every request and never answers; ignores the abort signal. */
-function hungRemote(name: string) {
+function hungRemote(name: string, timeoutMs?: number) {
   let reached!: () => void;
   const requested = new Promise<void>((resolve) => {
     reached = resolve;
@@ -22,6 +22,7 @@ function hungRemote(name: string) {
         reached();
         return new Promise<Response>(() => {});
       },
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
     },
   };
   return { descriptor, requested };
@@ -57,6 +58,25 @@ describe("remote inspection request bound", () => {
     const outcome = expect(provisioned).rejects.toThrow(/timed out/);
 
     await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
+    await outcome;
+    expect(registry.get("hung")?.status).toBe("failed");
+  });
+
+  it("bounds a remote provision by the descriptor's timeoutMs", async () => {
+    vi.useFakeTimers();
+    const registry = new ReactorMonitorRegistry();
+    const { descriptor } = hungRemote("hung", 1_234);
+    let settled = false;
+    const provisioned = registry.provision(descriptor).finally(() => {
+      settled = true;
+    });
+    const outcome = expect(provisioned).rejects.toThrow(
+      /timed out after 1234ms/,
+    );
+
+    await vi.advanceTimersByTimeAsync(1_233);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
     await outcome;
     expect(registry.get("hung")?.status).toBe("failed");
   });
