@@ -322,6 +322,14 @@ to be ignored. The `config` block of the installed package's manifest is
 authoritative for the version you actually have.
 :::
 
+## Configuring inspection (Switchboard)
+
+Switchboard mounts a read-only `inspection` subgraph at `/graphql/inspection`, which reactor-monitor attaches to. It is on by default. Its `info` and `documentModels` queries answer any caller that reaches the endpoint, and its operational reads need an address in `ADMINS`. Set `INSPECTION_ENABLED=false` to unmount it, or keep it mounted and set `REQUIRE_AUTHENTICATED_CALLER=true` to turn anonymous callers away:
+
+```bash
+INSPECTION_ENABLED=false
+```
+
 ## Configuring privacy (Switchboard)
 
 The privacy add-on answers GDPR access and erasure requests through an admin-only `privacy` subgraph. It is off by default and needs authentication:
