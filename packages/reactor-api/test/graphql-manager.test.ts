@@ -4723,6 +4723,38 @@ describe("GraphQLManager", () => {
       expect(claimExclusions(harness.logger)).toEqual([]);
     });
 
+    it("lets a refused model's subgraph claim nothing", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("Revision", "test/revision"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "revision-custom",
+              gql`
+                type RevisionQueries {
+                  example: String
+                }
+                type Query {
+                  Revision: RevisionQueries
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      expect(harness.manager.getSubgraphByName("revision")).toBeUndefined();
+      expect(supergraphNames(harness.gatewayAdapter)).toContain(
+        "revision-custom",
+      );
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
     it("excludes nothing among the real core subgraphs and base models", async () => {
       const harness = makeOwnershipHarness([
         driveDocumentModelModule,
