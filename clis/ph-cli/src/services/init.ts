@@ -9,6 +9,7 @@ import { kebabCase } from "change-case";
 import enquirer from "enquirer";
 import { clean, valid } from "semver";
 import type { InitArgs } from "../types.js";
+import { isUniformRunnersEnabled } from "../utils/feature-flags.js";
 import { setupRemoteDrive } from "../utils/validate-remote-drive.js";
 
 export async function startInit(args: InitArgs) {
@@ -111,6 +112,9 @@ export async function startInit(args: InitArgs) {
       name,
       packageManager: parsedPackageManager,
       tag: parsedTag,
+      // explicit flag wins; otherwise the env toggle decides (codegen never
+      // sniffs env itself)
+      uniformRunners: args.uniformRunners === true || isUniformRunnersEnabled(),
     });
 
     if (remoteDrive) {
