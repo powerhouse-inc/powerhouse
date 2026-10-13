@@ -147,6 +147,68 @@ describe("DrivesTab", () => {
     expect(checkDriveIntegrity).toHaveBeenCalledWith("drive-a", "main");
   });
 
+  it("creates a drive through client.drives.create and re-lists", async () => {
+    const listDrives = vi.fn(() =>
+      Promise.resolve({ results: [DRIVE], nextCursor: undefined }),
+    );
+    const create = vi.fn(() => Promise.resolve({} as never));
+    const view = render(
+      <DrivesTab
+        drives={{ create }}
+        inspector={stubInspector({ listDrives })}
+        syncManager={stubSyncManager(undefined)}
+      />,
+    );
+    await waitFor(() => view.getByTestId("drives-row"));
+    const calls = listDrives.mock.calls.length;
+
+    fireEvent.change(view.getByLabelText("Drive name"), {
+      target: { value: "Ledger" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Create drive" }));
+
+    await waitFor(() => {
+      expect(create).toHaveBeenCalledWith({ global: { name: "Ledger" } });
+    });
+    await waitFor(() => {
+      expect(listDrives.mock.calls.length).toBeGreaterThan(calls);
+    });
+    expect((view.getByLabelText("Drive name") as HTMLInputElement).value).toBe(
+      "",
+    );
+  });
+
+  it("shows why a drive cannot be created when it fails", async () => {
+    const view = render(
+      <DrivesTab
+        drives={{ create: () => Promise.reject(new Error("no models")) }}
+        inspector={stubInspector({})}
+        syncManager={stubSyncManager(undefined)}
+      />,
+    );
+
+    fireEvent.change(view.getByLabelText("Drive name"), {
+      target: { value: "Ledger" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Create drive" }));
+
+    const alert = await waitFor(() => view.getByRole("alert"));
+    expect(alert.textContent).toContain("no models");
+  });
+
+  it("offers no create form without a drive client", async () => {
+    const view = render(
+      <DrivesTab
+        inspector={stubInspector({})}
+        syncManager={stubSyncManager(undefined)}
+      />,
+    );
+
+    await waitFor(() => view.getByTestId("drives-row"));
+    expect(view.queryByTestId("drives-create-form")).toBeNull();
+    expect(view.getByTestId("drives-create-unavailable")).toBeTruthy();
+  });
+
   it("states plainly when a reactor holds no drives", async () => {
     const view = render(
       <DrivesTab

@@ -1,5 +1,8 @@
 import { ReactorEventTypes, SyncEventTypes } from "@powerhousedao/reactor";
-import { SYNC_STATUS_CHANGED_EVENT } from "./sync-manager-proxy.js";
+import {
+  SYNC_REMOTES_CHANGED_EVENT,
+  SYNC_STATUS_CHANGED_EVENT,
+} from "./sync-manager-proxy.js";
 
 export const FORWARDED_EVENT_TYPES = [
   SyncEventTypes.SYNC_PENDING,
@@ -13,4 +16,5 @@ export const FORWARDED_EVENT_TYPES = [
 export const FORWARDED_BUS_EVENT_TYPES: number[] = [
   ...FORWARDED_EVENT_TYPES,
   SYNC_STATUS_CHANGED_EVENT,
+  SYNC_REMOTES_CHANGED_EVENT,
 ];

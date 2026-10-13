@@ -120,6 +120,8 @@ export type ReactorRemoteConfig = {
   headers?: RemoteInspectionHeaders;
   /** Defaults to the global `fetch`. A test seam, and a host with its own agent. */
   fetch?: typeof fetch;
+  /** Bound on one inspection request; defaults to 30s. */
+  timeoutMs?: number;
 };
 
 /** What to provision. `name` must be unique across a monitor session. */

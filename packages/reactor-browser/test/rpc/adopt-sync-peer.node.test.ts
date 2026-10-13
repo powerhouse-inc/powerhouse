@@ -20,6 +20,7 @@ import {
 } from "@powerhousedao/reactor/rpc";
 import { localSyncPeerHandlers } from "../../src/rpc/local-sync-peer-handlers.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
+import { SYNC_REMOTES_CHANGED_EVENT } from "../../src/rpc/sync-manager-proxy.js";
 
 const FILTER: RemoteFilter = { documentId: [], scope: [], branch: "main" };
 
@@ -281,6 +282,82 @@ describe("ReactorHost adopt-sync-peer routing", () => {
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({ k: "res", id: "a4", value: { ok: true } });
     expect(port.close).not.toHaveBeenCalled();
+    dispose();
+  });
+
+  it("sends every tab the remotes before it replies to the adopter", async () => {
+    const remotes = [{ meta: { name: PARAMS.remoteName } }];
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onAdoptSyncPeer: () => Promise.resolve(),
+      onSyncOp: (method) =>
+        Promise.resolve(method === "list" ? remotes : undefined),
+    });
+    const adopter = injectableTransport();
+    const other = injectableTransport();
+    const disposeAdopter = host.connect(adopter.transport);
+    const disposeOther = host.connect(other.transport);
+    const changed = {
+      k: "bus-event",
+      eventType: SYNC_REMOTES_CHANGED_EVENT,
+      event: { remotes },
+    };
+
+    adopter.receive(adoptMessage("a7", fakePort().port));
+
+    await vi.waitFor(() => expect(adopter.sent).toHaveLength(2));
+    expect(adopter.sent).toEqual([
+      changed,
+      { k: "res", id: "a7", value: { ok: true } },
+    ]);
+    expect(other.sent).toEqual([changed]);
+    disposeAdopter();
+    disposeOther();
+  });
+
+  it("sends the remotes after a remove", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onRemoveSyncPeer: () => Promise.resolve(),
+      onSyncOp: () => Promise.resolve([]),
+    });
+    const { transport, sent, receive } = injectableTransport();
+    const dispose = host.connect(transport);
+
+    receive({
+      k: "remove-sync-peer",
+      id: "r1",
+      peerId: PARAMS.peerId,
+      channelName: PARAMS.channelName,
+      remoteName: PARAMS.remoteName,
+    });
+
+    await vi.waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[0]).toEqual({
+      k: "bus-event",
+      eventType: SYNC_REMOTES_CHANGED_EVENT,
+      event: { remotes: [] },
+    });
+    expect(sent[1]).toEqual({ k: "res", id: "r1", value: { ok: true } });
+    dispose();
+  });
+
+  it("still replies ok to an adopt when listing the remotes fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onAdoptSyncPeer: () => Promise.resolve(),
+      onSyncOp: () => Promise.reject(new Error("no sync manager")),
+    });
+    const { transport, sent, receive } = injectableTransport();
+    const dispose = host.connect(transport);
+
+    receive(adoptMessage("a8", fakePort().port));
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({ k: "res", id: "a8", value: { ok: true } });
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
     dispose();
   });
 });
