@@ -43,7 +43,6 @@ import type { DocumentPermissionService } from "../services/document-permission.
 import {
   buildDocumentModelSchema,
   buildSubgraphSchemaModule,
-  createMergedSchema,
   createSchema,
   type DocumentModelSchema,
   DocumentModelSchemaCache,
@@ -60,6 +59,7 @@ import {
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
+import { filterBuildableSubgraphs } from "./gateway/adapter-gateway-stitching.js";
 import {
   getAuthContext,
   type AuthFetchMiddleware,
@@ -87,7 +87,11 @@ import {
   type WsDisposer,
   type WsHandlers,
 } from "./gateway/types.js";
-import { createGraphQLSSEHandler } from "./sse.js";
+import {
+  createGraphQLSSEHandler,
+  mergeStreamSubgraphs,
+  withoutFederationDirectives,
+} from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
@@ -1966,6 +1970,8 @@ export class GraphQLManager {
     return;
   }
 
+  #loggedSSEExclusions = new Set<string>();
+
   /**
    * Set up an SSE subscription endpoint at the supergraph level.
    * Merges the schemas of all subscription-enabled subgraphs so that
@@ -1975,12 +1981,18 @@ export class GraphQLManager {
   #setupSupergraphSSE(superGraphPath: string) {
     const allSubgraphs = this.#getAllSubgraphs();
 
-    const modules: ReturnType<typeof buildSubgraphSchemaModule>[] = [];
-    for (const subgraph of allSubgraphs.values()) {
+    const definitions: SubgraphDefinition[] = [];
+    for (const [subgraphPath, subgraph] of allSubgraphs) {
       if (!subgraph.hasSubscriptions) continue;
       if (this.#isExcludedForTypes(subgraph)) continue;
       try {
-        modules.push(this.#buildSubgraphSchemaModule(subgraph));
+        const module = this.#buildSubgraphSchemaModule(subgraph);
+        definitions.push({
+          name: subgraph.name,
+          typeDefs: module.typeDefs,
+          resolvers: module.resolvers,
+          url: subgraphPath,
+        });
       } catch (error) {
         this.logger.error(
           "Excluding subgraph @name from supergraph SSE: @error",
@@ -1990,18 +2002,34 @@ export class GraphQLManager {
       }
     }
 
-    if (modules.length === 0) {
-      // No subscription-capable subgraphs left: drop the SSE route rather
-      // than keep serving an empty merged schema.
-      this.#disposeSSERoute(superGraphPath);
-      return;
-    }
+    // Merged like the stitching supergraph, so subgraphs may share root types.
+    // Each exclusion is logged once, not on every router update.
+    const excluded = new Set<string>();
+    const buildable = filterBuildableSubgraphs(
+      withoutFederationDirectives(definitions),
+      {
+        error: (message: string) => {
+          excluded.add(message);
+          if (!this.#loggedSSEExclusions.has(message)) {
+            this.logger.error(message);
+          }
+        },
+      },
+      "Supergraph SSE",
+    );
+    this.#loggedSSEExclusions = excluded;
 
     try {
-      const mergedSchema = createMergedSchema(modules);
+      const mergedSchema = mergeStreamSubgraphs(buildable);
+      if (mergedSchema === undefined) {
+        // Nothing left contributes a Query root: drop the SSE route rather
+        // than serve an empty or invalid schema.
+        this.#disposeSSERoute(superGraphPath);
+        return;
+      }
       this.#setupSSEHandler(mergedSchema, superGraphPath);
       this.logger.debug(
-        `SSE subscriptions enabled at supergraph level (merged from ${modules.length} subgraph(s))`,
+        `SSE subscriptions enabled at supergraph level (merged from ${buildable.length} subgraph(s))`,
       );
     } catch (error) {
       this.logger.error("Failed to setup supergraph SSE: @error", error);

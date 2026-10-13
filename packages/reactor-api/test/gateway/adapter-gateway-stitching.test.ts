@@ -314,6 +314,58 @@ describe("mergeSubgraphSchemas", () => {
     expect((await run("last")).data).toEqual({ thing: 4242 });
   });
 
+  it("keeps type-level __resolveType and __isTypeOf resolvers", async () => {
+    const schema = mergeSubgraphSchemas(
+      [
+        {
+          name: "nodes",
+          typeDefs: gql`
+            interface Node {
+              id: ID!
+            }
+            interface Named {
+              name: String
+            }
+            type Item implements Node & Named {
+              id: ID!
+              name: String
+            }
+            type Query {
+              node: Node
+              named: Named
+            }
+          `,
+          url: "http://nodes",
+          resolvers: {
+            Query: {
+              node: () => ({ id: "1" }),
+              named: () => ({ name: "n" }),
+            },
+            Node: { __resolveType: () => "Item" },
+            Item: { __isTypeOf: () => true },
+          },
+        },
+      ],
+      "last",
+    );
+    const server = new ApolloServer<Context>({
+      schema,
+      stopOnTerminationSignals: false,
+    });
+    await server.start();
+    const handler = createApolloFetchHandler(server, noopCtx);
+    const { body } = await post(
+      handler,
+      "{ node { id __typename } named { name __typename } }",
+    );
+    await server.stop();
+    expect(body.errors).toBeUndefined();
+    expect(body.data).toEqual({
+      node: { id: "1", __typename: "Item" },
+      named: { name: "n", __typename: "Item" },
+    });
+  });
+
   it("throws for zero subgraphs", () => {
     expect(() => mergeSubgraphSchemas([], "last")).toThrow(
       "Cannot merge zero subgraphs",
