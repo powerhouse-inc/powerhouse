@@ -137,6 +137,7 @@ import {
   type DocumentPermissionDatabase,
   type PgliteFactory,
 } from "./utils/db.js";
+import type { ReportError } from "./utils/detached.js";
 import {
   openCurrentPgliteForVerify,
   preparePgliteDataDir,
@@ -208,6 +209,8 @@ type Options = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   logger?: ILogger;
+  /** Receives failures in background work that is logged and skipped. */
+  reportError?: ReportError;
   /**
    * Filesystem path for attachment binary storage.
    * Defaults to a sibling "attachments" directory next to dbPath,
@@ -997,6 +1000,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
     packages: options.packages ?? [],
+    reportError: options.reportError,
   });
 
   // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
@@ -1280,7 +1284,7 @@ async function _setupAPI(
     reactorProcessorManager,
     moduleFor,
     documentModelRegistry,
-    { logger },
+    { logger, reportError: options.reportError },
   );
 
   if (mcpServerEnabled) {

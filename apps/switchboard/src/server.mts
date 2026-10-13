@@ -34,7 +34,9 @@ import {
   PackagesSubgraph,
   PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
+  reportFailure,
   resolveRenownConfig,
+  runDetached,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
@@ -945,6 +947,9 @@ async function initServer(
   }
 
   const apiLogger = logger.child(["reactor-api"]);
+  const reportError = (error: unknown) => {
+    Sentry.captureException(error);
+  };
   // When the read-model store is on disk, hand reactor-api a factory that
   // constructs the matching PGLite (current or legacy) for the detected
   // PG_VERSION. reactor-api calls the factory synchronously, so the legacy
@@ -981,6 +986,7 @@ async function initServer(
       configFile: configPath,
       mcp: options.mcp ?? true,
       logger: apiLogger,
+      reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
       // Already resolved for this reactor's own identity; reuse it so an
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
@@ -1270,18 +1276,23 @@ async function initServer(
     );
   }
 
-  void (async () => {
-    await Promise.all(lateSubgraphs);
-    try {
-      await graphqlManager.updateRouter(true);
-    } catch (error) {
-      logger.error(
-        "Final router update before readiness failed: @error",
-        error,
-      );
-    }
-    api.readiness.markReady();
-  })();
+  void runDetached(
+    "Marking the API ready",
+    async () => {
+      await Promise.allSettled(lateSubgraphs);
+      try {
+        await graphqlManager.updateRouter(true);
+      } catch (error) {
+        reportFailure(
+          { logger, report: reportError },
+          error,
+          "Final router update before readiness failed: @error",
+        );
+      }
+      api.readiness.markReady();
+    },
+    { logger, report: reportError },
+  );
 
   // Create default drive if provided
   if (options.drive) {

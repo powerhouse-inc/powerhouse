@@ -114,6 +114,37 @@ describe("package listeners do not leak rejections", () => {
     expect(unhandled).toEqual([]);
   });
 
+  it("reports what it catches through reportError", async () => {
+    const failure = new Error("getDocumentModelModules failed");
+    const reactorClient = {
+      getDocumentModelModules: vi.fn().mockRejectedValue(failure),
+    } as unknown as IReactorClient;
+    const processorManager = makeProcessorManager();
+    const registerFailure = new Error("register failed");
+    processorManager.registerFactory.mockRejectedValueOnce(registerFailure);
+    const { pkgManager, handlers } = makePackageManager();
+    const reportError = vi.fn();
+    const healthyFactory: ProcessorFactory = () => Promise.resolve([]);
+    const healthy = (() =>
+      healthyFactory) as unknown as ProcessorFactoryBuilder;
+
+    setupEventListeners(
+      pkgManager,
+      makeGraphQLManager(reactorClient),
+      processorManager,
+      moduleFor,
+      undefined,
+      { logger: silentLogger, reportError },
+    );
+    handlers.documentModels!({});
+    handlers.processors!(new Map<string, Processor>([["pkg", [healthy]]]));
+    await nextMacrotask();
+
+    expect(reportError).toHaveBeenCalledWith(failure);
+    expect(reportError).toHaveBeenCalledWith(registerFailure);
+    expect(unhandled).toEqual([]);
+  });
+
   it("registers the remaining packages when a processor factory builder throws", async () => {
     const processorManager = makeProcessorManager();
     const { pkgManager, handlers } = makePackageManager();
