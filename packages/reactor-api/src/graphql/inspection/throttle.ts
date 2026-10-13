@@ -20,11 +20,19 @@ export class InspectionThrottledError extends GraphQLError {
 }
 
 export class InspectionThrottle {
-  readonly #config: InspectionThrottleConfig;
+  readonly #cap: number;
   readonly #buckets = new Map<string, { tokens: number; at: number }>();
 
   constructor(config: Partial<InspectionThrottleConfig> = {}) {
-    this.#config = { ...DEFAULT_INSPECTION_THROTTLE, ...config };
+    const cap =
+      config.callsPerMinute ?? DEFAULT_INSPECTION_THROTTLE.callsPerMinute;
+    // Below 1 the bucket never holds a whole call.
+    if (!Number.isFinite(cap) || cap < 1) {
+      throw new Error(
+        `Inspection throttle callsPerMinute must be a finite number >= 1, got ${cap}`,
+      );
+    }
+    this.#cap = cap;
   }
 
   /** Callers with a bucket still refilling. */
@@ -34,7 +42,7 @@ export class InspectionThrottle {
 
   /** Spends one of the caller's calls; throws when none is left. */
   charge(caller: string): void {
-    const cap = this.#config.callsPerMinute;
+    const cap = this.#cap;
     const perMs = cap / 60_000;
     const now = Date.now();
     const bucket = this.#buckets.get(caller);
