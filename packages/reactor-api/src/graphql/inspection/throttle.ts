@@ -11,6 +11,9 @@ export const DEFAULT_INSPECTION_THROTTLE: InspectionThrottleConfig = {
 
 const MAX_TRACKED_CALLERS = 10_000;
 
+// Absorbs float error so waiting exactly retryAfterMs refills a whole call.
+const EPSILON = 1e-9;
+
 export class InspectionThrottledError extends GraphQLError {
   constructor(retryAfterMs: number) {
     super("Too many inspection reads; retry later", {
@@ -44,18 +47,18 @@ export class InspectionThrottle {
   charge(caller: string): void {
     const cap = this.#cap;
     const perMs = cap / 60_000;
-    const now = Date.now();
+    const now = performance.now();
     const bucket = this.#buckets.get(caller);
     const tokens = bucket
       ? Math.min(cap, bucket.tokens + (now - bucket.at) * perMs)
       : cap;
     // Re-inserted so the map's first key is the least recently seen caller.
     this.#buckets.delete(caller);
-    if (tokens < 1) {
+    if (tokens < 1 - EPSILON) {
       this.#buckets.set(caller, { tokens, at: now });
       throw new InspectionThrottledError(Math.ceil((1 - tokens) / perMs));
     }
-    this.#buckets.set(caller, { tokens: tokens - 1, at: now });
+    this.#buckets.set(caller, { tokens: Math.max(0, tokens - 1), at: now });
     if (this.#buckets.size > MAX_TRACKED_CALLERS) {
       // Evicting resets that caller to a full bucket.
       this.#buckets.delete(this.#buckets.keys().next().value!);

@@ -97,10 +97,8 @@ import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
-import {
-  getUniqueDocumentModels,
-  PackageManager,
-} from "./packages/package-manager.js";
+import { setupEventListeners } from "./packages/package-listeners.js";
+import { PackageManager } from "./packages/package-manager.js";
 import {
   AuthService,
   type CredentialVerifier,
@@ -139,6 +137,7 @@ import {
   type DocumentPermissionDatabase,
   type PgliteFactory,
 } from "./utils/db.js";
+import type { ReportError } from "./utils/detached.js";
 import {
   openCurrentPgliteForVerify,
   preparePgliteDataDir,
@@ -210,6 +209,8 @@ type Options = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   logger?: ILogger;
+  /** Receives failures in background work that is logged and skipped. */
+  reportError?: ReportError;
   /**
    * Filesystem path for attachment binary storage.
    * Defaults to a sibling "attachments" directory next to dbPath,
@@ -519,6 +520,7 @@ type SetupGraphQLManagerOptions = {
   attachments?: IAttachmentClientProvider;
   inspection?: IReactorInspectionSource;
   driveStore?: DriveStore;
+  reportError?: ReportError;
 };
 
 /**
@@ -547,6 +549,7 @@ async function setupGraphQLManager({
   attachments,
   inspection,
   driveStore,
+  reportError,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -575,6 +578,7 @@ async function setupGraphQLManager({
     attachments,
     inspection,
     driveStore,
+    reportError,
   });
 
   await graphqlManager.init(
@@ -587,193 +591,6 @@ async function setupGraphQLManager({
   await graphqlManager.updateRouter();
 
   return graphqlManager;
-}
-
-/**
- * Sets up event listeners for package manager changes
- */
-export function setupEventListeners(
-  pkgManager: PackageManager,
-  graphqlManager: GraphQLManager,
-  reactorProcessorManager: IReactorProcessorManager,
-  moduleFor: (packageName: string) => IProcessorHostModule,
-  documentModelRegistry?: IDocumentModelRegistry,
-): void {
-  const typesOf = (models: readonly DocumentModelModule[]) =>
-    new Set(models.map((m) => m.documentModel.global.id));
-  const packagedTypes = new Map(
-    Array.from(pkgManager.getDocumentModels(), ([pkg, models]) => [
-      pkg,
-      typesOf(models),
-    ]),
-  );
-  pkgManager.onDocumentModelsChange((packagedModels) => {
-    if (documentModelRegistry) {
-      // Replace each incoming type's whole version family: skipping types
-      // that are already registered would never pick up a new version of a
-      // versioned model (or regenerated code for an existing one), and
-      // unregisterModules is type-scoped so partial re-registration would
-      // drop sibling versions.
-      const newModules = getUniqueDocumentModels(
-        Object.values(packagedModels).flat(),
-      );
-      const incomingTypes = typesOf(newModules);
-
-      // A failed load arrives as no models or no package: neither removes any.
-      const removedTypes = new Set<string>();
-      for (const [pkg, models] of Object.entries(packagedModels)) {
-        if (models.length === 0) continue;
-        for (const type of packagedTypes.get(pkg) ?? []) {
-          if (!incomingTypes.has(type)) removedTypes.add(type);
-        }
-        packagedTypes.set(pkg, typesOf(models));
-      }
-      if (removedTypes.size > 0) {
-        documentModelRegistry.unregisterModules(...removedTypes);
-        documentModelRegistry.unregisterUpgradeManifests(...removedTypes);
-        defaultLogger.info(
-          "Unregistered document models: @types",
-          Array.from(removedTypes).join(", "),
-        );
-      }
-
-      if (incomingTypes.size > 0) {
-        documentModelRegistry.unregisterModules(...incomingTypes);
-        const results = documentModelRegistry.registerModules(...newModules);
-        for (const result of results) {
-          if (result.status === "success") {
-            defaultLogger.info(
-              `Registered document model: ${result.item.documentModel.global.id} v${result.item.version ?? 1}`,
-            );
-          } else {
-            defaultLogger.error(
-              `Failed to register document model: ${result.error.message}`,
-            );
-          }
-        }
-      }
-
-      // Manifests change together with document models (they live under the
-      // same document-models/ tree), so swap them here as well.
-      const manifests = pkgManager.getUniqueUpgradeManifests();
-      if (manifests.length > 0) {
-        documentModelRegistry.unregisterUpgradeManifests(
-          ...manifests.map((m) => m.documentType),
-        );
-        const manifestResults = documentModelRegistry.registerUpgradeManifests(
-          ...manifests,
-        );
-        for (const result of manifestResults) {
-          if (result.status === "error") {
-            defaultLogger.error(
-              `Failed to register upgrade manifest: ${result.error.message}`,
-            );
-          }
-        }
-      }
-    }
-    void graphqlManager
-      .regenerateDocumentModelSubgraphs()
-      .catch((error: unknown) => {
-        defaultLogger.error(
-          "Document model change left subgraphs stale: @error",
-          error,
-        );
-      });
-  });
-
-  pkgManager.onSubgraphsChange((packagedSubgraphs) => {
-    void graphqlManager
-      .applyPackageSubgraphs(packagedSubgraphs)
-      .catch((error: unknown) => {
-        defaultLogger.error("Failed to apply package subgraphs: @error", error);
-      });
-  });
-
-  let knownProcessorPackages = new Set<string>();
-  pkgManager.onProcessorsChange((processors) => {
-    void (async () => {
-      // Packages that vanished from the map entirely keep none of their
-      // factories: unregister the leftovers.
-      for (const packageName of knownProcessorPackages) {
-        if (!processors.has(packageName)) {
-          try {
-            await reactorProcessorManager.unregisterFactory(packageName);
-          } catch (error) {
-            defaultLogger.error(
-              "Failed to unregister processors of @package: @error",
-              packageName,
-              error,
-            );
-          }
-        }
-      }
-      knownProcessorPackages = new Set(processors.keys());
-
-      for (const [packageName, fns] of processors) {
-        try {
-          await reactorProcessorManager.unregisterFactory(packageName);
-        } catch (error) {
-          defaultLogger.error(
-            "Failed to unregister processors of @package: @error",
-            packageName,
-            error,
-          );
-        }
-
-        const factories = await Promise.allSettled(
-          fns.map(async (fn) => fn(moduleFor(packageName))),
-        );
-
-        const validBuilders: ProcessorFactory[] = [];
-        for (const factory of factories) {
-          if (factory.status === "rejected") {
-            defaultLogger.error(
-              "Processor factory builder of @package failed: @error",
-              packageName,
-              factory.reason,
-            );
-          } else if (typeof factory.value === "function") {
-            validBuilders.push(factory.value);
-          }
-        }
-
-        if (!validBuilders.length) {
-          continue;
-        }
-
-        try {
-          await reactorProcessorManager.registerFactory(
-            packageName,
-            async (driveHeader) =>
-              (
-                await Promise.all(
-                  validBuilders.map(async (driveFactory) => {
-                    try {
-                      const result = await driveFactory(driveHeader);
-                      return result as unknown as ReactorProcessorRecord[];
-                    } catch (e) {
-                      const logger = defaultLogger;
-                      logger.error(
-                        `Error creating processor for drive ${driveHeader.id}:`,
-                        e,
-                      );
-                      return [];
-                    }
-                  }),
-                )
-              ).flat(),
-          );
-        } catch (error) {
-          defaultLogger.error(
-            "Failed to register processors of @package: @error",
-            packageName,
-            error,
-          );
-        }
-      }
-    })();
-  });
 }
 
 /**
@@ -1187,6 +1004,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
     packages: options.packages ?? [],
+    reportError: options.reportError,
   });
 
   // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
@@ -1461,6 +1279,7 @@ async function _setupAPI(
     attachments: attachmentClientProvider,
     inspection,
     driveStore,
+    reportError: options.reportError,
   });
 
   // Set up event listeners
@@ -1470,6 +1289,7 @@ async function _setupAPI(
     reactorProcessorManager,
     moduleFor,
     documentModelRegistry,
+    { logger, reportError: options.reportError },
   );
 
   if (mcpServerEnabled) {

@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseNonNegativeInt } from "./env.mjs";
 
 export type WorkerCountInput = number | "auto";
 
@@ -406,20 +407,6 @@ function parseWorkerCount(
     throw new Error(
       `REACTOR_WORKERS must be "auto" or a non-negative integer, got "${raw}"`,
     );
-  }
-  return value;
-}
-
-export function parseNonNegativeInt(
-  raw: string | undefined,
-  name: string,
-): number | undefined {
-  if (raw === undefined || raw.trim() === "") {
-    return undefined;
-  }
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value) || value < 0 || String(value) !== raw.trim()) {
-    throw new Error(`${name} must be a non-negative integer, got "${raw}"`);
   }
   return value;
 }

@@ -53,6 +53,17 @@ export {
   type RunnerHandle,
 } from "./compound.js";
 export {
+  defaultUserDataDir,
+  resolveUserDataPlaceholders,
+} from "./placeholders.js";
+export {
+  backendsToDescriptors,
+  backendToDescriptor,
+  isStructuralMultiReactor,
+  remoteBackendUrls,
+  type ProjectedDescriptor,
+} from "./backend-projection.js";
+export {
   childrenSchema,
   profileSchema,
   reactorBackendSchema,

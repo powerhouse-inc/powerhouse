@@ -3,9 +3,12 @@ import {
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import {
+  isStructuralMultiReactor,
   profileSchema,
+  projectDrivesIntoConnect,
   projectReactorToConnect,
   reactorSchema,
+  remoteBackendUrls,
   type HostDefinition,
   type ReactorConfig,
   type RunnerContext,
@@ -65,20 +68,45 @@ function toStudioArgs(host: HostDefinition): ConnectStudioArgs {
 /** Merge the reactor-block projection (protocol → connect.reactor,
  * backend kind → instance.reactorWorker, workflows → app.workflowsEnabled)
  * into the host's connect config, which rides the studio caller-override.
- * The host config wins on conflict (an explicit connect.* value is intent). */
+ * The host config wins on conflict (an explicit connect.* value is intent) —
+ * EXCEPT structural multi-reactor (P4.2): declaring a remote backend next to
+ * a local one IS the intent, so it beats a scaffold-default
+ * instance.multiReactor: false, and the remote's drive url merges FIRST into
+ * drives.defaultDrives (the first url entry is what the routing client dials). */
 function callerOverride(
   host: HostDefinition,
 ): PHConnectRuntimeConfig | undefined {
   const base = (host.config ?? {}) as PHConnectRuntimeConfig;
-  const { connect } = projectReactorToConnect(host.reactor as ReactorConfig);
-  if (!connect.reactor && !connect.instance && !connect.app) {
+  const reactor = host.reactor as ReactorConfig | undefined;
+  const { connect } = projectReactorToConnect(reactor);
+  const structural = isStructuralMultiReactor(reactor);
+  if (!connect.reactor && !connect.instance && !connect.app && !structural) {
     return host.config as PHConnectRuntimeConfig | undefined;
   }
+  const drives = structural
+    ? projectDrivesIntoConnect({
+        createdDriveUrls: remoteBackendUrls(reactor),
+        configuredDefaultDrives: base.drives?.defaultDrives,
+      }).drives
+    : base.drives;
+  // When the host DECLARES backends, instance facts derive from them and win
+  // over config defaults (declaring `kind: "worker"` is more explicit intent
+  // than a scaffold's `reactorWorker: false`); without backends the P2 rule
+  // stands — an explicit connect.* value wins over descriptive projection.
+  const declaresBackends = Object.keys(reactor?.backends ?? {}).length > 0;
+  const instance = declaresBackends
+    ? {
+        ...base.instance,
+        ...connect.instance,
+        ...(structural ? { multiReactor: true } : {}),
+      }
+    : { ...connect.instance, ...base.instance };
   return {
     ...base,
     reactor: { ...connect.reactor, ...base.reactor },
-    instance: { ...connect.instance, ...base.instance } as never,
+    instance: instance as never,
     app: { ...connect.app, ...base.app },
+    ...(drives ? { drives: { ...base.drives, ...drives } } : {}),
   };
 }
 
@@ -108,7 +136,13 @@ export async function build(
 }
 
 /** P3.3 — `serve`: the SAME vite preview server as classic
- * `ph connect preview` (static serve of a built Connect; run `build` first). */
+ * `ph connect preview` (static serve of a built Connect; run `build` first).
+ * The host's connect config (including a supervising compound's projected
+ * drives and the reactor projection) rides a serve override: the baked
+ * powerhouse.config.json merges with it at request time, and
+ * `runner.cspRegistrySync` (set by the compound's wiring) patches the baked
+ * CSP's script-src for the runtime registry — together these replace the
+ * ph-win-desktop sidecar's hand-rolled static server (desktop shape). */
 export async function serve(
   host: HostDefinition,
   _ctx: RunnerContext,
@@ -126,6 +160,14 @@ export async function serve(
     cors: true,
     printUrls: true,
     bindCLIShortcuts: false,
+    // Explicit IPv4 loopback (runner.host overrides): vite's default
+    // "localhost" can bind ::1 only on Windows, and a supervising shell
+    // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
+    host: typeof runner.host === "string" ? runner.host : "127.0.0.1",
   };
-  await runConnectPreview(args as ConnectPreviewArgs);
+  const override = callerOverride(host);
+  await runConnectPreview(args as ConnectPreviewArgs, {
+    connect: override,
+    cspRegistrySync: runner.cspRegistrySync === true,
+  });
 }
