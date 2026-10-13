@@ -65,7 +65,10 @@ export {
 } from "./backend-projection.js";
 export {
   childrenSchema,
+  compoundHostSchema,
+  emittedHostSchemas,
   profileSchema,
+  reactorHostSchema,
   reactorBackendSchema,
   reactorProtocolSchema,
   reactorSchema,

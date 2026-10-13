@@ -1,0 +1,89 @@
+{
+  "name": "@powerhousedao/clint",
+  "version": "6.2.3-dev.55",
+  "description": "The clint framework: AI-powered CLIs over the Powerhouse stack — clint-runner (services manager, REPL, proxy) and mastra-runner (headless agent host) for uniform-runners hosts.",
+  "type": "module",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "./clint-runner": {
+      "source": "./src/runners/clint-runner.ts",
+      "types": "./dist/runners/clint-runner.d.mts",
+      "import": "./dist/runners/clint-runner.mjs",
+      "default": "./dist/runners/clint-runner.mjs"
+    },
+    "./mastra-runner": {
+      "source": "./src/runners/mastra-runner.ts",
+      "types": "./dist/runners/mastra-runner.d.mts",
+      "import": "./dist/runners/mastra-runner.mjs",
+      "default": "./dist/runners/mastra-runner.mjs"
+    }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/clint",
+    "build": "tsdown",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "cli-highlight": "^2.1.11",
+    "commander": "catalog:",
+    "handlebars": "^4.7.10",
+    "http-proxy": "^1.18.1",
+    "ink": "^6.8.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "marked": "^12.0.2",
+    "marked-terminal": "^7.3.0",
+    "react": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@electric-sql/pglite": ">=0.2.0",
+    "@mastra/core": ">=1.41.0",
+    "@mastra/libsql": ">=1.12.1",
+    "@mastra/memory": ">=1.20.2",
+    "@powerhousedao/reactor": "workspace:>=6.2.0-dev.0",
+    "@powerhousedao/reactor-api": "workspace:>=6.2.0-dev.0",
+    "@powerhousedao/switchboard": "workspace:>=6.2.0-dev.0",
+    "document-model": "workspace:>=6.2.0-dev.0"
+  },
+  "peerDependenciesMeta": {
+    "@electric-sql/pglite": {
+      "optional": true
+    },
+    "@mastra/core": {
+      "optional": true
+    },
+    "@mastra/libsql": {
+      "optional": true
+    },
+    "@mastra/memory": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@mastra/core": "catalog:",
+    "@mastra/libsql": "catalog:",
+    "@mastra/memory": "catalog:",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "@types/http-proxy": "^1.17.15",
+    "@types/react": "catalog:",
+    "document-model": "workspace:*",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  }
+}

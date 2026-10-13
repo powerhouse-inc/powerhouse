@@ -33,6 +33,8 @@ registries:
 catalog:
   "@mastra/core": 1.67.0
   "@mastra/libsql": 1.23.0
+  "@mastra/mcp": 2.3.0
+  "@mastra/memory": 1.37.0
   "mastra": 1.30.0
   "marked": 18.0.12
   "ai": 7.0.83

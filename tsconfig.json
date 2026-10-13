@@ -20,6 +20,9 @@
       "path": "packages/builder-tools"
     },
     {
+      "path": "packages/clint"
+    },
+    {
       "path": "packages/document-model"
     },
     {
