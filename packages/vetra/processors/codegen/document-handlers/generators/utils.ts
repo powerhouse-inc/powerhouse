@@ -91,7 +91,9 @@ export function warnSubgraphTypeConflicts(workingDir: string): void {
   try {
     warnings = lintSubgraphTypes(workingDir);
   } catch (error) {
-    logger.warn("Failed to check subgraph type names:", error);
+    logger.warn(
+      `Failed to check subgraph type names: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return;
   }
   for (const warning of warnings) logger.warn(`⚠️ ${warning}`);
