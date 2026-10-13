@@ -1,5 +1,5 @@
 import type { InspectionThrottleConfig } from "@powerhousedao/reactor-api";
-import { parseNonNegativeInt } from "./worker-pool.mjs";
+import { parseNonNegativeInt } from "./env.mjs";
 
 const NAME = "PH_INSPECTION_CALLS_PER_MINUTE";
 

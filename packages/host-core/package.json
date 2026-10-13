@@ -1,8 +1,10 @@
 {
   "name": "@powerhousedao/host-core",
   "version": "6.2.3-dev.55",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "uniform-runners host framework: host.js loading, runner resolution, and the generic compound runner. EXPERIMENTAL \u00e2\u20ac\u201d private while under development; published when the ph init scaffold references it (see docs/plans/2026-10-13-uniform-runners.md).",
-  "private": true,
   "type": "module",
   "sideEffects": false,
   "license": "AGPL-3.0-only",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@powerhousedao/reactor-monitor": "workspace:*"
   }
 }

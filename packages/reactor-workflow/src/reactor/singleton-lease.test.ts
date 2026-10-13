@@ -401,16 +401,25 @@ describe("a holder that cannot renew", () => {
   it.each(faults)(
     "reports itself lost before the lease can be taken when the database %s",
     async (_, failure) => {
+      // The renewal loop and its monotonic clock run on fake time; queries
+      // still run on the real event loop.
+      vi.useFakeTimers({
+        toFake: ["setInterval", "clearInterval", "performance"],
+      });
       const relationalDb = createFreshRelationalDb();
       let broken = false;
+      let landing: Promise<unknown> | undefined;
       const lost = vi.fn();
       // Heartbeat 500ms: the fence at 750ms of silence, stale at 1s.
       const ttlMs = 5_000;
       const heartbeatMs = 500;
+      const tickMs = heartbeatMs / 4;
+      const takeableAfterMs = heartbeatMs * SINGLETON_STALE_HEARTBEATS;
       const lease = await acquireWorkflowSingletonLease({
-        relationalDb: withUpdateFault(relationalDb, () =>
-          broken ? failure : undefined,
-        ),
+        relationalDb: withUpdateFault(relationalDb, () => {
+          if (broken) return failure;
+          return (run) => (landing = run());
+        }),
         logger: silent,
         owner: "alpha",
         ttlMs,
@@ -419,24 +428,29 @@ describe("a holder that cannot renew", () => {
       });
       try {
         // Renewing normally, it holds on for several renewal periods.
-        await new Promise((resolve) => setTimeout(resolve, heartbeatMs * 4));
+        for (let tick = 0; tick < 16; tick++) {
+          await vi.advanceTimersByTimeAsync(tickMs);
+          await landing;
+        }
         expect(lost).not.toHaveBeenCalled();
 
         broken = true;
-        const brokeAt = Date.now();
-        await vi.waitFor(() => expect(lost).toHaveBeenCalledTimes(1), {
-          timeout: ttlMs,
-        });
-        // Before a stale same-owner claim could take it over.
-        expect(Date.now() - brokeAt).toBeLessThan(
-          heartbeatMs * SINGLETON_STALE_HEARTBEATS,
-        );
-        expect(lost).toHaveBeenCalledWith(
+        const brokeAt = performance.now();
+        while (!lost.mock.calls.length) {
+          await vi.advanceTimersByTimeAsync(tickMs);
+          // Before a stale same-owner claim could take it over.
+          expect(performance.now() - brokeAt).toBeLessThan(takeableAfterMs);
+        }
+
+        expect(lost).toHaveBeenCalledExactlyOnceWith(
           expect.objectContaining({ reason: "unrenewable" }),
         );
+        const [loss] = lost.mock.calls[0] as [{ silentMs: number }];
+        expect(loss.silentMs).toBeLessThan(takeableAfterMs);
       } finally {
         broken = false;
         await lease.release();
+        vi.useRealTimers();
       }
     },
   );

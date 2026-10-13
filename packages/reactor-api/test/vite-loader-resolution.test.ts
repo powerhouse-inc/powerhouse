@@ -132,7 +132,7 @@ describe("VitePackageLoader resolution", () => {
   it("loads a package the project does not install from the host's dependencies", async () => {
     const loader = VitePackageLoader.build(vite, { resolveFrom: [hostEntry] });
 
-    const models = await loader.loadDocumentModels(HOSTED, true);
+    const models = await loader.loadDocumentModels(HOSTED);
     expect(models.map((dm) => dm.documentModel.global.id)).toEqual([
       "acme/hosted",
     ]);
@@ -149,7 +149,7 @@ describe("VitePackageLoader resolution", () => {
   it("finds nothing for that package without the host's location", async () => {
     const loader = VitePackageLoader.build(vite);
 
-    expect(await loader.loadDocumentModels(HOSTED, true)).toEqual([]);
+    expect(await loader.loadDocumentModels(HOSTED)).toEqual([]);
     expect(await loader.loadPieces(HOSTED)).toEqual([]);
     expect(logged(errorSpy)).toBe("");
   });
@@ -167,7 +167,7 @@ describe("VitePackageLoader resolution", () => {
   it("is quiet about a fresh project's exported but absent modules", async () => {
     const loader = VitePackageLoader.build(vite);
 
-    const models = await loader.loadDocumentModels(root, true);
+    const models = await loader.loadDocumentModels(root);
     expect(models.map((dm) => dm.documentModel.global.id)).toEqual([
       "acme/local",
     ]);
@@ -182,7 +182,7 @@ describe("VitePackageLoader resolution", () => {
   it("reports a module that exists and fails to load", async () => {
     const loader = VitePackageLoader.build(vite, { resolveFrom: [hostEntry] });
 
-    expect(await loader.loadDocumentModels(BROKEN, true)).toEqual([]);
+    expect(await loader.loadDocumentModels(BROKEN)).toEqual([]);
     const errors = logged(errorSpy);
     expect(errors).toContain(BROKEN);
     expect(errors).toContain("boom in broken");

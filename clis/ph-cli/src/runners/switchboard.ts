@@ -56,25 +56,90 @@ function toSwitchboardArgs(
   return args as SwitchboardArgs;
 }
 
-async function start(host: HostDefinition, devMode: boolean): Promise<void> {
+/** The slug of the drive the switchboard creates by default
+ * (apps/switchboard config); `runner.driveSlug` overrides. */
+const DEFAULT_DRIVE_SLUG = "powerhouse";
+
+/** Poll the default drive endpoint until the server answers — the compound's
+ * readiness gate: Connect auto-connects the drive on first load, so the drive
+ * must answer before the connect member serves (the sidecar's
+ * waitForSwitchboard, moved behind the handle contract). */
+async function waitForDrive(url: string, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) return;
+    } catch {
+      // not listening yet
+    }
+    if (Date.now() > deadline) {
+      throw new Error(
+        `Switchboard drive ${url} did not answer within ${timeoutMs}ms.`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+}
+
+/** What a started switchboard reports to a supervising compound: its port and
+ * the drive it serves (projected into a connect member's defaultDrives). */
+export interface SwitchboardHandle {
+  port: number;
+  driveUrls: string[];
+  endpoints: Record<string, string>;
+  ready: Promise<void>;
+}
+
+async function start(
+  host: HostDefinition,
+  devMode: boolean,
+): Promise<SwitchboardHandle> {
   const options = applyReactorEnvProjection(
     host.reactor as ReactorConfig | undefined,
     `hosts/${host.name}/host.js`,
   );
   const { startSwitchboard } = await import("../services/switchboard.js");
-  await startSwitchboard(toSwitchboardArgs(host, devMode, options.dbPath));
+  const args = toSwitchboardArgs(host, devMode, options.dbPath);
+  const switchboard = await startSwitchboard(args);
+  const port = args.port;
+  const slug =
+    typeof host.runner.driveSlug === "string"
+      ? host.runner.driveSlug
+      : DEFAULT_DRIVE_SLUG;
+  const driveUrl = `http://localhost:${port}/d/${slug}`;
+  const driveUrls = [driveUrl];
+
+  // Workflows on → seed the SAME project-hashed workflows drive the vetra
+  // path seeds (opens in Workflow Studio); it rides the handle so a
+  // supervising compound projects it into the connect member's drives.
+  if (switchboard?.workflowsEnabled) {
+    const { seedWorkflowsDrive } = await import("../services/vetra.js");
+    driveUrls.push(await seedWorkflowsDrive(switchboard.reactor, port));
+  }
+
+  const ready = waitForDrive(driveUrl, 180_000);
+  // A supervisor awaits `ready` and sees the rejection; an unsupervised caller
+  // (or a test with the service mocked) must not die of an unhandled one.
+  ready.catch(() => undefined);
+  return {
+    port,
+    driveUrls,
+    endpoints: { graphql: `http://localhost:${port}/graphql` },
+    ready,
+  };
 }
 
 export async function run(
   host: HostDefinition,
   _ctx: RunnerContext,
-): Promise<void> {
-  await start(host, false);
+): Promise<SwitchboardHandle> {
+  return start(host, false);
 }
 
 export async function dev(
   host: HostDefinition,
   _ctx: RunnerContext,
-): Promise<void> {
-  await start(host, true);
+): Promise<SwitchboardHandle> {
+  return start(host, true);
 }
