@@ -46,8 +46,6 @@
     "marked": "^12.0.2",
     "marked-terminal": "^7.3.0",
     "react": "catalog:",
-    "sirv": "^3.0.2",
-    "totalist": "^3.0.1",
     "zod": "catalog:"
   },
   "peerDependencies": {

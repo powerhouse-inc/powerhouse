@@ -20,6 +20,44 @@ import type { ConnectPreviewArgs } from "../types.js";
 export interface ConnectServeOverride {
   connect?: PHConnectRuntimeConfig;
   cspRegistrySync?: boolean;
+  /** Overrides the baked top-level packageRegistryUrl in the served config. */
+  packageRegistryUrl?: string;
+}
+
+/**
+ * The env contract a supervisor can drive the preview with — the same
+ * variables the Docker entrypoint and clint's service manager already speak:
+ * PH_CONNECT_DEFAULT_DRIVES_URL (comma-separated drive urls, injected into
+ * drives.defaultDrives), PH_CONNECT_DRIVES_PRESERVE_STRATEGY, and
+ * PH_CONNECT_PACKAGES_REGISTRY (runtime registry: served config + baked-CSP
+ * patch). Lets `ph connect preview` replace hand-rolled static servers
+ * (clint's connect-server, the ph-win sidecar) without losing injection.
+ */
+export function overrideFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): ConnectServeOverride | undefined {
+  const drivesUrl = env.PH_CONNECT_DEFAULT_DRIVES_URL;
+  const registry = env.PH_CONNECT_PACKAGES_REGISTRY;
+  if (!drivesUrl && !registry) return undefined;
+  const override: ConnectServeOverride = {};
+  if (drivesUrl) {
+    override.connect = {
+      drives: {
+        defaultDrives: drivesUrl
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((url) => ({ url, name: null, icon: null })),
+        preserveStrategy:
+          env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY ?? "preserve-all",
+      },
+    } as PHConnectRuntimeConfig;
+  }
+  if (registry) {
+    override.packageRegistryUrl = registry;
+    override.cspRegistrySync = true;
+  }
+  return override;
 }
 
 function mergedConfigBody(
@@ -36,7 +74,13 @@ function mergedConfigBody(
         override.connect,
       )
     : baked.connect;
-  return JSON.stringify({ ...baked, connect });
+  return JSON.stringify({
+    ...baked,
+    connect,
+    ...(override.packageRegistryUrl
+      ? { packageRegistryUrl: override.packageRegistryUrl }
+      : {}),
+  });
 }
 
 /**
@@ -110,6 +154,9 @@ export async function runConnectPreview(
   args: ConnectPreviewArgs,
   serveOverride?: ConnectServeOverride,
 ) {
+  // A supervisor can drive the preview via env when no explicit override is
+  // passed (the classic `ph connect preview` command path).
+  serveOverride ??= overrideFromEnv();
   const {
     outDir,
     port,
