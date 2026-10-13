@@ -437,11 +437,20 @@ export function reservedTypeNamesTaken(
 export function getGeneratedDocumentModelTypes(
   documentModels: DocumentModelModule[],
 ): GeneratedDocumentModelTypes {
+  return generatedTypesOf(
+    documentModels.map(({ documentModel }) => documentModel.global),
+  );
+}
+
+/** {@link getGeneratedDocumentModelTypes} from the models' global states. */
+export function generatedTypesOf(
+  documentModels: readonly DocumentModelGlobalState[],
+): GeneratedDocumentModelTypes {
   let dmSchema = "";
 
   const addedDocumentModels = new Set<string>();
-  documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = getDocumentModelSchemaName(documentModel.global);
+  documentModels.forEach((documentModel) => {
+    const dmSchemaName = getDocumentModelSchemaName(documentModel);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
@@ -449,7 +458,7 @@ export function getGeneratedDocumentModelTypes(
       return;
     }
     addedDocumentModels.add(dmSchemaName);
-    dmSchema += documentModelTypesSdl(documentModel.global, dmSchemaName);
+    dmSchema += documentModelTypesSdl(documentModel, dmSchemaName);
   });
 
   // add the mutation and query types
