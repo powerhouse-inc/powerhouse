@@ -3,14 +3,13 @@ import {
   DEFAULT_VETRA_DRIVE_ID,
 } from "@powerhousedao/shared/clis";
 import {
-  assertProtocolConsistency,
   profileSchema,
-  projectReactorToSwitchboard,
   reactorSchema,
   type HostDefinition,
   type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
 import type { SwitchboardArgs } from "../types.js";
 
@@ -55,28 +54,6 @@ function toSwitchboardArgs(
     ...(dbPath ? { dbPath } : {}),
   };
   return args as SwitchboardArgs;
-}
-
-/**
- * Apply a host's reactor block to the CURRENT process env, the way the
- * in-process switchboard server reads it at boot (D2.c: env derivation
- * immediately before the member starts; sequential boots make this safe).
- * Single-sourcing teeth first: a pre-set env contradicting the protocol block
- * fails loudly. Then set-if-absent, so an operator's explicit (agreeing) env
- * still wins during the transition. Returns the non-env options (dbPath).
- * Also called by the compound bridge for its switchboard member — the vetra
- * path boots the switchboard via startVetra, not via this runner's verbs.
- */
-export function applyReactorEnvProjection(
-  reactor: ReactorConfig | undefined,
-  hostFileLabel: string,
-): { dbPath?: string } {
-  const { env, options } = projectReactorToSwitchboard(reactor);
-  assertProtocolConsistency(reactor?.protocol, process.env, hostFileLabel);
-  for (const [name, value] of Object.entries(env)) {
-    if (process.env[name] === undefined) process.env[name] = value;
-  }
-  return options;
 }
 
 async function start(host: HostDefinition, devMode: boolean): Promise<void> {

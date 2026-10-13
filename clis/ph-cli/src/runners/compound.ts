@@ -111,7 +111,7 @@ export async function run(
     ...((sbMember.host.reactor as Record<string, unknown> | undefined) ?? {}),
     ...(sbWrapper?.reactor ?? {}),
   } as ReactorConfig;
-  const { applyReactorEnvProjection } = await import("./switchboard.js");
+  const { applyReactorEnvProjection } = await import("./reactor-env.js");
   applyReactorEnvProjection(sbReactor, `hosts/${switchboardRef.host}/host.js`);
 
   // Classic `ph vetra` resolves these through flag>env>.env>config>constant;
