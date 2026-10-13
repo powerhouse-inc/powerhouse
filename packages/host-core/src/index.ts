@@ -7,4 +7,9 @@
  * docs/plans/2026-10-13-uniform-runners.md.
  */
 
-export const HOST_CORE = "@powerhousedao/host-core";
+export {
+  mergeDefaultDrives,
+  projectDrivesIntoConnect,
+  rebaseDriveUrl,
+  type DriveProjectionInput,
+} from "./connect-projection.js";

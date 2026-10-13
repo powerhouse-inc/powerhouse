@@ -5,5 +5,10 @@
     "types": ["vitest/globals"]
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../shared"
+    }
+  ]
 }

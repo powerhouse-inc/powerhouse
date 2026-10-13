@@ -90,6 +90,7 @@
     "copyfiles": "catalog:",
     "ts-morph": "catalog:",
     "write-package": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@powerhousedao/host-core": "workspace:*"
   }
 }

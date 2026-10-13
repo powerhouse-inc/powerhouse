@@ -28,6 +28,9 @@
     "build": "tsdown",
     "test": "vitest --run"
   },
+  "dependencies": {
+    "@powerhousedao/shared": "workspace:*"
+  },
   "devDependencies": {
     "tsdown": "catalog:",
     "vitest": "catalog:"
