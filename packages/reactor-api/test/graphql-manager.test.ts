@@ -1023,6 +1023,29 @@ describe("GraphQLManager", () => {
       expect(sseExclusions[0]).toContain("NoSuchType");
     });
 
+    it("merges the reactor subgraph's subscriptions with another subgraph's", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await initAndFlush(manager, [ReactorSubgraph]);
+      vi.useRealTimers();
+
+      const sseErrors = vi
+        .mocked(logger.error)
+        .mock.calls.map((call) => String(call[0]))
+        .filter((message) => /SSE/.test(message));
+      expect(sseErrors).toEqual([]);
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const events = await streamOver(
+        handler!,
+        '{ __type(name: "Subscription") { fields { name } } }',
+      );
+      for (const field of ["alpha", "documentChanges", "jobChanges"]) {
+        expect(events).toContain(`{"name":"${field}"}`);
+      }
+    });
+
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
       const { manager, mounts } = makeHarness();
       await registerSubscriptionSubgraph(manager);
