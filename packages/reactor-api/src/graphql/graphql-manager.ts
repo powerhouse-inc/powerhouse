@@ -14,7 +14,13 @@ import type {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { DocumentNode, GraphQLSchema } from "graphql";
+import {
+  type DocumentNode,
+  type GraphQLSchema,
+  Kind,
+  print,
+  visit,
+} from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
@@ -45,6 +51,7 @@ import {
   reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
+  typeDefinitionNames,
 } from "../utils/create-schema.js";
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
@@ -90,6 +97,17 @@ import {
 } from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
+
+const NON_MODEL_TYPE_NAMES = new Set([
+  "String",
+  "Int",
+  "Float",
+  "Boolean",
+  "ID",
+  "Query",
+  "Mutation",
+  "Subscription",
+]);
 
 /**
  * Filter document models to keep only the latest version of each unique document model.
@@ -294,7 +312,11 @@ export class GraphQLManager {
 
   private readonly subgraphHandlerCache = new Map<
     string,
-    { handler: FetchHandler; subgraph: ISubgraph }
+    {
+      handler: FetchHandler;
+      subgraph: ISubgraph;
+      generated: GeneratedDocumentModelTypes;
+    }
   >();
 
   /** subgraphPath → the http adapter handle of its mounted route. */
@@ -341,8 +363,17 @@ export class GraphQLManager {
   readonly #inHook = new AsyncLocalStorage<{ active: boolean }>();
 
   #generatedTypes:
-    | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
+    | {
+        models: DocumentModelModule[];
+        types: GeneratedDocumentModelTypes;
+        sdl: string;
+      }
     | undefined;
+
+  /** Generated types no document model contributes, but `IDocument`. */
+  #modelFreeTypeNames: ReadonlySet<string> | undefined;
+
+  readonly #usesModelTypesMemo = new WeakMap<ISubgraph, boolean>();
 
   /** Document models refused from the schema, by id, with the reason logged. */
   #refusedModels = new Map<string, string>();
@@ -777,9 +808,19 @@ export class GraphQLManager {
 
   #generated(): GeneratedDocumentModelTypes {
     if (this.#generatedTypes?.models !== this.cachedDocumentModels) {
+      const types = getGeneratedDocumentModelTypes(this.cachedDocumentModels);
+      const sdl = print({
+        kind: Kind.DOCUMENT,
+        definitions: types.definitions,
+      });
+      // Unchanged types keep their identity, so handlers built on them stay.
       this.#generatedTypes = {
         models: this.cachedDocumentModels,
-        types: getGeneratedDocumentModelTypes(this.cachedDocumentModels),
+        types:
+          sdl === this.#generatedTypes?.sdl
+            ? this.#generatedTypes.types
+            : types,
+        sdl,
       };
     }
     return this.#generatedTypes.types;
@@ -793,6 +834,40 @@ export class GraphQLManager {
           ? subgraph.generatedTypeNames
           : undefined,
     };
+  }
+
+  /** Whether `subgraph`'s own typeDefs refer to a document model's types. */
+  #usesModelTypes(subgraph: ISubgraph): boolean {
+    const memo = this.#usesModelTypesMemo.get(subgraph);
+    if (memo !== undefined) return memo;
+    if (!this.#modelFreeTypeNames) {
+      const names = new Set(getGeneratedDocumentModelTypes([]).names);
+      names.delete("IDocument");
+      this.#modelFreeTypeNames = names;
+    }
+    const modelFree = this.#modelFreeTypeNames;
+    const own = typeDefinitionNames(subgraph.typeDefs);
+    const referenced: string[] = [];
+    const collect = (node: { name: { value: string } }) => {
+      referenced.push(node.name.value);
+    };
+    visit(subgraph.typeDefs, {
+      NamedType: collect,
+      ScalarTypeExtension: collect,
+      ObjectTypeExtension: collect,
+      InterfaceTypeExtension: collect,
+      UnionTypeExtension: collect,
+      EnumTypeExtension: collect,
+      InputObjectTypeExtension: collect,
+    });
+    const uses = referenced.some(
+      (name) =>
+        !own.has(name) &&
+        !modelFree.has(name) &&
+        !NON_MODEL_TYPE_NAMES.has(name),
+    );
+    this.#usesModelTypesMemo.set(subgraph, uses);
+    return uses;
   }
 
   /** The generated type names `subgraph` redefines under the current models. */
@@ -1681,23 +1756,28 @@ export class GraphQLManager {
           continue;
         }
         try {
-          // Skip if handler already cached and mounted — a replaced subgraph
-          // invalidates its entries, so a cached path is current. Two
-          // different subgraphs landing on the same path: first mounted
-          // wins; say so.
+          // First mounted wins, unless it has since been unregistered.
           const cached = this.subgraphHandlerCache.get(subgraphPath);
           if (cached) {
-            if (cached.subgraph !== subgraph) {
+            if (cached.subgraph === subgraph) {
+              const current =
+                cached.generated === this.#generated() ||
+                !this.#usesModelTypes(subgraph);
+              if (current) continue;
+            } else if (this.#origins.has(cached.subgraph)) {
               this.logger.warn(
                 "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
                 subgraphPath,
                 cached.subgraph.name,
                 subgraph.name,
               );
+              continue;
+            } else {
+              await this.#unmountSubgraph(cached.subgraph, supergraph);
             }
-            continue;
           }
 
+          const generated = this.#generated();
           const schema = createSchema(
             this.cachedDocumentModels,
             subgraph.resolvers,
@@ -1709,10 +1789,24 @@ export class GraphQLManager {
             schema,
             this.#makeContextFactory(),
           );
+          // Superseded meanwhile: the update that change scheduled mounts it.
+          if (!subgraphsMap.get(supergraph)?.includes(subgraph)) continue;
+          if (generated !== this.#generated()) continue;
+          const previous = this.subgraphHandlerCache.get(subgraphPath);
+          if (
+            previous?.subgraph === subgraph &&
+            previous.generated === generated
+          ) {
+            continue;
+          }
+          if (previous) {
+            await this.#unmountSubgraph(previous.subgraph, supergraph);
+          }
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
           this.subgraphHandlerCache.set(subgraphPath, {
             handler: fetchHandler,
             subgraph,
+            generated,
           });
           this.#setInternalSubgraphHandler(subgraph, subgraphPath, rawHandler);
           this.subgraphRouteHandles.set(

@@ -99,6 +99,7 @@ import {
 } from "./worker-pool.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
+import { resolveInspectionEnabled } from "./inspection-flag.mjs";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
@@ -980,6 +981,7 @@ async function initServer(
         : {},
       configFile: configPath,
       mcp: options.mcp ?? true,
+      inspection: options.inspection === false ? false : undefined,
       logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
       // Already resolved for this reactor's own identity; reuse it so an
@@ -1366,6 +1368,7 @@ async function initServer(
     modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: privacy ? { erasure: privacy.erasure } : undefined,
     mcpEnabled: options.mcp !== false,
+    inspectionEnabled: options.inspection !== false,
     renown,
     port: serverPort,
     shutdown,
@@ -1418,6 +1421,10 @@ export const startSwitchboard = async (
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
   options.mcp = await resolveMcpEnabled({ featureFlags, option: options.mcp });
+  options.inspection = await resolveInspectionEnabled({
+    featureFlags,
+    option: options.inspection,
+  });
 
   const configPathForFlags = resolveConfigPath(options.configFile);
   const workflowsEnabled = await resolveWorkflowsEnabled({
@@ -1444,6 +1451,7 @@ export const startSwitchboard = async (
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
+        INSPECTION_ENABLED: options.inspection,
         PH_WORKFLOWS_ENABLED: workflowsEnabled,
       },
       null,

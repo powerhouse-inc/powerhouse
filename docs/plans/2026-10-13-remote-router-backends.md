@@ -266,7 +266,7 @@ locate(identifier: string, signal?: AbortSignal): Promise<string>; // the routed
 
 R3 and R4 can run in parallel after R1. R10 is independent of R5 to R8.
 
-Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decomposition.md`: review until clean, verify with the repo's real commands, and a two-sentence PR description.
+Every stage runs the per-PR loop under Delivery.
 
 **R1.**
 - Changes:
@@ -361,6 +361,54 @@ Every stage runs the per-PR loop from `docs/plans/2026-10-06-multi-reactor-decom
   - The monitor's existing `timeoutMs` (`packages/reactor-monitor/src/types.ts:123`) maps onto `requestTimeoutMs`.
 - Exit:
   - `RoutingPanel.test.tsx` covers a remote row and its health.
+
+## Delivery
+
+### Parallel lanes
+
+| Wave | Lane A: router | Lane B: facts and monitor | Lane C: e2e and Connect |
+|---|---|---|---|
+| 1 | R1 | | |
+| 2 | R3 | R4 | R2 |
+| 3 | R5, then R6 (stacked) | R10 | |
+| 4 | | | R7, then R8 (stacked) |
+
+- **Stacking:**
+  - A stage that follows another in the same lane stacks on that stage's unmerged branch: R5 on R3, R6 on R5, and R8 on R7.
+  - A stage that depends on another lane waits for that lane's work to merge to main: R2, R3 and R4 wait for R1; R10 waits for R4; R7 waits for R4 and R6.
+- **File overlap in wave 2:**
+  - R3 and R4 both edit `reactor-browser/src/graphql-client/switchboard-backend.ts`, and `reactor-router/src/backend.ts` and `types.ts`. Whichever merges second merges main and resolves the conflicts. Neither reshapes the other's members.
+  - R3 and R4 add their e2e cases to R2's suite only after R2 has merged, in a follow-up commit on their own branch.
+- **File overlap in wave 3:** R5 and R6 both edit `dispatcher.ts` and `table.ts`, which is why they stack. R10 touches only `apps/reactor-monitor`.
+
+### Execution model
+
+- **Coordinator.** A coordinator subagent drives the waves. It works from scratchpad files: `handoff.md`, `rules.md` (the setup rules below), `tracker.md` (stage, branch, worktree, PR, status) and `reports/R<n>.md`. It keeps no state in its own context that is not also in those files.
+- **Implementers.**
+  - One implementer subagent per stage, each in its own git worktree off main, or off its base stage's branch when stacked.
+  - At most 3 implementers run at once.
+  - Implementers commit at each logical step, and write their outcome, any deviations, and the commands they ran with exit codes to `reports/R<n>.md`. They do not report through context.
+- **Main session.** It answers escalations and pushes, opens and merges PRs. Nothing else goes through it.
+
+### Per-PR loop
+
+1. Implement the stage, with the tests its exit criteria name.
+2. Run `/code-review` rounds. Fix the confirmed findings as separate commits, and stop when a round comes back clean.
+3. The `verify` subagent runs the real CI commands for every touched package (build, lint, `pnpm test`) and records the commands and exit codes in the report.
+4. Push and open the PR. A stage based on main opens a ready PR against main. A stacked stage opens a draft PR against its base stage's branch, and is retargeted to main once that base merges. The description is two or three sentences.
+5. Merge with a merge commit (`gh pr merge --merge`), never a squash. Then merge main into every open stacked branch and into the next wave's worktrees.
+
+### Agent setup rules
+
+- In a fresh worktree, run `pnpm install`, then `pnpm build` in `packages/shared`, then build the dists of the packages under test, before any test run. Rebuild stale dists after every merge of main.
+- In `reactor-browser`, run `pnpm test`. `vitest run <file>` false-greens there.
+- No `git stash`, and no history rewrites (rebase, reset, amend, force-push).
+- Never write "fold" in code; reducers apply or derive state.
+- R2's real-Switchboard harness needs its own ports in each worktree: a free Switchboard port through `SWITCHBOARD_URL` (the default is 4001), and a free Postgres port when it runs against Postgres. R2 makes both configurable.
+
+### Escalation
+
+The coordinator escalates to the user, through the main session, any deviation from the design in this plan and any change of scope. It stops that stage until it gets an answer. Everything else is decided in the lane and recorded in the stage's report.
 
 ## Deferred
 

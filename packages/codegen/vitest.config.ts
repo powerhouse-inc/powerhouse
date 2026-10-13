@@ -21,6 +21,7 @@ export default defineConfig({
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
       "src/file-builders/boilerplate/generated-project-files.test.ts",
+      "src/file-builders/boilerplate/generated-hosts.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

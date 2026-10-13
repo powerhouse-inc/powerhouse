@@ -322,6 +322,20 @@ to be ignored. The `config` block of the installed package's manifest is
 authoritative for the version you actually have.
 :::
 
+## Configuring inspection (Switchboard)
+
+Switchboard mounts a read-only `inspection` subgraph at `/graphql/inspection`. It is on by default. reactor-monitor attaches to it, and Connect's remote backend reads its `info` for the remote's placement facts. Its reads come in three tiers:
+
+- `info` and `documentModels` answer any caller that reaches the endpoint.
+- `drives`, `driveIntegrity` and `validateDocument` answer any caller the document read policy lets read that drive or document.
+- The operational reads (`queueState`, `processors`, `remotes`, `remote`, `deadLetters`, `catchUpStatus`, `storageHealth`, `attachmentInfo`) need an address in `ADMINS`.
+
+Set `INSPECTION_ENABLED=false` to unmount it. reactor-monitor can then no longer attach, and Connect places the Switchboard with unknown reactor facts and reports a diagnostic each time it refreshes them:
+
+```bash
+INSPECTION_ENABLED=false
+```
+
 ## Configuring privacy (Switchboard)
 
 The privacy add-on answers GDPR access and erasure requests through an admin-only `privacy` subgraph. It is off by default and needs authentication:
