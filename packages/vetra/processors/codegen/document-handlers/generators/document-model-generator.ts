@@ -9,7 +9,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument } from "./utils.js";
+import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
 
 /**
  * Generator for document model documents
@@ -84,6 +84,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       logger.info(
         `✅ Code generation completed successfully for: ${globalState.name}`,
       );
+      warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
 
       // Backup the document
       const fullState = input.state as DocumentModelPHState;
