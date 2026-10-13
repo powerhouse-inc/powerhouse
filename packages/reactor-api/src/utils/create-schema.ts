@@ -26,6 +26,7 @@ import {
 } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
+import { createHash } from "node:crypto";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
 
@@ -335,11 +336,11 @@ export type GeneratedDocumentModelTypes = {
   names: ReadonlySet<string>;
 };
 
-/** The SDL `documentModel` adds to the generated schema, under `dmSchemaName`. */
-function documentModelTypesSdl(
+/** The definitions `documentModel` adds to the generated schema. */
+function documentModelDefinitions(
   documentModel: DocumentModelGlobalState,
-  dmSchemaName: string,
-): string {
+): DefinitionNode[] {
+  const dmSchemaName = getDocumentModelSchemaName(documentModel);
   // Use only the latest specification to avoid duplicate type definitions
   // when a document model has multiple versions (e.g. v1, v2).
   const latestSpec = documentModel.specifications.at(-1);
@@ -355,8 +356,7 @@ function documentModelTypesSdl(
     dmSchemaName,
     new Set(definedTypeNames(stateDoc, STATE_PREFIX_KINDS)),
   );
-  let sdl = definitions.length > 0 ? `${print(prefixed)}\n` : "";
-  sdl += `
+  const documentType = parseSdl(`
     type ${dmSchemaName} implements IDocument {
               id: String!
               name: String!
@@ -368,8 +368,8 @@ function documentModelTypesSdl(
               ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               stateJSON: JSONObject
-          }\n`;
-  return sdl;
+          }`);
+  return [...prefixed.definitions, ...documentType.definitions];
 }
 
 /** Type name → whether every definition of that name is a scalar. */
@@ -420,13 +420,11 @@ export function reservedTypeNames(
 export function reservedTypeNamesTaken(
   documentModel: DocumentModelModule,
   reserved: ReservedTypeNames,
+  definitions: readonly DefinitionNode[] = documentModelDefinitions(
+    documentModel.documentModel.global,
+  ),
 ): string[] {
-  const global = documentModel.documentModel.global;
-  const generated = addScalarFlags(
-    parseSdl(documentModelTypesSdl(global, getDocumentModelSchemaName(global)))
-      .definitions,
-    new Map(),
-  );
+  const generated = addScalarFlags(definitions, new Map());
   return Array.from(generated)
     .filter(
       ([name, scalar]) => reserved.has(name) && !(scalar && reserved.get(name)),
@@ -434,14 +432,97 @@ export function reservedTypeNamesTaken(
     .map(([name]) => name);
 }
 
+// The generated schema around the document models' definitions.
+const GENERATED_HEAD = gql`
+  scalar JSONObject
+  scalar AttachmentRef
+  # Codegen scalars not in the document-engineering set.
+  scalar Unknown
+  scalar Address
+  ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
+
+  type PHOperationContext {
+    signer: Signer
+  }
+
+  type Signer {
+    user: SignerUser
+    app: SignerApp
+    signatures: [String!]!
+  }
+
+  type SignerUser {
+    address: String!
+    networkId: String!
+    chainId: Int!
+  }
+
+  type SignerApp {
+    name: String!
+    key: String!
+  }
+
+  type Operation {
+    id: String!
+    type: String!
+    index: Int!
+    timestampUtcMs: DateTime!
+    hash: String!
+    skip: Int
+    inputText: String
+    error: String
+    context: PHOperationContext
+  }
+
+  interface IDocument {
+    id: String!
+    name: String!
+    documentType: String!
+    revision: Int!
+    createdAtUtcIso: DateTime!
+    lastModifiedAtUtcIso: DateTime!
+    operations(first: Int, skip: Int): [Operation!]!
+    stateJSON: JSONObject
+  }
+`.definitions;
+
+const GENERATED_TAIL = gql`
+  type GqlDocument implements IDocument {
+    id: String!
+    name: String!
+    documentType: String!
+    revision: Int!
+    createdAtUtcIso: DateTime!
+    lastModifiedAtUtcIso: DateTime!
+    operations(first: Int, skip: Int): [Operation!]!
+    stateJSON: JSONObject
+  }
+
+  type DriveDocument implements IDocument {
+    id: String!
+    name: String!
+    documentType: String!
+    revision: Int!
+    createdAtUtcIso: DateTime!
+    lastModifiedAtUtcIso: DateTime!
+    operations(first: Int, skip: Int): [Operation!]!
+    stateJSON: JSONObject
+  }
+`.definitions;
+
+/**
+ * The generated schema for `documentModels`. `schemas` supplies models'
+ * definitions already built; the others are built here.
+ */
 export function getGeneratedDocumentModelTypes(
   documentModels: DocumentModelModule[],
+  schemas?: ReadonlyMap<DocumentModelModule, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
-  let dmSchema = "";
-
+  const modelDefinitions: DefinitionNode[] = [];
   const addedDocumentModels = new Set<string>();
-  documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = getDocumentModelSchemaName(documentModel.global);
+  documentModels.forEach((model) => {
+    const global = model.documentModel.global;
+    const dmSchemaName = getDocumentModelSchemaName(global);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
@@ -449,91 +530,159 @@ export function getGeneratedDocumentModelTypes(
       return;
     }
     addedDocumentModels.add(dmSchemaName);
-    dmSchema += documentModelTypesSdl(documentModel.global, dmSchemaName);
+    modelDefinitions.push(
+      ...(schemas?.get(model)?.generated ?? documentModelDefinitions(global)),
+    );
   });
 
-  // add the mutation and query types
-  const schema = gql`
-    scalar JSONObject
-    scalar AttachmentRef
-    # Codegen scalars not in the document-engineering set.
-    scalar Unknown
-    scalar Address
-    ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
-
-    type PHOperationContext {
-      signer: Signer
-    }
-
-    type Signer {
-      user: SignerUser
-      app: SignerApp
-      signatures: [String!]!
-    }
-
-    type SignerUser {
-      address: String!
-      networkId: String!
-      chainId: Int!
-    }
-
-    type SignerApp {
-      name: String!
-      key: String!
-    }
-
-    type Operation {
-      id: String!
-      type: String!
-      index: Int!
-      timestampUtcMs: DateTime!
-      hash: String!
-      skip: Int
-      inputText: String
-      error: String
-      context: PHOperationContext
-    }
-
-    interface IDocument {
-      id: String!
-      name: String!
-      documentType: String!
-      revision: Int!
-      createdAtUtcIso: DateTime!
-      lastModifiedAtUtcIso: DateTime!
-      operations(first: Int, skip: Int): [Operation!]!
-      stateJSON: JSONObject
-    }
-    ${dmSchema}
-
-    type GqlDocument implements IDocument {
-      id: String!
-      name: String!
-      documentType: String!
-      revision: Int!
-      createdAtUtcIso: DateTime!
-      lastModifiedAtUtcIso: DateTime!
-      operations(first: Int, skip: Int): [Operation!]!
-      stateJSON: JSONObject
-    }
-
-    type DriveDocument implements IDocument {
-      id: String!
-      name: String!
-      documentType: String!
-      revision: Int!
-      createdAtUtcIso: DateTime!
-      lastModifiedAtUtcIso: DateTime!
-      operations(first: Int, skip: Int): [Operation!]!
-      stateJSON: JSONObject
-    }
-  `;
-
-  const definitions = dedupeTypeDefinitions(schema.definitions);
+  const definitions = dedupeTypeDefinitions([
+    ...GENERATED_HEAD,
+    ...modelDefinitions,
+    ...GENERATED_TAIL,
+  ]);
   const names = new Set(
     definitions.map(typeDefinitionName).filter((name) => name !== undefined),
   );
   return { definitions, names };
+}
+
+/** What a document model contributes to the GraphQL schema. */
+export type DocumentModelSchema = {
+  /** Its definitions in the generated schema every subgraph carries. */
+  generated: readonly DefinitionNode[];
+  /** Its own subgraph's types, when it has operations to serve. */
+  subgraph?: { typeDefs: DocumentNode; typeNames: ReadonlySet<string> };
+  /** Why its own subgraph cannot be served; its generated types still can. */
+  subgraphError?: Error;
+};
+
+const hasValidSchema = (schema: string | null | undefined): boolean =>
+  !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
+
+/** Whether any operation of the latest specification has a schema. */
+export function hasOperationSchemas(documentModel: DocumentModelModule) {
+  const specification =
+    documentModel.documentModel.global.specifications.at(-1);
+  if (!specification) return false;
+  return specification.modules.some((module) =>
+    module.operations.some((op) => hasValidSchema(op.schema)),
+  );
+}
+
+/** The types of a document model's own subgraph. */
+export function documentModelSubgraphTypes(
+  documentModel: DocumentModelGlobalState,
+): { typeDefs: DocumentNode; typeNames: ReadonlySet<string> } {
+  const typeDefs = generateDocumentModelSchema(documentModel, {
+    useNewApi: true,
+  });
+  return { typeDefs, typeNames: typeDefinitionNames(typeDefs) };
+}
+
+const toError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
+
+/** Build `subgraph` over the generated types of `documentModel` alone. */
+function checkBuilds(
+  documentModel: DocumentModelModule,
+  generated: readonly DefinitionNode[],
+  subgraph?: DocumentModelSchema["subgraph"],
+): void {
+  buildSubgraphSchema([
+    {
+      typeDefs: assembleSubgraphTypeDefs(
+        getGeneratedDocumentModelTypes(
+          [documentModel],
+          new Map([[documentModel, { generated }]]),
+        ),
+        subgraph?.typeDefs ?? EMPTY_DOCUMENT,
+        subgraph?.typeNames,
+      ),
+    },
+  ]);
+}
+
+/** Throws when the generated types every subgraph carries do not build. */
+export function buildDocumentModelSchema(
+  documentModel: DocumentModelModule,
+  options: { subgraph?: boolean } = {},
+): DocumentModelSchema {
+  const generated = documentModelDefinitions(
+    documentModel.documentModel.global,
+  );
+  if (options.subgraph === false || !hasOperationSchemas(documentModel)) {
+    checkBuilds(documentModel, generated);
+    return { generated };
+  }
+  try {
+    const subgraph = documentModelSubgraphTypes(
+      documentModel.documentModel.global,
+    );
+    checkBuilds(documentModel, generated, subgraph);
+    return { generated, subgraph };
+  } catch (error) {
+    checkBuilds(documentModel, generated);
+    return { generated, subgraphError: toError(error) };
+  }
+}
+
+/** A document model's schema, or why it is unusable, under its source key. */
+export type ResolvedDocumentModelSchema = {
+  model: DocumentModelModule;
+  key: string;
+} & (
+  | { schema: DocumentModelSchema; error?: undefined }
+  | { schema?: undefined; error: Error }
+);
+
+/** Hash of everything {@link buildDocumentModelSchema} reads. */
+function schemaSourceKey(documentModel: DocumentModelModule): string {
+  const { name, specifications } = documentModel.documentModel.global;
+  return createHash("sha256")
+    .update(JSON.stringify([name, specifications.at(-1)]))
+    .digest("base64");
+}
+
+/** Schemas and failures by source hash, for the last resolve's models only. */
+export class DocumentModelSchemaCache {
+  #entries = new Map<string, DocumentModelSchema | Error>();
+  readonly #build: (documentModel: DocumentModelModule) => DocumentModelSchema;
+
+  constructor(build = buildDocumentModelSchema) {
+    this.#build = build;
+  }
+
+  resolve(
+    documentModels: readonly DocumentModelModule[],
+  ): ResolvedDocumentModelSchema[] {
+    const entries = new Map<string, DocumentModelSchema | Error>();
+    const resolved = documentModels.map(
+      (model): ResolvedDocumentModelSchema => {
+        let key: string;
+        let entry: DocumentModelSchema | Error | undefined;
+        try {
+          key = schemaSourceKey(model);
+          entry = entries.get(key) ?? this.#entries.get(key);
+        } catch (error) {
+          key = `unkeyed:${model.documentModel.global.id}`;
+          entry = toError(error);
+        }
+        if (entry === undefined) {
+          try {
+            entry = this.#build(model);
+          } catch (error) {
+            entry = toError(error);
+          }
+        }
+        entries.set(key, entry);
+        return entry instanceof Error
+          ? { model, key, error: entry }
+          : { model, key, schema: entry };
+      },
+    );
+    this.#entries = entries;
+    return resolved;
+  }
 }
 
 /**
@@ -861,10 +1010,6 @@ export function generateDocumentModelSchema(
     documentName,
     allTypeNames,
   );
-
-  // Helper to check if schema has actual GraphQL type definitions
-  const hasValidSchema = (schema: string | null | undefined): boolean =>
-    !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
 
   if (useNewApi) {
     // New API: flat queries, typed state, async mutations
