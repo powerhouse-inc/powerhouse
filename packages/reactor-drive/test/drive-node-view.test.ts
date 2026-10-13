@@ -1,10 +1,27 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
-import { Kysely, sql, type LogEvent } from "kysely";
+import {
+  CompiledQuery,
+  Kysely,
+  sql,
+  type Insertable,
+  type LogEvent,
+} from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
 import { runReactorDriveMigrations } from "../src/schema/migrations/migrator.js";
-import type { ReactorDriveDatabase } from "../src/schema/tables.js";
+import type {
+  DriveNodeTable,
+  ReactorDriveDatabase,
+} from "../src/schema/tables.js";
 
 async function applyReactorDriveMigrations(
   db: Kysely<ReactorDriveDatabase>,
@@ -429,4 +446,102 @@ describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
       view.listChildren("drive-1", null, { cursor: bogus, limit: 10 }),
     ).rejects.toThrow(/cursor/i);
   });
+});
+
+describe("DriveNodeView.listChildren query plans (PGlite)", () => {
+  let pg: PGlite;
+  let db: Kysely<ReactorDriveDatabase>;
+  let view: DriveNodeView;
+  const queryLog: CompiledQuery[] = [];
+
+  beforeAll(async () => {
+    pg = new PGlite({ fs: new MemoryFS() });
+    db = new Kysely<ReactorDriveDatabase>({
+      dialect: new PGliteDialect(pg),
+      log: (event: LogEvent) => {
+        if (event.level === "query") {
+          queryLog.push(event.query);
+        }
+      },
+    });
+    await applyReactorDriveMigrations(db);
+    view = new DriveNodeView(db);
+
+    const base = Date.UTC(2024, 0, 1);
+    const rows: Insertable<DriveNodeTable>[] = [];
+    const node = (
+      driveId: string,
+      id: string,
+      parentFolder: string | null,
+      kind: "file" | "folder",
+    ) => {
+      const createdAt = new Date(base + rows.length * 1000);
+      rows.push({
+        driveId,
+        id,
+        kind,
+        name: id,
+        requestedName: id,
+        parentFolder,
+        documentType: kind === "file" ? "powerhouse/document-model" : null,
+        createdAt,
+        updatedAt: createdAt,
+      });
+    };
+    node("drive-1", "parent", null, "folder");
+    for (let i = 0; i < 300; i++) {
+      node("drive-1", `child-${i}`, "parent", i % 10 ? "file" : "folder");
+      node("drive-1", `root-${i}`, null, i % 10 ? "file" : "folder");
+      node("drive-2", `other-${i}`, i % 2 ? null : "parent", "file");
+    }
+    await db.insertInto("DriveNode").values(rows).execute();
+    await sql`ANALYZE "DriveNode"`.execute(db);
+    // A Sort then appears only when no index yields ("createdAt", id) order.
+    await sql`SET enable_sort = off`.execute(db);
+  });
+
+  afterAll(async () => {
+    await db.destroy();
+    await pg.close();
+  });
+
+  it.each([
+    ["a parent", "parent", undefined],
+    ["a parent by kind", "parent", "folder"],
+    ["the root", null, undefined],
+    ["the root by kind", null, "folder"],
+    ["a whole drive", undefined, undefined],
+  ] as const)(
+    "reads %s in index order, first and later pages",
+    async (_label, parentFolder, kind) => {
+      const first = await view.listChildren(
+        "drive-1",
+        parentFolder,
+        { cursor: "", limit: 10 },
+        undefined,
+        kind,
+      );
+      expect(first.nextCursor).toBeDefined();
+
+      for (const cursor of ["", first.nextCursor!]) {
+        queryLog.length = 0;
+        await view.listChildren(
+          "drive-1",
+          parentFolder,
+          { cursor, limit: 10 },
+          undefined,
+          kind,
+        );
+        expect(queryLog).toHaveLength(1);
+        const plan = await db.executeQuery<{ "QUERY PLAN": string }>(
+          CompiledQuery.raw(`EXPLAIN ${queryLog[0].sql}`, [
+            ...queryLog[0].parameters,
+          ]),
+        );
+        const text = plan.rows.map((row) => row["QUERY PLAN"]).join("\n");
+        expect(text).toMatch(/Index Scan using idx_drive_node_/);
+        expect(text).not.toMatch(/\bSort\b/);
+      }
+    },
+  );
 });
