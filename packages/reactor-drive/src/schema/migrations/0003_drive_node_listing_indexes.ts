@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 const LISTING_INDEXES = [
   "idx_drive_node_parent_created_id",
@@ -29,7 +29,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .ifNotExists()
     .on("DriveNode")
     .columns(["driveId", "createdAt", "id"])
-    .where("parentFolder", "is", null)
+    .where(sql.ref("parentFolder"), "is", null)
     .execute();
 
   await db.schema
@@ -37,7 +37,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .ifNotExists()
     .on("DriveNode")
     .columns(["driveId", "kind", "createdAt", "id"])
-    .where("parentFolder", "is", null)
+    .where(sql.ref("parentFolder"), "is", null)
     .execute();
 
   await db.schema
