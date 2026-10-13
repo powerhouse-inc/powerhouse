@@ -1657,21 +1657,20 @@ export class GraphQLManager {
           continue;
         }
         try {
-          // Skip if handler already cached and mounted — a replaced subgraph
-          // invalidates its entries, so a cached path is current. Two
-          // different subgraphs landing on the same path: first mounted
-          // wins; say so.
+          // First mounted wins, unless it has since been unregistered.
           const cached = this.subgraphHandlerCache.get(subgraphPath);
           if (cached) {
-            if (cached.subgraph !== subgraph) {
+            if (cached.subgraph === subgraph) continue;
+            if (this.#origins.has(cached.subgraph)) {
               this.logger.warn(
                 "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
                 subgraphPath,
                 cached.subgraph.name,
                 subgraph.name,
               );
+              continue;
             }
-            continue;
+            await this.#unmountSubgraph(cached.subgraph, supergraph);
           }
 
           const schema = createSchema(
@@ -1685,6 +1684,12 @@ export class GraphQLManager {
             schema,
             this.#makeContextFactory(),
           );
+          // Replaced meanwhile: the next update mounts its successor.
+          if (!subgraphsMap.get(supergraph)?.includes(subgraph)) continue;
+          const previous = this.subgraphHandlerCache.get(subgraphPath);
+          if (previous) {
+            await this.#unmountSubgraph(previous.subgraph, supergraph);
+          }
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
           this.subgraphHandlerCache.set(subgraphPath, {
             handler: fetchHandler,

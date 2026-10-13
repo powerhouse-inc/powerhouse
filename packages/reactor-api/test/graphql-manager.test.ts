@@ -24,7 +24,7 @@ import {
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
-import { type DocumentNode, Kind } from "graphql";
+import { type DocumentNode, type GraphQLSchema, Kind, parse } from "graphql";
 import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1457,6 +1457,146 @@ describe("GraphQLManager", () => {
       expect(gatewayAdapter.createHandler.mock.calls.length).toBe(
         firstCallCount,
       );
+    });
+  });
+
+  describe("subgraph replaced while its handler is built", () => {
+    type Gateway = ReturnType<typeof makeHarness>["gatewayAdapter"];
+
+    // Field names, not printSchema: the schema comes from another graphql realm.
+    const fieldNames = (schema: GraphQLSchema) =>
+      Object.values(schema.getTypeMap())
+        .flatMap((type) =>
+          "getFields" in type ? Object.keys(type.getFields()) : [],
+        )
+        .join(" ");
+
+    const servingSdl =
+      (schema: GraphQLSchema): FetchHandler =>
+      () =>
+        Promise.resolve(Response.json({ data: { sdl: fieldNames(schema) } }));
+
+    const createHandlerOf = (gatewayAdapter: Gateway) =>
+      vi.mocked(
+        gatewayAdapter.createHandler as IGatewayAdapter<Context>["createHandler"],
+      );
+
+    function serveSdl(gatewayAdapter: Gateway) {
+      createHandlerOf(gatewayAdapter).mockImplementation((schema) =>
+        Promise.resolve(servingSdl(schema)),
+      );
+    }
+
+    function holdNextHandler(gatewayAdapter: Gateway) {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const started = vi.fn();
+      createHandlerOf(gatewayAdapter).mockImplementationOnce(async (schema) => {
+        started();
+        await held;
+        return servingSdl(schema);
+      });
+      return { release, started };
+    }
+
+    async function servedSdl(
+      mounts: Map<string, FetchHandler>,
+      path: string,
+    ): Promise<string> {
+      const response = await mounts.get(path)!(
+        new Request(`http://localhost${path}`, { method: "POST" }),
+      );
+      const body = (await response.json()) as { data: { sdl: string } };
+      return body.data.sdl;
+    }
+
+    async function internalSdl(manager: GraphQLManager, name: string) {
+      const data = await manager.executeSubgraphQuery<{ sdl: string }>(
+        name,
+        "{ __typename }",
+        {},
+      );
+      return data.sdl;
+    }
+
+    function racer(field: string) {
+      return class extends BaseSubgraph {
+        name = "racer";
+        typeDefs = parse(`type Query { ${field}: String }`);
+        resolvers = {};
+      };
+    }
+
+    function alphaWith(field: string): DocumentModelModule {
+      const alpha = makeModelModule("Alpha", "test/alpha");
+      alpha.documentModel.global.specifications[0].state.global.schema = `type AlphaState { ${field}: String }`;
+      return alpha;
+    }
+
+    it("mounts the package subgraph that replaced it", async () => {
+      const { manager, mounts, gatewayAdapter } = makeHarness();
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      const apply = (field: string) =>
+        manager.applyPackageSubgraphs(new Map([["pkg", [racer(field)]]]));
+
+      await apply("rev1");
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev1");
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await apply("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+
+      await apply("rev3");
+      hold.release();
+      await vi.runAllTimersAsync();
+      // A later update must not take the stale handler for the current one.
+      await manager.updateRouter(true);
+
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
+      expect(await internalSdl(manager, "racer")).toContain("rev3");
+    });
+
+    it("mounts the document model subgraph that replaced it", async () => {
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({
+          results: [makeDriveModule(), alphaWith("rev1")],
+        }),
+      });
+      const { manager, mounts, gatewayAdapter } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      expect(await servedSdl(mounts, "/graphql/alpha")).toContain("rev1");
+
+      const regenerate = async (field: string) => {
+        vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+          results: [makeDriveModule(), alphaWith(field)],
+          options: { cursor: "", limit: 100 },
+        });
+        await manager.regenerateDocumentModelSubgraphs();
+      };
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+
+      await regenerate("rev3");
+      hold.release();
+      await vi.runAllTimersAsync();
+      await manager.updateRouter(true);
+
+      const served = await servedSdl(mounts, "/graphql/alpha");
+      expect(served).toContain("rev3");
+      expect(served).not.toContain("rev2");
+      expect(await internalSdl(manager, "alpha")).toContain("rev3");
     });
   });
 
