@@ -26,7 +26,7 @@ import {
 } from "@powerhousedao/shared/connect";
 import { readPackage } from "read-pkg";
 import { z } from "zod";
-import { spawnAsync } from "@powerhousedao/shared/clis";
+import { SpawnError, spawnAsync } from "@powerhousedao/shared/clis";
 import type { PackedConsumerEvidence } from "document-model/tooling";
 import {
   cpSync,
@@ -40,7 +40,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { nodeFileTrace } from "@vercel/nft";
 import type { Agent } from "package-manager-detector";
 import { detect, resolveCommand } from "package-manager-detector";
@@ -52,7 +52,7 @@ import {
   type GenerationSteps,
 } from "./generation.js";
 import { NON_INPUT_DIRECTORIES } from "./package-revision.js";
-import { canonicalPath, pathWithin } from "./paths.js";
+import { canonicalPath } from "./paths.js";
 
 // nft reports paths relative to its base; from "/" that is every path minus its root.
 // One cache per build: the traces of a project's packages share most files.
@@ -124,14 +124,18 @@ async function runLocal(
     };
   }
   try {
+    // tsc spells paths from $PWD when it names the same directory, so a
+    // shell in a symlinked spelling of the package would change every path.
     const stdout = await spawnAsync(resolved.command, resolved.args, {
       cwd: packageRoot,
+      env: { ...process.env, PWD: packageRoot },
     });
     return { ok: true, stdout };
   } catch (error) {
     return {
       ok: false,
       summary: error instanceof Error ? error.message : `${argv[0]} failed`,
+      ...(error instanceof SpawnError && { stdout: error.stdout }),
     };
   }
 }
@@ -143,8 +147,12 @@ type BuildStepOptions = {
 
 const compilerConfigSchema = z.object({
   compilerOptions: z.object({
+    declaration: z.boolean().optional(),
+    composite: z.boolean().optional(),
     declarationDir: z.string().optional(),
     outDir: z.string().optional(),
+    rootDir: z.string().optional(),
+    noEmit: z.boolean().optional(),
     allowImportingTsExtensions: z.boolean().optional(),
   }),
   references: z.array(z.object({ path: z.string() })).optional(),
@@ -188,11 +196,60 @@ async function confirmBuildDespiteTypeErrors(): Promise<boolean> {
   }
 }
 
+type CompilerOptions = z.infer<typeof compilerConfigSchema>["compilerOptions"];
+
+// The redirected emit must lay declarations out under emittedRoot exactly as
+// tsc lays them out under the returned directory.
+export function declarationLayout(
+  compilerOptions: CompilerOptions,
+  packageRoot: string,
+  emittedRoot: string,
+): { readonly flags: readonly string[]; readonly directory: string | null } {
+  const declares =
+    compilerOptions.declaration === true || compilerOptions.composite === true;
+  const emits = compilerOptions.noEmit !== true;
+  // With no outDir or declarationDir tsc writes each declaration beside its
+  // source; the redirected emit is laid out from rootDir, so mapping back
+  // through it, or the package root when unset, lands beside the source.
+  // Under noEmit tsc writes nothing, so pinning the layout moves no file;
+  // under emit an unset rootDir is left to tsc, which reports TS5011 as on
+  // main.
+  const layoutRoot =
+    compilerOptions.declarationDir ??
+    compilerOptions.outDir ??
+    compilerOptions.rootDir;
+  const pinsLayout =
+    compilerOptions.rootDir === undefined &&
+    (layoutRoot === undefined || !emits);
+  return {
+    flags: [
+      // tsc rejects emitDeclarationOnly without declarations (TS5069), as on
+      // main, so it is only lifted when declarations are on.
+      ...(declares
+        ? ["--declarationDir", emittedRoot, "--emitDeclarationOnly", "false"]
+        : []),
+      ...(pinsLayout ? ["--rootDir", packageRoot] : []),
+    ],
+    directory:
+      declares && emits ? resolve(packageRoot, layoutRoot ?? ".") : null,
+  };
+}
+
+// The paths `tsc --listFilesOnly --pretty false` prints, as tsc spells them;
+// its diagnostics are relative and drop out.
+function listedFiles(stdout: string | undefined): string[] {
+  return (stdout ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => isAbsolute(line) && existsSync(line))
+    .map((file) => resolve(file));
+}
+
 export function createTypecheckStep(
   agent: Agent,
   options: BuildStepOptions = {},
 ): GenerationSteps["typecheck"] {
-  return async ({ packageRoot, emittedRoot, outDir }) => {
+  return async ({ packageRoot, emittedRoot }) => {
     const config = await runLocal(packageRoot, agent, [
       "tsc",
       "-p",
@@ -208,6 +265,11 @@ export function createTypecheckStep(
     } catch (error) {
       return { ok: false, summary: layoutFailure(error) };
     }
+    const layout = declarationLayout(
+      compilerConfig.compilerOptions,
+      packageRoot,
+      emittedRoot,
+    );
     // `tsc -p` reads a referenced project's declarations without building
     // them, so the references build first, as `tsc --build` would.
     const references = compilerConfig.references ?? [];
@@ -219,6 +281,31 @@ export function createTypecheckStep(
             "--build",
             ...references.map((reference) => reference.path),
           ]);
+    // The redirected emit cannot see a declaration overwrite an input, so
+    // the program main would build is listed for the plan to check against.
+    // tsc prints the list even when it reports errors.
+    const listed =
+      !referencesBuilt.ok || layout.directory === null
+        ? undefined
+        : await runLocal(packageRoot, agent, [
+            "tsc",
+            "-p",
+            "tsconfig.json",
+            "--listFilesOnly",
+            "--pretty",
+            "false",
+          ]);
+    const programFiles = listedFiles(listed?.stdout);
+    // A program can list nothing (a solution tsconfig with only
+    // references); a listing that failed and printed nothing cannot be
+    // trusted.
+    if (listed !== undefined && !listed.ok && programFiles.length === 0) {
+      return {
+        ok: false,
+        refused: true,
+        summary: `tsc listed no program files, so the declarations cannot be checked against its inputs: ${listed.summary}`,
+      };
+    }
     const result = !referencesBuilt.ok
       ? referencesBuilt
       : await runLocal(packageRoot, agent, [
@@ -227,11 +314,7 @@ export function createTypecheckStep(
           "tsconfig.json",
           "--outDir",
           emittedRoot,
-          "--declaration",
-          "--declarationDir",
-          emittedRoot,
-          "--emitDeclarationOnly",
-          "false",
+          ...layout.flags,
           "--noEmit",
           "false",
           "--noEmitOnError",
@@ -261,8 +344,6 @@ export function createTypecheckStep(
       );
     }
     try {
-      const { compilerOptions } = compilerConfig;
-      const declared = compilerOptions.declarationDir ?? compilerOptions.outDir;
       const emittedModules = new Map<string, string>();
       for (const path of filesUnder(emittedRoot)) {
         if (!/\.[cm]?jsx?\.map$/.test(path)) continue;
@@ -279,13 +360,8 @@ export function createTypecheckStep(
       return {
         ok: true,
         emittedModules,
-        declarationSubdirectory:
-          declared === undefined
-            ? null
-            : pathWithin(
-                canonicalPath(resolve(packageRoot, outDir)),
-                canonicalPath(resolve(packageRoot, declared)),
-              ),
+        declarationDirectory: layout.directory,
+        inputs: programFiles.filter((file) => /\.d\.[cm]?ts$/.test(file)),
       };
     } catch (error) {
       return { ok: false, summary: layoutFailure(error) };

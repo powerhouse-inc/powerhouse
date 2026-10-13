@@ -184,7 +184,7 @@ describe("what the promoted tree contains", () => {
     }
   }, 120_000);
 
-  it("promotes to the directory --out-dir names", async () => {
+  it("promotes to the directory --out-dir names and leaves declarations where tsconfig puts them", async () => {
     const fixture = withPriorOutput("control");
     const recording = recorder();
     try {
@@ -196,18 +196,31 @@ describe("what the promoted tree contains", () => {
       expect(existsSync(join(fixture.root, "lib", "node", "index.js"))).toBe(
         true,
       );
-      expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-        fixture.priorDigest,
-      );
+      const dist = join(fixture.root, "dist");
+      expect(readdirSync(join(dist, "types", "src")).sort()).toEqual([
+        "catalog.d.ts",
+        "decoy.d.ts",
+        "helper.d.ts",
+        "invoice.d.ts",
+      ]);
+      rmSync(join(dist, "types"), { recursive: true });
+      expect(directoryDigest(dist)).toBe(fixture.priorDigest);
     } finally {
       fixture.dispose();
     }
   }, 120_000);
 
-  it("refuses an --out-dir that is not a directory inside the package", async () => {
+  it("refuses an --out-dir outside the package or overlapping .ph/build", async () => {
     const fixture = withPriorOutput("control");
     try {
-      for (const outDir of [".", "../escape", "/tmp/escape"]) {
+      for (const outDir of [
+        ".",
+        "../escape",
+        "/tmp/escape",
+        ".ph",
+        ".ph/build",
+        ".ph/build/out",
+      ]) {
         await expect(
           runBuild(
             { ...buildArgsFor(fixture.root), outDir },

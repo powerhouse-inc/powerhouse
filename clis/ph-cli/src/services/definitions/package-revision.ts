@@ -14,7 +14,7 @@ export const NON_INPUT_DIRECTORIES: readonly string[] = [
 
 type PackageRevisionInput = {
   readonly packageRoot: string;
-  readonly excludedDirectories?: readonly string[];
+  readonly excludedPaths?: readonly string[];
   readonly excludedDirectoryNames?: readonly string[];
   readonly respectGitignore?: boolean;
   readonly bindings: Readonly<Record<string, string>>;
@@ -81,8 +81,8 @@ export function computePackageRevision(
   input: PackageRevisionInput,
 ): `sha256:${string}` {
   const excluded = new Set(
-    (input.excludedDirectories ?? []).map((directory) =>
-      relative(input.packageRoot, resolve(input.packageRoot, directory)),
+    (input.excludedPaths ?? []).map((path) =>
+      relative(input.packageRoot, resolve(input.packageRoot, path)),
     ),
   );
   const entries: string[] = [];

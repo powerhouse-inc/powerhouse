@@ -10,18 +10,25 @@ import {
   unregisteredDefinitionDiagnostic,
 } from "document-model/tooling";
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { getVersion } from "../../get-version.js";
+import {
+  movedDeclaration,
+  planDeclarations,
+  publishedPaths,
+  stageDeclarations,
+  unlandedDeclaration,
+  writeOutsideOutput,
+} from "./declarations.js";
 import { defaultHostValidationFor } from "./host-validation.js";
+import { relocateSourceMaps } from "./source-maps.js";
 import { BuildGraphTypeScriptSourceImportAdapter } from "./import-adapters.js";
 import {
   computePackageRevision,
@@ -50,16 +57,25 @@ export type GenerationSteps = {
   readonly typecheck: (request: {
     readonly packageRoot: string;
     readonly emittedRoot: string;
-    readonly outDir: string;
   }) => Promise<
     | {
         readonly ok: false;
+        readonly refused?: false;
         readonly summary?: string;
       }
+    // Refused for a reason that is not a compiler error.
+    | { readonly ok: false; readonly refused: true; readonly summary: string }
     | {
         readonly ok: true;
         readonly emittedModules: ReadonlyMap<string, string>;
-        readonly declarationSubdirectory: string | null;
+        // Where tsc writes the declarations it laid out under emittedRoot;
+        // null when the package publishes none.
+        readonly declarationDirectory: string | null;
+        // The declaration files of the program main would build, as tsc
+        // spells them: tsc never writes a declaration over one of those
+        // paths (TS5055), and the build refuses one reached through a
+        // symlink as well.
+        readonly inputs: readonly string[];
       }
   >;
   readonly emitCandidate: (request: {
@@ -96,17 +112,21 @@ export type GenerationResult = {
   readonly exitCode: 0 | 1 | 2;
   readonly phases: readonly GenerationPhase[];
   readonly report: DefinitionCheckReport | undefined;
+  // Why the build refused, when no report or compiler output says it.
+  readonly summary?: string;
 };
 
 export type ReleaseApproval = {
   readonly kind: "powerhouse.release-approval";
-  readonly formatVersion: 1;
+  readonly formatVersion: 2;
   readonly packageRevision: `sha256:${string}`;
   readonly sourceSetDigest: string;
   readonly sources: readonly string[];
   readonly sourcesDigest: string;
   readonly compilerVersion: string;
   readonly outputDigest: string;
+  readonly declarations: readonly string[];
+  readonly declarationsDigest: string;
   readonly warningsAsErrors: boolean;
   readonly report: DefinitionCheckReport;
 };
@@ -142,17 +162,28 @@ export function assertOutputDirectory(
   const target = resolve(paths.packageRoot, paths.outDir);
   const isInside = (root: string, path: string): boolean =>
     (pathWithin(root, path) ?? "") !== "";
-  let physicallyInside = false;
-  if (isInside(paths.packageRoot, target)) {
-    try {
-      physicallyInside = isInside(paths.packageRoot, canonicalPath(target));
-    } catch {
-      physicallyInside = false;
-    }
+  let output: string | undefined;
+  try {
+    output = canonicalPath(target);
+  } catch {
+    output = undefined;
   }
-  if (!physicallyInside) {
+  if (
+    output === undefined ||
+    !isInside(paths.packageRoot, target) ||
+    !isInside(paths.packageRoot, output)
+  ) {
     throw new Error(
       `--out-dir must name a directory inside the package; ${JSON.stringify(outDir)} does not.`,
+    );
+  }
+  const scratch = canonicalPath(join(paths.packageRoot, GENERATION_DIRECTORY));
+  if (
+    pathWithin(scratch, output) !== null ||
+    pathWithin(output, scratch) !== null
+  ) {
+    throw new Error(
+      `--out-dir must not overlap ${GENERATION_DIRECTORY}, which every build clears; ${JSON.stringify(outDir)} does.`,
     );
   }
 }
@@ -160,11 +191,12 @@ export function assertOutputDirectory(
 export function packageRevisionOf(
   packageRoot: string,
   outDir: string,
+  outputs: readonly string[] = [],
 ): `sha256:${string}` {
   const paths = resolvePackagePaths({ packageRoot, outDir });
   return computePackageRevision({
     packageRoot: paths.packageRoot,
-    excludedDirectories: [paths.outDir],
+    excludedPaths: [paths.outDir, ...outputs],
     respectGitignore: true,
     bindings: { compiler: getVersion() },
   });
@@ -220,6 +252,7 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
   );
   const generationRoot = join(request.packageRoot, GENERATION_DIRECTORY);
   const candidateRoot = join(generationRoot, "candidate");
+  const declarationsRoot = join(generationRoot, "declarations");
   // Each revision gets its own directory because Node caches an ESM module by
   // URL for the life of the process, so a second generation staged to the same
   // path would check the first one's modules.
@@ -231,6 +264,7 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
   rmSync(generationRoot, { recursive: true, force: true });
   mkdirSync(emittedRoot, { recursive: true });
   mkdirSync(candidateRoot, { recursive: true });
+  mkdirSync(declarationsRoot, { recursive: true });
 
   const failure = (
     status: "invalid" | "failed",
@@ -241,19 +275,39 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     phases,
     report,
   });
+  const refusal = (
+    summary: string,
+    report?: DefinitionCheckReport,
+  ): GenerationResult => {
+    log(`✘ ${summary}\n`);
+    return { ...failure("failed", report), summary };
+  };
 
   log("▶ Compiling TypeScript\n");
   phases.push("typecheck");
   const typecheck = await request.steps.typecheck({
     packageRoot: request.packageRoot,
     emittedRoot,
-    outDir: request.outDir,
   });
   if (!typecheck.ok) {
+    if (typecheck.refused === true) {
+      return refusal(typecheck.summary);
+    }
     log("✘ TypeScript failed; no definition was evaluated.\n");
     if (typecheck.summary !== undefined) log(`${typecheck.summary}\n`);
     return failure("failed");
   }
+  const plan = planDeclarations({
+    packageRoot: request.packageRoot,
+    outDir: request.outDir,
+    emittedRoot,
+    directory: typecheck.declarationDirectory,
+    inputs: typecheck.inputs,
+    scratch: canonicalPath(generationRoot),
+  });
+  if (!plan.ok) return refusal(plan.summary);
+  const { declarations } = plan;
+  const roots = { candidateRoot, declarationsRoot };
 
   const loader = new DefinitionSourceLoader(
     new BuildGraphTypeScriptSourceImportAdapter({
@@ -274,19 +328,25 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
         candidate.summary ?? "the candidate bundle failed",
       );
     }
-    const subdirectory = typecheck.declarationSubdirectory;
-    if (subdirectory !== null) {
-      stageDeclarations({ emittedRoot, candidateRoot, subdirectory });
-    }
     relocateSourceMaps(
       candidateRoot,
       resolve(request.packageRoot, request.outDir),
     );
+    stageDeclarations(declarations, roots);
   };
 
-  const promote = async (): Promise<void> => {
-    if (!promoteOutput) return;
+  const promote = async (
+    report?: DefinitionCheckReport,
+  ): Promise<GenerationResult | undefined> => {
+    if (!promoteOutput) return undefined;
     assertOutputDirectory(request.packageRoot, request.outDir);
+    const moved = movedDeclaration(declarations);
+    if (moved !== undefined) {
+      return refusal(
+        `The declaration ${JSON.stringify(moved.target)} no longer resolves where the build planned it; nothing was promoted.`,
+        report,
+      );
+    }
     log("▶ Promoting the candidate\n");
     phases.push("promote");
     await request.steps.promote({
@@ -294,21 +354,51 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
       candidateRoot,
       outDir: request.outDir,
     });
+    // Replacing the output directory removes any symlink inside it that a
+    // configured declaration path went through.
+    const cut = movedDeclaration(declarations);
+    if (cut !== undefined) {
+      return refusal(
+        `Promoting the output changed where ${JSON.stringify(cut.configured)} resolves; the declarations outside the output directory were not written.`,
+        report,
+      );
+    }
+    try {
+      writeOutsideOutput(declarations, roots);
+    } catch (error) {
+      return refusal(
+        `The output was promoted, but the declarations outside it could not be written: ${error instanceof Error ? error.message : String(error)}`,
+        report,
+      );
+    }
+    const missing = unlandedDeclaration(declarations, roots);
+    if (missing !== undefined) {
+      return refusal(
+        `After promotion ${JSON.stringify(missing.configured)} does not hold the declaration the build wrote; a symlink in the output directory may have led it there.`,
+        report,
+      );
+    }
+    return undefined;
   };
 
   const buildWithoutEvidence = async (): Promise<GenerationResult> => {
     try {
       await assembleCandidate();
     } catch (error) {
-      log(
-        `✘ The candidate bundle failed.\n${error instanceof Error ? error.message : String(error)}\n`,
+      return refusal(
+        `The candidate bundle failed.\n${error instanceof Error ? error.message : String(error)}`,
       );
-      return failure("failed");
     } finally {
       await loader.dispose();
     }
-    await promote();
-    return { status: "ok", exitCode: 0, phases, report: undefined };
+    return (
+      (await promote()) ?? {
+        status: "ok",
+        exitCode: 0,
+        phases,
+        report: undefined,
+      }
+    );
   };
 
   if (
@@ -341,6 +431,14 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     return await buildWithoutEvidence();
   }
 
+  const published = publishedPaths(declarations);
+  // Taken while the package is as the check sees it: the guard after the
+  // check proves nothing changed since the build started.
+  const approvalRevision = packageRevisionOf(
+    request.packageRoot,
+    request.outDir,
+    published,
+  );
   const sources = [...typecheck.emittedModules.keys()]
     .map((source) => toPosixPath(relative(request.packageRoot, source)))
     .sort();
@@ -376,8 +474,7 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
     });
   } catch (error) {
     if (!(error instanceof CandidateBundleError)) throw error;
-    log(`✘ The candidate bundle failed.\n${error.message}\n`);
-    return failure("failed");
+    return refusal(`The candidate bundle failed.\n${error.message}`);
   } finally {
     await loader.dispose();
   }
@@ -392,31 +489,37 @@ async function generate(request: GenerationRequest): Promise<GenerationResult> {
       packageRevision ||
     filesDigest(request.packageRoot, sources) !== sourcesDigest
   ) {
-    log("✘ The package changed while it was being checked.\n");
-    return failure("failed", report);
+    return refusal("The package changed while it was being checked.", report);
   }
 
   const approval: ReleaseApproval = {
     kind: "powerhouse.release-approval",
-    formatVersion: 1,
-    packageRevision,
+    formatVersion: 2,
+    packageRevision: approvalRevision,
     sourceSetDigest: report.sourceSet.digest,
     sources,
     sourcesDigest,
     compilerVersion: getVersion(),
     outputDigest: directoryDigest(candidateRoot),
+    declarations: published,
+    declarationsDigest: filesDigest(declarationsRoot, published),
     warningsAsErrors: request.warningsAsErrors,
     report,
   };
 
-  await promote();
+  const refused = await promote(report);
+  if (refused !== undefined) return refused;
   if (promoteOutput) {
     if (
       directoryDigest(resolve(request.packageRoot, request.outDir)) !==
-      approval.outputDigest
+        approval.outputDigest ||
+      filesDigest(request.packageRoot, published) !==
+        approval.declarationsDigest
     ) {
-      log("✘ The published output differs from the verified candidate.\n");
-      return failure("failed", report);
+      return refusal(
+        "The published output differs from the verified candidate.",
+        report,
+      );
     }
     writeFileSync(approvalPath(request.packageRoot), JSON.stringify(approval));
   }
@@ -433,12 +536,16 @@ function isReleaseApproval(value: unknown): value is ReleaseApproval {
   const candidate = value as Partial<ReleaseApproval>;
   return (
     candidate.kind === "powerhouse.release-approval" &&
-    candidate.formatVersion === 1 &&
+    candidate.formatVersion === 2 &&
     typeof candidate.packageRevision === "string" &&
     Array.isArray(candidate.sources) &&
+    candidate.sources.every((path) => typeof path === "string") &&
     typeof candidate.sourcesDigest === "string" &&
     typeof candidate.compilerVersion === "string" &&
     typeof candidate.outputDigest === "string" &&
+    Array.isArray(candidate.declarations) &&
+    candidate.declarations.every((path) => typeof path === "string") &&
+    typeof candidate.declarationsDigest === "string" &&
     typeof candidate.warningsAsErrors === "boolean" &&
     candidate.report?.kind === "powerhouse.definition-check"
   );
@@ -460,6 +567,16 @@ export function readRetainedApproval(input: {
     parsed = JSON.parse(readFileSync(path, "utf-8"));
   } catch {
     return { ok: false, reason: "the retained release check is unreadable" };
+  }
+  if (
+    (parsed as Partial<ReleaseApproval> | null)?.kind ===
+      "powerhouse.release-approval" &&
+    (parsed as Partial<ReleaseApproval>).formatVersion !== 2
+  ) {
+    return {
+      ok: false,
+      reason: "the retained release check was made by another ph version",
+    };
   }
   if (!isReleaseApproval(parsed)) {
     return { ok: false, reason: "the retained release check is malformed" };
@@ -491,7 +608,11 @@ export function readRetainedApproval(input: {
   }
   if (
     approval.packageRevision !==
-    packageRevisionOf(request.packageRoot, request.outDir)
+    packageRevisionOf(
+      request.packageRoot,
+      request.outDir,
+      approval.declarations,
+    )
   ) {
     return { ok: false, reason: "the package changed since that check" };
   }
@@ -510,81 +631,14 @@ export function readRetainedApproval(input: {
       reason: "the published output changed since that check",
     };
   }
+  if (
+    approval.declarationsDigest !==
+    filesDigest(request.packageRoot, approval.declarations)
+  ) {
+    return {
+      ok: false,
+      reason: "the published declarations changed since that check",
+    };
+  }
   return { ok: true, approval };
-}
-
-export function stageDeclarations(options: {
-  readonly emittedRoot: string;
-  readonly candidateRoot: string;
-  readonly subdirectory: string;
-}): void {
-  const into = join(options.candidateRoot, options.subdirectory);
-  for (const file of readdirSync(options.emittedRoot, {
-    recursive: true,
-    encoding: "utf8",
-  })) {
-    if (!/\.d\.[cm]?ts(?:\.map)?$/.test(file)) continue;
-    const from = join(options.emittedRoot, file);
-    if (!statSync(from).isFile()) continue;
-    const to = join(into, file);
-    mkdirSync(dirname(to), { recursive: true });
-    if (file.endsWith(".map")) {
-      writeFileSync(
-        to,
-        relocateSourceMap(
-          readFileSync(from, "utf8"),
-          dirname(from),
-          dirname(to),
-        ),
-      );
-    } else {
-      cpSync(from, to);
-    }
-  }
-}
-
-function relocateSourceMaps(candidateRoot: string, outputRoot: string): void {
-  for (const file of readdirSync(candidateRoot, {
-    recursive: true,
-    encoding: "utf8",
-  })) {
-    if (!file.endsWith(".map")) continue;
-    const path = join(candidateRoot, file);
-    writeFileSync(
-      path,
-      relocateSourceMap(
-        readFileSync(path, "utf8"),
-        dirname(path),
-        dirname(join(outputRoot, file)),
-      ),
-    );
-  }
-}
-
-function relocateSourceMap(
-  text: string,
-  writtenIn: string,
-  servedFrom: string,
-): string {
-  const map = JSON.parse(text) as { sources?: unknown; sourceRoot?: unknown };
-  const sourceRoot = typeof map.sourceRoot === "string" ? map.sourceRoot : "";
-  const isUrl = (path: string): boolean =>
-    !isAbsolute(path) && /^[a-z][a-z\d+.-]*:/i.test(path);
-  if (!Array.isArray(map.sources) || isUrl(sourceRoot)) {
-    return text;
-  }
-  return JSON.stringify({
-    ...map,
-    sourceRoot: "",
-    sources: map.sources.map((source: unknown) =>
-      typeof source === "string" && !isUrl(source)
-        ? toPosixPath(
-            relative(
-              servedFrom,
-              canonicalPath(resolve(writtenIn, sourceRoot, source)),
-            ),
-          )
-        : source,
-    ),
-  });
 }

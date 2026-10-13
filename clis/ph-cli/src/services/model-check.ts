@@ -244,23 +244,26 @@ async function runReleaseCheck(
       (result.report === undefined && selection.status === "ready")
     ) {
       const phase = result?.phases.at(-1);
+      // A refusal with its own reason is not a compiler failure, even when
+      // it happens while TypeScript is the last phase.
+      const typecheckFailed =
+        phase === "typecheck" && result?.summary === undefined;
       diagnostics.push(
         createDiagnostic({
-          code:
-            phase === "typecheck"
-              ? "PH-PKG-TYPECHECK-FAILED"
-              : "PH-PKG-RELEASE-EVIDENCE-MISSING",
+          code: typecheckFailed
+            ? "PH-PKG-TYPECHECK-FAILED"
+            : "PH-PKG-RELEASE-EVIDENCE-MISSING",
           path: [phase ?? "release"],
           message:
             buildError instanceof Error
               ? buildError.message
-              : phase === "typecheck"
-                ? "The release TypeScript build failed."
-                : "The release generation did not complete for this package revision.",
-          repair:
-            phase === "typecheck"
-              ? "Fix the TypeScript errors and run the release check again."
-              : "Resolve the reported build failure and rerun the release check on an unchanged package.",
+              : (result?.summary ??
+                (typecheckFailed
+                  ? "The release TypeScript build failed."
+                  : "The release generation did not complete for this package revision.")),
+          repair: typecheckFailed
+            ? "Fix the TypeScript errors and run the release check again."
+            : "Resolve the reported build failure and rerun the release check on an unchanged package.",
         }),
       );
     }

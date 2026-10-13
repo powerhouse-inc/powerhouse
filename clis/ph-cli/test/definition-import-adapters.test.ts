@@ -176,6 +176,7 @@ describe("compiler output layouts", () => {
               module: "nodenext",
               target: "esnext",
               skipLibCheck: true,
+              declaration: true,
               declarationMap: true,
               ...options,
             },

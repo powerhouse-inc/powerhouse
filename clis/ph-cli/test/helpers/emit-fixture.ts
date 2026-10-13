@@ -2,12 +2,8 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTypecheckStep } from "../../src/services/definitions/build-steps.js";
 
-export async function emitFixture(
-  packageRoot: string,
-  emittedRoot: string,
-  outDir = "dist",
-) {
-  return await createTypecheckStep("npm")({ packageRoot, emittedRoot, outDir });
+export async function emitFixture(packageRoot: string, emittedRoot: string) {
+  return await createTypecheckStep("npm")({ packageRoot, emittedRoot });
 }
 
 export function writeFixtureTsconfig(packageRoot: string): void {

@@ -464,6 +464,42 @@ describe("the release profile through the command", () => {
     }
   }, 60_000);
 
+  it("reports why the release build refused the declaration layout", async () => {
+    const fixture = materializeFixturePackage("control");
+    writeFixtureTsconfig(fixture.root);
+    const tsconfig = join(fixture.root, "tsconfig.json");
+    const config = JSON.parse(readFileSync(tsconfig, "utf8")) as {
+      compilerOptions: Record<string, unknown>;
+    };
+    config.compilerOptions.declarationDir = "./.ph/build/types-out";
+    writeFileSync(tsconfig, JSON.stringify(config));
+    const io = recordStreams();
+    try {
+      const code = await runModelCheck(
+        checkArgs({
+          configFile: join(fixture.root, "powerhouse.config.json"),
+          release: true,
+          json: true,
+        }),
+        { steps: releaseSteps(), streams: io.streams },
+      );
+      expect(code).toBe(2);
+      expect(JSON.parse(io.stdout)).toMatchObject({
+        status: "failed",
+        diagnostics: [
+          expect.objectContaining({
+            code: "PH-PKG-RELEASE-EVIDENCE-MISSING",
+            message: `tsc would write the declaration ${JSON.stringify(join(fixture.root, ".ph", "build", "types-out", "src", "catalog.d.ts"))} inside .ph/build, which every build clears.`,
+            repair:
+              "Resolve the reported build failure and rerun the release check on an unchanged package.",
+          }),
+        ],
+      });
+    } finally {
+      fixture.dispose();
+    }
+  }, 60_000);
+
   it("reports a release setup failure as one JSON report", async () => {
     const fixture = materializeFixturePackage("control");
     writeFileSync(
