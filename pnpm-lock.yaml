@@ -3026,6 +3026,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/reactor-api':
+        specifier: workspace:*
+        version: link:../reactor-api
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser
@@ -3038,6 +3041,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
       react:
         specifier: 'catalog:'
         version: 19.2.6
