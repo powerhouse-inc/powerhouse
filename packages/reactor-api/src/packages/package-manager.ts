@@ -135,6 +135,7 @@ export class PackageManager implements IPackageManager {
   private processorMap = new Map<string, Processor>();
   private piecesMap = new Map<string, PackagePieceEntry[]>();
   private configWatcher: StatWatcher | undefined;
+  private unsubscribePackages: (() => void) | undefined;
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
@@ -180,8 +181,10 @@ export class PackageManager implements IPackageManager {
     this.updateProcessorsMap(processorsMap);
     this.updatePiecesMap(piecesMap);
 
+    this.unsubscribePackages?.();
+    this.unsubscribePackages = undefined;
     try {
-      this.subscribePackages(packages);
+      this.unsubscribePackages = this.subscribePackages(packages);
     } catch (error) {
       this.logger.error("Failed to subscribe to packages: @error", error);
     }
@@ -609,13 +612,15 @@ export class PackageManager implements IPackageManager {
   }
 
   private getAllPackageNames(): string[] {
-    const packageNames = this.options.packages ?? [];
+    const packageNames = new Set(this.options.packages);
     if (this.options.configFile) {
-      packageNames.push(
-        ...this.getPackageNamesFromConfigFile(this.options.configFile),
-      );
+      for (const name of this.getPackageNamesFromConfigFile(
+        this.options.configFile,
+      )) {
+        packageNames.add(name);
+      }
     }
-    return packageNames;
+    return Array.from(packageNames);
   }
 
   private getPackageNamesFromConfigFile(configFile: string) {
