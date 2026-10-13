@@ -189,6 +189,79 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
   });
 });
 
+describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () => {
+  it("a remote backend next to a local one activates routing: multiReactor + drives", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      {
+        name: "lab-connect",
+        runner: { module: "m" },
+        config: {
+          // the scaffold default that must NOT veto declared structure:
+          instance: { reactorWorker: false, multiReactor: false },
+          drives: {
+            defaultDrives: [
+              { url: "http://existing/d/kept", name: null, icon: null },
+            ],
+          },
+        },
+        reactor: {
+          backends: {
+            local: { kind: "worker" },
+            main: {
+              kind: "remote",
+              remote: { url: "http://localhost:7064/d/drive" },
+            },
+          },
+          placement: { primary: "local" },
+        },
+      },
+      ctx,
+    );
+    const override = vi.mocked(runConnectStudio).mock
+      .calls[0][2] as PHConnectRuntimeConfigLike;
+    expect(override.instance).toMatchObject({
+      multiReactor: true, // structure beats the scaffold-default false
+      reactorWorker: true, // primary backend kind
+    });
+    // remote url first — it becomes defaultDrivesUrl, what the router dials
+    expect(override.drives?.defaultDrives?.[0]).toMatchObject({
+      url: "http://localhost:7064/d/drive",
+    });
+    expect(override.drives?.defaultDrives?.[1]).toMatchObject({
+      url: "http://existing/d/kept",
+    });
+  });
+
+  it("a single local backend stays single-reactor (no multiReactor, drives untouched)", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      {
+        name: "lab-connect",
+        runner: { module: "m" },
+        config: { instance: { multiReactor: false } },
+        reactor: { backends: { local: { kind: "in-process" } } },
+      },
+      ctx,
+    );
+    const override = vi.mocked(runConnectStudio).mock
+      .calls[0][2] as PHConnectRuntimeConfigLike;
+    expect(override.instance?.multiReactor).toBe(false);
+    expect(override.drives).toBeUndefined();
+  });
+});
+
+interface PHConnectRuntimeConfigLike {
+  instance?: { multiReactor?: boolean; reactorWorker?: boolean };
+  drives?: { defaultDrives?: { url?: string }[] };
+}
+
 describe("connect bridge runner — reactor projection (P2.5)", () => {
   it("merges protocol → connect.reactor and workflows into the caller override", async () => {
     const runner = await import("../src/runners/connect.js");

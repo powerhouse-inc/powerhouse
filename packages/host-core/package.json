@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@powerhousedao/reactor-monitor": "workspace:*"
   }
 }
