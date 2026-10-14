@@ -1350,10 +1350,14 @@ export function defineDocumentModel<
   return context;
 }
 
-function familyPlans(
+/** The family's versions and the upgrade manifest, read once from `config`. */
+function familyDeclaration(
   collector: DefinitionDiagnosticCollector,
   config: unknown,
-): readonly CompiledDocumentModelVersion[] {
+): {
+  readonly plans: readonly CompiledDocumentModelVersion[];
+  readonly upgradeManifest: unknown;
+} {
   const declaration = take(
     collector,
     snapshotRecord(config, ["versions", "upgradeManifest"], []),
@@ -1362,7 +1366,7 @@ function familyPlans(
   );
   if (declaration === undefined) {
     collector.throwIfFailed();
-    return [];
+    return { plans: [], upgradeManifest: undefined };
   }
   const versions =
     take(
@@ -1402,7 +1406,7 @@ function familyPlans(
     return [plan];
   });
   collector.throwIfFailed();
-  return plans;
+  return { plans, upgradeManifest: declaration.upgradeManifest };
 }
 
 const MANIFEST_KEYS = [
@@ -1617,10 +1621,13 @@ export function defineDocumentModelFamily<
   readonly upgradeManifest: UpgradeManifest<readonly number[]>;
 }): DocumentModelFamily<TVersions> {
   const collector = new DefinitionDiagnosticCollector();
-  const plans = familyPlans(collector, config);
+  const declaration = familyDeclaration(collector, config);
+  const { plans } = declaration;
+  // The snapshot of config.upgradeManifest, so the value checked is the value
+  // published.
+  const upgradeManifest =
+    declaration.upgradeManifest as (typeof config)["upgradeManifest"];
   checkFamilyVersions(collector, plans);
-  // Read once, so the manifest published is the one that was checked.
-  const { upgradeManifest } = config;
   checkUpgradeManifest(collector, upgradeManifest, plans);
   collector.throwIfFailed();
   const first = plans.at(0);
