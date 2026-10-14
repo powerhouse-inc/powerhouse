@@ -23,6 +23,7 @@ const codes = Object.keys(DEFINITION_DIAGNOSTIC_CODES);
 
 const reportOnlyCodes: readonly DefinitionDiagnosticCode[] = [
   "PH-CONFIG-SOURCE-UNSELECTED",
+  "PH-SG-GENERATED-TYPE-TAKEN",
   "PH-SG-NAME-TAKEN",
   "PH-GQL-COORDINATE-OWNED",
   "PH-GQL-SHARED-DEFINITION-MISMATCH",
@@ -37,7 +38,7 @@ const reportOnlyCodes: readonly DefinitionDiagnosticCode[] = [
 describe("DEFINITION_DIAGNOSTIC_CODES", () => {
   it("is frozen and every code carries the PH- prefix", () => {
     expect(Object.isFrozen(DEFINITION_DIAGNOSTIC_CODES)).toBe(true);
-    expect(codes.length).toBe(54);
+    expect(codes.length).toBe(55);
     for (const code of codes) {
       expect(code).toMatch(/^PH-[A-Z0-9-]+$/);
     }
@@ -97,6 +98,7 @@ describe("DEFINITION_DIAGNOSTIC_CODES", () => {
         "PH-SG-SCHEMA-INVALID": "composition",
         "PH-SG-ENTRY-INVALID": "definition",
         "PH-SG-COMPUTED-FIELD-INVALID": "definition",
+        "PH-SG-GENERATED-TYPE-TAKEN": "composition",
         "PH-SG-NAME-TAKEN": "composition",
         "PH-GQL-COORDINATE-OWNED": "composition",
         "PH-GQL-SHARED-DEFINITION-MISMATCH": "composition",

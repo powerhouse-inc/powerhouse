@@ -202,6 +202,12 @@ const catalog = {
     meaning:
       "A computed field is malformed, unbound, bound twice, or bound where it does not exist",
   },
+  "PH-SG-GENERATED-TYPE-TAKEN": {
+    severity: "warning",
+    phase: "composition",
+    meaning:
+      "The subgraph defines a type the document-model schema generates, so the server refuses it",
+  },
   "PH-SG-NAME-TAKEN": {
     severity: "warning",
     phase: "composition",

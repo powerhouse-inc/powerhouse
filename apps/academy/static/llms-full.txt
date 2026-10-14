@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-14T16:56:18.823Z
+> Generated: 2026-10-14T17:43:31.602Z
 > Total Documents: 124
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -8416,6 +8416,7 @@ Builds the host GraphQL schema from all registered models and subgraphs.
 | `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | Another subgraph owns a type that this subgraph defines differently, so the server leaves this subgraph out of the supergraph. Field order and descriptions do not count as differences. |
 | `PH-SCALAR-RESOLVER-SHADOWED` | warning | A resolver that you wrote uses the name of a catalog scalar. |
 | `PH-SCALAR-UNREGISTERED` | warning | The SDL uses a scalar that the catalog has no entry for. |
+| `PH-SG-GENERATED-TYPE-TAKEN` | warning | The subgraph defines a type that the document-model schema generates, such as `Operation` or a model's document type, so the server refuses this subgraph. |
 | `PH-SG-NAME-TAKEN` | warning | A core or document-model subgraph already uses this subgraph's name, so the server refuses this subgraph. |
 | `PH-SG-SCHEMA-INVALID` | error | The subgraph schema, with the types that the host adds, does not build or is not valid. |
 

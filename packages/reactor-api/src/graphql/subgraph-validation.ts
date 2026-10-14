@@ -11,7 +11,10 @@ import type {
 import { type DocumentNode, Kind } from "graphql";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import { getUniqueDocumentModels } from "../packages/package-manager.js";
-import { createSchema } from "../utils/create-schema.js";
+import {
+  createSchema,
+  SubgraphTypeCollisionError,
+} from "../utils/create-schema.js";
 import type { DefinedSubgraph } from "./define-subgraph.js";
 import { isRootFieldClaim } from "./subgraph-type-ownership.js";
 import {
@@ -65,6 +68,13 @@ export function validateSubgraphsForHost(
     try {
       createSchema(documentModels, scalarResolversOf(entry.value), typeDefs);
     } catch (error) {
+      // The server refuses such a subgraph, and schema-first only warns.
+      if (error instanceof SubgraphTypeCollisionError) {
+        diagnostics.push(
+          generatedTypeTaken(definition.name, entry.source, error.typeNames),
+        );
+        continue;
+      }
       diagnostics.push(
         createDiagnostic({
           code: "PH-SG-SCHEMA-INVALID",
@@ -114,18 +124,13 @@ function conflictDiagnostics(
         }),
       ];
     case "generated":
-      // createSchema reports these first, so a subgraph that redefines a
-      // generated type never reaches this check.
-      return conflict.claims.map(({ claim, owner }) =>
-        createDiagnostic({
-          code: "PH-SG-SCHEMA-INVALID",
+      return [
+        generatedTypeTaken(
+          name,
           source,
-          path: ["composition", name, claim],
-          message: `${claim} belongs to "${owner}", so the server refuses subgraph "${name}".`,
-          received: name,
-          repair: `Rename ${claim} in this subgraph.`,
-        }),
-      );
+          conflict.claims.map(({ claim }) => claim),
+        ),
+      ];
     case "claims":
       return conflict.claims.map((lost) => {
         const rootField = isRootFieldClaim(lost.claim);
@@ -155,6 +160,21 @@ function conflictDiagnostics(
         });
       });
   }
+}
+
+function generatedTypeTaken(
+  name: string,
+  source: DefinitionSource,
+  typeNames: readonly string[],
+): DefinitionDiagnostic {
+  return createDiagnostic({
+    code: "PH-SG-GENERATED-TYPE-TAKEN",
+    source,
+    path: ["composition", name],
+    message: `Subgraph "${name}" defines ${typeNames.join(", ")}, which the document-model schema generates, so the server refuses it.`,
+    received: name,
+    repair: "Rename those types in this subgraph.",
+  });
 }
 
 /** `"a" and "b"`, or `"a", "b" and "c"`. */
