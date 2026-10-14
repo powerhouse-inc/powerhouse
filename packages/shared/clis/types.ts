@@ -288,7 +288,19 @@ export type PHConnectPwa = {
   navigateFallbackDenylist?: PHConnectPwaUrlPattern[];
 };
 
+/** One entry of the host.js composition, projected into the served config as
+ * DATA (module specifier + validated config) — the browser pipeline resolves
+ * and runs them (rewire R3). Verb filtering happens at the runner. */
+export type PHConnectCompositionEntry = {
+  module: string;
+  config?: Record<string, unknown>;
+};
+
 export type PHConnectRuntimeConfig = {
+  /** The plugin composition this Connect boots with (rewire R3): present
+   * only when the host file declares runner.plugins — absent means the
+   * classic defaults. */
+  composition?: PHConnectCompositionEntry[];
   branding?: PHConnectBranding;
   app?: PHConnectApp;
   ai?: PHConnectAi;
