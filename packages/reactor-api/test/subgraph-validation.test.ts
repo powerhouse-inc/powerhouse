@@ -402,6 +402,37 @@ describe("the conflicts the server enforces", () => {
     ).toEqual([]);
   });
 
+  it("warns, as schema-first does, that the server refuses a subgraph that redefines a generated type", () => {
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [],
+      subgraphs: [
+        entry(
+          compat(
+            "ledger",
+            "type Query { lastOperation: Operation } type Operation { id: ID }",
+          ),
+        ),
+      ],
+    });
+    expect(
+      result.diagnostics.map(({ code, severity, path, message }) => ({
+        code,
+        severity,
+        path,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-SG-GENERATED-TYPE-TAKEN",
+        severity: "warning",
+        path: ["composition", "ledger"],
+        message:
+          'Subgraph "ledger" defines Operation, which the document-model schema generates, so the server refuses it.',
+      },
+    ]);
+  });
+
   it("says nothing about a single subgraph", () => {
     expect(findings([widgets()])).toEqual([]);
   });
