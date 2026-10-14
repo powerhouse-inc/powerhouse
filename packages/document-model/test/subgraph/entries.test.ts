@@ -889,7 +889,7 @@ describe("a compiled declaration", () => {
           build.query(key, {
             fieldName,
             returns: ph.Int(),
-            resolve: () => "second",
+            resolve: () => 2,
           }),
         ],
       });
@@ -933,7 +933,7 @@ describe("a compiled declaration", () => {
       entries: (build) => [
         build.query("counted", {
           returns: ph.ref(Counted),
-          resolve: () => ({}),
+          resolve: () => ({ id: "c1" }),
         }),
         build.field(size, { resolve: () => 1 }),
         build.field(size, { resolve: () => 2 }),
