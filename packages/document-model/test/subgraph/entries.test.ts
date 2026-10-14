@@ -1,4 +1,10 @@
-import { buildASTSchema, defaultFieldResolver, execute, parse } from "graphql";
+import {
+  buildASTSchema,
+  defaultFieldResolver,
+  type DocumentNode,
+  execute,
+  parse,
+} from "graphql";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
@@ -435,6 +441,36 @@ describe("a compiled declaration", () => {
       definition.schemaKind === "typed" && definition.definitionOrder,
     ).toEqual(["Query", "Author", "OID"]);
     expect(diagnostics).toEqual([]);
+  });
+
+  it("keeps a complete definition order when an unrelated diagnostic is reported", () => {
+    const compiled = compileSubgraph({
+      name: "authors",
+      schemaKind: "typed",
+      definitionOrder: ["Query", "Author", "OID"],
+      entries: (build) => [
+        build.query("author", {
+          returns: ph.ref(Author),
+          resolve: () => null,
+        }),
+        build.field((Post.computedTokens as Record<string, never>).wordCount, {
+          resolve: () => 12,
+        }),
+      ],
+    });
+
+    expect(compiled.diagnostics.map(({ message }) => message)).toEqual([
+      "Computed field Post.wordCount is bound, but no reachable type declares it.",
+    ]);
+    expect(
+      compiled.definition.schemaKind === "typed" &&
+        compiled.definition.definitionOrder,
+    ).toEqual(["Query", "Author", "OID"]);
+    expect(
+      (compiled.typeDefs as DocumentNode).definitions.map((definition) =>
+        "name" in definition ? definition.name?.value : undefined,
+      ),
+    ).toEqual(["Query", "Author", "OID"]);
   });
 
   it("refuses a definition order that names something other than a string", () => {
