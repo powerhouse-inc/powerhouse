@@ -282,7 +282,7 @@ describe("a declared subgraph", () => {
     instance.resolvers as Resolvers;
 
   it("keeps its name and resolvers when the author changes the config and clears the returned array", () => {
-    const seen: unknown[] = [];
+    const seen: { subgraph: unknown; request: unknown; info: unknown }[] = [];
     const returned: TypedSubgraphEntry[] = [];
     const config: Mutable<DefineSubgraphConfig> = {
       name: "widgets",
@@ -291,8 +291,8 @@ describe("a declared subgraph", () => {
         returned.push(
           build.query("widget", {
             returns: ph.ref(Widget),
-            resolve: ({ subgraph }) => {
-              seen.push(subgraph);
+            resolve: ({ subgraph, request, info }) => {
+              seen.push({ subgraph, request, info });
               return { id: "w1", label: "One" };
             },
           }),
@@ -302,18 +302,28 @@ describe("a declared subgraph", () => {
     };
     const Subgraph = defineSubgraph(config);
     const first = new Subgraph(args());
-    resolversOf(first).Query.widget(undefined, {}, {}, {});
+    const firstRequest = { request: 1 };
+    const firstInfo = { info: 1 };
+    resolversOf(first).Query.widget(undefined, {}, firstRequest, firstInfo);
 
     returned.length = 0;
     config.name = "renamed";
     const second = new Subgraph(args());
-    resolversOf(second).Query.widget(undefined, {}, {}, {});
+    const secondRequest = { request: 2 };
+    const secondInfo = { info: 2 };
+    resolversOf(second).Query.widget(undefined, {}, secondRequest, secondInfo);
 
     expect(second.name).toBe("widgets");
     expect(Subgraph.definition.name).toBe("widgets");
     expect(Object.keys(resolversOf(second).Query)).toEqual(["widget"]);
     expect(print(second.typeDefs)).toContain("widget: Widget");
-    expect(seen).toEqual([first, second]);
+    expect(seen).toHaveLength(2);
+    expect(seen[0].subgraph).toBe(first);
+    expect(seen[0].request).toBe(firstRequest);
+    expect(seen[0].info).toBe(firstInfo);
+    expect(seen[1].subgraph).toBe(second);
+    expect(seen[1].request).toBe(secondRequest);
+    expect(seen[1].info).toBe(secondInfo);
   });
 
   it("serves the declared entry after the author swaps the array element", () => {
@@ -379,11 +389,13 @@ describe("a declared subgraph", () => {
     const config: Mutable<DefineSubgraphConfig> = {
       name: "widgets",
       schemaKind: "typed",
-      onSetup: () => {
-        calls.push("declared setup");
+      onSetup() {
+        calls.push(this === config ? "declared setup" : "detached setup");
       },
-      onDisconnect: () => {
-        calls.push("declared disconnect");
+      onDisconnect() {
+        calls.push(
+          this === config ? "declared disconnect" : "detached disconnect",
+        );
       },
       entries: (build) => [
         build.query("widget", { returns: ph.String(), resolve: () => null }),
@@ -416,7 +428,13 @@ describe("a declared subgraph", () => {
       resolverCoordinates: [
         { typeName: "Query", fieldName: "ping", resolverKind: "field" },
       ],
-      getResolvers: () => ({ Query: { ping: () => "declared" } }),
+      getResolvers() {
+        return {
+          Query: {
+            ping: () => (this === compatibility ? "declared" : "detached"),
+          },
+        };
+      },
       hasSubscriptions: undefined,
       preserveDefinitionOrder: true,
     };

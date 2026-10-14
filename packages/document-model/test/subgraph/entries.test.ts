@@ -317,6 +317,53 @@ describe("a compiled declaration", () => {
     });
   });
 
+  it("keeps the declared definition order after the author changes the array", () => {
+    const order = ["Query", "Author", "OID"];
+    const { definition } = compileSubgraph({
+      name: "authors",
+      schemaKind: "typed",
+      definitionOrder: order,
+      entries: (build) => [
+        build.query("author", {
+          returns: ph.ref(Author),
+          resolve: () => null,
+        }),
+      ],
+    });
+
+    order.reverse();
+    order.push("Injected");
+
+    expect(
+      definition.schemaKind === "typed" && definition.definitionOrder,
+    ).toEqual(["Query", "Author", "OID"]);
+  });
+
+  it("binds a computed field where it was declared after the author changes the token", () => {
+    const token = {
+      ...(Post.computedTokens as Record<string, object>).wordCount,
+    };
+    const compiled = compileSubgraph({
+      name: "posts",
+      schemaKind: "typed",
+      entries: (build) => [
+        build.query("post", { returns: ph.ref(Post), resolve: () => null }),
+        build.field(token as never, { resolve: () => 12 }),
+        build.field((Post.computedTokens as Record<string, never>).author, {
+          resolve: () => null,
+        }),
+      ],
+    });
+
+    Object.assign(token, { fieldName: "title" });
+    const resolvers = compiled.resolversFor({}) as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    expect(Object.keys(resolvers.Post)).toEqual(["wordCount", "author"]);
+  });
+
   it("refuses an entries callback that returns something other than an array", () => {
     expect(() =>
       compileSubgraph({
