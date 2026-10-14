@@ -919,6 +919,38 @@ describe("a compiled declaration", () => {
     }
   });
 
+  it("serves the first binding of a computed field bound twice", () => {
+    const Counted = ph.object("Counted", {
+      fields: {
+        id: ph.OID({ required: true }),
+        size: ph.field({ returns: ph.Int({ required: true }) }),
+      },
+    });
+    const size = (Counted.computedTokens as Record<string, never>).size;
+    const compiled = compileSubgraph({
+      name: "counted",
+      schemaKind: "typed",
+      entries: (build) => [
+        build.query("counted", {
+          returns: ph.ref(Counted),
+          resolve: () => ({}),
+        }),
+        build.field(size, { resolve: () => 1 }),
+        build.field(size, { resolve: () => 2 }),
+      ],
+    });
+    const resolvers = compiled.resolversFor({}) as Record<
+      string,
+      Record<string, (...args: unknown[]) => unknown>
+    >;
+    expect(
+      compiled.diagnostics.map(({ path, message }) => [path, message]),
+    ).toEqual([
+      [["entries", 2], "Computed field Counted.size is bound twice."],
+    ]);
+    expect(resolvers.Counted.size({}, {}, {}, {})).toBe(1);
+  });
+
   it("refuses a declaration that is not an object", () => {
     expect(refused(() => compileSubgraph(null as never))).toEqual({
       code: "PH-SG-DEFINITION-INVALID",
