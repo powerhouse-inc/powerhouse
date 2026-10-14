@@ -106,6 +106,16 @@ export function compileSubgraph<
     TResolverMap
   >,
 ): CompiledSubgraph<TSubgraph> {
+  if (typeof config !== "object" || config === null) {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: [],
+      message: "A subgraph declaration is an object.",
+      received: config === null ? "null" : typeof config,
+      repair:
+        "Pass an object with name, schemaKind, and entries or compatibility.",
+    });
+  }
   // Read before the entries callback runs, which may reassign them.
   const name = subgraphName(config.name);
   const onSetup = hookOrFail(config.onSetup, "onSetup");
@@ -170,11 +180,21 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
     TInfo,
     TAbstractType
   >();
-  const { definitionOrder: authoredOrder } = config;
+  const { definitionOrder: authoredOrder, entries } = config;
+  if (typeof entries !== "function") {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["entries"],
+      message: "A typed subgraph declares its entries in an entries callback.",
+      received: typeof entries,
+      repair:
+        "Pass entries: (build) => [...], returning the entries the builders produce.",
+    });
+  }
   const definitionOrder =
     authoredOrder === undefined ? undefined : definitionNames(authoredOrder);
   const returned = snapshotDescriptorArray(
-    config.entries(builders),
+    entries.call(config, builders),
     ["entries"],
     "PH-SG-ENTRY-INVALID",
     "Return an array of the entries the builders produced.",
@@ -327,6 +347,17 @@ function bindingOf(
   }
 }
 
+type DeclaredCompatibility = GraphQLAstCompatibility<unknown, unknown, unknown>;
+
+function isDocumentNode(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { readonly kind?: unknown }).kind === "Document" &&
+    Array.isArray((value as { readonly definitions?: unknown }).definitions)
+  );
+}
+
 function compileCompat<TSubgraph, TDocument, TResolverMap>(
   config: CompatSubgraphConfig<TSubgraph, TDocument, TResolverMap>,
   name: string,
@@ -343,8 +374,56 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
         'Pass compatibility: { kind: "graphql-ast-v1", typeDefs, resolverCoordinates, getResolvers, hasSubscriptions, preserveDefinitionOrder: true }.',
     });
   }
-  const declared: Partial<Record<string, unknown>> = { ...compatibility };
-  const { getResolvers } = declared;
+  // Property access, not a spread, so a class instance's prototype members
+  // count. Each member is read once and only these values are used after.
+  const {
+    kind,
+    typeDefs,
+    resolverCoordinates,
+    getResolvers,
+    hasSubscriptions,
+    preserveDefinitionOrder,
+  } = compatibility as Partial<Record<string, unknown>>;
+  if (kind !== "graphql-ast-v1") {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "kind"],
+      message: 'The compatibility declaration\'s kind is "graphql-ast-v1".',
+      received: typeof kind === "string" ? kind : typeof kind,
+      repair: 'Set kind: "graphql-ast-v1".',
+    });
+  }
+  if (!isDocumentNode(typeDefs)) {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "typeDefs"],
+      message:
+        "The compatibility declaration's typeDefs is not a GraphQL document node.",
+      received: typeDefs === null ? "null" : typeof typeDefs,
+      repair:
+        "Pass the document that gql or graphql's parse returns, not the SDL string.",
+    });
+  }
+  const coordinateRepair =
+    "List each resolver coordinate as { typeName, fieldName, resolverKind }.";
+  const coordinates = snapshotDescriptorArray(
+    resolverCoordinates,
+    ["compatibility", "resolverCoordinates"],
+    "PH-SG-ENTRY-INVALID",
+    coordinateRepair,
+  );
+  coordinates.forEach((coordinate, index) => {
+    if (typeof coordinate !== "object" || coordinate === null) {
+      failDefinition({
+        code: "PH-SG-ENTRY-INVALID",
+        path: ["compatibility", "resolverCoordinates", index],
+        message:
+          "A resolver coordinate is an object with typeName, fieldName, and resolverKind.",
+        received: coordinate === null ? "null" : typeof coordinate,
+        repair: coordinateRepair,
+      });
+    }
+  });
   if (typeof getResolvers !== "function") {
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
@@ -358,9 +437,35 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
         "Pass getResolvers: a function that returns the resolver map for the subgraph instance.",
     });
   }
-  const normalized = normalizeCompatibility(
-    declared as GraphQLAstCompatibility<unknown, unknown, unknown>,
-  );
+  if (hasSubscriptions !== undefined && typeof hasSubscriptions !== "boolean") {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "hasSubscriptions"],
+      message: "hasSubscriptions is true, false, or undefined.",
+      received: typeof hasSubscriptions,
+      repair:
+        "Pass the value the subgraph's hasSubscriptions had, or undefined if it had none.",
+    });
+  }
+  if (preserveDefinitionOrder !== true) {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "preserveDefinitionOrder"],
+      message:
+        "A compatibility subgraph serves its document in source order, so preserveDefinitionOrder is true.",
+      received: String(preserveDefinitionOrder),
+      repair: "Set preserveDefinitionOrder: true.",
+    });
+  }
+  const normalized = normalizeCompatibility({
+    kind,
+    typeDefs,
+    resolverCoordinates:
+      coordinates as DeclaredCompatibility["resolverCoordinates"],
+    getResolvers: getResolvers as DeclaredCompatibility["getResolvers"],
+    hasSubscriptions,
+    preserveDefinitionOrder,
+  });
   const typeKinds = typeKindsOfDocument(normalized.document);
 
   const definition: SubgraphDefinition = Object.freeze({
