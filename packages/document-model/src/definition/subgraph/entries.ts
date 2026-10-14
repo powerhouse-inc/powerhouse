@@ -385,7 +385,11 @@ export function createEntryBuilders<
       }
       return register({
         kind: "computed-field",
-        token,
+        token: Object.freeze({
+          kind: "computed-token" as const,
+          typeName: token.typeName,
+          fieldName: token.fieldName,
+        }),
         resolve: options.resolve as (call: never) => unknown,
       });
     },

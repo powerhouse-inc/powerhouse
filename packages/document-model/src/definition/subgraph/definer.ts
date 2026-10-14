@@ -61,8 +61,7 @@ export type SubgraphConfig<
 /**
  * Compiled once per class. Compiling per instance would re-walk the
  * declaration on every construction and could let two instances of one class
- * serve different schemas. Nothing here reads the author's inputs again, so
- * changing them after declaration changes no instance.
+ * serve different schemas.
  */
 export type CompiledSubgraph<TSubgraph> = {
   readonly definition: SubgraphDefinition;
@@ -111,20 +110,26 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
     TInfo,
     TAbstractType
   >();
-  // A copy, because the author still owns the array the callback returned.
   const returned = snapshotDescriptorArray(
     config.entries(builders),
     ["entries"],
     "PH-SG-ENTRY-INVALID",
     "Return an array of the entries the builders produced.",
   );
+  const definitionOrder =
+    config.definitionOrder === undefined
+      ? undefined
+      : (snapshotDescriptorArray(
+          config.definitionOrder,
+          ["definitionOrder"],
+          "PH-SG-ENTRY-INVALID",
+          "List every emitted definition once, as an array of names.",
+        ) as readonly string[]);
   const schema = compileSubgraphSchema({
     name: config.name,
     entries: returned,
     exposed,
-    ...(config.definitionOrder !== undefined && {
-      definitionOrder: config.definitionOrder,
-    }),
+    ...(definitionOrder !== undefined && { definitionOrder }),
   });
 
   const definition: SubgraphDefinition = Object.freeze({

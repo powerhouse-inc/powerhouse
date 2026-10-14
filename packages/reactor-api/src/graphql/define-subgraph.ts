@@ -54,9 +54,9 @@ export function defineSubgraph<TRequest extends Context = Context>(
 ): DefinedSubgraph {
   // Compiled once per declaration and frozen. Two instances of one class must
   // serve one schema, so the walk cannot run per construction.
+  const { onSetup, onDisconnect } = config;
   const compiled = compileSubgraph(config);
   const { name } = compiled.definition;
-  const { onSetup, onDisconnect } = config;
   const typeDefs = compiled.typeDefs as DocumentNode;
   const scalarResolvers = packageScalarResolvers(
     compiled.packageScalars.map((binding) => ({
