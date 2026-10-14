@@ -10,6 +10,7 @@ import {
   type RunnerContext,
 } from "@powerhousedao/host-core";
 import {
+  pluginEntrySchema,
   resolveDriveDeclaration,
   resolveHostPlugins,
   seedDrives,
@@ -38,7 +39,10 @@ export const hostSchema = z.looseObject({
     module: z.string(),
     port: z.number().int().positive().optional(),
     https: z.boolean().optional(),
-    plugins: z.string().optional(),
+    // THE COMPOSITION (rewire R2): plugin entries, presence is activation.
+    // (The classic packages-CSV meaning of this field is retired — packages
+    // load via reactor.backends.*.packages / the package manager.)
+    plugins: z.array(pluginEntrySchema).optional(),
   }),
   config: z.looseObject({}).optional(),
   profile: profileSchema,
@@ -49,13 +53,16 @@ function toSwitchboardArgs(
   host: HostDefinition,
   devMode: boolean,
   dbPath: string | undefined,
+  composed: boolean,
 ): SwitchboardArgs {
   const runner = host.runner;
   const args: Partial<SwitchboardArgs> = {
     port:
       typeof runner.port === "number" ? runner.port : DEFAULT_SWITCHBOARD_PORT,
     vetraDriveId: DEFAULT_VETRA_DRIVE_ID,
-    mcp: true,
+    // A declared composition owns the carved switches; the plugins set them.
+    // Classic path keeps the bridge defaults.
+    mcp: composed ? undefined : true,
     useVetraDrive: false,
     remoteDrives: [],
     dev: devMode || runner.dev === true,
@@ -140,7 +147,14 @@ async function start(
     `hosts/${host.name}/host.js`,
   );
   const { startSwitchboard } = await import("../services/switchboard.js");
-  const args = toSwitchboardArgs(host, devMode, options.dbPath);
+  const entriesDeclared =
+    (host.runner as { plugins?: unknown }).plugins !== undefined;
+  const args = toSwitchboardArgs(
+    host,
+    devMode,
+    options.dbPath,
+    entriesDeclared,
+  );
 
   // R2 step 2: a declared composition activates the plugin pipeline — the
   // runner resolves the entries against the PROJECT dependency tree and the
