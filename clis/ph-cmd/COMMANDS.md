@@ -1,4 +1,4 @@
-# PH-CMD CLI Commands (6.2.3-dev.55)<br>
+# PH-CMD CLI Commands (6.2.3-dev.56)<br>
 This document provides detailed information about the available commands in the PH-CMD CLI. The CLI is published as `ph-cmd` and is invoked with the `ph` command.<br><br>
 The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects.
 The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
@@ -72,6 +72,10 @@ Use the `staging` release tag.<br><br>
 #### Rc <br>
 Use the `rc` release tag.<br><br>
 **usage:** `--rc`<br>
+
+#### Uniform Runners <br>
+Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED.<br><br>
+**usage:** `--uniform-runners`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -214,6 +218,10 @@ Use the `staging` release tag.<br><br>
 #### Rc <br>
 Use the `rc` release tag.<br><br>
 **usage:** `--rc`<br>
+
+#### Uniform Runners <br>
+Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED.<br><br>
+**usage:** `--uniform-runners`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
