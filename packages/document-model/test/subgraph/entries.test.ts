@@ -282,6 +282,31 @@ describe("the entry builders", () => {
     });
   });
 
+  it("registers the type name resolveType and isTypeOf checked", () => {
+    const { builders: build } = builders();
+    const changing = () => {
+      let reads = 0;
+      return {
+        get name() {
+          reads += 1;
+          return reads === 1 ? "Post" : 7;
+        },
+      };
+    };
+    const resolveType = readEntry(
+      build.resolveType(changing() as never, () => "Post"),
+      ["entries", 0],
+    );
+    const isTypeOf = readEntry(
+      build.isTypeOf(changing() as never, () => true),
+      ["entries", 1],
+    );
+    if (resolveType.kind !== "resolve-type" || isTypeOf.kind !== "is-type-of") {
+      throw new Error("unreachable");
+    }
+    expect([resolveType.typeName, isTypeOf.typeName]).toEqual(["Post", "Post"]);
+  });
+
   it("requires a computed-field token to name its type and field", () => {
     const { builders: build } = builders();
     expect(
