@@ -32,8 +32,8 @@ export type SubgraphSchemaData = {
   readonly diagnostics: readonly DefinitionDiagnostic[];
   /**
    * The input entries as the builders registered them, in input order, less
-   * a root field declared twice, so each resolver is the one whose
-   * declaration the document carries.
+   * a root field declared twice or a computed field bound twice, so each
+   * resolver is the one whose declaration the document carries.
    */
   readonly registered: readonly RegisteredEntry[];
 };
@@ -136,6 +136,7 @@ export function compileSubgraphSchema(
             received: key,
             repair: "Bind each computed field once.",
           });
+          duplicates.add(index);
           return;
         }
         boundComputed.add(key);
