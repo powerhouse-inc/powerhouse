@@ -133,6 +133,35 @@ describe("defineDocumentModelFamily", () => {
     expect(() => TaskFamily.at(3 as never)).toThrow(/test\/task/);
   });
 
+  it("publishes the manifest it checked, reading the declaration once", () => {
+    const unchecked = {
+      ...taskUpgradeManifest,
+      latestVersion: 9,
+      supportedVersions: [1, 2, 9],
+    };
+    let reads = 0;
+    const config = new Proxy(
+      {
+        versions: [TaskV1Definition, TaskV2Definition],
+        upgradeManifest: taskUpgradeManifest,
+      },
+      {
+        get(target, key, receiver) {
+          if (key !== "upgradeManifest") {
+            return Reflect.get(target, key, receiver) as unknown;
+          }
+          reads += 1;
+          return reads === 1 ? taskUpgradeManifest : unchecked;
+        },
+      },
+    );
+
+    const family = defineDocumentModelFamily(config);
+
+    expect(family.upgradeManifest).toBe(taskUpgradeManifest);
+    expect(family.upgradeManifest.supportedVersions).toStrictEqual([1, 2]);
+  });
+
   it("publishes the manifest it was given, in the generated shape", () => {
     // The authored object itself, not a copy: a host registers what the
     // author wrote in `upgrades/upgrade-manifest.ts`.
