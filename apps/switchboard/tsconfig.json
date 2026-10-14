@@ -13,6 +13,9 @@
       "path": "../../packages/document-model"
     },
     {
+      "path": "../../packages/host-core"
+    },
+    {
       "path": "../../packages/opentelemetry-instrumentation-reactor"
     },
     {
