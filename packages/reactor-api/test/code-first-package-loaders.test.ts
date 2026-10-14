@@ -143,7 +143,7 @@ describe("HTTP / CDN", () => {
 describe("Vite / local source", () => {
   it("reads model subpath exports and keeps only a non-null documentModel", async () => {
     const loader = VitePackageLoader.build(vite);
-    const loaded = await loader.loadDocumentModels(fixture.root, true);
+    const loaded = await loader.loadDocumentModels(fixture.root);
     expect(
       observedModels(models(loaded)).map((entry) => [entry.id, entry.version]),
     ).toEqual([
@@ -153,7 +153,6 @@ describe("Vite / local source", () => {
     expect(loaded).toHaveLength(2);
     const schemaFirst = await loader.loadDocumentModels(
       fixture.schemaFirstRoot,
-      true,
     );
     expect(observedModels(models(loaded))).toEqual(
       observedModels(models(schemaFirst)),
