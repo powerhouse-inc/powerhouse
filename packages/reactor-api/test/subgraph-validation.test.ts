@@ -2,7 +2,12 @@ import type {
   DefinitionSource,
   DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import { defineDocumentModel, defineScalar, ph } from "document-model";
+import {
+  defineDocumentModel,
+  defineDocumentModelFamily,
+  defineScalar,
+  ph,
+} from "document-model";
 import {
   checkDefinitions,
   type DefinitionSourceLoader,
@@ -204,29 +209,163 @@ describe("validating against the augmented schema", () => {
   });
 });
 
-describe("composition findings", () => {
-  it("reports a coordinate two subgraphs own, as a warning", () => {
-    const result = validateSubgraphsForHost({
+describe("the conflicts the server enforces", () => {
+  type Finding = { code: string; severity: string; path: readonly unknown[] };
+  const findings = (
+    subgraphs: readonly SubgraphClass[],
+    documentModels: readonly DocumentModelModule[] = [],
+  ): Finding[] =>
+    validateSubgraphsForHost({
       profile: "release",
-      documentModels: [],
-      subgraphs: [entry(widgets("alpha")), entry(widgets("beta"))],
+      documentModels,
+      subgraphs: subgraphs.map((subgraph) => entry(subgraph)),
+    }).diagnostics.map(({ code, severity, path }) => ({
+      code,
+      severity,
+      path,
+    }));
+
+  function notesWithOperations(): DocumentModelModule {
+    const context = defineDocumentModel({
+      id: "test/notes",
+      name: "Notes",
+      description: "",
+      extension: "notes",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("NotesState", { fields: { title: ph.String() } }),
+          initialValue: { title: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
     });
-    const owned = result.diagnostics.filter(
-      (entry) => entry.code === "PH-GQL-COORDINATE-OWNED",
-    );
-    expect(owned).toHaveLength(1);
-    expect(owned[0].severity).toBe("warning");
-    expect(owned[0].message).toContain("Query.widget");
+    const edits = context.module("edits", {
+      operations: ({ global }) => ({
+        setTitle: global({
+          input: ph.input({ fields: { title: ph.String({ required: true }) } }),
+          reduce(state, input) {
+            state.title = input.title;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [edits],
+    }) as unknown as DocumentModelModule;
+  }
+
+  it("warns that the server refuses a subgraph named like a core subgraph", () => {
+    expect(findings([widgets("system")])).toEqual([
+      {
+        code: "PH-SG-NAME-TAKEN",
+        severity: "warning",
+        path: ["composition", "system"],
+      },
+    ]);
+  });
+
+  it("warns that the server refuses a subgraph named like a document model's", () => {
+    expect(findings([widgets("notes")], [notesWithOperations()])).toEqual([
+      {
+        code: "PH-SG-NAME-TAKEN",
+        severity: "warning",
+        path: ["composition", "notes"],
+      },
+    ]);
+  });
+
+  it("warns that a later subgraph loses a root field an earlier one owns", () => {
+    expect(findings([widgets("alpha"), widgets("beta")])).toEqual([
+      {
+        code: "PH-GQL-COORDINATE-OWNED",
+        severity: "warning",
+        path: ["composition", "beta", "Query.widget"],
+      },
+    ]);
+  });
+
+  it("warns that a subgraph loses a root field a document model's subgraph owns", () => {
+    expect(
+      findings(
+        [compat("notes-lookup", "type Query { Notes: String }")],
+        [notesWithOperations()],
+      ),
+    ).toEqual([
+      {
+        code: "PH-GQL-COORDINATE-OWNED",
+        severity: "warning",
+        path: ["composition", "notes-lookup", "Query.Notes"],
+      },
+    ]);
+  });
+
+  it("warns that a subgraph defining an owned type differently loses it", () => {
+    expect(
+      findings([
+        compat("alpha", "type Query { a: Gadget } type Gadget { id: ID! }"),
+        compat(
+          "beta",
+          "type Query { b: Gadget } type Gadget { id: ID! size: Int }",
+        ),
+      ]),
+    ).toEqual([
+      {
+        code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
+        severity: "warning",
+        path: ["composition", "beta", "Gadget"],
+      },
+    ]);
+  });
+
+  it("accepts a shared type that differs only in field order and descriptions", () => {
+    expect(
+      findings([
+        compat(
+          "alpha",
+          'type Query { a: Gadget } type Gadget { id: ID! "The size." size: Int }',
+        ),
+        compat(
+          "beta",
+          "type Query { b: Gadget } type Gadget { size: Int id: ID! }",
+        ),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("accepts typed subgraphs whose shared type differs only in field order and descriptions", () => {
+    const gadgets = (
+      name: string,
+      field: string,
+      fields: Parameters<typeof ph.object>[1]["fields"],
+    ) =>
+      defineSubgraph({
+        name,
+        schemaKind: "typed",
+        entries: (build) => [
+          build.query(field, {
+            returns: ph.ref(ph.object("Gadget", { fields })),
+            resolve: () => null,
+          }),
+        ],
+      });
+    expect(
+      findings([
+        gadgets("alpha", "a", {
+          id: ph.ID({ required: true }),
+          size: ph.Int({ description: "The size." }),
+        }),
+        gadgets("beta", "b", {
+          size: ph.Int(),
+          id: ph.ID({ required: true }),
+        }),
+      ]),
+    ).toEqual([]);
   });
 
   it("says nothing about a single subgraph", () => {
-    expect(
-      validateSubgraphsForHost({
-        profile: "release",
-        documentModels: [],
-        subgraphs: [entry(widgets())],
-      }).diagnostics,
-    ).toEqual([]);
+    expect(findings([widgets()])).toEqual([]);
   });
 });
 
@@ -252,6 +391,67 @@ describe("the document models a schema builds against", () => {
       }).diagnostics.map((diagnostic) => diagnostic.code);
     expect(codes([notesModel()])).toEqual([]);
     expect(codes([])).toEqual(["PH-SG-SCHEMA-INVALID"]);
+  });
+});
+
+describe("a versioned model", () => {
+  function notesFamily() {
+    const Tag = ph.object("Tag", { fields: { label: ph.String() } });
+    const declaration = {
+      id: "test/notes",
+      name: "Notes",
+      description: "",
+      extension: "notes",
+      author: { name: "Powerhouse", website: null },
+    };
+    const v1 = defineDocumentModel({
+      ...declaration,
+      version: 1,
+      specifications: {
+        global: {
+          schema: ph.object("NotesState", { fields: { title: ph.String() } }),
+          initialValue: { title: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    }).version({ modules: [] });
+    const v2 = defineDocumentModel({
+      ...declaration,
+      version: 2,
+      specifications: {
+        global: {
+          schema: ph.object("NotesState", {
+            fields: { title: ph.String(), tag: ph.ref(Tag) },
+          }),
+          initialValue: { title: null, tag: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    }).version({ modules: [] });
+    return defineDocumentModelFamily({
+      versions: [v1, v2],
+      upgradeManifest: {
+        documentType: "test/notes",
+        latestVersion: 2,
+        supportedVersions: [1, 2],
+        upgrades: {
+          v2: { toVersion: 2, upgradeReducer: (document) => document },
+        },
+      },
+    });
+  }
+
+  it("is validated at its latest version, as the host serves it", () => {
+    const family = notesFamily();
+    expect(
+      validateSubgraphsForHost({
+        profile: "edit",
+        documentModels: family.modules as unknown as DocumentModelModule[],
+        subgraphs: [
+          entry(compat("notes-tags", "type Query { latestTag: Notes_Tag }")),
+        ],
+      }).diagnostics,
+    ).toEqual([]);
   });
 });
 
