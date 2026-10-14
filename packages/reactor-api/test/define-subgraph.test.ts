@@ -597,6 +597,44 @@ describe("a declaration the server could not run", () => {
     });
   });
 
+  it("refuses a field or argument name GraphQL would reject, before the host builds a schema", () => {
+    const notAName = (path: readonly string[]) => ({
+      code: "PH-DEF-NAME-INVALID",
+      path,
+      message:
+        "A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores.",
+    });
+    expect(
+      refusal(() =>
+        defineSubgraph({
+          name: "widgets",
+          schemaKind: "typed",
+          entries: (build) => [
+            build.query("my field", {
+              returns: ph.String(),
+              resolve: () => null,
+            }),
+          ],
+        }),
+      ),
+    ).toEqual(notAName(["key"]));
+    expect(
+      refusal(() =>
+        defineSubgraph({
+          name: "widgets",
+          schemaKind: "typed",
+          entries: (build) => [
+            build.query("widget", {
+              args: { "bad name": ph.ID() },
+              returns: ph.String(),
+              resolve: () => null,
+            }),
+          ],
+        }),
+      ),
+    ).toEqual(notAName(["options", "args", "bad name"]));
+  });
+
   it("still declares a subgraph whose name, hooks, and factory are well formed", () => {
     expect(refusal(typed({ onSetup: () => undefined }))).toBeUndefined();
     expect(refusal(compat({}))).toBeUndefined();

@@ -331,19 +331,43 @@ describe("the entry builders", () => {
     ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["options", "subscribe"] });
   });
 
-  it("refuses a root entry whose key is not a non-empty string", () => {
+  it("refuses a root key, field name, or argument name that is not a GraphQL name", () => {
     const { builders: build } = builders();
-    const options = { returns: ph.String(), resolve: () => null };
-    expect(refused(() => build.query(7 as never, options))).toEqual({
-      code: "PH-SG-ENTRY-INVALID",
-      path: ["key"],
-      message: "query() takes a field name as a non-empty string.",
+    const declared = { returns: ph.String(), resolve: () => null };
+    const notAName = (path: readonly string[]) => ({
+      code: "PH-DEF-NAME-INVALID",
+      path,
+      message:
+        "A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores.",
     });
-    expect(refused(() => build.mutation("", options))).toEqual({
-      code: "PH-SG-ENTRY-INVALID",
-      path: ["key"],
-      message: "mutation() takes a field name as a non-empty string.",
-    });
+    expect(refused(() => build.query(7 as never, declared))).toEqual(
+      notAName(["key"]),
+    );
+    expect(refused(() => build.mutation("", declared))).toEqual(
+      notAName(["key"]),
+    );
+    expect(refused(() => build.query("my field", declared))).toEqual(
+      notAName(["key"]),
+    );
+    expect(
+      refused(() =>
+        build.subscription("posted", {
+          fieldName: "__posted",
+          returns: ph.String(),
+          subscribe: () => (async function* () {})(),
+        }),
+      ),
+    ).toEqual(notAName(["options", "fieldName"]));
+    expect(
+      refused(() =>
+        build.query("widget", { ...declared, args: { "bad name": ph.ID() } }),
+      ),
+    ).toEqual(notAName(["options", "args", "bad name"]));
+    expect(
+      refused(() =>
+        ph.field({ args: { "bad name": ph.ID() }, returns: ph.String() }),
+      ),
+    ).toEqual(notAName(["options", "args", "bad name"]));
   });
 
   it("refuses a root return that is not a field use", () => {
