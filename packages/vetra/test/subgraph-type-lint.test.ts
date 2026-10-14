@@ -110,7 +110,7 @@ describe("lintSubgraphTypes", () => {
     });
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraph "ledger" defines Operation (owned by "document-model schema"), so the supergraph leaves it out. Rename them in its schema.ts.',
+      'Subgraph "ledger" defines Operation (owned by "document-model schema"), so the server refuses it. Rename them in its schema.ts.',
     ]);
   });
 
@@ -128,7 +128,7 @@ describe("lintSubgraphTypes", () => {
     );
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraph "ledger-copy" defines Query.ledger (owned by "ledger"), so the supergraph leaves it out. Rename them in its schema.ts.',
+      'Subgraphs "ledger" and "ledger-copy" both define Query.ledger, so the supergraph leaves out whichever of them registers second. Rename them in one of the two.',
     ]);
   });
 

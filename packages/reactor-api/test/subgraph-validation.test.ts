@@ -276,12 +276,24 @@ describe("the conflicts the server enforces", () => {
     ]);
   });
 
-  it("warns that a later subgraph loses a root field an earlier one owns", () => {
-    expect(findings([widgets("alpha"), widgets("beta")])).toEqual([
+  it("warns about a root field two subgraphs declare, without guessing which registers first", () => {
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [],
+      subgraphs: [entry(widgets("foo-bar")), entry(widgets("foo2"))],
+    });
+    expect(
+      result.diagnostics.map(({ code, severity, message }) => ({
+        code,
+        severity,
+        message,
+      })),
+    ).toEqual([
       {
         code: "PH-GQL-COORDINATE-OWNED",
         severity: "warning",
-        path: ["composition", "beta", "Query.widget"],
+        message:
+          'Subgraphs "foo-bar" and "foo2" both declare Query.widget, so the server leaves out of the supergraph whichever of them registers second.',
       },
     ]);
   });
@@ -301,20 +313,34 @@ describe("the conflicts the server enforces", () => {
     ]);
   });
 
-  it("warns that a subgraph defining an owned type differently loses it", () => {
-    expect(
-      findings([
-        compat("alpha", "type Query { a: Gadget } type Gadget { id: ID! }"),
-        compat(
-          "beta",
-          "type Query { b: Gadget } type Gadget { id: ID! size: Int }",
+  it("warns about a type two subgraphs define differently", () => {
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [],
+      subgraphs: [
+        entry(
+          compat("alpha", "type Query { a: Gadget } type Gadget { id: ID! }"),
         ),
-      ]),
+        entry(
+          compat(
+            "beta",
+            "type Query { b: Gadget } type Gadget { id: ID! size: Int }",
+          ),
+        ),
+      ],
+    });
+    expect(
+      result.diagnostics.map(({ code, severity, message }) => ({
+        code,
+        severity,
+        message,
+      })),
     ).toEqual([
       {
         code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
         severity: "warning",
-        path: ["composition", "beta", "Gadget"],
+        message:
+          'Subgraphs "alpha" and "beta" both declare Gadget, differently, so the server leaves out of the supergraph whichever of them registers second.',
       },
     ]);
   });

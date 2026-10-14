@@ -118,14 +118,14 @@ describe("findPackageSubgraphConflicts", () => {
         { name: "todo-list", typeDefs: template("TodoList", "todoList") },
       ]),
     ).toEqual({
-      "todo-list": { nameHeldBy: "document model", claims: [] },
+      "todo-list": { kind: "name", heldBy: "document model" },
     });
   });
 
   it("refuses the name of a core subgraph", () => {
     expect(
       conflicts([{ name: "system", typeDefs: template("System", "sys") }]),
-    ).toEqual({ system: { nameHeldBy: "core", claims: [] } });
+    ).toEqual({ system: { kind: "name", heldBy: "core" } });
   });
 
   it("leaves a model without operations unmounted, so its name is free", () => {
@@ -149,7 +149,14 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "todo-tools", typeDefs }])).toEqual({
       "todo-tools": {
-        claims: [{ claim: "TodoListQueries", owner: "todo-list" }],
+        kind: "claims",
+        claims: [
+          {
+            claim: "TodoListQueries",
+            owner: "todo-list",
+            ownerIsPackage: false,
+          },
+        ],
       },
     });
   });
@@ -163,7 +170,14 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
-        claims: [{ claim: "DocumentModelQueries", owner: "document-model" }],
+        kind: "claims",
+        claims: [
+          {
+            claim: "DocumentModelQueries",
+            owner: "document-model",
+            ownerIsPackage: false,
+          },
+        ],
       },
     });
   });
@@ -176,7 +190,10 @@ describe("findPackageSubgraphConflicts", () => {
     `;
 
     expect(conflicts([{ name: "ledger", typeDefs }])).toEqual({
-      ledger: { claims: [{ claim: "TodoList", owner: "todo-list" }] },
+      ledger: {
+        kind: "generated",
+        claims: [{ claim: "TodoList", owner: "todo-list" }],
+      },
     });
   });
 
@@ -189,6 +206,7 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
+        kind: "generated",
         claims: [{ claim: "Operation", owner: DOCUMENT_MODEL_SCHEMA_OWNER }],
       },
     });
@@ -206,9 +224,10 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
+        kind: "claims",
         claims: [
-          { claim: "Query.system", owner: "system" },
-          { claim: "Revision", owner: "r" },
+          { claim: "Query.system", owner: "system", ownerIsPackage: false },
+          { claim: "Revision", owner: "r", ownerIsPackage: false },
         ],
       },
     });
@@ -227,7 +246,12 @@ describe("findPackageSubgraphConflicts", () => {
         { name: "ledger-copy", typeDefs },
       ]),
     ).toEqual({
-      "ledger-copy": { claims: [{ claim: "Query.ledger", owner: "ledger" }] },
+      "ledger-copy": {
+        kind: "claims",
+        claims: [
+          { claim: "Query.ledger", owner: "ledger", ownerIsPackage: true },
+        ],
+      },
     });
   });
 
@@ -239,7 +263,7 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(report.skippedModels).toEqual(["Broken"]);
     expect(Object.fromEntries(report.conflicts)).toEqual({
-      "todo-list": { nameHeldBy: "document model", claims: [] },
+      "todo-list": { kind: "name", heldBy: "document model" },
     });
   });
 });
