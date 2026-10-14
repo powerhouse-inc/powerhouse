@@ -1,9 +1,13 @@
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
 import { canonicalJson, ph } from "document-model";
+import type { TypedSubgraphEntry } from "document-model/tooling";
 import { parse, print } from "graphql";
 import { describe, expect, it } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
-import { defineSubgraph } from "../src/graphql/define-subgraph.js";
+import {
+  type DefineSubgraphConfig,
+  defineSubgraph,
+} from "../src/graphql/define-subgraph.js";
 
 /**
  * `defineSubgraph` returns a class that the host treats like a hand-written
@@ -264,5 +268,174 @@ interface Node {
     expect(
       Object.prototype.hasOwnProperty.call(instance, "hasSubscriptions"),
     ).toBe(false);
+  });
+});
+
+describe("a declared subgraph", () => {
+  type Resolvers = Record<
+    string,
+    Record<string, (...args: unknown[]) => unknown>
+  >;
+  type Mutable<T> = { -readonly [K in keyof T]: T[K] };
+
+  const resolversOf = (instance: { resolvers?: unknown }) =>
+    instance.resolvers as Resolvers;
+
+  it("keeps its name and resolvers when the author changes the config and clears the returned array", () => {
+    const seen: unknown[] = [];
+    const returned: TypedSubgraphEntry[] = [];
+    const config: Mutable<DefineSubgraphConfig> = {
+      name: "widgets",
+      schemaKind: "typed",
+      entries: (build) => {
+        returned.push(
+          build.query("widget", {
+            returns: ph.ref(Widget),
+            resolve: ({ subgraph }) => {
+              seen.push(subgraph);
+              return { id: "w1", label: "One" };
+            },
+          }),
+        );
+        return returned;
+      },
+    };
+    const Subgraph = defineSubgraph(config);
+    const first = new Subgraph(args());
+    resolversOf(first).Query.widget(undefined, {}, {}, {});
+
+    returned.length = 0;
+    config.name = "renamed";
+    const second = new Subgraph(args());
+    resolversOf(second).Query.widget(undefined, {}, {}, {});
+
+    expect(second.name).toBe("widgets");
+    expect(Subgraph.definition.name).toBe("widgets");
+    expect(Object.keys(resolversOf(second).Query)).toEqual(["widget"]);
+    expect(print(second.typeDefs)).toContain("widget: Widget");
+    expect(seen).toEqual([first, second]);
+  });
+
+  it("serves the declared entry after the author swaps the array element", () => {
+    const returned: TypedSubgraphEntry[] = [];
+    let build!: Parameters<
+      Extract<DefineSubgraphConfig, { schemaKind: "typed" }>["entries"]
+    >[0];
+    const Subgraph = defineSubgraph({
+      name: "widgets",
+      schemaKind: "typed",
+      entries: (builders) => {
+        build = builders;
+        returned.push(
+          builders.query("widget", {
+            returns: ph.String(),
+            resolve: () => "declared",
+          }),
+        );
+        return returned;
+      },
+    });
+
+    returned[0] = build.query("gadget", {
+      returns: ph.String(),
+      resolve: () => "swapped",
+    });
+    const instance = new Subgraph(args());
+
+    expect(Object.keys(resolversOf(instance).Query)).toEqual(["widget"]);
+    expect(resolversOf(instance).Query.widget(undefined, {}, {}, {})).toBe(
+      "declared",
+    );
+  });
+
+  it("keeps the declared resolver and arguments when the author mutates the objects passed to a builder", () => {
+    const options: {
+      args: Record<string, ReturnType<typeof ph.String>>;
+      returns: ReturnType<typeof ph.String>;
+      resolve: () => string;
+    } = {
+      args: { id: ph.String() },
+      returns: ph.String(),
+      resolve: () => "declared",
+    };
+    const Subgraph = defineSubgraph({
+      name: "widgets",
+      schemaKind: "typed",
+      entries: (build) => [build.query("widget", options)],
+    });
+
+    options.resolve = () => "mutated";
+    options.args.extra = ph.String();
+    const instance = new Subgraph(args());
+
+    expect(resolversOf(instance).Query.widget(undefined, {}, {}, {})).toBe(
+      "declared",
+    );
+    expect(print(instance.typeDefs)).toContain("widget(id: String): String");
+  });
+
+  it("runs the declared lifecycle hooks after the author replaces them", async () => {
+    const calls: string[] = [];
+    const config: Mutable<DefineSubgraphConfig> = {
+      name: "widgets",
+      schemaKind: "typed",
+      onSetup: () => {
+        calls.push("declared setup");
+      },
+      onDisconnect: () => {
+        calls.push("declared disconnect");
+      },
+      entries: (build) => [
+        build.query("widget", { returns: ph.String(), resolve: () => null }),
+      ],
+    };
+    const Subgraph = defineSubgraph(config);
+
+    config.onSetup = () => {
+      calls.push("replaced setup");
+    };
+    config.onDisconnect = () => {
+      calls.push("replaced disconnect");
+    };
+    const instance = new Subgraph(args());
+    await instance.onSetup();
+    await instance.onDisconnect();
+
+    expect(calls).toEqual(["declared setup", "declared disconnect"]);
+  });
+
+  it("keeps a compatibility subgraph's name and resolver factory when the author changes the config", () => {
+    const compatibility: Mutable<
+      Extract<
+        DefineSubgraphConfig,
+        { schemaKind: "graphql-ast-compat" }
+      >["compatibility"]
+    > = {
+      kind: "graphql-ast-v1",
+      typeDefs: parse("type Query { ping: String }"),
+      resolverCoordinates: [
+        { typeName: "Query", fieldName: "ping", resolverKind: "field" },
+      ],
+      getResolvers: () => ({ Query: { ping: () => "declared" } }),
+      hasSubscriptions: undefined,
+      preserveDefinitionOrder: true,
+    };
+    const config: Mutable<DefineSubgraphConfig> = {
+      name: "compat",
+      schemaKind: "graphql-ast-compat",
+      compatibility,
+    };
+    const Subgraph = defineSubgraph(config);
+
+    config.name = "renamed";
+    compatibility.getResolvers = () => ({
+      Query: { ping: () => "replaced" },
+    });
+    const instance = new Subgraph(args());
+
+    expect(instance.name).toBe("compat");
+    expect(resolversOf(instance).Query.ping(undefined, {}, {}, {})).toBe(
+      "declared",
+    );
   });
 });

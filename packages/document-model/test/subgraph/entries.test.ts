@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
 import { compileSubgraphSchema } from "../../src/definition/subgraph/ast.js";
+import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
 import {
   createEntryBuilders,
   isRegisteredEntry,
@@ -11,6 +12,7 @@ import {
 import type {
   OutputObjectWithComputed,
   SourceObjectWithComputed,
+  TypedSubgraphEntry,
 } from "../../src/definition/subgraph/types.js";
 
 /**
@@ -282,5 +284,46 @@ describe("the entry builders", () => {
       resolve: () => ({ id: "p1", title: "One" }),
     });
     expect(Object.isFrozen(entry)).toBe(true);
+  });
+});
+
+describe("a compiled declaration", () => {
+  it("binds the entries the callback returned, whatever the author does to the array afterwards", () => {
+    const returned: TypedSubgraphEntry[] = [];
+    const compiled = compileSubgraph({
+      name: "authors",
+      schemaKind: "typed",
+      entries: (build) => {
+        returned.push(
+          build.query("author", {
+            returns: ph.ref(Author),
+            resolve: () => ({ id: "declared", name: null }),
+          }),
+        );
+        return returned;
+      },
+    });
+
+    returned.length = 0;
+    const resolvers = compiled.resolversFor({}) as Record<
+      string,
+      Record<string, (...args: unknown[]) => unknown>
+    >;
+
+    expect(Object.keys(resolvers)).toEqual(["Query"]);
+    expect(resolvers.Query.author(undefined, {}, {}, {})).toEqual({
+      id: "declared",
+      name: null,
+    });
+  });
+
+  it("refuses an entries callback that returns something other than an array", () => {
+    expect(() =>
+      compileSubgraph({
+        name: "authors",
+        schemaKind: "typed",
+        entries: () => new Set() as never,
+      }),
+    ).toThrow(DocumentModelDefinitionError);
   });
 });
