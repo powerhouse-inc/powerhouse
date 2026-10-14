@@ -1,5 +1,9 @@
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
-import { canonicalJson, ph } from "document-model";
+import {
+  canonicalJson,
+  DocumentModelDefinitionError,
+  ph,
+} from "document-model";
 import type { TypedSubgraphEntry } from "document-model/tooling";
 import { parse, print } from "graphql";
 import { describe, expect, it } from "vitest";
@@ -498,5 +502,105 @@ describe("a declared subgraph", () => {
     expect(resolversOf(instance).Query.ping(undefined, {}, {}, {})).toBe(
       "declared",
     );
+  });
+});
+
+describe("a declaration the server could not run", () => {
+  function refusal(declare: () => unknown) {
+    try {
+      declare();
+    } catch (error) {
+      if (!(error instanceof DocumentModelDefinitionError)) throw error;
+      const [{ code, path, message }] = error.diagnostics;
+      return { code, path, message };
+    }
+    return undefined;
+  }
+
+  function typed(overrides: Record<string, unknown>) {
+    return () =>
+      defineSubgraph({
+        name: "widgets",
+        schemaKind: "typed",
+        entries: (build) => [
+          build.query("widget", { returns: ph.String(), resolve: () => null }),
+        ],
+        ...overrides,
+      } as DefineSubgraphConfig);
+  }
+
+  function compat(
+    overrides: Record<string, unknown>,
+    compatibility: Record<string, unknown> = {},
+  ) {
+    return () =>
+      defineSubgraph({
+        name: "compat",
+        schemaKind: "graphql-ast-compat",
+        compatibility: {
+          kind: "graphql-ast-v1",
+          typeDefs: parse("type Query { ping: String }"),
+          resolverCoordinates: [
+            { typeName: "Query", fieldName: "ping", resolverKind: "field" },
+          ],
+          getResolvers: () => ({ Query: { ping: () => "pong" } }),
+          hasSubscriptions: undefined,
+          preserveDefinitionOrder: true,
+          ...compatibility,
+        },
+        ...overrides,
+      } as DefineSubgraphConfig);
+  }
+
+  const noName = {
+    code: "PH-SG-DEFINITION-INVALID",
+    path: ["name"],
+    message: "A subgraph needs a name.",
+  };
+
+  it("refuses a typed subgraph without a string name", () => {
+    expect(refusal(typed({ name: undefined }))).toEqual(noName);
+    expect(refusal(typed({ name: 7 }))).toEqual(noName);
+    expect(refusal(typed({ name: "" }))).toEqual(noName);
+  });
+
+  it("refuses a compatibility subgraph without a string name", () => {
+    expect(refusal(compat({ name: undefined }))).toEqual(noName);
+    expect(refusal(compat({ name: 7 }))).toEqual(noName);
+    expect(refusal(compat({ name: "" }))).toEqual(noName);
+  });
+
+  it("refuses lifecycle hooks that are not functions", () => {
+    expect(refusal(typed({ onSetup: 5 }))).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["onSetup"],
+      message: "onSetup is not a function.",
+    });
+    expect(refusal(compat({ onDisconnect: "close" }))).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["onDisconnect"],
+      message: "onDisconnect is not a function.",
+    });
+  });
+
+  it("refuses a compatibility subgraph whose getResolvers is missing or not a function", () => {
+    expect(refusal(compat({}, { getResolvers: undefined }))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["compatibility", "getResolvers"],
+      message: "The compatibility declaration has no getResolvers.",
+    });
+    expect(refusal(compat({}, { getResolvers: {} }))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["compatibility", "getResolvers"],
+      message:
+        "The compatibility declaration's getResolvers is not a function.",
+    });
+  });
+
+  it("still declares a subgraph whose name, hooks, and factory are well formed", () => {
+    expect(refusal(typed({ onSetup: () => undefined }))).toBeUndefined();
+    expect(refusal(compat({}))).toBeUndefined();
+    expect(typed({})().definition.name).toBe("widgets");
+    expect(compat({})().definition.name).toBe("compat");
   });
 });

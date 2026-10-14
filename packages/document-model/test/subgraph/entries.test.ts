@@ -64,6 +64,18 @@ function refusal(declare: () => unknown) {
   return undefined;
 }
 
+/** The first diagnostic a builder throws, with its message. */
+function refused(declare: () => unknown) {
+  try {
+    declare();
+  } catch (error) {
+    if (!(error instanceof DocumentModelDefinitionError)) throw error;
+    const [{ code, path, message }] = error.diagnostics;
+    return { code, path, message };
+  }
+  return undefined;
+}
+
 describe("ph.field", () => {
   it("keeps computed members out of the stored fields", () => {
     // Every existing reader of `fields` sees exactly what it saw before.
@@ -257,6 +269,143 @@ describe("the entry builders", () => {
         } as never),
       ),
     ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["options", "subscribe"] });
+  });
+
+  it("refuses a root entry whose key is not a non-empty string", () => {
+    const { builders: build } = builders();
+    const options = { returns: ph.String(), resolve: () => null };
+    expect(refused(() => build.query(7 as never, options))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["key"],
+      message: "query() takes a field name as a non-empty string.",
+    });
+    expect(refused(() => build.mutation("", options))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["key"],
+      message: "mutation() takes a field name as a non-empty string.",
+    });
+  });
+
+  it("refuses a root return that is not a field use", () => {
+    const { builders: build } = builders();
+    expect(
+      refused(() =>
+        build.query("widget", {
+          returns: "String",
+          resolve: () => null,
+        } as never),
+      ),
+    ).toEqual({
+      code: "PH-DEF-FIELD-INVALID",
+      path: ["options", "returns"],
+      message: "A field position must hold a field use created by ph.",
+    });
+    expect(
+      refused(() =>
+        build.subscription("authorAdded", {
+          returns: Author as never,
+          subscribe: () => (async function* () {})(),
+        }),
+      ),
+    ).toEqual({
+      code: "PH-DEF-TYPE-AS-FIELD",
+      path: ["options", "returns"],
+      message: 'Named type "Author" was used directly as a field.',
+    });
+  });
+
+  it("refuses root arguments that are not a map of field uses", () => {
+    const { builders: build } = builders();
+    expect(
+      refused(() =>
+        build.query("widget", {
+          args: ph.String() as never,
+          returns: ph.String(),
+          resolve: () => null,
+        }),
+      ),
+    ).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["options", "args"],
+      message:
+        "args maps each argument name to a field use; it is not a field use itself.",
+    });
+    expect(
+      refused(() =>
+        build.query("widget", {
+          args: { id: "String" } as never,
+          returns: ph.String(),
+          resolve: () => null,
+        }),
+      ),
+    ).toEqual({
+      code: "PH-DEF-FIELD-INVALID",
+      path: ["options", "args", "id"],
+      message: "A field position must hold a field use created by ph.",
+    });
+    expect(
+      refused(() =>
+        build.mutation("addAuthor", {
+          args: { id: ph.ID(), author: Author } as never,
+          returns: ph.String(),
+          resolve: () => null,
+        }),
+      ),
+    ).toEqual({
+      code: "PH-DEF-TYPE-AS-FIELD",
+      path: ["options", "args", "author"],
+      message: 'Named type "Author" was used directly as a field.',
+    });
+  });
+
+  it("says whether a resolver is missing or is not a function", () => {
+    const { builders: build } = builders();
+    const tokens = Post.computedTokens as Record<string, never>;
+    expect(
+      refused(() => build.query("post", { returns: ph.ref(Post) } as never)),
+    ).toMatchObject({ message: 'query "post" declares no resolve.' });
+    expect(
+      refused(() =>
+        build.query("post", { returns: ph.ref(Post), resolve: 5 } as never),
+      ),
+    ).toMatchObject({
+      message: 'query "post" declares a resolve that is not a function.',
+    });
+    expect(
+      refused(() =>
+        build.subscription("posted", { returns: ph.ref(Post) } as never),
+      ),
+    ).toMatchObject({
+      message: 'subscription "posted" declares no subscribe.',
+    });
+    expect(
+      refused(() =>
+        build.subscription("posted", {
+          returns: ph.ref(Post),
+          subscribe: 5,
+        } as never),
+      ),
+    ).toMatchObject({
+      message:
+        'subscription "posted" declares a subscribe that is not a function.',
+    });
+    expect(refused(() => build.field(tokens.wordCount, {} as never))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["options", "resolve"],
+      message: "field() declares no resolve.",
+    });
+    expect(
+      refused(() => build.field(tokens.wordCount, { resolve: 5 } as never)),
+    ).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["options", "resolve"],
+      message: "field() declares a resolve that is not a function.",
+    });
+    expect(refused(() => build.isTypeOf(Post, "Post" as never))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["resolve"],
+      message: "isTypeOf() declares a resolve that is not a function.",
+    });
   });
 
   it("registers the token coordinate it checked", () => {
