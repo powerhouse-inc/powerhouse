@@ -85,6 +85,7 @@ import {
 import {
   resolvePrivacy,
   startPrivacy,
+  type ResolvedPrivacy,
   type RunningPrivacy,
 } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
@@ -587,7 +588,11 @@ async function initServer(
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
   // Resolved before the reactor is built: a bad secret fails the boot early.
-  const privacyConfig = resolvePrivacy(options.privacy, process.env);
+  // Flag-on, the privacy plugin owns this resolve (same fail-fast timing, in
+  // transformServerOptions above).
+  const privacyConfig = pluginHost
+    ? ({ enabled: false } as ResolvedPrivacy)
+    : resolvePrivacy(options.privacy, process.env);
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -1085,11 +1090,8 @@ async function initServer(
     pluginHost.ctx.client = client;
     pluginHost.ctx.graphqlManager = graphqlManager;
     pluginHost.ctx.lateSubgraphs = lateSubgraphs;
+    pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
     await pluginHost.observe("onReactorReady");
-    // Plugins push their subgraph registrations into lateSubgraphs here; the
-    // drain below (Promise.allSettled) happens before the readiness router
-    // update, same as the inline registrations.
-    await pluginHost.observe("onSubgraphsRegistering");
   }
 
   // The workflow runtime is a switchboard component: composed from what the
@@ -1216,8 +1218,22 @@ async function initServer(
     api.inspection?.facts.setWorkflows(true);
   }
 
+  // Plugins register their subgraphs here (push into lateSubgraphs, or mount
+  // directly like privacy). The call site carries the inline privacy block's
+  // failure semantics: stop workflows, abort the partial boot, rethrow.
+  if (pluginHost) {
+    try {
+      await pluginHost.observe("onSubgraphsRegistering");
+    } catch (error) {
+      await workflowsRetry?.stop();
+      await workflows?.stop();
+      await abortBoot(api);
+      throw error;
+    }
+  }
+
   let privacy: RunningPrivacy | undefined;
-  if (privacyConfig.enabled) {
+  if (!pluginHost && privacyConfig.enabled) {
     // The caller's reactor signs with a signer only the caller knows.
     const signer = options.reactor
       ? options.privacy?.signer
@@ -1438,7 +1454,11 @@ async function initServer(
     },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],
-    privacy: privacy ? { erasure: privacy.erasure } : undefined,
+    privacy: (() => {
+      const running =
+        privacy ?? (pluginHost?.ctx.privacy as RunningPrivacy | undefined);
+      return running ? { erasure: running.erasure } : undefined;
+    })(),
     mcpEnabled: options.mcp !== false,
     inspectionEnabled: options.inspection !== false,
     renown,

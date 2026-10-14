@@ -1,4 +1,5 @@
 import { attachmentsPlugin } from "./plugins/attachments.mjs";
+import { privacyPlugin } from "./plugins/privacy.mjs";
 import { mcpPlugin } from "./plugins/mcp.mjs";
 import {
   mergeContributions,
@@ -53,6 +54,10 @@ export interface SwitchboardHostContext {
   /** Set by the attachments plugin at onHttpMounting; the boot reads it for
    * the returned handle. */
   attachmentService?: unknown;
+  /** Privacy plugin state: config resolved at transformServerOptions
+   * (fail-fast), the running subsystem set at onSubgraphsRegistering. */
+  privacyConfig?: unknown;
+  privacy?: unknown;
   api?: unknown;
   client?: unknown;
   graphqlManager?: unknown;
@@ -93,6 +98,14 @@ export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
       entry: {
         ...entry,
         module: "@powerhousedao/switchboard/plugins/attachments",
+      },
+    },
+    {
+      plugin: privacyPlugin as HostPlugin,
+      provenance: "built-in",
+      entry: {
+        ...entry,
+        module: "@powerhousedao/switchboard/plugins/privacy",
       },
     },
   ];
