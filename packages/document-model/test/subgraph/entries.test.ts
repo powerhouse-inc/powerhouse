@@ -4,6 +4,7 @@ import {
   type DocumentNode,
   execute,
   parse,
+  print,
 } from "graphql";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
@@ -871,6 +872,51 @@ describe("a compiled declaration", () => {
         }),
       ),
     ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["definitionOrder", 1] });
+  });
+
+  it("reports a root field declared twice and serves the first declaration", () => {
+    const declare = (key: string, fieldName?: string) =>
+      compileSubgraph({
+        name: "twice",
+        schemaKind: "typed",
+        entries: (build) => [
+          build.query("a", {
+            fieldName: "x",
+            returns: ph.String(),
+            resolve: () => "first",
+          }),
+          build.mutation("x", { returns: ph.Int(), resolve: () => 1 }),
+          build.query(key, {
+            fieldName,
+            returns: ph.Int(),
+            resolve: () => "second",
+          }),
+        ],
+      });
+    const cases = [declare("b", "x"), declare("x")];
+    for (const compiled of cases) {
+      expect(
+        compiled.diagnostics.map(({ code, path, message }) => ({
+          code,
+          path,
+          message,
+        })),
+      ).toEqual([
+        {
+          code: "PH-SG-ENTRY-INVALID",
+          path: ["entries", 2],
+          message: "Query.x is declared twice.",
+        },
+      ]);
+      expect(print(compiled.typeDefs as DocumentNode)).toContain(
+        "type Query {\n  x: String\n}",
+      );
+      const resolvers = compiled.resolversFor({}) as Record<
+        string,
+        Record<string, (...args: unknown[]) => unknown>
+      >;
+      expect(resolvers.Query.x(undefined, {}, {}, {})).toBe("first");
+    }
   });
 
   it("refuses a declaration that is not an object", () => {
