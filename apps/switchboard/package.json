@@ -18,6 +18,30 @@
       "source": "./src/utils.mts",
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
+    },
+    "./plugins/mcp": {
+      "source": "./src/plugins/mcp.mts",
+      "types": "./dist/plugins/mcp.d.mts",
+      "import": "./dist/plugins/mcp.mjs",
+      "default": "./dist/plugins/mcp.mjs"
+    },
+    "./plugins/attachments": {
+      "source": "./src/plugins/attachments.mts",
+      "types": "./dist/plugins/attachments.d.mts",
+      "import": "./dist/plugins/attachments.mjs",
+      "default": "./dist/plugins/attachments.mjs"
+    },
+    "./plugins/privacy": {
+      "source": "./src/plugins/privacy.mts",
+      "types": "./dist/plugins/privacy.d.mts",
+      "import": "./dist/plugins/privacy.mjs",
+      "default": "./dist/plugins/privacy.mjs"
+    },
+    "./plugins/workflows": {
+      "source": "./src/plugins/workflows.mts",
+      "types": "./dist/plugins/workflows.d.mts",
+      "import": "./dist/plugins/workflows.mjs",
+      "default": "./dist/plugins/workflows.mjs"
     }
   },
   "engines": {

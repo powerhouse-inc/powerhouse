@@ -9,6 +9,14 @@ import {
   type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import {
+  resolveDriveDeclaration,
+  resolveHostPlugins,
+  seedDrives,
+  type DriveDeclaration,
+  type DriveSeederClient,
+  type ResolvedDrive,
+} from "@powerhousedao/host-core";
 import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
 import type { SwitchboardArgs } from "../types.js";
@@ -91,8 +99,40 @@ export interface SwitchboardHandle {
   ready: Promise<void>;
 }
 
+/** Adapter from the switchboard's reactor client onto the host-core seeder.
+ * addDefaultDrive is slug-idempotent itself, so findDriveBySlug delegates. */
+function seederClient(reactor: unknown, port: number): DriveSeederClient {
+  return {
+    findDriveBySlug: () => Promise.resolve(undefined),
+    createDrive: async (drive: ResolvedDrive) => {
+      const { addDefaultDrive } =
+        await import("@powerhousedao/switchboard/utils");
+      await addDefaultDrive(
+        reactor as Parameters<typeof addDefaultDrive>[0],
+        {
+          id: drive.id,
+          slug: drive.slug,
+          global: { name: drive.name, icon: drive.icon },
+          ...(drive.preferredEditor
+            ? { preferredEditor: drive.preferredEditor }
+            : {}),
+          local: {
+            availableOffline: drive.availableOffline,
+            listeners: [],
+            sharingType: drive.sharingType,
+            triggers: [],
+          },
+        } as Parameters<typeof addDefaultDrive>[1],
+        port,
+      );
+    },
+    attachRemoteDrive: () => Promise.resolve(), // remotes ride options.remoteDrives
+  };
+}
+
 async function start(
   host: HostDefinition,
+  ctx: RunnerContext,
   devMode: boolean,
 ): Promise<SwitchboardHandle> {
   const options = applyReactorEnvProjection(
@@ -101,14 +141,66 @@ async function start(
   );
   const { startSwitchboard } = await import("../services/switchboard.js");
   const args = toSwitchboardArgs(host, devMode, options.dbPath);
-  const switchboard = await startSwitchboard(args);
+
+  // R2 step 2: a declared composition activates the plugin pipeline — the
+  // runner resolves the entries against the PROJECT dependency tree and the
+  // flag drives server-side activation. No plugins key = classic path.
+  const entries = (host.runner as { plugins?: unknown }).plugins as
+    | Parameters<typeof resolveHostPlugins>[3]
+    | undefined;
+  let pluginComposition;
+  if (entries !== undefined) {
+    process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
+    pluginComposition = await resolveHostPlugins(
+      ctx.projectRoot,
+      "switchboard",
+      ctx.verb ?? (devMode ? "dev" : "run"),
+      entries,
+      `hosts/${host.name}/host.js`,
+    );
+  }
+
+  // Core drive declarations (reactor.drives): locals seed after boot via the
+  // host-core seeder; remotes ride the existing remoteDrives option; the
+  // implicit default powerhouse drive is replaced by the declared set.
+  const declarations = (
+    host.reactor as { drives?: DriveDeclaration[] } | undefined
+  )?.drives;
+  const resolvedDrives = (declarations ?? []).map((declaration) =>
+    resolveDriveDeclaration(ctx.projectRoot, declaration),
+  );
+  const serverArgs = {
+    ...args,
+    ...(pluginComposition ? { pluginComposition } : {}),
+    ...(resolvedDrives.length > 0
+      ? {
+          drive: undefined,
+          remoteDrives: resolvedDrives
+            .filter((d) => d.kind === "remote")
+            .map((d) => d.remoteUrl!),
+        }
+      : {}),
+  };
+
+  const switchboard = await startSwitchboard(serverArgs as typeof args);
   const port = args.port;
+
+  const localDrives = resolvedDrives.filter((d) => d.kind === "local");
+  if (localDrives.length > 0 && switchboard) {
+    await seedDrives(seederClient(switchboard.reactor, port), localDrives);
+  }
+
   const slug =
-    typeof host.runner.driveSlug === "string"
-      ? host.runner.driveSlug
-      : DEFAULT_DRIVE_SLUG;
+    localDrives.length > 0
+      ? localDrives[0].slug
+      : typeof host.runner.driveSlug === "string"
+        ? host.runner.driveSlug
+        : DEFAULT_DRIVE_SLUG;
   const driveUrl = `http://localhost:${port}/d/${slug}`;
-  const driveUrls = [driveUrl];
+  const driveUrls =
+    localDrives.length > 0
+      ? localDrives.map((d) => `http://localhost:${port}/d/${d.slug}`)
+      : [driveUrl];
 
   // Workflows on → seed the SAME project-hashed workflows drive the vetra
   // path seeds (opens in Workflow Studio); it rides the handle so a
@@ -132,14 +224,14 @@ async function start(
 
 export async function run(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
-  return start(host, false);
+  return start(host, ctx, false);
 }
 
 export async function dev(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
-  return start(host, true);
+  return start(host, ctx, true);
 }

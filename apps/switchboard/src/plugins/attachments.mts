@@ -38,3 +38,6 @@ export const attachmentsPlugin: HostPlugin<{
     },
   },
 };
+
+// resolveHostPlugins consumes the DEFAULT export (plugin object or factory).
+export default attachmentsPlugin;

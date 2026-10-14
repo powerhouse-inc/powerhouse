@@ -28,3 +28,6 @@ export const mcpPlugin: HostPlugin<{
       options.mcp === false ? options : { ...options, mcp: true },
   },
 };
+
+// resolveHostPlugins consumes the DEFAULT export (plugin object or factory).
+export default mcpPlugin;
