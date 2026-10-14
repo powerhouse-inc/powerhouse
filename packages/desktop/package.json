@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/desktop",
   "version": "6.2.3-dev.56",
-  "description": "The desktop runner for uniform-runners hosts: the generic compound stack wrapped in a native shell — dev opens the window, build stages the shippable stack.",
+  "description": "The desktop runner for uniform-runners hosts: the generic compound stack wrapped in a native shell \u2014 dev opens the window, build stages the shippable stack.",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -21,7 +21,8 @@
       "types": "./dist/runner.d.mts",
       "import": "./dist/runner.mjs",
       "default": "./dist/runner.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "tsc": "tsc",
