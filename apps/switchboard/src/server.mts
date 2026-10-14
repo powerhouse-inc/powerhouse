@@ -416,6 +416,11 @@ async function initServer(
     : null;
   if (pluginHost) {
     options = await pluginHost.transformOptions(options);
+    // Presence is activation: whatever no plugin (or explicit option) set
+    // stays OFF. The mcp/workflows plugins set these true at
+    // transformServerOptions; their absence must actually deactivate.
+    options.mcp ??= false;
+    options.workflows = { enabled: options.workflows?.enabled === true };
   }
   logger.level = LogLevel;
   const dbPath =
@@ -1535,19 +1540,29 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  options.mcp = await resolveMcpEnabled({ featureFlags, option: options.mcp });
+  // CLASSIC resolution of the carved subsystems' switches — flag-on, the
+  // plugins own these (presence is activation): the resolvers are skipped so
+  // an ABSENT plugin can actually deactivate its subsystem (initServer
+  // normalizes unset values to off after transformServerOptions). An explicit
+  // caller option always wins on both paths. The inspection flag is a core
+  // capability (not carved) and resolves classically either way.
+  if (!isPluginHostEnabled()) {
+    options.mcp = await resolveMcpEnabled({
+      featureFlags,
+      option: options.mcp,
+    });
+    const configPathForFlags = resolveConfigPath(options.configFile);
+    const workflowsEnabled = await resolveWorkflowsEnabled({
+      featureFlags,
+      override: options.workflows?.enabled,
+      configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
+    });
+    options.workflows = { enabled: workflowsEnabled };
+  }
   options.inspection = await resolveInspectionEnabled({
     featureFlags,
     option: options.inspection,
   });
-
-  const configPathForFlags = resolveConfigPath(options.configFile);
-  const workflowsEnabled = await resolveWorkflowsEnabled({
-    featureFlags,
-    override: options.workflows?.enabled,
-    configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
-  });
-  options.workflows = { enabled: workflowsEnabled };
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1567,7 +1582,7 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
         INSPECTION_ENABLED: options.inspection,
-        PH_WORKFLOWS_ENABLED: workflowsEnabled,
+        PH_WORKFLOWS_ENABLED: options.workflows?.enabled,
       },
       null,
       2,
