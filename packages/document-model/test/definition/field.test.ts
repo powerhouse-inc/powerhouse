@@ -245,6 +245,17 @@ describe("presentation metadata", () => {
     });
   });
 
+  it("reads an explicit undefined description or deprecation as absent", () => {
+    const { presentation } = ph.String({
+      description: undefined,
+      deprecated: undefined,
+    });
+    expect([presentation.description, presentation.deprecated]).toEqual([
+      null,
+      null,
+    ]);
+  });
+
   it("records equals as an @equals use on scalars with a Zod string validator", () => {
     expect(ph.String({ equals: "a.c" }).presentation.directives).toStrictEqual([
       { name: "equals", arguments: [{ name: "value", value: "a.c" }] },

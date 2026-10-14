@@ -173,6 +173,15 @@ describe("ph.field", () => {
       message: "Option deprecated must be a string.",
     });
   });
+
+  it("reads an explicit undefined description or deprecation as absent", () => {
+    const field = ph.field({
+      returns: ph.String(),
+      description: undefined,
+      deprecated: undefined,
+    });
+    expect([field.description, field.deprecated]).toEqual([null, null]);
+  });
 });
 
 describe("output and backing shapes", () => {
@@ -280,6 +289,27 @@ describe("the entry builders", () => {
     );
     if (read.kind !== "query") throw new Error("unreachable");
     expect([read.key, read.fieldName]).toEqual(["postById", "post"]);
+  });
+
+  it("reads an explicit undefined field name, description, or deprecation as absent", () => {
+    const { builders: build } = builders();
+    const read = readEntry(
+      build.query("post", {
+        fieldName: undefined,
+        description: undefined,
+        deprecated: undefined,
+        returns: ph.ref(Post),
+        resolve: () => null,
+      }),
+      ["entries", 0],
+    );
+    if (read.kind !== "query") throw new Error("unreachable");
+    expect([
+      read.key,
+      read.fieldName,
+      read.description,
+      read.deprecated,
+    ]).toEqual(["post", "post", null, null]);
   });
 
   it("keeps a key that is not a GraphQL name when the field name is given", () => {
