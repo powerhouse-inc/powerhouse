@@ -11,6 +11,7 @@ import { loginArgs } from "./login.js";
 import { migrateArgs } from "./migrate.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
+import { runArgs } from "./run.js";
 import { switchboardArgs } from "./switchboard.js";
 import { uninstallArgs } from "./uninstall.js";
 import { vetraArgs } from "./vetra.js";
@@ -36,6 +37,13 @@ function helpCommand<
 }
 
 export const phCliHelpCommands = {
+  run: helpCommand({
+    name: "run",
+    args: runArgs,
+    description:
+      "Run a host from hosts/ (uniform-runners; requires FEATURE_UNIFORM_RUNNERS_ENABLED)",
+    handler: () => {},
+  }),
   generate: helpCommand({
     name: "generate",
     args: generateArgs,
