@@ -216,22 +216,43 @@ describe("the unified predicate (extractSubgraphs)", () => {
     );
   });
 
-  it("returns a package's subgraphs in export-name order, however the loader built the namespace", () => {
+  it("walks module namespaces in export-name order, however the loader built them", () => {
     class Zebra extends BaseSubgraph {}
     class Apple extends BaseSubgraph {}
     class Mango extends BaseSubgraph {}
     // Vite's SSR loader keeps statement order; native ESM sorts export names.
-    const statementOrder = {
-      ZebraSubgraph: { Zebra },
-      AppleSubgraph: { Mango, Apple },
-    };
-    const nativeOrder = {
-      AppleSubgraph: { Apple, Mango },
-      ZebraSubgraph: { Zebra },
-    };
+    const namespace = (entries: Record<string, unknown>) =>
+      Object.freeze(
+        Object.assign(Object.create(null) as object, entries, {
+          [Symbol.toStringTag]: "Module",
+        }),
+      ) as Record<string, unknown>;
+    const statementOrder = namespace({
+      ZebraSubgraph: namespace({ Zebra }),
+      AppleSubgraph: namespace({ Mango, Apple }),
+    });
+    const nativeOrder = namespace({
+      AppleSubgraph: namespace({ Apple, Mango }),
+      ZebraSubgraph: namespace({ Zebra }),
+    });
 
     expect(extractSubgraphs(statementOrder)).toEqual([Apple, Mango, Zebra]);
     expect(extractSubgraphs(nativeOrder)).toEqual([Apple, Mango, Zebra]);
+  });
+
+  it("keeps the order of an exported array or plain object", () => {
+    const classes = Array.from(
+      { length: 12 },
+      () => class extends BaseSubgraph {},
+    );
+    class Beta extends BaseSubgraph {}
+    class Alpha extends BaseSubgraph {}
+
+    expect(extractSubgraphs({ default: classes })).toEqual(classes);
+    expect(extractSubgraphs({ default: { Beta, Alpha } })).toEqual([
+      Beta,
+      Alpha,
+    ]);
   });
 
   it("accepts a code-first class by ancestry, not by its class name", () => {
