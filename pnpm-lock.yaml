@@ -781,6 +781,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@powerhousedao/host-core':
+        specifier: workspace:*
+        version: link:../../packages/host-core
       '@powerhousedao/opentelemetry-instrumentation-reactor':
         specifier: workspace:*
         version: link:../../packages/opentelemetry-instrumentation-reactor

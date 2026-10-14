@@ -89,6 +89,11 @@ import {
 } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
+  createSwitchboardPluginHost,
+  isPluginHostEnabled,
+  type SwitchboardPluginHost,
+} from "./plugin-host.mjs";
+import {
   assertProjectionWorkerSupported,
   resolveProjectionWorkerOptions,
 } from "./projection-worker.mjs";
@@ -394,6 +399,20 @@ async function initServer(
     remoteDrives = [],
     logger = defaultLogger,
   } = options;
+
+  // R2 plugin pipeline (FEATURE_PLUGIN_HOST_ENABLED): flag off, the inline
+  // path below runs byte-identically; flag on, carved subsystems run as
+  // built-in plugins through the hook moments marked along this function.
+  const pluginHost: SwitchboardPluginHost | null = isPluginHostEnabled()
+    ? createSwitchboardPluginHost({
+        logger,
+        options: options as unknown as Record<string, unknown>,
+        renown,
+      })
+    : null;
+  if (pluginHost) {
+    options = await pluginHost.transformOptions(options);
+  }
   logger.level = LogLevel;
   const dbPath =
     options.dbPath ??
@@ -1035,6 +1054,10 @@ async function initServer(
   }
 
   registerAttachmentRoutes(api);
+  if (pluginHost) {
+    pluginHost.ctx.api = api;
+    await pluginHost.observe("onHttpMounting");
+  }
 
   const attachmentService = createRemoteAttachmentService(
     deriveAttachmentServiceConfig(options, serverPort, renown),
@@ -1049,6 +1072,16 @@ async function initServer(
   const { client, graphqlManager, documentModelRegistry } = api;
 
   const lateSubgraphs: Promise<unknown>[] = [];
+  if (pluginHost) {
+    pluginHost.ctx.client = client;
+    pluginHost.ctx.graphqlManager = graphqlManager;
+    pluginHost.ctx.lateSubgraphs = lateSubgraphs;
+    await pluginHost.observe("onReactorReady");
+    // Plugins push their subgraph registrations into lateSubgraphs here; the
+    // drain below (Promise.allSettled) happens before the readiness router
+    // update, same as the inline registrations.
+    await pluginHost.observe("onSubgraphsRegistering");
+  }
 
   // The workflow runtime is a switchboard component: composed from what the
   // api handed back, registered like any other late subgraph.
@@ -1202,6 +1235,7 @@ async function initServer(
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
   const shutdown = async () => {
+    if (pluginHost) await pluginHost.observe("onShutdown");
     await privacy?.stop();
     await workflowsRetry?.stop();
     await workflows?.stop();
@@ -1378,6 +1412,10 @@ async function initServer(
       }
     }
   }
+
+  // Drives exist (default created, remotes attached) — the barrier after the
+  // future core drive seeding (R2 step 2 replaces the two blocks above).
+  if (pluginHost) await pluginHost.observe("onDrivesReady");
 
   return {
     defaultDriveUrl,
