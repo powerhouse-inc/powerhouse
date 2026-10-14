@@ -293,13 +293,13 @@ describe("the conflicts the server enforces", () => {
         code: "PH-GQL-COORDINATE-OWNED",
         severity: "warning",
         message:
-          'Subgraphs "foo-bar" and "foo2" all declare Query.widget, and only the one that registers first keeps it in the supergraph.',
+          'Subgraphs "foo-bar" and "foo2" both declare Query.widget, and only the one that registers first keeps it in the supergraph.',
       },
       {
         code: "PH-GQL-COORDINATE-OWNED",
         severity: "warning",
         message:
-          'Subgraphs "foo2" and "foo-bar" all declare Query.widget, and only the one that registers first keeps it in the supergraph.',
+          'Subgraphs "foo2" and "foo-bar" both declare Query.widget, and only the one that registers first keeps it in the supergraph.',
       },
     ]);
   });
@@ -346,13 +346,13 @@ describe("the conflicts the server enforces", () => {
         code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
         severity: "warning",
         message:
-          'Subgraphs "alpha" and "beta" all define Gadget differently, and only the one that registers first keeps it in the supergraph.',
+          'Subgraph "alpha" defines Gadget differently from "beta". The supergraph keeps it only in the subgraphs that define it as the first one to register does.',
       },
       {
         code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
         severity: "warning",
         message:
-          'Subgraphs "beta" and "alpha" all define Gadget differently, and only the one that registers first keeps it in the supergraph.',
+          'Subgraph "beta" defines Gadget differently from "alpha". The supergraph keeps it only in the subgraphs that define it as the first one to register does.',
       },
     ]);
   });
@@ -431,6 +431,23 @@ describe("the conflicts the server enforces", () => {
           'Subgraph "ledger" defines Operation, which the document-model schema generates, so the server refuses it.',
       },
     ]);
+  });
+
+  it("warns about a taken name before anything else, as the server decides", () => {
+    const codes = (sdl: string) =>
+      validateSubgraphsForHost({
+        profile: "release",
+        documentModels: [],
+        subgraphs: [entry(compat("system", sdl))],
+      }).diagnostics.map(({ code, severity }) => ({ code, severity }));
+
+    const taken = [{ code: "PH-SG-NAME-TAKEN", severity: "warning" }];
+    expect(
+      codes(
+        "type Query { lastOperation: Operation } type Operation { id: ID }",
+      ),
+    ).toEqual(taken);
+    expect(codes("type Query { missing: Missing }")).toEqual(taken);
   });
 
   it("says nothing about a single subgraph", () => {

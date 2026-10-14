@@ -128,7 +128,38 @@ describe("lintSubgraphTypes", () => {
     );
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraphs "ledger" and "ledger-copy" all define Query.ledger, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.',
+      'Subgraphs "ledger" and "ledger-copy" both define Query.ledger, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.',
+    ]);
+  });
+
+  it("groups the subgraphs that define a contested type the same way", () => {
+    const gadget = (sdl: string, field: string) =>
+      schemaFile(`type Query { ${field}: Gadget } ${sdl}`);
+    const root = makeProject({
+      alpha: gadget("type Gadget { id: ID! }", "a"),
+      beta: gadget("type Gadget { id: ID! }", "b"),
+      gamma: gadget("type Gadget { id: ID! size: Int }", "c"),
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Gadget is defined one way by "alpha" and "beta", and another way by "gamma". The supergraph keeps it only in the subgraphs that define it as the first one to register does. Make the definitions identical, or rename it where it differs.',
+    ]);
+  });
+
+  it("warns that the server serves only one of two subgraphs with one name", () => {
+    const root = makeProject({
+      first: schemaFile("type Query { a: String }"),
+      second: schemaFile("type Query { b: String }"),
+    });
+    for (const dir of ["first", "second"]) {
+      writeFileSync(
+        join(root, "subgraphs", dir, "index.ts"),
+        'export class LedgerSubgraph { name = "ledger"; }\n',
+      );
+    }
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraphs in "first" and "second" are both named "ledger", so the server serves only one of them. Rename one of them.',
     ]);
   });
 

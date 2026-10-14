@@ -61,7 +61,10 @@ function conflicts(
   models: DocumentModelGlobalState[] = [todoList],
 ) {
   return Object.fromEntries(
-    findPackageSubgraphConflicts(subgraphs, models).conflicts,
+    Array.from(
+      findPackageSubgraphConflicts(subgraphs, models).conflicts,
+      ([subgraph, conflict]) => [subgraph.name, conflict],
+    ),
   );
 }
 
@@ -324,21 +327,74 @@ describe("findPackageSubgraphConflicts", () => {
     ).toEqual({});
   });
 
-  it("treats two subgraphs with one name as the one the server keeps", () => {
-    const typeDefs = gql`
-      type Query {
-        ledger: String
-      }
-    `;
+  it("checks each of two subgraphs with one name on its own claims", () => {
+    const first = {
+      name: "ledger",
+      typeDefs: gql`
+        type Query {
+          x: String
+        }
+      `,
+    };
+    const second = {
+      name: "ledger",
+      typeDefs: gql`
+        type Query {
+          y: String
+        }
+      `,
+    };
+    const other = {
+      name: "other",
+      typeDefs: gql`
+        type Query {
+          x: String
+        }
+      `,
+    };
+
+    const report = findPackageSubgraphConflicts([first, second, other], []);
+
+    expect(report.duplicateNames).toEqual(["ledger"]);
+    expect(report.conflicts.get(first)).toEqual({
+      kind: "claims",
+      claims: [{ kind: "contested", claim: "Query.x", rivals: ["other"] }],
+    });
+    expect(report.conflicts.has(second)).toBe(false);
+    expect(report.conflicts.get(other)).toEqual({
+      kind: "claims",
+      claims: [{ kind: "contested", claim: "Query.x", rivals: ["ledger"] }],
+    });
+  });
+
+  it("contests a type only between subgraphs that define it differently", () => {
+    const gadget = (field: string, body: string) =>
+      parse(`type Query { ${field}: Gadget } type Gadget { ${body} }`);
     expect(
       conflicts(
         [
-          { name: "ledger", typeDefs },
-          { name: "ledger", typeDefs },
+          { name: "alpha", typeDefs: gadget("a", "id: ID!") },
+          { name: "beta", typeDefs: gadget("b", "id: ID!") },
+          { name: "gamma", typeDefs: gadget("c", "id: ID! size: Int") },
         ],
         [],
       ),
-    ).toEqual({});
+    ).toEqual({
+      alpha: {
+        kind: "claims",
+        claims: [{ kind: "contested", claim: "Gadget", rivals: ["gamma"] }],
+      },
+      beta: {
+        kind: "claims",
+        claims: [{ kind: "contested", claim: "Gadget", rivals: ["gamma"] }],
+      },
+      gamma: {
+        kind: "claims",
+        claims: [
+          { kind: "contested", claim: "Gadget", rivals: ["alpha", "beta"] },
+        ],
+      },
+    });
   });
 
   it("skips a model whose schema does not parse and checks the rest", () => {
@@ -348,7 +404,14 @@ describe("findPackageSubgraphConflicts", () => {
     );
 
     expect(report.skippedModels).toEqual(["Broken"]);
-    expect(Object.fromEntries(report.conflicts)).toEqual({
+    expect(
+      Object.fromEntries(
+        Array.from(report.conflicts, ([subgraph, conflict]) => [
+          subgraph.name,
+          conflict,
+        ]),
+      ),
+    ).toEqual({
       "todo-list": { kind: "name", heldBy: "document model" },
     });
   });
