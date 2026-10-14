@@ -35,13 +35,25 @@ export function extractSubgraphs(
       found.push(candidate);
     }
   };
-  for (const value of Object.values(namespace)) {
+  for (const value of valuesByName(namespace)) {
     add(value);
     if (value !== null && typeof value === "object") {
-      for (const inner of Object.values(value)) {
+      for (const inner of valuesByName(value as Record<string, unknown>)) {
         add(inner);
       }
     }
   }
   return found;
+}
+
+/**
+ * Values in export-name order, as a native module namespace lists them. The
+ * vite loader's namespace keeps statement order, and the first subgraph to
+ * register keeps a contested type or root field, so without this a dev
+ * server and a built package could serve different supergraphs.
+ */
+function valuesByName(record: Record<string, unknown>): unknown[] {
+  return Object.keys(record)
+    .sort()
+    .map((key) => record[key]);
 }
