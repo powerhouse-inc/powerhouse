@@ -106,12 +106,13 @@ export function compileSubgraph<
     TResolverMap
   >,
 ): CompiledSubgraph<TSubgraph> {
-  if (typeof config !== "object" || config === null) {
+  const declared: unknown = config;
+  if (typeof declared !== "object" || declared === null) {
     failDefinition({
       code: "PH-SG-DEFINITION-INVALID",
       path: [],
       message: "A subgraph declaration is an object.",
-      received: config === null ? "null" : typeof config,
+      received: declared === null ? "null" : typeof declared,
       repair:
         "Pass an object with name, schemaKind, and entries or compatibility.",
     });
