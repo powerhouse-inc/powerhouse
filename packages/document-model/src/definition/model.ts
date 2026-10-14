@@ -1619,11 +1619,9 @@ export function defineDocumentModelFamily<
   const collector = new DefinitionDiagnosticCollector();
   const plans = familyPlans(collector, config);
   checkFamilyVersions(collector, plans);
-  checkUpgradeManifest(
-    collector,
-    (config as { readonly upgradeManifest?: unknown }).upgradeManifest,
-    plans,
-  );
+  // Read once, so the manifest published is the one that was checked.
+  const { upgradeManifest } = config;
+  checkUpgradeManifest(collector, upgradeManifest, plans);
   collector.throwIfFailed();
   const first = plans.at(0);
   if (first === undefined) {
@@ -1632,7 +1630,6 @@ export function defineDocumentModelFamily<
     );
   }
   const documentType = first.config.id;
-  const { upgradeManifest } = config;
   const supportedVersions = plans.map((plan) => plan.config.version);
 
   const behaviors = plans.map((plan) => createCodeFirstRuntimeBehavior(plan));
