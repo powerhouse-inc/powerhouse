@@ -1,3 +1,74 @@
+## 6.2.3-dev.57 (2026-10-14)
+
+### 🚀 Features
+
+- **reactor-api:** fresher credential checks (no cache for in-process Renown, package invalidation, WebSocket re-verification) ([#3239](https://github.com/powerhouse-inc/powerhouse/pull/3239))
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **reactor-api:** export core typeDefs and subgraph type conflicts from ./subgraph-types ([4fc1e0cc94](https://github.com/powerhouse-inc/powerhouse/commit/4fc1e0cc94))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **reactor-api:** collect subgraph type and root-field claims and resolve their owners ([c2f68cb479](https://github.com/powerhouse-inc/powerhouse/commit/c2f68cb479))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **reactor-api:** report background failures through a reportError option ([724796bcc1](https://github.com/powerhouse-inc/powerhouse/commit/724796bcc1))
+- **reactor-api:** throttle validateDocument and driveIntegrity per caller ([479b640bd6](https://github.com/powerhouse-inc/powerhouse/commit/479b640bd6))
+- **reactor-api:** add an inspection throttle (per-caller bucket, slot cap, single-flight) ([c4ec902df2](https://github.com/powerhouse-inc/powerhouse/commit/c4ec902df2))
+- **reactor-api:** let a host leave the inspection subgraph unmounted ([0db42f9f29](https://github.com/powerhouse-inc/powerhouse/commit/0db42f9f29))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **reactor-api:** refill the inspection throttle on a monotonic clock ([a237e0634c](https://github.com/powerhouse-inc/powerhouse/commit/a237e0634c))
+- **reactor-api:** report package subgraph conflicts the way the server decides them ([b0946b9cc4](https://github.com/powerhouse-inc/powerhouse/commit/b0946b9cc4))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **reactor-api:** let only subgraphs whose schema builds claim types and root fields ([518733b24f](https://github.com/powerhouse-inc/powerhouse/commit/518733b24f))
+- **reactor-api:** give each root field to one subgraph and normalize quoted and split definitions ([f1df1f8870](https://github.com/powerhouse-inc/powerhouse/commit/f1df1f8870))
+- **reactor-api:** refuse a document model whose specification cannot be keyed ([c43ab0cbab](https://github.com/powerhouse-inc/powerhouse/commit/c43ab0cbab))
+- **reactor-api:** keep a package's models when its load comes back empty ([9b87c36b22](https://github.com/powerhouse-inc/powerhouse/commit/9b87c36b22))
+- **reactor-api:** count type extensions as uses of model types ([9df7eb5af6](https://github.com/powerhouse-inc/powerhouse/commit/9df7eb5af6))
+- **reactor-api:** refuse only a model's own subgraph when its operation schema fails ([079843c699](https://github.com/powerhouse-inc/powerhouse/commit/079843c699))
+- **reactor-api:** rebuild model-typed subgraphs only when the types change ([25299abbcf](https://github.com/powerhouse-inc/powerhouse/commit/25299abbcf))
+- **reactor-api:** serve the old subgraph handler until its rebuild succeeds ([cb5091d8c5](https://github.com/powerhouse-inc/powerhouse/commit/cb5091d8c5))
+- **reactor-api:** keep the newest subgraph build when router updates overlap ([82b9913473](https://github.com/powerhouse-inc/powerhouse/commit/82b9913473))
+- **reactor-api:** keep a stream that has no Subscription root ([6d17c4d061](https://github.com/powerhouse-inc/powerhouse/commit/6d17c4d061))
+- **switchboard:** report the remaining logged-only background failures ([f20ff3eb16](https://github.com/powerhouse-inc/powerhouse/commit/f20ff3eb16))
+- **reactor-api:** reload once per burst of vite watcher events and report failures ([20d5bfa4df](https://github.com/powerhouse-inc/powerhouse/commit/20d5bfa4df))
+- **reactor-api:** keep a pending update from re-adding a dropped package ([6ff7e0a29b](https://github.com/powerhouse-inc/powerhouse/commit/6ff7e0a29b))
+- **reactor-api:** report router update failures through reportError ([11d1316f54](https://github.com/powerhouse-inc/powerhouse/commit/11d1316f54))
+- **reactor-api:** stream federation-style and root-extending subgraphs ([c495bd9ed4](https://github.com/powerhouse-inc/powerhouse/commit/c495bd9ed4))
+- **reactor-api:** exclude subgraphs that lose a type or root-field claim from the supergraph ([9be8ce4a2c](https://github.com/powerhouse-inc/powerhouse/commit/9be8ce4a2c))
+- **reactor-api:** keep __resolveType and __isTypeOf in stitched resolvers ([116e05d888](https://github.com/powerhouse-inc/powerhouse/commit/116e05d888))
+- **reactor-api:** cap inspection buckets at 10,000 callers in O(1) ([d09a27a435](https://github.com/powerhouse-inc/powerhouse/commit/d09a27a435))
+- **reactor-api:** reject an invalid inspection throttle config ([b5da56c03c](https://github.com/powerhouse-inc/powerhouse/commit/b5da56c03c))
+- **reactor-api:** unregister document models a package stops providing ([b0b5e015da](https://github.com/powerhouse-inc/powerhouse/commit/b0b5e015da))
+- **reactor-api:** rebuild a subgraph that uses model types when models change ([9ee6a99639](https://github.com/powerhouse-inc/powerhouse/commit/9ee6a99639))
+- **reactor-api:** stop config reloads from piling up packages and watchers ([99de0b11aa](https://github.com/powerhouse-inc/powerhouse/commit/99de0b11aa))
+- **reactor-api:** mount the current subgraph after a replacement mid router update ([f4f47cf891](https://github.com/powerhouse-inc/powerhouse/commit/f4f47cf891))
+- **reactor-api:** settle superseded debounced calls with the run that follows ([b4ab71bddc](https://github.com/powerhouse-inc/powerhouse/commit/b4ab71bddc))
+- **reactor-api:** give each package its own document-model reload in the vite loader ([1a8a69f219](https://github.com/powerhouse-inc/powerhouse/commit/1a8a69f219))
+- **reactor-api:** run package change listeners detached so one failure cannot stop the rest ([9dd5a2dc59](https://github.com/powerhouse-inc/powerhouse/commit/9dd5a2dc59))
+- **reactor-api:** refuse a document model whose schema does not parse or build ([88bd294b2b](https://github.com/powerhouse-inc/powerhouse/commit/88bd294b2b))
+- **reactor-api:** merge subscription subgraphs into the supergraph stream ([fa488dd1f6](https://github.com/powerhouse-inc/powerhouse/commit/fa488dd1f6))
+
+### 🔥 Performance
+
+- **reactor-api:** build each document model schema once per schema text ([d64e4f09a4](https://github.com/powerhouse-inc/powerhouse/commit/d64e4f09a4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Frank @froid1911
+- Wouter Kampmann
+
 ## 6.2.3-dev.56 (2026-10-14)
 
 ### 🚀 Features
