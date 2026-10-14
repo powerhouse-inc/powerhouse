@@ -1,24 +1,29 @@
 import type {
   DefinitionDiagnostic,
+  DefinitionSource,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
 import { createDiagnostic } from "document-model";
-import {
-  composedSubgraphOf,
-  reportCompositionPolicy,
-  type ComposedSubgraph,
-  type HostValidationRequest,
-  type HostValidationResult,
+import type {
+  HostValidationRequest,
+  HostValidationResult,
 } from "document-model/tooling";
 import { type DocumentNode, Kind } from "graphql";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import { getUniqueDocumentModels } from "../packages/package-manager.js";
 import { createSchema } from "../utils/create-schema.js";
 import type { DefinedSubgraph } from "./define-subgraph.js";
+import {
+  findPackageSubgraphConflicts,
+  type PackageSubgraph,
+  type PackageSubgraphConflicts,
+} from "./subgraph-types.js";
 
 /**
  * Validates each code-first subgraph in a selection against the augmented
- * schema the host serves, then reports composition conflicts across them. A
+ * schema the host serves, then warns about each one the server would refuse
+ * for its name or leave out of the supergraph for a type or root field
+ * another subgraph owns. A
  * subgraph that names a host-declared type such as `OID` or `DocumentDrive` is
  * valid, because the host declares it. Each class is read through its static
  * `definition`, `typeDefs`, and `scalarResolvers`. Nothing is constructed, so
@@ -28,7 +33,7 @@ export function validateSubgraphsForHost(
   request: HostValidationRequest,
 ): HostValidationResult {
   const diagnostics: DefinitionDiagnostic[] = [];
-  const composed: ComposedSubgraph[] = [];
+  const built: (PackageSubgraph & { source: DefinitionSource })[] = [];
   const documentModels = getUniqueDocumentModels(
     baseDocumentModels.map(([, model]) => model),
     request.documentModels,
@@ -74,14 +79,55 @@ export function validateSubgraphsForHost(
       continue;
     }
 
-    composed.push(composedSubgraphOf(definition));
+    built.push({ name: definition.name, typeDefs, source: entry.source });
   }
 
-  if (composed.length > 1) {
-    diagnostics.push(...reportCompositionPolicy(composed));
+  const { conflicts } = findPackageSubgraphConflicts(
+    built,
+    request.documentModels,
+  );
+  for (const { name, source } of built) {
+    const conflict = conflicts.get(name);
+    if (conflict !== undefined) {
+      diagnostics.push(...conflictDiagnostics(name, source, conflict));
+    }
   }
 
   return { completed: true, diagnostics };
+}
+
+function conflictDiagnostics(
+  name: string,
+  source: DefinitionSource,
+  conflict: PackageSubgraphConflicts,
+): DefinitionDiagnostic[] {
+  if (conflict.nameHeldBy !== undefined) {
+    return [
+      createDiagnostic({
+        code: "PH-SG-NAME-TAKEN",
+        source,
+        path: ["composition", name],
+        message: `Subgraph "${name}" has the name of a ${conflict.nameHeldBy} subgraph, so the server refuses it.`,
+        received: name,
+        repair: "Rename the subgraph.",
+      }),
+    ];
+  }
+  return conflict.claims.map(({ claim, owner }) => {
+    const rootField = claim.includes(".");
+    return createDiagnostic({
+      code: rootField
+        ? "PH-GQL-COORDINATE-OWNED"
+        : "PH-GQL-SHARED-DEFINITION-MISMATCH",
+      source,
+      path: ["composition", name, claim],
+      message: `${claim} belongs to "${owner}", so the server leaves subgraph "${name}" out of the supergraph.`,
+      received: name,
+      repair: rootField
+        ? `Rename ${claim} in this subgraph.`
+        : `Rename ${claim} in this subgraph, or define it exactly as "${owner}" does.`,
+    });
+  });
 }
 
 function subgraphDefinitionOf(value: unknown): SubgraphDefinition | null {

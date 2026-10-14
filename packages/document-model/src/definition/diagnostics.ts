@@ -202,17 +202,23 @@ const catalog = {
     meaning:
       "A computed field is malformed, unbound, bound twice, or bound where it does not exist",
   },
+  "PH-SG-NAME-TAKEN": {
+    severity: "warning",
+    phase: "composition",
+    meaning:
+      "A core or document-model subgraph holds the subgraph's name, so the server refuses it",
+  },
   "PH-GQL-COORDINATE-OWNED": {
     severity: "warning",
     phase: "composition",
     meaning:
-      "Report-only: two subgraphs own one coordinate under the later PH-COMP-1 policy",
+      "Another subgraph owns a root field the subgraph declares, so the server leaves it out of the supergraph",
   },
   "PH-GQL-SHARED-DEFINITION-MISMATCH": {
     severity: "warning",
     phase: "composition",
     meaning:
-      "Report-only: repeated shared definitions differ under that later policy",
+      "Another subgraph owns a type the subgraph defines differently, so the server leaves it out of the supergraph",
   },
   "PH-GQL-FEDERATION-UNSUPPORTED": {
     severity: "error",

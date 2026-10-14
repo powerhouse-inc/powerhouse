@@ -97,10 +97,7 @@ export {
 } from "./src/definition/subgraph/compatibility.js";
 export {
   checkFederationSurface,
-  composedSubgraphOf,
   directiveUsesOfDocument,
-  reportCompositionPolicy,
-  type ComposedSubgraph,
 } from "./src/definition/subgraph/federation.js";
 export {
   createEntryBuilders,

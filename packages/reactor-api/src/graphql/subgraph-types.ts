@@ -1,13 +1,14 @@
 import { typedefs as analyticsTypeDefs } from "@powerhousedao/analytics-engine-graphql";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import {
+  type DocumentModelSource,
   findSubgraphTypeCollisions,
   documentModelSubgraphTypes,
   generatedTypesOf,
   getDocumentModelSubgraphName,
+  globalStateOf,
   hasOperationSchemas,
 } from "../utils/create-schema.js";
 import authSchema from "./auth/schema.graphql";
@@ -67,31 +68,34 @@ function claimsOf(typeDefs: DocumentNode, generated: ReadonlySet<string>) {
   }
 }
 
-/** Package subgraphs the server refuses or excludes; host subgraphs unchecked. */
+/**
+ * Package subgraphs the server refuses or excludes; host subgraphs unchecked.
+ * Pass a code-first model as its module, so its types are the ones it serves.
+ */
 export function findPackageSubgraphConflicts(
   subgraphs: readonly PackageSubgraph[],
-  documentModels: readonly DocumentModelGlobalState[],
+  documentModels: readonly DocumentModelSource[],
 ): PackageSubgraphReport {
-  const models: DocumentModelGlobalState[] = [];
+  const models: DocumentModelSource[] = [];
   const modelSubgraphs: ModelSubgraph[] = [];
   const skippedModels: string[] = [];
   const allModels = [
-    ...baseDocumentModels.map(([, model]) => model.documentModel.global),
+    ...baseDocumentModels.map(([, model]) => model),
     ...documentModels,
   ];
   for (const model of allModels) {
     let typeDefs: DocumentNode | undefined;
     try {
       generatedTypesOf([model]);
-      if (hasOperationSchemas(model)) {
+      if (hasOperationSchemas(globalStateOf(model))) {
         typeDefs = documentModelSubgraphTypes(model).typeDefs;
       }
     } catch {
-      skippedModels.push(model.name);
+      skippedModels.push(globalStateOf(model).name);
       continue;
     }
     models.push(model);
-    const name = getDocumentModelSubgraphName(model);
+    const name = getDocumentModelSubgraphName(globalStateOf(model));
     if (typeDefs && !modelSubgraphs.some((owner) => owner.name === name)) {
       modelSubgraphs.push({ name, typeDefs });
     }
@@ -103,7 +107,10 @@ export function findPackageSubgraphConflicts(
   for (const model of models) {
     for (const name of generatedTypesOf([model]).names) {
       if (!fixed.has(name)) {
-        generatedOwners.set(name, getDocumentModelSubgraphName(model));
+        generatedOwners.set(
+          name,
+          getDocumentModelSubgraphName(globalStateOf(model)),
+        );
       }
     }
   }

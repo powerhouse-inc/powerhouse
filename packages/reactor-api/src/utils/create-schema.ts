@@ -392,6 +392,22 @@ function documentWrapperType(
           }\n`;
 }
 
+/**
+ * A model as a module, or as the global state a schema-first model's JSON
+ * holds. Only a module carries a code-first model's structured definition.
+ */
+export type DocumentModelSource =
+  | DocumentModelModule
+  | DocumentModelGlobalState;
+
+const isModule = (source: DocumentModelSource): source is DocumentModelModule =>
+  "documentModel" in source;
+
+export const globalStateOf = (
+  source: DocumentModelSource,
+): DocumentModelGlobalState =>
+  isModule(source) ? source.documentModel.global : source;
+
 /** The name the model's own subgraph registers under. */
 export function getDocumentModelSubgraphName(
   documentModel: DocumentModelGlobalState,
@@ -708,14 +724,17 @@ export function getGeneratedDocumentModelTypes(
 
 /** {@link getGeneratedDocumentModelTypes} from the models' global states. */
 export function generatedTypesOf(
-  documentModels: readonly DocumentModelGlobalState[],
+  documentModels: readonly DocumentModelSource[],
 ): GeneratedDocumentModelTypes {
   return generatedTypesFrom(
-    documentModels.map((global) => ({
-      global,
-      definitions: () => storedModelDefinitions(global),
+    documentModels.map((source) => ({
+      global: globalStateOf(source),
+      definitions: () =>
+        isModule(source)
+          ? documentModelDefinitions(source)
+          : storedModelDefinitions(source),
     })),
-    [],
+    modelPackageScalars(documentModels.filter(isModule)),
   );
 }
 
@@ -788,7 +807,7 @@ export function hasOperationSchemas(documentModel: DocumentModelGlobalState) {
  * code-first model is projected from its structured definition.
  */
 export function documentModelSubgraphTypes(
-  documentModel: DocumentModelModule | DocumentModelGlobalState,
+  documentModel: DocumentModelSource,
 ): { typeDefs: DocumentNode; typeNames: ReadonlySet<string> } {
   const typeDefs = generateDocumentModelSchema(documentModel, {
     useNewApi: true,
@@ -1327,14 +1346,12 @@ const templateOwners = new WeakMap<
 >();
 
 export function generateDocumentModelSchema(
-  source: DocumentModelModule | DocumentModelGlobalState,
+  source: DocumentModelSource,
   options: DocumentModelSchemaOptions = {},
 ): DocumentNode {
-  const documentModel =
-    "documentModel" in source ? source.documentModel.global : source;
+  const documentModel = globalStateOf(source);
   const documentName = getDocumentModelSchemaName(documentModel);
-  const structured =
-    "documentModel" in source ? structuredModelOf(source) : null;
+  const structured = isModule(source) ? structuredModelOf(source) : null;
   const document = generateModelSchema(
     structured === null
       ? storedModelProjection(documentModel, documentName)
