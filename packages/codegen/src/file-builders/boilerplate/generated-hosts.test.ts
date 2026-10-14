@@ -72,7 +72,7 @@ describe("writeGeneratedHostsFiles", () => {
     // the desktop host runs on the PUBLISHED generic compound; ${userData}
     // must survive as a literal placeholder (resolved by the runner, not here)
     const desktop = readFileSync(join(dir, "hosts/desktop/host.js"), "utf-8");
-    expect(desktop).toContain("@powerhousedao/host-core/runners/compound");
+    expect(desktop).toContain("@powerhousedao/desktop/runner");
     expect(desktop).toContain('dataDir: "${userData}/pglite"');
     expect(desktop).toContain(`defaultVerb: "serve"`);
     expect(desktop).toContain("cspRegistrySync: true");

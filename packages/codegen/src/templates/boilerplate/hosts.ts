@@ -133,17 +133,29 @@ export default {
 
   const desktopHost = `// @ts-check
 // The desktop shape: a production switchboard next to the BUILT Connect,
-// supervised by the GENERIC compound (@powerhousedao/host-core). Run
-// \`ph run connect build\` once, then \`ph run desktop\`. A desktop shell
-// (ph-win) supervises exactly this command. At \`run\`, each member uses its
-// own default mode below; \`ph run desktop <verb>\` forwards uniformly.
+// supervised by the desktop runner (@powerhousedao/desktop — run/serve are
+// the generic compound; \`dev\` opens a native shell window; \`build\` stages
+// the shippable stack). Run \`ph run connect build\` once, then
+// \`ph run desktop\`. At \`run\`, each member uses its own default mode below;
+// \`ph run desktop <verb>\` forwards uniformly.
 import config from "../../powerhouse.config.json" with { type: "json" };
 
 export default {
   name: "desktop",
 
   runner: {
-    module: "@powerhousedao/host-core/runners/compound",
+    module: "@powerhousedao/desktop/runner",
+    // NATIVE WINDOW (optional): point \`shell\` at a ph-win-desktop checkout;
+    // \`ph run desktop dev\` then opens the shell around this stack with no
+    // environment wiring, and \`ph run desktop build\` stages the shippable
+    // stack (hosts + config + built Connect + vendored ph-cli) into the
+    // shell for a no-env installed app. Headless verbs need no shell.
+    // shell: {
+    //   project: "../ph-win-desktop",
+    //   window: { title: "${projectName}", width: 1440, height: 900 },
+    //   tray: true,
+    //   fileAssociations: [".phd"],
+    // },
   },
 
   profile: {
@@ -182,22 +194,6 @@ export default {
     runtimeRecord: true, // single-instance record under .ph/run/
   },
 
-  // NATIVE WINDOW (optional): switch runner.module to
-  // "@powerhousedao/desktop/runner" (private until its first publish — link
-  // the workspace package meanwhile) and point it at a ph-win-desktop
-  // checkout; \`ph run desktop dev\` then opens the shell around this stack
-  // with no environment wiring, and \`ph run desktop build\` stages the
-  // shippable stack (hosts + config + built Connect + vendored ph-cli) into
-  // the shell for a no-env installed app.
-  // runner: {
-  //   module: "@powerhousedao/desktop/runner",
-  //   shell: {
-  //     project: "../ph-win-desktop",
-  //     window: { title: "${projectName}", width: 1440, height: 900 },
-  //     tray: true,
-  //     fileAssociations: [".phd"],
-  //   },
-  // },
 };
 `;
 
@@ -207,8 +203,7 @@ export default {
 // and glued to its lifetime; the switchboard outlives agent sessions, and N
 // agents attach to ONE reactor. Serves an OpenAI-compatible chat-completions
 // API; without a model configured it answers as the demo agent.
-// Requires @powerhousedao/clint in devDependencies (private until its first
-// publish — link the workspace package meanwhile).
+// Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 import config from "../../powerhouse.config.json" with { type: "json" };
 
 export default {
@@ -254,8 +249,7 @@ export default {
 // services manager (start/stop/ps/logs, per-run log files, re-attach), not
 // merely started. \`ph run cli\` brings the stack up; \`ph run cli dev\` adds
 // a chat shell against the agents below.
-// Requires @powerhousedao/clint in devDependencies (private until its first
-// publish — link the workspace package meanwhile).
+// Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 export default {
   name: "cli",
 
