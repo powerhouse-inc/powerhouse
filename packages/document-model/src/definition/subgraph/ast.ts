@@ -30,7 +30,11 @@ export type SubgraphSchemaData = {
   readonly hasSubscriptions: boolean;
   readonly document: LocationFreeGraphQLDocumentNode;
   readonly diagnostics: readonly DefinitionDiagnostic[];
-  /** The input entries as the builders registered them, in input order. */
+  /**
+   * The input entries as the builders registered them, in input order, less
+   * a root field declared twice, so each resolver is the one whose
+   * declaration the document carries.
+   */
   readonly registered: readonly RegisteredEntry[];
 };
 
@@ -65,6 +69,8 @@ export function compileSubgraphSchema(
   const roots = new Map<RootName, FieldNode[]>();
   const computedTargets = new Map<string, ReadonlySet<string>>();
   const boundComputed = new Set<string>();
+  const boundRoots = new Set<string>();
+  const duplicates = new Set<number>();
 
   const read = input.entries.map((value, index) =>
     readEntry(value, ["entries", index]),
@@ -78,13 +84,27 @@ export function compileSubgraphSchema(
       case "query":
       case "mutation":
       case "subscription": {
+        const root = rootFor(entry.kind);
+        const coordinate = `${root}.${entry.fieldName}`;
+        if (boundRoots.has(coordinate)) {
+          collector.add({
+            code: "PH-SG-ENTRY-INVALID",
+            path,
+            message: `${coordinate} is declared twice.`,
+            received: coordinate,
+            repair:
+              "Declare each root field once, or give one of them a different fieldName.",
+          });
+          duplicates.add(index);
+          return;
+        }
+        boundRoots.add(coordinate);
         const args = argumentDefinitions(walk, entry.args, [...path, "args"]);
         const returns = walk.typeReferenceFor(entry.returns, [
           ...path,
           "returns",
         ]);
         if (returns === undefined) return;
-        const root = rootFor(entry.kind);
         const fields = roots.get(root) ?? [];
         fields.push({
           name: entry.fieldName,
@@ -205,7 +225,7 @@ export function compileSubgraphSchema(
     hasSubscriptions: roots.has("Subscription"),
     document: buildDocument(emitted, scalars, definitionOrder),
     diagnostics: collector.diagnostics,
-    registered: read,
+    registered: read.filter((_, index) => !duplicates.has(index)),
   };
 }
 
