@@ -3,7 +3,10 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
 import { compileSubgraphSchema } from "../../src/definition/subgraph/ast.js";
-import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
+import {
+  compileSubgraph,
+  type TypedSubgraphConfig,
+} from "../../src/definition/subgraph/definer.js";
 import {
   createEntryBuilders,
   isRegisteredEntry,
@@ -362,6 +365,35 @@ describe("a compiled declaration", () => {
     >;
 
     expect(Object.keys(resolvers.Post)).toEqual(["wordCount", "author"]);
+  });
+
+  it("takes the name and definition order as they were when the entries callback ran", () => {
+    const config: {
+      -readonly [
+        K in keyof TypedSubgraphConfig<unknown, unknown, unknown, unknown>
+      ]: TypedSubgraphConfig<unknown, unknown, unknown, unknown>[K];
+    } = {
+      name: "authors",
+      schemaKind: "typed",
+      definitionOrder: ["Query", "Author", "OID"],
+      entries: (build) => {
+        config.name = "renamed";
+        config.definitionOrder = ["Bogus"];
+        return [
+          build.query("author", {
+            returns: ph.ref(Author),
+            resolve: () => null,
+          }),
+        ];
+      },
+    };
+    const { definition, diagnostics } = compileSubgraph(config);
+
+    expect(definition.name).toBe("authors");
+    expect(
+      definition.schemaKind === "typed" && definition.definitionOrder,
+    ).toEqual(["Query", "Author", "OID"]);
+    expect(diagnostics).toEqual([]);
   });
 
   it("refuses an entries callback that returns something other than an array", () => {

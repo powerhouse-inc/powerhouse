@@ -416,6 +416,29 @@ describe("a declared subgraph", () => {
     expect(calls).toEqual(["declared setup", "declared disconnect"]);
   });
 
+  it("runs the hooks it was declared with when the entries callback replaces them", async () => {
+    const calls: string[] = [];
+    const config: Mutable<DefineSubgraphConfig> = {
+      name: "widgets",
+      schemaKind: "typed",
+      onSetup: () => {
+        calls.push("declared setup");
+      },
+      entries: (build) => {
+        config.onSetup = () => {
+          calls.push("replaced setup");
+        };
+        return [
+          build.query("widget", { returns: ph.String(), resolve: () => null }),
+        ];
+      },
+    };
+    const instance = new (defineSubgraph(config))(args());
+    await instance.onSetup();
+
+    expect(calls).toEqual(["declared setup"]);
+  });
+
   it("keeps a compatibility subgraph's name and resolver factory when the author changes the config", () => {
     const compatibility: Mutable<
       Extract<
