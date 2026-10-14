@@ -2970,6 +2970,9 @@ importers:
         specifier: 7.0.0-next-7.27
         version: 7.0.0-next-7.27(supports-color@8.1.1)(typanion@3.14.0)
     devDependencies:
+      '@powerhousedao/reactor-workflow':
+        specifier: workspace:*
+        version: link:../reactor-workflow
       '@powerhousedao/verdaccio-s3-storage':
         specifier: 13.0.0
         version: 13.0.0(supports-color@8.1.1)
