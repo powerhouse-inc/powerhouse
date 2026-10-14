@@ -28,6 +28,9 @@
       "path": "../../packages/document-model"
     },
     {
+      "path": "../../packages/host-core"
+    },
+    {
       "path": "../../packages/powerhouse-vetra-packages"
     },
     {
