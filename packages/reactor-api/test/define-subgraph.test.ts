@@ -570,6 +570,38 @@ describe("a declaration the server could not run", () => {
     expect(refusal(compat({ name: "" }))).toEqual(noName);
   });
 
+  it("refuses a name that is not a single route segment", () => {
+    const notASegment = {
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["name"],
+      message:
+        "A subgraph name is one route segment: letters, digits, hyphens, and underscores, starting with a letter or digit.",
+    };
+    for (const name of ["../r", "graphql/r", "a/b c", ".", "-widgets"]) {
+      expect(refusal(typed({ name }))).toEqual(notASegment);
+    }
+    expect(refusal(compat({ name: "x/../../escape" }))).toEqual(notASegment);
+    for (const name of [
+      "contacts-search",
+      "my_widgets",
+      "1st",
+      "café-ünïcode",
+    ]) {
+      expect(
+        new (defineSubgraph({
+          name,
+          schemaKind: "typed",
+          entries: (build) => [
+            build.query("widget", {
+              returns: ph.String(),
+              resolve: () => null,
+            }),
+          ],
+        }))(args()).name,
+      ).toBe(name);
+    }
+  });
+
   it("refuses lifecycle hooks that are not functions", () => {
     expect(refusal(typed({ onSetup: 5 }))).toEqual({
       code: "PH-DEF-OPTION-INVALID",
