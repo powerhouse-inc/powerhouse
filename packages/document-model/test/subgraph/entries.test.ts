@@ -46,6 +46,18 @@ const Post = ph.object("Post", {
   },
 });
 
+/** The first diagnostic a builder throws, or undefined when it accepts. */
+function refusal(declare: () => unknown) {
+  try {
+    declare();
+  } catch (error) {
+    if (!(error instanceof DocumentModelDefinitionError)) throw error;
+    const [{ code, path }] = error.diagnostics;
+    return { code, path };
+  }
+  return undefined;
+}
+
 describe("ph.field", () => {
   it("keeps computed members out of the stored fields", () => {
     // Every existing reader of `fields` sees exactly what it saw before.
@@ -200,6 +212,35 @@ describe("the entry builders", () => {
     expect(() =>
       build.subscription("posted", { returns: ph.ref(Post) } as never),
     ).toThrow(DocumentModelDefinitionError);
+  });
+
+  it("requires resolve on a computed field, resolveType and isTypeOf", () => {
+    const { builders: build } = builders();
+    const tokens = Post.computedTokens as Record<string, never>;
+    expect(refusal(() => build.field(tokens.wordCount, {} as never))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["options", "resolve"],
+    });
+    expect(refusal(() => build.resolveType(Post, undefined as never))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["resolve"],
+    });
+    expect(refusal(() => build.isTypeOf(Post, "Post" as never))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["resolve"],
+    });
+  });
+
+  it("requires a computed-field token to name its type and field", () => {
+    const { builders: build } = builders();
+    expect(
+      refusal(() =>
+        build.field(
+          { kind: "computed-token", typeName: "Post", fieldName: 7 } as never,
+          { resolve: () => 12 },
+        ),
+      ),
+    ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["token"] });
   });
 
   it("accepts a subscription whose event differs from its result", () => {
@@ -394,6 +435,24 @@ describe("a compiled declaration", () => {
       definition.schemaKind === "typed" && definition.definitionOrder,
     ).toEqual(["Query", "Author", "OID"]);
     expect(diagnostics).toEqual([]);
+  });
+
+  it("refuses a definition order that names something other than a string", () => {
+    expect(
+      refusal(() =>
+        compileSubgraph({
+          name: "authors",
+          schemaKind: "typed",
+          definitionOrder: ["Query", 7, "OID"] as never,
+          entries: (build) => [
+            build.query("author", {
+              returns: ph.ref(Author),
+              resolve: () => null,
+            }),
+          ],
+        }),
+      ),
+    ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["definitionOrder", 1] });
   });
 
   it("refuses an entries callback that returns something other than an array", () => {
