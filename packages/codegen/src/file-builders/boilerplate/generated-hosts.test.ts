@@ -59,6 +59,11 @@ describe("writeGeneratedHostsFiles", () => {
     expect(vetra).toContain(`defaultVerb: "dev"`);
     expect(vetra).toContain(`host: "connect"`);
     expect(vetra).toContain("config.vetra?.connectPort");
+    // R4: generic compound + studio plugins (no vetra-specific runner).
+    expect(vetra).toContain("@powerhousedao/host-core/runners/compound");
+    expect(vetra).toContain("@powerhousedao/vetra-studio/switchboard");
+    expect(vetra).toContain("@powerhousedao/vetra-studio/connect");
+    expect(vetra).not.toContain("@powerhousedao/ph-cli/runners/compound");
 
     // P2.8: single-sourced protocol — the switchboard host references the
     // SAME connect.reactor block the connect host receives via its config.

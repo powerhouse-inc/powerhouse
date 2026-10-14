@@ -64,6 +64,11 @@ export default {
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
     port: config.studio?.port ?? 3000, // referenced — the value stays in powerhouse.config.json
+
+    // THE COMPOSITION — presence is activation (no feature flags behind
+    // these lines). The generic shell: sidebar, home, /d/ URLs, drive
+    // management; delete it and list your own shell plugin to go deep.
+    plugins: ["@powerhousedao/connect/plugins/generic"],
   },
 
   // handed to the runtime whole: the connect.* block, projected unchanged
@@ -89,6 +94,14 @@ export default {
   runner: {
     module: "@powerhousedao/ph-cli/runners/switchboard",
     port: config.reactor?.port ?? 4001, // referenced — single value store
+
+    // THE COMPOSITION — the switchboard defaults, each line removable (a
+    // curated API deletes what it does not serve). Presence is activation.
+    plugins: [
+      "@powerhousedao/switchboard/plugins/mcp",
+      "@powerhousedao/switchboard/plugins/attachments",
+      "@powerhousedao/switchboard/plugins/workflows",
+    ],
   },
 
   // \`auth\` is read from powerhouse.config.json by the server itself.
@@ -104,28 +117,54 @@ export default {
 `;
 
   const vetraHost = `// @ts-check
+// vetra is the GENERIC compound over the project's switchboard and connect
+// members, each composed with the Vetra Studio plugins — there is no
+// vetra-specific runner. Studio is verb-scoped: \`ph run vetra dev\` gets the
+// Vite package loader + studio UI + codegen reload; \`ph run vetra\` (run) is
+// the same stack headless. Members spread their sibling host's composition
+// (full inclusion) and add studio.
+// Requires @powerhousedao/vetra-studio in devDependencies (private until its
+// first publish — link the workspace package meanwhile; added to the
+// versioned scaffold deps at that publish event, same as host-core/clint).
 import config from "../../powerhouse.config.json" with { type: "json" };
+import switchboard from "../switchboard/host.js";
+import connect from "../connect/host.js";
 
 export default {
   name: "vetra",
 
-  // The compound starts each member via that member's own declared runner at
-  // defaultVerb. "dev" is what makes vetra vetra: Vite package loader on the
-  // switchboard, HMR studio on connect, codegen hot-reload.
   runner: {
-    module: "@powerhousedao/ph-cli/runners/compound",
+    module: "@powerhousedao/host-core/runners/compound",
     defaultVerb: "dev",
   },
 
-  // Member wrappers reference sibling hosts by folder name; a wrapper
-  // overrides the member's sections by the same names (wrapper wins).
   children: {
-    "vetra-studio": {
-      host: "connect",
-      runner: { port: config.vetra?.connectPort ?? 3001 },
-    },
     "vetra-switchboard": {
       host: "switchboard",
+      runner: {
+        plugins: [
+          ...switchboard.runner.plugins,
+          { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
+        ],
+      },
+      // The studio drives, declared (projectHash keeps today's ids):
+      reactor: {
+        ...switchboard.reactor,
+        drives: [
+          { slug: "vetra", name: "Vetra", projectHash: true, preferredEditor: "vetra-drive-app" },
+          { slug: "vetra-preview", name: "Vetra Preview", projectHash: true },
+        ],
+      },
+    },
+    "vetra-studio": {
+      host: "connect",
+      runner: {
+        port: config.vetra?.connectPort ?? 3001,
+        plugins: [
+          ...connect.runner.plugins,
+          { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },
+        ],
+      },
     },
   },
 };
