@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-13T18:39:14.591Z
+> Generated: 2026-10-14T07:09:11.317Z
 > Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -14679,6 +14679,8 @@ Initialize a new project
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
 
+**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -14778,6 +14780,8 @@ Initialize a new global project
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
+
+**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
