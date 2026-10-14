@@ -317,11 +317,16 @@ function resolveDefinitionOrder(
   collector: DefinitionDiagnosticCollector,
 ): readonly string[] {
   if (authored === undefined) return emitted;
+  let invalid = false;
+  const report: DefinitionDiagnosticCollector["add"] = (diagnostic) => {
+    invalid = true;
+    collector.add(diagnostic);
+  };
   const expected = new Set(emitted);
   const seen = new Set<string>();
   for (const name of authored) {
     if (seen.has(name)) {
-      collector.add({
+      report({
         code: "PH-SG-ENTRY-INVALID",
         path: ["definitionOrder"],
         message: `${name} appears twice in definitionOrder.`,
@@ -332,7 +337,7 @@ function resolveDefinitionOrder(
     }
     seen.add(name);
     if (!expected.has(name)) {
-      collector.add({
+      report({
         code: "PH-SG-ENTRY-INVALID",
         path: ["definitionOrder"],
         message: `definitionOrder names ${name}, which this schema does not emit.`,
@@ -344,7 +349,7 @@ function resolveDefinitionOrder(
   }
   for (const name of emitted) {
     if (!seen.has(name)) {
-      collector.add({
+      report({
         code: "PH-SG-ENTRY-INVALID",
         path: ["definitionOrder"],
         message: `definitionOrder omits ${name}.`,
@@ -354,7 +359,7 @@ function resolveDefinitionOrder(
       });
     }
   }
-  return collector.size > 0 ? emitted : authored;
+  return invalid ? emitted : authored;
 }
 
 function buildDocument(
