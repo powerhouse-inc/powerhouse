@@ -176,8 +176,18 @@ export default {
 // the generic compound; \`dev\` opens a native shell window; \`build\` stages
 // the shippable stack). Run \`ph run connect build\` once, then
 // \`ph run desktop\`. At \`run\`, each member uses its own default mode below;
-// \`ph run desktop <verb>\` forwards uniformly.
+// \`ph run desktop <verb>\` forwards uniformly. Members derive from the sibling
+// hosts (full inclusion); the server's drive list is hoisted once and the
+// connect member attaches it as REMOTES (one declaration, two projections).
 import config from "../../powerhouse.config.json" with { type: "json" };
+import switchboard from "../switchboard/host.js";
+import connect from "../connect/host.js";
+
+// Declared once: the server member serves these locally; the connect member
+// attaches the SAME list as remote drives (a compound's Connect must not
+// duplicate-declare the local drives the server owns).
+const serverPort = switchboard.runner.port;
+const serverDrives = [{ slug: "powerhouse", name: "${projectName}" }];
 
 export default {
   name: "desktop",
@@ -202,10 +212,18 @@ export default {
     name: "${projectName} Desktop",
   },
 
+  config: {
+    startOrder: ["desktop-switchboard", "desktop-connect"],
+    cspRegistrySync: true, // patch the baked CSP for the runtime registry
+    runtimeRecord: true, // single-instance record under .ph/run/
+  },
+
   children: {
     "desktop-switchboard": {
       host: "switchboard",
+      runner: { plugins: [...switchboard.runner.plugins] },
       reactor: {
+        protocol: switchboard.reactor.protocol,
         backends: {
           main: {
             // Per-user data dir; \${userData} resolves at the runner (a shell
@@ -216,23 +234,29 @@ export default {
             packages: { dynamic: true },
           },
         },
+        drives: serverDrives,
       },
     },
     "desktop-connect": {
       host: "connect",
       // serve the BUILT Connect; the loopback port doubles as a shell's
       // readiness probe
-      runner: { defaultVerb: "serve", port: config.studio?.port ?? 3000 },
+      runner: {
+        defaultVerb: "serve",
+        port: config.studio?.port ?? 3000,
+        plugins: [...connect.runner.plugins],
+      },
+      // Attach the server's drives as remotes (replaces the old implicit
+      // projectDrivesIntoConnect flag with legible derivation):
+      reactor: {
+        ...connect.reactor,
+        drives: serverDrives.map((d) => ({
+          slug: d.slug,
+          remote: { url: \`http://127.0.0.1:\${serverPort}/d/\${d.slug}\` },
+        })),
+      },
     },
   },
-
-  config: {
-    startOrder: ["desktop-switchboard", "desktop-connect"],
-    projectDrivesIntoConnect: true, // defaultDrives -> this switchboard's drives
-    cspRegistrySync: true, // patch the baked CSP for the runtime registry
-    runtimeRecord: true, // single-instance record under .ph/run/
-  },
-
 };
 `;
 
