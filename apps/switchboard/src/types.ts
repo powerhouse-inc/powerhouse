@@ -195,8 +195,10 @@ export type StartServerOptions = {
 export type SwitchboardReactor = {
   defaultDriveUrl: string | undefined;
   reactor: IReactorClient;
-  /** Switchboard-backed remote attachment service over its own `/attachments/*` API, for downstream consumers. */
-  attachmentService: IAttachmentService;
+  /** Switchboard-backed remote attachment service over its own `/attachments/*` API, for downstream consumers.
+   * Undefined when the attachments plugin is absent from the composition
+   * (FEATURE_PLUGIN_HOST_ENABLED — presence is activation, rewire R2.3). */
+  attachmentService: IAttachmentService | undefined;
   /** Whether the authoritative attachment-reference projection is active. */
   attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
   /** Whether the workflow runtime's operation intake is indexing. Undefined

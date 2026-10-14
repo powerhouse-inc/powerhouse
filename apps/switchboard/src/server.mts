@@ -1053,15 +1053,24 @@ async function initServer(
     );
   }
 
-  registerAttachmentRoutes(api);
+  // R2.3: flag-on, the attachments plugin owns the route mount + service
+  // creation at onHttpMounting; flag-off runs the inline path.
+  let attachmentService:
+    | ReturnType<typeof createRemoteAttachmentService>
+    | undefined;
   if (pluginHost) {
     pluginHost.ctx.api = api;
+    pluginHost.ctx.serverPort = serverPort;
     await pluginHost.observe("onHttpMounting");
+    attachmentService = pluginHost.ctx.attachmentService as
+      | ReturnType<typeof createRemoteAttachmentService>
+      | undefined;
+  } else {
+    registerAttachmentRoutes(api);
+    attachmentService = createRemoteAttachmentService(
+      deriveAttachmentServiceConfig(options, serverPort, renown),
+    );
   }
-
-  const attachmentService = createRemoteAttachmentService(
-    deriveAttachmentServiceConfig(options, serverPort, renown),
-  );
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.

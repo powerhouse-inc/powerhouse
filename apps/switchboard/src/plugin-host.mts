@@ -1,3 +1,4 @@
+import { attachmentsPlugin } from "./plugins/attachments.mjs";
 import { mcpPlugin } from "./plugins/mcp.mjs";
 import {
   mergeContributions,
@@ -48,6 +49,10 @@ export interface SwitchboardHostContext {
   logger: unknown;
   options: Record<string, unknown>;
   renown: unknown;
+  serverPort?: number;
+  /** Set by the attachments plugin at onHttpMounting; the boot reads it for
+   * the returned handle. */
+  attachmentService?: unknown;
   api?: unknown;
   client?: unknown;
   graphqlManager?: unknown;
@@ -81,6 +86,14 @@ export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
       plugin: mcpPlugin as HostPlugin,
       provenance: "built-in",
       entry: { ...entry, module: "@powerhousedao/switchboard/plugins/mcp" },
+    },
+    {
+      plugin: attachmentsPlugin as HostPlugin,
+      provenance: "built-in",
+      entry: {
+        ...entry,
+        module: "@powerhousedao/switchboard/plugins/attachments",
+      },
     },
   ];
 }
