@@ -10,13 +10,13 @@ import {
   normalizePluginEntry,
   PluginError,
   registerHostType,
-  resolveHostPlugins,
   resolveOrder,
   runObserveHook,
   runProvideHook,
   runTransformHook,
   type HostPlugin,
 } from "../src/plugins.js";
+import { resolveHostPlugins } from "../src/plugins-resolve.js";
 
 const temporary: string[] = [];
 afterEach(() => {

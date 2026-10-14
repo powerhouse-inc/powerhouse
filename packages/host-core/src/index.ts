@@ -96,7 +96,6 @@ export {
   entryActiveForVerb,
   registerHostType,
   hostTypeSatisfies,
-  resolveHostPlugins,
   resolveOrder,
   runProvideHook,
   runTransformHook,
@@ -115,6 +114,7 @@ export {
   type ContributionSource,
   type MergedContribution,
 } from "./plugins.js";
+export { resolveHostPlugins } from "./plugins-resolve.js";
 export {
   driveDeclarationSchema,
   drivesSchema,
