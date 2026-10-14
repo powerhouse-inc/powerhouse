@@ -100,6 +100,10 @@ jobs:
       # New packages must be published once with a token, then registered
       # via `npm trust github <pkg> --file release-branch.yml
       # --repo powerhouse-inc/powerhouse --allow-publish`.
+      # Do that first publish via `pnpm publish:first <package-dir>` — it
+      # guards lockstep and registry freshness so the packed manifest cannot
+      # pin siblings one version behind (pnpm rewrites workspace:* from DISK;
+      # a checkout that predates the latest nightly bump ships stale pins).
 
       # sentry-cli is installed before Run release: release.ts shells out
       # to `sentry-cli sourcemaps inject` between build and publish.
