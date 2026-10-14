@@ -465,11 +465,9 @@ function namedOrFail(
   type: { readonly name: string | null },
   builder: string,
 ): string {
-  if (
-    type === null ||
-    typeof type !== "object" ||
-    typeof type.name !== "string"
-  ) {
+  const name =
+    type !== null && typeof type === "object" ? type.name : undefined;
+  if (typeof name !== "string") {
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
       path: ["type"],
@@ -478,5 +476,5 @@ function namedOrFail(
         "Pass the descriptor returned by ph.object, ph.interface, or ph.union.",
     });
   }
-  return type.name;
+  return name;
 }
