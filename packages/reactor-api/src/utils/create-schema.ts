@@ -527,7 +527,6 @@ export type GeneratedDocumentModelTypes = {
   names: ReadonlySet<string>;
 };
 
-/** The definitions a schema-first model adds to the generated schema. */
 function storedModelDefinitions(
   documentModel: DocumentModelGlobalState,
 ): readonly DefinitionNode[] {
@@ -615,8 +614,6 @@ export function reservedTypeNamesTaken(
     .map(([name]) => name);
 }
 
-// The generated schema around the document models' definitions. The models'
-// package scalars follow the host scalars.
 const GENERATED_SCALARS = gql`
   ${SUBGRAPH_SCALAR_TYPE_DEFS}
 `.definitions;
@@ -735,7 +732,6 @@ function packageScalarDefinitions(
   ).definitions;
 }
 
-/** Only the first model with a given schema name is projected. */
 function generatedTypesFrom(
   documentModels: readonly {
     global: DocumentModelGlobalState;

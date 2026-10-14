@@ -58,7 +58,6 @@ export type StructuredModel = {
   readonly packageScalars: ReadonlySet<string>;
   readonly layout: TemplateLayout;
   readonly hostDescriptions: ReadonlyMap<string, string>;
-  /** Digest of the whole definition the projection reads. */
   readonly digest: string;
 };
 
