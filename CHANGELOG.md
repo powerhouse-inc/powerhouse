@@ -1,3 +1,22 @@
+## 6.2.3-dev.58 (2026-10-14)
+
+### 🚀 Features
+
+- **ph-cmd:** dispatch 'ph run' to the project's ph-cli ([7f89c17931](https://github.com/powerhouse-inc/powerhouse/commit/7f89c17931))
+- **ph-cmd,shared:** 'ph run' surfaces only when uniform-runners is enabled ([ac4007490e](https://github.com/powerhouse-inc/powerhouse/commit/ac4007490e))
+
+### 🩹 Fixes
+
+- **clint:** powerhousedao packages are regular deps, not peers — npm ERESOLVE on scaffold install ([6de7d0d7c6](https://github.com/powerhouse-inc/powerhouse/commit/6de7d0d7c6))
+- **registry:** declare reactor-workflow — undeclared dep broke test shard 1 ([37660d7b04](https://github.com/powerhouse-inc/powerhouse/commit/37660d7b04))
+- **release:** build @powerhousedao/desktop — dev.57 shipped an empty tarball; guard the filter list ([9103896840](https://github.com/powerhouse-inc/powerhouse/commit/9103896840))
+- **release:** the desktop build filter belongs in scripts.build — the prior commit amended test:ci ([2cbbff231c](https://github.com/powerhouse-inc/powerhouse/commit/2cbbff231c))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.57 (2026-10-14)
 
 ### 🚀 Features
