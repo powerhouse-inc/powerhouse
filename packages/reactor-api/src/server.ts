@@ -120,6 +120,7 @@ import {
   type RenownConfig,
   type ResolvedRenownConfig,
 } from "./services/renown-config.js";
+import { resolveWsCredentialRecheckIntervalMs } from "./graphql/ws-credential-monitor.js";
 import type {
   API,
   IPackageLoader,
@@ -550,6 +551,10 @@ async function setupGraphQLManager({
   reportError,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
+    wsCredentialRecheckIntervalMs: resolveWsCredentialRecheckIntervalMs(
+      process.env.WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+      logger,
+    ),
     path: config.basePath,
     httpServer,
     wsServer,

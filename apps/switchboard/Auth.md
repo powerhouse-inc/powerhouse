@@ -391,8 +391,8 @@ class RenownAuthSubgraph extends BaseSubgraph {
     Mutation: {
       revokeCredential: async (_: unknown, { id }: { id: string }) => {
         const vc = await this.store.revoke(id); // persist first
-        // Evicts cached checks for this identity. chainId and appDid
-        // narrow the eviction;
+        // Evicts cached checks for this identity and re-verifies its open
+        // WebSocket connections. chainId and appDid narrow the eviction;
         // pass only the address to drop every app key of that address.
         this.credentials.invalidateCredential(
           vc.address,
@@ -409,7 +409,17 @@ class RenownAuthSubgraph extends BaseSubgraph {
 The call is synchronous, returns the number of evicted entries and is a no-op on
 a host without authentication. It is local to the process: other replicas keep
 their cache until its TTL lapses, which is why `source: "self"` defaults to no
-cache. A package built against an older `reactor-api` sees `this.credentials` as
+cache.
+
+Open WebSocket connections are authenticated once, at connect. Their credentials
+are re-verified every `WS_CREDENTIAL_RECHECK_INTERVAL_MS` (default `60000`; `0`
+turns the periodic sweep off) and immediately for the identity named by an
+`invalidateCredential` call. A connection whose credential no longer verifies is
+closed with code `4403` and reason `credential-revoked`. A re-check that fails
+because the verifier is unreachable keeps the connection open. SSE subscription
+streams are not re-checked.
+
+A package built against an older `reactor-api` sees `this.credentials` as
 `undefined`; call it as `this.credentials?.invalidateCredential(...)` when the
 package must support such hosts.
 

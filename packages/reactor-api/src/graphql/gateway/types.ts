@@ -56,10 +56,14 @@ export const WS_CLOSE_REASON_AUTHENTICATION_REQUIRED =
 /** A bearer was sent and could not be verified. */
 export const WS_CLOSE_REASON_BEARER_REJECTED = "bearer-rejected";
 
+/** An admitted connection's credential was revoked or no longer verifies. */
+export const WS_CLOSE_REASON_CREDENTIAL_REVOKED = "credential-revoked";
+
 /** Every reason a refusal closes with, for a client matching on the set. */
 export const WS_AUTH_CLOSE_REASONS = [
   WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
   WS_CLOSE_REASON_BEARER_REJECTED,
+  WS_CLOSE_REASON_CREDENTIAL_REVOKED,
 ] as const;
 
 export type WsDisposer = { dispose: () => void | Promise<void> };

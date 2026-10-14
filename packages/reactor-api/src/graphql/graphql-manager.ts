@@ -91,6 +91,10 @@ import {
 } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
 import {
+  DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+  WsCredentialMonitor,
+} from "./ws-credential-monitor.js";
+import {
   WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
   WS_CLOSE_REASON_BEARER_REJECTED,
   type FetchHandler,
@@ -191,6 +195,13 @@ export type GraphQLManagerOptions = {
    */
   driveStore?: DriveStore;
   reportError?: ReportError;
+  /**
+   * How often the credentials of authenticated WebSocket connections are
+   * re-verified; a connection whose credential no longer holds is closed.
+   * Defaults to {@link DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS}; `0` turns the
+   * periodic sweep off, leaving only the re-check on invalidation.
+   */
+  wsCredentialRecheckIntervalMs?: number;
 };
 
 /**
@@ -258,6 +269,8 @@ function refuseConnection(connection: WsConnection, reason: string): false {
 // Admitted anonymous connections authorize per document, as they do over SSE.
 export function createWsAuthHandlers(opts: {
   authService?: AuthService;
+  /** Re-verifies admitted connections and closes revoked ones. */
+  credentialMonitor?: WsCredentialMonitor;
   /** Whether anonymous callers are refused; read at call time, not at build time. */
   requireAuthenticatedCaller: () => boolean;
   logger: ILogger;
@@ -299,6 +312,9 @@ export function createWsAuthHandlers(opts: {
       }
 
       resolved.set(connection, user ?? undefined);
+      if (user) {
+        opts.credentialMonitor?.track(connection, user);
+      }
       return true;
     },
 
@@ -446,6 +462,7 @@ export class GraphQLManager {
   private readonly httpAdapter: IHttpAdapter;
   private readonly gatewayAdapter: IGatewayAdapter<Context>;
   private readonly authService?: AuthService;
+  readonly #credentialMonitor: WsCredentialMonitor | undefined;
   private readonly documentPermissionService?: DocumentPermissionService;
   private readonly featureFlags: GraphqlManagerFeatureFlags;
   private readonly port: number;
@@ -467,6 +484,16 @@ export class GraphQLManager {
     this.httpAdapter = options.httpAdapter;
     this.gatewayAdapter = options.gatewayAdapter;
     this.authService = options.authService;
+    if (options.authService) {
+      this.#credentialMonitor = new WsCredentialMonitor({
+        authService: options.authService,
+        intervalMs:
+          options.wsCredentialRecheckIntervalMs ??
+          DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+        logger: options.logger,
+      });
+      this.#credentialMonitor.start();
+    }
     this.documentPermissionService = options.documentPermissionService;
     this.featureFlags = options.featureFlags ?? DefaultFeatureFlags;
     const subgraph = !!this.featureFlags.enableDocumentModelSubgraphs;
@@ -1709,6 +1736,7 @@ export class GraphQLManager {
   #makeWsContextFactory(): WsHandlers<Context> {
     return createWsAuthHandlers({
       authService: this.authService,
+      credentialMonitor: this.#credentialMonitor,
       // Read at call time: init() installs this after the manager is built.
       requireAuthenticatedCaller: () =>
         this.#requireAuthMiddleware !== undefined,
@@ -1754,6 +1782,7 @@ export class GraphQLManager {
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down GraphQL Manager");
+    this.#credentialMonitor?.dispose();
 
     // Dispose per-subgraph WebSocket handlers before closing the WS server.
     for (const disposer of this.subgraphWsDisposers.values()) {
