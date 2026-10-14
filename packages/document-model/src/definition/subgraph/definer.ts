@@ -2,6 +2,7 @@ import type {
   DefinitionDiagnostic,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
+import { snapshotDescriptorArray } from "../field-options.js";
 import type { ScalarBinding } from "../scalars/types.js";
 import { compileSubgraphSchema, rootFor } from "./ast.js";
 import {
@@ -60,7 +61,8 @@ export type SubgraphConfig<
 /**
  * Compiled once per class. Compiling per instance would re-walk the
  * declaration on every construction and could let two instances of one class
- * serve different schemas.
+ * serve different schemas. Nothing here reads the author's inputs again, so
+ * changing them after declaration changes no instance.
  */
 export type CompiledSubgraph<TSubgraph> = {
   readonly definition: SubgraphDefinition;
@@ -109,7 +111,13 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
     TInfo,
     TAbstractType
   >();
-  const returned = config.entries(builders);
+  // A copy, because the author still owns the array the callback returned.
+  const returned = snapshotDescriptorArray(
+    config.entries(builders),
+    ["entries"],
+    "PH-SG-ENTRY-INVALID",
+    "Return an array of the entries the builders produced.",
+  );
   const schema = compileSubgraphSchema({
     name: config.name,
     entries: returned,
@@ -153,7 +161,7 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
  * of declaring them again.
  */
 function typedResolverMap<TSubgraph>(
-  entries: readonly TypedSubgraphEntry[],
+  entries: readonly unknown[],
   subgraph: TSubgraph,
 ): Record<string, unknown> {
   const resolvers: Record<string, Record<string, unknown>> = {};
@@ -161,7 +169,7 @@ function typedResolverMap<TSubgraph>(
     resolvers[typeName] = { ...resolvers[typeName], [fieldName]: value };
   };
 
-  for (const entry of entries as readonly unknown[]) {
+  for (const entry of entries) {
     const read = entry as {
       kind: string;
       key?: string;
@@ -262,8 +270,10 @@ function typedResolverMap<TSubgraph>(
 function compileCompat<TSubgraph, TDocument, TResolverMap>(
   config: CompatSubgraphConfig<TSubgraph, TDocument, TResolverMap>,
 ): CompiledSubgraph<TSubgraph> {
+  const { compatibility } = config;
+  const { getResolvers } = compatibility;
   const normalized = normalizeCompatibility(
-    config.compatibility as GraphQLAstCompatibility<unknown, unknown, unknown>,
+    compatibility as GraphQLAstCompatibility<unknown, unknown, unknown>,
   );
   const typeKinds = typeKindsOfDocument(normalized.document);
 
@@ -284,16 +294,13 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
     definition,
     // The author's own node, so the host adapter receives the object the
     // author passed. `normalized.document` is a location-free copy.
-    typeDefs: config.compatibility.typeDefs,
+    typeDefs: compatibility.typeDefs,
     hasSubscriptions: runtimeHasSubscriptions(normalized.hasSubscriptions),
     diagnostics: normalized.diagnostics,
     // A compatibility subgraph keeps its authored scalars and resolvers.
     packageScalars: [],
     resolversFor: (subgraph) =>
-      config.compatibility.getResolvers({ subgraph }) as Record<
-        string,
-        unknown
-      >,
+      getResolvers.call(compatibility, { subgraph }) as Record<string, unknown>,
     checkResolvers: (resolvers) =>
       compareResolverCoordinates(
         normalized.resolverCoordinates,

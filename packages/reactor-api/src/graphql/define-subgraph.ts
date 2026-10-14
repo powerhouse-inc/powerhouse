@@ -55,6 +55,8 @@ export function defineSubgraph<TRequest extends Context = Context>(
   // Compiled once per declaration and frozen. Two instances of one class must
   // serve one schema, so the walk cannot run per construction.
   const compiled = compileSubgraph(config);
+  const { name } = compiled.definition;
+  const { onSetup, onDisconnect } = config;
   const typeDefs = compiled.typeDefs as DocumentNode;
   const scalarResolvers = packageScalarResolvers(
     compiled.packageScalars.map((binding) => ({
@@ -77,7 +79,7 @@ export function defineSubgraph<TRequest extends Context = Context>(
 
     constructor(args: SubgraphArgs) {
       super(args);
-      this.name = config.name;
+      this.name = name;
       this.typeDefs = typeDefs;
       // Resolver factories run once per construction, with the real instance.
       // Declaration, check, and inspect never call them, because a factory is
@@ -94,11 +96,11 @@ export function defineSubgraph<TRequest extends Context = Context>(
 
     override async onSetup(): Promise<void> {
       await super.onSetup();
-      await config.onSetup?.({ subgraph: this });
+      await onSetup?.call(config, { subgraph: this });
     }
 
     override async onDisconnect(): Promise<void> {
-      await config.onDisconnect?.({ subgraph: this });
+      await onDisconnect?.call(config, { subgraph: this });
       await super.onDisconnect();
     }
   };
