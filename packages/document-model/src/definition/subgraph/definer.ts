@@ -64,7 +64,10 @@ export type SubgraphConfig<
  * declaration on every construction and could let two instances of one class
  * serve different schemas.
  */
-export type CompiledSubgraph<TSubgraph> = {
+export type CompiledSubgraph<TSubgraph> = CompiledSchema<TSubgraph> &
+  Pick<SubgraphConfigBase<TSubgraph>, "onSetup" | "onDisconnect">;
+
+type CompiledSchema<TSubgraph> = {
   readonly definition: SubgraphDefinition;
   readonly typeDefs: unknown;
   readonly hasSubscriptions: boolean | undefined;
@@ -97,21 +100,57 @@ export function compileSubgraph<
     TResolverMap
   >,
 ): CompiledSubgraph<TSubgraph> {
-  return config.schemaKind === "typed"
-    ? compileTyped(config)
-    : compileCompat(config);
+  // Read before the entries callback runs, which may reassign them.
+  const name = subgraphName(config.name);
+  const onSetup = hookOrFail(config.onSetup, "onSetup");
+  const onDisconnect = hookOrFail(config.onDisconnect, "onDisconnect");
+  const compiled =
+    config.schemaKind === "typed"
+      ? compileTyped(config, name)
+      : compileCompat(config, name);
+  return { ...compiled, onSetup, onDisconnect };
+}
+
+function subgraphName(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["name"],
+      message: "A subgraph needs a name.",
+      received: typeof value,
+      repair: "Give the subgraph a name.",
+    });
+  }
+  return value;
+}
+
+function hookOrFail<THook>(
+  value: THook | undefined,
+  key: "onSetup" | "onDisconnect",
+): THook | undefined {
+  if (value !== undefined && typeof value !== "function") {
+    failDefinition({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [key],
+      message: `${key} is not a function.`,
+      received: typeof value,
+      repair: `Pass ${key} as a function, or leave it out.`,
+    });
+  }
+  return value;
 }
 
 function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
   config: TypedSubgraphConfig<TSubgraph, TRequest, TInfo, TAbstractType>,
-): CompiledSubgraph<TSubgraph> {
+  name: string,
+): CompiledSchema<TSubgraph> {
   const { builders, exposed } = createEntryBuilders<
     TSubgraph,
     TRequest,
     TInfo,
     TAbstractType
   >();
-  const { name, definitionOrder: authoredOrder } = config;
+  const { definitionOrder: authoredOrder } = config;
   const definitionOrder =
     authoredOrder === undefined ? undefined : definitionNames(authoredOrder);
   const returned = snapshotDescriptorArray(
@@ -291,9 +330,24 @@ function typedResolverMap<TSubgraph>(
 
 function compileCompat<TSubgraph, TDocument, TResolverMap>(
   config: CompatSubgraphConfig<TSubgraph, TDocument, TResolverMap>,
-): CompiledSubgraph<TSubgraph> {
+  name: string,
+): CompiledSchema<TSubgraph> {
   const { compatibility } = config;
   const declared = { ...compatibility };
+  const getResolvers: unknown = declared.getResolvers;
+  if (typeof getResolvers !== "function") {
+    failDefinition({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["compatibility", "getResolvers"],
+      message:
+        getResolvers === undefined
+          ? "The compatibility declaration has no getResolvers."
+          : "The compatibility declaration's getResolvers is not a function.",
+      received: typeof getResolvers,
+      repair:
+        "Pass getResolvers: a function that returns the resolver map for the subgraph instance.",
+    });
+  }
   const normalized = normalizeCompatibility(
     declared as GraphQLAstCompatibility<unknown, unknown, unknown>,
   );
@@ -302,7 +356,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
   const definition: SubgraphDefinition = Object.freeze({
     kind: "powerhouse.subgraph",
     formatVersion: 1,
-    name: config.name,
+    name,
     compositionPolicy: "host-current",
     federationProfile: "host-current",
     schemaKind: "graphql-ast-compat",
@@ -320,10 +374,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
     // A compatibility subgraph keeps its authored scalars and resolvers.
     packageScalars: [],
     resolversFor: (subgraph) =>
-      declared.getResolvers.call(compatibility, { subgraph }) as Record<
-        string,
-        unknown
-      >,
+      getResolvers.call(compatibility, { subgraph }) as Record<string, unknown>,
     checkResolvers: (resolvers) =>
       compareResolverCoordinates(
         normalized.resolverCoordinates,

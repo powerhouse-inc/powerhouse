@@ -1,5 +1,10 @@
 import { failDefinition } from "../diagnostics.js";
-import { snapshotDescriptorOptions } from "../field-options.js";
+import { isFieldDescriptor } from "../descriptor-registry.js";
+import {
+  assertFieldUse,
+  snapshotDescriptorOptions,
+  snapshotFieldMap,
+} from "../field-options.js";
 import type { AnyFieldDescriptor, ObjectFields } from "../types.js";
 import {
   COMPUTED_FIELD_ROLE,
@@ -300,9 +305,18 @@ export function createEntryBuilders<
 
   function root(
     kind: "query" | "mutation" | "subscription",
-    key: string,
+    key: unknown,
     options: Record<string, unknown>,
   ): TypedSubgraphEntry {
+    if (typeof key !== "string" || key.length === 0) {
+      failDefinition({
+        code: "PH-SG-ENTRY-INVALID",
+        path: ["key"],
+        message: `${kind}() takes a field name as a non-empty string.`,
+        received: typeof key,
+        repair: `Pass the field name first, as ${kind}("widget", { ... }).`,
+      });
+    }
     const config = snapshotDescriptorOptions(
       options,
       [
@@ -316,50 +330,43 @@ export function createEntryBuilders<
       ],
       ["options"],
     );
+    const subject = `${kind} ${JSON.stringify(key)}`;
     if (config.returns === undefined) {
       failDefinition({
         code: "PH-SG-ENTRY-INVALID",
         path: ["options", "returns"],
-        message: `${kind} ${JSON.stringify(key)} declares no return type.`,
+        message: `${subject} declares no return type.`,
         repair: "Add returns: a field use such as ph.ref(SomeType).",
       });
     }
-    const resolve = config.resolve;
-    const subscribe = config.subscribe;
+    assertFieldUse(config.returns, ["options", "returns"]);
+    const args = argumentMap(config.args);
+    let resolve: ((call: never) => unknown) | undefined;
+    let subscribe: ((call: never) => unknown) | undefined;
     if (kind === "subscription") {
-      if (typeof subscribe !== "function") {
-        failDefinition({
-          code: "PH-SG-ENTRY-INVALID",
-          path: ["options", "subscribe"],
-          message: `Subscription ${JSON.stringify(key)} declares no subscribe.`,
-          repair:
-            "Add subscribe, returning an AsyncIterable of the events this subscription emits.",
-        });
-      }
-      if (resolve !== undefined && typeof resolve !== "function") {
-        failDefinition({
-          code: "PH-SG-ENTRY-INVALID",
-          path: ["options", "resolve"],
-          message: `Subscription ${JSON.stringify(key)} declares a resolve that is not a function.`,
-          received: typeof resolve,
-          repair:
-            "Pass resolve as a function, or leave it out to read the field from each event.",
-        });
+      subscribe = resolverOrFail(
+        config.subscribe,
+        ["options", "subscribe"],
+        subject,
+        "subscribe",
+        "Add subscribe, returning an AsyncIterable of the events this subscription emits.",
+      );
+      if (config.resolve !== undefined) {
+        resolve = resolverOrFail(
+          config.resolve,
+          ["options", "resolve"],
+          subject,
+          "resolve",
+          "Pass resolve as a function, or leave it out to read the field from each event.",
+        );
       }
     } else {
-      if (typeof resolve !== "function") {
-        failDefinition({
-          code: "PH-SG-ENTRY-INVALID",
-          path: ["options", "resolve"],
-          message: `${kind} ${JSON.stringify(key)} declares no resolve.`,
-          repair: "Add resolve.",
-        });
-      }
-      if (subscribe !== undefined) {
+      resolve = resolverOrFail(config.resolve, ["options", "resolve"], subject);
+      if (config.subscribe !== undefined) {
         failDefinition({
           code: "PH-SG-ENTRY-INVALID",
           path: ["options", "subscribe"],
-          message: `${kind} ${JSON.stringify(key)} declares subscribe, which only a subscription has.`,
+          message: `${subject} declares subscribe, which only a subscription has.`,
           repair: "Remove subscribe, or declare the entry with subscription().",
         });
       }
@@ -372,23 +379,19 @@ export function createEntryBuilders<
         typeof config.description === "string" ? config.description : null,
       deprecated:
         typeof config.deprecated === "string" ? config.deprecated : null,
-      args: (config.args ?? {}) as ObjectFields,
-      returns: config.returns as AnyFieldDescriptor,
-      ...(typeof resolve === "function" && {
-        resolve: resolve as (call: never) => unknown,
-      }),
-      ...(typeof subscribe === "function" && {
-        subscribe: subscribe as (call: never) => unknown,
-      }),
+      args,
+      returns: config.returns,
+      ...(resolve !== undefined && { resolve }),
+      ...(subscribe !== undefined && { subscribe }),
     });
   }
 
   const builders = {
-    query: (key: string, options: Record<string, unknown>) =>
+    query: (key: unknown, options: Record<string, unknown>) =>
       root("query", key, options),
-    mutation: (key: string, options: Record<string, unknown>) =>
+    mutation: (key: unknown, options: Record<string, unknown>) =>
       root("mutation", key, options),
-    subscription: (key: string, options: Record<string, unknown>) =>
+    subscription: (key: unknown, options: Record<string, unknown>) =>
       root("subscription", key, options),
     field: (token: unknown, options: unknown) => {
       const { kind, typeName, fieldName }: Partial<Record<string, unknown>> =
@@ -416,7 +419,7 @@ export function createEntryBuilders<
         resolve: resolverOrFail(
           config.resolve,
           ["options", "resolve"],
-          "field",
+          "field()",
         ),
       });
     },
@@ -424,13 +427,13 @@ export function createEntryBuilders<
       register({
         kind: "resolve-type",
         typeName: namedOrFail(type, "resolveType"),
-        resolve: resolverOrFail(resolve, ["resolve"], "resolveType"),
+        resolve: resolverOrFail(resolve, ["resolve"], "resolveType()"),
       }),
     isTypeOf: (type: { readonly name: string | null }, resolve: unknown) =>
       register({
         kind: "is-type-of",
         typeName: namedOrFail(type, "isTypeOf"),
-        resolve: resolverOrFail(resolve, ["resolve"], "isTypeOf"),
+        resolve: resolverOrFail(resolve, ["resolve"], "isTypeOf()"),
       }),
     expose: (...types: readonly { readonly name: string | null }[]) => {
       // Call order is preserved: it is what decides definition order for
@@ -443,20 +446,44 @@ export function createEntryBuilders<
 }
 
 function resolverOrFail(
-  resolve: unknown,
+  value: unknown,
   path: readonly string[],
-  builder: string,
+  subject: string,
+  member: "resolve" | "subscribe" = "resolve",
+  repair = `Pass ${member} as a function.`,
 ): (call: never) => unknown {
-  if (typeof resolve !== "function") {
+  if (typeof value !== "function") {
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
       path,
-      message: `${builder}() declares no resolve.`,
-      received: typeof resolve,
-      repair: "Pass resolve: a function.",
+      message:
+        value === undefined
+          ? `${subject} declares no ${member}.`
+          : `${subject} declares a ${member} that is not a function.`,
+      received: typeof value,
+      repair,
     });
   }
-  return resolve as (call: never) => unknown;
+  return value as (call: never) => unknown;
+}
+
+function argumentMap(value: unknown): ObjectFields {
+  if (value === undefined) return {};
+  if (isFieldDescriptor(value)) {
+    failDefinition({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["options", "args"],
+      message:
+        "args maps each argument name to a field use; it is not a field use itself.",
+      received: `field use (${value.kind})`,
+      repair: "Key it by argument name, as args: { id: ph.ID() }.",
+    });
+  }
+  const members = snapshotFieldMap(value, ["options", "args"]);
+  for (const [key, member] of Object.entries(members)) {
+    assertFieldUse(member, ["options", "args", key]);
+  }
+  return members as ObjectFields;
 }
 
 function namedOrFail(type: unknown, builder: string): string {

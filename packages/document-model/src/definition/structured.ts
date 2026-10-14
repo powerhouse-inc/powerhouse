@@ -428,15 +428,13 @@ export class DescriptorWalk {
     path: DefinitionPath,
     position: Position = "output",
   ): TypeReferenceDefinition | undefined {
-    try {
+    return this.#attempt(() => {
       const reference = this.#typeReference(field, path);
       // Resolving a reference is not the same as reaching its target: without
       // this, a type named only by an entry's return would never be emitted.
       this.#visitField(field, position, path);
       return reference;
-    } catch {
-      return undefined;
-    }
+    });
   }
 
   #typeReference(
