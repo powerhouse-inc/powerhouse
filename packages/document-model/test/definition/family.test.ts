@@ -162,6 +162,29 @@ describe("defineDocumentModelFamily", () => {
     expect(family.upgradeManifest.supportedVersions).toStrictEqual([1, 2]);
   });
 
+  it("checks and publishes the declaration it snapshotted", () => {
+    const unchecked = {
+      ...taskUpgradeManifest,
+      latestVersion: 9,
+      supportedVersions: [1, 2, 9],
+    };
+    const target = {
+      versions: [TaskV1Definition, TaskV2Definition],
+      upgradeManifest: taskUpgradeManifest,
+    };
+    const config = new Proxy(target, {
+      get(object, key, receiver) {
+        return key === "upgradeManifest"
+          ? unchecked
+          : (Reflect.get(object, key, receiver) as unknown);
+      },
+    });
+
+    const family = defineDocumentModelFamily(config);
+
+    expect(family.upgradeManifest).toBe(taskUpgradeManifest);
+  });
+
   it("publishes the manifest it was given, in the generated shape", () => {
     // The authored object itself, not a copy: a host registers what the
     // author wrote in `upgrades/upgrade-manifest.ts`.
