@@ -237,6 +237,51 @@ describe("the entry builders", () => {
     });
   });
 
+  it("refuses a subscription resolve that is not a function, and subscribe on a query", () => {
+    const { builders: build } = builders();
+    expect(
+      refusal(() =>
+        build.subscription("posted", {
+          returns: ph.ref(Post),
+          subscribe: () => (async function* () {})(),
+          resolve: "post" as never,
+        }),
+      ),
+    ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["options", "resolve"] });
+    expect(
+      refusal(() =>
+        build.query("post", {
+          returns: ph.ref(Post),
+          resolve: () => null,
+          subscribe: () => (async function* () {})(),
+        } as never),
+      ),
+    ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["options", "subscribe"] });
+  });
+
+  it("registers the token coordinate it checked", () => {
+    const { builders: build } = builders();
+    let reads = 0;
+    const token = {
+      kind: "computed-token",
+      typeName: "Post",
+      get fieldName() {
+        reads += 1;
+        return reads === 1 ? "wordCount" : 7;
+      },
+    };
+    const read = readEntry(build.field(token as never, { resolve: () => 12 }), [
+      "entries",
+      0,
+    ]);
+    if (read.kind !== "computed-field") throw new Error("unreachable");
+    expect(read.token).toEqual({
+      kind: "computed-token",
+      typeName: "Post",
+      fieldName: "wordCount",
+    });
+  });
+
   it("requires a computed-field token to name its type and field", () => {
     const { builders: build } = builders();
     expect(
