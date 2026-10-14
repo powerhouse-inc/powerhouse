@@ -128,6 +128,13 @@ export function compileSubgraph<
   return { ...compiled, onSetup, onDisconnect };
 }
 
+/**
+ * The host mounts a subgraph at a path joined from its name, so a `/` or
+ * `..` would land it on another route. Every name `ph generate subgraph`
+ * writes, a kebab-case run of letters and digits, matches.
+ */
+const ROUTE_SEGMENT = /^[\p{L}\d][\p{L}\d_-]*$/u;
+
 function subgraphName(value: unknown): string {
   if (typeof value !== "string" || value.length === 0) {
     failDefinition({
@@ -136,6 +143,17 @@ function subgraphName(value: unknown): string {
       message: "A subgraph needs a name.",
       received: typeof value,
       repair: "Give the subgraph a name.",
+    });
+  }
+  if (!ROUTE_SEGMENT.test(value)) {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["name"],
+      message:
+        "A subgraph name is one route segment: letters, digits, hyphens, and underscores, starting with a letter or digit.",
+      received: value,
+      repair:
+        'Use a name such as "contacts-search", the kebab-case form ph generate subgraph writes.',
     });
   }
   return value;
