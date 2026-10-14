@@ -352,7 +352,7 @@ specifiers (`@powerhousedao/pieces-framework` to
 ## Syncing upstream
 
 ```sh
-pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.91.0
+pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.92.3
 ```
 
 `scripts/sync-upstream.mts` is the only thing that writes `upstream/` and
