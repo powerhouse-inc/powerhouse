@@ -90,7 +90,7 @@ describe("lintSubgraphTypes", () => {
     });
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraph "tools" defines SubgraphModuleQueries (owned by "subgraph-module"), so the supergraph leaves it out. Rename them in its schema.ts.',
+      'Subgraph "tools" defines SubgraphModuleQueries differently from "subgraph-module", which owns it, so the server leaves it out of the supergraph. Rename SubgraphModuleQueries in this subgraph, or define it exactly as "subgraph-module" does.',
     ]);
   });
 
@@ -110,7 +110,7 @@ describe("lintSubgraphTypes", () => {
     });
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraph "ledger" defines Operation (owned by "document-model schema"), so the server refuses it. Rename them in its schema.ts.',
+      'Subgraph "ledger" defines Operation, which the document-model schema generates, so the server refuses it. Rename those types in this subgraph.',
     ]);
   });
 
@@ -128,7 +128,7 @@ describe("lintSubgraphTypes", () => {
     );
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraphs "ledger" and "ledger-copy" both define Query.ledger, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.',
+      'Subgraphs "ledger" and "ledger-copy" both define Query.ledger, and the supergraph can include only one of them. Define Query.ledger in one subgraph only.',
     ]);
   });
 
@@ -142,7 +142,7 @@ describe("lintSubgraphTypes", () => {
     });
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Gadget is defined one way by "alpha" and "beta", and another way by "gamma". The supergraph keeps it only in the subgraphs that define it as the first one to register does. Make the definitions identical, or rename it where it differs.',
+      'Gadget is defined one way by "alpha" and "beta", and another way by "gamma". The supergraph can include the subgraphs of only one of these definitions. Make every definition of Gadget identical, or rename it where it differs.',
     ]);
   });
 
@@ -163,7 +163,7 @@ describe("lintSubgraphTypes", () => {
     ]);
   });
 
-  it("skips a model whose schema does not generate and checks the rest", () => {
+  it("warns that the server refuses a model whose schema does not build, and checks the rest", () => {
     const root = makeProject({
       "subgraph-module": template("SubgraphModule", "subgraphModule"),
     });
@@ -211,7 +211,9 @@ describe("lintSubgraphTypes", () => {
     );
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Document model "Broken" was left out of the subgraph check: its schema does not generate.',
+      expect.stringMatching(
+        /^The server refuses document model "Broken": it has an unusable schema: [\s\S]+\. Fix the document model's state and operation schemas so they build\.$/,
+      ),
       'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
     ]);
   });

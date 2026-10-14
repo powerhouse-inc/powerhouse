@@ -9,6 +9,7 @@ import {
   coreSubgraphTypeDefs,
   DOCUMENT_MODEL_SCHEMA_OWNER,
   findPackageSubgraphConflicts,
+  hostDocumentModels,
   type PackageSubgraph,
 } from "../src/graphql/subgraph-types.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
@@ -16,7 +17,9 @@ import type { SubgraphArgs } from "../src/graphql/types.js";
 function model(
   name: string,
   operationSchema = `input Set${name}TitleInput { title: String }`,
+  stateSchema = `type ${name}State { title: String }`,
 ): DocumentModelGlobalState {
+  const constant = name.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
   return {
     name,
     id: `test/${name}`,
@@ -28,16 +31,13 @@ function model(
               {
                 name: "base",
                 operations: [
-                  {
-                    name: `SET_${name.toUpperCase()}_TITLE`,
-                    schema: operationSchema,
-                  },
+                  { name: `SET_${constant}_TITLE`, schema: operationSchema },
                 ],
               },
             ]
           : [],
         state: {
-          global: { schema: `type ${name}State { title: String }` },
+          global: { schema: stateSchema },
           local: { schema: "" },
         },
       },
@@ -62,10 +62,25 @@ function conflicts(
 ) {
   return Object.fromEntries(
     Array.from(
-      findPackageSubgraphConflicts(subgraphs, models).conflicts,
+      findPackageSubgraphConflicts(subgraphs, hostDocumentModels(models))
+        .conflicts,
       ([subgraph, conflict]) => [subgraph.name, conflict],
     ),
   );
+}
+
+function contests(
+  subgraphs: PackageSubgraph[],
+  models: DocumentModelGlobalState[] = [],
+) {
+  return findPackageSubgraphConflicts(
+    subgraphs,
+    hostDocumentModels(models),
+  ).contests.map(({ claim, claimants, groups }) => ({
+    claim,
+    claimants: claimants.map(({ name }) => name),
+    groups,
+  }));
 }
 
 describe("coreSubgraphTypeDefs", () => {
@@ -152,10 +167,8 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "todo-tools", typeDefs }])).toEqual({
       "todo-tools": {
-        kind: "claims",
-        claims: [
-          { kind: "owned", claim: "TodoListQueries", owner: "todo-list" },
-        ],
+        kind: "owned",
+        claims: [{ claim: "TodoListQueries", owner: "todo-list" }],
       },
     });
   });
@@ -169,14 +182,8 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
-        kind: "claims",
-        claims: [
-          {
-            kind: "owned",
-            claim: "DocumentModelQueries",
-            owner: "document-model",
-          },
-        ],
+        kind: "owned",
+        claims: [{ claim: "DocumentModelQueries", owner: "document-model" }],
       },
     });
   });
@@ -223,10 +230,10 @@ describe("findPackageSubgraphConflicts", () => {
 
     expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
-        kind: "claims",
+        kind: "owned",
         claims: [
-          { kind: "owned", claim: "Query.system", owner: "system" },
-          { kind: "owned", claim: "Revision", owner: "r" },
+          { claim: "Query.system", owner: "system" },
+          { claim: "Revision", owner: "r" },
         ],
       },
     });
@@ -238,26 +245,19 @@ describe("findPackageSubgraphConflicts", () => {
         ledger: String
       }
     `;
+    const subgraphs = [
+      { name: "ledger", typeDefs },
+      { name: "ledger-copy", typeDefs },
+    ];
 
-    expect(
-      conflicts([
-        { name: "ledger", typeDefs },
-        { name: "ledger-copy", typeDefs },
-      ]),
-    ).toEqual({
-      ledger: {
-        kind: "claims",
-        claims: [
-          { kind: "contested", claim: "Query.ledger", rivals: ["ledger-copy"] },
-        ],
+    expect(conflicts(subgraphs)).toEqual({});
+    expect(contests(subgraphs)).toEqual([
+      {
+        claim: "Query.ledger",
+        claimants: ["ledger", "ledger-copy"],
+        groups: [["ledger", "ledger-copy"]],
       },
-      "ledger-copy": {
-        kind: "claims",
-        claims: [
-          { kind: "contested", claim: "Query.ledger", rivals: ["ledger"] },
-        ],
-      },
-    });
+    ]);
   });
 
   it("finds every contest in a chain, whatever order the subgraphs come in", () => {
@@ -286,26 +286,21 @@ describe("findPackageSubgraphConflicts", () => {
         }
       `,
     };
-    const expected = {
-      alpha: {
-        kind: "claims",
-        claims: [{ kind: "contested", claim: "Query.x", rivals: ["beta"] }],
+    const expected = [
+      {
+        claim: "Query.x",
+        claimants: ["alpha", "beta"],
+        groups: [["alpha", "beta"]],
       },
-      beta: {
-        kind: "claims",
-        claims: [
-          { kind: "contested", claim: "Query.x", rivals: ["alpha"] },
-          { kind: "contested", claim: "Query.y", rivals: ["gamma"] },
-        ],
+      {
+        claim: "Query.y",
+        claimants: ["beta", "gamma"],
+        groups: [["beta", "gamma"]],
       },
-      gamma: {
-        kind: "claims",
-        claims: [{ kind: "contested", claim: "Query.y", rivals: ["beta"] }],
-      },
-    };
+    ];
 
-    expect(conflicts([alpha, beta, gamma], [])).toEqual(expected);
-    expect(conflicts([gamma, beta, alpha], [])).toEqual(expected);
+    expect(contests([alpha, beta, gamma])).toEqual(expected);
+    expect(contests([gamma, beta, alpha])).toEqual(expected);
   });
 
   it("lets package subgraphs share a type they define identically", () => {
@@ -353,66 +348,119 @@ describe("findPackageSubgraphConflicts", () => {
       `,
     };
 
-    const report = findPackageSubgraphConflicts([first, second, other], []);
+    const report = findPackageSubgraphConflicts(
+      [first, second, other],
+      hostDocumentModels([]),
+    );
 
     expect(report.duplicateNames).toEqual(["ledger"]);
-    expect(report.conflicts.get(first)).toEqual({
-      kind: "claims",
-      claims: [{ kind: "contested", claim: "Query.x", rivals: ["other"] }],
-    });
-    expect(report.conflicts.has(second)).toBe(false);
-    expect(report.conflicts.get(other)).toEqual({
-      kind: "claims",
-      claims: [{ kind: "contested", claim: "Query.x", rivals: ["ledger"] }],
-    });
+    expect(report.conflicts.size).toBe(0);
+    expect(report.contests).toEqual([
+      {
+        claim: "Query.x",
+        claimants: [first, other],
+        groups: [["ledger", "other"]],
+      },
+    ]);
   });
 
   it("contests a type only between subgraphs that define it differently", () => {
     const gadget = (field: string, body: string) =>
       parse(`type Query { ${field}: Gadget } type Gadget { ${body} }`);
-    expect(
-      conflicts(
-        [
-          { name: "alpha", typeDefs: gadget("a", "id: ID!") },
-          { name: "beta", typeDefs: gadget("b", "id: ID!") },
-          { name: "gamma", typeDefs: gadget("c", "id: ID! size: Int") },
-        ],
-        [],
-      ),
-    ).toEqual({
-      alpha: {
-        kind: "claims",
-        claims: [{ kind: "contested", claim: "Gadget", rivals: ["gamma"] }],
+    const subgraphs = [
+      { name: "gamma", typeDefs: gadget("c", "id: ID! size: Int") },
+      { name: "beta", typeDefs: gadget("b", "id: ID!") },
+      { name: "alpha", typeDefs: gadget("a", "id: ID!") },
+    ];
+
+    expect(conflicts(subgraphs, [])).toEqual({});
+    expect(contests(subgraphs)).toEqual([
+      {
+        claim: "Gadget",
+        claimants: ["alpha", "beta", "gamma"],
+        groups: [["alpha", "beta"], ["gamma"]],
       },
-      beta: {
-        kind: "claims",
-        claims: [{ kind: "contested", claim: "Gadget", rivals: ["gamma"] }],
-      },
-      gamma: {
-        kind: "claims",
-        claims: [
-          { kind: "contested", claim: "Gadget", rivals: ["alpha", "beta"] },
-        ],
-      },
-    });
+    ]);
   });
+});
 
-  it("skips a model whose schema does not parse and checks the rest", () => {
-    const report = findPackageSubgraphConflicts(
-      [{ name: "todo-list", typeDefs: template("TodoList", "todoList") }],
-      [todoList, model("Broken", "input BrokenInput {")],
-    );
+describe("hostDocumentModels", () => {
+  it("refuses a model whose state schema does not build, and checks the rest", () => {
+    const host = hostDocumentModels([
+      todoList,
+      model("Broken", "", "type BrokenState {"),
+    ]);
 
-    expect(report.skippedModels).toEqual(["Broken"]);
+    expect(host.refused).toEqual([
+      {
+        id: "test/Broken",
+        name: "Broken",
+        kind: "unusable schema",
+        reason: expect.stringMatching(/^has an unusable schema: /),
+      },
+    ]);
     expect(
       Object.fromEntries(
-        Array.from(report.conflicts, ([subgraph, conflict]) => [
-          subgraph.name,
-          conflict,
-        ]),
+        Array.from(
+          findPackageSubgraphConflicts(
+            [{ name: "todo-list", typeDefs: template("TodoList", "todoList") }],
+            host,
+          ).conflicts,
+          ([subgraph, conflict]) => [subgraph.name, conflict],
+        ),
       ),
     ).toEqual({
       "todo-list": { kind: "name", heldBy: "document model" },
     });
+  });
+
+  it("refuses a model that generates a core type name, as the server does", () => {
+    const systemInfo = model("SystemInfo");
+
+    expect(hostDocumentModels([systemInfo]).refused).toEqual([
+      {
+        id: "test/SystemInfo",
+        name: "SystemInfo",
+        kind: "reserved names",
+        reason: "generates reserved type names: SystemInfo",
+      },
+    ]);
+    expect(
+      conflicts(
+        [
+          {
+            name: "system-info",
+            typeDefs: gql`
+              type SystemInfo_SystemInfoState {
+                title: String
+              }
+              type Query {
+                systemInfoTitle: SystemInfo_SystemInfoState
+              }
+            `,
+          },
+        ],
+        [systemInfo],
+      ),
+    ).toEqual({});
+  });
+
+  it("frees the name of a model whose own subgraph does not build", () => {
+    const notes = model("Notes", "input SetNotesTitleInput { title: Missing }");
+
+    expect(hostDocumentModels([notes]).refused).toEqual([
+      {
+        id: "test/Notes",
+        name: "Notes",
+        kind: "unusable subgraph",
+        reason: expect.stringMatching(/^has an unusable subgraph schema: /),
+      },
+    ]);
+    expect(
+      conflicts(
+        [{ name: "notes", typeDefs: template("Notes", "notes") }],
+        [notes],
+      ),
+    ).toEqual({});
   });
 });

@@ -276,31 +276,66 @@ describe("the conflicts the server enforces", () => {
     ]);
   });
 
-  it("warns about a root field two subgraphs declare, without guessing which registers first", () => {
+  it("warns each subgraph that declares a contested root field, without guessing which registers first", () => {
     const result = validateSubgraphsForHost({
       profile: "release",
       documentModels: [],
       subgraphs: [entry(widgets("foo-bar")), entry(widgets("foo2"))],
     });
+    const message =
+      'Subgraphs "foo-bar" and "foo2" both define Query.widget, and the supergraph can include only one of them.';
     expect(
-      result.diagnostics.map(({ code, severity, message }) => ({
+      result.diagnostics.map(({ code, severity, path, message }) => ({
         code,
         severity,
+        path,
         message,
       })),
     ).toEqual([
       {
         code: "PH-GQL-COORDINATE-OWNED",
         severity: "warning",
-        message:
-          'Subgraphs "foo-bar" and "foo2" both declare Query.widget, and only the one that registers first keeps it in the supergraph.',
+        path: ["composition", "foo-bar", "Query.widget"],
+        message,
       },
       {
         code: "PH-GQL-COORDINATE-OWNED",
         severity: "warning",
-        message:
-          'Subgraphs "foo2" and "foo-bar" both declare Query.widget, and only the one that registers first keeps it in the supergraph.',
+        path: ["composition", "foo2", "Query.widget"],
+        message,
       },
+    ]);
+  });
+
+  it("names no survivor in a chain of contests, because one lost claim leaves a subgraph out", () => {
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [],
+      subgraphs: [
+        entry(compat("alpha", "type Query { x: String }")),
+        entry(compat("beta", "type Query { x: String y: String }")),
+        entry(compat("gamma", "type Query { y: String }")),
+      ],
+    });
+    expect(
+      result.diagnostics.map(({ path, message }) => [path.join(" "), message]),
+    ).toEqual([
+      [
+        "composition alpha Query.x",
+        'Subgraphs "alpha" and "beta" both define Query.x, and the supergraph can include only one of them.',
+      ],
+      [
+        "composition beta Query.x",
+        'Subgraphs "alpha" and "beta" both define Query.x, and the supergraph can include only one of them.',
+      ],
+      [
+        "composition beta Query.y",
+        'Subgraphs "beta" and "gamma" both define Query.y, and the supergraph can include only one of them.',
+      ],
+      [
+        "composition gamma Query.y",
+        'Subgraphs "beta" and "gamma" both define Query.y, and the supergraph can include only one of them.',
+      ],
     ]);
   });
 
@@ -341,20 +376,14 @@ describe("the conflicts the server enforces", () => {
         severity,
         message,
       })),
-    ).toEqual([
-      {
+    ).toEqual(
+      ["alpha", "beta"].map(() => ({
         code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
         severity: "warning",
         message:
-          'Subgraph "alpha" defines Gadget differently from "beta". The supergraph keeps it only in the subgraphs that define it as the first one to register does.',
-      },
-      {
-        code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
-        severity: "warning",
-        message:
-          'Subgraph "beta" defines Gadget differently from "alpha". The supergraph keeps it only in the subgraphs that define it as the first one to register does.',
-      },
-    ]);
+          'Gadget is defined one way by "alpha", and another way by "beta". The supergraph can include the subgraphs of only one of these definitions.',
+      })),
+    );
   });
 
   it("accepts a shared type that differs only in field order and descriptions", () => {
@@ -477,6 +506,111 @@ describe("the document models a schema builds against", () => {
       }).diagnostics.map((diagnostic) => diagnostic.code);
     expect(codes([notesModel()])).toEqual([]);
     expect(codes([])).toEqual(["PH-SG-SCHEMA-INVALID"]);
+  });
+
+  it("leave out a model the server refuses, and say why", () => {
+    const systemInfo = defineDocumentModel({
+      id: "test/system-info",
+      name: "SystemInfo",
+      description: "",
+      extension: "sys",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("SystemInfoState", {
+            fields: { title: ph.String() },
+          }),
+          initialValue: { title: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    }).finalize({ modules: [] }) as unknown as DocumentModelModule;
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [systemInfo],
+      subgraphs: [
+        entry(
+          compat(
+            "system-info-lookup",
+            "type Query { systemInfo: SystemInfo_SystemInfoState }",
+          ),
+        ),
+      ],
+    });
+    expect(
+      result.diagnostics.map(({ code, severity, definition, message }) => ({
+        code,
+        severity,
+        definition,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-DM-GRAPHQL-REFUSED",
+        severity: "warning",
+        definition: { kind: "document-model", key: "test/system-info" },
+        message:
+          'The server refuses document model "SystemInfo": it generates reserved type names: SystemInfo.',
+      },
+      {
+        code: "PH-SG-SCHEMA-INVALID",
+        severity: "error",
+        definition: undefined,
+        message: expect.stringContaining(
+          'Unknown type "SystemInfo_SystemInfoState"',
+        ),
+      },
+    ]);
+  });
+
+  it("free the name of a model whose own subgraph the server refuses", () => {
+    const context = defineDocumentModel({
+      id: "test/loop",
+      name: "Loop",
+      description: "",
+      extension: "loop",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("LoopState", { fields: { title: ph.String() } }),
+          initialValue: { title: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const SetInput: ReturnType<typeof ph.input> = ph.input("SetInput", {
+      fields: { next: ph.ref(() => SetInput, { required: true }) },
+    });
+    const edits = context.module("edits", {
+      operations: ({ global }) => ({
+        set: global({ input: SetInput, reduce() {} }),
+      }),
+    });
+    const loop = context.finalize({
+      modules: [edits],
+    }) as unknown as DocumentModelModule;
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [loop],
+      subgraphs: [entry(compat("loop", "type Query { ping: String }"))],
+    });
+    expect(
+      result.diagnostics.map(({ code, path, message }) => ({
+        code,
+        path,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-DM-GRAPHQL-REFUSED",
+        path: ["composition", "Loop"],
+        message: expect.stringMatching(
+          /^The server refuses the subgraph of document model "Loop": it has an unusable subgraph schema: /,
+        ),
+      },
+    ]);
   });
 });
 
