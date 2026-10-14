@@ -61,11 +61,11 @@
     "@mastra/core": ">=1.41.0",
     "@mastra/libsql": ">=1.12.1",
     "@mastra/memory": ">=1.20.2",
-    "@powerhousedao/reactor": "workspace:>=6.2.0-dev.0",
-    "@powerhousedao/reactor-api": "workspace:>=6.2.0-dev.0",
-    "@powerhousedao/switchboard": "workspace:>=6.2.0-dev.0",
-    "document-model": "workspace:>=6.2.0-dev.0",
-    "@powerhousedao/reactor-browser": "workspace:>=6.2.0-dev.0"
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "document-model": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@electric-sql/pglite": {
