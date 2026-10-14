@@ -86,6 +86,8 @@ Initialize a new project
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
 
+**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -199,6 +201,8 @@ Initialize a new global project
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
+
+**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 

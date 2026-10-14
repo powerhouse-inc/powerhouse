@@ -125,13 +125,27 @@ function workerCompileCache(entryPath: string): string | undefined {
 }
 
 // A forked node child on this machine, over its IPC channel.
-export function createForkTransport(entryPath: string): IPieceWorkerTransport {
+export interface ForkTransportOptions {
+  // `--max-old-space-size` for the child.
+  heapMb?: number;
+}
+
+export function createForkTransport(
+  entryPath: string,
+  options: ForkTransportOptions = {},
+): IPieceWorkerTransport {
   const profileDir = workerProfileDir();
   const cacheDir = workerCompileCache(entryPath);
+  const execArgv = profileDir
+    ? ["--cpu-prof", `--cpu-prof-dir=${profileDir}`]
+    : [];
+  if (options.heapMb) {
+    execArgv.push(`--max-old-space-size=${Math.trunc(options.heapMb)}`);
+  }
   const child: ChildProcess = fork(entryPath, [], {
     // No host env: the child gets no secrets and no inherited TLS overrides.
     env: cacheDir ? { NODE_COMPILE_CACHE: cacheDir } : {},
-    execArgv: profileDir ? ["--cpu-prof", `--cpu-prof-dir=${profileDir}`] : [],
+    execArgv,
     // Structured clone rather than JSON, so a Buffer in a payload survives.
     serialization: "advanced",
     // Piece stdout/stderr are dropped for now; log capture arrives with journaling.

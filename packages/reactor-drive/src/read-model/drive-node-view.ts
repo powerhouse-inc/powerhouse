@@ -1,17 +1,18 @@
-import { type PagedResults, type PagingOptions } from "@powerhousedao/reactor";
-import type { Kysely } from "kysely";
+import { type PagingOptions } from "@powerhousedao/reactor";
+import { sql, type Kysely } from "kysely";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
 import type {
   ReactorDriveFileNode,
   ReactorDriveFolderNode,
   ReactorDriveNode,
 } from "../types.js";
-import type { IDriveReadModel } from "./interfaces.js";
+import type { DriveNodePage, IDriveReadModel } from "./interfaces.js";
 
 const DEFAULT_LIMIT = 100;
 
 type KeysetCursor = {
-  createdAt: Date;
+  /** ISO timestamp; a cursor this view issues carries microseconds. */
+  createdAt: string;
   id: string;
 };
 
@@ -33,10 +34,8 @@ function parseListChildrenPaging(paging: PagingOptions | undefined): {
   return { limit: paging.limit, cursor: decodeKeysetCursor(paging.cursor) };
 }
 
-function encodeKeysetCursor(createdAt: Date, id: string): string {
-  return globalThis.btoa(
-    JSON.stringify({ createdAt: createdAt.toISOString(), id }),
-  );
+function encodeKeysetCursor(createdAt: string, id: string): string {
+  return globalThis.btoa(JSON.stringify({ createdAt, id }));
 }
 
 function decodeKeysetCursor(cursor: string): KeysetCursor {
@@ -66,8 +65,8 @@ function decodeKeysetCursor(cursor: string): KeysetCursor {
       `Invalid paging cursor: ${JSON.stringify(cursor)} (must be a keyset cursor returned by a prior page)`,
     );
   }
-  const createdAt = new Date((parsed as { createdAt: string }).createdAt);
-  if (Number.isNaN(createdAt.getTime())) {
+  const createdAt = (parsed as { createdAt: string }).createdAt;
+  if (Number.isNaN(new Date(createdAt).getTime())) {
     throw new Error(
       `Invalid paging cursor: ${JSON.stringify(cursor)} (createdAt is not a valid timestamp)`,
     );
@@ -96,12 +95,20 @@ export class DriveNodeView implements IDriveReadModel {
     driveId: string,
     parentFolder: string | null | undefined,
     paging?: PagingOptions,
-  ): Promise<PagedResults<ReactorDriveNode>> {
+    _signal?: AbortSignal,
+    kind?: ReactorDriveNode["kind"],
+  ): Promise<DriveNodePage> {
     const { limit, cursor } = parseListChildrenPaging(paging);
 
+    // A JS Date keeps milliseconds; the column keeps microseconds.
     let query = this.db
       .selectFrom("DriveNode")
       .selectAll()
+      .select(
+        sql<string>`to_char("createdAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`.as(
+          "createdAtKey",
+        ),
+      )
       .where("driveId", "=", driveId);
 
     if (parentFolder === null) {
@@ -110,12 +117,19 @@ export class DriveNodeView implements IDriveReadModel {
       query = query.where("parentFolder", "=", parentFolder);
     }
 
+    if (kind !== undefined) {
+      query = query.where("kind", "=", kind);
+    }
+
     if (cursor !== null) {
       query = query.where((eb) =>
         eb(
           eb.refTuple("createdAt", "id"),
           ">",
-          eb.tuple(cursor.createdAt, cursor.id),
+          eb.tuple(
+            sql<Date>`${cursor.createdAt}::timestamptz`,
+            sql<string>`${cursor.id}`,
+          ),
         ),
       );
     }
@@ -128,14 +142,15 @@ export class DriveNodeView implements IDriveReadModel {
 
     const hasMore = rows.length > limit;
     const sliced = hasMore ? rows.slice(0, limit) : rows;
-    const last = sliced[sliced.length - 1];
+    const cursors = sliced.map((row) =>
+      encodeKeysetCursor(row.createdAtKey, row.id),
+    );
 
     return {
       results: sliced.map(rowToNode),
+      cursors,
       options: { cursor: paging?.cursor ?? "", limit },
-      nextCursor: hasMore
-        ? encodeKeysetCursor(last.createdAt, last.id)
-        : undefined,
+      nextCursor: hasMore ? cursors[cursors.length - 1] : undefined,
     };
   }
 

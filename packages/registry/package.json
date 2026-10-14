@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/registry",
-  "version": "6.2.3-dev.54",
+  "version": "6.2.3-dev.58",
   "description": "Powerhouse package registry — resolves and manages document model package dependencies within the Powerhouse ecosystem.",
   "type": "module",
   "repository": {
@@ -50,6 +50,7 @@
     "verdaccio": "7.0.0-next-7.27"
   },
   "devDependencies": {
+    "@powerhousedao/reactor-workflow": "workspace:*",
     "@powerhousedao/verdaccio-s3-storage": "13.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",

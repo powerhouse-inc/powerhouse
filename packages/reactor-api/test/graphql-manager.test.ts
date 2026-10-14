@@ -10,10 +10,12 @@
  */
 
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  IReactorClient,
-  IRelationalDb,
-  ISyncManager,
+import {
+  type IReactorClient,
+  type IRelationalDb,
+  type ISyncManager,
+  type JobInfo,
+  JobStatus,
 } from "@powerhousedao/reactor";
 import {
   createReactorDriveResolvers,
@@ -24,14 +26,16 @@ import {
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
-import { type DocumentNode, Kind } from "graphql";
+import { type DocumentNode, type GraphQLSchema, Kind, parse } from "graphql";
 import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
+import { DocumentModelRegistry } from "@powerhousedao/reactor";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
+import { AuthSubgraph } from "../src/graphql/auth/subgraph.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "../src/graphql/system/subgraph.js";
 import { getGeneratedDocumentModelTypes } from "../src/utils/create-schema.js";
@@ -68,6 +72,9 @@ import type {
   SubgraphClass,
 } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
+import type { PackageManager } from "../src/packages/package-manager.js";
+import { setupEventListeners } from "../src/packages/package-listeners.js";
+import type { IProcessorHostModule } from "../src/types.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
 
@@ -620,6 +627,88 @@ describe("GraphQLManager", () => {
     );
   }
 
+  /** A subscription subgraph whose `<field>` subscription yields `value`. */
+  async function registerStreamSubgraph(
+    manager: GraphQLManager,
+    name: string,
+    field: string,
+    value: string,
+  ) {
+    await manager.registerSubgraphInstance(
+      {
+        name,
+        hasSubscriptions: true,
+        typeDefs: gql(`
+          type Query {
+            ${field}Info: String
+          }
+          type Subscription {
+            ${field}: String
+          }
+        `),
+        resolvers: {
+          Query: { [`${field}Info`]: () => value },
+          Subscription: {
+            [field]: {
+              subscribe: async function* () {
+                await Promise.resolve();
+                yield { [field]: value };
+              },
+            },
+          },
+        },
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+      },
+      "graphql",
+    );
+  }
+
+  /** Run `query` over the SSE handler and return the raw event stream. */
+  async function streamOver(handler: FetchHandler, query: string) {
+    const res = await handler(
+      new Request("http://localhost/graphql/stream", {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ query }),
+      }),
+    );
+    return res.text();
+  }
+
+  /** Subscribe over the SSE handler and read events until one carries `needle`. */
+  async function streamUntil(
+    handler: FetchHandler,
+    query: string,
+    needle: string,
+  ) {
+    const res = await handler(
+      new Request("http://localhost/graphql/stream", {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ query }),
+      }),
+    );
+    const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+    let events = "";
+    try {
+      while (!events.includes(needle)) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        events += value;
+      }
+    } finally {
+      await reader.cancel();
+    }
+    return events;
+  }
+
   describe("SSE handler", () => {
     it("mounts the SSE handler at {basePath}/graphql/stream", async () => {
       const { manager, httpAdapter } = makeHarness({ path: "/" });
@@ -726,6 +815,349 @@ describe("GraphQLManager", () => {
       await unregistering;
 
       expect(disposed).toContain(route);
+    });
+
+    it("merges every subscription subgraph into the supergraph stream", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await registerStreamSubgraph(manager, "stream-b", "beta", "from-b");
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { alpha }")).toContain(
+        '{"data":{"alpha":"from-a"}}',
+      );
+      expect(await streamOver(handler!, "subscription { beta }")).toContain(
+        '{"data":{"beta":"from-b"}}',
+      );
+      expect(await streamOver(handler!, "{ alphaInfo betaInfo }")).toContain(
+        '{"data":{"alphaInfo":"from-a","betaInfo":"from-b"}}',
+      );
+    });
+
+    it("excludes a broken subscription subgraph from the stream and keeps the rest", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-broken",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            type Subscription {
+              broken: NoSuchType
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await registerStreamSubgraph(manager, "stream-b", "beta", "from-b");
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { alpha }")).toContain(
+        '{"data":{"alpha":"from-a"}}',
+      );
+      expect(await streamOver(handler!, "subscription { beta }")).toContain(
+        '{"data":{"beta":"from-b"}}',
+      );
+      const sseExclusions = vi
+        .mocked(logger.error)
+        .mock.calls.map((call) => String(call[0]))
+        .filter((message) => message.startsWith("Supergraph SSE:"));
+      expect(sseExclusions).toHaveLength(1);
+      expect(sseExclusions[0]).toContain('"stream-broken"');
+      expect(sseExclusions[0]).toContain("NoSuchType");
+    });
+
+    it("merges the reactor subgraph's subscriptions with another subgraph's", async () => {
+      const logger = makeHarnessLogger();
+      const reactorClient = makeMockReactorClient({
+        isServed: vi.fn().mockResolvedValue(true),
+        // Answers after the subscriber listens: earlier events are not replayed.
+        getJobStatus: vi.fn(
+          () =>
+            new Promise<JobInfo>((resolve) =>
+              setTimeout(
+                () =>
+                  resolve({
+                    id: "job-1",
+                    status: JobStatus.READ_READY,
+                    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+                    completedAtUtcIso: "2026-01-01T00:00:01.000Z",
+                    documentId: "doc-1",
+                  } as JobInfo),
+                50,
+              ),
+            ),
+        ),
+      });
+      const { manager, mounts } = makeHarness({ logger, reactorClient });
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await initAndFlush(manager, [ReactorSubgraph]);
+      vi.useRealTimers();
+
+      const sseErrors = vi
+        .mocked(logger.error)
+        .mock.calls.map((call) => String(call[0]))
+        .filter((message) => /SSE/.test(message));
+      expect(sseErrors).toEqual([]);
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const events = await streamOver(
+        handler!,
+        '{ __type(name: "Subscription") { fields { name } } }',
+      );
+      for (const field of ["alpha", "documentChanges", "jobChanges"]) {
+        expect(events).toContain(`{"name":"${field}"}`);
+      }
+      const jobEvent =
+        '{"data":{"jobChanges":{"jobId":"job-1","status":"READ_READY"}}}';
+      expect(
+        await streamUntil(
+          handler!,
+          'subscription { jobChanges(jobId: "job-1") { jobId status } }',
+          jobEvent,
+        ),
+      ).toContain(jobEvent);
+    });
+
+    it("streams a subscription subgraph that uses federation directives", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-federated",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            extend schema
+              @link(
+                url: "https://specs.apollo.dev/federation/v2.3"
+                import: ["@key", "@shareable"]
+              )
+            type StreamThing @key(fields: "id") {
+              id: ID!
+            }
+            type Query {
+              streamThing: StreamThing @shareable
+            }
+            type Subscription {
+              thingAdded: StreamThing
+            }
+          `,
+          resolvers: {
+            Query: { streamThing: () => ({ id: "t-1" }) },
+            Subscription: {
+              thingAdded: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { thingAdded: { id: "t-2" } };
+                },
+              },
+            },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(
+        await streamOver(handler!, "subscription { thingAdded { id } }"),
+      ).toContain('{"data":{"thingAdded":{"id":"t-2"}}}');
+      expect(
+        await streamOver(handler!, "{ alphaInfo streamThing { id } }"),
+      ).toContain('{"data":{"alphaInfo":"from-a","streamThing":{"id":"t-1"}}}');
+    });
+
+    it("streams subgraphs that only extend the root types", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-extends",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            extend type Query {
+              extInfo: String
+            }
+            extend type Subscription {
+              extTick: String
+            }
+          `,
+          resolvers: {
+            Query: { extInfo: () => "info" },
+            Subscription: {
+              extTick: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { extTick: "tick" };
+                },
+              },
+            },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { extTick }")).toContain(
+        '{"data":{"extTick":"tick"}}',
+      );
+      expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
+        "Failed to setup supergraph SSE: @error",
+        expect.anything(),
+      );
+    });
+
+    it("mounts no stream when no subgraph contributes a Query root", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-no-query",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            type Subscription {
+              lonely: String
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+
+      expect(mounts.has("/graphql/stream")).toBe(false);
+      expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
+        "Failed to setup supergraph SSE: @error",
+        expect.anything(),
+      );
+    });
+
+    it("logs an exclusion again when the subgraph breaks after recovering", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      const brokenTypeDefs = gql`
+        type Subscription {
+          broken: NoSuchType
+        }
+      `;
+      const register = (typeDefs: DocumentNode) =>
+        manager.registerSubgraphInstance(
+          {
+            name: "stream-flaky",
+            hasSubscriptions: true,
+            typeDefs,
+            resolvers: {},
+            relationalDb: {} as IRelationalDb,
+            reactorClient: {} as IReactorClient,
+          },
+          "graphql",
+        );
+      const sseExclusions = () =>
+        vi
+          .mocked(logger.error)
+          .mock.calls.map((call) => String(call[0]))
+          .filter((message) => message.includes('"stream-flaky"'));
+      const flushRouter = async () => {
+        const update = manager.updateRouter();
+        await vi.runAllTimersAsync();
+        await update;
+      };
+
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await register(brokenTypeDefs);
+      await initAndFlush(manager);
+      expect(sseExclusions()).toHaveLength(1);
+
+      await register(gql`
+        type Subscription {
+          flaky: String
+        }
+      `);
+      await flushRouter();
+      expect(sseExclusions()).toHaveLength(1);
+
+      await register(brokenTypeDefs);
+      await flushRouter();
+      expect(sseExclusions()).toHaveLength(2);
+    });
+
+    it("resolves interface-typed fields over the supergraph stream", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        {
+          name: "stream-nodes",
+          hasSubscriptions: true,
+          typeDefs: gql`
+            interface StreamNode {
+              id: ID!
+            }
+            type StreamItem implements StreamNode {
+              id: ID!
+            }
+            type Query {
+              streamNode: StreamNode
+            }
+            type Subscription {
+              nodeAdded: StreamNode
+            }
+          `,
+          resolvers: {
+            Query: { streamNode: () => ({ id: "n-1" }) },
+            Subscription: {
+              nodeAdded: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { nodeAdded: { id: "n-2" } };
+                },
+              },
+            },
+            StreamNode: { __resolveType: () => "StreamItem" },
+          },
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(
+        await streamOver(
+          handler!,
+          "subscription { nodeAdded { __typename id } }",
+        ),
+      ).toContain(
+        '{"data":{"nodeAdded":{"__typename":"StreamItem","id":"n-2"}}}',
+      );
+      expect(
+        await streamOver(handler!, "{ streamNode { __typename id } }"),
+      ).toContain(
+        '{"data":{"streamNode":{"__typename":"StreamItem","id":"n-1"}}}',
+      );
     });
 
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
@@ -1277,6 +1709,409 @@ describe("GraphQLManager", () => {
     });
   });
 
+  describe("stale subgraph handlers", () => {
+    type Gateway = ReturnType<typeof makeHarness>["gatewayAdapter"];
+
+    // Field names, not printSchema: the schema comes from another graphql realm.
+    const fieldNames = (schema: GraphQLSchema) =>
+      Object.values(schema.getTypeMap())
+        .flatMap((type) =>
+          "getFields" in type ? Object.keys(type.getFields()) : [],
+        )
+        .join(" ");
+
+    const servingSdl =
+      (schema: GraphQLSchema): FetchHandler =>
+      () =>
+        Promise.resolve(Response.json({ data: { sdl: fieldNames(schema) } }));
+
+    const createHandlerOf = (gatewayAdapter: Gateway) =>
+      vi.mocked(
+        gatewayAdapter.createHandler as IGatewayAdapter<Context>["createHandler"],
+      );
+
+    function serveSdl(gatewayAdapter: Gateway) {
+      createHandlerOf(gatewayAdapter).mockImplementation((schema) =>
+        Promise.resolve(servingSdl(schema)),
+      );
+    }
+
+    function holdNextHandler(gatewayAdapter: Gateway) {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const started = vi.fn();
+      createHandlerOf(gatewayAdapter).mockImplementationOnce(async (schema) => {
+        started();
+        await held;
+        return servingSdl(schema);
+      });
+      return { release, started };
+    }
+
+    async function servedSdl(
+      mounts: Map<string, FetchHandler>,
+      path: string,
+    ): Promise<string> {
+      const response = await mounts.get(path)!(
+        new Request(`http://localhost${path}`, { method: "POST" }),
+      );
+      const body = (await response.json()) as { data: { sdl: string } };
+      return body.data.sdl;
+    }
+
+    async function internalSdl(manager: GraphQLManager, name: string) {
+      const data = await manager.executeSubgraphQuery<{ sdl: string }>(
+        name,
+        "{ __typename }",
+        {},
+      );
+      return data.sdl;
+    }
+
+    function racer(field: string) {
+      return class extends BaseSubgraph {
+        name = "racer";
+        typeDefs = parse(`type Query { ${field}: String }`);
+        resolvers = {};
+      };
+    }
+
+    function alphaWith(field: string): DocumentModelModule {
+      const alpha = makeModelModule("Alpha", "test/alpha");
+      alpha.documentModel.global.specifications[0].state.global.schema = `type AlphaState { ${field}: String }`;
+      return alpha;
+    }
+
+    it("mounts the package subgraph that replaced it", async () => {
+      const { manager, mounts, gatewayAdapter } = makeHarness();
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      const apply = (field: string) =>
+        manager.applyPackageSubgraphs(new Map([["pkg", [racer(field)]]]));
+
+      await apply("rev1");
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev1");
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await apply("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+
+      await apply("rev3");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
+
+      // A later update must not take the stale handler for the current one.
+      await manager.updateRouter(true);
+      expect(await servedSdl(mounts, "/graphql/racer")).toContain("rev3");
+      expect(await internalSdl(manager, "racer")).toContain("rev3");
+    });
+
+    it("mounts the document model subgraph that replaced it", async () => {
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({
+          results: [makeDriveModule(), alphaWith("rev1")],
+        }),
+      });
+      const { manager, mounts, gatewayAdapter } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      serveSdl(gatewayAdapter);
+      await initAndFlush(manager);
+      expect(await servedSdl(mounts, "/graphql/alpha")).toContain("rev1");
+
+      const regenerate = async (field: string) => {
+        vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+          results: [makeDriveModule(), alphaWith(field)],
+          options: { cursor: "", limit: 100 },
+        });
+        await manager.regenerateDocumentModelSubgraphs();
+      };
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+
+      await regenerate("rev3");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(mounts, "/graphql/alpha")).toContain("rev3");
+
+      await manager.updateRouter(true);
+      const served = await servedSdl(mounts, "/graphql/alpha");
+      expect(served).toContain("rev3");
+      expect(served).not.toContain("rev2");
+      expect(await internalSdl(manager, "alpha")).toContain("rev3");
+    });
+    async function setupAlphaTools(
+      typeDefs = "type Query { alphaDoc: Alpha }",
+    ) {
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn().mockResolvedValue({
+          results: [makeDriveModule(), alphaWith("rev1")],
+        }),
+      });
+      const logger = makeHarnessLogger();
+      const harness = makeHarness({
+        reactorClient,
+        logger,
+        enableDocumentModelSubgraphs: true,
+      });
+      serveSdl(harness.gatewayAdapter);
+      await initAndFlush(harness.manager);
+      class AlphaTools extends BaseSubgraph {
+        name = "alpha-tools";
+        typeDefs = parse(typeDefs);
+        resolvers = {};
+      }
+      class Plain extends BaseSubgraph {
+        name = "plain";
+        typeDefs = parse("type Query { ping: String }");
+        resolvers = {};
+      }
+      await harness.manager.applyPackageSubgraphs(
+        new Map([["pkg", [AlphaTools, Plain]]]),
+      );
+      await vi.runAllTimersAsync();
+      expect(await servedSdl(harness.mounts, "/graphql/alpha-tools")).toContain(
+        "rev1",
+      );
+      const regenerate = async (field: string) => {
+        vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+          results: [makeDriveModule(), alphaWith(field)],
+          options: { cursor: "", limit: 100 },
+        });
+        await harness.manager.regenerateDocumentModelSubgraphs();
+      };
+      const served = () => servedSdl(harness.mounts, "/graphql/alpha-tools");
+      return { ...harness, logger, regenerate, served };
+    }
+
+    it("rebuilds a subgraph using a model's types after the model changes", async () => {
+      const { manager, mounts, regenerate, served } = await setupAlphaTools();
+      const plainHandler = mounts.get("/graphql/plain");
+
+      await regenerate("rev2");
+      await vi.runAllTimersAsync();
+
+      expect(await served()).toContain("rev2");
+      expect(await served()).not.toContain("rev1");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
+      // Uses no model type, so its handler is kept.
+      expect(mounts.get("/graphql/plain")).toBe(plainHandler);
+    });
+
+    it("rebuilds a subgraph that only extends a model's type", async () => {
+      const { regenerate, served } = await setupAlphaTools(
+        "type Query { ping: String } extend type Alpha_AlphaState { extra: String }",
+      );
+
+      await regenerate("rev2");
+      await vi.runAllTimersAsync();
+
+      expect(await served()).toContain("rev2");
+    });
+
+    it("keeps the handler when a regeneration leaves the model types alone", async () => {
+      const { mounts, regenerate } = await setupAlphaTools();
+      const handler = mounts.get("/graphql/alpha-tools");
+
+      await regenerate("rev1");
+      await vi.runAllTimersAsync();
+
+      expect(mounts.get("/graphql/alpha-tools")).toBe(handler);
+    });
+
+    it("serves the old handler until its rebuild succeeds", async () => {
+      const { manager, handles, disposed, gatewayAdapter, logger, ...rest } =
+        await setupAlphaTools();
+      let route = handles.get("/graphql/alpha-tools");
+
+      const hold = holdNextHandler(gatewayAdapter);
+      await rest.regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(hold.started).toHaveBeenCalled();
+      expect(disposed).not.toContain(route);
+      expect(await rest.served()).toContain("rev1");
+      hold.release();
+      await vi.runAllTimersAsync();
+      expect(await rest.served()).toContain("rev2");
+
+      route = handles.get("/graphql/alpha-tools");
+      createHandlerOf(gatewayAdapter).mockImplementation((schema) =>
+        schema.getQueryType()?.getFields().alphaDoc
+          ? Promise.reject(new Error("boom"))
+          : Promise.resolve(servingSdl(schema)),
+      );
+      await rest.regenerate("rev3");
+      await vi.runAllTimersAsync();
+
+      expect(disposed).not.toContain(route);
+      expect(await rest.served()).toContain("rev2");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev2");
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to setup subgraph @name at path @path: @error",
+        "alpha-tools",
+        "/graphql/alpha-tools",
+        expect.any(Error),
+      );
+    });
+
+    it("keeps the newest build when an older one finishes last", async () => {
+      const { manager, gatewayAdapter, regenerate, served } =
+        await setupAlphaTools();
+
+      const older = holdNextHandler(gatewayAdapter);
+      await regenerate("rev2");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(older.started).toHaveBeenCalled();
+
+      const newer = holdNextHandler(gatewayAdapter);
+      await regenerate("rev3");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(newer.started).toHaveBeenCalled();
+
+      newer.release();
+      await vi.runAllTimersAsync();
+      expect(await served()).toContain("rev3");
+
+      older.release();
+      await vi.runAllTimersAsync();
+      expect(await served()).toContain("rev3");
+      expect(await served()).not.toContain("rev2");
+      expect(await internalSdl(manager, "alpha-tools")).toContain("rev3");
+    });
+  });
+
+  describe("document models a package stops providing", () => {
+    function setup(initial: DocumentModelModule[]) {
+      const registry = new DocumentModelRegistry();
+      registry.registerModules(makeDriveModule(), ...initial);
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi.fn(() =>
+          Promise.resolve({
+            results: registry.getAllModules(),
+            options: { cursor: "", limit: 100 },
+          }),
+        ),
+      });
+      const harness = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      let emit!: (models: Record<string, DocumentModelModule[]>) => void;
+      const pkgManager = {
+        getDocumentModels: () => new Map([["pkg", initial]]),
+        getUniqueUpgradeManifests: () => [],
+        onDocumentModelsChange: (handler: typeof emit) => {
+          emit = handler;
+        },
+        onSubgraphsChange: vi.fn(),
+        onProcessorsChange: vi.fn(),
+      } as unknown as PackageManager;
+      setupEventListeners(
+        pkgManager,
+        harness.manager,
+        {} as Parameters<typeof setupEventListeners>[2],
+        () => ({}) as IProcessorHostModule,
+        registry,
+      );
+      const modelsChange = async (
+        models: Record<string, DocumentModelModule[]>,
+      ) => {
+        emit(models);
+        await vi.runAllTimersAsync();
+      };
+      const registeredTypes = () =>
+        registry.getAllModules().map((m) => m.documentModel.global.id);
+      return { ...harness, registry, modelsChange, registeredTypes };
+    }
+
+    function supergraphTypeNames(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): (string | undefined)[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { typeDefs: DocumentNode }[];
+      return getDefinitions().flatMap(({ typeDefs }) =>
+        typeDefs.definitions.map((def) =>
+          "name" in def ? def.name?.value : undefined,
+        ),
+      );
+    }
+
+    const alpha = makeModelModule("Alpha", "test/alpha");
+    const beta = makeModelModule("Beta", "test/beta");
+
+    it("unregisters a removed model and frees its subgraph name", async () => {
+      const {
+        manager,
+        handles,
+        disposed,
+        gatewayAdapter,
+        modelsChange,
+        registeredTypes,
+      } = setup([alpha, beta]);
+      await initAndFlush(manager);
+      class BetaStandIn extends BaseSubgraph {
+        name = "beta";
+        typeDefs = parse("type Query { betaStandIn: String }");
+        resolvers = {};
+      }
+      await manager.applyPackageSubgraphs(new Map([["other", [BetaStandIn]]]));
+      await vi.runAllTimersAsync();
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(
+        DocumentModelSubgraph,
+      );
+      const modelRoute = handles.get("/graphql/beta");
+
+      await modelsChange({ pkg: [alpha] });
+
+      expect(registeredTypes()).not.toContain("test/beta");
+      expect(registeredTypes()).toContain("test/alpha");
+      expect(disposed).toContain(modelRoute);
+      expect(manager.getSubgraphByName("beta")).toBeInstanceOf(BetaStandIn);
+      expect(manager.hasSubgraphHandler("beta")).toBe(true);
+      const typeNames = supergraphTypeNames(gatewayAdapter);
+      expect(typeNames).toContain("Alpha");
+      expect(typeNames).not.toContain("Beta");
+    });
+
+    it("unregisters a model whose id changed", async () => {
+      const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+      await initAndFlush(manager);
+
+      await modelsChange({
+        pkg: [alpha, makeModelModule("Beta", "test/beta-renamed")],
+      });
+
+      expect(registeredTypes()).not.toContain("test/beta");
+      expect(registeredTypes()).toContain("test/beta-renamed");
+    });
+
+    it.each([
+      ["missing from the event", {}],
+      ["with no models", { pkg: [] }],
+    ])(
+      "keeps the models of a package %s, as a failed load sends",
+      async (_, event: Record<string, DocumentModelModule[]>) => {
+        const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+        await initAndFlush(manager);
+
+        await modelsChange(event);
+
+        expect(registeredTypes()).toEqual(
+          expect.arrayContaining(["test/alpha", "test/beta"]),
+        );
+      },
+    );
+  });
+
   // ── shutdown() ─────────────────────────────────────────────────────────────
 
   describe("shutdown()", () => {
@@ -1296,6 +2131,38 @@ describe("GraphQLManager", () => {
       await manager.shutdown();
 
       expect(wsServer.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("reportError", () => {
+    it("receives a failed supergraph update", async () => {
+      const reportError = vi.fn();
+      const { manager, gatewayAdapter } = makeHarness({ reportError });
+      await initAndFlush(manager);
+      const failure = new Error("composition failed");
+      gatewayAdapter.updateSupergraph.mockRejectedValueOnce(failure);
+
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
+    });
+
+    it("receives a failed router update scheduled by a package change", async () => {
+      const reportError = vi.fn();
+      const { manager } = makeHarness({ reportError });
+      await initAndFlush(manager);
+      const failure = new Error("router update failed");
+      manager.updateRouter = vi.fn(() => Promise.reject(failure));
+      class Widget extends BaseSubgraph {
+        name = "widget";
+      }
+
+      await manager.applyPackageSubgraphs(new Map([["pkg", [Widget]]]));
+      await vi.runAllTimersAsync();
+
+      expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
     });
   });
 
@@ -3194,6 +4061,532 @@ describe("GraphQLManager", () => {
           harness.manager.hasSubgraphHandler(modelSubgraphName(model)),
         ).toBe(true);
       }
+    });
+  });
+
+  describe("type and root-field ownership", () => {
+    const CLAIM_EXCLUSION =
+      "Excluding subgraph @name from the supergraph: @error";
+
+    async function flush<T>(pending: Promise<T>): Promise<T> {
+      await vi.runAllTimersAsync();
+      return pending;
+    }
+
+    function supergraphNames(
+      gatewayAdapter: ReturnType<typeof makeHarness>["gatewayAdapter"],
+    ): string[] {
+      const getDefinitions = gatewayAdapter.createSupergraphHandler.mock
+        .calls[0][0] as () => { name: string }[];
+      return getDefinitions().map((d) => d.name.replace(":graphql/", ""));
+    }
+
+    /** The subgraphs logged as losing a claim, once per log line. */
+    function claimExclusions(logger: ILogger): string[] {
+      return vi
+        .mocked(logger.error)
+        .mock.calls.filter(
+          ([message, , reason]) =>
+            message === CLAIM_EXCLUSION &&
+            String(reason).includes("claims owned by another subgraph"),
+        )
+        .map(([, name]) => String(name));
+    }
+
+    function subgraphClass(
+      subgraphName: string,
+      subgraphTypeDefs: DocumentNode,
+    ): SubgraphClass {
+      return class extends BaseSubgraph {
+        name = subgraphName;
+        typeDefs = subgraphTypeDefs;
+        resolvers = {};
+      };
+    }
+
+    const widget = gql`
+      type Widget {
+        id: ID!
+        name: String
+      }
+      type Query {
+        widget: Widget
+      }
+    `;
+    const widgetSubset = gql`
+      type Widget {
+        id: ID!
+      }
+      type Query {
+        widgetById: Widget
+      }
+    `;
+
+    function makeOwnershipHarness(models?: DocumentModelModule[]) {
+      const logger = makeHarnessLogger();
+      return {
+        logger,
+        ...makeHarness({
+          logger,
+          enableDocumentModelSubgraphs: models !== undefined,
+          reactorClient: models
+            ? makeMockReactorClient({
+                getDocumentModelModules: vi
+                  .fn()
+                  .mockResolvedValue({ results: models }),
+              })
+            : undefined,
+        }),
+      };
+    }
+
+    async function applyPackages(
+      manager: GraphQLManager,
+      packages: [string, SubgraphClass[]][],
+    ) {
+      await flush(manager.applyPackageSubgraphs(new Map(packages)));
+      await flush(manager.updateRouter());
+    }
+
+    function expectRouteKept(
+      harness: ReturnType<typeof makeOwnershipHarness>,
+      name: string,
+    ) {
+      const route = harness.handles.get(`/graphql/${name}`);
+      expect(route).toBeDefined();
+      expect(route?.dispose).not.toHaveBeenCalled();
+      expect(harness.manager.hasSubgraphHandler(name)).toBe(true);
+    }
+
+    it("serves every model subgraph's Revision beside the reactor subgraph's", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("TodoList", "test/todo-list"),
+        makeModelModule("Invoice", "test/invoice"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+
+      expect(supergraphNames(harness.gatewayAdapter)).toEqual(
+        expect.arrayContaining(["r", "todo-list", "invoice"]),
+      );
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
+    it("excludes a subgraph defining a subset of an owned type, keeping its route", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+      ]);
+      await flush(harness.manager.updateRouter());
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-a");
+      expect(names).not.toContain("widget-b");
+      expectRouteKept(harness, "widget-b");
+      expect(claimExclusions(harness.logger)).toEqual(["widget-b"]);
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "widget-b",
+        expect.stringContaining('Widget (owned by "widget-a")'),
+      );
+    });
+
+    it("gives Query.documents to the first package claiming it", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        [
+          "pkg-a",
+          [
+            subgraphClass(
+              "docs-a",
+              gql`
+                type Query {
+                  documents(limit: Int): [String!]!
+                }
+              `,
+            ),
+          ],
+        ],
+        [
+          "pkg-b",
+          [
+            subgraphClass(
+              "docs-b",
+              gql`
+                type Query {
+                  documents: [String!]!
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("docs-a");
+      expect(names).not.toContain("docs-b");
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "docs-b",
+        expect.stringContaining('Query.documents (owned by "docs-a")'),
+      );
+    });
+
+    it("excludes a subgraph extending a type another subgraph defines", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        [
+          "pkg-b",
+          [
+            subgraphClass(
+              "widget-extra",
+              gql`
+                extend type Widget {
+                  extra: String
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-a");
+      expect(names).not.toContain("widget-extra");
+    });
+
+    it("keeps the reactor subgraph's PagingInput over a package's", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "paging",
+              gql`
+                input PagingInput {
+                  limit: Int
+                  offset: Int
+                }
+                type Query {
+                  things(paging: PagingInput): [String!]!
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("r");
+      expect(names).not.toContain("paging");
+      expectRouteKept(harness, "paging");
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "paging",
+        expect.stringContaining('PagingInput (owned by "r")'),
+      );
+    });
+
+    it("ranks the host over a package registered before it", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg", [subgraphClass("widget-pkg", widgetSubset)]],
+      ]);
+      await harness.manager.registerSubgraph(
+        subgraphClass("widget-host", widget),
+        "graphql",
+      );
+      await flush(harness.manager.updateRouter());
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-host");
+      expect(names).not.toContain("widget-pkg");
+    });
+
+    it("keeps the owner when the packages reload in another order", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      const packageA: [string, SubgraphClass[]] = [
+        "pkg-a",
+        [subgraphClass("widget-a", widget)],
+      ];
+      const packageB: [string, SubgraphClass[]] = [
+        "pkg-b",
+        [subgraphClass("widget-b", widgetSubset)],
+      ];
+      await applyPackages(harness.manager, [packageA, packageB]);
+
+      // As an HMR reload does: new instances, the loser registered first.
+      await applyPackages(harness.manager, [packageB, packageA]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("widget-a");
+      expect(names).not.toContain("widget-b");
+      expect(new Set(claimExclusions(harness.logger))).toEqual(
+        new Set(["widget-b"]),
+      );
+    });
+
+    it("serves the loser once the owner's package is removed", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+      ]);
+      expect(supergraphNames(harness.gatewayAdapter)).not.toContain("widget-b");
+
+      await flush(harness.manager.unregisterPackage("pkg-a"));
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).not.toContain("widget-a");
+      expect(names).toContain("widget-b");
+    });
+
+    it("excludes the loser from the supergraph stream", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      const streamed = (
+        subgraphName: string,
+        field: string,
+        widgetSdl: string,
+      ): SubgraphClass =>
+        class extends BaseSubgraph {
+          name = subgraphName;
+          hasSubscriptions = true;
+          typeDefs = gql(`${widgetSdl}
+            type Query { ${field}Info: String }
+            type Subscription { ${field}: Widget }`);
+          resolvers = {
+            Subscription: {
+              [field]: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { [field]: { id: subgraphName } };
+                },
+              },
+            },
+          };
+        };
+      await applyPackages(harness.manager, [
+        [
+          "pkg-a",
+          [
+            streamed(
+              "stream-a",
+              "widgetA",
+              "type Widget { id: ID! name: String }",
+            ),
+          ],
+        ],
+        ["pkg-b", [streamed("stream-b", "widgetB", "type Widget { id: ID! }")]],
+      ]);
+      vi.useRealTimers();
+
+      const handler = harness.mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const res = await handler!(
+        new Request("http://localhost/graphql/stream", {
+          method: "POST",
+          headers: {
+            accept: "text/event-stream",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            query: '{ __type(name: "Subscription") { fields { name } } }',
+          }),
+        }),
+      );
+      const events = await res.text();
+      expect(events).toContain('{"name":"widgetA"}');
+      expect(events).not.toContain('{"name":"widgetB"}');
+      expectRouteKept(harness, "stream-b");
+    });
+
+    it("keeps a model's Queries type for its own subgraph over a codegen custom subgraph", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("TodoList", "test/todo-list"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      // The `ph generate --subgraph` template.
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "todo-list-custom",
+              gql`
+                """
+                TodoList Queries
+                """
+                type TodoListQueries {
+                  example(driveId: String!): String
+                }
+
+                type Query {
+                  todoList: TodoListQueries!
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("todo-list");
+      expect(names).not.toContain("todo-list-custom");
+      expectRouteKept(harness, "todo-list-custom");
+      expect(vi.mocked(harness.logger.error)).toHaveBeenCalledWith(
+        CLAIM_EXCLUSION,
+        "todo-list-custom",
+        expect.stringContaining('TodoListQueries (owned by "todo-list")'),
+      );
+
+      // As editing the model in Vetra does.
+      await flush(harness.manager.regenerateDocumentModelSubgraphs());
+      await flush(harness.manager.updateRouter());
+
+      const reloaded = supergraphNames(harness.gatewayAdapter);
+      expect(reloaded).toContain("todo-list");
+      expect(reloaded).not.toContain("todo-list-custom");
+    });
+
+    it("serves an identical root field from its owner only", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      const documentSubgraph = (subgraphName: string): SubgraphClass =>
+        class extends BaseSubgraph {
+          name = subgraphName;
+          hasSubscriptions = true;
+          typeDefs = gql`
+            type Query {
+              document(id: String!): String
+            }
+            type Subscription {
+              ${subgraphName.replace("-", "")}: String
+            }
+          `;
+          resolvers = {
+            Query: { document: () => subgraphName },
+            Subscription: {},
+          };
+        };
+      await harness.manager.registerSubgraph(
+        documentSubgraph("doc-host"),
+        "graphql",
+      );
+      // Lower-ranked and registered last, so a last-wins merge would pick it.
+      await applyPackages(harness.manager, [
+        ["pkg", [documentSubgraph("doc-pkg")]],
+      ]);
+      vi.useRealTimers();
+
+      const names = supergraphNames(harness.gatewayAdapter);
+      expect(names).toContain("doc-host");
+      expect(names).not.toContain("doc-pkg");
+      expectRouteKept(harness, "doc-pkg");
+      const handler = harness.mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const res = await handler!(
+        new Request("http://localhost/graphql/stream", {
+          method: "POST",
+          headers: {
+            accept: "text/event-stream",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ query: '{ document(id: "x") }' }),
+        }),
+      );
+      expect(await res.text()).toContain('{"data":{"document":"doc-host"}}');
+    });
+
+    it("lets a subgraph whose schema cannot build claim nothing", async () => {
+      const harness = makeOwnershipHarness();
+      await initAndFlush(harness.manager);
+      await applyPackages(harness.manager, [
+        [
+          "pkg-a",
+          [
+            subgraphClass(
+              "widget-broken",
+              gql`
+                type Widget {
+                  id: ID!
+                  part: NoSuchType
+                }
+                type Query {
+                  brokenWidget: Widget
+                }
+              `,
+            ),
+          ],
+        ],
+        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+      ]);
+
+      expect(harness.manager.hasSubgraphHandler("widget-broken")).toBe(false);
+      expect(supergraphNames(harness.gatewayAdapter)).toContain("widget-b");
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
+    it("lets a refused model's subgraph claim nothing", async () => {
+      const harness = makeOwnershipHarness([
+        makeDriveModule(),
+        makeModelModule("Revision", "test/revision"),
+      ]);
+      await initAndFlush(harness.manager, [ReactorSubgraph]);
+      await applyPackages(harness.manager, [
+        [
+          "pkg",
+          [
+            subgraphClass(
+              "revision-custom",
+              gql`
+                type RevisionQueries {
+                  example: String
+                }
+                type Query {
+                  Revision: RevisionQueries
+                }
+              `,
+            ),
+          ],
+        ],
+      ]);
+
+      expect(harness.manager.getSubgraphByName("revision")).toBeUndefined();
+      expect(supergraphNames(harness.gatewayAdapter)).toContain(
+        "revision-custom",
+      );
+      expect(claimExclusions(harness.logger)).toEqual([]);
+    });
+
+    it("excludes nothing among the real core subgraphs and base models", async () => {
+      const harness = makeOwnershipHarness([
+        driveDocumentModelModule,
+        documentModelDocumentModelModule,
+        reactorDriveDocumentModelModule,
+      ] as unknown as DocumentModelModule[]);
+      await initAndFlush(harness.manager, [
+        AnalyticsSubgraph,
+        ReactorSubgraph,
+        SystemSubgraph,
+        AuthSubgraph,
+      ]);
+
+      expect(claimExclusions(harness.logger)).toEqual([]);
+      expect(supergraphNames(harness.gatewayAdapter)).toEqual(
+        expect.arrayContaining(["analytics", "r", "system", "auth"]),
+      );
     });
   });
 });

@@ -37,7 +37,7 @@ import {
   resolvedBlock,
   stepConfigHash,
   pieceModuleRef,
-  PieceWorker,
+  type IPieceWorker,
   PieceWorkerError,
   PieceWorkerPool,
   PieceWorkerTimeoutError,
@@ -250,6 +250,8 @@ import {
   type EffectiveRunPolicy,
 } from "./policy.js";
 import { WorkflowRunGate } from "./run-gate.js";
+import { DEFAULT_ADMIT_MAX_ELU, RunDispatcher } from "./run-dispatcher.js";
+import { EventLoopMonitor } from "./event-loop.js";
 import {
   RETENTION_SWEEP_INTERVAL_MS,
   runRetentionMs,
@@ -404,6 +406,9 @@ export interface TriggerTestOptions extends WorkflowAccessOptions {
 }
 
 const WEBHOOK_TEST_TIMEOUT_MS = 5 * 60_000;
+
+// How often PENDING rows another owner left are swept up, and their minimum age.
+export const PENDING_SWEEP_INTERVAL_MS = 60_000;
 
 interface WebhookTest {
   config: WebhookConfig;
@@ -731,6 +736,24 @@ function configRecord(config: unknown): Record<string, unknown> {
   return {};
 }
 
+// Workflows whose latest state trigger runs read without a reactor load.
+const WORKFLOW_CACHE_MAX = 1_000;
+
+interface CachedWorkflow {
+  state: WorkflowState;
+  name: string | undefined;
+  // The global scope's operation count the state reflects.
+  revision: number;
+}
+
+// A partial header (test doubles, old snapshots) reads as revision 0.
+function globalRevision(document: WorkflowDocument): number {
+  const revision = document.header.revision as
+    | Partial<Record<string, number>>
+    | undefined;
+  return revision?.global ?? 0;
+}
+
 // The name a run is stamped with. A run record is a journal: it snapshots the
 // name alongside the version so a workflow that is later renamed or deleted
 // still reads correctly in its own history. That is why this resolves at run
@@ -754,6 +777,9 @@ export class WorkflowRuntimeService {
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
   private unobservePool?: () => void;
+  private runDispatcher?: RunDispatcher;
+  private unobserveDispatcher?: () => void;
+  private readonly eventLoop = new EventLoopMonitor();
   private storePromise: Promise<WorkflowRunStore>;
   private storeError?: unknown;
   private storeOpening = false;
@@ -1648,8 +1674,12 @@ export class WorkflowRuntimeService {
       await this.updateRegistration(workflowId, carried, onlyIfChanged);
       return;
     }
+    const generation = this.workflowGeneration(workflowId);
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+    if (document.header.documentType === WORKFLOW_DOCUMENT_TYPE) {
+      this.cacheLoaded(workflowId, generation, document);
+    }
     await this.updateRegistration(
       workflowId,
       document.state.global,
@@ -1660,6 +1690,41 @@ export class WorkflowRuntimeService {
   // The manager routes by filter only, so every per-drive processor instance
   // delivers every matching operation; dedup keeps fires once-per-operation.
   private readonly seenOps = new Set<string>();
+  // Filled by loads and kept current by onOperations, the feed the trigger
+  // registry is built from; manual fires always load.
+  private readonly workflowCache = new Map<string, CachedWorkflow>();
+  // Bumped by every operation on a workflow: a load that saw a bump while in
+  // flight may have read the state before it, so it does not cache.
+  private readonly workflowGenerations = new Map<string, number>();
+
+  private workflowGeneration(workflowId: string): number {
+    return this.workflowGenerations.get(workflowId) ?? 0;
+  }
+
+  // Caches what a load returned, unless an operation landed during the load.
+  private cacheLoaded(
+    workflowId: string,
+    generation: number,
+    document: WorkflowDocument,
+  ): void {
+    if (this.workflowGeneration(workflowId) !== generation) return;
+    this.cacheWorkflow(workflowId, {
+      state: document.state.global,
+      name: document.header.name,
+      revision: globalRevision(document),
+    });
+  }
+
+  private cacheWorkflow(workflowId: string, entry: CachedWorkflow): void {
+    const held = this.workflowCache.get(workflowId);
+    if (held && held.revision > entry.revision) return;
+    this.workflowCache.delete(workflowId);
+    this.workflowCache.set(workflowId, entry);
+    if (this.workflowCache.size > WORKFLOW_CACHE_MAX) {
+      const oldest = this.workflowCache.keys().next().value;
+      if (oldest !== undefined) this.workflowCache.delete(oldest);
+    }
+  }
   private readonly seenOpsQueue: string[] = [];
 
   private alreadySeen(key: string): boolean {
@@ -1723,7 +1788,15 @@ export class WorkflowRuntimeService {
       }
       const opKey = operationKey({ operation, context });
       if (this.alreadySeen(opKey)) continue;
+      if (context.documentType === WORKFLOW_DOCUMENT_TYPE) {
+        this.workflowGenerations.set(
+          context.documentId,
+          this.workflowGeneration(context.documentId) + 1,
+        );
+      }
       if (context.scope === DOCUMENT_SCOPE) {
+        // Renames, deletes and upgrades: the next run reloads.
+        this.workflowCache.delete(context.documentId);
         await this.matchDocumentLifecycle(operation, context, hints);
         await this.forgetDeletedWorkflow(operation, context);
         continue;
@@ -1731,6 +1804,21 @@ export class WorkflowRuntimeService {
       // A workflow edit updates the registry, then falls through: workflow docs are
       // also a document-event source, so a workflow can watch its own type.
       if (context.documentType === "powerhouse/workflow") {
+        const cached = this.workflowCache.get(context.documentId);
+        const carried =
+          cached && operation.error === undefined
+            ? parseWorkflowState(operation.resultingState)
+            : undefined;
+        if (cached && carried) {
+          this.cacheWorkflow(context.documentId, {
+            state: carried,
+            name: cached.name,
+            revision: operation.index + 1,
+          });
+        } else if (cached) {
+          // No state to apply: refreshRegistration's load refills the entry.
+          this.workflowCache.delete(context.documentId);
+        }
         // Publish and enable re-check reactor access first.
         const rechecked = await this.recheckReactorAccess(
           context.documentId,
@@ -1951,10 +2039,10 @@ export class WorkflowRuntimeService {
         this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
       (error: unknown) => {
-        // Not lost: the journaled row is FAILED, for an operator to rerun.
+        // Not lost: the journaled row stays PENDING for the next owner.
         if (enqueuedRunId && isShutdownRefusal(error)) {
           this.logger.warn(
-            `${kind} fire of workflow ${workflowId} was refused by the shutdown; run ${enqueuedRunId} is left to rerun`,
+            `${kind} fire of workflow ${workflowId} was refused by the shutdown; run ${enqueuedRunId} is left for the next owner to start`,
           );
           return;
         }
@@ -2081,6 +2169,7 @@ export class WorkflowRuntimeService {
       stringField(inputRecord(operation.action.input), "documentId") ??
       context.documentId;
     this.disarmDeleted(workflowId);
+    this.workflowCache.delete(workflowId);
     try {
       const store = await this.store();
       await store?.deleteDedupe(workflowId);
@@ -2248,6 +2337,9 @@ export class WorkflowRuntimeService {
       reactorAccess: (binding, requireReactor, runUser) =>
         this.triggerReactorAccess(binding, requireReactor, runUser),
       models: this.models,
+      // Hooks lease the pool's trigger children; the pool owns their lifetime.
+      worker: this.workers().session("trigger"),
+      hookConcurrency: this.workers().triggerSlots,
       telemetry: this.telemetry,
       cacheDir: bundleCacheDir(),
       resolver: pieceResolver(),
@@ -2275,9 +2367,51 @@ export class WorkflowRuntimeService {
 
   startTriggerSupervisor(): void {
     this.supervisor().start();
+    void this.admitAbandonedRuns();
+    // Then rows left after that pass, by a draining owner or a failed pass;
+    // only settled ones, so an owner still draining keeps its own.
+    this.pendingSweepTimer ??= setInterval(() => {
+      void this.admitAbandonedRuns(PENDING_SWEEP_INTERVAL_MS);
+    }, PENDING_SWEEP_INTERVAL_MS);
+    this.pendingSweepTimer.unref();
+  }
+
+  private pendingSweepTimer?: ReturnType<typeof setInterval>;
+  private admittingAbandoned = false;
+
+  // PENDING runs another owner journaled start here, oldest first and through
+  // the same gates as any fire. RUNNING ones were failed at open.
+  private async admitAbandonedRuns(minAgeMs?: number): Promise<void> {
+    if (this.admittingAbandoned || this.closed) return;
+    this.admittingAbandoned = true;
+    try {
+      const store = await this.store();
+      const admitted = await store?.admitAbandonedRuns(
+        minAgeMs === undefined
+          ? {}
+          : { enqueuedBefore: new Date(Date.now() - minAgeMs) },
+      );
+      for (const run of admitted ?? []) {
+        this.startFiring(
+          run.workflowId,
+          run.triggerPayload,
+          run.triggerKind,
+          run.runId,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        "Could not admit the runs a stopped reactor journaled: @error",
+        error,
+      );
+    } finally {
+      this.admittingAbandoned = false;
+    }
   }
 
   stopTriggerSupervisor(): void {
+    clearInterval(this.pendingSweepTimer);
+    this.pendingSweepTimer = undefined;
     this.triggerSupervisor?.stop();
   }
 
@@ -2301,6 +2435,10 @@ export class WorkflowRuntimeService {
   shutdown(): void {
     this.closed = true;
     this.runGate.close();
+    this.runDispatcher?.close();
+    this.eventLoop.stop();
+    this.unobserveDispatcher?.();
+    this.unobserveDispatcher = undefined;
     clearInterval(this.retentionTimer);
     for (const { timer } of this.resolutionRetries.values())
       clearTimeout(timer);
@@ -2314,9 +2452,6 @@ export class WorkflowRuntimeService {
     this.pieceWorkers?.dispose();
     this.unobservePool?.();
     this.unobservePool = undefined;
-    // Forked on the editor's first request and never replaced, so it outlives
-    // a hot reload unless it goes with everything else.
-    this.designWorker?.dispose();
     this.designWorker = undefined;
   }
 
@@ -2820,11 +2955,11 @@ export class WorkflowRuntimeService {
   }
 
   private readonly descriptors = new Map<string, PieceDescriptor>();
-  private designWorker?: PieceWorker;
+  private designWorker?: IPieceWorker;
 
-  // Describe, options and connection checks: traced like a run's requests.
-  private createDesignWorker(): PieceWorker {
-    return new PieceWorker({ models: this.models, telemetry: this.telemetry });
+  // Describe, options and connection checks lease children like a run's steps.
+  private createDesignWorker(): IPieceWorker {
+    return this.workers().session("design");
   }
 
   // Design-time piece code runs under the policy a run would get, so nothing
@@ -4182,21 +4317,60 @@ export class WorkflowRuntimeService {
     ));
   }
 
-  // One child per run, N runs at a time. Sized by the operator: each slot is a
-  // node process, so this is the reactor's real connector concurrency.
+  // Every piece request leases a warm child from one pool: runs, the editor
+  // and trigger hooks. Unset sizes come from the container's cores and memory.
   private workers(): PieceWorkerPool {
-    // A queue depth of 0 waits without limit, which is what one shared worker
-    // did — a cap turns a saturated pool into failures instead of latency.
     if (this.pieceWorkers) return this.pieceWorkers;
+    const env = (name: string) => Number(process.env[name]) || undefined;
+    // Where 0 is a setting rather than "unset".
+    const count = (name: string) => {
+      const value = Number(process.env[name] || Number.NaN);
+      return value >= 0 ? value : undefined;
+    };
     const pool = new PieceWorkerPool({
       models: this.models,
-      size: Number(process.env.PH_WORKFLOWS_RUN_CONCURRENCY) || undefined,
-      maxQueueDepth:
-        Number(process.env.PH_WORKFLOWS_RUN_QUEUE_DEPTH) || undefined,
+      size: env("PH_WORKFLOWS_RUN_CONCURRENCY"),
+      maxQueueDepth: env("PH_WORKFLOWS_RUN_QUEUE_DEPTH"),
+      heapMb: env("PH_WORKFLOWS_WORKER_MEMORY_MB"),
+      maxRequests: env("PH_WORKFLOWS_WORKER_MAX_REQUESTS"),
+      minWarm: count("PH_WORKFLOWS_WORKER_MIN"),
+      triggerSlots: env("PH_WORKFLOWS_TRIGGER_SLOTS"),
+      reactorThreads: this.host.reactorThreads,
       telemetry: this.telemetry,
     });
+    // Built after shutdown, by a late supervisor or editor call: forks nothing.
+    if (this.closed) {
+      pool.dispose();
+      return (this.pieceWorkers = pool);
+    }
     this.unobservePool = this.telemetry.observeWorkerPool(() => pool.stats());
     return (this.pieceWorkers = pool);
+  }
+
+  // Eight runs in flight per child by default: one waiting out a retry holds its
+  // place. Built after shutdown, it admits nothing.
+  private dispatcher(): RunDispatcher {
+    if (this.runDispatcher) return this.runDispatcher;
+    const configured = Number(process.env.PH_WORKFLOWS_ADMIT_MAX_ELU);
+    const dispatcher = new RunDispatcher({
+      maxInFlight:
+        Number(process.env.PH_WORKFLOWS_RUNS_IN_FLIGHT) ||
+        8 * this.workers().size,
+      maxElu:
+        configured > 0 && configured <= 1 ? configured : DEFAULT_ADMIT_MAX_ELU,
+      loop: this.eventLoop,
+    });
+    this.runDispatcher = dispatcher;
+    if (this.closed) {
+      dispatcher.close();
+      return dispatcher;
+    }
+    this.eventLoop.start();
+    this.unobserveDispatcher = this.telemetry.observeDispatcher(() => ({
+      ...dispatcher.stats(),
+      utilization: this.eventLoop.utilization(),
+    }));
+    return dispatcher;
   }
 
   async fire(
@@ -4209,7 +4383,12 @@ export class WorkflowRuntimeService {
     enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
     if (this.closed) {
-      return this.refuseClosed(await this.store(), workflowId, enqueuedRunId);
+      return this.refuseClosed(
+        await this.store(),
+        workflowId,
+        enqueuedRunId,
+        triggerKind,
+      );
     }
     const started = performance.now();
     const attributes = {
@@ -4275,26 +4454,42 @@ export class WorkflowRuntimeService {
     let documentName: string | undefined;
     let definition: ReturnType<typeof toWorkflowDefinition>;
     let runUser: RunUser | null | undefined;
+    // The workflow's generation as read: a wait it outlasts re-reads nothing.
+    let readGeneration: number;
     try {
       // "manual" is the only kind a caller can ask for; every other one is
-      // system-initiated and already authorized by whatever armed the trigger.
-      if (triggerKind === "manual") {
+      // system-initiated. An adopted manual row passed this check when journaled.
+      if (triggerKind === "manual" && !enqueuedRunId) {
         await this.assertCanReadDocument(workflowId, ctx).catch((error) => {
           run.refused = true;
           throw error;
         });
       }
-      const document = await this.telemetry.phase("load", {}, () =>
-        this.host.reactorClient.get<WorkflowDocument>(workflowId),
-      );
-      if (document.header.documentType !== "powerhouse/workflow") {
-        run.refused = true;
-        throw new Error(
-          `Document "${workflowId}" is not a powerhouse/workflow`,
+      // A caller's fire or rerun reads fresh; a trigger's run reads the cache.
+      const cached =
+        triggerKind === "manual" || resume
+          ? undefined
+          : this.workflowCache.get(workflowId);
+      if (cached) {
+        state = cached.state;
+        documentName = cached.name;
+        readGeneration = this.workflowGeneration(workflowId);
+      } else {
+        const generation = this.workflowGeneration(workflowId);
+        readGeneration = generation;
+        const document = await this.telemetry.phase("load", {}, () =>
+          this.host.reactorClient.get<WorkflowDocument>(workflowId),
         );
+        if (document.header.documentType !== "powerhouse/workflow") {
+          run.refused = true;
+          throw new Error(
+            `Document "${workflowId}" is not a powerhouse/workflow`,
+          );
+        }
+        state = document.state.global;
+        documentName = document.header.name;
+        this.cacheLoaded(workflowId, generation, document);
       }
-      state = document.state.global;
-      documentName = document.header.name;
       if (state.status !== "ENABLED") {
         run.refused = true;
         throw new Error(
@@ -4331,6 +4526,22 @@ export class WorkflowRuntimeService {
       }
       throw error;
     }
+    // A manual fire is journaled as it queues, so a crash while it waits
+    // leaves it for the next boot; one admitted at once is written as before.
+    let journaling: Promise<void> | undefined;
+    const journalOnQueue = () => {
+      if (triggerKind !== "manual" || enqueuedRunId || resume || journaling) {
+        return;
+      }
+      if (!store) return;
+      journaling = store
+        .enqueueRun({ workflowId, triggerKind, triggerPayload })
+        .then((runId) => {
+          enqueuedRunId = runId;
+        });
+      // Awaited once admitted; until then nothing else may observe it.
+      journaling.catch(() => undefined);
+    };
     // Bound once, to the connections this definition names: an edit landing
     // mid-run cannot widen what the run may resolve.
     const connections = declaredConnectionIds(definition);
@@ -4377,34 +4588,48 @@ export class WorkflowRuntimeService {
       throw error;
     }
     if (parked) return skipped(parked, "parked");
-    const admission = await this.runGate.admit(workflowId, policy);
+    const admission = await this.runGate.admit(
+      workflowId,
+      policy,
+      journalOnQueue,
+    );
+    try {
+      await journaling;
+    } catch (error) {
+      if (admission.admitted) admission.release();
+      throw error;
+    }
     // Shut down while it waited, or as it was handed the slot: refused, not
     // journaled as a fresh CANCELLED run.
     if (this.closed) {
       if (admission.admitted) admission.release();
-      return this.refuseClosed(store, workflowId, enqueuedRunId);
+      return this.refuseClosed(store, workflowId, enqueuedRunId, triggerKind);
     }
     if (!admission.admitted) {
       if (admission.refusal === "closed") {
-        return this.refuseClosed(store, workflowId, enqueuedRunId);
+        return this.refuseClosed(store, workflowId, enqueuedRunId, triggerKind);
       }
       return skipped(admission.reason, admission.refusal);
     }
     // A firing that queued read the workflow before it waited: disabled,
     // re-published or parked meanwhile, it must not run on that old read.
-    if (admission.waited) {
-      let stale: string | undefined;
+    const staleAfter = async (): Promise<string | undefined> => {
       try {
-        stale = await this.staleAfterWait(
+        return await this.staleAfterWait(
           workflowId,
           triggerKind,
           runnable.version,
+          readGeneration,
         );
       } catch (error) {
-        stale =
+        return (
           "Skipped: the workflow could not be read again after this firing " +
-          `waited for its slot: ${error instanceof Error ? error.message : String(error)}`;
+          `waited for its slot: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
+    };
+    if (admission.waited) {
+      const stale = await staleAfter();
       if (stale) {
         admission.release();
         return skipped(stale, "stale");
@@ -4414,14 +4639,54 @@ export class WorkflowRuntimeService {
     // run it in: CANCELLED without executing a single step, rather than a side
     // effect fired long after the timeout that was supposed to bound it. The
     // slot goes back first — this firing is not going to use it.
-    if (deadline !== undefined && Date.now() >= deadline) {
-      admission.release();
-      return skipped(
+    const expired = () =>
+      skipped(
         `Skipped: this firing waited past its runTimeoutSeconds ` +
           `(${policy.runTimeoutSeconds}s) for a concurrency slot and was ` +
           "cancelled without running",
         "expired",
       );
+    if (deadline !== undefined && Date.now() >= deadline) {
+      admission.release();
+      return expired();
+    }
+    // Then the cap across workflows: runs in flight, and a busy main thread.
+    let dispatched: () => void;
+    let dispatcherWaited = false;
+    try {
+      dispatched = await this.dispatcher().admit(workflowId, () => {
+        dispatcherWaited = true;
+        journalOnQueue();
+      });
+    } catch (error) {
+      // The refusal below closes out the row this fire journaled while queued.
+      await journaling?.catch(() => undefined);
+      admission.release();
+      if (this.closed)
+        return this.refuseClosed(store, workflowId, enqueuedRunId, triggerKind);
+      throw error;
+    }
+    try {
+      await journaling;
+    } catch (error) {
+      dispatched();
+      admission.release();
+      throw error;
+    }
+    if (this.closed || (deadline !== undefined && Date.now() >= deadline)) {
+      dispatched();
+      admission.release();
+      return this.closed
+        ? this.refuseClosed(store, workflowId, enqueuedRunId, triggerKind)
+        : expired();
+    }
+    if (dispatcherWaited) {
+      const stale = await staleAfter();
+      if (stale) {
+        dispatched();
+        admission.release();
+        return skipped(stale, "stale");
+      }
     }
 
     let runId: string | null = enqueuedRunId ?? null;
@@ -4462,9 +4727,9 @@ export class WorkflowRuntimeService {
         },
       );
       if (runId) run.span.setAttribute("run.id", runId);
-      // Also in here: a pool disposed while this run was starting up refuses
-      // here, and the journal records the run as failed rather than leaving it
-      // to be swept up as an orphan.
+      // Shut down during the journal write: refused here, and the journal
+      // records the run as failed rather than leaving it to be swept up.
+      if (this.closed) throw new WorkflowRuntimeClosedError(workflowId);
       session = this.workers().session();
       // Resolved per run, so a rotated secret takes effect on the next one.
       const { variables, secretValues } = await resolveVariables(
@@ -4582,6 +4847,7 @@ export class WorkflowRuntimeService {
       session?.close();
       // And the concurrency slot, so the next QUEUE'd firing starts.
       admission.release();
+      dispatched();
     }
   }
 
@@ -4609,7 +4875,11 @@ export class WorkflowRuntimeService {
     workflowId: string,
     triggerKind: string,
     publishedVersion: number,
+    readGeneration: number,
   ): Promise<string | undefined> {
+    if (this.workflowGeneration(workflowId) === readGeneration) {
+      return this.parkedFiring(workflowId, triggerKind, publishedVersion);
+    }
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     const state = document.state.global;
@@ -4673,11 +4943,25 @@ export class WorkflowRuntimeService {
     store: WorkflowRunStore | undefined,
     workflowId: string,
     enqueuedRunId: string | undefined,
+    triggerKind: string,
   ): Promise<never> {
     const error = new WorkflowRuntimeClosedError(workflowId);
     if (enqueuedRunId) {
       // Answered 503, the sender's retry is the record: not left to rerun.
       const redelivered = this.heldReplies.get(enqueuedRunId)?.() ?? false;
+      // A trigger's source has moved past it: the next owner starts it. A
+      // manual caller hears the refusal now, so that run stays failed.
+      if (!redelivered && triggerKind !== "manual") {
+        try {
+          await store?.releaseAdmission(enqueuedRunId);
+        } catch (failure) {
+          this.logger.warn(
+            `Could not give back the boot admission of run ${enqueuedRunId}: @error`,
+            failure,
+          );
+        }
+        throw error;
+      }
       try {
         if (redelivered) {
           await store?.cancelRun(enqueuedRunId, WEBHOOK_REDELIVERED_REASON);

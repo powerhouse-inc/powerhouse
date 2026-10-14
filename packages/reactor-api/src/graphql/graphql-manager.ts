@@ -14,7 +14,13 @@ import type {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { GraphQLSchema } from "graphql";
+import {
+  type DocumentNode,
+  type GraphQLSchema,
+  Kind,
+  print,
+  visit,
+} from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
@@ -27,7 +33,17 @@ import {
   type IHttpScope,
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
-import type { AuthService, User } from "../services/auth.service.js";
+import {
+  reportFailure,
+  runDetached,
+  type ReportError,
+  type RunDetachedOptions,
+} from "../utils/detached.js";
+import {
+  createCredentialInvalidator,
+  type AuthService,
+  type User,
+} from "../services/auth.service.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type {
   CanonicalDocumentId,
@@ -35,20 +51,31 @@ import type {
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
+  buildDocumentModelSchema,
   buildSubgraphSchemaModule,
-  createMergedSchema,
   createSchema,
+  type DocumentModelSchema,
+  DocumentModelSchemaCache,
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
+  type ReservedTypeNames,
   reservedTypeNames,
   reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
+  typeDefinitionNames,
 } from "../utils/create-schema.js";
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
+import {
+  collectSubgraphClaims,
+  describeOwnershipConflicts,
+  resolveClaimOwnership,
+  type SubgraphClaims,
+} from "./subgraph-type-ownership.js";
+import { filterBuildableSubgraphs } from "./gateway/adapter-gateway-stitching.js";
 import {
   getAuthContext,
   type AuthFetchMiddleware,
@@ -64,6 +91,10 @@ import {
 } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
 import {
+  DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+  WsCredentialMonitor,
+} from "./ws-credential-monitor.js";
+import {
   WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
   WS_CLOSE_REASON_BEARER_REJECTED,
   type FetchHandler,
@@ -76,23 +107,24 @@ import {
   type WsDisposer,
   type WsHandlers,
 } from "./gateway/types.js";
-import { hasValidSchema } from "./model-schema-templates.js";
-import { createGraphQLSSEHandler } from "./sse.js";
+import {
+  createGraphQLSSEHandler,
+  mergeStreamSubgraphs,
+  withoutFederationDirectives,
+} from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
-/**
- * Check if a document model has any operations with valid schemas.
- * Document models without valid operation schemas cannot generate valid subgraph schemas.
- */
-function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
-  const specification =
-    documentModel.documentModel.global.specifications.at(-1);
-  if (!specification) return false;
-  return specification.modules.some((module) =>
-    module.operations.some((op) => hasValidSchema(op.schema)),
-  );
-}
+const NON_MODEL_TYPE_NAMES = new Set([
+  "String",
+  "Int",
+  "Float",
+  "Boolean",
+  "ID",
+  "Query",
+  "Mutation",
+  "Subscription",
+]);
 
 /**
  * Filter document models to keep only the latest version of each unique document model.
@@ -166,6 +198,14 @@ export type GraphQLManagerOptions = {
    * reactor client, which withholds a drive the host's own key may not read.
    */
   driveStore?: DriveStore;
+  reportError?: ReportError;
+  /**
+   * How often the credentials of authenticated WebSocket connections are
+   * re-verified; a connection whose credential no longer holds is closed.
+   * Defaults to {@link DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS}; `0` turns the
+   * periodic sweep off, leaving only the re-check on invalidation.
+   */
+  wsCredentialRecheckIntervalMs?: number;
 };
 
 /**
@@ -233,6 +273,8 @@ function refuseConnection(connection: WsConnection, reason: string): false {
 // Admitted anonymous connections authorize per document, as they do over SSE.
 export function createWsAuthHandlers(opts: {
   authService?: AuthService;
+  /** Re-verifies admitted connections and closes revoked ones. */
+  credentialMonitor?: WsCredentialMonitor;
   /** Whether anonymous callers are refused; read at call time, not at build time. */
   requireAuthenticatedCaller: () => boolean;
   logger: ILogger;
@@ -274,6 +316,9 @@ export function createWsAuthHandlers(opts: {
       }
 
       resolved.set(connection, user ?? undefined);
+      if (user) {
+        opts.credentialMonitor?.track(connection, user);
+      }
       return true;
     },
 
@@ -301,7 +346,11 @@ export class GraphQLManager {
 
   private readonly subgraphHandlerCache = new Map<
     string,
-    { handler: FetchHandler; subgraph: ISubgraph }
+    {
+      handler: FetchHandler;
+      subgraph: ISubgraph;
+      generated: GeneratedDocumentModelTypes;
+    }
   >();
 
   /** subgraphPath → the http adapter handle of its mounted route. */
@@ -348,14 +397,46 @@ export class GraphQLManager {
   readonly #inHook = new AsyncLocalStorage<{ active: boolean }>();
 
   #generatedTypes:
-    | { models: DocumentModelModule[]; types: GeneratedDocumentModelTypes }
+    | {
+        models: DocumentModelModule[];
+        types: GeneratedDocumentModelTypes;
+        sdl: string;
+      }
     | undefined;
 
-  /** Document models refused from the schema, by id, with the reason logged. */
-  #refusedModels = new Map<string, string>();
+  /** Generated types no document model contributes, but `IDocument`. */
+  #modelFreeTypeNames: ReadonlySet<string> | undefined;
+
+  readonly #usesModelTypesMemo = new WeakMap<ISubgraph, boolean>();
+
+  /** Refusals logged: model id, source key and reason. */
+  #refusals = new Set<string>();
+
+  readonly #schemaCache: DocumentModelSchemaCache;
+
+  /** The schemas of the admitted document models. */
+  #modelSchemas = new Map<DocumentModelModule, DocumentModelSchema>();
 
   /** Subgraphs excluded for a type collision, with the reason last logged. */
   readonly #loggedCollisions = new WeakMap<ISubgraph, string>();
+
+  /** Supergraph exclusions for a lost claim, with the reason last logged. */
+  readonly #loggedOwnershipExclusions = new WeakMap<ISubgraph, string>();
+
+  readonly #claims = new WeakMap<
+    ISubgraph,
+    {
+      typeDefs: DocumentNode;
+      generated: GeneratedDocumentModelTypes;
+      claims: SubgraphClaims;
+    }
+  >();
+
+  /** Claim tie-break: kept across re-registration, so HMR keeps the owner. */
+  readonly #registrationOrder = new Map<
+    SubgraphOrigin,
+    { order: number; names: Map<string, number> }
+  >();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -385,6 +466,7 @@ export class GraphQLManager {
   private readonly httpAdapter: IHttpAdapter;
   private readonly gatewayAdapter: IGatewayAdapter<Context>;
   private readonly authService?: AuthService;
+  readonly #credentialMonitor: WsCredentialMonitor | undefined;
   private readonly documentPermissionService?: DocumentPermissionService;
   private readonly featureFlags: GraphqlManagerFeatureFlags;
   private readonly port: number;
@@ -392,6 +474,7 @@ export class GraphQLManager {
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
   private readonly inspection?: IReactorInspectionSource;
+  readonly #reporting: RunDetachedOptions;
 
   constructor(options: GraphQLManagerOptions) {
     this.path = options.path;
@@ -405,8 +488,22 @@ export class GraphQLManager {
     this.httpAdapter = options.httpAdapter;
     this.gatewayAdapter = options.gatewayAdapter;
     this.authService = options.authService;
+    if (options.authService) {
+      this.#credentialMonitor = new WsCredentialMonitor({
+        authService: options.authService,
+        intervalMs:
+          options.wsCredentialRecheckIntervalMs ??
+          DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+        logger: options.logger,
+      });
+      this.#credentialMonitor.start();
+    }
     this.documentPermissionService = options.documentPermissionService;
     this.featureFlags = options.featureFlags ?? DefaultFeatureFlags;
+    const subgraph = !!this.featureFlags.enableDocumentModelSubgraphs;
+    this.#schemaCache = new DocumentModelSchemaCache((model) =>
+      buildDocumentModelSchema(model, { subgraph }),
+    );
     this.port = options.port ?? 4001;
     this.authorizationService = options.authorizationService;
     this.reactorDriveClient = options.reactorDriveClient;
@@ -414,6 +511,7 @@ export class GraphQLManager {
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
     this.inspection = options.inspection;
+    this.#reporting = { logger: options.logger, report: options.reportError };
 
     this.driveOwnershipCache = new DriveOwnershipCache(
       options.driveStore ?? this.reactorClient,
@@ -633,40 +731,64 @@ export class GraphQLManager {
     return this.#setupSubgraphs(this.coreSubgraphsMap);
   }
 
-  /**
-   * The models whose generated types take no reserved name. The others stay
-   * in the reactor but are left out of the schema.
-   */
+  /** Models whose schemas build and take no reserved name. */
   #admitModels(models: DocumentModelModule[]): DocumentModelModule[] {
     const reserved = reservedTypeNames(
       Array.from(this.coreSubgraphsMap.values(), (subgraphs) =>
         subgraphs.map((subgraph) => subgraph.typeDefs),
       ).flat(),
     );
-    const refused = new Map<string, string>();
-    const admitted = models.filter((model) => {
-      let taken: string[];
-      try {
-        taken = reservedTypeNamesTaken(model, reserved);
-      } catch {
-        // An unparseable model fails where the schema is built, as before.
-        return true;
-      }
-      if (taken.length === 0) return true;
+    const refusals = new Set<string>();
+    const schemas = new Map<DocumentModelModule, DocumentModelSchema>();
+    const admitted: DocumentModelModule[] = [];
+    for (const { model, key, schema, error } of this.#schemaCache.resolve(
+      models,
+    )) {
       const id = model.documentModel.global.id;
-      const reason = `generates reserved type names: ${taken.join(", ")}`;
-      refused.set(id, reason);
-      if (this.#refusedModels.get(id) !== reason) {
-        this.logger.error(
+      const refuse = (message: string, reason: string) => {
+        const refusal = `${id}\n${key}\n${reason}`;
+        refusals.add(refusal);
+        if (!this.#refusals.has(refusal)) {
+          this.logger.error(message, id, reason);
+        }
+      };
+      const refuseModel = (reason: string) =>
+        refuse(
           "Refusing document model @documentType from the GraphQL schema: @reason",
-          id,
           reason,
         );
+      if (!schema) {
+        refuseModel(`has an unusable schema: ${error.message}`);
+        continue;
       }
-      return false;
-    });
-    this.#refusedModels = refused;
+      const taken = this.#reservedNamesReason(model, schema, reserved);
+      if (taken !== undefined) {
+        refuseModel(taken);
+        continue;
+      }
+      if (schema.subgraphError) {
+        refuse(
+          "Refusing the subgraph of document model @documentType: @reason",
+          `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+        );
+      }
+      schemas.set(model, schema);
+      admitted.push(model);
+    }
+    this.#refusals = refusals;
+    this.#modelSchemas = schemas;
     return admitted;
+  }
+
+  #reservedNamesReason(
+    model: DocumentModelModule,
+    schema: DocumentModelSchema,
+    reserved: ReservedTypeNames,
+  ): string | undefined {
+    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
+    return taken.length > 0
+      ? `generates reserved type names: ${taken.join(", ")}`
+      : undefined;
   }
 
   async #setupDocumentModelSubgraphs(
@@ -685,24 +807,27 @@ export class GraphQLManager {
       ) {
         continue;
       }
-      if (!hasOperationSchemas(documentModel)) {
-        continue;
-      }
+      const types = this.#modelSchemas.get(documentModel)?.subgraph;
+      if (!types) continue;
       try {
-        const subgraphInstance = new DocumentModelSubgraph(documentModel, {
-          http: this.scopeForPackage(CORE_PACKAGE_NAME),
-          relationalDb: this.relationalDb,
-          analyticsStore: this.analyticsStore,
-          reactorClient: this.reactorClient,
-          graphqlManager: this,
-          syncManager: this.syncManager,
-          path: this.path,
-          documentPermissionService: this.documentPermissionService,
-          authorizationService: this.authorizationService,
-          syncServingGate: this.syncServingGate,
-          attachments: this.attachments,
-          inspection: this.inspection,
-        });
+        const subgraphInstance = new DocumentModelSubgraph(
+          documentModel,
+          {
+            http: this.scopeForPackage(CORE_PACKAGE_NAME),
+            relationalDb: this.relationalDb,
+            analyticsStore: this.analyticsStore,
+            reactorClient: this.reactorClient,
+            graphqlManager: this,
+            syncManager: this.syncManager,
+            path: this.path,
+            documentPermissionService: this.documentPermissionService,
+            authorizationService: this.authorizationService,
+            syncServingGate: this.syncServingGate,
+            attachments: this.attachments,
+            inspection: this.inspection,
+          },
+          types,
+        );
 
         const registered = await this.#addSubgraphInstance(
           subgraphInstance,
@@ -766,9 +891,22 @@ export class GraphQLManager {
 
   #generated(): GeneratedDocumentModelTypes {
     if (this.#generatedTypes?.models !== this.cachedDocumentModels) {
+      const types = getGeneratedDocumentModelTypes(
+        this.cachedDocumentModels,
+        this.#modelSchemas,
+      );
+      const sdl = print({
+        kind: Kind.DOCUMENT,
+        definitions: types.definitions,
+      });
+      // Unchanged types keep their identity, so handlers built on them stay.
       this.#generatedTypes = {
         models: this.cachedDocumentModels,
-        types: getGeneratedDocumentModelTypes(this.cachedDocumentModels),
+        types:
+          sdl === this.#generatedTypes?.sdl
+            ? this.#generatedTypes.types
+            : types,
+        sdl,
       };
     }
     return this.#generatedTypes.types;
@@ -782,6 +920,40 @@ export class GraphQLManager {
           ? subgraph.generatedTypeNames
           : undefined,
     };
+  }
+
+  /** Whether `subgraph`'s own typeDefs refer to a document model's types. */
+  #usesModelTypes(subgraph: ISubgraph): boolean {
+    const memo = this.#usesModelTypesMemo.get(subgraph);
+    if (memo !== undefined) return memo;
+    if (!this.#modelFreeTypeNames) {
+      const names = new Set(getGeneratedDocumentModelTypes([]).names);
+      names.delete("IDocument");
+      this.#modelFreeTypeNames = names;
+    }
+    const modelFree = this.#modelFreeTypeNames;
+    const own = typeDefinitionNames(subgraph.typeDefs);
+    const referenced: string[] = [];
+    const collect = (node: { name: { value: string } }) => {
+      referenced.push(node.name.value);
+    };
+    visit(subgraph.typeDefs, {
+      NamedType: collect,
+      ScalarTypeExtension: collect,
+      ObjectTypeExtension: collect,
+      InterfaceTypeExtension: collect,
+      UnionTypeExtension: collect,
+      EnumTypeExtension: collect,
+      InputObjectTypeExtension: collect,
+    });
+    const uses = referenced.some(
+      (name) =>
+        !own.has(name) &&
+        !modelFree.has(name) &&
+        !NON_MODEL_TYPE_NAMES.has(name),
+    );
+    this.#usesModelTypesMemo.set(subgraph, uses);
+    return uses;
   }
 
   /** The generated type names `subgraph` redefines under the current models. */
@@ -941,6 +1113,7 @@ export class GraphQLManager {
     }
 
     this.#origins.set(subgraphInstance, origin);
+    this.#recordRegistrationOrder(origin, subgraphInstance.name);
     if (origin !== HOST_ORIGIN && origin !== CORE_ORIGIN) {
       let instances = this.packageSubgraphs.get(origin);
       if (!instances) {
@@ -953,6 +1126,15 @@ export class GraphQLManager {
       `${replaces.length + evicts.length > 0 ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
+  }
+
+  #recordRegistrationOrder(origin: SubgraphOrigin, name: string) {
+    let entry = this.#registrationOrder.get(origin);
+    if (!entry) {
+      entry = { order: this.#registrationOrder.size, names: new Map() };
+      this.#registrationOrder.set(origin, entry);
+    }
+    if (!entry.names.has(name)) entry.names.set(name, entry.names.size);
   }
 
   /**
@@ -1109,15 +1291,15 @@ export class GraphQLManager {
     await this.updateRouter();
   }
 
-  /** Not awaited: the debounced call never settles a promise whose timer a
-   * later call replaced, so awaiting it in a registry change could wedge the
-   * queue. */
+  /** Not awaited: a registry change does not wait out the debounce. */
   #scheduleRouterUpdate(): void {
     // Outside the registry change: the update runs after it has finished.
     this.#inHook.exit(() => {
-      this.updateRouter().catch((error: unknown) => {
-        this.logger.error("Failed to update router: @error", error);
-      });
+      void runDetached(
+        "Router update",
+        () => this.updateRouter(),
+        this.#reporting,
+      );
     });
   }
 
@@ -1255,6 +1437,7 @@ export class GraphQLManager {
       syncServingGate: this.syncServingGate,
       attachments: this.attachments,
       inspection: this.inspection,
+      credentials: createCredentialInvalidator(this.authService),
     });
   }
 
@@ -1515,9 +1698,10 @@ export class GraphQLManager {
       await this.gatewayAdapter.updateSupergraph();
       this.logger.debug("Updated Apollo Gateway supergraph");
     } catch (error) {
-      this.logger.error(
-        "Failed to update Apollo Gateway supergraph: @error",
+      reportFailure(
+        this.#reporting,
         error,
+        "Failed to update Apollo Gateway supergraph: @error",
       );
     }
 
@@ -1556,6 +1740,7 @@ export class GraphQLManager {
   #makeWsContextFactory(): WsHandlers<Context> {
     return createWsAuthHandlers({
       authService: this.authService,
+      credentialMonitor: this.#credentialMonitor,
       // Read at call time: init() installs this after the manager is built.
       requireAuthenticatedCaller: () =>
         this.#requireAuthMiddleware !== undefined,
@@ -1601,6 +1786,7 @@ export class GraphQLManager {
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down GraphQL Manager");
+    this.#credentialMonitor?.dispose();
 
     // Dispose per-subgraph WebSocket handlers before closing the WS server.
     for (const disposer of this.subgraphWsDisposers.values()) {
@@ -1660,23 +1846,28 @@ export class GraphQLManager {
           continue;
         }
         try {
-          // Skip if handler already cached and mounted — a replaced subgraph
-          // invalidates its entries, so a cached path is current. Two
-          // different subgraphs landing on the same path: first mounted
-          // wins; say so.
+          // First mounted wins, unless it has since been unregistered.
           const cached = this.subgraphHandlerCache.get(subgraphPath);
           if (cached) {
-            if (cached.subgraph !== subgraph) {
+            if (cached.subgraph === subgraph) {
+              const current =
+                cached.generated === this.#generated() ||
+                !this.#usesModelTypes(subgraph);
+              if (current) continue;
+            } else if (this.#origins.has(cached.subgraph)) {
               this.logger.warn(
                 "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
                 subgraphPath,
                 cached.subgraph.name,
                 subgraph.name,
               );
+              continue;
+            } else {
+              await this.#unmountSubgraph(cached.subgraph, supergraph);
             }
-            continue;
           }
 
+          const generated = this.#generated();
           const schema = createSchema(
             this.cachedDocumentModels,
             subgraph.resolvers,
@@ -1688,10 +1879,24 @@ export class GraphQLManager {
             schema,
             this.#makeContextFactory(),
           );
+          // Superseded meanwhile: the update that change scheduled mounts it.
+          if (!subgraphsMap.get(supergraph)?.includes(subgraph)) continue;
+          if (generated !== this.#generated()) continue;
+          const previous = this.subgraphHandlerCache.get(subgraphPath);
+          if (
+            previous?.subgraph === subgraph &&
+            previous.generated === generated
+          ) {
+            continue;
+          }
+          if (previous) {
+            await this.#unmountSubgraph(previous.subgraph, supergraph);
+          }
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
           this.subgraphHandlerCache.set(subgraphPath, {
             handler: fetchHandler,
             subgraph,
+            generated,
           });
           this.#setInternalSubgraphHandler(subgraph, subgraphPath, rawHandler);
           this.subgraphRouteHandles.set(
@@ -1777,6 +1982,99 @@ export class GraphQLManager {
     return subgraphsMap;
   }
 
+  /** Excluded subgraphs leave the supergraph only: their routes stay. */
+  #getSupergraphSubgraphs(): Map<string, ISubgraph> {
+    const members = new Map<string, ISubgraph>();
+    for (const [subgraphPath, subgraph] of this.#getAllSubgraphs()) {
+      if (!this.#isExcludedForTypes(subgraph)) {
+        members.set(subgraphPath, subgraph);
+      }
+    }
+    // A subgraph whose schema failed to build claims nothing.
+    const built = new Set(
+      Array.from(members)
+        .filter(
+          ([subgraphPath, subgraph]) =>
+            this.subgraphHandlerCache.get(subgraphPath)?.subgraph === subgraph,
+        )
+        .map(([, subgraph]) => subgraph),
+    );
+    const losers = this.#claimLosers(built);
+    for (const [subgraphPath, subgraph] of members) {
+      if (losers.has(subgraph)) members.delete(subgraphPath);
+    }
+    return members;
+  }
+
+  /** Claims go by rank, then first registration; each exclusion logs once. */
+  #claimLosers(subgraphs: ReadonlySet<ISubgraph>): Set<ISubgraph> {
+    const priority = (subgraph: ISubgraph): number[] => {
+      const origin = this.#originOf(subgraph);
+      const order = this.#registrationOrder.get(origin);
+      return [
+        -rank(origin),
+        order?.order ?? Infinity,
+        order?.names.get(subgraph.name) ?? Infinity,
+      ];
+    };
+    const ranked = Array.from(subgraphs, (subgraph) => ({
+      subgraph,
+      priority: priority(subgraph),
+    })).sort((a, b) => {
+      const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
+      return i === -1 ? 0 : a.priority[i] - b.priority[i];
+    });
+    const excluded = resolveClaimOwnership(
+      ranked.map(({ subgraph }) => ({
+        candidate: subgraph,
+        name: subgraph.name,
+        claims: this.#claimsOf(subgraph),
+      })),
+    );
+
+    for (const subgraph of subgraphs) {
+      const conflicts = excluded.get(subgraph);
+      if (!conflicts) {
+        this.#loggedOwnershipExclusions.delete(subgraph);
+        continue;
+      }
+      const reason = describeOwnershipConflicts(conflicts);
+      if (this.#loggedOwnershipExclusions.get(subgraph) !== reason) {
+        this.#loggedOwnershipExclusions.set(subgraph, reason);
+        this.logger.error(
+          "Excluding subgraph @name from the supergraph: @error",
+          subgraph.name,
+          reason,
+        );
+      }
+    }
+    return new Set(excluded.keys());
+  }
+
+  #claimsOf(subgraph: ISubgraph): SubgraphClaims {
+    const generated = this.#generated();
+    const cached = this.#claims.get(subgraph);
+    if (
+      cached?.typeDefs === subgraph.typeDefs &&
+      cached.generated === generated
+    ) {
+      return cached.claims;
+    }
+    let claims: SubgraphClaims;
+    try {
+      claims = collectSubgraphClaims(subgraph.typeDefs, generated.names);
+    } catch {
+      // Malformed typeDefs fail where the schema is built, and are logged there.
+      claims = new Map();
+    }
+    this.#claims.set(subgraph, {
+      typeDefs: subgraph.typeDefs,
+      generated,
+      claims,
+    });
+    return claims;
+  }
+
   #buildSubgraphSchemaModule(subgraph: ISubgraph) {
     return buildSubgraphSchemaModule(
       this.cachedDocumentModels,
@@ -1787,7 +2085,7 @@ export class GraphQLManager {
   }
 
   #getSubgraphDefinitions(): SubgraphDefinition[] {
-    const subgraphs = this.#getAllSubgraphs();
+    const subgraphs = this.#getSupergraphSubgraphs();
 
     const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
       ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
@@ -1795,7 +2093,6 @@ export class GraphQLManager {
 
     const definitions: SubgraphDefinition[] = [];
     for (const [subgraphPath, subgraph] of subgraphs) {
-      if (this.#isExcludedForTypes(subgraph)) continue;
       // One subgraph whose schema cannot be built must not take the
       // supergraph down with it.
       let module: ReturnType<typeof buildSubgraphSchemaModule>;
@@ -1843,6 +2140,8 @@ export class GraphQLManager {
     return;
   }
 
+  #loggedSSEExclusions = new Set<string>();
+
   /**
    * Set up an SSE subscription endpoint at the supergraph level.
    * Merges the schemas of all subscription-enabled subgraphs so that
@@ -1850,14 +2149,17 @@ export class GraphQLManager {
    * subgraph paths.
    */
   #setupSupergraphSSE(superGraphPath: string) {
-    const allSubgraphs = this.#getAllSubgraphs();
-
-    const modules: ReturnType<typeof buildSubgraphSchemaModule>[] = [];
-    for (const subgraph of allSubgraphs.values()) {
+    const definitions: SubgraphDefinition[] = [];
+    for (const [subgraphPath, subgraph] of this.#getSupergraphSubgraphs()) {
       if (!subgraph.hasSubscriptions) continue;
-      if (this.#isExcludedForTypes(subgraph)) continue;
       try {
-        modules.push(this.#buildSubgraphSchemaModule(subgraph));
+        const module = this.#buildSubgraphSchemaModule(subgraph);
+        definitions.push({
+          name: subgraph.name,
+          typeDefs: module.typeDefs,
+          resolvers: module.resolvers,
+          url: subgraphPath,
+        });
       } catch (error) {
         this.logger.error(
           "Excluding subgraph @name from supergraph SSE: @error",
@@ -1867,18 +2169,34 @@ export class GraphQLManager {
       }
     }
 
-    if (modules.length === 0) {
-      // No subscription-capable subgraphs left: drop the SSE route rather
-      // than keep serving an empty merged schema.
-      this.#disposeSSERoute(superGraphPath);
-      return;
-    }
+    // Merged like the stitching supergraph, so subgraphs may share root types.
+    // Each exclusion is logged once, not on every router update.
+    const excluded = new Set<string>();
+    const buildable = filterBuildableSubgraphs(
+      withoutFederationDirectives(definitions),
+      {
+        error: (message: string) => {
+          excluded.add(message);
+          if (!this.#loggedSSEExclusions.has(message)) {
+            this.logger.error(message);
+          }
+        },
+      },
+      "Supergraph SSE",
+    );
+    this.#loggedSSEExclusions = excluded;
 
     try {
-      const mergedSchema = createMergedSchema(modules);
+      const mergedSchema = mergeStreamSubgraphs(buildable);
+      if (mergedSchema === undefined) {
+        // Nothing left contributes a Query root: drop the SSE route rather
+        // than serve an empty or invalid schema.
+        this.#disposeSSERoute(superGraphPath);
+        return;
+      }
       this.#setupSSEHandler(mergedSchema, superGraphPath);
       this.logger.debug(
-        `SSE subscriptions enabled at supergraph level (merged from ${modules.length} subgraph(s))`,
+        `SSE subscriptions enabled at supergraph level (merged from ${buildable.length} subgraph(s))`,
       );
     } catch (error) {
       this.logger.error("Failed to setup supergraph SSE: @error", error);

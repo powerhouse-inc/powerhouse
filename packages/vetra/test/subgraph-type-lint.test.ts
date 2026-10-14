@@ -1,0 +1,196 @@
+// @vitest-environment node
+import { customSubgraphSchemaTemplate } from "@powerhousedao/codegen/templates";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { lintSubgraphTypes } from "../codegen/subgraph-type-lint.js";
+
+const temporary: string[] = [];
+
+afterEach(() => {
+  for (const dir of temporary.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A project with vetra's "Subgraph Module" model and the given subgraphs.
+function makeProject(subgraphs: Record<string, string>): string {
+  const root = mkdtempSync(join(tmpdir(), "ph-subgraph-lint-"));
+  temporary.push(root);
+  const modelDir = join(root, "document-models", "subgraph-module");
+  mkdirSync(modelDir, { recursive: true });
+  copyFileSync(
+    join(
+      import.meta.dirname,
+      "../document-models/subgraph-module/subgraph-module.json",
+    ),
+    join(modelDir, "subgraph-module.json"),
+  );
+  for (const [dir, schema] of Object.entries(subgraphs)) {
+    mkdirSync(join(root, "subgraphs", dir), { recursive: true });
+    writeFileSync(join(root, "subgraphs", dir, "schema.ts"), schema);
+  }
+  return root;
+}
+
+const schemaFile = (sdl: string) =>
+  `import { gql } from "graphql-tag";\n\nexport const schema = gql\`\n${sdl}\n\`;\n`;
+
+const template = (pascalCaseName: string, camelCaseName: string) =>
+  customSubgraphSchemaTemplate({ pascalCaseName, camelCaseName });
+
+describe("lintSubgraphTypes", () => {
+  it("is silent on the template under a name of its own", () => {
+    const root = makeProject({
+      "subgraph-tools": template("SubgraphTools", "subgraphTools"),
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([]);
+  });
+
+  it("warns on a subgraph named like the package's model subgraph", () => {
+    const root = makeProject({
+      "subgraph-module": template("SubgraphModule", "subgraphModule"),
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("reads the subgraph's name from its index.ts", () => {
+    const root = makeProject({ tools: template("Tools", "tools") });
+    writeFileSync(
+      join(root, "subgraphs", "tools", "index.ts"),
+      'export class ToolsSubgraph extends BaseSubgraph {\n  name = "system";\n}\n',
+    );
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "system" has the name of a core subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("warns on a type the package's model subgraph generates", () => {
+    const root = makeProject({
+      tools: schemaFile(`
+        type SubgraphModuleQueries {
+          example(driveId: String!): String
+        }
+        type Query {
+          tools: SubgraphModuleQueries!
+        }
+      `),
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "tools" defines SubgraphModuleQueries (owned by "subgraph-module"), so the supergraph leaves it out. Rename them in its schema.ts.',
+    ]);
+  });
+
+  it("warns on core and reserved types", () => {
+    const root = makeProject({
+      ledger: schemaFile(`
+        type Revision {
+          id: ID
+        }
+        type Operation {
+          id: ID
+        }
+        type Query {
+          ledger: Revision
+        }
+      `),
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "ledger" defines Operation (owned by "document-model schema"), so the supergraph leaves it out. Rename them in its schema.ts.',
+    ]);
+  });
+
+  it("warns on a root field another of the package's subgraphs serves", () => {
+    const sdl = schemaFile(`
+      type Query {
+        ledger: String
+      }
+    `);
+    const root = makeProject({ ledger: sdl, "ledger-copy": sdl });
+    mkdirSync(join(root, "subgraphs"), { recursive: true });
+    writeFileSync(
+      join(root, "subgraphs", "index.ts"),
+      'export * as A from "./ledger/index.js";\nexport * as B from "./ledger-copy/index.js";\n',
+    );
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "ledger-copy" defines Query.ledger (owned by "ledger"), so the supergraph leaves it out. Rename them in its schema.ts.',
+    ]);
+  });
+
+  it("skips a model whose schema does not generate and checks the rest", () => {
+    const root = makeProject({
+      "subgraph-module": template("SubgraphModule", "subgraphModule"),
+    });
+    const brokenDir = join(root, "document-models", "broken");
+    mkdirSync(brokenDir, { recursive: true });
+    writeFileSync(
+      join(brokenDir, "broken.json"),
+      JSON.stringify({
+        id: "test/broken",
+        name: "Broken",
+        author: { name: "", website: "" },
+        extension: "",
+        description: "",
+        specifications: [
+          {
+            version: 1,
+            changeLog: [],
+            modules: [
+              {
+                id: "m",
+                name: "base",
+                description: "",
+                operations: [
+                  {
+                    id: "o",
+                    name: "SET",
+                    description: "",
+                    schema: "input BrokenInput {",
+                    template: "",
+                    reducer: "",
+                    errors: [],
+                    examples: [],
+                    scope: "global",
+                  },
+                ],
+              },
+            ],
+            state: {
+              global: { schema: "", initialValue: "", examples: [] },
+              local: { schema: "", initialValue: "", examples: [] },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Document model "Broken" was left out of the subgraph check: its schema does not generate.',
+      'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("skips a schema built from substitutions", () => {
+    const root = makeProject({
+      ledger:
+        'import { gql } from "graphql-tag";\nconst sdl = `type Revision { id: ID }`;\nexport const schema = gql`${sdl}`;\n',
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([]);
+  });
+});

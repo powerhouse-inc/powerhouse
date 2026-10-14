@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.2.3-dev.54",
+  "version": "6.2.3-dev.58",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -16,6 +16,27 @@
   },
   "bin": {
     "ph-cli": "./dist/cli.mjs"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./runners/connect": {
+      "source": "./src/runners/connect.ts",
+      "types": "./dist/runners/connect.d.mts",
+      "import": "./dist/runners/connect.mjs",
+      "default": "./dist/runners/connect.mjs"
+    },
+    "./runners/switchboard": {
+      "source": "./src/runners/switchboard.ts",
+      "types": "./dist/runners/switchboard.d.mts",
+      "import": "./dist/runners/switchboard.mjs",
+      "default": "./dist/runners/switchboard.mjs"
+    },
+    "./runners/compound": {
+      "source": "./src/runners/compound.ts",
+      "types": "./dist/runners/compound.d.mts",
+      "import": "./dist/runners/compound.mjs",
+      "default": "./dist/runners/compound.mjs"
+    }
   },
   "files": [
     "dist"
@@ -73,6 +94,7 @@
     "typescript": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "write-package": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@powerhousedao/host-core": "workspace:*"
   }
 }

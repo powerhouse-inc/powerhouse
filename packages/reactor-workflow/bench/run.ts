@@ -1,8 +1,10 @@
 // Fires one workflow repeatedly against the built engine and a real in-process
 // reactor, reporting latency per batch as the run journal grows. See README.md.
 import {
+  createHybridProjectionCoordinatorFactory,
   ReactorBuilder,
   ReactorClientBuilder,
+  type DocumentModelSource,
   type IReactorClient,
   type ModelManifestEntry,
 } from "@powerhousedao/reactor";
@@ -32,9 +34,12 @@ import { Session } from "node:inspector/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
+import { performance as perfHooks } from "node:perf_hooks";
 import { parseArgs } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createFreshRelationalDb } from "../test/helpers/pglite.ts";
+import { freshDatabase, hostKysely, journalDb } from "./postgres.ts";
+import { createBenchDurablePglite } from "./pglite-durable.ts";
 import { profilesIn, pushProfiles } from "./pyroscope-push.ts";
 import { benchTelemetry } from "./telemetry.ts";
 import { testSigner } from "../test/helpers/signer.ts";
@@ -46,6 +51,10 @@ const { values: args } = parseArgs({
     warmup: { type: "string", default: "5" },
     steps: { type: "string", default: "1" },
     concurrency: { type: "string", default: "1" },
+    // Worker slots; defaults to --concurrency.
+    pool: { type: "string" },
+    // Step kinds repeated across --steps, e.g. "piece,core"; default the workload.
+    mix: { type: "string" },
     batch: { type: "string", default: "25" },
     "seed-runs": { type: "string", default: "0" },
     "seed-steps": { type: "string", default: "3" },
@@ -60,6 +69,16 @@ const { values: args } = parseArgs({
     // runs-page: list every workflow's runs, or only the benched workflow's.
     scope: { type: "string", default: "all" },
     "page-size": { type: "string", default: "25" },
+    // Postgres server URL; each run gets a fresh database on it.
+    postgres: { type: "string" },
+    // Reactor executor worker threads (REACTOR_WORKERS); needs --postgres.
+    "reactor-workers": { type: "string", default: "0" },
+    // The reactor's projection worker thread; needs --postgres.
+    "projection-worker": { type: "boolean", default: false },
+    // Directory for on-disk PGlite, as Switchboard keeps it; fsyncs unless PH_PGLITE_FSYNC=0.
+    "pglite-dir": { type: "string" },
+    // The workflow's policy.concurrency; QUEUE runs its firings one at a time.
+    policy: { type: "string", default: "PARALLEL" },
     out: { type: "string" },
   },
 });
@@ -81,10 +100,23 @@ const RUNS = Number(args.runs);
 const WARMUP = Number(args.warmup);
 const STEPS = Number(args.steps);
 const CONCURRENCY = Number(args.concurrency);
+const POOL = Number(args.pool ?? args.concurrency);
+const STEP_KINDS = ["core", "piece", "reactor-read", "reactor-write"] as const;
+type StepKind = (typeof STEP_KINDS)[number];
+const MIX = (args.mix?.split(",") ?? []) as StepKind[];
+for (const kind of MIX) {
+  if (!STEP_KINDS.includes(kind)) {
+    throw new Error(`--mix kinds must be among ${STEP_KINDS.join(", ")}`);
+  }
+}
 const BATCH = Number(args.batch);
 const SEED_RUNS = Number(args["seed-runs"]);
 const SEED_STEPS = Number(args["seed-steps"]);
 const HISTORY = Number(args.history);
+const REACTOR_WORKERS = Number(args["reactor-workers"]);
+if ((REACTOR_WORKERS > 0 || args["projection-worker"]) && !args.postgres) {
+  throw new Error("--reactor-workers and --projection-worker need --postgres");
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -92,7 +124,7 @@ const outDir = args.out ?? join(here, ".out", `${stamp}-${workload}`);
 mkdirSync(outDir, { recursive: true });
 
 // Read when the runtime builds its pool, so set before the engine loads.
-process.env.PH_WORKFLOWS_RUN_CONCURRENCY = String(CONCURRENCY);
+process.env.PH_WORKFLOWS_RUN_CONCURRENCY = String(POOL);
 
 const engine = await import("../dist/index.js");
 const { packagePieces, CORE_PIECE_NAME, CORE_PIECE_VERSION } = engine;
@@ -187,14 +219,68 @@ function modelManifest(): ModelManifestEntry[] {
 
 // --- reactor and documents ------------------------------------------------
 
-const module = await new ReactorClientBuilder()
-  .withReactorBuilder(
-    new ReactorBuilder().withDocumentModelSources([
+const database = args.postgres
+  ? await freshDatabase(
+      args.postgres,
+      `rw_bench_${stamp.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
+    )
+  : undefined;
+
+const durable =
+  !database && args["pglite-dir"]
+    ? await createBenchDurablePglite(join(args["pglite-dir"], stamp))
+    : undefined;
+
+// Worker threads re-import models, so on Postgres every model is a file.
+function modelSources(): DocumentModelSource[] {
+  if (!database) {
+    return [
       Workflow as unknown as DocumentModelModule,
       Connection as unknown as DocumentModelModule,
       driveDocumentModelModule as unknown as DocumentModelModule,
-    ]),
-  )
+    ];
+  }
+  return [
+    {
+      filePath: join(
+        workflowRoot,
+        "dist/node/document-models/workflow/index.mjs",
+      ),
+      exportName: "Workflow",
+    },
+    ...modelManifest().map((entry) => entry.spec.module),
+  ];
+}
+
+function reactorBuilder(): ReactorBuilder {
+  const builder = new ReactorBuilder().withDocumentModelSources(modelSources());
+  if (durable) builder.withKysely(durable.reactorKysely as never);
+  if (!database) return builder;
+  builder.withKysely(hostKysely(database.config("bench-host", 16)) as never);
+  if (REACTOR_WORKERS > 0) {
+    builder.withWorkerPool({
+      numWorkers: REACTOR_WORKERS,
+      db: database.config("bench-worker", 2),
+    });
+  }
+  if (args["projection-worker"]) {
+    builder.withReadModelCoordinatorFactory(
+      createHybridProjectionCoordinatorFactory({
+        shardCount: 1,
+        poolSize: 8,
+        db: database.config("bench-projection", 8),
+        onFatal: (error) => {
+          console.error("projection worker failed", error);
+          process.exit(1);
+        },
+      }),
+    );
+  }
+  return builder;
+}
+
+const module = await new ReactorClientBuilder()
+  .withReactorBuilder(reactorBuilder())
   .buildModule();
 const publisher: IReactorClient = await new ReactorClientBuilder()
   .withReactor(
@@ -224,7 +310,8 @@ await publisher.execute(CONN, "main", [
 
 function stepFor(i: number) {
   const base = { id: `s${i}`, key: `step${i}`, name: `step${i}` };
-  switch (workload) {
+  const kind = MIX.length > 0 ? MIX[i % MIX.length]! : workload;
+  switch (kind) {
     // Read workloads fire core runs only to warm up and migrate the journal.
     case "runs-page":
     case "purge":
@@ -288,6 +375,7 @@ await publisher.execute(WORKFLOW_ID, "main", [
       port: "next",
     }),
   ),
+  workflowActions.setPolicy({ concurrency: args.policy } as never),
   workflowActions.publishWorkflow({ publishedAt: new Date().toISOString() }),
   workflowActions.setWorkflowStatus({ status: "ENABLED" }),
 ]);
@@ -313,7 +401,9 @@ const telemetry = args["no-trace"]
       attributes: { "bench.run": basename(outDir), "bench.workload": workload },
     });
 
-const relationalDb = createFreshRelationalDb();
+const relationalDb = database
+  ? journalDb(database.url)
+  : (durable?.relationalDb ?? createFreshRelationalDb());
 const service = engine.createWorkflowRuntime({
   ...(telemetry
     ? { telemetry: { tracer: telemetry.tracer, meter: telemetry.meter } }
@@ -483,7 +573,8 @@ if (args.profile || args.pyroscope) {
 }
 
 console.log(
-  `workload=${workload} steps=${STEPS} runs=${RUNS} concurrency=${CONCURRENCY} seed=${SEED_RUNS} history=${HISTORY}`,
+  `workload=${workload} steps=${STEPS} mix=${MIX.join(",") || workload} runs=${RUNS} concurrency=${CONCURRENCY} pool=${POOL} seed=${SEED_RUNS} history=${HISTORY} ` +
+    `db=${database ? "postgres" : "pglite"} reactorWorkers=${REACTOR_WORKERS} projectionWorker=${args["projection-worker"]}`,
 );
 const cols = [
   "runs",
@@ -503,6 +594,8 @@ const all: Sample[] = [];
 const batches: object[] = [];
 telemetry?.record(true);
 const benchStarted = performance.now();
+const loopStarted = perfHooks.eventLoopUtilization();
+const cpuStarted = process.cpuUsage();
 let issued = 0;
 while (issued < RUNS) {
   const size = Math.min(BATCH, RUNS - issued);
@@ -539,6 +632,10 @@ while (issued < RUNS) {
   );
 }
 const totalSeconds = (performance.now() - benchStarted) / 1000;
+// The host's main thread, and CPU across all of the host's threads.
+const hostLoop = perfHooks.eventLoopUtilization(loopStarted).utilization;
+const cpu = process.cpuUsage(cpuStarted);
+const hostCores = (cpu.user + cpu.system) / 1e6 / totalSeconds;
 telemetry?.record(false);
 
 if (profiler) {
@@ -555,6 +652,9 @@ console.log(
   `total    p50=${total.p50.toFixed(1)}ms p95=${total.p95.toFixed(1)}ms mean=${total.mean.toFixed(1)}ms ` +
     `overhead=${total.overheadMean.toFixed(1)}ms runs/s=${(RUNS / totalSeconds).toFixed(1)} ` +
     `rss=${mb(memory.rss)} heap=${mb(memory.heapUsed)}`,
+);
+console.log(
+  `host     loop=${hostLoop.toFixed(2)} cpu=${hostCores.toFixed(2)} cores`,
 );
 console.log(
   `journal  runs=${counts.runs} steps=${counts.steps} run_documents=${counts.docs}`,
@@ -583,6 +683,7 @@ writeFileSync(
       node: process.version,
       total,
       runsPerSec: RUNS / totalSeconds,
+      host: { loop: hostLoop, cores: hostCores },
       memory,
       journal: counts,
       batches,

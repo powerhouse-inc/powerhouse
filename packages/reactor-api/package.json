@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.2.3-dev.54",
+  "version": "6.2.3-dev.58",
   "description": "GraphQL API layer for the Powerhouse reactor Ã¢â‚¬â€ auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
   "type": "module",
   "repository": {
@@ -28,6 +28,11 @@
       "source": "./src/pglite/pglite-node.ts",
       "types": "./dist/src/pglite/pglite-node.d.mts",
       "import": "./dist/src/pglite/pglite-node.mjs"
+    },
+    "./subgraph-types": {
+      "source": "./src/graphql/subgraph-types.ts",
+      "types": "./dist/src/graphql/subgraph-types.d.mts",
+      "import": "./dist/src/graphql/subgraph-types.mjs"
     },
     "./test": {
       "import": "./test/index.ts"

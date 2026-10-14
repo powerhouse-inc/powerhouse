@@ -1,22 +1,12 @@
-import { gql } from "graphql-tag";
 import { BaseSubgraph } from "../base-subgraph.js";
+import { systemTypeDefs } from "./schema.js";
 import { getGitHash, getGitUrl, getVersion } from "./version.js";
 
 export class SystemSubgraph extends BaseSubgraph {
   name = "system";
   hasSubscriptions = false;
 
-  typeDefs = gql`
-    type SystemInfo {
-      version: String!
-      gitHash: String!
-      gitUrl: String
-    }
-
-    type Query {
-      system: SystemInfo!
-    }
-  `;
+  typeDefs = systemTypeDefs;
 
   resolvers = {
     Query: {

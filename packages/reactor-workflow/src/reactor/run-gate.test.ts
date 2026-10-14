@@ -1,7 +1,11 @@
 // The concurrency gate in isolation: the modes, the bound, and that a slot is
 // handed to the next waiter rather than left for a later arrival.
 import { describe, expect, it } from "vitest";
-import { effectiveRunPolicy, UNENFORCED_POLICY } from "./policy.js";
+import {
+  effectiveRunPolicy,
+  type EffectiveRunPolicy,
+  UNENFORCED_POLICY,
+} from "./policy.js";
 import {
   DEFAULT_MAX_QUEUED_FIRINGS,
   maxQueuedFirings,
@@ -89,6 +93,23 @@ describe("the workflow run gate", () => {
     if (a.admitted) a.release();
     await settled();
     expect(third).toBe(true);
+  });
+
+  it("calls onQueue only for a firing it queues, not one it refuses", async () => {
+    const gate = new WorkflowRunGate();
+    const queue = policyOf({ concurrency: "QUEUE" });
+    const singleton = policyOf({ concurrency: "SINGLETON" });
+    const queued: string[] = [];
+    const admit = (id: string, policy: EffectiveRunPolicy) =>
+      gate.admit(id, policy, () => queued.push(id));
+
+    await admit("q", queue);
+    void admit("q", queue);
+    await admit("s", singleton);
+    await admit("s", singleton);
+    await admit("u", UNENFORCED_POLICY);
+
+    expect(queued).toEqual(["q"]);
   });
 
   it("keeps lanes per workflow", async () => {

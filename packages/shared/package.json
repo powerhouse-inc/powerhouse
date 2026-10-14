@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.2.3-dev.54",
+  "version": "6.2.3-dev.58",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -114,6 +114,10 @@
     "./clis/command-names": {
       "source": "./clis/command-names.ts",
       "import": "./dist/clis/command-names.mjs"
+    },
+    "./clis/feature-flags": {
+      "source": "./clis/feature-flags.ts",
+      "import": "./dist/clis/feature-flags.mjs"
     },
     "./clis/telemetry": {
       "source": "./clis/services/telemetry.ts",

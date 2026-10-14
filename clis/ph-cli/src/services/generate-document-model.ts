@@ -17,6 +17,7 @@ import { kebabCase } from "change-case";
 import { readPackage } from "read-pkg";
 import { dirname, join } from "node:path";
 import type { GenerateDocumentModelArgs } from "../types.js";
+import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
 import { logCodeFirstResult } from "./code-first-result.js";
 
 export async function startGenerateDocumentModel(
@@ -75,6 +76,7 @@ export async function startGenerateDocumentModel(
     return;
   }
   await project.save();
+  warnSubgraphTypeConflicts(projectDir);
 }
 
 async function createCodeFirstDocumentModel(

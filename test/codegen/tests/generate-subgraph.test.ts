@@ -51,8 +51,8 @@ describe("generateSubgraph", () => {
       "utf-8",
     );
     expect(schemaContent).toContain("import { gql } from");
-    expect(schemaContent).toContain("type MyCustomQueries");
-    expect(schemaContent).toContain("myCustom: MyCustomQueries!");
+    expect(schemaContent).toContain("type MyCustomSubgraphQueries");
+    expect(schemaContent).toContain("myCustom: MyCustomSubgraphQueries!");
 
     // resolvers.ts — custom resolvers
     const resolversContent = await readFile(
@@ -61,7 +61,7 @@ describe("generateSubgraph", () => {
     );
     expect(resolversContent).toContain("BaseSubgraph");
     expect(resolversContent).toContain("subgraph.reactorClient");
-    expect(resolversContent).toContain("MyCustomQueries");
+    expect(resolversContent).toContain("MyCustomSubgraphQueries");
     expect(resolversContent).not.toContain("document-drive");
   });
 

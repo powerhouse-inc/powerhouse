@@ -3,10 +3,28 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { WorkerPhaseTiming, WorkerTimings } from "./protocol.js";
 
-// Epoch ms with sub-ms precision, comparable across processes on one machine.
-export function epochNow(): number {
-  return performance.timeOrigin + performance.now();
+const ANCHOR_MS = 1_000;
+// Date.now() rounds to the ms: a smaller drift is that, not a clock step, and
+// following it would step time backwards.
+const STEP_MS = 5;
+
+// Epoch ms, sub-ms precise, comparable across processes. Re-anchored each second:
+// timeOrigin is fixed at start, so a clock step would skew host against child.
+export function wallClock(): () => number {
+  let anchoredAt = performance.now();
+  let anchor = Date.now() - anchoredAt;
+  return () => {
+    const now = performance.now();
+    if (now - anchoredAt >= ANCHOR_MS) {
+      anchoredAt = now;
+      const next = Date.now() - now;
+      if (Math.abs(next - anchor) > STEP_MS) anchor = next;
+    }
+    return anchor + now;
+  };
 }
+
+export const epochNow = wallClock();
 
 let readyAt: number | undefined;
 let bootReported = false;
@@ -62,10 +80,12 @@ export async function timed<T>(
 export function finishRequestTimings(timings: RequestTimings): WorkerTimings {
   const boot = !bootReported && readyAt !== undefined;
   bootReported = true;
+  const { rss, heapUsed, heapTotal, external } = process.memoryUsage();
   return {
     received: timings.received,
     sent: epochNow(),
     phases: timings.phases,
+    memory: { rss, heapUsed, heapTotal, external },
     ...(boot ? { ready: readyAt } : {}),
   };
 }

@@ -165,4 +165,43 @@ describe("PackageManager teardown (issue #2973)", () => {
     expect(lastDoc["pkg-b"]).toBeDefined();
     expect(lastDoc["document-drive"]).toBeDefined();
   });
+
+  it("a pending update does not bring back a removed package", async () => {
+    vi.useFakeTimers();
+    const fake = makeFakeLoader();
+    fake.subgraphs.set("pkg-a", [makeSubgraphClass("alpha")]);
+    const manager = new PackageManager([fake.loader], {
+      packages: ["pkg-a"],
+    });
+    const events: Map<string, SubgraphClass[]>[] = [];
+    manager.onSubgraphsChange((m) => events.push(m));
+    await manager.init();
+
+    fake.fireSubgraphsChange("pkg-a");
+    manager.removePackage("pkg-a");
+    await vi.runAllTimersAsync();
+
+    expect(events.at(-1)?.has("pkg-a")).toBe(false);
+  });
+
+  it("a pending update does not bring back a package a reload dropped", async () => {
+    vi.useFakeTimers();
+    const fake = makeFakeLoader();
+    fake.subgraphs.set("pkg-a", [makeSubgraphClass("alpha")]);
+    const manager = new PackageManager([fake.loader], {
+      packages: ["pkg-a"],
+    });
+    const events: Map<string, SubgraphClass[]>[] = [];
+    manager.onSubgraphsChange((m) => events.push(m));
+    await manager.init();
+
+    fake.fireSubgraphsChange("pkg-a");
+    const reload = manager as unknown as {
+      loadPackages(packages: string[]): Promise<unknown>;
+    };
+    await reload.loadPackages([]);
+    await vi.runAllTimersAsync();
+
+    expect(events.at(-1)?.has("pkg-a")).toBe(false);
+  });
 });

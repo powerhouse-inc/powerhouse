@@ -213,14 +213,94 @@ describe("TriggerSupervisor after stop()", () => {
     release();
     await tick;
 
-    expect(fired).toEqual([]);
+    // The schedule went first, before any hook, so it fired before the stop.
+    expect(fired.map((fire) => fire.workflowId)).toEqual([c]);
+    expect((await store.getTriggerState(c))?.next_poll_at).not.toBe(PAST);
+    // B waited for the one hook slot and never ran.
     expect(hooks).toEqual([{ workflowId: a, hook: "run" }]);
     expect(await store.getPieceStoreValue("FLOW", a, "cursor")).toBe("before");
-    for (const workflowId of [a, b, c]) {
+    for (const workflowId of [a, b]) {
       const row = await store.getTriggerState(workflowId);
       expect(row?.next_poll_at).toBe(PAST);
       expect(row?.consecutive_failures).toBe(0);
     }
+  });
+
+  it("lets a hanging poll delay neither another workflow's schedule nor its park", async () => {
+    const [a, c] = [`${prefix}-a`, `${prefix}-c`];
+    const { release, tick } = await holdTick([piece(a), schedule(c)]);
+
+    // A's hook is still held: lanes are per workflow.
+    await vi.waitFor(() =>
+      expect(fired.map((fire) => fire.workflowId)).toContain(c),
+    );
+    await expect(supervisor.park(c, 1, "parked")).resolves.toBeTypeOf(
+      "boolean",
+    );
+
+    release();
+    await tick;
+    expect(fired.map((fire) => fire.workflowId)).toContain(a);
+  });
+
+  it("lets a workflow whose poll waits for a hook slot park meanwhile", async () => {
+    const [a, b] = [`${prefix}-a`, `${prefix}-b`];
+    const { release, tick } = await holdTick([piece(a), piece(b)]);
+
+    // A holds the one slot; B's lane must not be held by B's poll waiting.
+    const parked = await Promise.race([
+      supervisor.park(b, 1, "parked"),
+      new Promise((resolve) => setTimeout(() => resolve("blocked"), 1000)),
+    ]);
+    expect(parked).toBeTypeOf("boolean");
+
+    release();
+    await tick;
+  });
+
+  it("polls other workflows alongside, up to its hook slots", async () => {
+    supervisor = build(scoped(), { hookConcurrency: 2 });
+    const [a, b] = [`${prefix}-a`, `${prefix}-b`];
+    const { release, tick } = await holdTick([piece(a), piece(b)]);
+
+    await vi.waitFor(() =>
+      expect(fired.map((fire) => fire.workflowId)).toEqual([b]),
+    );
+
+    release();
+    await tick;
+    expect(fired.map((fire) => fire.workflowId)).toEqual([b, a]);
+  });
+
+  it("skips a listed poll whose workflow was removed while it waited", async () => {
+    const [a, b] = [`${prefix}-a`, `${prefix}-b`];
+    const { release, tick } = await holdTick([piece(a), piece(b)]);
+
+    // B waits for the one hook slot A holds; then it is removed.
+    void supervisor.remove(b).catch(() => undefined);
+    release();
+    await tick;
+
+    expect(hooks.filter((hook) => hook.workflowId === b)).not.toContainEqual({
+      workflowId: b,
+      hook: "run",
+    });
+    expect(fired.map((fire) => fire.workflowId)).toEqual([a]);
+  });
+
+  it("settles the work it started when a stop lands mid-listing", async () => {
+    const a = `${prefix}-a`;
+    const handle = scoped();
+    handle.listDueTriggerRenewals = async (now: string) => {
+      supervisor.stop();
+      return store.listDueTriggerRenewals(now);
+    };
+    supervisor = build(handle);
+    await supervisor.upsert(piece(a));
+    await due(a);
+
+    // Rejects as stopped; A's poll, already started, settles with it.
+    await expect(supervisor.tick()).rejects.toThrow("stopped");
   });
 
   it("writes no park or enable that was queued behind the lane when it stopped", async () => {

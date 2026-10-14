@@ -1,10 +1,13 @@
 // Every package published from the monorepo that `ph update` / `ph use` keep in lockstep.
 export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/builder-tools",
+  "@powerhousedao/clint",
   "@powerhousedao/codegen",
   "@powerhousedao/common",
   "@powerhousedao/config",
   "@powerhousedao/design-system",
+  "@powerhousedao/desktop",
+  "@powerhousedao/host-core",
   "document-drive",
   "document-model",
   "@powerhousedao/opentelemetry-instrumentation-reactor",

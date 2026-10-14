@@ -9,6 +9,10 @@ import {
   type IInspectorStorageHealthProvider,
   type ISyncInspector,
 } from "@powerhousedao/reactor";
+import {
+  InspectionThrottle,
+  type InspectionThrottleConfig,
+} from "./throttle.js";
 
 /** What the inspection subgraph serves. Only reads cross GraphQL. */
 export interface IReactorInspectionSource {
@@ -18,6 +22,7 @@ export interface IReactorInspectionSource {
   readonly documentModelRegistry: IDocumentModelRegistry;
   /** Facts the host learns after boot, e.g. a composed workflow runtime. */
   readonly facts: IReactorFactsSink;
+  readonly throttle: InspectionThrottle;
 }
 
 export type ReactorInspectionOptions = {
@@ -25,6 +30,7 @@ export type ReactorInspectionOptions = {
   storageHealth?: IInspectorStorageHealthProvider;
   attachmentStore?: IInspectableAttachmentStore;
   workflows?: boolean;
+  throttle?: Partial<InspectionThrottleConfig>;
 };
 
 export function createReactorInspectionSource(
@@ -43,5 +49,6 @@ export function createReactorInspectionSource(
     syncInspector: module.syncModule?.syncInspector,
     documentModelRegistry: module.documentModelRegistry,
     facts: inspector,
+    throttle: new InspectionThrottle(options.throttle),
   };
 }

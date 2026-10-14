@@ -57,14 +57,48 @@
     {
       "name": "PH_WORKFLOWS_RUN_CONCURRENCY",
       "type": "var",
-      "description": "How many runs execute at once. Each slot is a forked node process, so this is the reactor's real connector concurrency.",
-      "default": "4"
+      "description": "Most piece children at once. Each is a forked node process that serves one request at a time and stays warm between them. Unset, it is sized from the container: twice the cores, less the reactor's worker threads, and no more than the memory left fits."
     },
     {
       "name": "PH_WORKFLOWS_RUN_QUEUE_DEPTH",
       "type": "var",
-      "description": "How many runs may wait for a slot before new ones are refused. 0 waits without limit, turning saturation into latency rather than failures.",
+      "description": "How many piece requests may wait for a child before new ones are refused. 0 waits without limit, turning saturation into latency rather than failures.",
       "default": "0"
+    },
+    {
+      "name": "PH_WORKFLOWS_WORKER_MEMORY_MB",
+      "type": "var",
+      "description": "Each piece child's V8 heap limit (--max-old-space-size). A child past 80% of it is retired between requests.",
+      "default": "256"
+    },
+    {
+      "name": "PH_WORKFLOWS_WORKER_MAX_REQUESTS",
+      "type": "var",
+      "description": "Requests a piece child serves before it is retired, a backstop for leaks outside its heap.",
+      "default": "1000"
+    },
+    {
+      "name": "PH_WORKFLOWS_WORKER_MIN",
+      "type": "var",
+      "description": "Idle piece children kept warm. Idle children above it exit after a minute; 0 lets every one exit.",
+      "default": "1"
+    },
+    {
+      "name": "PH_WORKFLOWS_TRIGGER_SLOTS",
+      "type": "var",
+      "description": "Piece children reserved for trigger hooks, so a burst of runs can't delay a poll.",
+      "default": "1"
+    },
+    {
+      "name": "PH_WORKFLOWS_RUNS_IN_FLIGHT",
+      "type": "var",
+      "description": "Runs admitted at once across all workflows, after each workflow's own concurrency policy. Unset, eight times the most piece children: a run waiting out a retry holds its place, so the event-loop limit does the throttling."
+    },
+    {
+      "name": "PH_WORKFLOWS_ADMIT_MAX_ELU",
+      "type": "var",
+      "description": "Main-thread event-loop utilization, 0 to 1, above which no new run is admitted. Runs already admitted continue, and one run is always admitted when none is running.",
+      "default": "0.8"
     },
     {
       "name": "PH_WORKFLOWS_POLL_INTERVAL_MS",

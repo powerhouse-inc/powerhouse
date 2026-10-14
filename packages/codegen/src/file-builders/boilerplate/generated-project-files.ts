@@ -11,6 +11,7 @@ import { writeJsonFile } from "write-json-file";
 import {
   agentsTemplate,
   buildCursorMcpTemplate,
+  buildHostsTemplates,
   buildMcpTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
@@ -191,6 +192,69 @@ export async function writeModuleFiles(projectDir = process.cwd()) {
 async function seedUserOwnedFile(filePath: string, contents: string) {
   if (existsSync(filePath)) return;
   await writeFileEnsuringDir(filePath, contents);
+}
+
+/** uniform-runners scaffold (FEATURE_UNIFORM_RUNNERS_ENABLED): the hosts/
+ * folder plus the agents/ stub. Every file is user-owned once created
+ * (preserve-on-migrate, same contract as the AI config files). Host files
+ * reference powerhouse.config.json values rather than copying them, so the
+ * scaffold adds no second value store. */
+export async function writeGeneratedHostsFiles(
+  projectDir: string,
+  projectName: string,
+) {
+  const templates = buildHostsTemplates(projectName);
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/README.md"),
+    templates.readme,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/connect/host.js"),
+    templates.connectHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/switchboard/host.js"),
+    templates.switchboardHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/vetra/host.js"),
+    templates.vetraHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/desktop/host.js"),
+    templates.desktopHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/assistant/host.js"),
+    templates.assistantHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/cli/host.js"),
+    templates.cliHost,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/README.md"),
+    templates.agentsReadme,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/profiles.json"),
+    templates.agentsProfiles,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/agent-profiles/AgentBase.md"),
+    templates.agentsBaseProfile,
+  );
+  await seedUserOwnedFile(
+    join(
+      projectDir,
+      "agents/skills-tpl/getting-started/00.describe-the-project.md",
+    ),
+    templates.agentsExampleSkill,
+  );
+  await seedUserOwnedFile(
+    join(projectDir, "agents/index.ts"),
+    templates.agentsIndex,
+  );
 }
 
 export async function writeAiConfigFiles(projectDir = process.cwd()) {

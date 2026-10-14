@@ -26,7 +26,7 @@ inputs:
     description: Flag only when current also exceeds median + this many seconds.
     default: "60"
   github-token:
-    description: Token with actions:read (and pull-requests:write for comments).
+    description: Token with actions:read, checks:read (and pull-requests:write for comments).
     required: true
 
 runs:

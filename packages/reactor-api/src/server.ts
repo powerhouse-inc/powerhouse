@@ -47,7 +47,7 @@ import {
   type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
-import { config, DefaultCoreSubgraphs } from "./config.js";
+import { config, coreSubgraphClasses } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import {
   AttachmentAccessService,
@@ -59,7 +59,6 @@ import {
   type IAttachmentClientProvider,
 } from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
-import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -89,18 +88,14 @@ import {
 } from "./graphql/playground.js";
 import {
   createReactorInspectionSource,
-  InspectionSubgraph,
   type IReactorInspectionSource,
   type ReactorInspectionOptions,
 } from "./graphql/inspection/index.js";
-import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
-import {
-  getUniqueDocumentModels,
-  PackageManager,
-} from "./packages/package-manager.js";
+import { setupEventListeners } from "./packages/package-listeners.js";
+import { PackageManager } from "./packages/package-manager.js";
 import {
   AuthService,
   type CredentialVerifier,
@@ -120,10 +115,12 @@ import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
   assertCredentialVerifierForSource,
+  resolveCredentialCacheTtlMs,
   resolveRenownConfig,
   type RenownConfig,
   type ResolvedRenownConfig,
 } from "./services/renown-config.js";
+import { resolveWsCredentialRecheckIntervalMs } from "./graphql/ws-credential-monitor.js";
 import type {
   API,
   IPackageLoader,
@@ -139,6 +136,7 @@ import {
   type DocumentPermissionDatabase,
   type PgliteFactory,
 } from "./utils/db.js";
+import type { ReportError } from "./utils/detached.js";
 import {
   openCurrentPgliteForVerify,
   preparePgliteDataDir,
@@ -210,14 +208,17 @@ type Options = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   logger?: ILogger;
+  /** Receives failures in background work that is logged and skipped. */
+  reportError?: ReportError;
   /**
    * Filesystem path for attachment binary storage.
    * Defaults to a sibling "attachments" directory next to dbPath,
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
-  /** Storage health and workflow facts for the inspection subgraph. */
-  inspection?: ReactorInspectionOptions;
+  /** Storage health and workflow facts for the inspection subgraph; `false`
+   * leaves it unmounted and `api.inspection` undefined. On by default. */
+  inspection?: ReactorInspectionOptions | false;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
@@ -518,6 +519,7 @@ type SetupGraphQLManagerOptions = {
   attachments?: IAttachmentClientProvider;
   inspection?: IReactorInspectionSource;
   driveStore?: DriveStore;
+  reportError?: ReportError;
 };
 
 /**
@@ -546,8 +548,13 @@ async function setupGraphQLManager({
   attachments,
   inspection,
   driveStore,
+  reportError,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
+    wsCredentialRecheckIntervalMs: resolveWsCredentialRecheckIntervalMs(
+      process.env.WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+      logger,
+    ),
     path: config.basePath,
     httpServer,
     wsServer,
@@ -574,6 +581,7 @@ async function setupGraphQLManager({
     attachments,
     inspection,
     driveStore,
+    reportError,
   });
 
   await graphqlManager.init(
@@ -586,168 +594,6 @@ async function setupGraphQLManager({
   await graphqlManager.updateRouter();
 
   return graphqlManager;
-}
-
-/**
- * Sets up event listeners for package manager changes
- */
-export function setupEventListeners(
-  pkgManager: PackageManager,
-  graphqlManager: GraphQLManager,
-  reactorProcessorManager: IReactorProcessorManager,
-  moduleFor: (packageName: string) => IProcessorHostModule,
-  documentModelRegistry?: IDocumentModelRegistry,
-): void {
-  pkgManager.onDocumentModelsChange((packagedModels) => {
-    if (documentModelRegistry) {
-      // Replace each incoming type's whole version family: skipping types
-      // that are already registered would never pick up a new version of a
-      // versioned model (or regenerated code for an existing one), and
-      // unregisterModules is type-scoped so partial re-registration would
-      // drop sibling versions.
-      const newModules = getUniqueDocumentModels(
-        Object.values(packagedModels).flat(),
-      );
-      const incomingTypes = new Set(
-        newModules.map((m) => m.documentModel.global.id),
-      );
-      if (incomingTypes.size > 0) {
-        documentModelRegistry.unregisterModules(...incomingTypes);
-        const results = documentModelRegistry.registerModules(...newModules);
-        for (const result of results) {
-          if (result.status === "success") {
-            defaultLogger.info(
-              `Registered document model: ${result.item.documentModel.global.id} v${result.item.version ?? 1}`,
-            );
-          } else {
-            defaultLogger.error(
-              `Failed to register document model: ${result.error.message}`,
-            );
-          }
-        }
-      }
-
-      // Manifests change together with document models (they live under the
-      // same document-models/ tree), so swap them here as well.
-      const manifests = pkgManager.getUniqueUpgradeManifests();
-      if (manifests.length > 0) {
-        documentModelRegistry.unregisterUpgradeManifests(
-          ...manifests.map((m) => m.documentType),
-        );
-        const manifestResults = documentModelRegistry.registerUpgradeManifests(
-          ...manifests,
-        );
-        for (const result of manifestResults) {
-          if (result.status === "error") {
-            defaultLogger.error(
-              `Failed to register upgrade manifest: ${result.error.message}`,
-            );
-          }
-        }
-      }
-    }
-    void graphqlManager
-      .regenerateDocumentModelSubgraphs()
-      .catch((error: unknown) => {
-        defaultLogger.error(
-          "Document model change left subgraphs stale: @error",
-          error,
-        );
-      });
-  });
-
-  pkgManager.onSubgraphsChange((packagedSubgraphs) => {
-    void graphqlManager
-      .applyPackageSubgraphs(packagedSubgraphs)
-      .catch((error: unknown) => {
-        defaultLogger.error("Failed to apply package subgraphs: @error", error);
-      });
-  });
-
-  let knownProcessorPackages = new Set<string>();
-  pkgManager.onProcessorsChange((processors) => {
-    void (async () => {
-      // Packages that vanished from the map entirely keep none of their
-      // factories: unregister the leftovers.
-      for (const packageName of knownProcessorPackages) {
-        if (!processors.has(packageName)) {
-          try {
-            await reactorProcessorManager.unregisterFactory(packageName);
-          } catch (error) {
-            defaultLogger.error(
-              "Failed to unregister processors of @package: @error",
-              packageName,
-              error,
-            );
-          }
-        }
-      }
-      knownProcessorPackages = new Set(processors.keys());
-
-      for (const [packageName, fns] of processors) {
-        try {
-          await reactorProcessorManager.unregisterFactory(packageName);
-        } catch (error) {
-          defaultLogger.error(
-            "Failed to unregister processors of @package: @error",
-            packageName,
-            error,
-          );
-        }
-
-        const factories = await Promise.allSettled(
-          fns.map(async (fn) => fn(moduleFor(packageName))),
-        );
-
-        const validBuilders: ProcessorFactory[] = [];
-        for (const factory of factories) {
-          if (factory.status === "rejected") {
-            defaultLogger.error(
-              "Processor factory builder of @package failed: @error",
-              packageName,
-              factory.reason,
-            );
-          } else if (typeof factory.value === "function") {
-            validBuilders.push(factory.value);
-          }
-        }
-
-        if (!validBuilders.length) {
-          continue;
-        }
-
-        try {
-          await reactorProcessorManager.registerFactory(
-            packageName,
-            async (driveHeader) =>
-              (
-                await Promise.all(
-                  validBuilders.map(async (driveFactory) => {
-                    try {
-                      const result = await driveFactory(driveHeader);
-                      return result as unknown as ReactorProcessorRecord[];
-                    } catch (e) {
-                      const logger = defaultLogger;
-                      logger.error(
-                        `Error creating processor for drive ${driveHeader.id}:`,
-                        e,
-                      );
-                      return [];
-                    }
-                  }),
-                )
-              ).flat(),
-          );
-        } catch (error) {
-          defaultLogger.error(
-            "Failed to register processors of @package: @error",
-            packageName,
-            error,
-          );
-        }
-      }
-    })();
-  });
 }
 
 /**
@@ -927,22 +773,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
-  let credentialVerificationCacheTtlMs: number | undefined;
-  if (CREDENTIAL_VERIFICATION_CACHE_TTL_MS !== undefined) {
-    const parsed = Number(CREDENTIAL_VERIFICATION_CACHE_TTL_MS);
-    if (
-      CREDENTIAL_VERIFICATION_CACHE_TTL_MS.trim() !== "" &&
-      Number.isFinite(parsed) &&
-      parsed >= 0
-    ) {
-      credentialVerificationCacheTtlMs = parsed;
-    } else {
-      logger.warn(
-        `Ignoring invalid CREDENTIAL_VERIFICATION_CACHE_TTL_MS="${CREDENTIAL_VERIFICATION_CACHE_TTL_MS}" (expected a non-negative number of milliseconds; 0 disables caching) — using the default TTL`,
-      );
-    }
-  }
-
   const documentPermissionsRequested =
     options.documentPermissionService !== undefined ||
     DOCUMENT_PERMISSIONS_ENABLED === "true";
@@ -1038,7 +868,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       resolveIdentity: resolveCallerIdentity,
       admins,
       skipCredentialVerification,
-      credentialVerificationCacheTtlMs,
+      credentialVerificationCacheTtlMs: resolveCredentialCacheTtlMs(
+        CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
+        renown.source,
+        logger,
+      ),
       verifyCredential:
         options.verifyCredential ??
         (await createRenownCredentialVerifier({
@@ -1161,6 +995,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
     packages: options.packages ?? [],
+    reportError: options.reportError,
   });
 
   // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
@@ -1397,15 +1232,11 @@ async function _setupAPI(
   );
 
   // set up subgraph manager
-  const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
-  coreSubgraphs.push(ReactorSubgraph);
-  if (inspection) {
-    coreSubgraphs.push(InspectionSubgraph);
-  }
-
-  // Register Auth subgraph when document permission service is available
+  const coreSubgraphs = coreSubgraphClasses({
+    inspection: !!inspection,
+    documentPermissions: !!documentPermissionService,
+  });
   if (documentPermissionService) {
-    coreSubgraphs.push(AuthSubgraph);
     logger.info("Auth subgraph registered (document permissions enabled)");
   }
 
@@ -1435,6 +1266,7 @@ async function _setupAPI(
     attachments: attachmentClientProvider,
     inspection,
     driveStore,
+    reportError: options.reportError,
   });
 
   // Set up event listeners
@@ -1444,6 +1276,7 @@ async function _setupAPI(
     reactorProcessorManager,
     moduleFor,
     documentModelRegistry,
+    { logger, reportError: options.reportError },
   );
 
   if (mcpServerEnabled) {
@@ -1720,7 +1553,7 @@ export async function initializeAndStartAPI(
     ),
     httpRoutes,
     attachmentReadsFollowDocumentPolicy,
-    reactorClientModule.reactorModule
+    reactorClientModule.reactorModule && options.inspection !== false
       ? createReactorInspectionSource(reactorClientModule.reactorModule, {
           ...options.inspection,
           attachmentStore: attachmentInspectionStore(attachments),

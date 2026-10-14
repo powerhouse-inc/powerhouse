@@ -49,3 +49,20 @@ describe("ALL_POWERHOUSE_DEPENDENCIES", () => {
     );
   });
 });
+
+describe("root build script", () => {
+  it("builds every published package (an unbuilt package publishes an EMPTY tarball)", () => {
+    // @powerhousedao/desktop@6.2.3-dev.57 shipped with no dist because the
+    // root `build` script is a hand-maintained --filter list and the new
+    // package was missing from it. The release packs whatever is on disk, so
+    // the omission is silent until an install fails at runtime.
+    const rootManifest = JSON.parse(
+      readFileSync(join(REPO_ROOT, "package.json"), "utf8"),
+    ) as { scripts: Record<string, string> };
+    const buildScript = rootManifest.scripts.build;
+    const missing = publishedWorkspacePackages().filter(
+      (name) => !buildScript.includes(`--filter=${name} `),
+    );
+    expect(missing).toEqual([]);
+  });
+});

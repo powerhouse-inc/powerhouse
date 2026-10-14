@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "types": ["vitest/globals"],
+    "jsx": "react-jsx"
+  },
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../../apps/switchboard"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../host-core"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-api"
+    },
+    {
+      "path": "../reactor-attachments"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}

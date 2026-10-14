@@ -12,7 +12,6 @@ import { childLogger } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
 import { watchFile } from "node:fs";
-import { CORE_DOCUMENT_MODEL_MODULES } from "./core-document-models.js";
 import type {
   IPackageLoader,
   IPackageManager,
@@ -21,7 +20,9 @@ import type {
   PackageManagerResult,
   PackagePieceEntry,
 } from "./types.js";
+import { baseDocumentModels } from "./base-document-models.js";
 import { debounce, manifestDeclaredSubgraphs } from "./util.js";
+import { runDetached } from "../utils/detached.js";
 import {
   REGISTRY_ENTRY_ABSENT,
   REGISTRY_EXTERNAL_DEPS_MISSING,
@@ -132,6 +133,8 @@ export class PackageManager implements IPackageManager {
   private processorMap = new Map<string, Processor>();
   private piecesMap = new Map<string, PackagePieceEntry[]>();
   private configWatcher: StatWatcher | undefined;
+  private unsubscribePackages: (() => void) | undefined;
+  private subscribedPackages = new Set<string>();
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
@@ -139,6 +142,10 @@ export class PackageManager implements IPackageManager {
     processorsChange: [Map<string, Processor>];
     piecesChange: [Map<string, PackagePieceEntry[]>];
   }>();
+
+  private get detached() {
+    return { logger: this.logger, report: this.options.reportError };
+  }
 
   constructor(
     loaders: IPackageLoader[],
@@ -173,8 +180,11 @@ export class PackageManager implements IPackageManager {
     this.updateProcessorsMap(processorsMap);
     this.updatePiecesMap(piecesMap);
 
+    this.unsubscribePackages?.();
+    this.unsubscribePackages = undefined;
+    this.subscribedPackages = new Set(packages);
     try {
-      this.subscribePackages(packages);
+      this.unsubscribePackages = this.subscribePackages(packages);
     } catch (error) {
       this.logger.error("Failed to subscribe to packages: @error", error);
     }
@@ -199,8 +209,8 @@ export class PackageManager implements IPackageManager {
 
     const documentModelModuleMap = new Map<string, DocumentModelModule[]>();
 
-    for (const [name, module] of Object.entries(CORE_DOCUMENT_MODEL_MODULES)) {
-      documentModelModuleMap.set(name, [module]);
+    for (const [source, model] of baseDocumentModels) {
+      documentModelModuleMap.set(source, [model]);
     }
 
     for (const pkg of packages) {
@@ -531,15 +541,21 @@ export class PackageManager implements IPackageManager {
 
   /** Debounced per key so repeated subscribePackages calls reuse one timer. */
   private getDebouncedUpdateCallback(
-    key: string,
+    pkg: string,
+    kind: string,
     update: () => Promise<void>,
   ): () => void {
+    const key = `${pkg}:${kind}`;
     if (!this.debouncedUpdateCallbacks.has(key)) {
-      const debouncedFn = debounce(update, 1000);
+      // A timer still pending for a package dropped since does nothing.
+      const updateIfSubscribed = () =>
+        this.subscribedPackages.has(pkg) ? update() : undefined;
+      const debouncedFn = debounce(
+        () => runDetached(`Updating ${key}`, updateIfSubscribed, this.detached),
+        1000,
+      );
       this.debouncedUpdateCallbacks.set(key, () => {
-        debouncedFn().catch((error: unknown) => {
-          this.logger.error("Failed to update package: @error", error);
-        });
+        void debouncedFn();
       });
     }
     return this.debouncedUpdateCallbacks.get(key)!;
@@ -549,18 +565,21 @@ export class PackageManager implements IPackageManager {
     const unsubs: (() => void)[] = [];
     for (const pkg of packages) {
       const onDocumentModels = this.getDebouncedUpdateCallback(
-        `${pkg}:document-models`,
+        pkg,
+        "document-models",
         () => this.updateDocumentModelsForPackage(pkg),
       );
       const onSubgraphs = this.getDebouncedUpdateCallback(
-        `${pkg}:subgraphs`,
+        pkg,
+        "subgraphs",
         () => this.updateSubgraphsForPackage(pkg),
       );
       const onProcessors = this.getDebouncedUpdateCallback(
-        `${pkg}:processors`,
+        pkg,
+        "processors",
         () => this.updateProcessorsForPackage(pkg),
       );
-      const onPieces = this.getDebouncedUpdateCallback(`${pkg}:pieces`, () =>
+      const onPieces = this.getDebouncedUpdateCallback(pkg, "pieces", () =>
         this.updatePiecesForPackage(pkg),
       );
 
@@ -588,13 +607,15 @@ export class PackageManager implements IPackageManager {
   }
 
   private getAllPackageNames(): string[] {
-    const packageNames = this.options.packages ?? [];
+    const packageNames = new Set(this.options.packages);
     if (this.options.configFile) {
-      packageNames.push(
-        ...this.getPackageNamesFromConfigFile(this.options.configFile),
-      );
+      for (const name of this.getPackageNamesFromConfigFile(
+        this.options.configFile,
+      )) {
+        packageNames.add(name);
+      }
     }
-    return packageNames;
+    return Array.from(packageNames);
   }
 
   private getPackageNamesFromConfigFile(configFile: string) {
@@ -608,11 +629,15 @@ export class PackageManager implements IPackageManager {
         configFile,
         { interval: 100 },
         (curr, prev) => {
-          if (curr.mtime === prev.mtime) {
+          if (curr.mtimeMs === prev.mtimeMs) {
             return;
           }
 
-          void this.loadPackages(this.getAllPackageNames());
+          void runDetached(
+            "Reloading packages from the config file",
+            () => this.loadPackages(this.getAllPackageNames()),
+            this.detached,
+          );
         },
       );
     }
@@ -671,6 +696,11 @@ export class PackageManager implements IPackageManager {
     this.eventEmitter.emit("piecesChange", piecesMap);
   }
 
+  /** The document models every loaded package ships, keyed by the package. */
+  getDocumentModels(): Map<string, DocumentModelModule[]> {
+    return new Map(this.docModelsMap);
+  }
+
   /** The pieces every loaded package ships, keyed by the package. */
   getPieces(): Map<string, PackagePieceEntry[]> {
     return new Map(this.piecesMap);
@@ -684,6 +714,7 @@ export class PackageManager implements IPackageManager {
    */
   removePackage(pkg: string): void {
     this.logger.info(`Removing package: ${pkg}`);
+    this.subscribedPackages.delete(pkg);
     const dropKey = <T>(map: Map<string, T>): Map<string, T> => {
       if (!map.has(pkg)) return map;
       const next = new Map(map);
@@ -704,26 +735,50 @@ export class PackageManager implements IPackageManager {
   }
 
   onDocumentModelsChange(
-    handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
+    handler: (documentModels: Record<string, DocumentModelModule[]>) => unknown,
   ): void {
-    this.eventEmitter.on("documentModelsChange", handler);
+    this.eventEmitter.on("documentModelsChange", (documentModels) => {
+      void runDetached(
+        "Document models change listener",
+        () => handler(documentModels),
+        this.detached,
+      );
+    });
   }
 
   onSubgraphsChange(
-    handler: (subgraphs: Map<string, SubgraphClass[]>) => void,
+    handler: (subgraphs: Map<string, SubgraphClass[]>) => unknown,
   ): void {
-    this.eventEmitter.on("subgraphsChange", handler);
+    this.eventEmitter.on("subgraphsChange", (subgraphs) => {
+      void runDetached(
+        "Subgraphs change listener",
+        () => handler(subgraphs),
+        this.detached,
+      );
+    });
   }
 
   onProcessorsChange(
-    handler: (processors: Map<string, Processor>) => void,
+    handler: (processors: Map<string, Processor>) => unknown,
   ): void {
-    this.eventEmitter.on("processorsChange", handler);
+    this.eventEmitter.on("processorsChange", (processors) => {
+      void runDetached(
+        "Processors change listener",
+        () => handler(processors),
+        this.detached,
+      );
+    });
   }
 
   onPiecesChange(
-    handler: (pieces: Map<string, PackagePieceEntry[]>) => void,
+    handler: (pieces: Map<string, PackagePieceEntry[]>) => unknown,
   ): void {
-    this.eventEmitter.on("piecesChange", handler);
+    this.eventEmitter.on("piecesChange", (pieces) => {
+      void runDetached(
+        "Pieces change listener",
+        () => handler(pieces),
+        this.detached,
+      );
+    });
   }
 }

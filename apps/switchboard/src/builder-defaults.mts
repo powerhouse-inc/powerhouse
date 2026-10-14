@@ -8,16 +8,16 @@ import {
   type ReactorClientBuilder,
   type SignerConfig,
 } from "@powerhousedao/reactor";
-import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
-import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
-import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  baseDocumentModels,
+  getUniqueDocumentModels,
+} from "@powerhousedao/reactor-api";
 import type {
   DocumentModelModule,
   SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { documentModelDocumentModelModule, type ILogger } from "document-model";
+import type { ILogger } from "document-model";
 
 export type SwitchboardReactorDefaultsOptions = {
   // Extra models registered alongside the baseline (document-model, drive,
@@ -71,12 +71,7 @@ export type SwitchboardReactorDefaultsOptions = {
  */
 /** The models switchboard always registers alongside package models. */
 export function switchboardBaseDocumentModels() {
-  return [
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-    reactorDriveDocumentModelModule,
-    ReactorGroupV1 as unknown as DocumentModelModule,
-  ];
+  return baseDocumentModels.map(([, model]) => model);
 }
 
 export function applySwitchboardReactorDefaults(

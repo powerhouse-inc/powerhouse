@@ -12,6 +12,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   assignStoredSegments,
+  canonicalDigest,
   checkDocumentModelDefinitionShape,
   DefinitionDiagnosticCollector,
   foldTypeExtensions,
@@ -57,6 +58,8 @@ export type StructuredModel = {
   readonly packageScalars: ReadonlySet<string>;
   readonly layout: TemplateLayout;
   readonly hostDescriptions: ReadonlyMap<string, string>;
+  /** Digest of the whole definition the projection reads. */
+  readonly digest: string;
 };
 
 type TemplateLayout = {
@@ -167,6 +170,7 @@ function readStructuredModel(
     layout,
     hostDescriptions:
       placement?.hostDescriptions ?? canonicalHostDescriptions(layout),
+    digest: canonicalDigest(definition),
   };
 }
 

@@ -35,6 +35,7 @@ export interface WorkflowTelemetryOptions {
 export interface WorkerPoolStats {
   size: number;
   active: number;
+  idle: number;
   waiting: number;
 }
 
@@ -45,7 +46,14 @@ export class WorkflowTelemetry {
   private readonly runDuration: Histogram;
   private readonly stepDuration: Histogram;
   private readonly phaseDuration: Histogram;
-  private poolGauges?: Record<"size" | "active" | "waiting", ObservableGauge>;
+  private dispatcherGauges?: Record<
+    "inFlight" | "waiting" | "loop",
+    ObservableGauge
+  >;
+  private poolGauges?: Record<
+    "size" | "active" | "idle" | "waiting",
+    ObservableGauge
+  >;
 
   constructor(options: WorkflowTelemetryOptions = {}) {
     this.tracer = options.tracer ?? trace.getTracer(TELEMETRY_SCOPE);
@@ -107,12 +115,12 @@ export class WorkflowTelemetry {
       this.recordPhase(`worker.${name}`, end - start);
       return span;
     };
-    const ready = epoch(timings.ready);
+    const ready = finite(timings.ready);
     if (ready !== undefined && forkedAt > 0) {
       child("boot", forkedAt, Math.max(forkedAt, ready));
     }
-    const received = epoch(timings.received);
-    const sent = epoch(timings.sent);
+    const received = finite(timings.received);
+    const sent = finite(timings.sent);
     // A request queued behind boot only starts travelling once the child is up.
     const delivered = Math.max(ipc.sent, ready ?? 0);
     if (received !== undefined) {
@@ -139,6 +147,7 @@ export class WorkflowTelemetry {
     if (sent !== undefined) {
       child("ipc.out", sent, Math.max(sent, ipc.received));
     }
+    request.setAttributes(workerMemory(timings.memory));
   }
 
   recordPhase(name: string, ms: number): void {
@@ -188,13 +197,49 @@ export class WorkflowTelemetry {
   // so a replaced runtime's pool stops reporting and can be collected.
   observeWorkerPool(stats: () => WorkerPoolStats): () => void {
     this.poolGauges ??= this.createPoolGauges();
-    const { size, active, waiting } = this.poolGauges;
-    const observables = [size, active, waiting];
+    const { size, active, idle, waiting } = this.poolGauges;
+    const observables = [size, active, idle, waiting];
     const callback: BatchObservableCallback = (result) => {
       const current = stats();
       result.observe(size, current.size);
       result.observe(active, current.active);
+      result.observe(idle, current.idle);
       result.observe(waiting, current.waiting);
+    };
+    this.meter.addBatchObservableCallback(callback, observables);
+    return () =>
+      this.meter.removeBatchObservableCallback(callback, observables);
+  }
+
+  // Runs admitted and waiting across workflows, and the loop that admits them.
+  observeDispatcher(
+    stats: () => { inFlight: number; waiting: number; utilization: number },
+  ): () => void {
+    // Created once: a replaced runtime re-observes the same instruments.
+    this.dispatcherGauges ??= {
+      inFlight: this.meter.createObservableGauge("workflow.runs.in_flight", {
+        description: "Runs admitted and not yet finished",
+        unit: "{run}",
+      }),
+      waiting: this.meter.createObservableGauge("workflow.runs.waiting", {
+        description: "Runs waiting for admission across workflows",
+        unit: "{run}",
+      }),
+      loop: this.meter.createObservableGauge(
+        "workflow.host.event_loop.utilization",
+        {
+          description: "Main thread busy share over the last second",
+          unit: "1",
+        },
+      ),
+    };
+    const { inFlight, waiting, loop } = this.dispatcherGauges;
+    const observables = [inFlight, waiting, loop];
+    const callback: BatchObservableCallback = (result) => {
+      const current = stats();
+      result.observe(inFlight, current.inFlight);
+      result.observe(waiting, current.waiting);
+      result.observe(loop, current.utilization);
     };
     this.meter.addBatchObservableCallback(callback, observables);
     return () =>
@@ -205,9 +250,16 @@ export class WorkflowTelemetry {
     const gauge = (name: string, description: string) =>
       this.meter.createObservableGauge(name, { description, unit: "{worker}" });
     return {
-      size: gauge("workflow.worker.pool.size", "Worker slots"),
-      active: gauge("workflow.worker.pool.active", "Slots held by runs"),
-      waiting: gauge("workflow.worker.pool.waiting", "Runs waiting for a slot"),
+      size: gauge("workflow.worker.pool.size", "Most run children"),
+      active: gauge(
+        "workflow.worker.pool.active",
+        "Children serving a request",
+      ),
+      idle: gauge("workflow.worker.pool.idle", "Warm children waiting"),
+      waiting: gauge(
+        "workflow.worker.pool.waiting",
+        "Requests waiting for a child",
+      ),
     };
   }
 }
@@ -226,7 +278,7 @@ const WORKER_ATTRIBUTES: Record<string, "boolean" | "string"> = {
 };
 const MAX_ATTRIBUTE_LENGTH = 256;
 
-function epoch(value: unknown): number | undefined {
+function finite(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
@@ -239,8 +291,8 @@ function knownPhase(phase: unknown): phase is WorkerPhaseTiming {
     typeof name === "string" &&
     WORKER_PHASES.has(name) &&
     (parent === undefined || WORKER_PHASES.has(parent)) &&
-    epoch(start) !== undefined &&
-    epoch(end) !== undefined &&
+    finite(start) !== undefined &&
+    finite(end) !== undefined &&
     end! >= start!
   );
 }
@@ -257,6 +309,24 @@ function phaseAttributes(attributes: unknown): Attributes | undefined {
         : (value as boolean);
   }
   return Object.keys(kept).length > 0 ? kept : undefined;
+}
+
+const MB = 2 ** 20;
+
+// The child's memory as it answered, in MB, on the request span.
+function workerMemory(memory: unknown): Attributes {
+  if (typeof memory !== "object" || memory === null) return {};
+  const attributes: Attributes = {};
+  for (const [key, name] of [
+    ["rss", "worker.memory.rss_mb"],
+    ["heapUsed", "worker.memory.heap_used_mb"],
+    ["heapTotal", "worker.memory.heap_total_mb"],
+    ["external", "worker.memory.external_mb"],
+  ] as const) {
+    const bytes = finite((memory as Record<string, unknown>)[key]);
+    if (bytes !== undefined) attributes[name] = bytes / MB;
+  }
+  return attributes;
 }
 
 // Piece trigger kinds embed author-typed names; metrics keep only "piece".

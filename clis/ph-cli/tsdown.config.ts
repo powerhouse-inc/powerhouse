@@ -6,7 +6,15 @@ const version =
 const gitSha = process.env.WORKSPACE_GIT_SHA ?? "unknown";
 
 export default defineConfig({
-  entry: "src/cli.ts",
+  entry: {
+    cli: "src/cli.ts",
+    // uniform-runners bridge runners, published as package subpaths so a
+    // scaffolded project's hosts/<name>/host.js can name them as runner.module
+    // and resolve them from its own node_modules (ph-cli is a devDependency).
+    "runners/connect": "src/runners/connect.ts",
+    "runners/switchboard": "src/runners/switchboard.ts",
+    "runners/compound": "src/runners/compound.ts",
+  },
   outDir: "dist",
   clean: true,
   dts: { generator: "tsgo" },

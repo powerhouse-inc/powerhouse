@@ -1,6 +1,7 @@
 import { generateAll } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { extractAllDocuments, saveSpec } from "@powerhousedao/vetra/codegen";
+import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
 
 export async function startGenerateAll(
   args: { extract?: boolean },
@@ -23,4 +24,5 @@ export async function startGenerateAll(
   }
   await generateAll(project);
   await project.save();
+  warnSubgraphTypeConflicts(projectDir);
 }

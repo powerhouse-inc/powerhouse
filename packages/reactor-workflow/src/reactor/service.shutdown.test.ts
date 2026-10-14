@@ -141,7 +141,7 @@ afterEach(() => {
 });
 
 describe("a runtime that has shut down", () => {
-  it("fails the PENDING row a trigger handed it instead of leaving it", async () => {
+  it("leaves the PENDING row a trigger handed it for the next owner to start", async () => {
     const { service, workflowId } = runtime();
     const store = (await service.store())!;
     const runId = await store.enqueueRun({
@@ -162,7 +162,7 @@ describe("a runtime that has shut down", () => {
       ),
     ).rejects.toThrow("shut down");
 
-    expect((await store.getRun(runId))?.status).toBe("FAILED");
+    expect((await store.getRun(runId))?.status).toBe("PENDING");
   });
 
   it("refuses a firing that was waiting for its slot", async () => {
@@ -191,7 +191,28 @@ describe("a runtime that has shut down", () => {
     await expect(within(firing)).rejects.toBeInstanceOf(
       WorkflowRuntimeClosedError,
     );
-    expect((await store.getRun(runId))?.status).toBe("FAILED");
+    expect((await store.getRun(runId))?.status).toBe("PENDING");
+    if (slot.admitted) slot.release();
+  });
+
+  it("fails a manual fire refused while it waited, since its caller heard so", async () => {
+    const { service, workflowId } = runtime();
+    const store = (await service.store())!;
+    const slot = await gateOf(service).admit(
+      workflowId,
+      effectiveRunPolicy({ policy } as never),
+    );
+    const caller = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+    const firing = service.fire(workflowId, {}, "manual", undefined, caller);
+    await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
+
+    service.shutdown();
+
+    await expect(within(firing)).rejects.toBeInstanceOf(
+      WorkflowRuntimeClosedError,
+    );
+    const runs = await store.listRuns(workflowId);
+    expect(runs.map((run) => run.status)).toEqual(["FAILED"]);
     if (slot.admitted) slot.release();
   });
 
@@ -222,7 +243,7 @@ describe("a runtime that has shut down", () => {
     await expect(within(firing)).rejects.toBeInstanceOf(
       WorkflowRuntimeClosedError,
     );
-    expect((await store.getRun(runId))?.status).toBe("FAILED");
+    expect((await store.getRun(runId))?.status).toBe("PENDING");
   });
 
   // Opening the journal runs its sweeps, which would fail the next owner's
@@ -230,7 +251,7 @@ describe("a runtime that has shut down", () => {
   // Built lazily, so the first caller after shutdown would otherwise get a
   // fresh, running lane over the journal the next owner holds.
   // The cursor is past the item, so the refused firing must leave its run.
-  it("fails the run a queued piece item journaled, with its payload", async () => {
+  it("leaves the run a queued piece item journaled PENDING, with its payload", async () => {
     const { service, workflowId } = runtime();
     const store = (await service.store())!;
     const item = { id: "item-1", _dedupe_key: "item-1" };
@@ -294,12 +315,12 @@ describe("a runtime that has shut down", () => {
     service.shutdown();
     poller.stop();
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await vi.waitFor(async () => {
       const runs = await store.listRuns(workflowId);
       expect(runs).toHaveLength(1);
       expect(runs[0]).toMatchObject({
-        status: "FAILED",
-        error_name: "WorkflowRuntimeClosedError",
+        status: "PENDING",
       });
       expect(JSON.parse(runs[0]!.trigger_payload!)).toEqual(item);
     });
@@ -307,7 +328,7 @@ describe("a runtime that has shut down", () => {
   });
 
   // The slot is consumed with the fire, so the refused run is its only record.
-  it("fails the run a queued schedule slot journaled, with its payload", async () => {
+  it("leaves the run a queued schedule slot journaled PENDING, with its payload", async () => {
     const { service, workflowId } = runtime();
     const store = (await service.store())!;
     const poller = new TriggerSupervisor({
@@ -343,12 +364,12 @@ describe("a runtime that has shut down", () => {
     service.shutdown();
     poller.stop();
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await vi.waitFor(async () => {
       const runs = await store.listRuns(workflowId);
       expect(runs).toHaveLength(1);
       expect(runs[0]).toMatchObject({
-        status: "FAILED",
-        error_name: "WorkflowRuntimeClosedError",
+        status: "PENDING",
         trigger_kind: "schedule",
       });
       expect(JSON.parse(runs[0]!.trigger_payload!)).toMatchObject({
@@ -359,7 +380,7 @@ describe("a runtime that has shut down", () => {
   });
 
   // The sender was answered, so it never retries: the run is the record.
-  it("fails the run of an async webhook delivery queued at shutdown, with its payload", async () => {
+  it("leaves the run of an async webhook delivery queued at shutdown PENDING, with its payload", async () => {
     const { service, workflowId, store, slot, request } =
       await queuedWebhook("async");
 
@@ -368,12 +389,12 @@ describe("a runtime that has shut down", () => {
     await vi.waitFor(() => expect(gateOf(service).waiting(workflowId)).toBe(1));
     service.shutdown();
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await vi.waitFor(async () => {
       const runs = await store.listRuns(workflowId);
       expect(runs).toHaveLength(1);
       expect(runs[0]).toMatchObject({
-        status: "FAILED",
-        error_name: "WorkflowRuntimeClosedError",
+        status: "PENDING",
       });
       expect(deliveredBody(runs[0])).toEqual({ id: "evt_1" });
     });
@@ -381,7 +402,7 @@ describe("a runtime that has shut down", () => {
   });
 
   // After the 504 the sender's retry is absorbed as a duplicate.
-  it("fails the run of a sync webhook delivery that timed out and queued at shutdown", async () => {
+  it("leaves the run of a sync webhook delivery that timed out and queued at shutdown PENDING", async () => {
     const { service, workflowId, store, slot, request } =
       await queuedWebhook("sync");
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -397,12 +418,12 @@ describe("a runtime that has shut down", () => {
     }
     service.shutdown();
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await vi.waitFor(async () => {
       const runs = await store.listRuns(workflowId);
       expect(runs).toHaveLength(1);
       expect(runs[0]).toMatchObject({
-        status: "FAILED",
-        error_name: "WorkflowRuntimeClosedError",
+        status: "PENDING",
       });
       expect(deliveredBody(runs[0])).toEqual({ id: "evt_1" });
     });

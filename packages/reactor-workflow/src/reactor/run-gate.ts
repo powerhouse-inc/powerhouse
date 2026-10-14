@@ -91,6 +91,7 @@ export class WorkflowRunGate {
   async admit(
     workflowId: string,
     policy: EffectiveRunPolicy,
+    onQueue?: () => void,
   ): Promise<GateAdmission> {
     if (this.closed)
       return { admitted: false, reason: CLOSED_REASON, refusal: "closed" };
@@ -124,6 +125,7 @@ export class WorkflowRunGate {
             `(${this.maxQueued}; raise ${QUEUE_DEPTH_ENV} to allow more)`,
         };
       }
+      onQueue?.();
       // The release that wakes this counts the run in on its behalf, so the
       // slot is reserved across the await and a later arrival cannot take it.
       const handed = await new Promise<boolean>((resolve) =>

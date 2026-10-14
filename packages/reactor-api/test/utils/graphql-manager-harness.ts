@@ -168,6 +168,7 @@ export type HarnessOptions = {
   logger?: ILogger;
   authorizationService?: IAuthorizationService;
   attachments?: IAttachmentClientProvider;
+  reportError?: (error: unknown) => void;
 };
 
 export function makeHarness(options: HarnessOptions = {}) {
@@ -209,6 +210,7 @@ export function makeHarness(options: HarnessOptions = {}) {
         policy: AuthorizationPolicy.OPEN,
       }),
     attachments: options.attachments,
+    reportError: options.reportError,
   });
 
   return {

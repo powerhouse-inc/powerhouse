@@ -11,7 +11,7 @@ import {
   type HostValidationResult,
 } from "document-model/tooling";
 import { type DocumentNode, Kind } from "graphql";
-import { CORE_DOCUMENT_MODEL_MODULES } from "../packages/core-document-models.js";
+import { baseDocumentModels } from "../packages/base-document-models.js";
 import { getUniqueDocumentModels } from "../packages/package-manager.js";
 import { createSchema } from "../utils/create-schema.js";
 import type { DefinedSubgraph } from "./define-subgraph.js";
@@ -30,7 +30,7 @@ export function validateSubgraphsForHost(
   const diagnostics: DefinitionDiagnostic[] = [];
   const composed: ComposedSubgraph[] = [];
   const documentModels = getUniqueDocumentModels(
-    Object.values(CORE_DOCUMENT_MODEL_MODULES),
+    baseDocumentModels.map(([, model]) => model),
     request.documentModels,
   );
 
