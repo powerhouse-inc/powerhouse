@@ -152,6 +152,27 @@ describe("ph.field", () => {
       message: "A field position must hold a field use created by ph.",
     });
   });
+
+  it("refuses a description or deprecation that is not a string", () => {
+    expect(
+      refused(() =>
+        ph.field({ returns: ph.String(), description: 5 } as never),
+      ),
+    ).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "description"],
+      message: "Option description must be a string.",
+    });
+    expect(
+      refused(() =>
+        ph.field({ returns: ph.String(), deprecated: true } as never),
+      ),
+    ).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "deprecated"],
+      message: "Option deprecated must be a string.",
+    });
+  });
 });
 
 describe("output and backing shapes", () => {
@@ -394,6 +415,38 @@ describe("the entry builders", () => {
       code: "PH-DEF-TYPE-AS-FIELD",
       path: ["options", "args", "author"],
       message: 'Named type "Author" was used directly as a field.',
+    });
+  });
+
+  it("refuses a root field name, description, or deprecation that is not a string", () => {
+    const { builders: build } = builders();
+    const declared = { returns: ph.String(), resolve: () => null };
+    expect(
+      refused(() =>
+        build.query("widget", { ...declared, fieldName: 5 } as never),
+      ),
+    ).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "fieldName"],
+      message: "Option fieldName must be a string.",
+    });
+    expect(
+      refused(() =>
+        build.mutation("addWidget", { ...declared, description: 6 } as never),
+      ),
+    ).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "description"],
+      message: "Option description must be a string.",
+    });
+    expect(
+      refused(() =>
+        build.query("widget", { ...declared, deprecated: true } as never),
+      ),
+    ).toEqual({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "deprecated"],
+      message: "Option deprecated must be a string.",
     });
   });
 
