@@ -115,10 +115,12 @@ import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
   assertCredentialVerifierForSource,
+  resolveCredentialCacheTtlMs,
   resolveRenownConfig,
   type RenownConfig,
   type ResolvedRenownConfig,
 } from "./services/renown-config.js";
+import { resolveWsCredentialRecheckIntervalMs } from "./graphql/ws-credential-monitor.js";
 import type {
   API,
   IPackageLoader,
@@ -549,6 +551,10 @@ async function setupGraphQLManager({
   reportError,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
+    wsCredentialRecheckIntervalMs: resolveWsCredentialRecheckIntervalMs(
+      process.env.WS_CREDENTIAL_RECHECK_INTERVAL_MS,
+      logger,
+    ),
     path: config.basePath,
     httpServer,
     wsServer,
@@ -767,22 +773,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
-  let credentialVerificationCacheTtlMs: number | undefined;
-  if (CREDENTIAL_VERIFICATION_CACHE_TTL_MS !== undefined) {
-    const parsed = Number(CREDENTIAL_VERIFICATION_CACHE_TTL_MS);
-    if (
-      CREDENTIAL_VERIFICATION_CACHE_TTL_MS.trim() !== "" &&
-      Number.isFinite(parsed) &&
-      parsed >= 0
-    ) {
-      credentialVerificationCacheTtlMs = parsed;
-    } else {
-      logger.warn(
-        `Ignoring invalid CREDENTIAL_VERIFICATION_CACHE_TTL_MS="${CREDENTIAL_VERIFICATION_CACHE_TTL_MS}" (expected a non-negative number of milliseconds; 0 disables caching) — using the default TTL`,
-      );
-    }
-  }
-
   const documentPermissionsRequested =
     options.documentPermissionService !== undefined ||
     DOCUMENT_PERMISSIONS_ENABLED === "true";
@@ -878,7 +868,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       resolveIdentity: resolveCallerIdentity,
       admins,
       skipCredentialVerification,
-      credentialVerificationCacheTtlMs,
+      credentialVerificationCacheTtlMs: resolveCredentialCacheTtlMs(
+        CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
+        renown.source,
+        logger,
+      ),
       verifyCredential:
         options.verifyCredential ??
         (await createRenownCredentialVerifier({
