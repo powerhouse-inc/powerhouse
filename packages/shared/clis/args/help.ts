@@ -1,4 +1,5 @@
 import { command } from "cmd-ts";
+import { isUniformRunnersEnabled } from "../feature-flags.js";
 import type { phCliCommandNames } from "../command-names.js";
 import { accessTokenArgs } from "./access-token.js";
 import { debugArgs } from "./common.js";
@@ -36,12 +37,11 @@ function helpCommand<
   };
 }
 
-export const phCliHelpCommands = {
+const allPhCliHelpCommands = {
   run: helpCommand({
     name: "run",
     args: runArgs,
-    description:
-      "Run a host from hosts/ (uniform-runners; requires FEATURE_UNIFORM_RUNNERS_ENABLED)",
+    description: "Run a host from hosts/ with its runner",
     handler: () => {},
   }),
   generate: helpCommand({
@@ -142,6 +142,16 @@ export const phCliHelpCommands = {
     handler: () => {},
   }),
 };
+
+// `run` is flag-gated: with uniform-runners off it must not surface in help
+// or dispatch at all (ph-cli also skips its registration). The cast keeps the
+// FULL compile-time shape so the drift guard below still pairs the name lists
+// while the runtime object simply lacks the key.
+export const phCliHelpCommands = (
+  isUniformRunnersEnabled()
+    ? allPhCliHelpCommands
+    : (({ run: _run, ...rest }) => rest)(allPhCliHelpCommands)
+) as typeof allPhCliHelpCommands;
 
 export { phCliCommandNames } from "../command-names.js";
 

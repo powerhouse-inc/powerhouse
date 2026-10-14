@@ -107,6 +107,10 @@
       "source": "./clis/command-names.ts",
       "import": "./dist/clis/command-names.mjs"
     },
+    "./clis/feature-flags": {
+      "source": "./clis/feature-flags.ts",
+      "import": "./dist/clis/feature-flags.mjs"
+    },
     "./clis/telemetry": {
       "source": "./clis/services/telemetry.ts",
       "import": "./dist/clis/services/telemetry.mjs"
