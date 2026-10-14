@@ -36,7 +36,7 @@ export type ComputedFieldSource = {
 };
 
 export const COMPUTED_FIELD_ROLE =
-  "computed field; bind it with field(Type.computed.name, { resolve })" as const;
+  "computed field; bind it with field(Type.computedTokens.name, { resolve })" as const;
 
 /**
  * A field whose value a resolver computes.
@@ -92,7 +92,7 @@ export type SourceObjectWithComputed<TMembers extends OutputMembers> = {
 /**
  * The stable token a computed field is bound through.
  *
- * `Object.computed.<field>` rather than a string: a rename is then a compile
+ * `Type.computedTokens.<field>` rather than a string: a rename is then a compile
  * error at the binding rather than a missing-binding diagnostic at build time.
  */
 export type ComputedToken<

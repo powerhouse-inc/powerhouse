@@ -336,13 +336,33 @@ export function createEntryBuilders<
             "Add subscribe, returning an AsyncIterable of the events this subscription emits.",
         });
       }
-    } else if (typeof resolve !== "function") {
-      failDefinition({
-        code: "PH-SG-ENTRY-INVALID",
-        path: ["options", "resolve"],
-        message: `${kind} ${JSON.stringify(key)} declares no resolve.`,
-        repair: "Add resolve.",
-      });
+      if (resolve !== undefined && typeof resolve !== "function") {
+        failDefinition({
+          code: "PH-SG-ENTRY-INVALID",
+          path: ["options", "resolve"],
+          message: `Subscription ${JSON.stringify(key)} declares a resolve that is not a function.`,
+          received: typeof resolve,
+          repair:
+            "Pass resolve as a function, or leave it out to read the field from each event.",
+        });
+      }
+    } else {
+      if (typeof resolve !== "function") {
+        failDefinition({
+          code: "PH-SG-ENTRY-INVALID",
+          path: ["options", "resolve"],
+          message: `${kind} ${JSON.stringify(key)} declares no resolve.`,
+          repair: "Add resolve.",
+        });
+      }
+      if (subscribe !== undefined) {
+        failDefinition({
+          code: "PH-SG-ENTRY-INVALID",
+          path: ["options", "subscribe"],
+          message: `${kind} ${JSON.stringify(key)} declares subscribe, which only a subscription has.`,
+          repair: "Remove subscribe, or declare the entry with subscription().",
+        });
+      }
     }
     return register({
       kind,
@@ -371,12 +391,14 @@ export function createEntryBuilders<
     subscription: (key: string, options: Record<string, unknown>) =>
       root("subscription", key, options),
     field: (token: AnyComputedToken, options: { resolve: unknown }) => {
+      const { kind, typeName, fieldName } =
+        token !== null && typeof token === "object"
+          ? token
+          : ({} as Partial<AnyComputedToken>);
       if (
-        token === null ||
-        typeof token !== "object" ||
-        token.kind !== "computed-token" ||
-        typeof token.typeName !== "string" ||
-        typeof token.fieldName !== "string"
+        kind !== "computed-token" ||
+        typeof typeName !== "string" ||
+        typeof fieldName !== "string"
       ) {
         failDefinition({
           code: "PH-SG-ENTRY-INVALID",
@@ -392,11 +414,7 @@ export function createEntryBuilders<
       );
       return register({
         kind: "computed-field",
-        token: Object.freeze({
-          kind: "computed-token" as const,
-          typeName: token.typeName,
-          fieldName: token.fieldName,
-        }),
+        token: Object.freeze({ kind, typeName, fieldName }),
         resolve: resolverOrFail(
           config.resolve,
           ["options", "resolve"],
