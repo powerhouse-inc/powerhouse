@@ -374,15 +374,22 @@ export function createEntryBuilders<
       if (
         token === null ||
         typeof token !== "object" ||
-        token.kind !== "computed-token"
+        token.kind !== "computed-token" ||
+        typeof token.typeName !== "string" ||
+        typeof token.fieldName !== "string"
       ) {
         failDefinition({
           code: "PH-SG-ENTRY-INVALID",
           path: ["token"],
-          message: "field() takes a token from Type.computed.",
-          repair: "Pass Type.computed.<field>, not a string.",
+          message: "field() takes a token from Type.computedTokens.",
+          repair: "Pass Type.computedTokens.<field>, not a string.",
         });
       }
+      const config = snapshotDescriptorOptions(
+        options,
+        ["resolve"],
+        ["options"],
+      );
       return register({
         kind: "computed-field",
         token: Object.freeze({
@@ -390,20 +397,24 @@ export function createEntryBuilders<
           typeName: token.typeName,
           fieldName: token.fieldName,
         }),
-        resolve: options.resolve as (call: never) => unknown,
+        resolve: resolverOrFail(
+          config.resolve,
+          ["options", "resolve"],
+          "field",
+        ),
       });
     },
     resolveType: (type: { readonly name: string | null }, resolve: unknown) =>
       register({
         kind: "resolve-type",
         typeName: namedOrFail(type, "resolveType"),
-        resolve: resolve as (call: never) => unknown,
+        resolve: resolverOrFail(resolve, ["resolve"], "resolveType"),
       }),
     isTypeOf: (type: { readonly name: string | null }, resolve: unknown) =>
       register({
         kind: "is-type-of",
         typeName: namedOrFail(type, "isTypeOf"),
-        resolve: resolve as (call: never) => unknown,
+        resolve: resolverOrFail(resolve, ["resolve"], "isTypeOf"),
       }),
     expose: (...types: readonly { readonly name: string | null }[]) => {
       // Call order is preserved: it is what decides definition order for
@@ -413,6 +424,23 @@ export function createEntryBuilders<
   } as unknown as EntryBuilders<TSubgraph, TRequest, TInfo, TAbstractType>;
 
   return { builders, exposed };
+}
+
+function resolverOrFail(
+  resolve: unknown,
+  path: readonly string[],
+  builder: string,
+): (call: never) => unknown {
+  if (typeof resolve !== "function") {
+    failDefinition({
+      code: "PH-SG-ENTRY-INVALID",
+      path,
+      message: `${builder}() declares no resolve.`,
+      received: typeof resolve,
+      repair: "Pass resolve: a function.",
+    });
+  }
+  return resolve as (call: never) => unknown;
 }
 
 function namedOrFail(

@@ -2,6 +2,7 @@ import type {
   DefinitionDiagnostic,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
+import { failDefinition } from "../diagnostics.js";
 import { snapshotDescriptorArray } from "../field-options.js";
 import type { ScalarBinding } from "../scalars/types.js";
 import { compileSubgraphSchema, rootFor } from "./ast.js";
@@ -114,12 +115,7 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
   const definitionOrder =
     config.definitionOrder === undefined
       ? undefined
-      : (snapshotDescriptorArray(
-          config.definitionOrder,
-          ["definitionOrder"],
-          "PH-SG-ENTRY-INVALID",
-          "List every emitted definition once, as an array of names.",
-        ) as readonly string[]);
+      : definitionNames(config.definitionOrder);
   const returned = snapshotDescriptorArray(
     config.entries(builders),
     ["entries"],
@@ -159,6 +155,28 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
       typedResolverMap(returned, subgraph as TSubgraph),
     checkResolvers: () => [],
   };
+}
+
+function definitionNames(value: unknown): readonly string[] {
+  const repair = "List every emitted definition once, as an array of names.";
+  const names = snapshotDescriptorArray(
+    value,
+    ["definitionOrder"],
+    "PH-SG-ENTRY-INVALID",
+    repair,
+  );
+  names.forEach((name, index) => {
+    if (typeof name !== "string") {
+      failDefinition({
+        code: "PH-SG-ENTRY-INVALID",
+        path: ["definitionOrder", index],
+        message: "definitionOrder lists definition names only.",
+        received: typeof name,
+        repair,
+      });
+    }
+  });
+  return names as readonly string[];
 }
 
 /**
