@@ -679,7 +679,7 @@ Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
 
 
 ### Options
-**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files. - Usage: `--out-dir <str>`
 
 **Default:** `dist`
 **Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
@@ -962,7 +962,7 @@ Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
 
 
 ### Options
-**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files. - Usage: `--out-dir <str>`
 
 **Default:** `dist`
 **Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`
@@ -1009,7 +1009,7 @@ that automatically sets the registry URL.
 **Source 
 Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
 
-**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files. - Usage: `--out-dir <str>`
 
 **Default:** `dist`
 
@@ -1215,7 +1215,7 @@ operator and fails with "no matches found".
 **Source 
 Definition source to select, written as './module.ts' or './module.ts#/exportName'. The part after '#' is an RFC 6901 pointer, where '~0' is '~' and '~1' is '/'. Repeat to select several. Quote the value. zsh with extendedglob reads an unquoted '#' as a glob operator. Passing any --source replaces all configured entries.** -  - Usage: `--source <str>`
 
-**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files. - Usage: `--out-dir <str>`
 
 **Default:** `dist`
 
@@ -1293,7 +1293,7 @@ Exit codes: 0 approved, 1 the declarations are wrong, 2 the check could not run.
 
 
 ### Options
-**Out Dir** - Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale. - Usage: `--out-dir <str>`
+**Out Dir** - Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files. - Usage: `--out-dir <str>`
 
 **Default:** `dist`
 **Config File** - Path to the powerhouse.config.json that selects the package. Its directory becomes the package root. - Usage: `--config-file <str>`

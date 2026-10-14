@@ -14,19 +14,30 @@ import {
 } from "document-model/tooling";
 import { createDiagnostic } from "document-model";
 import { relative, resolve, sep } from "node:path";
+import { statSync } from "node:fs";
 import { ViteTypeScriptSourceImportAdapter } from "./definitions/import-adapters.js";
 import {
   type GenerationResult,
   type GenerationSteps,
-  packageRevisionOf,
 } from "./definitions/generation.js";
+import { createGenerationSteps } from "./definitions/build-steps.js";
 import { defaultHostValidationFor } from "./definitions/host-validation.js";
-import { NON_INPUT_DIRECTORIES } from "./definitions/package-revision.js";
+import {
+  NON_INPUT_DIRECTORIES,
+  packageRevisionOf,
+} from "./definitions/package-revision.js";
+import {
+  canonicalPath,
+  pathWithin,
+  resolvePackagePaths,
+  scratchDirectory,
+} from "./definitions/paths.js";
 import {
   selectedPackageRoot,
   selectionRequest,
 } from "./definitions/selection.js";
 import type { DefinitionSelectionArgs, ModelCheckArgs } from "../types.js";
+import type { OutputInventory } from "./definitions/compiler.js";
 
 export class UsageError extends Error {
   constructor(message: string) {
@@ -210,6 +221,7 @@ function checkRequestFor(
 async function runReleaseCheck(
   args: ModelCheckArgs,
   options: RunModelCheckOptions,
+  onGeneration?: (result: GenerationResult) => void,
 ): Promise<DefinitionCheckReport> {
   const streams = options.streams ?? processStreams;
   return await withCapturedStdout(streams.err, async () => {
@@ -225,6 +237,7 @@ async function runReleaseCheck(
           ...(options.steps !== undefined && { steps: options.steps }),
         },
       );
+      onGeneration?.(result);
     } catch (error) {
       buildError = error;
     }
@@ -311,39 +324,113 @@ async function runEditCheck(
 
 const WATCH_DEBOUNCE_MS = 50;
 
+export function isIgnoredModelCheckPath(
+  packageRoot: string,
+  outDir: string,
+  filename: string,
+): boolean {
+  const path = resolve(packageRoot, filename);
+  const output = relative(packageRoot, resolve(packageRoot, outDir));
+  if (
+    filename.split(sep).some((part) => NON_INPUT_DIRECTORIES.includes(part)) ||
+    filename === output ||
+    filename.startsWith(`${output}${sep}`)
+  )
+    return true;
+  return (
+    pathWithin(
+      scratchDirectory(packageRoot),
+      canonicalPath(path, { resolveMissingLinks: true }),
+    ) !== null
+  );
+}
+
 export async function runModelCheckWatch(
   args: ModelCheckArgs,
   options: RunModelCheckOptions = {},
 ): Promise<number> {
-  const controller = createModelCheckWatch(args, options);
+  const steps = args.release
+    ? (options.steps ?? (await createGenerationSteps()))
+    : undefined;
+  const { packageRoot, outDir } = resolvePackagePaths({
+    packageRoot: selectedPackageRoot(args),
+    outDir: args.outDir,
+  });
+  const controller = createModelCheckWatch(args, {
+    ...options,
+    ...(steps !== undefined && { steps }),
+  });
+  const excludedOutputs = (): readonly string[] => {
+    const outputs = controller.compilerOutputs();
+    return outputs === undefined
+      ? []
+      : [...outputs.directories, ...outputs.files];
+  };
   const streams = options.streams ?? processStreams;
-  const packageRoot = selectedPackageRoot(args);
   const { watch } = await import("node:fs");
   let timer: NodeJS.Timeout | undefined;
-  let lastRevision = packageRevisionOf(packageRoot, args.outDir);
-  const output = relative(packageRoot, resolve(packageRoot, args.outDir));
+  let lastRevision: string | undefined;
+  let checking = false;
+  let stopped = false;
+  // Read through a call: the stop handler flips it while a check awaits.
+  const isStopped = (): boolean => stopped;
+  const dirtyPaths = new Set<string | null>();
   const reportFailure = (error: unknown): void => {
     if (error instanceof Error && error.name === "AbortError") return;
     streams.err(`${error instanceof Error ? error.message : String(error)}\n`);
   };
-  const checkChangedRevision = async (): Promise<void> => {
-    const revision = packageRevisionOf(packageRoot, args.outDir);
-    if (revision === lastRevision) return;
-    lastRevision = revision;
-    await controller.check();
+  const revision = (): string =>
+    packageRevisionOf(packageRoot, outDir, excludedOutputs());
+  const ignored = (filename: string): boolean =>
+    isIgnoredModelCheckPath(packageRoot, outDir, filename) ||
+    excludedOutputs().some((path) => {
+      const output = relative(packageRoot, resolve(packageRoot, path));
+      return (
+        filename === output ||
+        filename.startsWith(`${output}${sep}`) ||
+        (output.startsWith(`${filename}${sep}`) &&
+          statSync(resolve(packageRoot, filename), {
+            throwIfNoEntry: false,
+          })?.isDirectory() === true)
+      );
+    });
+  const checkChangedRevision = async (force = false): Promise<void> => {
+    if (checking || isStopped()) return;
+    if (!force && revision() === lastRevision) return;
+    checking = true;
+    try {
+      do {
+        dirtyPaths.clear();
+        lastRevision = revision();
+        const exclusions = JSON.stringify(excludedOutputs());
+        await controller.check().catch(reportFailure);
+        if (JSON.stringify(excludedOutputs()) === exclusions) {
+          force = revision() !== lastRevision;
+        } else {
+          // The first generation changes which compiler writes count as inputs.
+          force = [...dirtyPaths].some(
+            (path) => path === null || !ignored(path),
+          );
+          lastRevision = undefined;
+        }
+      } while (force && !isStopped());
+    } finally {
+      checking = false;
+    }
   };
   const watcher = watch(
     packageRoot,
     { recursive: true },
     (_event, filename) => {
-      if (filename !== null) {
-        const parts = filename.split(sep);
-        if (
-          parts.some((part) => NON_INPUT_DIRECTORIES.includes(part)) ||
-          filename === output ||
-          filename.startsWith(`${output}${sep}`)
-        )
-          return;
+      try {
+        if (filename !== null && ignored(filename)) return;
+      } catch (error) {
+        reportFailure(error);
+        return;
+      }
+      if (checking) {
+        dirtyPaths.add(filename);
+        return;
       }
       if (timer !== undefined) clearTimeout(timer);
       timer = setTimeout(() => {
@@ -351,11 +438,9 @@ export async function runModelCheckWatch(
       }, WATCH_DEBOUNCE_MS);
     },
   );
-
-  await controller.check().catch(reportFailure);
-
-  return await new Promise<number>((resolve) => {
+  const finished = new Promise<number>((resolve) => {
     const stop = () => {
+      stopped = true;
       if (timer !== undefined) clearTimeout(timer);
       watcher.close();
       process.off("SIGINT", stop);
@@ -365,11 +450,14 @@ export async function runModelCheckWatch(
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
   });
+  void checkChangedRevision(true).catch(reportFailure);
+  return await finished;
 }
 
 type WatchController = {
   readonly check: () => Promise<DefinitionCheckReport>;
   readonly close: () => Promise<void>;
+  readonly compilerOutputs: () => OutputInventory | undefined;
 };
 
 export function createModelCheckWatch(
@@ -382,12 +470,15 @@ export function createModelCheckWatch(
     new ViteTypeScriptSourceImportAdapter(),
   );
   let releaseWork = Promise.resolve();
+  let lastGeneration: GenerationResult | undefined;
   const session = new DefinitionCheckSession({
     ...(args.release && {
       run: (_request: DefinitionCheckRequest, signal: AbortSignal) => {
         const pending = releaseWork.then(async () => {
           signal.throwIfAborted();
-          const report = await runReleaseCheck(args, options);
+          const report = await runReleaseCheck(args, options, (result) => {
+            lastGeneration = result;
+          });
           signal.throwIfAborted();
           return report;
         });
@@ -404,6 +495,7 @@ export function createModelCheckWatch(
   });
 
   return {
+    compilerOutputs: () => lastGeneration?.compilerOutputs,
     check: () =>
       withCapturedStdout(streams.err, () =>
         session.request(checkRequestFor(args, loader)),

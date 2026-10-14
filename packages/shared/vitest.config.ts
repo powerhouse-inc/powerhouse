@@ -32,6 +32,7 @@ export default defineConfig({
       "clis/services/use-local.test.ts",
       "clis/source-config-schema.test.ts",
       "clis/file-system/get-config-strict.test.ts",
+      "clis/file-system/spawn-async.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
       "clis/args/vetra-ports.test.ts",

@@ -1,7 +1,20 @@
-import { spawnSync } from "node:child_process";
+import { getVersion } from "../../get-version.js";
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readlinkSync,
+  statSync,
+} from "node:fs";
+import { relative, resolve, sep } from "node:path";
+import {
+  canonicalPath,
+  resolvePackagePaths,
+  scratchDirectory,
+} from "./paths.js";
+import { walkFiles } from "./file-walk.js";
+export { PackageRevisionError } from "./file-walk.js";
 
 export const NON_INPUT_DIRECTORIES: readonly string[] = [
   "node_modules",
@@ -17,49 +30,12 @@ type PackageRevisionInput = {
   readonly excludedPaths?: readonly string[];
   readonly excludedDirectoryNames?: readonly string[];
   readonly respectGitignore?: boolean;
+  readonly preserveSymlinks?: boolean;
   readonly bindings: Readonly<Record<string, string>>;
 };
 
 export function toPosixPath(path: string): string {
   return path.split(sep).join("/");
-}
-
-function gitVisibleFiles(root: string): ReadonlySet<string> | undefined {
-  const listed = spawnSync(
-    "git",
-    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-    { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-  );
-  if (listed.status !== 0) return undefined;
-  return new Set(listed.stdout.split("\0").filter((path) => path !== ""));
-}
-
-function fileEntries(
-  root: string,
-  directory: string,
-  excluded: ReadonlySet<string>,
-  excludedNames: ReadonlySet<string>,
-  visible: ReadonlySet<string> | undefined,
-  into: string[],
-): void {
-  for (const entry of readdirSync(directory).sort()) {
-    const path = join(directory, entry);
-    if (excludedNames.has(entry) || excluded.has(relative(root, path)))
-      continue;
-    const stats = statSync(path, { throwIfNoEntry: false });
-    if (stats === undefined) continue;
-    if (stats.isDirectory()) {
-      fileEntries(root, path, excluded, excludedNames, visible, into);
-      continue;
-    }
-    if (!stats.isFile()) continue;
-    const packagePath = toPosixPath(relative(root, path));
-    if (visible !== undefined && !visible.has(packagePath)) continue;
-    const digest = createHash("sha256")
-      .update(readFileSync(path))
-      .digest("hex");
-    into.push(`${packagePath} ${digest}`);
-  }
 }
 
 export function filesDigest(
@@ -72,32 +48,72 @@ export function filesDigest(
     const digest = stats?.isFile()
       ? createHash("sha256").update(readFileSync(file)).digest("hex")
       : "absent";
-    return `${path} ${digest}`;
+    return [path, digest] as const;
   });
-  return `sha256:${createHash("sha256").update(entries.join("\n")).digest("hex")}`;
+  return fileEntriesDigest(entries);
+}
+
+export function fileEntriesDigest(
+  entries: readonly (readonly [string, string])[],
+): `sha256:${string}` {
+  return `sha256:${createHash("sha256")
+    .update(entries.map(([path, digest]) => `${path} ${digest}`).join("\n"))
+    .digest("hex")}`;
 }
 
 export function computePackageRevision(
   input: PackageRevisionInput,
 ): `sha256:${string}` {
-  const excluded = new Set(
-    (input.excludedPaths ?? []).map((path) =>
-      relative(input.packageRoot, resolve(input.packageRoot, path)),
-    ),
+  const excluded = (input.excludedPaths ?? []).map((path) =>
+    canonicalPath(resolve(input.packageRoot, path)),
   );
-  const entries: string[] = [];
-  fileEntries(
-    input.packageRoot,
-    input.packageRoot,
-    excluded,
-    new Set(input.excludedDirectoryNames ?? NON_INPUT_DIRECTORIES),
-    input.respectGitignore === true
-      ? gitVisibleFiles(input.packageRoot)
-      : undefined,
-    entries,
+  const entries = walkFiles(input.packageRoot, {
+    excludedPaths: excluded,
+    excludedDirectoryNames:
+      input.excludedDirectoryNames ?? NON_INPUT_DIRECTORIES,
+    respectGitignore: input.respectGitignore,
+    preserveSymlinks: input.preserveSymlinks,
+  }).map(
+    (path) =>
+      `${toPosixPath(relative(input.packageRoot, path))} ${createHash("sha256")
+        .update(
+          input.preserveSymlinks && lstatSync(path).isSymbolicLink()
+            ? `symlink:${readlinkSync(path)}`
+            : readFileSync(path),
+        )
+        .digest("hex")}`,
   );
   for (const key of Object.keys(input.bindings).sort()) {
     entries.push(`binding:${key} ${input.bindings[key]}`);
   }
   return `sha256:${createHash("sha256").update(entries.join("\n")).digest("hex")}`;
+}
+
+export function directoryDigest(root: string): string {
+  return existsSync(root)
+    ? computePackageRevision({
+        packageRoot: root,
+        excludedDirectoryNames: [],
+        preserveSymlinks: true,
+        bindings: {},
+      })
+    : "absent";
+}
+
+export function packageRevisionOf(
+  packageRoot: string,
+  outDir: string,
+  outputs: readonly string[] = [],
+): `sha256:${string}` {
+  const paths = resolvePackagePaths({ packageRoot, outDir });
+  return computePackageRevision({
+    packageRoot: paths.packageRoot,
+    excludedPaths: [
+      paths.outDir,
+      ...outputs,
+      scratchDirectory(paths.packageRoot),
+    ],
+    respectGitignore: true,
+    bindings: { compiler: getVersion() },
+  });
 }

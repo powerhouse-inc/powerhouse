@@ -11,9 +11,9 @@ import { createGenerationSteps } from "./definitions/build-steps.js";
 import {
   type GenerationResult,
   type GenerationSteps,
-  readRetainedApproval,
   runGeneration,
 } from "./definitions/generation.js";
+import { readRetainedApproval } from "./definitions/release-approval.js";
 import {
   canonicalConfigFile,
   resolvePackagePaths,
@@ -131,7 +131,7 @@ export async function runPrepack(
 ): Promise<GenerationResult> {
   const args = { ...hookArgs, ...publishSelection() };
   const log = options.log ?? writeStderr;
-  const retained = readRetainedApproval({
+  const retained = await readRetainedApproval({
     packageRoot: selectedPackageRoot(args),
     outDir: args.outDir,
     warningsAsErrors: args.warningsAsErrors,
@@ -144,6 +144,7 @@ export async function runPrepack(
       exitCode: 0,
       phases: [],
       report: retained.approval.report,
+      compilerOutputs: retained.approval.compilerOutputs,
     };
   }
   log(`▶ Running a release check: ${retained.reason}.\n`);

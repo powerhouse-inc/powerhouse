@@ -2,8 +2,19 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTypecheckStep } from "../../src/services/definitions/build-steps.js";
 
+import {
+  CompilePreflightError,
+  prepareCompile,
+} from "../../src/services/definitions/compiler.js";
+
 export async function emitFixture(packageRoot: string, emittedRoot: string) {
-  return await createTypecheckStep("npm")({ packageRoot, emittedRoot });
+  const preflight = await prepareCompile(packageRoot, "npm");
+  if (!preflight.ok) throw new CompilePreflightError(preflight.summary);
+  return await createTypecheckStep("npm")({
+    packageRoot,
+    emittedRoot,
+    plan: preflight.plan,
+  });
 }
 
 export function writeFixtureTsconfig(packageRoot: string): void {

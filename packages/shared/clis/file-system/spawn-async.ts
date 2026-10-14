@@ -38,12 +38,14 @@ export function spawnAsync(
     let stdout = "";
     let stderr = "";
 
-    child.stdout?.on("data", (d: Buffer) => {
-      stdout += d.toString();
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (d: string) => {
+      stdout += d;
     });
 
-    child.stderr?.on("data", (d: Buffer) => {
-      stderr += d.toString();
+    child.stderr?.on("data", (d: string) => {
+      stderr += d;
     });
 
     child.on("error", reject);

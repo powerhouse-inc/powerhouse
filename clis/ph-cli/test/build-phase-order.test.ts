@@ -22,12 +22,12 @@ import {
   runPublishCheck,
 } from "../src/services/build.js";
 import {
-  directoryDigest,
   GENERATION_DIRECTORY,
   type GenerationPhase,
   type GenerationSteps,
-  readRetainedApproval,
 } from "../src/services/definitions/generation.js";
+import { directoryDigest } from "../src/services/definitions/package-revision.js";
+import { readRetainedApproval } from "../src/services/definitions/release-approval.js";
 import { createTypecheckStep } from "../src/services/definitions/build-steps.js";
 import { selectedSourceSetDigest } from "../src/services/definitions/selection.js";
 import { writeFixtureTsconfig } from "./helpers/emit-fixture.js";
@@ -52,6 +52,18 @@ function withPriorOutput(fixture: string): {
     priorDigest: directoryDigest(dist),
     dispose: materialized.dispose,
   };
+}
+
+function expectPriorBundles(root: string): void {
+  expect(readFileSync(join(root, "dist", "node", "index.js"), "utf8")).toBe(
+    "export const shipped = 1;\n",
+  );
+  expect(readFileSync(join(root, "dist", "index.d.ts"), "utf8")).toBe(
+    "export declare const shipped: 1;\n",
+  );
+  expect(readFileSync(join(root, "dist", "tsconfig.tsbuildinfo"), "utf8")).toBe(
+    '{"version":"prior"}\n',
+  );
 }
 
 function buildArgsFor(root: string, configFile = "powerhouse.config.json") {
@@ -112,7 +124,7 @@ describe("phase order", () => {
 
 describe("opting into builds with type errors", () => {
   it.each(["control", "schema-first"])(
-    "permits the opt-in for %s and otherwise preserves prior output",
+    "permits the opt-in for %s while preserving prior bundles",
     async (name) => {
       const fixture = withPriorOutput(name);
       try {
@@ -139,9 +151,7 @@ describe("opting into builds with type errors", () => {
         const strict = await run(false);
         expect(strict.result.exitCode).toBe(2);
         expect(strict.recording.candidateWrites).toBe(0);
-        expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-          fixture.priorDigest,
-        );
+        expectPriorBundles(fixture.root);
 
         const allowed = await run(true);
         expect(allowed.result.exitCode).toBe(0);
@@ -164,7 +174,7 @@ describe("opting into builds with type errors", () => {
 });
 
 describe("what the promoted tree contains", () => {
-  it("publishes the declarations the compiler staged", async () => {
+  it("publishes the declarations the compiler wrote", async () => {
     const fixture = withPriorOutput("control");
     const recording = recorder();
     try {
@@ -248,9 +258,7 @@ describe("what a failure is allowed to touch", () => {
       expect(result.phases).toEqual(["typecheck"]);
       expect(recording.candidateWrites).toBe(0);
       expect(recording.promotions).toBe(0);
-      expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-        fixture.priorDigest,
-      );
+      expectPriorBundles(fixture.root);
     } finally {
       fixture.dispose();
     }
@@ -268,15 +276,13 @@ describe("what a failure is allowed to touch", () => {
       expect(result.phases).toEqual(["typecheck", "definitions"]);
       expect(recording.candidateWrites).toBe(0);
       expect(recording.promotions).toBe(0);
-      expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-        fixture.priorDigest,
-      );
+      expectPriorBundles(fixture.root);
     } finally {
       fixture.dispose();
     }
   }, 60_000);
 
-  it("keeps the prior output when a packed consumer fails, and only writes privately", async () => {
+  it("keeps prior bundles and the compiler output when a packed consumer fails", async () => {
     const fixture = withPriorOutput("control");
     const recording = recorder({ packedOk: false });
     try {
@@ -288,9 +294,7 @@ describe("what a failure is allowed to touch", () => {
       expect(recording.candidateWrites).toBe(1);
       expect(recording.promotions).toBe(0);
       expect(readdirSync(join(fixture.root, GENERATION_DIRECTORY))).toEqual([]);
-      expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-        fixture.priorDigest,
-      );
+      expectPriorBundles(fixture.root);
     } finally {
       fixture.dispose();
     }
@@ -338,7 +342,7 @@ describe("what a failure is allowed to touch", () => {
 });
 
 describe("unregistered code-first definitions", () => {
-  it("builds a package without a config through the staged build, and refuses one that holds a code-first definition", async () => {
+  it("builds a package without a config through the build pipeline, and refuses one that holds a code-first definition", async () => {
     const fixture = withPriorOutput("schema-first");
     const enteredFrom = process.cwd();
     rmSync(join(fixture.root, "powerhouse.config.json"));
@@ -397,9 +401,7 @@ describe("unregistered code-first definitions", () => {
         "PH-CONFIG-SOURCE-UNREGISTERED",
       ]);
       expect(recording.promotions).toBe(0);
-      expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-        fixture.priorDigest,
-      );
+      expectPriorBundles(fixture.root);
     } finally {
       fixture.dispose();
     }
@@ -421,7 +423,7 @@ describe("the compatibility window", () => {
       expect(logged.join("")).toContain(
         "ℹ This package lists no code-first definitionSources; no definition was checked.\n",
       );
-      expect(retained(fixture.root)).toEqual({
+      expect(await retained(fixture.root)).toEqual({
         ok: false,
         reason: "no completed release check was retained",
       });
@@ -440,7 +442,7 @@ describe("the compatibility window", () => {
       });
       expect(result.exitCode).toBe(0);
       expect(recording.promotions).toBe(1);
-      expect(retained(fixture.root)).toEqual({
+      expect(await retained(fixture.root)).toEqual({
         ok: false,
         reason: "no completed release check was retained",
       });
@@ -478,9 +480,7 @@ describe("the compatibility window", () => {
         expect(result.exitCode, configFile).toBe(2);
         expect(recording.candidateWrites, configFile).toBe(0);
         expect(recording.promotions, configFile).toBe(0);
-        expect(directoryDigest(join(fixture.root, "dist")), configFile).toBe(
-          fixture.priorDigest,
-        );
+        expectPriorBundles(fixture.root);
       }
     } finally {
       fixture.dispose();
@@ -503,7 +503,7 @@ describe("the compatibility window", () => {
       });
       expect(result.exitCode).toBe(0);
       expect(result.report?.sourceSet.origin).toBe("cli");
-      const check = retained(fixture.root, {
+      const check = await retained(fixture.root, {
         sourceSetDigest: selectedSourceSetDigest(args),
       });
       expect(check.ok && check.approval.report.profile).toBe("release");
@@ -591,7 +591,7 @@ describe("the retained release approval", () => {
         join(fixture.root, "src", "helper.ts"),
         "export const normalizeTitle = (t: string) => t.toUpperCase();\n",
       );
-      expect(retained(fixture.root)).toEqual({
+      expect(await retained(fixture.root)).toEqual({
         ok: false,
         reason: "the package changed since that check",
       });
@@ -618,12 +618,12 @@ describe("the retained release approval", () => {
         log: silent,
       });
       writeFileSync(join(fixture.root, "debug.log"), "noise\n");
-      expect(retained(fixture.root).ok).toBe(true);
+      expect((await retained(fixture.root)).ok).toBe(true);
       writeFileSync(
         join(fixture.root, "src", "helper.ts"),
         "export const normalizeTitle = (t: string) => t.toUpperCase();\n",
       );
-      expect(retained(fixture.root)).toEqual({
+      expect(await retained(fixture.root)).toEqual({
         ok: false,
         reason: "a compiled source changed since that check",
       });
@@ -646,7 +646,7 @@ describe("the retained release approval", () => {
       ]);
       mkdirSync(join(fixture.root, ".ph"), { recursive: true });
       writeFileSync(join(fixture.root, ".ph", "read-model.db"), "rows");
-      expect(retained(fixture.root).ok).toBe(true);
+      expect((await retained(fixture.root)).ok).toBe(true);
     } finally {
       fixture.dispose();
     }
@@ -661,11 +661,13 @@ describe("a retained approval with one binding changed", () => {
   const editApproval = (
     edit: (approval: {
       compilerVersion: string;
+      sourceSetDigest?: string;
       report: { profile: string };
     }) => void,
   ) => {
     const approval = JSON.parse(readFileSync(approvalFile(), "utf-8")) as {
       compilerVersion: string;
+      sourceSetDigest?: string;
       report: { profile: string };
     };
     edit(approval);
@@ -735,24 +737,36 @@ describe("a retained approval with one binding changed", () => {
       reason: "the retained release check is unreadable",
     },
     {
+      binding: "the approval's source-set binding",
+      change: () =>
+        editApproval((approval) => {
+          delete approval.sourceSetDigest;
+        }),
+      reason: "the retained release check is malformed",
+    },
+    {
       binding: "the approval's shape",
       change: () => writeFileSync(approvalFile(), '{"kind":"something-else"}'),
       reason: "the retained release check is malformed",
     },
-  ])("is rejected when $binding changes", ({ change, reason }) => {
-    const saved = [approvalFile(), shippedFile()].map(
-      (path) => [path, readFileSync(path)] as const,
-    );
-    expect(retained(fixture.root).ok).toBe(true);
-    try {
-      expect(retained(fixture.root, change() ?? {})).toEqual({
-        ok: false,
-        reason,
-      });
-    } finally {
-      for (const [path, bytes] of saved) writeFileSync(path, bytes);
-    }
-  });
+  ])(
+    "is rejected when $binding changes",
+    async ({ change, reason }) => {
+      const saved = [approvalFile(), shippedFile()].map(
+        (path) => [path, readFileSync(path)] as const,
+      );
+      expect((await retained(fixture.root)).ok).toBe(true);
+      try {
+        expect(await retained(fixture.root, change() ?? {})).toEqual({
+          ok: false,
+          reason,
+        });
+      } finally {
+        for (const [path, bytes] of saved) writeFileSync(path, bytes);
+      }
+    },
+    30_000,
+  );
 });
 
 describe("a nested package", () => {
@@ -984,9 +998,7 @@ describe("the scaffolded prepack hook", () => {
         expect(packed.status, packed.output).toBe(1);
         expect(packed.output).toContain("invalid (release profile");
         expect(packed.tarballs).toEqual([]);
-        expect(directoryDigest(join(fixture.root, "dist"))).toBe(
-          fixture.priorDigest,
-        );
+        expectPriorBundles(fixture.root);
       } finally {
         fixture.dispose();
       }
@@ -1094,7 +1106,7 @@ describe("release artifact regressions", () => {
     }
   }, 60_000);
 
-  it("loads definitions and stages declarations with rootDir src", async () => {
+  it("loads definitions and writes declarations with rootDir src", async () => {
     const fixture = withPriorOutput("control");
     try {
       const config = JSON.parse(
@@ -1173,7 +1185,7 @@ describe("nested published layouts", () => {
     }
   }, 60_000);
 
-  it("stages declarations published directly at the output root", async () => {
+  it("publishes declarations directly at the output root", async () => {
     const fixture = withPriorOutput("control");
     try {
       const config = JSON.parse(

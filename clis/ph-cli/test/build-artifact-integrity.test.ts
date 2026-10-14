@@ -11,51 +11,46 @@ import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { materializeFixturePackage } from "../../../packages/document-model/test/tooling/loader-contract.js";
 import { runBuild } from "../src/services/build.js";
-import {
-  createGenerationSteps,
-  promoteCandidate,
-} from "../src/services/definitions/build-steps.js";
+import { createGenerationSteps } from "../src/services/definitions/build-steps.js";
 import {
   assertOutputDirectory,
-  directoryDigest,
-  GENERATION_DIRECTORY,
   type GenerationSteps,
-  packageRevisionOf,
   runGeneration,
 } from "../src/services/definitions/generation.js";
-import { toPosixPath } from "../src/services/definitions/package-revision.js";
+import {
+  directoryDigest,
+  packageRevisionOf,
+  toPosixPath,
+} from "../src/services/definitions/package-revision.js";
 import { runModelCheck } from "../src/services/model-check.js";
 import { emitFixture, writeFixtureTsconfig } from "./helpers/emit-fixture.js";
 import { recorder } from "./helpers/recorder.js";
 
 describe("physical output containment", () => {
   it.each(["dist", "new/deep/dist"])(
-    "refuses linked parents for %s at promotion",
-    (outDir) => {
+    "refuses linked output parents for %s before building",
+    async (outDir) => {
       const fixture = materializeFixturePackage("control");
       const outside = materializeFixturePackage("control");
       try {
         const parent = join(fixture.root, "linked");
-        const candidateRoot = join(
-          fixture.root,
-          GENERATION_DIRECTORY,
-          "candidate",
-        );
-        mkdirSync(candidateRoot, { recursive: true });
-        writeFileSync(
-          join(candidateRoot, "index.js"),
-          "export const candidate = true;",
-        );
         mkdirSync(join(outside.root, "dist"));
         writeFileSync(join(outside.root, "dist", "keep"), "prior output");
         symlinkSync(outside.root, parent);
-        expect(() =>
-          promoteCandidate({
-            packageRoot: fixture.root,
-            candidateRoot,
-            outDir: `linked/${outDir}`,
-          }),
-        ).toThrow(/--out-dir/);
+        await expect(
+          runBuild(
+            {
+              configFile: join(fixture.root, "powerhouse.config.json"),
+              outDir: `linked/${outDir}`,
+              source: [],
+              warningsAsErrors: false,
+              noSharedDeps: false,
+              ignoreTypeErrors: false,
+              debug: false,
+            },
+            { steps: recorder().steps, log: () => undefined },
+          ),
+        ).rejects.toThrow(/--out-dir/);
         expect(readFileSync(join(outside.root, "dist", "keep"), "utf8")).toBe(
           "prior output",
         );

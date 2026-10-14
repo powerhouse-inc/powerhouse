@@ -398,7 +398,8 @@ describe("runBuild on a package that only lists a piece", () => {
     expect(messages.join("")).toContain(
       'pieces: "@fixture/piece-gone" declares dist/node/pieces/gone/index.mjs, which is missing',
     );
-    expect(existsSync(join(fixture, "dist"))).toBe(false);
+    expect(existsSync(join(fixture, "dist", "node"))).toBe(false);
+    expect(existsSync(join(fixture, "dist", "types"))).toBe(true);
   }, 120_000);
 });
 

@@ -567,7 +567,7 @@ and shared browser dependencies are externalized unless --no-shared-deps is set.
 Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
 ### options
 #### Out Dir <br>
-Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.<br><br>
+Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files.<br><br>
 **usage:** `--out-dir <str>`<br>
 **default**: `dist`
 #### Config File <br>
@@ -954,7 +954,7 @@ and shared browser dependencies are externalized unless --no-shared-deps is set.
 Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
 ### options
 #### Out Dir <br>
-Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.<br><br>
+Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files.<br><br>
 **usage:** `--out-dir <str>`<br>
 **default**: `dist`
 #### Config File <br>
@@ -1012,7 +1012,7 @@ Definition source to select, written as './module.ts' or './module.ts#/exportNam
 **usage:** `--source <str>`<br>
 
 #### Out Dir <br>
-Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.<br><br>
+Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files.<br><br>
 **usage:** `--out-dir <str>`<br>
 **default**: `dist`
 
@@ -1213,7 +1213,7 @@ Definition source to select, written as './module.ts' or './module.ts#/exportNam
 **usage:** `--source <str>`<br>
 
 #### Out Dir <br>
-Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.<br><br>
+Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files.<br><br>
 **usage:** `--out-dir <str>`<br>
 **default**: `dist`
 
@@ -1294,7 +1294,7 @@ completed when that generation still covers this tree, and runs one otherwise.
 Exit codes: 0 approved, 1 the declarations are wrong, 2 the check could not run.
 ### options
 #### Out Dir <br>
-Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.<br><br>
+Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files.<br><br>
 **usage:** `--out-dir <str>`<br>
 **default**: `dist`
 #### Config File <br>

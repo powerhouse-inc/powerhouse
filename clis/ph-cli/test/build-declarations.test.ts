@@ -1,9 +1,8 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { declarationLayout } from "../src/services/definitions/build-steps.js";
 import {
   cleanUp,
   packageWith,
@@ -278,80 +277,4 @@ describe("declarations byte for byte as tsc writes them", () => {
     },
     120_000,
   );
-});
-
-describe("the declaration layout a tsconfig asks for", () => {
-  const packageRoot = resolve("/work/pkg");
-  const scratch = resolve(packageRoot, ".ph/build/types/0");
-  it.each<{
-    options: Record<string, unknown>;
-    flags: string[];
-    directory: string | null;
-  }>([
-    {
-      options: { declaration: true, rootDir: ".", declarationDir: "./types" },
-      flags: ["--declarationDir", scratch, "--emitDeclarationOnly", "false"],
-      directory: resolve(packageRoot, "types"),
-    },
-    {
-      options: { declaration: true, outDir: "./dist" },
-      flags: ["--declarationDir", scratch, "--emitDeclarationOnly", "false"],
-      directory: resolve(packageRoot, "dist"),
-    },
-    {
-      options: { composite: true, rootDir: "src", outDir: "./lib" },
-      flags: ["--declarationDir", scratch, "--emitDeclarationOnly", "false"],
-      directory: resolve(packageRoot, "lib"),
-    },
-    {
-      options: { declaration: true },
-      flags: [
-        "--declarationDir",
-        scratch,
-        "--emitDeclarationOnly",
-        "false",
-        "--rootDir",
-        packageRoot,
-      ],
-      directory: packageRoot,
-    },
-    {
-      options: { declaration: true, rootDir: ".." },
-      flags: ["--declarationDir", scratch, "--emitDeclarationOnly", "false"],
-      directory: resolve(packageRoot, ".."),
-    },
-    {
-      options: { declaration: true, noEmit: true, declarationDir: "./types" },
-      flags: [
-        "--declarationDir",
-        scratch,
-        "--emitDeclarationOnly",
-        "false",
-        "--rootDir",
-        packageRoot,
-      ],
-      directory: null,
-    },
-    {
-      options: { noEmit: true, outDir: "./dist" },
-      flags: ["--rootDir", packageRoot],
-      directory: null,
-    },
-    {
-      options: { composite: true, declaration: false, declarationDir: "../x" },
-      flags: ["--declarationDir", scratch, "--emitDeclarationOnly", "false"],
-      directory: resolve(packageRoot, "../x"),
-    },
-    {
-      options: { declaration: false, outDir: "./dist" },
-      flags: [],
-      directory: null,
-    },
-    { options: {}, flags: ["--rootDir", packageRoot], directory: null },
-  ])("$options", ({ options, flags, directory }) => {
-    expect(declarationLayout(options, packageRoot, scratch)).toEqual({
-      flags,
-      directory,
-    });
-  });
 });

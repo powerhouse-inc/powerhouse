@@ -82,7 +82,7 @@ describe("the release check and declarations outside the output directory", () =
   }, 120_000);
 
   it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
-    "fails without a release check when the declarations cannot be written after promotion",
+    "fails before bundling when tsc cannot write the declarations",
     async () => {
       const root = packageWith("code-first");
       writeTsconfig(root, { declaration: true, declarationDir: "./types" });
@@ -92,9 +92,7 @@ describe("the release check and declarations outside the output directory", () =
 
       const result = await build(root, "code-first");
       expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        "The output was promoted, but the declarations outside it could not be written: EACCES",
-      );
+      expect(result.log).toContain("TS5033");
       expect(
         existsSync(join(root, ".ph", "build", "release-approval.json")),
       ).toBe(false);

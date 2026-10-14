@@ -1,4 +1,4 @@
-import { lstatSync, realpathSync } from "node:fs";
+import { lstatSync, readlinkSync, realpathSync } from "node:fs";
 import {
   basename,
   dirname,
@@ -9,7 +9,10 @@ import {
   sep,
 } from "node:path";
 
-export function canonicalPath(path: string): string {
+export function canonicalPath(
+  path: string,
+  options: { readonly resolveMissingLinks?: boolean } = {},
+): string {
   const absolute = resolve(path);
   let ancestor = absolute;
   while (lstatSync(ancestor, { throwIfNoEntry: false }) === undefined) {
@@ -17,7 +20,22 @@ export function canonicalPath(path: string): string {
     if (parent === ancestor) break;
     ancestor = parent;
   }
-  return resolve(realpathSync.native(ancestor), relative(ancestor, absolute));
+  let canonical: string;
+  try {
+    canonical = realpathSync.native(ancestor);
+  } catch (error) {
+    if (
+      options.resolveMissingLinks !== true ||
+      !(error instanceof Error && "code" in error && error.code === "ENOENT") ||
+      !lstatSync(ancestor, { throwIfNoEntry: false })?.isSymbolicLink()
+    )
+      throw error;
+    canonical = canonicalPath(
+      resolve(dirname(ancestor), readlinkSync(ancestor)),
+      options,
+    );
+  }
+  return resolve(canonical, relative(ancestor, absolute));
 }
 
 export function pathWithin(root: string, path: string): string | null {
@@ -57,4 +75,30 @@ export function resolvePackagePaths(request: {
     }
   }
   return { packageRoot, outDir: outDir ?? relative(packageRoot, output) };
+}
+
+export class ScratchDirectoryError extends Error {}
+
+// Where the build's scratch directory lives once `.ph/build` is recreated:
+// `.ph` resolved, the final entry not, since a `build` link is replaced.
+export function scratchDirectory(packageRoot: string): string {
+  let parent: string;
+  try {
+    parent = canonicalPath(join(packageRoot, ".ph"), {
+      resolveMissingLinks: true,
+    });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new ScratchDirectoryError(
+        `Directory symlink cycle at ".ph"; package inputs cannot be read.`,
+      );
+    }
+    throw error;
+  }
+  if (pathWithin(canonicalPath(packageRoot), parent) === null) {
+    throw new ScratchDirectoryError(
+      `ph build never writes outside the package root; .ph resolves to ${JSON.stringify(parent)}.`,
+    );
+  }
+  return join(parent, "build");
 }

@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { materializeFixturePackage } from "../../../packages/document-model/test/tooling/loader-contract.js";
+import { declarationSnapshot, plainCompile } from "./helpers/workspace.js";
 import { runBuild, runPrepack } from "../src/services/build.js";
 
 describe("building through a symlinked package root", () => {
@@ -88,6 +89,7 @@ describe("building through a symlinked package root", () => {
                 moduleResolution: "nodenext",
                 target: "esnext",
                 ...(layout === "absolute source root" && { sourceRoot: root }),
+                sourceMap: true,
                 declaration: true,
                 declarationMap: true,
                 ...(layout === "absolute compiler output"
@@ -107,6 +109,9 @@ describe("building through a symlinked package root", () => {
         };
         const build = async (root: string) => {
           configure(root);
+          const main = plainCompile(fixture.root);
+          expect(main.status, main.output).toBe(0);
+          const declarations = declarationSnapshot(fixture.root);
           const messages: string[] = [];
           const result = await runBuild(
             {
@@ -143,6 +148,7 @@ describe("building through a symlinked package root", () => {
               .sort()
               .map((file) => [file, readFileSync(join(dist, file))]),
           );
+          expect(declarationSnapshot(fixture.root)).toEqual(declarations);
           expect(artifacts).toHaveProperty(`types/${sources}/invoice.d.ts`);
           expect(artifacts).toHaveProperty(`types/${sources}/invoice.d.ts.map`);
           expect(artifacts).toHaveProperty("node/index.mjs");
@@ -155,7 +161,15 @@ describe("building through a symlinked package root", () => {
         const direct = await build(fixture.root);
         rmSync(join(fixture.root, "dist"), { recursive: true, force: true });
         const linked = await build(alias);
-        expect(linked).toEqual(direct);
+        expect(linked.result).toEqual(direct.result);
+        const bundles = (artifacts: typeof direct.artifacts) =>
+          Object.fromEntries(
+            Object.entries(artifacts).filter(
+              ([file]) =>
+                file.startsWith("browser/") || file.startsWith("node/"),
+            ),
+          );
+        expect(bundles(linked.artifacts)).toEqual(bundles(direct.artifacts));
         for (const root of [fixture.root, alias]) {
           const messages: string[] = [];
           const retained = await runPrepack(

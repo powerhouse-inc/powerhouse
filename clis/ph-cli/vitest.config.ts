@@ -7,7 +7,7 @@ export default defineConfig({
       deps: {
         // vitest inlines workspace links. Emitted definition modules import
         // `document-model` through Node, so an inlined copy is a second instance.
-        external: ["document-model"],
+        external: ["document-model", /\/node-import\.mjs$/],
       },
     },
   },

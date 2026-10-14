@@ -1,8 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { promoteCandidate } from "../../src/services/definitions/build-steps.js";
+import {
+  createTypecheckStep,
+  promoteCandidate,
+} from "../../src/services/definitions/build-steps.js";
+import { prepareCompile } from "../../src/services/definitions/compiler.js";
 import type { GenerationSteps } from "../../src/services/definitions/generation.js";
-import { emitFixture } from "./emit-fixture.js";
 
 export type Recorder = {
   readonly steps: GenerationSteps;
@@ -22,12 +25,14 @@ export function recorder(
   const calls: string[] = [];
   const state = { candidateWrites: 0, promotions: 0 };
   const steps: GenerationSteps = {
-    typecheck: async ({ packageRoot, emittedRoot }) => {
+    preflight: (packageRoot, loadDefinitions) =>
+      prepareCompile(packageRoot, "npm", loadDefinitions),
+    typecheck: async (request) => {
       calls.push("typecheck");
       if (options.typecheckOk === false) {
         return { ok: false, summary: "2 type errors" };
       }
-      return await emitFixture(packageRoot, emittedRoot);
+      return await createTypecheckStep("npm")(request);
     },
     emitCandidate: ({ candidateRoot }) => {
       calls.push("candidate");

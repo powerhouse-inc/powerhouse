@@ -4,18 +4,21 @@ import fs, {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
 import { setTimeout as delay } from "node:timers/promises";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import { materializeFixturePackage } from "../../../packages/document-model/test/tooling/loader-contract.js";
 import {
   GENERATION_DIRECTORY,
   type GenerationSteps,
 } from "../src/services/definitions/generation.js";
-import { emitFixture, writeFixtureTsconfig } from "./helpers/emit-fixture.js";
+import { writeFixtureTsconfig } from "./helpers/emit-fixture.js";
 import { recordStreams } from "./helpers/streams.js";
 import {
   createModelCheckWatch,
@@ -26,6 +29,11 @@ import {
   withCapturedStdout,
 } from "../src/services/model-check.js";
 import type { ModelCheckArgs } from "../src/types.js";
+import { prepareCompile } from "../src/services/definitions/compiler.js";
+import { createTypecheckStep } from "../src/services/definitions/build-steps.js";
+import { z } from "zod";
+import { build, cleanUp, itWithSymlinks } from "./helpers/declarations.js";
+import { mutableCases, mutableRuntime } from "./helpers/loader-cases.js";
 
 function checkArgs(overrides: Partial<ModelCheckArgs>): ModelCheckArgs {
   return {
@@ -367,8 +375,9 @@ describe("source selection through the command", () => {
 
 function releaseSteps(): GenerationSteps {
   return {
-    typecheck: async ({ packageRoot, emittedRoot }) =>
-      await emitFixture(packageRoot, emittedRoot),
+    preflight: (packageRoot, loadDefinitions) =>
+      prepareCompile(packageRoot, "npm", loadDefinitions),
+    typecheck: createTypecheckStep("npm"),
     emitCandidate: ({ candidateRoot }) => {
       mkdirSync(join(candidateRoot, "node"), { recursive: true });
       writeFileSync(
@@ -489,7 +498,7 @@ describe("the release profile through the command", () => {
         diagnostics: [
           expect.objectContaining({
             code: "PH-PKG-RELEASE-EVIDENCE-MISSING",
-            message: `tsc would write the declaration ${JSON.stringify(join(fixture.root, ".ph", "build", "types-out", "src", "catalog.d.ts"))} inside .ph/build, which every build clears.`,
+            message: `tsc would write to ${JSON.stringify(join(fixture.root, ".ph", "build", "types-out"))} inside .ph/build, which every build clears.`,
             repair:
               "Resolve the reported build failure and rerun the release check on an unchanged package.",
           }),
@@ -551,7 +560,13 @@ describe("the release profile through the command", () => {
       expect(report.profile).toBe("release");
       expect(report.status).toBe("ok");
       expect(code).toBe(0);
-      expect(readdirSync(join(fixture.root, "dist"))).toEqual(["shipped.js"]);
+      expect(readdirSync(join(fixture.root, "dist")).sort()).toEqual([
+        "shipped.js",
+        "types",
+      ]);
+      expect(
+        readFileSync(join(fixture.root, "dist", "shipped.js"), "utf8"),
+      ).toBe("export const a = 1;\n");
       expect(
         existsSync(
           join(fixture.root, GENERATION_DIRECTORY, "release-approval.json"),
@@ -605,12 +620,197 @@ describe("watch stream discipline", () => {
 });
 
 describe("watch", () => {
+  it.each(["ordinary edit", "mtime-preserving replacement"])(
+    "rechecks exactly once after %s during the first release check",
+    async (change) => {
+      const fixture = materializeFixturePackage("control");
+      writeFixtureTsconfig(fixture.root);
+      await delay(500);
+      const entered = Promise.withResolvers<void>();
+      const finish = Promise.withResolvers<void>();
+      const steps = releaseSteps();
+      const reports: DefinitionCheckReport[] = [];
+      let checks = 0;
+      const watching = runModelCheckWatch(
+        checkArgs({
+          configFile: join(fixture.root, "powerhouse.config.json"),
+          watch: true,
+          release: true,
+          jsonLines: true,
+        }),
+        {
+          steps: {
+            ...steps,
+            emitCandidate: async (request) => {
+              checks += 1;
+              if (checks === 1) {
+                entered.resolve();
+                await finish.promise;
+              }
+              return await steps.emitCandidate(request);
+            },
+          },
+          streams: {
+            out: (text) =>
+              reports.push(JSON.parse(text) as DefinitionCheckReport),
+            err: () => undefined,
+          },
+        },
+      );
+      try {
+        await entered.promise;
+        const source = join(fixture.root, "src", "invoice.ts");
+        const before = statSync(source);
+        const edited = readFileSync(source, "utf8").replaceAll(
+          '"test/invoice"',
+          '"test/invoice-edited"',
+        );
+        if (change === "mtime-preserving replacement") {
+          writeFileSync(
+            join(fixture.root, GENERATION_DIRECTORY, "replacement.ts"),
+            edited,
+          );
+          utimesSync(
+            join(fixture.root, GENERATION_DIRECTORY, "replacement.ts"),
+            before.atime,
+            before.mtime,
+          );
+          renameSync(
+            join(fixture.root, GENERATION_DIRECTORY, "replacement.ts"),
+            source,
+          );
+        } else writeFileSync(source, edited);
+        await delay(150);
+        finish.resolve();
+        await vi.waitFor(
+          () =>
+            expect(reports.map((report) => report.status)).toEqual([
+              "failed",
+              "ok",
+            ]),
+          { timeout: 15_000 },
+        );
+        expect(
+          reports[1]?.definitions.map((definition) => definition.key),
+        ).toEqual(["test/invoice-edited", "test/invoice-edited"]);
+        await delay(200);
+        expect(checks).toBe(2);
+      } finally {
+        finish.resolve();
+        await vi.waitFor(
+          () => expect(process.listenerCount("SIGINT")).toBeGreaterThan(0),
+          { timeout: 15_000 },
+        );
+        process.emit("SIGINT");
+        await watching;
+        fixture.dispose();
+      }
+    },
+    60_000,
+  );
+
+  it.each(["first", "later"])(
+    "rechecks an edit after the %s report when its event arrives late",
+    async (generation) => {
+      const fixture = materializeFixturePackage("control");
+      writeFixtureTsconfig(fixture.root);
+      const source = join(fixture.root, "src", "invoice.ts");
+      const originalWatch = fs.watch;
+      let emitSourceChange: (() => void) | undefined;
+      const watchSpy = vi
+        .spyOn(fs, "watch")
+        .mockImplementation((...args: Parameters<typeof fs.watch>) => {
+          const listener = args.at(-1);
+          if (typeof listener !== "function") return originalWatch(...args);
+          emitSourceChange = () => listener("change", "src/invoice.ts");
+          return originalWatch(
+            fixture.root,
+            { recursive: true },
+            (event, filename) => {
+              if (filename !== "src/invoice.ts") listener(event, filename);
+            },
+          );
+        });
+      syncBuiltinESMExports();
+      const reports: DefinitionCheckReport[] = [];
+      const watching = runModelCheckWatch(
+        checkArgs({
+          configFile: join(fixture.root, "powerhouse.config.json"),
+          watch: true,
+          release: true,
+          jsonLines: true,
+        }),
+        {
+          steps: releaseSteps(),
+          streams: {
+            err: () => undefined,
+            out: (text) => {
+              reports.push(JSON.parse(text) as DefinitionCheckReport);
+              if (reports.length === (generation === "first" ? 1 : 2)) {
+                writeFileSync(
+                  source,
+                  readFileSync(source, "utf8").replaceAll(
+                    generation === "first"
+                      ? '"test/invoice"'
+                      : '"test/invoice-mid"',
+                    '"test/invoice-late"',
+                  ),
+                );
+              }
+            },
+          },
+        },
+      );
+      try {
+        await vi.waitFor(() => expect(reports).toHaveLength(1), {
+          timeout: 30_000,
+        });
+        if (generation === "later") {
+          writeFileSync(
+            source,
+            readFileSync(source, "utf8").replaceAll(
+              '"test/invoice"',
+              '"test/invoice-mid"',
+            ),
+          );
+          emitSourceChange?.();
+          await vi.waitFor(() => expect(reports).toHaveLength(2), {
+            timeout: 30_000,
+          });
+        }
+        emitSourceChange?.();
+        await vi.waitFor(
+          () => expect(reports).toHaveLength(generation === "first" ? 2 : 3),
+          {
+            timeout: 15_000,
+          },
+        );
+        expect(reports.map((report) => report.status)).toEqual(
+          generation === "first" ? ["ok", "ok"] : ["ok", "ok", "ok"],
+        );
+        expect(
+          reports.at(-1)?.definitions.map((definition) => definition.key),
+        ).toEqual(["test/invoice-late", "test/invoice-late"]);
+      } finally {
+        process.emit("SIGINT");
+        await watching;
+        watchSpy.mockRestore();
+        syncBuiltinESMExports();
+        fixture.dispose();
+      }
+    },
+    60_000,
+  );
+
   it("reacts to real source edits without watching its own release artifacts", async () => {
     const fixture = materializeFixturePackage("control");
     writeFixtureTsconfig(fixture.root);
+    mkdirSync(join(fixture.root, "build", "dist"), { recursive: true });
+    await delay(500);
     const published: DefinitionCheckReport[] = [];
     const steps = releaseSteps();
     let compilations = 0;
+    let preflights = 0;
     const signalListeners = process.listenerCount("SIGINT");
     let stopped = false;
     const originalWatch = fs.watch;
@@ -636,6 +836,10 @@ describe("watch", () => {
       {
         steps: {
           ...steps,
+          preflight: async (...request) => {
+            preflights += 1;
+            return await steps.preflight(...request);
+          },
           typecheck: async (request) => {
             compilations += 1;
             return await steps.typecheck(request);
@@ -660,9 +864,9 @@ describe("watch", () => {
       mkdirSync(join(fixture.root, "build", "dist"), { recursive: true });
       writeFileSync(join(fixture.root, "build", "dist", "noise.js"), "");
       writeFileSync(join(fixture.root, GENERATION_DIRECTORY, "noise.txt"), "");
-      emitUnknownChange?.();
       await delay(200);
       expect(compilations).toBe(1);
+      expect(preflights).toBe(1);
       expect(published.map((report) => report.status)).toEqual(["ok"]);
       const source = join(fixture.root, "src", "invoice.ts");
       writeFileSync(
@@ -678,6 +882,10 @@ describe("watch", () => {
         },
         { timeout: 30_000 },
       );
+      emitUnknownChange?.();
+      await delay(200);
+      expect(compilations).toBe(2);
+      expect(preflights).toBe(2);
       process.emit("SIGINT");
       expect(await watching).toBe(0);
       stopped = true;
@@ -767,7 +975,10 @@ describe("watch", () => {
       const latest = controller.check();
       finishFirst.resolve();
       expect(await firstResult).toMatchObject({ name: "AbortError" });
-      expect(await latest).toMatchObject({ profile: "release", status: "ok" });
+      expect(await latest).toMatchObject({
+        profile: "release",
+        status: "ok",
+      });
       expect(candidates).toBe(2);
       expect(maximumActive).toBe(1);
       expect(
@@ -822,7 +1033,10 @@ describe("watch", () => {
           (text) => (JSON.parse(text) as DefinitionCheckReport).status,
         ),
       ).toEqual(["ok", "failed"]);
-      expect(existsSync(join(fixture.root, "dist"))).toBe(false);
+      expect(
+        existsSync(join(fixture.root, "dist", "types", "src", "invoice.d.ts")),
+      ).toBe(true);
+      expect(existsSync(join(fixture.root, "dist", "node"))).toBe(false);
       expect(
         existsSync(
           join(fixture.root, GENERATION_DIRECTORY, "release-approval.json"),
@@ -877,7 +1091,10 @@ describe("watch", () => {
         jsonLines: true,
       }),
       {
-        streams: { out: (text) => published.push(text), err: () => undefined },
+        streams: {
+          out: (text) => published.push(text),
+          err: () => undefined,
+        },
       },
     );
     try {
@@ -902,4 +1119,79 @@ describe("watch", () => {
       fixture.dispose();
     }
   }, 60_000);
+});
+
+describe("mutable runtime checking", () => {
+  afterEach(cleanUp);
+
+  itWithSymlinks.each(mutableCases)(
+    "refreshes %s and its transitive helper across generations",
+    async (kind) => {
+      const { root, edit } = mutableRuntime(kind);
+      const initial = await build(root, "code-first");
+      expect(
+        initial.exitCode,
+        initial.log + JSON.stringify(initial.report?.diagnostics),
+      ).toBe(0);
+      expect(
+        initial.report?.definitions.map((definition) => definition.key),
+      ).toEqual(["test/invoice", "test/invoice"]);
+      edit();
+      const changed = await build(root, "code-first");
+      expect(
+        changed.exitCode,
+        changed.log + JSON.stringify(changed.report?.diagnostics),
+      ).toBe(0);
+      expect(
+        changed.report?.definitions.map((definition) => definition.key),
+      ).toEqual(["test/invoice-next", "test/invoice-next"]);
+    },
+    120_000,
+  );
+
+  it("reports an edited unlisted JavaScript helper during release watch", async () => {
+    const { root, edit } = mutableRuntime("local JavaScript");
+    const reportSchema = z.object({
+      status: z.string(),
+      definitions: z.array(z.object({ key: z.string() })),
+    });
+    const reports: z.infer<typeof reportSchema>[] = [];
+    const watching = runModelCheckWatch(
+      {
+        configFile: join(root, "powerhouse.config.json"),
+        source: [],
+        outDir: "dist",
+        json: false,
+        jsonLines: true,
+        release: true,
+        watch: true,
+        warningsAsErrors: false,
+        debug: false,
+      },
+      {
+        streams: {
+          out: (text) => reports.push(reportSchema.parse(JSON.parse(text))),
+          err: () => undefined,
+        },
+      },
+    );
+    try {
+      await vi.waitFor(() => expect(reports[0]?.status).toBe("ok"), {
+        timeout: 30_000,
+      });
+      await delay(150);
+      edit();
+      await vi.waitFor(
+        () =>
+          expect(
+            reports[1]?.definitions.map((definition) => definition.key),
+          ).toEqual(["test/invoice-next", "test/invoice-next"]),
+        { timeout: 30_000 },
+      );
+      expect(reports[1]?.status).toBe("ok");
+    } finally {
+      process.emit("SIGINT");
+      expect(await watching).toBe(0);
+    }
+  }, 120_000);
 });

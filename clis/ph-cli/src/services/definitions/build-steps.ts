@@ -25,8 +25,7 @@ import {
   findSharedImports,
 } from "@powerhousedao/shared/connect";
 import { readPackage } from "read-pkg";
-import { z } from "zod";
-import { SpawnError, spawnAsync } from "@powerhousedao/shared/clis";
+import { spawnAsync } from "@powerhousedao/shared/clis";
 import type { PackedConsumerEvidence } from "document-model/tooling";
 import {
   cpSync,
@@ -40,23 +39,31 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { nodeFileTrace } from "@vercel/nft";
 import type { Agent } from "package-manager-detector";
-import { detect, resolveCommand } from "package-manager-detector";
+import { detect } from "package-manager-detector";
 import {
   assertOutputDirectory,
   type CandidateRequest,
-  directoryDigest,
-  GENERATION_DIRECTORY,
   type GenerationSteps,
 } from "./generation.js";
-import { NON_INPUT_DIRECTORIES } from "./package-revision.js";
-import { canonicalPath } from "./paths.js";
+import { directoryDigest, fileEntriesDigest } from "./package-revision.js";
+import { copyPackageForPack } from "./package-copy.js";
+import { packedFileList, publishedFileSetDigest } from "./published-files.js";
+import { walkFiles } from "./file-walk.js";
+import {
+  hasMissingCompileOutputs,
+  prepareCompile,
+  refreshCompileGraph,
+  runLocal,
+} from "./compiler.js";
+import { emitLoaderModules } from "./loader-modules.js";
+import { canonicalPath, scratchDirectory } from "./paths.js";
 
 // nft reports paths relative to its base; from "/" that is every path minus its root.
 // One cache per build: the traces of a project's packages share most files.
-export function createTraceFiles(): TraceFiles {
+function createTraceFiles(): TraceFiles {
   const cache = {};
   return (file) => traceFile(file, cache);
 }
@@ -82,7 +89,7 @@ async function traceFile(file: string, cache: object) {
 
 // A package with a native addon or WebAssembly module stays external, so the
 // package's consumers must install it: devDependencies are skipped by every install.
-export function assertExternalDependenciesDeclared(
+function assertExternalDependenciesDeclared(
   projectRoot: string,
   found: ExternalDependency[],
   pkg: Parameters<typeof undeclaredExternalDependencies>[1],
@@ -105,74 +112,10 @@ export function assertExternalDependenciesDeclared(
   );
 }
 
-type CommandResult = {
-  readonly ok: boolean;
-  readonly summary?: string;
-  readonly stdout?: string;
-};
-
-async function runLocal(
-  packageRoot: string,
-  agent: Agent,
-  argv: readonly string[],
-): Promise<CommandResult> {
-  const resolved = resolveCommand(agent, "execute-local", [...argv]);
-  if (resolved === null) {
-    return {
-      ok: false,
-      summary: `${argv[0]} is not installed in this package`,
-    };
-  }
-  try {
-    // tsc spells paths from $PWD when it names the same directory, so a
-    // shell in a symlinked spelling of the package would change every path.
-    const stdout = await spawnAsync(resolved.command, resolved.args, {
-      cwd: packageRoot,
-      env: { ...process.env, PWD: packageRoot },
-    });
-    return { ok: true, stdout };
-  } catch (error) {
-    return {
-      ok: false,
-      summary: error instanceof Error ? error.message : `${argv[0]} failed`,
-      ...(error instanceof SpawnError && { stdout: error.stdout }),
-    };
-  }
-}
-
 type BuildStepOptions = {
   readonly ignoreTypeErrors?: boolean;
   readonly noSharedDeps?: boolean;
 };
-
-const compilerConfigSchema = z.object({
-  compilerOptions: z.object({
-    declaration: z.boolean().optional(),
-    composite: z.boolean().optional(),
-    declarationDir: z.string().optional(),
-    outDir: z.string().optional(),
-    rootDir: z.string().optional(),
-    noEmit: z.boolean().optional(),
-    allowImportingTsExtensions: z.boolean().optional(),
-  }),
-  references: z.array(z.object({ path: z.string() })).optional(),
-});
-const sourceMapSchema = z.object({
-  sources: z.array(z.string()),
-  sourceRoot: z.string().optional(),
-});
-
-function filesUnder(root: string): string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(root, entry.name);
-    return entry.isDirectory()
-      ? filesUnder(path)
-      : entry.isFile()
-        ? [path]
-        : [];
-  });
-}
 
 async function confirmBuildDespiteTypeErrors(): Promise<boolean> {
   if (!process.stdin.isTTY || process.env.CI) {
@@ -196,183 +139,104 @@ async function confirmBuildDespiteTypeErrors(): Promise<boolean> {
   }
 }
 
-type CompilerOptions = z.infer<typeof compilerConfigSchema>["compilerOptions"];
-
-// The redirected emit must lay declarations out under emittedRoot exactly as
-// tsc lays them out under the returned directory.
-export function declarationLayout(
-  compilerOptions: CompilerOptions,
-  packageRoot: string,
-  emittedRoot: string,
-): { readonly flags: readonly string[]; readonly directory: string | null } {
-  const declares =
-    compilerOptions.declaration === true || compilerOptions.composite === true;
-  const emits = compilerOptions.noEmit !== true;
-  // With no outDir or declarationDir tsc writes each declaration beside its
-  // source; the redirected emit is laid out from rootDir, so mapping back
-  // through it, or the package root when unset, lands beside the source.
-  // Under noEmit tsc writes nothing, so pinning the layout moves no file;
-  // under emit an unset rootDir is left to tsc, which reports TS5011 as on
-  // main.
-  const layoutRoot =
-    compilerOptions.declarationDir ??
-    compilerOptions.outDir ??
-    compilerOptions.rootDir;
-  const pinsLayout =
-    compilerOptions.rootDir === undefined &&
-    (layoutRoot === undefined || !emits);
-  return {
-    flags: [
-      // tsc rejects emitDeclarationOnly without declarations (TS5069), as on
-      // main, so it is only lifted when declarations are on.
-      ...(declares
-        ? ["--declarationDir", emittedRoot, "--emitDeclarationOnly", "false"]
-        : []),
-      ...(pinsLayout ? ["--rootDir", packageRoot] : []),
-    ],
-    directory:
-      declares && emits ? resolve(packageRoot, layoutRoot ?? ".") : null,
-  };
-}
-
-// The paths `tsc --listFilesOnly --pretty false` prints, as tsc spells them;
-// its diagnostics are relative and drop out.
-function listedFiles(stdout: string | undefined): string[] {
-  return (stdout ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => isAbsolute(line) && existsSync(line))
-    .map((file) => resolve(file));
-}
-
 export function createTypecheckStep(
   agent: Agent,
   options: BuildStepOptions = {},
 ): GenerationSteps["typecheck"] {
-  return async ({ packageRoot, emittedRoot }) => {
-    const config = await runLocal(packageRoot, agent, [
-      "tsc",
-      "-p",
-      "tsconfig.json",
-      "--showConfig",
-    ]);
-    if (!config.ok) return { ok: false, summary: config.summary };
-    let compilerConfig: z.infer<typeof compilerConfigSchema>;
-    try {
-      compilerConfig = compilerConfigSchema.parse(
-        JSON.parse(config.stdout ?? ""),
-      );
-    } catch (error) {
-      return { ok: false, summary: layoutFailure(error) };
-    }
-    const layout = declarationLayout(
-      compilerConfig.compilerOptions,
-      packageRoot,
-      emittedRoot,
+  return async ({ packageRoot, emittedRoot, plan }) => {
+    const projects = new Map(
+      plan.projects.map((project) => [project.configFile, project]),
     );
-    // `tsc -p` reads a referenced project's declarations without building
-    // them, so the references build first, as `tsc --build` would.
-    const references = compilerConfig.references ?? [];
-    const referencesBuilt =
-      references.length === 0
-        ? { ok: true }
-        : await runLocal(packageRoot, agent, [
-            "tsc",
-            "--build",
-            ...references.map((reference) => reference.path),
-          ]);
-    // The redirected emit cannot see a declaration overwrite an input, so
-    // the program main would build is listed for the plan to check against.
-    // tsc prints the list even when it reports errors.
-    const listed =
-      !referencesBuilt.ok || layout.directory === null
-        ? undefined
-        : await runLocal(packageRoot, agent, [
-            "tsc",
-            "-p",
-            "tsconfig.json",
-            "--listFilesOnly",
-            "--pretty",
-            "false",
-          ]);
-    const programFiles = listedFiles(listed?.stdout);
-    // A program can list nothing (a solution tsconfig with only
-    // references); a listing that failed and printed nothing cannot be
-    // trusted.
-    if (listed !== undefined && !listed.ok && programFiles.length === 0) {
-      return {
-        ok: false,
-        refused: true,
-        summary: `tsc listed no program files, so the declarations cannot be checked against its inputs: ${listed.summary}`,
-      };
-    }
-    const result = !referencesBuilt.ok
-      ? referencesBuilt
-      : await runLocal(packageRoot, agent, [
-          "tsc",
-          "-p",
-          "tsconfig.json",
-          "--outDir",
-          emittedRoot,
-          ...layout.flags,
-          "--noEmit",
-          "false",
-          "--noEmitOnError",
-          "false",
-          "--sourceMap",
-          "true",
-          "--inlineSourceMap",
-          "false",
-          "--tsBuildInfoFile",
-          join(emittedRoot, "tsconfig.tsbuildinfo"),
-          // Emitting JS is only allowed with `.ts` imports when they are
-          // rewritten, and Node needs them rewritten to load the output.
-          ...(compilerConfig.compilerOptions.allowImportingTsExtensions
-            ? ["--rewriteRelativeImportExtensions", "true"]
-            : []),
-        ]);
-    if (!result.ok) {
-      console.error(result.summary);
-      if (
-        !options.ignoreTypeErrors &&
-        !(await confirmBuildDespiteTypeErrors())
-      ) {
-        return { ok: false, summary: result.summary };
-      }
+    const visited = new Set<string>();
+    const references: string[] = [];
+    const visit = (configFile: string): void => {
+      if (visited.has(configFile)) return;
+      visited.add(configFile);
+      for (const reference of projects.get(configFile)?.references ?? [])
+        visit(reference);
+      if (configFile !== plan.projects[0].configFile)
+        references.push(configFile);
+    };
+    visit(plan.projects[0].configFile);
+    const acceptTypeErrors = async (
+      result: Awaited<ReturnType<typeof runLocal>>,
+    ): Promise<boolean> => {
+      if (result.ok) return true;
+      console.error(result.output);
+      if (!options.ignoreTypeErrors && !(await confirmBuildDespiteTypeErrors()))
+        return false;
       console.warn(
         "⚠ Building despite type errors. The package can load and still fail at runtime. Fix them before you publish or deploy it.",
       );
-    }
-    try {
-      const emittedModules = new Map<string, string>();
-      for (const path of filesUnder(emittedRoot)) {
-        if (!/\.[cm]?jsx?\.map$/.test(path)) continue;
-        const map = sourceMapSchema.parse(
-          JSON.parse(readFileSync(path, "utf8")),
+      return true;
+    };
+    if (plan.preflightTypeError !== undefined) {
+      const preflightTypeError = plan.preflightTypeError;
+      if (plan.projects[0].diagnostic !== undefined)
+        plan = await refreshCompileGraph(
+          packageRoot,
+          agent,
+          plan,
+          plan.projects[0].configFile,
         );
-        for (const source of map.sources) {
-          emittedModules.set(
-            canonicalPath(resolve(dirname(path), map.sourceRoot ?? "", source)),
-            canonicalPath(path.slice(0, -4)),
-          );
-        }
-      }
+      const result = await runLocal(packageRoot, agent, [
+        "tsc",
+        "--build",
+        ...(hasMissingCompileOutputs(plan) ? ["--force"] : []),
+      ]);
+      if (!(await acceptTypeErrors(result)))
+        return { ok: false, summary: result.output };
       return {
         ok: true,
-        emittedModules,
-        declarationDirectory: layout.directory,
-        inputs: programFiles.filter((file) => /\.d\.[cm]?ts$/.test(file)),
+        emittedModules: new Map(),
+        loadedRuntimeFiles: () => ({
+          files: [],
+          digest: fileEntriesDigest([]),
+        }),
+        loaderDiagnostics: preflightTypeError,
+        diagnostics: result.output,
+        plan,
       };
-    } catch (error) {
-      return { ok: false, summary: layoutFailure(error) };
     }
+    for (const reference of references) {
+      plan = await refreshCompileGraph(packageRoot, agent, plan, reference);
+      const built = await runLocal(packageRoot, agent, [
+        "tsc",
+        "--build",
+        reference,
+        ...(hasMissingCompileOutputs(plan, reference) ? ["--force"] : []),
+      ]);
+      if (!(await acceptTypeErrors(built)))
+        return { ok: false, summary: built.output };
+    }
+    plan = await refreshCompileGraph(
+      packageRoot,
+      agent,
+      plan,
+      plan.projects[0].configFile,
+    );
+    const result = await runLocal(packageRoot, agent, [
+      "tsc",
+      "--build",
+      ...(hasMissingCompileOutputs(plan) ? ["--force"] : []),
+    ]);
+    if (!(await acceptTypeErrors(result)))
+      return { ok: false, summary: result.output };
+    const loader = await emitLoaderModules(
+      packageRoot,
+      agent,
+      emittedRoot,
+      plan,
+    );
+    return {
+      ok: true,
+      emittedModules: loader.modules,
+      loaderDiagnostics: loader.diagnostics,
+      loadedRuntimeFiles: loader.loadedRuntimeFiles,
+      disposeLoader: loader.dispose,
+      plan,
+    };
   };
-}
-
-function layoutFailure(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "The TypeScript output layout could not be resolved.";
 }
 
 function createCandidateStep(
@@ -441,7 +305,7 @@ function createCandidateStep(
         ];
         const bundled = findBundledSharedDeps(
           imported,
-          filesUnder(join(candidateRoot, "browser"))
+          walkFiles(join(candidateRoot, "browser"))
             .filter((file) => file.endsWith(".js"))
             .map((file) => ({
               path: file,
@@ -507,7 +371,7 @@ function createCandidateStep(
         "-o",
         join(candidateRoot, "style.css"),
       ]);
-      if (!css.ok) return css;
+      if (!css.ok) return { ok: false, summary: css.output };
     }
     return { ok: true };
   };
@@ -517,6 +381,7 @@ export async function verifyPackedConsumers({
   packageRoot,
   candidateRoot,
   outDir,
+  recordPublishedFiles,
 }: CandidateRequest): Promise<PackedConsumerEvidence> {
   const failed = (summary: string): PackedConsumerEvidence => ({
     ok: false,
@@ -537,30 +402,39 @@ export async function verifyPackedConsumers({
     return failed("the package has no name, so no consumer can import it");
   }
 
-  const generationRoot = join(packageRoot, GENERATION_DIRECTORY);
+  const generationRoot = scratchDirectory(packageRoot);
   const packRoot = join(generationRoot, "pack");
   const tarballRoot = join(generationRoot, "tarball");
   const consumerRoot = join(generationRoot, "consumer");
   const installed = join(consumerRoot, "node_modules", name);
+  let publishedFiles: readonly string[];
+  let publishedSetDigest: string;
   try {
     for (const directory of [packRoot, tarballRoot, consumerRoot]) {
       rmSync(directory, { recursive: true, force: true });
       mkdirSync(directory, { recursive: true });
     }
-    for (const entry of readdirSync(packageRoot)) {
-      if (NON_INPUT_DIRECTORIES.includes(entry)) continue;
-      cpSync(join(packageRoot, entry), join(packRoot, entry), {
-        recursive: true,
-      });
-    }
-    assertOutputDirectory(packRoot, outDir);
-    rmSync(join(packRoot, outDir), { recursive: true, force: true });
-    cpSync(candidateRoot, join(packRoot, outDir), { recursive: true });
+    const output = canonicalPath(resolve(packageRoot, outDir));
+    copyPackageForPack(packageRoot, packRoot, [output]);
+    const stagedOutput = resolve(packRoot, relative(packageRoot, output));
+    assertOutputDirectory(packRoot, relative(packageRoot, output));
+    mkdirSync(stagedOutput, { recursive: true });
+    cpSync(candidateRoot, stagedOutput, {
+      recursive: true,
+      verbatimSymlinks: true,
+    });
 
-    await spawnAsync(
+    const packed = await spawnAsync(
       "npm",
-      ["pack", "--ignore-scripts", "--pack-destination", tarballRoot],
+      ["pack", "--json", "--ignore-scripts", "--pack-destination", tarballRoot],
       { cwd: packRoot },
+    );
+    publishedFiles = packedFileList(packed);
+    publishedSetDigest = publishedFileSetDigest(
+      packageRoot,
+      outDir,
+      publishedFiles,
+      packRoot,
     );
     const produced = readdirSync(tarballRoot).filter((entry) =>
       entry.endsWith(".tgz"),
@@ -618,9 +492,10 @@ export async function verifyPackedConsumers({
       );
     }
   }
-  return failures.length === 0
-    ? { ok: true, consumers }
-    : { ok: false, consumers, summary: failures.join("\n") };
+  if (failures.length !== 0)
+    return { ok: false, consumers, summary: failures.join("\n") };
+  recordPublishedFiles?.({ files: publishedFiles, digest: publishedSetDigest });
+  return { ok: true, consumers };
 }
 
 export function promoteCandidate({
@@ -628,13 +503,12 @@ export function promoteCandidate({
   candidateRoot,
   outDir,
 }: CandidateRequest): Promise<void> {
-  assertOutputDirectory(packageRoot, outDir);
-  const target = resolve(packageRoot, outDir);
+  const target = canonicalPath(resolve(packageRoot, outDir));
   mkdirSync(dirname(target), { recursive: true });
   const staged = mkdtempSync(`${target}.promote-`);
   const previous = `${staged}.previous`;
   try {
-    cpSync(candidateRoot, staged, { recursive: true });
+    cpSync(candidateRoot, staged, { recursive: true, verbatimSymlinks: true });
     if (directoryDigest(staged) !== directoryDigest(candidateRoot)) {
       throw new Error("The copied output differs from the verified candidate.");
     }
@@ -658,6 +532,8 @@ export async function createGenerationSteps(
   const detected = await detect();
   const agent = detected?.agent ?? "npm";
   return {
+    preflight: (packageRoot, loadDefinitions) =>
+      prepareCompile(packageRoot, agent, loadDefinitions),
     typecheck: createTypecheckStep(agent, options),
     emitCandidate: createCandidateStep(agent, options),
     verifyPackedConsumers,

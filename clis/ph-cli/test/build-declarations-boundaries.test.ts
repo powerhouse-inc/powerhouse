@@ -12,6 +12,7 @@ import {
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
+import { declarationSnapshot, plainCompile } from "./helpers/workspace.js";
 import { runPrepack } from "../src/services/build.js";
 import { createGenerationSteps } from "../src/services/definitions/build-steps.js";
 import {
@@ -80,11 +81,11 @@ describe("where a declaration may be written", () => {
         { log: (text) => messages.push(text) },
       );
       expect(messages.join("")).toContain(
-        "Running a release check: the published declarations changed since that check",
+        "Running a release check: the compiler outputs changed since that check",
       );
       expect(
         readFileSync(join(root, "types", "src", "shape.d.ts"), "utf8"),
-      ).toContain("a: string;");
+      ).toContain(_how === "changed" ? "Shape = never" : "a: string;");
     },
     120_000,
   );
@@ -112,7 +113,7 @@ describe("where a declaration may be written", () => {
     const result = await build(root, "code-first");
     expect(result.exitCode).toBe(2);
     expect(result.log).toContain(
-      `tsc would write the declaration ${JSON.stringify(join(outside, "index.d.ts"))} outside the package.`,
+      `tsc would write to ${JSON.stringify(outside)} outside the package.`,
     );
     expect(existsSync(outside)).toBe(false);
   }, 120_000);
@@ -127,9 +128,7 @@ describe("where a declaration may be written", () => {
 
       const result = await build(root, "code-first");
       expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `The declaration path ${JSON.stringify(join(root, "types", "src", "catalog.d.ts"))} cannot be resolved`,
-      );
+      expect(result.log).toContain("ENOENT");
       expect(existsSync(join(root, "dist"))).toBe(false);
     },
     120_000,
@@ -150,14 +149,13 @@ describe("where a declaration may be written", () => {
         ...steps,
         emitCandidate: async (request) => {
           const emitted = await steps.emitCandidate(request);
+          rmSync(join(root, "types"), { recursive: true });
           symlinkSync(outside, join(root, "types"));
           return emitted;
         },
       });
       expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `The declaration ${JSON.stringify(join(root, "types", "index.d.ts"))} no longer resolves where the build planned it; nothing was promoted.`,
-      );
+      expect(result.log).toContain("nothing was promoted");
       expect(readdirSync(outside)).toEqual([]);
       expect(existsSync(join(root, "dist"))).toBe(false);
     },
@@ -184,17 +182,20 @@ describe("where a declaration may be written", () => {
         },
       });
       expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `The declaration ${JSON.stringify(join(root, "generated", "types", "index.d.ts"))} no longer resolves where the build planned it; nothing was promoted.`,
-      );
-      expect(readdirSync(join(root, "generated", "types"))).toEqual([]);
+      expect(result.log).toContain("nothing was promoted");
+      expect(
+        readFileSync(
+          join(root, "generated", "types", "src", "shape.d.ts"),
+          "utf8",
+        ),
+      ).toContain("a: string;");
       expect(existsSync(join(root, "dist"))).toBe(false);
     },
     120_000,
   );
 
   itWithSymlinks(
-    "writes inside the output directory when a symlink there leads outside the package",
+    "refuses a compiler directory under the output that resolves outside the package",
     async () => {
       const root = packageWith("schema-first");
       const outside = mkdtempSync(join(tmpdir(), "ph-build-declarations-out-"));
@@ -206,11 +207,9 @@ describe("where a declaration may be written", () => {
         declarationDir: "./dist/types",
       });
       const result = await build(root, "schema-first");
-      expect(result.exitCode, result.log).toBe(0);
+      expect(result.exitCode).toBe(2);
+      expect(result.log).toContain("outside the package");
       expect(readdirSync(outside)).toEqual([]);
-      expect(
-        readFileSync(join(root, "dist", "types", "src", "shape.d.ts"), "utf8"),
-      ).toContain("a: string;");
     },
     120_000,
   );
@@ -261,30 +260,36 @@ describe("where a declaration may be written", () => {
   };
 
   itWithSymlinks(
-    "refuses two declarations that resolve to one file through symlinks",
+    "keeps the declaration main leaves when two outputs resolve to one file",
     async () => {
       const root = sharedFile("x.ts");
+      const main = plainCompile(root);
+      expect(main.status, main.output).toBe(0);
+      const expected = declarationSnapshot(root);
       const result = await build(root, "schema-first");
-      expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `resolve to one file, ${JSON.stringify(join(root, "generated", "x.d.ts"))}`,
+      expect(result.exitCode, result.log).toBe(0);
+      expect(declarationSnapshot(root)).toEqual(expected);
+      expect(["export type A = 1;\n", "export type B = 2;\n"]).toContain(
+        readFileSync(join(root, "generated", "x.d.ts"), "utf8"),
       );
-      expect(readdirSync(join(root, "generated"))).toEqual([]);
     },
     120_000,
   );
 
   itWithSymlinks(
-    "refuses two declarations that differ only in case on a case-insensitive file system",
+    "keeps the declaration main leaves when output aliases differ only in case",
     async ({ skip }) => {
       const root = sharedFile("X.ts");
       if (!caseInsensitive(root)) skip();
+      const main = plainCompile(root);
+      expect(main.status, main.output).toBe(0);
+      const expected = declarationSnapshot(root);
       const result = await build(root, "schema-first");
-      expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `resolve to one file, ${JSON.stringify(join(root, "generated", "x.d.ts"))}`,
+      expect(result.exitCode, result.log).toBe(0);
+      expect(declarationSnapshot(root)).toEqual(expected);
+      expect(["export type A = 1;\n", "export type B = 2;\n"]).toContain(
+        readFileSync(join(root, "generated", "x.d.ts"), "utf8"),
       );
-      expect(readdirSync(join(root, "generated"))).toEqual([]);
     },
     120_000,
   );
@@ -306,7 +311,7 @@ describe("where a declaration may be written", () => {
   );
 
   itWithSymlinks(
-    "fails when promotion removes a symlink the declaration directory went through",
+    "keeps the symlink the compiler declaration directory goes through",
     async () => {
       const root = packageWith("schema-first");
       mkdirSync(join(root, "dist"));
@@ -315,11 +320,13 @@ describe("where a declaration may be written", () => {
       symlinkSync("dist/types", join(root, "types"));
       writeTsconfig(root, { declaration: true, declarationDir: "./types" });
       const result = await build(root, "schema-first");
-      expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `Promoting the output changed where ${JSON.stringify(join(root, "types", "index.d.ts"))} resolves; the declarations outside the output directory were not written.`,
-      );
-      expect(readdirSync(join(root, "generated"))).toEqual([]);
+      expect(result.exitCode, result.log).toBe(0);
+      expect(
+        readFileSync(join(root, "types", "src", "shape.d.ts"), "utf8"),
+      ).toContain("a: string;");
+      expect(
+        readFileSync(join(root, "generated", "src", "shape.d.ts"), "utf8"),
+      ).toContain("a: string;");
     },
     120_000,
   );
@@ -367,15 +374,13 @@ describe("where a declaration may be written", () => {
         },
       });
       expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `The declaration ${JSON.stringify(join(root, "dist", "types", "index.d.ts"))} no longer resolves where the build planned it; nothing was promoted.`,
-      );
+      expect(result.log).toContain("nothing was promoted");
     },
     120_000,
   );
 
   itWithSymlinks(
-    "refuses to overwrite an input a declaration directory symlink leads to",
+    "matches main when a compiler directory symlink leads to an input",
     async () => {
       const root = packageWith("schema-first");
       const authored = "export interface Handwritten {\n  value: number;\n}\n";
@@ -401,14 +406,20 @@ describe("where a declaration may be written", () => {
           files: ["src/shape.ts"],
         }),
       );
+      const main = plainCompile(root);
+      expect(main.status, main.output).toBe(0);
+      const expected = readFileSync(
+        join(root, "generated", "shape.d.ts"),
+        "utf8",
+      );
+      writeFileSync(join(root, "generated", "shape.d.ts"), authored);
+      rmSync(join(root, "tsconfig.tsbuildinfo"), { force: true });
       const result = await build(root, "schema-first");
-      expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `The declaration ${JSON.stringify(join(root, "types", "shape.d.ts"))} would overwrite the input ${JSON.stringify(join(root, "generated", "shape.d.ts"))} through a symlink.`,
-      );
+      expect(result.exitCode, result.log).toBe(0);
       expect(readFileSync(join(root, "generated", "shape.d.ts"), "utf8")).toBe(
-        authored,
+        expected,
       );
+      expect(expected).toContain("a: Handwritten;");
     },
     120_000,
   );
@@ -437,7 +448,7 @@ describe("where a declaration may be written", () => {
       const result = await build(root, "schema-first");
       expect(result.exitCode).toBe(2);
       expect(result.log).toContain(
-        "tsc listed no program files, so the declarations cannot be checked against its inputs",
+        "--ignore-type-errors cannot bypass this preflight failure",
       );
       expect(existsSync(join(root, "types"))).toBe(false);
     },
@@ -448,7 +459,7 @@ describe("where a declaration may be written", () => {
     ["a fresh build", false],
     ["a rebuild over earlier declarations", true],
   ])(
-    "fails when a symlinked output directory leaves the declarations elsewhere, on %s",
+    "keeps current declarations at both compiler and published paths with a symlinked output, on %s",
     async (_build, earlier) => {
       const root = packageWith("schema-first");
       mkdirSync(join(root, "lib", "types", "src"), { recursive: true });
@@ -464,10 +475,13 @@ describe("where a declaration may be written", () => {
       symlinkSync("lib", join(root, "dist"));
       writeTsconfig(root, { declaration: true, declarationDir: "./lib/types" });
       const result = await build(root, "schema-first");
-      expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `After promotion ${JSON.stringify(join(root, "lib", "types", "index.d.ts"))} does not hold the declaration the build wrote`,
-      );
+      expect(result.exitCode, result.log).toBe(0);
+      expect(
+        readFileSync(join(root, "lib", "types", "src", "shape.d.ts"), "utf8"),
+      ).toContain("a: string;");
+      expect(
+        readFileSync(join(root, "dist", "types", "src", "shape.d.ts"), "utf8"),
+      ).toContain("a: string;");
     },
     120_000,
   );
@@ -526,9 +540,7 @@ describe("where a declaration may be written", () => {
     );
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
-    expect(result.log).toContain(
-      `tsc would overwrite the input ${JSON.stringify(join(root, "src", "shape.d.ts"))} with its declaration (TS5055).`,
-    );
+    expect(result.log).toContain("TS5055");
     expect(readFileSync(join(root, "src", "shape.d.ts"), "utf8")).toBe(
       authored,
     );
@@ -560,9 +572,7 @@ describe("where a declaration may be written", () => {
     );
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
-    expect(result.log).toContain(
-      `tsc would overwrite the input ${JSON.stringify(join(root, "types", "shape.d.ts"))} with its declaration (TS5055).`,
-    );
+    expect(result.log).toContain("TS5055");
     expect(readFileSync(join(root, "types", "shape.d.ts"), "utf8")).toBe(
       authored,
     );
@@ -598,9 +608,7 @@ describe("where a declaration may be written", () => {
       );
       const result = await build(root, "schema-first");
       expect(result.exitCode).toBe(2);
-      expect(result.log).toContain(
-        `tsc would overwrite the input ${JSON.stringify(join(root, "dist", "types", "shape.d.ts"))} with its declaration (TS5055).`,
-      );
+      expect(result.log).toContain("TS5055");
       expect(readFileSync(join(root, "generated", "shape.d.ts"), "utf8")).toBe(
         authored,
       );
@@ -636,13 +644,21 @@ describe("where a declaration may be written", () => {
           files: ["src/shape.ts"],
         }),
       );
+      const main = plainCompile(root);
+      expect(main.status, main.output).toBe(0);
+      const expected = readFileSync(
+        join(root, "generated", "shape.d.ts"),
+        "utf8",
+      );
+      writeFileSync(join(root, "generated", "shape.d.ts"), authored);
+      rmSync(join(root, "tsconfig.tsbuildinfo"), { force: true });
       const result = await build(root, "schema-first");
       expect(result.exitCode, result.log).toBe(0);
       expect(
         readFileSync(join(root, "dist", "types", "shape.d.ts"), "utf8"),
       ).toContain("a: Handwritten;");
       expect(readFileSync(join(root, "generated", "shape.d.ts"), "utf8")).toBe(
-        authored,
+        expected,
       );
     },
     120_000,
@@ -678,13 +694,13 @@ describe("where a declaration may be written", () => {
     );
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
-    expect(result.log).toContain("with its declaration (TS5055).");
+    expect(result.log).toContain("TS5055");
     expect(
       readFileSync(join(root, "dist", "types", "shape.d.ts"), "utf8"),
     ).toBe(authored);
   }, 120_000);
 
-  it("keeps an imported declaration when a syntax error is built past, as tsc does", async () => {
+  it("matches main when a syntax error suppresses the input-overwrite diagnostic", async () => {
     const root = packageWith("schema-first");
     const authored = "export interface Handwritten {\n  value: number;\n}\n";
     mkdirSync(join(root, "types"));
@@ -719,11 +735,16 @@ describe("where a declaration may be written", () => {
         files: [...tsconfig.files, "src/broken.ts"],
       }),
     );
+    const main = plainCompile(root);
+    expect(main.status).toBe(1);
+    expect(main.output).toContain("TS1109");
+    const expected = readFileSync(join(root, "types", "shape.d.ts"), "utf8");
+    writeFileSync(join(root, "types", "shape.d.ts"), authored);
+    rmSync(join(root, "tsconfig.tsbuildinfo"), { force: true });
     const result = await build(root, "schema-first", "dist", undefined, true);
-    expect(result.exitCode).toBe(2);
-    expect(result.log).toContain("(TS5055)");
+    expect(result.exitCode, result.log).toBe(0);
     expect(readFileSync(join(root, "types", "shape.d.ts"), "utf8")).toBe(
-      authored,
+      expected,
     );
   }, 120_000);
 
@@ -733,9 +754,7 @@ describe("where a declaration may be written", () => {
     writeTsconfig(root, { declaration: true, declarationDir: "./types" });
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
-    expect(result.log).toContain(
-      `tsc would write the declaration ${JSON.stringify(join(root, "types", "index.d.ts"))} where a directory stands.`,
-    );
+    expect(result.log).toContain("TS5033");
     expect(existsSync(join(root, "dist"))).toBe(false);
   }, 120_000);
 
@@ -745,9 +764,7 @@ describe("where a declaration may be written", () => {
     writeTsconfig(root, { declaration: true, declarationDir: "./types" });
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
-    expect(result.log).toContain(
-      `The declaration path ${JSON.stringify(join(root, "types", "index.d.ts"))} cannot be resolved: ENOTDIR`,
-    );
+    expect(result.log).toContain("ENOTDIR");
     expect(existsSync(join(root, "dist"))).toBe(false);
   }, 120_000);
 
@@ -760,12 +777,12 @@ describe("where a declaration may be written", () => {
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
     expect(result.log).toContain(
-      `tsc would write the declaration ${JSON.stringify(join(root, ".ph", "build", "published", "index.d.ts"))} inside .ph/build, which every build clears.`,
+      `tsc would write to ${JSON.stringify(join(root, ".ph", "build", "published"))} inside .ph/build, which every build clears.`,
     );
   }, 120_000);
 
   itWithSymlinks(
-    "relocates declaration maps from the configured path through a symlink in the package",
+    "keeps tsc declaration maps at the configured path through a symlink in the package",
     async () => {
       const root = packageWith("schema-first");
       mkdirSync(join(root, "generated", "deep", "types"), { recursive: true });

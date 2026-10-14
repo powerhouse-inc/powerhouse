@@ -1,11 +1,17 @@
-import { readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join, sep } from "node:path";
 import { it, vi } from "vitest";
 import { materializeFixturePackage } from "../../../../packages/document-model/test/tooling/loader-contract.js";
-import { runBuild } from "../../src/services/build.js";
-export { caseInsensitive } from "../../src/services/definitions/declarations.js";
+import { runBuild, runPrepack } from "../../src/services/build.js";
 import type { BuildArgs } from "../../src/types.js";
 import type { GenerationSteps } from "../../src/services/definitions/generation.js";
+import type { GenerationResult } from "../../src/services/definitions/generation.js";
 
 export type Flow = "code-first" | "schema-first";
 
@@ -14,6 +20,18 @@ export const itWithSymlinks: typeof it.skip =
   process.platform === "win32" ? it.skip : it;
 
 export const disposals: (() => void)[] = [];
+
+export function caseInsensitive(packageRoot: string): boolean {
+  const options = { bigint: true, throwIfNoEntry: false } as const;
+  const lower = statSync(join(packageRoot, "package.json"), options);
+  const upper = statSync(join(packageRoot, "PACKAGE.JSON"), options);
+  return (
+    lower !== undefined &&
+    upper !== undefined &&
+    lower.ino === upper.ino &&
+    lower.dev === upper.dev
+  );
+}
 
 export function cleanUp(): void {
   vi.restoreAllMocks();
@@ -24,6 +42,16 @@ export function packageWith(flow: Flow): string {
   const fixture = materializeFixturePackage("control");
   disposals.push(fixture.dispose);
   const root = fixture.root;
+  const compiler = process.env.PH_TEST_TYPESCRIPT_PACKAGE;
+  if (compiler !== undefined) {
+    rmSync(join(root, "node_modules", "typescript"));
+    rmSync(join(root, "node_modules", ".bin", "tsc"));
+    symlinkSync(compiler, join(root, "node_modules", "typescript"));
+    symlinkSync(
+      join(compiler, "bin", "tsc"),
+      join(root, "node_modules", ".bin", "tsc"),
+    );
+  }
   if (flow === "schema-first") {
     rmSync(join(root, "powerhouse.config.json"));
     for (const file of ["invoice.ts", "catalog.ts", "decoy.ts"]) {
@@ -91,7 +119,7 @@ export async function build(
   outDir = "dist",
   steps?: GenerationSteps,
   ignoreTypeErrors = false,
-): Promise<{ exitCode: number; log: string }> {
+): Promise<GenerationResult & { log: string }> {
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
   const messages: string[] = [];
@@ -112,7 +140,7 @@ export async function build(
       log: (text) => messages.push(text),
       ...(steps !== undefined && { steps }),
     });
-    return { exitCode: result.exitCode, log: messages.join("") };
+    return { ...result, log: messages.join("") };
   } finally {
     process.chdir(cwd);
   }
@@ -132,3 +160,20 @@ export function declarationFiles(root: string): string[] {
 
 export const shapeDeclaration = (field: string): string =>
   `export type Shape = {\n    a: ${field};\n};\n//# sourceMappingURL=shape.d.ts.map`;
+
+export async function prepack(root: string) {
+  const messages: string[] = [];
+  const result = await runPrepack(
+    {
+      configFile: join(root, "powerhouse.config.json"),
+      outDir: "dist",
+      source: [],
+      warningsAsErrors: false,
+      noSharedDeps: false,
+      ignoreTypeErrors: false,
+      debug: false,
+    },
+    { log: (text) => messages.push(text) },
+  );
+  return { ...result, log: messages.join("") };
+}

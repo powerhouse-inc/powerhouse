@@ -64,7 +64,7 @@ export const outDir = option({
   type: string,
   long: "out-dir",
   description:
-    "Where to output the bundled code. It must name a directory inside the package, because a build replaces it wholesale.",
+    "Where to output the bundled code. It must name a directory inside the package. A build replaces browser/ and node/, refreshes powerhouse.manifest.json and style.css, and preserves other files.",
   defaultValue: () => "dist" as const,
   defaultValueIsSerializable: true,
 });
