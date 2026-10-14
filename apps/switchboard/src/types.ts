@@ -1,3 +1,4 @@
+import type { ResolvedPlugin } from "@powerhousedao/host-core";
 import type {
   InProcessReactorClientModule,
   IReactorClient,
@@ -116,6 +117,12 @@ export type StartServerOptions = {
   /** Mount the MCP server at `/mcp`. On by default; `false` wins over
    * MCP_ENABLED, which can turn it off but never on. */
   mcp?: boolean;
+  /** The plugin composition to boot with (FEATURE_PLUGIN_HOST_ENABLED): the
+   * resolved host.js runner.plugins entries, supplied by the uniform-runners
+   * switchboard runner (R2 step 2) or a test. Omitted = the built-in default
+   * composition. Resolved plugins, not specifiers — resolution happens at the
+   * runner against the PROJECT dependency tree. */
+  pluginComposition?: ResolvedPlugin[];
   /** Mount the read-only inspection subgraph at `/graphql/inspection`. On by
    * default; `false` wins over INSPECTION_ENABLED, which can turn it off. */
   inspection?: boolean;

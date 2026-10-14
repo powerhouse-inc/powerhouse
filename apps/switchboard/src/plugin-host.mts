@@ -131,8 +131,9 @@ export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
 
 export function createSwitchboardPluginHost(
   ctx: Omit<SwitchboardHostContext, "contributions">,
-  resolved: readonly ResolvedPlugin[] = builtinSwitchboardPlugins(),
+  resolved?: readonly ResolvedPlugin[],
 ): SwitchboardPluginHost {
+  resolved ??= builtinSwitchboardPlugins();
   const ordered = resolveOrder(resolved.map((r) => r.plugin));
   const contributions = mergeContributions(
     resolved.map((r) => ({ plugin: r.plugin, provenance: r.provenance })),

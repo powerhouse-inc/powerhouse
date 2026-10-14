@@ -405,11 +405,14 @@ async function initServer(
   // path below runs byte-identically; flag on, carved subsystems run as
   // built-in plugins through the hook moments marked along this function.
   const pluginHost: SwitchboardPluginHost | null = isPluginHostEnabled()
-    ? createSwitchboardPluginHost({
-        logger,
-        options: options as unknown as Record<string, unknown>,
-        renown,
-      })
+    ? createSwitchboardPluginHost(
+        {
+          logger,
+          options: options as unknown as Record<string, unknown>,
+          renown,
+        },
+        options.pluginComposition,
+      )
     : null;
   if (pluginHost) {
     options = await pluginHost.transformOptions(options);
