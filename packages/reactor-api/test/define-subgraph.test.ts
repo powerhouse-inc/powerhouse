@@ -241,7 +241,7 @@ interface Node {
     expect(calls).toBe(2);
   });
 
-  it("passes the original DocumentNode through, identity included", () => {
+  it("serves the declared schema after the author mutates the AST it passed", () => {
     const typeDefs = parse(SOURCE);
     const Subgraph = defineSubgraph({
       name: "compat",
@@ -255,7 +255,27 @@ interface Node {
         preserveDefinitionOrder: true,
       },
     });
-    expect(new Subgraph(args()).typeDefs).toBe(typeDefs);
+
+    const added = parse("type Extra { id: ID }").definitions[0];
+    (typeDefs.definitions as unknown[]).push(added);
+    const [query] = typeDefs.definitions as unknown as {
+      fields: unknown[];
+    }[];
+    query.fields.push(
+      (
+        parse("type Query { injected: String }").definitions[0] as unknown as {
+          fields: unknown[];
+        }
+      ).fields[0],
+    );
+
+    const first = new Subgraph(args());
+    const second = new Subgraph(args());
+    const declared = SOURCE.trimEnd();
+    expect(print(first.typeDefs)).toBe(declared);
+    expect(print(Subgraph.typeDefs)).toBe(declared);
+    expect(second.typeDefs).toBe(first.typeDefs);
+    expect(Subgraph.typeDefs).toBe(first.typeDefs);
   });
 
   it("records hasSubscriptions as null on the wire and leaves the flag unset", () => {
