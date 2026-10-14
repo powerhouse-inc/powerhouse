@@ -293,7 +293,13 @@ describe("the conflicts the server enforces", () => {
         code: "PH-GQL-COORDINATE-OWNED",
         severity: "warning",
         message:
-          'Subgraphs "foo-bar" and "foo2" both declare Query.widget, so the server leaves out of the supergraph whichever of them registers second.',
+          'Subgraphs "foo-bar" and "foo2" all declare Query.widget, and only the one that registers first keeps it in the supergraph.',
+      },
+      {
+        code: "PH-GQL-COORDINATE-OWNED",
+        severity: "warning",
+        message:
+          'Subgraphs "foo2" and "foo-bar" all declare Query.widget, and only the one that registers first keeps it in the supergraph.',
       },
     ]);
   });
@@ -340,7 +346,13 @@ describe("the conflicts the server enforces", () => {
         code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
         severity: "warning",
         message:
-          'Subgraphs "alpha" and "beta" both declare Gadget, differently, so the server leaves out of the supergraph whichever of them registers second.',
+          'Subgraphs "alpha" and "beta" all define Gadget differently, and only the one that registers first keeps it in the supergraph.',
+      },
+      {
+        code: "PH-GQL-SHARED-DEFINITION-MISMATCH",
+        severity: "warning",
+        message:
+          'Subgraphs "beta" and "alpha" all define Gadget differently, and only the one that registers first keeps it in the supergraph.',
       },
     ]);
   });

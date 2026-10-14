@@ -128,7 +128,7 @@ describe("lintSubgraphTypes", () => {
     );
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Subgraphs "ledger" and "ledger-copy" both define Query.ledger, so the supergraph leaves out whichever of them registers second. Rename them in one of the two.',
+      'Subgraphs "ledger" and "ledger-copy" all define Query.ledger, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.',
     ]);
   });
 

@@ -1,6 +1,6 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import { print } from "graphql";
+import { parse, print } from "graphql";
 import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
 import { coreSubgraphClasses } from "../src/config.js";
@@ -151,11 +151,7 @@ describe("findPackageSubgraphConflicts", () => {
       "todo-tools": {
         kind: "claims",
         claims: [
-          {
-            claim: "TodoListQueries",
-            owner: "todo-list",
-            ownerIsPackage: false,
-          },
+          { kind: "owned", claim: "TodoListQueries", owner: "todo-list" },
         ],
       },
     });
@@ -173,9 +169,9 @@ describe("findPackageSubgraphConflicts", () => {
         kind: "claims",
         claims: [
           {
+            kind: "owned",
             claim: "DocumentModelQueries",
             owner: "document-model",
-            ownerIsPackage: false,
           },
         ],
       },
@@ -226,14 +222,14 @@ describe("findPackageSubgraphConflicts", () => {
       ledger: {
         kind: "claims",
         claims: [
-          { claim: "Query.system", owner: "system", ownerIsPackage: false },
-          { claim: "Revision", owner: "r", ownerIsPackage: false },
+          { kind: "owned", claim: "Query.system", owner: "system" },
+          { kind: "owned", claim: "Revision", owner: "r" },
         ],
       },
     });
   });
 
-  it("gives a root field two package subgraphs define to the first", () => {
+  it("reports every package subgraph that declares a contested root field", () => {
     const typeDefs = gql`
       type Query {
         ledger: String
@@ -246,13 +242,103 @@ describe("findPackageSubgraphConflicts", () => {
         { name: "ledger-copy", typeDefs },
       ]),
     ).toEqual({
+      ledger: {
+        kind: "claims",
+        claims: [
+          { kind: "contested", claim: "Query.ledger", rivals: ["ledger-copy"] },
+        ],
+      },
       "ledger-copy": {
         kind: "claims",
         claims: [
-          { claim: "Query.ledger", owner: "ledger", ownerIsPackage: true },
+          { kind: "contested", claim: "Query.ledger", rivals: ["ledger"] },
         ],
       },
     });
+  });
+
+  it("finds every contest in a chain, whatever order the subgraphs come in", () => {
+    const alpha = {
+      name: "alpha",
+      typeDefs: gql`
+        type Query {
+          x: String
+        }
+      `,
+    };
+    const beta = {
+      name: "beta",
+      typeDefs: gql`
+        type Query {
+          x: String
+          y: String
+        }
+      `,
+    };
+    const gamma = {
+      name: "gamma",
+      typeDefs: gql`
+        type Query {
+          y: String
+        }
+      `,
+    };
+    const expected = {
+      alpha: {
+        kind: "claims",
+        claims: [{ kind: "contested", claim: "Query.x", rivals: ["beta"] }],
+      },
+      beta: {
+        kind: "claims",
+        claims: [
+          { kind: "contested", claim: "Query.x", rivals: ["alpha"] },
+          { kind: "contested", claim: "Query.y", rivals: ["gamma"] },
+        ],
+      },
+      gamma: {
+        kind: "claims",
+        claims: [{ kind: "contested", claim: "Query.y", rivals: ["beta"] }],
+      },
+    };
+
+    expect(conflicts([alpha, beta, gamma], [])).toEqual(expected);
+    expect(conflicts([gamma, beta, alpha], [])).toEqual(expected);
+  });
+
+  it("lets package subgraphs share a type they define identically", () => {
+    const shared = "type Gadget { id: ID! size: Int }";
+    expect(
+      conflicts(
+        [
+          {
+            name: "alpha",
+            typeDefs: parse(`type Query { a: Gadget } ${shared}`),
+          },
+          {
+            name: "beta",
+            typeDefs: parse(`type Query { b: Gadget } ${shared}`),
+          },
+        ],
+        [],
+      ),
+    ).toEqual({});
+  });
+
+  it("treats two subgraphs with one name as the one the server keeps", () => {
+    const typeDefs = gql`
+      type Query {
+        ledger: String
+      }
+    `;
+    expect(
+      conflicts(
+        [
+          { name: "ledger", typeDefs },
+          { name: "ledger", typeDefs },
+        ],
+        [],
+      ),
+    ).toEqual({});
   });
 
   it("skips a model whose schema does not parse and checks the rest", () => {
