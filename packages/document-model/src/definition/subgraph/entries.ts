@@ -31,28 +31,60 @@ import {
  * field that nobody implemented.
  */
 
+/** The call the host makes to a field resolver at request time. */
+export type FieldInvocation = {
+  readonly parent: unknown;
+  readonly args: unknown;
+  readonly subgraph: unknown;
+  readonly request: unknown;
+  readonly info: unknown;
+};
+
+/** The call the host makes to a `__resolveType` at request time. */
+type TypeInvocation = {
+  readonly value: unknown;
+  readonly subgraph: unknown;
+  readonly request: unknown;
+  readonly info: unknown;
+  readonly abstractType: unknown;
+};
+
+export type Bound<TCall> = (call: TCall) => unknown;
+
+type RootEntry = {
+  readonly key: string;
+  readonly fieldName: string;
+  readonly description: string | null;
+  readonly deprecated: string | null;
+  readonly args: ObjectFields;
+  readonly returns: AnyFieldDescriptor;
+};
+
 /** The internal shape behind the opaque `TypedSubgraphEntry`. */
 export type RegisteredEntry =
-  | {
-      readonly kind: "query" | "mutation" | "subscription";
-      readonly key: string;
-      readonly fieldName: string;
-      readonly description: string | null;
-      readonly deprecated: string | null;
-      readonly args: ObjectFields;
-      readonly returns: AnyFieldDescriptor;
-      readonly resolve?: (call: never) => unknown;
-      readonly subscribe?: (call: never) => unknown;
-    }
+  | (RootEntry & {
+      readonly kind: "query" | "mutation";
+      readonly resolve: Bound<FieldInvocation>;
+    })
+  | (RootEntry & {
+      readonly kind: "subscription";
+      readonly subscribe: Bound<FieldInvocation>;
+      readonly resolve?: Bound<FieldInvocation>;
+    })
   | {
       readonly kind: "computed-field";
       readonly token: AnyComputedToken;
-      readonly resolve: (call: never) => unknown;
+      readonly resolve: Bound<FieldInvocation>;
     }
   | {
-      readonly kind: "resolve-type" | "is-type-of";
+      readonly kind: "resolve-type";
       readonly typeName: string;
-      readonly resolve: (call: never) => unknown;
+      readonly resolve: Bound<TypeInvocation>;
+    }
+  | {
+      readonly kind: "is-type-of";
+      readonly typeName: string;
+      readonly resolve: Bound<FieldInvocation>;
     };
 
 const REGISTERED = new WeakSet<object>();
@@ -340,50 +372,53 @@ export function createEntryBuilders<
       });
     }
     assertFieldUse(config.returns, ["options", "returns"]);
-    const args = argumentMap(config.args);
-    let resolve: ((call: never) => unknown) | undefined;
-    let subscribe: ((call: never) => unknown) | undefined;
-    if (kind === "subscription") {
-      subscribe = resolverOrFail(
-        config.subscribe,
-        ["options", "subscribe"],
-        subject,
-        "subscribe",
-        "Add subscribe, returning an AsyncIterable of the events this subscription emits.",
-      );
-      if (config.resolve !== undefined) {
-        resolve = resolverOrFail(
-          config.resolve,
-          ["options", "resolve"],
-          subject,
-          "resolve",
-          "Pass resolve as a function, or leave it out to read the field from each event.",
-        );
-      }
-    } else {
-      resolve = resolverOrFail(config.resolve, ["options", "resolve"], subject);
-      if (config.subscribe !== undefined) {
-        failDefinition({
-          code: "PH-SG-ENTRY-INVALID",
-          path: ["options", "subscribe"],
-          message: `${subject} declares subscribe, which only a subscription has.`,
-          repair: "Remove subscribe, or declare the entry with subscription().",
-        });
-      }
-    }
-    return register({
-      kind,
+    const shape: RootEntry = {
       key,
       fieldName: typeof config.fieldName === "string" ? config.fieldName : key,
       description:
         typeof config.description === "string" ? config.description : null,
       deprecated:
         typeof config.deprecated === "string" ? config.deprecated : null,
-      args,
+      args: argumentMap(config.args),
       returns: config.returns,
-      ...(resolve !== undefined && { resolve }),
-      ...(subscribe !== undefined && { subscribe }),
-    });
+    };
+    if (kind === "subscription") {
+      const subscribe = resolverOrFail<FieldInvocation>(
+        config.subscribe,
+        ["options", "subscribe"],
+        subject,
+        "subscribe",
+        "Add subscribe, returning an AsyncIterable of the events this subscription emits.",
+      );
+      return register({
+        ...shape,
+        kind,
+        subscribe,
+        ...(config.resolve !== undefined && {
+          resolve: resolverOrFail<FieldInvocation>(
+            config.resolve,
+            ["options", "resolve"],
+            subject,
+            "resolve",
+            "Pass resolve as a function, or leave it out to read the field from each event.",
+          ),
+        }),
+      });
+    }
+    const resolve = resolverOrFail<FieldInvocation>(
+      config.resolve,
+      ["options", "resolve"],
+      subject,
+    );
+    if (config.subscribe !== undefined) {
+      failDefinition({
+        code: "PH-SG-ENTRY-INVALID",
+        path: ["options", "subscribe"],
+        message: `${subject} declares subscribe, which only a subscription has.`,
+        repair: "Remove subscribe, or declare the entry with subscription().",
+      });
+    }
+    return register({ ...shape, kind, resolve });
   }
 
   const builders = {
@@ -416,7 +451,7 @@ export function createEntryBuilders<
       return register({
         kind: "computed-field",
         token: Object.freeze({ kind, typeName, fieldName }),
-        resolve: resolverOrFail(
+        resolve: resolverOrFail<FieldInvocation>(
           config.resolve,
           ["options", "resolve"],
           "field()",
@@ -427,13 +462,21 @@ export function createEntryBuilders<
       register({
         kind: "resolve-type",
         typeName: namedOrFail(type, "resolveType"),
-        resolve: resolverOrFail(resolve, ["resolve"], "resolveType()"),
+        resolve: resolverOrFail<TypeInvocation>(
+          resolve,
+          ["resolve"],
+          "resolveType()",
+        ),
       }),
     isTypeOf: (type: { readonly name: string | null }, resolve: unknown) =>
       register({
         kind: "is-type-of",
         typeName: namedOrFail(type, "isTypeOf"),
-        resolve: resolverOrFail(resolve, ["resolve"], "isTypeOf()"),
+        resolve: resolverOrFail<FieldInvocation>(
+          resolve,
+          ["resolve"],
+          "isTypeOf()",
+        ),
       }),
     expose: (...types: readonly { readonly name: string | null }[]) => {
       // Call order is preserved: it is what decides definition order for
@@ -445,13 +488,17 @@ export function createEntryBuilders<
   return { builders, exposed };
 }
 
-function resolverOrFail(
+/**
+ * The one place a resolver's call type is asserted: only its being a function
+ * can be checked, and the host builds every call this type names.
+ */
+function resolverOrFail<TCall>(
   value: unknown,
   path: readonly string[],
   subject: string,
   member: "resolve" | "subscribe" = "resolve",
   repair = `Pass ${member} as a function.`,
-): (call: never) => unknown {
+): Bound<TCall> {
   if (typeof value !== "function") {
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
@@ -464,7 +511,7 @@ function resolverOrFail(
       repair,
     });
   }
-  return value as (call: never) => unknown;
+  return value as Bound<TCall>;
 }
 
 function argumentMap(value: unknown): ObjectFields {

@@ -30,6 +30,8 @@ export type SubgraphSchemaData = {
   readonly hasSubscriptions: boolean;
   readonly document: LocationFreeGraphQLDocumentNode;
   readonly diagnostics: readonly DefinitionDiagnostic[];
+  /** The input entries as the builders registered them, in input order. */
+  readonly registered: readonly RegisteredEntry[];
 };
 
 export type CompileSubgraphInput = {
@@ -203,6 +205,7 @@ export function compileSubgraphSchema(
     hasSubscriptions: roots.has("Subscription"),
     document: buildDocument(emitted, scalars, definitionOrder),
     diagnostics: collector.diagnostics,
+    registered: read,
   };
 }
 

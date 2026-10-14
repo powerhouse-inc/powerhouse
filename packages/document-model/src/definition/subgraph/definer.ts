@@ -14,7 +14,13 @@ import {
   typeKindsOfDocument,
   type GraphQLAstCompatibility,
 } from "./compatibility.js";
-import { createEntryBuilders, type EntryBuilders } from "./entries.js";
+import {
+  createEntryBuilders,
+  type Bound,
+  type EntryBuilders,
+  type FieldInvocation,
+  type RegisteredEntry,
+} from "./entries.js";
 import type { TypedSubgraphEntry } from "./types.js";
 
 // `defineSubgraph` ships from `reactor-api` because the class it returns
@@ -188,8 +194,7 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
     hasSubscriptions: schema.hasSubscriptions,
     diagnostics: schema.diagnostics,
     packageScalars: schema.packageScalars,
-    resolversFor: (subgraph) =>
-      typedResolverMap(returned, subgraph as TSubgraph),
+    resolversFor: (subgraph) => typedResolverMap(schema.registered, subgraph),
     checkResolvers: () => [],
   };
 }
@@ -221,111 +226,91 @@ function definitionNames(value: unknown): readonly string[] {
  * factory captures, so an author reaches host dependencies through it instead
  * of declaring them again.
  */
-function typedResolverMap<TSubgraph>(
-  entries: readonly unknown[],
-  subgraph: TSubgraph,
+function typedResolverMap(
+  entries: readonly RegisteredEntry[],
+  subgraph: unknown,
 ): Record<string, unknown> {
   const resolvers: Record<string, Record<string, unknown>> = {};
-  const put = (typeName: string, fieldName: string, value: unknown): void => {
-    resolvers[typeName] = { ...resolvers[typeName], [fieldName]: value };
-  };
-
   for (const entry of entries) {
-    const read = entry as {
-      kind: string;
-      key?: string;
-      fieldName?: string;
-      typeName?: string;
-      token?: { typeName: string; fieldName: string };
-      resolve?: (call: unknown) => unknown;
-      subscribe?: (call: unknown) => unknown;
-    };
-    switch (read.kind) {
-      case "query":
-      case "mutation":
-        put(
-          rootFor(read.kind),
-          read.fieldName!,
-          (parent: unknown, args: unknown, request: unknown, info: unknown) =>
-            read.resolve!({ parent, args, subgraph, request, info }),
-        );
-        break;
-      case "subscription":
-        put(rootFor(read.kind), read.fieldName!, {
-          subscribe: (
-            parent: unknown,
-            args: unknown,
-            request: unknown,
-            info: unknown,
-          ) => read.subscribe!({ parent, args, subgraph, request, info }),
-          // Without a resolve, GraphQL's default lookup reads the field from
-          // the event payload, which existing subscriptions rely on.
-          ...(read.resolve !== undefined && {
-            resolve: (
-              parent: unknown,
-              args: unknown,
-              request: unknown,
-              info: unknown,
-            ) => read.resolve!({ parent, args, subgraph, request, info }),
-          }),
-        });
-        break;
-      case "computed-field":
-        put(
-          read.token!.typeName,
-          read.token!.fieldName,
-          (parent: unknown, args: unknown, request: unknown, info: unknown) =>
-            read.resolve!({ parent, args, subgraph, request, info }),
-        );
-        break;
-      case "resolve-type":
-        put(
-          read.typeName!,
-          "__resolveType",
-          (
-            value: unknown,
-            request: unknown,
-            info: unknown,
-            abstractType: unknown,
-          ) => {
-            const resolved = read.resolve!({
-              value,
-              subgraph,
-              request,
-              info,
-              abstractType,
-            });
-            const nameOf = (value: unknown): unknown =>
-              typeof value === "object" && value !== null
-                ? (value as { name?: string }).name
-                : value;
-            return resolved !== null &&
-              (typeof resolved === "object" ||
-                typeof resolved === "function") &&
-              "then" in resolved &&
-              typeof resolved.then === "function"
-              ? Promise.resolve(resolved).then(nameOf)
-              : nameOf(resolved);
-          },
-        );
-        break;
-      case "is-type-of":
-        put(
-          read.typeName!,
-          "__isTypeOf",
-          (value: unknown, request: unknown, info: unknown) =>
-            read.resolve!({
-              parent: value,
-              args: undefined,
-              subgraph,
-              request,
-              info,
-            }),
-        );
-        break;
-    }
+    const [typeName, fieldName, value] = bindingOf(entry, subgraph);
+    resolvers[typeName] = { ...resolvers[typeName], [fieldName]: value };
   }
   return resolvers;
+}
+
+/** Every case returns, so an entry kind added later fails to compile here. */
+function bindingOf(
+  entry: RegisteredEntry,
+  subgraph: unknown,
+): readonly [typeName: string, fieldName: string, value: unknown] {
+  const field =
+    (resolve: Bound<FieldInvocation>) =>
+    (parent: unknown, args: unknown, request: unknown, info: unknown) =>
+      resolve({ parent, args, subgraph, request, info });
+  switch (entry.kind) {
+    case "query":
+    case "mutation":
+      return [rootFor(entry.kind), entry.fieldName, field(entry.resolve)];
+    case "subscription":
+      return [
+        rootFor(entry.kind),
+        entry.fieldName,
+        {
+          subscribe: field(entry.subscribe),
+          // Without a resolve, GraphQL's default lookup reads the field from
+          // the event payload, which existing subscriptions rely on.
+          ...(entry.resolve !== undefined && { resolve: field(entry.resolve) }),
+        },
+      ];
+    case "computed-field":
+      return [
+        entry.token.typeName,
+        entry.token.fieldName,
+        field(entry.resolve),
+      ];
+    case "resolve-type": {
+      const { resolve } = entry;
+      const nameOf = (value: unknown): unknown =>
+        typeof value === "object" && value !== null
+          ? "name" in value
+            ? value.name
+            : undefined
+          : value;
+      return [
+        entry.typeName,
+        "__resolveType",
+        (
+          value: unknown,
+          request: unknown,
+          info: unknown,
+          abstractType: unknown,
+        ) => {
+          const resolved = resolve({
+            value,
+            subgraph,
+            request,
+            info,
+            abstractType,
+          });
+          return resolved !== null &&
+            (typeof resolved === "object" || typeof resolved === "function") &&
+            "then" in resolved &&
+            typeof resolved.then === "function"
+            ? Promise.resolve(resolved).then(nameOf)
+            : nameOf(resolved);
+        },
+      ];
+    }
+    case "is-type-of": {
+      const { resolve } = entry;
+      return [
+        entry.typeName,
+        "__isTypeOf",
+        (value: unknown, request: unknown, info: unknown) =>
+          resolve({ parent: value, args: undefined, subgraph, request, info }),
+      ];
+    }
+  }
 }
 
 function compileCompat<TSubgraph, TDocument, TResolverMap>(
