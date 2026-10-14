@@ -110,6 +110,7 @@ export function compileSubgraph<
   const name = subgraphName(config.name);
   const onSetup = hookOrFail(config.onSetup, "onSetup");
   const onDisconnect = hookOrFail(config.onDisconnect, "onDisconnect");
+  schemaKindOrFail(config.schemaKind);
   const compiled =
     config.schemaKind === "typed"
       ? compileTyped(config, name)
@@ -128,6 +129,19 @@ function subgraphName(value: unknown): string {
     });
   }
   return value;
+}
+
+function schemaKindOrFail(value: unknown): void {
+  if (value !== "typed" && value !== "graphql-ast-compat") {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["schemaKind"],
+      message: 'schemaKind is "typed" or "graphql-ast-compat".',
+      received: typeof value === "string" ? value : typeof value,
+      repair:
+        'Use schemaKind: "typed" to declare entries, or "graphql-ast-compat" to serve an existing GraphQL document.',
+    });
+  }
 }
 
 function hookOrFail<THook>(
@@ -317,9 +331,20 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
   config: CompatSubgraphConfig<TSubgraph, TDocument, TResolverMap>,
   name: string,
 ): CompiledSchema<TSubgraph> {
-  const { compatibility } = config;
-  const declared = { ...compatibility };
-  const getResolvers: unknown = declared.getResolvers;
+  const compatibility: unknown = config.compatibility;
+  if (typeof compatibility !== "object" || compatibility === null) {
+    failDefinition({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility"],
+      message:
+        "A graphql-ast-compat subgraph needs a compatibility declaration object.",
+      received: compatibility === null ? "null" : typeof compatibility,
+      repair:
+        'Pass compatibility: { kind: "graphql-ast-v1", typeDefs, resolverCoordinates, getResolvers, hasSubscriptions, preserveDefinitionOrder: true }.',
+    });
+  }
+  const declared: Partial<Record<string, unknown>> = { ...compatibility };
+  const { getResolvers } = declared;
   if (typeof getResolvers !== "function") {
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
