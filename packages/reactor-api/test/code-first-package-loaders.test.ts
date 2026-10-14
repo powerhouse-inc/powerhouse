@@ -249,6 +249,14 @@ const forms: ExportForm[] = [
     expected: [example, notes],
   },
   {
+    form: "statement-order",
+    variantIndex: [
+      'export * as Zebra from "../../../subgraphs/example.js";',
+      'export { NotesSubgraph as AppleSubgraph } from "../../../subgraphs/notes.js";',
+    ].join("\n"),
+    expected: [example, notes],
+  },
+  {
     form: "unrelated-exports",
     variantIndex: [
       'export * as tasks from "../../../subgraphs/example.js";',
@@ -334,6 +342,19 @@ describe("subgraph export forms", () => {
       expect(observedSubgraphs(await load(variantOf(form)))).toEqual(
         form.expected,
       );
+    });
+
+    // The order decides which subgraph keeps a contested claim, so a dev
+    // server and a built package must register in the same one.
+    it("registers in export-name order, not statement order", async () => {
+      const form = forms.find(({ form }) => form === "statement-order");
+      const loaded = await load(variantOf(form!));
+      expect(
+        loaded.map(
+          (value) =>
+            (value as Partial<DefinedSubgraph>).definition?.name ?? value.name,
+        ),
+      ).toEqual(["NotesSubgraph", "example"]);
     });
   });
 });
