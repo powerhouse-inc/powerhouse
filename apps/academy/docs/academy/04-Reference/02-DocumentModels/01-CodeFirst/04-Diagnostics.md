@@ -115,9 +115,10 @@ Builds the host GraphQL schema from all registered models and subgraphs.
 
 | Code | Severity | Meaning |
 | ---- | -------- | ------- |
-| `PH-GQL-COORDINATE-OWNED` | warning | A core or document-model subgraph owns a root field that this subgraph declares, so the server leaves this subgraph out of the supergraph. Or other package subgraphs declare it too, and only the one that registers first keeps it in the supergraph. |
+| `PH-DM-GRAPHQL-REFUSED` | warning | The server refuses a document model's GraphQL schema, because the schema does not build or generates a type name that the server reserves. Or the server refuses only the model's own subgraph, because that subgraph's schema does not build. The check reports this only when the selection has subgraphs. |
+| `PH-GQL-COORDINATE-OWNED` | warning | A core or document-model subgraph owns a root field that this subgraph declares, so the server leaves this subgraph out of the supergraph. Or other package subgraphs declare it too, and the supergraph can include only one of them. Which one depends on the order the subgraphs register, so the warning names no winner. |
 | `PH-GQL-FEDERATION-UNSUPPORTED` | error | A code-first subgraph uses Apollo Federation 2 features. This version does not support them. |
-| `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | A core or document-model subgraph defines a type differently from this subgraph, so the server leaves this subgraph out of the supergraph. Or other package subgraphs define it differently, and only the subgraphs that define it as the first one to register does stay in the supergraph. Field order and descriptions do not count as differences. |
+| `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | A core or document-model subgraph defines a type differently from this subgraph, so the server leaves this subgraph out of the supergraph. Or other package subgraphs define it differently, and the supergraph can include the subgraphs of only one definition. Field order and descriptions do not count as differences. |
 | `PH-SCALAR-RESOLVER-SHADOWED` | warning | A resolver that you wrote uses the name of a catalog scalar. |
 | `PH-SCALAR-UNREGISTERED` | warning | The SDL uses a scalar that the catalog has no entry for. |
 | `PH-SG-GENERATED-TYPE-TAKEN` | warning | The subgraph defines a type that the document-model schema generates, such as `Operation` or a model's document type, so the server refuses this subgraph. |

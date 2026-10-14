@@ -51,6 +51,7 @@ import type {
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
+  admitDocumentModel,
   buildDocumentModelSchema,
   buildSubgraphSchemaModule,
   createSchema,
@@ -59,9 +60,7 @@ import {
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
-  type ReservedTypeNames,
   reservedTypeNames,
-  reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
   typeDefinitionNames,
@@ -741,9 +740,8 @@ export class GraphQLManager {
     const refusals = new Set<string>();
     const schemas = new Map<DocumentModelModule, DocumentModelSchema>();
     const admitted: DocumentModelModule[] = [];
-    for (const { model, key, schema, error } of this.#schemaCache.resolve(
-      models,
-    )) {
+    for (const resolved of this.#schemaCache.resolve(models)) {
+      const { model, key } = resolved;
       const id = model.documentModel.global.id;
       const refuse = (message: string, reason: string) => {
         const refusal = `${id}\n${key}\n${reason}`;
@@ -752,43 +750,26 @@ export class GraphQLManager {
           this.logger.error(message, id, reason);
         }
       };
-      const refuseModel = (reason: string) =>
+      const admission = admitDocumentModel(resolved, reserved);
+      if (!admission.admitted) {
         refuse(
           "Refusing document model @documentType from the GraphQL schema: @reason",
-          reason,
+          admission.reason,
         );
-      if (!schema) {
-        refuseModel(`has an unusable schema: ${error.message}`);
         continue;
       }
-      const taken = this.#reservedNamesReason(model, schema, reserved);
-      if (taken !== undefined) {
-        refuseModel(taken);
-        continue;
-      }
-      if (schema.subgraphError) {
+      if (admission.subgraphRefusal !== undefined) {
         refuse(
           "Refusing the subgraph of document model @documentType: @reason",
-          `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+          admission.subgraphRefusal,
         );
       }
-      schemas.set(model, schema);
+      schemas.set(model, admission.schema);
       admitted.push(model);
     }
     this.#refusals = refusals;
     this.#modelSchemas = schemas;
     return admitted;
-  }
-
-  #reservedNamesReason(
-    model: DocumentModelModule,
-    schema: DocumentModelSchema,
-    reserved: ReservedTypeNames,
-  ): string | undefined {
-    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
-    return taken.length > 0
-      ? `generates reserved type names: ${taken.join(", ")}`
-      : undefined;
   }
 
   async #setupDocumentModelSubgraphs(

@@ -556,8 +556,9 @@ function storedModelDefinitions(
 
 /** The definitions `documentModel` adds to the generated schema. */
 function documentModelDefinitions(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
 ): readonly DefinitionNode[] {
+  if (!isModule(documentModel)) return storedModelDefinitions(documentModel);
   const global = documentModel.documentModel.global;
   const structured = structuredModelOf(documentModel);
   if (structured === null) return storedModelDefinitions(global);
@@ -616,7 +617,7 @@ export function reservedTypeNames(
  * repeat a reserved scalar: the duplicate is dropped on assembly.
  */
 export function reservedTypeNamesTaken(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
   reserved: ReservedTypeNames,
   definitions: readonly DefinitionNode[] = documentModelDefinitions(
     documentModel,
@@ -704,35 +705,28 @@ const GENERATED_TAIL = gql`
   }
 `.definitions;
 
-/**
- * The generated schema for `documentModels`. `schemas` supplies models'
- * definitions already built; the others are built here.
- */
+/** {@link generatedTypesOf} for modules. */
 export function getGeneratedDocumentModelTypes(
   documentModels: DocumentModelModule[],
   schemas?: ReadonlyMap<DocumentModelModule, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
-  return generatedTypesFrom(
-    documentModels.map((model) => ({
-      global: model.documentModel.global,
-      definitions: () =>
-        schemas?.get(model)?.generated ?? documentModelDefinitions(model),
-    })),
-    modelPackageScalars(documentModels),
-  );
+  return generatedTypesOf(documentModels, schemas);
 }
 
-/** {@link getGeneratedDocumentModelTypes} from the models' global states. */
+/**
+ * The generated schema for `documentModels`, modules or stored global states.
+ * `schemas` supplies models' definitions already built; the others are built
+ * here.
+ */
 export function generatedTypesOf(
   documentModels: readonly DocumentModelSource[],
+  schemas?: ReadonlyMap<DocumentModelSource, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
   return generatedTypesFrom(
     documentModels.map((source) => ({
       global: globalStateOf(source),
       definitions: () =>
-        isModule(source)
-          ? documentModelDefinitions(source)
-          : storedModelDefinitions(source),
+        schemas?.get(source)?.generated ?? documentModelDefinitions(source),
     })),
     modelPackageScalars(documentModels.filter(isModule)),
   );
@@ -820,14 +814,14 @@ const toError = (error: unknown): Error =>
 
 /** Build `subgraph` over the generated types of `documentModel` alone. */
 function checkBuilds(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
   generated: readonly DefinitionNode[],
   subgraph?: DocumentModelSchema["subgraph"],
 ): void {
   buildSubgraphSchema([
     {
       typeDefs: assembleSubgraphTypeDefs(
-        getGeneratedDocumentModelTypes(
+        generatedTypesOf(
           [documentModel],
           new Map([[documentModel, { generated }]]),
         ),
@@ -840,13 +834,13 @@ function checkBuilds(
 
 /** Throws when the generated types every subgraph carries do not build. */
 export function buildDocumentModelSchema(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
   options: { subgraph?: boolean } = {},
 ): DocumentModelSchema {
   const generated = documentModelDefinitions(documentModel);
   if (
     options.subgraph === false ||
-    !hasOperationSchemas(documentModel.documentModel.global)
+    !hasOperationSchemas(globalStateOf(documentModel))
   ) {
     checkBuilds(documentModel, generated);
     return { generated };
@@ -921,6 +915,56 @@ export class DocumentModelSchemaCache {
     this.#entries = entries;
     return resolved;
   }
+}
+
+/** Whether the server admits a model, and why not when it refuses one. */
+export type DocumentModelAdmission =
+  | {
+      admitted: true;
+      schema: DocumentModelSchema;
+      /** Why its own subgraph is refused; its generated types still serve. */
+      subgraphRefusal?: string;
+    }
+  | {
+      admitted: false;
+      refusal: "unusable schema" | "reserved names";
+      reason: string;
+    };
+
+/**
+ * The server's decision on one built model: it refuses a model whose schema
+ * does not build or that generates a reserved type name.
+ */
+export function admitDocumentModel(
+  resolved: { model: DocumentModelSource } & (
+    | { schema: DocumentModelSchema; error?: undefined }
+    | { schema?: undefined; error: Error }
+  ),
+  reserved: ReservedTypeNames,
+): DocumentModelAdmission {
+  if (resolved.schema === undefined) {
+    return {
+      admitted: false,
+      refusal: "unusable schema",
+      reason: `has an unusable schema: ${resolved.error.message}`,
+    };
+  }
+  const { model, schema } = resolved;
+  const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
+  if (taken.length > 0) {
+    return {
+      admitted: false,
+      refusal: "reserved names",
+      reason: `generates reserved type names: ${taken.join(", ")}`,
+    };
+  }
+  return {
+    admitted: true,
+    schema,
+    ...(schema.subgraphError !== undefined && {
+      subgraphRefusal: `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+    }),
+  };
 }
 
 /**

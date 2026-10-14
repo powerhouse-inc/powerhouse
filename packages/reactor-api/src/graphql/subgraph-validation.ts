@@ -1,6 +1,5 @@
 import type {
   DefinitionDiagnostic,
-  DefinitionSource,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
 import { createDiagnostic } from "document-model";
@@ -9,38 +8,49 @@ import type {
   HostValidationResult,
 } from "document-model/tooling";
 import { type DocumentNode, Kind } from "graphql";
-import { baseDocumentModels } from "../packages/base-document-models.js";
 import { getUniqueDocumentModels } from "../packages/package-manager.js";
 import {
   createSchema,
   SubgraphTypeCollisionError,
 } from "../utils/create-schema.js";
 import type { DefinedSubgraph } from "./define-subgraph.js";
-import { isRootFieldClaim } from "./subgraph-type-ownership.js";
 import {
+  describeClaimContest,
+  describeRefusedDocumentModel,
+  describeSubgraphConflict,
   findPackageSubgraphConflicts,
+  generatedTypeConflict,
+  hostDocumentModels,
   type PackageSubgraph,
-  type PackageSubgraphConflicts,
-  quotedNames,
+  refusePackageSubgraph,
+  type SubgraphWarning,
 } from "./subgraph-types.js";
 
 /**
  * Validates each code-first subgraph in a selection against the augmented
- * schema the host serves, then warns about each one the server would refuse
- * or leave out of the supergraph. A subgraph that names a host-declared type
- * such as `OID` or `DocumentDrive` is valid, because the host declares it.
- * Each class is read through its static `definition`, `typeDefs`, and
- * `scalarResolvers`. Nothing is constructed, so no resolver factory or
- * `onSetup` runs.
+ * schema the host serves, then warns about each model and subgraph the server
+ * would refuse or leave out of the supergraph. A subgraph that names a
+ * host-declared type such as `OID` or `DocumentDrive` is valid, because the
+ * host declares it. Each class is read through its static `definition`,
+ * `typeDefs`, and `scalarResolvers`. Nothing is constructed, so no resolver
+ * factory or `onSetup` runs.
  */
 export function validateSubgraphsForHost(
   request: HostValidationRequest,
 ): HostValidationResult {
   const diagnostics: DefinitionDiagnostic[] = [];
-  const documentModels = getUniqueDocumentModels(
-    baseDocumentModels.map(([, model]) => model),
-    request.documentModels,
-  );
+  const host = hostDocumentModels(request.documentModels);
+  for (const refused of host.refused) {
+    diagnostics.push(
+      createDiagnostic({
+        ...describeRefusedDocumentModel(refused),
+        definition: { kind: "document-model", key: refused.id },
+        path: ["composition", refused.name],
+        received: refused.name,
+      }),
+    );
+  }
+  const documentModels = getUniqueDocumentModels(host.admitted);
 
   const candidates: Candidate[] = [];
   for (const entry of request.subgraphs) {
@@ -64,17 +74,17 @@ export function validateSubgraphsForHost(
 
   // The server refuses a taken name or a redefined generated type before it
   // builds anything, so those are decided first.
-  const admission = findPackageSubgraphConflicts(
-    candidates,
-    request.documentModels,
-  ).conflicts;
   const built: Candidate[] = [];
   for (const candidate of candidates) {
     request.signal?.throwIfAborted();
     const { name, typeDefs, entry } = candidate;
-    const refused = admission.get(candidate);
-    if (refused !== undefined && refused.kind !== "claims") {
-      diagnostics.push(...conflictDiagnostics(name, entry.source, refused));
+    const refusal = refusePackageSubgraph(candidate, host);
+    if (refusal !== undefined) {
+      diagnostics.push(
+        ...describeSubgraphConflict(name, refusal).map((warning) =>
+          warningDiagnostic(candidate, warning),
+        ),
+      );
       continue;
     }
 
@@ -87,7 +97,13 @@ export function validateSubgraphsForHost(
     } catch (error) {
       diagnostics.push(
         error instanceof SubgraphTypeCollisionError
-          ? generatedTypeTaken(name, entry.source, error.typeNames)
+          ? warningDiagnostic(
+              candidate,
+              describeSubgraphConflict(
+                name,
+                generatedTypeConflict(error.typeNames, host),
+              )[0],
+            )
           : createDiagnostic({
               code: "PH-SG-SCHEMA-INVALID",
               source: entry.source,
@@ -104,20 +120,22 @@ export function validateSubgraphsForHost(
     built.push(candidate);
   }
 
-  const { conflicts } = findPackageSubgraphConflicts(
-    built,
-    request.documentModels,
-  );
+  const { conflicts, contests } = findPackageSubgraphConflicts(built, host);
   for (const candidate of built) {
     const conflict = conflicts.get(candidate);
     if (conflict !== undefined) {
       diagnostics.push(
-        ...conflictDiagnostics(
-          candidate.name,
-          candidate.entry.source,
-          conflict,
+        ...describeSubgraphConflict(candidate.name, conflict).map((warning) =>
+          warningDiagnostic(candidate, warning),
         ),
       );
+    }
+    for (const contest of contests) {
+      if (contest.claimants.includes(candidate)) {
+        diagnostics.push(
+          warningDiagnostic(candidate, describeClaimContest(contest)),
+        );
+      }
     }
   }
 
@@ -128,77 +146,18 @@ type Candidate = PackageSubgraph & {
   readonly entry: HostValidationRequest["subgraphs"][number];
 };
 
-function conflictDiagnostics(
-  name: string,
-  source: DefinitionSource,
-  conflict: PackageSubgraphConflicts,
-): DefinitionDiagnostic[] {
-  switch (conflict.kind) {
-    case "name":
-      return [
-        createDiagnostic({
-          code: "PH-SG-NAME-TAKEN",
-          source,
-          path: ["composition", name],
-          message: `Subgraph "${name}" has the name of a ${conflict.heldBy} subgraph, so the server refuses it.`,
-          received: name,
-          repair: "Rename the subgraph.",
-        }),
-      ];
-    case "generated":
-      return [
-        generatedTypeTaken(
-          name,
-          source,
-          conflict.claims.map(({ claim }) => claim),
-        ),
-      ];
-    case "claims":
-      return conflict.claims.map((lost) => {
-        const rootField = isRootFieldClaim(lost.claim);
-        const code = rootField
-          ? "PH-GQL-COORDINATE-OWNED"
-          : "PH-GQL-SHARED-DEFINITION-MISMATCH";
-        const at = { source, path: ["composition", name, lost.claim] };
-        if (lost.kind === "owned") {
-          return createDiagnostic({
-            code,
-            ...at,
-            message: `${lost.claim} belongs to "${lost.owner}", so the server leaves subgraph "${name}" out of the supergraph.`,
-            received: name,
-            repair: rootField
-              ? `Rename ${lost.claim} in this subgraph.`
-              : `Rename ${lost.claim} in this subgraph, or define it exactly as "${lost.owner}" does.`,
-          });
-        }
-        const { rivals } = lost;
-        return createDiagnostic({
-          code,
-          ...at,
-          message: rootField
-            ? `Subgraphs ${quotedNames([name, ...rivals])} ${rivals.length === 1 ? "both" : "all"} declare ${lost.claim}, and only the one that registers first keeps it in the supergraph.`
-            : `Subgraph "${name}" defines ${lost.claim} differently from ${quotedNames(rivals)}. The supergraph keeps it only in the subgraphs that define it as the first one to register does.`,
-          received: name,
-          repair: rootField
-            ? `Declare ${lost.claim} in one subgraph only.`
-            : `Make every definition of ${lost.claim} identical, or rename it where it differs.`,
-        });
-      });
-  }
-}
-
-function generatedTypeTaken(
-  name: string,
-  source: DefinitionSource,
-  typeNames: readonly string[],
+function warningDiagnostic(
+  { name, entry }: Candidate,
+  { claim, ...warning }: SubgraphWarning,
 ): DefinitionDiagnostic {
   return createDiagnostic({
-    code: "PH-SG-GENERATED-TYPE-TAKEN",
-    source,
-    path: ["composition", name],
-    message: `Subgraph "${name}" defines ${typeNames.join(", ")}, which the document-model schema generates, so the server refuses it.`,
+    ...warning,
+    source: entry.source,
+    path:
+      claim === undefined
+        ? ["composition", name]
+        : ["composition", name, claim],
     received: name,
-    repair: "Rename those types in this subgraph.",
   });
 }
 

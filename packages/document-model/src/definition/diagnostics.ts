@@ -178,6 +178,12 @@ const catalog = {
     meaning:
       "Compatibility data disagrees with the authored declaration or is malformed",
   },
+  "PH-DM-GRAPHQL-REFUSED": {
+    severity: "warning",
+    phase: "composition",
+    meaning:
+      "The server refuses a document model's GraphQL schema, or its own subgraph, so it does not serve them",
+  },
   "PH-SG-DEFINITION-INVALID": {
     severity: "error",
     phase: "definition",
@@ -218,13 +224,13 @@ const catalog = {
     severity: "warning",
     phase: "composition",
     meaning:
-      "A root field the subgraph declares is owned by a core or model subgraph, or declared by other package subgraphs, so the server leaves out of the supergraph every claimant but the first",
+      "A root field the subgraph declares is owned by a core or model subgraph, or declared by other package subgraphs, so the supergraph can include at most one of them",
   },
   "PH-GQL-SHARED-DEFINITION-MISMATCH": {
     severity: "warning",
     phase: "composition",
     meaning:
-      "A type the subgraph defines differs from the definition of a core or model subgraph, or of other package subgraphs, so the server keeps only the subgraphs that match the first",
+      "A type the subgraph defines differs from the definition of a core or model subgraph, or of other package subgraphs, so the supergraph can include the subgraphs of only one definition",
   },
   "PH-GQL-FEDERATION-UNSUPPORTED": {
     severity: "error",
