@@ -4,6 +4,7 @@ import {
   assertFieldUse,
   snapshotDescriptorOptions,
   snapshotFieldMap,
+  stringOption,
 } from "../field-options.js";
 import type { AnyFieldDescriptor, ObjectFields } from "../types.js";
 import {
@@ -165,10 +166,8 @@ export function computedField<
     kind: "computed-field" as const,
     args: argumentMap(config.args, "PH-SG-COMPUTED-FIELD-INVALID") as TArgs,
     returns: config.returns as TReturns,
-    description:
-      typeof config.description === "string" ? config.description : null,
-    deprecated:
-      typeof config.deprecated === "string" ? config.deprecated : null,
+    description: stringOption(config, "description", ["options"]),
+    deprecated: stringOption(config, "deprecated", ["options"]),
   }) as ComputedFieldDescriptor<TArgs, TReturns>;
 }
 
@@ -375,11 +374,9 @@ export function createEntryBuilders<
     assertFieldUse(config.returns, ["options", "returns"]);
     const shape: RootEntry = {
       key,
-      fieldName: typeof config.fieldName === "string" ? config.fieldName : key,
-      description:
-        typeof config.description === "string" ? config.description : null,
-      deprecated:
-        typeof config.deprecated === "string" ? config.deprecated : null,
+      fieldName: stringOption(config, "fieldName", ["options"]) ?? key,
+      description: stringOption(config, "description", ["options"]),
+      deprecated: stringOption(config, "deprecated", ["options"]),
       args: argumentMap(config.args, "PH-SG-ENTRY-INVALID"),
       returns: config.returns,
     };

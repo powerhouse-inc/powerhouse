@@ -215,9 +215,9 @@ export function assertNamedType(
   });
 }
 
-function stringOption(
-  options: { readonly [key: string]: DataValue },
-  key: "description" | "deprecated",
+export function stringOption(
+  options: { readonly [key: string]: unknown },
+  key: string,
   path: DataPath,
 ): string | null {
   if (!Object.hasOwn(options, key)) return null;
