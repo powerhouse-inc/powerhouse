@@ -377,6 +377,42 @@ the generic `GraphQLManager.executeSubgraphQuery` plus an injectable
 sets `source: "self"` without injecting a verifier is refused at boot rather
 than silently verified against a remote Renown.
 
+#### Revoking a Credential From a Package
+
+A package that revokes credentials (for example a `revokeCredential` mutation)
+should evict the host's cached check as soon as the revocation is stored, so the
+credential is refused on the next request instead of after the cache TTL.
+Every subgraph receives the invalidator as `SubgraphArgs.credentials`, and
+`BaseSubgraph` exposes it as `this.credentials`:
+
+```ts
+class RenownAuthSubgraph extends BaseSubgraph {
+  resolvers = {
+    Mutation: {
+      revokeCredential: async (_: unknown, { id }: { id: string }) => {
+        const vc = await this.store.revoke(id); // persist first
+        // Evicts cached checks for this identity. chainId and appDid
+        // narrow the eviction;
+        // pass only the address to drop every app key of that address.
+        this.credentials.invalidateCredential(
+          vc.address,
+          vc.chainId,
+          vc.appDid, // the did:key the credential delegates to
+        );
+        return true;
+      },
+    },
+  };
+}
+```
+
+The call is synchronous, returns the number of evicted entries and is a no-op on
+a host without authentication. It is local to the process: other replicas keep
+their cache until its TTL lapses, which is why `source: "self"` defaults to no
+cache. A package built against an older `reactor-api` sees `this.credentials` as
+`undefined`; call it as `this.credentials?.invalidateCredential(...)` when the
+package must support such hosts.
+
 #### The Switchboard's Own Identity
 
 Separately from verifying incoming credentials, a switchboard has its own

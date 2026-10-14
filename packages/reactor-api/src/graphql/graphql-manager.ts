@@ -39,7 +39,11 @@ import {
   type ReportError,
   type RunDetachedOptions,
 } from "../utils/detached.js";
-import type { AuthService, User } from "../services/auth.service.js";
+import {
+  createCredentialInvalidator,
+  type AuthService,
+  type User,
+} from "../services/auth.service.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type {
   CanonicalDocumentId,
@@ -1402,6 +1406,7 @@ export class GraphQLManager {
       syncServingGate: this.syncServingGate,
       attachments: this.attachments,
       inspection: this.inspection,
+      credentials: createCredentialInvalidator(this.authService),
     });
   }
 

@@ -27,6 +27,10 @@ import {
 } from "../services/canonical-document-id.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
+import {
+  createCredentialInvalidator,
+  type ICredentialInvalidator,
+} from "../services/auth.service.js";
 import type { Context } from "./types.js";
 
 /**
@@ -61,6 +65,14 @@ export class BaseSubgraph implements ISubgraph {
   documentPermissionService?: DocumentPermissionService;
   authorizationService: IAuthorizationService;
   syncServingGate?: SyncScopeGate;
+  /**
+   * The host's credential cache, for a package that revokes credentials:
+   * call `this.credentials.invalidateCredential(address, chainId?, appDid?)`
+   * right after the revocation is stored, so this host refuses the credential
+   * on the next request and closes WebSocket connections that rely on it.
+   * A no-op on a host without authentication.
+   */
+  readonly credentials: ICredentialInvalidator;
 
   /**
    * Per-request memo of raw identifier to canonical document id, keyed on the
@@ -92,6 +104,8 @@ export class BaseSubgraph implements ISubgraph {
     this.syncServingGate = args.syncServingGate;
     this.path = args.path ?? "";
     this.#attachments = args.attachments;
+    this.credentials =
+      args.credentials ?? createCredentialInvalidator(undefined);
   }
 
   /**
