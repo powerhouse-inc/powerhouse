@@ -873,6 +873,14 @@ describe("a compiled declaration", () => {
     ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["definitionOrder", 1] });
   });
 
+  it("refuses a declaration that is not an object", () => {
+    expect(refused(() => compileSubgraph(null as never))).toEqual({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: [],
+      message: "A subgraph declaration is an object.",
+    });
+  });
+
   it("refuses an entries callback that returns something other than an array", () => {
     expect(() =>
       compileSubgraph({

@@ -623,6 +623,126 @@ describe("a declaration the server could not run", () => {
     ).toEqual(noDeclaration);
   });
 
+  it("serves a compatibility declaration whose members live on its prototype", () => {
+    class Declaration {
+      readonly kind = "graphql-ast-v1";
+      readonly typeDefs = parse("type Query { ping: String }");
+      readonly resolverCoordinates = [
+        { typeName: "Query", fieldName: "ping", resolverKind: "field" },
+      ];
+      readonly hasSubscriptions = undefined;
+      readonly preserveDefinitionOrder = true;
+      readonly reply = "from the instance";
+      getResolvers() {
+        return { Query: { ping: () => this.reply } };
+      }
+    }
+    const fromBase = Object.create(new Declaration(), {
+      reply: { value: "from the derived object" },
+    }) as Declaration;
+    const ping = (compatibility: unknown) => {
+      const instance = new (defineSubgraph({
+        name: "compat",
+        schemaKind: "graphql-ast-compat",
+        compatibility,
+      } as DefineSubgraphConfig))(args());
+      const resolvers = instance.resolvers as Record<
+        string,
+        Record<string, () => unknown>
+      >;
+      return resolvers.Query.ping();
+    };
+    expect(ping(new Declaration())).toBe("from the instance");
+    expect(ping(fromBase)).toBe("from the derived object");
+  });
+
+  it("refuses a compatibility kind it does not know", () => {
+    expect(refusal(compat({}, { kind: "nope" }))).toEqual({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "kind"],
+      message: 'The compatibility declaration\'s kind is "graphql-ast-v1".',
+    });
+  });
+
+  it("refuses typeDefs that are missing or not a parsed document", () => {
+    const notADocument = {
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "typeDefs"],
+      message:
+        "The compatibility declaration's typeDefs is not a GraphQL document node.",
+    };
+    expect(refusal(compat({}, { typeDefs: undefined }))).toEqual(notADocument);
+    expect(
+      refusal(compat({}, { typeDefs: "type Query { ping: String }" })),
+    ).toEqual(notADocument);
+  });
+
+  it("refuses resolver coordinates that are missing or hold something other than a coordinate", () => {
+    expect(refusal(compat({}, { resolverCoordinates: undefined }))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["compatibility", "resolverCoordinates"],
+      message: "Expected an array.",
+    });
+    expect(
+      refusal(
+        compat(
+          {},
+          {
+            resolverCoordinates: [
+              { typeName: "Query", fieldName: "ping", resolverKind: "field" },
+              null,
+            ],
+          },
+        ),
+      ),
+    ).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["compatibility", "resolverCoordinates", 1],
+      message:
+        "A resolver coordinate is an object with typeName, fieldName, and resolverKind.",
+    });
+  });
+
+  it("refuses a hasSubscriptions or preserveDefinitionOrder the declaration type does not allow", () => {
+    expect(refusal(compat({}, { hasSubscriptions: "yes" }))).toEqual({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "hasSubscriptions"],
+      message: "hasSubscriptions is true, false, or undefined.",
+    });
+    expect(refusal(compat({}, { preserveDefinitionOrder: false }))).toEqual({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility", "preserveDefinitionOrder"],
+      message:
+        "A compatibility subgraph serves its document in source order, so preserveDefinitionOrder is true.",
+    });
+  });
+
+  it("refuses a typed subgraph without an entries callback", () => {
+    const noEntries = {
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["entries"],
+      message: "A typed subgraph declares its entries in an entries callback.",
+    };
+    expect(refusal(typed({ entries: undefined }))).toEqual(noEntries);
+    expect(refusal(typed({ entries: [] }))).toEqual(noEntries);
+  });
+
+  it("refuses a declaration that is not an object", () => {
+    const notAnObject = {
+      code: "PH-SG-DEFINITION-INVALID",
+      path: [],
+      message: "A subgraph declaration is an object.",
+    };
+    expect(
+      refusal(() => defineSubgraph(null as unknown as DefineSubgraphConfig)),
+    ).toEqual(notAnObject);
+    expect(
+      refusal(() =>
+        defineSubgraph("widgets" as unknown as DefineSubgraphConfig),
+      ),
+    ).toEqual(notAnObject);
+  });
+
   it("refuses a field or argument name GraphQL would reject, before the host builds a schema", () => {
     const notAName = (path: readonly string[]) => ({
       code: "PH-DEF-NAME-INVALID",
