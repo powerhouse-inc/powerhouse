@@ -341,7 +341,6 @@ export function createEntryBuilders<
     authoredKey: unknown,
     options: Record<string, unknown>,
   ): TypedSubgraphEntry {
-    const key = assertAuthoredName(authoredKey, ["key"]);
     const config = snapshotDescriptorOptions(
       options,
       [
@@ -355,6 +354,13 @@ export function createEntryBuilders<
       ],
       ["options"],
     );
+    const fieldName = stringOption(config, "fieldName", ["options"]);
+    // The key is the author's identifier; it is the GraphQL name only when
+    // no fieldName overrides it.
+    const key =
+      fieldName === null
+        ? assertAuthoredName(authoredKey, ["key"])
+        : keyOrFail(authoredKey, kind);
     const subject = `${kind} ${JSON.stringify(key)}`;
     if (config.returns === undefined) {
       failDefinition({
@@ -365,7 +371,6 @@ export function createEntryBuilders<
       });
     }
     assertFieldUse(config.returns, ["options", "returns"]);
-    const fieldName = stringOption(config, "fieldName", ["options"]);
     const shape: RootEntry = {
       key,
       fieldName:
@@ -507,6 +512,19 @@ function resolverOrFail<TCall>(
     });
   }
   return value as Bound<TCall>;
+}
+
+function keyOrFail(value: unknown, builder: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    failDefinition({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["key"],
+      message: `${builder}() takes a key as a non-empty string.`,
+      received: typeof value,
+      repair: `Pass the key first, as ${builder}("postById", { ... }).`,
+    });
+  }
+  return value;
 }
 
 function argumentMap(
