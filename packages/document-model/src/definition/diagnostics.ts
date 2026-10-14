@@ -218,13 +218,13 @@ const catalog = {
     severity: "warning",
     phase: "composition",
     meaning:
-      "Another subgraph owns a root field the subgraph declares, so the server leaves it out of the supergraph",
+      "A root field the subgraph declares is owned by a core or model subgraph, or declared by other package subgraphs, so the server leaves out of the supergraph every claimant but the first",
   },
   "PH-GQL-SHARED-DEFINITION-MISMATCH": {
     severity: "warning",
     phase: "composition",
     meaning:
-      "Another subgraph owns a type the subgraph defines differently, so the server leaves it out of the supergraph",
+      "A type the subgraph defines differs from the definition of a core or model subgraph, or of other package subgraphs, so the server keeps only the subgraphs that match the first",
   },
   "PH-GQL-FEDERATION-UNSUPPORTED": {
     severity: "error",

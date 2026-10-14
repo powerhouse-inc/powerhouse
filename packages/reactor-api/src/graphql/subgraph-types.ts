@@ -32,6 +32,14 @@ export {
   type OwnershipConflict,
 } from "./subgraph-type-ownership.js";
 
+/** `"a"`, `"a" and "b"`, or `"a", "b" and "c"`. */
+export function quotedNames(names: readonly string[]): string {
+  const quoted = names.map((name) => `"${name}"`);
+  return quoted.length < 2
+    ? quoted.join("")
+    : `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
+}
+
 /** Owner of the types every generated document-model schema carries. */
 export const DOCUMENT_MODEL_SCHEMA_OWNER = "document-model schema";
 
@@ -68,8 +76,13 @@ export type PackageSubgraphConflicts =
   | { kind: "claims"; claims: PackageClaimConflict[] };
 
 export type PackageSubgraphReport = {
-  /** By subgraph name; subgraphs without a conflict are left out. */
-  conflicts: Map<string, PackageSubgraphConflicts>;
+  /** By subgraph; subgraphs without a conflict are left out. */
+  conflicts: Map<PackageSubgraph, PackageSubgraphConflicts>;
+  /**
+   * Names more than one package subgraph uses. The server serves only the
+   * last of them to register, so each is checked on its own claims.
+   */
+  duplicateNames: string[];
   /** Models whose schema does not generate, left out of the check. */
   skippedModels: string[];
 };
@@ -132,15 +145,15 @@ export function findPackageSubgraphConflicts(
     }
   }
 
-  const conflicts = new Map<string, PackageSubgraphConflicts>();
+  const conflicts = new Map<PackageSubgraph, PackageSubgraphConflicts>();
   const admitted: PackageSubgraph[] = [];
   for (const subgraph of subgraphs) {
     if (coreSubgraphTypeDefs.has(subgraph.name)) {
-      conflicts.set(subgraph.name, { kind: "name", heldBy: "core" });
+      conflicts.set(subgraph, { kind: "name", heldBy: "core" });
       continue;
     }
     if (modelSubgraphs.some((owner) => owner.name === subgraph.name)) {
-      conflicts.set(subgraph.name, { kind: "name", heldBy: "document model" });
+      conflicts.set(subgraph, { kind: "name", heldBy: "document model" });
       continue;
     }
     let collisions: string[];
@@ -150,7 +163,7 @@ export function findPackageSubgraphConflicts(
       collisions = [];
     }
     if (collisions.length > 0) {
-      conflicts.set(subgraph.name, {
+      conflicts.set(subgraph, {
         kind: "generated",
         claims: collisions.map((claim) => ({
           claim,
@@ -161,10 +174,6 @@ export function findPackageSubgraphConflicts(
     }
     admitted.push(subgraph);
   }
-
-  // The server replaces a package subgraph with a later one of the same name.
-  const slots = new Map<string, PackageSubgraph>();
-  for (const subgraph of admitted) slots.set(subgraph.name, subgraph);
 
   const hostCandidates = [
     ...Array.from(coreSubgraphTypeDefs, ([name, typeDefs]) => ({
@@ -177,15 +186,19 @@ export function findPackageSubgraphConflicts(
     name,
     claims: claimsOf(typeDefs, generated.names),
   }));
-  const claimants = new Map<string, { name: string; definition: string }[]>();
-  for (const { name, typeDefs } of slots.values()) {
-    const claims = claimsOf(typeDefs, generated.names);
+  const claimants = new Map<
+    string,
+    { subgraph: PackageSubgraph; definition: string }[]
+  >();
+  for (const subgraph of admitted) {
+    const { name } = subgraph;
+    const claims = claimsOf(subgraph.typeDefs, generated.names);
     const owned = resolveClaimOwnership([
       ...hostCandidates,
       { candidate: name, name, claims },
     ]).get(name);
     if (owned) {
-      conflicts.set(name, {
+      conflicts.set(subgraph, {
         kind: "claims",
         claims: owned.map(({ claim, owner }) => ({
           kind: "owned",
@@ -198,33 +211,41 @@ export function findPackageSubgraphConflicts(
     for (const [claim, definition] of claims) {
       claimants.set(claim, [
         ...(claimants.get(claim) ?? []),
-        { name, definition },
+        { subgraph, definition },
       ]);
     }
   }
 
-  const contested = new Map<string, PackageClaimConflict[]>();
+  const contested = new Map<PackageSubgraph, PackageClaimConflict[]>();
   const byClaim = Array.from(claimants).sort(([left], [right]) =>
     left < right ? -1 : left > right ? 1 : 0,
   );
   for (const [claim, holders] of byClaim) {
     for (const holder of holders) {
+      // A same-name subgraph is the same slot on the server, not a rival.
       const rivals = holders
         .filter(
           (other) =>
-            other.name !== holder.name &&
+            other.subgraph.name !== holder.subgraph.name &&
             (isRootFieldClaim(claim) || other.definition !== holder.definition),
         )
-        .map((other) => other.name);
+        .map((other) => other.subgraph.name);
       if (rivals.length === 0) continue;
-      contested.set(holder.name, [
-        ...(contested.get(holder.name) ?? []),
-        { kind: "contested", claim, rivals },
+      contested.set(holder.subgraph, [
+        ...(contested.get(holder.subgraph) ?? []),
+        { kind: "contested", claim, rivals: [...new Set(rivals)] },
       ]);
     }
   }
-  for (const [name, claims] of contested) {
-    conflicts.set(name, { kind: "claims", claims });
+  for (const [subgraph, claims] of contested) {
+    conflicts.set(subgraph, { kind: "claims", claims });
   }
-  return { conflicts, skippedModels };
+
+  const seen = new Set<string>();
+  const duplicateNames = new Set<string>();
+  for (const { name } of subgraphs) {
+    if (seen.has(name)) duplicateNames.add(name);
+    seen.add(name);
+  }
+  return { conflicts, duplicateNames: [...duplicateNames], skippedModels };
 }

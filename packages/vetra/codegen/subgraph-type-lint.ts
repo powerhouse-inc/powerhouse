@@ -3,6 +3,7 @@ import {
   findPackageSubgraphConflicts,
   isRootFieldClaim,
   type OwnershipConflict,
+  quotedNames,
   type PackageSubgraph,
   type PackageSubgraphConflicts,
 } from "@powerhousedao/reactor-api/subgraph-types";
@@ -50,12 +51,6 @@ function readSchema(path: string): DocumentNode | undefined {
 const listClaims = (claims: readonly OwnershipConflict[]) =>
   claims.map(({ claim, owner }) => `${claim} (owned by "${owner}")`).join(", ");
 
-/** `"a" and "b"`, or `"a", "b" and "c"`. */
-const quotedList = (names: readonly string[]) => {
-  const quoted = names.map((name) => `"${name}"`);
-  return `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
-};
-
 /** The warnings for one subgraph, except the claims it contests. */
 function describe(name: string, conflict: PackageSubgraphConflicts): string[] {
   switch (conflict.kind) {
@@ -80,25 +75,40 @@ function describe(name: string, conflict: PackageSubgraphConflicts): string[] {
   }
 }
 
-/** One warning per contested claim, naming every subgraph that declares it. */
+/**
+ * One warning per contested claim. A root field names every subgraph that
+ * declares it. A type groups its claimants by definition: subgraphs with the
+ * same rivals define it the same way.
+ */
 function describeContests(
-  conflicts: ReadonlyMap<string, PackageSubgraphConflicts>,
+  conflicts: ReadonlyMap<PackageSubgraph, PackageSubgraphConflicts>,
 ): string[] {
-  const claimants = new Map<string, Set<string>>();
-  for (const [name, conflict] of conflicts) {
+  const rivalsByClaim = new Map<string, Map<string, readonly string[]>>();
+  for (const [{ name }, conflict] of conflicts) {
     if (conflict.kind !== "claims") continue;
     for (const lost of conflict.claims) {
       if (lost.kind !== "contested") continue;
-      const names = claimants.get(lost.claim) ?? new Set([name]);
-      for (const rival of lost.rivals) names.add(rival);
-      claimants.set(lost.claim, names);
+      const holders =
+        rivalsByClaim.get(lost.claim) ?? new Map<string, readonly string[]>();
+      holders.set(name, lost.rivals);
+      rivalsByClaim.set(lost.claim, holders);
     }
   }
-  return Array.from(
-    claimants,
-    ([claim, names]) =>
-      `Subgraphs ${quotedList([...names])} all define ${claim}${isRootFieldClaim(claim) ? "" : " differently"}, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.`,
-  );
+  return Array.from(rivalsByClaim, ([claim, holders]) => {
+    const names = [...holders.keys()].sort();
+    if (isRootFieldClaim(claim)) {
+      return `Subgraphs ${quotedNames(names)} ${names.length === 2 ? "both" : "all"} define ${claim}, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.`;
+    }
+    const groups = Map.groupBy(names, (name) =>
+      [...(holders.get(name) ?? [])].sort().join("\n"),
+    );
+    const ways = Array.from(
+      groups.values(),
+      (group, index) =>
+        `${index === 0 ? "one way" : "another way"} by ${quotedNames(group)}`,
+    );
+    return `${claim} is defined ${ways.slice(0, -1).join(", ")}, and ${ways.at(-1)}. The supergraph keeps it only in the subgraphs that define it as the first one to register does. Make the definitions identical, or rename it where it differs.`;
+  });
 }
 
 /** A warning per subgraph the server would refuse or leave out. */
@@ -108,6 +118,7 @@ export function lintSubgraphTypes(projectDir: string): string[] {
     .filter((model) => model !== undefined);
   const subgraphsDir = join(projectDir, "subgraphs");
   const subgraphs: PackageSubgraph[] = [];
+  const dirOf = new Map<PackageSubgraph, string>();
   const dirs = directories(subgraphsDir)
     .map((entry) => entry.name)
     .sort();
@@ -115,20 +126,26 @@ export function lintSubgraphTypes(projectDir: string): string[] {
     const typeDefs = readSchema(join(subgraphsDir, dir, "schema.ts"));
     if (!typeDefs) continue;
     const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";
-    subgraphs.push({ name: SUBGRAPH_NAME.exec(index)?.[1] ?? dir, typeDefs });
+    const subgraph = { name: SUBGRAPH_NAME.exec(index)?.[1] ?? dir, typeDefs };
+    subgraphs.push(subgraph);
+    dirOf.set(subgraph, dir);
   }
   if (subgraphs.length === 0) return [];
 
-  const { conflicts, skippedModels } = findPackageSubgraphConflicts(
-    subgraphs,
-    models,
-  );
+  const { conflicts, duplicateNames, skippedModels } =
+    findPackageSubgraphConflicts(subgraphs, models);
   return [
     ...skippedModels.map(
       (name) =>
         `Document model "${name}" was left out of the subgraph check: its schema does not generate.`,
     ),
-    ...Array.from(conflicts).flatMap(([name, conflict]) =>
+    ...duplicateNames.map((name) => {
+      const dirs = subgraphs
+        .filter((subgraph) => subgraph.name === name)
+        .map((subgraph) => dirOf.get(subgraph) ?? name);
+      return `Subgraphs in ${quotedNames(dirs)} are ${dirs.length === 2 ? "both" : "all"} named "${name}", so the server serves only one of them. Rename ${dirs.length === 2 ? "one" : "all but one"} of them.`;
+    }),
+    ...Array.from(conflicts).flatMap(([{ name }, conflict]) =>
       describe(name, conflict),
     ),
     ...describeContests(conflicts),

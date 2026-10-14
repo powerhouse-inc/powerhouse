@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-14T17:43:31.602Z
+> Generated: 2026-10-14T17:58:38.459Z
 > Total Documents: 124
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -8411,9 +8411,9 @@ Builds the host GraphQL schema from all registered models and subgraphs.
 
 | Code | Severity | Meaning |
 | ---- | -------- | ------- |
-| `PH-GQL-COORDINATE-OWNED` | warning | Another subgraph owns a root field that this subgraph declares, so the server leaves this subgraph out of the supergraph. Core subgraphs own their fields first, then document-model subgraphs, then package subgraphs in the order they register. |
+| `PH-GQL-COORDINATE-OWNED` | warning | A core or document-model subgraph owns a root field that this subgraph declares, so the server leaves this subgraph out of the supergraph. Or other package subgraphs declare it too, and only the one that registers first keeps it in the supergraph. |
 | `PH-GQL-FEDERATION-UNSUPPORTED` | error | A code-first subgraph uses Apollo Federation 2 features. This version does not support them. |
-| `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | Another subgraph owns a type that this subgraph defines differently, so the server leaves this subgraph out of the supergraph. Field order and descriptions do not count as differences. |
+| `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | A core or document-model subgraph defines a type differently from this subgraph, so the server leaves this subgraph out of the supergraph. Or other package subgraphs define it differently, and only the subgraphs that define it as the first one to register does stay in the supergraph. Field order and descriptions do not count as differences. |
 | `PH-SCALAR-RESOLVER-SHADOWED` | warning | A resolver that you wrote uses the name of a catalog scalar. |
 | `PH-SCALAR-UNREGISTERED` | warning | The SDL uses a scalar that the catalog has no entry for. |
 | `PH-SG-GENERATED-TYPE-TAKEN` | warning | The subgraph defines a type that the document-model schema generates, such as `Operation` or a model's document type, so the server refuses this subgraph. |
