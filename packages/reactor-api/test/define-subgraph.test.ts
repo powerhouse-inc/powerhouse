@@ -597,6 +597,32 @@ describe("a declaration the server could not run", () => {
     });
   });
 
+  it("refuses a schema kind it does not know", () => {
+    const unknownKind = {
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["schemaKind"],
+      message: 'schemaKind is "typed" or "graphql-ast-compat".',
+    };
+    expect(refusal(typed({ schemaKind: "type" }))).toEqual(unknownKind);
+    expect(refusal(typed({ schemaKind: undefined }))).toEqual(unknownKind);
+  });
+
+  it("refuses a compatibility subgraph without a compatibility declaration", () => {
+    const noDeclaration = {
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["compatibility"],
+      message:
+        "A graphql-ast-compat subgraph needs a compatibility declaration object.",
+    };
+    expect(refusal(compat({ compatibility: undefined }))).toEqual(
+      noDeclaration,
+    );
+    expect(refusal(compat({ compatibility: null }))).toEqual(noDeclaration);
+    expect(
+      refusal(compat({ compatibility: "type Query { ping: String }" })),
+    ).toEqual(noDeclaration);
+  });
+
   it("refuses a field or argument name GraphQL would reject, before the host builds a schema", () => {
     const notAName = (path: readonly string[]) => ({
       code: "PH-DEF-NAME-INVALID",
