@@ -216,6 +216,24 @@ describe("the unified predicate (extractSubgraphs)", () => {
     );
   });
 
+  it("returns a package's subgraphs in export-name order, however the loader built the namespace", () => {
+    class Zebra extends BaseSubgraph {}
+    class Apple extends BaseSubgraph {}
+    class Mango extends BaseSubgraph {}
+    // Vite's SSR loader keeps statement order; native ESM sorts export names.
+    const statementOrder = {
+      ZebraSubgraph: { Zebra },
+      AppleSubgraph: { Mango, Apple },
+    };
+    const nativeOrder = {
+      AppleSubgraph: { Apple, Mango },
+      ZebraSubgraph: { Zebra },
+    };
+
+    expect(extractSubgraphs(statementOrder)).toEqual([Apple, Mango, Zebra]);
+    expect(extractSubgraphs(nativeOrder)).toEqual([Apple, Mango, Zebra]);
+  });
+
   it("accepts a code-first class by ancestry, not by its class name", () => {
     expect(TasksSubgraph.name).toBe("CodeFirstSubgraph");
     expect(isSubgraphClass(TasksSubgraph)).toBe(true);
