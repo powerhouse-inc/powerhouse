@@ -390,11 +390,9 @@ export function createEntryBuilders<
       root("mutation", key, options),
     subscription: (key: string, options: Record<string, unknown>) =>
       root("subscription", key, options),
-    field: (token: AnyComputedToken, options: { resolve: unknown }) => {
-      const { kind, typeName, fieldName } =
-        token !== null && typeof token === "object"
-          ? token
-          : ({} as Partial<AnyComputedToken>);
+    field: (token: unknown, options: unknown) => {
+      const { kind, typeName, fieldName }: Partial<Record<string, unknown>> =
+        token !== null && typeof token === "object" ? token : {};
       if (
         kind !== "computed-token" ||
         typeof typeName !== "string" ||
@@ -461,12 +459,9 @@ function resolverOrFail(
   return resolve as (call: never) => unknown;
 }
 
-function namedOrFail(
-  type: { readonly name: string | null },
-  builder: string,
-): string {
-  const name =
-    type !== null && typeof type === "object" ? type.name : undefined;
+function namedOrFail(type: unknown, builder: string): string {
+  const { name }: Partial<Record<string, unknown>> =
+    type !== null && typeof type === "object" ? type : {};
   if (typeof name !== "string") {
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
