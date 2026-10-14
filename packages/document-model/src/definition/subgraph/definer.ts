@@ -111,11 +111,9 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
     TInfo,
     TAbstractType
   >();
-  const { name } = config;
+  const { name, definitionOrder: authoredOrder } = config;
   const definitionOrder =
-    config.definitionOrder === undefined
-      ? undefined
-      : definitionNames(config.definitionOrder);
+    authoredOrder === undefined ? undefined : definitionNames(authoredOrder);
   const returned = snapshotDescriptorArray(
     config.entries(builders),
     ["entries"],

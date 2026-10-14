@@ -20,10 +20,6 @@ const ROOT_TYPES = ["Query", "Mutation", "Subscription"] as const;
 
 type RootName = (typeof ROOT_TYPES)[number];
 
-export function isRootTypeName(name: string): name is RootName {
-  return (ROOT_TYPES as readonly string[]).includes(name);
-}
-
 export type SubgraphSchemaData = {
   readonly types: readonly NamedGraphQLTypeDefinition[];
   readonly entries: readonly SubgraphEntryDefinition[];

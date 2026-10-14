@@ -24,9 +24,8 @@ import {
  * Validates each code-first subgraph in a selection against the augmented
  * schema the host serves, then warns about each one the server would refuse
  * for its name or leave out of the supergraph for a type or root field
- * another subgraph owns. A
- * subgraph that names a host-declared type such as `OID` or `DocumentDrive` is
- * valid, because the host declares it. Each class is read through its static
+ * another subgraph owns. A subgraph that names a host-declared type such as
+ * `OID` or `DocumentDrive` is valid, because the host declares it. Each class is read through its static
  * `definition`, `typeDefs`, and `scalarResolvers`. Nothing is constructed, so
  * no resolver factory or `onSetup` runs.
  */
