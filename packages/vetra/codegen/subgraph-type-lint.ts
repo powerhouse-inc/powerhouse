@@ -1,6 +1,7 @@
 import { loadDocumentModelInDir } from "@powerhousedao/codegen/utils";
 import {
   findPackageSubgraphConflicts,
+  isRootFieldClaim,
   type OwnershipConflict,
   type PackageSubgraph,
   type PackageSubgraphConflicts,
@@ -12,7 +13,6 @@ import { join } from "node:path";
 // Templates with substitutions are skipped: their SDL is only known at runtime.
 const GQL_TEMPLATE = /\bgql\s*`([^`]*)`/g;
 const SUBGRAPH_NAME = /\bname\s*=\s*["'`]([^"'`]+)["'`]/;
-const SUBGRAPH_EXPORT = /from\s+["']\.\/([^/"']+)\/index\.js["']/g;
 
 function directories(path: string): Dirent[] {
   try {
@@ -47,24 +47,16 @@ function readSchema(path: string): DocumentNode | undefined {
   }
 }
 
-/** Subgraph directories in the order `subgraphs/index.ts` registers them. */
-function subgraphDirs(subgraphsDir: string): string[] {
-  const exported = Array.from(
-    (read(join(subgraphsDir, "index.ts")) ?? "").matchAll(SUBGRAPH_EXPORT),
-    ([, dir]) => dir,
-  );
-  const position = (dir: string) => {
-    const index = exported.indexOf(dir);
-    return index === -1 ? exported.length : index;
-  };
-  return directories(subgraphsDir)
-    .map((entry) => entry.name)
-    .sort((a, b) => position(a) - position(b));
-}
-
 const listClaims = (claims: readonly OwnershipConflict[]) =>
   claims.map(({ claim, owner }) => `${claim} (owned by "${owner}")`).join(", ");
 
+/** `"a" and "b"`, or `"a", "b" and "c"`. */
+const quotedList = (names: readonly string[]) => {
+  const quoted = names.map((name) => `"${name}"`);
+  return `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
+};
+
+/** The warnings for one subgraph, except the claims it contests. */
 function describe(name: string, conflict: PackageSubgraphConflicts): string[] {
   switch (conflict.kind) {
     case "name":
@@ -76,25 +68,37 @@ function describe(name: string, conflict: PackageSubgraphConflicts): string[] {
         `Subgraph "${name}" defines ${listClaims(conflict.claims)}, so the server refuses it. Rename them in its schema.ts.`,
       ];
     case "claims": {
-      const owned = conflict.claims.filter((claim) => !claim.ownerIsPackage);
-      const contested = Map.groupBy(
-        conflict.claims.filter((claim) => claim.ownerIsPackage),
-        (claim) => claim.owner,
+      const owned = conflict.claims.flatMap((claim) =>
+        claim.kind === "owned" ? [claim] : [],
       );
-      return [
-        ...(owned.length > 0
-          ? [
-              `Subgraph "${name}" defines ${listClaims(owned)}, so the supergraph leaves it out. Rename them in its schema.ts.`,
-            ]
-          : []),
-        ...Array.from(
-          contested,
-          ([owner, claims]) =>
-            `Subgraphs "${owner}" and "${name}" both define ${claims.map(({ claim }) => claim).join(", ")}, so the supergraph leaves out whichever of them registers second. Rename them in one of the two.`,
-        ),
-      ];
+      return owned.length === 0
+        ? []
+        : [
+            `Subgraph "${name}" defines ${listClaims(owned)}, so the supergraph leaves it out. Rename them in its schema.ts.`,
+          ];
     }
   }
+}
+
+/** One warning per contested claim, naming every subgraph that declares it. */
+function describeContests(
+  conflicts: ReadonlyMap<string, PackageSubgraphConflicts>,
+): string[] {
+  const claimants = new Map<string, Set<string>>();
+  for (const [name, conflict] of conflicts) {
+    if (conflict.kind !== "claims") continue;
+    for (const lost of conflict.claims) {
+      if (lost.kind !== "contested") continue;
+      const names = claimants.get(lost.claim) ?? new Set([name]);
+      for (const rival of lost.rivals) names.add(rival);
+      claimants.set(lost.claim, names);
+    }
+  }
+  return Array.from(
+    claimants,
+    ([claim, names]) =>
+      `Subgraphs ${quotedList([...names])} all define ${claim}${isRootFieldClaim(claim) ? "" : " differently"}, and only the one that registers first keeps it in the supergraph. Rename it in all but one of them.`,
+  );
 }
 
 /** A warning per subgraph the server would refuse or leave out. */
@@ -104,7 +108,10 @@ export function lintSubgraphTypes(projectDir: string): string[] {
     .filter((model) => model !== undefined);
   const subgraphsDir = join(projectDir, "subgraphs");
   const subgraphs: PackageSubgraph[] = [];
-  for (const dir of subgraphDirs(subgraphsDir)) {
+  const dirs = directories(subgraphsDir)
+    .map((entry) => entry.name)
+    .sort();
+  for (const dir of dirs) {
     const typeDefs = readSchema(join(subgraphsDir, dir, "schema.ts"));
     if (!typeDefs) continue;
     const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";
@@ -124,5 +131,6 @@ export function lintSubgraphTypes(projectDir: string): string[] {
     ...Array.from(conflicts).flatMap(([name, conflict]) =>
       describe(name, conflict),
     ),
+    ...describeContests(conflicts),
   ];
 }

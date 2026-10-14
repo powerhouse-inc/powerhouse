@@ -17,6 +17,7 @@ import reactorSchema from "./reactor/schema.graphql";
 import {
   collectSubgraphClaims,
   type OwnershipConflict,
+  isRootFieldClaim,
   resolveClaimOwnership,
   type SubgraphClaims,
 } from "./subgraph-type-ownership.js";
@@ -26,7 +27,10 @@ export {
   reservedTypeNames,
   type ReservedTypeNames,
 } from "../utils/create-schema.js";
-export type { OwnershipConflict } from "./subgraph-type-ownership.js";
+export {
+  isRootFieldClaim,
+  type OwnershipConflict,
+} from "./subgraph-type-ownership.js";
 
 /** Owner of the types every generated document-model schema carries. */
 export const DOCUMENT_MODEL_SCHEMA_OWNER = "document-model schema";
@@ -44,12 +48,14 @@ export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
 export type PackageSubgraph = { name: string; typeDefs: DocumentNode };
 
 /**
- * A type or root field another subgraph owns. When that owner is another
- * package subgraph, which of the two keeps it depends on registration order.
+ * A type or root field the subgraph cannot keep. A core or model subgraph
+ * that owns it outranks every package subgraph. Between package subgraphs,
+ * only the one that registers first keeps a contested claim, and the checks
+ * cannot know that order.
  */
-export type PackageClaimConflict = OwnershipConflict & {
-  ownerIsPackage: boolean;
-};
+export type PackageClaimConflict =
+  | { kind: "owned"; claim: string; owner: string }
+  | { kind: "contested"; claim: string; rivals: string[] };
 
 /**
  * Why the server would not serve a package subgraph whole. It refuses one
@@ -156,30 +162,69 @@ export function findPackageSubgraphConflicts(
     admitted.push(subgraph);
   }
 
-  const packageNames = new Set(admitted.map(({ name }) => name));
-  const excluded = resolveClaimOwnership(
-    [
-      ...Array.from(coreSubgraphTypeDefs, ([name, typeDefs]) => ({
-        name,
-        typeDefs,
-      })),
-      ...modelSubgraphs,
-      ...admitted,
-    ].map(({ name, typeDefs }) => ({
-      candidate: name,
+  // The server replaces a package subgraph with a later one of the same name.
+  const slots = new Map<string, PackageSubgraph>();
+  for (const subgraph of admitted) slots.set(subgraph.name, subgraph);
+
+  const hostCandidates = [
+    ...Array.from(coreSubgraphTypeDefs, ([name, typeDefs]) => ({
       name,
-      claims: claimsOf(typeDefs, generated.names),
+      typeDefs,
     })),
+    ...modelSubgraphs,
+  ].map(({ name, typeDefs }) => ({
+    candidate: name,
+    name,
+    claims: claimsOf(typeDefs, generated.names),
+  }));
+  const claimants = new Map<string, { name: string; definition: string }[]>();
+  for (const { name, typeDefs } of slots.values()) {
+    const claims = claimsOf(typeDefs, generated.names);
+    const owned = resolveClaimOwnership([
+      ...hostCandidates,
+      { candidate: name, name, claims },
+    ]).get(name);
+    if (owned) {
+      conflicts.set(name, {
+        kind: "claims",
+        claims: owned.map(({ claim, owner }) => ({
+          kind: "owned",
+          claim,
+          owner,
+        })),
+      });
+      continue;
+    }
+    for (const [claim, definition] of claims) {
+      claimants.set(claim, [
+        ...(claimants.get(claim) ?? []),
+        { name, definition },
+      ]);
+    }
+  }
+
+  const contested = new Map<string, PackageClaimConflict[]>();
+  const byClaim = Array.from(claimants).sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0,
   );
-  for (const [name, claims] of excluded) {
-    if (!packageNames.has(name)) continue;
-    conflicts.set(name, {
-      kind: "claims",
-      claims: claims.map((claim) => ({
-        ...claim,
-        ownerIsPackage: packageNames.has(claim.owner),
-      })),
-    });
+  for (const [claim, holders] of byClaim) {
+    for (const holder of holders) {
+      const rivals = holders
+        .filter(
+          (other) =>
+            other.name !== holder.name &&
+            (isRootFieldClaim(claim) || other.definition !== holder.definition),
+        )
+        .map((other) => other.name);
+      if (rivals.length === 0) continue;
+      contested.set(holder.name, [
+        ...(contested.get(holder.name) ?? []),
+        { kind: "contested", claim, rivals },
+      ]);
+    }
+  }
+  for (const [name, claims] of contested) {
+    conflicts.set(name, { kind: "claims", claims });
   }
   return { conflicts, skippedModels };
 }

@@ -127,26 +127,42 @@ function conflictDiagnostics(
         }),
       );
     case "claims":
-      return conflict.claims.map(({ claim, owner, ownerIsPackage }) => {
-        const rootField = isRootFieldClaim(claim);
+      return conflict.claims.map((lost) => {
+        const rootField = isRootFieldClaim(lost.claim);
+        const code = rootField
+          ? "PH-GQL-COORDINATE-OWNED"
+          : "PH-GQL-SHARED-DEFINITION-MISMATCH";
+        const at = { source, path: ["composition", name, lost.claim] };
+        if (lost.kind === "owned") {
+          return createDiagnostic({
+            code,
+            ...at,
+            message: `${lost.claim} belongs to "${lost.owner}", so the server leaves subgraph "${name}" out of the supergraph.`,
+            received: name,
+            repair: rootField
+              ? `Rename ${lost.claim} in this subgraph.`
+              : `Rename ${lost.claim} in this subgraph, or define it exactly as "${lost.owner}" does.`,
+          });
+        }
         return createDiagnostic({
-          code: rootField
-            ? "PH-GQL-COORDINATE-OWNED"
-            : "PH-GQL-SHARED-DEFINITION-MISMATCH",
-          source,
-          path: ["composition", name, claim],
-          message: ownerIsPackage
-            ? `Subgraphs "${owner}" and "${name}" both declare ${claim}${rootField ? "" : ", differently"}, so the server leaves out of the supergraph whichever of them registers second.`
-            : `${claim} belongs to "${owner}", so the server leaves subgraph "${name}" out of the supergraph.`,
+          code,
+          ...at,
+          message: `Subgraphs ${quotedList([name, ...lost.rivals])} all ${rootField ? `declare ${lost.claim}` : `define ${lost.claim} differently`}, and only the one that registers first keeps it in the supergraph.`,
           received: name,
-          repair: ownerIsPackage
-            ? `Rename ${claim} in one of the two subgraphs.`
-            : rootField
-              ? `Rename ${claim} in this subgraph.`
-              : `Rename ${claim} in this subgraph, or define it exactly as "${owner}" does.`,
+          repair: rootField
+            ? `Declare ${lost.claim} in one subgraph only.`
+            : `Define ${lost.claim} identically in every subgraph, or rename it in all but one.`,
         });
       });
   }
+}
+
+/** `"a" and "b"`, or `"a", "b" and "c"`. */
+function quotedList(names: readonly string[]): string {
+  const quoted = names.map((name) => `"${name}"`);
+  return quoted.length < 2
+    ? quoted.join("")
+    : `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
 }
 
 function subgraphDefinitionOf(value: unknown): SubgraphDefinition | null {
