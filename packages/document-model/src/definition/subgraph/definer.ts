@@ -110,12 +110,7 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
     TInfo,
     TAbstractType
   >();
-  const returned = snapshotDescriptorArray(
-    config.entries(builders),
-    ["entries"],
-    "PH-SG-ENTRY-INVALID",
-    "Return an array of the entries the builders produced.",
-  );
+  const { name } = config;
   const definitionOrder =
     config.definitionOrder === undefined
       ? undefined
@@ -125,8 +120,14 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
           "PH-SG-ENTRY-INVALID",
           "List every emitted definition once, as an array of names.",
         ) as readonly string[]);
+  const returned = snapshotDescriptorArray(
+    config.entries(builders),
+    ["entries"],
+    "PH-SG-ENTRY-INVALID",
+    "Return an array of the entries the builders produced.",
+  );
   const schema = compileSubgraphSchema({
-    name: config.name,
+    name,
     entries: returned,
     exposed,
     ...(definitionOrder !== undefined && { definitionOrder }),
@@ -135,7 +136,7 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
   const definition: SubgraphDefinition = Object.freeze({
     kind: "powerhouse.subgraph",
     formatVersion: 1,
-    name: config.name,
+    name,
     compositionPolicy: "host-current",
     federationProfile: "host-current",
     schemaKind: "typed",
