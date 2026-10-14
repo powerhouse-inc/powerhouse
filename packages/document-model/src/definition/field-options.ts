@@ -220,8 +220,8 @@ export function stringOption(
   key: string,
   path: DataPath,
 ): string | null {
-  if (!Object.hasOwn(options, key)) return null;
   const value = options[key];
+  if (value === undefined) return null;
   if (typeof value !== "string") {
     return failDefinition({
       code: "PH-DEF-OPTION-INVALID",
