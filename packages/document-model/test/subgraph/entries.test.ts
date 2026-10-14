@@ -282,6 +282,23 @@ describe("the entry builders", () => {
     expect([read.key, read.fieldName]).toEqual(["postById", "post"]);
   });
 
+  it("keeps a key that is not a GraphQL name when the field name is given", () => {
+    const { builders: build } = builders();
+    const declared = {
+      fieldName: "postById",
+      returns: ph.ref(Post),
+      resolve: () => null,
+    };
+    const read = readEntry(build.query("post-by-id", declared), ["entries", 0]);
+    if (read.kind !== "query") throw new Error("unreachable");
+    expect([read.key, read.fieldName]).toEqual(["post-by-id", "postById"]);
+    expect(refused(() => build.query("", declared))).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["key"],
+      message: "query() takes a key as a non-empty string.",
+    });
+  });
+
   it("requires resolve on a query and subscribe on a subscription", () => {
     const { builders: build } = builders();
     expect(() =>
