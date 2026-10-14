@@ -159,10 +159,11 @@ export function computedField<
       repair: "Add returns: a field use such as ph.String({ required: true }).",
     });
   }
+  assertFieldUse(config.returns, ["options", "returns"]);
   return Object.freeze({
     role: COMPUTED_FIELD_ROLE,
     kind: "computed-field" as const,
-    args: (config.args ?? {}) as TArgs,
+    args: argumentMap(config.args, "PH-SG-COMPUTED-FIELD-INVALID") as TArgs,
     returns: config.returns as TReturns,
     description:
       typeof config.description === "string" ? config.description : null,
@@ -379,7 +380,7 @@ export function createEntryBuilders<
         typeof config.description === "string" ? config.description : null,
       deprecated:
         typeof config.deprecated === "string" ? config.deprecated : null,
-      args: argumentMap(config.args),
+      args: argumentMap(config.args, "PH-SG-ENTRY-INVALID"),
       returns: config.returns,
     };
     if (kind === "subscription") {
@@ -514,11 +515,14 @@ function resolverOrFail<TCall>(
   return value as Bound<TCall>;
 }
 
-function argumentMap(value: unknown): ObjectFields {
+function argumentMap(
+  value: unknown,
+  code: "PH-SG-ENTRY-INVALID" | "PH-SG-COMPUTED-FIELD-INVALID",
+): ObjectFields {
   if (value === undefined) return {};
   if (isFieldDescriptor(value)) {
     failDefinition({
-      code: "PH-SG-ENTRY-INVALID",
+      code,
       path: ["options", "args"],
       message:
         "args maps each argument name to a field use; it is not a field use itself.",
