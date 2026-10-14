@@ -357,6 +357,20 @@ export async function runTransformHook<T, C>(
   return value;
 }
 
+/** Sequential observe, in plugin order — for lifecycle moments whose order
+ * is load-bearing (teardown: the switchboard stops privacy before workflows
+ * before the api, per the carve map). */
+export async function runObserveHookSequential<C>(
+  name: string,
+  plugins: readonly HostPlugin[],
+  ctx: C,
+): Promise<void> {
+  for (const plugin of plugins) {
+    const impl = plugin.hooks?.[name] as Observe<C> | undefined;
+    if (typeof impl === "function") await impl(ctx);
+  }
+}
+
 export async function runObserveHook<C>(
   name: string,
   plugins: readonly HostPlugin[],

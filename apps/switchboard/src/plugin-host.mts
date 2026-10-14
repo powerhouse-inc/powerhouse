@@ -1,10 +1,12 @@
 import { attachmentsPlugin } from "./plugins/attachments.mjs";
 import { privacyPlugin } from "./plugins/privacy.mjs";
+import { workflowsPlugin } from "./plugins/workflows.mjs";
 import { mcpPlugin } from "./plugins/mcp.mjs";
 import {
   mergeContributions,
   resolveOrder,
   runObserveHook,
+  runObserveHookSequential,
   runTransformHook,
   type HostPlugin,
   type MergedContribution,
@@ -58,6 +60,11 @@ export interface SwitchboardHostContext {
    * (fail-fast), the running subsystem set at onSubgraphsRegistering. */
   privacyConfig?: unknown;
   privacy?: unknown;
+  /** Workflows plugin: wiring closures handed in by server.mts, runtime +
+   * retry handles stored by the plugin. */
+  workflowsOrchestration?: unknown;
+  workflows?: unknown;
+  workflowsRetry?: unknown;
   api?: unknown;
   client?: unknown;
   graphqlManager?: unknown;
@@ -108,6 +115,17 @@ export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
         module: "@powerhousedao/switchboard/plugins/privacy",
       },
     },
+    // Registered after privacy ON PURPOSE: onShutdown runs sequentially in
+    // registration order, preserving the inline teardown (privacy stops
+    // before workflows, both before api.dispose — carve map).
+    {
+      plugin: workflowsPlugin as HostPlugin,
+      provenance: "built-in",
+      entry: {
+        ...entry,
+        module: "@powerhousedao/switchboard/plugins/workflows",
+      },
+    },
   ];
 }
 
@@ -125,6 +143,9 @@ export function createSwitchboardPluginHost(
     ctx: fullCtx,
     transformOptions: (seed) =>
       runTransformHook("transformServerOptions", ordered, fullCtx, seed),
-    observe: (hook) => runObserveHook(hook, ordered, fullCtx),
+    observe: (hook) =>
+      hook === "onShutdown"
+        ? runObserveHookSequential(hook, ordered, fullCtx)
+        : runObserveHook(hook, ordered, fullCtx),
   };
 }

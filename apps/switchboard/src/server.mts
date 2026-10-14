@@ -1158,7 +1158,7 @@ async function initServer(
         );
       });
   };
-  if (workflowsEnabled) {
+  if (!pluginHost && workflowsEnabled) {
     try {
       workflows = await composeWorkflows();
     } catch (error) {
@@ -1222,11 +1222,28 @@ async function initServer(
   // directly like privacy). The call site carries the inline privacy block's
   // failure semantics: stop workflows, abort the partial boot, rethrow.
   if (pluginHost) {
+    pluginHost.ctx.workflowsOrchestration = {
+      enabled: options.workflows?.enabled === true,
+      composeWorkflows,
+      registerWorkflowSubgraph,
+      updateRouter: () => graphqlManager.updateRouter(true),
+      reportMountFailure: (error: unknown) =>
+        reportFailure(
+          reporting,
+          error,
+          "Mounting the late workflow-runtime subgraph failed: @error",
+        ),
+      setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
+    };
     try {
       await pluginHost.observe("onSubgraphsRegistering");
     } catch (error) {
-      await workflowsRetry?.stop();
-      await workflows?.stop();
+      await (
+        pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
+      )?.stop();
+      await (
+        pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
+      )?.stop();
       await abortBoot(api);
       throw error;
     }
@@ -1450,7 +1467,10 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     // Read live: losing the singleton turns it unavailable.
     get workflowTriggers() {
-      return workflows?.triggers;
+      return (
+        workflows ??
+        (pluginHost?.ctx.workflows as ComposedWorkflowRuntime | undefined)
+      )?.triggers;
     },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],

@@ -101,6 +101,7 @@ export {
   runProvideHook,
   runTransformHook,
   runObserveHook,
+  runObserveHookSequential,
   mergeContributions,
   type PluginEntry,
   type NormalizedPluginEntry,
