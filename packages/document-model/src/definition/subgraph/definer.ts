@@ -293,9 +293,9 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
   config: CompatSubgraphConfig<TSubgraph, TDocument, TResolverMap>,
 ): CompiledSubgraph<TSubgraph> {
   const { compatibility } = config;
-  const { getResolvers } = compatibility;
+  const declared = { ...compatibility };
   const normalized = normalizeCompatibility(
-    compatibility as GraphQLAstCompatibility<unknown, unknown, unknown>,
+    declared as GraphQLAstCompatibility<unknown, unknown, unknown>,
   );
   const typeKinds = typeKindsOfDocument(normalized.document);
 
@@ -314,15 +314,16 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
 
   return {
     definition,
-    // The author's own node, so the host adapter receives the object the
-    // author passed. `normalized.document` is a location-free copy.
-    typeDefs: compatibility.typeDefs,
+    typeDefs: normalized.document,
     hasSubscriptions: runtimeHasSubscriptions(normalized.hasSubscriptions),
     diagnostics: normalized.diagnostics,
     // A compatibility subgraph keeps its authored scalars and resolvers.
     packageScalars: [],
     resolversFor: (subgraph) =>
-      getResolvers.call(compatibility, { subgraph }) as Record<string, unknown>,
+      declared.getResolvers.call(compatibility, { subgraph }) as Record<
+        string,
+        unknown
+      >,
     checkResolvers: (resolvers) =>
       compareResolverCoordinates(
         normalized.resolverCoordinates,
