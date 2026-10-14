@@ -47,13 +47,16 @@ export function extractSubgraphs(
 }
 
 /**
- * Values in export-name order, as a native module namespace lists them. The
- * vite loader's namespace keeps statement order, and the first subgraph to
- * register keeps a contested type or root field, so without this a dev
- * server and a built package could serve different supergraphs.
+ * A module namespace's values in export-name order, as native ESM lists them.
+ * The vite loader's namespace keeps statement order, and the first subgraph
+ * to register keeps a contested type or root field, so without this a dev
+ * server and a built package could serve different supergraphs. Arrays and
+ * plain objects keep their own order under every loader.
  */
 function valuesByName(record: Record<string, unknown>): unknown[] {
-  return Object.keys(record)
-    .sort()
-    .map((key) => record[key]);
+  const keys = Object.keys(record);
+  if (Object.prototype.toString.call(record) === "[object Module]") {
+    keys.sort();
+  }
+  return keys.map((key) => record[key]);
 }
