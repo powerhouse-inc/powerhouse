@@ -1,11 +1,13 @@
 import { typedefs as analyticsTypeDefs } from "@powerhousedao/analytics-engine-graphql";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { DefinitionDiagnosticCode } from "document-model";
 import { type DocumentNode, Kind } from "graphql";
 import { gql } from "graphql-tag";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import {
   admitDocumentModel,
   buildDocumentModelSchema,
+  createSchema,
   type DocumentModelSchema,
   type DocumentModelSource,
   findSubgraphTypeCollisions,
@@ -13,7 +15,9 @@ import {
   generatedTypesOf,
   getDocumentModelSubgraphName,
   globalStateOf,
+  latestDocumentModelVersions,
   reservedTypeNames,
+  SubgraphTypeCollisionError,
   typeDefinitionNames,
 } from "../utils/create-schema.js";
 import authSchema from "./auth/schema.graphql";
@@ -75,7 +79,7 @@ export type HostDocumentModels<M extends DocumentModelSource> = {
   readonly refused: readonly RefusedDocumentModel[];
   /** The generated schema every subgraph is built onto. */
   readonly generated: GeneratedDocumentModelTypes;
-  /** Generated type name to the model subgraph whose model generates it. */
+  /** Generated type name to the name of the model that generates it. */
   readonly generatedOwners: ReadonlyMap<string, string>;
   /** The model subgraphs the server registers. Each holds its name and claims. */
   readonly subgraphs: readonly PackageSubgraph[];
@@ -90,7 +94,6 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   const admitted: (M | DocumentModelModule)[] = [];
   const refused: RefusedDocumentModel[] = [];
   const schemas = new Map<DocumentModelSource, DocumentModelSchema>();
-  const subgraphs: PackageSubgraph[] = [];
   const refuse = (
     model: DocumentModelSource,
     kind: RefusedDocumentModel["kind"],
@@ -98,6 +101,16 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   ) => {
     if (!given.has(model)) return;
     const { id, name } = globalStateOf(model);
+    // The server logs a refusal once per model source, and versions that
+    // share a specification share one.
+    if (
+      refused.some(
+        (other) =>
+          other.id === id && other.kind === kind && other.reason === reason,
+      )
+    ) {
+      return;
+    }
     refused.push({ id, name, kind, reason });
   };
 
@@ -125,14 +138,17 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     schemas.set(model, admission.schema);
     if (admission.subgraphRefusal !== undefined) {
       refuse(model, "unusable subgraph", admission.subgraphRefusal);
-      continue;
     }
-    const own = admission.schema.subgraph;
+  }
+
+  // The server registers the latest version's subgraph only, and a later
+  // model whose subgraph takes the same name replaces an earlier one.
+  const subgraphs = new Map<string, PackageSubgraph>();
+  for (const model of latestDocumentModelVersions(admitted)) {
+    const own = schemas.get(model)?.subgraph;
+    if (own === undefined) continue;
     const name = getDocumentModelSubgraphName(globalStateOf(model));
-    // Every version of a model projects the same subgraph, registered once.
-    if (own && !subgraphs.some((subgraph) => subgraph.name === name)) {
-      subgraphs.push({ name, typeDefs: own.typeDefs });
-    }
+    subgraphs.set(name, { name, typeDefs: own.typeDefs });
   }
 
   const fixed = generatedTypesOf([]).names;
@@ -144,10 +160,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
       definitions,
     })) {
       if (!fixed.has(name)) {
-        generatedOwners.set(
-          name,
-          getDocumentModelSubgraphName(globalStateOf(model)),
-        );
+        generatedOwners.set(name, globalStateOf(model).name);
       }
     }
   }
@@ -157,17 +170,19 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     refused,
     generated: generatedTypesOf(admitted, schemas),
     generatedOwners,
-    subgraphs,
+    subgraphs: [...subgraphs.values()],
   };
 }
 
 /**
- * Why the server refuses a package subgraph, or leaves it out of the
- * supergraph because a core or model subgraph owns one of its claims.
+ * Why the server refuses a package subgraph, does not serve it because its
+ * schema does not build, or leaves it out of the supergraph because a core or
+ * model subgraph owns one of its claims.
  */
 export type PackageSubgraphConflicts =
   | { kind: "name"; heldBy: "core" | "document model" }
   | { kind: "generated"; claims: OwnershipConflict[] }
+  | { kind: "unbuildable"; message: string }
   | { kind: "owned"; claims: OwnershipConflict[] };
 
 /**
@@ -176,25 +191,26 @@ export type PackageSubgraphConflicts =
  * no claimant is named the winner: a subgraph that loses any claim is left out
  * whole, and with it the claims it would have won.
  */
-export type ClaimContest = {
+export type ClaimContest<S extends PackageSubgraph = PackageSubgraph> = {
   claim: string;
   /** In name order. */
-  claimants: PackageSubgraph[];
+  claimants: S[];
   /** Claimant names grouped by definition, each group in name order. */
   groups: string[][];
 };
 
-export type PackageSubgraphReport = {
-  /** By subgraph; subgraphs without a conflict are left out. */
-  conflicts: Map<PackageSubgraph, PackageSubgraphConflicts>;
-  /** In claim order. */
-  contests: ClaimContest[];
-  /**
-   * Names more than one package subgraph uses. The server serves only the
-   * last of them to register, so each is checked on its own claims.
-   */
-  duplicateNames: string[];
-};
+export type PackageSubgraphReport<S extends PackageSubgraph = PackageSubgraph> =
+  {
+    /** By subgraph; subgraphs without a conflict are left out. */
+    conflicts: Map<S, PackageSubgraphConflicts>;
+    /** In claim order. */
+    contests: ClaimContest<S>[];
+    /**
+     * Names more than one package subgraph uses. The server serves only the
+     * last of them to register, so each is checked on its own claims.
+     */
+    duplicateNames: string[];
+  };
 
 function claimsOf(typeDefs: DocumentNode, generated: ReadonlySet<string>) {
   try {
@@ -206,7 +222,7 @@ function claimsOf(typeDefs: DocumentNode, generated: ReadonlySet<string>) {
 }
 
 /** Why the server refuses `subgraph` before building it, if it does. */
-export function refusePackageSubgraph(
+function refusePackageSubgraph(
   subgraph: PackageSubgraph,
   host: HostDocumentModels<DocumentModelSource>,
 ): PackageSubgraphConflicts | undefined {
@@ -228,7 +244,7 @@ export function refusePackageSubgraph(
 }
 
 /** The refusal for a subgraph that redefines the generated `typeNames`. */
-export function generatedTypeConflict(
+function generatedTypeConflict(
   typeNames: readonly string[],
   host: HostDocumentModels<DocumentModelSource>,
 ): PackageSubgraphConflicts {
@@ -241,15 +257,41 @@ export function generatedTypeConflict(
   };
 }
 
+/**
+ * Builds `subgraph` as the server does, onto the admitted models' generated
+ * schema. Throws when the server could not serve it.
+ */
+export function buildPackageSubgraph(
+  subgraph: PackageSubgraph,
+  host: HostDocumentModels<DocumentModelSource>,
+  resolvers: Parameters<typeof createSchema>[1] = {},
+): void {
+  createSchema(
+    host.admitted.filter(
+      (model): model is DocumentModelModule => "documentModel" in model,
+    ),
+    resolvers,
+    subgraph.typeDefs,
+    { generated: host.generated },
+  );
+}
+
 const byCodeUnits = (left: string, right: string) =>
   left < right ? -1 : left > right ? 1 : 0;
 
-/** Package subgraphs the server refuses or excludes; host subgraphs unchecked. */
-export function findPackageSubgraphConflicts(
-  subgraphs: readonly PackageSubgraph[],
+/**
+ * Package subgraphs the server refuses, does not serve, or excludes, decided in
+ * the server's order: a taken name or generated type first, then the build,
+ * then the claims. `build` throws as the server's build does; host subgraphs
+ * are not checked.
+ */
+export function findPackageSubgraphConflicts<S extends PackageSubgraph>(
+  subgraphs: readonly S[],
   host: HostDocumentModels<DocumentModelSource>,
-): PackageSubgraphReport {
-  const conflicts = new Map<PackageSubgraph, PackageSubgraphConflicts>();
+  build: (subgraph: S) => void = (subgraph) =>
+    buildPackageSubgraph(subgraph, host),
+): PackageSubgraphReport<S> {
+  const conflicts = new Map<S, PackageSubgraphConflicts>();
   const hostCandidates = [
     ...Array.from(coreSubgraphTypeDefs, ([name, typeDefs]) => ({
       name,
@@ -257,18 +299,29 @@ export function findPackageSubgraphConflicts(
     })),
     ...host.subgraphs,
   ].map(({ name, typeDefs }) => ({
-    candidate: name as string | PackageSubgraph,
+    candidate: name as string | S,
     name,
     claims: claimsOf(typeDefs, host.generated.names),
   }));
-  const claimants = new Map<
-    string,
-    { subgraph: PackageSubgraph; definition: string }[]
-  >();
+  const claimants = new Map<string, { subgraph: S; definition: string }[]>();
   for (const subgraph of subgraphs) {
     const refusal = refusePackageSubgraph(subgraph, host);
     if (refusal !== undefined) {
       conflicts.set(subgraph, refusal);
+      continue;
+    }
+    try {
+      build(subgraph);
+    } catch (error) {
+      conflicts.set(
+        subgraph,
+        error instanceof SubgraphTypeCollisionError
+          ? generatedTypeConflict(error.typeNames, host)
+          : {
+              kind: "unbuildable",
+              message: error instanceof Error ? error.message : String(error),
+            },
+      );
       continue;
     }
     const claims = claimsOf(subgraph.typeDefs, host.generated.names);
@@ -288,7 +341,7 @@ export function findPackageSubgraphConflicts(
     }
   }
 
-  const contests: ClaimContest[] = [];
+  const contests: ClaimContest<S>[] = [];
   for (const [claim, holders] of Array.from(claimants).sort(([left], [right]) =>
     byCodeUnits(left, right),
   )) {
@@ -335,12 +388,15 @@ export function findPackageSubgraphConflicts(
  * so both styles tell an author the same thing.
  */
 export type SubgraphWarning = {
-  readonly code:
+  readonly code: Extract<
+    DefinitionDiagnosticCode,
     | "PH-DM-GRAPHQL-REFUSED"
     | "PH-SG-NAME-TAKEN"
     | "PH-SG-GENERATED-TYPE-TAKEN"
+    | "PH-SG-SCHEMA-INVALID"
     | "PH-GQL-COORDINATE-OWNED"
-    | "PH-GQL-SHARED-DEFINITION-MISMATCH";
+    | "PH-GQL-SHARED-DEFINITION-MISMATCH"
+  >;
   /** The claim the warning is about, when it is about one. */
   readonly claim?: string;
   readonly message: string;
@@ -382,12 +438,29 @@ export function describeSubgraphConflict(
           repair: "Rename the subgraph.",
         },
       ];
-    case "generated":
+    case "generated": {
+      const byOwner = Map.groupBy(conflict.claims, ({ owner }) => owner);
+      const generators = Array.from(
+        byOwner,
+        ([owner, claims]) =>
+          `${claims.map(({ claim }) => claim).join(", ")}, which ${owner === DOCUMENT_MODEL_SCHEMA_OWNER ? "the document-model schema" : `document model "${owner}"`} generates`,
+      );
       return [
         {
           code: "PH-SG-GENERATED-TYPE-TAKEN",
-          message: `Subgraph "${name}" defines ${conflict.claims.map(({ claim }) => claim).join(", ")}, which the document-model schema generates, so the server refuses it.`,
+          message: `Subgraph "${name}" defines ${generators.join(", and ")}, so the server refuses it.`,
           repair: "Rename those types in this subgraph.",
+        },
+      ];
+    }
+    case "unbuildable":
+      return [
+        {
+          code: "PH-SG-SCHEMA-INVALID",
+          message: sentence(
+            `Subgraph "${name}" does not build, so the server does not serve it: ${conflict.message}`,
+          ),
+          repair: "Fix its schema so it builds, or declare the missing type.",
         },
       ];
     case "owned":

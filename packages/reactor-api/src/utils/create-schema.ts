@@ -408,6 +408,28 @@ export const globalStateOf = (
 ): DocumentModelGlobalState =>
   isModule(source) ? source.documentModel.global : source;
 
+/**
+ * The latest version of each model, by name: the only one whose own subgraph
+ * the server registers.
+ */
+export function latestDocumentModelVersions<M extends DocumentModelSource>(
+  documentModels: readonly M[],
+): M[] {
+  const versionOf = (source: M) =>
+    (isModule(source) ? source.version : undefined) ??
+    globalStateOf(source).specifications.at(-1)?.version ??
+    0;
+  const latestByName = new Map<string, M>();
+  for (const documentModel of documentModels) {
+    const { name } = globalStateOf(documentModel);
+    const existing = latestByName.get(name);
+    if (!existing || versionOf(documentModel) > versionOf(existing)) {
+      latestByName.set(name, documentModel);
+    }
+  }
+  return Array.from(latestByName.values());
+}
+
 /** The name the model's own subgraph registers under. */
 export function getDocumentModelSubgraphName(
   documentModel: DocumentModelGlobalState,

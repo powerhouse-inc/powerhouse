@@ -8,21 +8,15 @@ import type {
   HostValidationResult,
 } from "document-model/tooling";
 import { type DocumentNode, Kind } from "graphql";
-import { getUniqueDocumentModels } from "../packages/package-manager.js";
-import {
-  createSchema,
-  SubgraphTypeCollisionError,
-} from "../utils/create-schema.js";
 import type { DefinedSubgraph } from "./define-subgraph.js";
 import {
+  buildPackageSubgraph,
   describeClaimContest,
   describeRefusedDocumentModel,
   describeSubgraphConflict,
   findPackageSubgraphConflicts,
-  generatedTypeConflict,
   hostDocumentModels,
   type PackageSubgraph,
-  refusePackageSubgraph,
   type SubgraphWarning,
 } from "./subgraph-types.js";
 
@@ -50,7 +44,6 @@ export function validateSubgraphsForHost(
       }),
     );
   }
-  const documentModels = getUniqueDocumentModels(host.admitted);
 
   const candidates: Candidate[] = [];
   for (const entry of request.subgraphs) {
@@ -72,57 +65,38 @@ export function validateSubgraphsForHost(
     candidates.push({ name: definition.name, typeDefs, entry });
   }
 
-  // The server refuses a taken name or a redefined generated type before it
-  // builds anything, so those are decided first.
-  const built: Candidate[] = [];
+  // buildSubgraphSchema validates as it builds and throws, so building is the
+  // check. validateSchema cannot run on the result, because @apollo/subgraph
+  // loads graphql's CommonJS entry, this package loads the ESM entry, and
+  // graphql checks type identity with instanceof.
+  const { conflicts, contests } = findPackageSubgraphConflicts(
+    candidates,
+    host,
+    (candidate) => {
+      request.signal?.throwIfAborted();
+      buildPackageSubgraph(
+        candidate,
+        host,
+        scalarResolversOf(candidate.entry.value),
+      );
+    },
+  );
   for (const candidate of candidates) {
-    request.signal?.throwIfAborted();
-    const { name, typeDefs, entry } = candidate;
-    const refusal = refusePackageSubgraph(candidate, host);
-    if (refusal !== undefined) {
-      diagnostics.push(
-        ...describeSubgraphConflict(name, refusal).map((warning) =>
-          warningDiagnostic(candidate, warning),
-        ),
-      );
-      continue;
-    }
-
-    // buildSubgraphSchema validates as it builds and throws, so building is
-    // the check. validateSchema cannot run on the result, because
-    // @apollo/subgraph loads graphql's CommonJS entry, this package loads the
-    // ESM entry, and graphql checks type identity with instanceof.
-    try {
-      createSchema(documentModels, scalarResolversOf(entry.value), typeDefs);
-    } catch (error) {
-      diagnostics.push(
-        error instanceof SubgraphTypeCollisionError
-          ? warningDiagnostic(
-              candidate,
-              describeSubgraphConflict(
-                name,
-                generatedTypeConflict(error.typeNames, host),
-              )[0],
-            )
-          : createDiagnostic({
-              code: "PH-SG-SCHEMA-INVALID",
-              source: entry.source,
-              path: entry.path.map(String),
-              message: `${name}: ${error instanceof Error ? error.message : String(error)}`,
-              repair:
-                "Fix the declaration so the augmented schema builds, or declare the missing type.",
-            }),
-      );
-      // The host excludes a subgraph whose schema fails to build, so it
-      // takes no part in composition.
-      continue;
-    }
-    built.push(candidate);
-  }
-
-  const { conflicts, contests } = findPackageSubgraphConflicts(built, host);
-  for (const candidate of built) {
     const conflict = conflicts.get(candidate);
+    if (conflict?.kind === "unbuildable") {
+      const { name, entry } = candidate;
+      diagnostics.push(
+        createDiagnostic({
+          code: "PH-SG-SCHEMA-INVALID",
+          source: entry.source,
+          path: entry.path.map(String),
+          message: `${name}: ${conflict.message}`,
+          repair:
+            "Fix the declaration so the augmented schema builds, or declare the missing type.",
+        }),
+      );
+      continue;
+    }
     if (conflict !== undefined) {
       diagnostics.push(
         ...describeSubgraphConflict(candidate.name, conflict).map((warning) =>

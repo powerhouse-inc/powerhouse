@@ -60,6 +60,7 @@ import {
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
+  latestDocumentModelVersions,
   reservedTypeNames,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
@@ -124,40 +125,6 @@ const NON_MODEL_TYPE_NAMES = new Set([
   "Mutation",
   "Subscription",
 ]);
-
-/**
- * Filter document models to keep only the latest version of each unique document model.
- */
-function filterLatestDocumentModelVersions(
-  documentModels: DocumentModelModule[],
-): DocumentModelModule[] {
-  const latestByName = new Map<string, DocumentModelModule>();
-
-  for (const documentModel of documentModels) {
-    const name = documentModel.documentModel.global.name;
-    const existing = latestByName.get(name);
-
-    if (!existing) {
-      latestByName.set(name, documentModel);
-      continue;
-    }
-
-    const currentVersion =
-      documentModel.version ??
-      documentModel.documentModel.global.specifications.at(-1)?.version ??
-      0;
-    const existingVersion =
-      existing.version ??
-      existing.documentModel.global.specifications.at(-1)?.version ??
-      0;
-
-    if (currentVersion > existingVersion) {
-      latestByName.set(name, documentModel);
-    }
-  }
-
-  return Array.from(latestByName.values());
-}
 
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
@@ -776,8 +743,7 @@ export class GraphQLManager {
     supergraph: string,
     documentModels: DocumentModelModule[],
   ): Promise<Set<string>> {
-    const latestDocumentModels =
-      filterLatestDocumentModelVersions(documentModels);
+    const latestDocumentModels = latestDocumentModelVersions(documentModels);
     const registeredNames = new Set<string>();
 
     for (const documentModel of latestDocumentModels) {
