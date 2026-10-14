@@ -111,7 +111,46 @@ describe("ph.field", () => {
   });
 
   it("refuses a computed field that declares no return type", () => {
-    expect(() => ph.field({} as never)).toThrow(DocumentModelDefinitionError);
+    expect(refused(() => ph.field({} as never))).toEqual({
+      code: "PH-SG-COMPUTED-FIELD-INVALID",
+      path: ["options", "returns"],
+      message: "A computed field must declare what it returns.",
+    });
+  });
+
+  it("refuses a computed return that is not a field use", () => {
+    expect(refused(() => ph.field({ returns: "String" } as never))).toEqual({
+      code: "PH-DEF-FIELD-INVALID",
+      path: ["options", "returns"],
+      message: "A field position must hold a field use created by ph.",
+    });
+    expect(refused(() => ph.field({ returns: Author } as never))).toEqual({
+      code: "PH-DEF-TYPE-AS-FIELD",
+      path: ["options", "returns"],
+      message: 'Named type "Author" was used directly as a field.',
+    });
+  });
+
+  it("refuses computed arguments that are not a map of field uses", () => {
+    expect(
+      refused(() =>
+        ph.field({ args: ph.String() as never, returns: ph.String() }),
+      ),
+    ).toEqual({
+      code: "PH-SG-COMPUTED-FIELD-INVALID",
+      path: ["options", "args"],
+      message:
+        "args maps each argument name to a field use; it is not a field use itself.",
+    });
+    expect(
+      refused(() =>
+        ph.field({ args: { id: "String" } as never, returns: ph.String() }),
+      ),
+    ).toEqual({
+      code: "PH-DEF-FIELD-INVALID",
+      path: ["options", "args", "id"],
+      message: "A field position must hold a field use created by ph.",
+    });
   });
 });
 
