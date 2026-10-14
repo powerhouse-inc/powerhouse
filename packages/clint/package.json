@@ -3,7 +3,9 @@
   "version": "6.2.3-dev.55",
   "description": "The clint framework: AI-powered CLIs over the Powerhouse stack \u2014 clint-runner (services manager, REPL, proxy) and mastra-runner (headless agent host) for uniform-runners hosts.",
   "type": "module",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
