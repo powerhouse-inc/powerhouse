@@ -1,3 +1,4 @@
+import { mcpPlugin } from "./plugins/mcp.mjs";
 import {
   mergeContributions,
   resolveOrder,
@@ -71,9 +72,17 @@ export interface SwitchboardPluginHost {
   ): Promise<void>;
 }
 
-/** Built-in plugins, pre-listed. Subsystems join as R2 carves them. */
+/** Built-in plugins, pre-listed (the default composition until host.js
+ * entries map in R2 step 2). Subsystems join as R2 carves them. */
 export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
-  return [];
+  const entry = { enabled: true, verbs: "*" as const, config: {} };
+  return [
+    {
+      plugin: mcpPlugin as HostPlugin,
+      provenance: "built-in",
+      entry: { ...entry, module: "@powerhousedao/switchboard/plugins/mcp" },
+    },
+  ];
 }
 
 export function createSwitchboardPluginHost(
