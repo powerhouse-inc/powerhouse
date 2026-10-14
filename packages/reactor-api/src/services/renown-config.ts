@@ -76,3 +76,31 @@ function resolveRenownSource(
   );
   return "remote";
 }
+
+/**
+ * The credential-verification cache TTL for `AuthService`.
+ *
+ * `CREDENTIAL_VERIFICATION_CACHE_TTL_MS` wins when it is a non-negative number.
+ * Otherwise the default depends on the source: with `"self"` the check is an
+ * in-process read-model query, so caching buys little and only delays a
+ * revocation — it defaults to `0` (no cache). A `"remote"` source returns
+ * `undefined`, leaving AuthService's own default TTL in place.
+ */
+export function resolveCredentialCacheTtlMs(
+  raw: string | undefined,
+  source: RenownSource,
+  logger: ILogger,
+): number | undefined {
+  const fallback = source === "self" ? 0 : undefined;
+  if (raw === undefined) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  if (raw.trim() !== "" && Number.isFinite(parsed) && parsed >= 0) {
+    return parsed;
+  }
+  logger.warn(
+    `Ignoring invalid CREDENTIAL_VERIFICATION_CACHE_TTL_MS="${raw}" (expected a non-negative number of milliseconds; 0 disables caching) — using the ${source === "self" ? "renown source=self default (0, no cache)" : "default TTL"}`,
+  );
+  return fallback;
+}

@@ -360,8 +360,10 @@ for verification — but `url` still applies to this switchboard's own identity
 Either way the credential's EIP-712 proof is re-verified and expiry and
 delegation binding are re-checked, so a locally stored credential is held to the
 same standard as a remote one. Successful checks are cached per identity for
-`CREDENTIAL_VERIFICATION_CACHE_TTL_MS` (60s default) in both modes, so
-revocation still lags by up to that TTL.
+`CREDENTIAL_VERIFICATION_CACHE_TTL_MS`. The default depends on the source: `0`
+(no cache) for `self`, where the check is an in-process read-model query, and
+60s for `remote`, where revocation lags by up to that TTL per replica. Setting
+the env var overrides either default.
 
 `self` requires a loaded package that provides the `renown-read-model` subgraph
 (`@powerhousedao/renown-package`). Startup fails if none does, rather than booting
