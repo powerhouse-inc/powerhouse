@@ -218,6 +218,17 @@ describe("lintSubgraphTypes", () => {
     ]);
   });
 
+  it("warns that the server does not serve a subgraph whose schema does not build, and leaves it out of the claims", () => {
+    const root = makeProject({
+      broken: schemaFile("type Query { shared: Missing }"),
+      working: schemaFile("type Query { shared: String }"),
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "broken" does not build, so the server does not serve it: Unknown type "Missing". Fix its schema so it builds, or declare the missing type.',
+    ]);
+  });
+
   it("skips a schema built from substitutions", () => {
     const root = makeProject({
       ledger:

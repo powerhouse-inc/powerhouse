@@ -45,6 +45,19 @@ function model(
   } as unknown as DocumentModelGlobalState;
 }
 
+function version(
+  global: DocumentModelGlobalState,
+  number: number,
+): DocumentModelGlobalState {
+  return {
+    ...global,
+    specifications: global.specifications.map((specification) => ({
+      ...specification,
+      version: number,
+    })),
+  };
+}
+
 const todoList = model("TodoList");
 
 const template = (pascal: string, camel: string) => gql`
@@ -198,7 +211,7 @@ describe("findPackageSubgraphConflicts", () => {
     expect(conflicts([{ name: "ledger", typeDefs }])).toEqual({
       ledger: {
         kind: "generated",
-        claims: [{ claim: "TodoList", owner: "todo-list" }],
+        claims: [{ claim: "TodoList", owner: "TodoList" }],
       },
     });
   });
@@ -462,5 +475,57 @@ describe("hostDocumentModels", () => {
         [notes],
       ),
     ).toEqual({});
+  });
+
+  it("takes each model's subgraph from its latest version, as the server does", () => {
+    const v1 = version(model("Notes"), 1);
+    const v2 = version(
+      model("Notes", "input SetNotesTitleInput { title: Missing }"),
+      2,
+    );
+    const notes = { name: "notes", typeDefs: template("Notes", "notes") };
+
+    for (const models of [
+      [v1, v2],
+      [v2, v1],
+    ]) {
+      const host = hostDocumentModels(models);
+      expect(host.subgraphs.map(({ name }) => name)).not.toContain("notes");
+      expect(findPackageSubgraphConflicts([notes], host).conflicts.size).toBe(
+        0,
+      );
+    }
+  });
+
+  it("reports a model once when the server refuses it once", () => {
+    const broken = () => model("Broken", "", "type BrokenState {");
+
+    expect(
+      hostDocumentModels([broken(), broken()]).refused.map(({ name }) => name),
+    ).toEqual(["Broken"]);
+  });
+});
+
+describe("a package subgraph whose schema does not build", () => {
+  it("is left out of the claims, as the server leaves it out", () => {
+    const broken = {
+      name: "broken",
+      typeDefs: parse("type Query { shared: Missing }"),
+    };
+    const working = {
+      name: "working",
+      typeDefs: parse("type Query { shared: String }"),
+    };
+    const report = findPackageSubgraphConflicts(
+      [broken, working],
+      hostDocumentModels([]),
+    );
+
+    expect(report.conflicts.get(broken)).toEqual({
+      kind: "unbuildable",
+      message: 'Unknown type "Missing".',
+    });
+    expect(report.conflicts.has(working)).toBe(false);
+    expect(report.contests).toEqual([]);
   });
 });

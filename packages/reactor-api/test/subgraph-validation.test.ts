@@ -462,6 +462,29 @@ describe("the conflicts the server enforces", () => {
     ]);
   });
 
+  it("names the document model that generates a type the subgraph redefines", () => {
+    const result = validateSubgraphsForHost({
+      profile: "release",
+      documentModels: [notesWithOperations()],
+      subgraphs: [
+        entry(
+          compat(
+            "ledger",
+            "type Query { lastNote: Notes } type Notes { id: ID }",
+          ),
+        ),
+      ],
+    });
+    expect(
+      result.diagnostics.map(({ code, message }) => [code, message]),
+    ).toEqual([
+      [
+        "PH-SG-GENERATED-TYPE-TAKEN",
+        'Subgraph "ledger" defines Notes, which document model "Notes" generates, so the server refuses it.',
+      ],
+    ]);
+  });
+
   it("warns about a taken name before anything else, as the server decides", () => {
     const codes = (sdl: string) =>
       validateSubgraphsForHost({
