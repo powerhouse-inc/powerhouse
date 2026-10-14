@@ -13,6 +13,7 @@ import { baseDocumentModels } from "../packages/base-document-models.js";
 import { getUniqueDocumentModels } from "../packages/package-manager.js";
 import { createSchema } from "../utils/create-schema.js";
 import type { DefinedSubgraph } from "./define-subgraph.js";
+import { isRootFieldClaim } from "./subgraph-type-ownership.js";
 import {
   findPackageSubgraphConflicts,
   type PackageSubgraph,
@@ -101,33 +102,52 @@ function conflictDiagnostics(
   source: DefinitionSource,
   conflict: PackageSubgraphConflicts,
 ): DefinitionDiagnostic[] {
-  if (conflict.nameHeldBy !== undefined) {
-    return [
-      createDiagnostic({
-        code: "PH-SG-NAME-TAKEN",
-        source,
-        path: ["composition", name],
-        message: `Subgraph "${name}" has the name of a ${conflict.nameHeldBy} subgraph, so the server refuses it.`,
-        received: name,
-        repair: "Rename the subgraph.",
-      }),
-    ];
+  switch (conflict.kind) {
+    case "name":
+      return [
+        createDiagnostic({
+          code: "PH-SG-NAME-TAKEN",
+          source,
+          path: ["composition", name],
+          message: `Subgraph "${name}" has the name of a ${conflict.heldBy} subgraph, so the server refuses it.`,
+          received: name,
+          repair: "Rename the subgraph.",
+        }),
+      ];
+    case "generated":
+      // createSchema reports these first, so a subgraph that redefines a
+      // generated type never reaches this check.
+      return conflict.claims.map(({ claim, owner }) =>
+        createDiagnostic({
+          code: "PH-SG-SCHEMA-INVALID",
+          source,
+          path: ["composition", name, claim],
+          message: `${claim} belongs to "${owner}", so the server refuses subgraph "${name}".`,
+          received: name,
+          repair: `Rename ${claim} in this subgraph.`,
+        }),
+      );
+    case "claims":
+      return conflict.claims.map(({ claim, owner, ownerIsPackage }) => {
+        const rootField = isRootFieldClaim(claim);
+        return createDiagnostic({
+          code: rootField
+            ? "PH-GQL-COORDINATE-OWNED"
+            : "PH-GQL-SHARED-DEFINITION-MISMATCH",
+          source,
+          path: ["composition", name, claim],
+          message: ownerIsPackage
+            ? `Subgraphs "${owner}" and "${name}" both declare ${claim}${rootField ? "" : ", differently"}, so the server leaves out of the supergraph whichever of them registers second.`
+            : `${claim} belongs to "${owner}", so the server leaves subgraph "${name}" out of the supergraph.`,
+          received: name,
+          repair: ownerIsPackage
+            ? `Rename ${claim} in one of the two subgraphs.`
+            : rootField
+              ? `Rename ${claim} in this subgraph.`
+              : `Rename ${claim} in this subgraph, or define it exactly as "${owner}" does.`,
+        });
+      });
   }
-  return conflict.claims.map(({ claim, owner }) => {
-    const rootField = claim.includes(".");
-    return createDiagnostic({
-      code: rootField
-        ? "PH-GQL-COORDINATE-OWNED"
-        : "PH-GQL-SHARED-DEFINITION-MISMATCH",
-      source,
-      path: ["composition", name, claim],
-      message: `${claim} belongs to "${owner}", so the server leaves subgraph "${name}" out of the supergraph.`,
-      received: name,
-      repair: rootField
-        ? `Rename ${claim} in this subgraph.`
-        : `Rename ${claim} in this subgraph, or define it exactly as "${owner}" does.`,
-    });
-  });
 }
 
 function subgraphDefinitionOf(value: unknown): SubgraphDefinition | null {

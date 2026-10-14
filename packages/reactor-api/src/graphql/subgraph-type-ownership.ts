@@ -143,7 +143,8 @@ function mergeTypeNodes(
   return merged as unknown as ASTNode;
 }
 
-function isRootFieldClaim(claim: string): boolean {
+/** Whether a claim is a root field, as `Query.field`, rather than a type. */
+export function isRootFieldClaim(claim: string): boolean {
   return claim.includes(".");
 }
 

@@ -1,6 +1,7 @@
 import { loadDocumentModelInDir } from "@powerhousedao/codegen/utils";
 import {
   findPackageSubgraphConflicts,
+  type OwnershipConflict,
   type PackageSubgraph,
   type PackageSubgraphConflicts,
 } from "@powerhousedao/reactor-api/subgraph-types";
@@ -61,14 +62,39 @@ function subgraphDirs(subgraphsDir: string): string[] {
     .sort((a, b) => position(a) - position(b));
 }
 
-function describe(name: string, conflict: PackageSubgraphConflicts): string {
-  if (conflict.nameHeldBy) {
-    return `Subgraph "${name}" has the name of a ${conflict.nameHeldBy} subgraph, so the server refuses it. Rename the subgraph.`;
+const listClaims = (claims: readonly OwnershipConflict[]) =>
+  claims.map(({ claim, owner }) => `${claim} (owned by "${owner}")`).join(", ");
+
+function describe(name: string, conflict: PackageSubgraphConflicts): string[] {
+  switch (conflict.kind) {
+    case "name":
+      return [
+        `Subgraph "${name}" has the name of a ${conflict.heldBy} subgraph, so the server refuses it. Rename the subgraph.`,
+      ];
+    case "generated":
+      return [
+        `Subgraph "${name}" defines ${listClaims(conflict.claims)}, so the server refuses it. Rename them in its schema.ts.`,
+      ];
+    case "claims": {
+      const owned = conflict.claims.filter((claim) => !claim.ownerIsPackage);
+      const contested = Map.groupBy(
+        conflict.claims.filter((claim) => claim.ownerIsPackage),
+        (claim) => claim.owner,
+      );
+      return [
+        ...(owned.length > 0
+          ? [
+              `Subgraph "${name}" defines ${listClaims(owned)}, so the supergraph leaves it out. Rename them in its schema.ts.`,
+            ]
+          : []),
+        ...Array.from(
+          contested,
+          ([owner, claims]) =>
+            `Subgraphs "${owner}" and "${name}" both define ${claims.map(({ claim }) => claim).join(", ")}, so the supergraph leaves out whichever of them registers second. Rename them in one of the two.`,
+        ),
+      ];
+    }
   }
-  const claims = conflict.claims
-    .map(({ claim, owner }) => `${claim} (owned by "${owner}")`)
-    .join(", ");
-  return `Subgraph "${name}" defines ${claims}, so the supergraph leaves it out. Rename them in its schema.ts.`;
 }
 
 /** A warning per subgraph the server would refuse or leave out. */
@@ -95,6 +121,8 @@ export function lintSubgraphTypes(projectDir: string): string[] {
       (name) =>
         `Document model "${name}" was left out of the subgraph check: its schema does not generate.`,
     ),
-    ...Array.from(conflicts, ([name, conflict]) => describe(name, conflict)),
+    ...Array.from(conflicts).flatMap(([name, conflict]) =>
+      describe(name, conflict),
+    ),
   ];
 }

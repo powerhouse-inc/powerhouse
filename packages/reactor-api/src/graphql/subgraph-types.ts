@@ -43,12 +43,23 @@ export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
 /** A package's own subgraph, in the order the package exports it. */
 export type PackageSubgraph = { name: string; typeDefs: DocumentNode };
 
-export type PackageSubgraphConflicts = {
-  /** Set when the server refuses the subgraph's name. */
-  nameHeldBy?: "core" | "document model";
-  /** Types and root fields the subgraph loses. */
-  claims: OwnershipConflict[];
+/**
+ * A type or root field another subgraph owns. When that owner is another
+ * package subgraph, which of the two keeps it depends on registration order.
+ */
+export type PackageClaimConflict = OwnershipConflict & {
+  ownerIsPackage: boolean;
 };
+
+/**
+ * Why the server would not serve a package subgraph whole. It refuses one
+ * whose name is taken or that redefines a generated type, and leaves one that
+ * loses a claim out of the supergraph while still serving its own route.
+ */
+export type PackageSubgraphConflicts =
+  | { kind: "name"; heldBy: "core" | "document model" }
+  | { kind: "generated"; claims: OwnershipConflict[] }
+  | { kind: "claims"; claims: PackageClaimConflict[] };
 
 export type PackageSubgraphReport = {
   /** By subgraph name; subgraphs without a conflict are left out. */
@@ -119,14 +130,11 @@ export function findPackageSubgraphConflicts(
   const admitted: PackageSubgraph[] = [];
   for (const subgraph of subgraphs) {
     if (coreSubgraphTypeDefs.has(subgraph.name)) {
-      conflicts.set(subgraph.name, { nameHeldBy: "core", claims: [] });
+      conflicts.set(subgraph.name, { kind: "name", heldBy: "core" });
       continue;
     }
     if (modelSubgraphs.some((owner) => owner.name === subgraph.name)) {
-      conflicts.set(subgraph.name, {
-        nameHeldBy: "document model",
-        claims: [],
-      });
+      conflicts.set(subgraph.name, { kind: "name", heldBy: "document model" });
       continue;
     }
     let collisions: string[];
@@ -137,6 +145,7 @@ export function findPackageSubgraphConflicts(
     }
     if (collisions.length > 0) {
       conflicts.set(subgraph.name, {
+        kind: "generated",
         claims: collisions.map((claim) => ({
           claim,
           owner: generatedOwners.get(claim) ?? DOCUMENT_MODEL_SCHEMA_OWNER,
@@ -163,7 +172,14 @@ export function findPackageSubgraphConflicts(
     })),
   );
   for (const [name, claims] of excluded) {
-    if (packageNames.has(name)) conflicts.set(name, { claims });
+    if (!packageNames.has(name)) continue;
+    conflicts.set(name, {
+      kind: "claims",
+      claims: claims.map((claim) => ({
+        ...claim,
+        ownerIsPackage: packageNames.has(claim.owner),
+      })),
+    });
   }
   return { conflicts, skippedModels };
 }
