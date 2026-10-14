@@ -1,6 +1,7 @@
 import { failDefinition } from "../diagnostics.js";
 import { isFieldDescriptor } from "../descriptor-registry.js";
 import {
+  assertAuthoredName,
   assertFieldUse,
   snapshotDescriptorOptions,
   snapshotFieldMap,
@@ -337,18 +338,10 @@ export function createEntryBuilders<
 
   function root(
     kind: "query" | "mutation" | "subscription",
-    key: unknown,
+    authoredKey: unknown,
     options: Record<string, unknown>,
   ): TypedSubgraphEntry {
-    if (typeof key !== "string" || key.length === 0) {
-      failDefinition({
-        code: "PH-SG-ENTRY-INVALID",
-        path: ["key"],
-        message: `${kind}() takes a field name as a non-empty string.`,
-        received: typeof key,
-        repair: `Pass the field name first, as ${kind}("widget", { ... }).`,
-      });
-    }
+    const key = assertAuthoredName(authoredKey, ["key"]);
     const config = snapshotDescriptorOptions(
       options,
       [
@@ -372,9 +365,13 @@ export function createEntryBuilders<
       });
     }
     assertFieldUse(config.returns, ["options", "returns"]);
+    const fieldName = stringOption(config, "fieldName", ["options"]);
     const shape: RootEntry = {
       key,
-      fieldName: stringOption(config, "fieldName", ["options"]) ?? key,
+      fieldName:
+        fieldName === null
+          ? key
+          : assertAuthoredName(fieldName, ["options", "fieldName"]),
       description: stringOption(config, "description", ["options"]),
       deprecated: stringOption(config, "deprecated", ["options"]),
       args: argumentMap(config.args, "PH-SG-ENTRY-INVALID"),
@@ -529,6 +526,7 @@ function argumentMap(
   }
   const members = snapshotFieldMap(value, ["options", "args"]);
   for (const [key, member] of Object.entries(members)) {
+    assertAuthoredName(key, ["options", "args", key]);
     assertFieldUse(member, ["options", "args", key]);
   }
   return members as ObjectFields;
