@@ -18,7 +18,7 @@ import type {
   NamedGraphQLTypeDefinition,
   SchemaFirstGraphQLDocumentCompatibility,
 } from "@powerhousedao/shared/document-model";
-import { createDiagnostic } from "./diagnostics.js";
+import { createDiagnostic, describeReceived } from "./diagnostics.js";
 import { equalsPatternProblem } from "./field-options.js";
 import { canonicalJson, compareCodeUnits } from "./primitives.js";
 import {
@@ -873,7 +873,7 @@ export function checkGraphQLDocumentAgreement(options: {
         "A GraphQL compatibility document must be a location-free Document node.",
         {
           expected: 'a { kind: "Document", definitions: [...] } node',
-          received: typeof document,
+          received: describeReceived(document),
         },
       ),
     ];

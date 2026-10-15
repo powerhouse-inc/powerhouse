@@ -136,7 +136,9 @@ function storedModel(
       path: ["documentModel", "global", "specifications"],
       message: "A stored document model carries a specification history.",
       expected: "documentModel.global.specifications",
-      received: typeof global?.ok,
+      received: describeReceived(
+        global?.ok === true ? global.value.specifications : undefined,
+      ),
       repair: "Pass the module produced by ph generate, or its stored state.",
     });
     return undefined;

@@ -219,7 +219,7 @@ function nameMap(
           message:
             "A stored name override must be a string already in Unicode NFC.",
           expected: "string",
-          received: typeof override,
+          received: describeReceived(override),
           repair: "Copy the exact stored name from the model this replaces.",
         });
         continue;

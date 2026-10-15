@@ -8,6 +8,7 @@ import {
   type DefinitionDiagnosticInput,
   DocumentModelDefinitionError,
   createDiagnostic,
+  describeReceived,
 } from "../diagnostics.js";
 import { canonicalJson, isAuthoredSchemaName } from "../primitives.js";
 import type { ScalarLiteralNode } from "./scalar-literal.js";
@@ -171,7 +172,7 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
       code: "PH-SCALAR-DECLARATION-INVALID",
       path: ["name"],
       message: "A scalar name must be a GraphQL name.",
-      received: typeof name === "string" ? name : typeof name,
+      received: typeof name === "string" ? name : describeReceived(name),
       repair: "Use the registered SDL scalar name.",
     });
   }

@@ -470,7 +470,7 @@ function requiredString(
     path,
     message: "This declaration member must be a nonempty string.",
     expected: "a nonempty string",
-    received: value === undefined ? "undefined" : typeof value,
+    received: value === undefined ? "undefined" : describeReceived(value),
     repair: `Give ${path.at(-1) === undefined ? "the member" : String(path.at(-1))} a nonempty string value.`,
   });
   return undefined;
@@ -487,7 +487,7 @@ function requiredText(
     path,
     message: "This declaration member must be a string.",
     expected: "a string",
-    received: value === undefined ? "absent" : typeof value,
+    received: value === undefined ? "absent" : describeReceived(value),
     repair: `Give ${String(path.at(-1))} a string value.`,
   });
   return undefined;
@@ -505,7 +505,7 @@ function optionalString(
     path,
     message: "This declaration member must be a string, null, or absent.",
     expected: "a string, null, or absent",
-    received: typeof value,
+    received: describeReceived(value),
     repair: `Pass a string, pass null, or omit ${String(path.at(-1))}.`,
   });
   return undefined;
@@ -541,7 +541,7 @@ function normalizeExamples(
         path: [...examplePath, "value"],
         message: "An example value must be the stored JSON string.",
         expected: "string",
-        received: typeof exampleValue,
+        received: describeReceived(exampleValue),
         repair: 'Pass the serialized example, such as \'{"id":"item-1"}\'.',
       });
       return [];
@@ -576,11 +576,9 @@ function stateRoot(
   }
   const received = isTypeDescriptor(candidate)
     ? `${candidate.kind} ${JSON.stringify(candidate.name)}`
-    : candidate === null
-      ? "null"
-      : candidate === undefined
-        ? "absent"
-        : typeof candidate;
+    : candidate === undefined
+      ? "absent"
+      : describeReceived(candidate);
   collector.add({
     code: "PH-DM-STATE-ROOT-INVALID",
     path,
@@ -805,7 +803,10 @@ function normalizeConfig(
       path: ["version"],
       message: "A code-first model version must be a positive safe integer.",
       expected: "a positive safe integer",
-      received: typeof version === "number" ? String(version) : typeof version,
+      received:
+        typeof version === "number"
+          ? String(version)
+          : describeReceived(version),
       repair: "Use version: 1, or the next integer for a later version.",
     });
   }
@@ -993,7 +994,7 @@ function operationBuilder<TState, TScope extends "global" | "local">(
           ? descriptor.kind
           : descriptor === undefined
             ? "absent"
-            : typeof descriptor,
+            : describeReceived(descriptor),
         repair:
           "Declare input: ph.input({ fields: { ... } }); an operation with no fields uses ph.input({ fields: {} }).",
       });
@@ -1006,7 +1007,10 @@ function operationBuilder<TState, TScope extends "global" | "local">(
         path: [...path, "reduce"],
         message: "An operation must declare one reducer.",
         expected: "reduce(state, input, ctx)",
-        received: config.reduce === undefined ? "absent" : typeof config.reduce,
+        received:
+          config.reduce === undefined
+            ? "absent"
+            : describeReceived(config.reduce),
         repair: "Add reduce(state, input, ctx) to the operation declaration.",
       });
       rejectedOperations.add(token);
@@ -1095,7 +1099,7 @@ function normalizeModule(
       received:
         declaration.operations === undefined
           ? "absent"
-          : typeof declaration.operations,
+          : describeReceived(declaration.operations),
       repair: "Use operations: ({ global, local }) => ({ ... }).",
     });
     return undefined;
@@ -1483,7 +1487,7 @@ function checkUpgradeManifest(
       expected: JSON.stringify(versions),
       received: supported.ok
         ? JSON.stringify(supported.value)
-        : typeof manifest.supportedVersions,
+        : describeReceived(manifest.supportedVersions),
       repair:
         "List every version the family composes in upgrades/versions.ts, in ascending order.",
     });
@@ -1555,7 +1559,7 @@ function checkUpgradeManifest(
         received:
           transition.upgradeReducer === undefined
             ? "absent"
-            : typeof transition.upgradeReducer,
+            : describeReceived(transition.upgradeReducer),
         repair:
           "Write the upgrade by hand: it rewrites both state and initialState.",
       });

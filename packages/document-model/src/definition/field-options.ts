@@ -202,9 +202,7 @@ export function assertNamedType(
     ? `field use (${value.kind})`
     : isScalarFactory(value)
       ? "scalar factory"
-      : value === null
-        ? "null"
-        : typeof value;
+      : describeReceived(value);
   failDefinition({
     code,
     path,

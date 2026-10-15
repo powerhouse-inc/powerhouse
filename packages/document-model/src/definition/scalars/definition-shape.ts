@@ -3,6 +3,7 @@ import type {
   ScalarRepresentation,
 } from "@powerhousedao/shared/document-model";
 import { snapshotRecord } from "../data-properties.js";
+import { describeReceived } from "../diagnostics.js";
 import { canonicalJson } from "../primitives.js";
 import { PROFILE } from "./declaration.js";
 
@@ -35,9 +36,7 @@ const REPRESENTATIONS: readonly ScalarRepresentation[] = [
 ];
 
 function describe(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null) return "null";
-  return typeof value;
+  return typeof value === "string" ? value : describeReceived(value);
 }
 
 /**

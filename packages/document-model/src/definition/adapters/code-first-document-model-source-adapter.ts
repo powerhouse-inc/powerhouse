@@ -86,7 +86,7 @@ function inspect(
       path: [...path, "reducer"],
       message: "A usable document-model module has a callable reducer.",
       expected: "a reducer function",
-      received: typeof module.reducer,
+      received: describeReceived(module.reducer),
       repair:
         "Export the module returned by context.finalize(); a stored specification alone is not a module.",
     });
@@ -104,7 +104,10 @@ function inspect(
       message:
         "A code-first module declares its registry version as a positive safe integer.",
       expected: "a positive safe integer",
-      received: typeof version === "number" ? String(version) : typeof version,
+      received:
+        typeof version === "number"
+          ? String(version)
+          : describeReceived(version),
       repair:
         "Declare version in defineDocumentModel and finalize through a version family.",
     });
@@ -128,7 +131,8 @@ function inspect(
       path: [...path, "documentModel", "global", "id"],
       message: "A usable document-model module has a stored model ID.",
       expected: "a nonempty document type",
-      received: typeof storedId === "string" ? '""' : typeof storedId,
+      received:
+        typeof storedId === "string" ? '""' : describeReceived(storedId),
       repair:
         "Declare id in defineDocumentModel; the stored model ID is the document type every consumer registers.",
     });
@@ -243,7 +247,7 @@ function upgradeManifestOf(
       expected: canonicalJson(versions),
       received:
         manifest === undefined
-          ? typeof value
+          ? describeReceived(value)
           : canonicalJson((supported ?? null) as never),
       repair:
         "Publish the manifest defineDocumentModelFamily returned, beside the modules of the same family.",
