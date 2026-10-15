@@ -1293,13 +1293,13 @@ describe("a scalar coercion", () => {
   it("may be any object whose three members are functions, as before", () => {
     class Coercion {
       readonly unit = "ms";
-      parseValue(value: unknown) {
-        return value;
+      parseValue(value: unknown): number {
+        return Number(value);
       }
-      parseLiteral() {
+      parseLiteral(): number {
         return 0;
       }
-      serialize(value: unknown) {
+      serialize(value: unknown): unknown {
         return value;
       }
     }
