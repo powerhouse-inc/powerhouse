@@ -5,7 +5,11 @@ import type {
   DocumentModelPHState,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { snapshotArray, snapshotRecord } from "../data-properties.js";
+import {
+  rejectionReceived,
+  snapshotArray,
+  snapshotRecord,
+} from "../data-properties.js";
 import {
   describeReceived,
   DefinitionDiagnosticCollector,
@@ -72,7 +76,7 @@ function inspect(
       path: snapshot.path,
       message: `This export is not a document-model module (${snapshot.reason}).`,
       expected: MODULE_KEYS.join(", "),
-      received: describeReceived(value),
+      received: rejectionReceived(snapshot),
       repair:
         "Export the module returned by context.finalize() or family.at(version).",
     });
@@ -241,14 +245,13 @@ function upgradeManifestOf(
   ) {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
-      path,
+      path: snapshot.ok ? path : snapshot.path,
       message:
         "A family's upgrade manifest must cover exactly the versions its modules serve.",
       expected: canonicalJson(versions),
-      received:
-        manifest === undefined
-          ? describeReceived(value)
-          : canonicalJson((supported ?? null) as never),
+      received: snapshot.ok
+        ? canonicalJson((supported ?? null) as never)
+        : rejectionReceived(snapshot),
       repair:
         "Publish the manifest defineDocumentModelFamily returned, beside the modules of the same family.",
     });

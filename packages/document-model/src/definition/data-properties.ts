@@ -14,19 +14,20 @@ export type DataSnapshotRejection =
       readonly ok: false;
       readonly reason: "not-record";
       readonly path: DataPath;
-      /** The refused value, as `describeReceived` spells it. */
       readonly received: string;
     }
   | {
       readonly ok: false;
       readonly reason: "not-array";
       readonly path: DataPath;
+      readonly received: string;
     }
   | {
       readonly ok: false;
       readonly reason: "custom-prototype";
       readonly path: DataPath;
-      /** The refused value, as `describeReceived` spells it. */
+      /** What the position holds: a plain record, or a plain array. */
+      readonly expected: "record" | "array";
       readonly received: string;
     }
   | {
@@ -67,7 +68,12 @@ export type DataSnapshotRejection =
       readonly key: string;
     }
   | { readonly ok: false; readonly reason: "cycle"; readonly path: DataPath }
-  | { readonly ok: false; readonly reason: "not-data"; readonly path: DataPath }
+  | {
+      readonly ok: false;
+      readonly reason: "not-data";
+      readonly path: DataPath;
+      readonly received: string;
+    }
   | {
       readonly ok: false;
       readonly reason: "inspection-failed";
@@ -77,6 +83,16 @@ export type DataSnapshotRejection =
 export type DataSnapshot<T> =
   | { readonly ok: true; readonly value: T }
   | DataSnapshotRejection;
+
+/**
+ * What a refusal built from `rejection` reports as `received`: the value at
+ * `rejection.path` when the refusal is about its shape, and otherwise the
+ * reason, because an accessor or an uninspectable value has no type worth
+ * naming.
+ */
+export function rejectionReceived(rejection: DataSnapshotRejection): string {
+  return "received" in rejection ? rejection.received : rejection.reason;
+}
 
 const CANONICAL_INDEX = /^(?:0|[1-9][0-9]*)$/;
 
@@ -132,7 +148,12 @@ function snapshotArrayValue<T>(
 ): DataSnapshot<readonly T[]> {
   try {
     if (!Array.isArray(value)) {
-      return { ok: false, reason: "not-array", path };
+      return {
+        ok: false,
+        reason: "not-array",
+        path,
+        received: describeReceived(value),
+      };
     }
   } catch {
     return { ok: false, reason: "inspection-failed", path };
@@ -169,11 +190,17 @@ function snapshotArrayMembers<T>(
       ok: false,
       reason: "custom-prototype",
       path,
-      received: describeReceived(value),
+      expected: "array",
+      received: "array of another prototype or realm",
     };
   }
   if (lengthDescriptor === undefined || !("value" in lengthDescriptor)) {
-    return { ok: false, reason: "not-array", path };
+    return {
+      ok: false,
+      reason: "not-array",
+      path,
+      received: "array with an unreadable length",
+    };
   }
   const length: unknown = lengthDescriptor.value;
   if (
@@ -181,7 +208,12 @@ function snapshotArrayMembers<T>(
     !Number.isSafeInteger(length) ||
     length < 0
   ) {
-    return { ok: false, reason: "not-array", path };
+    return {
+      ok: false,
+      reason: "not-array",
+      path,
+      received: "array with an unreadable length",
+    };
   }
   for (const key of keys) {
     if (key === "length") continue;
@@ -297,7 +329,8 @@ function snapshotPlainObjectMembers<T>(
       ok: false,
       reason: "custom-prototype",
       path,
-      received: describeReceived(value),
+      expected: "record",
+      received: "object",
     };
   }
   const entries: [string, T][] = [];
@@ -363,8 +396,9 @@ function snapshotDataValue(
     case "undefined":
       return { ok: true, value };
     case "function":
+      return { ok: false, reason: "not-data", path, received: "function" };
     case "symbol":
-      return { ok: false, reason: "not-data", path };
+      return { ok: false, reason: "not-data", path, received: "symbol" };
     case "object": {
       if (value === null) return { ok: true, value };
       let isArray: boolean;

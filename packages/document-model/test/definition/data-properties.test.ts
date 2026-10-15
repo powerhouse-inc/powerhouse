@@ -191,6 +191,7 @@ describe("snapshotDataRecord", () => {
         ok: false,
         reason: "custom-prototype",
         path: ["opts"],
+        expected: "record",
         received: "object",
       });
     }
@@ -200,6 +201,7 @@ describe("snapshotDataRecord", () => {
       ok: false,
       reason: "custom-prototype",
       path: ["opts", "when"],
+      expected: "record",
       received: "object",
     });
   });
@@ -297,10 +299,16 @@ describe("snapshotDataRecord", () => {
       ok: false,
       reason: "not-data",
       path: ["opts", "nested", "run"],
+      received: "function",
     });
     expect(
       snapshotDataRecord({ tag: Symbol("tag") }, ["tag"], ["opts"]),
-    ).toStrictEqual({ ok: false, reason: "not-data", path: ["opts", "tag"] });
+    ).toStrictEqual({
+      ok: false,
+      reason: "not-data",
+      path: ["opts", "tag"],
+      received: "symbol",
+    });
   });
 
   it("reports a throwing proxy trap as inspection-failed", () => {
@@ -412,13 +420,15 @@ describe("snapshotDataArray", () => {
       ok: false,
       reason: "custom-prototype",
       path: ["list"],
-      received: "array",
+      expected: "array",
+      received: "array of another prototype or realm",
     });
     expect(snapshotDataRecord({ list }, ["list"], ["opts"])).toStrictEqual({
       ok: false,
       reason: "custom-prototype",
       path: ["opts", "list"],
-      received: "array",
+      expected: "array",
+      received: "array of another prototype or realm",
     });
   });
 
@@ -456,11 +466,13 @@ describe("snapshotDataArray", () => {
       ok: false,
       reason: "not-array",
       path: ["list"],
+      received: "object",
     });
     expect(snapshotDataArray(new Set([1]), ["list"])).toStrictEqual({
       ok: false,
       reason: "not-array",
       path: ["list"],
+      received: "object",
     });
   });
 
@@ -469,6 +481,7 @@ describe("snapshotDataArray", () => {
       ok: false,
       reason: "not-data",
       path: ["list", 1],
+      received: "function",
     });
   });
 
@@ -542,6 +555,7 @@ describe("snapshotRecord", () => {
       ok: false,
       reason: "custom-prototype",
       path: ["opts"],
+      expected: "record",
       received: "object",
     });
   });

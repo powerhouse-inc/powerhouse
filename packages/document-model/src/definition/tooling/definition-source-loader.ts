@@ -8,7 +8,11 @@ import type {
   Sha256Digest,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { snapshotArray, snapshotRecord } from "../data-properties.js";
+import {
+  rejectionReceived,
+  snapshotArray,
+  snapshotRecord,
+} from "../data-properties.js";
 import {
   describeReceived,
   compareDefinitionDiagnostics,
@@ -481,7 +485,7 @@ function walk(
         path,
         message: `This export could not be read safely (${plain.reason}).`,
         expected: "a plain object, an array, or a finalized definition",
-        received: plain.reason,
+        received: rejectionReceived(plain),
         repair:
           "Export plain values: a getter or a Proxy in a definition collection hides what a check would read.",
       }),

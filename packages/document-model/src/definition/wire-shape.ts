@@ -4,7 +4,11 @@ import type {
   DocumentModelDefinition,
   JsonValue,
 } from "@powerhousedao/shared/document-model";
-import { snapshotArray, snapshotRecord } from "./data-properties.js";
+import {
+  rejectionReceived,
+  snapshotArray,
+  snapshotRecord,
+} from "./data-properties.js";
 import {
   type DefinitionDiagnosticCollector,
   describeReceived,
@@ -76,7 +80,7 @@ class ShapeChecker {
       snapshot.path,
       `This node is not a plain object with the V1 members (${snapshot.reason}).`,
       keys.join(", "),
-      value,
+      rejectionReceived(snapshot),
     );
   }
 
@@ -93,7 +97,7 @@ class ShapeChecker {
       snapshot.path,
       "This node must be an array.",
       "an array",
-      value,
+      rejectionReceived(snapshot),
     );
   }
 

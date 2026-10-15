@@ -271,7 +271,7 @@ describe("a refused author value", () => {
 });
 
 describe("a hand-edited wire definition", () => {
-  it("reads an array as array, and an uninspectable value as its type", () => {
+  it("reads an array as array, and an uninspectable value as inspection-failed", () => {
     const { proxy, revoke } = Proxy.revocable({}, {});
     revoke();
     const receivedFor = (value: unknown, path: string) => {
@@ -284,7 +284,7 @@ describe("a hand-edited wire definition", () => {
       receivedFor([], ""),
       receivedFor({ compatibility: [] }, "compatibility"),
       receivedFor(proxy, ""),
-    ]).toEqual(["array", "array", "object"]);
+    ]).toEqual(["array", "array", "inspection-failed"]);
   });
 });
 

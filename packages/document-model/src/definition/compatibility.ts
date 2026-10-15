@@ -1,5 +1,5 @@
 import type { DefinitionPath } from "@powerhousedao/shared/document-model";
-import { snapshotDataRecord } from "./data-properties.js";
+import { rejectionReceived, snapshotDataRecord } from "./data-properties.js";
 import {
   describeReceived,
   DefinitionDiagnosticCollector,
@@ -104,7 +104,7 @@ function stringMap(
       path: snapshot.path,
       message: `The ${member} map must be a plain object of strings (${snapshot.reason}).`,
       expected: `{ "${keyShape}": "..." }`,
-      received: describeReceived(value),
+      received: rejectionReceived(snapshot),
       repair: `Pass ${member} as an object literal keyed by ${keyShape}.`,
     });
     return entries;
@@ -166,7 +166,7 @@ function nameMap(
       path: snapshot.path,
       message: `The names map must be a plain object (${snapshot.reason}).`,
       expected: '{ "module/lineItems": { storedName: "line_items" } }',
-      received: describeReceived(value),
+      received: rejectionReceived(snapshot),
       repair: "Pass names as an object literal keyed by identity path.",
     });
     return entries;
@@ -194,7 +194,7 @@ function nameMap(
         path: overrides.path,
         message: `A name override must be a plain object (${overrides.reason}).`,
         expected: allowed.join(", "),
-        received: describeReceived(entry),
+        received: rejectionReceived(overrides),
         repair: `Use ${allowed.map((name) => `${name}: "..."`).join(" or ")}.`,
       });
       continue;
@@ -256,8 +256,7 @@ export function schemaFirstSpecification<
       path: config.path,
       message: `The compatibility declaration must be a plain object (${config.reason}).`,
       expected: "ids, names, serialization",
-      // An untyped caller can still pass null here.
-      received: describeReceived(input),
+      received: rejectionReceived(config),
       repair:
         "Pass schemaFirstSpecification({ ids, names, serialization }) with object literals.",
     });

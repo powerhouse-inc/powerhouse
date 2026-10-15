@@ -12,6 +12,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   type DataSnapshot,
+  rejectionReceived,
   snapshotArray,
   snapshotDataRecord,
   snapshotRecord,
@@ -1482,12 +1483,12 @@ function checkUpgradeManifest(
   if (!sameVersions) {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
-      path: [...path, "supportedVersions"],
+      path: supported.ok ? [...path, "supportedVersions"] : supported.path,
       message: "The upgrade manifest and the family list different versions.",
       expected: JSON.stringify(versions),
       received: supported.ok
         ? JSON.stringify(supported.value)
-        : describeReceived(manifest.supportedVersions),
+        : rejectionReceived(supported),
       repair:
         "List every version the family composes in upgrades/versions.ts, in ascending order.",
     });

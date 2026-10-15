@@ -3,7 +3,7 @@ import type {
   ScalarZero,
 } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
-import { snapshotRecord } from "../data-properties.js";
+import { rejectionReceived, snapshotRecord } from "../data-properties.js";
 import {
   type DefinitionDiagnosticInput,
   DocumentModelDefinitionError,
@@ -126,7 +126,7 @@ export function parseScalarDeclaration(
       code: "PH-SCALAR-DECLARATION-INVALID",
       path: snapshot.path,
       message: `The declaration could not be snapshotted (${snapshot.reason}).`,
-      received: "received" in snapshot ? snapshot.received : snapshot.reason,
+      received: rejectionReceived(snapshot),
       repair: "Pass a plain declaration object with data properties only.",
     });
   }

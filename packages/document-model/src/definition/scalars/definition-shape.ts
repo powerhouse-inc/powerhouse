@@ -2,7 +2,7 @@ import type {
   DefinitionPath,
   ScalarRepresentation,
 } from "@powerhousedao/shared/document-model";
-import { snapshotRecord } from "../data-properties.js";
+import { rejectionReceived, snapshotRecord } from "../data-properties.js";
 import { describeReceived } from "../diagnostics.js";
 import { canonicalJson } from "../primitives.js";
 import { PROFILE } from "./declaration.js";
@@ -55,7 +55,7 @@ export function scalarDefinitionIssues(
       {
         path: snapshot.path,
         message: `A scalar definition is a plain object with the V1 members (${snapshot.reason}).`,
-        received: describe(value),
+        received: rejectionReceived(snapshot),
       },
     ];
   }

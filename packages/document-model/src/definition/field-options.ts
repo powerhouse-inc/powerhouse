@@ -8,6 +8,7 @@ import {
   type DataPath,
   type DataSnapshotRejection,
   type DataValue,
+  rejectionReceived,
   snapshotArray,
   snapshotDataRecord,
   snapshotRecord,
@@ -72,11 +73,24 @@ export function optionRejection(
       repair: `Remove ${JSON.stringify(rejection.key)}; the supported options are ${allowedKeys.join(", ")}.`,
     });
   }
+  if (
+    rejection.reason === "custom-prototype" &&
+    rejection.expected === "array"
+  ) {
+    return failDefinition({
+      code: "PH-DEF-OPTION-INVALID",
+      path: rejectionPath(rejection),
+      message:
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+      received: rejection.received,
+      repair: "Pass an array literal, or copy the array with Array.from(...).",
+    });
+  }
   return failDefinition({
     code: "PH-DEF-OPTION-INVALID",
     path: rejectionPath(rejection),
     message: `The option value could not be snapshotted (${rejection.reason}).`,
-    received: "received" in rejection ? rejection.received : rejection.reason,
+    received: rejectionReceived(rejection),
     repair:
       "Pass a plain object literal with enumerable string-keyed data properties and no accessors, symbols, or class instances.",
   });
@@ -120,7 +134,7 @@ export function snapshotDescriptorArray(
       code,
       path,
       message: "Expected an array.",
-      received: describeReceived(value),
+      received: snapshot.received,
       repair,
     });
   }

@@ -26,7 +26,7 @@ import type {
   NormalizedDocumentModelArtifact,
   NormalizedDocumentModelResult,
 } from "../../adapters/types.js";
-import { snapshotRecord } from "../../data-properties.js";
+import { rejectionReceived, snapshotRecord } from "../../data-properties.js";
 import {
   describeReceived,
   DefinitionDiagnosticCollector,
@@ -112,7 +112,7 @@ function storedModel(
       path: root.path,
       message: `This export is neither a document-model module nor a stored document-model state (${root.reason}).`,
       expected: "a module with documentModel, or a DocumentModelPHState",
-      received: describeReceived(value),
+      received: rejectionReceived(root),
       repair:
         "Export the generated module, or pass its documentModel state directly.",
     });
