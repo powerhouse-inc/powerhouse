@@ -134,10 +134,16 @@ const REACTOR_ERROR_NAMES = new Set<string>([
   ReactorRequestClosedError,
 ]);
 
-function errorName(error: unknown, fallback: string | undefined): string {
+// An error's own name first: bundled pieces are minified, so a class name can
+// read "mc" while the error says "AI_APICallError".
+export function errorName(
+  error: unknown,
+  fallback: string | undefined,
+): string {
   if (typeof error !== "object" || error === null) return fallback || "Error";
   const named = (error as { name?: unknown }).name;
   if (typeof named === "string" && REACTOR_ERROR_NAMES.has(named)) return named;
+  if (typeof named === "string" && named && named !== "Error") return named;
   return error.constructor.name || fallback || "Error";
 }
 
