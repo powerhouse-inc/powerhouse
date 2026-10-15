@@ -651,7 +651,10 @@ export class DefinitionSourceLoader {
             message:
               "The package revision is not a SHA-256 identifier, so nothing can be bound to it.",
             expected: "sha256: followed by 64 lowercase hexadecimal digits",
-            received: String(request.packageRevision),
+            received:
+              typeof request.packageRevision === "string"
+                ? request.packageRevision
+                : describeReceived(request.packageRevision),
             repair:
               "Pass the package revision the active build graph produced.",
           }),
