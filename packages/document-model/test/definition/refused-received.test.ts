@@ -1243,4 +1243,48 @@ describe("a refused value that cannot be inspected", () => {
       "inspection-failed",
     ]);
   });
+
+  it("includes an array whose length cannot be read, which is not refused as a non-array", () => {
+    const unreadableLength = new Proxy([], {
+      getOwnPropertyDescriptor(target, key) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+        return key === "length" ? { ...descriptor, value: -1 } : descriptor;
+      },
+    });
+
+    expect(
+      [
+        () => ph.union("U", { members: unreadableLength as never }),
+        () =>
+          defineDocumentModel(
+            config({
+              specifications: specifications(
+                {},
+                { auxiliaryTypes: unreadableLength },
+              ),
+            }),
+          ),
+      ].flatMap((run) =>
+        diagnosticsOf(run).map(({ code, path, message, received }) => [
+          code,
+          path.join("."),
+          message,
+          received,
+        ]),
+      ),
+    ).toEqual([
+      [
+        "PH-DEF-OPTION-INVALID",
+        "options.members",
+        "The option value could not be snapshotted (inspection-failed).",
+        "inspection-failed",
+      ],
+      [
+        "PH-DM-DECLARATION-INVALID",
+        "specifications.auxiliaryTypes",
+        "The option value could not be snapshotted (inspection-failed).",
+        "inspection-failed",
+      ],
+    ]);
+  });
 });
