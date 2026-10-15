@@ -139,14 +139,42 @@ export function createSwitchboardPluginHost(
     resolved.map((r) => ({ plugin: r.plugin, provenance: r.provenance })),
   );
   const fullCtx: SwitchboardHostContext = { ...ctx, contributions };
+
+  // Change 2: the composition is observable on the `ph run` terminal. Report
+  // the activated plugins once at construction, then which plugins run each
+  // lifecycle hook as it fires.
+  const LOG = "[switchboard:plugins]";
+  console.log(
+    `${LOG} composition: ${ordered.length} plugin(s) in order — ${ordered.map((p) => p.name).join(", ") || "(none)"}`,
+  );
+  for (const r of resolved) {
+    const cfg = Object.keys(r.entry.config ?? {});
+    console.log(
+      `${LOG}   • ${r.plugin.name} [${r.provenance}] (${r.entry.module})` +
+        (cfg.length ? ` config: {${cfg.join(", ")}}` : ""),
+    );
+  }
+  const ranBy = (hook: string) =>
+    ordered.filter((p) => (p.hooks as Record<string, unknown>)?.[hook]);
+  const logHook = (hook: string) => {
+    const names = ranBy(hook).map((p) => p.name);
+    console.log(
+      `${LOG} hook ${hook} → ${names.length ? names.join(", ") : "(no implementers)"}`,
+    );
+  };
+
   return {
     plugins: ordered,
     ctx: fullCtx,
-    transformOptions: (seed) =>
-      runTransformHook("transformServerOptions", ordered, fullCtx, seed),
-    observe: (hook) =>
-      hook === "onShutdown"
+    transformOptions: (seed) => {
+      logHook("transformServerOptions");
+      return runTransformHook("transformServerOptions", ordered, fullCtx, seed);
+    },
+    observe: (hook) => {
+      logHook(hook);
+      return hook === "onShutdown"
         ? runObserveHookSequential(hook, ordered, fullCtx)
-        : runObserveHook(hook, ordered, fullCtx),
+        : runObserveHook(hook, ordered, fullCtx);
+    },
   };
 }

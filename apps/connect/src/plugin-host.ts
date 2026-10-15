@@ -4,10 +4,20 @@ import {
   runTransformHook,
   type HostPlugin,
 } from "@powerhousedao/host-core/plugins";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import createAssistantPlugin from "./plugins/assistant.js";
+import createGenericPlugin from "./plugins/generic.js";
+import createOpenPanelPlugin from "./plugins/openpanel.js";
+import createSentryPlugin from "./plugins/sentry.js";
 import type {
-  PHConnectCompositionEntry,
-  PHConnectRuntimeConfig,
-} from "@powerhousedao/shared/clis";
+  ConnectConfigHooks,
+  ConnectPlugin,
+  ConnectPluginContext,
+  ConnectPluginFactory,
+} from "./plugins/types.js";
+import createVetraStudioPlugin from "./plugins/vetra-studio.js";
+
+export type { ConnectPluginContext } from "./plugins/types.js";
 
 /**
  * R3.2 — ConnectCore's plugin pipeline (rewire plan R3; the browser side of
@@ -16,113 +26,26 @@ import type {
  * from host.js runner.plugins) AND the runtime flag is on — otherwise the
  * classic boot is byte-identical.
  *
- * Tonight's carve depth (recorded in the plan): the BUILT-IN plugins own
- * their CONFIG CONCERNS via transformConfig — presence is activation for the
- * vendor adapters (sentry, openpanel) and the assistant, and the generic
- * shell takes its entry config (branding/allowAddDrive/sections). The
- * downstream app consumes the TRANSFORMED config through the unchanged
- * classic code paths (real hooks, code moved not redesigned). Deleting the
- * generic shell's UI (deep product) is phase-4 scope; external plugin modules
- * (dynamic import via the package manager) are the documented follow-up —
- * unknown specifiers warn and skip.
+ * The built-in plugins are REAL modules under ./plugins — each a
+ * `(config) => HostPlugin` with a named `transformConnectConfig` hook, so the
+ * config slice it owns is auditable in its own file. Presence is activation:
+ * a plugin that is absent from a declared composition has its slice ZEROED.
+ * Unknown specifiers are logged and skipped (external, non-built-in browser
+ * plugin loading is the documented follow-up; the connect runner should also
+ * reject unknowns at `ph run` time — tracked separately).
  */
 
 export const PLUGIN_RUNNER_FLAG = "FEATURE_PLUGIN_RUNNER_ENABLED";
 
-export interface ConnectPluginContext {
-  entryConfig: Record<string, unknown>;
-}
-
-type ConnectConfigHooks = {
-  transformConnectConfig: (
-    config: PHConnectRuntimeConfig,
-    ctx: ConnectPluginContext,
-  ) => PHConnectRuntimeConfig;
-  onShutdown: (ctx: ConnectPluginContext) => void | Promise<void>;
-};
-
-type BuiltinFactory = (
-  entry: PHConnectCompositionEntry,
-) => HostPlugin<ConnectConfigHooks>;
-
-/** The built-in registry, keyed by the published specifier. Each built-in
- * owns one slice of the served config; ABSENCE zeroes that slice. */
-const BUILTINS: Record<string, BuiltinFactory> = {
-  "@powerhousedao/connect/plugins/generic": (entry) => ({
-    name: "connect-generic",
-    appliesTo: "connect",
-    hooks: {
-      transformConnectConfig: (config: PHConnectRuntimeConfig) => {
-        const c = entry.config ?? {};
-        return {
-          ...config,
-          branding: (c.branding as never) ?? config.branding,
-          drives: {
-            ...config.drives,
-            allowAddDrive:
-              (c.allowAddDrive as boolean | undefined) ??
-              config.drives?.allowAddDrive,
-            sections: (c.sections as never) ?? config.drives?.sections,
-          },
-        };
-      },
-    },
-  }),
-  "@powerhousedao/connect/plugins/sentry": (entry) => ({
-    name: "connect-sentry",
-    appliesTo: "connect",
-    hooks: {
-      transformConnectConfig: (config: PHConnectRuntimeConfig) => ({
-        ...config,
-        sentry: { ...config.sentry, ...(entry.config as object) } as never,
-      }),
-    },
-  }),
-  "@powerhousedao/connect/plugins/openpanel": (entry) => ({
-    name: "connect-openpanel",
-    appliesTo: "connect",
-    hooks: {
-      transformConnectConfig: (config: PHConnectRuntimeConfig) => ({
-        ...config,
-        openPanel: {
-          ...config.openPanel,
-          ...(entry.config as object),
-        } as never,
-      }),
-    },
-  }),
-  "@powerhousedao/vetra-studio/connect": (entry) => ({
-    name: "vetra-studio-connect",
-    appliesTo: "connect",
-    hooks: {
-      // Studio in the browser: presence turns studio mode on (the classic
-      // app.studioMode consumer paths run unchanged); absence of this entry
-      // leaves studioMode wherever the config put it — the zeroing below
-      // forces it OFF under a declared composition.
-      transformConnectConfig: (config: PHConnectRuntimeConfig) => ({
-        ...config,
-        app: {
-          ...config.app,
-          studioMode: true,
-          ...(entry.config as object),
-        } as never,
-      }),
-    },
-  }),
-  "@powerhousedao/connect/plugins/assistant": (entry) => ({
-    name: "connect-assistant",
-    appliesTo: "connect",
-    hooks: {
-      transformConnectConfig: (config: PHConnectRuntimeConfig) => ({
-        ...config,
-        ai: {
-          ...config.ai,
-          assistantEnabled: true,
-          ...(entry.config as object),
-        } as never,
-      }),
-    },
-  }),
+/** The built-in registry: published specifier -> the module's factory. The
+ * modules live in Connect's own source (bundled into the app), so this is a
+ * static import map, not a dynamic module resolution. */
+const BUILTINS: Record<string, ConnectPluginFactory> = {
+  "@powerhousedao/connect/plugins/generic": createGenericPlugin,
+  "@powerhousedao/connect/plugins/sentry": createSentryPlugin,
+  "@powerhousedao/connect/plugins/openpanel": createOpenPanelPlugin,
+  "@powerhousedao/connect/plugins/assistant": createAssistantPlugin,
+  "@powerhousedao/vetra-studio/connect": createVetraStudioPlugin,
 };
 
 /** The config slices each built-in owns; zeroed when its plugin is ABSENT
@@ -152,10 +75,14 @@ function zeroAbsentSlices(
   return out;
 }
 
+const LOG = "[connect:plugins]";
+
 /**
- * Apply the composition to the served config. Pure; called from
- * loadRuntimeConfig after the fetch, before the cache is warmed — every
- * downstream consumer sees the transformed config through the classic paths.
+ * Apply the composition to the served config. Pure (no mutation of the input);
+ * called from loadRuntimeConfig after the fetch, before the cache is warmed —
+ * every downstream consumer sees the transformed config through the classic
+ * paths. Logs the resolved plan and each lifecycle hook it fires to the
+ * browser console, so activation is observable (Change 2).
  */
 export async function applyComposition(
   config: PHConnectRuntimeConfig,
@@ -164,20 +91,36 @@ export async function applyComposition(
   if (!composition) return config;
 
   const present = new Set(composition.map((entry) => entry.module));
-  const plugins: HostPlugin<ConnectConfigHooks>[] = [];
+  const plugins: ConnectPlugin[] = [];
+
+  console.info(
+    `${LOG} resolving composition — ${composition.length} entr${composition.length === 1 ? "y" : "ies"}`,
+  );
   for (const entry of composition) {
     const factory = BUILTINS[entry.module];
     if (!factory) {
       console.warn(
-        `[connect:plugins] unknown plugin "${entry.module}" — external plugin loading is not wired yet; entry skipped.`,
+        `${LOG}   ✗ ${entry.module} — unknown (external plugin loading not wired); SKIPPED`,
       );
       continue;
     }
-    plugins.push(factory(entry));
+    const plugin = factory(entry.config ?? {});
+    plugins.push(plugin);
+    const cfgKeys = Object.keys(entry.config ?? {});
+    console.info(
+      `${LOG}   ✓ ${plugin.name} (${entry.module})` +
+        (cfgKeys.length ? ` config: {${cfgKeys.join(", ")}}` : ""),
+    );
   }
 
   const ordered = resolveOrder(plugins);
   const ctx: ConnectPluginContext = { entryConfig: {} };
+  const ran = ordered
+    .filter((p) => p.hooks?.transformConnectConfig)
+    .map((p) => p.name);
+  console.info(
+    `${LOG} hook transformConnectConfig → ${ran.length ? ran.join(", ") : "(none)"}`,
+  );
   const transformed = await runTransformHook<
     PHConnectRuntimeConfig,
     ConnectPluginContext
@@ -188,7 +131,7 @@ export async function applyComposition(
 /** Teardown parity with the server pipeline (unused tonight; the browser has
  * no orderly shutdown, but the vocabulary stays symmetric). */
 export async function shutdownComposition(
-  plugins: readonly HostPlugin[],
+  plugins: readonly HostPlugin<ConnectConfigHooks>[],
 ): Promise<void> {
   await runObserveHookSequential("onShutdown", plugins, { entryConfig: {} });
 }

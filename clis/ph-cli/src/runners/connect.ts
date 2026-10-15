@@ -128,6 +128,28 @@ function callerOverride(
       : normalizePluginEntries(entries, `hosts/${host.name}/host.js`)
           .filter((entry) => entryActiveForVerb(entry, verb))
           .map((entry) => ({ module: entry.module, config: entry.config }));
+  if (entries !== undefined) {
+    // Change 2: show the composition plan on the `ph run connect` terminal.
+    // The pipeline itself runs in the browser (hook execution logs to the
+    // browser console); here we report WHAT will be served and for which verb.
+    const all = normalizePluginEntries(entries, `hosts/${host.name}/host.js`);
+    console.log(
+      `[connect] composition plan (verb=${verb}): ${composition?.length ?? 0} active of ${all.length} declared`,
+    );
+    for (const entry of all) {
+      const active = entryActiveForVerb(entry, verb);
+      const scope =
+        entry.verbs === "*"
+          ? ""
+          : ` verbs=[${(entry.verbs as string[]).join(",")}]`;
+      const cfg = Object.keys(entry.config ?? {});
+      console.log(
+        `[connect]   ${active ? "•" : "○"} ${entry.module}${scope}` +
+          (cfg.length ? ` config: {${cfg.join(", ")}}` : "") +
+          (active ? "" : " (inactive for this verb)"),
+      );
+    }
+  }
   const declared = (reactor as { drives?: DriveDeclaration[] } | undefined)
     ?.drives;
   const declaredDefaults =
