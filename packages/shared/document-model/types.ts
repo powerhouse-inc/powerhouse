@@ -1708,7 +1708,7 @@ export type PhAiToolAnnotations = {
  * AI assistant (see `DocumentModelLib.aiTools`).
  *
  * Structurally compatible with the MCP tool records produced by
- * `createReactorMcpProvider`: the callback parameter is `never` so any
+ * `toMcpTool`: the callback parameter is `never` so any
  * per-tool-args function type is assignable, and the result is `unknown`
  * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
  * adapter boundary.

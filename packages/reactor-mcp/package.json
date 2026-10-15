@@ -18,6 +18,11 @@
       "source": "./src/tools/index.ts",
       "types": "./dist/tools/index.d.mts",
       "import": "./dist/tools/index.mjs"
+    },
+    "./admin-tools": {
+      "source": "./src/admin-tools.ts",
+      "types": "./dist/admin-tools.d.mts",
+      "import": "./dist/admin-tools.mjs"
     }
   },
   "types": "./dist/index.d.mts",
