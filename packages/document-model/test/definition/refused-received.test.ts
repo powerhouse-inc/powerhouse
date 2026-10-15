@@ -17,6 +17,7 @@ import {
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
 import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
 import { adaptSchemaFirstDocumentModelModule } from "../../src/definition/tooling/adapters/schema-first-document-model-module-adapter.js";
+import { schemaFirstGraphQLDocument } from "../../src/definition/tooling/graphql-document.js";
 import { checkDocumentModelDefinitionShape } from "../../src/definition/wire-shape.js";
 
 const SOURCE = { specifier: "./model.ts" } as const;
@@ -1035,5 +1036,75 @@ describe("a scalar member that cannot be read as data", () => {
       [{ kind: "value", value: "" }, "explicit", "literal"],
       [{ kind: "none", reason: "No empty probe." }, "explicit", "literal"],
     ]);
+  });
+});
+
+describe("a GraphQL compatibility record", () => {
+  const finalize = (graphQLCompatibility: unknown) => () =>
+    defineDocumentModel(
+      config({
+        specifications: specifications({}, { graphQLCompatibility }),
+      }),
+    ).finalize({ modules: [] });
+  const compatibility = schemaFirstGraphQLDocument([
+    "type SampleState { title: String! }",
+  ]);
+
+  it("is read once without running author code, and its refusal describes the faulty member", () => {
+    let ran = false;
+    const refusal = (value: unknown) => {
+      try {
+        return diagnosticsOf(finalize(value)).map(
+          ({ code, path, received }) => [code, path.join("."), received],
+        );
+      } catch (error) {
+        return [["thrown", String(error)]];
+      }
+    };
+
+    expect([
+      ...refusal({
+        ...compatibility,
+        get kind() {
+          ran = true;
+          return "graphql-ast-v1";
+        },
+      }),
+      ...refusal({ ...compatibility, preserveDefinitionOrder: false }),
+      ...refusal({ ...compatibility, preserveDefinitionOrder: undefined }),
+      ...refusal({ ...compatibility, kind: "graphql-ast-v2" }),
+    ]).toEqual([
+      [
+        "PH-DM-COMPATIBILITY-INVALID",
+        "specifications.graphQLCompatibility.kind",
+        "accessor",
+      ],
+      [
+        "PH-DM-COMPATIBILITY-INVALID",
+        "specifications.graphQLCompatibility",
+        "false",
+      ],
+      [
+        "PH-DM-COMPATIBILITY-INVALID",
+        "specifications.graphQLCompatibility",
+        "undefined",
+      ],
+      [
+        "PH-DM-COMPATIBILITY-INVALID",
+        "specifications.graphQLCompatibility",
+        "graphql-ast-v2",
+      ],
+    ]);
+    expect(ran).toBe(false);
+  });
+
+  it("still accepts the record schemaFirstGraphQLDocument returns, frozen or copied", () => {
+    expect(
+      [compatibility, Object.freeze({ ...compatibility })].map(
+        (value) =>
+          finalize(value)().definition.specifications[0]?.graphQLCompatibility
+            ?.kind,
+      ),
+    ).toEqual(["graphql-ast-v1", "graphql-ast-v1"]);
   });
 });
