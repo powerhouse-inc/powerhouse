@@ -1,3 +1,25 @@
+## 6.2.3-dev.59 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,vetra-studio:** browser plugin pipeline over the served composition (R3.2) + the studio plugins (R4 start) ([8fb91868da](https://github.com/powerhouse-inc/powerhouse/commit/8fb91868da))
+- **ph-cli,switchboard:** host.js compositions and core drives reach the switchboard runner (R2.6b) ([e74f6830fe](https://github.com/powerhouse-inc/powerhouse/commit/e74f6830fe))
+- **switchboard:** plugin composition seam for host.js entries and tests (R2.6a) ([8e64a8e6ea](https://github.com/powerhouse-inc/powerhouse/commit/8e64a8e6ea))
+- **switchboard:** workflows subsystem carved into the plugin composition (R2.5) ([e9467d9c38](https://github.com/powerhouse-inc/powerhouse/commit/e9467d9c38))
+- **switchboard:** privacy subsystem carved into the plugin composition (R2.4) ([8bff8cbbff](https://github.com/powerhouse-inc/powerhouse/commit/8bff8cbbff))
+- **switchboard:** attachments subsystem carved into the plugin composition (R2.3) ([d63108172e](https://github.com/powerhouse-inc/powerhouse/commit/d63108172e))
+- **switchboard:** mcp subsystem as the first built-in plugin (R2.2) ([41aebd9a0d](https://github.com/powerhouse-inc/powerhouse/commit/41aebd9a0d))
+- **switchboard:** plugin pipeline scaffold for the subsystem carve (R2.1) ([042cd5a93c](https://github.com/powerhouse-inc/powerhouse/commit/042cd5a93c))
+
+### 🩹 Fixes
+
+- **switchboard:** absent plugins actually deactivate — presence suite (R2.6c) ([5c5380f872](https://github.com/powerhouse-inc/powerhouse/commit/5c5380f872))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.58 (2026-10-14)
 
 ### 🩹 Fixes
