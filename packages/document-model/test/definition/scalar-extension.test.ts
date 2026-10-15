@@ -430,6 +430,36 @@ describe("the wire shape of a package scalar reference", () => {
     ).toEqual(["specifications/0/scalars/0/definition/name"]);
   });
 
+  it("reports an array definition, or an array member of one, as an array", () => {
+    const received = (edit: (reference: Record<string, unknown>) => void) => {
+      const definition = structuredClone(contactsModel().definition);
+      edit(
+        definition.specifications.at(-1)!.scalars[0] as unknown as Record<
+          string,
+          unknown
+        >,
+      );
+      const collector = new DefinitionDiagnosticCollector();
+      checkDocumentModelDefinitionShape(collector, definition);
+      return collector.diagnostics.map((entry) => [
+        entry.path.join("/"),
+        entry.received,
+      ]);
+    };
+
+    expect([
+      ...received((reference) => {
+        reference.definition = [];
+      }),
+      ...received((reference) => {
+        (reference.definition as Record<string, unknown>).description = [];
+      }),
+    ]).toEqual([
+      ["specifications/0/scalars/0/definition", "array"],
+      ["specifications/0/scalars/0/definition/description", "array"],
+    ]);
+  });
+
   it("refuses a catalog name and an undeclared reference", () => {
     expect(
       tampered((reference) => {
