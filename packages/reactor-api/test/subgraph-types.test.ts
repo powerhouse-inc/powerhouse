@@ -516,7 +516,7 @@ describe("hostDocumentModels", () => {
     ]);
   });
 
-  it("frees a latest model subgraph that does not build onto the combined schema", () => {
+  it("keeps the name, but not the claims, of a latest model subgraph that does not build onto the combined schema", () => {
     const v1 = version(
       model(
         "Notes",
@@ -533,12 +533,23 @@ describe("hostDocumentModels", () => {
       {
         id: "test/Notes",
         name: "Notes",
-        kind: "unusable subgraph",
+        kind: "unservable subgraph",
         reason: expect.stringMatching(
-          /^has a subgraph that does not build onto the generated schema: /,
+          /^does not build onto the generated schema: /,
         ),
       },
     ]);
+    expect(
+      Object.fromEntries(
+        Array.from(
+          findPackageSubgraphConflicts(
+            [{ name: "notes", typeDefs: template("Notes", "notes") }],
+            host,
+          ).conflicts,
+          ([subgraph, conflict]) => [subgraph.name, conflict],
+        ),
+      ),
+    ).toEqual({ notes: { kind: "name", heldBy: "document model" } });
   });
 
   it("reports a model once when the server refuses it once", () => {
