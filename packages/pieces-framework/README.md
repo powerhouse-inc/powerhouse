@@ -217,6 +217,14 @@ export const archiveInvoice = createAction({
 - `ph build` copies the declaration into `descriptor.json`.
   `ph generate piece-action` and `ph generate piece-trigger` write
   `requireReactor: false`, or the value of `--require-reactor read|write`.
+- `createAction` also takes `defaultTimeoutSeconds` (positive) and
+  `defaultRetry` (`maxAttempts`, plus optional `backoff`,
+  `initialDelaySeconds`, `maxDelaySeconds` and `retryOn`), used for a step
+  that sets no timeout or retry of its own. The workflow's own default retry
+  wins over the action's. A `defaultRetry` without delays
+  backs off exponentially from 5s, capped at 300s. `ph generate piece-action`
+  writes them commented out, or set from `--default-timeout-seconds` and
+  `--default-max-attempts`.
 - The host serves `ctx.reactor`. Each call acts as the workflow's run user,
   within the step's reactor connection and deadline. Writes return once
   applied.

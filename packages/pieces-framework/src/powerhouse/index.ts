@@ -2,6 +2,8 @@ export { createAction, createTrigger } from "./create.js";
 export { Property } from "./property.js";
 export type { PropertyContext } from "./property.js";
 export type {
+  ActionDefaults,
+  ActionRetryDefault,
   CreateActionParams,
   CreateTriggerParams,
   Declared,

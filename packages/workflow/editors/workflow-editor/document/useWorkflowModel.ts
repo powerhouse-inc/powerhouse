@@ -57,6 +57,7 @@ function toModel(state: WorkflowState): WorkflowModel {
     description: state.description ?? null,
     status: state.status,
     version: state.version,
+    defaultRetryAttempts: state.policy.defaultRetry.maxAttempts,
     published: state.published
       ? {
           version: state.published.version,

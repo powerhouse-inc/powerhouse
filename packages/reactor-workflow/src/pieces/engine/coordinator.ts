@@ -14,6 +14,7 @@ import {
 import {
   effectiveRetryPolicy,
   isRetryableError,
+  MAX_RETRY_DELAY_MS,
   retryDelayMs,
   type EffectiveRetryPolicy,
 } from "./retry.js";
@@ -30,6 +31,7 @@ import { blockLabel, pieceRecord, resolutionOf } from "./resolution.js";
 import {
   stepBlock,
   triggerBlock,
+  type BlockDefaults,
   type BlockExecutor,
   type StepExecutionRecord,
   type WorkflowDefinition,
@@ -95,6 +97,35 @@ export interface RunWorkflowOptions {
   priorSteps?: ExpressionScope["steps"];
   // A block's declared output ports; an edge on any other is a warning.
   declaredPorts?: (block: BlockRef) => readonly string[] | undefined;
+  // The action's timeout and retry defaults, asked only for a step missing one.
+  blockDefaults?: (block: BlockRef) => Promise<BlockDefaults | undefined>;
+}
+
+// Marks a failed defaults lookup; carries no defaults of its own.
+const LOOKUP_FAILED: BlockDefaults = Object.freeze({});
+
+// Fills the delays an action's retry default omits, as the editor's default does.
+const ACTION_RETRY_DELAYS = {
+  backoff: "EXPONENTIAL",
+  initialDelaySeconds: 5,
+  maxDelaySeconds: MAX_RETRY_DELAY_MS / 1000,
+};
+
+function actionRetryPolicy(retry: unknown): EffectiveRetryPolicy | null {
+  if (typeof retry !== "object" || retry === null) return null;
+  const declared: Record<string, unknown> = Object.fromEntries(
+    Object.entries(retry).filter(([, value]) => value !== undefined),
+  );
+  const cap = declared.maxDelaySeconds;
+  const initial =
+    typeof cap === "number" && cap > 0
+      ? Math.min(ACTION_RETRY_DELAYS.initialDelaySeconds, cap)
+      : ACTION_RETRY_DELAYS.initialDelaySeconds;
+  return effectiveRetryPolicy({
+    ...ACTION_RETRY_DELAYS,
+    initialDelaySeconds: initial,
+    ...declared,
+  });
 }
 
 // Edges no run can take, because their source never emits that port.
@@ -186,6 +217,19 @@ export async function runWorkflow(
         // A pending retry wait must not be what keeps the process alive.
         setTimeout(resolve, ms).unref();
       }));
+
+  // A failed lookup leaves the runtime timeout and no action retry: the action
+  // may be unsafe to retry. Executing reports the cause.
+  const blockDefaults = async (
+    step: WorkflowStepDef,
+  ): Promise<BlockDefaults | undefined> => {
+    if (!options.blockDefaults) return undefined;
+    try {
+      return await options.blockDefaults(stepBlock(step));
+    } catch {
+      return LOOKUP_FAILED;
+    }
+  };
 
   // Null while there is time left; the reason once there is not.
   const outOfTime = (): string | undefined => {
@@ -327,14 +371,25 @@ export async function runWorkflow(
       return;
     }
 
-    // One resolved policy per step: its own `retry`, else the workflow's. A
-    // step that DECLARES a block overrides, whatever the block resolves to —
-    // `{maxAttempts: 1}` is an author saying "not this one", and inheriting
-    // the workflow default over it would be the opposite of an override.
-    const retry =
-      step.retry === undefined || step.retry === null
-        ? (options.defaultRetry ?? null)
-        : effectiveRetryPolicy(step.retry);
+    // Retry is the step's block, else the workflow's default, else the
+    // action's. A workflow default that retries nothing (the document's
+    // initial `{maxAttempts: 1}`) counts as unset; a step's does not.
+    const ownRetry = step.retry !== undefined && step.retry !== null;
+    const inherited = ownRetry ? null : (options.defaultRetry ?? null);
+    const defaults =
+      (ownRetry || inherited) && step.timeoutSeconds
+        ? undefined
+        : await blockDefaults(step);
+    const retry = ownRetry
+      ? effectiveRetryPolicy(step.retry)
+      : (inherited ??
+        (defaults === LOOKUP_FAILED || defaults?.retry === undefined
+          ? null
+          : actionRetryPolicy(defaults.retry)));
+    const defaultTimeout =
+      !step.timeoutSeconds && defaults?.timeoutSeconds
+        ? { defaultTimeoutSeconds: defaults.timeoutSeconds }
+        : {};
     const maxAttempts = retry?.maxAttempts ?? 1;
     const startedAt = new Date().toISOString();
     let input: unknown;
@@ -364,6 +419,7 @@ export async function runWorkflow(
           reactorConnectionId: step.reactorConnectionId,
           step,
           ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
+          ...defaultTimeout,
         });
         const port = result.port ?? "next";
         const values = [...runSecrets, ...(result.redactValues ?? [])];

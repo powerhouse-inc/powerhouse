@@ -527,6 +527,9 @@ they are true.
   is not rerunnable; fire the workflow again instead.
 - A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
   block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
+- A step with no `retry` takes the workflow's `defaultRetry`, else its action's
+  default retry. A `defaultRetry` that retries nothing (the document's initial
+  `{maxAttempts: 1}`) counts as unset, so the action's applies.
 - An **INDETERMINATE** step is never retried and never replayed: a retry would
   be a second write. A rerun does execute it again, so it can write twice. See
   **Indeterminate steps** below.
@@ -849,7 +852,9 @@ releases what an earlier enable registered. The reason reads
 
 **Actions**
 
-- `errorHandlingOptions` (retry, continue on failure) is ignored.
+- `errorHandlingOptions.retryOnFailure` with `defaultValue: true` becomes the
+  action's default retry (3 attempts, exponential from 5s) unless the action
+  declares a `defaultRetry`. `continueOnFailure` is ignored.
 - `test` is never called.
 - `requireAuth` defaults to `false` in the descriptor; upstream defaults to
   `true`.

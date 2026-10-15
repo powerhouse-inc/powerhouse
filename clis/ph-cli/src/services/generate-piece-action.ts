@@ -16,6 +16,8 @@ export async function startGeneratePieceAction(
     name: nameOption,
     piece,
     requireReactor,
+    defaultTimeoutSeconds,
+    defaultMaxAttempts,
     debug,
   } = args;
   if (debug) {
@@ -28,7 +30,13 @@ export async function startGeneratePieceAction(
   }
   const project = buildTsMorphProject(projectDir);
   await generatePieceAction(
-    { pieceDir: piece, actionName, requireReactor },
+    {
+      pieceDir: piece,
+      actionName,
+      requireReactor,
+      defaultTimeoutSeconds,
+      defaultMaxAttempts,
+    },
     project,
   );
   await project.save();

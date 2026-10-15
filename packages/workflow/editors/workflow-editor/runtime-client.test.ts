@@ -361,6 +361,49 @@ describe("the paged runs listing", () => {
   });
 });
 
+describe("action defaults in block forms", () => {
+  it("carries the declared timeout and attempts, and nothing when undeclared", async () => {
+    const descriptor = (extra: Record<string, unknown>) => ({
+      workflowRuntime: {
+        blockDescriptor: {
+          displayName: "AI",
+          action: {
+            displayName: "Run agent",
+            requireAuth: false,
+            props: [],
+            ...extra,
+          },
+        },
+      },
+    });
+    const answers = [
+      descriptor({
+        defaultTimeoutSeconds: 300,
+        defaultRetry: { maxAttempts: 1 },
+      }),
+      descriptor({}),
+    ];
+    const client = runtimeClient.createRuntimeClient("http://a/graphql", {
+      fetch: () => Promise.resolve(jsonResponse(answers.shift())),
+      token: () => Promise.resolve(null),
+    });
+    const block = {
+      pieceName: "@acme/piece-ai",
+      pieceVersion: "1.0.0",
+      kind: "action" as const,
+      name: "run_agent",
+    };
+
+    expect((await client.getBlockForm(block))?.actionDefaults).toEqual({
+      timeoutSeconds: 300,
+      retryAttempts: 1,
+    });
+    expect(await client.getBlockForm(block)).not.toHaveProperty(
+      "actionDefaults",
+    );
+  });
+});
+
 describe("reactor access in block forms", () => {
   it("carries a block's requireReactor declaration into its form", async () => {
     const descriptor = (requireReactor?: string) => ({

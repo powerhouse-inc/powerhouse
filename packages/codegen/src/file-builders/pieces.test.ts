@@ -293,6 +293,56 @@ describe("generatePieceAction with requireReactor", () => {
   });
 });
 
+describe("generatePieceAction step defaults", () => {
+  it("writes the given defaults, and commented examples without them", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await generatePieceAction(
+      {
+        actionName: "slow-record",
+        defaultTimeoutSeconds: 120,
+        defaultMaxAttempts: 5,
+      },
+      project,
+    );
+    await generatePieceAction({ actionName: "get-record" }, project);
+    await project.save();
+
+    const action = (name: string) =>
+      readFileSync(
+        join(dir, "pieces", "acme-crm", "lib", "actions", `${name}.ts`),
+        "utf8",
+      );
+    expect(action("slow-record")).toContain("\n  defaultTimeoutSeconds: 120,");
+    expect(action("slow-record")).toContain(
+      "\n  defaultRetry: { maxAttempts: 5 },",
+    );
+    expect(action("get-record")).toContain("// defaultTimeoutSeconds: 30,");
+    expect(action("get-record")).toContain(
+      '// defaultRetry: { maxAttempts: 3, backoff: "EXPONENTIAL", initialDelaySeconds: 5 },',
+    );
+  });
+
+  it("rejects non-positive values", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await expect(
+      generatePieceAction(
+        { actionName: "a", defaultTimeoutSeconds: 0 },
+        project,
+      ),
+    ).rejects.toThrow("defaultTimeoutSeconds");
+    await expect(
+      generatePieceAction(
+        { actionName: "a", defaultMaxAttempts: 1.5 },
+        project,
+      ),
+    ).rejects.toThrow("defaultMaxAttempts");
+  });
+});
+
 describe("generatePieceTrigger", () => {
   it("polls through pollingHelper rather than a cursor of its own", async () => {
     const dir = makeProject();
