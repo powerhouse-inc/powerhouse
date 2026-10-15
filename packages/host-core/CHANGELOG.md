@@ -1,3 +1,14 @@
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,host-core:** single reactorClient selector for all four client modes ([fe33899e8b](https://github.com/powerhouse-inc/powerhouse/commit/fe33899e8b))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.59 (2026-10-15)
 
 ### 🚀 Features

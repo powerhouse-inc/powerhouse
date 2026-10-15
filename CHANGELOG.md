@@ -1,3 +1,19 @@
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **codegen:** scaffold the standalone + cli reactor-client topologies by default ([4c9baeeffe](https://github.com/powerhouse-inc/powerhouse/commit/4c9baeeffe))
+- **connect:** generic plugin owns the drive-chrome toggles (allowAddDrive, sections) ([6438046651](https://github.com/powerhouse-inc/powerhouse/commit/6438046651))
+- **connect:** gate the generic chrome (sidebar + homepage) on plugin presence ([c50d71d7a3](https://github.com/powerhouse-inc/powerhouse/commit/c50d71d7a3))
+- **connect,host-core:** single reactorClient selector for all four client modes ([fe33899e8b](https://github.com/powerhouse-inc/powerhouse/commit/fe33899e8b))
+- **connect,switchboard:** built-in plugins become real modules + observable lifecycle ([224ce4b01a](https://github.com/powerhouse-inc/powerhouse/commit/224ce4b01a))
+- **ph-cli:** switchboard runner — orthogonal run/serve/dev/build verbs ([7b180c02c6](https://github.com/powerhouse-inc/powerhouse/commit/7b180c02c6))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.59 (2026-10-15)
 
 ### 🚀 Features

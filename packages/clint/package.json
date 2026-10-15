@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/clint",
-  "version": "6.2.3-dev.59",
+  "version": "6.2.3-dev.60",
   "description": "The clint framework: AI-powered CLIs over the Powerhouse stack — clint-runner (services manager, REPL, proxy) and mastra-runner (headless agent host) for uniform-runners hosts.",
   "repository": {
     "type": "git",

@@ -1,3 +1,14 @@
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **connect:** generic plugin owns the drive-chrome toggles (allowAddDrive, sections) ([6438046651](https://github.com/powerhouse-inc/powerhouse/commit/6438046651))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.59 (2026-10-15)
 
 ### 🚀 Features

@@ -1,3 +1,17 @@
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,host-core:** single reactorClient selector for all four client modes ([fe33899e8b](https://github.com/powerhouse-inc/powerhouse/commit/fe33899e8b))
+- **connect:** gate the generic chrome (sidebar + homepage) on plugin presence ([c50d71d7a3](https://github.com/powerhouse-inc/powerhouse/commit/c50d71d7a3))
+- **connect:** generic plugin owns the drive-chrome toggles (allowAddDrive, sections) ([6438046651](https://github.com/powerhouse-inc/powerhouse/commit/6438046651))
+- **connect,switchboard:** built-in plugins become real modules + observable lifecycle ([224ce4b01a](https://github.com/powerhouse-inc/powerhouse/commit/224ce4b01a))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.59 (2026-10-15)
 
 ### 🚀 Features

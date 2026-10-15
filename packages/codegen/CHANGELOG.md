@@ -1,3 +1,15 @@
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **codegen:** scaffold the standalone + cli reactor-client topologies by default ([4c9baeeffe](https://github.com/powerhouse-inc/powerhouse/commit/4c9baeeffe))
+- **connect:** generic plugin owns the drive-chrome toggles (allowAddDrive, sections) ([6438046651](https://github.com/powerhouse-inc/powerhouse/commit/6438046651))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.59 (2026-10-15)
 
 ### 🚀 Features

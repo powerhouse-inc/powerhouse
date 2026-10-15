@@ -1,3 +1,15 @@
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **ph-cli:** switchboard runner — orthogonal run/serve/dev/build verbs ([7b180c02c6](https://github.com/powerhouse-inc/powerhouse/commit/7b180c02c6))
+- **connect,switchboard:** built-in plugins become real modules + observable lifecycle ([224ce4b01a](https://github.com/powerhouse-inc/powerhouse/commit/224ce4b01a))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.59 (2026-10-15)
 
 ### 🚀 Features
