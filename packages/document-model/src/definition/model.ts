@@ -1481,7 +1481,10 @@ function checkUpgradeManifest(
       path: [...path, "documentType"],
       message: "The upgrade manifest names a different document type.",
       expected: first.config.id,
-      received: String(manifest.documentType),
+      received:
+        typeof manifest.documentType === "string"
+          ? manifest.documentType
+          : describeReceived(manifest.documentType),
       repair: "Use the id every version of the family declares.",
     });
   }
@@ -1514,7 +1517,10 @@ function checkUpgradeManifest(
       message:
         "The upgrade manifest's latest version is not the family's last.",
       expected: String(versions.at(-1)),
-      received: String(manifest.latestVersion),
+      received:
+        typeof manifest.latestVersion === "number"
+          ? String(manifest.latestVersion)
+          : describeReceived(manifest.latestVersion),
       repair: "Set latestVersion to the last entry of supportedVersions.",
     });
   }
@@ -1561,7 +1567,10 @@ function checkUpgradeManifest(
         path: [...transitionPath, "toVersion"],
         message: `The transition under ${key} must target version ${version}.`,
         expected: String(version),
-        received: String(transition.toVersion),
+        received:
+          typeof transition.toVersion === "number"
+            ? String(transition.toVersion)
+            : describeReceived(transition.toVersion),
         repair: "Set toVersion to the version the transition is keyed by.",
       });
     }

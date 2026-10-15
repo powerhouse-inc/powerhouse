@@ -18,6 +18,7 @@ import type {
   NamedGraphQLTypeDefinition,
   SchemaFirstGraphQLDocumentCompatibility,
 } from "@powerhousedao/shared/document-model";
+import { rejectionReceived, snapshotRecord } from "./data-properties.js";
 import { createDiagnostic, describeReceived } from "./diagnostics.js";
 import { equalsPatternProblem } from "./field-options.js";
 import { canonicalJson, compareCodeUnits } from "./primitives.js";
@@ -808,10 +809,22 @@ function isGraphQLAstV1(
 ): value is SchemaFirstGraphQLDocumentCompatibility {
   if (value === null || typeof value !== "object") return false;
   const candidate = value as Partial<SchemaFirstGraphQLDocumentCompatibility>;
-  return (
-    candidate.kind === "graphql-ast-v1" &&
-    candidate.preserveDefinitionOrder === true
-  );
+  try {
+    return (
+      candidate.kind === "graphql-ast-v1" &&
+      candidate.preserveDefinitionOrder === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** A refused compatibility's `kind`, or what the value is when it is not a record. */
+function refusedCompatibility(value: unknown): string {
+  const snapshot = snapshotRecord(value, undefined, []);
+  if (!snapshot.ok) return rejectionReceived(snapshot);
+  const kind = snapshot.value.kind;
+  return typeof kind === "string" ? kind : describeReceived(kind);
 }
 
 function sameMembers(
@@ -853,7 +866,7 @@ export function checkGraphQLDocumentAgreement(options: {
         "A GraphQL compatibility declaration must be a V1 location-free document with preserveDefinitionOrder.",
         {
           expected: 'kind "graphql-ast-v1" with preserveDefinitionOrder: true',
-          received: String((compatibility as { readonly kind?: unknown }).kind),
+          received: refusedCompatibility(compatibility),
           repair:
             "Use the value returned by schemaFirstGraphQLDocument from document-model/tooling.",
         },

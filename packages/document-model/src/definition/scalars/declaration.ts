@@ -153,6 +153,23 @@ export function parseScalarDeclaration(
       repair: "Use the registered SDL scalar name.",
     });
   }
+  const representation = snapshot.value.representation;
+  if (
+    typeof representation !== "string" ||
+    !Object.hasOwn(DEFAULT_TYPESCRIPT_TYPE, representation)
+  ) {
+    fail(name, {
+      code: "PH-SCALAR-DECLARATION-INVALID",
+      path: ["representation"],
+      message: `Scalar ${name} has no known representation.`,
+      expected: Object.keys(DEFAULT_TYPESCRIPT_TYPE).join(", "),
+      received:
+        typeof representation === "string"
+          ? representation
+          : describeReceived(representation),
+      repair: "Declare the wire shape of the scalar's values.",
+    });
+  }
   const declaration = withDefaults(
     snapshot.value as unknown as AnyScalarDeclaration,
   );
@@ -212,16 +229,6 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
       message: `Scalar ${name} has no description.`,
       repair:
         "Add a one-sentence description; it is the whole contract an introspecting agent reads.",
-    });
-  }
-  if (!Object.hasOwn(DEFAULT_TYPESCRIPT_TYPE, declaration.representation)) {
-    fail(name, {
-      code: "PH-SCALAR-DECLARATION-INVALID",
-      path: ["representation"],
-      message: `Scalar ${name} has no known representation.`,
-      expected: Object.keys(DEFAULT_TYPESCRIPT_TYPE).join(", "),
-      received: String(declaration.representation),
-      repair: "Declare the wire shape of the scalar's values.",
     });
   }
   const validator: unknown = declaration.validator;

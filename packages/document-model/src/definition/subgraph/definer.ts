@@ -474,7 +474,10 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
       path: ["compatibility", "preserveDefinitionOrder"],
       message:
         "A compatibility subgraph serves its document in source order, so preserveDefinitionOrder is true.",
-      received: String(preserveDefinitionOrder),
+      received:
+        typeof preserveDefinitionOrder === "boolean"
+          ? String(preserveDefinitionOrder)
+          : describeReceived(preserveDefinitionOrder),
       repair: "Set preserveDefinitionOrder: true.",
     });
   }

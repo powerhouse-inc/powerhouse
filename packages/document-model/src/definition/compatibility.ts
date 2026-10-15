@@ -139,7 +139,9 @@ function stringMap(
             : "A serialization override must be a string already in Unicode NFC.",
         expected: member === "ids" ? "a nonempty NFC string" : "an NFC string",
         received:
-          typeof entry === "string" ? JSON.stringify(entry) : typeof entry,
+          typeof entry === "string"
+            ? JSON.stringify(entry)
+            : describeReceived(entry),
         repair:
           member === "ids"
             ? "Copy the exact stored ID from the model this declaration replaces."
