@@ -32,9 +32,9 @@ export type SubgraphSchemaData = {
   readonly diagnostics: readonly DefinitionDiagnostic[];
   /**
    * The input entries as the builders registered them, in input order, less
-   * a root field declared twice or a computed field, resolveType, or isTypeOf
-   * bound twice, so each resolver is the one whose declaration the document
-   * carries.
+   * a root field the document does not carry or declares twice, and a
+   * computed field, resolveType, or isTypeOf bound twice, so each resolver is
+   * the one whose declaration the document carries.
    */
   readonly registered: readonly RegisteredEntry[];
 };
@@ -72,7 +72,7 @@ export function compileSubgraphSchema(
   const boundComputed = new Set<string>();
   const boundRoots = new Set<string>();
   const boundAbstract = new Set<string>();
-  const duplicates = new Set<number>();
+  const dropped = new Set<number>();
 
   const read = input.entries.map((value, index) =>
     readEntry(value, ["entries", index]),
@@ -97,16 +97,19 @@ export function compileSubgraphSchema(
             repair:
               "Declare each root field once, or give one of them a different fieldName.",
           });
-          duplicates.add(index);
+          dropped.add(index);
           return;
         }
-        boundRoots.add(coordinate);
         const args = argumentDefinitions(walk, entry.args, [...path, "args"]);
         const returns = walk.typeReferenceFor(entry.returns, [
           ...path,
           "returns",
         ]);
-        if (returns === undefined) return;
+        if (returns === undefined) {
+          dropped.add(index);
+          return;
+        }
+        boundRoots.add(coordinate);
         const fields = roots.get(root) ?? [];
         fields.push({
           name: entry.fieldName,
@@ -138,7 +141,7 @@ export function compileSubgraphSchema(
             received: key,
             repair: "Bind each computed field once.",
           });
-          duplicates.add(index);
+          dropped.add(index);
           return;
         }
         boundComputed.add(key);
@@ -163,7 +166,7 @@ export function compileSubgraphSchema(
             received: entry.typeName,
             repair: `Bind ${builder} for each type once.`,
           });
-          duplicates.add(index);
+          dropped.add(index);
           return;
         }
         boundAbstract.add(key);
@@ -238,7 +241,7 @@ export function compileSubgraphSchema(
     hasSubscriptions: roots.has("Subscription"),
     document: buildDocument(emitted, scalars, definitionOrder),
     diagnostics: collector.diagnostics,
-    registered: read.filter((_, index) => !duplicates.has(index)),
+    registered: read.filter((_, index) => !dropped.has(index)),
   };
 }
 
