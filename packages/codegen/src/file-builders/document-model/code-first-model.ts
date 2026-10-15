@@ -1,3 +1,4 @@
+import { capitalCase } from "change-case";
 import type {
   CodeFirstDocumentModelTemplateArgs,
   CodeFirstGenerationResult,
@@ -103,7 +104,7 @@ export async function tsMorphGenerateCodeFirstDocumentModel(
   }
   await createOrUpdateManifest(
     {
-      documentModels: [{ name: v.pascalCaseDocumentType, id: v.documentType }],
+      documentModels: [{ name: capitalCase(v.name), id: v.documentType }],
     },
     projectDir,
   );

@@ -1,4 +1,5 @@
 import { ts } from "@tmpl/core";
+import { capitalCase } from "change-case";
 import type { CodeFirstDocumentModelTemplateArgs } from "file-builders";
 
 export const codeFirstDefinitionTemplate = (
@@ -22,7 +23,7 @@ export const ${v.pascalCaseDocumentType}Item = ph.object("${v.pascalCaseDocument
 
 export const ${v.contextName} = defineDocumentModel({
   id: "${v.documentType}",
-  name: "${v.pascalCaseDocumentType}",
+  name: "${capitalCase(v.name)}",
   description: "A ${v.name} document model.",
   extension: "${v.kebabCaseDocumentType}",
   version: 1,
