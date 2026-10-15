@@ -407,14 +407,14 @@ export type DocumentModelSource =
   | DocumentModelModule
   | DocumentModelGlobalState;
 
-export const isModule = (
+export const isDocumentModelModule = (
   source: DocumentModelSource,
 ): source is DocumentModelModule => "documentModel" in source;
 
 export const globalStateOf = (
   source: DocumentModelSource,
 ): DocumentModelGlobalState =>
-  isModule(source) ? source.documentModel.global : source;
+  isDocumentModelModule(source) ? source.documentModel.global : source;
 
 /**
  * The latest version of each model, by name: the only one whose own subgraph
@@ -424,7 +424,7 @@ export function latestDocumentModelVersions<M extends DocumentModelSource>(
   documentModels: readonly M[],
 ): M[] {
   const versionOf = (source: M) =>
-    (isModule(source) ? source.version : undefined) ??
+    (isDocumentModelModule(source) ? source.version : undefined) ??
     globalStateOf(source).specifications.at(-1)?.version ??
     0;
   const latestByName = new Map<string, M>();
@@ -588,7 +588,8 @@ function storedModelDefinitions(
 function documentModelDefinitions(
   documentModel: DocumentModelSource,
 ): readonly DefinitionNode[] {
-  if (!isModule(documentModel)) return storedModelDefinitions(documentModel);
+  if (!isDocumentModelModule(documentModel))
+    return storedModelDefinitions(documentModel);
   const global = documentModel.documentModel.global;
   const structured = structuredModelOf(documentModel);
   if (structured === null) return storedModelDefinitions(global);
@@ -758,7 +759,7 @@ export function generatedTypesOf(
       definitions: () =>
         schemas?.get(source)?.generated ?? documentModelDefinitions(source),
     })),
-    modelPackageScalars(documentModels.filter(isModule)),
+    modelPackageScalars(documentModels.filter(isDocumentModelModule)),
   );
 }
 
@@ -1425,7 +1426,9 @@ export function generateDocumentModelSchema(
 ): DocumentNode {
   const documentModel = globalStateOf(source);
   const documentName = getDocumentModelSchemaName(documentModel);
-  const structured = isModule(source) ? structuredModelOf(source) : null;
+  const structured = isDocumentModelModule(source)
+    ? structuredModelOf(source)
+    : null;
   const document = generateModelSchema(
     structured === null
       ? storedModelProjection(documentModel, documentName)

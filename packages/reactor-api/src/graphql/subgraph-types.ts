@@ -15,7 +15,7 @@ import {
   generatedTypesOf,
   getDocumentModelSubgraphName,
   globalStateOf,
-  isModule,
+  isDocumentModelModule,
   latestDocumentModelVersions,
   reservedTypeNames,
   SubgraphTypeCollisionError,
@@ -72,7 +72,10 @@ export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
 /** A package's own subgraph, as the server would receive it. */
 export type PackageSubgraph = { name: string; typeDefs: DocumentNode };
 
-/** A model the server refuses whole, or whose own subgraph it refuses. */
+/**
+ * A model the server refuses whole, or whose own subgraph it refuses or
+ * registers without being able to serve it.
+ */
 export type RefusedDocumentModel = {
   readonly id: string;
   readonly name: string;
@@ -90,16 +93,17 @@ export type RefusedDocumentModel = {
 export type HostDocumentModels<M extends DocumentModelSource> = {
   /** The base models, then the given models the server admits. */
   readonly admitted: readonly (M | DocumentModelModule)[];
-  /** The given models the server refuses, whole or their subgraph only. */
+  /** The given models whose schema or own subgraph the server cannot serve. */
   readonly refused: readonly RefusedDocumentModel[];
   /** The generated schema every subgraph is built onto. */
   readonly generated: GeneratedDocumentModelTypes;
   /** Generated type name to the name of the model that generates it. */
   readonly generatedOwners: ReadonlyMap<string, string>;
-  /** The names of the model subgraphs the server registers. */
-  readonly subgraphNames: ReadonlySet<string>;
-  /** The registered model subgraphs that build, which also hold claims. */
-  readonly subgraphs: readonly PackageSubgraph[];
+  /**
+   * The model subgraphs the server registers, each holding its name. Only
+   * those that build onto the generated schema hold claims.
+   */
+  readonly subgraphs: readonly (PackageSubgraph & { builds: boolean })[];
 };
 
 /** Admits the base models and `documentModels` as the server does. */
@@ -185,37 +189,27 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   const generated = generatedTypesOf(admitted, schemas);
   // Each subgraph is set up onto the generated schema of every admitted
   // model, so one that builds alone can still fail beside the others. The
-  // server refuses one that redefines a generated type before registering
-  // it; any other failure leaves it registered, holding its name, with
-  // nothing mounted and no claims.
-  const subgraphNames = new Set<string>();
-  const subgraphs: PackageSubgraph[] = [];
+  // server keeps it registered, holding its name, with nothing mounted and
+  // no claims.
+  const modules = admitted.filter(isDocumentModelModule);
+  const subgraphs: (PackageSubgraph & { builds: boolean })[] = [];
   for (const [name, { model, own }] of latest) {
+    let builds = true;
     try {
-      createSchema(admitted.filter(isModule), {}, own.typeDefs, {
+      createSchema(modules, {}, own.typeDefs, {
         generated,
         ownTypeNames: own.typeNames,
         reportScalars: false,
       });
     } catch (error) {
-      if (error instanceof SubgraphTypeCollisionError) {
-        refuse(
-          model,
-          "unusable subgraph",
-          `redefines generated types: ${error.typeNames.join(", ")}`,
-        );
-        continue;
-      }
-      subgraphNames.add(name);
+      builds = false;
       refuse(
         model,
         "unservable subgraph",
         `does not build onto the generated schema: ${error instanceof Error ? error.message : String(error)}`,
       );
-      continue;
     }
-    subgraphNames.add(name);
-    subgraphs.push({ name, typeDefs: own.typeDefs });
+    subgraphs.push({ name, typeDefs: own.typeDefs, builds });
   }
 
   const fixed = generatedTypesOf([]).names;
@@ -237,7 +231,6 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     refused,
     generated,
     generatedOwners,
-    subgraphNames,
     subgraphs,
   };
 }
@@ -297,7 +290,7 @@ function refusePackageSubgraph(
   if (coreSubgraphTypeDefs.has(subgraph.name)) {
     return { kind: "name", heldBy: "core" };
   }
-  if (host.subgraphNames.has(subgraph.name)) {
+  if (host.subgraphs.some((owner) => owner.name === subgraph.name)) {
     return { kind: "name", heldBy: "document model" };
   }
   let collisions: string[];
@@ -342,7 +335,7 @@ export function buildPackageSubgraph(
   },
 ): void {
   createSchema(
-    host.admitted.filter(isModule),
+    host.admitted.filter(isDocumentModelModule),
     options.resolvers ?? {},
     subgraph.typeDefs,
     { generated: host.generated, reportScalars: options.reportScalars },
@@ -370,7 +363,7 @@ export function findPackageSubgraphConflicts<S extends PackageSubgraph>(
       name,
       typeDefs,
     })),
-    ...host.subgraphs,
+    ...host.subgraphs.filter(({ builds }) => builds),
   ].map(({ name, typeDefs }) => ({
     candidate: name as string | S,
     name,
@@ -507,7 +500,7 @@ const REFUSED_MODEL_WORDING: Record<
     subject: (name) =>
       `The server registers the subgraph of document model "${name}" but cannot serve it`,
     repair:
-      "Make every version of the document model define its types the same way, or retire the version that differs.",
+      "The first model listed under this model's schema name supplies the generated types, so make every model and version sharing that name define its types the same way, or rename one of them.",
   },
 };
 
