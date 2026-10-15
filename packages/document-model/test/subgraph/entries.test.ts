@@ -8,6 +8,7 @@ import {
 } from "graphql";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
+import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
@@ -1137,5 +1138,20 @@ describe("an explicit undefined implements", () => {
         implements: undefined,
       }).implements,
     ).toEqual([]);
+  });
+});
+
+describe("a refused value that cannot be inspected", () => {
+  it("still reads as its type, so the refusal is reported rather than thrown", () => {
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+
+    const result = adaptCodeFirstDocumentModelSource(proxy, {
+      specifier: "./model.ts",
+    });
+
+    expect(
+      result.diagnostics.map(({ code, received }) => [code, received]),
+    ).toEqual([["PH-DM-DECLARATION-INVALID", "object"]]);
   });
 });
