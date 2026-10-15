@@ -682,8 +682,8 @@ function rejectAuthorization(
   collector: DefinitionDiagnosticCollector,
   container: unknown,
   path: DefinitionPath,
-): void {
-  if (!ownStringKeys(container).includes("auth")) return;
+): boolean {
+  if (!ownStringKeys(container).includes("auth")) return false;
   collector.add({
     code: "PH-AUTH-UNSUPPORTED",
     path: [...path, "auth"],
@@ -694,6 +694,7 @@ function rejectAuthorization(
     repair:
       "Remove the auth declaration. Platform authorization state and its runtime behavior are unchanged and stay outside the model declaration.",
   });
+  return true;
 }
 
 function normalizeSpecifications(
@@ -702,10 +703,12 @@ function normalizeSpecifications(
   names: { readonly global: string; readonly local: string },
 ): DocumentModelCompilationConfig["specifications"] | undefined {
   const path: DefinitionPath = ["specifications"];
-  rejectAuthorization(collector, value, path);
-  // `auth` is reported above, so the snapshot admits it and reports the
-  // first other unknown key whatever the key order.
-  const snapshot = snapshotRecord(value, [...SPECIFICATION_KEYS, "auth"], path);
+  const declaresAuth = rejectAuthorization(collector, value, path);
+  // `auth` is reported above, so the snapshot leaves it unread and reports
+  // the first other unknown key whatever the key order.
+  const snapshot = snapshotRecord(value, [...SPECIFICATION_KEYS], path, [
+    "auth",
+  ]);
   // `specifications` is the scope map plus two reserved members. Any other
   // key is an authored platform or custom scope, which V1 does not admit.
   if (!snapshot.ok && snapshot.reason === "unknown-key") {
@@ -723,9 +726,7 @@ function normalizeSpecifications(
   const specifications = take(collector, snapshot, "PH-DM-SCOPE-UNSUPPORTED", [
     ...SPECIFICATION_KEYS,
   ]);
-  if (specifications === undefined || Object.hasOwn(specifications, "auth")) {
-    return undefined;
-  }
+  if (specifications === undefined || declaresAuth) return undefined;
 
   const auxiliary =
     specifications.auxiliaryTypes === undefined
@@ -787,14 +788,14 @@ function normalizeConfig(
   input: unknown,
   contextId: symbol,
 ): DocumentModelCompilationConfig | undefined {
-  rejectAuthorization(collector, input, []);
+  const declaresAuth = rejectAuthorization(collector, input, []);
   const config = take(
     collector,
-    snapshotRecord(input, [...CONFIG_KEYS, "auth"], []),
+    snapshotRecord(input, [...CONFIG_KEYS], [], ["auth"]),
     "PH-DM-DECLARATION-INVALID",
     [...CONFIG_KEYS],
   );
-  if (config === undefined || Object.hasOwn(config, "auth")) return undefined;
+  if (config === undefined || declaresAuth) return undefined;
 
   const id = requiredString(collector, config.id, ["id"]);
   const name = requiredString(collector, config.name, ["name"]);

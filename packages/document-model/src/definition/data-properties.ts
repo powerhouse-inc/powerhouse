@@ -235,12 +235,14 @@ function snapshotArrayMembers<T>(
 /**
  * Snapshots a plain object whose members stay opaque. `allowedKeys` closes the
  * member set; `undefined` accepts any string key, which is what a consumer
- * inspecting a value it did not build needs.
+ * inspecting a value it did not build needs. `ignoredKeys` are left out
+ * unread, for a key the caller refuses on its own.
  */
 export function snapshotRecord(
   value: unknown,
   allowedKeys: readonly string[] | undefined,
   path: DataPath,
+  ignoredKeys: readonly string[] = [],
 ): DataSnapshot<{ readonly [key: string]: unknown }> {
   return snapshotPlainObject<unknown>(
     value,
@@ -248,6 +250,7 @@ export function snapshotRecord(
     path,
     (member) => ({ ok: true, value: member }),
     new Set(),
+    ignoredKeys,
   );
 }
 
@@ -261,6 +264,7 @@ function snapshotPlainObject<T>(
     ancestors: Set<object>,
   ) => DataSnapshot<T>,
   ancestors: Set<object>,
+  ignoredKeys: readonly string[] = [],
 ): DataSnapshot<{ readonly [key: string]: T }> {
   if (value === null || typeof value !== "object") {
     return {
@@ -281,6 +285,7 @@ function snapshotPlainObject<T>(
       path,
       member,
       ancestors,
+      ignoredKeys,
     );
   } finally {
     ancestors.delete(value);
@@ -297,6 +302,7 @@ function snapshotPlainObjectMembers<T>(
     ancestors: Set<object>,
   ) => DataSnapshot<T>,
   ancestors: Set<object>,
+  ignoredKeys: readonly string[],
 ): DataSnapshot<{ readonly [key: string]: T }> {
   let isArray: boolean;
   let prototype: unknown;
@@ -325,6 +331,7 @@ function snapshotPlainObjectMembers<T>(
     if (typeof key === "symbol") {
       return { ok: false, reason: "symbol-key", path, key };
     }
+    if (ignoredKeys.includes(key)) continue;
     const memberPath = [...path, key];
     if (allowedKeys !== undefined && !allowedKeys.includes(key)) {
       return {
