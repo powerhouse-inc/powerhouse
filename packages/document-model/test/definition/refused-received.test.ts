@@ -1315,4 +1315,56 @@ describe("a scalar coercion", () => {
     expect(Duration.binding.coercion.serialize(5)).toBe(5);
     expect(Duration.binding.definition.coercion.source).toBe("explicit");
   });
+
+  it("keeps its instance as the receiver of each member", () => {
+    class Offset {
+      #offset = 10;
+      readonly scale = 2;
+      parseValue(value: unknown): number {
+        return Number(value) + this.#offset;
+      }
+      parseLiteral(): number {
+        return this.#offset;
+      }
+      serialize(value: unknown): unknown {
+        return Number(value) * this.scale;
+      }
+    }
+    const Shifted = defineScalar({
+      name: "Shifted",
+      description: "A shifted number",
+      representation: "number",
+      validator: z.number(),
+      zodSource: "z.number()",
+      coercion: new Offset(),
+    });
+
+    expect(Shifted.binding.coercion.parseValue(2)).toBe(12);
+    expect(Shifted.binding.coercion.serialize(3)).toBe(6);
+  });
+
+  it("is refused, not looped over, when its prototype chain never ends", () => {
+    const cyclic: object = new Proxy({}, { getPrototypeOf: () => cyclic });
+    const endless: ProxyHandler<object> = {
+      getPrototypeOf: () => new Proxy({}, endless),
+    };
+    const declare = (coercion: object) =>
+      diagnosticsOf(() =>
+        defineScalar({
+          name: "Looped",
+          description: "A looped coercion",
+          representation: "number",
+          validator: z.number(),
+          zodSource: "z.number()",
+          coercion: coercion as never,
+        }),
+      ).map((entry) => [entry.code, entry.path.join("."), entry.received]);
+
+    expect(declare(cyclic)).toEqual([
+      ["PH-SCALAR-DECLARATION-INVALID", "coercion", "inspection-failed"],
+    ]);
+    expect(declare(new Proxy({}, endless))).toEqual([
+      ["PH-SCALAR-DECLARATION-INVALID", "coercion", "inspection-failed"],
+    ]);
+  });
 });
