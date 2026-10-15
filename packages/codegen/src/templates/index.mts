@@ -9,6 +9,7 @@ export * from "./app/components/NavigationBreadcrumbs.js";
 export * from "./app/config.js";
 export * from "./app/editor.js";
 export * from "./boilerplate/AGENTS.md.js";
+export * from "./boilerplate/agent-guides/index.js";
 export * from "./boilerplate/CLAUDE.md.js";
 export * from "./boilerplate/claude/settings.local.json.js";
 export * from "./boilerplate/cursor/mcp.json.js";

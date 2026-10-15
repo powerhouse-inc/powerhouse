@@ -10,7 +10,12 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { packageJsonTemplate } from "templates";
+import {
+  agentGuideTemplates,
+  packageJsonTemplate,
+  readmeTemplate,
+  vitestConfigTemplate,
+} from "templates";
 import { detectFeatures } from "../../codegen/features.js";
 import {
   writeAiConfigFiles,
@@ -145,6 +150,7 @@ describe("writeAiConfigFiles", () => {
     join(".cursor", "mcp.json"),
     join(".gemini", "settings.json"),
     join(".claude", "settings.local.json"),
+    ...Object.keys(agentGuideTemplates),
   ];
 
   it("writes the full set into a fresh scaffold", async () => {
@@ -192,5 +198,98 @@ describe("writeAiConfigFiles", () => {
     // The absent files arrive from the templates.
     expect(readFileSync(join(dir, "AGENTS.md"), "utf-8")).toContain("ph vetra");
     expect(existsSync(join(dir, ".claude", "settings.local.json"))).toBe(true);
+  });
+
+  it("adds no agent guides next to an AGENTS.md that does not link them", async () => {
+    const dir = makeTempProject("ph-migrate-ai-old-agents-");
+    writeFileSync(join(dir, "AGENTS.md"), "# Older instructions\n");
+
+    await writeAiConfigFiles(dir);
+
+    expect(existsSync(join(dir, "docs", "agent-guides"))).toBe(false);
+  });
+
+  it("restores a missing guide that AGENTS.md links", async () => {
+    const dir = makeTempProject("ph-migrate-ai-missing-guide-");
+    await writeAiConfigFiles(dir);
+    const guide = join(dir, "docs", "agent-guides", "editor-recipes.md");
+    rmSync(guide);
+
+    await writeAiConfigFiles(dir);
+
+    expect(readFileSync(guide, "utf-8")).toContain("# Editor recipes");
+  });
+});
+
+// The agent docs describe the scaffold, and they drifted from it once: they
+// named reducer paths that a code-first model does not have (T-210). These
+// tests tie the files, globs and scripts the docs name to the templates that
+// create them.
+describe("agent instructions", () => {
+  async function scaffoldAgentDocs() {
+    const dir = makeTempProject("ph-agent-docs-");
+    await writeAiConfigFiles(dir);
+    const agents = readFileSync(join(dir, "AGENTS.md"), "utf-8");
+    const guides = Object.keys(agentGuideTemplates).map((rel) =>
+      readFileSync(join(dir, rel), "utf-8"),
+    );
+    return { dir, agents, guides };
+  }
+
+  it("links AGENTS.md only to files the scaffold writes and to its own headings", async () => {
+    const { dir, agents } = await scaffoldAgentDocs();
+    const anchors = [...agents.matchAll(/^#+ (.+)$/gm)].map(
+      ([, heading]) =>
+        "#" +
+        heading
+          .toLowerCase()
+          .replace(/[^a-z0-9 -]/g, "")
+          .replace(/ /g, "-"),
+    );
+    const links = [...agents.matchAll(/\]\(([^)\s]+)\)/g)].map(
+      ([, href]) => href,
+    );
+
+    expect(links).toContain("docs/agent-guides/editor-recipes.md");
+    for (const href of links) {
+      if (href.startsWith("#")) expect(anchors).toContain(href);
+      else if (!/^https?:/.test(href)) {
+        expect(existsSync(join(dir, href)), href).toBe(true);
+      }
+    }
+  });
+
+  it("links every guide from AGENTS.md", async () => {
+    const { agents } = await scaffoldAgentDocs();
+
+    for (const rel of Object.keys(agentGuideTemplates)) {
+      expect(agents).toContain(`](${rel})`);
+    }
+  });
+
+  it("names the coverage globs that vitest measures", async () => {
+    const { agents } = await scaffoldAgentDocs();
+    const include = /include: \[([^\]]*)\]/.exec(vitestConfigTemplate)?.[1];
+    const globs = [...(include ?? "").matchAll(/"([^"]+)"/g)].map(
+      ([, glob]) => glob,
+    );
+
+    expect(globs).toContain("document-models/**/v*/modules/**");
+    for (const glob of globs) expect(agents).toContain(glob);
+  });
+
+  it("runs only npm scripts that the package defines", async () => {
+    const { agents, guides } = await scaffoldAgentDocs();
+    const { scripts } = JSON.parse(
+      packageJsonTemplate("test-project", {}, {}),
+    ) as { scripts: Record<string, string> };
+    const named = [agents, ...guides, readmeTemplate].flatMap((doc) =>
+      [...doc.matchAll(/npm run ([\w:-]+)/g)].map(([, script]) => script),
+    );
+
+    expect(named).toContain("test:coverage");
+    for (const script of new Set(named)) {
+      expect(Object.keys(scripts)).toContain(script);
+    }
   });
 });

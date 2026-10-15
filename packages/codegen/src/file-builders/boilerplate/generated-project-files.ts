@@ -9,6 +9,7 @@ import { loadJsonFile } from "load-json-file";
 import { join } from "path";
 import { writeJsonFile } from "write-json-file";
 import {
+  agentGuideTemplates,
   agentsTemplate,
   buildCursorMcpTemplate,
   buildHostsTemplates,
@@ -258,18 +259,27 @@ export async function writeGeneratedHostsFiles(
 }
 
 export async function writeAiConfigFiles(projectDir = process.cwd()) {
-  // All six files are preserve-on-migrate; none is refresh. Per-file rationale:
+  // Every file is preserve-on-migrate; none is refresh. Per-file rationale:
   //
-  // CLAUDE.md / AGENTS.md: project instructions for coding agents — prose the
-  // user extends by hand; nothing in the toolchain regenerates them.
+  // CLAUDE.md / AGENTS.md / docs/agent-guides/: project instructions for
+  // coding agents — prose the user extends by hand; nothing in the toolchain
+  // regenerates them.
   await seedUserOwnedFile(
     join(projectDir, "CLAUDE.md"),
     claudeTemplate.trimStart(),
   );
-  await seedUserOwnedFile(
-    join(projectDir, "AGENTS.md"),
-    agentsTemplate.trimStart(),
-  );
+  const agentsPath = join(projectDir, "AGENTS.md");
+  // The guides belong to the AGENTS.md that links them. An older AGENTS.md
+  // links none, so seeding them next to it would leave unreachable files.
+  const agentsLinksGuides =
+    !existsSync(agentsPath) ||
+    readFileSync(agentsPath, "utf-8").includes("docs/agent-guides/");
+  await seedUserOwnedFile(agentsPath, agentsTemplate.trimStart());
+  if (agentsLinksGuides) {
+    for (const [path, contents] of Object.entries(agentGuideTemplates)) {
+      await seedUserOwnedFile(join(projectDir, path), contents.trimStart());
+    }
+  }
   // .mcp.json / .cursor/mcp.json: committed files carrying the project's
   // name-derived switchboard port as a literal (applyProjectCustomizations
   // bakes it in at init; the static templates here carry only the default

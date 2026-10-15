@@ -1,140 +1,283 @@
 import { md } from "@tmpl/core";
 
 export const agentsTemplate = md`
-# Powerhouse Document Models Assistant
+# Powerhouse package guide for agents
 
-This project creates document models, editors, processors and subgraphs for the Powerhouse ecosystem. Your role is to help users create these modules based on their needs.
+This package builds document models, editors, processors and subgraphs for the Powerhouse ecosystem. Help the user design and build them.
 
-## Core Concepts
+## Terms
 
-- **Document Model**: A template for creating documents. Defines schema and allowed operations for a document type.
-- **Document**: An instance of a document model containing actual data that follows the model's structure and can be modified using operations.
-- **Drive**: A document of type "powerhouse/document-drive" representing a collection of documents and folders. Add documents using "addActions" with "ADD_FILE" action.
-- **Action**: A proposed change to a document (JSON object with action name and input). Dispatch using "addActions" tool.
-- **Operation**: A completed change to a document containing the action plus metadata (index, timestamp, hash, errors). Actions become operations after dispatch.
+- **Document model**: the type of a document. It defines the state schema and the operations that change the state.
+- **Document**: an instance of a document model.
+- **Action**: a proposed change, a JSON object with an action type and an input. After a reducer applies it, it is an **operation**, with an index, a timestamp, a hash and any error.
+- **Drive**: a document of type \`powerhouse/document-drive\` that holds documents and folders.
+- **Reactor**: the engine that loads document models and synchronizes documents through drives. This package is a **Reactor package**.
+- **Connect**: the web app where users open drives and edit documents. **Switchboard**: the API service, with GraphQL and MCP endpoints.
+- **Vetra**: the local development environment. It runs Vetra Studio (a local Connect) and Vetra Switchboard (a local Switchboard that serves \`reactor-mcp\`).
 
-## Technology Primer
+## Two kinds of document model
 
-- **Reactor**: The core Powerhouse engine. It is modular and storage-agnostic, loads document models at runtime, and synchronizes documents across nodes via drives.
-- **Reactor Package**: A deployable bundle that extends the Reactor. It contains one or more document models, editors, processors, and subgraphs. A Vetra project generates a Reactor Package.
-- **Connect**: The Powerhouse web application for document management. End users open Connect to browse drives, create documents, and interact with editors.
-- **Switchboard**: The Powerhouse API service. It exposes GraphQL and MCP endpoints so external tools can read/write documents programmatically.
-- **Vetra**: The local development environment for building Reactor Packages. It includes Vetra Studio (a local Connect instance) and Vetra Switchboard (a local Switchboard with reactor-mcp). **You start it yourself** with \`ph vetra --strictPort --watch\` as a background process — see the MCP rules below. Its ports are assigned per project in \`powerhouse.config.json\`, so they never collide with another project's.
+Each model in \`document-models/\` is schema-first or code-first. One package can hold both kinds, so check each model before you change it.
 
-## CRITICAL: MCP Tool Usage Rules
+|                   | Schema-first                                               | Code-first                                                                                          |
+| ----------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Recognize it by   | \`document-models/<name>/<name>.json\` and \`v<n>/gen/\`       | an entry in \`definitionSources.entries\` in \`powerhouse.config.json\`, and \`v<n>/modules/\`; no \`gen/\` |
+| The definition is | the model document, which you change through \`reactor-mcp\` | the TypeScript files, which you edit                                                                |
+| Reducers          | \`v<n>/src/reducers/<module>.ts\`                            | \`reduce\` in each operation in \`v<n>/modules/<module>.ts\`                                            |
+| Errors            | \`ADD_OPERATION_ERROR\` on the model document                | \`errors\` in each operation in \`v<n>/modules/<module>.ts\`                                            |
+| Tests             | \`v<n>/tests/\`                                              | \`v<n>/tests/\`                                                                                       |
+| Guide             | [Schema-first models](#schema-first-models) below          | [Code-first models](#code-first-models) below                                                       |
 
-**MANDATORY**: The \`reactor-mcp\` MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
-If the \`reactor-mcp\` server is unavailable, **start Vetra yourself** — do not ask the user to do it:
+A model is code-first only when an entry in \`definitionSources.entries\` points at it. \`mode\` does not classify models: a new package has \`"mode": "schema-first"\` and no entries, and the first code-first model changes \`mode\` to \`"code-first"\` while the schema-first models stay schema-first.
 
-1. **Check for a running instance.** If \`.ph/vetra-runtime.json\` exists and describes a live instance, Vetra is already up: report its Connect URL and stop. Never start a second one — a project must have exactly one reactor, because two would contend for the same \`.ph/\` storage and leave you with two drives that diverge.
-2. **Start it in the background:** \`ph vetra --strictPort --watch\`. Pass no port flags. The project's ports live in \`powerhouse.config.json\` and are already what \`.mcp.json\` points at; choosing your own port is how you end up talking to a different project's reactor. \`--strictPort\` makes a genuine conflict fail loudly instead of silently binding a neighbouring port.
-3. **Wait for readiness.** Poll \`GET http://localhost:<port>/ready\` until it returns 200, for at most 60 seconds, where \`<port>\` is the one in \`.mcp.json\`. Poll that port specifically: it is the only one your MCP client will ever use, so a timeout there is the correct signal even if Vetra came up somewhere else.
-4. **Tell the user the Connect URL** so they can watch their editors render.
-5. **Reconnect to the MCP server** and continue the task.
+For a new model, use the kind of the package's other models. If the package has models of both kinds or none, put the choice in your proposal.
 
-Escalate to the user only when startup actually fails — \`--strictPort\` rejected the port, \`/ready\` never returned 200, or the process crashed — and include the real error output.
+## Plan before you build
 
-**Never edit \`.mcp.json\` to chase a port.** A mismatch between it and the running switchboard is a bug worth reporting, not routing around; \`ph vetra\` owns that reconciliation and will rewrite the file itself when a local override moves the port.
+Present a proposal and get the user's approval before you implement a document model. Describe the state schema, the modules, their operations and the errors. Ask when a requirement is unclear. Split a large model into modules of related operations.
 
-### Key Requirements:
+- Document type: \`{organization}/{document-type-name}\`, for example \`acme/invoice\`.
+- File extension: 2 to 4 characters after a dot, for example \`.inv\`.
+- Name: matches \`/[a-zA-Z][a-zA-Z0-9 ]*/\`, readable and capitalized, for example \`Invoice\`.
+- Also give a description and the author's name and website.
 
-- Never set document IDs manually - they're auto-generated by 'createDocument'
-- Minimize "addActions" calls by batching multiple actions together
-- Add new document model documents to "vetra-{hash}" drive unless specified otherwise
-- Always check document model schema before calling addActions
-- Use MCP tools for ALL document and document-model operations
+Follow the [model design rules](#model-design-rules) for the state and the operations.
 
-## Document Model Creation Workflow
+## Model design rules
 
-### 1. Planning Phase
+These rules apply to schema-first and code-first models. The examples use GraphQL notation. In a code-first model, a field is required when you pass \`{ required: true }\`. So \`[Item!]!\` is \`ph.list(ph.ref(Item, { required: true }), { required: true })\`.
 
-**MANDATORY**: Present your proposal to the user and ask for confirmation before implementing ANY document model.
+### State
 
-- **ALWAYS** describe the proposed document model structure (state schema, operations, modules) before creating
-- **NEVER** proceed with implementation without explicit user approval of your proposal
-- When in doubt, ask for clarification
-- Break complex models into logical modules and operations
+- A user must be able to create an empty document without entering any data. Make most fields optional, and set defaults in operations or in the initial state, not in the schema.
+- Make a root field required only when it has a natural default, such as an empty list or the first value of a status enum.
+- Make a child object field required only when all its required fields have natural defaults.
+- Declare every list as \`[Type!]!\`. The list is never null, defaults to empty, and holds no nulls.
+- Give each object in a list an \`id: OID!\`. Add an \`OLabel\` field for its metadata when it needs one.
+- Use \`OID\` for IDs and for references inside the document. Use \`PHID\` only for references to other documents, usually with cached fields such as a title that can go stale. Do not use the \`ID\` type.
+- Keep the order of a list in the array. Do not add \`position\` or \`weight\` fields. Reorder with an operation such as \`MOVE_ITEM\`.
+- Store a tree as a flat list with \`parentId: OID\`, where a root node has \`parentId: null\`. Do not use recursive or nested types.
+- Use an enum for a workflow status, for example \`status: OrderStatus!\` with the initial value \`DRAFT\`.
 
-#### Document Type ID Format
+### Operations
 
-- **Type ID**: \`{organization}/{document-type-name}\` (e.g., \`pizza-plaza/order\`, \`acme/invoice\`)
-- **File extension**: 2-4 characters with leading dot (e.g., \`.ordr\`, \`.inv\`)
-- **Name**: Must match \`/[a-zA-Z][a-zA-Z0-9 ]*/\` — human-readable, capitalized (e.g., \`"Order"\`, \`"Invoice"\`)
+- Give each operation one user intent and a descriptive name, such as \`ADD_LINE_ITEM\` or \`UPDATE_RECIPIENT\`.
+- Group related operations into a module.
+- Name the input fields after what the user means. Prefer simple, specific fields to nested input types.
+- Take every ID from the input. The editor creates it with \`generateId()\` from \`document-model\`.
+- Declare a named error for each way an operation can fail.
 
-### 2. Pre-Implementation Requirements
+### Scopes
 
-**MANDATORY**: Check document model schema before making any MCP tool calls.
+- \`global\` state is shared by every user with access to the document.
+- \`local\` state is private to each user.
 
-- **ALWAYS** use \`mcp__reactor-mcp__getDocumentModelSchema\` with \`type: "powerhouse/document-model"\` first
-- Review input schema requirements for operations like \`ADD_MODULE\`, \`ADD_OPERATION\`, etc.
-- Ensure all required parameters (like \`id\` or \`scope\` fields) are included in action inputs
-- This prevents failed tool calls and reduces iteration
+### Scalars
 
-### 3. Implementation Requirements
+- Standard: \`String\`, \`Int\`, \`Float\`, \`Boolean\`
+- Identity: \`OID\`, \`PHID\`, \`OLabel\`
+- Amounts: \`Amount\`, \`Amount_Tokens\`, \`Amount_Money\`, \`Amount_Fiat\`, \`Amount_Currency\`, \`Amount_Crypto\`, \`Amount_Percentage\`
+- Specialized: \`EthereumAddress\`, \`EmailAddress\`, \`Date\`, \`DateTime\`, \`URL\`, \`Currency\`
 
-- Document model reducers must be **pure synchronous functions**
-- Reducers receive current state and operation, always returning the same result
-- Values like dates/IDs must come from operation input, not generated in reducer
-- Reducer code goes into SET_OPERATION_REDUCER action (no function header needed)
-- Reducers are wrapped with Mutative - you can mutate the state object directly
-- External imports go at the beginning of the actual reducer file in \`src/\`
-- Ensure that the reducer code of each operation in the document model schema is applied in \`document-models/<document-model-name>/src/reducers/<module-name>.ts\`
+In a code-first model, call the scalar's builder on \`ph\`, such as \`ph.OID()\` or \`ph.DateTime()\`. The amount builders are named without the underscore, and some are shorter: \`ph.AmountFiat()\` declares \`Amount_Fiat\`, and \`ph.Tokens()\` declares \`Amount_Tokens\`. TypeScript completion on \`ph.\` lists every builder.
 
-### 4. Quality assurance
+## Code-first models
 
-After doing changes to the code, or after creating a new document model or a new editor, _YOU MUST RUN_ the following commands to check for errors in your implementation:
+Do not use \`reactor-mcp\` to create or change a code-first model. The TypeScript source is the definition. Document actions cannot change it, and Connect shows it read-only. Edit the files, then run \`ph model check\`. The MCP stays the right tool for documents of the model.
 
-- **TypeScript Check**: Run \`npm run tsc\` to validate type safety
-- **Lint Check**: Run \`npm run lint:fix\` to check for errors with oxlint (type-aware rules plus TypeScript type checking)
-- **Reducer Test Coverage**: Run \`npm run test:coverage\` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in \`document-models/<name>/v<n>/tests/\` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via \`ADD_OPERATION_ERROR\` (each error is a branch that needs explicit test coverage). Push toward 100% by following the strategy below.
+1. Create a model with \`ph generate document-model --code-first <name>\`. The command writes \`v1/definition.ts\` for the state, \`v1/modules/items.ts\` for the operations, and tests in \`v1/tests/\`. It registers the model in \`powerhouse.config.json\`, \`powerhouse.manifest.json\` and \`document-models/index.ts\`. Keep the \`definitionSources\` entry: without it, \`ph build\` fails.
+2. Declare the state in \`v<n>/definition.ts\` and the operations in \`v<n>/modules/<module>.ts\` with the \`ph\` builders from \`document-model\`. The generated \`modules/items.ts\` shows one operation with \`input\`, \`errors\` and \`reduce\`. A field is optional unless you pass \`{ required: true }\`.
+3. Declare each error in the operation, as in \`errors: { NotFound: {} }\`, and throw it in \`reduce\` with \`throw new ctx.errors.NotFound("...")\`.
+4. Run \`ph model check\` after every edit. \`tsc\` cannot find what it reports, because a declaration is compiled only when its module runs. Add \`--json\` to read the report as one JSON object. Exit code \`1\` means a declaration is invalid, and \`2\` that the check could not run. Exit code \`0\` means the check passed or that there was nothing to check, so read \`status\` in the \`--json\` report.
+5. To add a version, follow "Add a version" in the [code-first quickstart](https://academy.vetra.io/academy/Reference/DocumentModels/CodeFirst/Quickstart). \`ph model check\` reports an upgrade manifest that does not match \`upgrades/versions.ts\`.
 
-#### Strategy: reaching 100% reducer coverage
+No tool rewrites these files, so your edits stay.
 
-95% is the enforced floor — push toward 100% when feasible. Statements and lines reach high coverage quickly; the real challenge is **branch coverage** (every \`||\`, \`??\`, \`if\`, \`&&\` is two branches).
+## Schema-first models
 
-Write a small number of **scenario tests** first — each chaining many operations the way a real consumer would. One "full conversation flow" test that exercises 14 ops is more valuable than 14 isolated unit tests. Then categorize each remaining uncovered branch before writing a test for it:
+A schema-first model is defined by its model document, of type \`powerhouse/document-model\`. You change the document through \`reactor-mcp\`, and codegen writes \`document-models/<name>/\` from it. This section does not apply to code-first models.
 
-1. **Wrong nullability** — type allows \`null\` but the value is always initialized. Fix the type (e.g. \`Int!\` in the schema via \`SET_STATE_SCHEMA\` / \`SET_OPERATION_SCHEMA\`); the fallback branch disappears.
-2. **Missing validation** — the field is genuinely required for a variant but the reducer silently accepts its absence. Add a named error via \`ADD_OPERATION_ERROR\` and reject; the new branch is reachable and worth testing.
-3. **Wrong coercion operator** — \`||\` used where \`??\` is needed; falsy-but-valid values (\`0\`, \`false\`, \`""\`) get coerced to the fallback. Fix the operator and add a test with a falsy-but-valid value.
-4. **Legitimate optionality** — both sides reachable through valid inputs. Fold both into existing scenario tests by varying inputs.
+### Create a model
 
-Then extend scenario tests to hit remaining branches: skip initialization to hit "not yet initialized" branches; chain invalid operations using the operation-index pattern from "Testing Reducer Errors" (never \`.toThrow()\`); use minimal/empty inputs for fallback-to-null branches; vary inputs so both sides of legitimate \`||\` / \`??\` are hit.
+1. Get the schema of \`powerhouse/document-model\` with \`mcp__reactor-mcp__getDocumentModelSchema\`. It lists each action, such as \`ADD_MODULE\`, \`ADD_OPERATION\`, \`SET_OPERATION_SCHEMA\` and \`ADD_OPERATION_ERROR\`, and the input that each one requires, including \`id\` and \`scope\` fields.
+2. Create the model document in the \`vetra-{hash}\` drive. Add the modules, operations, schemas, reducers, errors and examples with batched \`addActions\` calls.
+3. Do not use the versioning actions. They are not implemented.
+4. Codegen writes \`v<n>/gen/\`, the reducer files in \`v<n>/src/reducers/<module>.ts\`, and tests in \`v<n>/tests/\`.
 
-**Principle: don't test around bad types — fix them.** When a branch is untestable, it's almost always a type that's too loose, missing validation, or a wrong operator. Coverage follows naturally from correct types and realistic scenarios.
+### Model document structure and actions
 
-## Document editor creation flow
+A model document holds the metadata (\`id\`, \`name\`, \`extension\`, \`description\`, and the author's name and website), versioned specifications (\`version\`, \`changeLog\`, and the \`global\` and \`local\` state with its schema, initial value and examples), and the modules with their operations. These are its 37 actions:
 
-**CRITICAL**: Creating a document editor is a **two-phase** process. You must NEVER skip Phase 1 or try to manually create editor files from scratch. The codegen system generates the boilerplate — your job is only to implement the UI inside it.
+- Header: \`SET_MODEL_NAME\`, \`SET_MODEL_ID\`, \`SET_MODEL_EXTENSION\`, \`SET_MODEL_DESCRIPTION\`, \`SET_AUTHOR_NAME\`, \`SET_AUTHOR_WEBSITE\`
+- Modules: \`ADD_MODULE\`, \`SET_MODULE_NAME\`, \`SET_MODULE_DESCRIPTION\`, \`DELETE_MODULE\`, \`REORDER_MODULES\`
+- Operations: \`ADD_OPERATION\`, \`SET_OPERATION_NAME\`, \`SET_OPERATION_SCHEMA\`, \`SET_OPERATION_DESCRIPTION\`, \`SET_OPERATION_TEMPLATE\`, \`SET_OPERATION_REDUCER\`, \`MOVE_OPERATION\`, \`DELETE_OPERATION\`, \`REORDER_MODULE_OPERATIONS\`
+- Operation errors: \`ADD_OPERATION_ERROR\`, \`SET_OPERATION_ERROR_CODE\`, \`SET_OPERATION_ERROR_NAME\`, \`SET_OPERATION_ERROR_DESCRIPTION\`, \`SET_OPERATION_ERROR_TEMPLATE\`, \`DELETE_OPERATION_ERROR\`, \`REORDER_OPERATION_ERRORS\`
+- Operation examples: \`ADD_OPERATION_EXAMPLE\`, \`UPDATE_OPERATION_EXAMPLE\`, \`DELETE_OPERATION_EXAMPLE\`, \`REORDER_OPERATION_EXAMPLES\`
+- State: \`SET_STATE_SCHEMA\`, \`SET_INITIAL_STATE\`, \`ADD_STATE_EXAMPLE\`, \`UPDATE_STATE_EXAMPLE\`, \`DELETE_STATE_EXAMPLE\`, \`REORDER_STATE_EXAMPLES\`
 
-### Phase 1: Create the editor document via MCP (MANDATORY FIRST STEP)
+### Change a model
 
-**NEVER** start by writing editor code, creating component files, or looking at how to scaffold an editor manually. The **only** way to create a new editor is through the MCP tools:
+Each change has two steps:
 
-1. Check if the document editor already exists. If it does, ask the user if a new one should be created or if the existing one should be reimplemented
-2. If it's a new editor, get the document editor schema using \`mcp__reactor-mcp__getDocumentModelSchema\` with \`type: "powerhouse/document-editor"\`
-3. Create a new editor document on the \`vetra-{hash}\` drive of type \`powerhouse/document-editor\` using \`mcp__reactor-mcp__addActions\` with the \`ADD_FILE\` action
-4. Configure the editor document with the required actions (set the editor name, target document model, etc.) according to the schema
+1. Change the model document with \`mcp__reactor-mcp__addActions\`, for example with \`SET_STATE_SCHEMA\`, \`SET_OPERATION_SCHEMA\` or \`SET_OPERATION_REDUCER\`.
+2. Make the same change in the reducer files in \`v<n>/src/reducers/\`. Codegen writes a reducer only for a new operation and never changes an existing one. After a state schema change, check each reducer that uses the changed types.
 
-⚠️ **The editor document MUST be confirmed/published — if it is left as draft state, the codegen will NOT run and no editor files will be generated.** Make sure the document state is not "DRAFT" after creation.
+If you fix only the reducer file, the model document keeps the old reducer code. The bug comes back whenever codegen writes the reducer from the document again, for example in a new project generated from the model or after the reducer file is deleted.
 
-5. Once the editor document is confirmed on the drive, the codegen automatically runs and generates boilerplate files in the \`editors/\` folder, including hooks, type definitions, and the editor component shell
+### Reducer code
 
-### Phase 2: Implement the editor UI
+- Give \`SET_OPERATION_REDUCER\` the function body only, without a function header.
+- Put external imports at the top of the reducer file in \`v<n>/src/reducers/\`.
+- Codegen imports the errors that the reducer code uses. Throw an error by its name, as in \`throw new MissingIdError("ID is required")\`. Do not import it from \`gen/\`, and do not reach it through \`errors.ModuleName.MissingIdError\`.
 
-Only **after** the codegen has produced the boilerplate files, proceed with the UI implementation:
+### Errors
 
-- Inspect the generated files in the \`editors/\` folder — do NOT create new files for the main editor component; edit the generated one
-- Hooks for each document model are auto-generated at \`document-models/<name>/v<n>/hooks.ts\` and re-exported through the top-level barrel \`document-models/<name>\` (which always points at the latest version). Import them from the barrel — there is **no** \`editors/hooks/\` folder.
-- Read the schema of the document model that the editor is for to know how to interact with it
-- Every editor **MUST** include \`<DocumentToolbar />\` imported from \`@powerhousedao/design-system/connect/index\`. Place it at the top of the editor component — do not put anything next to it.
-- Style the editor using tailwind classes or a style tag. If using a style tag, make sure to make the selectors specific to only apply to the editor component.
-- Create modular components for the UI elements and place them on separate files to make it easier to maintain and update
-- Consider using the React Components exported by \`@powerhousedao/design-system\` and \`@powerhousedao/document-engineering\`
-- Separate business logic from presentation logic
-- Use TypeScript for type safety, avoid using any and type casting
-- Always check for type and lint errors after creating or modifying the editor
-- **CRITICAL**: After creating a new editor, verify that \`editors/editors.ts\` includes the new editor module. The codegen should update this file automatically, but if it doesn't, manually add the import and include the editor in the \`editors\` array. Without this registration, Connect won't find an editor for the document type. Example:
+Add each error to its operation with \`ADD_OPERATION_ERROR\`:
+
+- \`errorCode\`: upper snake case, for example \`ENTRY_NOT_FOUND\`.
+- \`errorName\`: Pascal case that ends with \`Error\`, for example \`EntryNotFoundError\`. Code generation depends on the suffix.
+- \`errorDescription\`: the condition that causes the error.
+
+Error names and codes must be unique. Typical errors are \`EntityNotFoundError\`, \`DuplicateIdError\`, \`InvalidInputError\` and \`PermissionDeniedError\`.
+
+### Examples
+
+Add examples to the operations with \`ADD_OPERATION_EXAMPLE\`.
+
+### GraphQL naming rules
+
+Codegen depends on these names. If a name breaks a rule, the generated code does not compile.
+
+- Name the global state type \`<ModelName>State\` and the local state type \`<ModelName>LocalState\`. Do not use \`<ModelName>GlobalState\`.
+- Name each operation's input type \`<OperationName>Input\`, in Pascal case. The \`SET_CATEGORY_LABEL\` operation takes \`SetCategoryLabelInput\`.
+- An input type cannot reference a state object type. Give each operation its own input type that mirrors it, for example \`NewMenuItemInput\` for the state type \`MenuItem\`. Do not share mirror types between operations.
+- Reference state enums and scalars directly. Do not declare an enum again in an input schema.
+- An input type needs at least one field. For an operation without input, add an optional placeholder field:
+
+~~~graphql
+input ClearAllInput {
+  _: Boolean
+}
+~~~
+
+## Vetra and reactor-mcp
+
+Use \`reactor-mcp\` to work with documents: drives, editor documents, schema-first model documents, and documents of any model. If the server is not available, start Vetra yourself. Do not ask the user to do it.
+
+1. If \`.ph/vetra-runtime.json\` describes a live instance, Vetra is already running. Report its Connect URL and stop. Do not start a second instance: two reactors share the \`.ph/\` storage, and their drives diverge.
+2. Run \`ph vetra --strictPort --watch\` in the background, with no port flags. Each project has its own ports in \`powerhouse.config.json\`, so it does not collide with another project, and \`.mcp.json\` uses the same ports. With \`--strictPort\`, a port conflict fails instead of binding a different port.
+3. Poll \`GET http://localhost:<port>/ready\` until it returns 200, for at most 60 seconds. Take \`<port>\` from \`.mcp.json\`: it is the only port your MCP client uses, even if Vetra started on a different one.
+4. Give the user the Connect URL, so they can watch the editors render.
+5. Reconnect to the MCP server and continue the task.
+
+Escalate to the user only when startup fails: \`--strictPort\` rejected the port, \`/ready\` did not return 200, or the process crashed. Include the error output.
+
+Do not edit \`.mcp.json\` to match a port. A mismatch with the running Switchboard is a bug to report. \`ph vetra\` updates the file when a local override changes the port.
+
+When you use the MCP:
+
+- Get the document type's schema with \`getDocumentModelSchema\` before you call \`addActions\`. Include every required input field, such as \`id\` and \`scope\`.
+- Batch actions into as few \`addActions\` calls as you can.
+- Do not set document IDs. \`createDocument\` generates them.
+- Add model and editor documents to the \`vetra-{hash}\` drive. Add demo documents to the \`preview-{hash}\` drive, named "Vetra Preview". Use a different drive only when the user asks.
+- Before you change a drive, get the \`powerhouse/document-drive\` schema. Use \`ADD_FILE\`, \`ADD_FOLDER\`, \`UPDATE_NODE\` and \`MOVE_NODE\`. To remove a file or folder, use \`DELETE_NODE\`. There is no \`DELETE_FILE\`.
+
+## Reducers
+
+A reducer is a pure synchronous function: replaying the same operations gives the same state. Change \`state\` in place, because reducers run inside Mutative. These rules apply to both kinds of model, and the table above says where each kind keeps its reducers, errors and tests. A schema-first reducer reads its input as \`action.input\`. A code-first \`reduce(state, input, ctx)\` receives it as \`input\`. The examples use \`input\`.
+
+### Keep reducers deterministic
+
+Every node replays the same operations and must reach the same state. A reducer must not use \`crypto.randomUUID()\`, \`Math.random()\`, \`Date.now()\`, \`new Date()\`, network or file access, or \`async\` code. A fallback is not an exception:
+
+~~~typescript
+// Each replay creates a different ID.
+id: input.id || crypto.randomUUID(),
+~~~
+
+Add the value to the operation input instead. An ID is \`id: OID!\`, and a timestamp is \`timestamp: DateTime!\`. The editor creates an ID with \`generateId()\` from \`document-model\` and puts it in the action. Compute derived values before you dispatch the action.
+
+### Handle optional values
+
+An optional input field can be \`null\` or \`undefined\`.
+
+- When the state field is required, fall back to its default, such as \`[]\` for a list or the initial enum value.
+- Otherwise, store a missing value as \`null\`. Schema-first state types (\`Maybe<T>\`) do not accept \`undefined\`, and serialized state drops a field that is \`undefined\`.
+- Use \`??\`, not \`||\`: \`||\` also replaces \`0\`, \`false\` and \`""\`. For the same reason, check for a value with \`!= null\`, not with a truthiness check.
+
+~~~typescript
+state.amount = input.amount ?? null;
+state.tags = input.tags ?? [];
+if (input.notes != null) state.notes = input.notes;
+~~~
+
+### Throw declared errors
+
+For each invalid case, throw a specific declared error. Do not throw \`Error\`. The input is validated against the operation's input schema before your reducer code runs, so check only the rules that the schema cannot express.
+
+When a reducer throws, the operation is still recorded. Its \`error\` property holds the message, and the state does not change. Test the recorded operation. Do not use \`toThrow()\` for a reducer error. This code-first test uses the \`notesV1\` export, as the generated tests in \`v<n>/tests/\` do:
+
+~~~typescript
+it("refuses a duplicate id", () => {
+  const add = () => notesV1.actions.addItem({ id: "a", label: "First" });
+  let document = notesV1.utils.createDocument();
+  document = notesV1.reducer(document, add());
+  document = notesV1.reducer(document, add());
+
+  expect(document.operations.global.at(-1)?.error).toContain(
+    "already in the list",
+  );
+  expect(document.state.global.items).toHaveLength(1);
+});
+~~~
+
+A schema-first test imports \`reducer\`, \`utils\` and the action creators from \`document-models/<name>/v<n>\` and calls them directly, as in \`reducer(document, addItem(input))\`.
+
+Use \`operations.local\` for an operation in the \`local\` scope. \`toThrow()\` is correct only for an action creator that rejects an invalid input, because a creator validates the input before any reducer runs.
+
+## Test coverage
+
+\`npm run test:coverage\` fails below 95% on lines, branches, functions or statements. Aim for 100%. Branches are the hard part: each \`||\`, \`??\`, \`if\` and \`&&\` has two.
+
+Test the normal path of each operation and each declared error, because each error is a branch. Start with a few scenario tests. Each one chains many operations the way a real user would. One test of a full flow through 14 operations covers more than 14 tests of one operation each.
+
+Then classify each uncovered branch before you write a test for it:
+
+1. **Wrong nullability.** The type allows \`null\`, but the value is always set. Make the field required: \`!\` in a schema-first schema, \`{ required: true }\` in a code-first declaration. The fallback branch goes away.
+2. **Missing validation.** The reducer accepts a missing value that the case requires. Declare a named error and throw it. The new branch is worth a test.
+3. **Wrong operator.** \`||\` is used where \`??\` belongs. Fix the operator and test with a valid falsy value.
+4. **Legitimate optionality.** Both sides are valid. Vary the inputs of an existing scenario test to reach both.
+
+To reach the branches that remain, skip initialization to reach the "not initialized" branches, chain invalid operations and check their errors, use minimal inputs for the \`null\` fallbacks, and vary inputs so that both sides of each \`??\` run.
+
+A branch that you cannot test usually comes from a type that is too loose, from missing validation, or from a wrong operator. Fix the cause, and the coverage follows.
+
+## Editors
+
+Codegen writes an editor's files. Your job is to implement the UI inside them.
+
+### Create an editor
+
+Let codegen create the editor files, then implement the UI in them. Do not write editor files from scratch.
+
+1. Check whether an editor for the document type already exists. If it does, ask the user whether to create a new editor or to change the existing one.
+2. Create the editor with one of these:
+   - Run \`ph generate editor --name <name> --document-type <type>\`. This works without Vetra.
+   - Or, while Vetra runs, create an editor document with \`reactor-mcp\`. Get the schema of \`powerhouse/document-editor\` with \`mcp__reactor-mcp__getDocumentModelSchema\`. Create the document in the \`vetra-{hash}\` drive with \`mcp__reactor-mcp__addActions\` and the \`ADD_FILE\` action, and set the editor name, the target document type and the other fields that the schema requires. Make sure the editor document is not in the \`DRAFT\` state: codegen ignores a draft, so no editor files appear.
+3. Codegen writes \`editors/<name>/\`, including \`editor.tsx\`, and registers the editor in \`editors/editors.ts\`.
+
+### Implement the UI
+
+- Read the generated files in \`editors/<name>/\`. Edit the generated \`editor.tsx\`. Do not create a new editor component.
+- Read the definition of the document model to learn its state and actions.
+- Put \`<DocumentToolbar />\` from \`@powerhousedao/design-system/connect/index\` at the top of the editor. Put nothing next to it.
+- Style the editor with Tailwind classes or a style tag. Scope the selectors of a style tag to the editor component.
+- Put each UI element in its own component file.
+- Use the React components of \`@powerhousedao/design-system\` and \`@powerhousedao/document-engineering\` where they fit.
+- Keep business logic out of the presentation components.
+- Do not use \`any\` or type casts.
+- Run the [checks](#checks) after each change.
+- Check that \`editors/editors.ts\` lists the new editor. Without it, Connect finds no editor for the document type. The file is generated, but if codegen did not add the editor, add it yourself:
 
   ~~~typescript
   import type { EditorModule } from "document-model";
@@ -143,15 +286,11 @@ Only **after** the codegen has produced the boilerplate files, proceed with the 
   export const editors: EditorModule[] = [TodoListEditor];
   ~~~
 
-### Document Editor Implementation Pattern
+### Read and change the document
 
-**CRITICAL**: When implementing document editors, use the modern React hooks pattern from \`@powerhousedao/reactor-browser\`.
+These patterns are for an editor of one document type. The generated \`editor.tsx\` already uses the right one for its model.
 
-The following section is valid for editors that edit a single document type.
-
-#### Required Imports and Setup
-
-Using a "Todo" document model as example:
+For a schema-first model, codegen writes hooks to \`document-models/<name>/v<n>/hooks.ts\`. The barrel \`document-models/<name>\` re-exports them with the action creators, and it always points at the latest version. There is no \`editors/hooks/\` folder. For a \`todo\` model:
 
 ~~~typescript
 import { generateId } from "document-model";
@@ -168,67 +307,77 @@ export default function Editor() {
 
   // ...
 }
-
-// Note: The \`useSelectedTodoDocument\` hook is auto-generated at
-// \`document-models/todo/v<n>/hooks.ts\` and re-exported via the top-level
-// barrel \`document-models/todo\` (which always points at the latest version).
-// Action creators are exposed as \`actions.<actionName>\` from the same barrel
-// (e.g. \`actions.addTodo(...)\`) — never import from a deep \`gen/creators.js\` path.
 ~~~
 
-The \`useSelectedTodoDocument\` (and every other document hook) is auto-generated and re-exported from the \`document-models/<name>\` top-level barrel, so you don't need to implement it yourself. See the "Editor code conventions" section below for the full import-path rules.
-
-### Editor code conventions (TypeScript & module resolution)
-
-These rules apply to **every** editor regardless of which UI library you use. They come from the project's \`tsconfig\` (\`module: nodenext\`, \`strict\`, \`verbatimModuleSyntax\`) and oxlint config — they are constraints, not stylistic preferences.
-
-#### Always use the top-level barrel for document-model imports
-
-Every document model exposes a single public surface via its top-level barrel. Use it for **all** document-model symbols (types, actions, hooks, utils):
+A code-first model has no generated hooks. Use \`useSelectedDocumentOfType\` from \`@powerhousedao/reactor-browser\` with the version that the model's \`index.ts\` exports, such as \`notesV1\`. Its \`actions\` holds the action creators. For a \`notes\` model:
 
 ~~~typescript
-// ✅ GOOD — barrel always points at the latest version
+import { useSelectedDocumentOfType } from "@powerhousedao/reactor-browser";
+import type { ActionOf, DocumentOf } from "document-model";
+import { generateId } from "document-model";
+import { notesV1 } from "document-models/notes";
+
+type NotesDocument = DocumentOf<typeof notesV1>;
+type NotesAction = ActionOf<typeof notesV1>;
+
+export default function Editor() {
+  const [document, dispatch] = useSelectedDocumentOfType<
+    NotesDocument,
+    NotesAction
+  >(notesV1.documentModel.global.id);
+
+  function handleAddItem(label: string) {
+    dispatch(notesV1.actions.addItem({ id: generateId(), label }));
+  }
+
+  // ...
+}
+~~~
+
+### Imports and TypeScript
+
+The project's \`tsconfig\` (\`module: nodenext\`, \`strict\`, \`verbatimModuleSyntax\`) and oxlint configuration enforce these rules. \`npm run tsc\` and \`npm run lint:fix\` report a break.
+
+#### Import from the model's barrel
+
+Import document-model symbols from the barrel \`document-models/<name>\`, not from deep paths. For a schema-first model, the barrel exports the types, the action creators as \`actions.<actionName>\`, the hooks \`useSelected<Name>Document\`, \`use<Name>DocumentById\`, \`use<Name>DocumentsInSelectedDrive\` and \`use<Name>DocumentsInSelectedFolder\`, and \`utils\`. For a code-first model, it exports the family and each version, such as \`notesFamily\` and \`notesV1\`.
+
+~~~typescript
+// Correct: the barrel always points at the latest version.
 import { actions, useSelectedTodoDocument } from "document-models/todo";
 import type { TodoAction, TodoDocument } from "document-models/todo";
 
-// ❌ BAD — deep paths bypass the barrel and break when the version increments
+// Wrong: a deep path breaks when the version changes.
 import { useSelectedTodoDocument } from "../hooks/useTodoDocument.js";
 import { addTodo } from "../../document-models/todo/gen/creators.js";
 import type { Todo } from "document-models/todo/v1/gen/schema/types.js";
 ~~~
 
-The barrel re-exports types, \`actions.<actionName>\` action creators, the four generated hooks (\`useSelected<Name>Document\`, \`use<Name>DocumentById\`, \`use<Name>DocumentsInSelectedDrive\`, \`use<Name>DocumentsInSelectedFolder\`), and \`utils\`. There is **no** \`editors/hooks/\` folder — that path does not exist in generated projects.
+#### Use the configured path aliases
 
-#### Use the configured tsconfig path aliases — do NOT add \`@/*\`
-
-The boilerplate \`tsconfig.json\` already exposes the following path aliases:
+\`tsconfig.json\` defines these aliases:
 
 - \`document-models\`, \`document-models/<name>\`
 - \`editors\`, \`editors/<name>\`
 - \`processors/<name>\`
 - \`subgraphs\`, \`subgraphs/<name>\`
 
-Use these directly. **Do NOT** introduce a \`@/*\` alias — \`baseUrl\` is not configured in the boilerplate, and any \`@/...\` import will fail to resolve under \`nodenext\`.
+Do not add an \`@/*\` alias. \`baseUrl\` is not set, so an \`@/...\` import does not resolve under \`nodenext\`.
 
-#### Relative imports MUST include \`.js\` extensions
+#### Add \`.js\` to relative imports
 
-The boilerplate uses \`"module": "nodenext"\`, which requires explicit \`.js\` extensions on every relative import (even when the source file is \`.ts\` / \`.tsx\`):
+Under \`nodenext\`, every relative import needs a \`.js\` extension, also when the source file is \`.ts\` or \`.tsx\`:
 
 ~~~typescript
-// ✅ GOOD
 import { Button } from "./components/ui/button.js";
 import { cn } from "../lib/utils.js";
-
-// ❌ BAD — fails at compile time
-import { Button } from "./components/ui/button";
-import { cn } from "../lib/utils";
 ~~~
 
-When a third-party CLI generates extensionless imports, do a bulk find-and-replace after install to add \`.js\` to every relative path.
+If a third-party CLI writes imports without extensions, add \`.js\` to each relative path after it runs.
 
-#### Stringifying \`unknown\` values
+#### Convert \`unknown\` values to strings
 
-The boilerplate oxlint config enables \`typescript/no-base-to-string\` (the \`recommendedTypeChecked\` equivalent). \`String(value ?? "")\` on a value typed as \`unknown\` will trip the rule because the default \`Object.prototype.toString\` produces \`"[object Object]"\`. Use a small helper:
+The oxlint rule \`typescript/no-base-to-string\` rejects \`String(value ?? "")\` on an \`unknown\` value, because an object becomes \`"[object Object]"\`. Use a helper:
 
 ~~~typescript
 function str(v: unknown): string {
@@ -239,501 +388,18 @@ function str(v: unknown): string {
 }
 ~~~
 
-### Drag-and-drop file uploads (optional pattern)
+For an editor that accepts dropped files, or that uses shadcn or Vercel AI Elements, read [Editor recipes](docs/agent-guides/editor-recipes.md).
 
-Use this **only** when your editor needs to accept arbitrary file drops (images, PDFs, CSVs, attachments). Default editors do not need any of this.
+## Generated files
 
-Connect wraps every editor in an outer DropZone that only handles Powerhouse document files (\`.phd\`, \`.phdm\`, \`.zip\`). To accept other files in your editor, use the \`useEditorFileDrop\` hook — it spreads the right handlers and a marker attribute that tells the outer DropZone to leave your subtree alone.
+Do not edit a file whose header says \`DO NOT EDIT\`, or anything in a \`gen/\` directory. Codegen rewrites them. A code-first model's own files are not generated.
 
-~~~tsx
-import { useEditorFileDrop } from "@powerhousedao/reactor-browser";
+## Checks
 
-export default function Editor() {
-  const { dragProps, isDragOver } = useEditorFileDrop({
-    accept: [".png", ".jpg", ".jpeg", ".pdf"],
-    onFiles: (files) => handleFiles(files),
-  });
+Run these after you change code, and after you create a model or an editor:
 
-  return (
-    <div {...dragProps} className="relative">
-      {isDragOver && (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-black/40">
-          <p className="text-foreground text-base font-medium">
-            Drop files to attach
-          </p>
-        </div>
-      )}
-      {/* ... editor content ... */}
-    </div>
-  );
-}
-~~~
-
-The overlay \`div\` **MUST** use \`pointer-events-none\` — otherwise it captures the \`drop\` event and your handler never fires.
-
-If your file-upload handler lives inside a **child** component's React context (e.g. \`usePromptInputAttachments().add\` inside a \`PromptInput\`), use a ref bridge: store the child's add function in a ref from a tiny bridge component, and call \`ref.current?.(files)\` from \`onFiles\`.
-
-### Using shadcn / Vercel AI Elements in editors (optional)
-
-Use this **only** when your editor needs UI primitives not covered by \`@powerhousedao/design-system\` or \`@powerhousedao/document-engineering\` — typically chat-style UIs built on Vercel AI Elements (\`Conversation\`, \`Message\`, \`Reasoning\`, \`Tool\`, \`PromptInput\`). Default editors should prefer the design-system / document-engineering primitives and skip this section.
-
-\`shadcn init\` does not work here (it fails with "could not detect a supported framework"), so configure shadcn manually with the steps below. Substitute \`<name>\` with your editor's name throughout.
-
-#### Setup steps
-
-1. **Install deps**: \`pnpm add class-variance-authority clsx tailwind-merge lucide-react tw-animate-css\`
-
-2. **Create \`components.json\`** at the project root. The \`@/*\` alias here is consumed by the shadcn / AI Elements CLIs at install time only — do **NOT** add a matching \`@/*\` alias to \`tsconfig.json\`:
-
-   ~~~json
-   {
-     "$schema": "https://ui.shadcn.com/schema.json",
-     "style": "new-york",
-     "rsc": false,
-     "tsx": true,
-     "tailwind": {
-       "config": "",
-       "css": "style.css",
-       "baseColor": "neutral",
-       "cssVariables": true
-     },
-     "aliases": {
-       "components": "@/editors/<name>/components",
-       "utils": "@/editors/<name>/lib/utils",
-       "ui": "@/editors/<name>/components/ui",
-       "lib": "@/editors/<name>/lib",
-       "hooks": "@/editors/<name>/hooks"
-     },
-     "iconLibrary": "lucide"
-   }
-   ~~~
-
-3. **Create \`editors/<name>/lib/utils.ts\`** exporting the standard \`cn\` helper (\`twMerge(clsx(inputs))\`).
-
-4. **Extend \`style.css\`** (append, do not replace): \`@import "tw-animate-css";\`, \`@custom-variant dark (&:is(.dark *));\`, a \`@theme inline { ... }\` block mapping \`--color-*\`/\`--radius-*\`, \`:root\` and \`.dark\` blocks with \`oklch(...)\` values, and a \`@layer base\` block. ⚠️ The design-system theme already declares its own tokens — verify both the editor and Connect still render correctly in light/dark mode after this step. If they break, fall back to design-system primitives.
-
-5. **Install AI Elements** using Vercel's CLI (not shadcn's). Verify each name exists at https://ai-sdk.dev/elements first — unknown names abort the install:
-
-   ~~~bash
-   npx ai-elements@latest add conversation message reasoning tool prompt-input code-block
-   ~~~
-
-   The CLI auto-installs \`ai\`, \`use-stick-to-bottom\`, \`streamdown\` (+ \`@streamdown/{cjk,code,math,mermaid}\`), and \`@radix-ui/react-use-controllable-state\`.
-
-6. **Move \`components/ai-elements/\`** from the project root into \`editors/<name>/components/ai-elements/\`, then delete the empty project-root \`components/\`. (Files under \`editors/<name>/components/ui/\` are already in the right place.)
-
-7. **Rewrite \`@/...\` imports to relative paths with \`.js\` extensions** across every CLI-generated file — \`@/*\` does not resolve under \`nodenext\`, and extensionless relative imports fail too. From an \`ai-elements/\` file: \`@/editors/<name>/components/ui/button\` → \`../ui/button.js\`, \`@/editors/<name>/lib/utils\` → \`../../lib/utils.js\`. From a \`ui/\` file: \`./button.js\` and \`../../lib/utils.js\`. Also add \`.js\` to any extensionless sibling imports (e.g. \`./shimmer\` → \`./shimmer.js\`).
-
-#### Bridging document-model types to AI Elements
-
-AI Elements use Vercel AI SDK types (\`UIMessage\`, \`ToolUIPart\`, \`DynamicToolUIPart\`); your document model has its own. **Do not convert between them.** Use the plain-prop low-level primitives (\`Message\`, \`MessageContent\`, \`Conversation\`, \`ConversationContent\`, \`Reasoning\`, \`ReasoningTrigger\`, \`ReasoningContent\`, \`Tool\`, \`ToolHeader\`, \`ToolContent\`, \`ToolInput\`, \`ToolOutput\`, \`MessageResponse\`) and write thin wrapper components. For \`ToolHeader\`, pass \`type="dynamic-tool"\` with explicit \`toolName\` and \`state\`.
-
-Tool-state mapping:
-
-| Document-model state         | AI Elements \`ToolPart["state"]\` |
-| ---------------------------- | ------------------------------- |
-| Tool call with no result yet | \`"input-available"\`             |
-| Tool call with result        | \`"output-available"\`            |
-| Tool call with error result  | \`"output-error"\`                |
-
-If TypeScript complains that your concrete interface is missing an index signature when passed where \`Record<string, unknown> & { ... }\` is expected, add \`[key: string]: unknown;\` to the interface.
-
-#### Final file structure
-
-~~~
-editors/<name>/
-  editor.tsx              ← main editor (edit codegen output)
-  module.ts               ← DO NOT EDIT (codegen)
-  lib/utils.ts            ← cn() helper
-  components/
-    ai-elements/          ← moved from project root in step 6
-    ui/                   ← shadcn primitives installed by ai-elements CLI
-    <wrappers bridging document-model types to AI Elements primitives>
-~~~
-
-## ⚠️ CRITICAL: Generated Files & Modification Rules
-
-### Generated Files Rule
-
-**NEVER edit files in \`gen/\` folders** - they are auto-generated and will be overwritten.
-
-### Document Model Modification Process
-
-For ANY document model changes, follow this **mandatory** two-step process:
-
-#### Step 1: Update Document Model via MCP
-
-Use \`mcp__reactor-mcp__addActions\` with operations like:
-
-- \`SET_OPERATION_SCHEMA\` - update input/output schemas
-- \`SET_OPERATION_REDUCER\` - update reducer code
-- \`SET_STATE_SCHEMA\` - update state definitions
-
-#### Step 2: Update Existing Source Files
-
-**ALSO manually update existing reducer files in \`src/\` folder** - these are NOT auto-generated.
-Make sure to check if the operation reducer code needs to be updated after changing the state schema.
-
-### ⚠️ Critical Reminder
-
-**ALWAYS do BOTH steps when fixing reducer issues:**
-
-1. ✅ Fix existing reducer files in \`src/\` manually
-2. ✅ Update document model via MCP with same fixes
-
-**Forgetting step 2 means future code generations will still contain the bugs!**
-
-## Reducer Implementation Guidelines
-
-### ❌ Forbidden in Reducers (Non-Deterministic)
-
-- \`crypto.randomUUID()\`, \`Math.random()\`, \`Date.now()\`, \`new Date()\`
-- External API calls or side effects
-- Asynchronous functions
-- Any non-deterministic functions
-
-### ❌ Forbidden Patterns
-
-~~~typescript
-// NEVER use fallback values with non-deterministic functions
-id: action.input.id || crypto.randomUUID(); // ❌ FORBIDDEN
-timestamp: action.input.timestamp || new Date(); // ❌ FORBIDDEN
-~~~
-
-### ✅ Required Pattern
-
-All dynamic values must come from action input:
-
-- **IDs**: Include \`id: OID!\` in input schema, use \`action.input.id\` in reducer
-- **Timestamps**: Include \`timestamp: DateTime!\` in input schema
-- **Computed values**: Calculate before dispatching action
-
-### Example
-
-~~~typescript
-// ❌ BAD - impure reducer
-const newItem = {
-  id: crypto.randomUUID(), // Non-deterministic
-  createdAt: new Date(), // Non-deterministic
-};
-
-// ✅ GOOD - pure reducer
-const newItem = {
-  id: action.input.id, // From action input
-  createdAt: action.input.createdAt, // From action input
-};
-~~~
-
-### Handling Nullable Input Types
-
-**CRITICAL**: Be careful when handling optional input types:
-
-- Optional input types use \`InputMaybe<T>\` allowing \`null | undefined | T\`.
-- Optional state types use \`Maybe<T>\` = \`T | null\`.
-- If there is no applicable default value then use \`|| null\`.
-
-~~~typescript
-// ❌ BAD - Type error with Maybe<string>
-amount: action.input.amount,
-notes: action.input.notes,
-
-// ✅ GOOD - Matches Maybe<T> = T | null
-amount: action.input.amount || null,
-notes: action.input.notes || [],
-~~~
-
-Use truthy checks when conditionally assigning optional values from input to state:
-
-~~~typescript
-// ❌ BAD - Type 'string | null' is not assignable to type 'string'.
-if (action.input.field !== undefined) entry.field = action.input.field;
-
-// ✅ GOOD - use truthy checks
-if (action.input.field) state.field = action.input.field;
-
-// ✅ GOOD - For booleans use explicit null/undefined checks
-if (action.input.field !== undefined && action.input.field !== null)
-  state.field = action.input.field;
-~~~
-
-### Error Handling in Operations
-
-**MANDATORY**: Define specific error types for each operation to handle invalid inputs and edge cases properly.
-Action inputs are validated so they are guaranteed to respect the input schema.
-Errors referenced in the reducer code will be imported automatically.
-
-#### Error Definition Requirements
-
-1. **Add error definitions** to operations using \`ADD_OPERATION_ERROR\`:
-   - \`errorCode\`: Uppercase snake_case (e.g., \`"MISSING_ID"\`, \`"ENTRY_NOT_FOUND"\`)
-   - \`errorName\`: PascalCase ending with "Error" (e.g., \`"MissingIdError"\`, \`"EntryNotFoundError"\`)
-   - \`errorDescription\`: Human-readable description of the error condition
-
-2. **Error names must end with "Error"** for consistency and code generation
-
-3. **Use specific error types** rather than generic validation
-
-4. **Must use unique error names and ids**
-
-#### Error Usage in Reducers
-
-~~~typescript
-// ✅ GOOD - Throw specific errors by name
-if (!action.input.id) {
-  throw new MissingIdError("ID is required for operation");
-}
-
-if (entryIndex === -1) {
-  throw new EntryNotFoundError(\`Entry not found\`);
-}
-
-// ❌ BAD - Generic Error
-throw new Error("Something went wrong");
-
-// ❌ BAD - Nested error access
-throw new errors.ModuleName.MissingIdError("message");
-
-// ❌ BAD - Do not import error classes in the reducer code,
-import { MissingIdError } from "../../gen/module-name/error.js";
-
-// ✅ GOOD - Simply reference the error and it will be imported automatically
-throw new MissingIdError("message");
-~~~
-
-#### Common Error Patterns
-
-- **EntityNotFoundError**: Referenced entity doesn't exist
-- **DuplicateIdError**: ID already exists when creating new entries
-- **InvalidInputError**: Business logic violations
-- **PermissionDeniedError**: Access control violations
-
-#### Testing Reducer Errors
-
-**CRITICAL**: When a reducer throws an error, the operation is **still added** to the document but with an \`.error\` property containing the error message as a string.
-
-**DO NOT** use \`.toThrow()\` or \`expect(() => ...).toThrow()\` patterns when testing reducer errors.
-
-##### How Errors Work in Operations
-
-1. The reducer throws an error (e.g., \`throw new InvalidNameError("message")\`)
-2. The operation is still recorded in \`document.operations.global\` (or \`.local\`)
-3. The error message is stored in \`operation.error\` as a string
-4. **The state is NOT mutated** - it remains unchanged from before the operation
-
-##### Accessing the Correct Operation Index
-
-**CRITICAL**: You must access the correct operation index. The index corresponds to how many operations were dispatched before it.
-
-- If this is the **first** operation dispatched, access \`[0]\`
-- If 3 operations were dispatched **before** the failing one, access \`[3]\`
-
-##### Example
-
-~~~typescript
-it("should return error and not mutate state", () => {
-  const document = utils.createDocument();
-  const initialState = document.state.global.name;
-
-  const updatedDocument = reducer(document, setName({ name: "invalid" }));
-
-  // Access the correct operation index (0 = first operation)
-  expect(updatedDocument.operations.global[0].error).toBe(
-    "Name is not allowed",
-  );
-  // State remains unchanged
-  expect(updatedDocument.state.global.name).toBe(initialState);
-});
-
-// ❌ WRONG - Never use toThrow()
-expect(() => reducer(document, setName({ name: "invalid" }))).toThrow();
-~~~
-
-## Document Model Structure
-
-### Core Components
-
-- **Basic Metadata**: \`id\`, \`name\`, \`extension\`, \`description\`, \`author\` (name + website)
-- **Specifications**: Versioned specs with \`version\`, \`changeLog\`, \`state\` (global/local with schema, initialValue, examples)
-- **Modules**: Operational modules containing their operations
-
-## Available Document Model Operations (37 total)
-
-| Category                         | Operations                                                                                                                                                                                                       | Count |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| **Header Management**            | \`SET_MODEL_NAME\`, \`SET_MODEL_ID\`, \`SET_MODEL_EXTENSION\`, \`SET_MODEL_DESCRIPTION\`, \`SET_AUTHOR_NAME\`, \`SET_AUTHOR_WEBSITE\`                                                                                        | 6     |
-| **Versioning**                   | ⚠️ **DO NOT USE** - Not implemented                                                                                                                                                                              | 0     |
-| **Module Management**            | \`ADD_MODULE\`, \`SET_MODULE_NAME\`, \`SET_MODULE_DESCRIPTION\`, \`DELETE_MODULE\`, \`REORDER_MODULES\`                                                                                                                    | 5     |
-| **Operation Management**         | \`ADD_OPERATION\`, \`SET_OPERATION_NAME\`, \`SET_OPERATION_SCHEMA\`, \`SET_OPERATION_DESCRIPTION\`, \`SET_OPERATION_TEMPLATE\`, \`SET_OPERATION_REDUCER\`, \`MOVE_OPERATION\`, \`DELETE_OPERATION\`, \`REORDER_MODULE_OPERATIONS\` | 9     |
-| **Operation Error Management**   | \`ADD_OPERATION_ERROR\`, \`SET_OPERATION_ERROR_CODE\`, \`SET_OPERATION_ERROR_NAME\`, \`SET_OPERATION_ERROR_DESCRIPTION\`, \`SET_OPERATION_ERROR_TEMPLATE\`, \`DELETE_OPERATION_ERROR\`, \`REORDER_OPERATION_ERRORS\`           | 7     |
-| **Operation Example Management** | \`ADD_OPERATION_EXAMPLE\`, \`UPDATE_OPERATION_EXAMPLE\`, \`DELETE_OPERATION_EXAMPLE\`, \`REORDER_OPERATION_EXAMPLES\`                                                                                                    | 4     |
-| **State Management**             | \`SET_STATE_SCHEMA\`, \`SET_INITIAL_STATE\`, \`ADD_STATE_EXAMPLE\`, \`UPDATE_STATE_EXAMPLE\`, \`DELETE_STATE_EXAMPLE\`, \`REORDER_STATE_EXAMPLES\`                                                                           | 6     |
-
-## Best Practices & Design Principles
-
-### Scope Selection
-
-- **\`scope: "global"\`**: State shared among all users with document access
-- **\`scope: "local"\`**: State private to each individual user
-
-### Operation Design
-
-- Use descriptive operation names (e.g., \`ADD_LINE_ITEM\`, \`UPDATE_RECIPIENT\`)
-- One operation per user intent (separate concerns)
-- Include comprehensive examples and error definitions
-- Organize related operations into logical modules
-
-## GraphQL Schema Guidelines
-
-### Document State Schema
-
-- **Most fields optional** to support creating empty documents
-- Use required fields \`!\` only when absolutely necessary
-- Defaults handled by operations, not schema
-
-#### Mandatory vs Optional Field Rules
-
-A user must always be able to create an **empty document** without providing any information. This drives the following rules:
-
-- **Root type properties** can only be mandatory (\`!\`) if they have a logical default value (e.g., empty array, enum initial status)
-- **Collections** should always use \`[Type!]!\` — inner \`!\` means no nulls in the array, outer \`!\` means the array itself defaults to empty
-- **Child object fields** can be mandatory only if all their required properties also have logical defaults
-- Use \`enum\` types for workflow statuses (e.g., \`status: OrderStatus!\` where the enum has an initial value like \`DRAFT\`)
-
-### ⚠️ CRITICAL: State Type Naming Convention
-
-**MANDATORY**: The global state type name MUST follow this exact pattern:
-
-~~~graphql
-type <DocumentModelName>State {
-    # your fields here
-}
-~~~
-
-**DO NOT** append "Global" to the state type name, even when defining global state:
-
-~~~graphql
-// ❌ WRONG - Do not use "GlobalState" suffix
-type TodoListGlobalState {
-    todos: [Todo!]!
-}
-
-// ✅ CORRECT - Use only "State" suffix
-type TodoListState {
-    todos: [Todo!]!
-}
-
-// ✅ CORRECT - Use "LocalState" suffix for Local scope
-type TodoListLocalState {
-    localTodos: [Todo!]!
-}
-~~~
-
-**Why this matters:**
-
-- The code generator expects the type to be named \`<DocumentModelName>State\`
-- Using \`GlobalState\` or \`LocalState\` suffix will cause TypeScript compilation errors
-- This applies when using \`SET_STATE_SCHEMA\` with \`scope: "global"\`
-
-**Rule**: For global state, the type should be \`<DocumentModelName>State\`. For local state (if needed), the type name should be \`<DocumentModelName>LocalState\`.
-
-### Available Scalar Types
-
-| Standard  | Custom Identity        | Custom Amounts      | Custom Specialized |
-| --------- | ---------------------- | ------------------- | ------------------ |
-| \`String\`  | \`OID\` (Object ID)      | \`Amount\`            | \`EthereumAddress\`  |
-| \`Int\`     | \`PHID\` (Powerhouse ID) | \`Amount_Tokens\`     | \`EmailAddress\`     |
-| \`Float\`   | \`OLabel\`               | \`Amount_Money\`      | \`Date\`             |
-| \`Boolean\` |                        | \`Amount_Fiat\`       | \`DateTime\`         |
-|           |                        | \`Amount_Currency\`   | \`URL\`              |
-|           |                        | \`Amount_Crypto\`     | \`Currency\`         |
-|           |                        | \`Amount_Percentage\` |                    |
-
-### Arrays and Objects
-
-- **Arrays**: Must be mandatory \`[ObjectType!]!\`
-- **Objects in arrays**: Must include \`OID!\` field for unique identification
-- Include \`OLabel\` for metadata when relevant
-
-#### OID vs PHID Usage
-
-- \`OID\` is used as **primary key** (\`id: OID!\`) and **foreign key** (\`otherObjectId: OID!\`) within a document
-- \`PHID\` is **only** for referencing **external documents** (other documents in the drive), typically alongside cached properties (like a link preview — title/snippet may become stale)
-- **NEVER** use the \`ID\` type — it is a common GraphQL convention but is not used in Powerhouse document models
-
-#### Collection Sorting & Trees
-
-- **No need for \`position\` or \`weight\` properties** — maintain order via array index; operations like \`MOVE_X\` reorder the array directly
-- **Trees**: Always define as a flat list with \`parentId: OID\` (root nodes have \`parentId = null\`); do NOT use recursive/nested types
-
-### Input Types
-
-- Reflect user intent with descriptive names
-- Simple, specific fields over complex nested types
-- System auto-generates \`OID\` for new objects (users don't provide manually)
-
-#### Input Type Naming Convention
-
-- Root input type **MUST** be named \`<OperationName>Input\` (PascalCase of the operation name)
-- Example: operation \`SET_CATEGORY_LABEL\` → input type \`SetCategoryLabelInput\`
-- **Failing to follow this convention breaks the code generator**
-
-#### Input Types Cannot Reference State Types
-
-- In operation input schemas, **ONLY** \`enum\` types and scalar types from the state schema can be referenced directly
-- All other state types must be **mirrored** with unique input types (e.g., state type \`MenuItem\` → input type \`NewMenuItemInput\` for the ADD operation)
-- State \`enum\` types **MUST NOT** be redefined in input schemas — reference them directly
-- Each operation should have its **own** input types; do not share mirror types across operations
-
-#### Empty Input Workaround
-
-- Input types with **zero fields** are not supported by the code generator
-- Workaround: add \`_: Boolean\` as a dummy optional parameter
-
-~~~graphql
-# ❌ BAD - empty input type breaks codegen
-input ClearAllInput {}
-
-# ✅ GOOD - dummy field workaround
-input ClearAllInput {
-    _: Boolean
-}
-~~~
-
-## Working with Drives
-
-**MANDATORY**: Check the document-drive schema before performing drive operations.
-
-### Drive Types
-
-There might be two drives available with a special use case:
-
-1. **Vetra Drive** (\`vetra-{hash}\`):
-   - Contains **source documents**: document models and document editors
-   - Used for development
-   - Add document model and editor definitions here
-
-2. **Preview Drive** (\`preview-{hash}\`, named "Vetra Preview"):
-   - Contains **demo and preview documents** (document instances)
-   - Used for showcasing and testing document models
-   - Add actual document instances here
-
-### Drive Operations
-
-When working with drives (adding/removing documents, creating folders, etc.):
-
-1. **Always get the drive schema first**:
-
-   ~~~typescript
-   mcp__reactor -
-     mcp__getDocumentModelSchema({ type: "powerhouse/document-drive" });
-   ~~~
-
-2. **Review available operations** in the schema, such as:
-   - \`ADD_FILE\` - Add a document to the drive
-   - \`ADD_FOLDER\` - Create a new folder
-   - \`DELETE_NODE\` - Remove a file or folder (use this, NOT "DELETE_FILE")
-   - \`UPDATE_NODE\` - Update node properties
-   - \`MOVE_NODE\` - Move a node to different location
-
-3. **Check input schemas** for each operation to ensure you're passing correct parameters
+- \`npm run tsc\` checks the types.
+- \`npm run lint:fix\` runs oxlint with type-aware rules and fixes what it can.
+- \`ph model check\` checks the code-first models, if the package has any.
+- \`npm run test:coverage\` runs the tests and measures the coverage of \`document-models/**/src/reducers/**\` and \`document-models/**/v*/modules/**\`. Lines, branches, functions and statements must each stay at 95% or more. If coverage drops, add tests in \`v<n>/tests/\`. Do not lower the threshold or exclude files. [Test coverage](#test-coverage) shows how to reach 100%.
 `.raw;

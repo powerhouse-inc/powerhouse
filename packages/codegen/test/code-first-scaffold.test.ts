@@ -25,6 +25,7 @@ import {
 import { buildTsMorphProject, formatSafe } from "../src/utils/index.mts";
 import { refreshDocumentModelAggregates } from "../src/file-builders/document-model/document-model.js";
 import { ViteTypeScriptSourceImportAdapter } from "../src/utils/definition-source-importer.js";
+import { agentsTemplate } from "../src/templates/boilerplate/AGENTS.md.js";
 import { createCodeFirstPackage } from "./code-first-package.js";
 
 let projectDir: string;
@@ -240,6 +241,23 @@ describe("planDefinitionSourceRegistration", () => {
 });
 
 describe("generateCodeFirstDocumentModel", () => {
+  // The generated AGENTS.md once named reducer paths that a code-first model
+  // does not have (T-210). Every `v1/` path it names must be a scaffold file.
+  it("writes each code-first file that the generated AGENTS.md names", async () => {
+    const { written } = await generateModel();
+    const named = [...agentsTemplate.matchAll(/`(v1\/[^`]+)`/g)].map(
+      ([, path]) => path,
+    );
+
+    expect(named).toContain("v1/modules/items.ts");
+    for (const path of named) {
+      expect(
+        written.some((file) => file.startsWith(`document-models/todo/${path}`)),
+        path,
+      ).toBe(true);
+    }
+  });
+
   it("writes the model, registers it, and exports it from the package", async () => {
     expect(await generateModel()).toStrictEqual({
       written: [
