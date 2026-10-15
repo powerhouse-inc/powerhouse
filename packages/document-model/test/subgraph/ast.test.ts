@@ -574,3 +574,139 @@ describe("equals in a subgraph", () => {
     );
   });
 });
+
+describe("input defaults in a subgraph", () => {
+  function shelf(options: {
+    readonly limit: unknown;
+    readonly status: unknown;
+    readonly computed: unknown;
+  }) {
+    const Status = ph.enum("ShelfStatus", { values: ["OPEN", "CLOSED"] });
+    const Filter = ph.input("ShelfFilter", {
+      fields: {
+        status: ph.ref(Status, { defaultValue: options.status as never }),
+      },
+    });
+    const Book = ph.object("ShelfBook", {
+      fields: {
+        title: ph.String(),
+        pages: ph.field({
+          args: { from: ph.Int({ defaultValue: options.computed as never }) },
+          returns: ph.Int(),
+        }),
+      },
+    });
+    const { builders, exposed } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+    return compileSubgraphSchema({
+      name: "shelf",
+      entries: [
+        builders.query("books", {
+          args: {
+            limit: ph.Int({ defaultValue: options.limit as never }),
+            filter: ph.ref(Filter),
+          },
+          returns: ph.list(ph.ref(Book)),
+          resolve: () => [],
+        }),
+        builders.field((Book.computedTokens as Record<string, never>).pages, {
+          resolve: () => 0,
+        }),
+      ],
+      exposed,
+    });
+  }
+
+  it("refuses an invalid argument, computed argument, or input field default", () => {
+    expect(
+      shelf({ limit: "ten", status: "LOST", computed: 1.5 }).diagnostics.map(
+        ({ code, path, expected, received }) => ({
+          code,
+          path,
+          expected,
+          received,
+        }),
+      ),
+    ).toStrictEqual([
+      {
+        code: "PH-DEF-OPTION-INVALID",
+        path: [
+          "entries",
+          0,
+          "args",
+          "filter",
+          "fields",
+          "status",
+          "defaultValue",
+        ],
+        expected: "a value of type ShelfStatus",
+        received: '"LOST"',
+      },
+      {
+        code: "PH-DEF-OPTION-INVALID",
+        path: ["entries", 0, "args", "limit", "defaultValue"],
+        expected: "a value of type Int",
+        received: '"ten"',
+      },
+      {
+        code: "PH-DEF-OPTION-INVALID",
+        path: [
+          "entries",
+          0,
+          "returns",
+          "item",
+          "computed",
+          "pages",
+          "args",
+          "fields",
+          "from",
+          "defaultValue",
+        ],
+        expected: "a value of type Int",
+        received: "1.5",
+      },
+    ]);
+  });
+
+  it("checks argument defaults against GraphQL but not against validators", () => {
+    function since(defaultValue: unknown) {
+      const { builders, exposed } = createEntryBuilders<
+        unknown,
+        unknown,
+        unknown,
+        unknown
+      >();
+      return compileSubgraphSchema({
+        name: "since",
+        entries: [
+          builders.query("changes", {
+            args: {
+              since: ph.DateTime({ defaultValue: defaultValue as never }),
+            },
+            returns: ph.Int(),
+            resolve: () => 0,
+          }),
+        ],
+        exposed,
+      });
+    }
+    const accepted = since("not-a-date");
+    expect(accepted.diagnostics).toStrictEqual([]);
+    expect(print(accepted.document as never)).toContain(
+      'changes(since: DateTime = "not-a-date"): Int',
+    );
+  });
+
+  it("compiles valid defaults into the printed schema", () => {
+    const compiled = shelf({ limit: 10, status: "OPEN", computed: 1 });
+    expect(compiled.diagnostics).toStrictEqual([]);
+    const printed = print(compiled.document as never);
+    expect(printed).toContain("books(limit: Int = 10, filter: ShelfFilter)");
+    expect(printed).toContain("status: ShelfStatus = OPEN");
+    expect(printed).toContain("pages(from: Int = 1): Int");
+  });
+});

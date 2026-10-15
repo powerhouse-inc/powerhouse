@@ -40,7 +40,12 @@ export function asSchemaFirst(
   return rest as DocumentModelModule;
 }
 
-type ScopedOperations = Readonly<Record<string, readonly { error?: string }[]>>;
+type StoredOperation = {
+  readonly error?: string;
+  readonly action: { readonly input: unknown };
+};
+
+type ScopedOperations = Readonly<Record<string, readonly StoredOperation[]>>;
 
 function operationsByScope(document: PHDocument): ScopedOperations {
   return document.operations as unknown as ScopedOperations;
@@ -49,7 +54,7 @@ function operationsByScope(document: PHDocument): ScopedOperations {
 function appendedSince(
   document: PHDocument,
   before: Readonly<Record<string, number>>,
-): readonly { error?: string }[] {
+): readonly StoredOperation[] {
   const scopes = operationsByScope(document);
   return Object.keys(scopes)
     .sort()
@@ -145,6 +150,7 @@ type Host = {
     variableValues?: Record<string, unknown>,
   ) => Promise<ExecutionResult>;
   readonly state: () => Record<string, unknown>;
+  readonly inputs: () => readonly unknown[];
 };
 
 export function hostFor(
@@ -173,6 +179,10 @@ export function hostFor(
     state: () =>
       (current().state as unknown as { global: Record<string, unknown> })
         .global,
+    inputs: () =>
+      (operationsByScope(current()).global ?? []).map(
+        (operation) => operation.action.input,
+      ),
   };
 }
 

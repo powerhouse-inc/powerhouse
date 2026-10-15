@@ -47,6 +47,31 @@ ph.String({ equals: "[A-Z]{3}" })            // String @equals(value: "[A-Z]{3}"
 
 `equals` works on a scalar whose validator is a Zod string schema: `ph.String`, `ph.ID`, and catalog scalars such as `ph.PHID`, `ph.EmailAddress`, and `ph.DateTime`. `ph.Address` and `ph.AttachmentRef` are strings, but they validate with a custom check, so they do not accept `equals`. On those, on a number, object, or opaque scalar, on a list, a reference, or a list item, and on a field of a subgraph, the declaration fails. A pattern that is not a valid regular expression also fails. So does a pattern with a `/` outside a character class or with a line terminator, because a schema-first model writes the pattern into a regular expression literal. Write a slash as `\/` and a line break as `\n`. As in a schema-first model, the replacement tokens `$&`, `` $` ``, `$'`, and `$$` in the pattern are expanded before it is used; write `$$` for a literal `$` next to one of those characters.
 
+## Default an operation input field with `defaultValue`
+
+A field of an operation input accepts `defaultValue`. The SDL then declares the same GraphQL default that a schema-first model writes by hand.
+
+```ts
+ph.input("SetTitleInput", {
+  fields: {
+    title: ph.String({ required: true, defaultValue: "Untitled" }), // title: String! = "Untitled"
+    count: ph.Int({ defaultValue: 3 }),                             // count: Int = 3
+  },
+});
+```
+
+The GraphQL host fills the default when a mutation omits the field. It keeps an explicit value. It also keeps an explicit `null` on a nullable field. An explicit `null` on a required field is a GraphQL error, and the host stores no operation.
+
+A direct call to an action creator does not fill defaults, and neither does the reducer. They validate the input and keep it as passed, the same as in a schema-first model. Only a string, number, or boolean default on a field that is not a list reaches the validator. An enum default is a string, so it reaches the validator too. Any other default applies only at the GraphQL host. That covers a `null` default, an object default such as one on `ph.Amount`, and every default on a list field, including a single item. So a direct call that omits a required field passes validation when the field is not a list and its default is a string, number, or boolean. A direct call that omits a required field with any other default fails validation. In the inferred input type, a field with a default is an optional key.
+
+The default must be a value the field's GraphQL type accepts. The rules are the GraphQL rules for a default literal. An `Int` takes a 32-bit integer, a `Float` takes a number, a `String` takes a string, a `Boolean` takes a boolean, and an `ID` takes a string or an integer. A list takes one item or an array of items. An enum takes the name of one of its values. An input object takes an object that names only its declared fields and includes every required field that has no default of its own. A catalog or package scalar takes any literal. The host does not apply a catalog scalar's own literal parser to a default, so `ph.Amount({ defaultValue: { value: 5 } })` is valid. In an operation input, a scalar default must also pass the scalar's validator and its `equals` pattern. Any other default fails with `PH-DEF-OPTION-INVALID`.
+
+An argument or an input field of a subgraph follows the same GraphQL rules. A subgraph does not validate its fields, so the scalar's validator does not apply there.
+
+Three more kinds of default fail with `PH-DEF-OPTION-INVALID`, because a GraphQL host cannot build a schema that contains them. A key of an object inside a scalar default must be a GraphQL name, such as `a_b` and not `a-b`. A string must be well-formed Unicode, with no lone surrogate. An object default must not lead back to the input type that declares it through other object defaults, as in `input Node { child: Node = {} }`. A `null` default, an empty list, or a field with no default ends such a cycle.
+
+A field of the document state cannot declare `defaultValue`. Set the value in the scope's `initialValue` or in the reducer.
+
 ## Declarations that fail
 
 The declarations below fail as soon as the module runs. Each failure reports a diagnostic that tells you how to fix it. All four would otherwise produce a model whose runtime behavior does not match its TypeScript types.

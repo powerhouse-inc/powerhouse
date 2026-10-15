@@ -71,7 +71,7 @@ const catalog = {
     severity: "error",
     phase: "definition",
     meaning:
-      "A builder option is malformed: wrong type, accessor, symbol key, non-plain object, or an explicit undefined default",
+      "A builder option is malformed: wrong type, accessor, symbol key, non-plain object, an explicit undefined default, or an input default its GraphQL type does not accept or a GraphQL host cannot build",
   },
   "PH-DEF-NAME-INVALID": {
     severity: "error",

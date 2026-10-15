@@ -65,6 +65,7 @@ export function compileSubgraphSchema(
   const walk = new DescriptorWalk(collector, {
     allowOutputDefaults: true,
     allowEquals: false,
+    validateInputDefaults: false,
   });
   const entries: SubgraphEntryDefinition[] = [];
   const roots = new Map<RootName, FieldNode[]>();

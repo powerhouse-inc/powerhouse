@@ -28,7 +28,12 @@ import {
   getDocumentModelTypeDefs,
   reservedTypeNamesTaken,
 } from "../src/utils/create-schema.js";
-import { asSchemaFirst, hostFor, printSchema } from "./utils/graphql-host.js";
+import {
+  asSchemaFirst,
+  hostFor,
+  messages,
+  printSchema,
+} from "./utils/graphql-host.js";
 
 /**
  * A code-first module carries both a structured definition and the stored
@@ -882,5 +887,182 @@ describe("an operation input with default values", () => {
     );
     expect(result.errors).toBeUndefined();
     expect(host.state()).toEqual({ level: "LOW", count: 3 });
+  });
+});
+
+describe("an operation input default at the host", () => {
+  function buildTitles(): DocumentModelModule {
+    const context = defineDocumentModel({
+      id: "test/titles",
+      name: "Titles",
+      description: "",
+      extension: "titles",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("TitlesState", {
+            fields: {
+              title: ph.String(),
+              subtitle: ph.String(),
+              count: ph.Int(),
+            },
+          }),
+          initialValue: { title: null, subtitle: null, count: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const editing = context.module("editing", {
+      operations: ({ global }) => ({
+        setFields: global({
+          input: ph.input("SetFieldsInput", {
+            fields: {
+              title: ph.String({ required: true, defaultValue: "Untitled" }),
+              subtitle: ph.String({ defaultValue: "Sub" }),
+              count: ph.Int({ defaultValue: 3 }),
+            },
+          }),
+          reduce(state, input) {
+            state.title = input.title;
+            state.subtitle = input.subtitle ?? null;
+            state.count = input.count ?? null;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [editing],
+    }) as unknown as DocumentModelModule;
+  }
+
+  const MODULE = buildTitles();
+
+  it("serves the same schema as the stored SDL", () => {
+    const printed = printSchema(hostFor(MODULE).schema);
+    expect(printed).toBe(printSchema(hostFor(asSchemaFirst(MODULE)).schema));
+    expect(printed).toContain(
+      'input Titles_SetFieldsInput {\n  count: Int = 3\n  subtitle: String = "Sub"\n  title: String! = "Untitled"\n}',
+    );
+  });
+
+  const initial = { title: null, subtitle: null, count: null };
+  it.each([
+    {
+      sent: "{}",
+      errors: [],
+      inputs: [{ title: "Untitled", subtitle: "Sub", count: 3 }],
+      state: { title: "Untitled", subtitle: "Sub", count: 3 },
+    },
+    {
+      sent: '{ title: "T", subtitle: "S2", count: 5 }',
+      errors: [],
+      inputs: [{ title: "T", subtitle: "S2", count: 5 }],
+      state: { title: "T", subtitle: "S2", count: 5 },
+    },
+    {
+      sent: "{ title: null }",
+      errors: ['Expected value of type "String!", found null.'],
+      inputs: [],
+      state: initial,
+    },
+    {
+      sent: "{ subtitle: null, count: null }",
+      errors: [],
+      inputs: [{ title: "Untitled", subtitle: null, count: null }],
+      state: { title: "Untitled", subtitle: null, count: null },
+    },
+  ])("handles input $sent the same both ways", async (row) => {
+    const observed = await Promise.all(
+      [MODULE, asSchemaFirst(MODULE)].map(async (module) => {
+        const host = hostFor(module);
+        const result = await host.run(
+          `mutation { Titles { setFields(docId: "doc-1", input: ${row.sent}) { name } } }`,
+        );
+        return {
+          errors: messages(result),
+          inputs: host.inputs(),
+          state: host.state(),
+        };
+      }),
+    );
+    const expected = {
+      errors: row.errors,
+      inputs: row.inputs,
+      state: row.state,
+    };
+    expect(observed).toStrictEqual([expected, expected]);
+  });
+});
+
+describe("a catalog scalar input default at the host", () => {
+  function buildPricing(): DocumentModelModule {
+    const context = defineDocumentModel({
+      id: "test/pricing",
+      name: "Pricing",
+      description: "",
+      extension: "pricing",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("PricingState", {
+            fields: {
+              price: ph.Amount(),
+              total: ph.Money(),
+              due: ph.DateTime(),
+            },
+          }),
+          initialValue: { price: null, total: null, due: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const editing = context.module("editing", {
+      operations: ({ global }) => ({
+        setPricing: global({
+          input: ph.input("SetPricingInput", {
+            fields: {
+              price: ph.Amount({ defaultValue: { unit: "USD", value: 5 } }),
+              total: ph.Money({ defaultValue: 0 }),
+              due: ph.DateTime({ defaultValue: "2026-01-01T00:00:00.000Z" }),
+            },
+          }),
+          reduce(state, input) {
+            state.price = input.price ?? null;
+            state.total = input.total ?? null;
+            state.due = input.due ?? null;
+          },
+        }),
+      }),
+    });
+    return context.finalize({
+      modules: [editing],
+    }) as unknown as DocumentModelModule;
+  }
+
+  it("fills the same stored input both ways", async () => {
+    const module = buildPricing();
+    const observed = await Promise.all(
+      [module, asSchemaFirst(module)].map(async (served) => {
+        const host = hostFor(served);
+        const result = await host.run(
+          'mutation { Pricing { setPricing(docId: "doc-1", input: {}) { name } } }',
+        );
+        return { errors: messages(result), inputs: host.inputs() };
+      }),
+    );
+    const expected = {
+      errors: [],
+      inputs: [
+        {
+          price: { unit: "USD", value: 5 },
+          total: 0,
+          due: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    };
+    // graphql-js coerces an object literal into a null-prototype object.
+    expect(observed).toEqual([expected, expected]);
   });
 });

@@ -696,3 +696,201 @@ describe("compatibility declarations", () => {
     });
   });
 });
+
+describe("operation input defaults across the three routes", () => {
+  const STATE_SDL = "type DefaultState {\n  title: String\n}";
+
+  function finalizeTitle(
+    title: ReturnType<typeof ph.String>,
+    options: {
+      readonly astDefault?: string;
+      readonly compatibility?: ReturnType<typeof schemaFirstSpecification>;
+    } = {},
+  ) {
+    const context = defineDocumentModel({
+      id: "powerhouse/default",
+      name: "Default",
+      description: "",
+      extension: "dft",
+      version: 1,
+      author: { name: "Powerhouse" },
+      specifications: {
+        ...(options.astDefault !== undefined && {
+          graphQLCompatibility: schemaFirstGraphQLDocument([
+            STATE_SDL,
+            `input SetTitleInput {\n  title: String!${options.astDefault}\n}`,
+          ]),
+        }),
+        global: {
+          schema: ph.object("DefaultState", { fields: { title: ph.String() } }),
+          initialValue: { title: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const module = context.module("editing", {
+      operations: ({ global }) => ({
+        setTitle: global({
+          input: ph.input("SetTitleInput", { fields: { title } }),
+          reduce(state, input) {
+            state.title = input.title;
+          },
+        }),
+      }),
+    });
+    return context.finalize(
+      options.compatibility === undefined
+        ? { modules: [module] }
+        : { modules: [module], compatibility: options.compatibility },
+    );
+  }
+
+  function operationSchema(model: ReturnType<typeof finalizeTitle>) {
+    return model.documentModel.global.specifications[0]?.modules[0]
+      ?.operations[0]?.schema;
+  }
+
+  const AST_DEFAULT_PATH = [
+    "specifications",
+    "graphQLCompatibility",
+    "document",
+    "SetTitleInput",
+    "fields",
+    "title",
+    "defaultValue",
+  ];
+
+  it("prints the typed declaration's default into the stored SDL", () => {
+    expect(
+      operationSchema(
+        finalizeTitle(ph.String({ required: true, defaultValue: "Untitled" })),
+      ),
+    ).toContain('title: String! = "Untitled"');
+  });
+
+  it("finalizes when the compatibility AST declares the same default", () => {
+    const model = finalizeTitle(
+      ph.String({ required: true, defaultValue: "Untitled" }),
+      { astDefault: ' = "Untitled"' },
+    );
+    expect(operationSchema(model)).toContain('title: String! = "Untitled"');
+  });
+
+  it.each([
+    [
+      "the AST alone",
+      ph.String({ required: true }),
+      ' = "Untitled"',
+      "no default",
+      '"Untitled"',
+    ],
+    [
+      "the typed declaration alone",
+      ph.String({ required: true, defaultValue: "Untitled" }),
+      "",
+      '"Untitled"',
+      "no default",
+    ],
+    [
+      "different values",
+      ph.String({ required: true, defaultValue: "Other" }),
+      ' = "Untitled"',
+      '"Other"',
+      '"Untitled"',
+    ],
+  ])(
+    "refuses a default declared by %s",
+    (_, title, astDefault, expected, received) => {
+      const diagnostics = diagnosticsOf(() =>
+        finalizeTitle(title, { astDefault }),
+      );
+      expect(
+        diagnostics.map(({ code, path, expected, received, repair }) => ({
+          code,
+          path,
+          expected,
+          received,
+          repair,
+        })),
+      ).toStrictEqual([
+        {
+          code: "PH-DM-COMPATIBILITY-INVALID",
+          path: AST_DEFAULT_PATH,
+          expected,
+          received,
+          repair:
+            "Remove the default from the compatibility AST, or declare a defaultValue the field's type accepts on the descriptor field SetTitleInput.title.",
+        },
+      ]);
+    },
+  );
+
+  function retained(title: ReturnType<typeof ph.String>) {
+    const model = finalizeTitle(title, {
+      compatibility: schemaFirstSpecification({
+        serialization: {
+          "operation/editing/setTitle/schema":
+            'input SetTitleInput {\n    title: String! = "Untitled"\n}',
+        },
+      }),
+    });
+    return checkRetainedSerialization({
+      definition: model.definition,
+      documentModel: model.documentModel,
+    });
+  }
+
+  it("accepts a retained serialization with the same default", () => {
+    expect(
+      retained(ph.String({ required: true, defaultValue: "Untitled" })),
+    ).toStrictEqual([]);
+  });
+
+  function storedInput(defaultValue?: string): string {
+    const fallback =
+      defaultValue === undefined
+        ? ""
+        : `"defaultValue":${JSON.stringify(defaultValue)},`;
+    return `{"description":null,"fields":[{${fallback}"deprecated":null,"description":null,"key":"title","name":"title","type":{"kind":"scalar","name":"String","required":true}}],"kind":"input","name":"SetTitleInput","unknownKeys":"preserve"}`;
+  }
+
+  it.each([
+    ["lacks the default", ph.String({ required: true }), undefined],
+    [
+      "declares a different default",
+      ph.String({ required: true, defaultValue: "Other" }),
+      "Other",
+    ],
+  ])(
+    "reports a retained default the typed declaration %s",
+    (_, title, typed) => {
+      expect(
+        retained(title).map(({ code, path, message, expected, received }) => ({
+          code,
+          path,
+          message,
+          expected,
+          received,
+        })),
+      ).toStrictEqual([
+        {
+          code: "PH-DM-COMPATIBILITY-INVALID",
+          path: [
+            "specifications",
+            0,
+            "modules",
+            0,
+            "operations",
+            0,
+            "schema",
+            "SetTitleInput",
+          ],
+          message:
+            "The retained segment describes SetTitleInput differently than the declaration does.",
+          expected: storedInput(typed),
+          received: storedInput("Untitled"),
+        },
+      ]);
+    },
+  );
+});

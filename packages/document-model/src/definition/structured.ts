@@ -39,6 +39,11 @@ import {
 import { nameAnonymousInput } from "./field.js";
 import { checkGraphQLDocumentAgreement } from "./graphql-ast.js";
 import {
+  fieldDefault,
+  inputDefaultCycle,
+  inputDefaultProblem,
+} from "./input-default.js";
+import {
   checkDerivedNameCollisions,
   type DerivedModuleNames,
   type DerivedOperationNames,
@@ -47,9 +52,17 @@ import {
   deriveDocumentModelOperationNames,
   type DocumentModelNames,
 } from "./naming.js";
-import { canonicalDigest, compareCodeUnits } from "./primitives.js";
+import {
+  canonicalDigest,
+  canonicalJson,
+  compareCodeUnits,
+} from "./primitives.js";
 import { assignStoredSegments } from "./segments.js";
-import { namedTypeInventory, printSchemaSegment } from "./printer.js";
+import {
+  namedTypeInventory,
+  printSchemaSegment,
+  printTypeReference,
+} from "./printer.js";
 import {
   internalScalarDiagnostic,
   isCatalogBinding,
@@ -222,12 +235,6 @@ type Position = "input" | "output";
 /** Abandons one named definition whose failure is already recorded. */
 class WalkAbort extends Error {}
 
-function fieldDefault(field: AnyFieldDescriptor): JsonValue | undefined {
-  return field.presentation.default.present
-    ? field.presentation.default.value
-    : undefined;
-}
-
 function directivesOf(
   field: AnyFieldDescriptor,
 ): Pick<FieldDefinition, "directives"> {
@@ -238,6 +245,7 @@ function directivesOf(
 type DescriptorWalkPolicy = {
   readonly allowOutputDefaults: boolean;
   readonly allowEquals: boolean;
+  readonly validateInputDefaults: boolean;
 };
 
 export class DescriptorWalk {
@@ -380,6 +388,7 @@ export class DescriptorWalk {
           fields: this.#inputFields(
             (descriptor as InputDescriptor).fields,
             path,
+            descriptor as InputDescriptor,
           ),
         };
       case "union":
@@ -431,6 +440,7 @@ export class DescriptorWalk {
   ): TypeReferenceDefinition | undefined {
     return this.#attempt(() => {
       const reference = this.#typeReference(field, path);
+      if (position === "input") this.#checkInputDefault(field, reference, path);
       // Resolving a reference is not the same as reaching its target: without
       // this, a type named only by an entry's return would never be emitted.
       this.#visitField(field, position, path);
@@ -549,15 +559,21 @@ export class DescriptorWalk {
   #inputFields(
     fields: ObjectFields,
     path: DefinitionPath,
+    owner?: InputDescriptor,
   ): InputFieldDefinition[] {
     return Object.entries(fields).map(([key, field]) => {
       const defaultValue = fieldDefault(field);
+      const fieldPath = [...path, "fields", key];
+      const type = this.#typeReference(field, fieldPath);
+      if (!this.#checkInputDefault(field, type, fieldPath) && owner) {
+        this.#checkDefaultCycle(owner, key, fieldPath);
+      }
       return {
         key,
         name: key,
         description: field.presentation.description,
         deprecated: field.presentation.deprecated,
-        type: this.#typeReference(field, [...path, "fields", key]),
+        type,
         ...(defaultValue !== undefined && { defaultValue }),
         ...directivesOf(field),
       };
@@ -657,7 +673,7 @@ export class DescriptorWalk {
         expected: "no defaultValue on a document state field use",
         received: "defaultValue",
         repair:
-          "Remove defaultValue; set the value in the scope initial value or in the reducer.",
+          "Remove defaultValue and set the value in the scope initial value or in the reducer. To default an operation input, declare defaultValue on the field of its ph.input.",
       });
     }
     if (!this.#policy.allowEquals && field.presentation.directives.length > 0) {
@@ -694,6 +710,48 @@ export class DescriptorWalk {
         return;
       }
     }
+  }
+
+  /** Reports a default the field's type does not accept; true when it did. */
+  #checkInputDefault(
+    field: AnyFieldDescriptor,
+    type: TypeReferenceDefinition,
+    path: DefinitionPath,
+  ): boolean {
+    const value = fieldDefault(field);
+    if (value === undefined) return false;
+    const problem = inputDefaultProblem(field, value, {
+      runValidators: this.#policy.validateInputDefaults,
+    });
+    if (problem === null) return false;
+    const typeText = printTypeReference(type);
+    this.#collector.add({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [...path, "defaultValue"],
+      message: `defaultValue is not a valid value of type ${typeText}: ${problem}.`,
+      expected: `a value of type ${typeText}`,
+      received: canonicalJson(value),
+      repair: "Use a default the field's type accepts, or remove defaultValue.",
+    });
+    return true;
+  }
+
+  #checkDefaultCycle(
+    owner: InputDescriptor,
+    key: string,
+    path: DefinitionPath,
+  ): void {
+    const cycle = inputDefaultCycle(owner, key);
+    if (cycle === null) return;
+    this.#collector.add({
+      code: "PH-DEF-OPTION-INVALID",
+      path: [...path, "defaultValue"],
+      message: `defaultValue builds input ${owner.name} from itself through the object defaults on ${cycle.join(", ")}, which GraphQL cannot resolve.`,
+      expected: "no cycle of object defaults between input types",
+      received: canonicalJson(fieldDefault(owner.fields[key]) ?? null),
+      repair:
+        "Remove any one object default in the cycle, or default a nullable field in it to null. Either change clears every diagnostic this cycle reports.",
+    });
   }
 
   #resolve(
@@ -1115,6 +1173,7 @@ export function compileDocumentModelVersion(
   const walk = new DescriptorWalk(collector, {
     allowOutputDefaults: false,
     allowEquals: true,
+    validateInputDefaults: true,
   });
   const compatibility = new AppliedCompatibility(
     collector,

@@ -701,6 +701,7 @@ function compareFields(
           {
             expected: field.defaultValue ?? "no default",
             received: match.defaultValue ?? "no default",
+            repair: `Remove the default from the compatibility AST, or declare a defaultValue the field's type accepts on the descriptor field ${descriptor.name}.${field.name}.`,
           },
         ),
       );

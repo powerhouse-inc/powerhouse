@@ -71,6 +71,10 @@ function applyDirective(
   return base.check(z.regex(new RegExp(equalsPattern(value))));
 }
 
+export function constrainedBase(field: AnyFieldDescriptor): z.ZodType {
+  return field.presentation.directives.reduce(applyDirective, fieldBase(field));
+}
+
 /**
  * The generator emits `.default(v)` only on a field that is not a list and
  * whose default is a string, number, boolean, or enum literal. A list, input
@@ -118,10 +122,7 @@ export function buildValidator(descriptor: AnyDescriptor): z.ZodType {
     case "list":
     case "ref": {
       const field = descriptor as AnyFieldDescriptor;
-      const base = withDefault(
-        field,
-        field.presentation.directives.reduce(applyDirective, fieldBase(field)),
-      );
+      const base = withDefault(field, constrainedBase(field));
       return field.required ? base : base.nullish();
     }
     case "enum": {

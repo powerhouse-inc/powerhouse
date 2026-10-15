@@ -13,7 +13,10 @@ import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.j
 import { ph } from "../../src/definition/field.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
 import { canonicalDigest } from "../../src/definition/primitives.js";
-import type { AnyTypeDescriptor } from "../../src/definition/types.js";
+import type {
+  AnyFieldDescriptor,
+  AnyTypeDescriptor,
+} from "../../src/definition/types.js";
 import { Invoice, invoice } from "./fixtures/invoice.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -728,6 +731,9 @@ describe("the structured definition builder", () => {
       }).finalize({ modules: [] }),
     );
     expect(stateDiagnostics[0]?.code).toBe("PH-DM-DEFAULT-UNSUPPORTED");
+    expect(stateDiagnostics[0]?.repair).toBe(
+      "Remove defaultValue and set the value in the scope initial value or in the reducer. To default an operation input, declare defaultValue on the field of its ph.input.",
+    );
 
     const model = tinyModel();
     const module = model.module("defaults", {
@@ -1064,5 +1070,228 @@ describe("the stored SDL segments", () => {
       build(ph.interface("EmptyInterface", { fields: {} })),
     );
     expect(iface[0]?.message).toContain("EmptyInterface");
+  });
+});
+
+describe("operation input defaults", () => {
+  const Status = ph.enum("DefaultStatus", { values: ["OPEN", "DONE"] });
+  const Item = ph.input("DefaultItemInput", {
+    fields: {
+      name: ph.String({ required: true }),
+      count: ph.Int({ required: true, defaultValue: 1 }),
+    },
+  });
+
+  function compileInput(value: AnyFieldDescriptor) {
+    const model = tinyModel();
+    const module = model.module("defaults", {
+      operations: ({ global }) => ({
+        setValue: global({
+          input: ph.input("SetValueInput", { fields: { value } }),
+          reduce() {},
+        }),
+      }),
+    });
+    return model.finalize({ modules: [module] });
+  }
+
+  it.each([
+    [
+      "Int",
+      ph.Int({ defaultValue: "x" }),
+      "Int",
+      '"x"',
+      '"x" is not a signed 32-bit integer',
+    ],
+    [
+      "a fractional Int",
+      ph.Int({ defaultValue: 1.5 }),
+      "Int",
+      "1.5",
+      "1.5 is not a signed 32-bit integer",
+    ],
+    [
+      "an Int above 32 bits",
+      ph.Int({ defaultValue: 2 ** 31 }),
+      "Int",
+      "2147483648",
+      "2147483648 is not a signed 32-bit integer",
+    ],
+    [
+      "null on a required field",
+      ph.String({ required: true, defaultValue: null }),
+      "String!",
+      "null",
+      "null is not accepted by a required field",
+    ],
+    [
+      "an enum non-member",
+      ph.ref(Status, { defaultValue: "MAYBE" }),
+      "DefaultStatus",
+      '"MAYBE"',
+      '"MAYBE" is not a value of enum DefaultStatus (OPEN, DONE)',
+    ],
+    [
+      "an enum default given as a number",
+      ph.ref(Status, { defaultValue: 1 }),
+      "DefaultStatus",
+      "1",
+      "1 is not a value of enum DefaultStatus (OPEN, DONE)",
+    ],
+    [
+      "an input object with an unknown key",
+      ph.ref(Item, { defaultValue: { name: "a", extra: 1 } }),
+      "DefaultItemInput",
+      '{"extra":1,"name":"a"}',
+      'field "extra" is not declared on DefaultItemInput',
+    ],
+    [
+      "an input object missing a required field",
+      ph.ref(Item, { defaultValue: {} }),
+      "DefaultItemInput",
+      "{}",
+      'required field "name" of DefaultItemInput is missing',
+    ],
+    [
+      "an input object with a wrong nested type",
+      ph.ref(Item, { defaultValue: { name: 5 } }),
+      "DefaultItemInput",
+      '{"name":5}',
+      'field "name": 5 is not a string',
+    ],
+    [
+      "a list with a wrong item",
+      ph.list(ph.Int(), { defaultValue: [1, "two"] }),
+      "[Int]",
+      '[1,"two"]',
+      'item 1: "two" is not a signed 32-bit integer',
+    ],
+    [
+      "a value equals rejects",
+      ph.String({ equals: "abc", defaultValue: "abd" }),
+      "String",
+      '"abd"',
+      '"abd" is not a valid String: Invalid string: must match pattern /^abc$/',
+    ],
+    [
+      "a DateTime that is not a date",
+      ph.DateTime({ defaultValue: "not-a-date" }),
+      "DateTime",
+      '"not-a-date"',
+      '"not-a-date" is not a valid DateTime: Invalid ISO datetime',
+    ],
+  ])("refuses %s", (_, field, type, received, reason) => {
+    const diagnostics = diagnosticsOf(() =>
+      compileInput(field as AnyFieldDescriptor),
+    );
+    expect(
+      diagnostics.map(
+        ({ code, path, message, expected, received, repair }) => ({
+          code,
+          path,
+          message,
+          expected,
+          received,
+          repair,
+        }),
+      ),
+    ).toStrictEqual([
+      {
+        code: "PH-DEF-OPTION-INVALID",
+        path: [
+          "modules",
+          0,
+          "operations",
+          0,
+          "input",
+          "fields",
+          "value",
+          "defaultValue",
+        ],
+        message: `defaultValue is not a valid value of type ${type}: ${reason}.`,
+        expected: `a value of type ${type}`,
+        received,
+        repair:
+          "Use a default the field's type accepts, or remove defaultValue.",
+      },
+    ]);
+  });
+
+  it("gives the validator's reason once, ending in one period", () => {
+    expect(
+      diagnosticsOf(() =>
+        compileInput(ph.EmailAddress({ defaultValue: "nope" })),
+      ).map((diagnostic) => diagnostic.message),
+    ).toStrictEqual([
+      'defaultValue is not a valid value of type EmailAddress: "nope" is not a valid EmailAddress: Invalid email address.',
+    ]);
+  });
+
+  it.each([
+    [
+      "a required String",
+      ph.String({ required: true, defaultValue: "Untitled" }),
+      'value: String! = "Untitled"',
+    ],
+    [
+      "null on a nullable Int",
+      ph.Int({ defaultValue: null }),
+      "value: Int = null",
+    ],
+    [
+      "one value for a list",
+      ph.list(ph.String(), { defaultValue: "a" }),
+      'value: [String] = "a"',
+    ],
+    [
+      "an input object that omits a defaulted field",
+      ph.ref(Item, { defaultValue: { name: "a" } }),
+      'value: DefaultItemInput = {name: "a"}',
+    ],
+    ["an integer ID", ph.ID({ defaultValue: 5 }), "value: ID = 5"],
+    ["an integer Float", ph.Float({ defaultValue: 1 }), "value: Float = 1"],
+    [
+      "a DateTime",
+      ph.DateTime({ defaultValue: "2026-01-01T00:00:00.000Z" }),
+      'value: DateTime = "2026-01-01T00:00:00.000Z"',
+    ],
+    [
+      "an enum member",
+      ph.ref(Status, { defaultValue: "DONE" }),
+      "value: DefaultStatus = DONE",
+    ],
+    [
+      "an Amount with a float value",
+      ph.Amount({ defaultValue: { value: 5.5 } }),
+      "value: Amount = {value: 5.5}",
+    ],
+    [
+      "an Amount with an integer value",
+      ph.Amount({ defaultValue: { value: 5 } }),
+      "value: Amount = {value: 5}",
+    ],
+    [
+      "an integer Money",
+      ph.Money({ defaultValue: 0 }),
+      "value: Amount_Money = 0",
+    ],
+  ])("accepts %s", (_, field, line) => {
+    const compiled = compileInput(field as AnyFieldDescriptor);
+    expect(
+      compiled.documentModel.global.specifications[0]?.modules[0]?.operations[0]
+        ?.schema,
+    ).toContain(line);
+  });
+
+  it("leaves a direct action creator's input as passed", () => {
+    const compiled = compileInput(
+      ph.String({ required: true, defaultValue: "Untitled" }),
+    ) as unknown as {
+      actions: { setValue(input: object): { input: unknown } };
+    };
+    expect(compiled.actions.setValue({}).input).toStrictEqual({});
+    expect(compiled.actions.setValue({ value: "T" }).input).toStrictEqual({
+      value: "T",
+    });
   });
 });
