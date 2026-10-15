@@ -22,6 +22,7 @@ import {
   usePublish,
 } from "./PublishControls.js";
 import { useReactorAccessDenial, useSignInGate } from "../reactor-hooks.js";
+import { PanelResizer, usePanelWidth } from "./PanelResizer.js";
 import { StepPanel, TriggerPanel } from "./StepPanel.js";
 import { useWorkflowCheck } from "./use-validity.js";
 import { VariablesEditor } from "./VariablesEditor.js";
@@ -46,6 +47,7 @@ export function WorkflowEditorApp(props: {
 }) {
   const { model, callbacks } = props;
   const [selectedId, setSelectedId] = useSelectedBlock();
+  const panel = usePanelWidth();
   const { publishing, error: publishError, publish } = usePublish(callbacks);
   const { readiness } = useWorkflowCheck(model);
 
@@ -216,12 +218,18 @@ export function WorkflowEditorApp(props: {
             </div>
           </div>
           {showVariables ? (
-            <aside className="min-h-0 w-[26rem] shrink-0 overflow-y-auto border-l border-solid border-foreground/10 bg-card">
-              <VariablesEditor
-                variables={model.variables}
-                callbacks={callbacks}
-                onClose={() => setSelectedId(null)}
-              />
+            <aside
+              className="relative flex min-h-0 shrink-0 flex-col border-l border-solid border-foreground/10 bg-card"
+              style={{ width: panel.width }}
+            >
+              <PanelResizer width={panel.width} onResize={panel.resize} />
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <VariablesEditor
+                  variables={model.variables}
+                  callbacks={callbacks}
+                  onClose={() => setSelectedId(null)}
+                />
+              </div>
             </aside>
           ) : null}
           {selectedStep || selectedTrigger ? (
@@ -230,7 +238,11 @@ export function WorkflowEditorApp(props: {
               stepBlocks={stepBlocks}
               triggerBlock={trigger}
             >
-              <aside className="flex min-h-0 w-[26rem] shrink-0 flex-col border-l border-solid border-foreground/10 bg-card">
+              <aside
+                className="relative flex min-h-0 shrink-0 flex-col border-l border-solid border-foreground/10 bg-card"
+                style={{ width: panel.width }}
+              >
+                <PanelResizer width={panel.width} onResize={panel.resize} />
                 <div className="min-h-0 flex-1 overflow-y-auto">
                   {selectedStep ? (
                     <StepPanel
