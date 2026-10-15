@@ -556,12 +556,9 @@ function normalizeExamples(
  * Why `value` is not an exact empty plain object, or `undefined` when it is.
  * The answer is a refusal's `received`.
  */
-function notExactEmptyObject(
-  value: unknown,
-  path: DefinitionPath,
-): string | undefined {
+function notExactEmptyObject(value: unknown): string | undefined {
   const otherPrototype = "an object whose prototype is not Object.prototype";
-  const snapshot = snapshotRecord(value, [], path);
+  const snapshot = snapshotRecord(value, [], []);
   if (!snapshot.ok) {
     if (snapshot.reason === "unknown-key") return "a nonempty object";
     if (snapshot.reason === "custom-prototype") return otherPrototype;
@@ -628,10 +625,7 @@ function normalizeScope(
   // nonnullish primitives, so the runtime check is the narrow one.
   if (scope === "local" && declaration.schema === null) {
     const initialValuePath = [...path, "initialValue"];
-    const refused = notExactEmptyObject(
-      declaration.initialValue,
-      initialValuePath,
-    );
+    const refused = notExactEmptyObject(declaration.initialValue);
     if (refused !== undefined) {
       collector.add({
         code: "PH-DM-INITIAL-VALUE-INVALID",
