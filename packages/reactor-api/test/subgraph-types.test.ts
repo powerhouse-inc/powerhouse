@@ -585,11 +585,46 @@ describe("hostDocumentModels", () => {
       reason: expect.stringMatching(
         /^does not build onto the generated schema: /,
       ),
-      supplier: "NotesApp",
+      supplier: { id: "test/NotesApp", name: "NotesApp" },
     });
     expect(describeRefusedDocumentModel(refused!).repair).toBe(
       'Document model "NotesApp" is listed first under the same schema name and supplies the generated types, so rename one of the two models.',
     );
+  });
+
+  it("tells two models with one name apart by id when one supplies the clashing types", () => {
+    const first = model(
+      "Notes",
+      "",
+      "type NotesState { title: String } type SetNotesTitleInput { title: String }",
+    );
+    const second = {
+      ...version(model("Notes"), 2),
+      id: "other/notes",
+    } as DocumentModelGlobalState;
+    const [refused] = hostDocumentModels([first, second]).refused;
+
+    expect(refused?.supplier).toEqual({ id: "test/Notes", name: "Notes" });
+    expect(describeRefusedDocumentModel(refused!).repair).toBe(
+      'Document model "Notes" (test/Notes) is listed first under the same schema name and supplies the generated types, so rename one of the two models.',
+    );
+  });
+
+  it("names no supplier when the clashing types come from another version of the same model", () => {
+    const v1 = version(
+      model(
+        "Notes",
+        "",
+        "type NotesState { title: String } type SetNotesTitleInput { title: String }",
+      ),
+      1,
+    );
+    const [refused] = hostDocumentModels([
+      v1,
+      version(model("Notes"), 2),
+    ]).refused;
+
+    expect(refused?.supplier).toBeUndefined();
   });
 
   it("reports a model once when the server refuses it once", () => {
