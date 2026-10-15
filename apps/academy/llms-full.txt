@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-14T22:49:16.429Z
+> Generated: 2026-10-15T15:50:49.588Z
 > Total Documents: 124
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -1150,6 +1150,10 @@ A caller can't sneak state changes past the reducer. A reducer can't introduce u
 > Source: https://academy.vetra.io/academy/Learn/document-models/your-first-document-model
 
 In this lesson you'll build a minimal **Todo** document model from scratch. You'll define the schema in <Term>Vetra</Term> Studio, let codegen scaffold the types, and write the reducer that drives every state transition.
+
+**NOTE:**
+This lesson uses the schema-first flow, where codegen writes the reducer stubs in `v<n>/src/reducers/` from the schema you define in Vetra Studio. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
 
 You'll need:
 
@@ -7334,6 +7338,10 @@ This page is a map. For each recipe it gives the core idea, the Reactor primitiv
 
 **INFO:**
 Recipes are reference implementations, not published libraries. Clone the repo, read the recipe, and adapt the code — don't depend on the `@powerhousedao/example-*` packages in production.
+
+
+**NOTE:**
+The document models in these recipes are schema-first, so their reducers live in `v<n>/src/reducers/`. To write a model in TypeScript instead, see [Choose an approach](../docs/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
 
 
 ## Running a recipe
@@ -18737,6 +18745,10 @@ It summarizes the flow from initial setup to a built, tested package.
 Please start with the [**Manual Todo tutorial**](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) or the [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 
 
+**NOTE:**
+This guide uses the schema-first flow, where Vetra Studio generates the reducer stubs in `v<n>/src/reducers/` from your specification. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
+
 <details>
 <summary>Key commands that you'll use in this flow</summary>
 
@@ -20190,6 +20202,10 @@ git reset --hard tutorial/step-3-implement-reducer-operation-handlers
 ```
 
 </details>
+
+**NOTE:**
+This tutorial uses the schema-first flow, where Vetra generates the reducer stubs in `v<n>/src/reducers/` from your specification. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
 
 Now implement the operation reducers for the **todo-list** document model. In the previous step, Vetra imported the document specification and scaffolded the code and directory through live code generation.
 
@@ -22125,6 +22141,10 @@ When building document models with **Vetra Studio**, code generation happens aut
 
 This article covers the **manual code generation method** using the `ph generate` command—an alternative approach that remains available when working with **Connect** and exported `.phd` specification files. While Vetra Studio is the recommended workflow for most developers, understanding the generator command provides useful context for how the scaffolding works under the hood.
 
+**NOTE:**
+This guide covers the schema-first flow, where `ph generate` writes `gen/` and the reducer stubs in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
+
 ## When to Use Manual Generation
 
 | Workflow         | Code Generation                                                            |
@@ -22318,6 +22338,10 @@ Subsequently, write unit tests for your reducers to ensure they behave correctly
 
 **NOTE:**
 This is the same step from the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ImplementOperationReducers), covered here in depth. The Mastery Track's only addition is the reducer logic for the computed `stats` field — if you've done the basic build, skim to the stats parts.
+
+
+**NOTE:**
+This guide implements reducers in the schema-first flow, where `ph generate` writes the reducer stubs in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
 
 
 ## The heart of document logic
@@ -24267,6 +24291,10 @@ If not, you can follow the shortened guide below to prepare your project for thi
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
+
+**NOTE:**
+These steps use a schema-first model, where the reducers live in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
 
 - Copy the code from [`todos.ts`](https://github.com/powerhouse-inc/todo-tutorial/blob/step-3-complete-implement-todo-list-document-model-reducer-operation-handlers/document-models/todo-list/src/reducers/todos.ts)
 - Paste it into `document-models/todo-list/src/reducers/todos.ts`
@@ -35216,6 +35244,10 @@ git reset --hard tutorial/main
 
 </details>
 
+**NOTE:**
+This tutorial uses the schema-first flow, where `ph generate` writes the reducer stubs in `v<n>/src/reducers/` from your specification. To write the model in TypeScript instead, see [Choose an approach](../docs/../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
+
 Now implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been generating your document model code as you defined the specification.
 
 If you need to review the document model specification steps, see [Define ChatRoom Document Model](/academy/Build/ExampleUsecases/Chatroom/DefineChatroomDocumentModel).
@@ -38418,6 +38450,10 @@ This section covers managing the Powerhouse Reactor (the local service for proce
 ### Reactor Recipes
 
 The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository contains standalone example projects that demonstrate common Reactor patterns and integrations. Each recipe is a self-contained project you can clone and run.
+
+**NOTE:**
+The document models in these recipes are schema-first, so their reducers live in `v<n>/src/reducers/`. To write a model in TypeScript instead, see [Choose an approach](../docs/04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
 
 {/* AUTO-GENERATED-RECIPE-DOCS-START */}
 {/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}

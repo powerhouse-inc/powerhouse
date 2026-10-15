@@ -4,6 +4,10 @@ When building document models with **Vetra Studio**, code generation happens aut
 
 This article covers the **manual code generation method** using the `ph generate` command—an alternative approach that remains available when working with **Connect** and exported `.phd` specification files. While Vetra Studio is the recommended workflow for most developers, understanding the generator command provides useful context for how the scaffolding works under the hood.
 
+:::note
+This guide covers the schema-first flow, where `ph generate` writes `gen/` and the reducer stubs in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
 ## When to Use Manual Generation
 
 | Workflow         | Code Generation                                                            |

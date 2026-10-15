@@ -12,6 +12,10 @@ This page is a map. For each recipe it gives the core idea, the Reactor primitiv
 Recipes are reference implementations, not published libraries. Clone the repo, read the recipe, and adapt the code — don't depend on the `@powerhousedao/example-*` packages in production.
 :::
 
+:::note
+The document models in these recipes are schema-first, so their reducers live in `v<n>/src/reducers/`. To write a model in TypeScript instead, see [Choose an approach](../02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
 ## Running a recipe
 
 Every recipe is a workspace package with a runnable demo. From the repo root:

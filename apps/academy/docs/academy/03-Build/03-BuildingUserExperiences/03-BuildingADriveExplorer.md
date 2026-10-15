@@ -92,6 +92,10 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 ### 2. Add the reducer code:
 
+:::note
+These steps use a schema-first model, where the reducers live in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
 - Copy the code from [`todos.ts`](https://github.com/powerhouse-inc/todo-tutorial/blob/step-3-complete-implement-todo-list-document-model-reducer-operation-handlers/document-models/todo-list/src/reducers/todos.ts)
 - Paste it into `document-models/todo-list/src/reducers/todos.ts`
 
