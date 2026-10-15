@@ -1,4 +1,5 @@
 import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
+import { parse } from "graphql";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -14,6 +15,7 @@ import {
   defineDocumentModelFamily,
 } from "../../src/definition/model.js";
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
+import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
 import { adaptSchemaFirstDocumentModelModule } from "../../src/definition/tooling/adapters/schema-first-document-model-module-adapter.js";
 import { checkDocumentModelDefinitionShape } from "../../src/definition/wire-shape.js";
 
@@ -679,6 +681,118 @@ describe("a legitimate declaration", () => {
       "test/sample",
       [[1, ["Probe"]]],
       [["module/editing", "stored-id"]],
+    ]);
+  });
+});
+
+describe("a refused member that is null, an array, or has no string form", () => {
+  it("reads as null, array, or its type at every remaining site", () => {
+    const versionAt = (version: number) =>
+      defineDocumentModel(config({ version })).version({ modules: [] });
+    const family = (manifest: Record<string, unknown>) => () =>
+      defineDocumentModelFamily({
+        versions: [versionAt(1), versionAt(2)],
+        upgradeManifest: {
+          documentType: "test/sample",
+          latestVersion: 2,
+          supportedVersions: [1, 2],
+          upgrades: { v2: { toVersion: 2, upgradeReducer: () => undefined } },
+          ...manifest,
+        },
+      } as never);
+    const scalar = (representation: unknown) => () =>
+      defineScalar({
+        name: "Thing",
+        description: "A thing.",
+        representation,
+      } as never);
+    const graphQLCompatibility = (value: unknown) => () =>
+      defineDocumentModel(
+        config({
+          specifications: specifications({}, { graphQLCompatibility: value }),
+        }),
+      ).finalize({ modules: [] });
+    const subgraph = (preserveDefinitionOrder: unknown) => () =>
+      compileSubgraph({
+        name: "compat",
+        schemaKind: "graphql-ast-compat",
+        compatibility: {
+          kind: "graphql-ast-v1",
+          typeDefs: parse("type Query { ping: String }"),
+          resolverCoordinates: [
+            { typeName: "Query", fieldName: "ping", resolverKind: "field" },
+          ],
+          getResolvers: () => ({ Query: { ping: () => "pong" } }),
+          hasSubscriptions: undefined,
+          preserveDefinitionOrder,
+        },
+      } as never);
+    const refusal = (run: () => unknown) => {
+      try {
+        const [first] = diagnosticsOf(run);
+        return [first.path.join("."), first.received];
+      } catch (error) {
+        return ["thrown", String(error)];
+      }
+    };
+
+    expect([
+      refusal(() =>
+        schemaFirstSpecification({ ids: { "module/a": null } } as never),
+      ),
+      refusal(() =>
+        schemaFirstSpecification({ ids: { "module/a": [] } } as never),
+      ),
+      refusal(() =>
+        schemaFirstSpecification({
+          serialization: { "state/global/schema": null },
+        } as never),
+      ),
+      refusal(() =>
+        schemaFirstSpecification({
+          serialization: { "state/global/schema": [] },
+        } as never),
+      ),
+      refusal(scalar([])),
+      refusal(scalar(Object.create(null))),
+      refusal(family({ documentType: [] })),
+      refusal(family({ latestVersion: [] })),
+      refusal(
+        family({
+          upgrades: { v2: { toVersion: [], upgradeReducer: () => undefined } },
+        }),
+      ),
+      refusal(
+        family({
+          upgrades: {
+            v2: {
+              toVersion: Object.create(null) as unknown,
+              upgradeReducer: () => undefined,
+            },
+          },
+        }),
+      ),
+      refusal(graphQLCompatibility([])),
+      refusal(graphQLCompatibility({ kind: Object.create(null) as unknown })),
+      refusal(graphQLCompatibility(revokedProxy())),
+      refusal(subgraph([])),
+      refusal(subgraph(Object.create(null))),
+    ]).toEqual([
+      ["ids.module/a", "null"],
+      ["ids.module/a", "array"],
+      ["serialization.state/global/schema", "null"],
+      ["serialization.state/global/schema", "array"],
+      ["representation", "array"],
+      ["representation", "object"],
+      ["upgradeManifest.documentType", "array"],
+      ["upgradeManifest.latestVersion", "array"],
+      ["upgradeManifest.upgrades.v2.toVersion", "array"],
+      ["upgradeManifest.upgrades.v2.toVersion", "object"],
+      ["specifications.graphQLCompatibility", "array"],
+      ["specifications.graphQLCompatibility", "object"],
+      ["specifications.graphQLCompatibility", "inspection-failed"],
+      ["compatibility.preserveDefinitionOrder", "array"],
+      ["compatibility.preserveDefinitionOrder", "object"],
     ]);
   });
 });
