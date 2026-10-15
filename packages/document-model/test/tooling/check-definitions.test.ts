@@ -102,6 +102,24 @@ const completeRelease = (
 });
 
 describe("checkDefinitions statuses and exit codes", () => {
+  it("rejects a finalized object missing a required interface field", async () => {
+    const { report } = await run({
+      fixture: "interfaces",
+    });
+    expect(report.status).toBe("invalid");
+    expect(exitCodeFor(report)).toBe(1);
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "PH-DM-INTERFACE-INVALID",
+        severity: "error",
+        phase: "definition",
+        path: ["specifications", 0, "types", 0],
+        message:
+          "Interface field Named.label expected but MissingState does not provide it.",
+      }),
+    );
+  });
+
   it("passes a healthy package", async () => {
     const { report } = await run({ fixture: "control" });
     expect(report.status).toBe("ok");
