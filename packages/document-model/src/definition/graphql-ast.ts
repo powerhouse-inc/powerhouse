@@ -801,15 +801,20 @@ function extensionMemberDiagnostic(
 }
 
 /**
- * Why a snapshotted compatibility record is not V1, spelled as the faulty
- * member's `received`, or `undefined` when it is V1.
+ * The member that keeps a snapshotted compatibility record from being V1,
+ * with its value spelled as `received`, or `undefined` when it is V1.
  */
 function refusedV1Member(record: {
   readonly [key: string]: unknown;
-}): string | undefined {
-  if (record.kind !== "graphql-ast-v1") return spelledMember(record.kind);
+}): { readonly member: string; readonly received: string } | undefined {
+  if (record.kind !== "graphql-ast-v1") {
+    return { member: "kind", received: spelledMember(record.kind) };
+  }
   if (record.preserveDefinitionOrder !== true) {
-    return spelledMember(record.preserveDefinitionOrder);
+    return {
+      member: "preserveDefinitionOrder",
+      received: spelledMember(record.preserveDefinitionOrder),
+    };
   }
   return undefined;
 }
@@ -855,22 +860,24 @@ export function checkGraphQLDocumentAgreement(options: {
   // An untyped author can pass anything here, so the record is read once,
   // without running an accessor, and checked on the snapshot.
   const compatibility = snapshotRecord(options.compatibility, undefined, path);
-  const refused = compatibility.ok
-    ? refusedV1Member(compatibility.value)
-    : rejectionReceived(compatibility);
-  if (!compatibility.ok || refused !== undefined) {
-    return [
-      compatibilityDiagnostic(
-        compatibility.ok ? path : compatibility.path,
-        "A GraphQL compatibility declaration must be a V1 location-free document with preserveDefinitionOrder.",
-        {
-          expected: 'kind "graphql-ast-v1" with preserveDefinitionOrder: true',
-          received: refused,
-          repair:
-            "Use the value returned by schemaFirstGraphQLDocument from document-model/tooling.",
-        },
-      ),
-    ];
+  const refuse = (at: DefinitionPath, received: string) => [
+    compatibilityDiagnostic(
+      at,
+      "A GraphQL compatibility declaration must be a V1 location-free document with preserveDefinitionOrder.",
+      {
+        expected: 'kind "graphql-ast-v1" with preserveDefinitionOrder: true',
+        received,
+        repair:
+          "Use the value returned by schemaFirstGraphQLDocument from document-model/tooling.",
+      },
+    ),
+  ];
+  if (!compatibility.ok) {
+    return refuse(compatibility.path, rejectionReceived(compatibility));
+  }
+  const refused = refusedV1Member(compatibility.value);
+  if (refused !== undefined) {
+    return refuse([...path, refused.member], refused.received);
   }
   const document: unknown = compatibility.value.document;
   if (
