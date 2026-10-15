@@ -20,7 +20,7 @@ import {
 } from "@powerhousedao/host-core";
 import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
-import type { SwitchboardArgs } from "../types.js";
+import type { BuildArgs, SwitchboardArgs } from "../types.js";
 
 /**
  * BRIDGE runner for Switchboard hosts (uniform-runners phase 0): maps a
@@ -236,6 +236,17 @@ async function start(
   };
 }
 
+// The four verbs are orthogonal: each does ONE job.
+//  - `run`/`serve`: START the server in production mode (serves the built
+//    project package). `serve` is run's alias — a server IS its served stack,
+//    and it lets the compound forward one `serve` verb to every member.
+//  - `dev`: START the server in dev mode (watch / the Vite package loader).
+//  - `build`: PRODUCE the project package this switchboard serves, and start
+//    NOTHING. The analog of `ph connect build` on the server side: legacy
+//    `ph switchboard build` never existed, but the project still has a build.
+// `build` is what lets a compound forward a single `build` verb to all members
+// (desktop/cli) without the switchboard member failing on an unknown verb.
+
 export async function run(
   host: HostDefinition,
   ctx: RunnerContext,
@@ -243,9 +254,25 @@ export async function run(
   return start(host, ctx, false);
 }
 
+export const serve = run;
+
 export async function dev(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
   return start(host, ctx, true);
+}
+
+/** Build the project's reactor package (the SAME service as `ph build`) — what
+ * this switchboard serves. Starts no server; orthogonal to run/serve/dev. */
+export async function build(
+  host: HostDefinition,
+  _ctx: RunnerContext,
+): Promise<void> {
+  const { runBuild } = await import("../services/build.js");
+  const runner = host.runner;
+  const args: Partial<BuildArgs> = {
+    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+  };
+  await runBuild(args as BuildArgs);
 }
