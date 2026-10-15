@@ -565,6 +565,33 @@ describe("hostDocumentModels", () => {
     ).toEqual({ notes: { kind: "name", heldBy: "document model" } });
   });
 
+  it("names the other model whose generated types an unservable subgraph clashes with", () => {
+    const first = model(
+      "NotesApp",
+      "",
+      "type NotesAppState { title: String } type SetNotesAppTitleInput { title: String }",
+    );
+    const second = {
+      ...model("NotesApp"),
+      id: "other/notes",
+      name: "Notes App",
+    } as DocumentModelGlobalState;
+    const [refused] = hostDocumentModels([first, second]).refused;
+
+    expect(refused).toEqual({
+      id: "other/notes",
+      name: "Notes App",
+      kind: "unservable subgraph",
+      reason: expect.stringMatching(
+        /^does not build onto the generated schema: /,
+      ),
+      supplier: "NotesApp",
+    });
+    expect(describeRefusedDocumentModel(refused!).repair).toBe(
+      'Document model "NotesApp" is listed first under the same schema name and supplies the generated types, so rename one of the two models.',
+    );
+  });
+
   it("reports a model once when the server refuses it once", () => {
     const broken = () => model("Broken", "", "type BrokenState {");
 
@@ -621,7 +648,7 @@ describe("describeRefusedDocumentModel", () => {
       message:
         'The server registers the subgraph of document model "Notes" but cannot serve it: it does not build onto the generated schema: Bad input.',
       repair:
-        "The first model listed under this model's schema name supplies the generated types, so make every model and version sharing that name define its types the same way, or rename one of them.",
+        "Make every version of the document model define its types the same way, or retire the version that differs.",
     });
   });
 });
