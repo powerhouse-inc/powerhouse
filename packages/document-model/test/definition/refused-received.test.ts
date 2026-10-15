@@ -1202,3 +1202,45 @@ describe("a stored model refusal", () => {
     ]);
   });
 });
+
+describe("a refused value that cannot be inspected", () => {
+  it("reads as inspection-failed wherever it is described, as it does where it is snapshotted", () => {
+    expect([
+      receivedAt(
+        diagnosticsOf(() =>
+          defineDocumentModel(config({ id: revokedProxy() })),
+        ),
+        "id",
+      ),
+      receivedAt(
+        adaptCodeFirstDocumentModelSource(
+          {
+            reducer: revokedProxy(),
+            version: 1,
+            documentModel: { global: { id: "test/sample" } },
+          },
+          SOURCE,
+        ).diagnostics,
+        "reducer",
+      ),
+      receivedAt(
+        adaptSchemaFirstDocumentModelModule(
+          { documentModel: { global: { specifications: revokedProxy() } } },
+          SOURCE,
+        ).diagnostics,
+        "documentModel.global.specifications",
+      ),
+      receivedAt(
+        diagnosticsOf(() =>
+          schemaFirstSpecification({ ids: { "module/a": revokedProxy() } } as never),
+        ),
+        "ids.module/a",
+      ),
+    ]).toEqual([
+      "inspection-failed",
+      "inspection-failed",
+      "inspection-failed",
+      "inspection-failed",
+    ]);
+  });
+});
