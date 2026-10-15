@@ -1126,7 +1126,7 @@ describe("a refused value", () => {
         () => ph.object("A", { fields: [] as never }),
         () => ph.list(ph.String(), [] as never),
       ].map(received),
-    ).toEqual(["array", "not-record", "not-record"]);
+    ).toEqual(["array", "array", "array"]);
   });
 });
 

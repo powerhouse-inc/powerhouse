@@ -263,3 +263,37 @@ describe("a refused author value", () => {
     ]).toEqual(["null", "null", "array"]);
   });
 });
+
+describe("a value refused where a record belongs", () => {
+  it("reads as the value's type, not the snapshot's reason", () => {
+    const refusedAt = (run: () => unknown) =>
+      diagnosticsOf(run).map(({ path, received }) => [
+        path.join("."),
+        received,
+      ]);
+
+    expect([
+      ...refusedAt(() => ph.String(null as never)),
+      ...refusedAt(() => ph.String({ required: null as never })),
+      ...refusedAt(() => ph.String(new Date(0) as never)),
+      ...refusedAt(() => ph.object("A", [] as never)),
+      ...refusedAt(() => ph.object("A", { fields: null as never })),
+      ...refusedAt(() => ph.object("A", { fields: [] as never })),
+      ...refusedAt(() => defineScalar(null as never)),
+      ...refusedAt(() => defineScalar([] as never)),
+      ...refusedAt(() => defineDocumentModel(null as never)),
+      ...refusedAt(() => defineDocumentModel([] as never)),
+    ]).toEqual([
+      ["options", "null"],
+      ["options.required", "null"],
+      ["options", "object"],
+      ["options", "array"],
+      ["options.fields", "null"],
+      ["options.fields", "array"],
+      ["", "null"],
+      ["", "array"],
+      ["", "null"],
+      ["", "array"],
+    ]);
+  });
+});

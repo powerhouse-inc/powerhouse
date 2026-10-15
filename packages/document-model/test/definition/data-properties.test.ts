@@ -160,14 +160,21 @@ describe("snapshotDataRecord", () => {
     });
   });
 
-  it("rejects non-objects with not-record at the input path", () => {
-    for (const value of [null, undefined, "text", 1, () => true]) {
-      expect(snapshotDataRecord(value, [], ["opts"])).toStrictEqual({
-        ok: false,
-        reason: "not-record",
-        path: ["opts"],
-      });
-    }
+  it("rejects non-objects with not-record at the input path, naming what was received", () => {
+    expect(
+      [null, undefined, "text", 1, () => true, []].map((value) =>
+        snapshotDataRecord(value, [], ["opts"]),
+      ),
+    ).toStrictEqual(
+      ["null", "undefined", "string", "number", "function", "array"].map(
+        (received) => ({
+          ok: false,
+          reason: "not-record",
+          path: ["opts"],
+          received,
+        }),
+      ),
+    );
   });
 
   it("rejects Map, Date, and class instances with custom-prototype", () => {
@@ -183,6 +190,7 @@ describe("snapshotDataRecord", () => {
         ok: false,
         reason: "custom-prototype",
         path: ["opts"],
+        received: "object",
       });
     }
     expect(
@@ -191,6 +199,7 @@ describe("snapshotDataRecord", () => {
       ok: false,
       reason: "custom-prototype",
       path: ["opts", "when"],
+      received: "object",
     });
   });
 
@@ -402,11 +411,13 @@ describe("snapshotDataArray", () => {
       ok: false,
       reason: "custom-prototype",
       path: ["list"],
+      received: "array",
     });
     expect(snapshotDataRecord({ list }, ["list"], ["opts"])).toStrictEqual({
       ok: false,
       reason: "custom-prototype",
       path: ["opts", "list"],
+      received: "array",
     });
   });
 
@@ -530,6 +541,7 @@ describe("snapshotRecord", () => {
       ok: false,
       reason: "custom-prototype",
       path: ["opts"],
+      received: "object",
     });
   });
 });
