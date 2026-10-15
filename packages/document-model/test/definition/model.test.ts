@@ -371,6 +371,46 @@ describe("defineDocumentModel scopes and authorization", () => {
     expect(diagnostics[0]?.code).toBe("PH-AUTH-UNSUPPORTED");
   });
 
+  it("reports auth and a custom scope inside specifications in either order", () => {
+    const scopes = {
+      global: { schema: GoodState, initialValue: { title: "" } },
+      local: { schema: null, initialValue: {} },
+    };
+    const reported = (specifications: unknown) =>
+      diagnosticsOf(declare(specifications)).map((entry) => [
+        entry.code,
+        entry.path.join("."),
+      ]);
+    const both = [
+      ["PH-AUTH-UNSUPPORTED", "specifications.auth"],
+      ["PH-DM-SCOPE-UNSUPPORTED", "specifications.custom"],
+    ];
+
+    expect(reported({ auth: {}, custom: {}, ...scopes })).toEqual(both);
+    expect(reported({ custom: {}, auth: {}, ...scopes })).toEqual(both);
+  });
+
+  it("reports a model auth declaration once", () => {
+    const diagnostics = diagnosticsOf(() =>
+      defineDocumentModel({
+        id: "test/auth-once",
+        name: "AuthOnce",
+        description: "",
+        extension: "auth",
+        version: 1,
+        author: { name: "Powerhouse" },
+        auth: { required: true },
+        specifications: {
+          global: { schema: GoodState, initialValue: { title: "" } },
+          local: { schema: null, initialValue: {} },
+        },
+      } as never),
+    );
+    expect(
+      diagnostics.map((entry) => [entry.code, entry.path.join(".")]),
+    ).toEqual([["PH-AUTH-UNSUPPORTED", "auth"]]);
+  });
+
   it("rejects auth at TypeScript checking too", () => {
     const declare = () =>
       defineDocumentModel({

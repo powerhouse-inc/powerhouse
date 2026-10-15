@@ -1003,8 +1003,8 @@ describe("a scalar member that cannot be read as data", () => {
       ),
       ...refusal(scalar({ zero: { kind: "value", value: "", bogus: 1 } })),
     ]).toEqual([
-      ["PH-SCALAR-DECLARATION-INVALID", "validator", undefined],
-      ["PH-SCALAR-DECLARATION-INVALID", "validator", undefined],
+      ["PH-SCALAR-DECLARATION-INVALID", "validator", "inspection-failed"],
+      ["PH-SCALAR-DECLARATION-INVALID", "validator", "array"],
       ["PH-SCALAR-DECLARATION-INVALID", "coercion", "inspection-failed"],
       ["PH-SCALAR-DECLARATION-INVALID", "coercion.parseValue", "accessor"],
       ["PH-SCALAR-ZERO-VALUE-INVALID", "zero", "inspection-failed"],
@@ -1341,6 +1341,31 @@ describe("a scalar coercion", () => {
 
     expect(Shifted.binding.coercion.parseValue(2)).toBe(12);
     expect(Shifted.binding.coercion.serialize(3)).toBe(6);
+  });
+
+  it("has a validator whose methods are read as data, with no accessor run", () => {
+    let ran = false;
+    const validator = {
+      get parse() {
+        ran = true;
+        return () => 1;
+      },
+      safeParse: () => ({ success: true, data: 1 }),
+    };
+    const refused = diagnosticsOf(() =>
+      defineScalar({
+        name: "Guarded",
+        description: "A guarded validator",
+        representation: "number",
+        validator: validator as never,
+        zodSource: "z.number()",
+      }),
+    ).map((entry) => [entry.code, entry.path.join("."), entry.received]);
+
+    expect(ran).toBe(false);
+    expect(refused).toEqual([
+      ["PH-SCALAR-DECLARATION-INVALID", "validator.parse", "accessor"],
+    ]);
   });
 
   it("is refused, not looped over, when its prototype chain never ends", () => {
