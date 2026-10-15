@@ -1368,6 +1368,39 @@ describe("a scalar coercion", () => {
     ]);
   });
 
+  it("and a validator report a faulty member at its own path, with what it holds", () => {
+    const methods = {
+      parseValue: (value: unknown) => value,
+      parseLiteral: () => 0,
+      serialize: (value: unknown) => value,
+    };
+    const declare = (members: Record<string, unknown>) =>
+      diagnosticsOf(() =>
+        defineScalar({
+          name: "Membered",
+          description: "A membered number",
+          representation: "number",
+          validator: z.number(),
+          zodSource: "z.number()",
+          ...members,
+        } as never),
+      ).map((entry) => [entry.path.join("."), entry.received]);
+
+    expect([
+      ...declare({ validator: { parse: 5, safeParse: () => ({}) } }),
+      ...declare({ validator: { parse: () => 0 } }),
+      ...declare({ coercion: { ...methods, serialize: 5 } }),
+      ...declare({ coercion: { parseValue: methods.parseValue } }),
+      ...declare({ coercion: [] }),
+    ]).toEqual([
+      ["validator.parse", "number"],
+      ["validator.safeParse", "undefined"],
+      ["coercion.serialize", "number"],
+      ["coercion.parseLiteral", "undefined"],
+      ["coercion", "array"],
+    ]);
+  });
+
   it("is behavior, so it may be a class instance, while a zero is data and must be a plain record", () => {
     const scalar = (zero: unknown) => () =>
       defineScalar({
