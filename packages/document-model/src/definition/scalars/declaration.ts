@@ -347,6 +347,11 @@ function dataMember(
   }
 }
 
+/**
+ * `zero` is data the definition carries, so it is a plain record, as every
+ * other data position is. A coercion is behavior, so it may be a class
+ * instance.
+ */
 function snapshotZero(declaration: ResolvedScalarDeclaration): ScalarZero {
   const name = declaration.name;
   const repair =

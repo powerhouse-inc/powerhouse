@@ -1368,6 +1368,41 @@ describe("a scalar coercion", () => {
     ]);
   });
 
+  it("is behavior, so it may be a class instance, while a zero is data and must be a plain record", () => {
+    const scalar = (zero: unknown) => () =>
+      defineScalar({
+        name: "Zeroed",
+        description: "A zeroed number",
+        representation: "number",
+        validator: z.number(),
+        zodSource: "z.number()",
+        zero: zero as never,
+      });
+    const declare = (zero: unknown) =>
+      diagnosticsOf(scalar(zero)).map((entry) => [
+        entry.code,
+        entry.path.join("."),
+        entry.received,
+      ]);
+    const record = Object.assign(Object.create(null) as object, {
+      kind: "value",
+      value: 0,
+    });
+
+    expect(scalar(record)().definition.zero).toEqual({
+      kind: "value",
+      value: 0,
+    });
+    expect(
+      declare(
+        new (class Zero {
+          readonly kind = "value";
+          readonly value = 0;
+        })(),
+      ),
+    ).toEqual([["PH-SCALAR-ZERO-VALUE-INVALID", "zero", "object"]]);
+  });
+
   it("is refused, not looped over, when its prototype chain never ends", () => {
     const cyclic: object = new Proxy({}, { getPrototypeOf: () => cyclic });
     const endless: ProxyHandler<object> = {
