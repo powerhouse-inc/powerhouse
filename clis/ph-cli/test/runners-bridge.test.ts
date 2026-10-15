@@ -97,9 +97,16 @@ describe("switchboard bridge runner", () => {
     });
   });
 
-  it("has no build verb — honest absence", async () => {
+  it("exposes orthogonal run/serve/dev/build verbs", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    expect("build" in runner).toBe(false);
+    // run/serve/dev/build are all present and distinct jobs; serve is run's
+    // alias (a server IS its served stack), build builds without serving.
+    expect(typeof runner.run).toBe("function");
+    expect(typeof runner.dev).toBe("function");
+    expect(typeof runner.build).toBe("function");
+    expect(runner.serve).toBe(runner.run);
+    expect(runner.build).not.toBe(runner.run);
+    expect(runner.dev).not.toBe(runner.run);
   });
 
   it("projects reactor.protocol + storage into env, and dbPath into args (P2.4)", async () => {
