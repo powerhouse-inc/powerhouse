@@ -240,6 +240,81 @@ describe("planDefinitionSourceRegistration", () => {
 });
 
 describe("generateCodeFirstDocumentModel", () => {
+  it.each([
+    ["todo list", "Todo List", "todo-list", "TodoList", "todoList"],
+    ["TodoList", "Todo List", "todo-list", "TodoList", "todoList"],
+    ["todo-list", "Todo List", "todo-list", "TodoList", "todoList"],
+    ["todo", "Todo", "todo", "Todo", "todo"],
+  ])(
+    "capital-cases %s for display and preserves its technical names",
+    async (name, displayName, directory, typePrefix, variablePrefix) => {
+      await generateModel({ ...todo, name });
+      expect(readConfig().definitionSources).toStrictEqual({
+        formatVersion: 1,
+        mode: "code-first",
+        entries: [{ specifier: `./document-models/${directory}/index.ts` }],
+      });
+      const definition = read(`document-models/${directory}/v1/definition.ts`);
+      expect(definition).toContain(`name: "${displayName}",`);
+      expect(definition).toContain(
+        `export const ${variablePrefix}Context = defineDocumentModel({`,
+      );
+      expect(definition).toContain(
+        `export const ${typePrefix}Item = ph.object("${typePrefix}Item", {`,
+      );
+      expect(definition).toContain(`schema: ph.object("${typePrefix}State", {`);
+      expect(
+        read(`document-models/${directory}/v1/modules/items.ts`),
+      ).toContain(
+        `export const ${variablePrefix}Items = ${variablePrefix}Context.module("items", {`,
+      );
+      const index = read(`document-models/${directory}/index.ts`);
+      expect(index).toContain(
+        `export const ${variablePrefix}Family = defineDocumentModelFamily({`,
+      );
+      expect(index).toContain(
+        `export const ${variablePrefix}V1 = ${variablePrefix}Family.at(1);`,
+      );
+      expect(index).toContain(
+        `upgradeManifest: ${variablePrefix}UpgradeManifest,`,
+      );
+      expect(readManifestJson()).toMatchObject({
+        documentModels: [{ name: displayName, id: "acme-things/todo" }],
+      });
+
+      const loader = new DefinitionSourceLoader(
+        new ViteTypeScriptSourceImportAdapter(),
+      );
+      try {
+        const loaded = await loader.normalizeDefinitionSources({
+          configFile: configPath(),
+          packageRevision: `sha256:${"3".repeat(64)}`,
+        });
+        expect(loaded.documentModels.map(({ value }) => value)).toMatchObject([
+          {
+            documentModel: {
+              global: { name: displayName, id: "acme-things/todo" },
+            },
+            definition: {
+              model: {
+                name: displayName,
+                graphQLName: typePrefix,
+                documentType: "acme-things/todo",
+              },
+            },
+          },
+        ]);
+        expect(
+          loaded.documentModels.map(
+            ({ value }) => value.utils.createDocument().header.documentType,
+          ),
+        ).toStrictEqual(["acme-things/todo"]);
+      } finally {
+        await loader.dispose();
+      }
+    },
+  );
+
   it("writes the model, registers it, and exports it from the package", async () => {
     expect(await generateModel()).toStrictEqual({
       written: [
