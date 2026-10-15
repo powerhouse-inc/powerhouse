@@ -112,7 +112,7 @@ export function parseScalarDeclaration(
 ): ResolvedScalarDeclaration {
   const snapshot = snapshotRecord(input, DECLARATION_KEYS, []);
   if (!snapshot.ok) {
-    const name = String((input as { readonly name?: unknown }).name);
+    const name = String((input as { readonly name?: unknown } | null)?.name);
     if (snapshot.reason === "unknown-key" && snapshot.key === "visibility") {
       fail(name, {
         code: "PH-SCALAR-DECLARATION-INVALID",
@@ -126,7 +126,7 @@ export function parseScalarDeclaration(
       code: "PH-SCALAR-DECLARATION-INVALID",
       path: snapshot.path,
       message: `The declaration could not be snapshotted (${snapshot.reason}).`,
-      received: snapshot.reason,
+      received: "received" in snapshot ? snapshot.received : snapshot.reason,
       repair: "Pass a plain declaration object with data properties only.",
     });
   }

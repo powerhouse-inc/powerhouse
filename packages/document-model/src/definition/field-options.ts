@@ -76,7 +76,7 @@ export function optionRejection(
     code: "PH-DEF-OPTION-INVALID",
     path: rejectionPath(rejection),
     message: `The option value could not be snapshotted (${rejection.reason}).`,
-    received: rejection.reason,
+    received: "received" in rejection ? rejection.received : rejection.reason,
     repair:
       "Pass a plain object literal with enumerable string-keyed data properties and no accessors, symbols, or class instances.",
   });

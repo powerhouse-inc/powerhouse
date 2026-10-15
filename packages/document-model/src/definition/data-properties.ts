@@ -1,3 +1,5 @@
+import { describeReceived } from "./diagnostics.js";
+
 export type DataPath = readonly (string | number)[];
 
 export type DataLeaf = string | number | boolean | bigint | null | undefined;
@@ -12,6 +14,8 @@ export type DataSnapshotRejection =
       readonly ok: false;
       readonly reason: "not-record";
       readonly path: DataPath;
+      /** The refused value, as `describeReceived` spells it. */
+      readonly received: string;
     }
   | {
       readonly ok: false;
@@ -22,6 +26,8 @@ export type DataSnapshotRejection =
       readonly ok: false;
       readonly reason: "custom-prototype";
       readonly path: DataPath;
+      /** The refused value, as `describeReceived` spells it. */
+      readonly received: string;
     }
   | {
       readonly ok: false;
@@ -159,7 +165,12 @@ function snapshotArrayMembers<T>(
     return { ok: false, reason: "inspection-failed", path };
   }
   if (prototype !== Array.prototype) {
-    return { ok: false, reason: "custom-prototype", path };
+    return {
+      ok: false,
+      reason: "custom-prototype",
+      path,
+      received: describeReceived(value),
+    };
   }
   if (lengthDescriptor === undefined || !("value" in lengthDescriptor)) {
     return { ok: false, reason: "not-array", path };
@@ -233,7 +244,12 @@ function snapshotPlainObject<T>(
   ancestors: Set<object>,
 ): DataSnapshot<{ readonly [key: string]: T }> {
   if (value === null || typeof value !== "object") {
-    return { ok: false, reason: "not-record", path };
+    return {
+      ok: false,
+      reason: "not-record",
+      path,
+      received: describeReceived(value),
+    };
   }
   if (ancestors.has(value)) {
     return { ok: false, reason: "cycle", path };
@@ -272,10 +288,15 @@ function snapshotPlainObjectMembers<T>(
     return { ok: false, reason: "inspection-failed", path };
   }
   if (prototype === Array.prototype) {
-    return { ok: false, reason: "not-record", path };
+    return { ok: false, reason: "not-record", path, received: "array" };
   }
   if (prototype !== Object.prototype && prototype !== null) {
-    return { ok: false, reason: "custom-prototype", path };
+    return {
+      ok: false,
+      reason: "custom-prototype",
+      path,
+      received: describeReceived(value),
+    };
   }
   const entries: [string, T][] = [];
   for (const key of keys) {
