@@ -194,26 +194,13 @@ function snapshotArrayMembers<T>(
       received: "array of another prototype or realm",
     };
   }
-  if (lengthDescriptor === undefined || !("value" in lengthDescriptor)) {
-    return {
-      ok: false,
-      reason: "not-array",
-      path,
-      received: "array with an unreadable length",
-    };
-  }
-  const length: unknown = lengthDescriptor.value;
+  const length: unknown = lengthDescriptor?.value;
   if (
     typeof length !== "number" ||
     !Number.isSafeInteger(length) ||
     length < 0
   ) {
-    return {
-      ok: false,
-      reason: "not-array",
-      path,
-      received: "array with an unreadable length",
-    };
+    return { ok: false, reason: "inspection-failed", path };
   }
   for (const key of keys) {
     if (key === "length") continue;
