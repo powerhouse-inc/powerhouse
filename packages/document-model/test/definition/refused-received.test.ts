@@ -906,3 +906,101 @@ describe("a specifications value that is not the scope map", () => {
     ]);
   });
 });
+
+describe("a scalar member that cannot be read as data", () => {
+  const scalar = (members: Record<string, unknown>) => () =>
+    defineScalar({
+      name: "Probe",
+      description: "A probe scalar.",
+      representation: "string",
+      validator: z.string(),
+      zodSource: "z.string()",
+      ...members,
+    } as never);
+  const coercion = {
+    parseValue: String,
+    parseLiteral: () => "literal",
+    serialize: String,
+  };
+
+  it("is refused by defineScalar with a diagnostic, not a raw throw", () => {
+    const refusal = (run: () => unknown) => {
+      try {
+        return diagnosticsOf(run).map(({ code, path, received }) => [
+          code,
+          path.join("."),
+          received,
+        ]);
+      } catch (error) {
+        return [["thrown", String(error)]];
+      }
+    };
+
+    expect([
+      ...refusal(scalar({ validator: revokedProxy() })),
+      ...refusal(scalar({ validator: [] })),
+      ...refusal(scalar({ coercion: revokedProxy() })),
+      ...refusal(
+        scalar({
+          coercion: {
+            ...coercion,
+            get parseValue() {
+              return String;
+            },
+          },
+        }),
+      ),
+      ...refusal(scalar({ coercion: { ...coercion, bogus: 1 } })),
+      ...refusal(scalar({ zero: revokedProxy() })),
+      ...refusal(
+        scalar({
+          zero: {
+            get kind() {
+              return "value";
+            },
+            value: "",
+          },
+        }),
+      ),
+      ...refusal(
+        scalar({ zero: { kind: "value", value: "", reason: Symbol("why") } }),
+      ),
+      ...refusal(
+        scalar({ zero: { kind: "none", reason: "none", value: Symbol("v") } }),
+      ),
+      ...refusal(scalar({ zero: { kind: "value", value: "", bogus: 1 } })),
+    ]).toEqual([
+      ["PH-SCALAR-DECLARATION-INVALID", "validator", undefined],
+      ["PH-SCALAR-DECLARATION-INVALID", "validator", undefined],
+      ["PH-SCALAR-DECLARATION-INVALID", "coercion", "inspection-failed"],
+      ["PH-SCALAR-DECLARATION-INVALID", "coercion.parseValue", "accessor"],
+      ["PH-SCALAR-DECLARATION-INVALID", "coercion.bogus", "unknown-key"],
+      ["PH-SCALAR-ZERO-VALUE-INVALID", "zero", "inspection-failed"],
+      ["PH-SCALAR-ZERO-VALUE-INVALID", "zero.kind", "accessor"],
+      ["PH-SCALAR-ZERO-VALUE-INVALID", "zero.reason", "reason"],
+      ["PH-SCALAR-ZERO-VALUE-INVALID", "zero.value", "value"],
+      ["PH-SCALAR-ZERO-VALUE-INVALID", "zero.bogus", "unknown-key"],
+    ]);
+  });
+
+  it("still accepts a plain or frozen zero and coercion", () => {
+    const declared = [
+      scalar({ zero: { kind: "value", value: "" }, coercion })(),
+      scalar({
+        zero: Object.freeze({ kind: "none", reason: "No empty probe." }),
+        coercion: Object.freeze({ ...coercion }),
+      })(),
+    ];
+
+    expect(
+      declared.map(({ definition, binding }) => [
+        definition.zero,
+        definition.coercion.source,
+        binding.coercion.parseLiteral({ kind: "string", value: "x" }),
+      ]),
+    ).toEqual([
+      [{ kind: "value", value: "" }, "explicit", "literal"],
+      [{ kind: "none", reason: "No empty probe." }, "explicit", "literal"],
+    ]);
+  });
+});
