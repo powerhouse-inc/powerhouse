@@ -5,7 +5,10 @@ import type {
   JsonValue,
 } from "@powerhousedao/shared/document-model";
 import { snapshotArray, snapshotRecord } from "./data-properties.js";
-import type { DefinitionDiagnosticCollector } from "./diagnostics.js";
+import {
+  type DefinitionDiagnosticCollector,
+  describeReceived,
+} from "./diagnostics.js";
 import { validateLocationFreeDocument } from "./graphql-ast.js";
 import { canonicalJson, isGraphQLName } from "./primitives.js";
 import {
@@ -53,13 +56,9 @@ class ShapeChecker {
       received:
         typeof received === "string"
           ? received
-          : received === null
-            ? "null"
-            : typeof received === "number" || typeof received === "boolean"
-              ? String(received)
-              : Array.isArray(received)
-                ? "an array"
-                : typeof received,
+          : typeof received === "number" || typeof received === "boolean"
+            ? String(received)
+            : describeReceived(received),
       repair:
         "Produce the definition with the compiler or an adapter; a hand-edited wire definition is not accepted.",
     });
