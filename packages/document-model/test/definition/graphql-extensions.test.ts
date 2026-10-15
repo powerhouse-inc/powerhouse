@@ -1,14 +1,108 @@
 import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
+import { parse } from "graphql";
 import { describe, expect, it } from "vitest";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
 import { schemaFirstSpecification } from "../../src/definition/compatibility.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
+import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
 import { checkRetainedSerialization } from "../../src/definition/tooling/retained-serialization.js";
 import { schemaFirstGraphQLDocument } from "../../src/definition/tooling/graphql-document.js";
 import type { ObjectFields } from "../../src/definition/types.js";
 
 const PATH = ["specifications", "graphQLCompatibility"];
+
+describe.each([
+  {
+    kind: "enum" as const,
+    base: "enum Status { A B }",
+    extension: "extend enum Status { C }",
+    extensionOnly: "extend enum Status { A B C }",
+    resolver: { A: 1, B: 2, C: 3 },
+    missingResolverMessage:
+      "The declaration lists Status.<type>:enum, which the resolver map does not bind.",
+  },
+  {
+    kind: "scalar" as const,
+    base: "scalar Status",
+    extension: "extend scalar Status @tag",
+    extensionOnly: "extend scalar Status @tag",
+    resolver: { serialize: (value: unknown) => (value === 3 ? "C" : null) },
+    missingResolverMessage:
+      "The declaration lists Status.<type>:scalar, which the resolver map does not bind.",
+  },
+])(
+  "a compatibility subgraph with a $kind extension",
+  ({
+    kind,
+    base,
+    extension,
+    extensionOnly,
+    resolver,
+    missingResolverMessage,
+  }) => {
+    function compile(declarations: readonly string[]) {
+      return compileSubgraph({
+        name: `${kind}-extension`,
+        schemaKind: "graphql-ast-compat",
+        compatibility: {
+          kind: "graphql-ast-v1",
+          typeDefs: parse(
+            [
+              "directive @tag on SCALAR",
+              ...declarations,
+              "type Query { status: Status! }",
+            ].join("\n"),
+          ),
+          resolverCoordinates: [
+            { typeName: "Query", fieldName: "status", resolverKind: "field" },
+            { typeName: "Status", fieldName: null, resolverKind: kind },
+          ],
+          getResolvers: () => ({
+            Query: { status: () => 3 },
+            Status: resolver,
+          }),
+          hasSubscriptions: undefined,
+          preserveDefinitionOrder: true,
+        },
+      });
+    }
+
+    it.each([
+      { order: "after the base", declarations: [base, extension] },
+      { order: "before the base", declarations: [extension, base] },
+      { order: "without a base", declarations: [extensionOnly] },
+      {
+        order: "with a same-name directive",
+        declarations: [base, extension, "directive @Status on ENUM | SCALAR"],
+      },
+    ])(
+      "accepts the declared type-level resolver $order",
+      ({ declarations }) => {
+        const compiled = compile(declarations);
+        expect(compiled.diagnostics).toEqual([]);
+        expect(compiled.checkResolvers(compiled.resolversFor({}))).toEqual([]);
+      },
+    );
+
+    it("reports a declared type-level resolver missing from the resolver map", () => {
+      const compiled = compile([base, extension]);
+      expect(
+        compiled.checkResolvers({ Query: { status: () => 3 } }),
+      ).toStrictEqual([
+        {
+          code: "PH-SG-ENTRY-INVALID",
+          severity: "error",
+          phase: "definition",
+          path: ["compatibility", "resolverCoordinates"],
+          message: missingResolverMessage,
+          repair:
+            "List each resolver coordinate once, with a string type name, a string or null field name, and a known resolver kind.",
+        },
+      ]);
+    });
+  },
+);
 
 function diagnosticsOf(run: () => unknown): readonly DefinitionDiagnostic[] {
   try {

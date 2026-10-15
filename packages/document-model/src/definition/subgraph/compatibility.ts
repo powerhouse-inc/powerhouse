@@ -248,9 +248,20 @@ export function typeKindsOfDocument(
   const kinds = new Map<string, string>();
   for (const definition of document.definitions) {
     const named = definition as { kind?: string; name?: { value?: string } };
-    if (typeof named.name?.value === "string" && named.kind !== undefined) {
-      kinds.set(named.name.value, named.kind);
+    if (
+      named.kind === "SchemaDefinition" ||
+      named.kind === "SchemaExtension" ||
+      named.kind === "DirectiveDefinition"
+    ) {
+      continue;
     }
+    if (
+      typeof named.name?.value !== "string" ||
+      typeof named.kind !== "string"
+    ) {
+      continue;
+    }
+    kinds.set(named.name.value, named.kind.replace(/Extension$/, "Definition"));
   }
   return kinds;
 }

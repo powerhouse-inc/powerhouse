@@ -1,3 +1,4 @@
+import { buildSubgraphSchema } from "@apollo/subgraph";
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
 import {
   canonicalJson,
@@ -5,13 +6,17 @@ import {
   ph,
 } from "document-model";
 import type { TypedSubgraphEntry } from "document-model/tooling";
+import type * as GraphQL from "graphql";
 import { parse, print } from "graphql";
-import { describe, expect, it } from "vitest";
+import { createRequire } from "node:module";
+import { describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import {
   type DefineSubgraphConfig,
   defineSubgraph,
 } from "../src/graphql/define-subgraph.js";
+
+const { graphql } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
 
 /**
  * `defineSubgraph` returns a class that the host treats like a hand-written
@@ -195,6 +200,87 @@ describe("lifecycle", () => {
 });
 
 describe("the compatibility kind", () => {
+  it("serves an extended enum's mapped value without resolver diagnostics", async () => {
+    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const Subgraph = defineSubgraph({
+        name: "enum-extension",
+        schemaKind: "graphql-ast-compat",
+        compatibility: {
+          kind: "graphql-ast-v1",
+          typeDefs: parse(`
+            enum Status { A B }
+            extend enum Status { C }
+            type Query { status: Status! }
+          `),
+          resolverCoordinates: [
+            { typeName: "Query", fieldName: "status", resolverKind: "field" },
+            { typeName: "Status", fieldName: null, resolverKind: "enum" },
+          ],
+          getResolvers: () => ({
+            Query: { status: () => 3 },
+            Status: { A: 1, B: 2, C: 3 },
+          }),
+          hasSubscriptions: undefined,
+          preserveDefinitionOrder: true,
+        },
+      });
+      const instance = new Subgraph(args());
+      const schema = buildSubgraphSchema([
+        { typeDefs: instance.typeDefs, resolvers: instance.resolvers },
+      ]);
+      expect(await graphql({ schema, source: "{ status }" })).toEqual({
+        data: { status: "C" },
+      });
+      expect(Subgraph.diagnostics).toEqual([]);
+      expect(warnings.mock.calls).toEqual([]);
+    } finally {
+      warnings.mockRestore();
+    }
+  });
+
+  it("serves an extended scalar's serialized value without resolver diagnostics", async () => {
+    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const Subgraph = defineSubgraph({
+        name: "scalar-extension",
+        schemaKind: "graphql-ast-compat",
+        compatibility: {
+          kind: "graphql-ast-v1",
+          typeDefs: parse(`
+            directive @tag on SCALAR
+            scalar Status
+            extend scalar Status @tag
+            type Query { status: Status! }
+          `),
+          resolverCoordinates: [
+            { typeName: "Query", fieldName: "status", resolverKind: "field" },
+            { typeName: "Status", fieldName: null, resolverKind: "scalar" },
+          ],
+          getResolvers: () => ({
+            Query: { status: () => 3 },
+            Status: {
+              serialize: (value: unknown) => (value === 3 ? "C" : null),
+            },
+          }),
+          hasSubscriptions: undefined,
+          preserveDefinitionOrder: true,
+        },
+      });
+      const instance = new Subgraph(args());
+      const schema = buildSubgraphSchema([
+        { typeDefs: instance.typeDefs, resolvers: instance.resolvers },
+      ]);
+      expect(await graphql({ schema, source: "{ status }" })).toEqual({
+        data: { status: "C" },
+      });
+      expect(Subgraph.diagnostics).toEqual([]);
+      expect(warnings.mock.calls).toEqual([]);
+    } finally {
+      warnings.mockRestore();
+    }
+  });
+
   const SOURCE = `type Query {
   node(id: ID!): Node
 }
