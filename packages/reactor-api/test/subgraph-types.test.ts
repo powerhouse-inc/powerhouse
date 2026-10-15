@@ -11,6 +11,7 @@ import {
 } from "../src/graphql/scalar-bindings.js";
 import {
   coreSubgraphTypeDefs,
+  describeRefusedDocumentModel,
   describeSubgraphConflict,
   DOCUMENT_MODEL_SCHEMA_OWNER,
   findPackageSubgraphConflicts,
@@ -528,7 +529,9 @@ describe("hostDocumentModels", () => {
     const v2 = version(model("Notes"), 2);
     const host = hostDocumentModels([v1, v2]);
 
-    expect(host.subgraphs.map(({ name }) => name)).not.toContain("notes");
+    expect(host.subgraphs.find(({ name }) => name === "notes")?.builds).toBe(
+      false,
+    );
     expect(host.refused).toEqual([
       {
         id: "test/Notes",
@@ -584,6 +587,42 @@ describe("building a package subgraph for the check", () => {
     expect(
       unreportedScalarBindings(typeDefs, {}, new Set()).map(({ code }) => code),
     ).toEqual(["PH-SCALAR-UNREGISTERED"]);
+  });
+});
+
+describe("describeRefusedDocumentModel", () => {
+  it("says the server refuses a subgraph whose name a core subgraph holds", () => {
+    expect(
+      describeRefusedDocumentModel({
+        id: "test/R",
+        name: "R",
+        kind: "reserved subgraph name",
+        reason: 'has a subgraph named "r", which a core subgraph holds',
+      }),
+    ).toEqual({
+      code: "PH-DM-GRAPHQL-REFUSED",
+      message:
+        'The server refuses the subgraph of document model "R": it has a subgraph named "r", which a core subgraph holds.',
+      repair:
+        "Rename the document model, so its subgraph takes a name no core subgraph holds.",
+    });
+  });
+
+  it("says the server registers but cannot serve a subgraph that does not build beside the others", () => {
+    expect(
+      describeRefusedDocumentModel({
+        id: "test/Notes",
+        name: "Notes",
+        kind: "unservable subgraph",
+        reason: "does not build onto the generated schema: Bad input.",
+      }),
+    ).toEqual({
+      code: "PH-DM-GRAPHQL-REFUSED",
+      message:
+        'The server registers the subgraph of document model "Notes" but cannot serve it: it does not build onto the generated schema: Bad input.',
+      repair:
+        "The first model listed under this model's schema name supplies the generated types, so make every model and version sharing that name define its types the same way, or rename one of them.",
+    });
   });
 });
 
