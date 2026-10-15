@@ -758,6 +758,41 @@ describe("a declaration the server could not run", () => {
     });
   });
 
+  it("reports a refused null or array as null or array, not object", () => {
+    const received = (declare: () => unknown) => {
+      try {
+        declare();
+      } catch (error) {
+        if (!(error instanceof DocumentModelDefinitionError)) throw error;
+        return error.diagnostics[0].received;
+      }
+      return undefined;
+    };
+    expect([
+      received(compat({}, { hasSubscriptions: null })),
+      received(compat({}, { hasSubscriptions: [] })),
+      received(compat({}, { kind: null })),
+      received(compat({}, { typeDefs: [] })),
+      received(compat({}, { getResolvers: null })),
+      received(compat({ compatibility: null })),
+      received(typed({ name: null })),
+      received(typed({ schemaKind: null })),
+      received(typed({ onSetup: null })),
+      received(typed({ entries: null })),
+    ]).toEqual([
+      "null",
+      "array",
+      "null",
+      "array",
+      "null",
+      "null",
+      "null",
+      "null",
+      "null",
+      "null",
+    ]);
+  });
+
   it("refuses a typed subgraph without an entries callback", () => {
     const noEntries = {
       code: "PH-SG-DEFINITION-INVALID",
