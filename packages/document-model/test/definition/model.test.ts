@@ -22,7 +22,7 @@ function diagnosticsOf(run: () => unknown): readonly DefinitionDiagnostic[] {
 }
 
 /** A declaration whose scopes the caller replaces, with checking bypassed. */
-function declare(specifications: unknown): () => unknown {
+function declare(specifications: unknown) {
   return () =>
     defineDocumentModel({
       id: "test/sample",
@@ -184,6 +184,136 @@ describe("defineDocumentModel empty local state", () => {
 });
 
 describe("defineDocumentModel initial values", () => {
+  for (const scope of ["global", "local"] as const) {
+    const State = ph.object("SampleState", {
+      fields: { title: ph.String({ required: true }), payload: ph.Unknown() },
+    });
+    const LocalState = ph.object("SampleLocalState", {
+      fields: { title: ph.String({ required: true }), payload: ph.Unknown() },
+    });
+    const specifications = (initialValue: unknown) => ({
+      global: { schema: State, initialValue: { title: "global" } },
+      local: { schema: LocalState, initialValue: { title: "local" } },
+      [scope]: {
+        schema: scope === "global" ? State : LocalState,
+        initialValue,
+      },
+    });
+
+    it(`rejects a ${scope} getter at its member path without invoking it`, () => {
+      let reads = 0;
+      const initialValue = {
+        get title() {
+          reads += 1;
+          return "hi";
+        },
+      };
+      const diagnostics = diagnosticsOf(() =>
+        declare(specifications(initialValue))().finalize({ modules: [] }),
+      );
+      expect(reads).toBe(0);
+      expect(diagnostics[0]).toMatchObject({
+        code: "PH-DM-INITIAL-VALUE-INVALID",
+        path: ["specifications", scope, "initialValue", "title"],
+        received: "accessor",
+      });
+    });
+
+    const invalidMembers: readonly {
+      readonly label: string;
+      readonly payload: unknown;
+      readonly path: readonly (string | number)[];
+      readonly received: string;
+    }[] = [
+      {
+        label: "a symbol key",
+        payload: { [Symbol("tag")]: "hidden" },
+        path: ["payload"],
+        received: "symbol-key",
+      },
+      {
+        label: "a function",
+        payload: { run: () => "hi" },
+        path: ["payload", "run"],
+        received: "function",
+      },
+      {
+        label: "a symbol value",
+        payload: { tag: Symbol("tag") },
+        path: ["payload", "tag"],
+        received: "symbol",
+      },
+      {
+        label: "a non-enumerable member",
+        payload: Object.defineProperty({}, "hidden", { value: "hi" }),
+        path: ["payload", "hidden"],
+        received: "non-enumerable",
+      },
+    ];
+    for (const { label, payload, path, received } of invalidMembers) {
+      it(`rejects ${label} in ${scope} initialValue at its own path`, () => {
+        const diagnostics = diagnosticsOf(() =>
+          declare(specifications({ title: "hi", payload }))().finalize({
+            modules: [],
+          }),
+        );
+        expect(diagnostics[0]).toMatchObject({
+          code: "PH-DM-INITIAL-VALUE-INVALID",
+          path: ["specifications", scope, "initialValue", ...path],
+          received,
+        });
+      });
+    }
+
+    for (const container of ["object", "array"] as const) {
+      it(`rejects a nested ${container} getter in ${scope} initialValue without invoking it`, () => {
+        let reads = 0;
+        const payload = container === "array" ? ["hi"] : { title: "hi" };
+        const key = container === "array" ? 0 : "title";
+        Object.defineProperty(payload, key, {
+          enumerable: true,
+          get() {
+            reads += 1;
+            return "hi";
+          },
+        });
+        const diagnostics = diagnosticsOf(() =>
+          declare(specifications({ title: "hi", payload }))().finalize({
+            modules: [],
+          }),
+        );
+        expect(reads).toBe(0);
+        expect(diagnostics[0]).toMatchObject({
+          code: "PH-DM-INITIAL-VALUE-INVALID",
+          path: ["specifications", scope, "initialValue", "payload", key],
+          received: "accessor",
+        });
+      });
+    }
+
+    it(`copies plain ${scope} data before later author mutations`, () => {
+      const item = { count: 1 };
+      const initialValue = {
+        title: "initial",
+        payload: { note: "original", items: [item] },
+      };
+      const model = declare(specifications(initialValue))();
+      initialValue.title = "changed";
+      initialValue.payload.note = "changed";
+      item.count = 2;
+      initialValue.payload.items.push({ count: 3 });
+      const state = model.finalize({ modules: [] }).definition.specifications[0]
+        .state[scope];
+      expect(state.initialValue).toStrictEqual({
+        title: "initial",
+        payload: { note: "original", items: [{ count: 1 }] },
+      });
+      expect(state.materialized.initialValue).toBe(
+        '{"title":"initial","payload":{"note":"original","items":[{"count":1}]}}',
+      );
+    });
+  }
+
   it("contextually types initialValue against the sibling schema", () => {
     const State = ph.object("TypedState", {
       fields: {
@@ -232,11 +362,7 @@ describe("defineDocumentModel initial values", () => {
     const value = {
       dropped: undefined,
       nonFinite: Number.NaN,
-      serialized: {
-        toJSON() {
-          return { from: "toJSON" };
-        },
-      },
+      serialized: { from: "plain data" },
       nested: ["a", undefined],
     };
     const specification = defineDocumentModel({
@@ -259,12 +385,37 @@ describe("defineDocumentModel initial values", () => {
       JSON.stringify(value),
     );
     expect(specification.state.global.materialized.initialValue).toBe(
-      '{"nonFinite":null,"serialized":{"from":"toJSON"},"nested":["a",null]}',
+      '{"nonFinite":null,"serialized":{"from":"plain data"},"nested":["a",null]}',
     );
     expect(specification.state.global.initialValue).toStrictEqual({
       nonFinite: null,
-      serialized: { from: "toJSON" },
+      serialized: { from: "plain data" },
       nested: ["a", null],
+    });
+  });
+
+  it("rejects toJSON without invoking author code", () => {
+    let calls = 0;
+    const diagnostics = diagnosticsOf(() =>
+      declare({
+        global: {
+          schema: GoodState,
+          initialValue: {
+            title: "hi",
+            toJSON() {
+              calls += 1;
+              return { title: "serialized" };
+            },
+          },
+        },
+        local: { schema: null, initialValue: {} },
+      })().finalize({ modules: [] }),
+    );
+    expect(calls).toBe(0);
+    expect(diagnostics[0]).toMatchObject({
+      code: "PH-DM-INITIAL-VALUE-INVALID",
+      path: ["specifications", "global", "initialValue", "toJSON"],
+      received: "function",
     });
   });
 
@@ -316,8 +467,11 @@ describe("defineDocumentModel initial values", () => {
         },
       }).finalize({ modules: [] }),
     );
-    expect(diagnostics[0]?.code).toBe("PH-DM-INITIAL-VALUE-INVALID");
-    expect(diagnostics[0]?.message).toContain("stored JSON string");
+    expect(diagnostics[0]).toMatchObject({
+      code: "PH-DM-INITIAL-VALUE-INVALID",
+      path: ["specifications", "global", "initialValue", "self"],
+      received: "cycle",
+    });
   });
 });
 

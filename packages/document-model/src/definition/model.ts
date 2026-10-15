@@ -645,9 +645,25 @@ function normalizeScope(
     "schema",
   ]);
   if (root === undefined) return undefined;
+  const initialValue = snapshotDataRecord(declaration.initialValue, undefined, [
+    ...path,
+    "initialValue",
+  ]);
+  if (!initialValue.ok) {
+    collector.add({
+      code: "PH-DM-INITIAL-VALUE-INVALID",
+      path: initialValue.path,
+      message: "An initial value must contain only plain data properties.",
+      expected: "a plain data object",
+      received: rejectionReceived(initialValue),
+      repair:
+        "Use a plain object with enumerable string-keyed data properties.",
+    });
+    return undefined;
+  }
   // The value is materialized during compilation, after the descriptor
   // traversal has reported any broken reference at its authored coordinate.
-  return { root, initialValue: declaration.initialValue, examples };
+  return { root, initialValue: initialValue.value, examples };
 }
 
 const CONFIG_KEYS = [
@@ -772,12 +788,32 @@ function normalizeSpecifications(
   if (global === undefined || global.root === null || local === undefined) {
     return undefined;
   }
+  let graphQLCompatibility: SchemaFirstGraphQLDocumentCompatibility | null =
+    null;
+  if (specifications.graphQLCompatibility != null) {
+    const compatibility = snapshotDataRecord(
+      specifications.graphQLCompatibility,
+      undefined,
+      [...path, "graphQLCompatibility"],
+    );
+    if (!compatibility.ok) {
+      collector.add({
+        code: "PH-DM-COMPATIBILITY-INVALID",
+        path: compatibility.path,
+        message:
+          "GraphQL compatibility must contain only plain data properties.",
+        expected: "a plain data object",
+        received: rejectionReceived(compatibility),
+        repair: "Pass the plain data returned by schemaFirstGraphQLDocument.",
+      });
+      return undefined;
+    }
+    graphQLCompatibility =
+      compatibility.value as SchemaFirstGraphQLDocumentCompatibility;
+  }
   return {
     auxiliaryTypes,
-    graphQLCompatibility:
-      (specifications.graphQLCompatibility as
-        | SchemaFirstGraphQLDocumentCompatibility
-        | undefined) ?? null,
+    graphQLCompatibility,
     global: { ...global, root: global.root },
     local,
   };

@@ -1,11 +1,16 @@
-import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
+import type {
+  DefinitionDiagnostic,
+  SchemaFirstGraphQLDocumentCompatibility,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
+import { parse } from "graphql";
 import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import { schemaFirstSpecification } from "../../src/definition/compatibility.js";
 import { compilationReportOf } from "../../src/definition/materialize.js";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
+import { schemaFirstGraphQLDocument } from "../../src/definition/tooling/graphql-document.js";
 import { checkRetainedSerialization } from "../../src/definition/tooling/retained-serialization.js";
 
 /**
@@ -13,7 +18,9 @@ import { checkRetainedSerialization } from "../../src/definition/tooling/retaine
  * overkill, but one module with an error and both kinds of example covers
  * every identity path the grammar has.
  */
-function ticket() {
+function ticket(
+  graphQLCompatibility?: SchemaFirstGraphQLDocumentCompatibility,
+) {
   return defineDocumentModel({
     id: "powerhouse/ticket",
     name: "Ticket",
@@ -22,6 +29,7 @@ function ticket() {
     version: 1,
     author: { name: "Powerhouse" },
     specifications: {
+      graphQLCompatibility,
       global: {
         schema: ph.object("TicketState", {
           fields: { title: ph.String({ required: true }) },
@@ -91,6 +99,94 @@ function finalizeWith(
 }
 
 describe("compatibility declarations", () => {
+  describe("GraphQL document data", () => {
+    it("points authors with a parsed AST to the location-free helper", () => {
+      const compatibility = schemaFirstGraphQLDocument([
+        "type TicketState { title: String! }",
+      ]);
+      Object.defineProperty(compatibility, "document", {
+        enumerable: true,
+        value: parse("type TicketState { title: String! }"),
+      });
+
+      const diagnostics = diagnosticsOf(() =>
+        ticket(compatibility).finalize({ modules: [] }),
+      );
+
+      expect(diagnostics[0]).toMatchObject({
+        code: "PH-DM-COMPATIBILITY-INVALID",
+        path: [
+          "specifications",
+          "graphQLCompatibility",
+          "document",
+          "definitions",
+          0,
+          "name",
+          "loc",
+        ],
+        received: "object",
+      });
+      expect(diagnostics[0]?.repair).toContain("schemaFirstGraphQLDocument");
+    });
+
+    it("refuses a nested accessor without running it", () => {
+      const compatibility = schemaFirstGraphQLDocument([
+        "type TicketState { title: String! }",
+      ]);
+      let reads = 0;
+      Object.defineProperty(compatibility.document, "kind", {
+        enumerable: true,
+        get() {
+          reads += 1;
+          return "Document";
+        },
+      });
+
+      const diagnostics = diagnosticsOf(() =>
+        ticket(compatibility).finalize({ modules: [] }),
+      );
+
+      expect(reads).toBe(0);
+      expect(diagnostics).toMatchObject([
+        {
+          code: "PH-DM-COMPATIBILITY-INVALID",
+          path: ["specifications", "graphQLCompatibility", "document", "kind"],
+          received: "accessor",
+        },
+      ]);
+    });
+
+    it("copies the document before later author mutation", () => {
+      const compatibility = schemaFirstGraphQLDocument([
+        "type TicketState { title: String! }",
+      ]);
+      const context = ticket(compatibility);
+      Object.defineProperty(compatibility.document, "definitions", {
+        enumerable: true,
+        value: [],
+      });
+
+      const model = context.finalize({ modules: [] });
+
+      expect(
+        model.definition.specifications[0].graphQLCompatibility,
+      ).toMatchObject({
+        kind: "graphql-ast-v1",
+        preserveDefinitionOrder: true,
+        document: {
+          kind: "Document",
+          definitions: [
+            {
+              kind: "ObjectTypeDefinition",
+              name: { kind: "Name", value: "TicketState" },
+            },
+          ],
+        },
+      });
+      expect(model.utils.createState().global).toStrictEqual({ title: "" });
+    });
+  });
+
   describe("the three modes are independent", () => {
     it("explicit identity retains no string and selects no AST", () => {
       const model = finalizeWith(
