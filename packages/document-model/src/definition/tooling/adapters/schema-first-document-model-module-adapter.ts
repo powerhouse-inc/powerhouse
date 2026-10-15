@@ -129,11 +129,12 @@ function storedModel(
   const repair =
     "Pass the module produced by ph generate, or its stored state.";
   if (!global.ok) {
+    const unreadable = state.ok ? "documentModel.global" : "documentModel";
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
       path: global.path,
-      message: `A stored document model keeps its specification history in documentModel.global as plain data, and this one cannot be read (${global.reason}).`,
-      expected: "documentModel.global as a plain record of data properties",
+      message: `A stored document model keeps its specification history in documentModel.global as plain data, and its ${unreadable} cannot be read (${global.reason}).`,
+      expected: `${unreadable} as a plain record of data properties`,
       received: rejectionReceived(global),
       repair,
     });

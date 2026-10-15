@@ -130,11 +130,14 @@ function inspect(
     : documentModel;
   const storedId = global.ok ? global.value.id : undefined;
   if (!global.ok) {
+    const unreadable = documentModel.ok
+      ? "documentModel.global"
+      : "documentModel";
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
       path: global.path,
-      message: `A usable document-model module keeps its stored model in documentModel.global as plain data, and this one cannot be read (${global.reason}).`,
-      expected: "documentModel.global as a plain record of data properties",
+      message: `A usable document-model module keeps its stored model in documentModel.global as plain data, and its ${unreadable} cannot be read (${global.reason}).`,
+      expected: `${unreadable} as a plain record of data properties`,
       received: rejectionReceived(global),
       repair:
         "Export the module returned by context.finalize() or family.at(version) without replacing its documentModel.",
