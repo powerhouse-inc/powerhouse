@@ -2,7 +2,10 @@ import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model"
 import { describe, expect, it } from "vitest";
 import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import { schemaFirstSpecification } from "../../src/definition/compatibility.js";
-import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
+import {
+  DefinitionDiagnosticCollector,
+  DocumentModelDefinitionError,
+} from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
 import {
   defineDocumentModel,
@@ -10,6 +13,7 @@ import {
 } from "../../src/definition/model.js";
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
 import { adaptSchemaFirstDocumentModelModule } from "../../src/definition/tooling/adapters/schema-first-document-model-module-adapter.js";
+import { checkDocumentModelDefinitionShape } from "../../src/definition/wire-shape.js";
 
 const SOURCE = { specifier: "./model.ts" } as const;
 
@@ -261,6 +265,24 @@ describe("a refused author value", () => {
       receivedAt(stored, "documentModel.global.specifications"),
       receivedAt(website, "author.website"),
     ]).toEqual(["null", "null", "array"]);
+  });
+});
+
+describe("a hand-edited wire definition", () => {
+  it("reads an array as array, and an uninspectable value as its type", () => {
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+    const receivedFor = (value: unknown, path: string) => {
+      const collector = new DefinitionDiagnosticCollector();
+      checkDocumentModelDefinitionShape(collector, value);
+      return receivedAt(collector.diagnostics, path);
+    };
+
+    expect([
+      receivedFor([], ""),
+      receivedFor({ compatibility: [] }, "compatibility"),
+      receivedFor(proxy, ""),
+    ]).toEqual(["array", "array", "object"]);
   });
 });
 
