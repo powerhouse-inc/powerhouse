@@ -148,7 +148,8 @@ export const schema: DocumentNode = gql`
     """
     webhookEndpoint(workflowId: String!, driveId: String): WebhookEndpointRecord
     """
-    Secret metadata (label, version, status). Never the value.
+    Secret metadata (label, version, status). Never the value. Only secrets
+    whose owning document the caller can read.
     """
     secret(ref: String!): SecretRecord
     secrets: [SecretRecord!]!
@@ -274,6 +275,10 @@ export const schema: DocumentNode = gql`
   type SecretRecord {
     ref: String!
     label: String
+    "The document the secret resolves for; null for a host secret (an OAuth app's)."
+    ownerId: String
+    "Whether the caller may rotate or delete it: its creator, able to write its owner."
+    manageable: Boolean!
     version: Int!
     status: String!
     createdAt: String!
@@ -491,16 +496,23 @@ export const schema: DocumentNode = gql`
     """
     rerun(runId: String!): WorkflowRunPayload!
     """
-    Mints a managed secret and returns its ref; the value is stored
-    encrypted and is never readable back over any API.
+    Mints a managed secret for a connection or workflow document and returns
+    its ref; only that document resolves it. The value is stored encrypted
+    and is never readable back over any API.
     """
-    createSecret(value: String!, label: String): SecretRecord!
+    createSecret(
+      value: String!
+      label: String
+      documentId: String!
+    ): SecretRecord!
     """
     Replaces the value behind an existing ref; documents stay untouched.
+    Only its creator, while able to write its owning document.
     """
     rotateSecret(ref: String!, value: String!): SecretRecord!
     """
-    Tombstones a secret; its value becomes unrecoverable.
+    Tombstones a secret; its value becomes unrecoverable. Only its creator,
+    while able to write its owning document.
     """
     deleteSecret(ref: String!): Boolean!
     """

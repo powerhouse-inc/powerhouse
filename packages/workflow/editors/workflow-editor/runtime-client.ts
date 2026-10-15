@@ -588,13 +588,16 @@ export interface SecretStat {
   label: string | null;
   // Null for a secret minted before secrets had owners.
   ownerId: string | null;
+  // Whether this caller may rotate or delete it; else a save mints a new one.
+  manageable: boolean;
   version: number;
   status: "ACTIVE" | "DELETED";
   createdAt: string;
   updatedAt: string;
 }
 
-const SECRET_FIELDS = "ref label ownerId version status createdAt updatedAt";
+const SECRET_FIELDS =
+  "ref label ownerId manageable version status createdAt updatedAt";
 
 // Mints a secret for the connection or workflow documentId; only that
 // document resolves it, and only the returned ref ever enters it.

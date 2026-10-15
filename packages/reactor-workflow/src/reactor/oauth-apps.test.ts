@@ -13,9 +13,15 @@ function memoryStore(): SecretStore & { values: Map<string, string> } {
   const values = new Map<string, string>();
   const stats = new Map<string, SecretStat>();
   let n = 0;
-  const stat = (ref: string, label: string | null): SecretStat => ({
+  const stat = (
+    ref: string,
+    label: string | null,
+    ownerId: string | null,
+  ): SecretStat => ({
     ref,
     label,
+    ownerId,
+    createdBy: null,
     version: 1,
     status: "ACTIVE",
     createdAt: "",
@@ -23,10 +29,10 @@ function memoryStore(): SecretStore & { values: Map<string, string> } {
   });
   return {
     values,
-    create: ({ value, label }) => {
+    create: ({ value, label, ownerId }) => {
       const ref = `secret://v1:${(++n).toString(16).padStart(32, "0")}`;
       values.set(ref, value);
-      stats.set(ref, stat(ref, label ?? null));
+      stats.set(ref, stat(ref, label ?? null, ownerId));
       return Promise.resolve(stats.get(ref)!);
     },
     rotate: (ref, value) => {
@@ -109,6 +115,27 @@ describe("OAuth2 apps", () => {
       clientSecretLabel("sektar", "desktop"),
       clientSecretLabel("sektar", "web"),
     ]);
+  });
+
+  it("never takes a document's secret that shares a client's label", async () => {
+    const store = memoryStore();
+    const label = clientSecretLabel("sektar", "web");
+    const planted = await store.create({
+      value: "users-own",
+      label,
+      ownerId: "connection-1",
+    });
+    const read = () => Promise.resolve(google("web", "web", "w1"));
+
+    const registry = await loadOAuthApps(
+      [{ id: "sektar", clients: { web: "w.json" } }],
+      store,
+      { read },
+    );
+    const web = registry.client("sektar", "web")!;
+    expect(web.clientSecretRef).not.toBe(planted.ref);
+    expect(store.values.get(web.clientSecretRef)).toBe("w1");
+    expect(store.values.get(planted.ref)).toBe("users-own");
   });
 
   it("skips a client whose file cannot be read, keeping the others", async () => {

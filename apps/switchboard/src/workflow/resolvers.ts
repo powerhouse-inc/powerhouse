@@ -1,8 +1,5 @@
 import { hostname } from "node:os";
-import type {
-  Context,
-  IAuthorizationService,
-} from "@powerhousedao/reactor-api";
+import type { Context } from "@powerhousedao/reactor-api";
 import type {
   RunRow,
   StepExecutionRow,
@@ -24,6 +21,8 @@ interface PieceArgs {
   packageName: string;
   version?: string | null;
 }
+
+type SecretStat = Parameters<WorkflowRuntimeService["canManageSecret"]>[0];
 
 type BlockRef = Parameters<WorkflowRuntimeService["blockDescriptor"]>[0];
 
@@ -130,17 +129,6 @@ function readsStepData(
     node.selectionSet ? [node.selectionSet] : [],
   );
   return selectsStepData(selections, path);
-}
-
-// A secret belongs to the reactor, not to any one document, so writing one is
-// an administrator's call — the gate the package mutations already use.
-function requireAdmin(
-  authorizationService: IAuthorizationService,
-  ctx: Context,
-): void {
-  if (!authorizationService.isSupremeAdmin(ctx.user?.address)) {
-    throw new GraphQLError("Admin access required");
-  }
 }
 
 // The runtime's retryable "not synced here yet", tagged for clients.
@@ -298,7 +286,6 @@ function returnUrlFor(
 
 export const getResolvers = (
   runtime: WorkflowRuntimeService,
-  authorizationService: IAuthorizationService,
   oauth?: OAuthRouting,
   access: ReactorAccessInfo = UNKNOWN_ACCESS,
   // The subgraph's own read gate; fields that need it refuse without one.
@@ -411,15 +398,11 @@ export const getResolvers = (
             driveId: args.driveId ?? undefined,
           }),
         ),
-      secret: async (_parent: unknown, args: { ref: string }) => {
-        try {
-          return await (await runtime.secrets()).stat(args.ref);
-        } catch {
-          // Unknown or malformed ref reads as "no such secret".
-          return null;
-        }
-      },
-      secrets: async () => (await runtime.secrets()).list(),
+      // Only secrets whose owning document the caller can read.
+      secret: (_parent: unknown, args: { ref: string }, ctx: Context) =>
+        runtime.secretStat(args.ref, ctx),
+      secrets: (_parent: unknown, _args: unknown, ctx: Context) =>
+        runtime.listSecrets(ctx),
       oauthRedirectUri: () => oauth?.callbackUrl ?? null,
       // The runner id apps record (folder-sync and integrations): the
       // machine, which processors can name too; they see no signing key.
@@ -533,32 +516,34 @@ export const getResolvers = (
         ),
       rerun: (_parent: unknown, args: { runId: string }, ctx: Context) =>
         runtime.rerun(args.runId, ctx),
-      createSecret: async (
+      // The runtime requires write access to the owner, and to change a
+      // secret, being its creator; admins get nothing more.
+      createSecret: (
         _parent: unknown,
-        args: { value: string; label?: string | null },
+        args: { value: string; label?: string | null; documentId: string },
         ctx: Context,
-      ) => {
-        requireAdmin(authorizationService, ctx);
-        return (await runtime.secrets()).create({
-          value: args.value,
-          label: args.label ?? undefined,
-        });
-      },
-      rotateSecret: async (
+      ) =>
+        syncAware(() =>
+          runtime.createSecret(
+            {
+              value: args.value,
+              label: args.label ?? undefined,
+              ownerId: args.documentId,
+            },
+            ctx,
+          ),
+        ),
+      rotateSecret: (
         _parent: unknown,
         args: { ref: string; value: string },
         ctx: Context,
-      ) => {
-        requireAdmin(authorizationService, ctx);
-        return (await runtime.secrets()).rotate(args.ref, args.value);
-      },
+      ) => runtime.rotateSecret(args.ref, args.value, ctx),
       deleteSecret: async (
         _parent: unknown,
         args: { ref: string },
         ctx: Context,
       ) => {
-        requireAdmin(authorizationService, ctx);
-        await (await runtime.secrets()).delete(args.ref);
+        await runtime.deleteSecret(args.ref, ctx);
         return true;
       },
       checkConnection: (
@@ -566,7 +551,7 @@ export const getResolvers = (
         args: { connectionId: string },
         ctx: Context,
       ) => runtime.checkConnection(args.connectionId, ctx),
-      // Signing in mints a secret, so it takes what createSecret takes.
+      // Signing in mints a secret: the runtime requires write access.
       startOAuth: (
         _parent: unknown,
         args: {
@@ -576,13 +561,16 @@ export const getResolvers = (
         },
         ctx: Context,
       ) => {
-        requireAdmin(authorizationService, ctx);
         const returnUrl = returnUrlFor(args.returnUrl, ctx);
         return runtime.startOAuth(args.connectionId, ctx, {
           redirectUri: redirectUriFor(oauth, args.redirectUri),
           ...(returnUrl ? { returnUrl } : {}),
         });
       },
+    },
+    SecretRecord: {
+      manageable: (parent: SecretStat, _args: unknown, ctx: Context) =>
+        runtime.canManageSecret(parent, ctx),
     },
   };
 };

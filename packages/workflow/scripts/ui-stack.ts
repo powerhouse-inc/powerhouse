@@ -26,7 +26,7 @@ import type * as WorkflowModel from "../document-models/workflow/v1/index.js";
 
 export const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const ROOT = resolve(PKG, "../..");
-const SWITCHBOARD_PORT = 4001;
+const SWITCHBOARD_PORT = Number(process.env.UI_SHOTS_SWITCHBOARD_PORT ?? 4001);
 const CONNECT_PORT = Number(process.env.UI_SHOTS_CONNECT_PORT ?? 3100);
 export const SWITCHBOARD = `http://localhost:${SWITCHBOARD_PORT}`;
 export const CONNECT = `http://localhost:${CONNECT_PORT}`;
@@ -114,6 +114,8 @@ export async function ensureServers(): Promise<ChildProcess[]> {
         join(ROOT, "apps/switchboard"),
         {
           PORT: String(SWITCHBOARD_PORT),
+          // Switchboard's .env sets this, and it wins over PORT.
+          PH_SWITCHBOARD_PORT: String(SWITCHBOARD_PORT),
           PH_PGLITE_IN_MEMORY: "1",
           PH_WORKFLOWS_ENABLED: "true",
           // Loopback only, so tests can reach the services they start.
@@ -556,7 +558,9 @@ async function createRemoteDrive(slug: string): Promise<string> {
   return data.DocumentDrive.createDocument.id;
 }
 
+// Mints a secret for an existing connection or workflow; only it resolves it.
 export async function createSecret(
+  documentId: string,
   value: string,
   label: string,
 ): Promise<string> {
@@ -564,10 +568,41 @@ export async function createSecret(
     workflowRuntime: { createSecret: { ref: string } };
   }>(
     "/graphql/workflow-runtime",
-    `mutation($v: String!, $l: String) { workflowRuntime { createSecret(value: $v, label: $l) { ref } } }`,
-    { v: value, l: label },
+    `mutation($v: String!, $l: String, $d: String!) { workflowRuntime { createSecret(value: $v, label: $l, documentId: $d) { ref } } }`,
+    { v: value, l: label, d: documentId },
   );
   return data.workflowRuntime.createSecret.ref;
+}
+
+/** Mints each value for the connection and points its secretRefs at them. */
+async function addConnectionSecrets(
+  page: Page,
+  connectionId: string,
+  label: string,
+  values: Record<string, string>,
+): Promise<void> {
+  const refs: Record<string, string> = {};
+  for (const [name, value] of Object.entries(values)) {
+    refs[name] = await createSecret(connectionId, value, `${label} · ${name}`);
+  }
+  if (Object.keys(refs).length === 0) return;
+  await evaluateWithReactor(
+    page,
+    async ({ connectionId, refs }) => {
+      const w = window as unknown as PhWindow;
+      const cn = (await w.__uiModel!(
+        "powerhouse/connection",
+      )) as typeof ConnectionModel;
+      await w.ph!.reactorClientModule!.client.execute(
+        connectionId,
+        "main",
+        Object.entries(refs).map(([name, ref]) =>
+          cn.setSecretRef({ id: `secret-${name}`, name, ref }),
+        ),
+      );
+    },
+    { connectionId, refs },
+  );
 }
 
 interface PieceListing {
@@ -663,7 +698,6 @@ interface SeedInput {
     schedule: TriggerBlock;
     manual: TriggerBlock;
   };
-  botTokenRef: string;
   // Each block's piece defaults, by the role it plays in the seed.
   defaults: Record<SeedRole | "schedule" | "manual", Record<string, unknown>>;
 }
@@ -719,7 +753,7 @@ export interface PhWindow {
 function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
   return evaluateWithReactor(
     page,
-    async ({ drive, blocks, botTokenRef, defaults }) => {
+    async ({ drive, blocks, defaults }) => {
       const w = window as unknown as PhWindow;
       const client = w.ph!.reactorClientModule!.client;
       const wf = (await w.__uiModel!(
@@ -746,11 +780,6 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
         cn.setConnector({
           connectorId: "@activepieces/piece-slack",
           authType: "CUSTOM_AUTH",
-        }),
-        cn.setSecretRef({
-          id: "bot-token",
-          name: "botToken",
-          ref: botTokenRef,
         }),
         cn.setAccountLabel({ accountLabel: "ops@acme.dev" }),
         cn.recordCheckResult({
@@ -1117,7 +1146,7 @@ export async function resetConnect(page: Page): Promise<void> {
 
 // Adds the drive through Connect's own addRemoteDrive, then waits until the
 // local reactor can read it. Safe to repeat.
-async function attachDrive(page: Page, slug: string, id: string) {
+export async function attachDrive(page: Page, slug: string, id: string) {
   await evaluateWithReactor(
     page,
     async ({ url }) => {
@@ -1185,10 +1214,6 @@ export async function addSeededDrive(
       coreTrigger("manual"),
     ]);
   const blocks = { http, parseUrl, openai, slack, branch, schedule, manual };
-  const botTokenRef = await createSecret(
-    "xoxb-demo-token",
-    "Ops Slack · Bot Token",
-  );
   const known = await blockDefaults(Object.values(blocks));
   const defaults = Object.fromEntries(
     Object.entries(blocks).map(([role, block]) => [
@@ -1205,7 +1230,6 @@ export async function addSeededDrive(
       seeded = await seedInBrowser(page, {
         drive,
         blocks,
-        botTokenRef,
         defaults,
       });
     } catch (error) {
@@ -1217,6 +1241,10 @@ export async function addSeededDrive(
       await attachDrive(page, driveSlug, drive);
     }
   }
+  // The secret is minted once the connection exists, since it is bound to it.
+  await addConnectionSecrets(page, seeded.connection, "Ops Slack", {
+    botToken: "xoxb-demo-token",
+  });
   // One succeeded and one failed run, for the runs views.
   await Promise.all([
     fireWhenSynced(seeded.smoke),
@@ -1265,6 +1293,7 @@ export interface WorkflowSpec {
   enabled?: boolean;
   // Replaces the default chain; "trigger" names the trigger.
   edges?: { from: string; to: string; port: string }[];
+  variables?: { key: string; value: string; description?: string }[];
 }
 
 /** Adds a workflow, enabled unless told otherwise, through Connect's reactor. */
@@ -1327,6 +1356,8 @@ export async function createWorkflowInBrowser(
       }
       for (const [i, edge] of (spec.edges ?? []).entries())
         actions.push(wf.addEdge({ id: `e-${i}`, ...edge }));
+      for (const variable of spec.variables ?? [])
+        actions.push(wf.setVariable({ id: `v-${variable.key}`, ...variable }));
       if (spec.enabled !== false) {
         actions.push(
           wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
@@ -1351,17 +1382,17 @@ export interface ConnectionSpec {
   connectorId: string;
   authType: "SECRET_TEXT" | "BASIC_AUTH" | "CUSTOM_AUTH" | "REACTOR";
   config: Record<string, unknown>;
-  // Field name to secret:// ref, from createSecret.
+  // Field name to secret value, minted for the connection once it exists.
   secrets: Record<string, string>;
 }
 
 /** Adds a configured connection to the drive through Connect's reactor. */
-export function createConnectionInBrowser(
+export async function createConnectionInBrowser(
   page: Page,
   drive: string,
   spec: ConnectionSpec,
 ): Promise<string> {
-  return evaluateWithReactor(
+  const id = await evaluateWithReactor(
     page,
     async ({ drive, spec }) => {
       const w = window as unknown as PhWindow;
@@ -1388,17 +1419,16 @@ export function createConnectionInBrowser(
         }),
         cn.setConfig({ config: spec.config }),
       ];
-      for (const [name, ref] of Object.entries(spec.secrets)) {
-        actions.push(cn.setSecretRef({ id: `secret-${name}`, name, ref }));
-      }
       await client.execute(id, "main", actions);
       await client.rename(id, spec.name);
       // Pickers that list a drive's files show the node's name.
       await client.drives.renameNode(drive, id, spec.name);
       return id;
     },
-    { drive, spec },
+    { drive, spec: { ...spec, secrets: {} } },
   );
+  await addConnectionSecrets(page, id, spec.name, spec.secrets);
+  return id;
 }
 
 export interface RunResult {

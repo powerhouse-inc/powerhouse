@@ -23,6 +23,7 @@ import {
   type PieceSources,
 } from "../../test/helpers/piece-sources.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import type { SecretOwner } from "../pieces/index.js";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { resolveConnectionWithSecrets } from "./lib.js";
 import {
@@ -37,6 +38,7 @@ import type { WorkflowRuntimeService } from "./service.js";
 
 const PIECE = { name: "@activepieces/piece-oauth-app", version: "1.0.0" };
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+const OTHER_CTX = { headers: {}, db: {}, user: { address: "0xdef" } } as never;
 const REDIRECT =
   "https://switchboard.example/api/@powerhousedao/workflow/oauth/callback";
 const EGRESS_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
@@ -178,12 +180,16 @@ function documentStore() {
   };
 }
 
+const ownedBy = (documentId: string): SecretOwner => ({
+  documentId,
+  kind: "connection",
+});
+
 describe("OAuth2 sign-in", () => {
   let provider: Awaited<ReturnType<typeof startProvider>>;
   let sources: PieceSources;
   let service: WorkflowRuntimeService;
   let store: ReturnType<typeof documentStore>;
-  let clientSecretRef = "";
   const previousEgress = process.env[EGRESS_ENV];
 
   beforeAll(async () => {
@@ -222,10 +228,10 @@ module.exports = { app };
     service = testRuntime({
       reactorClient: store.client,
       relationalDb: createTestRelationalDb(),
+      subjectOf: (caller: { user?: { address: string } }) => ({
+        address: caller.user?.address,
+      }),
     } as unknown as WorkflowRuntimeHostDeps);
-    clientSecretRef = (
-      await (await service.secrets()).create({ value: "app-secret" })
-    ).ref;
   });
 
   afterAll(async () => {
@@ -235,8 +241,14 @@ module.exports = { app };
     await provider.stop();
   });
 
-  function connection(config: Record<string, unknown>): string {
+  // The client secret is minted for the connection, as the editor does.
+  async function connection(config: Record<string, unknown>): Promise<string> {
     let document = utils.createDocument();
+    const clientSecretRef = (
+      await (
+        await service.secrets()
+      ).create({ value: "app-secret", ownerId: document.header.id })
+    ).ref;
     document = reducer(
       document,
       actions.setConnector({
@@ -257,8 +269,8 @@ module.exports = { app };
     return document.header.id;
   }
 
-  async function signIn(connectionId: string) {
-    const started = await service.startOAuth(connectionId, CTX, {
+  async function signIn(connectionId: string, ctx = CTX) {
+    const started = await service.startOAuth(connectionId, ctx, {
       redirectUri: REDIRECT,
     });
     provider.issue("code-1", started.authorizationUrl);
@@ -272,7 +284,7 @@ module.exports = { app };
   }
 
   it("sends the user to the provider with the app, scopes and a PKCE challenge", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const started = await service.startOAuth(id, CTX, {
       redirectUri: REDIRECT,
     });
@@ -301,7 +313,7 @@ module.exports = { app };
   });
 
   it("stores the token, marks the connection OK and shapes it for pieces", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const { started, result } = await signIn(id);
 
     expect(result).toEqual({ ok: true, detail: null, returnUrl: null });
@@ -343,8 +355,78 @@ module.exports = { app };
     );
   });
 
+  it("refuses a client secret copied from another connection", async () => {
+    const owner = await connection({ client_id: "cid", subdomain: "acme" });
+    const thief = await connection({ client_id: "cid", subdomain: "acme" });
+    const ownerSecret = store.documents
+      .get(owner)!
+      .state.global.secretRefs.find((ref) => ref.name === "client_secret")!;
+    await store.client.execute(thief, "main", [
+      actions.setSecretRef({ ...ownerSecret, id: "sr-secret" }),
+    ]);
+    const before = provider.requests.length;
+
+    const { result } = await signIn(thief);
+
+    expect(result).toMatchObject({
+      ok: false,
+      detail: "This secret belongs to another connection; enter it again",
+    });
+    expect(provider.requests).toHaveLength(before);
+  });
+
+  it("mints its own token rather than rotate one copied from another connection", async () => {
+    const owner = await connection({ client_id: "cid", subdomain: "acme" });
+    await signIn(owner);
+    const ownerToken = store.documents
+      .get(owner)!
+      .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!;
+    const secrets = await service.secrets();
+    const before = await secrets.get(ownerToken.ref, ownedBy(owner));
+    const thief = await connection({ client_id: "cid", subdomain: "acme" });
+    await store.client.execute(thief, "main", [
+      actions.setSecretRef(ownerToken),
+    ]);
+
+    await signIn(thief);
+
+    const thiefToken = store.documents
+      .get(thief)!
+      .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!;
+    expect(thiefToken.ref).not.toBe(ownerToken.ref);
+    expect((await secrets.stat(thiefToken.ref)).ownerId).toBe(thief);
+    await expect(secrets.get(ownerToken.ref, ownedBy(owner))).resolves.toBe(
+      before,
+    );
+  });
+
+  it("rotates its signer's own token, but mints another user a new one", async () => {
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
+    const token = () =>
+      store.documents
+        .get(id)!
+        .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!.ref;
+    const secrets = await service.secrets();
+
+    await signIn(id);
+    const first = token();
+    expect((await secrets.stat(first)).createdBy).toBe("0xabc");
+    await signIn(id);
+    expect(token()).toBe(first);
+    expect((await secrets.stat(first)).version).toBe(2);
+
+    await signIn(id, OTHER_CTX);
+    expect(token()).not.toBe(first);
+    expect(await secrets.stat(token())).toMatchObject({
+      ownerId: id,
+      createdBy: "0xdef",
+      version: 1,
+    });
+    expect((await secrets.stat(first)).version).toBe(2);
+  });
+
   it("uses a state once", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const { started } = await signIn(id);
     const before = provider.requests.length;
     await expect(
@@ -357,7 +439,7 @@ module.exports = { app };
   });
 
   it("records the provider's refusal on the attempt, not the connection", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const started = await service.startOAuth(id, CTX, {
       redirectUri: REDIRECT,
     });
@@ -376,7 +458,7 @@ module.exports = { app };
   });
 
   it("refuses a token for an app the connection no longer names", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const started = await service.startOAuth(id, CTX, {
       redirectUri: REDIRECT,
     });
@@ -392,25 +474,27 @@ module.exports = { app };
   });
 
   it("asks for the app before signing in", async () => {
-    const id = connection({ subdomain: "acme" });
+    const id = await connection({ subdomain: "acme" });
     await expect(
       service.startOAuth(id, CTX, { redirectUri: REDIRECT }),
     ).rejects.toThrow("Set the client ID before connecting");
-    const noSubdomain = connection({ client_id: "cid" });
+    const noSubdomain = await connection({ client_id: "cid" });
     await expect(
       service.startOAuth(noSubdomain, CTX, { redirectUri: REDIRECT }),
     ).rejects.toThrow('Set "subdomain" before connecting');
   });
 
   it("refreshes a token close to expiry and keeps its refresh token", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     await signIn(id);
     const document = store.documents.get(id)!;
     const tokenRef = document.state.global.secretRefs.find(
       (ref) => ref.name === OAUTH_TOKEN,
     )!.ref;
     const secrets = await service.secrets();
-    const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     await secrets.rotate(
       tokenRef,
       JSON.stringify({ ...stored, claimed_at: stored.claimed_at - 3500 }),
@@ -436,7 +520,9 @@ module.exports = { app };
     ]);
     expect(first.auth).toMatchObject({ access_token: "at-refreshed-1" });
     expect(second.auth).toMatchObject({ access_token: "at-refreshed-1" });
-    const refreshed = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const refreshed = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     expect(refreshed).toMatchObject({
       access_token: "at-refreshed-1",
       refresh_token: "rt-1",
@@ -445,14 +531,16 @@ module.exports = { app };
   });
 
   it("drops a refresh that a newer sign-in overtook", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     await signIn(id);
     const document = store.documents.get(id)!;
     const tokenRef = document.state.global.secretRefs.find(
       (ref) => ref.name === OAUTH_TOKEN,
     )!.ref;
     const secrets = await service.secrets();
-    const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     await secrets.rotate(
       tokenRef,
       JSON.stringify({
@@ -466,10 +554,13 @@ module.exports = { app };
     });
 
     const held = provider.holdSlowRefresh();
-    const refreshing = refresher.refreshIfDue({
-      config: document.state.global.config as Record<string, unknown>,
-      secretRefs: document.state.global.secretRefs,
-    });
+    const refreshing = refresher.refreshIfDue(
+      {
+        config: document.state.global.config as Record<string, unknown>,
+        secretRefs: document.state.global.secretRefs,
+      },
+      id,
+    );
     await held.arrived;
     // The user reconnects while the refresh is still out.
     const reconnected = { ...stored, access_token: "at-reconnected" };
@@ -477,20 +568,22 @@ module.exports = { app };
     held.release();
     await refreshing;
 
-    expect(JSON.parse(await secrets.get(tokenRef))).toMatchObject({
+    expect(JSON.parse(await secrets.get(tokenRef, ownedBy(id)))).toMatchObject({
       access_token: "at-reconnected",
     });
   });
 
   it("keeps a token that still works when its refresh is refused", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     await signIn(id);
     const document = store.documents.get(id)!;
     const tokenRef = document.state.global.secretRefs.find(
       (ref) => ref.name === OAUTH_TOKEN,
     )!.ref;
     const secrets = await service.secrets();
-    const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     const refresher = new StoreTokenRefresher(() => service.secrets(), {
       allowAddresses: ["127.0.0.1/32"],
     });
@@ -560,7 +653,7 @@ module.exports = { app };
     });
 
     it("signs in with the web client for a public callback, asking only the connection's scopes", async () => {
-      const id = connection({
+      const id = await connection({
         oauth_app: "sektar",
         oauth_scopes: "read",
         subdomain: "acme",
@@ -588,7 +681,10 @@ module.exports = { app };
         (ref) => ref.name === OAUTH_TOKEN,
       )!.ref;
       const secrets = await appService.secrets();
-      const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+      const owner = { documentId: id, kind: "connection" as const };
+      const stored = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
       expect(stored.client_id).toBe("cid");
       expect(stored.client_secret_ref).toMatch(/^secret:\/\/v1:/);
       await secrets.rotate(
@@ -607,13 +703,13 @@ module.exports = { app };
       const auth = resolved.auth as { access_token?: unknown };
       expect(String(auth.access_token)).toMatch(/^at-refreshed-/);
       const refreshed = JSON.parse(
-        await secrets.get(tokenRef),
+        await secrets.get(tokenRef, owner),
       ) as OAuthTokenSet;
       expect(refreshed.client_id).toBe("cid");
     });
 
     it("signs in with the desktop client and PKCE for a callback to this machine", async () => {
-      const id = connection({ oauth_app: "sektar", subdomain: "acme" });
+      const id = await connection({ oauth_app: "sektar", subdomain: "acme" });
       const started = await appService.startOAuth(id, CTX, {
         redirectUri: LOOPBACK,
       });
@@ -626,7 +722,7 @@ module.exports = { app };
     });
 
     it("refuses an app without a client of the kind the callback needs", async () => {
-      const id = connection({ oauth_app: "web-only", subdomain: "acme" });
+      const id = await connection({ oauth_app: "web-only", subdomain: "acme" });
       await expect(
         appService.startOAuth(id, CTX, { redirectUri: LOOPBACK }),
       ).rejects.toThrow(
