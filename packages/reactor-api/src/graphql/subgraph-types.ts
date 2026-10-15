@@ -13,6 +13,7 @@ import {
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   generatedTypesOf,
+  getDocumentModelSchemaName,
   getDocumentModelSubgraphName,
   globalStateOf,
   isDocumentModelModule,
@@ -87,6 +88,17 @@ export type RefusedDocumentModel = {
     | "unservable subgraph";
   /** The reason the server logs. */
   readonly reason: string;
+  /**
+   * For an unservable subgraph, the other model listed first under the same
+   * schema name, whose generated types won.
+   */
+  readonly supplier?: string;
+};
+
+/** A model subgraph the server registers, holding its name. */
+export type RegisteredModelSubgraph = PackageSubgraph & {
+  /** Whether it builds onto the generated schema, and so holds claims. */
+  readonly builds: boolean;
 };
 
 /** The document models as the server admits them, built once per check. */
@@ -103,7 +115,7 @@ export type HostDocumentModels<M extends DocumentModelSource> = {
    * The model subgraphs the server registers, each holding its name. Only
    * those that build onto the generated schema hold claims.
    */
-  readonly subgraphs: readonly (PackageSubgraph & { builds: boolean })[];
+  readonly subgraphs: readonly RegisteredModelSubgraph[];
 };
 
 /** Admits the base models and `documentModels` as the server does. */
@@ -119,6 +131,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     model: DocumentModelSource,
     kind: RefusedDocumentModel["kind"],
     reason: string,
+    supplier?: string,
   ) => {
     if (!given.has(model)) return;
     const { id, name } = globalStateOf(model);
@@ -131,7 +144,13 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     ) {
       return;
     }
-    refused.push({ id, name, kind, reason });
+    refused.push({
+      id,
+      name,
+      kind,
+      reason,
+      ...(supplier !== undefined && { supplier }),
+    });
   };
 
   for (const model of [
@@ -192,7 +211,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   // server keeps it registered, holding its name, with nothing mounted and
   // no claims.
   const modules = admitted.filter(isDocumentModelModule);
-  const subgraphs: (PackageSubgraph & { builds: boolean })[] = [];
+  const subgraphs: RegisteredModelSubgraph[] = [];
   for (const [name, { model, own }] of latest) {
     let builds = true;
     try {
@@ -203,10 +222,23 @@ export function hostDocumentModels<M extends DocumentModelSource>(
       });
     } catch (error) {
       builds = false;
+      // The generated schema keeps the first model listed under a schema
+      // name, so a different model there supplies the types that clash.
+      const { id } = globalStateOf(model);
+      const schemaName = getDocumentModelSchemaName(globalStateOf(model));
+      const first = admitted.find(
+        (other) =>
+          getDocumentModelSchemaName(globalStateOf(other)) === schemaName,
+      );
+      const supplier =
+        first !== undefined && globalStateOf(first).id !== id
+          ? globalStateOf(first).name
+          : undefined;
       refuse(
         model,
         "unservable subgraph",
         `does not build onto the generated schema: ${error instanceof Error ? error.message : String(error)}`,
+        supplier,
       );
     }
     subgraphs.push({ name, typeDefs: own.typeDefs, builds });
@@ -473,34 +505,39 @@ const sentence = (text: string) => (text.endsWith(".") ? text : `${text}.`);
 
 const REFUSED_MODEL_WORDING: Record<
   RefusedDocumentModel["kind"],
-  { subject: (name: string) => string; repair: string }
+  {
+    subject: (name: string) => string;
+    repair: (model: RefusedDocumentModel) => string;
+  }
 > = {
   "unusable schema": {
     subject: (name) => `The server refuses document model "${name}"`,
-    repair:
+    repair: () =>
       "Fix the document model's state and operation schemas so they build.",
   },
   "reserved names": {
     subject: (name) => `The server refuses document model "${name}"`,
-    repair:
+    repair: () =>
       "Rename the document model, or the types it generates that the server reserves.",
   },
   "unusable subgraph": {
     subject: (name) =>
       `The server refuses the subgraph of document model "${name}"`,
-    repair: "Fix the operation schemas so the model's subgraph builds.",
+    repair: () => "Fix the operation schemas so the model's subgraph builds.",
   },
   "reserved subgraph name": {
     subject: (name) =>
       `The server refuses the subgraph of document model "${name}"`,
-    repair:
+    repair: () =>
       "Rename the document model, so its subgraph takes a name no core subgraph holds.",
   },
   "unservable subgraph": {
     subject: (name) =>
       `The server registers the subgraph of document model "${name}" but cannot serve it`,
-    repair:
-      "The first model listed under this model's schema name supplies the generated types, so make every model and version sharing that name define its types the same way, or rename one of them.",
+    repair: ({ supplier }) =>
+      supplier === undefined
+        ? "Make every version of the document model define its types the same way, or retire the version that differs."
+        : `Document model "${supplier}" is listed first under the same schema name and supplies the generated types, so rename one of the two models.`,
   },
 };
 
@@ -512,7 +549,7 @@ export function describeRefusedDocumentModel(
   return {
     code: "PH-DM-GRAPHQL-REFUSED",
     message: sentence(`${subject(name)}: it ${reason}`),
-    repair,
+    repair: repair(model),
   };
 }
 
