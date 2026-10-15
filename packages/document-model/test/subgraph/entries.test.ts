@@ -1106,6 +1106,27 @@ describe("a refused value", () => {
       ].map(received),
     ).toEqual(["null", "array", "null", "array", "null", "null", "null"]);
   });
+
+  it("is reported as an array, not an object or a custom prototype, where a field use or a record belongs", () => {
+    const { builders: build } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+
+    expect(
+      [
+        () =>
+          build.query("a", {
+            returns: [] as never,
+            resolve: (() => null) as never,
+          }),
+        () => ph.object("A", { fields: [] as never }),
+        () => ph.list(ph.String(), [] as never),
+      ].map(received),
+    ).toEqual(["array", "not-record", "not-record"]);
+  });
 });
 
 describe("an explicit undefined implements", () => {

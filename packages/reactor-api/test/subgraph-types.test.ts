@@ -543,7 +543,17 @@ describe("hostDocumentModels", () => {
       Object.fromEntries(
         Array.from(
           findPackageSubgraphConflicts(
-            [{ name: "notes", typeDefs: template("Notes", "notes") }],
+            [
+              { name: "notes", typeDefs: template("Notes", "notes") },
+              {
+                name: "other",
+                typeDefs: gql`
+                  type Query {
+                    Notes: String
+                  }
+                `,
+              },
+            ],
             host,
           ).conflicts,
           ([subgraph, conflict]) => [subgraph.name, conflict],
