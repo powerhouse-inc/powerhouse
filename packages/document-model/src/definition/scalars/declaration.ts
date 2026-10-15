@@ -206,8 +206,6 @@ function withDefaults(
 }
 
 /** Whether `value` is an object whose `methods` are functions, read without letting a throw escape. */
-const COERCION_KEYS = ["parseValue", "parseLiteral", "serialize"];
-
 const ZERO_KEYS = {
   value: ["kind", "value"],
   none: ["kind", "reason"],
@@ -296,8 +294,7 @@ function snapshotCoercion(
   // looked up along the chain by descriptor: a method is read without
   // running author code, and an accessor is refused unrun. Each method is
   // called on the instance, so it keeps its own state.
-  const members: Partial<Record<(typeof COERCION_KEYS)[number], unknown>> = {};
-  for (const key of COERCION_KEYS) {
+  const method = (key: string) => {
     const found = dataMember(value, key);
     if (found === "accessor" || found === "inspection-failed") {
       fail(name, {
@@ -308,25 +305,22 @@ function snapshotCoercion(
         repair,
       });
     }
-    members[key] = found.value;
-  }
-  if (COERCION_KEYS.some((key) => typeof members[key] !== "function")) {
-    fail(name, {
-      code: "PH-SCALAR-DECLARATION-INVALID",
-      path: ["coercion"],
-      message: `Scalar ${name} must either omit coercion or provide parseValue, parseLiteral, and serialize.`,
-      repair: "Omit coercion to derive it, or provide all three functions.",
-    });
-  }
-  const onInstance =
-    (method: unknown) =>
-    (...args: unknown[]): unknown =>
-      Reflect.apply(method as (...args: unknown[]) => unknown, value, args);
+    const member = found.value;
+    if (typeof member !== "function") {
+      fail(name, {
+        code: "PH-SCALAR-DECLARATION-INVALID",
+        path: ["coercion"],
+        message: `Scalar ${name} must either omit coercion or provide parseValue, parseLiteral, and serialize.`,
+        repair: "Omit coercion to derive it, or provide all three functions.",
+      });
+    }
+    return (...args: unknown[]): unknown => Reflect.apply(member, value, args);
+  };
   return {
-    parseValue: onInstance(members.parseValue),
-    parseLiteral: onInstance(members.parseLiteral),
-    serialize: onInstance(members.serialize),
-  } as ScalarCoercion<unknown>;
+    parseValue: method("parseValue"),
+    parseLiteral: method("parseLiteral"),
+    serialize: method("serialize"),
+  };
 }
 
 /** Deeper than any class hierarchy; a proxy can make a chain endless. */

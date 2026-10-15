@@ -81,8 +81,9 @@ function compileDeclaration<
   const declaration = parseScalarDeclaration(
     input,
   ) as ResolvedScalarDeclaration<TName, TBuilderName, TBase, TInput>;
-  // Every field use carries the binding, so nothing in it may be the
-  // author's own mutable object.
+  // Every field use carries the binding, so it is frozen. An explicit
+  // coercion's methods were resolved at declaration and run on the author's
+  // instance, so they keep its state.
   const { parseValue, parseLiteral, serialize } =
     declaration.coercion ?? deriveCoercion(declaration);
   const coercion = Object.freeze({ parseValue, parseLiteral, serialize });
