@@ -131,10 +131,12 @@ export function compileSubgraph<
 
 /**
  * The host mounts a subgraph at a path joined from its name, so a `/` or
- * `..` would land it on another route. Every name `ph generate subgraph`
- * writes, a kebab-case run of letters and digits, matches.
+ * `..` would land it on another route. ASCII only, because the adapters match
+ * the mounted path against the percent-encoded request path, so a route
+ * spelled with `é` never matches. Every name `ph generate subgraph` writes,
+ * a kebab-case run of letters and digits, matches.
  */
-const ROUTE_SEGMENT = /^[\p{L}\d][\p{L}\d_-]*$/u;
+const ROUTE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 function subgraphName(value: unknown): string {
   if (typeof value !== "string" || value.length === 0) {
@@ -151,7 +153,7 @@ function subgraphName(value: unknown): string {
       code: "PH-SG-DEFINITION-INVALID",
       path: ["name"],
       message:
-        "A subgraph name is one route segment: letters, digits, hyphens, and underscores, starting with a letter or digit.",
+        "A subgraph name is one route segment: ASCII letters, digits, hyphens, and underscores, starting with a letter or digit.",
       received: value,
       repair:
         'Use a name such as "contacts-search", the kebab-case form ph generate subgraph writes.',
