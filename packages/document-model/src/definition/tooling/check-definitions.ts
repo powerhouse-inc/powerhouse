@@ -41,6 +41,7 @@ import type {
   SubgraphClass,
 } from "./definition-source-types.js";
 import { checkRetainedSerialization } from "./retained-serialization.js";
+import { checkInterfaceImplementations } from "./interface-implementations.js";
 
 /**
  * `tsc` cannot run this check. A code-first declaration compiles while its
@@ -312,6 +313,7 @@ function normalizeLoadedDefinitions(loaded: LoadedDefinitionSet): Normalized {
         })),
         ...checkStoredMaterialization(artifact),
         ...checkDuplicateActionTypes(artifact),
+        ...checkInterfaceImplementations(artifact),
       );
       const compatibility = compatibilityOf(entry.value);
       definitions.push({

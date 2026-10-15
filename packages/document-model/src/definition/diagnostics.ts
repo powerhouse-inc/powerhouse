@@ -155,6 +155,12 @@ const catalog = {
     meaning:
       "A model, module, operation, error, example, version, or family declaration member is absent, malformed, unsupported, or forged",
   },
+  "PH-DM-INTERFACE-INVALID": {
+    severity: "error",
+    phase: "definition",
+    meaning:
+      "An object or interface does not satisfy an implemented interface's fields, arguments, or ancestor requirements",
+  },
   "PH-DM-INITIAL-VALUE-INVALID": {
     severity: "error",
     phase: "definition",
