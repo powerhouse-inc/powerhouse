@@ -32,11 +32,8 @@ describe("CI/CD Templates", () => {
       );
     });
 
-    test("should request an OIDC token and skip forked PRs", () => {
+    test("should request an OIDC token", () => {
       expect(vetraWorkflowTemplate).toContain("id-token: write");
-      expect(vetraWorkflowTemplate).toContain(
-        "if: github.event.pull_request.head.repo.fork != true",
-      );
     });
 
     test("should deploy via the vetra-deploy-action with the app-id variable", () => {
@@ -46,6 +43,23 @@ describe("CI/CD Templates", () => {
       expect(vetraWorkflowTemplate).toContain(
         "app-id: ${{ vars.VETRA_APP_ID }}",
       );
+    });
+
+    test("skips PRs from other repositories by full name, like the server template", () => {
+      expect(vetraWorkflowTemplate).toContain(
+        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
+      );
+      expect(vetraWorkflowTemplate).not.toContain("head.repo.fork");
+    });
+
+    test("should pin pnpm because the scaffolded package.json has no packageManager field", () => {
+      expect(vetraWorkflowTemplate).toContain(
+        "uses: pnpm/action-setup@v4\n        with: { version: 10 }",
+      );
+    });
+
+    test("should set up Node 24, which ph-cli requires", () => {
+      expect(vetraWorkflowTemplate).toContain("node-version: 24");
     });
 
     test("should keep the literal GitHub Actions expression syntax intact", () => {
