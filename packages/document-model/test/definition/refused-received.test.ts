@@ -1,4 +1,5 @@
 import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import { schemaFirstSpecification } from "../../src/definition/compatibility.js";
@@ -316,6 +317,38 @@ describe("a value refused where a record belongs", () => {
       ["", "array"],
       ["", "null"],
       ["", "array"],
+    ]);
+  });
+});
+
+describe("an array of another prototype or realm where fields belong", () => {
+  it("is refused as an array, and a revoked proxy is refused rather than thrown", () => {
+    class Sub extends Array {}
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+
+    expect(
+      [new Sub(), runInNewContext("[]") as unknown, proxy].flatMap((fields) =>
+        diagnosticsOf(() => ph.object("A", { fields: fields as never })).map(
+          ({ code, message, received }) => [code, message, received],
+        ),
+      ),
+    ).toEqual([
+      [
+        "PH-DEF-OPTION-INVALID",
+        "The option value could not be snapshotted (not-record).",
+        "array",
+      ],
+      [
+        "PH-DEF-OPTION-INVALID",
+        "The option value could not be snapshotted (not-record).",
+        "array",
+      ],
+      [
+        "PH-DEF-OPTION-INVALID",
+        "The option value could not be snapshotted (inspection-failed).",
+        "inspection-failed",
+      ],
     ]);
   });
 });

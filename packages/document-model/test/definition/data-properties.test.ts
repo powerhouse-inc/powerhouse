@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 import type { DataSnapshot } from "../../src/definition/data-properties.js";
@@ -543,5 +544,23 @@ describe("snapshotRecord", () => {
       path: ["opts"],
       received: "object",
     });
+  });
+});
+
+describe("an array where a record belongs", () => {
+  it("is not-record whatever its prototype or realm, and a revoked proxy fails inspection", () => {
+    class Sub extends Array<number> {}
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+
+    expect(
+      [new Sub(), runInNewContext("[]") as unknown, proxy].map((value) =>
+        snapshotRecord(value, [], ["opts"]),
+      ),
+    ).toStrictEqual([
+      { ok: false, reason: "not-record", path: ["opts"], received: "array" },
+      { ok: false, reason: "not-record", path: ["opts"], received: "array" },
+      { ok: false, reason: "inspection-failed", path: ["opts"] },
+    ]);
   });
 });
