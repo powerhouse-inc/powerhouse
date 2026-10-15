@@ -269,8 +269,17 @@ export async function tsMorphGeneratePieceAction(args: {
   pieceDir: string;
   actionName: string;
   requireReactor?: PieceRequireReactor;
+  defaultTimeoutSeconds?: number;
+  defaultMaxAttempts?: number;
 }): Promise<void> {
-  const { project, pieceDir, actionName, requireReactor } = args;
+  const {
+    project,
+    pieceDir,
+    actionName,
+    requireReactor,
+    defaultTimeoutSeconds,
+    defaultMaxAttempts,
+  } = args;
   const kebabActionName = kebabCase(actionName);
   const paths = pieceDirPaths(project, pieceDir);
   const { names, withAuth } = namesForExistingPiece(project, pieceDir);
@@ -287,6 +296,8 @@ export async function tsMorphGeneratePieceAction(args: {
       actionDisplayName: capitalCase(actionName),
       withAuth,
       requireReactor,
+      defaultTimeoutSeconds,
+      defaultMaxAttempts,
     }),
   );
   await addPartToPiece({

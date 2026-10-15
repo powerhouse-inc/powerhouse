@@ -440,14 +440,35 @@ export async function generatePieceAction(
     pieceDir?: string;
     actionName: string;
     requireReactor?: PieceRequireReactor;
+    defaultTimeoutSeconds?: number;
+    defaultMaxAttempts?: number;
   },
   project: Project,
 ) {
+  const { defaultTimeoutSeconds, defaultMaxAttempts } = args;
+  if (
+    defaultTimeoutSeconds !== undefined &&
+    !(Number.isFinite(defaultTimeoutSeconds) && defaultTimeoutSeconds > 0)
+  ) {
+    throw new Error(
+      `defaultTimeoutSeconds must be a positive number, got ${defaultTimeoutSeconds}`,
+    );
+  }
+  if (
+    defaultMaxAttempts !== undefined &&
+    !(Number.isInteger(defaultMaxAttempts) && defaultMaxAttempts > 0)
+  ) {
+    throw new Error(
+      `defaultMaxAttempts must be a positive integer, got ${defaultMaxAttempts}`,
+    );
+  }
   await tsMorphGeneratePieceAction({
     project,
     pieceDir: resolvePieceDir(project, args.pieceDir),
     actionName: args.actionName,
     requireReactor: args.requireReactor,
+    defaultTimeoutSeconds,
+    defaultMaxAttempts,
   });
 }
 

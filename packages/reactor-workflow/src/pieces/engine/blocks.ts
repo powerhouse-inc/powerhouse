@@ -396,8 +396,10 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       const auth = connection?.auth;
       redactValues = [...runSecrets, ...(connection?.secretValues ?? [])];
 
-      const timeoutMs = execution.step.timeoutSeconds
-        ? execution.step.timeoutSeconds * 1000
+      const timeoutSeconds =
+        execution.step.timeoutSeconds || execution.defaultTimeoutSeconds;
+      const timeoutMs = timeoutSeconds
+        ? timeoutSeconds * 1000
         : this.options.defaultTimeoutMs;
       // Staging and ingest count against the step's timeout, not only the
       // piece's own run.

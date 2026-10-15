@@ -133,6 +133,60 @@ describe("requireReactor", () => {
     expect(metadata.triggers.changed.requireReactor).toBe("read");
   });
 
+  it("carries timeout and retry defaults into metadata", () => {
+    const slow = createAction({
+      name: "slow",
+      displayName: "Slow",
+      description: "",
+      auth: PieceAuth.None(),
+      requireReactor: "write",
+      defaultTimeoutSeconds: 300,
+      defaultRetry: { maxAttempts: 1 },
+      props: {},
+      run: () => Promise.resolve(null),
+    });
+    const plain = createAction({
+      name: "plain",
+      displayName: "Plain",
+      description: "",
+      auth: PieceAuth.None(),
+      props: {},
+      run: () => Promise.resolve(null),
+    });
+    expect(slow.defaultTimeoutSeconds).toBe(300);
+    expect(slow.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect("defaultTimeoutSeconds" in plain).toBe(false);
+    expect("defaultRetry" in plain).toBe(false);
+    const piece = createPiece({
+      displayName: "Slow",
+      auth: PieceAuth.None(),
+      logoUrl: "",
+      authors: [],
+      actions: [slow, plain],
+      triggers: [],
+    });
+    const metadata = JSON.parse(JSON.stringify(piece.metadata())) as {
+      actions: Record<
+        string,
+        { defaultTimeoutSeconds?: number; defaultRetry?: unknown }
+      >;
+    };
+    expect(metadata.actions.slow.defaultTimeoutSeconds).toBe(300);
+    expect(metadata.actions.slow.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect(metadata.actions.plain.defaultTimeoutSeconds).toBeUndefined();
+    expect(() =>
+      createAction({
+        name: "bad",
+        displayName: "Bad",
+        description: "",
+        auth: PieceAuth.None(),
+        defaultTimeoutSeconds: 0,
+        props: {},
+        run: () => Promise.resolve(null),
+      }),
+    ).toThrow(/defaultTimeoutSeconds/);
+  });
+
   it("treats false as no declaration", () => {
     const action = createAction({
       name: "plain",
