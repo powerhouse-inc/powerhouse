@@ -21,7 +21,10 @@ export interface DurableNodeFsOptions {
   logger?: { warn(message: string): void };
   /** Emscripten abort (a Postgres PANIC, e.g. ENOSPC on WAL). */
   onAbort?: (what: unknown) => void;
-  hostFs?: Pick<typeof nodeFs, "fsyncSync" | "fdatasyncSync">;
+  hostFs?: Pick<
+    typeof nodeFs,
+    "fsyncSync" | "fdatasyncSync" | "openSync" | "closeSync"
+  >;
 }
 
 export type DurableNodeFs = InstanceType<NodeFsClass> & {
@@ -36,12 +39,23 @@ export function resolvePgliteFsync(
 
 interface NodeFsStream {
   nfd?: number;
+  /** The FS node behind the stream; NODEFS.realPath maps it to the host path. */
+  node?: unknown;
 }
 
 interface EmscriptenFs {
-  filesystems: { NODEFS: { stream_ops: Record<string, unknown> } };
+  filesystems: {
+    NODEFS: {
+      stream_ops: Record<string, unknown>;
+      realPath?: (node: unknown) => string;
+    };
+  };
   getStreamChecked(fd: number): NodeFsStream;
   quit(): void;
+}
+
+function isEperm(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException | null)?.code === "EPERM";
 }
 
 interface EmscriptenMod {
@@ -187,6 +201,40 @@ export function createDurableNodeFs(
       }
     }
 
+    // Windows refuses FlushFileBuffers on a handle without GENERIC_WRITE, so
+    // host fsync on a read-only fd fails EPERM — and Postgres opens files
+    // read-only just to fsync them in its sweep paths (legal on Linux). The
+    // barrier is per-FILE, not per-handle: reopening the path with write
+    // access and syncing that handle flushes the data written through the
+    // original one (sync-tree.ts relies on the same fact). The sweeps are
+    // bounded, so no handle cache: open, sync, close.
+    private pathSyncNoted = false;
+
+    private fsyncViaPath(stream: NodeFsStream): boolean {
+      const realPath = this.mod?.FS.filesystems.NODEFS.realPath;
+      if (realPath === undefined || stream.node === undefined) return false;
+      let fd: number;
+      try {
+        fd = hostFs.openSync(realPath(stream.node), "r+");
+      } catch {
+        return false;
+      }
+      try {
+        hostFs.fsyncSync(fd);
+      } catch {
+        return false;
+      } finally {
+        hostFs.closeSync(fd);
+      }
+      if (!this.pathSyncNoted) {
+        this.pathSyncNoted = true;
+        logger?.warn(
+          "DurableNodeFs: host fsync refused on a read-only handle (Windows); routing such syncs through a per-path write-handle reopen.",
+        );
+      }
+      return true;
+    }
+
     // WASI fd_sync convention: 0 or a positive errno.
     private fsyncStream(stream: NodeFsStream): number {
       if (!this.hostSyncs) return 0;
@@ -195,6 +243,7 @@ export function createDurableNodeFs(
       try {
         hostFs.fsyncSync(stream.nfd);
       } catch (err) {
+        if (isEperm(err) && this.fsyncViaPath(stream)) return 0;
         logger?.warn(`DurableNodeFs fsync failed: ${String(err)}`);
         return EIO;
       }
@@ -214,6 +263,8 @@ export function createDurableNodeFs(
       try {
         hostFs.fdatasyncSync(stream.nfd);
       } catch (err) {
+        // The fallback is a full fsync — a superset of fdatasync.
+        if (isEperm(err) && this.fsyncViaPath(stream)) return 0;
         logger?.warn(`DurableNodeFs fdatasync failed: ${String(err)}`);
         return -EIO;
       }

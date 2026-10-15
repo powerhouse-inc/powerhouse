@@ -34,6 +34,9 @@ describe("durable NodeFS over pglite-legacy-02 (PG16)", () => {
           counts.fdatasync++;
           nodeFs.fdatasyncSync(fd);
         },
+        // The EPERM reopen fallback opens/closes through hostFs too.
+        openSync: nodeFs.openSync,
+        closeSync: nodeFs.closeSync,
       };
       const [{ PGlite }, NodeFS] = await Promise.all([
         loadPGliteModule(16),
