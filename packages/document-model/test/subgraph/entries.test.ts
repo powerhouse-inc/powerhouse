@@ -1073,3 +1073,48 @@ describe("a compiled declaration", () => {
     ).toThrow(DocumentModelDefinitionError);
   });
 });
+
+describe("a refused value", () => {
+  function received(declare: () => unknown) {
+    try {
+      declare();
+    } catch (error) {
+      if (!(error instanceof DocumentModelDefinitionError)) throw error;
+      return error.diagnostics[0]?.received;
+    }
+    return undefined;
+  }
+
+  it("is reported as null or array rather than object", () => {
+    const { builders: build } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+    const declared = { returns: ph.String(), resolve: () => null };
+
+    expect(
+      [
+        () => readEntry(null, ["entries", 0]),
+        () => readEntry([], ["entries", 0]),
+        () => build.query("a", { ...declared, resolve: null as never }),
+        () => build.query("a", { ...declared, resolve: [] as never }),
+        () => build.query("a", { ...declared, description: null as never }),
+        () => build.query(null as never, { ...declared, fieldName: "a" }),
+        () => ph.String({ required: null as never }),
+      ].map(received),
+    ).toEqual(["null", "array", "null", "array", "null", "null", "null"]);
+  });
+});
+
+describe("an explicit undefined implements", () => {
+  it("reads as no interfaces", () => {
+    expect(
+      ph.object("Box", {
+        fields: { id: ph.ID() },
+        implements: undefined,
+      }).implements,
+    ).toEqual([]);
+  });
+});
