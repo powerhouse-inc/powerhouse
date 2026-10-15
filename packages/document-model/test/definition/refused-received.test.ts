@@ -1130,12 +1130,12 @@ describe("a stored model refusal", () => {
         SOURCE,
       ).diagnostics,
     );
-  const unreadableSpecifications =
-    "A stored document model keeps its specification history in documentModel.global as plain data, and this one cannot be read";
-  const unreadableModule =
-    "A usable document-model module keeps its stored model in documentModel.global as plain data, and this one cannot be read";
-  const plainGlobal =
-    "documentModel.global as a plain record of data properties";
+  const unreadableSpecifications = (member: string) =>
+    `A stored document model keeps its specification history in documentModel.global as plain data, and its ${member} cannot be read`;
+  const unreadableModule = (member: string) =>
+    `A usable document-model module keeps its stored model in documentModel.global as plain data, and its ${member} cannot be read`;
+  const plain = (member: string) =>
+    `${member} as a plain record of data properties`;
 
   it("describes the refused parent in the schema-first adapter, and the specifications member once the parent is read", () => {
     const repair =
@@ -1148,15 +1148,15 @@ describe("a stored model refusal", () => {
     ]).toEqual([
       [
         "documentModel",
-        `${unreadableSpecifications} (not-record).`,
-        plainGlobal,
+        `${unreadableSpecifications("documentModel")} (not-record).`,
+        plain("documentModel"),
         "null",
         repair,
       ],
       [
         "documentModel.global",
-        `${unreadableSpecifications} (not-record).`,
-        plainGlobal,
+        `${unreadableSpecifications("documentModel.global")} (not-record).`,
+        plain("documentModel.global"),
         "array",
         repair,
       ],
@@ -1178,15 +1178,15 @@ describe("a stored model refusal", () => {
     ]).toEqual([
       [
         "documentModel",
-        `${unreadableModule} (not-record).`,
-        plainGlobal,
+        `${unreadableModule("documentModel")} (not-record).`,
+        plain("documentModel"),
         "null",
         "Export the module returned by context.finalize() or family.at(version) without replacing its documentModel.",
       ],
       [
         "documentModel.global",
-        `${unreadableModule} (not-record).`,
-        plainGlobal,
+        `${unreadableModule("documentModel.global")} (not-record).`,
+        plain("documentModel.global"),
         "array",
         "Export the module returned by context.finalize() or family.at(version) without replacing its documentModel.",
       ],
