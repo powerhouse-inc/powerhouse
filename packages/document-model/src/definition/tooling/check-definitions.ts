@@ -6,10 +6,12 @@ import type {
   DefinitionDiagnostic,
   DefinitionPath,
   DefinitionSource,
+  DocumentModelGlobalState,
   DocumentModelModule,
   Sha256Digest,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
+import type { DocumentNode } from "graphql";
 import { unregisteredDefinitionDiagnostics } from "./unregistered-definitions.js";
 import { adaptCodeFirstDocumentModelSource } from "../adapters/code-first-document-model-source-adapter.js";
 import type { NormalizedDocumentModelArtifact } from "../adapters/types.js";
@@ -82,11 +84,28 @@ export type ReleaseEvidenceProvider = {
   }): Promise<PackedConsumerEvidence> | PackedConsumerEvidence;
 };
 
+/** A subgraph under `subgraphs/<dir>/`, read from its SDL. */
+export type SchemaFirstSubgraph = {
+  readonly name: string;
+  readonly typeDefs: DocumentNode;
+  /** How a warning names it: its directory. */
+  readonly label: string;
+  readonly source: DefinitionSource;
+};
+
 export type HostValidationRequest = {
   readonly profile: DefinitionCheckProfile;
   /** The selected modules only. The host adds its core modules. */
   readonly documentModels: readonly DocumentModelModule[];
   readonly subgraphs: readonly LoadedDefinition<SubgraphClass>[];
+  /**
+   * The package's schema-first models and subgraphs, which the server serves
+   * beside the selection, so conflicts across the two styles are found.
+   */
+  readonly schemaFirst?: {
+    readonly documentModels: readonly DocumentModelGlobalState[];
+    readonly subgraphs: readonly SchemaFirstSubgraph[];
+  };
   readonly signal?: AbortSignal;
 };
 
@@ -758,7 +777,8 @@ export async function checkDefinitionsWithArtifacts(
     ...normalized.diagnostics,
   ];
 
-  if (loaded.subgraphs.length > 0) {
+  // Schema-first subgraphs can conflict with a selection that has none.
+  if (request.hostValidation !== undefined || loaded.subgraphs.length > 0) {
     if (request.hostValidation === undefined) {
       diagnostics.push(
         createDiagnostic({

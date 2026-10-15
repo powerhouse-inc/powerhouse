@@ -726,9 +726,14 @@ describe("diagnostic sources", () => {
     expect(
       result.diagnostics.map(({ code, source }) => ({ code, source })),
     ).toEqual([
+      { code: "PH-SG-NAME-TAKEN", source: a },
+      { code: "PH-SG-NAME-TAKEN", source: b },
       { code: "PH-SG-SCHEMA-INVALID", source: a },
       { code: "PH-SG-SCHEMA-INVALID", source: b },
     ]);
+    expect(result.diagnostics[0].message).toBe(
+      'Subgraphs in "./subgraphs/a.ts#/A" and "./subgraphs/b.ts#/B" are both named "dup", so the server serves only one of them.',
+    );
   });
 });
 

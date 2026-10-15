@@ -26,6 +26,7 @@ export {
   type HostValidationResult,
   type PackedConsumerEvidence,
   type ReleaseEvidenceProvider,
+  type SchemaFirstSubgraph,
   type TypecheckEvidence,
 } from "./src/definition/tooling/check-definitions.js";
 export { DefinitionSourceLoader } from "./src/definition/tooling/definition-source-loader.js";

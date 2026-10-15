@@ -224,7 +224,7 @@ const catalog = {
     severity: "warning",
     phase: "composition",
     meaning:
-      "A core or document-model subgraph holds the subgraph's name, so the server refuses it",
+      "A core or document-model subgraph holds the subgraph's name, so the server refuses it, or another of the package's subgraphs has the same name, so the server serves only one of them",
   },
   "PH-GQL-COORDINATE-OWNED": {
     severity: "warning",

@@ -1,14 +1,21 @@
 import { loadDocumentModelInDir } from "@powerhousedao/codegen/utils";
 import {
-  describeClaimContest,
-  describeRefusedDocumentModel,
-  describeSubgraphConflict,
-  findPackageSubgraphConflicts,
-  hostDocumentModels,
-  type PackageSubgraph,
-  quotedNames,
-  type SubgraphWarning,
+  buildPackageSubgraph,
+  type CodeFirstSubgraph,
+  findPackageSubgraphFindings,
+  type LabeledSubgraph,
+  readCodeFirstSubgraph,
 } from "@powerhousedao/reactor-api/subgraph-types";
+import type {
+  DefinitionSource,
+  DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
+import type {
+  HostValidationRequest,
+  LoadedDefinition,
+  SchemaFirstSubgraph,
+  SubgraphClass,
+} from "document-model/tooling";
 import { type DocumentNode, parse } from "graphql";
 import { type Dirent, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,6 +23,10 @@ import { join } from "node:path";
 // Templates with substitutions are skipped: their SDL is only known at runtime.
 const GQL_TEMPLATE = /\bgql\s*`([^`]*)`/g;
 const SUBGRAPH_NAME = /\bname\s*=\s*["'`]([^"'`]+)["'`]/;
+// A code-first subgraph read here was not loaded, so take the name it declares.
+// Only a literal `name` before any nested object is found, as scaffolds write it.
+const DEFINED_SUBGRAPH_NAME =
+  /\bdefineSubgraph\s*(?:<[^>]*>)?\s*\(\s*\{[^{}]*?\bname\s*:\s*["'`]([^"'`]+)["'`]/;
 
 function directories(path: string): Dirent[] {
   try {
@@ -50,45 +61,95 @@ function readSchema(path: string): DocumentNode | undefined {
   }
 }
 
-const line = ({ message, repair }: SubgraphWarning) => `${message} ${repair}`;
+type SchemaFirst = NonNullable<HostValidationRequest["schemaFirst"]>;
 
-/** A warning per model and subgraph the server would refuse or leave out. */
-export function lintSubgraphTypes(projectDir: string): string[] {
-  const models = directories(join(projectDir, "document-models"))
-    .map(loadDocumentModelInDir)
-    .filter((model) => model !== undefined);
+/**
+ * The models under `document-models/`. A model file that is not JSON throws,
+ * unless `skipUnreadable` leaves that model out.
+ */
+export function readSchemaFirstModels(
+  projectDir: string,
+  { skipUnreadable = false }: { readonly skipUnreadable?: boolean } = {},
+): SchemaFirst["documentModels"] {
+  return directories(join(projectDir, "document-models")).flatMap((dir) => {
+    try {
+      return loadDocumentModelInDir(dir) ?? [];
+    } catch (error) {
+      if (skipUnreadable) return [];
+      throw error;
+    }
+  });
+}
+
+/**
+ * The subgraphs under `subgraphs/<dir>/`, except the directories the given
+ * code-first subgraphs were loaded from.
+ */
+export function readSchemaFirstSubgraphs(
+  projectDir: string,
+  codeFirst: readonly { readonly source: DefinitionSource }[],
+): SchemaFirst["subgraphs"] {
   const subgraphsDir = join(projectDir, "subgraphs");
-  const subgraphs: PackageSubgraph[] = [];
-  const dirOf = new Map<PackageSubgraph, string>();
+  const codeFirstDirs = new Set(
+    codeFirst.flatMap(
+      ({ source }) =>
+        /^\.\/subgraphs\/([^/]+)\//.exec(source.specifier)?.[1] ?? [],
+    ),
+  );
   const dirs = directories(subgraphsDir)
     .map((entry) => entry.name)
+    .filter((dir) => !codeFirstDirs.has(dir))
     .sort();
+  const subgraphs: SchemaFirstSubgraph[] = [];
   for (const dir of dirs) {
     const typeDefs = readSchema(join(subgraphsDir, dir, "schema.ts"));
     if (!typeDefs) continue;
     const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";
-    const subgraph = { name: SUBGRAPH_NAME.exec(index)?.[1] ?? dir, typeDefs };
-    subgraphs.push(subgraph);
-    dirOf.set(subgraph, dir);
+    subgraphs.push({
+      name:
+        SUBGRAPH_NAME.exec(index)?.[1] ??
+        DEFINED_SUBGRAPH_NAME.exec(index)?.[1] ??
+        dir,
+      typeDefs,
+      label: dir,
+      source: { specifier: `./subgraphs/${dir}/schema.ts` },
+    });
   }
-  if (subgraphs.length === 0) return [];
+  return subgraphs;
+}
 
-  const host = hostDocumentModels(models);
-  const { conflicts, contests, duplicateNames } = findPackageSubgraphConflicts(
-    subgraphs,
-    host,
-  );
-  return [
-    ...host.refused.map((model) => line(describeRefusedDocumentModel(model))),
-    ...duplicateNames.map((name) => {
-      const dirs = subgraphs
-        .filter((subgraph) => subgraph.name === name)
-        .map((subgraph) => dirOf.get(subgraph) ?? name);
-      return `Subgraphs in ${quotedNames(dirs)} are ${dirs.length === 2 ? "both" : "all"} named "${name}", so the server serves only one of them. Rename ${dirs.length === 2 ? "one" : "all but one"} of them.`;
-    }),
-    ...Array.from(conflicts).flatMap(([{ name }, conflict]) =>
-      describeSubgraphConflict(name, conflict).map(line),
-    ),
-    ...contests.map((contest) => line(describeClaimContest(contest))),
+type Subject = LabeledSubgraph & {
+  readonly scalarResolvers?: CodeFirstSubgraph["scalarResolvers"];
+};
+
+/**
+ * A warning per model and subgraph the server would refuse or leave out,
+ * across the project's schema-first package and its code-first selection.
+ */
+export function lintSubgraphTypes(
+  projectDir: string,
+  codeFirst?: {
+    readonly documentModels: readonly DocumentModelModule[];
+    readonly subgraphs: readonly LoadedDefinition<SubgraphClass>[];
+  },
+): string[] {
+  const documentModels = readSchemaFirstModels(projectDir);
+  const subgraphs: Subject[] = [
+    ...readSchemaFirstSubgraphs(projectDir, codeFirst?.subgraphs ?? []),
   ];
+  for (const entry of codeFirst?.subgraphs ?? []) {
+    const subgraph = readCodeFirstSubgraph(entry);
+    if (subgraph?.typeDefs) {
+      subgraphs.push({ ...subgraph, typeDefs: subgraph.typeDefs });
+    }
+  }
+  return findPackageSubgraphFindings(
+    [...documentModels, ...(codeFirst?.documentModels ?? [])],
+    subgraphs,
+    (subgraph, host) =>
+      buildPackageSubgraph(subgraph, host, {
+        resolvers: subgraph.scalarResolvers,
+        reportScalars: false,
+      }),
+  ).map(({ message, repair }) => `${message} ${repair}`);
 }

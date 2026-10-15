@@ -1,5 +1,9 @@
 import { typedefs as analyticsTypeDefs } from "@powerhousedao/analytics-engine-graphql";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DefinitionSource,
+  DocumentModelModule,
+  SubgraphDefinition,
+} from "@powerhousedao/shared/document-model";
 import type { DefinitionDiagnosticCode } from "document-model";
 import { type DocumentNode, Kind } from "graphql";
 import { gql } from "graphql-tag";
@@ -23,6 +27,7 @@ import {
   typeDefinitionNames,
 } from "../utils/create-schema.js";
 import authSchema from "./auth/schema.graphql";
+import type { DefinedSubgraph } from "./define-subgraph.js";
 import { inspectionTypeDefs } from "./inspection/schema.js";
 import reactorSchema from "./reactor/schema.graphql";
 import {
@@ -49,7 +54,7 @@ function listed(items: readonly string[]): string {
 }
 
 /** `"a"`, `"a" and "b"`, or `"a", "b" and "c"`. */
-export function quotedNames(names: readonly string[]): string {
+function quotedNames(names: readonly string[]): string {
   return listed(names.map((name) => `"${name}"`));
 }
 
@@ -620,7 +625,7 @@ export function describeSubgraphConflict(
   }
 }
 
-export function describeClaimContest(contest: ClaimContest): SubgraphWarning {
+function describeClaimContest(contest: ClaimContest): SubgraphWarning {
   const { claim, claimants, groups } = contest;
   if (isRootFieldClaim(claim)) {
     const names = [...new Set(claimants.map(({ name }) => name))];
@@ -641,4 +646,141 @@ export function describeClaimContest(contest: ClaimContest): SubgraphWarning {
     message: `${claim} is defined ${ways.slice(0, -1).join(", ")}, and ${ways.at(-1)}. The supergraph can include the subgraphs of only one of these definitions.`,
     repair: `Make every definition of ${claim} identical, or rename it where it differs.`,
   };
+}
+
+function describeSharedName(
+  name: string,
+  labels: readonly string[],
+): SubgraphWarning {
+  const sorted = [...labels].sort(byCodeUnits);
+  const two = sorted.length === 2;
+  return {
+    code: "PH-SG-NAME-TAKEN",
+    message: `Subgraphs in ${quotedNames(sorted)} are ${two ? "both" : "all"} named "${name}", so the server serves only one of them.`,
+    repair: `Rename ${two ? "one" : "all but one"} of them.`,
+  };
+}
+
+/** A package subgraph of either authoring style, as a warning names it. */
+export type LabeledSubgraph = PackageSubgraph & {
+  /** The schema-first directory or the code-first source. */
+  readonly label: string;
+};
+
+/** A warning, and the model or the package subgraphs it is about. */
+export type PackageSubgraphFinding<S extends LabeledSubgraph> =
+  SubgraphWarning &
+    (
+      | { readonly model: RefusedDocumentModel }
+      | { readonly subgraphs: readonly S[] }
+    );
+
+/**
+ * What the server does with a package's models and subgraphs, whichever style
+ * each is written in: refused models, shared names, each subgraph's conflicts
+ * in input order, then contests by claim. No finding depends on the order the
+ * server registers the subgraphs in. Silent when there is no package subgraph.
+ */
+export function findPackageSubgraphFindings<S extends LabeledSubgraph>(
+  documentModels: readonly DocumentModelSource[],
+  subgraphs: readonly S[],
+  build?: (subgraph: S, host: HostDocumentModels<DocumentModelSource>) => void,
+): PackageSubgraphFinding<S>[] {
+  if (subgraphs.length === 0) return [];
+  const host = hostDocumentModels(documentModels);
+  const { conflicts, contests, duplicateNames } = findPackageSubgraphConflicts(
+    subgraphs,
+    host,
+    build && ((subgraph) => build(subgraph, host)),
+  );
+  return [
+    ...host.refused.map((model) => ({
+      ...describeRefusedDocumentModel(model),
+      model,
+    })),
+    ...duplicateNames.map((name) => {
+      const named = subgraphs.filter((subgraph) => subgraph.name === name);
+      return {
+        ...describeSharedName(
+          name,
+          named.map(({ label }) => label),
+        ),
+        subgraphs: named,
+      };
+    }),
+    ...Array.from(conflicts).flatMap(([subgraph, conflict]) =>
+      describeSubgraphConflict(subgraph.name, conflict).map((warning) => ({
+        ...warning,
+        subgraphs: [subgraph],
+      })),
+    ),
+    ...contests.map((contest) => ({
+      ...describeClaimContest(contest),
+      subgraphs: contest.claimants,
+    })),
+  ];
+}
+
+/** A code-first subgraph class, read through its statics. */
+export type CodeFirstSubgraph = {
+  readonly name: string;
+  /** Its source, as a warning names it. */
+  readonly label: string;
+  /** Null when the class publishes no type definitions the host can read. */
+  readonly typeDefs: DocumentNode | null;
+  readonly scalarResolvers: DefinedSubgraph["scalarResolvers"];
+};
+
+/**
+ * Reads a loaded code-first subgraph class through its static `definition`,
+ * `typeDefs`, and `scalarResolvers`. Nothing is constructed, so no resolver
+ * factory or `onSetup` runs. Null when the value is not a subgraph class.
+ */
+export function readCodeFirstSubgraph({
+  value,
+  source,
+}: {
+  readonly value: unknown;
+  readonly source: DefinitionSource;
+}): CodeFirstSubgraph | null {
+  const definition = subgraphDefinitionOf(value);
+  if (definition === null) return null;
+  const exportPath = source.exportPath ?? [];
+  return {
+    name: definition.name,
+    label:
+      exportPath.length === 0
+        ? source.specifier
+        : `${source.specifier}#/${exportPath.join("/")}`,
+    typeDefs: staticTypeDefsOf(value),
+    scalarResolvers: scalarResolversOf(value),
+  };
+}
+
+function subgraphDefinitionOf(value: unknown): SubgraphDefinition | null {
+  if (typeof value !== "function") return null;
+  const definition = (value as { definition?: unknown }).definition;
+  if (definition === null || typeof definition !== "object") return null;
+  const candidate = definition as Partial<SubgraphDefinition>;
+  return candidate.kind === "powerhouse.subgraph" &&
+    candidate.formatVersion === 1
+    ? (definition as SubgraphDefinition)
+    : null;
+}
+
+function staticTypeDefsOf(value: unknown): DocumentNode | null {
+  const typeDefs = (value as { typeDefs?: unknown }).typeDefs;
+  return typeDefs !== null &&
+    typeof typeDefs === "object" &&
+    (typeDefs as Partial<DocumentNode>).kind === Kind.DOCUMENT &&
+    Array.isArray((typeDefs as Partial<DocumentNode>).definitions)
+    ? (typeDefs as DocumentNode)
+    : null;
+}
+
+function scalarResolversOf(value: unknown): DefinedSubgraph["scalarResolvers"] {
+  const resolvers = (value as { scalarResolvers?: unknown }).scalarResolvers;
+  return resolvers !== null && typeof resolvers === "object"
+    ? (resolvers as DefinedSubgraph["scalarResolvers"])
+    : {};
 }

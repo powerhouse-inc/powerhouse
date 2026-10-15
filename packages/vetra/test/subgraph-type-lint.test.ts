@@ -1,5 +1,10 @@
 // @vitest-environment node
 import { customSubgraphSchemaTemplate } from "@powerhousedao/codegen/templates";
+import { defineSubgraph } from "@powerhousedao/reactor-api";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { defineDocumentModel, ph } from "document-model";
+import type { LoadedDefinition, SubgraphClass } from "document-model/tooling";
+import { parse } from "graphql";
 import {
   copyFileSync,
   mkdirSync,
@@ -236,5 +241,187 @@ describe("lintSubgraphTypes", () => {
     });
 
     expect(lintSubgraphTypes(root)).toEqual([]);
+  });
+});
+
+function codeFirst(
+  name: string,
+  sdl: string,
+  specifier: `./${string}` = `./subgraphs/${name}.ts`,
+): LoadedDefinition<SubgraphClass> {
+  return {
+    value: defineSubgraph({
+      name,
+      schemaKind: "graphql-ast-compat",
+      compatibility: {
+        kind: "graphql-ast-v1",
+        typeDefs: parse(sdl),
+        resolverCoordinates: [],
+        getResolvers: () => ({}),
+        hasSubscriptions: undefined,
+        preserveDefinitionOrder: true,
+      },
+    }),
+    source: { specifier },
+    path: [],
+  };
+}
+
+function notesModel(): DocumentModelModule {
+  const context = defineDocumentModel({
+    id: "test/notes",
+    name: "Notes",
+    description: "",
+    extension: "notes",
+    version: 1,
+    author: { name: "Powerhouse", website: null },
+    specifications: {
+      global: {
+        schema: ph.object("NotesState", { fields: { title: ph.String() } }),
+        initialValue: { title: null },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  });
+  const edits = context.module("edits", {
+    operations: ({ global }) => ({
+      setTitle: global({
+        input: ph.input({ fields: { title: ph.String({ required: true }) } }),
+        reduce(state, input) {
+          state.title = input.title;
+        },
+      }),
+    }),
+  });
+  return context.finalize({
+    modules: [edits],
+  }) as unknown as DocumentModelModule;
+}
+
+describe("lintSubgraphTypes with a code-first selection", () => {
+  it("warns on a root field a schema-first and a code-first subgraph both define", () => {
+    const root = makeProject({
+      alpha: schemaFile("type Query { widget: String }"),
+    });
+
+    expect(
+      lintSubgraphTypes(root, {
+        documentModels: [],
+        subgraphs: [codeFirst("beta", "type Query { widget: String }")],
+      }),
+    ).toEqual([
+      'Subgraphs "alpha" and "beta" both define Query.widget, and the supergraph can include only one of them. Define Query.widget in one subgraph only.',
+    ]);
+  });
+
+  it("warns on a schema-first subgraph named like a code-first model's subgraph", () => {
+    const root = makeProject({ notes: template("Notes", "notes") });
+
+    expect(
+      lintSubgraphTypes(root, {
+        documentModels: [notesModel()],
+        subgraphs: [],
+      }),
+    ).toEqual([
+      'Subgraph "notes" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("warns on a code-first subgraph named like a schema-first model's subgraph", () => {
+    const root = makeProject({});
+
+    expect(
+      lintSubgraphTypes(root, {
+        documentModels: [],
+        subgraphs: [
+          codeFirst("subgraph-module", "type Query { modules: String }"),
+        ],
+      }),
+    ).toEqual([
+      'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("warns that the server serves only one of a schema-first and a code-first subgraph with one name", () => {
+    const root = makeProject({
+      ledger: schemaFile("type Query { a: String }"),
+    });
+
+    expect(
+      lintSubgraphTypes(root, {
+        documentModels: [],
+        subgraphs: [codeFirst("ledger", "type Query { b: String }")],
+      }),
+    ).toEqual([
+      'Subgraphs in "./subgraphs/ledger.ts" and "ledger" are both named "ledger", so the server serves only one of them. Rename one of them.',
+    ]);
+  });
+
+  it("reads a code-first subgraph kept in a directory once", () => {
+    const root = makeProject({
+      foo: schemaFile("type Query { foo: String }"),
+    });
+    writeFileSync(
+      join(root, "subgraphs", "foo", "index.ts"),
+      'import { defineSubgraph } from "@powerhousedao/reactor-api";\nimport { schema } from "./schema.js";\n\nexport const FooSubgraph = defineSubgraph({ name: "foo", schemaKind: "graphql-ast-compat", compatibility: { typeDefs: schema } });\n',
+    );
+
+    expect(
+      lintSubgraphTypes(root, {
+        documentModels: [],
+        subgraphs: [
+          codeFirst(
+            "foo",
+            "type Query { foo: String }",
+            "./subgraphs/foo/index.ts",
+          ),
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("reads a directory holding a code-first subgraph that no selection loaded", () => {
+    const root = makeProject({
+      bar: schemaFile("type Query { foo: String }"),
+      foo: schemaFile("type Query { foo: String }"),
+    });
+    writeFileSync(
+      join(root, "subgraphs", "foo", "index.ts"),
+      'import { defineSubgraph } from "@powerhousedao/reactor-api";\nimport { schema } from "./schema.js";\n\nexport const FooSubgraph = defineSubgraph({ name: "foo", schemaKind: "graphql-ast-compat", compatibility: { typeDefs: schema } });\n',
+    );
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraphs "bar" and "foo" both define Query.foo, and the supergraph can include only one of them. Define Query.foo in one subgraph only.',
+    ]);
+  });
+
+  it("names a code-first subgraph that no selection loaded by the name it declares", () => {
+    const root = makeProject({
+      tools: schemaFile("type Query { tools: String }"),
+    });
+    writeFileSync(
+      join(root, "subgraphs", "tools", "index.ts"),
+      'import { defineSubgraph } from "@powerhousedao/reactor-api";\nimport { schema } from "./schema.js";\n\nexport const ToolsSubgraph = defineSubgraph<Context>({ name: "system", schemaKind: "graphql-ast-compat", compatibility: { typeDefs: schema } });\n',
+    );
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Subgraph "system" has the name of a core subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("checks code-first subgraphs when the project has no schema-first one", () => {
+    const root = makeProject({});
+
+    expect(
+      lintSubgraphTypes(root, {
+        documentModels: [],
+        subgraphs: [
+          codeFirst("alpha", "type Query { widget: String }"),
+          codeFirst("beta", "type Query { widget: Int }"),
+        ],
+      }),
+    ).toEqual([
+      'Subgraphs "alpha" and "beta" both define Query.widget, and the supergraph can include only one of them. Define Query.widget in one subgraph only.',
+    ]);
   });
 });

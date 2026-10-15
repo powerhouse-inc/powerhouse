@@ -76,7 +76,7 @@ export async function startGenerateDocumentModel(
     return;
   }
   await project.save();
-  warnSubgraphTypeConflicts(projectDir);
+  await warnSubgraphTypeConflicts(projectDir);
 }
 
 async function createCodeFirstDocumentModel(

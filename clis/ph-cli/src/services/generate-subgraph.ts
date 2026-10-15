@@ -83,7 +83,7 @@ export async function startGenerateSubgraph(
     return;
   }
   await project.save();
-  warnSubgraphTypeConflicts(projectDir);
+  await warnSubgraphTypeConflicts(projectDir);
   await installFeatureDependencies(projectDir, args.skipInstall);
 }
 
