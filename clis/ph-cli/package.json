@@ -92,6 +92,7 @@
     "ts-morph": "catalog:",
     "write-package": "catalog:",
     "zod": "catalog:",
+    "@powerhousedao/desktop": "workspace:*",
     "@powerhousedao/host-core": "workspace:*"
   }
 }

@@ -242,11 +242,16 @@ export default {
 
   runner: {
     module: "@powerhousedao/desktop/runner",
-    // NATIVE WINDOW (optional): point \`shell\` at a ph-win-desktop checkout;
-    // \`ph run desktop dev\` then opens the shell around this stack with no
-    // environment wiring, and \`ph run desktop build\` stages the shippable
-    // stack (hosts + config + built Connect + vendored ph-cli) into the
-    // shell for a no-env installed app. Headless verbs need no shell.
+    // NATIVE WINDOW: two ways to get one (headless verbs need neither).
+    //
+    // 1. BUILDER-OWNED IDENTITY (recommended, no Rust): run
+    //    \`ph generate desktop-shell\` to scaffold hosts/desktop/app.json.
+    //    \`ph run desktop dev\` projects it into a generated Tauri shell that
+    //    depends on the published ph-desktop-shell crate and opens the window
+    //    around this stack; \`ph run desktop build\` produces installers for
+    //    this OS (nsis / app+dmg / deb+appimage). Needs Rust + the Tauri CLI.
+    //
+    // 2. PREBUILT/HAND-MAINTAINED shell: point \`shell.project\` at a checkout.
     // shell: {
     //   project: "../ph-win-desktop",
     //   window: { title: "${projectName}", width: 1440, height: 900 },

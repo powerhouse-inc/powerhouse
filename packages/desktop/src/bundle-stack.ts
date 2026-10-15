@@ -36,6 +36,9 @@ export interface BundleStackOptions {
   /** The connect member's port — written into the stack's shell.json so the
    * shell knows where to probe/navigate with no environment at all. */
   connectPort?: number;
+  /** Absolute paths to skip when staging `hosts/` — in mode 1 the generated
+   * shell dir sits under `hosts/` and must not be copied into itself. */
+  excludeDirs?: string[];
   logger?: (message: string) => void;
 }
 
@@ -47,6 +50,37 @@ export interface BundleStackResult {
 function copyIfExists(from: string, to: string): boolean {
   if (!fs.existsSync(from)) return false;
   fs.cpSync(from, to, { recursive: true });
+  return true;
+}
+
+/**
+ * Recursively copy `src` → `dest`, skipping any path in `excludes`. Unlike
+ * fs.cpSync this tolerates `dest` living INSIDE `src`: in mode 1 the generated
+ * shell (and its `dist-stack`) sits under `hosts/<desktop>/`, so staging the
+ * project's `hosts/` straight into the shell would be a copy-into-self that
+ * cpSync rejects outright. Excluding the shell subtree both avoids that and
+ * keeps the crate + node sidecar out of the shippable stack.
+ */
+function copyDirFiltered(
+  src: string,
+  dest: string,
+  excludes: string[],
+): boolean {
+  if (!fs.existsSync(src)) return false;
+  const skip = new Set(excludes.map((e) => path.resolve(e)));
+  const walk = (s: string, d: string): void => {
+    if (skip.has(path.resolve(s))) return;
+    const stat = fs.statSync(s);
+    if (stat.isDirectory()) {
+      fs.mkdirSync(d, { recursive: true });
+      for (const entry of fs.readdirSync(s)) {
+        walk(path.join(s, entry), path.join(d, entry));
+      }
+    } else {
+      fs.copyFileSync(s, d);
+    }
+  };
+  walk(src, dest);
   return true;
 }
 
@@ -67,7 +101,15 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   }
   fs.mkdirSync(stackDir, { recursive: true });
 
-  for (const dir of ["hosts", "agents", "dist"]) {
+  // hosts/ gets the filtered copy — the generated shell subtree lives under
+  // it and must not be copied into itself (nor shipped in the stack).
+  const hostsStaged = copyDirFiltered(
+    path.join(options.projectRoot, "hosts"),
+    path.join(stackDir, "hosts"),
+    options.excludeDirs ?? [],
+  );
+  log(`  hosts/ ${hostsStaged ? "staged" : "absent — skipped"}`);
+  for (const dir of ["agents", "dist"]) {
     const copied = copyIfExists(
       path.join(options.projectRoot, dir),
       path.join(stackDir, dir),
