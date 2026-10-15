@@ -951,6 +951,56 @@ describe("a compiled declaration", () => {
     expect(resolvers.Counted.size({}, {}, {}, {})).toBe(1);
   });
 
+  it("reports resolveType or isTypeOf bound twice and serves the first binding", () => {
+    const Cat = ph.object("Cat", {
+      fields: { id: ph.OID({ required: true }) },
+    });
+    const Dog = ph.object("Dog", {
+      fields: { id: ph.OID({ required: true }) },
+    });
+    const Pet = ph.union("Pet", { members: [Cat, Dog] });
+    const compiled = compileSubgraph({
+      name: "pets",
+      schemaKind: "typed",
+      entries: (build) => [
+        build.query("pet", { returns: ph.ref(Pet), resolve: () => null }),
+        build.resolveType(Pet, () => "Cat"),
+        build.resolveType(Pet, () => "Dog"),
+        build.isTypeOf(Cat, () => true),
+        build.isTypeOf(Cat, () => false),
+      ],
+    });
+    expect(
+      compiled.diagnostics.map(({ code, path, message }) => ({
+        code,
+        path,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-SG-ENTRY-INVALID",
+        path: ["entries", 2],
+        message: "resolveType for Pet is bound twice.",
+      },
+      {
+        code: "PH-SG-ENTRY-INVALID",
+        path: ["entries", 4],
+        message: "isTypeOf for Cat is bound twice.",
+      },
+    ]);
+    const { definition } = compiled;
+    expect(
+      definition.schemaKind === "typed" &&
+        definition.entries.map(({ kind }) => kind),
+    ).toEqual(["query", "resolve-type", "is-type-of"]);
+    const resolvers = compiled.resolversFor({}) as Record<
+      string,
+      Record<string, (...args: unknown[]) => unknown>
+    >;
+    expect(resolvers.Pet.__resolveType({ id: "p1" }, {}, {}, {})).toBe("Cat");
+    expect(resolvers.Cat.__isTypeOf({ id: "p1" }, {}, {})).toBe(true);
+  });
+
   it("refuses a declaration that is not an object", () => {
     expect(refused(() => compileSubgraph(null as never))).toEqual({
       code: "PH-SG-DEFINITION-INVALID",
