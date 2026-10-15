@@ -276,19 +276,35 @@ function snapshotCoercion(
   value: unknown,
 ): ScalarCoercion<unknown> | undefined {
   if (value === undefined) return undefined;
-  const snapshot = snapshotRecord(value, COERCION_KEYS, ["coercion"]);
-  if (!snapshot.ok) {
+  const repair =
+    "Omit coercion to derive it, or pass an object with parseValue, parseLiteral, and serialize.";
+  if (value === null || typeof value !== "object") {
     fail(name, {
       code: "PH-SCALAR-DECLARATION-INVALID",
-      path: snapshot.path,
-      message: `Scalar ${name}'s coercion could not be snapshotted (${snapshot.reason}).`,
-      received: rejectionReceived(snapshot),
-      repair:
-        "Omit coercion to derive it, or pass an object literal with parseValue, parseLiteral, and serialize.",
+      path: ["coercion"],
+      message: `Scalar ${name}'s coercion must be an object.`,
+      received: describeReceived(value),
+      repair,
     });
   }
-  const coercion = snapshot.value;
-  if (COERCION_KEYS.some((key) => typeof coercion[key] !== "function")) {
+  // A class instance keeps its methods on the prototype, so each member is
+  // looked up along the chain by descriptor: a method is read without
+  // running author code, and an accessor is refused unrun.
+  const members: Partial<Record<(typeof COERCION_KEYS)[number], unknown>> = {};
+  for (const key of COERCION_KEYS) {
+    const found = dataMember(value, key);
+    if (found === "accessor" || found === "inspection-failed") {
+      fail(name, {
+        code: "PH-SCALAR-DECLARATION-INVALID",
+        path: found === "accessor" ? ["coercion", key] : ["coercion"],
+        message: `Scalar ${name}'s coercion could not be read (${found}).`,
+        received: found,
+        repair,
+      });
+    }
+    members[key] = found.value;
+  }
+  if (COERCION_KEYS.some((key) => typeof members[key] !== "function")) {
     fail(name, {
       code: "PH-SCALAR-DECLARATION-INVALID",
       path: ["coercion"],
@@ -296,7 +312,28 @@ function snapshotCoercion(
       repair: "Omit coercion to derive it, or provide all three functions.",
     });
   }
-  return coercion as ScalarCoercion<unknown>;
+  return members as ScalarCoercion<unknown>;
+}
+
+/** The data value `key` resolves to along `target`'s prototype chain. */
+function dataMember(
+  target: object,
+  key: string,
+): { readonly value: unknown } | "accessor" | "inspection-failed" {
+  try {
+    for (
+      let current: object | null = target;
+      current !== null;
+      current = Object.getPrototypeOf(current) as object | null
+    ) {
+      const descriptor = Object.getOwnPropertyDescriptor(current, key);
+      if (descriptor === undefined) continue;
+      return "value" in descriptor ? { value: descriptor.value } : "accessor";
+    }
+    return { value: undefined };
+  } catch {
+    return "inspection-failed";
+  }
 }
 
 function snapshotZero(declaration: ResolvedScalarDeclaration): ScalarZero {
