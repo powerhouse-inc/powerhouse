@@ -36,7 +36,7 @@ export type AiToolAnnotations = PhAiToolAnnotations;
  * Provider-agnostic tool descriptor accepted by the chat agent.
  *
  * Structurally compatible with the MCP tool records produced by
- * `createReactorMcpProvider`: the callback parameter is `never` so any
+ * `toMcpTool`: the callback parameter is `never` so any
  * per-tool-args function type is assignable, and the result is `unknown`
  * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
  * adapter boundary.
@@ -46,26 +46,9 @@ export type AiToolDescriptor = PhAiToolDescriptor;
 /** Tool descriptors the app resolves when the user sends a message. */
 export type AiToolsProvider = () => Promise<AiToolDescriptor[]>;
 
-/** Tool names whose execution mutates the reactor and requires approval. */
-export const WRITE_TOOLS: ReadonlySet<string> = new Set([
-  "createDocument",
-  "addActions",
-  "deleteDocument",
-  "addDrive",
-  "deleteDrive",
-  "addRemoteDrive",
-]);
-
-/**
- * Whether executing the tool mutates state and requires user approval:
- * the built-in write tools, or any tool flagged destructive in its
- * annotations (covers package-provided tools outside the built-in set).
- */
-export function isWriteTool(
-  name: string,
-  annotations?: AiToolAnnotations,
-): boolean {
-  return WRITE_TOOLS.has(name) || annotations?.destructiveHint === true;
+/** Whether running the tool needs approval: anything not annotated read-only. */
+export function isWriteTool(annotations?: AiToolAnnotations): boolean {
+  return annotations?.readOnlyHint !== true;
 }
 
 export type ToolCallState =
