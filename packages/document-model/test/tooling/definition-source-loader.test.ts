@@ -301,6 +301,32 @@ describe("DefinitionSourceLoader", () => {
     }
   });
 
+  it("reports a refused package revision as null, array, or its type", async () => {
+    const fixture = materializeFixturePackage("control");
+    try {
+      const loader = new DefinitionSourceLoader(nodeImporter());
+      const received = async (packageRevision: unknown) => {
+        try {
+          const result = await loader.normalizeDefinitionSources({
+            configFile: join(fixture.root, "powerhouse.config.json"),
+            packageRevision: packageRevision as never,
+          });
+          return result.diagnostics[0]?.received;
+        } catch (error) {
+          return `thrown: ${String(error)}`;
+        }
+      };
+      expect([
+        await received("not-a-digest"),
+        await received(null),
+        await received([]),
+        await received(Object.create(null)),
+      ]).toEqual(["not-a-digest", "null", "array", "object"]);
+    } finally {
+      fixture.dispose();
+    }
+  });
+
   it("settles a cancelled load with a stable AbortError", async () => {
     const fixture = materializeFixturePackage("control");
     try {
