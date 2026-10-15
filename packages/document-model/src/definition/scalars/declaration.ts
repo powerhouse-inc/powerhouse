@@ -205,7 +205,6 @@ function withDefaults(
   };
 }
 
-/** Whether `value` is an object whose `methods` are functions, read without letting a throw escape. */
 const ZERO_KEYS = {
   value: ["kind", "value"],
   none: ["kind", "reason"],
@@ -250,28 +249,16 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
   }
 }
 
-/** `validator` has parse and safeParse, each read by descriptor so no accessor runs. */
 function assertValidator(name: string, validator: unknown): void {
-  function refuse(path: ScalarFailure["path"], received: string): never {
+  methodsOf(validator, "validator", ["parse", "safeParse"], (path, received) =>
     fail(name, {
       code: "PH-SCALAR-DECLARATION-INVALID",
       path,
       message: `Scalar ${name} has no Zod validator.`,
       received,
       repair: "Provide a Zod schema with parse and safeParse.",
-    });
-  }
-  if (validator === null || typeof validator !== "object") {
-    refuse(["validator"], describeReceived(validator));
-  }
-  for (const key of ["parse", "safeParse"]) {
-    const found = dataMember(validator, key);
-    if (found === "accessor") refuse(["validator", key], found);
-    if (found === "inspection-failed") refuse(["validator"], found);
-    if (typeof found.value !== "function") {
-      refuse(["validator"], describeReceived(validator));
-    }
-  }
+    }),
+  );
 }
 
 function snapshotCoercion(
@@ -279,48 +266,67 @@ function snapshotCoercion(
   value: unknown,
 ): ScalarCoercion<unknown> | undefined {
   if (value === undefined) return undefined;
-  const repair =
-    "Omit coercion to derive it, or pass an object with parseValue, parseLiteral, and serialize.";
-  if (value === null || typeof value !== "object") {
-    fail(name, {
-      code: "PH-SCALAR-DECLARATION-INVALID",
-      path: ["coercion"],
-      message: `Scalar ${name}'s coercion must be an object.`,
-      received: describeReceived(value),
-      repair,
-    });
-  }
-  // A class instance keeps its methods on the prototype, so each member is
-  // looked up along the chain by descriptor: a method is read without
-  // running author code, and an accessor is refused unrun. Each method is
-  // called on the instance, so it keeps its own state.
-  const method = (key: string) => {
-    const found = dataMember(value, key);
-    if (found === "accessor" || found === "inspection-failed") {
+  const { parseValue, parseLiteral, serialize } = methodsOf(
+    value,
+    "coercion",
+    ["parseValue", "parseLiteral", "serialize"],
+    (path, received) =>
       fail(name, {
         code: "PH-SCALAR-DECLARATION-INVALID",
-        path: found === "accessor" ? ["coercion", key] : ["coercion"],
-        message: `Scalar ${name}'s coercion could not be read (${found}).`,
-        received: found,
-        repair,
-      });
-    }
-    const member = found.value;
-    if (typeof member !== "function") {
-      fail(name, {
-        code: "PH-SCALAR-DECLARATION-INVALID",
-        path: ["coercion"],
+        path,
         message: `Scalar ${name} must either omit coercion or provide parseValue, parseLiteral, and serialize.`,
-        repair: "Omit coercion to derive it, or provide all three functions.",
-      });
-    }
-    return (...args: unknown[]): unknown => Reflect.apply(member, value, args);
-  };
+        received,
+        repair:
+          "Omit coercion to derive it, or pass an object with parseValue, parseLiteral, and serialize methods.",
+      }),
+  );
+  // Each method runs on the author's instance, so it keeps its own state.
+  const onInstance =
+    (method: AuthorMethod) =>
+    (...args: unknown[]): unknown =>
+      Reflect.apply(method, value, args);
   return {
-    parseValue: method("parseValue"),
-    parseLiteral: method("parseLiteral"),
-    serialize: method("serialize"),
+    parseValue: onInstance(parseValue),
+    parseLiteral: onInstance(parseLiteral),
+    serialize: onInstance(serialize),
   };
+}
+
+type AuthorMethod = (...args: unknown[]) => unknown;
+
+/**
+ * The functions `keys` name on the object at `part`. A class instance keeps
+ * its methods on the prototype, so each is looked up along the chain by
+ * descriptor: a method is read without running author code, and an accessor
+ * is refused unrun. A faulty member is refused at its own path with what it
+ * holds.
+ */
+function methodsOf<TKey extends string>(
+  value: unknown,
+  part: string,
+  keys: readonly TKey[],
+  refuse: (path: ScalarFailure["path"], received: string) => never,
+): Record<TKey, AuthorMethod> {
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    refuse([part], "inspection-failed");
+  }
+  if (value === null || typeof value !== "object" || isArray) {
+    refuse([part], describeReceived(value));
+  }
+  const methods = {} as Record<TKey, AuthorMethod>;
+  for (const key of keys) {
+    const found = dataMember(value, key);
+    if (found === "inspection-failed") refuse([part], found);
+    if (found === "accessor") refuse([part, key], found);
+    if (typeof found.value !== "function") {
+      refuse([part, key], describeReceived(found.value));
+    }
+    methods[key] = found.value as AuthorMethod;
+  }
+  return methods;
 }
 
 /** Deeper than any class hierarchy; a proxy can make a chain endless. */
