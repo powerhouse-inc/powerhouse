@@ -256,6 +256,46 @@ describe("presentation metadata", () => {
     ]);
   });
 
+  it("reads every other explicit undefined option as absent", () => {
+    const fields = { id: ph.String() };
+    const Member = ph.object("UndefinedMember", { fields });
+    const named = [
+      ph.object("UndefinedObject", { description: undefined, fields }),
+      ph.input("UndefinedInput", { description: undefined, fields }),
+      ph.interface("UndefinedInterface", { description: undefined, fields }),
+      ph.enum("UndefinedEnum", { description: undefined, values: ["A"] }),
+      ph.union("UndefinedUnion", { description: undefined, members: [Member] }),
+    ];
+    expect(named.map((type) => type.description)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+    const Valued = ph.enum("UndefinedValue", {
+      values: [{ name: "A", description: undefined, deprecated: undefined }],
+    });
+    expect(Valued.values).toEqual([
+      { name: "A", description: null, deprecated: null },
+    ]);
+    const scalar = ph.String({ equals: undefined, required: undefined });
+    expect([scalar.required, scalar.presentation.directives]).toEqual([
+      false,
+      [],
+    ]);
+  });
+
+  it("still refuses an explicit undefined defaultValue", () => {
+    expect(
+      rejection(() => ph.String({ defaultValue: undefined })),
+    ).toMatchObject({
+      code: "PH-DEF-OPTION-INVALID",
+      path: ["options", "defaultValue"],
+      message: "defaultValue is present but undefined.",
+    });
+  });
+
   it("records equals as an @equals use on scalars with a Zod string validator", () => {
     expect(ph.String({ equals: "a.c" }).presentation.directives).toStrictEqual([
       { name: "equals", arguments: [{ name: "value", value: "a.c" }] },
