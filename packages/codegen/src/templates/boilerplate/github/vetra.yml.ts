@@ -31,7 +31,9 @@ jobs:
     # Skip pull requests opened from another repository: they must not reach the
     # OIDC token. Compare full names rather than asking whether the head repo is
     # a fork, which is true for every PR when this repository is itself a fork.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Also skip until VETRA_APP_ID is set (e.g. after ph migrate into an
+    # existing project), so the job does not fail on every push.
+    if: vars.VETRA_APP_ID != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

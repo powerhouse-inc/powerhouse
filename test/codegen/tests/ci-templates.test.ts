@@ -47,9 +47,15 @@ describe("CI/CD Templates", () => {
 
     test("skips PRs from other repositories by full name, like the server template", () => {
       expect(vetraWorkflowTemplate).toContain(
-        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
+        "(github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
       );
       expect(vetraWorkflowTemplate).not.toContain("head.repo.fork");
+    });
+
+    test("only runs the deploy job once VETRA_APP_ID is set", () => {
+      expect(vetraWorkflowTemplate).toContain(
+        "if: vars.VETRA_APP_ID != '' && (",
+      );
     });
 
     test("should pin pnpm because the scaffolded package.json has no packageManager field", () => {
