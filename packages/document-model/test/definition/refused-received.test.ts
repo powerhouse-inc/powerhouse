@@ -457,6 +457,18 @@ describe("a refusal built from a snapshot rejection", () => {
       [
         () => ph.union("U", { members: new Sub() as never }),
         () => ph.union("U", { members: runInNewContext("[]") as never }),
+        () => ph.enum("E", { values: new Sub() as never }),
+        () =>
+          ph.object("O", {
+            fields: { title: ph.String() },
+            implements: new Sub() as never,
+          }),
+        () =>
+          compileSubgraph({
+            name: "s",
+            schemaKind: "typed",
+            entries: () => new Sub() as never,
+          }),
         () =>
           defineDocumentModel(
             config({
@@ -477,18 +489,39 @@ describe("a refusal built from a snapshot rejection", () => {
       ),
     ).toEqual([
       [
-        "PH-DEF-OPTION-INVALID",
+        "PH-DEF-UNION-MEMBERS-INVALID",
         "options.members",
         "Expected a plain array, not an Array subclass or an array from another realm.",
         "array of another prototype or realm",
-        "Pass an array literal, or copy the array with Array.from(...).",
+        "Pass members as a nonempty array of descriptors returned by ph.object. Copy an Array subclass or an array from another realm with Array.from(...).",
       ],
       [
-        "PH-DEF-OPTION-INVALID",
+        "PH-DEF-UNION-MEMBERS-INVALID",
         "options.members",
         "Expected a plain array, not an Array subclass or an array from another realm.",
         "array of another prototype or realm",
-        "Pass an array literal, or copy the array with Array.from(...).",
+        "Pass members as a nonempty array of descriptors returned by ph.object. Copy an Array subclass or an array from another realm with Array.from(...).",
+      ],
+      [
+        "PH-DEF-ENUM-VALUES-INVALID",
+        "options.values",
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+        "array of another prototype or realm",
+        "Pass values as a nonempty array of strings or { name, description?, deprecated? } entries. Copy an Array subclass or an array from another realm with Array.from(...).",
+      ],
+      [
+        "PH-DEF-IMPLEMENTS-INVALID",
+        "options.implements",
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+        "array of another prototype or realm",
+        "Pass implements as an array of descriptors returned by ph.interface. Copy an Array subclass or an array from another realm with Array.from(...).",
+      ],
+      [
+        "PH-SG-ENTRY-INVALID",
+        "entries",
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+        "array of another prototype or realm",
+        "Return an array of the entries the builders produced. Copy an Array subclass or an array from another realm with Array.from(...).",
       ],
       [
         "PH-DM-DECLARATION-INVALID",
