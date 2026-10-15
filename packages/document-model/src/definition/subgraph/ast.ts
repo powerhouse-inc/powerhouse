@@ -32,8 +32,9 @@ export type SubgraphSchemaData = {
   readonly diagnostics: readonly DefinitionDiagnostic[];
   /**
    * The input entries as the builders registered them, in input order, less
-   * a root field declared twice or a computed field bound twice, so each
-   * resolver is the one whose declaration the document carries.
+   * a root field declared twice or a computed field, resolveType, or isTypeOf
+   * bound twice, so each resolver is the one whose declaration the document
+   * carries.
    */
   readonly registered: readonly RegisteredEntry[];
 };
@@ -70,6 +71,7 @@ export function compileSubgraphSchema(
   const computedTargets = new Map<string, ReadonlySet<string>>();
   const boundComputed = new Set<string>();
   const boundRoots = new Set<string>();
+  const boundAbstract = new Set<string>();
   const duplicates = new Set<number>();
 
   const read = input.entries.map((value, index) =>
@@ -149,18 +151,28 @@ export function compileSubgraphSchema(
         return;
       }
       case "resolve-type":
+      case "is-type-of": {
+        const builder =
+          entry.kind === "resolve-type" ? "resolveType" : "isTypeOf";
+        const key = `${builder} for ${entry.typeName}`;
+        if (boundAbstract.has(key)) {
+          collector.add({
+            code: "PH-SG-ENTRY-INVALID",
+            path,
+            message: `${key} is bound twice.`,
+            received: entry.typeName,
+            repair: `Bind ${builder} for each type once.`,
+          });
+          duplicates.add(index);
+          return;
+        }
+        boundAbstract.add(key);
         entries.push({
-          kind: "resolve-type",
+          kind: entry.kind,
           typeName: entry.typeName,
           access: { kind: "manual" },
         });
-        return;
-      case "is-type-of":
-        entries.push({
-          kind: "is-type-of",
-          typeName: entry.typeName,
-          access: { kind: "manual" },
-        });
+      }
     }
   });
 
