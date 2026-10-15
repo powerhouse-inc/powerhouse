@@ -335,18 +335,8 @@ function equalsDirectives(
   options: { readonly [key: string]: DataValue },
   path: DataPath,
 ): readonly DirectiveUseDefinition[] {
-  if (!Object.hasOwn(options, "equals")) return NO_DIRECTIVES;
-  const value = options.equals;
-  if (typeof value !== "string") {
-    return failDefinition({
-      code: "PH-DEF-OPTION-INVALID",
-      path: [...path, "equals"],
-      message: "Option equals must be a string.",
-      expected: "string",
-      received: typeof value,
-      repair: "Pass the pattern the value must match as a string.",
-    });
-  }
+  const value = stringOption(options, "equals", path);
+  if (value === null) return NO_DIRECTIVES;
   const problem = equalsPatternProblem(value);
   if (problem !== undefined) {
     return failDefinition({
@@ -378,7 +368,7 @@ export function resolveFieldOptions<TRequired extends boolean>(
           path,
           "PH-DEF-FIELD-OPTION-UNSUPPORTED",
         );
-  const required = Object.hasOwn(config, "required") ? config.required : false;
+  const required = config.required === undefined ? false : config.required;
   if (typeof required !== "boolean") {
     return failDefinition({
       code: "PH-DEF-OPTION-INVALID",

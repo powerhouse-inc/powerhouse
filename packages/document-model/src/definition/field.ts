@@ -18,6 +18,7 @@ import {
   snapshotDescriptorArray,
   snapshotDescriptorOptions,
   snapshotFieldMap,
+  stringOption,
 } from "./field-options.js";
 import { isEnumValueName } from "./primitives.js";
 import {
@@ -126,23 +127,6 @@ function builtInFactory<const TName extends BuiltInName>(
   ) as unknown as BuiltInFactory<TName>;
 }
 
-function description(options: {
-  readonly [key: string]: unknown;
-}): string | null {
-  if (!Object.hasOwn(options, "description")) return null;
-  if (typeof options.description !== "string") {
-    return failDefinition({
-      code: "PH-DEF-OPTION-INVALID",
-      path: ["options", "description"],
-      message: "A named type description must be a string.",
-      expected: "string",
-      received: typeof options.description,
-      repair: "Pass a string description or omit it.",
-    });
-  }
-  return options.description;
-}
-
 function fieldMap(value: unknown, path: readonly string[]): ObjectFields {
   const members = splitMembers(value, path);
   const computed = Object.keys(members.computed);
@@ -241,25 +225,10 @@ function enumValues(input: unknown): readonly EnumValue[] {
         });
       }
       seen.add(name);
-      for (const key of ["description", "deprecated"] as const) {
-        if (
-          Object.hasOwn(normalized, key) &&
-          typeof normalized[key] !== "string"
-        ) {
-          failDefinition({
-            code: "PH-DEF-OPTION-INVALID",
-            path: [...path, key],
-            message: `Enum value ${key} must be a string.`,
-            expected: "string",
-            received: typeof normalized[key],
-            repair: `Pass a string ${key} or omit it.`,
-          });
-        }
-      }
       return Object.freeze({
         name,
-        description: (normalized.description as string | undefined) ?? null,
-        deprecated: (normalized.deprecated as string | undefined) ?? null,
+        description: stringOption(normalized, "description", path),
+        deprecated: stringOption(normalized, "deprecated", path),
       });
     }),
   );
@@ -462,7 +431,7 @@ export const ph = withInternalScalarGuards({
     return namedType<EnumDescriptor<TValues>>({
       kind: "enum",
       name: validName,
-      description: description(config),
+      description: stringOption(config, "description", ["options"]),
       values: enumValues(config.values),
     });
   },
@@ -494,7 +463,7 @@ export const ph = withInternalScalarGuards({
     return namedType<ObjectDescriptor<TFields, TImplements>>({
       kind: "object",
       name: validName,
-      description: description(config),
+      description: stringOption(config, "description", ["options"]),
       fields,
       implements: implementedInterfaces(config) as TImplements,
       // Present whether or not anything is computed, so a binding reads the
@@ -521,7 +490,7 @@ export const ph = withInternalScalarGuards({
     return namedType<InterfaceDescriptor<TFields, TImplements>>({
       kind: "interface",
       name: validName,
-      description: description(config),
+      description: stringOption(config, "description", ["options"]),
       fields: fieldMap(config.fields, ["options", "fields"]) as TFields,
       implements: implementedInterfaces(config) as TImplements,
     });
@@ -545,7 +514,7 @@ export const ph = withInternalScalarGuards({
     return namedType<InputDescriptor<TFields>>({
       kind: "input",
       name,
-      description: description(config),
+      description: stringOption(config, "description", ["options"]),
       fields: fieldMap(config.fields, ["options", "fields"]) as TFields,
     });
   },
@@ -606,7 +575,7 @@ export const ph = withInternalScalarGuards({
     return namedType<UnionDescriptor<TMembers>>({
       kind: "union",
       name: validName,
-      description: description(config),
+      description: stringOption(config, "description", ["options"]),
       members: Object.freeze([...members]) as unknown as TMembers,
     });
   },
