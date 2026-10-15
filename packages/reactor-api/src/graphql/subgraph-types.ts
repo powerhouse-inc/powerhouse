@@ -89,10 +89,16 @@ export type RefusedDocumentModel = {
   /** The reason the server logs. */
   readonly reason: string;
   /**
-   * For an unservable subgraph, the other model listed first under the same
-   * schema name, whose generated types won.
+   * For an unservable subgraph, the other model whose generated types it
+   * clashes with: the first listed under the same schema name.
    */
-  readonly supplier?: string;
+  readonly supplier?: DocumentModelIdentity;
+};
+
+/** A document model as a refusal names it. */
+export type DocumentModelIdentity = {
+  readonly id: string;
+  readonly name: string;
 };
 
 /** A model subgraph the server registers, holding its name. */
@@ -109,8 +115,11 @@ export type HostDocumentModels<M extends DocumentModelSource> = {
   readonly refused: readonly RefusedDocumentModel[];
   /** The generated schema every subgraph is built onto. */
   readonly generated: GeneratedDocumentModelTypes;
-  /** Generated type name to the name of the model that generates it. */
-  readonly generatedOwners: ReadonlyMap<string, string>;
+  /**
+   * Generated type name to the model that generates it: the first listed
+   * under its schema name, as the generated schema keeps that one.
+   */
+  readonly generatedOwners: ReadonlyMap<string, DocumentModelIdentity>;
   /**
    * The model subgraphs the server registers, each holding its name. Only
    * those that build onto the generated schema hold claims.
@@ -131,7 +140,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     model: DocumentModelSource,
     kind: RefusedDocumentModel["kind"],
     reason: string,
-    supplier?: string,
+    supplier?: DocumentModelIdentity,
   ) => {
     if (!given.has(model)) return;
     const { id, name } = globalStateOf(model);
@@ -206,6 +215,25 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   }
 
   const generated = generatedTypesOf(admitted, schemas);
+  const fixed = generatedTypesOf([]).names;
+  const generatedOwners = new Map<string, DocumentModelIdentity>();
+  const supplied = new Set<string>();
+  for (const model of admitted) {
+    const global = globalStateOf(model);
+    const schemaName = getDocumentModelSchemaName(global);
+    if (supplied.has(schemaName)) continue;
+    supplied.add(schemaName);
+    const definitions = schemas.get(model)?.generated ?? [];
+    for (const name of typeDefinitionNames({
+      kind: Kind.DOCUMENT,
+      definitions,
+    })) {
+      if (!fixed.has(name) && !generatedOwners.has(name)) {
+        generatedOwners.set(name, { id: global.id, name: global.name });
+      }
+    }
+  }
+
   // Each subgraph is set up onto the generated schema of every admitted
   // model, so one that builds alone can still fail beside the others. The
   // server keeps it registered, holding its name, with nothing mounted and
@@ -222,18 +250,12 @@ export function hostDocumentModels<M extends DocumentModelSource>(
       });
     } catch (error) {
       builds = false;
-      // The generated schema keeps the first model listed under a schema
-      // name, so a different model there supplies the types that clash.
+      // A type the subgraph defines that another model generated is the
+      // clash; another version of the same model is not another model.
       const { id } = globalStateOf(model);
-      const schemaName = getDocumentModelSchemaName(globalStateOf(model));
-      const first = admitted.find(
-        (other) =>
-          getDocumentModelSchemaName(globalStateOf(other)) === schemaName,
-      );
-      const supplier =
-        first !== undefined && globalStateOf(first).id !== id
-          ? globalStateOf(first).name
-          : undefined;
+      const supplier = [...own.typeNames]
+        .map((typeName) => generatedOwners.get(typeName))
+        .find((owner) => owner !== undefined && owner.id !== id);
       refuse(
         model,
         "unservable subgraph",
@@ -242,20 +264,6 @@ export function hostDocumentModels<M extends DocumentModelSource>(
       );
     }
     subgraphs.push({ name, typeDefs: own.typeDefs, builds });
-  }
-
-  const fixed = generatedTypesOf([]).names;
-  const generatedOwners = new Map<string, string>();
-  for (const model of admitted) {
-    const definitions = schemas.get(model)?.generated ?? [];
-    for (const name of typeDefinitionNames({
-      kind: Kind.DOCUMENT,
-      definitions,
-    })) {
-      if (!fixed.has(name)) {
-        generatedOwners.set(name, globalStateOf(model).name);
-      }
-    }
   }
 
   return {
@@ -345,7 +353,8 @@ function generatedTypeConflict(
     kind: "generated",
     claims: typeNames.map((claim) => ({
       claim,
-      owner: host.generatedOwners.get(claim) ?? DOCUMENT_MODEL_SCHEMA_OWNER,
+      owner:
+        host.generatedOwners.get(claim)?.name ?? DOCUMENT_MODEL_SCHEMA_OWNER,
     })),
   };
 }
@@ -534,10 +543,10 @@ const REFUSED_MODEL_WORDING: Record<
   "unservable subgraph": {
     subject: (name) =>
       `The server registers the subgraph of document model "${name}" but cannot serve it`,
-    repair: ({ supplier }) =>
+    repair: ({ name, supplier }) =>
       supplier === undefined
         ? "Make every version of the document model define its types the same way, or retire the version that differs."
-        : `Document model "${supplier}" is listed first under the same schema name and supplies the generated types, so rename one of the two models.`,
+        : `Document model "${supplier.name}"${supplier.name === name ? ` (${supplier.id})` : ""} is listed first under the same schema name and supplies the generated types, so rename one of the two models.`,
   },
 };
 
