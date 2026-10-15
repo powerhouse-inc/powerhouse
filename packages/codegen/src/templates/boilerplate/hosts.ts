@@ -47,7 +47,28 @@ Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
 server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs),
 \`desktop\` (production switchboard + built Connect on the generic compound),
 \`assistant\` (headless agent API on the project switchboard) and \`cli\`
-(the clint shell scheduling the others as services).
+(switchboard + Connect together, Connect as a remote client).
+
+### Reactor-client topologies (what runs the reactor, and where)
+
+The \`reactor.backends\` of a Connect host select which of four clients it
+runs — one field, derived from the backend topology:
+
+| host | backends | reactorClient | reactor + storage |
+|---|---|---|---|
+| \`connect\` (standalone) | one \`worker\` | \`worker\` | the tab's own reactor in a SharedWorker (PGlite in-worker) |
+| \`cli\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
+| \`desktop\` → connect member | — (serverDrives remote drive) | router/local | the tab's reactor PLUS a SYNCHRONIZED remote drive (local replica, keeps PGlite) |
+
+The lesson the \`cli\` vs \`desktop\` split teaches: a **remote client** proxies
+to the switchboard and stores nothing locally (no PGlite); a **synchronized
+remote drive** keeps a local replica and therefore needs PGlite by design.
+The \`in-process\` mode (main-thread reactor) is the fourth option — set one
+\`in-process\` backend instead of \`worker\`.
+
+The single project drive (\`powerhouse\`) is OWNED by the switchboard; standalone
+Connect has its own local copy; the \`cli\`/\`desktop\` compounds re-point Connect
+at the switchboard's.
 `;
 
   const connectHost = `// @ts-check
@@ -67,13 +88,21 @@ export default {
 
     // THE COMPOSITION — presence is activation (no feature flags behind
     // these lines). The generic shell is Connect's chrome: sidebar, home,
-    // /d/ URLs, drive management. It OWNS the drive-chrome toggles — configure
-    // them in this entry's config: { allowAddDrive, sections: { remote, local } }.
-    // Removing the entry turns those toggles OFF (live today — no add-drive
-    // affordance). NOTE: it does not yet unmount the chrome UI itself; gating
-    // the shell on this plugin ("go headless / swap your own shell") is on the
-    // roadmap. Branding is NOT set here — it stays top-level connect.branding.
-    plugins: ["@powerhousedao/connect/plugins/generic"],
+    // /d/ URLs, drive management. It OWNS the drive-chrome toggles — passed in
+    // its \`config\` here. Removing the entry turns those toggles OFF (live
+    // today — no add-drive affordance). NOTE: it does not yet unmount the
+    // chrome UI itself; gating the shell on this plugin ("go headless / swap
+    // your own shell") is on the roadmap. Branding is NOT set here — it stays
+    // top-level connect.branding.
+    plugins: [
+      {
+        module: "@powerhousedao/connect/plugins/generic",
+        config: {
+          allowAddDrive: config.connect?.drives?.allowAddDrive,
+          sections: config.connect?.drives?.sections,
+        },
+      },
+    ],
   },
 
   // handed to the runtime whole: the connect.* block, projected unchanged
@@ -84,9 +113,19 @@ export default {
     name: "${projectName}",
   },
 
-  // The replay/admission protocol reaches this host through \`config\` above:
-  // the connect.reactor block of powerhouse.config.json. The switchboard host
-  // references the SAME block, so client and server cannot diverge.
+  // Standalone Connect runs its OWN reactor (reactorClient derived from the
+  // backends below — a lone \`worker\` backend → the worker reactor, PGlite in
+  // a SharedWorker). The default drive lives in the tab's reactor. The
+  // cli/desktop compounds re-point this same drive at the switchboard instead
+  // — see those hosts. \`protocol\` is single-sourced from the connect.reactor
+  // block both this host and the switchboard read, so they cannot diverge.
+  reactor: {
+    protocol: config.connect?.reactor ?? {},
+    backends: {
+      main: { kind: "worker" },
+    },
+    drives: [{ slug: "powerhouse", name: "${projectName}" }],
+  },
 };
 `;
 
@@ -117,6 +156,10 @@ export default {
   // var contradicting it fails boot by name.
   reactor: {
     protocol: config.connect?.reactor ?? {},
+    // The drive this switchboard serves. The cli/desktop compounds read this
+    // list and point Connect at it (as a remote client / remote drive), so
+    // the drive is OWNED in exactly one place.
+    drives: [{ slug: "powerhouse", name: "${projectName}" }],
   },
 };
 `;
@@ -313,32 +356,56 @@ export default {
 `;
 
   const cliHost = `// @ts-check
-// The compound CLI: the clint shell — children below are SCHEDULED by its
-// services manager (start/stop/ps/logs, per-run log files, re-attach), not
-// merely started. \`ph run cli\` brings the stack up; \`ph run cli dev\` adds
-// a chat shell against the agents below.
-// Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
+// \`ph run cli\` brings up the switchboard + Connect together as one
+// supervised stack (generic compound). The drive lives in the switchboard;
+// Connect runs as a pure REMOTE CLIENT of it — a lone remote backend makes
+// reactorClient "remote", so this Connect builds NO local reactor and never
+// downloads PGlite. (Contrast desktop, where Connect takes the same drive as
+// a SYNCHRONIZED remote drive — a local replica, which keeps PGlite by
+// design. remote client = no local store; synchronized remote drive = local
+// store.) Standalone \`ph run connect\` is untouched — still a local reactor.
+import switchboard from "../switchboard/host.js";
+
+// The drive(s) the switchboard serves, and its port — the single source
+// Connect's remote attachment derives from.
+const serverPort = switchboard.runner.port;
+const serverDrives = switchboard.reactor.drives ?? [];
+
 export default {
   name: "cli",
 
+  // run → each member starts at "run": switchboard = server, Connect = studio
+  // (no build step needed).
   runner: {
-    module: "@powerhousedao/clint/clint-runner",
-    // "detached": children survive CLI exit and re-attach on the next run
-    // (clint's own posture); "attached" tears them down on Ctrl+C.
-    lifecycle: "detached",
-  },
-
-  children: {
-    switchboard: { host: "switchboard" },
-    assistant: { host: "assistant" },
+    module: "@powerhousedao/host-core/runners/compound",
   },
 
   config: {
-    startOrder: ["switchboard", "assistant"],
-    // THE AGENTS MANAGER — named OpenAI-compatible endpoints; a sibling-host
-    // reference resolves through that host's runner.port.
-    agents: {
-      assistant: { host: "assistant" },
+    startOrder: ["cli-switchboard", "cli-connect"],
+  },
+
+  children: {
+    // Inherits the switchboard host wholesale — including its drive.
+    "cli-switchboard": { host: "switchboard" },
+
+    // Connect as a remote client (full-statement reactor override; the
+    // standalone connect host's own reactor is untouched). The lone remote
+    // backend selects reactorClient "remote"; the remote default drive(s)
+    // give the client the Switchboard URL to proxy to.
+    "cli-connect": {
+      host: "connect",
+      reactor: {
+        backends: {
+          sb: {
+            kind: "remote",
+            remote: { url: \`http://127.0.0.1:\${serverPort}/graphql\` },
+          },
+        },
+        drives: serverDrives.map((drive) => ({
+          slug: drive.slug,
+          remote: { url: \`http://127.0.0.1:\${serverPort}/d/\${drive.slug}\` },
+        })),
+      },
     },
   },
 };
