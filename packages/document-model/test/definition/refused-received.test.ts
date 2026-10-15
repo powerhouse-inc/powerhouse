@@ -682,3 +682,53 @@ describe("a legitimate declaration", () => {
     ]);
   });
 });
+
+describe("a stored model whose parent is not a record", () => {
+  const storedModels: readonly unknown[] = [
+    null,
+    [],
+    { global: null },
+    { global: [] },
+    { global: {} },
+  ];
+  const refusedAt = (diagnostics: readonly DefinitionDiagnostic[]) =>
+    diagnostics
+      .filter(({ path }) => path[0] === "documentModel")
+      .map(({ path, received }) => [path.join("."), received]);
+
+  it("is reported at the parent by the schema-first adapter", () => {
+    expect(
+      storedModels.map((documentModel) =>
+        refusedAt(
+          adaptSchemaFirstDocumentModelModule({ documentModel }, SOURCE)
+            .diagnostics,
+        ),
+      ),
+    ).toEqual([
+      [["documentModel", "null"]],
+      [["documentModel", "array"]],
+      [["documentModel.global", "null"]],
+      [["documentModel.global", "array"]],
+      [["documentModel.global.specifications", "undefined"]],
+    ]);
+  });
+
+  it("is reported at the parent by the code-first adapter", () => {
+    expect(
+      storedModels.map((documentModel) =>
+        refusedAt(
+          adaptCodeFirstDocumentModelSource(
+            { reducer() {}, version: 1, documentModel },
+            SOURCE,
+          ).diagnostics,
+        ),
+      ),
+    ).toEqual([
+      [["documentModel", "null"]],
+      [["documentModel", "array"]],
+      [["documentModel.global", "null"]],
+      [["documentModel.global", "array"]],
+      [["documentModel.global.id", "undefined"]],
+    ]);
+  });
+});
