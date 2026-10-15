@@ -1401,7 +1401,7 @@ describe("a scalar coercion", () => {
     ]);
   });
 
-  it("is behavior, so it may be a class instance, while a zero is data and must be a plain record", () => {
+  it("differs from a zero, which is data and so must be a plain record, not a class instance", () => {
     const scalar = (zero: unknown) => () =>
       defineScalar({
         name: "Zeroed",
