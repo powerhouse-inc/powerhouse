@@ -126,6 +126,7 @@ describe("AttachmentSchemaCompiler", () => {
     { storedName: "RenameTitle", actionType: "SET_TITLE" },
     { storedName: "UPDATE_TITLE", actionType: "UPDATE_TITLE" },
     { storedName: "SetTitle", actionType: "UPDATE_TITLE_V2" },
+    { storedName: "SetTitle", actionType: "NOOP" },
   ])(
     "extracts code-first references with stored name $storedName and action type $actionType",
     ({ storedName, actionType }) => {

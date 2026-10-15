@@ -19,7 +19,8 @@ vite.*.config.*.timestamp-*.mjs
 storybook-static
 .gitignore.local
 .ph
-CLAUDE.md
+AGENTS.local.md
+CLAUDE.local.md
 .claude/*
 !.claude/commands/
 !.claude/commands/**

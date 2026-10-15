@@ -1,5 +1,10 @@
 # Powerhouse monorepo — documentation set
 
+For current source ownership and testing prerequisites, start with the maintained
+[source map](../docs/development/source-map.md) and
+[contributor guide](../CONTRIBUTING.md#testing). These pages describe the snapshot
+identified under Provenance and are not the current execution contract.
+
 A temporary, generated guide to this repository: what every package is for, what it
 does, how it is tested, and how it connects to everything else.
 
@@ -136,4 +141,4 @@ Everything here was derived from the repository itself as of commit `9cade568e` 
 `.github/workflows/`, and the source trees. Quoted text is quoted from those files.
 
 This is a **temporary folder** — delete `docs-temp/` when you no longer need it.
-Nothing in the repo references it.
+Treat its source and tooling claims as historical unless confirmed in the maintained guides.
