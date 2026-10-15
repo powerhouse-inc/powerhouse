@@ -155,10 +155,14 @@ function WorkflowEditor() {
       fetchRun: (runId) => client.fetchRun(runId),
       blockResolutions: () => client.blockResolutions(workflowId),
       secrets: {
-        save: ({ ref, value, label }) =>
-          ref
+        // Only this workflow's own secret, and only by whoever may change it,
+        // is rotated; any other is replaced.
+        save: async ({ ref, value, label }) => {
+          const stat = ref ? await client.fetchSecretStat(ref) : null;
+          return ref && stat?.ownerId === workflowId && stat.manageable
             ? actions.rotateSecret(ref, value)
-            : actions.createSecret(value, label),
+            : actions.createSecret(workflowId, value, label);
+        },
         stat: (ref) => client.fetchSecretStat(ref),
       },
     }),

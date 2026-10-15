@@ -6,6 +6,7 @@ import {
   parseAddress,
   type EgressPolicy,
   type OAuth2MethodDescriptor,
+  type SecretOwner,
   type SecretStore,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
@@ -43,6 +44,8 @@ export interface OAuthAttemptRow {
   token_url: string;
   authorization_method: string | null;
   return_url: string | null;
+  // Lower-cased address of who started it; null when anonymous.
+  created_by: string | null;
   status: OAuthAttemptStatus;
   error: string | null;
   created_at: string;
@@ -92,12 +95,22 @@ async function up(db: IRelationalDb<OAuthDB>): Promise<void> {
     .addColumn("token_url", "text", (col) => col.notNull())
     .addColumn("authorization_method", "text")
     .addColumn("return_url", "text")
+    .addColumn("created_by", "text")
     .addColumn("status", "text", (col) => col.notNull())
     .addColumn("error", "text")
     .addColumn("created_at", "text", (col) => col.notNull())
     .addColumn("expires_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();
+  // Additive migration for namespaces created before attempts had a caller.
+  try {
+    await db.schema
+      .alterTable("oauth_attempt")
+      .addColumn("created_by", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
 }
 
 // `{name}` placeholders in a provider URL, filled from the connection's props.
@@ -137,6 +150,7 @@ export interface StartOAuthInput {
   scopes?: string[];
   /** Always PKCE, whatever the piece says: a desktop client cannot keep its secret. */
   pkce?: boolean;
+  createdBy?: string | null;
 }
 
 export interface OAuthStart {
@@ -219,6 +233,7 @@ export class OAuthAttemptStore {
         token_url: fillOAuthUrl(method.tokenUrl, input.props),
         authorization_method: method.authorizationMethod ?? null,
         return_url: input.returnUrl ?? null,
+        created_by: input.createdBy?.toLowerCase() ?? null,
         status: "PENDING",
         error: null,
         created_at: now.toISOString(),
@@ -554,8 +569,12 @@ export interface OAuthConnectionSource {
 }
 
 export interface OAuthTokenRefresher {
-  // Rotates the token secret in place when it is close to expiring.
-  refreshIfDue(source: OAuthConnectionSource): Promise<void>;
+  // Rotates the token secret in place when it is close to expiring. Secrets
+  // are read as connectionId, so refs copied from another connection fail.
+  refreshIfDue(
+    source: OAuthConnectionSource,
+    connectionId: string,
+  ): Promise<void>;
 }
 
 export class StoreTokenRefresher implements OAuthTokenRefresher {
@@ -567,7 +586,10 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
     private readonly egress?: EgressPolicy,
   ) {}
 
-  refreshIfDue(source: OAuthConnectionSource): Promise<void> {
+  refreshIfDue(
+    source: OAuthConnectionSource,
+    connectionId: string,
+  ): Promise<void> {
     const refOf = (name: string) =>
       source.secretRefs?.find((entry) => entry.name === name)?.ref;
     const tokenRef = refOf(OAUTH_TOKEN);
@@ -581,7 +603,11 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
         : undefined;
     let pending = this.inFlight.get(tokenRef);
     if (!pending) {
-      pending = this.refresh(tokenRef, own).finally(() =>
+      const owner: SecretOwner = {
+        documentId: connectionId,
+        kind: "connection",
+      };
+      pending = this.refresh(tokenRef, own, owner).finally(() =>
         this.inFlight.delete(tokenRef),
       );
       this.inFlight.set(tokenRef, pending);
@@ -592,9 +618,11 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
   private async refresh(
     tokenRef: string,
     own: { secretRef: string; clientId: string } | undefined,
+    owner: SecretOwner,
   ): Promise<void> {
     const store = await this.secrets();
-    const tokens = parseTokenSet(await store.get(tokenRef));
+    const read = (ref: string) => store.get(ref, owner);
+    const tokens = parseTokenSet(await read(tokenRef));
     if (!tokenDue(tokens, Math.round(Date.now() / 1000))) return;
     const clientId = own?.clientId ?? tokens.client_id;
     const secretRef = own?.secretRef ?? tokens.client_secret_ref;
@@ -603,7 +631,8 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
     const auth = clientAuth(
       tokens.authorization_method,
       clientId,
-      await store.get(secretRef),
+      // A host app's client secret has no owner document.
+      own ? await read(secretRef) : await store.get(secretRef, null),
     );
     let response: Record<string, unknown>;
     try {
@@ -631,7 +660,7 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
       );
     }
     // A sign-in that landed meanwhile is newer than this refresh.
-    const current = parseTokenSet(await store.get(tokenRef));
+    const current = parseTokenSet(await read(tokenRef));
     if (
       current.access_token !== tokens.access_token ||
       current.claimed_at !== tokens.claimed_at

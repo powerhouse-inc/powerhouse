@@ -145,7 +145,8 @@ export async function loadOAuthApps(
   const read = options.read ?? ((path: string) => readFile(path, "utf8"));
   const existing = new Map(
     (await store.list())
-      .filter((s) => s.status === "ACTIVE" && s.label)
+      // A document's secret may share the label; only a host secret is the app's.
+      .filter((s) => s.status === "ACTIVE" && s.label && s.ownerId === null)
       .map((s) => [s.label!, s.ref]),
   );
   const entries: OAuthAppClient[] = [];
@@ -167,11 +168,17 @@ export async function loadOAuthApps(
       const label = clientSecretLabel(app.id, kind);
       let ref = existing.get(label);
       if (ref) {
-        if ((await store.get(ref)) !== client.clientSecret) {
+        if ((await store.get(ref, null)) !== client.clientSecret) {
           await store.rotate(ref, client.clientSecret);
         }
       } else {
-        ref = (await store.create({ value: client.clientSecret, label })).ref;
+        ref = (
+          await store.create({
+            value: client.clientSecret,
+            label,
+            ownerId: null,
+          })
+        ).ref;
       }
       entries.push({
         appId: app.id,

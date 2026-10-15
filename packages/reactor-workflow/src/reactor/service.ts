@@ -49,6 +49,7 @@ import {
   authMethodFor,
   isIndeterminateError,
   type PieceAuthDescriptor,
+  type BlockDefaults,
   type BlockExecutor,
   type BlockResolution,
   type LocalPiece,
@@ -64,7 +65,9 @@ import {
   type ModelManifestSource,
   type ReactorTap,
   type StepReactorRequest,
+  SecretCreatorMismatchError,
   type SecretProvider,
+  type SecretStat,
   type SecretStore,
   type StepExecutionRecord,
   type WorkflowRunResult,
@@ -465,6 +468,7 @@ const logger = childLogger(["workflow", "runtime"]);
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 const WORKFLOW_DOCUMENT_TYPE = "powerhouse/workflow";
+const CONNECTION_DOCUMENT_TYPE = "powerhouse/connection";
 // Document creation, deletion and parent linking are appended to the document
 // itself in this scope, not to any drive.
 const DOCUMENT_SCOPE = "document";
@@ -963,7 +967,117 @@ export class WorkflowRuntimeService {
   }
 
   private secretProvider(): SecretProvider {
-    return { get: (ref) => this.secrets().then((store) => store.get(ref)) };
+    return {
+      get: (ref, owner) => this.secrets().then((s) => s.get(ref, owner)),
+    };
+  }
+
+  // Lower-cased; null for an anonymous caller or a host that names none.
+  private callerAddress(ctx: WorkflowCaller | undefined): string | null {
+    const subject = ctx ? this.host.subjectOf?.(ctx) : undefined;
+    return subject?.address?.toLowerCase() ?? null;
+  }
+
+  // Mints a secret owned by a connection or workflow, as the caller; the
+  // caller must be able to write that document.
+  async createSecret(
+    input: { value: string; label?: string; ownerId: string },
+    ctx?: WorkflowCaller,
+  ): Promise<SecretStat> {
+    const client = this.host.reactorClient;
+    // An editor mints right after creating the document, maybe before sync.
+    if (await isNotHereYet(client, input.ownerId)) {
+      await waitForSync(
+        client,
+        input.ownerId,
+        () => Promise.resolve(),
+        this.host.syncWaitMs ?? SYNC_WAIT_MS,
+      );
+    }
+    await this.assertCanReadDocument(input.ownerId, ctx);
+    await this.assertCanWriteDocument(input.ownerId, ctx);
+    const document = await client.get(input.ownerId);
+    const type = document.header.documentType;
+    if (type !== CONNECTION_DOCUMENT_TYPE && type !== WORKFLOW_DOCUMENT_TYPE) {
+      throw new Error("A secret belongs to a connection or a workflow");
+    }
+    return (await this.secrets()).create({
+      ...input,
+      createdBy: this.callerAddress(ctx),
+    });
+  }
+
+  // Only its creator, while able to write its owner, changes a secret; one
+  // saved anonymously is open to any such writer. Being an admin adds nothing.
+  private async assertCanManageSecret(
+    stat: SecretStat,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<void> {
+    if (stat.ownerId === null) throw new Error("This secret has no owner");
+    await this.assertCanReadDocument(stat.ownerId, ctx);
+    await this.assertCanWriteDocument(stat.ownerId, ctx);
+    if (stat.createdBy !== null && stat.createdBy !== this.callerAddress(ctx)) {
+      throw new SecretCreatorMismatchError();
+    }
+  }
+
+  async canManageSecret(
+    stat: SecretStat,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<boolean> {
+    return this.assertCanManageSecret(stat, ctx).then(
+      () => true,
+      () => false,
+    );
+  }
+
+  async rotateSecret(
+    ref: string,
+    value: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<SecretStat> {
+    const store = await this.secrets();
+    await this.assertCanManageSecret(await store.stat(ref), ctx);
+    return store.rotate(ref, value);
+  }
+
+  async deleteSecret(
+    ref: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<void> {
+    const store = await this.secrets();
+    await this.assertCanManageSecret(await store.stat(ref), ctx);
+    await store.delete(ref);
+  }
+
+  // Metadata of a secret whose owner the caller can read; null otherwise.
+  async secretStat(
+    ref: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<SecretStat | null> {
+    let stat: SecretStat;
+    try {
+      stat = await (await this.secrets()).stat(ref);
+    } catch {
+      // Unknown or malformed ref reads as "no such secret".
+      return null;
+    }
+    return (await this.readableSecrets([stat], ctx)).at(0) ?? null;
+  }
+
+  async listSecrets(ctx: WorkflowCaller | undefined): Promise<SecretStat[]> {
+    return this.readableSecrets(await (await this.secrets()).list(), ctx);
+  }
+
+  private readableSecrets(
+    stats: SecretStat[],
+    ctx: WorkflowCaller | undefined,
+  ): Promise<SecretStat[]> {
+    return this.readableRows(
+      stats.filter((stat) => stat.ownerId !== null),
+      (stat) => stat.ownerId!,
+      ctx,
+    );
   }
 
   private oauthAttempts(): Promise<OAuthAttemptStore> {
@@ -2917,7 +3031,9 @@ export class WorkflowRuntimeService {
   ): Promise<string | undefined> {
     if (!config.secretRef) return undefined;
     try {
-      return await (await this.secrets()).get(config.secretRef);
+      return await (
+        await this.secrets()
+      ).get(config.secretRef, { documentId: workflowId, kind: "workflow" });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
@@ -2961,6 +3077,32 @@ export class WorkflowRuntimeService {
       block.kind === "trigger" ? descriptor.triggers : descriptor.actions;
     return blocks.find((candidate) => candidate.name === block.name)
       ?.requireReactor;
+  }
+
+  // The timeout and retry an action declares, at the version the step runs.
+  private async blockDefaults(
+    block: BlockRef,
+  ): Promise<BlockDefaults | undefined> {
+    if (block.kind !== "action" || builtinPiece(block.pieceName)) {
+      return undefined;
+    }
+    const parsed = resolvedBlock(await this.resolveBlock(block));
+    if (!parsed) return undefined;
+    const descriptor = await this.pieceDescriptor(targetOf(parsed));
+    const action = descriptor.actions.find(
+      (candidate) => candidate.name === parsed.name,
+    );
+    if (!action) return undefined;
+    const { defaultTimeoutSeconds, defaultRetry } = action;
+    if (defaultTimeoutSeconds === undefined && defaultRetry === undefined) {
+      return undefined;
+    }
+    return {
+      ...(defaultTimeoutSeconds !== undefined
+        ? { timeoutSeconds: defaultTimeoutSeconds }
+        : {}),
+      ...(defaultRetry !== undefined ? { retry: defaultRetry } : {}),
+    };
   }
 
   // Who a caller acts as at design time and in a single-step test.
@@ -3551,6 +3693,7 @@ export class WorkflowRuntimeService {
       ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
       ...(scopes ? { scopes } : {}),
       ...(pkce ? { pkce } : {}),
+      createdBy: this.callerAddress(ctx),
     });
   }
 
@@ -3619,10 +3762,17 @@ export class WorkflowRuntimeService {
         return await fail("The connection changed during sign-in; try again");
       }
       const secrets = await this.secrets();
+      const connectionId = document.header.id;
       const tokens = await exchangeCode(
         attempt,
         callback.code,
-        await secrets.get(attempt.client_secret_ref),
+        // A host app's client secret has no owner document.
+        await secrets.get(
+          attempt.client_secret_ref,
+          fromRegistry
+            ? null
+            : { documentId: connectionId, kind: "connection" },
+        ),
         this.designEgress,
         fromRegistry,
       );
@@ -3631,8 +3781,19 @@ export class WorkflowRuntimeService {
         (entry) => entry.name === OAUTH_TOKEN,
       );
       let ref = existing?.ref;
+      // Rotated in place only when this connection owns it and whoever signed
+      // in may change it; else a new one, so no one's secret is overwritten.
       try {
-        if (ref) await secrets.rotate(ref, value);
+        const stat = ref ? await secrets.stat(ref) : undefined;
+        if (
+          ref &&
+          stat?.ownerId === connectionId &&
+          (stat.createdBy === null || stat.createdBy === attempt.created_by)
+        ) {
+          await secrets.rotate(ref, value);
+        } else {
+          ref = undefined;
+        }
       } catch {
         ref = undefined;
       }
@@ -3641,6 +3802,8 @@ export class WorkflowRuntimeService {
           await secrets.create({
             value,
             label: `${state.name || "connection"} · OAuth2 token`,
+            ownerId: connectionId,
+            createdBy: attempt.created_by,
           })
         ).ref;
         await this.host.reactorClient.execute(document.header.id, "main", [
@@ -4892,6 +5055,7 @@ export class WorkflowRuntimeService {
       const { variables, secretValues } = await resolveVariables(
         runnable.variables,
         this.secretProvider(),
+        workflowId,
       );
       const journal = store;
       const journaledRunId = runId;
@@ -4920,6 +5084,7 @@ export class WorkflowRuntimeService {
             definition: { ...definition, variables },
             executor,
             declaredPorts: blockPorts,
+            blockDefaults: (block) => this.blockDefaults(block),
             ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload,
             completedSteps: resume?.completedSteps,
@@ -5437,7 +5602,11 @@ export class WorkflowRuntimeService {
     if ("error" in upstream) return refused(upstream.error);
     let resolved;
     try {
-      resolved = await resolveVariables(state.variables, this.secretProvider());
+      resolved = await resolveVariables(
+        state.variables,
+        this.secretProvider(),
+        workflowId,
+      );
     } catch (error) {
       return refused(error instanceof Error ? error.message : String(error));
     }
@@ -5521,6 +5690,12 @@ export class WorkflowRuntimeService {
           runWorkflow({
             definition,
             executor,
+            // A test runs once: the action's timeout applies, its retry not.
+            blockDefaults: async (block) => {
+              const timeoutSeconds = (await this.blockDefaults(block))
+                ?.timeoutSeconds;
+              return timeoutSeconds ? { timeoutSeconds } : undefined;
+            },
             ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload: upstream.triggerPayload,
             priorSteps: upstream.priorSteps,

@@ -163,8 +163,10 @@ export async function resolveConnectionWithSecrets(
     config: (state.config ?? {}) as Record<string, unknown>,
     secretRefs: state.secretRefs,
   };
-  if (source.authType === "OAUTH2") await oauth?.refreshIfDue(source);
-  return shapeConnection(source, secrets);
+  if (source.authType === "OAUTH2") {
+    await oauth?.refreshIfDue(source, document.header.id);
+  }
+  return shapeConnection(source, secrets, document.header.id);
 }
 
 // Piece code runs under an egress policy that denies private address space —

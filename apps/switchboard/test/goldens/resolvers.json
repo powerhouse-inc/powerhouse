@@ -271,6 +271,7 @@
     "PHID.serialize",
     "Query._service",
     "Query.workflowRuntime",
+    "SecretRecord.manageable",
     "URL.parseLiteral",
     "URL.parseValue",
     "URL.serialize",
