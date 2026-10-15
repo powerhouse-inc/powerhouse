@@ -58,6 +58,9 @@ function rejectionPath(rejection: DataSnapshotRejection): DefinitionPath {
   );
 }
 
+const FOREIGN_ARRAY =
+  "Expected a plain array, not an Array subclass or an array from another realm.";
+
 export function optionRejection(
   rejection: DataSnapshotRejection,
   unsupportedKeyCode: DefinitionDiagnosticCode,
@@ -80,8 +83,7 @@ export function optionRejection(
     return failDefinition({
       code: "PH-DEF-OPTION-INVALID",
       path: rejectionPath(rejection),
-      message:
-        "Expected a plain array, not an Array subclass or an array from another realm.",
+      message: FOREIGN_ARRAY,
       received: rejection.received,
       repair: "Pass an array literal, or copy the array with Array.from(...).",
     });
@@ -142,8 +144,7 @@ export function snapshotDescriptorArray(
     return failDefinition({
       code,
       path,
-      message:
-        "Expected a plain array, not an Array subclass or an array from another realm.",
+      message: FOREIGN_ARRAY,
       received: snapshot.received,
       repair: `${repair} Copy an Array subclass or an array from another realm with Array.from(...).`,
     });
