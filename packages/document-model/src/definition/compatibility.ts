@@ -1,6 +1,7 @@
 import type { DefinitionPath } from "@powerhousedao/shared/document-model";
 import { snapshotDataRecord } from "./data-properties.js";
 import {
+  describeReceived,
   DefinitionDiagnosticCollector,
   type DefinitionDiagnosticCode,
 } from "./diagnostics.js";
@@ -103,7 +104,7 @@ function stringMap(
       path: snapshot.path,
       message: `The ${member} map must be a plain object of strings (${snapshot.reason}).`,
       expected: `{ "${keyShape}": "..." }`,
-      received: value === null ? "null" : typeof value,
+      received: describeReceived(value),
       repair: `Pass ${member} as an object literal keyed by ${keyShape}.`,
     });
     return entries;
@@ -165,7 +166,7 @@ function nameMap(
       path: snapshot.path,
       message: `The names map must be a plain object (${snapshot.reason}).`,
       expected: '{ "module/lineItems": { storedName: "line_items" } }',
-      received: value === null ? "null" : typeof value,
+      received: describeReceived(value),
       repair: "Pass names as an object literal keyed by identity path.",
     });
     return entries;
@@ -193,7 +194,7 @@ function nameMap(
         path: overrides.path,
         message: `A name override must be a plain object (${overrides.reason}).`,
         expected: allowed.join(", "),
-        received: entry === null ? "null" : typeof entry,
+        received: describeReceived(entry),
         repair: `Use ${allowed.map((name) => `${name}: "..."`).join(" or ")}.`,
       });
       continue;
@@ -256,7 +257,7 @@ export function schemaFirstSpecification<
       message: `The compatibility declaration must be a plain object (${config.reason}).`,
       expected: "ids, names, serialization",
       // An untyped caller can still pass null here.
-      received: (input as unknown) === null ? "null" : typeof input,
+      received: describeReceived(input),
       repair:
         "Pass schemaFirstSpecification({ ids, names, serialization }) with object literals.",
     });

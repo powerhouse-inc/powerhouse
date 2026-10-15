@@ -22,6 +22,7 @@ import {
 } from "./compatibility.js";
 import { isTypeDescriptor } from "./descriptor-registry.js";
 import {
+  describeReceived,
   DefinitionDiagnosticCollector,
   type DefinitionDiagnosticCode,
 } from "./diagnostics.js";
@@ -738,7 +739,7 @@ function normalizeSpecifications(
       message:
         "An auxiliary type must be a named type created by a ph builder.",
       expected: "a named type descriptor",
-      received: candidate === null ? "null" : typeof candidate,
+      received: describeReceived(candidate),
       repair:
         "List descriptors returned by ph.enum, ph.object, ph.input, ph.interface, or ph.union.",
     });
@@ -1155,7 +1156,7 @@ function normalizeModule(
         message:
           "An operation entry must be the value returned by the global(...) or local(...) builder.",
         expected: "an operation token",
-        received: candidate === null ? "null" : typeof candidate,
+        received: describeReceived(candidate),
         repair:
           "Wrap the operation declaration with the scope builder the operations callback receives.",
       });
@@ -1228,7 +1229,7 @@ export function defineDocumentModel<
           path: ["modules", index],
           message: "A finalized value is not a document-model module token.",
           expected: "a module token returned by context.module",
-          received: module === null ? "null" : typeof module,
+          received: describeReceived(module),
           repair: "Pass only the values returned by this context's module().",
         });
         return [];
@@ -1288,7 +1289,7 @@ export function defineDocumentModel<
           message:
             "Compatibility data must come from the schemaFirstSpecification helper.",
           expected: "schemaFirstSpecification({ ids, names, serialization })",
-          received: compatibility === null ? "null" : typeof compatibility,
+          received: describeReceived(compatibility),
           repair:
             "Build the compatibility declaration with schemaFirstSpecification so its maps are checked before compilation.",
         });
@@ -1397,7 +1398,7 @@ function familyDeclaration(
         message:
           "A family version must be a token returned by context.version.",
         expected: "an opaque version token",
-        received: version === null ? "null" : typeof version,
+        received: describeReceived(version),
         repair:
           "Pass context.version({ modules }) results; a version token is not registrable on its own.",
       });

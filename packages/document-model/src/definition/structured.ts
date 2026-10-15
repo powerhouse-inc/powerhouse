@@ -32,6 +32,7 @@ import {
 } from "./compatibility-apply.js";
 import { isTypeDescriptor } from "./descriptor-registry.js";
 import {
+  describeReceived,
   DefinitionDiagnosticCollector,
   DocumentModelDefinitionError,
 } from "./diagnostics.js";
@@ -289,7 +290,7 @@ export class DescriptorWalk {
         message:
           "A type position must hold a named type created by a ph builder.",
         expected: "a named type descriptor",
-        received: candidate === null ? "null" : typeof candidate,
+        received: describeReceived(candidate),
         repair:
           "Use a descriptor returned by ph.enum, ph.object, ph.input, ph.interface, or ph.union.",
       });

@@ -175,6 +175,7 @@ export function compileSubgraphSchema(
           typeName: entry.typeName,
           access: { kind: "manual" },
         });
+        return;
       }
     }
   });

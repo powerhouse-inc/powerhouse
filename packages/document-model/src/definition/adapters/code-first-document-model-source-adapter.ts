@@ -6,7 +6,10 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import { snapshotArray, snapshotRecord } from "../data-properties.js";
-import { DefinitionDiagnosticCollector } from "../diagnostics.js";
+import {
+  describeReceived,
+  DefinitionDiagnosticCollector,
+} from "../diagnostics.js";
 import { compilationReportOf } from "../materialize.js";
 import { canonicalDigest, canonicalJson } from "../primitives.js";
 import { checkDocumentModelDefinitionShape } from "../wire-shape.js";
@@ -69,7 +72,7 @@ function inspect(
       path: snapshot.path,
       message: `This export is not a document-model module (${snapshot.reason}).`,
       expected: MODULE_KEYS.join(", "),
-      received: value === null ? "null" : typeof value,
+      received: describeReceived(value),
       repair:
         "Export the module returned by context.finalize() or family.at(version).",
     });

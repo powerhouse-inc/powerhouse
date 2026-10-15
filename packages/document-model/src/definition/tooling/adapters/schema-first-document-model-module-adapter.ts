@@ -27,7 +27,10 @@ import type {
   NormalizedDocumentModelResult,
 } from "../../adapters/types.js";
 import { snapshotRecord } from "../../data-properties.js";
-import { DefinitionDiagnosticCollector } from "../../diagnostics.js";
+import {
+  describeReceived,
+  DefinitionDiagnosticCollector,
+} from "../../diagnostics.js";
 import {
   checkDerivedNameCollisions,
   type DerivedModuleNames,
@@ -109,7 +112,7 @@ function storedModel(
       path: root.path,
       message: `This export is neither a document-model module nor a stored document-model state (${root.reason}).`,
       expected: "a module with documentModel, or a DocumentModelPHState",
-      received: value === null ? "null" : typeof value,
+      received: describeReceived(value),
       repair:
         "Export the generated module, or pass its documentModel state directly.",
     });

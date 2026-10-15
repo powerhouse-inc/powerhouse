@@ -120,7 +120,7 @@ export function snapshotDescriptorArray(
       code,
       path,
       message: "Expected an array.",
-      received: value === null ? "null" : typeof value,
+      received: describeReceived(value),
       repair,
     });
   }
@@ -185,7 +185,7 @@ export function assertFieldUse(
     code: "PH-DEF-FIELD-INVALID",
     path,
     message: "A field position must hold a field use created by ph.",
-    received: value === null ? "null" : typeof value,
+    received: describeReceived(value),
     repair:
       "Use a called scalar factory such as ph.String(), ph.list(...), or ph.ref(Type).",
   });

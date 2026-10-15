@@ -271,6 +271,9 @@ function snapshotPlainObjectMembers<T>(
   } catch {
     return { ok: false, reason: "inspection-failed", path };
   }
+  if (prototype === Array.prototype) {
+    return { ok: false, reason: "not-record", path };
+  }
   if (prototype !== Object.prototype && prototype !== null) {
     return { ok: false, reason: "custom-prototype", path };
   }

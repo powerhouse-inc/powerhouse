@@ -6,7 +6,7 @@ import type {
   SubgraphEntryDefinition,
   SubgraphScalarReferenceDefinition,
 } from "@powerhousedao/shared/document-model";
-import { createDiagnostic } from "../diagnostics.js";
+import { describeReceived, createDiagnostic } from "../diagnostics.js";
 import { isGraphQLName } from "../primitives.js";
 import {
   internalScalarDiagnostic,
@@ -51,7 +51,7 @@ export function checkSubgraphDefinitionShape(
         [],
         "A subgraph definition must be an object.",
         "Publish the value `defineSubgraph` returned.",
-        value === null ? "null" : typeof value,
+        describeReceived(value),
       ),
     ];
   }

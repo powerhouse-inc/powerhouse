@@ -55,7 +55,12 @@ export function quotedNames(names: readonly string[]): string {
 /** Owner of the types every generated document-model schema carries. */
 export const DOCUMENT_MODEL_SCHEMA_OWNER = "document-model schema";
 
-/** The type definitions of every core subgraph, by subgraph name. */
+/**
+ * The type definitions of every core subgraph, by subgraph name. The server
+ * registers `inspection` and `auth` only when inspection and document
+ * permissions are on, and the checks assume they are, so a name or claim
+ * that avoids them is free on every host.
+ */
 export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
   ["analytics", gql(analyticsTypeDefs)],
   ["system", systemTypeDefs],
@@ -502,7 +507,7 @@ const REFUSED_MODEL_WORDING: Record<
     subject: (name) =>
       `The server registers the subgraph of document model "${name}" but cannot serve it`,
     repair:
-      "Rename the types that clash with another model's generated types, so the model's subgraph builds beside them.",
+      "Make every version of the document model define its types the same way, or retire the version that differs.",
   },
 };
 

@@ -10,6 +10,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { snapshotArray, snapshotRecord } from "../data-properties.js";
 import {
+  describeReceived,
   compareDefinitionDiagnostics,
   compareDefinitionPaths,
   createDiagnostic,
@@ -812,7 +813,7 @@ function namespaceSnapshot(value: unknown): Readonly<Record<string, unknown>> {
     (typeof value !== "object" && typeof value !== "function")
   ) {
     throw new TypeError(
-      `The import adapter returned ${value === null ? "null" : typeof value} instead of a module namespace.`,
+      `The import adapter returned ${describeReceived(value)} instead of a module namespace.`,
     );
   }
   return Object.freeze({ ...(value as Record<string, unknown>) });
@@ -891,7 +892,7 @@ function selectExport(
           path: ["exportPath", index],
           message: `The export pointer reads "${key}" from a value that has no properties.`,
           expected: "an object or a namespace to read the next key from",
-          received: current === null ? "null" : typeof current,
+          received: describeReceived(current),
           repair: "Shorten the export pointer to the export that exists.",
         }),
       };
