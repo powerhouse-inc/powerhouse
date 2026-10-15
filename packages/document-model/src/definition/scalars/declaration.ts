@@ -174,8 +174,12 @@ export function parseScalarDeclaration(
     snapshot.value as unknown as AnyScalarDeclaration,
   );
   assertShape(declaration);
-  assertZero(declaration);
-  return declaration;
+  const coercion = snapshotCoercion(name, declaration.coercion);
+  return {
+    ...declaration,
+    ...(coercion === undefined ? {} : { coercion }),
+    zero: snapshotZero(declaration),
+  };
 }
 
 function withDefaults(
@@ -201,9 +205,25 @@ function withDefaults(
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+/** Whether `value` is an object whose `methods` are functions, read without letting a throw escape. */
+function hasMethods(value: unknown, methods: readonly string[]): boolean {
+  if (value === null || typeof value !== "object") return false;
+  try {
+    return methods.every(
+      (method) =>
+        typeof (value as Record<string, unknown>)[method] === "function",
+    );
+  } catch {
+    return false;
+  }
 }
+
+const COERCION_KEYS = ["parseValue", "parseLiteral", "serialize"];
+
+const ZERO_KEYS = {
+  value: ["kind", "value"],
+  none: ["kind", "reason"],
+} as const satisfies Record<ScalarZero["kind"], readonly string[]>;
 
 function assertShape(declaration: ResolvedScalarDeclaration): void {
   const name = declaration.name;
@@ -231,32 +251,12 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
         "Add a one-sentence description; it is the whole contract an introspecting agent reads.",
     });
   }
-  const validator: unknown = declaration.validator;
-  if (
-    !isRecord(validator) ||
-    typeof validator.parse !== "function" ||
-    typeof validator.safeParse !== "function"
-  ) {
+  if (!hasMethods(declaration.validator, ["parse", "safeParse"])) {
     fail(name, {
       code: "PH-SCALAR-DECLARATION-INVALID",
       path: ["validator"],
       message: `Scalar ${name} has no Zod validator.`,
       repair: "Provide a Zod schema with parse and safeParse.",
-    });
-  }
-  const coercion: unknown = declaration.coercion;
-  if (
-    coercion !== undefined &&
-    (!isRecord(coercion) ||
-      typeof coercion.parseValue !== "function" ||
-      typeof coercion.parseLiteral !== "function" ||
-      typeof coercion.serialize !== "function")
-  ) {
-    fail(name, {
-      code: "PH-SCALAR-DECLARATION-INVALID",
-      path: ["coercion"],
-      message: `Scalar ${name} must either omit coercion or provide parseValue, parseLiteral, and serialize.`,
-      repair: "Omit coercion to derive it, or provide all three functions.",
     });
   }
   for (const key of ["typescriptType", "zodSource"] as const) {
@@ -271,20 +271,75 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
   }
 }
 
-function assertZero(declaration: ResolvedScalarDeclaration): void {
+function snapshotCoercion(
+  name: string,
+  value: unknown,
+): ScalarCoercion<unknown> | undefined {
+  if (value === undefined) return undefined;
+  const snapshot = snapshotRecord(value, COERCION_KEYS, ["coercion"]);
+  if (!snapshot.ok) {
+    fail(name, {
+      code: "PH-SCALAR-DECLARATION-INVALID",
+      path: snapshot.path,
+      message: `Scalar ${name}'s coercion could not be snapshotted (${snapshot.reason}).`,
+      received: rejectionReceived(snapshot),
+      repair:
+        "Omit coercion to derive it, or pass an object literal with parseValue, parseLiteral, and serialize.",
+    });
+  }
+  const coercion = snapshot.value;
+  if (COERCION_KEYS.some((key) => typeof coercion[key] !== "function")) {
+    fail(name, {
+      code: "PH-SCALAR-DECLARATION-INVALID",
+      path: ["coercion"],
+      message: `Scalar ${name} must either omit coercion or provide parseValue, parseLiteral, and serialize.`,
+      repair: "Omit coercion to derive it, or provide all three functions.",
+    });
+  }
+  return coercion as ScalarCoercion<unknown>;
+}
+
+function snapshotZero(declaration: ResolvedScalarDeclaration): ScalarZero {
   const name = declaration.name;
-  const zero: unknown = declaration.zero;
-  if (!isRecord(zero) || (zero.kind !== "value" && zero.kind !== "none")) {
+  const repair =
+    'Declare zero as { kind: "value", value } or { kind: "none", reason }.';
+  const snapshot = snapshotRecord(
+    declaration.zero,
+    ["kind", "value", "reason"],
+    ["zero"],
+  );
+  if (!snapshot.ok) {
+    fail(name, {
+      code: "PH-SCALAR-ZERO-VALUE-INVALID",
+      path: snapshot.path,
+      message: `Scalar ${name}'s zero-value policy could not be snapshotted (${snapshot.reason}).`,
+      received: rejectionReceived(snapshot),
+      repair,
+    });
+  }
+  const zero = snapshot.value;
+  if (zero.kind !== "value" && zero.kind !== "none") {
     fail(name, {
       code: "PH-SCALAR-ZERO-VALUE-INVALID",
       path: ["zero"],
       message: `Scalar ${name} has no zero-value policy.`,
-      repair:
-        'Declare zero as { kind: "value", value } or { kind: "none", reason }.',
+      repair,
+    });
+  }
+  const allowed: readonly string[] = ZERO_KEYS[zero.kind];
+  const other = Object.keys(zero).find((key) => !allowed.includes(key));
+  if (other !== undefined) {
+    fail(name, {
+      code: "PH-SCALAR-ZERO-VALUE-INVALID",
+      path: ["zero", other],
+      message: `Scalar ${name} declares a zero of kind ${JSON.stringify(zero.kind)}, which takes no ${other}.`,
+      received: other,
+      repair,
     });
   }
   if (zero.kind === "none") {
-    if (typeof zero.reason !== "string" || zero.reason === "") {
+    const reason = zero.reason;
+    if (typeof reason !== "string" || reason === "") {
       fail(name, {
         code: "PH-SCALAR-ZERO-VALUE-INVALID",
         path: ["zero", "reason"],
@@ -292,7 +347,7 @@ function assertZero(declaration: ResolvedScalarDeclaration): void {
         repair: "State why the scalar has no meaningful zero value.",
       });
     }
-    return;
+    return { kind: "none", reason };
   }
   try {
     canonicalJson(zero.value);
@@ -314,4 +369,5 @@ function assertZero(declaration: ResolvedScalarDeclaration): void {
         'Declare a zero value the validator accepts, or use { kind: "none", reason }.',
     });
   }
+  return zero as ScalarZero;
 }
