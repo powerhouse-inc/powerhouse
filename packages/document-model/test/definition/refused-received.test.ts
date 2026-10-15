@@ -530,3 +530,155 @@ describe("an array of another prototype or realm where fields belong", () => {
     ]);
   });
 });
+
+function revokedProxy(): object {
+  const { proxy, revoke } = Proxy.revocable({}, {});
+  revoke();
+  return proxy;
+}
+
+describe("a declaration that cannot be inspected", () => {
+  it("is refused by defineScalar with a diagnostic, without running author code", () => {
+    let ran = false;
+    const refusal = (input: unknown) =>
+      diagnosticsOf(() => defineScalar(input as never)).map(
+        ({ code, path, definition, received }) => [
+          code,
+          path.join("."),
+          definition?.key ?? null,
+          received,
+        ],
+      );
+
+    expect([
+      ...refusal(null),
+      ...refusal(5),
+      ...refusal(revokedProxy()),
+      ...refusal({
+        get name() {
+          ran = true;
+          return "Thing";
+        },
+      }),
+      ...refusal({ name: Object.create(null) as unknown, bogus: 1 }),
+      ...refusal({ name: "Thing", bogus: 1 }),
+      ...refusal({
+        name: Object.create(null) as unknown,
+        description: "A thing.",
+        representation: "string",
+      }),
+    ]).toEqual([
+      ["PH-SCALAR-DECLARATION-INVALID", "", null, "null"],
+      ["PH-SCALAR-DECLARATION-INVALID", "", null, "number"],
+      ["PH-SCALAR-DECLARATION-INVALID", "", null, "inspection-failed"],
+      ["PH-SCALAR-DECLARATION-INVALID", "name", null, "accessor"],
+      ["PH-SCALAR-DECLARATION-INVALID", "bogus", null, "unknown-key"],
+      ["PH-SCALAR-DECLARATION-INVALID", "bogus", "Thing", "unknown-key"],
+      ["PH-SCALAR-DECLARATION-INVALID", "name", null, "object"],
+    ]);
+    expect(ran).toBe(false);
+  });
+
+  it("is refused by defineDocumentModel with a diagnostic", () => {
+    const local = (initialValue: unknown) =>
+      config({
+        specifications: {
+          global: { schema: state(), initialValue: { title: "" } },
+          local: { schema: null, initialValue },
+        },
+      });
+    const refusal = (input: unknown) =>
+      diagnosticsOf(() => defineDocumentModel(input as never)).map(
+        ({ code, path, received }) => [code, path.join("."), received],
+      );
+    const initialValue = "specifications.local.initialValue";
+
+    expect([
+      ...refusal(revokedProxy()),
+      ...refusal(config({ specifications: revokedProxy() })),
+      ...refusal(local(revokedProxy())),
+      ...refusal(local(null)),
+      ...refusal(local([])),
+      ...refusal(local(0)),
+      ...refusal(local({ note: null })),
+      ...refusal(local(Object.create({ note: null }))),
+      ...refusal(local(Object.create(null))),
+    ]).toEqual([
+      ["PH-DM-DECLARATION-INVALID", "", "inspection-failed"],
+      ["PH-DM-DECLARATION-INVALID", "specifications", "inspection-failed"],
+      ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "inspection-failed"],
+      ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "null"],
+      ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "array"],
+      ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "number"],
+      ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "a nonempty object"],
+      [
+        "PH-DM-INITIAL-VALUE-INVALID",
+        initialValue,
+        "an object whose prototype is not Object.prototype",
+      ],
+      [
+        "PH-DM-INITIAL-VALUE-INVALID",
+        initialValue,
+        "an object whose prototype is not Object.prototype",
+      ],
+    ]);
+  });
+});
+
+describe("a legitimate declaration", () => {
+  it("still declares with plain objects, plain arrays, frozen objects, and undefined members", () => {
+    const Probe = defineScalar(
+      Object.freeze({
+        name: "Probe",
+        description: "A probe scalar.",
+        representation: "string",
+        validator: z.string(),
+        zodSource: "z.string()",
+        builderName: undefined,
+      }),
+    );
+    const model = defineDocumentModel(
+      Object.freeze(
+        config({
+          changeLog: ["first"],
+          author: Object.freeze({ name: "Powerhouse", website: undefined }),
+          specifications: Object.freeze({
+            global: Object.freeze({
+              schema: ph.object("SampleState", {
+                fields: Object.freeze({
+                  title: Probe(),
+                  tags: ph.list(ph.String()),
+                }),
+              }),
+              initialValue: { title: null, tags: [] },
+              examples: [Object.freeze({ key: "first", value: "{}" })],
+            }),
+            local: Object.freeze({
+              schema: null,
+              initialValue: Object.freeze({}),
+            }),
+          }),
+        }),
+      ),
+    ).finalize({ modules: [] });
+    const compatibility = schemaFirstSpecification(
+      Object.freeze({
+        ids: Object.freeze({ "module/editing": "stored-id" }),
+        names: undefined,
+      }),
+    );
+
+    expect([
+      model.definition.model.documentType,
+      model.definition.specifications.map(({ version, scalars }) => [
+        version,
+        scalars.map(({ name }) => name),
+      ]),
+      [...compatibility.ids],
+    ]).toEqual([
+      "test/sample",
+      [[1, ["Probe"]]],
+      [["module/editing", "stored-id"]],
+    ]);
+  });
+});
