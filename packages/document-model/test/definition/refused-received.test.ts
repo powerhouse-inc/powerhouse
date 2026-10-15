@@ -984,7 +984,6 @@ describe("a scalar member that cannot be read as data", () => {
           },
         }),
       ),
-      ...refusal(scalar({ coercion: { ...coercion, bogus: 1 } })),
       ...refusal(scalar({ zero: revokedProxy() })),
       ...refusal(
         scalar({
@@ -1008,7 +1007,6 @@ describe("a scalar member that cannot be read as data", () => {
       ["PH-SCALAR-DECLARATION-INVALID", "validator", undefined],
       ["PH-SCALAR-DECLARATION-INVALID", "coercion", "inspection-failed"],
       ["PH-SCALAR-DECLARATION-INVALID", "coercion.parseValue", "accessor"],
-      ["PH-SCALAR-DECLARATION-INVALID", "coercion.bogus", "unknown-key"],
       ["PH-SCALAR-ZERO-VALUE-INVALID", "zero", "inspection-failed"],
       ["PH-SCALAR-ZERO-VALUE-INVALID", "zero.kind", "accessor"],
       ["PH-SCALAR-ZERO-VALUE-INVALID", "zero.reason", "reason"],
@@ -1232,7 +1230,9 @@ describe("a refused value that cannot be inspected", () => {
       ),
       receivedAt(
         diagnosticsOf(() =>
-          schemaFirstSpecification({ ids: { "module/a": revokedProxy() } } as never),
+          schemaFirstSpecification({
+            ids: { "module/a": revokedProxy() },
+          } as never),
         ),
         "ids.module/a",
       ),
@@ -1286,5 +1286,33 @@ describe("a refused value that cannot be inspected", () => {
         "inspection-failed",
       ],
     ]);
+  });
+});
+
+describe("a scalar coercion", () => {
+  it("may be any object whose three members are functions, as before", () => {
+    class Coercion {
+      readonly unit = "ms";
+      parseValue(value: unknown) {
+        return value;
+      }
+      parseLiteral() {
+        return 0;
+      }
+      serialize(value: unknown) {
+        return value;
+      }
+    }
+    const Duration = defineScalar({
+      name: "Duration",
+      description: "A duration",
+      representation: "number",
+      validator: z.number().int(),
+      zodSource: "z.number().int()",
+      coercion: new Coercion(),
+    });
+
+    expect(Duration.binding.coercion.serialize(5)).toBe(5);
+    expect(Duration.binding.definition.coercion.source).toBe("explicit");
   });
 });
