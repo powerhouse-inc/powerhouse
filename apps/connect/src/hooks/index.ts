@@ -3,6 +3,7 @@ export * from "./useClientErrorHandler.js";
 export * from "./useFailedInstallations.js";
 export * from "./useInitSentry.js";
 export * from "./useIsEmbedded.js";
+export * from "./usePluginComposition.js";
 export * from "./useOpenPanelAnalytics.js";
 export * from "./usePendingInstallations.js";
 export * from "./useRegistryPackages.js";
