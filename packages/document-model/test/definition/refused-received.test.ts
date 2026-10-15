@@ -846,3 +846,63 @@ describe("a stored model whose parent is not a record", () => {
     ]);
   });
 });
+
+describe("a specifications value that is not the scope map", () => {
+  it("is refused once per mistake", () => {
+    const withHidden = specifications({});
+    Object.defineProperty(withHidden, "custom", {
+      value: {},
+      enumerable: false,
+    });
+    const refusal = (value: unknown) =>
+      diagnosticsOf(() =>
+        defineDocumentModel(config({ specifications: value })),
+      ).map(({ code, path, message, received }) => [
+        code,
+        path.join("."),
+        message,
+        received,
+      ]);
+    const scope = (key: string) => [
+      "PH-DM-SCOPE-UNSUPPORTED",
+      `specifications.${key}`,
+      `Scope "${key}" cannot be declared; DocumentSpecification.state describes global and local only.`,
+      key,
+    ];
+
+    expect([
+      refusal([]),
+      refusal(new String("ab")),
+      refusal(withHidden),
+      refusal(specifications({}, { custom: {} })),
+      refusal(specifications({}, { auth: {} })),
+    ]).toEqual([
+      [
+        [
+          "PH-DM-DECLARATION-INVALID",
+          "specifications",
+          "The option value could not be snapshotted (not-record).",
+          "array",
+        ],
+      ],
+      [
+        [
+          "PH-DM-DECLARATION-INVALID",
+          "specifications",
+          "The option value could not be snapshotted (custom-prototype).",
+          "object",
+        ],
+      ],
+      [scope("custom")],
+      [scope("custom")],
+      [
+        [
+          "PH-AUTH-UNSUPPORTED",
+          "specifications.auth",
+          "A document model cannot declare authorization; core V1 rejects a model auth declaration.",
+          "auth",
+        ],
+      ],
+    ]);
+  });
+});
