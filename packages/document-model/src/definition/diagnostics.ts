@@ -429,7 +429,12 @@ export function createDiagnostic(
 /** What an author passed, as a refusal's `received`: `null`, `array`, or its `typeof`. */
 export function describeReceived(value: unknown): string {
   if (value === null) return "null";
-  return Array.isArray(value) ? "array" : typeof value;
+  try {
+    return Array.isArray(value) ? "array" : typeof value;
+  } catch {
+    // A revoked proxy throws on inspection; the refusal must still report.
+    return typeof value;
+  }
 }
 
 export function failDefinition(input: DefinitionDiagnosticInput): never {
