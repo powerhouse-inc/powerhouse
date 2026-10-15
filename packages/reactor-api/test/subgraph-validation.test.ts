@@ -698,6 +698,19 @@ describe("a versioned model", () => {
   });
 });
 
+describe("an aborted check", () => {
+  it("stops with the abort instead of reporting the subgraphs it did not build", () => {
+    expect(() =>
+      validateSubgraphsForHost({
+        profile: "release",
+        documentModels: [],
+        subgraphs: [entry(widgets())],
+        signal: AbortSignal.abort(),
+      }),
+    ).toThrow(expect.objectContaining({ name: "AbortError" }));
+  });
+});
+
 describe("diagnostic sources", () => {
   it("name the file each failing subgraph came from", () => {
     const a = { specifier: "./subgraphs/a.ts", exportPath: ["A"] } as const;

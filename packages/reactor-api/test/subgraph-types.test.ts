@@ -6,7 +6,12 @@ import { describe, expect, it } from "vitest";
 import { coreSubgraphClasses } from "../src/config.js";
 import type { IReactorInspectionSource } from "../src/graphql/inspection/source.js";
 import {
+  forgetReportedScalarBindings,
+  unreportedScalarBindings,
+} from "../src/graphql/scalar-bindings.js";
+import {
   coreSubgraphTypeDefs,
+  describeSubgraphConflict,
   DOCUMENT_MODEL_SCHEMA_OWNER,
   findPackageSubgraphConflicts,
   hostDocumentModels,
@@ -497,12 +502,84 @@ describe("hostDocumentModels", () => {
     }
   });
 
+  it("refuses a model subgraph whose name a core subgraph holds, as the server does", () => {
+    const host = hostDocumentModels([model("R")]);
+
+    expect(host.subgraphs.map(({ name }) => name)).not.toContain("r");
+    expect(host.refused).toEqual([
+      {
+        id: "test/R",
+        name: "R",
+        kind: "reserved subgraph name",
+        reason: 'has a subgraph named "r", which a core subgraph holds',
+      },
+    ]);
+  });
+
+  it("frees a latest model subgraph that does not build onto the combined schema", () => {
+    const v1 = version(
+      model(
+        "Notes",
+        "",
+        "type NotesState { title: String } type SetNotesTitleInput { title: String }",
+      ),
+      1,
+    );
+    const v2 = version(model("Notes"), 2);
+    const host = hostDocumentModels([v1, v2]);
+
+    expect(host.subgraphs.map(({ name }) => name)).not.toContain("notes");
+    expect(host.refused).toEqual([
+      {
+        id: "test/Notes",
+        name: "Notes",
+        kind: "unusable subgraph",
+        reason: expect.stringMatching(
+          /^has a subgraph that does not build onto the generated schema: /,
+        ),
+      },
+    ]);
+  });
+
   it("reports a model once when the server refuses it once", () => {
     const broken = () => model("Broken", "", "type BrokenState {");
 
     expect(
       hostDocumentModels([broken(), broken()]).refused.map(({ name }) => name),
     ).toEqual(["Broken"]);
+  });
+});
+
+describe("building a package subgraph for the check", () => {
+  it("leaves the server's one-time scalar report for the server", () => {
+    forgetReportedScalarBindings();
+    const typeDefs = parse("scalar Money type Query { price: Money }");
+
+    findPackageSubgraphConflicts(
+      [{ name: "pay", typeDefs }],
+      hostDocumentModels([]),
+    );
+
+    expect(
+      unreportedScalarBindings(typeDefs, {}, new Set()).map(({ code }) => code),
+    ).toEqual(["PH-SCALAR-UNREGISTERED"]);
+  });
+});
+
+describe("describeSubgraphConflict", () => {
+  it("joins the generated types each model generates", () => {
+    expect(
+      describeSubgraphConflict("ledger", {
+        kind: "generated",
+        claims: [
+          { claim: "Operation", owner: DOCUMENT_MODEL_SCHEMA_OWNER },
+          { claim: "Signer", owner: DOCUMENT_MODEL_SCHEMA_OWNER },
+          { claim: "Notes", owner: "Notes" },
+        ],
+      }).map(({ message }) => message),
+    ).toEqual([
+      'Subgraph "ledger" defines Operation and Signer, which the document-model schema generates, and Notes, which document model "Notes" generates, so the server refuses it.',
+    ]);
   });
 });
 
