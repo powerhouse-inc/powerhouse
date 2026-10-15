@@ -112,7 +112,7 @@ export function compileSubgraph<
       code: "PH-SG-DEFINITION-INVALID",
       path: [],
       message: "A subgraph declaration is an object.",
-      received: declared === null ? "null" : typeof declared,
+      received: describeReceived(declared),
       repair:
         "Pass an object with name, schemaKind, and entries or compatibility.",
     });
@@ -144,7 +144,7 @@ function subgraphName(value: unknown): string {
       code: "PH-SG-DEFINITION-INVALID",
       path: ["name"],
       message: "A subgraph needs a name.",
-      received: typeof value,
+      received: describeReceived(value),
       repair: "Give the subgraph a name.",
     });
   }
@@ -162,13 +162,18 @@ function subgraphName(value: unknown): string {
   return value;
 }
 
+function describeReceived(value: unknown): string {
+  if (value === null) return "null";
+  return Array.isArray(value) ? "array" : typeof value;
+}
+
 function schemaKindOrFail(value: unknown): void {
   if (value !== "typed" && value !== "graphql-ast-compat") {
     failDefinition({
       code: "PH-SG-DEFINITION-INVALID",
       path: ["schemaKind"],
       message: 'schemaKind is "typed" or "graphql-ast-compat".',
-      received: typeof value === "string" ? value : typeof value,
+      received: typeof value === "string" ? value : describeReceived(value),
       repair:
         'Use schemaKind: "typed" to declare entries, or "graphql-ast-compat" to serve an existing GraphQL document.',
     });
@@ -184,7 +189,7 @@ function hookOrFail<THook>(
       code: "PH-DEF-OPTION-INVALID",
       path: [key],
       message: `${key} is not a function.`,
-      received: typeof value,
+      received: describeReceived(value),
       repair: `Pass ${key} as a function, or leave it out.`,
     });
   }
@@ -207,7 +212,7 @@ function compileTyped<TSubgraph, TRequest, TInfo, TAbstractType>(
       code: "PH-SG-DEFINITION-INVALID",
       path: ["entries"],
       message: "A typed subgraph declares its entries in an entries callback.",
-      received: typeof entries,
+      received: describeReceived(entries),
       repair:
         "Pass entries: (build) => [...], returning the entries the builders produce.",
     });
@@ -268,7 +273,7 @@ function definitionNames(value: unknown): readonly string[] {
         code: "PH-SG-ENTRY-INVALID",
         path: ["definitionOrder", index],
         message: "definitionOrder lists definition names only.",
-        received: typeof name,
+        received: describeReceived(name),
         repair,
       });
     }
@@ -390,7 +395,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
       path: ["compatibility"],
       message:
         "A graphql-ast-compat subgraph needs a compatibility declaration object.",
-      received: compatibility === null ? "null" : typeof compatibility,
+      received: describeReceived(compatibility),
       repair:
         'Pass compatibility: { kind: "graphql-ast-v1", typeDefs, resolverCoordinates, getResolvers, hasSubscriptions, preserveDefinitionOrder: true }.',
     });
@@ -410,7 +415,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
       code: "PH-SG-DEFINITION-INVALID",
       path: ["compatibility", "kind"],
       message: 'The compatibility declaration\'s kind is "graphql-ast-v1".',
-      received: typeof kind === "string" ? kind : typeof kind,
+      received: typeof kind === "string" ? kind : describeReceived(kind),
       repair: 'Set kind: "graphql-ast-v1".',
     });
   }
@@ -420,7 +425,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
       path: ["compatibility", "typeDefs"],
       message:
         "The compatibility declaration's typeDefs is not a GraphQL document node.",
-      received: typeDefs === null ? "null" : typeof typeDefs,
+      received: describeReceived(typeDefs),
       repair:
         "Pass the document that gql or graphql's parse returns, not the SDL string.",
     });
@@ -440,7 +445,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
         path: ["compatibility", "resolverCoordinates", index],
         message:
           "A resolver coordinate is an object with typeName, fieldName, and resolverKind.",
-        received: coordinate === null ? "null" : typeof coordinate,
+        received: describeReceived(coordinate),
         repair: coordinateRepair,
       });
     }
@@ -453,7 +458,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
         getResolvers === undefined
           ? "The compatibility declaration has no getResolvers."
           : "The compatibility declaration's getResolvers is not a function.",
-      received: typeof getResolvers,
+      received: describeReceived(getResolvers),
       repair:
         "Pass getResolvers: a function that returns the resolver map for the subgraph instance.",
     });
@@ -463,7 +468,7 @@ function compileCompat<TSubgraph, TDocument, TResolverMap>(
       code: "PH-SG-DEFINITION-INVALID",
       path: ["compatibility", "hasSubscriptions"],
       message: "hasSubscriptions is true, false, or undefined.",
-      received: typeof hasSubscriptions,
+      received: describeReceived(hasSubscriptions),
       repair:
         "Pass the value the subgraph's hasSubscriptions had, or undefined if it had none.",
     });
