@@ -43,6 +43,10 @@ vi.mock("@powerhousedao/design-system/connect", () => ({
 vi.mock("@powerhousedao/connect/components", () => ({
   AppContainer: () => <div data-testid="app-container" />,
   DriveIcon: () => null,
+  // Pass-through: with no declared composition (getRuntimeConfig mock below
+  // returns connect:{}), the real IfPlugin renders its children — the chrome
+  // is active. The mock mirrors that so the home-screen assertions hold.
+  IfPlugin: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@powerhousedao/connect/config", () => ({
