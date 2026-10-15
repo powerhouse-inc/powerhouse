@@ -1,3 +1,22 @@
+## 6.2.3-dev.59 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,vetra-studio:** browser plugin pipeline over the served composition (R3.2) + the studio plugins (R4 start) ([8fb91868da](https://github.com/powerhouse-inc/powerhouse/commit/8fb91868da))
+- **ph-cli,shared:** connect runner projects the target host contract into the served config (R3.1) ([641b205785](https://github.com/powerhouse-inc/powerhouse/commit/641b205785))
+- **ph-cli,switchboard:** host.js compositions and core drives reach the switchboard runner (R2.6b) ([e74f6830fe](https://github.com/powerhouse-inc/powerhouse/commit/e74f6830fe))
+- **switchboard:** plugin pipeline scaffold for the subsystem carve (R2.1) ([042cd5a93c](https://github.com/powerhouse-inc/powerhouse/commit/042cd5a93c))
+- **ph-cli:** ph run <host> --explain drives (R1) ([bb1f1c0ba7](https://github.com/powerhouse-inc/powerhouse/commit/bb1f1c0ba7))
+
+### 🩹 Fixes
+
+- **ph-cli:** runner.plugins schema + composition owns mcp switch — live-proven (R2.6d) ([be3e3954fc](https://github.com/powerhouse-inc/powerhouse/commit/be3e3954fc))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.58 (2026-10-14)
 
 ### 🚀 Features

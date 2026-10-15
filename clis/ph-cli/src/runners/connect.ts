@@ -1,10 +1,19 @@
 import {
   DEFAULT_CONNECT_STUDIO_PORT,
+  type PHConnectCompositionEntry,
+  type PHConnectDefaultDrive,
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import {
+  entryActiveForVerb,
   isStructuralMultiReactor,
+  mergeDefaultDrives,
+  normalizePluginEntries,
+  pluginEntrySchema,
   profileSchema,
+  resolveDriveDeclaration,
+  type DriveDeclaration,
+  type PluginEntry,
   projectDrivesIntoConnect,
   projectReactorToConnect,
   reactorSchema,
@@ -38,9 +47,11 @@ export const hostSchema = z.looseObject({
   runner: z.looseObject({
     module: z.string(),
     port: z.number().int().positive().optional(),
+    host: z.string().optional(),
     https: z.boolean().optional(),
     openBrowser: z.boolean().optional(),
-    plugins: z.string().optional(),
+    // THE COMPOSITION (rewire R3): plugin entries, presence is activation.
+    plugins: z.array(pluginEntrySchema).optional(),
   }),
   config: z.looseObject({}).optional(),
   profile: profileSchema,
@@ -73,11 +84,99 @@ function toStudioArgs(host: HostDefinition): ConnectStudioArgs {
  * a local one IS the intent, so it beats a scaffold-default
  * instance.multiReactor: false, and the remote's drive url merges FIRST into
  * drives.defaultDrives (the first url entry is what the routing client dials). */
+/** host.js reactor.drives -> the served drives.defaultDrives shapes: locals
+ * carry id/name/icon and the preferredEditor under its Connect alias `app`;
+ * remotes carry their URL. */
+function declaredDrivesToDefaults(
+  projectRoot: string,
+  declarations: readonly DriveDeclaration[],
+): PHConnectDefaultDrive[] {
+  return declarations.map((declaration) => {
+    const drive = resolveDriveDeclaration(projectRoot, declaration);
+    if (drive.kind === "remote") {
+      return {
+        url: drive.remoteUrl!,
+        name: drive.name,
+        icon: drive.icon ?? null,
+      };
+    }
+    return {
+      local: true as const,
+      id: drive.id,
+      name: drive.name,
+      icon: drive.icon ?? null,
+      ...(drive.preferredEditor ? { app: drive.preferredEditor } : {}),
+    };
+  });
+}
+
 function callerOverride(
   host: HostDefinition,
+  ctx?: RunnerContext,
+  verb = "dev",
 ): PHConnectRuntimeConfig | undefined {
   const base = (host.config ?? {}) as PHConnectRuntimeConfig;
   const reactor = host.reactor as ReactorConfig | undefined;
+
+  // R3: the composition (verb-filtered, projected as DATA — the browser
+  // pipeline resolves and runs the entries), declared drives, and the
+  // reactor-core identity/namespace keys.
+  const entries = (host.runner as { plugins?: PluginEntry[] }).plugins;
+  const composition: PHConnectCompositionEntry[] | undefined =
+    entries === undefined
+      ? undefined
+      : normalizePluginEntries(entries, `hosts/${host.name}/host.js`)
+          .filter((entry) => entryActiveForVerb(entry, verb))
+          .map((entry) => ({ module: entry.module, config: entry.config }));
+  if (entries !== undefined) {
+    // Change 2: show the composition plan on the `ph run connect` terminal.
+    // The pipeline itself runs in the browser (hook execution logs to the
+    // browser console); here we report WHAT will be served and for which verb.
+    const all = normalizePluginEntries(entries, `hosts/${host.name}/host.js`);
+    console.log(
+      `[connect] composition plan (verb=${verb}): ${composition?.length ?? 0} active of ${all.length} declared`,
+    );
+    for (const entry of all) {
+      const active = entryActiveForVerb(entry, verb);
+      const scope =
+        entry.verbs === "*"
+          ? ""
+          : ` verbs=[${(entry.verbs as string[]).join(",")}]`;
+      const cfg = Object.keys(entry.config ?? {});
+      console.log(
+        `[connect]   ${active ? "•" : "○"} ${entry.module}${scope}` +
+          (cfg.length ? ` config: {${cfg.join(", ")}}` : "") +
+          (active ? "" : " (inactive for this verb)"),
+      );
+    }
+  }
+  const declared = (reactor as { drives?: DriveDeclaration[] } | undefined)
+    ?.drives;
+  const declaredDefaults =
+    declared && ctx
+      ? declaredDrivesToDefaults(ctx.projectRoot, declared)
+      : undefined;
+  const reactorRenown = (reactor as { renown?: unknown } | undefined)?.renown;
+  const reactorNamespace = (reactor as { namespace?: string } | undefined)
+    ?.namespace;
+  base.drives = declaredDefaults
+    ? {
+        ...base.drives,
+        defaultDrives: mergeDefaultDrives(
+          declaredDefaults,
+          base.drives?.defaultDrives ?? [],
+        ),
+        preserveStrategy: base.drives?.preserveStrategy ?? "preserve-all",
+      }
+    : base.drives;
+  if (composition) base.composition = composition;
+  if (reactorRenown)
+    base.renown = { ...(reactorRenown as object), ...base.renown };
+  if (reactorNamespace !== undefined)
+    base.instance = {
+      ...base.instance,
+      namespace: base.instance?.namespace ?? reactorNamespace,
+    } as typeof base.instance;
   const { connect } = projectReactorToConnect(reactor);
   const structural = isStructuralMultiReactor(reactor);
   if (!connect.reactor && !connect.instance && !connect.app && !structural) {
@@ -112,10 +211,14 @@ function callerOverride(
 
 export async function dev(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<void> {
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  await runConnectStudio(toStudioArgs(host), undefined, callerOverride(host));
+  await runConnectStudio(
+    toStudioArgs(host),
+    undefined,
+    callerOverride(host, ctx, ctx.verb ?? "dev"),
+  );
 }
 
 /** `run` is dev-studio until the plugin phases give hosts a production
@@ -145,7 +248,7 @@ export async function build(
  * ph-win-desktop sidecar's hand-rolled static server (desktop shape). */
 export async function serve(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<void> {
   const { runConnectPreview } = await import("../services/connect-preview.js");
   const runner = host.runner;
@@ -165,7 +268,7 @@ export async function serve(
     // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
     host: typeof runner.host === "string" ? runner.host : "127.0.0.1",
   };
-  const override = callerOverride(host);
+  const override = callerOverride(host, ctx, ctx.verb ?? "serve");
   await runConnectPreview(args as ConnectPreviewArgs, {
     connect: override,
     cspRegistrySync: runner.cspRegistrySync === true,

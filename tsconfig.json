@@ -38,6 +38,9 @@
       "path": "packages/shared"
     },
     {
+      "path": "packages/vetra-studio"
+    },
+    {
       "path": "packages/analytics-engine/benchmarks"
     },
     {

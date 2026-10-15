@@ -1,4 +1,8 @@
-import { AppContainer, DriveIcon } from "@powerhousedao/connect/components";
+import {
+  AppContainer,
+  DriveIcon,
+  IfPlugin,
+} from "@powerhousedao/connect/components";
 import {
   defaultPHAppConfig,
   defaultPHDocumentEditorConfig,
@@ -62,7 +66,13 @@ export function Content() {
           />
         </div>
       ) : showHomeScreen ? (
-        <HomeScreenContainer />
+        // The home screen is generic-shell chrome (the drive-list landing +
+        // add-drive). R3 gate: only when the generic plugin is composed in.
+        // Absent → no generic landing (a headless/custom shell renders its own
+        // or routes straight to a drive). Classic (no composition) = active.
+        <IfPlugin module="@powerhousedao/connect/plugins/generic">
+          <HomeScreenContainer />
+        </IfPlugin>
       ) : (
         <AppContainer />
       )}

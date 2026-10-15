@@ -1,3 +1,33 @@
+## 6.2.3-dev.59 (2026-10-15)
+
+### 🚀 Features
+
+- **clint:** compound proxy plugin + mastra agent-card/settings split (R5) ([5f90d78cfa](https://github.com/powerhouse-inc/powerhouse/commit/5f90d78cfa))
+- **codegen:** vetra scaffold dissolves to the generic compound + studio plugins (R4) ([c94a66fad2](https://github.com/powerhouse-inc/powerhouse/commit/c94a66fad2))
+- **codegen:** desktop scaffold uses sibling-derived members + serverDrives remote mapping (R6) ([1804ba2cec](https://github.com/powerhouse-inc/powerhouse/commit/1804ba2cec))
+- **connect,vetra-studio:** browser plugin pipeline over the served composition (R3.2) + the studio plugins (R4 start) ([8fb91868da](https://github.com/powerhouse-inc/powerhouse/commit/8fb91868da))
+- **host-core:** plugin framework, drive declarations, sibling imports, full-statement wrappers (R1) ([008d01f90f](https://github.com/powerhouse-inc/powerhouse/commit/008d01f90f))
+- **ph-cli:** ph run <host> --explain drives (R1) ([bb1f1c0ba7](https://github.com/powerhouse-inc/powerhouse/commit/bb1f1c0ba7))
+- **ph-cli,shared:** connect runner projects the target host contract into the served config (R3.1) ([641b205785](https://github.com/powerhouse-inc/powerhouse/commit/641b205785))
+- **ph-cli,switchboard:** host.js compositions and core drives reach the switchboard runner (R2.6b) ([e74f6830fe](https://github.com/powerhouse-inc/powerhouse/commit/e74f6830fe))
+- **switchboard:** plugin pipeline scaffold for the subsystem carve (R2.1) ([042cd5a93c](https://github.com/powerhouse-inc/powerhouse/commit/042cd5a93c))
+- **switchboard:** mcp subsystem as the first built-in plugin (R2.2) ([41aebd9a0d](https://github.com/powerhouse-inc/powerhouse/commit/41aebd9a0d))
+- **switchboard:** attachments subsystem carved into the plugin composition (R2.3) ([d63108172e](https://github.com/powerhouse-inc/powerhouse/commit/d63108172e))
+- **switchboard:** privacy subsystem carved into the plugin composition (R2.4) ([8bff8cbbff](https://github.com/powerhouse-inc/powerhouse/commit/8bff8cbbff))
+- **switchboard:** workflows subsystem carved into the plugin composition (R2.5) ([e9467d9c38](https://github.com/powerhouse-inc/powerhouse/commit/e9467d9c38))
+- **switchboard:** plugin composition seam for host.js entries and tests (R2.6a) ([8e64a8e6ea](https://github.com/powerhouse-inc/powerhouse/commit/8e64a8e6ea))
+
+### 🩹 Fixes
+
+- **e2e-utils:** publish host-core, clint, desktop to the local e2e registry ([ce4ccc24b1](https://github.com/powerhouse-inc/powerhouse/commit/ce4ccc24b1))
+- **ph-cli:** runner.plugins schema + composition owns mcp switch — live-proven (R2.6d) ([be3e3954fc](https://github.com/powerhouse-inc/powerhouse/commit/be3e3954fc))
+- **switchboard:** absent plugins actually deactivate — presence suite (R2.6c) ([5c5380f872](https://github.com/powerhouse-inc/powerhouse/commit/5c5380f872))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
 ## 6.2.3-dev.58 (2026-10-14)
 
 ### 🚀 Features

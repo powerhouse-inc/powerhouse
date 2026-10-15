@@ -75,7 +75,7 @@ afterEach(async () => {
 async function routeWithSwitchboardDown(module: WorkerReactorClientModule) {
   stub = await serve(switchboard({}, failing));
   await selectAppReactorClient({
-    multiReactor: true,
+    mode: "router",
     module,
     remoteDriveUrl: stub.url.replace(/\/graphql$/, "/d/drive-x"),
     signer,

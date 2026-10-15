@@ -80,26 +80,35 @@ export function deriveSwitchboardGraphqlUrl(
 }
 
 export type MultiReactorParams = {
-  /** The local module, built and ready. */
-  module: LocalReactorModule;
+  /** The local module, built and ready. Undefined builds a REMOTE-ONLY router
+   * (no local backend → no local reactor, no PGlite): the `remote` client. */
+  module: LocalReactorModule | undefined;
   remoteGraphqlUrl: string;
   signer: ISigner;
-  /** Signing models when the local module exposes no registry; the router asks the local reactor. */
+  /** Signing models when the local module exposes no registry; the router asks the local reactor (or, remote-only, the statically-loaded set). */
   documentModelModules: readonly DocumentModelModule[];
   onDiagnostic?: RouterDiagnostic;
 };
 
+/** Remote-only placement: the Switchboard serves every collection. (It offers
+ * no inspection surface over GraphQL, so PLACE_ON_LOCAL's `inspectable`
+ * requirement must NOT apply, or no backend would be eligible.) */
+export const PLACE_ON_REMOTE: CollectionRequirementsInput = Object.freeze({});
+
 /** The router Connect installs, with Connect's handling of credentials and id checks. */
 export class ConnectRoutingClient extends RoutingReactorClient {
   private readonly remote: GraphQLRoutableBackend;
+  private readonly hasLocal: boolean;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
     options: RoutingClientOptions,
     remote: GraphQLRoutableBackend,
+    hasLocal: boolean,
   ) {
     super(backends, options);
     this.remote = remote;
+    this.hasLocal = hasLocal;
   }
 
   /** Renown's sign-in and sign-out call this on whatever client is installed. */
@@ -107,7 +116,9 @@ export class ConnectRoutingClient extends RoutingReactorClient {
     this.remote.notifyCredentialsChanged();
   }
 
-  /** The local answer stands when only the Switchboard could not answer. */
+  /** The local answer stands when only the Switchboard could not answer — but
+   * only when there IS a local backend. Remote-only has nothing to fall back
+   * to, so its errors surface. */
   override async isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
@@ -115,7 +126,7 @@ export class ConnectRoutingClient extends RoutingReactorClient {
     try {
       return await super.isDocumentIdTaken(documentId, signal);
     } catch (error) {
-      if (!failedOnlyOnRemote(error)) {
+      if (!this.hasLocal || !failedOnlyOnRemote(error)) {
         throw error;
       }
       logger.warn(
@@ -135,40 +146,54 @@ function failedOnlyOnRemote(error: unknown): boolean {
   );
 }
 
-/** The router over the tab's reactor (primary) and the Switchboard. */
+/**
+ * Build the Connect routing client. With a local `module` it is the router
+ * over the tab's reactor (primary) and the Switchboard; WITHOUT one it is the
+ * `remote` client — a remote-only router whose single backend is the
+ * Switchboard, so no local reactor (and no PGlite) is built. Either way the
+ * result is a full IReactorClient the app graph consumes unchanged.
+ */
 export async function buildMultiReactorClient(
   params: MultiReactorParams,
 ): Promise<ConnectRoutingClient> {
-  const registry = params.module.reactorModule?.documentModelRegistry;
+  const module = params.module;
+  const registry = module?.reactorModule?.documentModelRegistry;
   const remote = createGraphQLRoutableBackend({
     url: params.remoteGraphqlUrl,
     documentModels: () =>
       registry?.getAllModules() ?? params.documentModelModules,
   });
+  const remoteBackend: RoutableBackendConfig = {
+    name: REMOTE_BACKEND_NAME,
+    backend: remote.backend,
+    facts: () => remote.info(),
+    reach: REMOTE_REACH,
+    refusesMisroutes: false,
+  };
+  const backends: RoutableBackendConfig[] = module
+    ? [
+        {
+          name: LOCAL_BACKEND_NAME,
+          backend: fromReactorClient(module.client),
+          facts: localFacts(module),
+          reach: localReach(module.kind),
+          refusesMisroutes: false,
+        },
+        remoteBackend,
+      ]
+    : [remoteBackend];
   const router = new ConnectRoutingClient(
-    [
-      {
-        name: LOCAL_BACKEND_NAME,
-        backend: fromReactorClient(params.module.client),
-        facts: localFacts(params.module),
-        reach: localReach(params.module.kind),
-        refusesMisroutes: false,
-      },
-      {
-        name: REMOTE_BACKEND_NAME,
-        backend: remote.backend,
-        facts: () => remote.info(),
-        reach: REMOTE_REACH,
-        refusesMisroutes: false,
-      },
-    ],
+    backends,
     {
-      primaryBackend: LOCAL_BACKEND_NAME,
-      defaultRequirements: PLACE_ON_LOCAL,
+      // Remote-only: the Switchboard is primary and serves every collection;
+      // with a local reactor, new collections land on it (inspectable).
+      primaryBackend: module ? LOCAL_BACKEND_NAME : REMOTE_BACKEND_NAME,
+      defaultRequirements: module ? PLACE_ON_LOCAL : PLACE_ON_REMOTE,
       signer: params.signer,
       onDiagnostic: params.onDiagnostic,
     },
     remote,
+    Boolean(module),
   );
   await router.refreshFacts();
   return router;

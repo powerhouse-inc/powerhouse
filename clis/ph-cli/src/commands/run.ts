@@ -1,4 +1,12 @@
-import { boolean, command, flag, optional, positional, string } from "cmd-ts";
+import {
+  boolean,
+  command,
+  flag,
+  option,
+  optional,
+  positional,
+  string,
+} from "cmd-ts";
 
 export const runHost = command({
   name: "run",
@@ -22,8 +30,20 @@ export const runHost = command({
       long: "debug",
       description: "Print resolved host/runner/verb before dispatch.",
     }),
+    explain: option({
+      type: optional(string),
+      long: "explain",
+      description:
+        "Explain a resolved aspect instead of running: `--explain drives` " +
+        "prints the merged drive plan with provenance.",
+    }),
   },
   handler: async (args) => {
+    if (args.explain !== undefined) {
+      const { explainHost } = await import("../services/run/explain.js");
+      await explainHost({ host: args.host, topic: args.explain });
+      return;
+    }
     const { startRun } = await import("../services/run/start-run.js");
     await startRun({ host: args.host, verb: args.verb, debug: args.debug });
   },

@@ -9,9 +9,18 @@ import {
   type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import {
+  pluginEntrySchema,
+  resolveDriveDeclaration,
+  resolveHostPlugins,
+  seedDrives,
+  type DriveDeclaration,
+  type DriveSeederClient,
+  type ResolvedDrive,
+} from "@powerhousedao/host-core";
 import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
-import type { SwitchboardArgs } from "../types.js";
+import type { BuildArgs, SwitchboardArgs } from "../types.js";
 
 /**
  * BRIDGE runner for Switchboard hosts (uniform-runners phase 0): maps a
@@ -30,7 +39,10 @@ export const hostSchema = z.looseObject({
     module: z.string(),
     port: z.number().int().positive().optional(),
     https: z.boolean().optional(),
-    plugins: z.string().optional(),
+    // THE COMPOSITION (rewire R2): plugin entries, presence is activation.
+    // (The classic packages-CSV meaning of this field is retired — packages
+    // load via reactor.backends.*.packages / the package manager.)
+    plugins: z.array(pluginEntrySchema).optional(),
   }),
   config: z.looseObject({}).optional(),
   profile: profileSchema,
@@ -41,13 +53,16 @@ function toSwitchboardArgs(
   host: HostDefinition,
   devMode: boolean,
   dbPath: string | undefined,
+  composed: boolean,
 ): SwitchboardArgs {
   const runner = host.runner;
   const args: Partial<SwitchboardArgs> = {
     port:
       typeof runner.port === "number" ? runner.port : DEFAULT_SWITCHBOARD_PORT,
     vetraDriveId: DEFAULT_VETRA_DRIVE_ID,
-    mcp: true,
+    // A declared composition owns the carved switches; the plugins set them.
+    // Classic path keeps the bridge defaults.
+    mcp: composed ? undefined : true,
     useVetraDrive: false,
     remoteDrives: [],
     dev: devMode || runner.dev === true,
@@ -91,8 +106,40 @@ export interface SwitchboardHandle {
   ready: Promise<void>;
 }
 
+/** Adapter from the switchboard's reactor client onto the host-core seeder.
+ * addDefaultDrive is slug-idempotent itself, so findDriveBySlug delegates. */
+function seederClient(reactor: unknown, port: number): DriveSeederClient {
+  return {
+    findDriveBySlug: () => Promise.resolve(undefined),
+    createDrive: async (drive: ResolvedDrive) => {
+      const { addDefaultDrive } =
+        await import("@powerhousedao/switchboard/utils");
+      await addDefaultDrive(
+        reactor as Parameters<typeof addDefaultDrive>[0],
+        {
+          id: drive.id,
+          slug: drive.slug,
+          global: { name: drive.name, icon: drive.icon },
+          ...(drive.preferredEditor
+            ? { preferredEditor: drive.preferredEditor }
+            : {}),
+          local: {
+            availableOffline: drive.availableOffline,
+            listeners: [],
+            sharingType: drive.sharingType,
+            triggers: [],
+          },
+        } as Parameters<typeof addDefaultDrive>[1],
+        port,
+      );
+    },
+    attachRemoteDrive: () => Promise.resolve(), // remotes ride options.remoteDrives
+  };
+}
+
 async function start(
   host: HostDefinition,
+  ctx: RunnerContext,
   devMode: boolean,
 ): Promise<SwitchboardHandle> {
   const options = applyReactorEnvProjection(
@@ -100,15 +147,74 @@ async function start(
     `hosts/${host.name}/host.js`,
   );
   const { startSwitchboard } = await import("../services/switchboard.js");
-  const args = toSwitchboardArgs(host, devMode, options.dbPath);
-  const switchboard = await startSwitchboard(args);
+  const entriesDeclared =
+    (host.runner as { plugins?: unknown }).plugins !== undefined;
+  const args = toSwitchboardArgs(
+    host,
+    devMode,
+    options.dbPath,
+    entriesDeclared,
+  );
+
+  // R2 step 2: a declared composition activates the plugin pipeline — the
+  // runner resolves the entries against the PROJECT dependency tree and the
+  // flag drives server-side activation. No plugins key = classic path.
+  const entries = (host.runner as { plugins?: unknown }).plugins as
+    | Parameters<typeof resolveHostPlugins>[3]
+    | undefined;
+  let pluginComposition;
+  if (entries !== undefined) {
+    process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
+    pluginComposition = await resolveHostPlugins(
+      ctx.projectRoot,
+      "switchboard",
+      ctx.verb ?? (devMode ? "dev" : "run"),
+      entries,
+      `hosts/${host.name}/host.js`,
+    );
+  }
+
+  // Core drive declarations (reactor.drives): locals seed after boot via the
+  // host-core seeder; remotes ride the existing remoteDrives option; the
+  // implicit default powerhouse drive is replaced by the declared set.
+  const declarations = (
+    host.reactor as { drives?: DriveDeclaration[] } | undefined
+  )?.drives;
+  const resolvedDrives = (declarations ?? []).map((declaration) =>
+    resolveDriveDeclaration(ctx.projectRoot, declaration),
+  );
+  const serverArgs = {
+    ...args,
+    ...(pluginComposition ? { pluginComposition } : {}),
+    ...(resolvedDrives.length > 0
+      ? {
+          drive: undefined,
+          remoteDrives: resolvedDrives
+            .filter((d) => d.kind === "remote")
+            .map((d) => d.remoteUrl!),
+        }
+      : {}),
+  };
+
+  const switchboard = await startSwitchboard(serverArgs as typeof args);
   const port = args.port;
+
+  const localDrives = resolvedDrives.filter((d) => d.kind === "local");
+  if (localDrives.length > 0 && switchboard) {
+    await seedDrives(seederClient(switchboard.reactor, port), localDrives);
+  }
+
   const slug =
-    typeof host.runner.driveSlug === "string"
-      ? host.runner.driveSlug
-      : DEFAULT_DRIVE_SLUG;
+    localDrives.length > 0
+      ? localDrives[0].slug
+      : typeof host.runner.driveSlug === "string"
+        ? host.runner.driveSlug
+        : DEFAULT_DRIVE_SLUG;
   const driveUrl = `http://localhost:${port}/d/${slug}`;
-  const driveUrls = [driveUrl];
+  const driveUrls =
+    localDrives.length > 0
+      ? localDrives.map((d) => `http://localhost:${port}/d/${d.slug}`)
+      : [driveUrl];
 
   // Workflows on → seed the SAME project-hashed workflows drive the vetra
   // path seeds (opens in Workflow Studio); it rides the handle so a
@@ -130,16 +236,43 @@ async function start(
   };
 }
 
+// The four verbs are orthogonal: each does ONE job.
+//  - `run`/`serve`: START the server in production mode (serves the built
+//    project package). `serve` is run's alias — a server IS its served stack,
+//    and it lets the compound forward one `serve` verb to every member.
+//  - `dev`: START the server in dev mode (watch / the Vite package loader).
+//  - `build`: PRODUCE the project package this switchboard serves, and start
+//    NOTHING. The analog of `ph connect build` on the server side: legacy
+//    `ph switchboard build` never existed, but the project still has a build.
+// `build` is what lets a compound forward a single `build` verb to all members
+// (desktop/cli) without the switchboard member failing on an unknown verb.
+
 export async function run(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
-  return start(host, false);
+  return start(host, ctx, false);
 }
+
+export const serve = run;
 
 export async function dev(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
-  return start(host, true);
+  return start(host, ctx, true);
+}
+
+/** Build the project's reactor package (the SAME service as `ph build`) — what
+ * this switchboard serves. Starts no server; orthogonal to run/serve/dev. */
+export async function build(
+  host: HostDefinition,
+  _ctx: RunnerContext,
+): Promise<void> {
+  const { runBuild } = await import("../services/build.js");
+  const runner = host.runner;
+  const args: Partial<BuildArgs> = {
+    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+  };
+  await runBuild(args as BuildArgs);
 }

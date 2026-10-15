@@ -85,9 +85,15 @@ import {
 import {
   resolvePrivacy,
   startPrivacy,
+  type ResolvedPrivacy,
   type RunningPrivacy,
 } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
+import {
+  createSwitchboardPluginHost,
+  isPluginHostEnabled,
+  type SwitchboardPluginHost,
+} from "./plugin-host.mjs";
 import {
   assertProjectionWorkerSupported,
   resolveProjectionWorkerOptions,
@@ -394,6 +400,28 @@ async function initServer(
     remoteDrives = [],
     logger = defaultLogger,
   } = options;
+
+  // R2 plugin pipeline (FEATURE_PLUGIN_HOST_ENABLED): flag off, the inline
+  // path below runs byte-identically; flag on, carved subsystems run as
+  // built-in plugins through the hook moments marked along this function.
+  const pluginHost: SwitchboardPluginHost | null = isPluginHostEnabled()
+    ? createSwitchboardPluginHost(
+        {
+          logger,
+          options: options as unknown as Record<string, unknown>,
+          renown,
+        },
+        options.pluginComposition,
+      )
+    : null;
+  if (pluginHost) {
+    options = await pluginHost.transformOptions(options);
+    // Presence is activation: whatever no plugin (or explicit option) set
+    // stays OFF. The mcp/workflows plugins set these true at
+    // transformServerOptions; their absence must actually deactivate.
+    options.mcp ??= false;
+    options.workflows = { enabled: options.workflows?.enabled === true };
+  }
   logger.level = LogLevel;
   const dbPath =
     options.dbPath ??
@@ -568,7 +596,11 @@ async function initServer(
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
   // Resolved before the reactor is built: a bad secret fails the boot early.
-  const privacyConfig = resolvePrivacy(options.privacy, process.env);
+  // Flag-on, the privacy plugin owns this resolve (same fail-fast timing, in
+  // transformServerOptions above).
+  const privacyConfig = pluginHost
+    ? ({ enabled: false } as ResolvedPrivacy)
+    : resolvePrivacy(options.privacy, process.env);
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -1034,11 +1066,24 @@ async function initServer(
     );
   }
 
-  registerAttachmentRoutes(api);
-
-  const attachmentService = createRemoteAttachmentService(
-    deriveAttachmentServiceConfig(options, serverPort, renown),
-  );
+  // R2.3: flag-on, the attachments plugin owns the route mount + service
+  // creation at onHttpMounting; flag-off runs the inline path.
+  let attachmentService:
+    | ReturnType<typeof createRemoteAttachmentService>
+    | undefined;
+  if (pluginHost) {
+    pluginHost.ctx.api = api;
+    pluginHost.ctx.serverPort = serverPort;
+    await pluginHost.observe("onHttpMounting");
+    attachmentService = pluginHost.ctx.attachmentService as
+      | ReturnType<typeof createRemoteAttachmentService>
+      | undefined;
+  } else {
+    registerAttachmentRoutes(api);
+    attachmentService = createRemoteAttachmentService(
+      deriveAttachmentServiceConfig(options, serverPort, renown),
+    );
+  }
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
@@ -1049,6 +1094,13 @@ async function initServer(
   const { client, graphqlManager, documentModelRegistry } = api;
 
   const lateSubgraphs: Promise<unknown>[] = [];
+  if (pluginHost) {
+    pluginHost.ctx.client = client;
+    pluginHost.ctx.graphqlManager = graphqlManager;
+    pluginHost.ctx.lateSubgraphs = lateSubgraphs;
+    pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
+    await pluginHost.observe("onReactorReady");
+  }
 
   // The workflow runtime is a switchboard component: composed from what the
   // api handed back, registered like any other late subgraph.
@@ -1114,7 +1166,7 @@ async function initServer(
         );
       });
   };
-  if (workflowsEnabled) {
+  if (!pluginHost && workflowsEnabled) {
     try {
       workflows = await composeWorkflows();
     } catch (error) {
@@ -1174,8 +1226,39 @@ async function initServer(
     api.inspection?.facts.setWorkflows(true);
   }
 
+  // Plugins register their subgraphs here (push into lateSubgraphs, or mount
+  // directly like privacy). The call site carries the inline privacy block's
+  // failure semantics: stop workflows, abort the partial boot, rethrow.
+  if (pluginHost) {
+    pluginHost.ctx.workflowsOrchestration = {
+      enabled: options.workflows?.enabled === true,
+      composeWorkflows,
+      registerWorkflowSubgraph,
+      updateRouter: () => graphqlManager.updateRouter(true),
+      reportMountFailure: (error: unknown) =>
+        reportFailure(
+          reporting,
+          error,
+          "Mounting the late workflow-runtime subgraph failed: @error",
+        ),
+      setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
+    };
+    try {
+      await pluginHost.observe("onSubgraphsRegistering");
+    } catch (error) {
+      await (
+        pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
+      )?.stop();
+      await (
+        pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
+      )?.stop();
+      await abortBoot(api);
+      throw error;
+    }
+  }
+
   let privacy: RunningPrivacy | undefined;
-  if (privacyConfig.enabled) {
+  if (!pluginHost && privacyConfig.enabled) {
     // The caller's reactor signs with a signer only the caller knows.
     const signer = options.reactor
       ? options.privacy?.signer
@@ -1202,6 +1285,7 @@ async function initServer(
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
   const shutdown = async () => {
+    if (pluginHost) await pluginHost.observe("onShutdown");
     await privacy?.stop();
     await workflowsRetry?.stop();
     await workflows?.stop();
@@ -1379,6 +1463,10 @@ async function initServer(
     }
   }
 
+  // Drives exist (default created, remotes attached) — the barrier after the
+  // future core drive seeding (R2 step 2 replaces the two blocks above).
+  if (pluginHost) await pluginHost.observe("onDrivesReady");
+
   return {
     defaultDriveUrl,
     api,
@@ -1387,11 +1475,18 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     // Read live: losing the singleton turns it unavailable.
     get workflowTriggers() {
-      return workflows?.triggers;
+      return (
+        workflows ??
+        (pluginHost?.ctx.workflows as ComposedWorkflowRuntime | undefined)
+      )?.triggers;
     },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],
-    privacy: privacy ? { erasure: privacy.erasure } : undefined,
+    privacy: (() => {
+      const running =
+        privacy ?? (pluginHost?.ctx.privacy as RunningPrivacy | undefined);
+      return running ? { erasure: running.erasure } : undefined;
+    })(),
     mcpEnabled: options.mcp !== false,
     inspectionEnabled: options.inspection !== false,
     renown,
@@ -1445,19 +1540,29 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  options.mcp = await resolveMcpEnabled({ featureFlags, option: options.mcp });
+  // CLASSIC resolution of the carved subsystems' switches — flag-on, the
+  // plugins own these (presence is activation): the resolvers are skipped so
+  // an ABSENT plugin can actually deactivate its subsystem (initServer
+  // normalizes unset values to off after transformServerOptions). An explicit
+  // caller option always wins on both paths. The inspection flag is a core
+  // capability (not carved) and resolves classically either way.
+  if (!isPluginHostEnabled()) {
+    options.mcp = await resolveMcpEnabled({
+      featureFlags,
+      option: options.mcp,
+    });
+    const configPathForFlags = resolveConfigPath(options.configFile);
+    const workflowsEnabled = await resolveWorkflowsEnabled({
+      featureFlags,
+      override: options.workflows?.enabled,
+      configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
+    });
+    options.workflows = { enabled: workflowsEnabled };
+  }
   options.inspection = await resolveInspectionEnabled({
     featureFlags,
     option: options.inspection,
   });
-
-  const configPathForFlags = resolveConfigPath(options.configFile);
-  const workflowsEnabled = await resolveWorkflowsEnabled({
-    featureFlags,
-    override: options.workflows?.enabled,
-    configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
-  });
-  options.workflows = { enabled: workflowsEnabled };
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1477,7 +1582,7 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
         INSPECTION_ENABLED: options.inspection,
-        PH_WORKFLOWS_ENABLED: workflowsEnabled,
+        PH_WORKFLOWS_ENABLED: options.workflows?.enabled,
       },
       null,
       2,

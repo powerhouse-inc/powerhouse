@@ -54,11 +54,24 @@ describe("writeGeneratedHostsFiles", () => {
     expect(connect).toContain(
       `import config from "../../powerhouse.config.json" with { type: "json" }`,
     );
+    // generic plugin enabled, carrying the drive-chrome config pointers:
+    expect(connect).toContain("@powerhousedao/connect/plugins/generic");
+    expect(connect).toContain("config.connect?.drives?.allowAddDrive");
+    expect(connect).toContain("config.connect?.drives?.sections");
+    // standalone Connect: its own worker reactor + a local default drive:
+    expect(connect).toContain(`backends: {`);
+    expect(connect).toContain(`kind: "worker"`);
+    expect(connect).toContain(`slug: "powerhouse"`);
 
     const vetra = readFileSync(join(dir, "hosts/vetra/host.js"), "utf-8");
     expect(vetra).toContain(`defaultVerb: "dev"`);
     expect(vetra).toContain(`host: "connect"`);
     expect(vetra).toContain("config.vetra?.connectPort");
+    // R4: generic compound + studio plugins (no vetra-specific runner).
+    expect(vetra).toContain("@powerhousedao/host-core/runners/compound");
+    expect(vetra).toContain("@powerhousedao/vetra-studio/switchboard");
+    expect(vetra).toContain("@powerhousedao/vetra-studio/connect");
+    expect(vetra).not.toContain("@powerhousedao/ph-cli/runners/compound");
 
     // P2.8: single-sourced protocol — the switchboard host references the
     // SAME connect.reactor block the connect host receives via its config.
@@ -67,6 +80,8 @@ describe("writeGeneratedHostsFiles", () => {
       "utf-8",
     );
     expect(switchboard).toContain("protocol: config.connect?.reactor ?? {}");
+    // the switchboard owns the project drive:
+    expect(switchboard).toContain(`slug: "powerhouse"`);
     expect(connect).toContain(`appId: "inc.powerhouse.connect.my-project"`);
 
     // the desktop host runs on the PUBLISHED generic compound; ${userData}
@@ -86,10 +101,15 @@ describe("writeGeneratedHostsFiles", () => {
     expect(assistant).toContain("@powerhousedao/clint/mastra-runner");
     expect(assistant).toContain('remote: { host: "switchboard" }');
     expect(assistant).toContain('workdir: "${userData}/assistant"');
+    // cli: the generic compound over switchboard + Connect, Connect as a
+    // REMOTE CLIENT (lone remote backend → reactorClient "remote", no PGlite).
     const cli = readFileSync(join(dir, "hosts/cli/host.js"), "utf-8");
-    expect(cli).toContain("@powerhousedao/clint/clint-runner");
-    expect(cli).toContain('lifecycle: "detached"');
-    expect(cli).toContain('assistant: { host: "assistant" }');
+    expect(cli).toContain("@powerhousedao/host-core/runners/compound");
+    expect(cli).toContain('import switchboard from "../switchboard/host.js"');
+    expect(cli).toContain('"cli-switchboard": { host: "switchboard" }');
+    expect(cli).toContain(`kind: "remote"`);
+    expect(cli).toContain("/graphql");
+    expect(cli).not.toContain("@powerhousedao/clint/clint-runner");
   });
 
   it("is preserve-on-migrate: never clobbers an existing host file", async () => {

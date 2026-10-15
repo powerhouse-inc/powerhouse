@@ -1,4 +1,4 @@
-import { boolean, flag, optional, positional, string } from "cmd-ts";
+import { boolean, flag, option, optional, positional, string } from "cmd-ts";
 
 // Mirrors clis/ph-cli/src/commands/run.ts — the uniform-runners entry point.
 // Kept here so ph-cmd's help/dispatch (phCliHelpCommands) can describe it;
@@ -18,5 +18,10 @@ export const runArgs = {
     type: optional(boolean),
     long: "debug",
     description: "verbose runner diagnostics",
+  }),
+  explain: option({
+    type: optional(string),
+    long: "explain",
+    description: "explain a resolved aspect instead of running (drives)",
   }),
 };

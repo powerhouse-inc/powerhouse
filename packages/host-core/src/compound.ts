@@ -101,8 +101,13 @@ function orderedMembers(
 }
 
 /** Build the member host object the member runner sees: the member's own
- * host.js, with the wrapper's runner/config/reactor overrides applied
- * (wrapper wins), and any compound-computed config patch merged in. */
+ * host.js with the wrapper applied. R1 semantics (rewire plan): a wrapper
+ * SECTION is a FULL STATEMENT — `reactor` and `config`, when present on the
+ * wrapper, replace the member's wholesale (host files derive keeps explicitly
+ * by spreading the sibling import: `{ ...switchboard.reactor, drives }`).
+ * `runner` stays key-merged: wrappers never restate `module`/`defaultVerb`,
+ * they override individual keys (port, host, plugins — the plugins LIST
+ * itself is a full statement computed in the file). */
 async function resolveMemberHost(
   projectRoot: string,
   member: CompoundMember,
@@ -115,11 +120,10 @@ async function resolveMemberHost(
     ...base,
     runner: { ...base.runner, ...(member.runner ?? {}) },
     config: {
-      ...(base.config ?? {}),
-      ...(member.config ?? {}),
+      ...(member.config !== undefined ? member.config : (base.config ?? {})),
       ...(configPatch ?? {}),
     },
-    reactor: { ...(base.reactor ?? {}), ...(member.reactor ?? {}) } as
+    reactor: (member.reactor !== undefined ? member.reactor : base.reactor) as
       | Record<string, unknown>
       | undefined,
   };

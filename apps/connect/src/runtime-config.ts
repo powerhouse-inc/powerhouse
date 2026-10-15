@@ -11,7 +11,27 @@ const loader = new ConfigLoader(
 );
 
 export async function loadRuntimeConfig(): Promise<RuntimePowerhouseConfig> {
-  return (await loader.read()) as RuntimePowerhouseConfig;
+  const config = (await loader.read()) as RuntimePowerhouseConfig;
+  // R3: a served composition (projected from host.js runner.plugins by the
+  // uniform-runners connect runner) runs the plugin pipeline over the config
+  // BEFORE the cache warms — every downstream consumer sees the transformed
+  // config through the classic paths. Runtime-flagged (query/stored override
+  // beats the composition's own presence acting as the config flag); no
+  // composition = classic boot, byte-identical.
+  if (config.connect?.composition) {
+    const { isRuntimeFlagEnabled } = await import("./utils/runtime-flag.js");
+    const enabled = isRuntimeFlagEnabled({
+      queryKey: "pluginRunner",
+      storageKey: "ph:flag:pluginRunner",
+      readConfigFlag: () => true,
+    });
+    if (enabled) {
+      const { applyComposition } = await import("./plugin-host.js");
+      config.connect = await applyComposition(config.connect);
+      loader.prime(config);
+    }
+  }
+  return config;
 }
 
 /**

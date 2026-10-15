@@ -74,6 +74,7 @@
 - [Overview and quickstart](https://academy.vetra.io/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart): GraphQLReactorClient is a light client for the @powerhousedao/reactor-browser hooks. It talks plain GraphQL to a Switchboard
 - [API reference](https://academy.vetra.io/academy/Reference/ReactorBrowserClient/ApiReference): Everything on this page is exported from @powerhousedao/reactor-browser.
 - [Subgraphs and attachments](https://academy.vetra.io/academy/Reference/ReactorBrowserClient/SubgraphsAndAttachments): A Switchboard serves more than the reactor's document API. Your project's own subgraphs sit next to it, and attachments come from a service the app su
+- [Hosts, Runners & Plugins](https://academy.vetra.io/academy/Reference/HostsAndRunners/HostsRunnersAndPlugins): This reference covers the uniform runners system, currently behind the FEATURE_UNIFORM_RUNNERS_ENABLED=1 flag. With the flag set, ph run <host>
 
 ## Book of Powerhouse
 

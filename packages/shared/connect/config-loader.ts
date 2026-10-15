@@ -148,6 +148,15 @@ export class ConfigLoader {
   }
 
   /**
+   * Replace the cached config — used by the plugin pipeline (rewire R3) to
+   * install the composition-transformed config so every later getCached()
+   * reader sees it. Call only during boot, before the app graph imports.
+   */
+  prime(config: ConfigShape): void {
+    this.cache = config;
+  }
+
+  /**
    * Returns the cached config synchronously. Throws if `read()` has not
    * resolved yet — matches Connect's `getRuntimeConfig()` shape.
    */

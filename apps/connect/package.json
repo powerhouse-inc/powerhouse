@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.3-dev.58",
+  "version": "6.2.3-dev.59",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -72,6 +72,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
+    "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",

@@ -54,24 +54,35 @@ export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
     : { kind: "present", dir, hosts };
 }
 
-/** Rejects every import except the project's powerhouse.config.json, plus any
- * dynamic `import(...)` or `require(...)`. Source-level enforcement: the JSON
- * round trip below is the hard gate; this one produces the better error. */
-export function lintHostImports(source: string, file: string): void {
+/** Sibling host imports: `../<host>/host.js` — source material for derived
+ * compositions (full-inclusion wrappers compute over them with plain JS). */
+const SIBLING_IMPORT = /^\.\.\/([A-Za-z0-9_-]+)\/host\.js$/;
+
+/** Rejects every import except the project's powerhouse.config.json and
+ * SIBLING host files (R1: derived compositions), plus any dynamic
+ * `import(...)` or `require(...)`. Source-level enforcement: the JSON round
+ * trip below is the hard gate; this one produces the better error. Returns
+ * the sibling host names the file imports, for cycle detection. */
+export function lintHostImports(source: string, file: string): string[] {
+  const siblings: string[] = [];
   for (const match of source.matchAll(
     /^\s*import\b[^;'"]*?from\s+["']([^"']+)["']/gm,
   )) {
     const specifier = match[1];
-    if (!specifier.endsWith(CONFIG_IMPORT_SUFFIX)) {
-      throw new HostLoadError(
-        `${file} imports "${specifier}" — a host file may only import the project's powerhouse.config.json.`,
-        "Host files are static projections; code belongs in plugins.js or the runner.",
-      );
+    if (specifier.endsWith(CONFIG_IMPORT_SUFFIX)) continue;
+    const sibling = SIBLING_IMPORT.exec(specifier);
+    if (sibling) {
+      siblings.push(sibling[1]);
+      continue;
     }
+    throw new HostLoadError(
+      `${file} imports "${specifier}" — a host file may only import the project's powerhouse.config.json or sibling hosts/<name>/host.js files.`,
+      "Host files are static projections; code belongs in plugins or the runner.",
+    );
   }
   if (/^\s*import\s+["']/m.test(source)) {
     throw new HostLoadError(
-      `${file} contains a side-effect import — a host file may only import the project's powerhouse.config.json.`,
+      `${file} contains a side-effect import — a host file may only import the project's powerhouse.config.json or sibling host files.`,
     );
   }
   if (/\bimport\s*\(/.test(source) || /\brequire\s*\(/.test(source)) {
@@ -79,6 +90,35 @@ export function lintHostImports(source: string, file: string): void {
       `${file} uses dynamic import()/require() — host files are static data.`,
     );
   }
+  return siblings;
+}
+
+/** Walks the sibling-import graph from `hostName`, linting every visited file
+ * and failing on a cycle (an ESM circular would otherwise surface as an
+ * undefined default export with no useful message). */
+export function lintHostImportGraph(hostsDir: string, hostName: string): void {
+  const state = new Map<string, "visiting" | "done">();
+  const visit = (name: string, chain: string[]): void => {
+    const mark = state.get(name);
+    if (mark === "done") return;
+    if (mark === "visiting") {
+      throw new HostLoadError(
+        `Host import cycle: ${[...chain, name].map((n) => `hosts/${n}`).join(" -> ")}.`,
+        "Hoist the shared data into one host (or powerhouse.config.json) instead of importing both ways.",
+      );
+    }
+    const file = path.join(hostsDir, name, HOST_FILE);
+    if (!existsSync(file)) {
+      throw new HostLoadError(
+        `hosts/${chain[chain.length - 1] ?? name} imports sibling "hosts/${name}/host.js", which does not exist.`,
+      );
+    }
+    state.set(name, "visiting");
+    const siblings = lintHostImports(readFileSync(file, "utf8"), file);
+    for (const sibling of siblings) visit(sibling, [...chain, name]);
+    state.set(name, "done");
+  };
+  visit(hostName, []);
 }
 
 /** Returns the path of the first value that would not survive a JSON round
@@ -177,7 +217,7 @@ export async function loadHost(
   }
 
   const file = path.join(probe.dir, hostName, HOST_FILE);
-  lintHostImports(readFileSync(file, "utf8"), file);
+  lintHostImportGraph(probe.dir, hostName);
 
   const module = (await import(pathToFileURL(file).href)) as {
     default?: unknown;

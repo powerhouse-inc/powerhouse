@@ -8,9 +8,17 @@ import {
   loadHost,
   probeRun,
   resolveUserDataPlaceholders,
+  runObserveHook,
+  runObserveHookSequential,
+  resolveHostPlugins,
   type HostDefinition,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import {
+  createProxyPlugin,
+  type ClintCompoundContext,
+  type MemberEndpoints,
+} from "./proxy-plugin.js";
 import fs from "node:fs";
 import { createEventBus } from "../core/events.js";
 import { isPortFree } from "../core/preflight.js";
@@ -156,6 +164,10 @@ async function startShell(
   const projectName = readProjectName(ctx.projectRoot, resolved.name);
   const definitions = childServices(resolved, ctx, phCliEntry);
   const eventBus = createEventBus();
+  // R5: compound plugins (appliesTo "compound" — e.g. the proxy) run over the
+  // member set. Built-ins resolve from a declared `runner.plugins`; the proxy
+  // is registered when a `runner.proxy` block is present (ergonomic alias).
+  const memberEndpoints: MemberEndpoints = {};
   const servicesDir = path.join(ctx.projectRoot, ".ph", "services");
   const services = createServiceManager(definitions, {
     config: {},
@@ -190,6 +202,14 @@ async function startShell(
         : typeof member.host.runner.port === "number"
           ? member.host.runner.port
           : undefined;
+    if (memberPort !== undefined) {
+      const memberHost =
+        (typeof wrapper.runner?.host === "string" && wrapper.runner.host) ||
+        (typeof member.host.runner.host === "string" &&
+          member.host.runner.host) ||
+        "127.0.0.1";
+      memberEndpoints[id] = { host: memberHost, port: memberPort };
+    }
     if (memberPort !== undefined && !(await isPortFree(memberPort))) {
       console.log(
         `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
@@ -212,6 +232,34 @@ async function startShell(
     if (status) console.log(`  ${formatStatus(status)}`);
   }
 
+  // Compound-plugin pipeline (CompoundCore): resolve entries + the proxy
+  // ergonomic alias, then fire onMembersReady now that endpoints are known.
+  const pluginEntries = (resolved.runner as { plugins?: unknown }).plugins as
+    | Parameters<typeof resolveHostPlugins>[3]
+    | undefined;
+  const resolvedPlugins = pluginEntries
+    ? (
+        await resolveHostPlugins(
+          ctx.projectRoot,
+          "compound",
+          ctx.verb ?? "run",
+          pluginEntries,
+          `hosts/${host.name}/host.js`,
+        )
+      ).map((r) => r.plugin)
+    : [];
+  const proxyBlock = (resolved.runner as { proxy?: unknown }).proxy;
+  if (proxyBlock && typeof proxyBlock === "object") {
+    resolvedPlugins.push(createProxyPlugin(proxyBlock as never) as never);
+  }
+  const compoundCtx: ClintCompoundContext = {
+    memberEndpoints,
+    logger: { info: (m: string) => console.log(m) },
+  };
+  if (resolvedPlugins.length > 0) {
+    await runObserveHook("onMembersReady", resolvedPlugins, compoundCtx);
+  }
+
   const agents: Record<string, string> = {};
   for (const [name, ref] of Object.entries(config.agents ?? {})) {
     agents[name] = await resolveAgentEndpoint(ref, ctx);
@@ -225,6 +273,13 @@ async function startShell(
   }
 
   const shutdown = async () => {
+    if (resolvedPlugins.length > 0) {
+      await runObserveHookSequential(
+        "onShutdown",
+        resolvedPlugins,
+        compoundCtx,
+      );
+    }
     if (lifecycle === "attached") {
       for (const id of names) {
         try {

@@ -38,6 +38,13 @@ export const kind = "reactor";
 
 export const hostSchema = reactorHostSchema;
 
+/**
+ * host.js config for the agent host — OPERATOR SETTINGS only (rewire R5):
+ * `model` selects the LLM; `instructions`/`prompts` shape the agent. Framework
+ * KNOBS (maxSteps, cacheControl, memory tuning, untilIdle, tool allowlists)
+ * stay in code, and the agent CARD (description/image) comes from the host's
+ * `profile`, not here. An LLM API key is a SECRET — env only, never config.
+ */
 interface AgentHostConfig {
   model?: string;
   instructions?: string;
@@ -198,12 +205,28 @@ async function serveAgent(
         return;
       }
       if (req.method === "GET" && url === "/v1/models") {
+        // The agent card: id + model, plus description/image from the host's
+        // profile (rewire R5 — identity lives in profile, not config).
+        const profile = (resolved.profile ?? {}) as {
+          description?: string;
+          icon?: string;
+          name?: string;
+        };
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
           JSON.stringify({
             object: "list",
             data: [
-              { id: provider.modelId, object: "model", owned_by: "clint" },
+              {
+                id: provider.modelId,
+                object: "model",
+                owned_by: "clint",
+                name: profile.name ?? resolved.name,
+                ...(profile.description
+                  ? { description: profile.description }
+                  : {}),
+                ...(profile.icon ? { image: profile.icon } : {}),
+              },
             ],
           }),
         );

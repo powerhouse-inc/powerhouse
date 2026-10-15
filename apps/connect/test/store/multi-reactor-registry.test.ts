@@ -81,7 +81,7 @@ describe("document models under multiReactor", () => {
     stub = await serve(switchboard({}));
     const { module, registry } = liveLocal();
     await selectAppReactorClient({
-      multiReactor: true,
+      mode: "router",
       module,
       remoteDriveUrl: stub.url.replace(/\/graphql$/, "/d/drive-x"),
       signer,

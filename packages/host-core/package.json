@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/host-core",
-  "version": "6.2.3-dev.58",
+  "version": "6.2.3-dev.59",
   "publishConfig": {
     "access": "public"
   },
@@ -28,6 +28,12 @@
       "types": "./dist/runners/compound.d.mts",
       "import": "./dist/runners/compound.mjs",
       "default": "./dist/runners/compound.mjs"
+    },
+    "./plugins": {
+      "source": "./src/plugins.ts",
+      "types": "./dist/plugins.d.mts",
+      "import": "./dist/plugins.mjs",
+      "default": "./dist/plugins.mjs"
     }
   },
   "scripts": {
