@@ -126,19 +126,34 @@ function storedModel(
   const global = state.ok
     ? snapshotRecord(state.value.global, undefined, ["documentModel", "global"])
     : state;
-  const specifications = global.ok
-    ? describeReceived(global.value.specifications)
-    : rejectionReceived(global);
-  if (!global.ok || specifications !== "array") {
+  const repair =
+    "Pass the module produced by ph generate, or its stored state.";
+  if (!global.ok) {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
-      path: global.ok
-        ? ["documentModel", "global", "specifications"]
-        : global.path,
+      path: global.path,
+      message: `A stored document model keeps its specification history in documentModel.global as plain data, and this one cannot be read (${global.reason}).`,
+      expected: "documentModel.global as a plain record of data properties",
+      received: rejectionReceived(global),
+      repair,
+    });
+    return undefined;
+  }
+  const specifications = global.value.specifications;
+  let isHistory: boolean;
+  try {
+    isHistory = Array.isArray(specifications);
+  } catch {
+    isHistory = false;
+  }
+  if (!isHistory) {
+    collector.add({
+      code: "PH-DM-DECLARATION-INVALID",
+      path: ["documentModel", "global", "specifications"],
       message: "A stored document model carries a specification history.",
-      expected: "documentModel.global.specifications",
-      received: specifications,
-      repair: "Pass the module produced by ph generate, or its stored state.",
+      expected: "an array of stored specifications",
+      received: describeReceived(specifications),
+      repair,
     });
     return undefined;
   }

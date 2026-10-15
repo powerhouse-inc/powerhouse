@@ -129,19 +129,24 @@ function inspect(
       ])
     : documentModel;
   const storedId = global.ok ? global.value.id : undefined;
-  if (!global.ok || typeof storedId !== "string" || storedId === "") {
+  if (!global.ok) {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
-      path: global.ok
-        ? [...path, "documentModel", "global", "id"]
-        : global.path,
+      path: global.path,
+      message: `A usable document-model module keeps its stored model in documentModel.global as plain data, and this one cannot be read (${global.reason}).`,
+      expected: "documentModel.global as a plain record of data properties",
+      received: rejectionReceived(global),
+      repair:
+        "Export the module returned by context.finalize() or family.at(version) without replacing its documentModel.",
+    });
+  } else if (typeof storedId !== "string" || storedId === "") {
+    collector.add({
+      code: "PH-DM-DECLARATION-INVALID",
+      path: [...path, "documentModel", "global", "id"],
       message: "A usable document-model module has a stored model ID.",
       expected: "a nonempty document type",
-      received: !global.ok
-        ? rejectionReceived(global)
-        : typeof storedId === "string"
-          ? '""'
-          : describeReceived(storedId),
+      received:
+        typeof storedId === "string" ? '""' : describeReceived(storedId),
       repair:
         "Declare id in defineDocumentModel; the stored model ID is the document type every consumer registers.",
     });
