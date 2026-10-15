@@ -252,8 +252,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
       builds = false;
       // A type the subgraph defines that another model generated is the
       // clash; another version of the same model is not another model.
-      // Every own type name derives from the model's schema name, so that
-      // other model shares the schema name and is the first listed under it.
+      // The supplier is the first model to generate that type name.
       const { id } = globalStateOf(model);
       const supplier = [...own.typeNames]
         .map((typeName) => generatedOwners.get(typeName))
