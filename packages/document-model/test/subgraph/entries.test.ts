@@ -7,8 +7,10 @@ import {
   print,
 } from "graphql";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { z } from "zod";
 import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.js";
 import { ph } from "../../src/definition/field.js";
+import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
 import { compileSubgraphSchema } from "../../src/definition/subgraph/ast.js";
 import {
   compileSubgraph,
@@ -917,6 +919,58 @@ describe("a compiled declaration", () => {
       >;
       expect(resolvers.Query.x(undefined, {}, {}, {})).toBe("first");
     }
+  });
+
+  it("serves a valid root declaration after an invalid one, and binds no field the document lacks", () => {
+    const Shadowing = defineScalar({
+      name: "String",
+      description: "Shadows the GraphQL built-in, so every use fails.",
+      representation: "string",
+      validator: z.string(),
+      zodSource: "z.string()",
+    });
+    const compiled = compileSubgraph({
+      name: "retried",
+      schemaKind: "typed",
+      entries: (build) => [
+        build.query("x", { returns: Shadowing(), resolve: () => "broken" }),
+        build.query("y", {
+          fieldName: "x",
+          returns: ph.String(),
+          resolve: () => "valid",
+        }),
+        build.mutation("lost", { returns: Shadowing(), resolve: () => "lost" }),
+      ],
+    });
+    expect(
+      compiled.diagnostics.map(({ code, path, message }) => ({
+        code,
+        path,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-SCALAR-DUPLICATE-NAME",
+        path: ["entries", 0, "returns"],
+        message:
+          "A package scalar is named String, which is a GraphQL built-in.",
+      },
+      {
+        code: "PH-SCALAR-DUPLICATE-NAME",
+        path: ["entries", 2, "returns"],
+        message:
+          "A package scalar is named String, which is a GraphQL built-in.",
+      },
+    ]);
+    expect(print(compiled.typeDefs as DocumentNode)).toBe(
+      "type Query {\n  x: String\n}",
+    );
+    const resolvers = compiled.resolversFor({}) as Record<
+      string,
+      Record<string, (...args: unknown[]) => unknown>
+    >;
+    expect(Object.keys(resolvers)).toEqual(["Query"]);
+    expect(resolvers.Query.x(undefined, {}, {}, {})).toBe("valid");
   });
 
   it("serves the first binding of a computed field bound twice", () => {
