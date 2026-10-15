@@ -150,11 +150,28 @@ export type PHConnectOpenPanel = {
   trackOperations?: boolean;
 };
 
+/**
+ * Which reactor client Connect runs. One field selects all four shapes the
+ * multi-reactor work standardized (each a peer `IReactorClient`):
+ *  - `in-process`: the tab's own reactor on the main thread (PGlite in-tab).
+ *  - `worker`:     the tab's own reactor in a SharedWorker (PGlite in-worker).
+ *  - `remote`:     a pure client to a remote Switchboard reactor over GraphQL,
+ *                  with NO local reactor and NO PGlite download.
+ *  - `router`:     the tab's reactor (local) PLUS remote backends, routed.
+ * Derived from the host's reactor backends (see reactorClientMode): a lone
+ * remote backend -> `remote`, local+remote -> `router`, a worker backend ->
+ * `worker`, else `in-process`. When unset, Connect falls back to the legacy
+ * `reactorWorker`/`multiReactor` booleans, so existing configs are unchanged.
+ */
+export type PHReactorClientMode = "in-process" | "worker" | "remote" | "router";
+
 export type PHConnectInstance = {
   namespace: string | null;
   reactorWorker: boolean;
   /** Routes through the in-browser reactor plus remote backends. Off by default. */
   multiReactor?: boolean;
+  /** Explicit client selection; supersedes reactorWorker/multiReactor when set. */
+  reactorClient?: PHReactorClientMode;
 };
 
 /** Each flag implies its predecessors, and must match the fleet Connect syncs

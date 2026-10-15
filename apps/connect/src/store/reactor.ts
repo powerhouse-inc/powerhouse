@@ -64,8 +64,8 @@ import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { startupOwningStores } from "../utils/worker-startup.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
-import { isMultiReactorEnabled } from "../utils/multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
+import { resolveReactorClientMode } from "./reactor-client-mode.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
   resolvePackagedReactorWorker,
@@ -375,13 +375,24 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     renownUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
   };
-  const multiReactor = isMultiReactorEnabled();
+  // The single 4-way selector. `remote` builds NO local reactor (no PGlite);
+  // `router` keeps the local reactor and adds remote backends; `worker` /
+  // `in-process` are the local reactor alone. (multiReactor is kept as the
+  // flag the local build + worker fingerprint already understand.)
+  const mode = resolveReactorClientMode();
+  const multiReactor = mode === "router";
+  const needsLocalReactor = mode !== "remote";
+  const localAsWorker =
+    needsLocalReactor &&
+    (mode === "worker" || (mode === "router" && isReactorWorkerEnabled()));
 
-  // create reactor v2 with all versions and upgrade manifests
+  // create reactor v2 with all versions and upgrade manifests. Undefined in
+  // `remote` mode: the tab has no local reactor, so PGlite is never imported.
   let reactorClientModule:
     | BrowserReactorClientModule
-    | WorkerReactorClientModule;
-  if (isReactorWorkerEnabled()) {
+    | WorkerReactorClientModule
+    | undefined;
+  if (localAsWorker) {
     const packageSpecs = packageManager
       .getRegistryPackages()
       .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
@@ -489,7 +500,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       logger.error("Reactor worker failed to start: @error", error);
       throw error;
     }
-  } else {
+  } else if (needsLocalReactor) {
     reactorClientModule = await createBrowserReactor(
       documentModelModules,
       upgradeManifests,
@@ -502,9 +513,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       multiReactor,
     );
   }
+  // mode === "remote": reactorClientModule stays undefined — no local reactor.
 
   const appReactorClient = await selectAppReactorClient({
-    multiReactor,
+    mode,
     module: reactorClientModule,
     remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
     signer: renown.signer,
@@ -513,7 +525,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   const drives = await getAppDrives(
     appReactorClient,
-    reactorClientModule.client,
+    reactorClientModule?.client ?? appReactorClient,
   );
 
   const didFromUrl = getDidFromUrl();
@@ -610,7 +622,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     });
   });
 
-  await refreshAppDrives(appReactorClient, reactorClientModule.client);
+  await refreshAppDrives(
+    appReactorClient,
+    reactorClientModule?.client ?? appReactorClient,
+  );
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,
@@ -618,18 +633,29 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // processorManager lives in the worker on the cutover path and is not yet
   // bridged, so surface the gap loudly rather than dropping factories silently.
+  // In `remote` mode there is no local reactor at all — processors run on the
+  // remote Switchboard, so there is nothing to register in the tab.
   const reactorModule =
-    reactorClientModule.kind === "browser"
+    reactorClientModule?.kind === "browser"
       ? reactorClientModule.reactorModule
       : undefined;
-  if (packagesWithProcessorFactories.length > 0 && !reactorModule) {
+  if (packagesWithProcessorFactories.length > 0 && !reactorClientModule) {
+    logger.info(
+      "Remote reactor client: @count processor factory/ies run on the Switchboard, not in the tab",
+      packagesWithProcessorFactories.length,
+    );
+  } else if (packagesWithProcessorFactories.length > 0 && !reactorModule) {
     for (const pkg of packagesWithProcessorFactories) {
       logger.warn(
         "Skipping processor factory @name: processors are not supported on the worker reactor path yet",
         pkg.manifest.name,
       );
     }
-  } else if (packagesWithProcessorFactories.length > 0 && reactorModule) {
+  } else if (
+    packagesWithProcessorFactories.length > 0 &&
+    reactorModule &&
+    reactorClientModule
+  ) {
     const readModels = reactorModule.readModelCoordinator.readModels;
     const processorHostModule = await createProcessorHostModule(
       reactorClientModule.client,

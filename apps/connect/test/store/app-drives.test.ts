@@ -62,7 +62,7 @@ afterEach(async () => {
 
 async function routerOver(module: WorkerReactorClientModule, url: string) {
   return selectAppReactorClient({
-    multiReactor: true,
+    mode: "router",
     module,
     remoteDriveUrl: url.replace(/\/graphql$/, "/d/drive-x"),
     signer,

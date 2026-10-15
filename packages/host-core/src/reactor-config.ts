@@ -135,17 +135,51 @@ export function projectReactorToSwitchboard(
   return { env, options };
 }
 
+/** The four reactor-client shapes a Connect host can select (mirrors the
+ * shared PHReactorClientMode; kept local to avoid an import cycle). */
+export type ReactorClientMode = "in-process" | "worker" | "remote" | "router";
+
+const LOCAL_BACKEND_KINDS = new Set<ReactorBackendKind | undefined>([
+  "in-process",
+  "worker",
+  undefined,
+]);
+
+/**
+ * Which reactor client the backend topology asks for:
+ *  - local (in-process/worker) AND remote backends -> `router`
+ *  - remote backend(s) only                        -> `remote`
+ *  - a worker backend                              -> `worker`
+ *  - anything else local                           -> `in-process`
+ * `undefined` when no backends are declared — the caller then keeps the
+ * legacy reactorWorker/multiReactor behaviour untouched.
+ */
+export function reactorClientMode(
+  reactor: ReactorConfig | undefined,
+): ReactorClientMode | undefined {
+  const backends = reactor?.backends;
+  if (!backends) return undefined;
+  const kinds = Object.values(backends).map((b) => b.kind);
+  if (kinds.length === 0) return undefined;
+  const hasLocal = kinds.some((k) => LOCAL_BACKEND_KINDS.has(k));
+  const hasRemote = kinds.some((k) => k === "remote");
+  if (hasLocal && hasRemote) return "router";
+  if (hasRemote) return "remote";
+  return primaryBackend(reactor)?.kind === "worker" ? "worker" : "in-process";
+}
+
 export interface ConnectReactorProjection {
   /** Patch merged into the connect runtime config (connect.*). */
   connect: {
     reactor?: ReactorProtocol;
-    instance?: { reactorWorker?: boolean };
+    instance?: { reactorWorker?: boolean; reactorClient?: ReactorClientMode };
     app?: { workflowsEnabled?: boolean };
   };
 }
 
 /** Project the reactor block onto the Connect runtime config: protocol →
- * connect.reactor (same shape), backend kind → instance.reactorWorker,
+ * connect.reactor (same shape), backend topology → instance.reactorWorker
+ * (legacy) + instance.reactorClient (the explicit 4-way selector),
  * workflows → app.workflowsEnabled. */
 export function projectReactorToConnect(
   reactor: ReactorConfig | undefined,
@@ -153,8 +187,14 @@ export function projectReactorToConnect(
   const connect: ConnectReactorProjection["connect"] = {};
   if (reactor?.protocol) connect.reactor = reactor.protocol;
   const backend = primaryBackend(reactor);
-  if (backend?.kind !== undefined) {
-    connect.instance = { reactorWorker: backend.kind === "worker" };
+  const mode = reactorClientMode(reactor);
+  if (backend?.kind !== undefined || mode !== undefined) {
+    connect.instance = {
+      ...(backend?.kind !== undefined
+        ? { reactorWorker: backend.kind === "worker" }
+        : {}),
+      ...(mode !== undefined ? { reactorClient: mode } : {}),
+    };
   }
   if (reactor?.workflows !== undefined) {
     connect.app = { workflowsEnabled: reactor.workflows };

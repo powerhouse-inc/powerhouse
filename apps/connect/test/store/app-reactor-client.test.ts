@@ -78,7 +78,7 @@ function params(
   overrides: Partial<AppReactorClientParams> = {},
 ): AppReactorClientParams {
   return {
-    multiReactor: false,
+    mode: "in-process",
     module,
     remoteDriveUrl: undefined,
     signer,
@@ -110,7 +110,7 @@ describe("selectAppReactorClient with multiReactor on", () => {
     const { module } = localModule();
 
     const client = await selectAppReactorClient(
-      params(module, { multiReactor: true }),
+      params(module, { mode: "router" }),
     );
 
     expect(client).toBe(module.client);
@@ -122,7 +122,7 @@ describe("selectAppReactorClient with multiReactor on", () => {
     const remoteDriveUrl = stub.url.replace(/\/graphql$/, "/d/drive-x");
 
     const client = await selectAppReactorClient(
-      params(module, { multiReactor: true, remoteDriveUrl }),
+      params(module, { mode: "router", remoteDriveUrl }),
     );
     await client.execute("drive-x", "main", [actions.setName("renamed")]);
 
@@ -142,7 +142,7 @@ describe("selectAppReactorClient with multiReactor on", () => {
     stub = await serve(switchboard({ "drive-x": DRIVE_TYPE }));
     const remoteDriveUrl = stub.url.replace(/\/graphql$/, "/d/drive-x");
     await selectAppReactorClient(
-      params(module, { multiReactor: true, remoteDriveUrl }),
+      params(module, { mode: "router", remoteDriveUrl }),
     );
 
     await renameDrive("drive-x", "renamed");
@@ -154,16 +154,16 @@ describe("selectAppReactorClient with multiReactor on", () => {
   });
 
   it.each([
-    ["the flag off", { multiReactor: false }],
-    ["no remote drive URL", { multiReactor: true }],
-  ])(
+    ["the flag off", { mode: "in-process" }],
+    ["no remote drive URL", { mode: "router" }],
+  ] as [string, Partial<AppReactorClientParams>][])(
     "drops the router when a later selection runs with %s",
     async (_, overrides) => {
       const first = localModule();
       stub = await serve(switchboard({ "drive-x": DRIVE_TYPE }));
       const remoteDriveUrl = stub.url.replace(/\/graphql$/, "/d/drive-x");
       const router = await selectAppReactorClient(
-        params(first.module, { multiReactor: true, remoteDriveUrl }),
+        params(first.module, { mode: "router", remoteDriveUrl }),
       );
       expect(getFullReactorClient()).toBe(router);
 
@@ -175,4 +175,42 @@ describe("selectAppReactorClient with multiReactor on", () => {
       expect(getFullReactorClient()).toBe(second.module.client);
     },
   );
+});
+
+describe("selectAppReactorClient in remote mode (no local reactor)", () => {
+  it("builds a remote-only router over the Switchboard, with no local module", async () => {
+    stub = await serve(switchboard({ "drive-x": DRIVE_TYPE }));
+    const remoteDriveUrl = stub.url.replace(/\/graphql$/, "/d/drive-x");
+
+    const client = await selectAppReactorClient({
+      mode: "remote",
+      module: undefined, // the point: no local reactor is built
+      remoteDriveUrl,
+      signer,
+      documentModelModules: [
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ],
+    });
+
+    // A full IReactorClient (router) the app graph consumes unchanged,
+    // routing straight to the Switchboard.
+    expect(client).toBeInstanceOf(RoutingReactorClient);
+    expect(getFullReactorClient()).toBe(client);
+    await client.execute("drive-x", "main", [actions.setName("renamed")]);
+    expect(driveIdOf(stub.received, "MutateDocumentWithOperations")).toBe(
+      "drive-x",
+    );
+  });
+
+  it("throws on a missing remote drive URL (no local reactor to fall back to)", async () => {
+    await expect(
+      selectAppReactorClient({
+        mode: "remote",
+        module: undefined,
+        remoteDriveUrl: undefined,
+        signer,
+        documentModelModules: [],
+      }),
+    ).rejects.toThrow(/needs a remote drive URL/);
+  });
 });

@@ -3,6 +3,7 @@ import {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
+  reactorClientMode,
   projectReactorToSwitchboard,
   protocolEnv,
   type ReactorConfig,
@@ -106,7 +107,10 @@ describe("projectReactorToConnect", () => {
       protocol: fullProtocol,
     });
     expect(connect.reactor).toEqual(fullProtocol);
-    expect(connect.instance).toEqual({ reactorWorker: true });
+    expect(connect.instance).toEqual({
+      reactorWorker: true,
+      reactorClient: "worker",
+    });
     expect(connect.app).toEqual({ workflowsEnabled: true });
   });
 
@@ -114,7 +118,63 @@ describe("projectReactorToConnect", () => {
     const { connect } = projectReactorToConnect({
       backends: { local: { kind: "in-process" } },
     });
-    expect(connect.instance).toEqual({ reactorWorker: false });
+    expect(connect.instance).toEqual({
+      reactorWorker: false,
+      reactorClient: "in-process",
+    });
+  });
+
+  it("a lone remote backend → reactorClient remote (no local, no PGlite)", () => {
+    const { connect } = projectReactorToConnect({
+      backends: { sb: { kind: "remote", remote: { url: "http://x/graphql" } } },
+    });
+    expect(connect.instance?.reactorClient).toBe("remote");
+    // remote kind !== worker, so legacy reactorWorker stays false
+    expect(connect.instance?.reactorWorker).toBe(false);
+  });
+
+  it("local + remote backends → reactorClient router", () => {
+    const { connect } = projectReactorToConnect({
+      backends: {
+        local: { kind: "worker" },
+        sb: { kind: "remote", remote: { url: "http://x/graphql" } },
+      },
+      placement: { primary: "local" },
+    });
+    expect(connect.instance?.reactorClient).toBe("router");
+  });
+
+  it("no declared backends → no reactorClient (legacy fallback preserved)", () => {
+    const { connect } = projectReactorToConnect({ protocol: fullProtocol });
+    expect(connect.instance).toBeUndefined();
+  });
+});
+
+describe("reactorClientMode", () => {
+  it("returns undefined without backends", () => {
+    expect(reactorClientMode({})).toBeUndefined();
+    expect(reactorClientMode(undefined)).toBeUndefined();
+  });
+  it("classifies each topology", () => {
+    expect(reactorClientMode({ backends: { m: { kind: "in-process" } } })).toBe(
+      "in-process",
+    );
+    expect(reactorClientMode({ backends: { m: { kind: "worker" } } })).toBe(
+      "worker",
+    );
+    expect(
+      reactorClientMode({
+        backends: { sb: { kind: "remote", remote: { url: "http://x" } } },
+      }),
+    ).toBe("remote");
+    expect(
+      reactorClientMode({
+        backends: {
+          m: { kind: "worker" },
+          sb: { kind: "remote", remote: { url: "http://x" } },
+        },
+      }),
+    ).toBe("router");
   });
 });
 

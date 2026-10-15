@@ -57,7 +57,7 @@ describe("credentials under multiReactor", () => {
       inspector: { info: () => Promise.reject(new Error("no facts")) },
     } as unknown as WorkerReactorClientModule;
     const client = await selectAppReactorClient({
-      multiReactor: true,
+      mode: "router",
       module,
       remoteDriveUrl: stub.url.replace(/\/graphql$/, "/d/drive-x"),
       signer,
