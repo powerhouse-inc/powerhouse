@@ -123,22 +123,21 @@ function storedModel(
     isModule ? root.value.documentModel : value
   ) as DocumentModelPHState;
   const state = snapshotRecord(documentModel, undefined, ["documentModel"]);
-  const global =
-    state.ok === true
-      ? snapshotRecord(state.value.global, undefined, [
-          "documentModel",
-          "global",
-        ])
-      : undefined;
-  if (global?.ok !== true || !Array.isArray(global.value.specifications)) {
+  const global = state.ok
+    ? snapshotRecord(state.value.global, undefined, ["documentModel", "global"])
+    : state;
+  const specifications = global.ok
+    ? describeReceived(global.value.specifications)
+    : rejectionReceived(global);
+  if (!global.ok || specifications !== "array") {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
-      path: ["documentModel", "global", "specifications"],
+      path: global.ok
+        ? ["documentModel", "global", "specifications"]
+        : global.path,
       message: "A stored document model carries a specification history.",
       expected: "documentModel.global.specifications",
-      received: describeReceived(
-        global?.ok === true ? global.value.specifications : undefined,
-      ),
+      received: specifications,
       repair: "Pass the module produced by ph generate, or its stored state.",
     });
     return undefined;

@@ -127,16 +127,21 @@ function inspect(
         "documentModel",
         "global",
       ])
-    : undefined;
-  const storedId = global?.ok === true ? global.value.id : undefined;
-  if (typeof storedId !== "string" || storedId === "") {
+    : documentModel;
+  const storedId = global.ok ? global.value.id : undefined;
+  if (!global.ok || typeof storedId !== "string" || storedId === "") {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
-      path: [...path, "documentModel", "global", "id"],
+      path: global.ok
+        ? [...path, "documentModel", "global", "id"]
+        : global.path,
       message: "A usable document-model module has a stored model ID.",
       expected: "a nonempty document type",
-      received:
-        typeof storedId === "string" ? '""' : describeReceived(storedId),
+      received: !global.ok
+        ? rejectionReceived(global)
+        : typeof storedId === "string"
+          ? '""'
+          : describeReceived(storedId),
       repair:
         "Declare id in defineDocumentModel; the stored model ID is the document type every consumer registers.",
     });
