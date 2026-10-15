@@ -709,27 +709,26 @@ function normalizeSpecifications(
 ): DocumentModelCompilationConfig["specifications"] | undefined {
   const path: DefinitionPath = ["specifications"];
   rejectAuthorization(collector, value, path);
+  const snapshot = snapshotRecord(value, [...SPECIFICATION_KEYS], path);
   // `specifications` is the scope map plus two reserved members. Any other
   // key is an authored platform or custom scope, which V1 does not admit.
-  for (const key of ownStringKeys(value)) {
-    if (key === "auth") continue;
-    if ((SPECIFICATION_KEYS as readonly string[]).includes(key)) continue;
-    collector.add({
-      code: "PH-DM-SCOPE-UNSUPPORTED",
-      path: [...path, key],
-      message: `Scope ${JSON.stringify(key)} cannot be declared; DocumentSpecification.state describes global and local only.`,
-      expected: "global or local",
-      received: key,
-      repair:
-        "Remove the scope. auth, document, and header stay platform concerns, and runtime action scopes keep their current handling.",
-    });
+  if (!snapshot.ok && snapshot.reason === "unknown-key") {
+    if (snapshot.key !== "auth") {
+      collector.add({
+        code: "PH-DM-SCOPE-UNSUPPORTED",
+        path: snapshot.path,
+        message: `Scope ${JSON.stringify(snapshot.key)} cannot be declared; DocumentSpecification.state describes global and local only.`,
+        expected: "global or local",
+        received: snapshot.key,
+        repair:
+          "Remove the scope. auth, document, and header stay platform concerns, and runtime action scopes keep their current handling.",
+      });
+    }
+    return undefined;
   }
-  const specifications = take(
-    collector,
-    snapshotRecord(value, [...SPECIFICATION_KEYS], path),
-    "PH-DM-SCOPE-UNSUPPORTED",
-    [...SPECIFICATION_KEYS],
-  );
+  const specifications = take(collector, snapshot, "PH-DM-SCOPE-UNSUPPORTED", [
+    ...SPECIFICATION_KEYS,
+  ]);
   if (specifications === undefined) return undefined;
 
   const auxiliary =
