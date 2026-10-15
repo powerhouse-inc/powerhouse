@@ -138,6 +138,16 @@ export function snapshotDescriptorArray(
       repair,
     });
   }
+  if (snapshot.reason === "custom-prototype" && snapshot.expected === "array") {
+    return failDefinition({
+      code,
+      path,
+      message:
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+      received: snapshot.received,
+      repair: `${repair} Copy an Array subclass or an array from another realm with Array.from(...).`,
+    });
+  }
   return optionRejection(snapshot, code, []);
 }
 
