@@ -575,9 +575,18 @@ describe("a declaration the server could not run", () => {
       code: "PH-SG-DEFINITION-INVALID",
       path: ["name"],
       message:
-        "A subgraph name is one route segment: letters, digits, hyphens, and underscores, starting with a letter or digit.",
+        "A subgraph name is one route segment: ASCII letters, digits, hyphens, and underscores, starting with a letter or digit.",
     };
-    for (const name of ["../r", "graphql/r", "a/b c", ".", "-widgets"]) {
+    for (const name of [
+      "../r",
+      "graphql/r",
+      "a/b c",
+      ".",
+      "-widgets",
+      // Mounted as /graphql/café, while a client requests the percent-encoded
+      // /graphql/caf%C3%A9, which no adapter matches.
+      "café",
+    ]) {
       expect(refusal(typed({ name }))).toEqual(notASegment);
     }
     expect(refusal(compat({ name: "x/../../escape" }))).toEqual(notASegment);
@@ -585,7 +594,7 @@ describe("a declaration the server could not run", () => {
       "contacts-search",
       "my_widgets",
       "1st",
-      "café-ünïcode",
+      "invoice-line-items-2",
     ]) {
       expect(
         new (defineSubgraph({
