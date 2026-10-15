@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-14T22:49:16.429Z
+> Generated: 2026-10-15T16:00:10.751Z
 > Total Documents: 124
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -8393,6 +8393,7 @@ Compiles each declaration into a structured definition.
 | `PH-DM-IDENTITY-INVALID` | error | An ID in the declaration is malformed, or two declarations produce the same ID. |
 | `PH-DM-IDENTITY-REUSED` | warning | The installed stored specification already uses one ID for two declarations. You cannot fix this in your package, because a change would alter stored data. |
 | `PH-DM-INITIAL-VALUE-INVALID` | error | The initial value of a scope cannot be stored as a JSON string, or the state validator of that scope rejects it. |
+| `PH-DM-INTERFACE-INVALID` | error | An object or interface violates an implemented interface's field, argument, or ancestor requirements. The diagnostic identifies the implementing type. |
 | `PH-DM-SCOPE-UNSUPPORTED` | error | A definition uses a scope other than `global` or `local`. |
 | `PH-DM-STATE-ROOT-INVALID` | error | A required state root type is missing, is not an object, or has the wrong name. |
 | `PH-DM-TYPE-POSITION-INVALID` | error | An input type is used where an output type is expected, or an output type where an input type is expected. |
