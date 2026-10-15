@@ -72,27 +72,30 @@ export function validateSubgraphsForHost(
   const { conflicts, contests } = findPackageSubgraphConflicts(
     candidates,
     host,
-    (candidate) => {
-      request.signal?.throwIfAborted();
-      buildPackageSubgraph(
-        candidate,
-        host,
-        scalarResolversOf(candidate.entry.value),
-      );
+    {
+      build: (candidate) =>
+        buildPackageSubgraph(candidate, host, {
+          resolvers: scalarResolversOf(candidate.entry.value),
+          reportScalars: true,
+        }),
+      ...(request.signal !== undefined && { signal: request.signal }),
     },
   );
   for (const candidate of candidates) {
     const conflict = conflicts.get(candidate);
     if (conflict?.kind === "unbuildable") {
-      const { name, entry } = candidate;
+      const { entry } = candidate;
+      const [{ code, message, repair }] = describeSubgraphConflict(
+        candidate.name,
+        conflict,
+      );
       diagnostics.push(
         createDiagnostic({
-          code: "PH-SG-SCHEMA-INVALID",
+          code,
+          message,
+          repair,
           source: entry.source,
           path: entry.path.map(String),
-          message: `${name}: ${conflict.message}`,
-          repair:
-            "Fix the declaration so the augmented schema builds, or declare the missing type.",
         }),
       );
       continue;

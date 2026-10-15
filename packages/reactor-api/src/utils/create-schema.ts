@@ -299,6 +299,11 @@ export type SubgraphSchemaOptions = {
   ownTypeNames?: ReadonlySet<string>;
   /** Generated types already built for `documentModels`. */
   generated?: GeneratedDocumentModelTypes;
+  /**
+   * Whether to log the scalar findings this process has not reported yet.
+   * A build that only checks passes `false`, so the host still logs them.
+   */
+  reportScalars?: boolean;
 };
 
 export const buildSubgraphSchemaModule = (
@@ -330,16 +335,18 @@ export const buildSubgraphSchemaModule = (
 
   // The scalar report only logs. A throw from it must not stop the subgraph
   // from composing, so it is caught.
-  try {
-    for (const diagnostic of unreportedScalarBindings(
-      moduleTypeDefs,
-      resolvers,
-      boundPackageScalars,
-    )) {
-      logger.warn(formatDefinitionDiagnostic(diagnostic));
+  if (options.reportScalars !== false) {
+    try {
+      for (const diagnostic of unreportedScalarBindings(
+        moduleTypeDefs,
+        resolvers,
+        boundPackageScalars,
+      )) {
+        logger.warn(formatDefinitionDiagnostic(diagnostic));
+      }
+    } catch (error) {
+      logger.debug("scalar binding report failed: @error", error);
     }
-  } catch (error) {
-    logger.debug("scalar binding report failed: @error", error);
   }
 
   return {

@@ -39,12 +39,16 @@ export {
 } from "../utils/create-schema.js";
 export type { OwnershipConflict } from "./subgraph-type-ownership.js";
 
+/** `a`, `a and b`, or `a, b and c`. */
+function listed(items: readonly string[]): string {
+  return items.length < 2
+    ? items.join("")
+    : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
 /** `"a"`, `"a" and "b"`, or `"a", "b" and "c"`. */
 export function quotedNames(names: readonly string[]): string {
-  const quoted = names.map((name) => `"${name}"`);
-  return quoted.length < 2
-    ? quoted.join("")
-    : `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
+  return listed(names.map((name) => `"${name}"`));
 }
 
 /** Owner of the types every generated document-model schema carries. */
@@ -66,7 +70,11 @@ export type PackageSubgraph = { name: string; typeDefs: DocumentNode };
 export type RefusedDocumentModel = {
   readonly id: string;
   readonly name: string;
-  readonly kind: "unusable schema" | "reserved names" | "unusable subgraph";
+  readonly kind:
+    | "unusable schema"
+    | "reserved names"
+    | "unusable subgraph"
+    | "reserved subgraph name";
   /** The reason the server logs. */
   readonly reason: string;
 };
@@ -101,8 +109,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   ) => {
     if (!given.has(model)) return;
     const { id, name } = globalStateOf(model);
-    // The server logs a refusal once per model source, and versions that
-    // share a specification share one.
+    // One warning per model and reason, however many versions share it.
     if (
       refused.some(
         (other) =>
@@ -141,14 +148,51 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     }
   }
 
-  // The server registers the latest version's subgraph only, and a later
-  // model whose subgraph takes the same name replaces an earlier one.
-  const subgraphs = new Map<string, PackageSubgraph>();
+  // The server registers the latest version's subgraph only, refuses one
+  // whose name a core subgraph holds, and lets a later model whose subgraph
+  // takes the same name replace an earlier one.
+  const latest = new Map<
+    string,
+    {
+      model: M | DocumentModelModule;
+      own: NonNullable<DocumentModelSchema["subgraph"]>;
+    }
+  >();
   for (const model of latestDocumentModelVersions(admitted)) {
     const own = schemas.get(model)?.subgraph;
     if (own === undefined) continue;
     const name = getDocumentModelSubgraphName(globalStateOf(model));
-    subgraphs.set(name, { name, typeDefs: own.typeDefs });
+    if (coreSubgraphTypeDefs.has(name)) {
+      refuse(
+        model,
+        "reserved subgraph name",
+        `has a subgraph named "${name}", which a core subgraph holds`,
+      );
+      continue;
+    }
+    latest.set(name, { model, own });
+  }
+
+  const generated = generatedTypesOf(admitted, schemas);
+  // Each subgraph is set up onto the generated schema of every admitted
+  // model, so one that builds alone can still fail beside the others.
+  const subgraphs: PackageSubgraph[] = [];
+  for (const [name, { model, own }] of latest) {
+    try {
+      createSchema(modulesOf(admitted), {}, own.typeDefs, {
+        generated,
+        ownTypeNames: own.typeNames,
+        reportScalars: false,
+      });
+    } catch (error) {
+      refuse(
+        model,
+        "unusable subgraph",
+        `has a subgraph that does not build onto the generated schema: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      continue;
+    }
+    subgraphs.push({ name, typeDefs: own.typeDefs });
   }
 
   const fixed = generatedTypesOf([]).names;
@@ -168,10 +212,18 @@ export function hostDocumentModels<M extends DocumentModelSource>(
   return {
     admitted,
     refused,
-    generated: generatedTypesOf(admitted, schemas),
+    generated,
     generatedOwners,
-    subgraphs: [...subgraphs.values()],
+    subgraphs,
   };
+}
+
+function modulesOf(
+  models: readonly DocumentModelSource[],
+): DocumentModelModule[] {
+  return models.filter(
+    (model): model is DocumentModelModule => "documentModel" in model,
+  );
 }
 
 /**
@@ -264,15 +316,19 @@ function generatedTypeConflict(
 export function buildPackageSubgraph(
   subgraph: PackageSubgraph,
   host: HostDocumentModels<DocumentModelSource>,
-  resolvers: Parameters<typeof createSchema>[1] = {},
+  options: {
+    resolvers?: Parameters<typeof createSchema>[1];
+    reportScalars?: boolean;
+  } = {},
 ): void {
   createSchema(
-    host.admitted.filter(
-      (model): model is DocumentModelModule => "documentModel" in model,
-    ),
-    resolvers,
+    modulesOf(host.admitted),
+    options.resolvers ?? {},
     subgraph.typeDefs,
-    { generated: host.generated },
+    {
+      generated: host.generated,
+      reportScalars: options.reportScalars ?? false,
+    },
   );
 }
 
@@ -288,9 +344,12 @@ const byCodeUnits = (left: string, right: string) =>
 export function findPackageSubgraphConflicts<S extends PackageSubgraph>(
   subgraphs: readonly S[],
   host: HostDocumentModels<DocumentModelSource>,
-  build: (subgraph: S) => void = (subgraph) =>
-    buildPackageSubgraph(subgraph, host),
+  options: { build?: (subgraph: S) => void; signal?: AbortSignal } = {},
 ): PackageSubgraphReport<S> {
+  const {
+    build = (subgraph: S) => buildPackageSubgraph(subgraph, host),
+    signal,
+  } = options;
   const conflicts = new Map<S, PackageSubgraphConflicts>();
   const hostCandidates = [
     ...Array.from(coreSubgraphTypeDefs, ([name, typeDefs]) => ({
@@ -305,6 +364,7 @@ export function findPackageSubgraphConflicts<S extends PackageSubgraph>(
   }));
   const claimants = new Map<string, { subgraph: S; definition: string }[]>();
   for (const subgraph of subgraphs) {
+    signal?.throwIfAborted();
     const refusal = refusePackageSubgraph(subgraph, host);
     if (refusal !== undefined) {
       conflicts.set(subgraph, refusal);
@@ -409,20 +469,33 @@ export function describeRefusedDocumentModel(
   model: RefusedDocumentModel,
 ): SubgraphWarning {
   const { name, kind, reason } = model;
-  return {
-    code: "PH-DM-GRAPHQL-REFUSED",
-    message: sentence(
-      kind === "unusable subgraph"
-        ? `The server refuses the subgraph of document model "${name}": it ${reason}`
-        : `The server refuses document model "${name}": it ${reason}`,
-    ),
-    repair:
-      kind === "unusable schema"
-        ? "Fix the document model's state and operation schemas so they build."
-        : kind === "reserved names"
-          ? "Rename the document model, or the types it generates that the server reserves."
-          : "Fix the operation schemas so the model's subgraph builds.",
-  };
+  const whole = `The server refuses document model "${name}": it ${reason}`;
+  const own = `The server refuses the subgraph of document model "${name}": it ${reason}`;
+  const [message, repair] = (() => {
+    switch (kind) {
+      case "unusable schema":
+        return [
+          whole,
+          "Fix the document model's state and operation schemas so they build.",
+        ];
+      case "reserved names":
+        return [
+          whole,
+          "Rename the document model, or the types it generates that the server reserves.",
+        ];
+      case "unusable subgraph":
+        return [
+          own,
+          "Fix the operation schemas so the model's subgraph builds.",
+        ];
+      case "reserved subgraph name":
+        return [
+          own,
+          "Rename the document model, so its subgraph takes a name no core subgraph holds.",
+        ];
+    }
+  })();
+  return { code: "PH-DM-GRAPHQL-REFUSED", message: sentence(message), repair };
 }
 
 export function describeSubgraphConflict(
@@ -443,7 +516,7 @@ export function describeSubgraphConflict(
       const generators = Array.from(
         byOwner,
         ([owner, claims]) =>
-          `${claims.map(({ claim }) => claim).join(", ")}, which ${owner === DOCUMENT_MODEL_SCHEMA_OWNER ? "the document-model schema" : `document model "${owner}"`} generates`,
+          `${listed(claims.map(({ claim }) => claim))}, which ${owner === DOCUMENT_MODEL_SCHEMA_OWNER ? "the document-model schema" : `document model "${owner}"`} generates`,
       );
       return [
         {
