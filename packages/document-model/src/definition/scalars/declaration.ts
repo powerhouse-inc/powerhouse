@@ -289,7 +289,8 @@ function snapshotCoercion(
   }
   // A class instance keeps its methods on the prototype, so each member is
   // looked up along the chain by descriptor: a method is read without
-  // running author code, and an accessor is refused unrun.
+  // running author code, and an accessor is refused unrun. Each method is
+  // called on the instance, so it keeps its own state.
   const members: Partial<Record<(typeof COERCION_KEYS)[number], unknown>> = {};
   for (const key of COERCION_KEYS) {
     const found = dataMember(value, key);
@@ -312,8 +313,19 @@ function snapshotCoercion(
       repair: "Omit coercion to derive it, or provide all three functions.",
     });
   }
-  return members as ScalarCoercion<unknown>;
+  const onInstance =
+    (method: unknown) =>
+    (...args: unknown[]): unknown =>
+      Reflect.apply(method as (...args: unknown[]) => unknown, value, args);
+  return {
+    parseValue: onInstance(members.parseValue),
+    parseLiteral: onInstance(members.parseLiteral),
+    serialize: onInstance(members.serialize),
+  } as ScalarCoercion<unknown>;
 }
+
+/** Deeper than any class hierarchy; a proxy can make a chain endless. */
+const PROTOTYPE_DEPTH_LIMIT = 64;
 
 /** The data value `key` resolves to along `target`'s prototype chain. */
 function dataMember(
@@ -321,14 +333,14 @@ function dataMember(
   key: string,
 ): { readonly value: unknown } | "accessor" | "inspection-failed" {
   try {
-    for (
-      let current: object | null = target;
-      current !== null;
-      current = Object.getPrototypeOf(current) as object | null
-    ) {
+    let current: object | null = target;
+    for (let depth = 0; current !== null; depth++) {
+      if (depth === PROTOTYPE_DEPTH_LIMIT) return "inspection-failed";
       const descriptor = Object.getOwnPropertyDescriptor(current, key);
-      if (descriptor === undefined) continue;
-      return "value" in descriptor ? { value: descriptor.value } : "accessor";
+      if (descriptor !== undefined) {
+        return "value" in descriptor ? { value: descriptor.value } : "accessor";
+      }
+      current = Object.getPrototypeOf(current) as object | null;
     }
     return { value: undefined };
   } catch {
