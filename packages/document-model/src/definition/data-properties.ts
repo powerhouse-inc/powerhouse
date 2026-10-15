@@ -279,15 +279,17 @@ function snapshotPlainObjectMembers<T>(
   ) => DataSnapshot<T>,
   ancestors: Set<object>,
 ): DataSnapshot<{ readonly [key: string]: T }> {
+  let isArray: boolean;
   let prototype: unknown;
   let keys: readonly (string | symbol)[];
   try {
+    isArray = Array.isArray(value);
     prototype = Object.getPrototypeOf(value);
     keys = Reflect.ownKeys(value);
   } catch {
     return { ok: false, reason: "inspection-failed", path };
   }
-  if (prototype === Array.prototype) {
+  if (isArray) {
     return { ok: false, reason: "not-record", path, received: "array" };
   }
   if (prototype !== Object.prototype && prototype !== null) {

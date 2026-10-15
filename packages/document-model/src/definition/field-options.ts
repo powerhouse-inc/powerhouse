@@ -132,11 +132,10 @@ export function snapshotFieldMap(
   value: unknown,
   path: DataPath,
 ): { readonly [key: string]: unknown } {
-  const ownKeys =
-    value !== null && typeof value === "object"
-      ? Reflect.ownKeys(value).filter((key) => typeof key === "string")
-      : [];
-  return snapshotDescriptorOptions(value, ownKeys, path);
+  const snapshot = snapshotRecord(value, undefined, path);
+  if (!snapshot.ok)
+    return optionRejection(snapshot, "PH-DEF-OPTION-INVALID", []);
+  return snapshot.value;
 }
 
 export function assertAuthoredName(value: unknown, path: DataPath): string {
