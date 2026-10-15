@@ -471,7 +471,7 @@ function requiredString(
     path,
     message: "This declaration member must be a nonempty string.",
     expected: "a nonempty string",
-    received: value === undefined ? "undefined" : describeReceived(value),
+    received: describeReceived(value),
     repair: `Give ${path.at(-1) === undefined ? "the member" : String(path.at(-1))} a nonempty string value.`,
   });
   return undefined;
