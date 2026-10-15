@@ -55,6 +55,18 @@ function zeroAbsentSlices(
   present: ReadonlySet<string>,
 ): PHConnectRuntimeConfig {
   const out = { ...config };
+  if (!present.has("@powerhousedao/connect/plugins/generic")) {
+    // The drive-chrome toggles the generic plugin owns describe nothing when
+    // the generic chrome is not composed in: no add-drive affordance, and the
+    // remote/local sections off. (branding is NOT zeroed — it is Connect-level
+    // and survives the plugin's absence.)
+    const off = { enabled: false, allowAdd: false, allowDelete: false };
+    out.drives = {
+      ...out.drives,
+      allowAddDrive: false,
+      sections: { remote: off, local: off },
+    } as never;
+  }
   if (!present.has("@powerhousedao/connect/plugins/sentry")) {
     out.sentry = { ...out.sentry, dsn: null } as never;
   }

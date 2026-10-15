@@ -241,14 +241,18 @@ resolve real modules from your project's `node_modules` today.
 
 :::caution Connect plugin presence today controls CONFIG, not the UI tree
 A built-in Connect plugin's effect right now is its `transformConnectConfig`
-step — the config slice it owns. Removing `@powerhousedao/connect/plugins/generic`
-clears the shell's config (branding, `allowAddDrive`, sections), but **does not
-yet unmount the chrome** (sidebar, home, `/d/` routes) — that UI still renders.
-Gating the shell UI on the generic plugin, so removing it goes headless or lets
-you swap your own shell, is a roadmap item. (The switchboard side is already
-behavioural: removing `mcp` really does remove `/mcp`.) To confirm the pipeline
-is running, remove `generic` and watch the branding/title fall back to the
-default — that change is live today.
+step — the config slice it owns. The generic plugin owns the drive-chrome
+toggles: `allowAddDrive` and `sections.{remote,local}.{enabled,allowAdd,allowDelete}`
+(configure them through its entry `config`, not top-level `connect.drives`).
+Removing `@powerhousedao/connect/plugins/generic` turns those OFF — no
+add-drive affordance, drive sections disabled — which is live and observable
+today. What it does **not** yet do is unmount the chrome shell (sidebar, home,
+`/d/` routes); that UI still renders, and gating it on the plugin (remove it →
+go headless, or swap your own shell) is a roadmap item. (`branding` is NOT the
+generic plugin's concern — it has reach beyond the chrome, like the document
+title, so it stays a top-level `connect.branding` value that survives the
+plugin's absence. The switchboard side is already fully behavioural: removing
+`mcp` removes `/mcp`.)
 :::
 
 ## Writing your own plugin
