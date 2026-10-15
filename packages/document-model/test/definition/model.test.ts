@@ -390,6 +390,65 @@ describe("defineDocumentModel scopes and authorization", () => {
     expect(reported({ custom: {}, auth: {}, ...scopes })).toEqual(both);
   });
 
+  it("reports auth once, unread, whether it is an accessor or non-enumerable", () => {
+    const scopes = {
+      global: { schema: GoodState, initialValue: { title: "" } },
+      local: { schema: null, initialValue: {} },
+    };
+    let ran = false;
+    const withAuth = (
+      descriptor: PropertyDescriptor,
+      before: object = {},
+      after: object = {},
+    ) => {
+      const value = { ...before };
+      Object.defineProperty(value, "auth", {
+        configurable: true,
+        ...descriptor,
+      });
+      return Object.assign(value, after);
+    };
+    const accessor = {
+      enumerable: true,
+      get() {
+        ran = true;
+        return {};
+      },
+    };
+    const hidden = { enumerable: false, value: {} };
+    const reported = (run: () => unknown) =>
+      diagnosticsOf(run).map((entry) => [entry.code, entry.path.join(".")]);
+    const auth = ["PH-AUTH-UNSUPPORTED", "specifications.auth"];
+    const custom = ["PH-DM-SCOPE-UNSUPPORTED", "specifications.custom"];
+
+    expect([
+      reported(declare(withAuth(accessor, {}, scopes))),
+      reported(declare(withAuth(hidden, {}, scopes))),
+      reported(declare(withAuth(accessor, {}, { custom: {}, ...scopes }))),
+      reported(declare(withAuth(accessor, { custom: {} }, scopes))),
+      reported(() =>
+        defineDocumentModel(
+          withAuth(accessor, {
+            id: "test/auth-accessor",
+            name: "AuthAccessor",
+            description: "",
+            extension: "auth",
+            version: 1,
+            author: { name: "Powerhouse" },
+            specifications: scopes,
+          }) as never,
+        ),
+      ),
+    ]).toEqual([
+      [auth],
+      [auth],
+      [auth, custom],
+      [auth, custom],
+      [["PH-AUTH-UNSUPPORTED", "auth"]],
+    ]);
+    expect(ran).toBe(false);
+  });
+
   it("reports a model auth declaration once", () => {
     const diagnostics = diagnosticsOf(() =>
       defineDocumentModel({
