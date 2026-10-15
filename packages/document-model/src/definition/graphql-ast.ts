@@ -801,30 +801,23 @@ function extensionMemberDiagnostic(
 }
 
 /**
- * An untyped author can pass anything here, so the discriminator and the
- * order flag are checked at runtime rather than trusted from the type.
+ * Why a snapshotted compatibility record is not V1, spelled as the faulty
+ * member's `received`, or `undefined` when it is V1.
  */
-function isGraphQLAstV1(
-  value: unknown,
-): value is SchemaFirstGraphQLDocumentCompatibility {
-  if (value === null || typeof value !== "object") return false;
-  const candidate = value as Partial<SchemaFirstGraphQLDocumentCompatibility>;
-  try {
-    return (
-      candidate.kind === "graphql-ast-v1" &&
-      candidate.preserveDefinitionOrder === true
-    );
-  } catch {
-    return false;
+function refusedV1Member(record: {
+  readonly [key: string]: unknown;
+}): string | undefined {
+  if (record.kind !== "graphql-ast-v1") return spelledMember(record.kind);
+  if (record.preserveDefinitionOrder !== true) {
+    return spelledMember(record.preserveDefinitionOrder);
   }
+  return undefined;
 }
 
-/** A refused compatibility's `kind`, or what the value is when it is not a record. */
-function refusedCompatibility(value: unknown): string {
-  const snapshot = snapshotRecord(value, undefined, []);
-  if (!snapshot.ok) return rejectionReceived(snapshot);
-  const kind = snapshot.value.kind;
-  return typeof kind === "string" ? kind : describeReceived(kind);
+function spelledMember(value: unknown): string {
+  return typeof value === "string" || typeof value === "boolean"
+    ? String(value)
+    : describeReceived(value);
 }
 
 function sameMembers(
@@ -858,22 +851,28 @@ export function checkGraphQLDocumentAgreement(options: {
   readonly definitions: readonly NamedGraphQLTypeDefinition[];
   readonly path: DefinitionPath;
 }): readonly DefinitionDiagnostic[] {
-  const { compatibility, definitions, path } = options;
-  if (!isGraphQLAstV1(compatibility)) {
+  const { definitions, path } = options;
+  // An untyped author can pass anything here, so the record is read once,
+  // without running an accessor, and checked on the snapshot.
+  const compatibility = snapshotRecord(options.compatibility, undefined, path);
+  const refused = compatibility.ok
+    ? refusedV1Member(compatibility.value)
+    : rejectionReceived(compatibility);
+  if (!compatibility.ok || refused !== undefined) {
     return [
       compatibilityDiagnostic(
-        path,
+        compatibility.ok ? path : compatibility.path,
         "A GraphQL compatibility declaration must be a V1 location-free document with preserveDefinitionOrder.",
         {
           expected: 'kind "graphql-ast-v1" with preserveDefinitionOrder: true',
-          received: refusedCompatibility(compatibility),
+          received: refused,
           repair:
             "Use the value returned by schemaFirstGraphQLDocument from document-model/tooling.",
         },
       ),
     ];
   }
-  const document: unknown = compatibility.document;
+  const document: unknown = compatibility.value.document;
   if (
     document === null ||
     typeof document !== "object" ||
@@ -893,12 +892,10 @@ export function checkGraphQLDocumentAgreement(options: {
   }
   const shape = validateLocationFreeDocument(document, [...path, "document"]);
   if (shape.length > 0) return shape;
+  const validated = document as LocationFreeGraphQLDocumentNode;
 
   const documentPath = [...path, "document"];
-  const folded = foldTypeExtensions(
-    compatibility.document.definitions,
-    documentPath,
-  );
+  const folded = foldTypeExtensions(validated.definitions, documentPath);
   const diagnostics: DefinitionDiagnostic[] = [
     ...folded.redefinitions.map(({ name }) =>
       compatibilityDiagnostic(
@@ -985,7 +982,7 @@ export function checkGraphQLDocumentAgreement(options: {
     );
   }
 
-  const rootTypes = rootOperationTypeNames(compatibility.document);
+  const rootTypes = rootOperationTypeNames(validated);
   for (const [name, { node }] of folded.types) {
     if (compared.has(name) || rootTypes.has(name)) continue;
     diagnostics.push(
