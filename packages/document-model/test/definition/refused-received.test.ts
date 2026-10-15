@@ -1108,3 +1108,97 @@ describe("a GraphQL compatibility record", () => {
     ).toEqual(["graphql-ast-v1", "graphql-ast-v1"]);
   });
 });
+
+describe("a stored model refusal", () => {
+  const described = (diagnostics: readonly DefinitionDiagnostic[]) =>
+    diagnostics
+      .filter(({ path }) => path[0] === "documentModel")
+      .map(({ path, message, expected, received, repair }) => [
+        path.join("."),
+        message,
+        expected,
+        received,
+        repair,
+      ]);
+  const schemaFirst = (documentModel: unknown) =>
+    described(
+      adaptSchemaFirstDocumentModelModule({ documentModel }, SOURCE)
+        .diagnostics,
+    );
+  const codeFirst = (documentModel: unknown) =>
+    described(
+      adaptCodeFirstDocumentModelSource(
+        { reducer() {}, version: 1, documentModel },
+        SOURCE,
+      ).diagnostics,
+    );
+  const unreadableSpecifications =
+    "A stored document model keeps its specification history in documentModel.global as plain data, and this one cannot be read";
+  const unreadableModule =
+    "A usable document-model module keeps its stored model in documentModel.global as plain data, and this one cannot be read";
+  const plainGlobal =
+    "documentModel.global as a plain record of data properties";
+
+  it("describes the refused parent in the schema-first adapter, and the specifications member once the parent is read", () => {
+    const repair =
+      "Pass the module produced by ph generate, or its stored state.";
+
+    expect([
+      ...schemaFirst(null),
+      ...schemaFirst({ global: [] }),
+      ...schemaFirst({ global: { specifications: {} } }),
+    ]).toEqual([
+      [
+        "documentModel",
+        `${unreadableSpecifications} (not-record).`,
+        plainGlobal,
+        "null",
+        repair,
+      ],
+      [
+        "documentModel.global",
+        `${unreadableSpecifications} (not-record).`,
+        plainGlobal,
+        "array",
+        repair,
+      ],
+      [
+        "documentModel.global.specifications",
+        "A stored document model carries a specification history.",
+        "an array of stored specifications",
+        "object",
+        repair,
+      ],
+    ]);
+  });
+
+  it("describes the refused parent in the code-first adapter, and the stored model ID once the parent is read", () => {
+    expect([
+      ...codeFirst(null),
+      ...codeFirst({ global: [] }),
+      ...codeFirst({ global: {} }),
+    ]).toEqual([
+      [
+        "documentModel",
+        `${unreadableModule} (not-record).`,
+        plainGlobal,
+        "null",
+        "Export the module returned by context.finalize() or family.at(version) without replacing its documentModel.",
+      ],
+      [
+        "documentModel.global",
+        `${unreadableModule} (not-record).`,
+        plainGlobal,
+        "array",
+        "Export the module returned by context.finalize() or family.at(version) without replacing its documentModel.",
+      ],
+      [
+        "documentModel.global.id",
+        "A usable document-model module has a stored model ID.",
+        "a nonempty document type",
+        "undefined",
+        "Declare id in defineDocumentModel; the stored model ID is the document type every consumer registers.",
+      ],
+    ]);
+  });
+});
