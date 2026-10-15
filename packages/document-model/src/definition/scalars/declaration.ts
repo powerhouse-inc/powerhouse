@@ -206,18 +206,6 @@ function withDefaults(
 }
 
 /** Whether `value` is an object whose `methods` are functions, read without letting a throw escape. */
-function hasMethods(value: unknown, methods: readonly string[]): boolean {
-  if (value === null || typeof value !== "object") return false;
-  try {
-    return methods.every(
-      (method) =>
-        typeof (value as Record<string, unknown>)[method] === "function",
-    );
-  } catch {
-    return false;
-  }
-}
-
 const COERCION_KEYS = ["parseValue", "parseLiteral", "serialize"];
 
 const ZERO_KEYS = {
@@ -251,14 +239,7 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
         "Add a one-sentence description; it is the whole contract an introspecting agent reads.",
     });
   }
-  if (!hasMethods(declaration.validator, ["parse", "safeParse"])) {
-    fail(name, {
-      code: "PH-SCALAR-DECLARATION-INVALID",
-      path: ["validator"],
-      message: `Scalar ${name} has no Zod validator.`,
-      repair: "Provide a Zod schema with parse and safeParse.",
-    });
-  }
+  assertValidator(name, declaration.validator);
   for (const key of ["typescriptType", "zodSource"] as const) {
     if (typeof declaration[key] !== "string" || declaration[key] === "") {
       fail(name, {
@@ -267,6 +248,30 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
         message: `Scalar ${name} must record its ${key}.`,
         repair: `Set ${key} to the exact source string generated code uses.`,
       });
+    }
+  }
+}
+
+/** `validator` has parse and safeParse, each read by descriptor so no accessor runs. */
+function assertValidator(name: string, validator: unknown): void {
+  function refuse(path: ScalarFailure["path"], received: string): never {
+    fail(name, {
+      code: "PH-SCALAR-DECLARATION-INVALID",
+      path,
+      message: `Scalar ${name} has no Zod validator.`,
+      received,
+      repair: "Provide a Zod schema with parse and safeParse.",
+    });
+  }
+  if (validator === null || typeof validator !== "object") {
+    refuse(["validator"], describeReceived(validator));
+  }
+  for (const key of ["parse", "safeParse"]) {
+    const found = dataMember(validator, key);
+    if (found === "accessor") refuse(["validator", key], found);
+    if (found === "inspection-failed") refuse(["validator"], found);
+    if (typeof found.value !== "function") {
+      refuse(["validator"], describeReceived(validator));
     }
   }
 }
