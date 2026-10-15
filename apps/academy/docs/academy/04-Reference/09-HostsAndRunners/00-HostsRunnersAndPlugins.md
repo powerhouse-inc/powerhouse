@@ -239,6 +239,18 @@ its own registry (`generic`, `sentry`, `openpanel`, `assistant`,
 browser is on the roadmap. Server-side (switchboard, compound) compositions
 resolve real modules from your project's `node_modules` today.
 
+:::caution Connect plugin presence today controls CONFIG, not the UI tree
+A built-in Connect plugin's effect right now is its `transformConnectConfig`
+step — the config slice it owns. Removing `@powerhousedao/connect/plugins/generic`
+clears the shell's config (branding, `allowAddDrive`, sections), but **does not
+yet unmount the chrome** (sidebar, home, `/d/` routes) — that UI still renders.
+Gating the shell UI on the generic plugin, so removing it goes headless or lets
+you swap your own shell, is a roadmap item. (The switchboard side is already
+behavioural: removing `mcp` really does remove `/mcp`.) To confirm the pipeline
+is running, remove `generic` and watch the branding/title fall back to the
+default — that change is live today.
+:::
+
 ## Writing your own plugin
 
 A complete switchboard plugin with config, in one file:

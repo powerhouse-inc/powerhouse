@@ -66,8 +66,11 @@ export default {
     port: config.studio?.port ?? 3000, // referenced — the value stays in powerhouse.config.json
 
     // THE COMPOSITION — presence is activation (no feature flags behind
-    // these lines). The generic shell: sidebar, home, /d/ URLs, drive
-    // management; delete it and list your own shell plugin to go deep.
+    // these lines). The generic shell owns Connect's chrome: sidebar, home,
+    // /d/ URLs, drive management. Its ENTRY CONFIG (branding, allowAddDrive,
+    // sections) is live today — removing the entry clears that config. NOTE:
+    // removing it does not yet unmount the chrome UI itself; gating the shell
+    // on this plugin ("go headless / swap your own shell") is on the roadmap.
     plugins: ["@powerhousedao/connect/plugins/generic"],
   },
 
