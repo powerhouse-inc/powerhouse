@@ -1142,7 +1142,7 @@ describe("an explicit undefined implements", () => {
 });
 
 describe("a refused value that cannot be inspected", () => {
-  it("still reads as its type, so the refusal is reported rather than thrown", () => {
+  it("reads as inspection-failed, so the refusal is reported rather than thrown", () => {
     const { proxy, revoke } = Proxy.revocable({}, {});
     revoke();
 
@@ -1152,6 +1152,6 @@ describe("a refused value that cannot be inspected", () => {
 
     expect(
       result.diagnostics.map(({ code, received }) => [code, received]),
-    ).toEqual([["PH-DM-DECLARATION-INVALID", "object"]]);
+    ).toEqual([["PH-DM-DECLARATION-INVALID", "inspection-failed"]]);
   });
 });
