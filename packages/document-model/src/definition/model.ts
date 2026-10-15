@@ -552,14 +552,28 @@ function normalizeExamples(
   });
 }
 
-function isExactEmptyObject(value: unknown): value is Record<string, never> {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.getPrototypeOf(value) === Object.prototype &&
-    Reflect.ownKeys(value).length === 0
-  );
+/**
+ * Why `value` is not an exact empty plain object, or `undefined` when it is.
+ * The answer is a refusal's `received`.
+ */
+function notExactEmptyObject(
+  value: unknown,
+  path: DefinitionPath,
+): string | undefined {
+  const otherPrototype = "an object whose prototype is not Object.prototype";
+  const snapshot = snapshotRecord(value, [], path);
+  if (!snapshot.ok) {
+    if (snapshot.reason === "unknown-key") return "a nonempty object";
+    if (snapshot.reason === "custom-prototype") return otherPrototype;
+    return rejectionReceived(snapshot);
+  }
+  try {
+    return Object.getPrototypeOf(value) === Object.prototype
+      ? undefined
+      : otherPrototype;
+  } catch {
+    return "inspection-failed";
+  }
 }
 
 function stateRoot(
@@ -613,21 +627,19 @@ function normalizeScope(
   // object initial value. `{}` in TypeScript also admits nonempty objects and
   // nonnullish primitives, so the runtime check is the narrow one.
   if (scope === "local" && declaration.schema === null) {
-    if (!isExactEmptyObject(declaration.initialValue)) {
+    const initialValuePath = [...path, "initialValue"];
+    const refused = notExactEmptyObject(
+      declaration.initialValue,
+      initialValuePath,
+    );
+    if (refused !== undefined) {
       collector.add({
         code: "PH-DM-INITIAL-VALUE-INVALID",
-        path: [...path, "initialValue"],
+        path: initialValuePath,
         message:
           "An empty local scope requires an exact empty plain JSON object as its initial value.",
         expected: "{}",
-        received:
-          declaration.initialValue === null
-            ? "null"
-            : Array.isArray(declaration.initialValue)
-              ? "array"
-              : typeof declaration.initialValue === "object"
-                ? "a nonempty object or a custom prototype"
-                : typeof declaration.initialValue,
+        received: refused,
         repair: "Use local: { schema: null, initialValue: {} }.",
       });
       return undefined;
@@ -662,18 +674,22 @@ const SPECIFICATION_KEYS = [
   "local",
 ] as const;
 
+/** An object's own string keys, or none when it cannot be inspected; its snapshot reports why. */
+function ownStringKeys(value: unknown): readonly string[] {
+  if (value === null || typeof value !== "object") return [];
+  try {
+    return Object.getOwnPropertyNames(value);
+  } catch {
+    return [];
+  }
+}
+
 function rejectAuthorization(
   collector: DefinitionDiagnosticCollector,
   container: unknown,
   path: DefinitionPath,
 ): void {
-  if (
-    container === null ||
-    typeof container !== "object" ||
-    !Object.hasOwn(container, "auth")
-  ) {
-    return;
-  }
+  if (!ownStringKeys(container).includes("auth")) return;
   collector.add({
     code: "PH-AUTH-UNSUPPORTED",
     path: [...path, "auth"],
@@ -693,22 +709,20 @@ function normalizeSpecifications(
 ): DocumentModelCompilationConfig["specifications"] | undefined {
   const path: DefinitionPath = ["specifications"];
   rejectAuthorization(collector, value, path);
-  if (value !== null && typeof value === "object") {
-    // `specifications` is the scope map plus two reserved members. Any other
-    // key is an authored platform or custom scope, which V1 does not admit.
-    for (const key of Object.keys(value)) {
-      if (key === "auth") continue;
-      if ((SPECIFICATION_KEYS as readonly string[]).includes(key)) continue;
-      collector.add({
-        code: "PH-DM-SCOPE-UNSUPPORTED",
-        path: [...path, key],
-        message: `Scope ${JSON.stringify(key)} cannot be declared; DocumentSpecification.state describes global and local only.`,
-        expected: "global or local",
-        received: key,
-        repair:
-          "Remove the scope. auth, document, and header stay platform concerns, and runtime action scopes keep their current handling.",
-      });
-    }
+  // `specifications` is the scope map plus two reserved members. Any other
+  // key is an authored platform or custom scope, which V1 does not admit.
+  for (const key of ownStringKeys(value)) {
+    if (key === "auth") continue;
+    if ((SPECIFICATION_KEYS as readonly string[]).includes(key)) continue;
+    collector.add({
+      code: "PH-DM-SCOPE-UNSUPPORTED",
+      path: [...path, key],
+      message: `Scope ${JSON.stringify(key)} cannot be declared; DocumentSpecification.state describes global and local only.`,
+      expected: "global or local",
+      received: key,
+      repair:
+        "Remove the scope. auth, document, and header stay platform concerns, and runtime action scopes keep their current handling.",
+    });
   }
   const specifications = take(
     collector,

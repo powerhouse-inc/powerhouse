@@ -98,13 +98,26 @@ type ScalarFailure = Omit<DefinitionDiagnosticInput, "code"> & {
     | "PH-SCALAR-ZERO-VALUE-INVALID";
 };
 
-function fail(name: string, input: ScalarFailure): never {
+/** `name` is the declared scalar name, or `undefined` when there is none to name. */
+function fail(name: string | undefined, input: ScalarFailure): never {
   throw new DocumentModelDefinitionError([
     createDiagnostic({
       ...input,
-      definition: { kind: "scalar", key: name },
+      ...(name !== undefined && { definition: { kind: "scalar", key: name } }),
     }),
   ]);
+}
+
+/** Reads a refused declaration's own string `name` without running author code. */
+function ownStringName(input: unknown): string | undefined {
+  if (input === null || typeof input !== "object") return undefined;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(input, "name");
+    const name: unknown = descriptor?.value;
+    return typeof name === "string" ? name : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function parseScalarDeclaration(
@@ -112,12 +125,12 @@ export function parseScalarDeclaration(
 ): ResolvedScalarDeclaration {
   const snapshot = snapshotRecord(input, DECLARATION_KEYS, []);
   if (!snapshot.ok) {
-    const name = String((input as { readonly name?: unknown } | null)?.name);
+    const name = ownStringName(input);
     if (snapshot.reason === "unknown-key" && snapshot.key === "visibility") {
       fail(name, {
         code: "PH-SCALAR-DECLARATION-INVALID",
         path: ["visibility"],
-        message: `Scalar ${name} sets visibility, which defineScalar does not take.`,
+        message: `${name === undefined ? "This scalar declaration" : `Scalar ${name}`} sets visibility, which defineScalar does not take.`,
         repair:
           "Remove visibility. Only the compiler catalog declares internal scalars, so every scalar defineScalar returns is one authors use.",
       });
@@ -128,6 +141,16 @@ export function parseScalarDeclaration(
       message: `The declaration could not be snapshotted (${snapshot.reason}).`,
       received: rejectionReceived(snapshot),
       repair: "Pass a plain declaration object with data properties only.",
+    });
+  }
+  const name = snapshot.value.name;
+  if (!isAuthoredSchemaName(name)) {
+    fail(typeof name === "string" ? name : undefined, {
+      code: "PH-SCALAR-DECLARATION-INVALID",
+      path: ["name"],
+      message: "A scalar name must be a GraphQL name.",
+      received: typeof name === "string" ? name : describeReceived(name),
+      repair: "Use the registered SDL scalar name.",
     });
   }
   const declaration = withDefaults(
@@ -167,15 +190,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function assertShape(declaration: ResolvedScalarDeclaration): void {
   const name = declaration.name;
-  if (!isAuthoredSchemaName(name)) {
-    fail(String(name), {
-      code: "PH-SCALAR-DECLARATION-INVALID",
-      path: ["name"],
-      message: "A scalar name must be a GraphQL name.",
-      received: typeof name === "string" ? name : describeReceived(name),
-      repair: "Use the registered SDL scalar name.",
-    });
-  }
   if (
     typeof declaration.builderName !== "string" ||
     !isAuthoredSchemaName(declaration.builderName)
