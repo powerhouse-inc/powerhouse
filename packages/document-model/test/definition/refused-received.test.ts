@@ -1,6 +1,7 @@
 import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import { schemaFirstSpecification } from "../../src/definition/compatibility.js";
 import {
@@ -317,6 +318,183 @@ describe("a value refused where a record belongs", () => {
       ["", "array"],
       ["", "null"],
       ["", "array"],
+    ]);
+  });
+});
+
+describe("a refusal built from a snapshot rejection", () => {
+  it("describes the value at the rejection's path, not the root", () => {
+    const Probe = defineScalar({
+      name: "Probe",
+      description: "A probe scalar.",
+      representation: "string",
+      validator: z.string(),
+      zodSource: "z.string()",
+    });
+    const wire = JSON.parse(
+      JSON.stringify(
+        defineDocumentModel(
+          config({
+            specifications: {
+              global: {
+                schema: ph.object("SampleState", { fields: { p: Probe() } }),
+                initialValue: { p: null },
+              },
+              local: { schema: null, initialValue: {} },
+            },
+          }),
+        ).finalize({ modules: [] }).definition,
+      ),
+    ) as {
+      readonly specifications: readonly {
+        readonly scalars: readonly { readonly definition: object }[];
+      }[];
+    };
+    Object.defineProperty(
+      wire.specifications[0].scalars[0].definition,
+      "zero",
+      {
+        get: () => ({ kind: "none", reason: "none" }),
+        enumerable: true,
+      },
+    );
+    const wireChecked = (value: unknown) => {
+      const collector = new DefinitionDiagnosticCollector();
+      checkDocumentModelDefinitionShape(collector, value);
+      return collector.diagnostics;
+    };
+    const firstRefusal = (diagnostics: readonly DefinitionDiagnostic[]) => {
+      const [first] = diagnostics;
+      return [first.path.join("."), first.received];
+    };
+
+    expect([
+      firstRefusal(
+        diagnosticsOf(() =>
+          schemaFirstSpecification({
+            ids: { "module/a": Symbol("s") },
+          } as never),
+        ),
+      ),
+      firstRefusal(
+        diagnosticsOf(() =>
+          schemaFirstSpecification({
+            serialization: {
+              get "state/global/schema"() {
+                return "";
+              },
+            },
+          }),
+        ),
+      ),
+      firstRefusal(
+        diagnosticsOf(() =>
+          schemaFirstSpecification({
+            names: { "module/a": { storedName: [Symbol("s")] } },
+          } as never),
+        ),
+      ),
+      firstRefusal(
+        adaptCodeFirstDocumentModelSource(
+          {
+            get reducer() {
+              return () => undefined;
+            },
+          },
+          SOURCE,
+        ).diagnostics,
+      ),
+      firstRefusal(
+        adaptCodeFirstDocumentModelSource(
+          {
+            modules: [],
+            at() {},
+            upgradeManifest: {
+              get documentType() {
+                return "test/sample";
+              },
+            },
+          },
+          SOURCE,
+        ).diagnostics,
+      ),
+      firstRefusal(
+        adaptSchemaFirstDocumentModelModule(
+          {
+            get documentModel() {
+              return {};
+            },
+          },
+          SOURCE,
+        ).diagnostics,
+      ),
+      firstRefusal(
+        wireChecked({
+          get kind() {
+            return "powerhouse.document-model";
+          },
+        }),
+      ),
+      firstRefusal(wireChecked(wire)),
+    ]).toEqual([
+      ["ids.module/a", "symbol"],
+      ["serialization.state/global/schema", "accessor"],
+      ["names.module/a.storedName.0", "symbol"],
+      ["reducer", "accessor"],
+      ["upgradeManifest.documentType", "accessor"],
+      ["documentModel", "accessor"],
+      ["kind", "accessor"],
+      ["specifications.0.scalars.0.definition.zero", "accessor"],
+    ]);
+  });
+
+  it("names an array of another prototype or realm where an array belongs, and says how to copy it", () => {
+    class Sub extends Array {}
+
+    expect(
+      [
+        () => ph.union("U", { members: new Sub() as never }),
+        () => ph.union("U", { members: runInNewContext("[]") as never }),
+        () =>
+          defineDocumentModel(
+            config({
+              specifications: {
+                ...specifications({}),
+                auxiliaryTypes: new Sub(),
+              },
+            }),
+          ),
+      ].flatMap((run) =>
+        diagnosticsOf(run).map(({ code, path, message, received, repair }) => [
+          code,
+          path.join("."),
+          message,
+          received,
+          repair,
+        ]),
+      ),
+    ).toEqual([
+      [
+        "PH-DEF-OPTION-INVALID",
+        "options.members",
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+        "array of another prototype or realm",
+        "Pass an array literal, or copy the array with Array.from(...).",
+      ],
+      [
+        "PH-DEF-OPTION-INVALID",
+        "options.members",
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+        "array of another prototype or realm",
+        "Pass an array literal, or copy the array with Array.from(...).",
+      ],
+      [
+        "PH-DM-DECLARATION-INVALID",
+        "specifications.auxiliaryTypes",
+        "Expected a plain array, not an Array subclass or an array from another realm.",
+        "array of another prototype or realm",
+        "Pass an array literal, or copy the array with Array.from(...).",
+      ],
     ]);
   });
 });
