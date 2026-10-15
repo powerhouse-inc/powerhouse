@@ -823,7 +823,7 @@ describe("a refused member that is null, an array, or has no string form", () =>
       ["upgradeManifest.upgrades.v2.toVersion", "array"],
       ["upgradeManifest.upgrades.v2.toVersion", "object"],
       ["specifications.graphQLCompatibility", "array"],
-      ["specifications.graphQLCompatibility", "object"],
+      ["specifications.graphQLCompatibility.kind", "object"],
       ["specifications.graphQLCompatibility", "inspection-failed"],
       ["compatibility.preserveDefinitionOrder", "array"],
       ["compatibility.preserveDefinitionOrder", "object"],
@@ -1079,17 +1079,17 @@ describe("a GraphQL compatibility record", () => {
       ],
       [
         "PH-DM-COMPATIBILITY-INVALID",
-        "specifications.graphQLCompatibility",
+        "specifications.graphQLCompatibility.preserveDefinitionOrder",
         "false",
       ],
       [
         "PH-DM-COMPATIBILITY-INVALID",
-        "specifications.graphQLCompatibility",
+        "specifications.graphQLCompatibility.preserveDefinitionOrder",
         "undefined",
       ],
       [
         "PH-DM-COMPATIBILITY-INVALID",
-        "specifications.graphQLCompatibility",
+        "specifications.graphQLCompatibility.kind",
         "graphql-ast-v2",
       ],
     ]);
