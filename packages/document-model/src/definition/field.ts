@@ -275,14 +275,15 @@ function refTarget(
 function implementedInterfaces(config: {
   readonly [key: string]: unknown;
 }): readonly InterfaceDescriptor[] {
-  const implemented = Object.hasOwn(config, "implements")
-    ? snapshotDescriptorArray(
-        config.implements,
-        ["options", "implements"],
-        "PH-DEF-IMPLEMENTS-INVALID",
-        "Pass implements as an array of descriptors returned by ph.interface.",
-      )
-    : [];
+  const implemented =
+    config.implements !== undefined
+      ? snapshotDescriptorArray(
+          config.implements,
+          ["options", "implements"],
+          "PH-DEF-IMPLEMENTS-INVALID",
+          "Pass implements as an array of descriptors returned by ph.interface.",
+        )
+      : [];
   const seen = new Set<string>();
   implemented.forEach((candidate, index) => {
     const path = ["options", "implements", index];

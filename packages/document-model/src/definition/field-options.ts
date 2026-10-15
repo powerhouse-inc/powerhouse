@@ -20,6 +20,7 @@ import {
 } from "./descriptor-registry.js";
 import {
   type DefinitionDiagnosticCode,
+  describeReceived,
   failDefinition,
 } from "./diagnostics.js";
 import { canonicalJson, isAuthoredSchemaName } from "./primitives.js";
@@ -146,7 +147,7 @@ export function assertAuthoredName(value: unknown, path: DataPath): string {
       message:
         "A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores.",
       expected: "a GraphQL name such as InvoiceLineItem",
-      received: typeof value === "string" ? value : typeof value,
+      received: typeof value === "string" ? value : describeReceived(value),
       repair:
         "Use letters, digits, and underscores, start with a letter or one underscore, and avoid the reserved __ prefix.",
     });
@@ -228,7 +229,7 @@ export function stringOption(
       path: [...path, key],
       message: `Option ${key} must be a string.`,
       expected: "string",
-      received: typeof value,
+      received: describeReceived(value),
       repair: `Pass a string ${key} or omit it.`,
     });
   }
@@ -375,7 +376,7 @@ export function resolveFieldOptions<TRequired extends boolean>(
       path: [...path, "required"],
       message: "Option required must be a boolean.",
       expected: "boolean",
-      received: typeof required,
+      received: describeReceived(required),
       repair: "Use required: true, required: false, or omit the option.",
     });
   }

@@ -426,6 +426,12 @@ export function createDiagnostic(
   };
 }
 
+/** What an author passed, as a refusal's `received`: `null`, `array`, or its `typeof`. */
+export function describeReceived(value: unknown): string {
+  if (value === null) return "null";
+  return Array.isArray(value) ? "array" : typeof value;
+}
+
 export function failDefinition(input: DefinitionDiagnosticInput): never {
   throw new DocumentModelDefinitionError([createDiagnostic(input)]);
 }

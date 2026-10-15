@@ -2,7 +2,7 @@ import type {
   DefinitionDiagnostic,
   SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
-import { failDefinition } from "../diagnostics.js";
+import { describeReceived, failDefinition } from "../diagnostics.js";
 import { snapshotDescriptorArray } from "../field-options.js";
 import type { ScalarBinding } from "../scalars/types.js";
 import { compileSubgraphSchema, rootFor } from "./ast.js";
@@ -160,11 +160,6 @@ function subgraphName(value: unknown): string {
     });
   }
   return value;
-}
-
-function describeReceived(value: unknown): string {
-  if (value === null) return "null";
-  return Array.isArray(value) ? "array" : typeof value;
 }
 
 function schemaKindOrFail(value: unknown): void {

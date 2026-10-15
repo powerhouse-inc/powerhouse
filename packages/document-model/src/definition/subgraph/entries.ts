@@ -1,4 +1,4 @@
-import { failDefinition } from "../diagnostics.js";
+import { describeReceived, failDefinition } from "../diagnostics.js";
 import { isFieldDescriptor } from "../descriptor-registry.js";
 import {
   assertAuthoredName,
@@ -116,7 +116,7 @@ export function readEntry(
       code: "PH-SG-ENTRY-INVALID",
       path,
       message: "The entries callback returned something the builders did not.",
-      received: typeof value,
+      received: describeReceived(value),
       repair:
         "Return only values produced by query, mutation, subscription, field, resolveType, or isTypeOf.",
     });
@@ -507,7 +507,7 @@ function resolverOrFail<TCall>(
         value === undefined
           ? `${subject} declares no ${member}.`
           : `${subject} declares a ${member} that is not a function.`,
-      received: typeof value,
+      received: describeReceived(value),
       repair,
     });
   }
@@ -520,7 +520,7 @@ function keyOrFail(value: unknown, builder: string): string {
       code: "PH-SG-ENTRY-INVALID",
       path: ["key"],
       message: `${builder}() takes a key as a non-empty string.`,
-      received: typeof value,
+      received: describeReceived(value),
       repair: `Pass the key first, as ${builder}("postById", { ... }).`,
     });
   }
