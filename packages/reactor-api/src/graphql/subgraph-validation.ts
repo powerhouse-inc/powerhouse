@@ -32,6 +32,7 @@ import {
 export function validateSubgraphsForHost(
   request: HostValidationRequest,
 ): HostValidationResult {
+  request.signal?.throwIfAborted();
   const diagnostics: DefinitionDiagnostic[] = [];
   const host = hostDocumentModels(request.documentModels);
   for (const refused of host.refused) {
@@ -72,14 +73,11 @@ export function validateSubgraphsForHost(
   const { conflicts, contests } = findPackageSubgraphConflicts(
     candidates,
     host,
-    {
-      build: (candidate) =>
-        buildPackageSubgraph(candidate, host, {
-          resolvers: scalarResolversOf(candidate.entry.value),
-          reportScalars: true,
-        }),
-      ...(request.signal !== undefined && { signal: request.signal }),
-    },
+    (candidate) =>
+      buildPackageSubgraph(candidate, host, {
+        resolvers: scalarResolversOf(candidate.entry.value),
+        reportScalars: true,
+      }),
   );
   for (const candidate of candidates) {
     const conflict = conflicts.get(candidate);

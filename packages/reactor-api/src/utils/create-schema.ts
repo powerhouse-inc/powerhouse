@@ -407,8 +407,9 @@ export type DocumentModelSource =
   | DocumentModelModule
   | DocumentModelGlobalState;
 
-const isModule = (source: DocumentModelSource): source is DocumentModelModule =>
-  "documentModel" in source;
+export const isModule = (
+  source: DocumentModelSource,
+): source is DocumentModelModule => "documentModel" in source;
 
 export const globalStateOf = (
   source: DocumentModelSource,
