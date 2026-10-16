@@ -5,5 +5,10 @@
     "types": ["node"]
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../../packages/shared"
+    }
+  ]
 }

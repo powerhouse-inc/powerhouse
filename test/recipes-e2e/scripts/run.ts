@@ -267,6 +267,25 @@ function exemptPowerhouseFromReleaseAge(workDir: string): void {
   );
 }
 
+/** Pins `zod` in `workDir` to this checkout's version: linked packages use this
+ * checkout's zod, and two zod 4 copies don't share types. */
+function alignZodWithCheckout(workDir: string): void {
+  // The installed version, not the catalog's range: the linked packages use it.
+  const zodManifest = path.join(MONOREPO, "node_modules/zod/package.json");
+  const { version } = JSON.parse(fs.readFileSync(zodManifest, "utf-8")) as {
+    version?: string;
+  };
+  if (!version) fail(`no zod version in ${zodManifest}`);
+
+  const file = path.join(workDir, "pnpm-workspace.yaml");
+  const existing = fs.readFileSync(file, "utf-8");
+  const entry = `  zod: "${version}"\n`;
+  const updated = /^overrides:\s*$/m.test(existing)
+    ? existing.replace(/^overrides:\s*\n/m, (block) => `${block}${entry}`)
+    : `${existing}${existing.endsWith("\n") ? "" : "\n"}\n# Added by test/recipes-e2e: one zod with the linked packages.\noverrides:\n${entry}`;
+  fs.writeFileSync(file, updated);
+}
+
 /** Rewrite the Powerhouse specifiers of every recipe in `workDir` to `link:`. */
 function applyLinks(
   workDir: string,
@@ -525,6 +544,9 @@ async function main(): Promise<void> {
 
     step("Exempting Powerhouse packages from the release-age policy");
     exemptPowerhouseFromReleaseAge(options.workDir);
+
+    step("Pinning zod to this checkout's version");
+    alignZodWithCheckout(options.workDir);
 
     if (options.install) {
       step("Installing");
