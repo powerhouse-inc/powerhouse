@@ -321,17 +321,19 @@ export async function createReactor(
     subscribeToPackagesChannel(packageManager);
   }
 
-  const documentModelModules = packageManager.packages
-    .flatMap((pkg) => pkg.documentModels)
-    .filter(
-      (module, index, modules) =>
-        // dedupe by documentType and version
-        modules.findIndex(
-          (m) =>
-            m.documentModel.global.id === module.documentModel.global.id &&
-            m.version === module.version,
-        ) === index,
-    );
+  const loadedDocumentModels = () =>
+    packageManager.packages
+      .flatMap((pkg) => pkg.documentModels)
+      .filter(
+        (module, index, modules) =>
+          // dedupe by documentType and version
+          modules.findIndex(
+            (m) =>
+              m.documentModel.global.id === module.documentModel.global.id &&
+              m.version === module.version,
+          ) === index,
+      );
+  const documentModelModules = loadedDocumentModels();
 
   const upgradeManifests = packageManager.packages
     .flatMap((pkg) => pkg.upgradeManifests)
@@ -523,7 +525,7 @@ export async function createReactor(
     module: reactorClientModule,
     remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
     signer: renown.signer,
-    documentModelModules,
+    documentModelModules: loadedDocumentModels,
   });
 
   const drives = await getAppDrives(
@@ -579,15 +581,19 @@ export async function createReactor(
 
   // Add default/remote drives in the background so the app renders immediately.
   // They are tracked before the drives are set, so a waiting route sees them pending.
+  // The remote client lists the Switchboard's own drives; it has no sync to add drives to.
+  const addsDrives = mode !== "remote";
   const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
-  if (defaultDrivesConfig.length > 0) {
+  if (addsDrives && defaultDrivesConfig.length > 0) {
     void trackDriveArrival(
       addDefaultDrivesForNewReactor(defaultDrivesConfig),
     ).catch((error) => console.error("Failed to add default drives:", error));
   }
 
   const remoteUrl = getDriveUrl();
-  if (remoteUrl) {
+  if (remoteUrl && !addsDrives) {
+    logger.warn("The remote reactor client ignores ?driveUrl=@url", remoteUrl);
+  } else if (remoteUrl) {
     void trackDriveArrival(
       addRemoteDrive(remoteUrl, undefined).then((driveId) =>
         untilDriveListed(store, driveId),

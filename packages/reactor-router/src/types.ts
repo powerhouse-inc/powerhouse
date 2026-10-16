@@ -106,6 +106,8 @@ export type RoutingOptions = {
   readonly onDiagnostic?: RouterDiagnostic;
   /** Signs the actions the router builds itself. Defaults to no signature. */
   readonly signer?: ISigner;
-  /** The module registry; absent, the primary backend's is used. */
-  readonly documentModelModules?: readonly DocumentModelModule[];
+  /** The module registry, or a getter read on each lookup; absent, the primary backend's is used. */
+  readonly documentModelModules?:
+    | readonly DocumentModelModule[]
+    | (() => readonly DocumentModelModule[]);
 };

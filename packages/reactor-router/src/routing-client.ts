@@ -236,7 +236,7 @@ export class RoutingReactorClient implements IReactorClient {
   private readonly dispatcher: RouteDispatcher;
   private readonly dedupSize: number;
   private readonly signer: ISigner;
-  private readonly registry: readonly DocumentModelModule[] | undefined;
+  private readonly modules: (() => readonly DocumentModelModule[]) | undefined;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
@@ -247,7 +247,11 @@ export class RoutingReactorClient implements IReactorClient {
       options,
     );
     this.signer = options.signer ?? new UnsignedSigner();
-    this.registry = options.documentModelModules;
+    const registry = options.documentModelModules;
+    this.modules =
+      typeof registry === "function"
+        ? registry
+        : registry && ((): readonly DocumentModelModule[] => registry);
     this.dedupSize =
       options.subscriptionDedupSize ?? DEFAULT_SUBSCRIPTION_DEDUP_SIZE;
     this.drives = new RoutingDriveClient(
@@ -277,7 +281,7 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>> {
-    if (this.registry === undefined) {
+    if (this.modules === undefined) {
       const primary = this.dispatcher.primary;
       return declared(primary, "getDocumentModelModules")(
         namespace,
@@ -285,7 +289,7 @@ export class RoutingReactorClient implements IReactorClient {
         signal,
       );
     }
-    const matching = this.registry.filter(
+    const matching = this.modules().filter(
       (module) =>
         !namespace || module.documentModel.global.id.startsWith(namespace),
     );
@@ -304,8 +308,8 @@ export class RoutingReactorClient implements IReactorClient {
   async getDocumentModelModule(
     documentType: string,
   ): Promise<DocumentModelModule> {
-    if (this.registry !== undefined) {
-      return selectDocumentModelModule(this.registry, documentType);
+    if (this.modules !== undefined) {
+      return selectDocumentModelModule(this.modules(), documentType);
     }
     let first: unknown = undefined;
     for (const backend of this.primaryFirst()) {
@@ -1168,8 +1172,8 @@ export class RoutingReactorClient implements IReactorClient {
   private async allModules(
     signal?: AbortSignal,
   ): Promise<readonly DocumentModelModule[]> {
-    if (this.registry !== undefined) {
-      return this.registry;
+    if (this.modules !== undefined) {
+      return this.modules();
     }
     const page = await this.getDocumentModelModules(
       undefined,

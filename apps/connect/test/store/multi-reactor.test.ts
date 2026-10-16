@@ -166,6 +166,24 @@ describe("buildMultiReactorClient", () => {
     expect(remote.facts.reactor.syncChannels).toEqual([GQL_CHANNEL_TYPE]);
   });
 
+  it("answers document models from the loaded set when remote-only, including later ones", async () => {
+    stub = await serve(switchboard({}));
+    const loaded: DocumentModelModule[] = [];
+    const router = await buildMultiReactorClient({
+      module: undefined,
+      remoteGraphqlUrl: stub.url,
+      signer,
+      documentModelModules: () => loaded,
+    });
+    await expect(router.getDocumentModelModule(DRIVE_TYPE)).rejects.toThrow();
+
+    loaded.push(driveDocumentModelModule as unknown as DocumentModelModule);
+    const module = await router.getDocumentModelModule(DRIVE_TYPE);
+    expect(module.documentModel.global.id).toBe(DRIVE_TYPE);
+    const { results } = await router.getDocumentModelModules();
+    expect(results.map((m) => m.documentModel.global.id)).toEqual([DRIVE_TYPE]);
+  });
+
   it("reaches a main-thread reactor directly", () => {
     expect(localReach("browser")).toEqual({
       hosting: "in-process",
