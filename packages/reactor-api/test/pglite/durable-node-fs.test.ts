@@ -17,31 +17,61 @@ const COMMITS = 10;
 
 interface HostFsSpy {
   hostFs: NonNullable<DurableNodeFsOptions["hostFs"]>;
-  counts: { fsync: number; fdatasync: number };
+  counts: { fsync: number; fdatasync: number; open: number };
   failFdatasync: { current: boolean };
+  /** Emulate Windows read-only-handle semantics deterministically: EPERM any
+   * sync on an fd the spy did not open itself (i.e. every fd NODEFS opened),
+   * while the fallback's own `'r+'` reopens keep working. */
+  refuseDirect: { current: boolean };
+  /** Make the fallback reopen fail, so the original error must surface. */
+  failOpen: { current: boolean };
+}
+
+function errnoError(code: string, message: string): Error {
+  const err = new Error(message) as Error & { code: string };
+  err.code = code;
+  return err;
 }
 
 function spyHostFs(): HostFsSpy {
-  const counts = { fsync: 0, fdatasync: 0 };
+  const counts = { fsync: 0, fdatasync: 0, open: 0 };
   const failFdatasync = { current: false };
+  const refuseDirect = { current: false };
+  const failOpen = { current: false };
+  const ownFds = new Set<number>();
+  const eperm = () =>
+    errnoError("EPERM", "EPERM: operation not permitted, fsync");
   return {
     counts,
     failFdatasync,
+    refuseDirect,
+    failOpen,
     hostFs: {
       fsyncSync: (fd) => {
+        if (refuseDirect.current && !ownFds.has(fd)) throw eperm();
         nodeFs.fsyncSync(fd);
         counts.fsync++;
       },
       fdatasyncSync: (fd) => {
         if (failFdatasync.current) {
-          const err = new Error("ENOSPC: no space left on device") as Error & {
-            code: string;
-          };
-          err.code = "ENOSPC";
-          throw err;
+          throw errnoError("ENOSPC", "ENOSPC: no space left on device");
         }
+        if (refuseDirect.current && !ownFds.has(fd)) throw eperm();
         nodeFs.fdatasyncSync(fd);
         counts.fdatasync++;
+      },
+      openSync: ((path: nodeFs.PathLike, flags: nodeFs.OpenMode) => {
+        if (failOpen.current) {
+          throw errnoError("EPERM", "EPERM: operation not permitted, open");
+        }
+        const fd = nodeFs.openSync(path, flags);
+        ownFds.add(fd);
+        counts.open++;
+        return fd;
+      }) as typeof nodeFs.openSync,
+      closeSync: (fd) => {
+        ownFds.delete(fd);
+        nodeFs.closeSync(fd);
       },
     },
   };
@@ -115,7 +145,9 @@ describe("createDurableNodeFs", () => {
       expect(spy.counts.fdatasync).toBe(0);
       const inodes = await countInodes(dir);
       const dirSyncs = syncDirectory(dir) ? inodes.dirs : 0;
-      expect(spy.counts.fsync).toBe(inodes.files + dirSyncs);
+      // On Windows, Postgres's own post-init sweep syncs through read-only
+      // handles; each now recovers via one reopen (counts.open) + one fsync.
+      expect(spy.counts.fsync).toBe(inodes.files + dirSyncs + spy.counts.open);
 
       await pg.exec("CREATE TABLE t (v int)");
       const before = spy.counts.fdatasync;
@@ -165,7 +197,7 @@ describe("createDurableNodeFs", () => {
         await pg.exec(`INSERT INTO t VALUES (${i})`);
       }
       await pg.exec("CHECKPOINT");
-      expect(spy.counts).toEqual({ fsync: 0, fdatasync: 0 });
+      expect(spy.counts).toEqual({ fsync: 0, fdatasync: 0, open: 0 });
     },
     BOOT,
   );
@@ -202,6 +234,7 @@ describe("createDurableNodeFs", () => {
       });
       await pg.exec("CREATE TABLE t (v int)");
       spy.failFdatasync.current = true;
+      const openBefore = spy.counts.open;
 
       await expect(pg.exec("INSERT INTO t VALUES (1)")).rejects.toThrow(
         /PGlite aborted/,
@@ -210,12 +243,77 @@ describe("createDurableNodeFs", () => {
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining("fdatasync failed"),
       );
+      // ENOSPC is not EPERM: the reopen fallback must not have been tried.
+      expect(spy.counts.open).toBe(openBefore);
 
       // close() rejects on the dead runtime; it must settle, not hang.
       await expect(pg.close()).rejects.toThrow(/PGlite aborted/);
       console.info(`pg.closed after abort: ${pg.closed}`);
       expect(pg.ready).toBe(false);
       await expect(pg.query("SELECT 1")).rejects.toThrow();
+    },
+    BOOT,
+  );
+
+  it(
+    "recovers EPERM syncs via a per-path write-handle reopen",
+    async () => {
+      const spy = spyHostFs();
+      const warn = vi.fn();
+      const { pg } = await start({ hostFs: spy.hostFs, logger: { warn } });
+      await pg.exec("CREATE TABLE t (v int)");
+
+      // Windows semantics from here on: every sync on a NODEFS-opened fd
+      // refuses; only the fallback's own 'r+' reopens may sync.
+      spy.refuseDirect.current = true;
+      const openBefore = spy.counts.open;
+      for (let i = 0; i < COMMITS; i++) {
+        await pg.exec(`INSERT INTO t VALUES (${i})`);
+      }
+      await pg.exec("CHECKPOINT");
+      spy.refuseDirect.current = false;
+
+      // Every refused barrier recovered through a reopen — at least one per
+      // commit (WAL fdatasync) — and Postgres never saw an EIO.
+      expect(spy.counts.open - openBefore).toBeGreaterThanOrEqual(COMMITS);
+      const res = await pg.query("SELECT count(*)::int AS n FROM t");
+      expect((res.rows[0] as { n: number }).n).toBe(COMMITS);
+      const failures = warn.mock.calls.filter(([message]) =>
+        /fsync failed|fdatasync failed/.test(String(message)),
+      );
+      expect(failures).toEqual([]);
+      // The routing note is logged once, not per call.
+      const notes = warn.mock.calls.filter(([message]) =>
+        /read-only handle/.test(String(message)),
+      );
+      expect(notes).toHaveLength(1);
+    },
+    BOOT,
+  );
+
+  it(
+    "surfaces the original failure when the reopen fallback cannot help",
+    async () => {
+      const spy = spyHostFs();
+      const onAbort = vi.fn();
+      const warn = vi.fn();
+      const { pg } = await start({
+        hostFs: spy.hostFs,
+        onAbort,
+        logger: { warn },
+      });
+      await pg.exec("CREATE TABLE t (v int)");
+      spy.refuseDirect.current = true;
+      spy.failOpen.current = true;
+
+      await expect(pg.exec("INSERT INTO t VALUES (1)")).rejects.toThrow(
+        /PGlite aborted/,
+      );
+      expect(onAbort).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("fdatasync failed"),
+      );
+      await expect(pg.close()).rejects.toThrow(/PGlite aborted/);
     },
     BOOT,
   );
