@@ -13,12 +13,15 @@ import { getRuntimeConfig } from "../runtime-config.js";
 import type { ConnectRouteComponents } from "../router/route-components.js";
 import type * as SettingsModule from "./settings/index.js";
 import { AppLayout } from "./app-layout.js";
+import { LoadingShell } from "./prerendered-shell.js";
 import {
   bindConnectRouter,
   createConnectRouter,
 } from "../router/connect-router.js";
 import { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
 import { DrivePending, RouteError, RouterChrome } from "./route-views.js";
+
+const EmptyView = () => null;
 
 const settingsModule = () => import("./settings/index.js");
 const lazySettings = (name: keyof typeof SettingsModule) =>
@@ -27,7 +30,7 @@ const SettingsPage = lazySettings("SettingsPage");
 
 export const connectRouteComponents: ConnectRouteComponents = {
   root: () => (
-    <Suspense name="RouteRoot">
+    <Suspense name="RouteRoot" fallback={<LoadingShell Fallback={EmptyView} />}>
       <Root />
     </Suspense>
   ),

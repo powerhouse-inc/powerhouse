@@ -31,6 +31,7 @@ import {
   DYNAMIC_BASE_PLACEHOLDER,
   connectDynamicBasePlugin,
 } from "./vite-plugins/dynamic-base.js";
+import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
@@ -509,6 +510,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
       connectThemeBootPlugin(),
+      // Build-time: Connect's prerendered app shell in #root, critical CSS inline.
+      connectAppShellPlugin(options.dirname),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).
       connectBuildHashPlugin(buildHash),

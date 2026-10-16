@@ -68,3 +68,6 @@ src/external-packages.js
 .env.sentry-build-plugin
 ts-dist/
 package.copy.json
+
+# Prerendered app shell build (see scripts/prerender-shell.ts)
+.prerender

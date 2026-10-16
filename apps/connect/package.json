@@ -11,6 +11,7 @@
   "files": [
     "dist",
     "style.css",
+    "fonts.css",
     "nginx.conf",
     "nginx.sh",
     "scripts",
@@ -46,14 +47,16 @@
       "import": "./dist/route-tree.js"
     },
     "./assets/*": "./assets/*",
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./fonts.css": "./fonts.css"
   },
   "sideEffects": [
     "./dist/main.js",
     "./dist/start-connect.js",
     "./dist/i18n-*.js",
     "./src/i18n/index.ts",
-    "./dist/style.css"
+    "./dist/style.css",
+    "./fonts.css"
   ],
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
@@ -70,9 +73,10 @@
     "lint": "cd ../.. && oxlint apps/connect",
     "test": "vitest --run",
     "dev": "vite dev",
-    "build": "pnpm run build:bundle && pnpm run build:css",
+    "build": "pnpm run build:bundle && pnpm run build:css && pnpm run build:shell",
     "build:bundle": "tsr generate && tsdown",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
+    "build:shell": "vite build --config vite.prerender.config.ts --logLevel warn && node scripts/prerender-shell.ts",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",

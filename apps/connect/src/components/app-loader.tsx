@@ -13,6 +13,7 @@ import { App } from "./index.js";
 import { ConnectionBanner } from "./connection-banner.js";
 import { MigrationBanner } from "./migration-banner.js";
 import { ModalsContainer } from "./modal/modals-container.js";
+import { LoadingShell } from "./prerendered-shell.js";
 import { ServiceWorkerUpdatePrompt } from "./service-worker-update-prompt.js";
 import { StoredDocumentsRefusedFallback } from "./stored-documents-refused.js";
 import { isStoredDocumentsRefused } from "../utils/stored-documents-refused.js";
@@ -56,7 +57,10 @@ export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
           resetKeys={[props.localPackage]}
           loggerContext={["Connect"]}
         >
-          <Suspense fallback={<AppSkeleton />} name="AppLoader">
+          <Suspense
+            fallback={<LoadingShell Fallback={AppSkeleton} />}
+            name="AppLoader"
+          >
             {/* eslint-disable-next-line react-hooks-extra/static-components */}
             <Load {...props}>
               <App />

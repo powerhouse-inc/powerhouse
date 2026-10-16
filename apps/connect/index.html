@@ -9,12 +9,6 @@
     />
     <title>Powerhouse Connect</title>
     <link rel="icon" href="%BASE_URL%icon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-      rel="stylesheet"
-    />
     <link href="/style.css" rel="stylesheet" />
     <script data-ph-theme-boot>
       (function () {
@@ -23,11 +17,19 @@
           if (p === "dark" || p === "light")
             localStorage.setItem("ph:theme", p);
           var s = localStorage.getItem("ph:theme");
-          var d =
-            s === "dark" ||
-            ((!s || s === "system") &&
-              matchMedia("(prefers-color-scheme: dark)").matches);
+          var m = matchMedia("(prefers-color-scheme: dark)");
+          var d = s === "dark" || ((!s || s === "system") && m.matches);
           document.documentElement.classList.toggle("dark", d);
+          // Same as builder-tools' theme-boot: follow a late OS preference.
+          if (!s || s === "system") {
+            var f = function () {
+              var t = localStorage.getItem("ph:theme");
+              if (!t || t === "system")
+                document.documentElement.classList.toggle("dark", m.matches);
+            };
+            m.addEventListener("change", f);
+            requestAnimationFrame(f);
+          }
         } catch (e) {}
       })();
     </script>

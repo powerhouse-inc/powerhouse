@@ -787,6 +787,7 @@
     "**/.docusaurus/",
     "**/.ph/",
     "**/routeTree.gen.ts",
+    "**/.prerender/",
     "**/.hotseat/",
     "**/prisma/",
     "**/babel.config.js",

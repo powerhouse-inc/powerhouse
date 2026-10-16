@@ -122,7 +122,9 @@ export type SidebarProps = {
 export function Sidebar({ extraItems, collapsed }: SidebarProps = {}) {
   const user = useUser();
   const openLogin = useOpenRenownLogin();
-  const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
+  const connectDebug =
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem("CONNECT_DEBUG") === "true";
 
   const ensName = user?.ens?.name || user?.profile?.username || undefined;
   const avatarUrl =

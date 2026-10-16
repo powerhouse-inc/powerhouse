@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { HOME_ROUTE_ID } from "../router/route-tree.js";
 import AppSkeleton from "./app-skeleton.js";
 import { CenteredErrorMessage } from "./error-boundary.js";
+import { LoadingShell } from "./prerendered-shell.js";
 
 // Loads quicker than this show no progress bar.
 const PROGRESS_DELAY_MS = 150;
@@ -96,7 +97,7 @@ export function RouterChrome({ children }: PropsWithChildren) {
   const isEmpty = useRouterState({ select: (state) => !state.matches.length });
   return (
     <>
-      {isEmpty && <AppSkeleton />}
+      {isEmpty && <LoadingShell Fallback={AppSkeleton} />}
       {children}
       <RouteProgressBar />
     </>
