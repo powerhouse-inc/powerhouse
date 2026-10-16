@@ -1,3 +1,4 @@
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { childLogger, type ILogger } from "document-model";
 import { init as lexerInit, parse as lexImports } from "es-module-lexer";
 import { createHash, randomUUID } from "node:crypto";
@@ -42,7 +43,7 @@ const PACKAGE_MANIFEST = "powerhouse.manifest.json";
 export const MANIFEST_FILE = "manifest.json";
 
 export function defaultRegistryCacheDir(cwd = process.cwd()): string {
-  return path.join(cwd, ".ph", "registry-packages");
+  return path.join(resolvePhDir(cwd), "registry-packages");
 }
 
 // A published package.json version: never a range or a dist-tag.

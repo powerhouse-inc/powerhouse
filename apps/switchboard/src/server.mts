@@ -154,6 +154,10 @@ import {
   addDefaultReactorDrive,
   isPostgresUrl,
 } from "./utils.mjs";
+import {
+  defaultStoreDirs,
+  resolvePhDir,
+} from "@powerhousedao/shared/clis/ph-dir";
 
 const defaultLogger = childLogger(["switchboard"]);
 
@@ -368,6 +372,69 @@ export async function createReactorKysely(opts: {
   };
 }
 
+export interface PgliteStorageDirs {
+  /** Read-model store: a Postgres URL or a PGlite dir. */
+  readModelPath: string;
+  /** Reactor store: a Postgres URL or a PGlite dir. */
+  reactorPath: string;
+  /** PGlite dir for the reactor, null for Postgres or a caller-owned reactor. */
+  reactorPgliteDir: string | null;
+  /** PGlite dir for the read model, null for Postgres. */
+  readModelPgliteDir: string | null;
+  /** The PGlite dirs for the pre-flight, as before (not deduplicated). */
+  pgliteDirs: string[];
+  /** Set when BOTH stores are PGlite on one dir (see resolvePgliteStorageDirs). */
+  sharedPgliteDir: string | null;
+}
+
+/**
+ * Where the two stores live — the classic resolution, relocated verbatim.
+ * Classic layout: `./.ph/reactor-storage` for the reactor and
+ * `.ph/read-storage` for the read model (the same names inside
+ * `${userData}/.ph` under a shell's PH_USER_DATA_DIR). `dbPath` also names
+ * the reactor store unless PH_REACTOR_DATABASE_URL does: with `dbPath` alone
+ * both stores share one location. That is the long-standing contract of
+ * `--db-path` and fine for one Postgres database, but for PGlite it is two
+ * postmasters on one data dir — reported via `sharedPgliteDir` so the caller
+ * warns. Not refused: changing that contract is a separate decision.
+ */
+export function resolvePgliteStorageDirs(opts: {
+  dbPath: string | undefined;
+  reactorDbUrl: string | undefined;
+  /** The caller passed its own reactor — the reactor-side dir is unused. */
+  callerReactor: boolean;
+  phDir?: string;
+}): PgliteStorageDirs {
+  const { dbPath, reactorDbUrl, callerReactor } = opts;
+  const defaults = defaultStoreDirs(process.env, opts.phDir);
+  const readModelPath = dbPath || defaults.readModel;
+  const reactorPath = reactorDbUrl || defaults.reactor;
+  const reactorPgliteDir = callerReactor
+    ? null
+    : !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
+      ? reactorPath
+      : null;
+  const readModelPgliteDir =
+    !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
+  const sharedPgliteDir =
+    reactorPgliteDir !== null &&
+    readModelPgliteDir !== null &&
+    path.resolve(reactorPgliteDir) === path.resolve(readModelPgliteDir)
+      ? path.resolve(reactorPgliteDir)
+      : null;
+  const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
+    (d): d is string => d !== null,
+  );
+  return {
+    readModelPath,
+    reactorPath,
+    reactorPgliteDir,
+    readModelPgliteDir,
+    pgliteDirs,
+    sharedPgliteDir,
+  };
+}
+
 /** Derive the remote attachment service config for switchboard's own `/attachments/*` API. */
 export function deriveAttachmentServiceConfig(
   options: Pick<StartServerOptions, "attachmentServiceUrl" | "https">,
@@ -428,31 +495,37 @@ async function initServer(
     process.env.DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
 
-  // use postgres url for read model storage if available, otherwise use local PGlite path
-  const readModelPath = dbPath || ".ph/read-storage";
-
   const reactorDbUrl =
     options.dbPath ??
     process.env.PH_REACTOR_DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
-  // When the caller passes in a reactor, the reactor-side PGLite dir is
-  // unused — the caller owns its own storage. Only the read-model dir is
-  // still needed by reactor-api itself.
-  const reactorPath = reactorDbUrl || "./.ph/reactor-storage";
-  const reactorPgliteDir = options.reactor
-    ? null
-    : !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
-      ? reactorPath
-      : null;
-  const readModelPgliteDir =
-    !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
+  // Postgres URLs or local PGlite dirs under the project's .ph tree. When
+  // the caller passes in a reactor, the reactor-side PGLite dir is unused —
+  // the caller owns its own storage. Only the read-model dir is still needed
+  // by reactor-api itself. Refuses one PGlite dir for both stores.
+  const {
+    readModelPath,
+    reactorPgliteDir,
+    readModelPgliteDir,
+    pgliteDirs,
+    sharedPgliteDir,
+  } = resolvePgliteStorageDirs({
+    dbPath,
+    reactorDbUrl,
+    callerReactor: options.reactor !== undefined,
+  });
+  if (sharedPgliteDir !== null) {
+    logger.warn(
+      `The reactor and read-model PGlite stores share one directory (${sharedPgliteDir}): ` +
+        "two PGlite instances on one data dir can abort at the first checkpoint and leave the store unopenable. " +
+        "Set PH_REACTOR_DATABASE_URL to a separate directory, or leave dbPath unset for the classic " +
+        "./.ph/reactor-storage + .ph/read-storage layout.",
+    );
+  }
 
   // PGLite pre-flight: convert legacy single-file snapshot stores, clear
   // stale lock and WAL temp files, then detect PG_VERSION and migrate or
   // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
-  const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
-    (d): d is string => d !== null,
-  );
   warnIgnoredFlushInterval(logger);
   const detectedMajors = await runPglitePreflight({
     dirs: pgliteDirs,
@@ -1573,6 +1646,14 @@ export const startSwitchboard = async (
   options.identity = {
     ...options.identity,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
+    // Under a shell's PH_USER_DATA_DIR the identity lives in the user's .ph
+    // tree with the stores, never in the install dir. Unset: unchanged —
+    // renown's own `<cwd>/.ph/.keypair.json` default applies.
+    keypairPath:
+      options.identity?.keypairPath ??
+      (process.env.PH_USER_DATA_DIR
+        ? path.join(resolvePhDir(), ".keypair.json")
+        : undefined),
   };
 
   logger.info(
