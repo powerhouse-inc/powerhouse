@@ -156,6 +156,7 @@ import {
   addDefaultReactorDrive,
   isPostgresUrl,
 } from "./utils.mjs";
+import { acquireStoreLocks } from "./store-lock.mjs";
 import {
   defaultStoreDirs,
   resolvePhDir,
@@ -552,6 +553,10 @@ async function initServer(
   // PGLite pre-flight: convert legacy single-file snapshot stores, clear
   // stale lock and WAL temp files, then detect PG_VERSION and migrate or
   // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
+  // One process per PGlite store, before anything (the pre-flight included)
+  // touches it: hosts share one .ph tree, so a second `ph run …` / `ph vetra`
+  // in the same project must fail here instead of tearing the store.
+  if (!PGLITE_IN_MEMORY) acquireStoreLocks(pgliteDirs);
   warnIgnoredFlushInterval(logger);
   const detectedMajors = await runPglitePreflight({
     dirs: pgliteDirs,
