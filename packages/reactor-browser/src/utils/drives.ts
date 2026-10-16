@@ -55,3 +55,8 @@ export function getSyncStatusSync(
 
   return syncStatusToUI[status];
 }
+
+/** A drive's display name: the header's (renames set it), else its creation name. */
+export function getDriveName(drive: DocumentDriveDocument): string {
+  return drive.header.name || drive.state.global.name;
+}

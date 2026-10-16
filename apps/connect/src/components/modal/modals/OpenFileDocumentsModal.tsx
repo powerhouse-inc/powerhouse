@@ -31,6 +31,7 @@ import {
   usePHModal,
   useUserPermissions,
   getPHStore,
+  getDriveName,
 } from "@powerhousedao/reactor-browser";
 import { UnsupportedDocumentModelVersionError } from "@powerhousedao/shared/document-model";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -131,9 +132,7 @@ export function OpenFileDocumentsModal() {
   );
 
   const driveOptions = (drives ?? []).map((drive) => ({
-    // New local drives carry their name only in the global state until the
-    // header syncs.
-    label: drive.header.name || drive.state.global.name,
+    label: getDriveName(drive),
     value: drive.header.id,
     drive,
   }));

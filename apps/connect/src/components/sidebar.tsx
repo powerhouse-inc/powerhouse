@@ -17,6 +17,7 @@ import {
   useLinkProps,
   useSelectedDriveSafe,
   useUser,
+  getDriveName,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { AnyRouter } from "@tanstack/react-router";
@@ -39,7 +40,7 @@ function DriveSidebarItem(props: {
   );
   return (
     <SidebarItem
-      title={drive.header.name}
+      title={getDriveName(drive)}
       href={link.href}
       aria-current={link["aria-current"]}
       onClick={link.onClick}

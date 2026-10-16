@@ -26,6 +26,7 @@ import {
   useSelectedDocumentId,
   useSelectedDriveSafe,
   useSelectedFolder,
+  getDriveName,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { Outlet } from "@tanstack/react-router";
@@ -112,7 +113,7 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
   return (
     <HomeScreenItem
       key={drive.header.id}
-      title={drive.state.global.name || drive.header.name}
+      title={getDriveName(drive)}
       description={description}
       icon={<DriveIcon drive={drive} />}
       href={link.href}
