@@ -1,6 +1,6 @@
-import { Root } from "@powerhousedao/connect/components";
+import { Root } from "./root.js";
 import { connectConfig } from "@powerhousedao/connect/config";
-import { Content } from "@powerhousedao/connect/pages";
+import { Content } from "../pages/content.js";
 import type { PHStore } from "@powerhousedao/reactor-browser";
 import {
   createDriveArrivals,

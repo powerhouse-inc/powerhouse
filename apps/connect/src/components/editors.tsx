@@ -1,5 +1,5 @@
-import { EditorLoader } from "@powerhousedao/connect/components";
-import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
+import { EditorLoader } from "./editor-loader.js";
+import { useUndoRedoShortcuts } from "../hooks/useUndoRedoShortcuts.js";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";

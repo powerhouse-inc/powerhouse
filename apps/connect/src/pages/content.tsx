@@ -1,8 +1,6 @@
-import {
-  AppContainer,
-  DriveIcon,
-  IfPlugin,
-} from "@powerhousedao/connect/components";
+import { AppContainer } from "../components/app-container.js";
+import { DriveIcon } from "../components/drive-icon.js";
+import { IfPlugin } from "../components/if-plugin.js";
 import {
   defaultPHAppConfig,
   defaultPHDocumentEditorConfig,
