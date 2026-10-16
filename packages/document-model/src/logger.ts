@@ -1,13 +1,16 @@
 import type { ILogger, LoggerErrorHandler } from "./logger-types.js";
 
 const tokenSub = /@([a-zA-Z0-9_]+)/g;
-const dtf = new Intl.DateTimeFormat(undefined, {
-  hour12: false,
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  fractionalSecondDigits: 2,
-});
+// Built on first log: constructing it loads locale data, ~20 ms at boot.
+let dtf: Intl.DateTimeFormat | undefined;
+const timeFormat = () =>
+  (dtf ??= new Intl.DateTimeFormat(undefined, {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 2,
+  }));
 
 const stringify = (value: unknown, includeStack: boolean): string => {
   if (value === null || value === undefined) return "null";
@@ -71,7 +74,7 @@ const formatMessage = (
 
   // timestamp
   const now = new Date();
-  const timestamp = dtf.format(now);
+  const timestamp = timeFormat().format(now);
   meta["timestamp"] = timestamp;
 
   return [message, meta];
