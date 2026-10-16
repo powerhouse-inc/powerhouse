@@ -35,14 +35,69 @@ export function makeDriveUrlComponent(
   return `/d/${slug(drive.header.slug)}`;
 }
 
+/** A drive's URL component: its slug, else its id, prefixed with the slugged
+ * name as `<name>-<id>` when the id is opaque (a UUID or derived id). */
+export function makeDriveSlug(drive: DocumentDriveDocument) {
+  const { id, slug: driveSlug } = drive.header;
+  if (driveSlug && driveSlug !== id) return driveSlug;
+  return isOpaqueId(id) ? namedDriveSlug(drive) : id;
+}
+
+function isOpaqueId(id: string) {
+  return findUuid(id) !== undefined || isDerivedDocumentId(id);
+}
+
+function namedDriveSlug(drive: DocumentDriveDocument) {
+  const name = drive.state.global.name || drive.header.name;
+  return namedSlug(drive, name, drive.header.id);
+}
+
+const namedSlugs = new WeakMap<
+  object,
+  { name: string; id: string; value: string }
+>();
+
+// `<slugged name>-<id>`, cached per drive or node; inputs are rechecked.
+function namedSlug(owner: object, name: string, id: string) {
+  const cached = namedSlugs.get(owner);
+  if (cached?.name === name && cached.id === id) return cached.value;
+  const nameSlug = name ? slug(name) : "";
+  const value = nameSlug ? `${nameSlug}-${id}` : id;
+  namedSlugs.set(owner, { name, id, value });
+  return value;
+}
+
+/** The drive a URL slug names: its own slug, its id, or `<name>-<id>`. */
+export function findDriveBySlug(
+  drives: readonly DocumentDriveDocument[] | undefined,
+  ref: string | undefined,
+) {
+  if (!drives || !ref) return undefined;
+  const exact = drives.find(
+    (d) => d.header.slug === ref || d.header.id === ref,
+  );
+  if (exact) return exact;
+  const id = extractDriveIdFromSlug(ref);
+  if (id !== undefined) {
+    const byId = drives.find((d) => d.header.id === id);
+    if (byId) return byId;
+  }
+  // `<name>-<id>` also for a readable id, as older links wrote it.
+  return drives.find(
+    (d) =>
+      (!d.header.slug || d.header.slug === d.header.id) &&
+      ref.endsWith(d.header.id) &&
+      namedDriveSlug(d) === ref,
+  );
+}
+
 /**
  * Makes a URL component for a node: `<slugged name>-<id>`. The id is kept
  * verbatim, since a v2-required id is case-sensitive base64url.
  */
 export function makeNodeSlug(node: Node | undefined) {
   if (!node) return "";
-  const nameSlug = node.name ? slug(node.name) : "";
-  return nameSlug ? `${nameSlug}-${node.id}` : node.id;
+  return namedSlug(node, node.name, node.id);
 }
 
 /** Extracts the node slug from a path.
@@ -77,6 +132,7 @@ export function extractNodeIdFromSlug(nodeSlug: string | undefined) {
   return findUuid(nodeSlug) ?? findDerivedId(nodeSlug);
 }
 
+/** @deprecated Route loaders resolve the node; use `extractNodeIdFromSlug`. */
 export function extractNodeIdFromPath(path: string) {
   const nodeSlug = extractNodeSlugFromPath(path);
   const nodeId = extractNodeIdFromSlug(nodeSlug);
@@ -97,6 +153,7 @@ export function extractDriveIdFromSlug(driveSlug: string | undefined) {
   return findUuid(driveSlug) ?? findDerivedId(driveSlug);
 }
 
+/** @deprecated Route loaders resolve the drive; use `extractDriveIdFromSlug`. */
 export function extractDriveIdFromPath(path: string) {
   const driveSlug = extractDriveSlugFromPath(path);
   const driveId = extractDriveIdFromSlug(driveSlug);

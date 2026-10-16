@@ -3,6 +3,7 @@ import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
   extractNodeSlugFromPath,
+  findDriveBySlug,
 } from "../utils/url.js";
 import {
   getCurrentPathname,
@@ -27,7 +28,7 @@ export function syncSelectionFromPath(pathname = getCurrentPathname()) {
   }
 
   // URLs carry the drive's raw slug, as written by setSelectedDrive.
-  const drive = drives.find((d) => d.header.slug === driveSlug);
+  const drive = findDriveBySlug(drives, driveSlug);
   const selectedIsUnlisted =
     !!selectedDriveId && !drives.some((d) => d.header.id === selectedDriveId);
   if (drive) {

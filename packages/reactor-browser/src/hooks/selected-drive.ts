@@ -14,7 +14,10 @@ import type {
 import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
+  findDriveBySlug,
+  makeDriveSlug,
 } from "../utils/url.js";
+import { isInitialSyncInFlight } from "../routing/initial-sync.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
 import {
@@ -94,7 +97,7 @@ export function selectDriveIn(
   const driveSlug =
     typeof driveOrDriveSlug === "string"
       ? driveOrDriveSlug
-      : driveOrDriveSlug?.header.slug;
+      : driveOrDriveSlug && makeDriveSlug(driveOrDriveSlug);
   if (store.navigation) {
     openTargetWith(store.navigation, driveSlug ? { driveSlug } : undefined);
     return;
@@ -102,7 +105,7 @@ export function selectDriveIn(
   const drive =
     typeof driveOrDriveSlug === "object"
       ? driveOrDriveSlug
-      : store.drives?.find((d) => d.header.slug === driveSlug);
+      : findDriveBySlug(store.drives, driveSlug);
   store.selectedDriveId = drive?.header.id;
   store.selectedNodeId = undefined;
 }
@@ -118,7 +121,7 @@ export function selectDrive(driveOrDriveSlug: DriveRef) {
   const driveSlug =
     typeof driveOrDriveSlug === "string"
       ? driveOrDriveSlug
-      : driveOrDriveSlug?.header.slug;
+      : driveOrDriveSlug && makeDriveSlug(driveOrDriveSlug);
 
   // A host router resolves the drive and writes the selection itself.
   if (hasHostNavigation()) {
@@ -133,10 +136,10 @@ export function selectDrive(driveOrDriveSlug: DriveRef) {
   const drive =
     typeof driveOrDriveSlug === "object" && driveOrDriveSlug !== null
       ? driveOrDriveSlug
-      : drives?.find((d) => d.header.slug === driveSlug);
+      : findDriveBySlug(drives, driveSlug);
   const driveId = drive?.header.id;
 
-  // Deprecated: hosts without a navigation only.
+  // Deprecated: hosts without a navigation only; route loaders wait for drives.
   // A deep link may predate remote drive registration, so defer the lookup.
   if (
     !driveId &&
@@ -162,7 +165,7 @@ export function selectDrive(driveOrDriveSlug: DriveRef) {
 /** Warms a drive's view before it is opened, e.g. on hover. */
 export function preloadDrive(drive: DocumentDriveDocument | undefined) {
   warnGlobalSetterInScope("preloadDrive", "usePreloadDrive");
-  if (drive) preloadTarget({ driveSlug: drive.header.slug });
+  if (drive) preloadTarget({ driveSlug: makeDriveSlug(drive) });
 }
 
 /** `preloadDrive` for the store in context. */
@@ -172,10 +175,10 @@ export function usePreloadDrive() {
     (drive: DocumentDriveDocument | undefined) => {
       if (!drive) return;
       if (!isScopedPHStore(store)) {
-        preloadTarget({ driveSlug: drive.header.slug });
+        preloadTarget({ driveSlug: makeDriveSlug(drive) });
         return;
       }
-      store?.navigation?.preload?.({ driveSlug: drive.header.slug });
+      store?.navigation?.preload?.({ driveSlug: makeDriveSlug(drive) });
     },
     [store],
   );
@@ -185,27 +188,6 @@ export function usePreloadDrive() {
 const DEFERRED_DRIVE_TICK_MS = 2_000;
 // Hard cap so a wedged remote can't pin the deep link forever.
 const DEFERRED_DRIVE_MAX_WAIT_MS = 15_000;
-
-// True while any sync remote has not completed its first successful pull —
-// a drive may still be on its way in, so the deferred lookup keeps waiting.
-function isInitialSyncInFlight(): boolean {
-  const remotes =
-    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager?.list();
-  if (!remotes?.length) {
-    return false;
-  }
-  return remotes.some((remote) => {
-    try {
-      const snapshot = remote.channel.getConnectionState();
-      return (
-        snapshot.receivingPages ||
-        (!snapshot.lastSuccessUtcMs && snapshot.state !== "error")
-      );
-    } catch {
-      return false;
-    }
-  });
-}
 
 let unsubscribePending: (() => void) | undefined;
 let pendingTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -230,9 +212,7 @@ function deferDriveSelection(driveSlug: string) {
   // rewrites the URL to /d/<driveSlug>, dropping the node segment.
   const nodeSlug = extractNodeSlugFromPath(getCurrentPathname());
   const handler = () => {
-    const drive = getPHStore()?.drives?.find(
-      (d) => d.header.slug === driveSlug,
-    );
+    const drive = findDriveBySlug(getPHStore()?.drives, driveSlug);
     if (!drive) {
       return;
     }
@@ -245,7 +225,7 @@ function deferDriveSelection(driveSlug: string) {
   const deadline = Date.now() + DEFERRED_DRIVE_MAX_WAIT_MS;
   const scheduleTick = () => {
     pendingTimeout = setTimeout(() => {
-      if (Date.now() < deadline && isInitialSyncInFlight()) {
+      if (Date.now() < deadline && isInitialSyncInFlight(getPHStore())) {
         scheduleTick();
         return;
       }

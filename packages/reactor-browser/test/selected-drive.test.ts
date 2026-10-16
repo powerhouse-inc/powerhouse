@@ -211,6 +211,74 @@ describe("setSelectedDrive deep-link race", () => {
     }
   });
 
+  it("keeps deferring while a remote reconnects before its first pull", () => {
+    vi.useFakeTimers();
+    try {
+      window.ph!.reactorClientModule = {
+        reactorModule: {
+          syncModule: {
+            syncManager: {
+              list: () => [
+                {
+                  channel: {
+                    getConnectionState: () => ({
+                      state: "reconnecting",
+                      receivingPages: false,
+                      lastSuccessUtcMs: 0,
+                    }),
+                  },
+                },
+              ],
+            },
+          },
+        },
+      } as unknown as NonNullable<typeof window.ph>["reactorClientModule"];
+
+      setSelectedDrive("preview-5d7ab3ec");
+      vi.advanceTimersByTime(3_000);
+      expect(window.location.pathname).toBe(DEEP_LINK);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not wait on a remote that failed, fails to reconnect, or never polls", () => {
+    vi.useFakeTimers();
+    try {
+      // Same rules as the route loader: none may bring a drive soon.
+      const states = [
+        { state: "error", receivingPages: false, lastSuccessUtcMs: 0 },
+        { state: "reconnecting", receivingPages: false, lastSuccessUtcMs: 1 },
+        {
+          state: "reconnecting",
+          receivingPages: false,
+          lastSuccessUtcMs: 0,
+          failureCount: 1,
+        },
+        { state: "connected", receivingPages: false, lastSuccessUtcMs: 0 },
+      ];
+      window.ph!.reactorClientModule = {
+        reactorModule: {
+          syncModule: {
+            syncManager: {
+              list: () =>
+                states.map((state) => ({
+                  channel: { getConnectionState: () => state },
+                })),
+            },
+          },
+        },
+      } as unknown as NonNullable<typeof window.ph>["reactorClientModule"];
+
+      setSelectedDrive("preview-5d7ab3ec");
+      vi.advanceTimersByTime(3_000);
+
+      expect(window.location.pathname).toBe(ROOT);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("gives up at the hard cap even if a sync never settles", () => {
     vi.useFakeTimers();
     try {
