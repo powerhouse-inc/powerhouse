@@ -1,45 +1,9 @@
-import type { SelectOption } from "#design-system/ui";
-import { SelectFieldRaw } from "#design-system/ui";
-import { twMerge } from "tailwind-merge";
+import { lazyComponent } from "../../lazy-component.js";
 
-type Props = {
-  documentModelEditor: string;
-  setDocumentModelEditor: (value: string) => void;
-  documentModelEditorOptions: SelectOption[];
-  className?: string;
-};
+export const DefaultEditor = lazyComponent(() =>
+  import("./default-editor.impl.js").then((m) => m.DefaultEditor),
+);
 
-export function DefaultEditor(props: Props) {
-  const { className, ...rest } = props;
-  return (
-    <div className={twMerge("rounded-lg bg-background p-3", className)}>
-      <DefaultEditorSelect {...rest} />
-    </div>
-  );
-}
-
-export function DefaultEditorSelect(props: Props) {
-  const {
-    documentModelEditor,
-    setDocumentModelEditor,
-    documentModelEditorOptions,
-    className,
-  } = props;
-
-  return (
-    <div>
-      <h3 className="mb-4 font-semibold text-foreground">
-        Default Editor Selection
-      </h3>
-      <SelectFieldRaw
-        className={twMerge("max-w-fit min-w-36", className)}
-        name="default-editor"
-        required
-        value={documentModelEditor}
-        options={documentModelEditorOptions}
-        multiple={false}
-        onChange={(value) => setDocumentModelEditor(value as string)}
-      />
-    </div>
-  );
-}
+export const DefaultEditorSelect = lazyComponent(() =>
+  import("./default-editor.impl.js").then((m) => m.DefaultEditorSelect),
+);
