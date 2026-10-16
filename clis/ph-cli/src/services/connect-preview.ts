@@ -3,9 +3,11 @@ import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import sirv from "sirv";
 import type { InlineConfig, Plugin } from "vite";
 import { mergeConfig, preview } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
+import { PRECOMPRESS_EXTENSIONS } from "../utils/precompress.js";
 
 /**
  * Runtime shaping for a served (built) Connect, desktop shape: the compound
@@ -135,11 +137,14 @@ export function stripBase(pathname: string, base: string): string {
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
-// The prebuilt dirs are content-addressed: hashed names, or a `v` query on the worker's.
+const HASHED_DIRS = ["/assets/", "/fonts/", "/__reactor_worker__/assets/"];
+
+// Content-addressed output (hashed names, or a `v` query on the worker's), as in the nginx image.
 export function previewCacheControl(
   pathname: string,
   search: string,
 ): string | undefined {
+  if (HASHED_DIRS.some((dir) => pathname.startsWith(dir))) return IMMUTABLE;
   if (pathname.startsWith("/__vendor__/")) {
     return /\/(shared-deps|import-map)\.js(on)?$/.test(pathname)
       ? "no-cache"
@@ -152,13 +157,18 @@ export function previewCacheControl(
   return undefined;
 }
 
-function previewCacheHeadersPlugin(base: string): Plugin {
+function previewCacheHeadersPlugin(outDir: string, base: string): Plugin {
   return {
     name: "ph:preview-cache-headers",
     configurePreviewServer(server) {
       server.middlewares.use((req, res, next) => {
         const [rawPath, search = ""] = (req.url ?? "/").split("?");
-        const value = previewCacheControl(stripBase(rawPath, base), search);
+        const rel = stripBase(rawPath, base);
+        let value = previewCacheControl(rel, search);
+        // A cached 404 would outlive the next deploy.
+        if (value === IMMUTABLE && !existsSync(path.join(outDir, rel))) {
+          value = undefined;
+        }
         if (value) res.setHeader("Cache-Control", value);
         next();
       });
@@ -211,6 +221,54 @@ function serveOverridePlugin(
   };
 }
 
+const PRECOMPRESSED_TYPES: Record<string, string> = {
+  ".wasm": "application/wasm",
+  ".data": "application/octet-stream",
+};
+
+// Serves the build's `.gz` siblings of wasm/data; Vite's sirv ignores them.
+export function precompressedAssetsPlugin(outDir: string, base = "/"): Plugin {
+  return {
+    name: "ph:precompressed-assets",
+    configurePreviewServer(server) {
+      const headers = server.config.preview.headers;
+      const serve = sirv(outDir, {
+        dev: true,
+        etag: true,
+        gzip: true,
+        extensions: [],
+        setHeaders(res, pathname) {
+          if (headers) for (const k in headers) res.setHeader(k, headers[k]!);
+          res.setHeader(
+            "Content-Type",
+            PRECOMPRESSED_TYPES[path.extname(pathname)],
+          );
+        },
+      });
+      server.middlewares.use((req, res, next) => {
+        const url = req.url ?? "/";
+        const [rawPath, search] = url.split("?");
+        const rel = stripBase(rawPath, base);
+        // Ranges are byte offsets into the identity body: leave them to Vite.
+        if (
+          !(PRECOMPRESS_EXTENSIONS as readonly string[]).includes(
+            path.extname(rel),
+          ) ||
+          req.headers.range ||
+          (base !== "/" && rel === rawPath)
+        ) {
+          return next();
+        }
+        req.url = search === undefined ? rel : `${rel}?${search}`;
+        serve(req, res, () => {
+          req.url = url;
+          next();
+        });
+      });
+    },
+  };
+}
+
 export async function runConnectPreview(
   args: ConnectPreviewArgs,
   serveOverride?: ConnectServeOverride,
@@ -256,7 +314,8 @@ export async function runConnectPreview(
       open,
     },
     plugins: [
-      previewCacheHeadersPlugin(base),
+      previewCacheHeadersPlugin(outDirAbs, base),
+      precompressedAssetsPlugin(outDirAbs, base),
       ...(serveOverride
         ? [serveOverridePlugin(outDirAbs, serveOverride, base)]
         : []),

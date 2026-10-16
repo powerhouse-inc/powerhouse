@@ -90,5 +90,16 @@ describe.skipIf(!HAS_ENVSUBST)("nginx.conf.template", () => {
     expect(conf).toMatch(
       /map \$arg_v \$ph_worker_cache_control \{\s+""\s+"no-cache";/,
     );
+    expect(block("location ^~ /connect/__reactor_worker__/assets/")).toContain(
+      "immutable",
+    );
+  });
+
+  it("serves the build's .gz siblings in every location", () => {
+    const conf = render("/connect/");
+    const http = conf.slice(conf.indexOf("http {"), conf.indexOf("server {"));
+    expect(http).toMatch(/^\s+gzip_static on;$/m);
+    expect(conf).not.toMatch(/gzip_static off/);
+    expect(http).toMatch(/gzip_types [^;]*application\/wasm/);
   });
 });

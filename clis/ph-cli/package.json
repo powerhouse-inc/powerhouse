@@ -81,6 +81,7 @@
     "remeda": "catalog:",
     "rolldown": "catalog:",
     "semver": "catalog:",
+    "sirv": "^3.0.2",
     "tsdown": "catalog:",
     "vite": "catalog:"
   },
