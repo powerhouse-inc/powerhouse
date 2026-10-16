@@ -1,3 +1,30 @@
+## 6.2.3-dev.62 (2026-10-16)
+
+### 🚀 Features
+
+- **builder-tools,ph-cli,codegen:** project routes from hosts/connect/routes ([1b7aeb2090](https://github.com/powerhouse-inc/powerhouse/commit/1b7aeb2090))
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+- **connect,reactor-browser:** settings page as routes ([2d32484c40](https://github.com/powerhouse-inc/powerhouse/commit/2d32484c40))
+- **connect:** page titles and a 404 page ([26f3ef18b9](https://github.com/powerhouse-inc/powerhouse/commit/26f3ef18b9))
+- **connect:** an _app layout whose routes declare the sidebar ([4724aa49f6](https://github.com/powerhouse-inc/powerhouse/commit/4724aa49f6))
+- **connect:** replace react-router with tanstack file routes ([3784d22e85](https://github.com/powerhouse-inc/powerhouse/commit/3784d22e85))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+- **builder-tools,connect:** content-address vendor, react and worker urls per build ([6c51c1af1a](https://github.com/powerhouse-inc/powerhouse/commit/6c51c1af1a))
+- **reactor-router,connect:** create documents and skip drive syncing on the remote reactor client ([dbdb1f1356](https://github.com/powerhouse-inc/powerhouse/commit/dbdb1f1356))
+- **connect,reactor-browser:** name drives by header, else by the name given at creation ([6def973bf7](https://github.com/powerhouse-inc/powerhouse/commit/6def973bf7))
+
+### 🔥 Performance
+
+- **connect,builder-tools,ph-cli:** share connect's libraries through the vendor and load the local package lazily ([22de730217](https://github.com/powerhouse-inc/powerhouse/commit/22de730217))
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.61 (2026-10-16)
 
 ### 🚀 Features

@@ -1,3 +1,38 @@
+## 6.2.3-dev.62 (2026-10-16)
+
+### 🚀 Features
+
+- **builder-tools,ph-cli,codegen:** project routes from hosts/connect/routes ([1b7aeb2090](https://github.com/powerhouse-inc/powerhouse/commit/1b7aeb2090))
+- **connect:** replace react-router with tanstack file routes ([3784d22e85](https://github.com/powerhouse-inc/powerhouse/commit/3784d22e85))
+- **connect:** an _app layout whose routes declare the sidebar ([4724aa49f6](https://github.com/powerhouse-inc/powerhouse/commit/4724aa49f6))
+- **connect:** page titles and a 404 page ([26f3ef18b9](https://github.com/powerhouse-inc/powerhouse/commit/26f3ef18b9))
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+- **connect,reactor-browser:** settings page as routes ([2d32484c40](https://github.com/powerhouse-inc/powerhouse/commit/2d32484c40))
+- **design-system:** render items as real links marked with aria-current ([42c9efc7c9](https://github.com/powerhouse-inc/powerhouse/commit/42c9efc7c9))
+- **reactor-browser:** a navigator api the app shell owns ([a3df324e36](https://github.com/powerhouse-inc/powerhouse/commit/a3df324e36))
+- **reactor-browser:** resolve drive routes, waiting for drives to arrive ([d21d2fe064](https://github.com/powerhouse-inc/powerhouse/commit/d21d2fe064))
+- **workflow,vetra:** keep workflow state in the url and select nodes via the store ([ad08b5a16a](https://github.com/powerhouse-inc/powerhouse/commit/ad08b5a16a))
+
+### 🩹 Fixes
+
+- **builder-tools:** recover from a waiting service worker when boot fails, and base the shell's links ([3acf22432d](https://github.com/powerhouse-inc/powerhouse/commit/3acf22432d))
+- **builder-tools,connect:** content-address vendor, react and worker urls per build ([6c51c1af1a](https://github.com/powerhouse-inc/powerhouse/commit/6c51c1af1a))
+- **connect,reactor-browser:** name drives by header, else by the name given at creation ([6def973bf7](https://github.com/powerhouse-inc/powerhouse/commit/6def973bf7))
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+- **reactor:** report a gql channel's first success and end of paging while connected ([733b064a61](https://github.com/powerhouse-inc/powerhouse/commit/733b064a61))
+- **reactor-router,connect:** create documents and skip drive syncing on the remote reactor client ([dbdb1f1356](https://github.com/powerhouse-inc/powerhouse/commit/dbdb1f1356))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+- **connect,builder-tools,ph-cli:** share connect's libraries through the vendor and load the local package lazily ([22de730217](https://github.com/powerhouse-inc/powerhouse/commit/22de730217))
+- **design-system:** load the icon map and heavy connect components on first use ([516ee720d5](https://github.com/powerhouse-inc/powerhouse/commit/516ee720d5))
+- **document-model:** build the logger's time formatter on first use ([4bac3e3188](https://github.com/powerhouse-inc/powerhouse/commit/4bac3e3188))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.61 (2026-10-16)
 
 ### 🚀 Features
