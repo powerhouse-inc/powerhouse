@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Plugin } from "vite";
 import { resolvePackage } from "../helpers.js";
+import { replaceShellLoader, type ProjectLoader } from "./project-brand.js";
 
 /** On the prerendered shell's elements; marks an index.html that has it. */
 export const APP_SHELL_MARKER = "data-ph-shell";
@@ -97,8 +98,14 @@ export function injectAppShell(html: string, shell: AppShell, base = "/") {
     .replace(root, () => `<div id="root">${body}</div>`);
 }
 
-/** Build only: dev keeps the empty root and blocking CSS for HMR. */
-export function connectAppShellPlugin(projectRoot: string): Plugin {
+/** Build only: dev keeps the empty root and blocking CSS for HMR.
+ * `loader` swaps the shell's logo for the project's loading image;
+ * `customShell` (the project's `_app` replaces Connect's layout) skips
+ * Connect's shell, whose sidebar the project would never show. */
+export function connectAppShellPlugin(
+  projectRoot: string,
+  options: { loader?: ProjectLoader; customShell?: boolean } = {},
+): Plugin {
   let shell: AppShell | undefined;
   let base = "/";
   return {
@@ -108,7 +115,13 @@ export function connectAppShellPlugin(projectRoot: string): Plugin {
       base = config.base;
     },
     buildStart() {
-      shell = readAppShell(projectRoot);
+      shell = options.customShell ? undefined : readAppShell(projectRoot);
+      if (shell && options.loader) {
+        shell = {
+          ...shell,
+          body: replaceShellLoader(shell.body, options.loader, base),
+        };
+      }
     },
     transformIndexHtml: {
       // After Vite injects the built CSS links.

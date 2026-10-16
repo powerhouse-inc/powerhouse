@@ -47,6 +47,10 @@ export type PHConnectIcons = {
   /** Wide splash/logo art (e.g. 2048x1152, transparent) for loading
    * screens; the desktop app.json `splash` points at the same file. */
   splash?: string;
+  /** Replaces Connect's animated Powerhouse logo on every loading screen.
+   * A static image pulses by default; `animation: "none"` for an image that
+   * animates itself. */
+  loader?: string | PHConnectLoader;
   /** Full-bleed background (e.g. 2048x1152, opaque; a WebP keeps it light):
    * Connect's home-screen background unless connect.branding.homeBackground
    * names another. */
@@ -63,6 +67,15 @@ export type PHConnectIcons = {
   documents?: Record<string, string>;
   /** Per drive slug: written into the drive's own state when seeded. */
   drives?: Record<string, string>;
+};
+
+/** The loading animation: an image and the motion applied to it. */
+export type PHConnectLoader = {
+  src: string;
+  /** Default "pulse"; "none" for an image that animates itself. */
+  animation?: "pulse" | "spin" | "none";
+  /** Width in CSS pixels (default 96); the height follows the image. */
+  size?: number;
 };
 
 export type PHConnectDefaultDriveRemote = {

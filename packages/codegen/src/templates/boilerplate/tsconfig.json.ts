@@ -61,6 +61,14 @@ export const tsConfigTemplate = json`
   },
   // **/* skips dot folders, so of .ph only the route tree is checked: it types hosts/connect/routes/.
   "include": ["**/*", "./powerhouse.manifest.json", ".ph/connect-routes.gen.ts"],
-  "exclude": ["dist", "node_modules", "vitest.config.ts", "main.tsx"]
+  // hosts/desktop/tauri-shell: the generated desktop shell, whose dist-stack/
+  // stages a copy of the project.
+  "exclude": [
+    "dist",
+    "node_modules",
+    "vitest.config.ts",
+    "main.tsx",
+    "hosts/desktop/tauri-shell"
+  ]
 }
 `.raw;

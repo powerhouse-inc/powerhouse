@@ -130,6 +130,33 @@ export const phConnectIconsSchema = {
       description:
         "Wide splash/logo art (e.g. 2048x1152, transparent) for loading screens; the desktop app.json `splash` points at the same file.",
     },
+    loader: {
+      description:
+        'Replaces Connect\'s animated Powerhouse logo on every loading screen (first paint, app start, drive and editor loading). An image reference, or { src, animation, size }. A static image gets a gentle pulse unless animation says otherwise; use animation "none" for an image that animates itself (animated SVG, GIF or WebP).',
+      anyOf: [
+        imageRefSchema,
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["src"],
+          properties: {
+            src: imageRefSchema,
+            animation: {
+              type: "string",
+              enum: ["pulse", "spin", "none"],
+              description: "Motion applied to the image (default pulse).",
+            },
+            size: {
+              type: "number",
+              minimum: 16,
+              maximum: 512,
+              description:
+                "Rendered width in CSS pixels (default 96); the height follows the image.",
+            },
+          },
+        },
+      ],
+    },
     background: {
       ...imageRefSchema,
       description:

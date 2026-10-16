@@ -11,7 +11,12 @@ export function ShellLoader() {
       aria-label="Starting Connect"
       className={`${SHELL_LOADER_CLASS} pointer-events-none fixed inset-0 z-10 flex items-center justify-center`}
     >
-      <div className="animate-pulse rounded-full bg-background p-4 text-foreground shadow-lg motion-reduce:animate-none">
+      {/* data-ph-loader-slot: a project build swaps this logo for its own
+          loader (powerhouse.config.json icons.loader). */}
+      <div
+        data-ph-loader-slot=""
+        className="animate-pulse rounded-full bg-background p-4 text-foreground shadow-lg motion-reduce:animate-none"
+      >
         <Icon name="ConnectSmall" size={40} />
       </div>
     </div>

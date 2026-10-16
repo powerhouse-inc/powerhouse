@@ -35,8 +35,14 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
+  hasProjectAppLayout,
   resolveConnectRoutesDir,
 } from "./vite-plugins/connect-routes.js";
+import {
+  connectProjectBrandPlugin,
+  resolveProjectLoader,
+  resolveProjectPwaBrand,
+} from "./vite-plugins/project-brand.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
@@ -365,6 +371,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     mode === "production"
       ? phPackages
       : phPackages.filter((p) => p.provider === "local");
+  // Project branding needed before any JavaScript runs: the loading image
+  // (index.html, prerendered shell) and the installed app's name and icons.
+  const brandWarn = (msg: string) => (customLogger ?? console).warn(msg);
+  const projectLoader = resolveProjectLoader(
+    options.dirname,
+    phConfig.icons,
+    brandWarn,
+  );
+  const projectBrand = resolveProjectPwaBrand(
+    options.dirname,
+    phConfig,
+    brandWarn,
+  );
   const pwaPlugins: PluginOption = (async () => {
     if (!offlineEnabled) return connectPwaPlugins({ offlineEnabled });
     const contributions = await collectPackagePwaContributions({
@@ -378,7 +397,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     });
     if (projectContribution) contributions.push(projectContribution);
     const mergedPwa = mergePwaConfig(contributions, projectPwa, pwaWarn);
-    return connectPwaPlugins({ offlineEnabled, pwa: mergedPwa });
+    return connectPwaPlugins({
+      offlineEnabled,
+      pwa: mergedPwa,
+      brand: projectBrand,
+    });
   })();
 
   const reactExternal = [
@@ -413,6 +436,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const routesDir = resolveConnectRoutesDir(options.dirname);
   const routes = connectRoutes(options.dirname, routesDir);
+  const customShell = hasProjectAppLayout(routesDir);
 
   const config: InlineConfig = {
     configFile: false,
@@ -537,7 +561,17 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // with the serve-time injection in the ph-clint connect proxy).
       connectThemeBootPlugin(),
       // Build-time: Connect's prerendered app shell in #root, critical CSS inline.
-      connectAppShellPlugin(options.dirname),
+      connectAppShellPlugin(options.dirname, {
+        loader: projectLoader,
+        customShell,
+      }),
+      // The project's loading image, installed-app icons and the meta tags
+      // Connect's loaders read; ahead of the PWA plugins, which precache them.
+      connectProjectBrandPlugin({
+        loader: projectLoader,
+        pwaIcons: offlineEnabled ? projectBrand.icons : undefined,
+        customShell,
+      }),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).
       connectBuildHashPlugin(buildHash),

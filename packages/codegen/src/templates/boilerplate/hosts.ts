@@ -229,8 +229,9 @@ export default {
 // The desktop shape: a production switchboard next to the BUILT Connect,
 // supervised by the desktop runner (@powerhousedao/desktop — run/serve are
 // the generic compound; \`dev\` opens a native shell window; \`build\` stages
-// the shippable stack). Run \`ph build\` (the server loads the project's
-// document models from dist/) and \`ph run connect build\` once, then
+// the shippable stack). Run \`ph run connect build\`, then \`ph build\`
+// (the server loads the project's document models from dist/, which a
+// Connect build empties), then
 // \`ph run desktop\`. At \`run\`, each member uses its own default mode below;
 // \`ph run desktop <verb>\` forwards uniformly. Members derive from the sibling
 // hosts (full inclusion); the server's drive list is hoisted once and the
