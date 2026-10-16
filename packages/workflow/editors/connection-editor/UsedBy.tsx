@@ -1,6 +1,6 @@
 // The workflows that depend on this connection, and through which steps, so
 // nobody revokes or deletes it blind.
-import { setSelectedNode } from "@powerhousedao/reactor-browser";
+import { useSetSelectedNode } from "@powerhousedao/reactor-browser";
 import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
 import { BlockLogo } from "../workflow-editor/ui/BlockSelector.js";
 import { stepBlock } from "../workflow-editor/ui/blocks.js";
@@ -26,6 +26,7 @@ export function useConnectionUsage(connectionId: string) {
 
 export function UsedBy(props: { usage: ConnectionUsage[] }) {
   const { usage } = props;
+  const setSelectedNode = useSetSelectedNode();
   return (
     <section className="mt-8 border-t border-solid border-foreground/10 pt-5">
       <h3 className="text-[13px] font-semibold text-foreground">Used by</h3>

@@ -1,5 +1,6 @@
 // Presentation for the connection editor: connector picker driven by the
 // piece catalog, auth form driven by the piece's PieceAuth descriptor.
+import { setSearchParams } from "@powerhousedao/reactor-browser";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   isReactorConnectorId,
@@ -392,11 +393,10 @@ function returnedState(): string | null {
   return new URL(window.location.href).searchParams.get(RETURN_PARAM);
 }
 
+// Through the host's navigator, so its router doesn't bring the param back.
 function clearReturnedState(): void {
-  const url = new URL(window.location.href);
-  if (!url.searchParams.has(RETURN_PARAM)) return;
-  url.searchParams.delete(RETURN_PARAM);
-  window.history.replaceState(window.history.state, "", url.href);
+  if (returnedState() === null) return;
+  setSearchParams({ [RETURN_PARAM]: undefined }, { replace: true });
 }
 
 function CopyField(props: { label: string; value: string; hint: string }) {

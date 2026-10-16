@@ -235,7 +235,7 @@ function WorkflowEditor() {
           <WorkflowEditorApp
             model={model}
             callbacks={callbacks}
-            leading={<BackButton />}
+            leading={<BackButton documentId={workflowId} />}
             trailing={
               <>
                 <LastRunFact workflowId={workflowId} />
