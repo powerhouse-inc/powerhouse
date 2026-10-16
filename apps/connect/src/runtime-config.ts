@@ -1,8 +1,7 @@
-import {
-  ConfigLoader,
-  JsonConfigAdapter,
-  type RuntimePowerhouseConfig,
-} from "@powerhousedao/shared/connect";
+// Narrow subpaths: the shared/connect barrel puts zod and semver on the boot path.
+import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
+import { ConfigLoader } from "@powerhousedao/shared/connect/config-loader";
+import { JsonConfigAdapter } from "@powerhousedao/shared/connect/json-adapter";
 
 const loader = new ConfigLoader(
   new JsonConfigAdapter({

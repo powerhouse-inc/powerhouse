@@ -43,7 +43,7 @@
     "release-wizard": "tsx scripts/release/index.ts",
     "publish:first": "node scripts/publish-first.mjs",
     "prepare": "husky",
-    "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
+    "check-circular-imports": "dpdm -T '{apps,packages,clis}/**/*.{ts,tsx,mts}' --exclude 'node_modules|/dist/|\\.ph/|\\.tsbuild' --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "pnpm update-ts-references --check",
     "knip": "knip",
     "postinstall": "pnpm update-ts-references",

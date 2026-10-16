@@ -1,11 +1,9 @@
-import {
-  Analytics,
-  OpenPanel,
-  Router,
-} from "@powerhousedao/connect/components";
+import { Analytics } from "./analytics.js";
+import { OpenPanel } from "./openpanel.js";
+import { Router } from "./router.js";
 
 import { connectConfig } from "@powerhousedao/connect/config";
-import { SentryProvider } from "@powerhousedao/connect/context";
+import { SentryProvider } from "../context/sentry-provider.js";
 import {
   DocumentEditorDebugTools,
   initLaunchQueueFileHandling,

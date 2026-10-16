@@ -9,7 +9,7 @@ import type { DocumentModelLib } from "document-model";
 import { lazy, StrictMode, Suspense } from "react";
 import AppSkeleton from "./app-skeleton.js";
 import { DetailedFallback, ErrorBoundary } from "./error-boundary.js";
-import { App } from "./index.js";
+import { App } from "./app.js";
 import { ConnectionBanner } from "./connection-banner.js";
 import { MigrationBanner } from "./migration-banner.js";
 import { ModalsContainer } from "./modal/modals-container.js";
