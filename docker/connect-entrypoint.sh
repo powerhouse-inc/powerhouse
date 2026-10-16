@@ -19,9 +19,15 @@ set -e
 #   "/connect/"-> "/connect"
 PH_CONNECT_BASE_PATH="${PH_CONNECT_BASE_PATH:-/}"
 PH_CONNECT_BASE_PREFIX="${PH_CONNECT_BASE_PATH%/}"
-export PH_CONNECT_BASE_PATH PH_CONNECT_BASE_PREFIX
+# A subpath deploy redirects the slashless base (/connect -> /connect/); root needs none.
+if [ -n "$PH_CONNECT_BASE_PREFIX" ]; then
+  PH_CONNECT_BASE_REDIRECT="location = ${PH_CONNECT_BASE_PREFIX} { return 301 ${PH_CONNECT_BASE_PREFIX}/\$is_args\$args; }"
+else
+  PH_CONNECT_BASE_REDIRECT=""
+fi
+export PH_CONNECT_BASE_PATH PH_CONNECT_BASE_PREFIX PH_CONNECT_BASE_REDIRECT
 
-envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX},${PH_CONNECT_BASE_REDIRECT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 # ============================================================
 # powerhouse.config.json runtime overrides (operator wins)
