@@ -50,6 +50,11 @@ export function useSelectedDocumentOfType<
   documentType: string | null | undefined,
 ): never[] | [TDocument, DocumentDispatch<TAction>] {
   const documentId = useSelectedDocumentId();
+  // Called on every render; without a type it reads no document.
+  const result = useDocumentOfType<TDocument, TAction>(
+    documentType ? documentId : null,
+    documentType,
+  );
 
   if (!documentType) {
     return [];
@@ -57,5 +62,5 @@ export function useSelectedDocumentOfType<
   if (!documentId) {
     throw new NoSelectedDocumentError();
   }
-  return useDocumentOfType<TDocument, TAction>(documentId, documentType);
+  return result;
 }

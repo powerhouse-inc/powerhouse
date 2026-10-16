@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import { map } from "remeda";
 import { phDocumentFromQuery } from "./adapters.js";
 import type { TStateSchemaZodObject } from "./types.js";
@@ -5,7 +6,7 @@ import type { TStateSchemaZodObject } from "./types.js";
 export async function reactorGraphqlFetchDocument<
   TDocumentSchema extends TStateSchemaZodObject,
 >(identifier: string, documentSchema?: TDocumentSchema) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -27,7 +28,7 @@ export async function reactorGraphqlFetchDocument<
 export async function reactorGraphqlBatchFetchDocuments(
   identifiers: readonly string[],
 ) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(

@@ -1,9 +1,11 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   ConflictResolution,
   DocumentTypeIcon,
   FileUploadProgressCallback,
   IReactorBrowserClient,
+  PHGlobal,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -357,7 +359,7 @@ function boundary(upgrade: Operation, scope: string, ops: Operation[]): number {
 }
 
 export async function exportFile(document: PHDocument, suggestedName?: string) {
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -426,7 +428,7 @@ export async function loadFile(path: string | File) {
   }
 
   const registry =
-    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    getPHStore()?.reactorClientModule?.reactorModule?.documentModelRegistry;
   let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
   if (registry) {
     try {
@@ -688,7 +690,7 @@ export async function addFileWithProgress(
 
       // Only attempt discovery if the failure is specifically a missing
       // document model module, not for other errors like corrupt files.
-      const discoveryService = window.ph?.packageDiscoveryService;
+      const discoveryService = getPHStore()?.packageDiscoveryService;
       if (discoveryService && DocumentModelNotFoundError.isError(loadError)) {
         // Trigger discovery and retry without blocking the drop handler
         void retryAfterDiscovery(
@@ -834,7 +836,7 @@ export async function addFileWithProgress(
 }
 
 async function retryAfterDiscovery(
-  discoveryService: NonNullable<typeof window.ph>["packageDiscoveryService"],
+  discoveryService: PHGlobal["packageDiscoveryService"],
   documentType: string,
   file: string | File,
   driveId: string,
@@ -873,7 +875,7 @@ export async function updateFile(
   name?: string,
   parentFolder?: string,
 ) {
-  const reactor = window.ph?.reactorClient;
+  const reactor = getPHStore()?.reactorClient;
   if (!reactor) {
     return;
   }
@@ -912,7 +914,7 @@ export async function addFolder(
     throw new Error("User is not allowed to create folders");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -966,7 +968,7 @@ export async function renameNode(
     throw new Error("User is not allowed to rename documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -1003,7 +1005,7 @@ export async function renameDriveNode(
     throw new Error("User is not allowed to rename documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -1033,7 +1035,7 @@ export async function setPreferredEditorOnNode(
     throw new Error("User is not allowed to modify documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -1056,7 +1058,7 @@ export async function moveNodeById(args: {
     throw new Error("User is not allowed to move documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -1087,7 +1089,7 @@ export async function moveNode(
     throw new Error("User is not allowed to move documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -1127,7 +1129,7 @@ async function _duplicateDocument(
   }
 
   const registry =
-    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    getPHStore()?.reactorClientModule?.reactorModule?.documentModelRegistry;
   let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
   if (registry) {
     try {

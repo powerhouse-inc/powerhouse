@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { DocumentModelLib } from "document-model";
 import { useSyncExternalStore } from "react";
 import {
@@ -25,13 +26,15 @@ const noPackageManagerUnsubscribe = () => {};
  */
 export const useVetraPackages = () => {
   const packageManager = useVetraPackageManager();
+  const getPackages = () => packageManager?.packages ?? EMPTY_VETRA_PACKAGES;
 
   return useSyncExternalStore(
     (cb) =>
       packageManager
         ? packageManager.subscribe(cb)
         : noPackageManagerUnsubscribe,
-    () => packageManager?.packages ?? EMPTY_VETRA_PACKAGES,
+    getPackages,
+    getPackages,
   );
 };
 
@@ -85,7 +88,7 @@ function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
     );
 
   const registry =
-    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    getPHStore()?.reactorClientModule?.reactorModule?.documentModelRegistry;
   if (!registry || documentModelModules.length === 0) return;
 
   const results = registry.registerModules(...documentModelModules);
@@ -121,7 +124,7 @@ function updateReactorClientUpgradeManifests(packages: DocumentModelLib[]) {
     .filter((u) => u !== undefined);
 
   const registry =
-    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    getPHStore()?.reactorClientModule?.reactorModule?.documentModelRegistry;
   if (!registry || upgradeManifests.length === 0) return;
 
   const results = registry.registerUpgradeManifests(...upgradeManifests);

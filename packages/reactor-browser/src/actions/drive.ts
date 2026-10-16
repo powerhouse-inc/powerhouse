@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import {
   DocumentChangeType,
   DriveCollectionId,
@@ -141,7 +142,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     throw new Error("User is not allowed to create drives");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -189,7 +190,7 @@ export async function addRemoteDrive(
   }
 
   const sync =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (!sync) {
     throw new Error("Sync not initialized");
   }
@@ -274,13 +275,13 @@ export async function deleteDrive(driveId: string) {
     throw new Error("User is not allowed to delete drives");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
 
   const sync =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (sync) {
     const collectionId = DriveCollectionId.forDrive(driveId);
     const remotes = sync
@@ -320,7 +321,7 @@ export async function setDriveAvailableOffline(
     throw new Error("User is not allowed to change drive availability");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -338,7 +339,7 @@ export async function setDriveSharingType(
     throw new Error("User is not allowed to change drive sharing type");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -356,7 +357,7 @@ export async function setDriveMetadata(
     throw new Error("User is not allowed to update drive metadata");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

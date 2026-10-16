@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { IRenown, User } from "@renown/sdk";
 import type { WalletSession } from "@renown/sdk/wallet";
 import { logger } from "document-model";
@@ -13,7 +14,7 @@ import {
 } from "./wallet-registry.js";
 
 export function openRenown(documentId?: string) {
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   let renownUrl = renown?.baseUrl;
   if (!renownUrl) {
     logger.warn("Renown instance not found, falling back to: @url", RENOWN_URL);
@@ -45,7 +46,7 @@ export function openRenown(documentId?: string) {
 // In-page Renown sign-in: signs an app-key credential with the wallet session
 // and logs in via the configured switchboard. Throws if no switchboard is set.
 async function signIn(session: WalletSession): Promise<User | undefined> {
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   if (!renown) {
     logger.warn("Renown instance not found, cannot sign in");
     return;
@@ -69,7 +70,7 @@ let lastSignedAddress: string | undefined;
 // renown never pulls the graphql-client module graph in, and so a client without
 // the method (the non-GraphQL browser client) is a no-op.
 function notifyReactorClientCredentialsChanged(): void {
-  const client = window.ph?.reactorClient as
+  const client = getPHStore()?.reactorClient as
     | { notifyCredentialsChanged?: () => void }
     | undefined;
   client?.notifyCredentialsChanged?.();
@@ -176,7 +177,7 @@ export async function logout() {
     logger.error(error instanceof Error ? error.message : String(error));
   }
 
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   await renown?.logout();
   resetSignInGuard();
   notifyReactorClientCredentialsChanged();

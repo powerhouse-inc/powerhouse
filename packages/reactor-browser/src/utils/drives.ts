@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { SyncStatus } from "@powerhousedao/reactor";
 import type {
@@ -43,10 +44,10 @@ export function getSyncStatusSync(
   documentId: string,
   sharingType: SharingType,
 ): UISyncStatus | undefined {
-  if (sharingType === "LOCAL") return;
+  if (sharingType === "LOCAL" || typeof window === "undefined") return;
 
   const syncManager =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (!syncManager) return;
 
   const status = syncManager.getSyncStatus(documentId);

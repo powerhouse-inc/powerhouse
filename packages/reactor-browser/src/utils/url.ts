@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
   DocumentDriveDocument,
   Node,
@@ -12,13 +13,13 @@ const DERIVED_ID_LENGTH = 43;
 export function resolveUrlPathname(path: string) {
   return new URL(
     path.replace(/^\/+/, ""),
-    window.location.origin + (window.ph?.basePath ?? "/"),
+    window.location.origin + (getPHStore()?.basePath ?? "/"),
   ).pathname;
 }
 
 /** Returns the current path without the base path */
 export function getPathWithoutBase(path: string) {
-  const basePath = window.ph?.basePath ?? "/";
+  const basePath = getPHStore()?.basePath ?? "/";
   return path.replace(basePath, basePath.endsWith("/") ? "/" : "");
 }
 

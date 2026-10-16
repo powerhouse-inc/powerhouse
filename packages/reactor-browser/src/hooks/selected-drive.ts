@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveAction,
@@ -12,7 +13,10 @@ import {
 } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
-import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import {
+  makePHEventFunctions,
+  subscribeToPHValue,
+} from "./make-ph-event-functions.js";
 import { setSelectedNode } from "./set-selected-node.js";
 
 const selectedDriveIdEventFunctions = makePHEventFunctions("selectedDriveId");
@@ -67,7 +71,7 @@ export function setSelectedDrive(
 
   // A full drive document is selected directly — a just-created drive
   // navigates before the collection refresh. Slugs go through the lookup.
-  const drives = window.ph?.drives;
+  const drives = getPHStore()?.drives;
   const drive =
     typeof driveOrDriveSlug === "object" && driveOrDriveSlug !== null
       ? driveOrDriveSlug
@@ -83,7 +87,7 @@ export function setSelectedDrive(
   ) {
     // Clear the previous selection so a stale drive doesn't render against
     // the new URL; the selected node resets with it, the URL is untouched.
-    if (window.ph?.selectedDriveId) {
+    if (getPHStore()?.selectedDriveId) {
       setSelectedDriveId(undefined);
     }
     deferDriveSelection(driveSlug);
@@ -119,7 +123,7 @@ const DEFERRED_DRIVE_MAX_WAIT_MS = 15_000;
 // a drive may still be on its way in, so the deferred lookup keeps waiting.
 function isInitialSyncInFlight(): boolean {
   const remotes =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager?.list();
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager?.list();
   if (!remotes?.length) {
     return false;
   }
@@ -136,13 +140,13 @@ function isInitialSyncInFlight(): boolean {
   });
 }
 
-let pendingHandler: (() => void) | undefined;
+let unsubscribePending: (() => void) | undefined;
 let pendingTimeout: ReturnType<typeof setTimeout> | undefined;
 
 function cancelPendingDriveSelection() {
-  if (pendingHandler) {
-    window.removeEventListener("ph:drivesUpdated", pendingHandler);
-    pendingHandler = undefined;
+  if (unsubscribePending) {
+    unsubscribePending();
+    unsubscribePending = undefined;
   }
   if (pendingTimeout) {
     clearTimeout(pendingTimeout);
@@ -159,7 +163,9 @@ function deferDriveSelection(driveSlug: string) {
   // rewrites the URL to /d/<driveSlug>, dropping the node segment.
   const nodeSlug = extractNodeSlugFromPath(window.location.pathname);
   const handler = () => {
-    const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
+    const drive = getPHStore()?.drives?.find(
+      (d) => d.header.slug === driveSlug,
+    );
     if (!drive) {
       return;
     }
@@ -167,8 +173,7 @@ function deferDriveSelection(driveSlug: string) {
     setSelectedDrive(driveSlug);
     setSelectedNode(nodeSlug);
   };
-  pendingHandler = handler;
-  window.addEventListener("ph:drivesUpdated", handler);
+  unsubscribePending = subscribeToPHValue("drives", handler);
 
   const deadline = Date.now() + DEFERRED_DRIVE_MAX_WAIT_MS;
   const scheduleTick = () => {
@@ -197,8 +202,8 @@ export function addSetSelectedDriveOnPopStateEventHandler() {
     // Compare slugs as the URL spells them: setSelectedDrive takes a slug,
     // and most slugs don't embed the drive id.
     const driveSlug = extractDriveSlugFromPath(window.location.pathname);
-    const drives = window.ph?.drives ?? [];
-    const selectedId = window.ph?.selectedDriveId;
+    const drives = getPHStore()?.drives ?? [];
+    const selectedId = getPHStore()?.selectedDriveId;
     const selected = drives.find((drive) => drive.header.id === selectedId);
     // A drive selected before it is listed stays, unless the URL names another.
     if (selectedId && !selected) {

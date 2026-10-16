@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
   Action,
   ActionSigner,
@@ -6,7 +7,7 @@ import type {
 import { logger } from "document-model";
 
 export function addActionContext(action: Action) {
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   if (!renown?.user) return action;
 
   const signer: ActionSigner = {

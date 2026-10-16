@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
@@ -1798,7 +1799,7 @@ function resolveAmbientSigner(): ISigner | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   return renown?.user ? renown.signer : undefined;
 }
 
