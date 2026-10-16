@@ -79,14 +79,19 @@ export function deriveSwitchboardGraphqlUrl(
   return prefix === undefined ? undefined : `${parsed.origin}${prefix}/graphql`;
 }
 
+/** The loaded document models, or a getter that reads the current ones. */
+export type LoadedDocumentModels =
+  | readonly DocumentModelModule[]
+  | (() => readonly DocumentModelModule[]);
+
 export type MultiReactorParams = {
   /** The local module, built and ready. Undefined builds a REMOTE-ONLY router
    * (no local backend → no local reactor, no PGlite): the `remote` client. */
   module: LocalReactorModule | undefined;
   remoteGraphqlUrl: string;
   signer: ISigner;
-  /** Signing models when the local module exposes no registry; the router asks the local reactor (or, remote-only, the statically-loaded set). */
-  documentModelModules: readonly DocumentModelModule[];
+  /** Signing models when the local module exposes no registry; the router asks the local reactor (or, remote-only, the loaded set). */
+  documentModelModules: LoadedDocumentModels;
   onDiagnostic?: RouterDiagnostic;
 };
 
@@ -158,10 +163,11 @@ export async function buildMultiReactorClient(
 ): Promise<ConnectRoutingClient> {
   const module = params.module;
   const registry = module?.reactorModule?.documentModelRegistry;
+  const loaded = params.documentModelModules;
+  const loadedModules = typeof loaded === "function" ? loaded : () => loaded;
   const remote = createGraphQLRoutableBackend({
     url: params.remoteGraphqlUrl,
-    documentModels: () =>
-      registry?.getAllModules() ?? params.documentModelModules,
+    documentModels: () => registry?.getAllModules() ?? loadedModules(),
   });
   const remoteBackend: RoutableBackendConfig = {
     name: REMOTE_BACKEND_NAME,
@@ -191,6 +197,8 @@ export async function buildMultiReactorClient(
       defaultRequirements: module ? PLACE_ON_LOCAL : PLACE_ON_REMOTE,
       signer: params.signer,
       onDiagnostic: params.onDiagnostic,
+      // The Switchboard serves no models over GraphQL; remote-only uses the loaded set.
+      documentModelModules: module ? undefined : loadedModules,
     },
     remote,
     Boolean(module),
