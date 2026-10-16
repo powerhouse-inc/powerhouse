@@ -1,12 +1,16 @@
 import { Icon } from "#design-system";
 import {
+  getNodeTargetIn,
   getSyncStatusSync,
   preloadEditorModule,
-  setSelectedNode,
   showDeleteNodeModal,
   useDownloadDocument,
   useDragNode,
   useEditorModulesForDocumentType,
+  useLinkProps,
+  usePHStore,
+  usePreloadNode,
+  useSetSelectedNode,
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
@@ -43,10 +47,18 @@ type Props = {
   fileNode: FileNode;
   className?: string;
   customDocumentIconSrc?: string;
+  /** The document's link; the navigation's href for it by default. */
+  href?: string;
 };
 
 export function FileItem(props: Props) {
   const { fileNode, className, customDocumentIconSrc } = props;
+  const store = usePHStore();
+  const setSelectedNode = useSetSelectedNode();
+  const preloadNode = usePreloadNode();
+  const target = getNodeTargetIn(store, fileNode);
+  const link = useLinkProps(target, () => setSelectedNode(fileNode));
+  const href = props.href ?? (target ? link.href : undefined);
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const [selectedDrive] = useSelectedDriveSafe();
@@ -59,10 +71,12 @@ export function FileItem(props: Props) {
   });
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const editorModules = useEditorModulesForDocumentType(fileNode.documentType);
-  const preloadEditors = () =>
+  const preload = () => {
     editorModules?.forEach((editorModule) => {
       void preloadEditorModule(editorModule);
     });
+    preloadNode(fileNode);
+  };
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
   const downloadDocument = useDownloadDocument(fileNode.id);
@@ -171,6 +185,7 @@ export function FileItem(props: Props) {
               isDropdownMenuOpen && "block",
             )}
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               setIsDropdownMenuOpen(true);
             }}
@@ -189,11 +204,25 @@ export function FileItem(props: Props) {
     />
   );
 
+  // A link only while reading: clicks in the rename input must not follow it.
+  const isLink = isReadMode && !!href;
+  const Element = isLink ? "a" : "div";
+
   return (
-    <div
-      className="relative w-64"
-      onClick={isReadMode ? () => setSelectedNode(fileNode) : undefined}
-      onMouseEnter={preloadEditors}
+    <Element
+      href={isLink ? href : undefined}
+      aria-current={isLink ? link["aria-current"] : undefined}
+      className="relative block w-64"
+      onClick={
+        isLink
+          ? link.onClick
+          : isReadMode
+            ? () => setSelectedNode(fileNode)
+            : undefined
+      }
+      onMouseEnter={preload}
+      onTouchStart={preload}
+      onFocus={preload}
       {...dragProps}
     >
       <div className={containerStyles}>
@@ -202,7 +231,7 @@ export function FileItem(props: Props) {
           {content}
         </div>
       </div>
-    </div>
+    </Element>
   );
 }
 
