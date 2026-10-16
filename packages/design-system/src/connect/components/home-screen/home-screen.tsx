@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { HomeBackgroundImage } from "./home-background-image.js";
 
@@ -9,6 +10,9 @@ type HomeScreenProps = {
 
 export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   const { children, containerClassName, homeBackground } = props;
+  // The page colour behind a custom background: its outer top-left pixel,
+  // sampled once the image has loaded, so the art blends into the page.
+  const [fill, setFill] = useState<{ src: string; color: string } | null>(null);
   const content = (
     <div
       className={twMerge(
@@ -33,18 +37,43 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
     </div>
   );
   if (!homeBackground) return content;
-  // A custom background fills the whole pane behind the tiles (cover,
-  // anchored bottom-right where background art keeps its subject). The
-  // image comes first in the DOM and the content is positioned after it, so
-  // the tiles paint above it.
+  // A custom background sits in the bottom-right corner at its own size
+  // (scaled down only to fit), and the rest of the page takes the colour of
+  // its outer top-left pixel. The image comes first in the DOM and the
+  // content is positioned after it, so the tiles paint above it.
+  const pageColor = fill?.src === homeBackground ? fill.color : undefined;
   return (
-    <div className="relative size-full overflow-hidden">
+    <div
+      className="relative size-full overflow-hidden"
+      style={pageColor ? { backgroundColor: pageColor } : undefined}
+    >
       <img
         src={homeBackground}
         alt=""
-        className="pointer-events-none absolute inset-0 size-full object-cover object-bottom-right"
+        className="pointer-events-none absolute right-0 bottom-0 max-h-full max-w-full object-contain object-bottom-right"
+        onLoad={(event) => {
+          const color = topLeftPixel(event.currentTarget);
+          if (color) setFill({ src: homeBackground, color });
+        }}
       />
       {content}
     </div>
   );
 };
+
+/** The image's top-left pixel as a CSS colour, or undefined when the canvas
+ * cannot read it (a cross-origin image without CORS taints the canvas). */
+function topLeftPixel(img: HTMLImageElement): string | undefined {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return undefined;
+    ctx.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `rgb(${r}, ${g}, ${b})`;
+  } catch {
+    return undefined;
+  }
+}
