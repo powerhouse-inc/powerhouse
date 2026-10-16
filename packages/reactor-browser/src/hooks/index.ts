@@ -43,10 +43,28 @@ export * from "./reactor.js";
 export * from "./renown.js";
 export * from "./revision-history.js";
 export * from "./selected-document.js";
+export * from "./navigation.js";
+export * from "./url-state.js";
 export * from "./ph-store.js";
-export * from "./selected-drive.js";
+// selectDrive and selectDriveIn stay internal: they skip the scope warning.
+export {
+  addSelectedDriveIdEventHandler,
+  preloadDrive,
+  setSelectedDrive,
+  setSelectedDriveId,
+  usePreloadDrive,
+  useSelectedDrive,
+  useSelectedDriveId,
+  useSelectedDriveSafe,
+  useSetSelectedDrive,
+} from "./selected-drive.js";
 export * from "./selected-folder.js";
 export * from "./selected-node.js";
+export {
+  addSetSelectedDriveOnPopStateEventHandler,
+  addSyncSelectionOnPopStateEventHandler,
+  syncSelectionFromPath,
+} from "./sync-selection.js";
 export * from "./selected-timeline-item.js";
 export * from "./subgraph-modules.js";
 export * from "./supported-document-types.js";
@@ -61,4 +79,6 @@ export * from "./use-on-drop-file.js";
 export * from "./user-permissions.js";
 export * from "./vetra-packages.js";
 export * from "./attachment-service.js";
+export * from "./close-node.js";
+export * from "./link-props.js";
 export * from "./use-attachments.js";

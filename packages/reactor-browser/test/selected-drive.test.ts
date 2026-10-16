@@ -1,4 +1,8 @@
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentDriveDocument,
+  Node,
+} from "@powerhousedao/shared/document-drive";
+import type { PHNavigationTarget } from "../src/types/global.js";
 import {
   afterEach,
   beforeAll,
@@ -11,10 +15,18 @@ import {
 import { addDrivesEventHandler, setDrives } from "../src/hooks/drives.js";
 import {
   addSelectedDriveIdEventHandler,
-  addSetSelectedDriveOnPopStateEventHandler,
+  preloadDrive,
   setSelectedDrive,
 } from "../src/hooks/selected-drive.js";
-import { addSelectedNodeIdEventHandler } from "../src/hooks/selected-node.js";
+import { addSetSelectedDriveOnPopStateEventHandler } from "../src/hooks/sync-selection.js";
+import { browserNavigation, targetPathname } from "../src/hooks/navigation.js";
+import {
+  addResetSelectedNodeEventHandler,
+  addSelectedNodeIdEventHandler,
+  preloadNode,
+  setSelectedNode,
+} from "../src/hooks/selected-node.js";
+import { addSyncSelectionOnPopStateEventHandler } from "../src/hooks/sync-selection.js";
 
 function makeDrive(slug: string, id: string): DocumentDriveDocument {
   return {
@@ -341,5 +353,128 @@ describe("back and forward within a drive", () => {
     window.dispatchEvent(new PopStateEvent("popstate"));
 
     expect(window.ph.selectedDriveId).toBe("id-2");
+  });
+});
+
+describe("syncing the selection from the URL", () => {
+  const DOC_ID = "5d7ab3ec-1111-4222-8333-944455556666";
+  const DRIVE_URL = "/d/Mixed-Case-Slug";
+  const DOC_URL = `${DRIVE_URL}/doc-${DOC_ID}`;
+
+  beforeAll(() => {
+    addDrivesEventHandler();
+    addSelectedDriveIdEventHandler();
+    addSelectedNodeIdEventHandler();
+    addResetSelectedNodeEventHandler();
+    addSyncSelectionOnPopStateEventHandler();
+  });
+
+  afterEach(() => {
+    setSelectedDrive(undefined);
+    window.ph = {};
+    window.history.replaceState(null, "", ROOT);
+  });
+
+  function openDocument() {
+    setDrives([makeDrive("Mixed-Case-Slug", "drive-id-mixed")]);
+    setSelectedDrive("Mixed-Case-Slug");
+    setSelectedNode(`doc-${DOC_ID}`);
+  }
+
+  it("restores the document on forward without pushing a new entry", () => {
+    window.ph = {};
+    openDocument();
+    expect(window.location.pathname).toBe(DOC_URL);
+
+    window.history.replaceState(null, "", DRIVE_URL);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(window.ph.selectedNodeId).toBeUndefined();
+
+    const length = window.history.length;
+    window.history.replaceState(null, "", DOC_URL);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(window.ph.selectedDriveId).toBe("drive-id-mixed");
+    expect(window.ph.selectedNodeId).toBe(DOC_ID);
+    expect(window.location.pathname).toBe(DOC_URL);
+    expect(window.history.length).toBe(length);
+  });
+
+  it("only opens targets through a host navigator and leaves the selection to it", () => {
+    window.ph = {};
+    let current = ROOT;
+    const open = vi.fn(
+      (target: PHNavigationTarget | undefined, _options?: unknown) => {
+        current = target ? targetPathname(target) : ROOT;
+      },
+    );
+    const preload = vi.fn();
+    window.ph.navigation = {
+      ...browserNavigation,
+      location: () => ({ pathname: current, search: "" }),
+      open,
+      preload,
+      setSearch: vi.fn(),
+    };
+    openDocument();
+
+    const drive = { driveSlug: "Mixed-Case-Slug" };
+    expect(open).toHaveBeenNthCalledWith(1, drive, undefined);
+    expect(open).toHaveBeenLastCalledWith(
+      { ...drive, nodeSlug: `doc-${DOC_ID}` },
+      undefined,
+    );
+    expect(window.location.pathname).toBe(ROOT);
+    expect(window.ph.selectedDriveId).toBeUndefined();
+    expect(window.ph.selectedNodeId).toBeUndefined();
+
+    // An open target is not reopened, unless params come with it.
+    const calls = open.mock.calls.length;
+    setSelectedNode(`doc-${DOC_ID}`);
+    expect(open).toHaveBeenCalledTimes(calls);
+    setSelectedNode(`doc-${DOC_ID}`, { search: { item: "a" } });
+    expect(open).toHaveBeenLastCalledWith(
+      { ...drive, nodeSlug: `doc-${DOC_ID}` },
+      { search: { item: "a" } },
+    );
+
+    current = DRIVE_URL;
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(window.ph.selectedNodeId).toBeUndefined();
+
+    preloadNode({ id: DOC_ID, name: "doc", kind: "file" } as Node);
+    expect(preload).toHaveBeenLastCalledWith({
+      ...drive,
+      nodeSlug: `doc-${DOC_ID}`,
+    });
+    preloadDrive(makeDrive("Other", "drive-id-other"));
+    expect(preload).toHaveBeenLastCalledWith({ driveSlug: "Other" });
+
+    setSelectedDrive(undefined);
+    expect(open).toHaveBeenLastCalledWith(undefined, undefined);
+  });
+
+  it("opens a document with its params in one history entry without a host", () => {
+    window.ph = {};
+    window.history.replaceState(null, "", `${ROOT}?theme=dark&item=old`);
+    setDrives([makeDrive("Mixed-Case-Slug", "drive-id-mixed")]);
+    setSelectedDrive("Mixed-Case-Slug");
+    const length = window.history.length;
+
+    setSelectedNode(`doc-${DOC_ID}`, { search: { item: "new" } });
+
+    expect(window.history.length).toBe(length + 1);
+    expect(window.location.pathname).toBe(DOC_URL);
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("item")).toBe("new");
+    expect(params.get("theme")).toBe("dark");
+    expect(window.ph.selectedNodeId).toBe(DOC_ID);
+  });
+
+  it("does not preload without a host navigator", () => {
+    window.ph = {};
+    openDocument();
+    expect(() => preloadDrive(makeDrive("Other", "x"))).not.toThrow();
+    expect(window.location.pathname).toBe(DOC_URL);
   });
 });
