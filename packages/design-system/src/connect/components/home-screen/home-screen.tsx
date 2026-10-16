@@ -37,10 +37,11 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
     </div>
   );
   if (!homeBackground) return content;
-  // A custom background sits in the bottom-right corner at its own size
-  // (scaled down only to fit), and the rest of the page takes the colour of
-  // its outer top-left pixel. The image comes first in the DOM and the
-  // content is positioned after it, so the tiles paint above it.
+  // A custom background sits in the bottom-right corner at its own aspect,
+  // capped at 1280x720 CSS px and scaled down to fit smaller panes; the rest
+  // of the page takes the colour of its outer top-left pixel. The image
+  // comes first in the DOM and the content is positioned after it, so the
+  // tiles paint above it.
   const pageColor = fill?.src === homeBackground ? fill.color : undefined;
   return (
     <div
@@ -50,7 +51,15 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
       <img
         src={homeBackground}
         alt=""
-        className="pointer-events-none absolute right-0 bottom-0 max-h-full max-w-full object-contain object-bottom-right"
+        className="pointer-events-none absolute right-0 bottom-0 max-h-[min(100%,720px)] max-w-[min(100%,1280px)] object-contain object-bottom-right"
+        // feather the top and left edges into the page colour: background
+        // art is lighter inside than at its corner pixel, so a hard edge
+        // would show as a seam once the image no longer spans the pane
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent, #000 20%), linear-gradient(to bottom, transparent, #000 20%)",
+          maskComposite: "intersect",
+        }}
         onLoad={(event) => {
           const color = topLeftPixel(event.currentTarget);
           if (color) setFill({ src: homeBackground, color });
