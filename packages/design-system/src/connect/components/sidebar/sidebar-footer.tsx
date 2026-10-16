@@ -10,7 +10,11 @@ export interface ConnectSidebarFooterProps extends ComponentProps<
   address: `0x${string}` | undefined;
   ensName?: string;
   avatarUrl?: string;
-  onClickSettings: (() => void) | undefined;
+  onClickSettings: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
+  /** Renders settings as a real link; `onClickSettings` can still take plain clicks. */
+  settingsHref?: string;
+  /** Marks the settings link while settings show. */
+  settingsCurrent?: "page";
   onLogin: (() => void) | undefined;
   etherscanUrl?: string;
   onDisconnect: (() => void) | undefined;
@@ -26,6 +30,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   className,
   onLogin,
   onClickSettings,
+  settingsHref,
+  settingsCurrent,
   onDisconnect,
   onHomeClick,
   showDebug,
@@ -33,6 +39,14 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
+  const settingsIcon = (
+    <>
+      <Settings className="text-foreground" size={24} strokeWidth={2} />
+      <span className="hidden text-sm/6 font-semibold text-foreground">
+        Settings
+      </span>
+    </>
+  );
   return (
     <SidebarFooter
       {...props}
@@ -79,17 +93,28 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           <SidebarLogin onLogin={onLogin} />
         )}
       </div>
-      <button
-        aria-label="Settings"
-        type="button"
-        className={twMerge(onClickSettings ? "cursor-pointer" : "cursor-wait")}
-        onClick={onClickSettings}
-      >
-        <Settings className="text-foreground" size={24} strokeWidth={2} />
-        <span className="hidden text-sm/6 font-semibold text-foreground">
-          Settings
-        </span>
-      </button>
+      {settingsHref ? (
+        <a
+          aria-label="Settings"
+          href={settingsHref}
+          aria-current={settingsCurrent}
+          className="cursor-pointer rounded-md aria-[current=page]:bg-sidebar-accent"
+          onClick={onClickSettings}
+        >
+          {settingsIcon}
+        </a>
+      ) : (
+        <button
+          aria-label="Settings"
+          type="button"
+          className={twMerge(
+            onClickSettings ? "cursor-pointer" : "cursor-wait",
+          )}
+          onClick={onClickSettings}
+        >
+          {settingsIcon}
+        </button>
+      )}
     </SidebarFooter>
   );
 };

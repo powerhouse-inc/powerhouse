@@ -1,11 +1,10 @@
 import {
-  setSelectedNode,
   showPHModal,
   showRevisionHistory,
   useDocumentVersionStatus,
   useDownloadDocument,
+  useCloseNode,
   useGetSwitchboardLink,
-  useNodeParentFolderById,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { ComponentProps } from "react";
@@ -194,7 +193,8 @@ export function ToolbarHistoryButton(props: ToolbarButtonProps) {
 /**
  * Toolbar control for closing the current document view.
  *
- * By default, this selects the current document's parent folder. Provide
+ * By default, this goes back when the app's history allows, else it selects the
+ * current document's parent folder. Provide
  * `children` to replace the default icon, or `onClick` to override the default
  * close behavior.
  */
@@ -205,10 +205,8 @@ export function ToolbarCloseButton(props: ToolbarButtonProps) {
     document,
     children = <Icon name="XmarkLight" size={16} />,
   } = props;
-  const parentFolder = useNodeParentFolderById(document?.header.id);
-  const onClick = makeOnClick(document, onClickOverride, () =>
-    setSelectedNode(parentFolder),
-  );
+  const close = useCloseNode(document?.header.id);
+  const onClick = makeOnClick(document, onClickOverride, close);
 
   return (
     <ToolbarButton
