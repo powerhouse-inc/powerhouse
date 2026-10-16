@@ -446,6 +446,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     define: {
       PH_CONNECT_SENTRY_RELEASE: JSON.stringify(release || "unknown"),
       PH_CONNECT_BUILD_HASH: JSON.stringify(buildHash),
+      // Per-build URLs, so a stale service worker never serves an older copy.
+      ...(options.vendor?.sharedDeps && mode === "production"
+        ? {
+            PH_CONNECT_SHARED_DEPS_URL: JSON.stringify(
+              options.vendor.sharedDeps,
+            ),
+          }
+        : {}),
+      ...(options.reactorWorkerVersion
+        ? {
+            PH_CONNECT_REACTOR_WORKER_VERSION: JSON.stringify(
+              options.reactorWorkerVersion,
+            ),
+          }
+        : {}),
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],

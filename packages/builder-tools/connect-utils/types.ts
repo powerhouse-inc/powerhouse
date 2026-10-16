@@ -42,7 +42,11 @@ export type IConnectOptions = {
   vendor?: {
     imports: Record<string, string>;
     versions: Record<string, string>;
+    /** Base-applied URL of the content-hashed shared-deps module. */
+    sharedDeps?: string;
   };
+  /** Content digest of the prebuilt reactor worker dir; versions its URLs. */
+  reactorWorkerVersion?: string;
 };
 
 export type ConnectCommonOptions = {

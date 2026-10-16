@@ -174,7 +174,10 @@ registerRoute(
 // producer at that URL. The __WB_MANIFEST property below is the injectManifest
 // injection point — workbox-build replaces it with the precache list at build
 // time (the token is written once, on the code line, never in prose).
-precacheAndRoute(self.__WB_MANIFEST);
+// `v` versions the reactor worker URLs; the precached copy is that same build's.
+precacheAndRoute(self.__WB_MANIFEST, {
+  ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
+});
 
 // ── runtime caching ──────────────────────────────────────────────────────────
 // Document-model editors/packages loaded at runtime from the registry CDN. The
