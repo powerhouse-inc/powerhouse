@@ -4,10 +4,10 @@ import {
   type SidebarNode,
 } from "@powerhousedao/design-system/ui";
 import {
-  setSelectedNode,
   useNodesInSelectedDrive,
   useSelectedDrive,
   useSelectedNode,
+  useSetSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
@@ -63,6 +63,7 @@ export function FolderTree() {
   const [selectedDrive] = useSelectedDrive();
   const nodes = useNodesInSelectedDrive();
   const selectedNode = useSelectedNode();
+  const setSelectedNode = useSetSelectedNode();
   const driveName = selectedDrive.header.name;
   // Transform Node[] to hierarchical SidebarNode structure
   const sidebarNodes = useMemo(
