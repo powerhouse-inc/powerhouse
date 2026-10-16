@@ -7,6 +7,7 @@ import {
   hasPrerenderedShell,
 } from "./components/prerendered-shell.js";
 import { loadRuntimeConfig } from "./runtime-config.js";
+import { applyProjectFavicons } from "./utils/project-favicon.js";
 import { initPerformanceObserver } from "./utils/performance-observer.js";
 import { warmModules } from "./warm-modules.js";
 
@@ -122,7 +123,7 @@ export async function bootConnect(
   // connection. Mapping the rejection to a value here also means a config
   // failure is handled from the start, never an unhandled rejection.
   const config = loadConfig().then(
-    () => ({ ok: true }) as const,
+    (value: unknown) => ({ ok: true, value }) as const,
     (error: unknown) => ({ ok: false, error }) as const,
   );
 
@@ -151,6 +152,9 @@ export async function bootConnect(
     root.render(<BootError error={result.error} />);
     return null;
   }
+  // Project favicons replace the static icon.ico as soon as the config is
+  // known — before the app renders, so the tab never flips back.
+  applyProjectFavicons(result.value);
   // The app imports these modules anyway; warmed, they evaluate in tasks of their own.
   await warmed;
 
