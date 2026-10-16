@@ -1,11 +1,11 @@
-import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import { getConfig } from "@powerhousedao/config/node";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import sirv from "sirv";
 import type { InlineConfig, Plugin } from "vite";
-import { mergeConfig, preview } from "vite";
+import { preview } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
 import { PRECOMPRESS_EXTENSIONS } from "../utils/precompress.js";
 
@@ -290,21 +290,20 @@ export async function runConnectPreview(
 
   const mode = "production";
 
-  const baseConfig = getConnectBaseViteConfig({
-    mode,
-    dirname,
-  });
-
+  // Serving a dist needs only its base, not the build's plugin stack.
+  const sourceBasePath = getConfig(path.join(dirname, "powerhouse.config.json"))
+    .connect?.app?.basePath;
   const outDirAbs = path.resolve(dirname, outDir);
   const base =
     resolvePreviewBase(args.connectBasePath, outDirAbs) ??
-    baseConfig.base ??
-    "/";
+    (sourceBasePath ? normalizeBasePath(sourceBasePath) : "/");
 
   const previewConfig: InlineConfig = {
+    configFile: false,
+    mode,
     base,
     build: {
-      outDir,
+      outDir: outDirAbs,
     },
     preview: {
       cors,
@@ -322,9 +321,7 @@ export async function runConnectPreview(
     ],
   };
 
-  const config = mergeConfig(baseConfig, previewConfig);
-
-  const server = await preview(config);
+  const server = await preview(previewConfig);
 
   if (printUrls) server.printUrls();
   if (bindCLIShortcuts) server.bindCLIShortcuts({ print: true });
